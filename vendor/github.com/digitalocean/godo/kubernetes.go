@@ -84,6 +84,7 @@ type KubernetesClusterCreateRequest struct {
 	SurgeUpgrade                   bool                                      `json:"surge_upgrade"`
 	ControlPlaneFirewall           *KubernetesControlPlaneFirewall           `json:"control_plane_firewall,omitempty"`
 	ClusterAutoscalerConfiguration *KubernetesClusterAutoscalerConfiguration `json:"cluster_autoscaler_configuration,omitempty"`
+	RoutingAgent                   *KubernetesRoutingAgent                   `json:"routing_agent,omitempty"`
 }
 
 // KubernetesClusterUpdateRequest represents a request to update a Kubernetes cluster.
@@ -95,6 +96,7 @@ type KubernetesClusterUpdateRequest struct {
 	SurgeUpgrade                   bool                                      `json:"surge_upgrade,omitempty"`
 	ControlPlaneFirewall           *KubernetesControlPlaneFirewall           `json:"control_plane_firewall,omitempty"`
 	ClusterAutoscalerConfiguration *KubernetesClusterAutoscalerConfiguration `json:"cluster_autoscaler_configuration,omitempty"`
+	RoutingAgent                   *KubernetesRoutingAgent                   `json:"routing_agent,omitempty"`
 
 	// Convert cluster to run highly available control plane
 	HA *bool `json:"ha,omitempty"`
@@ -214,6 +216,7 @@ type KubernetesCluster struct {
 	RegistryEnabled                bool                                      `json:"registry_enabled,omitempty"`
 	ControlPlaneFirewall           *KubernetesControlPlaneFirewall           `json:"control_plane_firewall,omitempty"`
 	ClusterAutoscalerConfiguration *KubernetesClusterAutoscalerConfiguration `json:"cluster_autoscaler_configuration,omitempty"`
+	RoutingAgent                   *KubernetesRoutingAgent                   `json:"routing_agent,omitempty"`
 
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
 	CreatedAt time.Time                `json:"created_at,omitempty"`
@@ -254,6 +257,11 @@ type KubernetesMaintenancePolicy struct {
 type KubernetesControlPlaneFirewall struct {
 	Enabled          *bool    `json:"enabled"`
 	AllowedAddresses []string `json:"allowed_addresses"`
+}
+
+// KubernetesRoutingAgent represents information about the routing-agent cluster plugin.
+type KubernetesRoutingAgent struct {
+	Enabled *bool `json:"enabled"`
 }
 
 // KubernetesClusterAutoscalerConfiguration represents Kubernetes cluster autoscaler configuration.

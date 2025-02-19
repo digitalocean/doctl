@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21
-	github.com/digitalocean/godo v1.136.0
+	github.com/digitalocean/godo v1.138.0
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -38,8 +38,6 @@ require (
 	k8s.io/client-go v0.26.2
 	sigs.k8s.io/yaml v1.3.0
 )
-
-replace github.com/digitalocean/godo v1.136.0 => /Users/deepaks/dev/open_source/godo
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
