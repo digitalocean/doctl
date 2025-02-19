@@ -35,11 +35,6 @@ type PartnerInterconnectAttachmentRoute struct {
 // PartnerInterconnectAttachmentRoutes is a slice of PartnerInterconnectAttachmentRoute.
 type PartnerInterconnectAttachmentRoutes []PartnerInterconnectAttachmentRoute
 
-// PartnerInterconnectAttachmentServiceKey wraps a godo ServiceKey.
-type PartnerInterconnectAttachmentServiceKey struct {
-	*godo.ServiceKey
-}
-
 // PartnerInterconnectAttachmentBGPAuthKey wrap a godo BgpAuthKey.
 type PartnerInterconnectAttachmentBGPAuthKey struct {
 	*godo.BgpAuthKey
@@ -59,7 +54,6 @@ type PartnerInterconnectAttachmentsService interface {
 	DeletePartnerInterconnectAttachment(iaID string) error
 	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error)
 	ListPartnerInterconnectAttachmentRoutes(iaID string) (PartnerInterconnectAttachmentRoutes, error)
-	GetServiceKey(iaID string) (*PartnerInterconnectAttachmentServiceKey, error)
 	GetBGPAuthKey(iaID string) (*PartnerInterconnectAttachmentBGPAuthKey, error)
 	RegenerateServiceKey(iaID string) (*PartnerInterconnectAttachmentRegenerateServiceKey, error)
 }
@@ -167,14 +161,6 @@ func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmen
 	}
 
 	return list, nil
-}
-
-func (p *partnerInterconnectAttachmentsService) GetServiceKey(iaID string) (*PartnerInterconnectAttachmentServiceKey, error) {
-	serviceKey, _, err := p.client.PartnerInterconnectAttachments.GetServiceKey(context.TODO(), iaID)
-	if err != nil {
-		return nil, err
-	}
-	return &PartnerInterconnectAttachmentServiceKey{ServiceKey: serviceKey}, nil
 }
 
 func (p *partnerInterconnectAttachmentsService) GetBGPAuthKey(iaID string) (*PartnerInterconnectAttachmentBGPAuthKey, error) {

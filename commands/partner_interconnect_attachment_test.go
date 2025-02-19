@@ -41,13 +41,6 @@ var (
 		testPartnerAttachmentRoute,
 	}
 
-	testServiceKey = do.PartnerInterconnectAttachmentServiceKey{
-		ServiceKey: &godo.ServiceKey{
-			ServiceKey: "test-service-key",
-			State:      "active",
-		},
-	}
-
 	testRegenerateServiceKey = do.PartnerInterconnectAttachmentRegenerateServiceKey{
 		RegenerateServiceKey: &godo.RegenerateServiceKey{},
 	}
