@@ -43,8 +43,9 @@ var (
 
 	testServiceKey = do.PartnerInterconnectAttachmentServiceKey{
 		ServiceKey: &godo.ServiceKey{
-			ServiceKey: "test-service-key",
-			State:      "active",
+			Value:     "test-service-key",
+			State:     "active",
+			CreatedAt: time.Date(2025, 1, 30, 0, 0, 0, 0, time.UTC),
 		},
 	}
 )

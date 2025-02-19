@@ -125,15 +125,17 @@ func (v *PartnerInterconnectAttachmentServiceKey) JSON(out io.Writer) error {
 
 func (v *PartnerInterconnectAttachmentServiceKey) Cols() []string {
 	return []string{
-		"Key",
+		"Value",
 		"State",
+		"CreatedAt",
 	}
 }
 
 func (v *PartnerInterconnectAttachmentServiceKey) ColMap() map[string]string {
 	return map[string]string{
-		"Key":   "Key",
-		"State": "State",
+		"Value":     "Value",
+		"State":     "State",
+		"CreatedAt": "CreatedAt",
 	}
 }
 
@@ -141,8 +143,9 @@ func (v *PartnerInterconnectAttachmentServiceKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{
-		"Key":   v.Key.ServiceKey.ServiceKey,
-		"State": v.Key.State,
+		"Value":     v.Key.ServiceKey.Value,
+		"State":     v.Key.ServiceKey.State,
+		"CreatedAt": v.Key.ServiceKey.CreatedAt,
 	}
 	out = append(out, o)
 

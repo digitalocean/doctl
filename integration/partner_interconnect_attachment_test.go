@@ -69,15 +69,15 @@ a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
 }
 `
 	interconnectGetServiceKeyOutput = `
-Key                 State
-test-service-key    active
+Value               State     CreatedAt
+test-service-key    active    2025-01-30 12:00:00 +0000 UTC	
 	`
 
 	interconnectGetServiceKeyResponse = `
 {
 	"service_key": {
 		"created_at": "2025-01-30T12:00:00Z",
-		"service_key": "test-service-key",
+		"value": "test-service-key",
 		"state": "active"
 	}
 }`
@@ -290,7 +290,7 @@ var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testin
 				"network",
 				"interconnect-attachment",
 				"get-service-key",
-				"--format", "Key",
+				"--format", "Value",
 				"--no-header",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)

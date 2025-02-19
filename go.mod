@@ -39,6 +39,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
+replace github.com/digitalocean/godo v1.138.0 => github.com/guptado/godo v0.0.0-20250219083849-2f80d81d1f61
+
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/apache/openwhisk-client-go v0.0.0-20221014112704-1ca897633f2d
