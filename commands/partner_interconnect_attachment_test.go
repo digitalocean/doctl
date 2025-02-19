@@ -5,11 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/digitalocean/godo"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -28,6 +27,17 @@ var (
 
 	testPartnerIAList = do.PartnerInterconnectAttachments{
 		testPartnerAttachment,
+	}
+
+	testPartnerAttachmentRoute = do.PartnerInterconnectAttachmentRoute{
+		RemoteRoute: &godo.RemoteRoute{
+			ID:   "test-route-id",
+			Cidr: "10.10.0.0/24",
+		},
+	}
+
+	testPartnerIARouteList = do.PartnerInterconnectAttachmentRoutes{
+		testPartnerAttachmentRoute,
 	}
 
 	testServiceKey = do.PartnerInterconnectAttachmentServiceKey{
@@ -52,7 +62,7 @@ func TestPartnerInterconnectAttachmentsCommand(t *testing.T) {
 	cmd := PartnerInterconnectAttachments()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "get-service-key", "regenerate-service-key", "get-bgp-auth-key")
+	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "get-service-key", "regenerate-service-key", "get-bgp-auth-key")
 }
 
 func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
@@ -166,6 +176,19 @@ func TestInterconnectAttachmentsUpdateNoID(t *testing.T) {
 
 		err := RunPartnerInterconnectAttachmentUpdate(config)
 		assert.Error(t, err)
+	})
+}
+
+func TestInterconnectAttachmentRoutesList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+
+		iaID := "ia-uuid1"
+		config.Args = append(config.Args, iaID)
+		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachmentRoutes(iaID).Return(testPartnerIARouteList, nil)
+
+		err := RunPartnerInterconnectAttachmentRouteList(config)
+		assert.NoError(t, err)
 	})
 }
 
