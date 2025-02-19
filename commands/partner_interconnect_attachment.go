@@ -147,7 +147,7 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerInterconnectAttachmentRegenerateServiceKey{}))
 	AddStringFlag(cmdGetPartnerIARegenerateServiceKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdGetPartnerIARegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" interconnect-attachment regen-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		`: doctl network --type "partner" interconnect-attachment regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdGetPartnerIAGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentBGPAuthKey, "get-bgp-auth-key <interconnect-attachment-id>",
 		"Retrieves a BGP Auth key of Partner Interconnect Attachment", "Retrieves information about a BGP Auth key of Partner Interconnect Attachment", Writer,
