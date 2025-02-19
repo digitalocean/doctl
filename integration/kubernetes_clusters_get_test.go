@@ -115,7 +115,7 @@ var (
 }
 `
 
-	k8sGetOutput = `ID                 Name               Region    Version              Auto Upgrade    HA Control Plane    Status     Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags          Created At                       Updated At                       Node Pools       Autoscaler Scale Down Utilization    Autoscaler Scale Down Unneeded Time
-some-cluster-id    some-cluster-id    nyc3      some-kube-version    true            false               running                                                            production    2018-11-15 16:00:11 +0000 UTC    2018-11-15 16:00:11 +0000 UTC    frontend-pool    50%                                  1m30s
+	k8sGetOutput = `ID                 Name               Region    Version              Auto Upgrade    HA Control Plane    Status     Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags          Created At                       Updated At                       Node Pools       Autoscaler Scale Down Utilization    Autoscaler Scale Down Unneeded Time    Routing Agent
+some-cluster-id    some-cluster-id    nyc3      some-kube-version    true            false               running                                                            production    2018-11-15 16:00:11 +0000 UTC    2018-11-15 16:00:11 +0000 UTC    frontend-pool    50%                                  1m30s                                  false
 `
 )
