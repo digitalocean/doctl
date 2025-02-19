@@ -141,7 +141,7 @@ func (v *PartnerInterconnectAttachmentServiceKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{
-		"Key":   v.Key.ServiceKey,
+		"Key":   v.Key.ServiceKey.ServiceKey,
 		"State": v.Key.State,
 	}
 	out = append(out, o)

@@ -215,7 +215,7 @@ func TestInterconnectAttachmentsRegenerateServiceKey(t *testing.T) {
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunGetPartnerInterconnectAttachmentRegenerateServiceKey(config)
+		err := RunPartnerInterconnectAttachmentRegenerateServiceKey(config)
 		assert.NoError(t, err)
 	})
 }

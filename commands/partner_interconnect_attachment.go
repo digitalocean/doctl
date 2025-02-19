@@ -142,7 +142,7 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" interconnect-attachment get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdGetPartnerIARegenerateServiceKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentRegenerateServiceKey, "regenerate-service-key <interconnect-attachment-id>",
+	cmdGetPartnerIARegenerateServiceKey := CmdBuilder(cmd, RunPartnerInterconnectAttachmentRegenerateServiceKey, "regenerate-service-key <interconnect-attachment-id>",
 		"Regenerates a Service key of Partner Interconnect Attachment", "Regenerates information about a Service key of Partner Interconnect Attachment", Writer,
 		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerInterconnectAttachmentRegenerateServiceKey{}))
 	AddStringFlag(cmdGetPartnerIARegenerateServiceKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
@@ -346,8 +346,8 @@ func RunGetPartnerInterconnectAttachmentServiceKey(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunGetPartnerInterconnectAttachmentRegenerateServiceKey regenerates a service key of existing Partner Interconnect Attachment
-func RunGetPartnerInterconnectAttachmentRegenerateServiceKey(c *CmdConfig) error {
+// RunPartnerInterconnectAttachmentRegenerateServiceKey regenerates a service key of existing Partner Interconnect Attachment
+func RunPartnerInterconnectAttachmentRegenerateServiceKey(c *CmdConfig) error {
 
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
