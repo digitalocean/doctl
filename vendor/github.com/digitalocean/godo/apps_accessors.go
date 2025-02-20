@@ -37,6 +37,14 @@ func (a *App) GetCreatedAt() time.Time {
 	return a.CreatedAt
 }
 
+// GetDedicatedIps returns the DedicatedIps field.
+func (a *App) GetDedicatedIps() []*AppDedicatedIp {
+	if a == nil {
+		return nil
+	}
+	return a.DedicatedIps
+}
+
 // GetDefaultIngress returns the DefaultIngress field.
 func (a *App) GetDefaultIngress() string {
 	if a == nil {
@@ -557,6 +565,30 @@ func (a *AppDatabaseSpec) GetVersion() string {
 	return a.Version
 }
 
+// GetID returns the ID field.
+func (a *AppDedicatedIp) GetID() string {
+	if a == nil {
+		return ""
+	}
+	return a.ID
+}
+
+// GetIp returns the Ip field.
+func (a *AppDedicatedIp) GetIp() string {
+	if a == nil {
+		return ""
+	}
+	return a.Ip
+}
+
+// GetStatus returns the Status field.
+func (a *AppDedicatedIp) GetStatus() AppDedicatedIpStatus {
+	if a == nil {
+		return ""
+	}
+	return a.Status
+}
+
 // GetCertificateExpiresAt returns the CertificateExpiresAt field.
 func (a *AppDomain) GetCertificateExpiresAt() time.Time {
 	if a == nil {
@@ -773,6 +805,14 @@ func (a *AppFunctionsSpec) GetAlerts() []*AppAlertSpec {
 	return a.Alerts
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (a *AppFunctionsSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
+}
+
 // GetCORS returns the CORS field.
 func (a *AppFunctionsSpec) GetCORS() *AppCORSPolicy {
 	if a == nil {
@@ -981,6 +1021,14 @@ func (a *AppIngressSpecRuleStringMatch) GetPrefix() string {
 	return a.Prefix
 }
 
+// GetBandwidthAllowanceGib returns the BandwidthAllowanceGib field.
+func (a *AppInstanceSize) GetBandwidthAllowanceGib() string {
+	if a == nil {
+		return ""
+	}
+	return a.BandwidthAllowanceGib
+}
+
 // GetCPUs returns the CPUs field.
 func (a *AppInstanceSize) GetCPUs() string {
 	if a == nil {
@@ -997,6 +1045,22 @@ func (a *AppInstanceSize) GetCPUType() AppInstanceSizeCPUType {
 	return a.CPUType
 }
 
+// GetDeprecationIntent returns the DeprecationIntent field.
+func (a *AppInstanceSize) GetDeprecationIntent() bool {
+	if a == nil {
+		return false
+	}
+	return a.DeprecationIntent
+}
+
+// GetFeaturePreview returns the FeaturePreview field.
+func (a *AppInstanceSize) GetFeaturePreview() bool {
+	if a == nil {
+		return false
+	}
+	return a.FeaturePreview
+}
+
 // GetMemoryBytes returns the MemoryBytes field.
 func (a *AppInstanceSize) GetMemoryBytes() string {
 	if a == nil {
@@ -1011,6 +1075,22 @@ func (a *AppInstanceSize) GetName() string {
 		return ""
 	}
 	return a.Name
+}
+
+// GetScalable returns the Scalable field.
+func (a *AppInstanceSize) GetScalable() bool {
+	if a == nil {
+		return false
+	}
+	return a.Scalable
+}
+
+// GetSingleInstanceOnly returns the SingleInstanceOnly field.
+func (a *AppInstanceSize) GetSingleInstanceOnly() bool {
+	if a == nil {
+		return false
+	}
+	return a.SingleInstanceOnly
 }
 
 // GetSlug returns the Slug field.
@@ -1067,6 +1147,14 @@ func (a *AppJobSpec) GetAlerts() []*AppAlertSpec {
 		return nil
 	}
 	return a.Alerts
+}
+
+// GetBitbucket returns the Bitbucket field.
+func (a *AppJobSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
 }
 
 // GetBuildCommand returns the BuildCommand field.
@@ -1189,6 +1277,22 @@ func (a *AppJobSpec) GetSourceDir() string {
 	return a.SourceDir
 }
 
+// GetTermination returns the Termination field.
+func (a *AppJobSpec) GetTermination() *AppJobSpecTermination {
+	if a == nil {
+		return nil
+	}
+	return a.Termination
+}
+
+// GetGracePeriodSeconds returns the GracePeriodSeconds field.
+func (a *AppJobSpecTermination) GetGracePeriodSeconds() int32 {
+	if a == nil {
+		return 0
+	}
+	return a.GracePeriodSeconds
+}
+
 // GetDatadog returns the Datadog field.
 func (a *AppLogDestinationSpec) GetDatadog() *AppLogDestinationSpecDataDog {
 	if a == nil {
@@ -1227,6 +1331,14 @@ func (a *AppLogDestinationSpec) GetName() string {
 		return ""
 	}
 	return a.Name
+}
+
+// GetOpenSearch returns the OpenSearch field.
+func (a *AppLogDestinationSpec) GetOpenSearch() *AppLogDestinationSpecOpenSearch {
+	if a == nil {
+		return nil
+	}
+	return a.OpenSearch
 }
 
 // GetPapertrail returns the Papertrail field.
@@ -1285,12 +1397,68 @@ func (a *AppLogDestinationSpecLogtail) GetToken() string {
 	return a.Token
 }
 
+// GetBasicAuth returns the BasicAuth field.
+func (a *AppLogDestinationSpecOpenSearch) GetBasicAuth() *OpenSearchBasicAuth {
+	if a == nil {
+		return nil
+	}
+	return a.BasicAuth
+}
+
+// GetClusterName returns the ClusterName field.
+func (a *AppLogDestinationSpecOpenSearch) GetClusterName() string {
+	if a == nil {
+		return ""
+	}
+	return a.ClusterName
+}
+
+// GetEndpoint returns the Endpoint field.
+func (a *AppLogDestinationSpecOpenSearch) GetEndpoint() string {
+	if a == nil {
+		return ""
+	}
+	return a.Endpoint
+}
+
+// GetIndexName returns the IndexName field.
+func (a *AppLogDestinationSpecOpenSearch) GetIndexName() string {
+	if a == nil {
+		return ""
+	}
+	return a.IndexName
+}
+
 // GetEndpoint returns the Endpoint field.
 func (a *AppLogDestinationSpecPapertrail) GetEndpoint() string {
 	if a == nil {
 		return ""
 	}
 	return a.Endpoint
+}
+
+// GetArchive returns the Archive field.
+func (a *AppMaintenanceSpec) GetArchive() bool {
+	if a == nil {
+		return false
+	}
+	return a.Archive
+}
+
+// GetEnabled returns the Enabled field.
+func (a *AppMaintenanceSpec) GetEnabled() bool {
+	if a == nil {
+		return false
+	}
+	return a.Enabled
+}
+
+// GetOfflinePageURL returns the OfflinePageURL field.
+func (a *AppMaintenanceSpec) GetOfflinePageURL() string {
+	if a == nil {
+		return ""
+	}
+	return a.OfflinePageURL
 }
 
 // GetAppID returns the AppID field.
@@ -1501,6 +1669,14 @@ func (a *AppServiceSpec) GetAutoscaling() *AppAutoscalingSpec {
 	return a.Autoscaling
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (a *AppServiceSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
+}
+
 // GetBuildCommand returns the BuildCommand field.
 func (a *AppServiceSpec) GetBuildCommand() string {
 	if a == nil {
@@ -1629,6 +1805,14 @@ func (a *AppServiceSpec) GetName() string {
 	return a.Name
 }
 
+// GetProtocol returns the Protocol field.
+func (a *AppServiceSpec) GetProtocol() ServingProtocol {
+	if a == nil {
+		return ""
+	}
+	return a.Protocol
+}
+
 // GetRoutes returns the Routes field.
 func (a *AppServiceSpec) GetRoutes() []*AppRouteSpec {
 	if a == nil {
@@ -1651,6 +1835,14 @@ func (a *AppServiceSpec) GetSourceDir() string {
 		return ""
 	}
 	return a.SourceDir
+}
+
+// GetTermination returns the Termination field.
+func (a *AppServiceSpec) GetTermination() *AppServiceSpecTermination {
+	if a == nil {
+		return nil
+	}
+	return a.Termination
 }
 
 // GetFailureThreshold returns the FailureThreshold field.
@@ -1715,6 +1907,22 @@ func (a *AppServiceSpecHealthCheck) GetTimeoutSeconds() int32 {
 		return 0
 	}
 	return a.TimeoutSeconds
+}
+
+// GetDrainSeconds returns the DrainSeconds field.
+func (a *AppServiceSpecTermination) GetDrainSeconds() int32 {
+	if a == nil {
+		return 0
+	}
+	return a.DrainSeconds
+}
+
+// GetGracePeriodSeconds returns the GracePeriodSeconds field.
+func (a *AppServiceSpecTermination) GetGracePeriodSeconds() int32 {
+	if a == nil {
+		return 0
+	}
+	return a.GracePeriodSeconds
 }
 
 // GetAlerts returns the Alerts field.
@@ -1789,6 +1997,14 @@ func (a *AppSpec) GetJobs() []*AppJobSpec {
 	return a.Jobs
 }
 
+// GetMaintenance returns the Maintenance field.
+func (a *AppSpec) GetMaintenance() *AppMaintenanceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Maintenance
+}
+
 // GetName returns the Name field.
 func (a *AppSpec) GetName() string {
 	if a == nil {
@@ -1827,6 +2043,14 @@ func (a *AppSpec) GetWorkers() []*AppWorkerSpec {
 		return nil
 	}
 	return a.Workers
+}
+
+// GetBitbucket returns the Bitbucket field.
+func (a *AppStaticSiteSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
 }
 
 // GetBuildCommand returns the BuildCommand field.
@@ -2053,6 +2277,14 @@ func (a *AppWorkerSpec) GetAutoscaling() *AppAutoscalingSpec {
 	return a.Autoscaling
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (a *AppWorkerSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
+}
+
 // GetBuildCommand returns the BuildCommand field.
 func (a *AppWorkerSpec) GetBuildCommand() string {
 	if a == nil {
@@ -2163,6 +2395,46 @@ func (a *AppWorkerSpec) GetSourceDir() string {
 		return ""
 	}
 	return a.SourceDir
+}
+
+// GetTermination returns the Termination field.
+func (a *AppWorkerSpec) GetTermination() *AppWorkerSpecTermination {
+	if a == nil {
+		return nil
+	}
+	return a.Termination
+}
+
+// GetGracePeriodSeconds returns the GracePeriodSeconds field.
+func (a *AppWorkerSpecTermination) GetGracePeriodSeconds() int32 {
+	if a == nil {
+		return 0
+	}
+	return a.GracePeriodSeconds
+}
+
+// GetBranch returns the Branch field.
+func (b *BitbucketSourceSpec) GetBranch() string {
+	if b == nil {
+		return ""
+	}
+	return b.Branch
+}
+
+// GetDeployOnPush returns the DeployOnPush field.
+func (b *BitbucketSourceSpec) GetDeployOnPush() bool {
+	if b == nil {
+		return false
+	}
+	return b.DeployOnPush
+}
+
+// GetRepo returns the Repo field.
+func (b *BitbucketSourceSpec) GetRepo() string {
+	if b == nil {
+		return ""
+	}
+	return b.Repo
 }
 
 // GetDescription returns the Description field.
@@ -2499,6 +2771,14 @@ func (d *DeploymentCauseDetailsDOCRPush) GetTag() string {
 		return ""
 	}
 	return d.Tag
+}
+
+// GetBitbucket returns the Bitbucket field.
+func (d *DeploymentCauseDetailsGitPush) GetBitbucket() *BitbucketSourceSpec {
+	if d == nil {
+		return nil
+	}
+	return d.Bitbucket
 }
 
 // GetCommitAuthor returns the CommitAuthor field.
@@ -2877,6 +3157,14 @@ func (d *DeployTemplate) GetSpec() *AppSpec {
 	return d.Spec
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (d *DetectRequest) GetBitbucket() *BitbucketSourceSpec {
+	if d == nil {
+		return nil
+	}
+	return d.Bitbucket
+}
+
 // GetCommitSHA returns the CommitSHA field.
 func (d *DetectRequest) GetCommitSHA() string {
 	if d == nil {
@@ -2923,6 +3211,14 @@ func (d *DetectResponse) GetComponents() []*DetectResponseComponent {
 		return nil
 	}
 	return d.Components
+}
+
+// GetPending returns the Pending field.
+func (d *DetectResponse) GetPending() bool {
+	if d == nil {
+		return false
+	}
+	return d.Pending
 }
 
 // GetTemplate returns the Template field.
@@ -3117,6 +3413,158 @@ func (d *DetectResponseServerlessPackage) GetName() string {
 	return d.Name
 }
 
+// GetConnectionDetails returns the ConnectionDetails field.
+func (g *GetAppDatabaseConnectionDetailsResponse) GetConnectionDetails() []*GetDatabaseConnectionDetailsResponse {
+	if g == nil {
+		return nil
+	}
+	return g.ConnectionDetails
+}
+
+// GetComponentName returns the ComponentName field.
+func (g *GetDatabaseConnectionDetailsResponse) GetComponentName() string {
+	if g == nil {
+		return ""
+	}
+	return g.ComponentName
+}
+
+// GetDatabaseName returns the DatabaseName field.
+func (g *GetDatabaseConnectionDetailsResponse) GetDatabaseName() string {
+	if g == nil {
+		return ""
+	}
+	return g.DatabaseName
+}
+
+// GetDatabaseURL returns the DatabaseURL field.
+func (g *GetDatabaseConnectionDetailsResponse) GetDatabaseURL() string {
+	if g == nil {
+		return ""
+	}
+	return g.DatabaseURL
+}
+
+// GetHost returns the Host field.
+func (g *GetDatabaseConnectionDetailsResponse) GetHost() string {
+	if g == nil {
+		return ""
+	}
+	return g.Host
+}
+
+// GetPassword returns the Password field.
+func (g *GetDatabaseConnectionDetailsResponse) GetPassword() string {
+	if g == nil {
+		return ""
+	}
+	return g.Password
+}
+
+// GetPools returns the Pools field.
+func (g *GetDatabaseConnectionDetailsResponse) GetPools() []*GetDatabaseConnectionDetailsResponsePool {
+	if g == nil {
+		return nil
+	}
+	return g.Pools
+}
+
+// GetPort returns the Port field.
+func (g *GetDatabaseConnectionDetailsResponse) GetPort() int64 {
+	if g == nil {
+		return 0
+	}
+	return g.Port
+}
+
+// GetSslMode returns the SslMode field.
+func (g *GetDatabaseConnectionDetailsResponse) GetSslMode() string {
+	if g == nil {
+		return ""
+	}
+	return g.SslMode
+}
+
+// GetUsername returns the Username field.
+func (g *GetDatabaseConnectionDetailsResponse) GetUsername() string {
+	if g == nil {
+		return ""
+	}
+	return g.Username
+}
+
+// GetDatabaseName returns the DatabaseName field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetDatabaseName() string {
+	if g == nil {
+		return ""
+	}
+	return g.DatabaseName
+}
+
+// GetDatabaseURL returns the DatabaseURL field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetDatabaseURL() string {
+	if g == nil {
+		return ""
+	}
+	return g.DatabaseURL
+}
+
+// GetHost returns the Host field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetHost() string {
+	if g == nil {
+		return ""
+	}
+	return g.Host
+}
+
+// GetPassword returns the Password field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetPassword() string {
+	if g == nil {
+		return ""
+	}
+	return g.Password
+}
+
+// GetPoolName returns the PoolName field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetPoolName() string {
+	if g == nil {
+		return ""
+	}
+	return g.PoolName
+}
+
+// GetPort returns the Port field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetPort() int64 {
+	if g == nil {
+		return 0
+	}
+	return g.Port
+}
+
+// GetSslMode returns the SslMode field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetSslMode() string {
+	if g == nil {
+		return ""
+	}
+	return g.SslMode
+}
+
+// GetUsername returns the Username field.
+func (g *GetDatabaseConnectionDetailsResponsePool) GetUsername() string {
+	if g == nil {
+		return ""
+	}
+	return g.Username
+}
+
+// GetIsEnabled returns the IsEnabled field.
+func (g *GetDatabaseTrustedSourceResponse) GetIsEnabled() bool {
+	if g == nil {
+		return false
+	}
+	return g.IsEnabled
+}
+
 // GetBranch returns the Branch field.
 func (g *GitHubSourceSpec) GetBranch() string {
 	if g == nil {
@@ -3251,6 +3699,78 @@ func (l *ListBuildpacksResponse) GetBuildpacks() []*Buildpack {
 		return nil
 	}
 	return l.Buildpacks
+}
+
+// GetPassword returns the Password field.
+func (o *OpenSearchBasicAuth) GetPassword() string {
+	if o == nil {
+		return ""
+	}
+	return o.Password
+}
+
+// GetUser returns the User field.
+func (o *OpenSearchBasicAuth) GetUser() string {
+	if o == nil {
+		return ""
+	}
+	return o.User
+}
+
+// GetAppID returns the AppID field.
+func (r *ResetDatabasePasswordRequest) GetAppID() string {
+	if r == nil {
+		return ""
+	}
+	return r.AppID
+}
+
+// GetComponentName returns the ComponentName field.
+func (r *ResetDatabasePasswordRequest) GetComponentName() string {
+	if r == nil {
+		return ""
+	}
+	return r.ComponentName
+}
+
+// GetDeployment returns the Deployment field.
+func (r *ResetDatabasePasswordResponse) GetDeployment() *Deployment {
+	if r == nil {
+		return nil
+	}
+	return r.Deployment
+}
+
+// GetAppID returns the AppID field.
+func (t *ToggleDatabaseTrustedSourceRequest) GetAppID() string {
+	if t == nil {
+		return ""
+	}
+	return t.AppID
+}
+
+// GetComponentName returns the ComponentName field.
+func (t *ToggleDatabaseTrustedSourceRequest) GetComponentName() string {
+	if t == nil {
+		return ""
+	}
+	return t.ComponentName
+}
+
+// GetEnable returns the Enable field.
+func (t *ToggleDatabaseTrustedSourceRequest) GetEnable() bool {
+	if t == nil {
+		return false
+	}
+	return t.Enable
+}
+
+// GetIsEnabled returns the IsEnabled field.
+func (t *ToggleDatabaseTrustedSourceResponse) GetIsEnabled() bool {
+	if t == nil {
+		return false
+	}
+	return t.IsEnabled
 }
 
 // GetAffectedComponents returns the AffectedComponents field.

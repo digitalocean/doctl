@@ -5,10 +5,12 @@
 //
 //	mockgen -source ../pkg/listen/listen.go -package=mocks Listen
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -18,6 +20,7 @@ import (
 type MockListenerService struct {
 	ctrl     *gomock.Controller
 	recorder *MockListenerServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockListenerServiceMockRecorder is the mock recorder for MockListenerService.
@@ -37,28 +40,16 @@ func (m *MockListenerService) EXPECT() *MockListenerServiceMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method.
-func (m *MockListenerService) Start() error {
+// Listen mocks base method.
+func (m *MockListenerService) Listen(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start")
+	ret := m.ctrl.Call(m, "Listen", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Start indicates an expected call of Start.
-func (mr *MockListenerServiceMockRecorder) Start() *gomock.Call {
+// Listen indicates an expected call of Listen.
+func (mr *MockListenerServiceMockRecorder) Listen(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockListenerService)(nil).Start))
-}
-
-// Stop mocks base method.
-func (m *MockListenerService) Stop() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
-}
-
-// Stop indicates an expected call of Stop.
-func (mr *MockListenerServiceMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockListenerService)(nil).Stop))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Listen", reflect.TypeOf((*MockListenerService)(nil).Listen), ctx)
 }

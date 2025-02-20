@@ -5,6 +5,7 @@
 //
 //	mockgen -source regions.go -package=mocks RegionsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -19,6 +20,7 @@ import (
 type MockRegionsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockRegionsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockRegionsServiceMockRecorder is the mock recorder for MockRegionsService.

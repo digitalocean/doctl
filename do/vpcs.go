@@ -27,6 +27,14 @@ type VPC struct {
 // VPCs is a slice of VPC.
 type VPCs []VPC
 
+// VPCPeering wraps a godo VPCPeering
+type VPCPeering struct {
+	*godo.VPCPeering
+}
+
+// VPCPeerings is a slice of VPCPeering
+type VPCPeerings []VPCPeering
+
 // VPCsService is the godo VPCsService interface.
 type VPCsService interface {
 	Get(vpcUUID string) (*VPC, error)
@@ -35,6 +43,12 @@ type VPCsService interface {
 	Update(vpcUUID string, vpcr *godo.VPCUpdateRequest) (*VPC, error)
 	PartialUpdate(vpcUUID string, options ...godo.VPCSetField) (*VPC, error)
 	Delete(vpcUUID string) error
+	GetPeering(peeringID string) (*VPCPeering, error)
+	ListVPCPeerings() (VPCPeerings, error)
+	CreateVPCPeering(req *godo.VPCPeeringCreateRequest) (*VPCPeering, error)
+	UpdateVPCPeering(peeringID string, req *godo.VPCPeeringUpdateRequest) (*VPCPeering, error)
+	DeleteVPCPeering(peeringID string) error
+	ListVPCPeeringsByVPCID(vpcID string) (VPCPeerings, error)
 }
 
 var _ VPCsService = &vpcsService{}
@@ -118,4 +132,92 @@ func (v *vpcsService) PartialUpdate(vpcUUID string, options ...godo.VPCSetField)
 func (v *vpcsService) Delete(vpcUUID string) error {
 	_, err := v.client.VPCs.Delete(context.TODO(), vpcUUID)
 	return err
+}
+
+func (v *vpcsService) GetPeering(peeringID string) (*VPCPeering, error) {
+	peering, _, err := v.client.VPCs.GetVPCPeering(context.TODO(), peeringID)
+	if err != nil {
+		return nil, err
+	}
+	return &VPCPeering{VPCPeering: peering}, nil
+}
+
+func (v *vpcsService) ListVPCPeerings() (VPCPeerings, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := v.client.VPCs.ListVPCPeerings(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]VPCPeering, len(si))
+	for i := range si {
+		a := si[i].(*godo.VPCPeering)
+		list[i] = VPCPeering{VPCPeering: a}
+	}
+
+	return list, nil
+}
+
+func (v *vpcsService) UpdateVPCPeering(peeringID string, req *godo.VPCPeeringUpdateRequest) (*VPCPeering, error) {
+	peering, _, err := v.client.VPCs.UpdateVPCPeering(context.TODO(), peeringID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &VPCPeering{VPCPeering: peering}, nil
+}
+
+func (v *vpcsService) DeleteVPCPeering(peeringID string) error {
+	_, err := v.client.VPCs.DeleteVPCPeering(context.TODO(), peeringID)
+	return err
+}
+
+func (v *vpcsService) CreateVPCPeering(req *godo.VPCPeeringCreateRequest) (*VPCPeering, error) {
+	peering, _, err := v.client.VPCs.CreateVPCPeering(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &VPCPeering{VPCPeering: peering}, nil
+}
+
+func (v *vpcsService) ListVPCPeeringsByVPCID(vpcID string) (VPCPeerings, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := v.client.VPCs.ListVPCPeeringsByVPCID(context.TODO(), vpcID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]VPCPeering, len(si))
+	for i := range si {
+		a := si[i].(*godo.VPCPeering)
+		list[i] = VPCPeering{VPCPeering: a}
+	}
+
+	return list, nil
 }

@@ -72,8 +72,6 @@ var (
 func init() {
 	var cfgFile string
 
-	initConfig()
-
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
 		filepath.Join(defaultConfigHome(), defaultConfigName), "Specify a custom config file")
@@ -186,6 +184,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Version())
 	DoitCmd.AddCommand(Registry())
 	DoitCmd.AddCommand(VPCs())
+	DoitCmd.AddCommand(Network())
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Serverless())
@@ -206,10 +205,12 @@ func computeCmd() *Command {
 	cmd.AddCommand(Certificate())
 	cmd.AddCommand(DropletAction())
 	cmd.AddCommand(Droplet())
+	cmd.AddCommand(DropletAutoscale())
 	cmd.AddCommand(Domain())
 	cmd.AddCommand(Firewall())
 	cmd.AddCommand(ReservedIP())
 	cmd.AddCommand(ReservedIPAction())
+	cmd.AddCommand(ReservedIPv6())
 	cmd.AddCommand(Images())
 	cmd.AddCommand(ImageAction())
 	cmd.AddCommand(LoadBalancer())

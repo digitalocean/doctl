@@ -5,6 +5,7 @@
 //
 //	mockgen -source firewalls.go -package=mocks FirewallsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockFirewallsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockFirewallsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockFirewallsServiceMockRecorder is the mock recorder for MockFirewallsService.

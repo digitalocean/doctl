@@ -5,6 +5,7 @@
 //
 //	mockgen -source tags.go -package=mocks TagsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockTagsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockTagsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockTagsServiceMockRecorder is the mock recorder for MockTagsService.

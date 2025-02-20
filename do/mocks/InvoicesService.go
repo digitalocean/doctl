@@ -5,6 +5,7 @@
 //
 //	mockgen -source invoices.go -package=mocks InvoicesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -19,6 +20,7 @@ import (
 type MockInvoicesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockInvoicesServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockInvoicesServiceMockRecorder is the mock recorder for MockInvoicesService.

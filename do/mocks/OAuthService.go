@@ -5,6 +5,7 @@
 //
 //	mockgen -source oauth.go -package=mocks OAuthService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -19,6 +20,7 @@ import (
 type MockOAuthService struct {
 	ctrl     *gomock.Controller
 	recorder *MockOAuthServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockOAuthServiceMockRecorder is the mock recorder for MockOAuthService.

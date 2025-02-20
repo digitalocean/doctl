@@ -5,6 +5,7 @@
 //
 //	mockgen -source apps.go -package=mocks AppsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -19,6 +20,7 @@ import (
 type MockAppsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockAppsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockAppsServiceMockRecorder is the mock recorder for MockAppsService.
@@ -82,6 +84,21 @@ func (mr *MockAppsServiceMockRecorder) Delete(appID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAppsService)(nil).Delete), appID)
 }
 
+// Find mocks base method.
+func (m *MockAppsService) Find(appRef string) (*godo.App, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Find", appRef)
+	ret0, _ := ret[0].(*godo.App)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Find indicates an expected call of Find.
+func (mr *MockAppsServiceMockRecorder) Find(appRef any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockAppsService)(nil).Find), appRef)
+}
+
 // Get mocks base method.
 func (m *MockAppsService) Get(appID string) (*godo.App, error) {
 	m.ctrl.T.Helper()
@@ -110,6 +127,21 @@ func (m *MockAppsService) GetDeployment(appID, deploymentID string) (*godo.Deplo
 func (mr *MockAppsServiceMockRecorder) GetDeployment(appID, deploymentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployment", reflect.TypeOf((*MockAppsService)(nil).GetDeployment), appID, deploymentID)
+}
+
+// GetExec mocks base method.
+func (m *MockAppsService) GetExec(appID, deploymentID, component string) (*godo.AppExec, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExec", appID, deploymentID, component)
+	ret0, _ := ret[0].(*godo.AppExec)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExec indicates an expected call of GetExec.
+func (mr *MockAppsServiceMockRecorder) GetExec(appID, deploymentID, component any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExec", reflect.TypeOf((*MockAppsService)(nil).GetExec), appID, deploymentID, component)
 }
 
 // GetInstanceSize mocks base method.
@@ -275,6 +307,21 @@ func (m *MockAppsService) Propose(req *godo.AppProposeRequest) (*godo.AppPropose
 func (mr *MockAppsServiceMockRecorder) Propose(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Propose", reflect.TypeOf((*MockAppsService)(nil).Propose), req)
+}
+
+// Restart mocks base method.
+func (m *MockAppsService) Restart(appID string, components []string) (*godo.Deployment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Restart", appID, components)
+	ret0, _ := ret[0].(*godo.Deployment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Restart indicates an expected call of Restart.
+func (mr *MockAppsServiceMockRecorder) Restart(appID, components any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockAppsService)(nil).Restart), appID, components)
 }
 
 // Update mocks base method.

@@ -5,6 +5,7 @@
 //
 //	mockgen -source reserved_ips.go -package=mocks ReservedIPsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockReservedIPsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockReservedIPsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockReservedIPsServiceMockRecorder is the mock recorder for MockReservedIPsService.

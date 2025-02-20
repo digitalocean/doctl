@@ -36,6 +36,7 @@ func (lb *LoadBalancer) Cols() []string {
 	return []string{
 		"ID",
 		"IP",
+		"IPv6",
 		"Name",
 		"Status",
 		"Created",
@@ -49,6 +50,7 @@ func (lb *LoadBalancer) Cols() []string {
 		"StickySessions",
 		"HealthCheck",
 		"ForwardingRules",
+		"Firewall",
 		"DisableLetsEncryptDNSRecords",
 	}
 }
@@ -57,6 +59,7 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 	return map[string]string{
 		"ID":                           "ID",
 		"IP":                           "IP",
+		"IPv6":                         "IPv6",
 		"Name":                         "Name",
 		"Status":                       "Status",
 		"Created":                      "Created At",
@@ -70,6 +73,7 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 		"StickySessions":               "Sticky Sessions",
 		"HealthCheck":                  "Health Check",
 		"ForwardingRules":              "Forwarding Rules",
+		"Firewall":                     "Firewall Rules",
 		"DisableLetsEncryptDNSRecords": "Disable Lets Encrypt DNS Records",
 	}
 }
@@ -86,10 +90,10 @@ func (lb *LoadBalancer) KV() []map[string]any {
 		o := map[string]any{
 			"ID":                           l.ID,
 			"IP":                           l.IP,
+			"IPv6":                         l.IPv6,
 			"Name":                         l.Name,
 			"Status":                       l.Status,
 			"Created":                      l.Created,
-			"Region":                       l.Region.Slug,
 			"VPCUUID":                      l.VPCUUID,
 			"Tag":                          l.Tag,
 			"DropletIDs":                   strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]"),
@@ -99,11 +103,17 @@ func (lb *LoadBalancer) KV() []map[string]any {
 			"ForwardingRules":              strings.Join(forwardingRules, " "),
 			"DisableLetsEncryptDNSRecords": toBool(l.DisableLetsEncryptDNSRecords),
 		}
+		if l.Region != nil {
+			o["Region"] = l.Region.Slug
+		}
 		if l.SizeSlug != "" {
 			o["Size"] = l.SizeSlug
 		}
 		if l.SizeUnit > 0 {
 			o["SizeUnit"] = l.SizeUnit
+		}
+		if l.Firewall != nil {
+			o["Firewall"] = prettyPrintStruct(l.Firewall)
 		}
 		out = append(out, o)
 	}

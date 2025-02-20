@@ -5,6 +5,7 @@
 //
 //	mockgen -source droplet_actions.go -package=mocks DropletActionsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -12,6 +13,7 @@ import (
 	reflect "reflect"
 
 	do "github.com/digitalocean/doctl/do"
+	godo "github.com/digitalocean/godo"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -19,6 +21,7 @@ import (
 type MockDropletActionsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockDropletActionsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockDropletActionsServiceMockRecorder is the mock recorder for MockDropletActionsService.
@@ -36,6 +39,21 @@ func NewMockDropletActionsService(ctrl *gomock.Controller) *MockDropletActionsSe
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDropletActionsService) EXPECT() *MockDropletActionsServiceMockRecorder {
 	return m.recorder
+}
+
+// ChangeBackupPolicy mocks base method.
+func (m *MockDropletActionsService) ChangeBackupPolicy(arg0 int, arg1 *godo.DropletBackupPolicyRequest) (*do.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeBackupPolicy", arg0, arg1)
+	ret0, _ := ret[0].(*do.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangeBackupPolicy indicates an expected call of ChangeBackupPolicy.
+func (mr *MockDropletActionsServiceMockRecorder) ChangeBackupPolicy(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeBackupPolicy", reflect.TypeOf((*MockDropletActionsService)(nil).ChangeBackupPolicy), arg0, arg1)
 }
 
 // ChangeKernel mocks base method.
@@ -111,6 +129,21 @@ func (m *MockDropletActionsService) EnableBackupsByTag(arg0 string) (do.Actions,
 func (mr *MockDropletActionsServiceMockRecorder) EnableBackupsByTag(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableBackupsByTag", reflect.TypeOf((*MockDropletActionsService)(nil).EnableBackupsByTag), arg0)
+}
+
+// EnableBackupsWithPolicy mocks base method.
+func (m *MockDropletActionsService) EnableBackupsWithPolicy(arg0 int, arg1 *godo.DropletBackupPolicyRequest) (*do.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableBackupsWithPolicy", arg0, arg1)
+	ret0, _ := ret[0].(*do.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableBackupsWithPolicy indicates an expected call of EnableBackupsWithPolicy.
+func (mr *MockDropletActionsServiceMockRecorder) EnableBackupsWithPolicy(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableBackupsWithPolicy", reflect.TypeOf((*MockDropletActionsService)(nil).EnableBackupsWithPolicy), arg0, arg1)
 }
 
 // EnableIPv6 mocks base method.

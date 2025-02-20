@@ -5,6 +5,7 @@
 //
 //	mockgen -source monitoring.go -package=mocks MonitoringService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockMonitoringService struct {
 	ctrl     *gomock.Controller
 	recorder *MockMonitoringServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockMonitoringServiceMockRecorder is the mock recorder for MockMonitoringService.

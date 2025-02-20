@@ -39,6 +39,8 @@ type DropletActionsService interface {
 	EnableBackupsByTag(string) (Actions, error)
 	DisableBackups(int) (*Action, error)
 	DisableBackupsByTag(string) (Actions, error)
+	ChangeBackupPolicy(int, *godo.DropletBackupPolicyRequest) (*Action, error)
+	EnableBackupsWithPolicy(int, *godo.DropletBackupPolicyRequest) (*Action, error)
 	PasswordReset(int) (*Action, error)
 	RebuildByImageID(int, int) (*Action, error)
 	RebuildByImageSlug(int, string) (*Action, error)
@@ -174,6 +176,16 @@ func (das *dropletActionsService) DisableBackups(id int) (*Action, error) {
 func (das *dropletActionsService) DisableBackupsByTag(tag string) (Actions, error) {
 	a, _, err := das.client.DropletActions.DisableBackupsByTag(context.TODO(), tag)
 	return das.handleTagActionResponse(a, err)
+}
+
+func (das *dropletActionsService) ChangeBackupPolicy(id int, policy *godo.DropletBackupPolicyRequest) (*Action, error) {
+	a, _, err := das.client.DropletActions.ChangeBackupPolicy(context.TODO(), id, policy)
+	return das.handleActionResponse(a, err)
+}
+
+func (das *dropletActionsService) EnableBackupsWithPolicy(id int, policy *godo.DropletBackupPolicyRequest) (*Action, error) {
+	a, _, err := das.client.DropletActions.EnableBackupsWithPolicy(context.TODO(), id, policy)
+	return das.handleActionResponse(a, err)
 }
 
 func (das *dropletActionsService) PasswordReset(id int) (*Action, error) {

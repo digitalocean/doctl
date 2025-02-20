@@ -64,7 +64,7 @@ type OutputNamespace struct {
 }
 
 // FunctionParameter is the type of a parameter in the response body of action.get.  We do our
-// own JSON unmarshaling of these because the go OpenWhisk client doesn't include the "init" and
+// own JSON unmarshalling of these because the go OpenWhisk client doesn't include the "init" and
 // "encryption" members, of which at least "init" is needed.
 type FunctionParameter struct {
 	Key        string `json:"key"`

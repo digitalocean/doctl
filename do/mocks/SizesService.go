@@ -5,6 +5,7 @@
 //
 //	mockgen -source sizes.go -package=mocks SizesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -19,6 +20,7 @@ import (
 type MockSizesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockSizesServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockSizesServiceMockRecorder is the mock recorder for MockSizesService.
