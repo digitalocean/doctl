@@ -517,7 +517,7 @@ func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli bui
 
 		// TODO: get stack run image from builder image md after we pull it, see below
 		images = append(images, "digitaloceanapps/apps-run:heroku-18_c047ec7")
-		images = append(images, "digitaloceanapps/apps-run:heroku-22_f7a0bf0")
+		images = append(images, "digitaloceanapps/apps-run:heroku-22_d12075d")
 	}
 
 	if componentSpec.GetType() == godo.AppComponentTypeStaticSite {
