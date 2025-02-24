@@ -543,6 +543,8 @@ const (
 	ArgPartnerInterconnectAttachmentBGPPeerASN = "bgp-peer-asn"
 	// ArgPartnerInterconnectAttachmentBGPPeerIPAddress is the BGP IP address of the peer device
 	ArgPartnerInterconnectAttachmentBGPPeerRouterIP = "bgp-peer-router-ip"
+	// ArgPartnerInterconnectAttachmentBGPAuthKey is the BGP MD5 authentication key
+	ArgPartnerInterconnectAttachmentBGPAuthKey = "bgp-auth-key"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
