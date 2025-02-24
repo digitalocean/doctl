@@ -69,6 +69,7 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPLocalRouterIP, "", "", "BGP Local Router IP")
 	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
+	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPAuthKey, "", "", "BGP Auth Key")
 	cmdPartnerIACreate.Example = `The following example creates a Partner Interconnect Attachment: doctl network interconnect-attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	interconnectAttachmentDetails := `
@@ -221,6 +222,11 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 	bgpConfig.PeerRouterIP = bgpPeerRouterIP
+
+	bgpAuthKey, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPAuthKey)
+	if err != nil {
+		bgpConfig.AuthKey = bgpAuthKey
+	}
 
 	pias := c.PartnerInterconnectAttachments()
 	pia, err := pias.Create(r)
