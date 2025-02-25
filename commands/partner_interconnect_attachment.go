@@ -146,6 +146,18 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 	cmdGetPartnerIAGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" interconnect-attachment get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
+	interconnectAttachmentServiceKeyDetails := `
+- The Service key Value
+- The Service key State
+- The Service key CreatedAt`
+
+	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentServiceKey, "get-service-key <interconnect-attachment-id>",
+		"Retrieves a Service key of Partner Interconnect Attachment", "Retrieves information about a Service key of Partner Interconnect Attachment, including:"+interconnectAttachmentServiceKeyDetails, Writer,
+		aliasOpt("g-service-key"), displayerType(&displayers.PartnerInterconnectAttachmentServiceKey{}))
+	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" interconnect-attachment get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+
 	return cmd
 }
 
@@ -362,6 +374,31 @@ func RunGetPartnerInterconnectAttachmentBGPAuthKey(c *CmdConfig) error {
 
 	item := &displayers.PartnerInterconnectAttachmentBgpAuthKey{
 		Key: *bgpAuthKey,
+	}
+	return c.Display(item)
+}
+
+// RunGetPartnerInterconnectAttachmentServiceKey retrieves service key of existing Partner Interconnect Attachment
+func RunGetPartnerInterconnectAttachmentServiceKey(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
+
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	iaID := c.Args[0]
+
+	pias := c.PartnerInterconnectAttachments()
+	serviceKey, err := pias.GetServiceKey(iaID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.PartnerInterconnectAttachmentServiceKey{
+		Key: *serviceKey,
 	}
 	return c.Display(item)
 }

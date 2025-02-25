@@ -82,6 +82,19 @@ test-bgp-auth-key
 		"value": "test-bgp-auth-key"
 	}
 }`
+	interconnectGetServiceKeyOutput = `
+Value               State     CreatedAt
+test-service-key    active    2025-01-30 12:00:00 +0000 UTC	
+	`
+
+	interconnectGetServiceKeyResponse = `
+{
+	"service_key": {
+		"created_at": "2025-01-30T12:00:00Z",
+		"value": "test-service-key",
+		"state": "active"
+	}
+}`
 )
 
 var _ = suite("partner_interconnect_attachments/create", func(t *testing.T, when spec.G, it spec.S) {
@@ -352,6 +365,78 @@ var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testi
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal("test-bgp-auth-key", strings.TrimSpace(string(output)))
+		})
+	})
+})
+
+var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			switch req.URL.Path {
+			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(interconnectGetServiceKeyResponse))
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	when("no flags are passed", func() {
+		it("gets the specified service key", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"network",
+				"interconnect-attachment",
+				"get-service-key",
+				"c5537207-ebf0-47cb-bc10-6fac717cd672",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(interconnectGetServiceKeyOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("format and no-header flags are passed", func() {
+		it("gets the specified service key", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"network",
+				"interconnect-attachment",
+				"get-service-key",
+				"--format", "Value",
+				"--no-header",
+				"c5537207-ebf0-47cb-bc10-6fac717cd672",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal("test-service-key", strings.TrimSpace(string(output)))
 		})
 	})
 })

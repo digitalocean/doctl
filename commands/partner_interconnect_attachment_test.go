@@ -50,13 +50,21 @@ var (
 			Value: "test-bgp-auth-key",
 		},
 	}
+
+	testServiceKey = do.PartnerInterconnectAttachmentServiceKey{
+		ServiceKey: &godo.ServiceKey{
+			Value:     "test-service-key",
+			State:     "active",
+			CreatedAt: time.Date(2025, 1, 30, 0, 0, 0, 0, time.UTC),
+		},
+	}
 )
 
 func TestPartnerInterconnectAttachmentsCommand(t *testing.T) {
 	cmd := PartnerInterconnectAttachments()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "regenerate-service-key", "get-bgp-auth-key")
+	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "regenerate-service-key", "get-bgp-auth-key", "get-service-key")
 }
 
 func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
@@ -210,6 +218,20 @@ func TestInterconnectAttachmentsBgpAuthKey(t *testing.T) {
 		config.Args = append(config.Args, iaID)
 
 		err := RunGetPartnerInterconnectAttachmentBGPAuthKey(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestInterconnectAttachmentsGetServiceKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+
+		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
+		tm.partnerInterconnectAttachment.EXPECT().GetServiceKey(iaID).Return(&testServiceKey, nil)
+
+		config.Args = append(config.Args, iaID)
+
+		err := RunGetPartnerInterconnectAttachmentServiceKey(config)
 		assert.NoError(t, err)
 	})
 }
