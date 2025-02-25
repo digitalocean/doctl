@@ -102,6 +102,8 @@ type BGP struct {
 	PeerASN int `json:"peer_router_asn,omitempty"`
 	// PeerRouterIP is the peer router IP
 	PeerRouterIP string `json:"peer_router_ip,omitempty"`
+	// AuthKey is the authentication key
+	AuthKey string `json:"auth_key,omitempty"`
 }
 
 // ServiceKey represents the service key of a Partner Interconnect Attachment.
@@ -285,7 +287,7 @@ func (s *PartnerInterconnectAttachmentsServiceOp) GetServiceKey(ctx context.Cont
 	return root.ServiceKey, resp, nil
 }
 
-// ListRoutes lists all routes for a Partner Interconnect Attachment.
+// ListRoutes lists all remote routes for a Partner Interconnect Attachment.
 func (s *PartnerInterconnectAttachmentsServiceOp) ListRoutes(ctx context.Context, id string, opt *ListOptions) ([]*RemoteRoute, *Response, error) {
 	path, err := addOptions(fmt.Sprintf("%s/%s/remote_routes", partnerInterconnectAttachmentsBasePath, id), opt)
 	if err != nil {
@@ -311,7 +313,7 @@ func (s *PartnerInterconnectAttachmentsServiceOp) ListRoutes(ctx context.Context
 	return root.RemoteRoutes, resp, nil
 }
 
-// SetRoutes  updates specific properties of a Partner Interconnect Attachment.
+// SetRoutes updates specific properties of a Partner Interconnect Attachment.
 func (s *PartnerInterconnectAttachmentsServiceOp) SetRoutes(ctx context.Context, id string, set *PartnerInterconnectAttachmentSetRoutesRequest) (*PartnerInterconnectAttachment, *Response, error) {
 	path := fmt.Sprintf("%s/%s/remote_routes", partnerInterconnectAttachmentsBasePath, id)
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, set)

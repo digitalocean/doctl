@@ -69,6 +69,7 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPLocalRouterIP, "", "", "BGP Local Router IP")
 	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
+	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPAuthKey, "", "", "BGP Auth Key")
 	cmdPartnerIACreate.Example = `The following example creates a Partner Interconnect Attachment: doctl network interconnect-attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	interconnectAttachmentDetails := `
@@ -130,6 +131,20 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 	AddStringFlag(cmdPartnerIARouteList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIARouteList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
 		` doctl network --type "partner" interconnect-attachment list-routes --format ID,Cidr `
+
+	cmdGetPartnerIARegenerateServiceKey := CmdBuilder(cmd, RunPartnerInterconnectAttachmentRegenerateServiceKey, "regenerate-service-key <interconnect-attachment-id>",
+		"Regenerates a Service key of Partner Interconnect Attachment", "Regenerates information about a Service key of Partner Interconnect Attachment", Writer,
+		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerInterconnectAttachmentRegenerateServiceKey{}))
+	AddStringFlag(cmdGetPartnerIARegenerateServiceKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	cmdGetPartnerIARegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" interconnect-attachment regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+
+	cmdGetPartnerIAGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentBGPAuthKey, "get-bgp-auth-key <interconnect-attachment-id>",
+		"Retrieves a BGP Auth key of Partner Interconnect Attachment", "Retrieves information about a BGP Auth key of Partner Interconnect Attachment", Writer,
+		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerInterconnectAttachmentBgpAuthKey{}))
+	AddStringFlag(cmdGetPartnerIAGetBGPAuthKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	cmdGetPartnerIAGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" interconnect-attachment get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	interconnectAttachmentServiceKeyDetails := `
 - The Service key Value
@@ -219,6 +234,11 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 	}
 	bgpConfig.PeerRouterIP = bgpPeerRouterIP
 
+	bgpAuthKey, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPAuthKey)
+	if err != nil {
+		bgpConfig.AuthKey = bgpAuthKey
+	}
+
 	pias := c.PartnerInterconnectAttachments()
 	pia, err := pias.Create(r)
 	if err != nil {
@@ -303,6 +323,56 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 
 	item := &displayers.PartnerInterconnectAttachment{
 		PartnerInterconnectAttachments: do.PartnerInterconnectAttachments{*interconnectAttachment},
+	}
+	return c.Display(item)
+}
+
+// RunPartnerInterconnectAttachmentRegenerateServiceKey regenerates a service key of existing Partner Interconnect Attachment
+func RunPartnerInterconnectAttachmentRegenerateServiceKey(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
+
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	iaID := c.Args[0]
+
+	pias := c.PartnerInterconnectAttachments()
+	regenerateServiceKey, err := pias.RegenerateServiceKey(iaID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.PartnerInterconnectAttachmentRegenerateServiceKey{
+		RegenerateKey: *regenerateServiceKey,
+	}
+	return c.Display(item)
+}
+
+// RunGetPartnerInterconnectAttachmentBGPAuthKey get a bgp auth key of existing Partner Interconnect Attachment
+func RunGetPartnerInterconnectAttachmentBGPAuthKey(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
+
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	iaID := c.Args[0]
+
+	pias := c.PartnerInterconnectAttachments()
+	bgpAuthKey, err := pias.GetBGPAuthKey(iaID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.PartnerInterconnectAttachmentBgpAuthKey{
+		Key: *bgpAuthKey,
 	}
 	return c.Display(item)
 }

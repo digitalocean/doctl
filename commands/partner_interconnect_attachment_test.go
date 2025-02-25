@@ -41,6 +41,16 @@ var (
 		testPartnerAttachmentRoute,
 	}
 
+	testRegenerateServiceKey = do.PartnerInterconnectAttachmentRegenerateServiceKey{
+		RegenerateServiceKey: &godo.RegenerateServiceKey{},
+	}
+
+	testBGPAuthKey = do.PartnerInterconnectAttachmentBGPAuthKey{
+		BgpAuthKey: &godo.BgpAuthKey{
+			Value: "test-bgp-auth-key",
+		},
+	}
+
 	testServiceKey = do.PartnerInterconnectAttachmentServiceKey{
 		ServiceKey: &godo.ServiceKey{
 			Value:     "test-service-key",
@@ -54,7 +64,7 @@ func TestPartnerInterconnectAttachmentsCommand(t *testing.T) {
 	cmd := PartnerInterconnectAttachments()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "get-service-key")
+	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "regenerate-service-key", "get-bgp-auth-key", "get-service-key")
 }
 
 func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
@@ -180,6 +190,34 @@ func TestInterconnectAttachmentRoutesList(t *testing.T) {
 		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachmentRoutes(iaID).Return(testPartnerIARouteList, nil)
 
 		err := RunPartnerInterconnectAttachmentRouteList(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestInterconnectAttachmentsRegenerateServiceKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+
+		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
+		tm.partnerInterconnectAttachment.EXPECT().RegenerateServiceKey(iaID).Return(&testRegenerateServiceKey, nil)
+
+		config.Args = append(config.Args, iaID)
+
+		err := RunPartnerInterconnectAttachmentRegenerateServiceKey(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestInterconnectAttachmentsBgpAuthKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+
+		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
+		tm.partnerInterconnectAttachment.EXPECT().GetBGPAuthKey(iaID).Return(&testBGPAuthKey, nil)
+
+		config.Args = append(config.Args, iaID)
+
+		err := RunGetPartnerInterconnectAttachmentBGPAuthKey(config)
 		assert.NoError(t, err)
 	})
 }
