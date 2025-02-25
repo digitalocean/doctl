@@ -148,7 +148,8 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
 	interconnectAttachmentServiceKeyDetails := `
 - The Service key Value
-- The Service key State`
+- The Service key State
+- The Service key CreatedAt`
 
 	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentServiceKey, "get-service-key <interconnect-attachment-id>",
 		"Retrieves a Service key of Partner Interconnect Attachment", "Retrieves information about a Service key of Partner Interconnect Attachment, including:"+interconnectAttachmentServiceKeyDetails, Writer,
