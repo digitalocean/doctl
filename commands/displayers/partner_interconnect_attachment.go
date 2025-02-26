@@ -74,3 +74,134 @@ func (v *PartnerInterconnectAttachment) KV() []map[string]any {
 
 	return out
 }
+
+type PartnerInterconnectAttachmentRoute struct {
+	PartnerInterconnectAttachmentRoutes do.PartnerInterconnectAttachmentRoutes
+}
+
+var _ Displayable = &PartnerInterconnectAttachmentRoute{}
+
+func (v *PartnerInterconnectAttachmentRoute) JSON(out io.Writer) error {
+	return writeJSON(v.PartnerInterconnectAttachmentRoutes, out)
+}
+
+func (v *PartnerInterconnectAttachmentRoute) Cols() []string {
+	return []string{
+		"ID",
+		"Cidr",
+	}
+}
+
+func (v *PartnerInterconnectAttachmentRoute) ColMap() map[string]string {
+	return map[string]string{
+		"ID":   "ID",
+		"Cidr": "Cidr",
+	}
+}
+
+func (v *PartnerInterconnectAttachmentRoute) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(v.PartnerInterconnectAttachmentRoutes))
+
+	for _, ia := range v.PartnerInterconnectAttachmentRoutes {
+		o := map[string]any{
+			"ID":   ia.ID,
+			"Cidr": ia.Cidr,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
+type PartnerInterconnectAttachmentRegenerateServiceKey struct {
+	RegenerateKey do.PartnerInterconnectAttachmentRegenerateServiceKey
+}
+
+var _ Displayable = &PartnerInterconnectAttachmentRegenerateServiceKey{}
+
+func (v *PartnerInterconnectAttachmentRegenerateServiceKey) JSON(out io.Writer) error {
+	return writeJSON(v.RegenerateKey, out)
+}
+
+func (v *PartnerInterconnectAttachmentRegenerateServiceKey) Cols() []string {
+	return []string{}
+}
+
+func (v *PartnerInterconnectAttachmentRegenerateServiceKey) ColMap() map[string]string {
+	return map[string]string{}
+}
+
+func (v *PartnerInterconnectAttachmentRegenerateServiceKey) KV() []map[string]any {
+	out := make([]map[string]any, 0, 1)
+
+	o := map[string]any{}
+	out = append(out, o)
+	return out
+}
+
+type PartnerInterconnectAttachmentBgpAuthKey struct {
+	Key do.PartnerInterconnectAttachmentBGPAuthKey
+}
+
+var _ Displayable = &PartnerInterconnectAttachmentBgpAuthKey{}
+
+func (v *PartnerInterconnectAttachmentBgpAuthKey) JSON(out io.Writer) error {
+	return writeJSON(v.Key, out)
+}
+
+func (v *PartnerInterconnectAttachmentBgpAuthKey) Cols() []string {
+	return []string{"Value"}
+}
+
+func (v *PartnerInterconnectAttachmentBgpAuthKey) ColMap() map[string]string {
+	return map[string]string{"Value": "Value"}
+}
+
+func (v *PartnerInterconnectAttachmentBgpAuthKey) KV() []map[string]any {
+	out := make([]map[string]any, 0, 1)
+
+	o := map[string]any{
+		"Value": v.Key.BgpAuthKey.Value,
+	}
+	out = append(out, o)
+	return out
+}
+
+type PartnerInterconnectAttachmentServiceKey struct {
+	Key do.PartnerInterconnectAttachmentServiceKey
+}
+
+var _ Displayable = &PartnerInterconnectAttachmentServiceKey{}
+
+func (v *PartnerInterconnectAttachmentServiceKey) JSON(out io.Writer) error {
+	return writeJSON(v.Key, out)
+}
+
+func (v *PartnerInterconnectAttachmentServiceKey) Cols() []string {
+	return []string{
+		"Value",
+		"State",
+		"CreatedAt",
+	}
+}
+
+func (v *PartnerInterconnectAttachmentServiceKey) ColMap() map[string]string {
+	return map[string]string{
+		"Value":     "Value",
+		"State":     "State",
+		"CreatedAt": "CreatedAt",
+	}
+}
+
+func (v *PartnerInterconnectAttachmentServiceKey) KV() []map[string]any {
+	out := make([]map[string]any, 0, 1)
+
+	o := map[string]any{
+		"Value":     v.Key.ServiceKey.Value,
+		"State":     v.Key.ServiceKey.State,
+		"CreatedAt": v.Key.ServiceKey.CreatedAt,
+	}
+	out = append(out, o)
+
+	return out
+}

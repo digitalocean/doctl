@@ -45,6 +45,9 @@ var (
 				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
 				ScaleDownUnneededTime:         &scaleDownUnneededTime,
 			},
+			RoutingAgent: &godo.KubernetesRoutingAgent{
+				Enabled: boolPtr(true),
+			},
 		},
 	}
 
@@ -523,6 +526,9 @@ func TestKubernetesCreate(t *testing.T) {
 				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
 				ScaleDownUnneededTime:         &scaleDownUnneededTime,
 			},
+			RoutingAgent: &godo.KubernetesRoutingAgent{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -548,6 +554,8 @@ func TestKubernetesCreate(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
+
+		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -606,6 +614,9 @@ func TestKubernetesUpdate(t *testing.T) {
 				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
 				ScaleDownUnneededTime:         &scaleDownUnneededTime,
 			},
+			RoutingAgent: &godo.KubernetesRoutingAgent{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -619,6 +630,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
+		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -645,6 +657,9 @@ func TestKubernetesUpdate(t *testing.T) {
 				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
 				ScaleDownUnneededTime:         &scaleDownUnneededTime,
 			},
+			RoutingAgent: &godo.KubernetesRoutingAgent{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
@@ -658,6 +673,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
+		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)

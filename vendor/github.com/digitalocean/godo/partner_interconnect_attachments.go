@@ -21,6 +21,8 @@ type PartnerInterconnectAttachmentsService interface {
 	GetServiceKey(context.Context, string) (*ServiceKey, *Response, error)
 	SetRoutes(context.Context, string, *PartnerInterconnectAttachmentSetRoutesRequest) (*PartnerInterconnectAttachment, *Response, error)
 	ListRoutes(context.Context, string, *ListOptions) ([]*RemoteRoute, *Response, error)
+	GetBGPAuthKey(ctx context.Context, iaID string) (*BgpAuthKey, *Response, error)
+	RegenerateServiceKey(ctx context.Context, iaID string) (*RegenerateServiceKey, *Response, error)
 }
 
 var _ PartnerInterconnectAttachmentsService = &PartnerInterconnectAttachmentsServiceOp{}
@@ -97,14 +99,18 @@ type BGP struct {
 	// LocalRouterIP is the local router IP
 	LocalRouterIP string `json:"local_router_ip,omitempty"`
 	// PeerASN is the peer ASN
-	PeerASN int `json:"peer_asn,omitempty"`
+	PeerASN int `json:"peer_router_asn,omitempty"`
 	// PeerRouterIP is the peer router IP
 	PeerRouterIP string `json:"peer_router_ip,omitempty"`
+	// AuthKey is the authentication key
+	AuthKey string `json:"auth_key,omitempty"`
 }
 
 // ServiceKey represents the service key of a Partner Interconnect Attachment.
 type ServiceKey struct {
-	ServiceKey string `json:"service_key,omitempty"`
+	Value     string    `json:"value,omitempty"`
+	State     string    `json:"state,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
 }
 
 // RemoteRoute represents a route for a Partner Interconnect Attachment.
@@ -155,6 +161,21 @@ type remoteRoutesRoot struct {
 	RemoteRoutes []*RemoteRoute `json:"remote_routes"`
 	Links        *Links         `json:"links"`
 	Meta         *Meta          `json:"meta"`
+}
+
+type BgpAuthKey struct {
+	Value string `json:"value"`
+}
+
+type bgpAuthKeyRoot struct {
+	BgpAuthKey *BgpAuthKey `json:"bgp_auth_key"`
+}
+
+type RegenerateServiceKey struct {
+}
+
+type regenerateServiceKeyRoot struct {
+	RegenerateServiceKey *RegenerateServiceKey `json:"-"`
 }
 
 // List returns a list of all Partner Interconnect Attachments, with optional pagination.
@@ -266,7 +287,7 @@ func (s *PartnerInterconnectAttachmentsServiceOp) GetServiceKey(ctx context.Cont
 	return root.ServiceKey, resp, nil
 }
 
-// ListRoutes lists all routes for a Partner Interconnect Attachment.
+// ListRoutes lists all remote routes for a Partner Interconnect Attachment.
 func (s *PartnerInterconnectAttachmentsServiceOp) ListRoutes(ctx context.Context, id string, opt *ListOptions) ([]*RemoteRoute, *Response, error) {
 	path, err := addOptions(fmt.Sprintf("%s/%s/remote_routes", partnerInterconnectAttachmentsBasePath, id), opt)
 	if err != nil {
@@ -292,7 +313,7 @@ func (s *PartnerInterconnectAttachmentsServiceOp) ListRoutes(ctx context.Context
 	return root.RemoteRoutes, resp, nil
 }
 
-// SetRoutes  updates specific properties of a Partner Interconnect Attachment.
+// SetRoutes updates specific properties of a Partner Interconnect Attachment.
 func (s *PartnerInterconnectAttachmentsServiceOp) SetRoutes(ctx context.Context, id string, set *PartnerInterconnectAttachmentSetRoutesRequest) (*PartnerInterconnectAttachment, *Response, error) {
 	path := fmt.Sprintf("%s/%s/remote_routes", partnerInterconnectAttachmentsBasePath, id)
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, set)
@@ -307,4 +328,38 @@ func (s *PartnerInterconnectAttachmentsServiceOp) SetRoutes(ctx context.Context,
 	}
 
 	return root.PartnerInterconnectAttachment, resp, nil
+}
+
+// GetBGPAuthKey returns Partner Interconnect Attachment bgp auth key
+func (s *PartnerInterconnectAttachmentsServiceOp) GetBGPAuthKey(ctx context.Context, iaID string) (*BgpAuthKey, *Response, error) {
+	path := fmt.Sprintf("%s/%s/bgp_auth_key", partnerInterconnectAttachmentsBasePath, iaID)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(bgpAuthKeyRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.BgpAuthKey, resp, nil
+}
+
+// RegenerateServiceKey regenerates the service key of a Partner Interconnect Attachment.
+func (s *PartnerInterconnectAttachmentsServiceOp) RegenerateServiceKey(ctx context.Context, iaID string) (*RegenerateServiceKey, *Response, error) {
+	path := fmt.Sprintf("%s/%s/service_key", partnerInterconnectAttachmentsBasePath, iaID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(regenerateServiceKeyRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.RegenerateServiceKey, resp, nil
 }

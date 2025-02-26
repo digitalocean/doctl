@@ -70,6 +70,21 @@ func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) DeletePartnerIn
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePartnerInterconnectAttachment", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).DeletePartnerInterconnectAttachment), iaID)
 }
 
+// GetBGPAuthKey mocks base method.
+func (m *MockPartnerInterconnectAttachmentsService) GetBGPAuthKey(iaID string) (*do.PartnerInterconnectAttachmentBGPAuthKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBGPAuthKey", iaID)
+	ret0, _ := ret[0].(*do.PartnerInterconnectAttachmentBGPAuthKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBGPAuthKey indicates an expected call of GetBGPAuthKey.
+func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) GetBGPAuthKey(iaID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBGPAuthKey", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).GetBGPAuthKey), iaID)
+}
+
 // GetPartnerInterconnectAttachment mocks base method.
 func (m *MockPartnerInterconnectAttachmentsService) GetPartnerInterconnectAttachment(iaID string) (*do.PartnerInterconnectAttachment, error) {
 	m.ctrl.T.Helper()
@@ -85,6 +100,36 @@ func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) GetPartnerInter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartnerInterconnectAttachment", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).GetPartnerInterconnectAttachment), iaID)
 }
 
+// GetServiceKey mocks base method.
+func (m *MockPartnerInterconnectAttachmentsService) GetServiceKey(iaID string) (*do.PartnerInterconnectAttachmentServiceKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetServiceKey", iaID)
+	ret0, _ := ret[0].(*do.PartnerInterconnectAttachmentServiceKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetServiceKey indicates an expected call of GetServiceKey.
+func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) GetServiceKey(iaID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceKey", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).GetServiceKey), iaID)
+}
+
+// ListPartnerInterconnectAttachmentRoutes mocks base method.
+func (m *MockPartnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmentRoutes(iaID string) (do.PartnerInterconnectAttachmentRoutes, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPartnerInterconnectAttachmentRoutes", iaID)
+	ret0, _ := ret[0].(do.PartnerInterconnectAttachmentRoutes)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPartnerInterconnectAttachmentRoutes indicates an expected call of ListPartnerInterconnectAttachmentRoutes.
+func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) ListPartnerInterconnectAttachmentRoutes(iaID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartnerInterconnectAttachmentRoutes", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).ListPartnerInterconnectAttachmentRoutes), iaID)
+}
+
 // ListPartnerInterconnectAttachments mocks base method.
 func (m *MockPartnerInterconnectAttachmentsService) ListPartnerInterconnectAttachments() (do.PartnerInterconnectAttachments, error) {
 	m.ctrl.T.Helper()
@@ -98,6 +143,21 @@ func (m *MockPartnerInterconnectAttachmentsService) ListPartnerInterconnectAttac
 func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) ListPartnerInterconnectAttachments() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartnerInterconnectAttachments", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).ListPartnerInterconnectAttachments))
+}
+
+// RegenerateServiceKey mocks base method.
+func (m *MockPartnerInterconnectAttachmentsService) RegenerateServiceKey(iaID string) (*do.PartnerInterconnectAttachmentRegenerateServiceKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegenerateServiceKey", iaID)
+	ret0, _ := ret[0].(*do.PartnerInterconnectAttachmentRegenerateServiceKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RegenerateServiceKey indicates an expected call of RegenerateServiceKey.
+func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) RegenerateServiceKey(iaID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegenerateServiceKey", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).RegenerateServiceKey), iaID)
 }
 
 // UpdatePartnerInterconnectAttachment mocks base method.
