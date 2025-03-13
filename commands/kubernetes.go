@@ -296,7 +296,7 @@ After creating a cluster, a configuration context is added to kubectl and made a
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
 		"The unneed time for the cluster autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down. To set the scale-down-unneeded-time to a minute and 30 seconds for example, pass the string '1m30s'.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
-		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
+		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
