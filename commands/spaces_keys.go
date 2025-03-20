@@ -65,7 +65,7 @@ doctl spaces keys create my-key --grants 'bucket=;permission=fullaccess'`
 		getSpacesKeyDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.SpacesKey{}),
 	)
-	cmdSpacesKeyGet.Example = "The following command gets a Spaces Key by Access Key ID and uses the `--format` flag to return only the Name and Grants of each key. `doctl spaces keys get --format Name,Grants`"
+	cmdSpacesKeyGet.Example = "The following command gets a Spaces Key by Access Key ID and uses the `--format` flag to return only the Name and Grants of each key. `doctl spaces keys get DOACCESSKEY --format Name,Grants`"
 
 	deleteSpacesKeyDesc := "Delete a key for a Space."
 	cmdSpacesKeysDelete := CmdBuilder(
