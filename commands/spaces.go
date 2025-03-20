@@ -20,7 +20,6 @@ func Spaces() *Command {
 		Command: &cobra.Command{
 			Use:     "spaces",
 			Aliases: []string{"sp"},
-			Hidden:  true,
 			Short:   "Display commands that manage DigitalOcean Spaces.",
 			Long:    "The subcommands of `doctl spaces` allow you to access and manage Spaces.",
 			GroupID: manageResourcesGroup,

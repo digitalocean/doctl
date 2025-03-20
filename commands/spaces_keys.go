@@ -56,6 +56,17 @@ doctl spaces keys create my-key --grants 'bucket=;permission=fullaccess'`
 	)
 	cmdSpacesKeysList.Example = "The following command lists all Spaces Keys and uses the `--format` flag to return only the Name and Grants of each key. `doctl spaces keys list --format Name,Grants`"
 
+	getSpacesKeyDesc := "Get the key for a Space by Access Key ID."
+	cmdSpacesKeyGet := CmdBuilder(
+		cmd,
+		spacesKeyGet,
+		"get",
+		"Get a key for a Space by Access Key ID.",
+		getSpacesKeyDesc,
+		Writer, aliasOpt("ls"), displayerType(&displayers.SpacesKey{}),
+	)
+	cmdSpacesKeyGet.Example = "The following command gets a Spaces Key by Access Key ID and uses the `--format` flag to return only the Name and Grants of each key. `doctl spaces keys get --format Name,Grants`"
+
 	deleteSpacesKeyDesc := "Delete a key for a Space."
 	cmdSpacesKeysDelete := CmdBuilder(
 		cmd,
@@ -114,6 +125,18 @@ func spacesKeysList(c *CmdConfig) error {
 	}
 
 	return displaySpacesKeys(c, keys...)
+}
+
+func spacesKeyGet(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	key, err := c.SpacesKeys().Get(c.Args[0])
+	if err != nil {
+		return err
+	}
+
+	return displaySpacesKeys(c, *key)
 }
 
 func spacesKeysDelete(c *CmdConfig) error {

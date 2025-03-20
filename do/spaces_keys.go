@@ -41,6 +41,7 @@ type SpacesKeysService interface {
 	Delete(string) error
 	Update(string, *godo.SpacesKeyUpdateRequest) (*SpacesKey, error)
 	List() ([]SpacesKey, error)
+	Get(string) (*SpacesKey, error)
 }
 
 type spacesKeysService struct {
@@ -67,6 +68,15 @@ func (s *spacesKeysService) Create(cr *godo.SpacesKeyCreateRequest) (*SpacesKey,
 func (s *spacesKeysService) Delete(accessKey string) error {
 	_, err := s.client.SpacesKeys.Delete(s.ctx, accessKey)
 	return err
+}
+
+// Get gets a Spaces key.
+func (s *spacesKeysService) Get(accessKey string) (*SpacesKey, error) {
+	key, _, err := s.client.SpacesKeys.Get(s.ctx, accessKey)
+	if err != nil {
+		return nil, err
+	}
+	return &SpacesKey{key}, nil
 }
 
 // List returns all Spaces keys.

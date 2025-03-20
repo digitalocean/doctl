@@ -38,7 +38,7 @@ var (
 func TestSpacesKeysCommand(t *testing.T) {
 	cmd := SpacesKeys()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "delete", "update")
+	assertCommandNames(t, cmd, "create", "list", "get", "delete", "update")
 }
 
 func TestRunSpacesKeysCreate(t *testing.T) {
@@ -114,6 +114,44 @@ func TestRunSpacesKeysList(t *testing.T) {
 		err := spacesKeysList(config)
 		require.NoError(t, err)
 	})
+}
+
+func TestRunSpacesKeyGet(t *testing.T) {
+	testCases := []struct {
+		name      string
+		args      []string
+		expectErr bool
+	}{
+		{
+			name:      "success",
+			args:      []string{testValidAccessKey},
+			expectErr: false,
+		},
+		{
+			name:      "missing key id",
+			args:      []string{},
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if !tc.expectErr {
+					tm.spacesKeys.EXPECT().Get(testValidAccessKey).Return(&testSpacesKey, nil)
+				}
+
+				config.Args = tc.args
+
+				err := spacesKeyGet(config)
+				if tc.expectErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		})
+	}
 }
 
 func TestRunSpacesKeysDelete(t *testing.T) {
