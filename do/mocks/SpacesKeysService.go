@@ -70,6 +70,21 @@ func (mr *MockSpacesKeysServiceMockRecorder) Delete(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSpacesKeysService)(nil).Delete), arg0)
 }
 
+// Get mocks base method.
+func (m *MockSpacesKeysService) Get(arg0 string) (*do.SpacesKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*do.SpacesKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockSpacesKeysServiceMockRecorder) Get(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSpacesKeysService)(nil).Get), arg0)
+}
+
 // List mocks base method.
 func (m *MockSpacesKeysService) List() ([]do.SpacesKey, error) {
 	m.ctrl.T.Helper()
