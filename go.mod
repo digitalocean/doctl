@@ -1,7 +1,6 @@
 module github.com/digitalocean/doctl
 
-go 1.22
-toolchain go1.24.1
+go 1.24
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
