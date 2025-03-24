@@ -8,7 +8,7 @@ import (
 )
 
 type PartnerInterconnectAttachment struct {
-	PartnerInterconnectAttachments do.PartnerInterconnectAttachments
+	PartnerInterconnectAttachments do.PartnerNetworkConnects
 }
 
 var _ Displayable = &PartnerInterconnectAttachment{}
@@ -76,7 +76,7 @@ func (v *PartnerInterconnectAttachment) KV() []map[string]any {
 }
 
 type PartnerInterconnectAttachmentRoute struct {
-	PartnerInterconnectAttachmentRoutes do.PartnerInterconnectAttachmentRoutes
+	PartnerInterconnectAttachmentRoutes do.PartnerAttachmentRoutes
 }
 
 var _ Displayable = &PartnerInterconnectAttachmentRoute{}
@@ -114,7 +114,7 @@ func (v *PartnerInterconnectAttachmentRoute) KV() []map[string]any {
 }
 
 type PartnerInterconnectAttachmentRegenerateServiceKey struct {
-	RegenerateKey do.PartnerInterconnectAttachmentRegenerateServiceKey
+	RegenerateKey do.PartnerAttachmentRegenerateServiceKey
 }
 
 var _ Displayable = &PartnerInterconnectAttachmentRegenerateServiceKey{}
@@ -140,7 +140,7 @@ func (v *PartnerInterconnectAttachmentRegenerateServiceKey) KV() []map[string]an
 }
 
 type PartnerInterconnectAttachmentBgpAuthKey struct {
-	Key do.PartnerInterconnectAttachmentBGPAuthKey
+	Key do.PartnerAttachmentBGPAuthKey
 }
 
 var _ Displayable = &PartnerInterconnectAttachmentBgpAuthKey{}
@@ -168,7 +168,7 @@ func (v *PartnerInterconnectAttachmentBgpAuthKey) KV() []map[string]any {
 }
 
 type PartnerInterconnectAttachmentServiceKey struct {
-	Key do.PartnerInterconnectAttachmentServiceKey
+	Key do.PartnerAttachmentServiceKey
 }
 
 var _ Displayable = &PartnerInterconnectAttachmentServiceKey{}

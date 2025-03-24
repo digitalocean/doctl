@@ -74,7 +74,7 @@ type CmdConfig struct {
 	Monitoring                     func() do.MonitoringService
 	Serverless                     func() do.ServerlessService
 	OAuth                          func() do.OAuthService
-	PartnerInterconnectAttachments func() do.PartnerInterconnectAttachmentsService
+	PartnerInterconnectAttachments func() do.PartnerNetworkConnectsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -131,7 +131,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
 			}
 			c.OAuth = func() do.OAuthService { return do.NewOAuthService(godoClient) }
-			c.PartnerInterconnectAttachments = func() do.PartnerInterconnectAttachmentsService {
+			c.PartnerInterconnectAttachments = func() do.PartnerNetworkConnectsService {
 				return do.NewPartnerInterconnectAttachmentsService(godoClient)
 			}
 

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	testPartnerAttachment = do.PartnerInterconnectAttachment{
+	testPartnerAttachment = do.PartnerNetworkConnect{
 		PartnerNetworkConnect: &godo.PartnerNetworkConnect{
 			ID:                        "test-id",
 			Name:                      "doctl-pia",
@@ -26,32 +26,32 @@ var (
 		},
 	}
 
-	testPartnerIAList = do.PartnerInterconnectAttachments{
+	testPartnerIAList = do.PartnerNetworkConnects{
 		testPartnerAttachment,
 	}
 
-	testPartnerAttachmentRoute = do.PartnerInterconnectAttachmentRoute{
+	testPartnerAttachmentRoute = do.PartnerAttachmentRoute{
 		RemoteRoute: &godo.RemoteRoute{
 			ID:   "test-route-id",
 			Cidr: "10.10.0.0/24",
 		},
 	}
 
-	testPartnerIARouteList = do.PartnerInterconnectAttachmentRoutes{
+	testPartnerIARouteList = do.PartnerAttachmentRoutes{
 		testPartnerAttachmentRoute,
 	}
 
-	testRegenerateServiceKey = do.PartnerInterconnectAttachmentRegenerateServiceKey{
+	testRegenerateServiceKey = do.PartnerAttachmentRegenerateServiceKey{
 		RegenerateServiceKey: &godo.RegenerateServiceKey{},
 	}
 
-	testBGPAuthKey = do.PartnerInterconnectAttachmentBGPAuthKey{
+	testBGPAuthKey = do.PartnerAttachmentBGPAuthKey{
 		BgpAuthKey: &godo.BgpAuthKey{
 			Value: "test-bgp-auth-key",
 		},
 	}
 
-	testServiceKey = do.PartnerInterconnectAttachmentServiceKey{
+	testServiceKey = do.PartnerAttachmentServiceKey{
 		ServiceKey: &godo.ServiceKey{
 			Value:     "test-service-key",
 			State:     "active",
@@ -187,7 +187,7 @@ func TestInterconnectAttachmentRoutesList(t *testing.T) {
 
 		iaID := "ia-uuid1"
 		config.Args = append(config.Args, iaID)
-		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachmentRoutes(iaID).Return(testPartnerIARouteList, nil)
+		tm.partnerInterconnectAttachment.EXPECT().ListPartnerAttachmentRoutes(iaID).Return(testPartnerIARouteList, nil)
 
 		err := RunPartnerInterconnectAttachmentRouteList(config)
 		assert.NoError(t, err)
