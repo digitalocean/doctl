@@ -56,121 +56,121 @@ func (mr *MockPartnerNetworkConnectsServiceMockRecorder) Create(arg0 any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).Create), arg0)
 }
 
-// DeletePartnerInterconnectAttachment mocks base method.
-func (m *MockPartnerNetworkConnectsService) DeletePartnerInterconnectAttachment(iaID string) error {
+// DeletePartnerNetworkConnect mocks base method.
+func (m *MockPartnerNetworkConnectsService) DeletePartnerNetworkConnect(pncID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePartnerInterconnectAttachment", iaID)
+	ret := m.ctrl.Call(m, "DeletePartnerNetworkConnect", pncID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeletePartnerInterconnectAttachment indicates an expected call of DeletePartnerInterconnectAttachment.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) DeletePartnerInterconnectAttachment(iaID any) *gomock.Call {
+// DeletePartnerNetworkConnect indicates an expected call of DeletePartnerNetworkConnect.
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) DeletePartnerNetworkConnect(pncID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePartnerInterconnectAttachment", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).DeletePartnerInterconnectAttachment), iaID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePartnerNetworkConnect", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).DeletePartnerNetworkConnect), pncID)
 }
 
 // GetBGPAuthKey mocks base method.
-func (m *MockPartnerNetworkConnectsService) GetBGPAuthKey(iaID string) (*do.PartnerAttachmentBGPAuthKey, error) {
+func (m *MockPartnerNetworkConnectsService) GetBGPAuthKey(pncID string) (*do.PartnerAttachmentBGPAuthKey, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBGPAuthKey", iaID)
+	ret := m.ctrl.Call(m, "GetBGPAuthKey", pncID)
 	ret0, _ := ret[0].(*do.PartnerAttachmentBGPAuthKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetBGPAuthKey indicates an expected call of GetBGPAuthKey.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) GetBGPAuthKey(iaID any) *gomock.Call {
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) GetBGPAuthKey(pncID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBGPAuthKey", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).GetBGPAuthKey), iaID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBGPAuthKey", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).GetBGPAuthKey), pncID)
 }
 
-// GetPartnerInterconnectAttachment mocks base method.
-func (m *MockPartnerNetworkConnectsService) GetPartnerInterconnectAttachment(iaID string) (*do.PartnerNetworkConnect, error) {
+// GetPartnerNetworkConnect mocks base method.
+func (m *MockPartnerNetworkConnectsService) GetPartnerNetworkConnect(pncID string) (*do.PartnerNetworkConnect, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPartnerInterconnectAttachment", iaID)
+	ret := m.ctrl.Call(m, "GetPartnerNetworkConnect", pncID)
 	ret0, _ := ret[0].(*do.PartnerNetworkConnect)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetPartnerInterconnectAttachment indicates an expected call of GetPartnerInterconnectAttachment.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) GetPartnerInterconnectAttachment(iaID any) *gomock.Call {
+// GetPartnerNetworkConnect indicates an expected call of GetPartnerNetworkConnect.
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) GetPartnerNetworkConnect(pncID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartnerInterconnectAttachment", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).GetPartnerInterconnectAttachment), iaID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartnerNetworkConnect", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).GetPartnerNetworkConnect), pncID)
 }
 
 // GetServiceKey mocks base method.
-func (m *MockPartnerNetworkConnectsService) GetServiceKey(iaID string) (*do.PartnerAttachmentServiceKey, error) {
+func (m *MockPartnerNetworkConnectsService) GetServiceKey(pncID string) (*do.PartnerAttachmentServiceKey, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetServiceKey", iaID)
+	ret := m.ctrl.Call(m, "GetServiceKey", pncID)
 	ret0, _ := ret[0].(*do.PartnerAttachmentServiceKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetServiceKey indicates an expected call of GetServiceKey.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) GetServiceKey(iaID any) *gomock.Call {
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) GetServiceKey(pncID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceKey", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).GetServiceKey), iaID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceKey", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).GetServiceKey), pncID)
 }
 
 // ListPartnerAttachmentRoutes mocks base method.
-func (m *MockPartnerNetworkConnectsService) ListPartnerAttachmentRoutes(iaID string) (do.PartnerAttachmentRoutes, error) {
+func (m *MockPartnerNetworkConnectsService) ListPartnerAttachmentRoutes(pncID string) (do.PartnerAttachmentRoutes, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPartnerAttachmentRoutes", iaID)
+	ret := m.ctrl.Call(m, "ListPartnerAttachmentRoutes", pncID)
 	ret0, _ := ret[0].(do.PartnerAttachmentRoutes)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListPartnerAttachmentRoutes indicates an expected call of ListPartnerAttachmentRoutes.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) ListPartnerAttachmentRoutes(iaID any) *gomock.Call {
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) ListPartnerAttachmentRoutes(pncID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartnerAttachmentRoutes", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).ListPartnerAttachmentRoutes), iaID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartnerAttachmentRoutes", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).ListPartnerAttachmentRoutes), pncID)
 }
 
-// ListPartnerInterconnectAttachments mocks base method.
-func (m *MockPartnerNetworkConnectsService) ListPartnerInterconnectAttachments() (do.PartnerNetworkConnects, error) {
+// ListPartnerNetworkConnects mocks base method.
+func (m *MockPartnerNetworkConnectsService) ListPartnerNetworkConnects() (do.PartnerNetworkConnects, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPartnerInterconnectAttachments")
+	ret := m.ctrl.Call(m, "ListPartnerNetworkConnects")
 	ret0, _ := ret[0].(do.PartnerNetworkConnects)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListPartnerInterconnectAttachments indicates an expected call of ListPartnerInterconnectAttachments.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) ListPartnerInterconnectAttachments() *gomock.Call {
+// ListPartnerNetworkConnects indicates an expected call of ListPartnerNetworkConnects.
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) ListPartnerNetworkConnects() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartnerInterconnectAttachments", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).ListPartnerInterconnectAttachments))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartnerNetworkConnects", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).ListPartnerNetworkConnects))
 }
 
 // RegenerateServiceKey mocks base method.
-func (m *MockPartnerNetworkConnectsService) RegenerateServiceKey(iaID string) (*do.PartnerAttachmentRegenerateServiceKey, error) {
+func (m *MockPartnerNetworkConnectsService) RegenerateServiceKey(pncID string) (*do.PartnerAttachmentRegenerateServiceKey, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegenerateServiceKey", iaID)
+	ret := m.ctrl.Call(m, "RegenerateServiceKey", pncID)
 	ret0, _ := ret[0].(*do.PartnerAttachmentRegenerateServiceKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RegenerateServiceKey indicates an expected call of RegenerateServiceKey.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) RegenerateServiceKey(iaID any) *gomock.Call {
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) RegenerateServiceKey(pncID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegenerateServiceKey", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).RegenerateServiceKey), iaID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegenerateServiceKey", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).RegenerateServiceKey), pncID)
 }
 
-// UpdatePartnerInterconnectAttachment mocks base method.
-func (m *MockPartnerNetworkConnectsService) UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerNetworkConnectUpdateRequest) (*do.PartnerNetworkConnect, error) {
+// UpdatePartnerNetworkConnect mocks base method.
+func (m *MockPartnerNetworkConnectsService) UpdatePartnerNetworkConnect(pncID string, req *godo.PartnerNetworkConnectUpdateRequest) (*do.PartnerNetworkConnect, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePartnerInterconnectAttachment", iaID, req)
+	ret := m.ctrl.Call(m, "UpdatePartnerNetworkConnect", pncID, req)
 	ret0, _ := ret[0].(*do.PartnerNetworkConnect)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UpdatePartnerInterconnectAttachment indicates an expected call of UpdatePartnerInterconnectAttachment.
-func (mr *MockPartnerNetworkConnectsServiceMockRecorder) UpdatePartnerInterconnectAttachment(iaID, req any) *gomock.Call {
+// UpdatePartnerNetworkConnect indicates an expected call of UpdatePartnerNetworkConnect.
+func (mr *MockPartnerNetworkConnectsServiceMockRecorder) UpdatePartnerNetworkConnect(pncID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePartnerInterconnectAttachment", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).UpdatePartnerInterconnectAttachment), iaID, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePartnerNetworkConnect", reflect.TypeOf((*MockPartnerNetworkConnectsService)(nil).UpdatePartnerNetworkConnect), pncID, req)
 }

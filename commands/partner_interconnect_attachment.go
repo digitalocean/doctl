@@ -273,7 +273,7 @@ func RunPartnerNCGet(c *CmdConfig) error {
 	iaID := c.Args[0]
 
 	pias := c.PartnerInterconnectAttachments()
-	networkConnects, err := pias.GetPartnerInterconnectAttachment(iaID)
+	networkConnects, err := pias.GetPartnerNetworkConnect(iaID)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func RunPartnerNCList(c *CmdConfig) error {
 	}
 
 	pias := c.PartnerInterconnectAttachments()
-	list, err := pias.ListPartnerInterconnectAttachments()
+	list, err := pias.ListPartnerNetworkConnects()
 	if err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 	}
 	r.VPCIDs = strings.Split(vpcIDs, ",")
 
-	interconnectAttachment, err := c.PartnerInterconnectAttachments().UpdatePartnerInterconnectAttachment(iaID, r)
+	interconnectAttachment, err := c.PartnerInterconnectAttachments().UpdatePartnerNetworkConnect(iaID, r)
 	if err != nil {
 		return err
 	}
@@ -433,7 +433,7 @@ func RunPartnerNCDelete(c *CmdConfig) error {
 	if force || AskForConfirmDelete("Partner Network Connect", 1) == nil {
 
 		pias := c.PartnerInterconnectAttachments()
-		err := pias.DeletePartnerInterconnectAttachment(iaID)
+		err := pias.DeletePartnerNetworkConnect(iaID)
 		if err != nil {
 			return err
 		}
@@ -499,7 +499,7 @@ func waitForPIA(pias do.PartnerNetworkConnectsService, iaID string, wantStatus s
 			}
 		}
 
-		interconnectAttachment, err := pias.GetPartnerInterconnectAttachment(iaID)
+		interconnectAttachment, err := pias.GetPartnerNetworkConnect(iaID)
 		if err != nil {
 			if terminateOnNotFound && strings.Contains(err.Error(), "not found") {
 				return nil

@@ -108,10 +108,10 @@ func TestInterconnectAttachmentsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		tm.partnerInterconnectAttachment.EXPECT().GetPartnerInterconnectAttachment(iaID).Return(&testPartnerAttachment, nil)
+		pncID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
+		tm.partnerInterconnectAttachment.EXPECT().GetPartnerNetworkConnect(pncID).Return(&testPartnerAttachment, nil)
 
-		config.Args = append(config.Args, iaID)
+		config.Args = append(config.Args, pncID)
 
 		err := RunPartnerNCGet(config)
 		assert.NoError(t, err)
@@ -131,7 +131,7 @@ func TestInterconnectAttachmentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachments().Return(testPartnerIAList, nil)
+		tm.partnerInterconnectAttachment.EXPECT().ListPartnerNetworkConnects().Return(testPartnerIAList, nil)
 
 		err := RunPartnerNCList(config)
 		assert.NoError(t, err)
@@ -143,7 +143,7 @@ func TestInterconnectAttachmentsDelete(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		tm.partnerInterconnectAttachment.EXPECT().DeletePartnerInterconnectAttachment(iaID).Return(nil)
+		tm.partnerInterconnectAttachment.EXPECT().DeletePartnerNetworkConnect(iaID).Return(nil)
 
 		config.Args = append(config.Args, iaID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -161,7 +161,7 @@ func TestInterconnectAttachmentsUpdate(t *testing.T) {
 		iaName := "ia-name"
 		vpcIDs := "f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268"
 		r := godo.PartnerNetworkConnectUpdateRequest{Name: iaName, VPCIDs: strings.Split(vpcIDs, ",")}
-		tm.partnerInterconnectAttachment.EXPECT().UpdatePartnerInterconnectAttachment(iaID, &r).Return(&testPartnerAttachment, nil)
+		tm.partnerInterconnectAttachment.EXPECT().UpdatePartnerNetworkConnect(iaID, &r).Return(&testPartnerAttachment, nil)
 
 		config.Args = append(config.Args, iaID)
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, iaName)
