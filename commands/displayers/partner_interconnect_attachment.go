@@ -7,17 +7,17 @@ import (
 	"github.com/digitalocean/doctl/do"
 )
 
-type PartnerInterconnectAttachment struct {
-	PartnerInterconnectAttachments do.PartnerNetworkConnects
+type PartnerNetworkConnect struct {
+	PartnerNetworkConnects do.PartnerNetworkConnects
 }
 
-var _ Displayable = &PartnerInterconnectAttachment{}
+var _ Displayable = &PartnerNetworkConnect{}
 
-func (v *PartnerInterconnectAttachment) JSON(out io.Writer) error {
-	return writeJSON(v.PartnerInterconnectAttachments, out)
+func (v *PartnerNetworkConnect) JSON(out io.Writer) error {
+	return writeJSON(v.PartnerNetworkConnects, out)
 }
 
-func (v *PartnerInterconnectAttachment) Cols() []string {
+func (v *PartnerNetworkConnect) Cols() []string {
 	return []string{
 		"ID",
 		"Name",
@@ -34,7 +34,7 @@ func (v *PartnerInterconnectAttachment) Cols() []string {
 	}
 }
 
-func (v *PartnerInterconnectAttachment) ColMap() map[string]string {
+func (v *PartnerNetworkConnect) ColMap() map[string]string {
 	return map[string]string{
 		"ID":                        "ID",
 		"Name":                      "Name",
@@ -51,10 +51,10 @@ func (v *PartnerInterconnectAttachment) ColMap() map[string]string {
 	}
 }
 
-func (v *PartnerInterconnectAttachment) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(v.PartnerInterconnectAttachments))
+func (v *PartnerNetworkConnect) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(v.PartnerNetworkConnects))
 
-	for _, ia := range v.PartnerInterconnectAttachments {
+	for _, ia := range v.PartnerNetworkConnects {
 		o := map[string]any{
 			"ID":                        ia.ID,
 			"Name":                      ia.Name,
@@ -75,34 +75,34 @@ func (v *PartnerInterconnectAttachment) KV() []map[string]any {
 	return out
 }
 
-type PartnerInterconnectAttachmentRoute struct {
-	PartnerInterconnectAttachmentRoutes do.PartnerAttachmentRoutes
+type PartnerAttachmentRoute struct {
+	PartnerAttachmentRoutes do.PartnerAttachmentRoutes
 }
 
-var _ Displayable = &PartnerInterconnectAttachmentRoute{}
+var _ Displayable = &PartnerAttachmentRoute{}
 
-func (v *PartnerInterconnectAttachmentRoute) JSON(out io.Writer) error {
-	return writeJSON(v.PartnerInterconnectAttachmentRoutes, out)
+func (v *PartnerAttachmentRoute) JSON(out io.Writer) error {
+	return writeJSON(v.PartnerAttachmentRoutes, out)
 }
 
-func (v *PartnerInterconnectAttachmentRoute) Cols() []string {
+func (v *PartnerAttachmentRoute) Cols() []string {
 	return []string{
 		"ID",
 		"Cidr",
 	}
 }
 
-func (v *PartnerInterconnectAttachmentRoute) ColMap() map[string]string {
+func (v *PartnerAttachmentRoute) ColMap() map[string]string {
 	return map[string]string{
 		"ID":   "ID",
 		"Cidr": "Cidr",
 	}
 }
 
-func (v *PartnerInterconnectAttachmentRoute) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(v.PartnerInterconnectAttachmentRoutes))
+func (v *PartnerAttachmentRoute) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(v.PartnerAttachmentRoutes))
 
-	for _, ia := range v.PartnerInterconnectAttachmentRoutes {
+	for _, ia := range v.PartnerAttachmentRoutes {
 		o := map[string]any{
 			"ID":   ia.ID,
 			"Cidr": ia.Cidr,
@@ -113,25 +113,25 @@ func (v *PartnerInterconnectAttachmentRoute) KV() []map[string]any {
 	return out
 }
 
-type PartnerInterconnectAttachmentRegenerateServiceKey struct {
+type PartnerAttachmentRegenerateServiceKey struct {
 	RegenerateKey do.PartnerAttachmentRegenerateServiceKey
 }
 
-var _ Displayable = &PartnerInterconnectAttachmentRegenerateServiceKey{}
+var _ Displayable = &PartnerAttachmentRegenerateServiceKey{}
 
-func (v *PartnerInterconnectAttachmentRegenerateServiceKey) JSON(out io.Writer) error {
+func (v *PartnerAttachmentRegenerateServiceKey) JSON(out io.Writer) error {
 	return writeJSON(v.RegenerateKey, out)
 }
 
-func (v *PartnerInterconnectAttachmentRegenerateServiceKey) Cols() []string {
+func (v *PartnerAttachmentRegenerateServiceKey) Cols() []string {
 	return []string{}
 }
 
-func (v *PartnerInterconnectAttachmentRegenerateServiceKey) ColMap() map[string]string {
+func (v *PartnerAttachmentRegenerateServiceKey) ColMap() map[string]string {
 	return map[string]string{}
 }
 
-func (v *PartnerInterconnectAttachmentRegenerateServiceKey) KV() []map[string]any {
+func (v *PartnerAttachmentRegenerateServiceKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{}
@@ -139,25 +139,25 @@ func (v *PartnerInterconnectAttachmentRegenerateServiceKey) KV() []map[string]an
 	return out
 }
 
-type PartnerInterconnectAttachmentBgpAuthKey struct {
+type PartnerAttachmentBgpAuthKey struct {
 	Key do.PartnerAttachmentBGPAuthKey
 }
 
-var _ Displayable = &PartnerInterconnectAttachmentBgpAuthKey{}
+var _ Displayable = &PartnerAttachmentBgpAuthKey{}
 
-func (v *PartnerInterconnectAttachmentBgpAuthKey) JSON(out io.Writer) error {
+func (v *PartnerAttachmentBgpAuthKey) JSON(out io.Writer) error {
 	return writeJSON(v.Key, out)
 }
 
-func (v *PartnerInterconnectAttachmentBgpAuthKey) Cols() []string {
+func (v *PartnerAttachmentBgpAuthKey) Cols() []string {
 	return []string{"Value"}
 }
 
-func (v *PartnerInterconnectAttachmentBgpAuthKey) ColMap() map[string]string {
+func (v *PartnerAttachmentBgpAuthKey) ColMap() map[string]string {
 	return map[string]string{"Value": "Value"}
 }
 
-func (v *PartnerInterconnectAttachmentBgpAuthKey) KV() []map[string]any {
+func (v *PartnerAttachmentBgpAuthKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{
@@ -167,17 +167,17 @@ func (v *PartnerInterconnectAttachmentBgpAuthKey) KV() []map[string]any {
 	return out
 }
 
-type PartnerInterconnectAttachmentServiceKey struct {
+type PartnerAttachmentServiceKey struct {
 	Key do.PartnerAttachmentServiceKey
 }
 
-var _ Displayable = &PartnerInterconnectAttachmentServiceKey{}
+var _ Displayable = &PartnerAttachmentServiceKey{}
 
-func (v *PartnerInterconnectAttachmentServiceKey) JSON(out io.Writer) error {
+func (v *PartnerAttachmentServiceKey) JSON(out io.Writer) error {
 	return writeJSON(v.Key, out)
 }
 
-func (v *PartnerInterconnectAttachmentServiceKey) Cols() []string {
+func (v *PartnerAttachmentServiceKey) Cols() []string {
 	return []string{
 		"Value",
 		"State",
@@ -185,7 +185,7 @@ func (v *PartnerInterconnectAttachmentServiceKey) Cols() []string {
 	}
 }
 
-func (v *PartnerInterconnectAttachmentServiceKey) ColMap() map[string]string {
+func (v *PartnerAttachmentServiceKey) ColMap() map[string]string {
 	return map[string]string{
 		"Value":     "Value",
 		"State":     "State",
@@ -193,7 +193,7 @@ func (v *PartnerInterconnectAttachmentServiceKey) ColMap() map[string]string {
 	}
 }
 
-func (v *PartnerInterconnectAttachmentServiceKey) KV() []map[string]any {
+func (v *PartnerAttachmentServiceKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{

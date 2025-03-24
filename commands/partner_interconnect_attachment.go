@@ -48,29 +48,29 @@ func Network() *Command {
 func PartnerInterconnectAttachments() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "interconnect-attachment",
-			Short: "Display commands that manage Partner Interconnect Attachments",
-			Long: `The commands under ` + "`" + `doctl network interconnect-attachment` + "`" + ` are for managing your Partner Interconnect Attachments.
+			Use:   "partner-attachment",
+			Short: "Display commands that manage Partner Network Connect",
+			Long: `The commands under ` + "`" + `doctl network partner-attachment` + "`" + ` are for managing your Partner Network Connect.
 
-With the Partner Interconnect Attachments commands, you can get, list, create, update, or delete Partner Interconnect Attachments, and manage their configuration details.`,
+With the Partner Network Connect commands, you can get, list, create, update, or delete Partner Network Connect, and manage their configuration details.`,
 		},
 	}
 
-	cmdPartnerIACreate := CmdBuilder(cmd, RunPartnerInterconnectAttachmentCreate, "create",
-		"Create a Partner Interconnect Attachment", "Use this command to create a new Partner Interconnect Attachment on your account.", Writer, aliasOpt("c"), displayerType(&displayers.PartnerInterconnectAttachment{}))
-	AddStringFlag(cmdPartnerIACreate, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	cmdPartnerAttachmentCreate := CmdBuilder(cmd, RunPartnerInterconnectAttachmentCreate, "create",
+		"Create a Partner Attachment", "Use this command to create a new Partner Attachment on your account.", Writer, aliasOpt("c"), displayerType(&displayers.PartnerNetworkConnect{}))
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify attachment type (e.g., partner)")
 
-	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentName, "", "", "Name of the Partner Interconnect Attachment", requiredOpt())
-	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps, "", 0, "Connection Bandwidth in Mbps", requiredOpt())
-	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentRegion, "", "", "Region", requiredOpt())
-	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentNaaSProvider, "", "", "NaaS Provider", requiredOpt())
-	AddStringSliceFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentVPCIDs, "", []string{}, "VPC network IDs", requiredOpt())
-	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPLocalASN, "", 0, "BGP Local ASN")
-	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPLocalRouterIP, "", "", "BGP Local Router IP")
-	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
-	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
-	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPAuthKey, "", "", "BGP Auth Key")
-	cmdPartnerIACreate.Example = `The following example creates a Partner Interconnect Attachment: doctl network interconnect-attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentName, "", "", "Name of the Partner Interconnect Attachment", requiredOpt())
+	AddIntFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentConnectionBandwidthInMbps, "", 0, "Connection Bandwidth in Mbps", requiredOpt())
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentRegion, "", "", "Region", requiredOpt())
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentNaaSProvider, "", "", "NaaS Provider", requiredOpt())
+	AddStringSliceFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentVPCIDs, "", []string{}, "VPC network IDs", requiredOpt())
+	AddIntFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPLocalASN, "", 0, "BGP Local ASN")
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPLocalRouterIP, "", "", "BGP Local Router IP")
+	AddIntFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPAuthKey, "", "", "BGP Auth Key")
+	cmdPartnerAttachmentCreate.Example = `The following example creates a Partner Attachment: doctl network partner-attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	interconnectAttachmentDetails := `
 - The Partner Interconnect Attachment ID
@@ -86,40 +86,40 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 - The Partner Interconnect Attachment BGP Peer ASN
 - The Partner Interconnect Attachment BGP Peer Router IP`
 
-	cmdPartnerIAGet := CmdBuilder(cmd, RunPartnerInterconnectAttachmentGet, "get <interconnect-attachment-id>",
+	cmdPartnerIAGet := CmdBuilder(cmd, RunPartnerInterconnectAttachmentGet, "get <partner-attachment-id>",
 		"Retrieves a Partner Interconnect Attachment", "Retrieves information about a Partner Interconnect Attachment, including:"+interconnectAttachmentDetails, Writer,
-		aliasOpt("g"), displayerType(&displayers.PartnerInterconnectAttachment{}))
-	AddStringFlag(cmdPartnerIAGet, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+		aliasOpt("g"), displayerType(&displayers.PartnerNetworkConnect{}))
+	AddStringFlag(cmdPartnerIAGet, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIAGet.Example = `The following example retrieves information about a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" interconnect-attachment get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		`: doctl network --type "partner" partner-attachment get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentList, "list", "List Network Interconnect Attachments", "Retrieves a list of the Network Interconnect Attachments on your account, including the following information for each:"+interconnectAttachmentDetails, Writer,
-		aliasOpt("ls"), displayerType(&displayers.PartnerInterconnectAttachment{}))
-	AddStringFlag(cmdPartnerIAList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+		aliasOpt("ls"), displayerType(&displayers.PartnerNetworkConnect{}))
+	AddStringFlag(cmdPartnerIAList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
-		` doctl network --type "partner" interconnect-attachment list --format Name,VPCIDs `
+		` doctl network --type "partner" partner-attachment list --format Name,VPCIDs `
 
-	cmdPartnerIADelete := CmdBuilder(cmd, RunPartnerInterconnectAttachmentDelete, "delete <interconnect-attachment-id>",
+	cmdPartnerIADelete := CmdBuilder(cmd, RunPartnerInterconnectAttachmentDelete, "delete <partner-attachment-id>",
 		"Deletes a Partner Interconnect Attachment", "Deletes information about a Partner Interconnect Attachment. This is irreversible ", Writer,
-		aliasOpt("rm"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+		aliasOpt("rm"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddBoolFlag(cmdPartnerIADelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the VPC Peering without any confirmation prompt")
 	AddBoolFlag(cmdPartnerIADelete, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for a VPC Peering deletion to complete before returning control to the terminal")
-	AddStringFlag(cmdPartnerIADelete, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	AddStringFlag(cmdPartnerIADelete, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIADelete.Example = `The following example deletes a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" interconnect-attachment delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		`: doctl network --type "partner" partner-attachment delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPartnerIAUpdate := CmdBuilder(cmd, RunPartnerInterconnectAttachmentUpdate, "update <interconnect-attachment-id>",
+	cmdPartnerIAUpdate := CmdBuilder(cmd, RunPartnerInterconnectAttachmentUpdate, "update <partner-attachment-id>",
 		"Update a Partner Interconnect Attachment's name and configuration", `Use this command to update the name and and configuration of a Partner Interconnect Attachment`, Writer, aliasOpt("u"))
-	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerInterconnectAttachmentName, "", "",
+	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerAttachmentName, "", "",
 		"The Partner Interconnect Attachment's name", requiredOpt())
-	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerInterconnectAttachmentVPCIDs, "", "",
+	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerAttachmentVPCIDs, "", "",
 		"The Partner Interconnect Attachment's vpc ids", requiredOpt())
 	cmdPartnerIAUpdate.Example = `The following example updates the name of a Partner Interconnect Attachment with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
-		`: doctl network --type "partner" interconnect-attachment update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
+		`: doctl network --type "partner" partner-attachment update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
 vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
 	interconnectAttachmentRouteDetails := `
@@ -127,42 +127,42 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 - The Partner Interconnect Attachment Cidr`
 
 	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentRouteList, "list-routes", "List Network Interconnect Attachment Routes", "Retrieves a list of the Network Interconnect Attachment Routes on your account, including the following information for each:"+interconnectAttachmentRouteDetails, Writer,
-		aliasOpt("ls-routes"), displayerType(&displayers.PartnerInterconnectAttachment{}))
-	AddStringFlag(cmdPartnerIARouteList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+		aliasOpt("ls-routes"), displayerType(&displayers.PartnerNetworkConnect{}))
+	AddStringFlag(cmdPartnerIARouteList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIARouteList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
-		` doctl network --type "partner" interconnect-attachment list-routes --format ID,Cidr `
+		` doctl network --type "partner" partner-attachment list-routes --format ID,Cidr `
 
-	cmdGetPartnerIARegenerateServiceKey := CmdBuilder(cmd, RunPartnerInterconnectAttachmentRegenerateServiceKey, "regenerate-service-key <interconnect-attachment-id>",
+	cmdGetPartnerIARegenerateServiceKey := CmdBuilder(cmd, RunPartnerInterconnectAttachmentRegenerateServiceKey, "regenerate-service-key <partner-attachment-id>",
 		"Regenerates a Service key of Partner Interconnect Attachment", "Regenerates information about a Service key of Partner Interconnect Attachment", Writer,
-		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerInterconnectAttachmentRegenerateServiceKey{}))
-	AddStringFlag(cmdGetPartnerIARegenerateServiceKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerAttachmentRegenerateServiceKey{}))
+	AddStringFlag(cmdGetPartnerIARegenerateServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdGetPartnerIARegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" interconnect-attachment regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		`: doctl network --type "partner" partner-attachment regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdGetPartnerIAGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentBGPAuthKey, "get-bgp-auth-key <interconnect-attachment-id>",
+	cmdGetPartnerIAGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentBGPAuthKey, "get-bgp-auth-key <partner-attachment-id>",
 		"Retrieves a BGP Auth key of Partner Interconnect Attachment", "Retrieves information about a BGP Auth key of Partner Interconnect Attachment", Writer,
-		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerInterconnectAttachmentBgpAuthKey{}))
-	AddStringFlag(cmdGetPartnerIAGetBGPAuthKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerAttachmentBgpAuthKey{}))
+	AddStringFlag(cmdGetPartnerIAGetBGPAuthKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdGetPartnerIAGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" interconnect-attachment get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		`: doctl network --type "partner" partner-attachment get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	interconnectAttachmentServiceKeyDetails := `
 - The Service key Value
 - The Service key State
 - The Service key CreatedAt`
 
-	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentServiceKey, "get-service-key <interconnect-attachment-id>",
+	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerInterconnectAttachmentServiceKey, "get-service-key <partner-attachment-id>",
 		"Retrieves a Service key of Partner Interconnect Attachment", "Retrieves information about a Service key of Partner Interconnect Attachment, including:"+interconnectAttachmentServiceKeyDetails, Writer,
-		aliasOpt("g-service-key"), displayerType(&displayers.PartnerInterconnectAttachmentServiceKey{}))
-	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+		aliasOpt("g-service-key"), displayerType(&displayers.PartnerAttachmentServiceKey{}))
+	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" interconnect-attachment get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		`: doctl network --type "partner" partner-attachment get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
 }
 
 func ensurePartnerAttachmentType(c *CmdConfig) error {
-	attachmentType, err := c.Doit.GetString(c.NS, doctl.ArgInterconnectAttachmentType)
+	attachmentType, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentType)
 	if err != nil {
 		return err
 	}
@@ -179,31 +179,31 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 	}
 
 	r := new(godo.PartnerNetworkConnectCreateRequest)
-	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
+	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentName)
 	if err != nil {
 		return err
 	}
 	r.Name = name
 
-	connBandwidth, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps)
+	connBandwidth, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerAttachmentConnectionBandwidthInMbps)
 	if err != nil {
 		return err
 	}
 	r.ConnectionBandwidthInMbps = connBandwidth
 
-	region, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentRegion)
+	region, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentRegion)
 	if err != nil {
 		return err
 	}
 	r.Region = region
 
-	naasProvider, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentNaaSProvider)
+	naasProvider, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentNaaSProvider)
 	if err != nil {
 		return err
 	}
 	r.NaaSProvider = naasProvider
 
-	vpcIDs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgPartnerInterconnectAttachmentVPCIDs)
+	vpcIDs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgPartnerAttachmentVPCIDs)
 	if err != nil {
 		return err
 	}
@@ -211,31 +211,31 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 
 	bgpConfig := new(godo.BGP)
 
-	bgpLocalASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPLocalASN)
+	bgpLocalASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerAttachmentBGPLocalASN)
 	if err != nil {
 		return err
 	}
 	bgpConfig.LocalASN = bgpLocalASN
 
-	bgpLocalRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPLocalRouterIP)
+	bgpLocalRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentBGPLocalRouterIP)
 	if err != nil {
 		return err
 	}
 	bgpConfig.LocalRouterIP = bgpLocalRouterIP
 
-	bgpPeerASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN)
+	bgpPeerASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerAttachmentBGPPeerASN)
 	if err != nil {
 		return err
 	}
 	bgpConfig.PeerASN = bgpPeerASN
 
-	bgpPeerRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP)
+	bgpPeerRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentBGPPeerRouterIP)
 	if err != nil {
 		return err
 	}
 	bgpConfig.PeerRouterIP = bgpPeerRouterIP
 
-	bgpAuthKey, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPAuthKey)
+	bgpAuthKey, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentBGPAuthKey)
 	if err != nil {
 		bgpConfig.AuthKey = bgpAuthKey
 	}
@@ -246,7 +246,7 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachment{PartnerInterconnectAttachments: do.PartnerNetworkConnects{*pia}}
+	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: do.PartnerNetworkConnects{*pia}}
 	return c.Display(item)
 }
 
@@ -269,8 +269,8 @@ func RunPartnerInterconnectAttachmentGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachment{
-		PartnerInterconnectAttachments: do.PartnerNetworkConnects{*interconnectAttachment},
+	item := &displayers.PartnerNetworkConnect{
+		PartnerNetworkConnects: do.PartnerNetworkConnects{*interconnectAttachment},
 	}
 	return c.Display(item)
 }
@@ -288,7 +288,7 @@ func RunPartnerInterconnectAttachmentList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachment{PartnerInterconnectAttachments: list}
+	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: list}
 	return c.Display(item)
 }
 
@@ -305,13 +305,13 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 	iaID := c.Args[0]
 
 	r := new(godo.PartnerNetworkConnectUpdateRequest)
-	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
+	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentName)
 	if err != nil {
 		return err
 	}
 	r.Name = name
 
-	vpcIDs, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentVPCIDs)
+	vpcIDs, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentVPCIDs)
 	if err != nil {
 		return err
 	}
@@ -322,8 +322,8 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachment{
-		PartnerInterconnectAttachments: do.PartnerNetworkConnects{*interconnectAttachment},
+	item := &displayers.PartnerNetworkConnect{
+		PartnerNetworkConnects: do.PartnerNetworkConnects{*interconnectAttachment},
 	}
 	return c.Display(item)
 }
@@ -347,7 +347,7 @@ func RunPartnerInterconnectAttachmentRegenerateServiceKey(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachmentRegenerateServiceKey{
+	item := &displayers.PartnerAttachmentRegenerateServiceKey{
 		RegenerateKey: *regenerateServiceKey,
 	}
 	return c.Display(item)
@@ -372,7 +372,7 @@ func RunGetPartnerInterconnectAttachmentBGPAuthKey(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachmentBgpAuthKey{
+	item := &displayers.PartnerAttachmentBgpAuthKey{
 		Key: *bgpAuthKey,
 	}
 	return c.Display(item)
@@ -397,7 +397,7 @@ func RunGetPartnerInterconnectAttachmentServiceKey(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachmentServiceKey{
+	item := &displayers.PartnerAttachmentServiceKey{
 		Key: *serviceKey,
 	}
 	return c.Display(item)
@@ -471,7 +471,7 @@ func RunPartnerInterconnectAttachmentRouteList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachmentRoute{PartnerInterconnectAttachmentRoutes: routeList}
+	item := &displayers.PartnerAttachmentRoute{PartnerAttachmentRoutes: routeList}
 	return c.Display(item)
 }
 

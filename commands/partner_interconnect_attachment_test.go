@@ -69,16 +69,16 @@ func TestPartnerInterconnectAttachmentsCommand(t *testing.T) {
 
 func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentName, "doctl-pia")
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps, 50)
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentRegion, "stage2")
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentNaaSProvider, "MEGAPORT")
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentVPCIDs, []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"})
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentBGPLocalASN, 65001)
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentBGPLocalRouterIP, "192.168.1.1")
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN, 65002)
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP, "192.168.1.2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, "doctl-pia")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentConnectionBandwidthInMbps, 50)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentRegion, "stage2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentNaaSProvider, "MEGAPORT")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"})
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalASN, 65001)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalRouterIP, "192.168.1.1")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerASN, 65002)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "192.168.1.2")
 
 		expectedRequest := &godo.PartnerNetworkConnectCreateRequest{
 			Name:                      "doctl-pia",
@@ -97,7 +97,7 @@ func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
 
 func TestPartnerInterconnectAttachmentCreateUnsupportedType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "unsupported")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "unsupported")
 		err := RunPartnerInterconnectAttachmentCreate(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported attachment type")
@@ -106,7 +106,7 @@ func TestPartnerInterconnectAttachmentCreateUnsupportedType(t *testing.T) {
 
 func TestInterconnectAttachmentsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
 		tm.partnerInterconnectAttachment.EXPECT().GetPartnerInterconnectAttachment(iaID).Return(&testPartnerAttachment, nil)
@@ -120,7 +120,7 @@ func TestInterconnectAttachmentsGet(t *testing.T) {
 
 func TestInterconnectAttachmentsGetNoID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		err := RunPartnerInterconnectAttachmentGet(config)
 		assert.Error(t, err)
@@ -129,7 +129,7 @@ func TestInterconnectAttachmentsGetNoID(t *testing.T) {
 
 func TestInterconnectAttachmentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachments().Return(testPartnerIAList, nil)
 
@@ -140,7 +140,7 @@ func TestInterconnectAttachmentsList(t *testing.T) {
 
 func TestInterconnectAttachmentsDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
 		tm.partnerInterconnectAttachment.EXPECT().DeletePartnerInterconnectAttachment(iaID).Return(nil)
@@ -155,7 +155,7 @@ func TestInterconnectAttachmentsDelete(t *testing.T) {
 
 func TestInterconnectAttachmentsUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "ia-uuid1"
 		iaName := "ia-name"
@@ -164,8 +164,8 @@ func TestInterconnectAttachmentsUpdate(t *testing.T) {
 		tm.partnerInterconnectAttachment.EXPECT().UpdatePartnerInterconnectAttachment(iaID, &r).Return(&testPartnerAttachment, nil)
 
 		config.Args = append(config.Args, iaID)
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentName, iaName)
-		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentVPCIDs, vpcIDs)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, iaName)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, vpcIDs)
 
 		err := RunPartnerInterconnectAttachmentUpdate(config)
 		assert.NoError(t, err)
@@ -174,7 +174,7 @@ func TestInterconnectAttachmentsUpdate(t *testing.T) {
 
 func TestInterconnectAttachmentsUpdateNoID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		err := RunPartnerInterconnectAttachmentUpdate(config)
 		assert.Error(t, err)
@@ -183,7 +183,7 @@ func TestInterconnectAttachmentsUpdateNoID(t *testing.T) {
 
 func TestInterconnectAttachmentRoutesList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "ia-uuid1"
 		config.Args = append(config.Args, iaID)
@@ -196,7 +196,7 @@ func TestInterconnectAttachmentRoutesList(t *testing.T) {
 
 func TestInterconnectAttachmentsRegenerateServiceKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
 		tm.partnerInterconnectAttachment.EXPECT().RegenerateServiceKey(iaID).Return(&testRegenerateServiceKey, nil)
@@ -210,7 +210,7 @@ func TestInterconnectAttachmentsRegenerateServiceKey(t *testing.T) {
 
 func TestInterconnectAttachmentsBgpAuthKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
 		tm.partnerInterconnectAttachment.EXPECT().GetBGPAuthKey(iaID).Return(&testBGPAuthKey, nil)
@@ -224,7 +224,7 @@ func TestInterconnectAttachmentsBgpAuthKey(t *testing.T) {
 
 func TestInterconnectAttachmentsGetServiceKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
 		tm.partnerInterconnectAttachment.EXPECT().GetServiceKey(iaID).Return(&testServiceKey, nil)
