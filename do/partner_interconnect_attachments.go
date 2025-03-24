@@ -21,7 +21,7 @@ import (
 
 // PartnerInterconnectAttachment wraps a godo PartnerInterconnectAttachment.
 type PartnerInterconnectAttachment struct {
-	*godo.PartnerInterconnectAttachment
+	*godo.PartnerNetworkConnect
 }
 
 // PartnerInterconnectAttachments is a slice of PartnerInterconnectAttachment.
@@ -53,11 +53,11 @@ type PartnerInterconnectAttachmentServiceKey struct {
 // PartnerInterconnectAttachmentsService is an interface for interacting with
 // DigitalOcean's partner interconnect attachments api.
 type PartnerInterconnectAttachmentsService interface {
-	Create(*godo.PartnerInterconnectAttachmentCreateRequest) (*PartnerInterconnectAttachment, error)
+	Create(request *godo.PartnerNetworkConnectCreateRequest) (*PartnerInterconnectAttachment, error)
 	GetPartnerInterconnectAttachment(iaID string) (*PartnerInterconnectAttachment, error)
 	ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error)
 	DeletePartnerInterconnectAttachment(iaID string) error
-	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error)
+	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerInterconnectAttachment, error)
 	ListPartnerInterconnectAttachmentRoutes(iaID string) (PartnerInterconnectAttachmentRoutes, error)
 	GetBGPAuthKey(iaID string) (*PartnerInterconnectAttachmentBGPAuthKey, error)
 	RegenerateServiceKey(iaID string) (*PartnerInterconnectAttachmentRegenerateServiceKey, error)
@@ -78,27 +78,27 @@ func NewPartnerInterconnectAttachmentsService(client *godo.Client) PartnerInterc
 }
 
 // Create creates a partner interconnect attachment.
-func (p *partnerInterconnectAttachmentsService) Create(req *godo.PartnerInterconnectAttachmentCreateRequest) (*PartnerInterconnectAttachment, error) {
-	pia, _, err := p.client.PartnerInterconnectAttachments.Create(context.TODO(), req)
+func (p *partnerInterconnectAttachmentsService) Create(req *godo.PartnerNetworkConnectCreateRequest) (*PartnerInterconnectAttachment, error) {
+	pia, _, err := p.client.PartnerNetworkConnect.Create(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: pia}, nil
+	return &PartnerInterconnectAttachment{PartnerNetworkConnect: pia}, nil
 }
 
 // GetPartnerInterconnectAttachment retrieves a partner interconnect attachment.
 func (p *partnerInterconnectAttachmentsService) GetPartnerInterconnectAttachment(iaID string) (*PartnerInterconnectAttachment, error) {
-	partnerIA, _, err := p.client.PartnerInterconnectAttachments.Get(context.TODO(), iaID)
+	partnerIA, _, err := p.client.PartnerNetworkConnect.Get(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
+	return &PartnerInterconnectAttachment{PartnerNetworkConnect: partnerIA}, nil
 }
 
 // ListPartnerInterconnectAttachments lists all partner interconnect attachments.
 func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := p.client.PartnerInterconnectAttachments.List(context.TODO(), opt)
+		list, resp, err := p.client.PartnerNetworkConnect.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -118,31 +118,31 @@ func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmen
 
 	list := make([]PartnerInterconnectAttachment, len(si))
 	for i := range si {
-		a := si[i].(*godo.PartnerInterconnectAttachment)
-		list[i] = PartnerInterconnectAttachment{PartnerInterconnectAttachment: a}
+		a := si[i].(*godo.PartnerNetworkConnect)
+		list[i] = PartnerInterconnectAttachment{PartnerNetworkConnect: a}
 	}
 
 	return list, nil
 }
 
 func (p *partnerInterconnectAttachmentsService) DeletePartnerInterconnectAttachment(iaID string) error {
-	_, err := p.client.PartnerInterconnectAttachments.Delete(context.TODO(), iaID)
+	_, err := p.client.PartnerNetworkConnect.Delete(context.TODO(), iaID)
 	return err
 }
 
-func (p *partnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error) {
-	partnerIA, _, err := p.client.PartnerInterconnectAttachments.Update(context.TODO(), iaID, req)
+func (p *partnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerInterconnectAttachment, error) {
+	partnerIA, _, err := p.client.PartnerNetworkConnect.Update(context.TODO(), iaID, req)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
+	return &PartnerInterconnectAttachment{PartnerNetworkConnect: partnerIA}, nil
 }
 
 // ListPartnerInterconnectAttachmentRoutes lists all partner interconnect attachment routes.
 func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmentRoutes(iaID string) (PartnerInterconnectAttachmentRoutes, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := p.client.PartnerInterconnectAttachments.ListRoutes(context.TODO(), iaID, opt)
+		list, resp, err := p.client.PartnerNetworkConnect.ListRoutes(context.TODO(), iaID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -170,7 +170,7 @@ func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmen
 }
 
 func (p *partnerInterconnectAttachmentsService) GetBGPAuthKey(iaID string) (*PartnerInterconnectAttachmentBGPAuthKey, error) {
-	bgpAuthKey, _, err := p.client.PartnerInterconnectAttachments.GetBGPAuthKey(context.TODO(), iaID)
+	bgpAuthKey, _, err := p.client.PartnerNetworkConnect.GetBGPAuthKey(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (p *partnerInterconnectAttachmentsService) GetBGPAuthKey(iaID string) (*Par
 }
 
 func (p *partnerInterconnectAttachmentsService) RegenerateServiceKey(iaID string) (*PartnerInterconnectAttachmentRegenerateServiceKey, error) {
-	regenerateServiceKey, _, err := p.client.PartnerInterconnectAttachments.RegenerateServiceKey(context.TODO(), iaID)
+	regenerateServiceKey, _, err := p.client.PartnerNetworkConnect.RegenerateServiceKey(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (p *partnerInterconnectAttachmentsService) RegenerateServiceKey(iaID string
 
 // GetServiceKey retrieves a service key of a partner interconnect attachment.
 func (p *partnerInterconnectAttachmentsService) GetServiceKey(iaID string) (*PartnerInterconnectAttachmentServiceKey, error) {
-	serviceKey, _, err := p.client.PartnerInterconnectAttachments.GetServiceKey(context.TODO(), iaID)
+	serviceKey, _, err := p.client.PartnerNetworkConnect.GetServiceKey(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}

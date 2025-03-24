@@ -42,18 +42,18 @@ func (m *MockPartnerInterconnectAttachmentsService) EXPECT() *MockPartnerInterco
 }
 
 // Create mocks base method.
-func (m *MockPartnerInterconnectAttachmentsService) Create(arg0 *godo.PartnerInterconnectAttachmentCreateRequest) (*do.PartnerInterconnectAttachment, error) {
+func (m *MockPartnerInterconnectAttachmentsService) Create(request *godo.PartnerNetworkConnectCreateRequest) (*do.PartnerInterconnectAttachment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
+	ret := m.ctrl.Call(m, "Create", request)
 	ret0, _ := ret[0].(*do.PartnerInterconnectAttachment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) Create(arg0 any) *gomock.Call {
+func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) Create(request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).Create), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPartnerInterconnectAttachmentsService)(nil).Create), request)
 }
 
 // DeletePartnerInterconnectAttachment mocks base method.
@@ -161,7 +161,7 @@ func (mr *MockPartnerInterconnectAttachmentsServiceMockRecorder) RegenerateServi
 }
 
 // UpdatePartnerInterconnectAttachment mocks base method.
-func (m *MockPartnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*do.PartnerInterconnectAttachment, error) {
+func (m *MockPartnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerNetworkConnectUpdateRequest) (*do.PartnerInterconnectAttachment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePartnerInterconnectAttachment", iaID, req)
 	ret0, _ := ret[0].(*do.PartnerInterconnectAttachment)
