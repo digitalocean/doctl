@@ -18,16 +18,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
+	domocks "github.com/digitalocean/doctl/do/mocks"
+	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/do"
-	domocks "github.com/digitalocean/doctl/do/mocks"
-	"github.com/digitalocean/doctl/internal/apps/builder"
 )
 
 var (
@@ -255,7 +254,7 @@ type tcMocks struct {
 	appBuilder                    *builder.MockComponentBuilder
 	appDockerEngineClient         *builder.MockDockerEngineClient
 	oauth                         *domocks.MockOAuthService
-	partnerInterconnectAttachment *domocks.MockPartnerNetworkConnectsService
+	partnerInterconnectAttachment *domocks.MockPartnerInterconnectAttachmentsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -305,7 +304,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		appBuilder:                    builder.NewMockComponentBuilder(ctrl),
 		appDockerEngineClient:         builder.NewMockDockerEngineClient(ctrl),
 		oauth:                         domocks.NewMockOAuthService(ctrl),
-		partnerInterconnectAttachment: domocks.NewMockPartnerNetworkConnectsService(ctrl),
+		partnerInterconnectAttachment: domocks.NewMockPartnerInterconnectAttachmentsService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -363,7 +362,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Monitoring:                     func() do.MonitoringService { return tm.monitoring },
 		Serverless:                     func() do.ServerlessService { return tm.serverless },
 		OAuth:                          func() do.OAuthService { return tm.oauth },
-		PartnerInterconnectAttachments: func() do.PartnerNetworkConnectsService { return tm.partnerInterconnectAttachment },
+		PartnerInterconnectAttachments: func() do.PartnerInterconnectAttachmentsService { return tm.partnerInterconnectAttachment },
 	}
 
 	tFn(config, tm)
