@@ -133,7 +133,7 @@ func TestInterconnectAttachmentsList(t *testing.T) {
 
 		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachments().Return(testPartnerIAList, nil)
 
-		err := RunPartnerAttachmentList(config)
+		err := RunPartnerNCList(config)
 		assert.NoError(t, err)
 	})
 }
@@ -148,7 +148,7 @@ func TestInterconnectAttachmentsDelete(t *testing.T) {
 		config.Args = append(config.Args, iaID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		err := RunPartnerNetworkAttachmentDelete(config)
+		err := RunPartnerNCDelete(config)
 		assert.NoError(t, err)
 	})
 }

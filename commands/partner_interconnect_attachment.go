@@ -87,28 +87,31 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 - The Partner Network Connect BGP Peer Router IP`
 
 	cmdPartnerNCGet := CmdBuilder(cmd, RunPartnerNCGet, "get <partner-network-connect-id>",
-		"Retrieves a Partner Network Connect", "Retrieves information about a Partner Network Connect, including:"+partnerNetworkConnectDetails, Writer,
+		"Retrieves a Partner Network Connect",
+		"Retrieves information about a Partner Network Connect, including:"+partnerNetworkConnectDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddStringFlag(cmdPartnerNCGet, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerNCGet.Example = `The following example retrieves information about a Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerAttachmentList, "list", "List Network Interconnect Attachments", "Retrieves a list of the Network Interconnect Attachments on your account, including the following information for each:"+partnerNetworkConnectDetails, Writer,
+	cmdPartnerNCList := CmdBuilder(cmd, RunPartnerNCList, "list", "List Partner Network Connects",
+		"Retrieves a list of the Partner Network Connects on your account, including the following information for each:"+partnerNetworkConnectDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.PartnerNetworkConnect{}))
-	AddStringFlag(cmdPartnerIAList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
-		` doctl network --type "partner" partner-attachment list --format Name,VPCIDs `
+	AddStringFlag(cmdPartnerNCList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdPartnerNCList.Example = `The following example lists the Partner Network Connects on your account :` +
+		` doctl network --type "partner" connect list --format Name,VPCIDs `
 
-	cmdPartnerIADelete := CmdBuilder(cmd, RunPartnerNetworkAttachmentDelete, "delete <partner-network-connect-id>",
-		"Deletes a Partner Interconnect Attachment", "Deletes information about a Partner Interconnect Attachment. This is irreversible ", Writer,
+	cmdPartnerNCDelete := CmdBuilder(cmd, RunPartnerNCDelete, "delete <partner-network-connect-id>",
+		"Deletes a Partner Network Connect",
+		"Deletes information about a Partner Network Connect. This is irreversible ", Writer,
 		aliasOpt("rm"), displayerType(&displayers.PartnerNetworkConnect{}))
-	AddBoolFlag(cmdPartnerIADelete, doctl.ArgForce, doctl.ArgShortForce, false,
-		"Delete the VPC Peering without any confirmation prompt")
-	AddBoolFlag(cmdPartnerIADelete, doctl.ArgCommandWait, "", false,
-		"Boolean that specifies whether to wait for a VPC Peering deletion to complete before returning control to the terminal")
-	AddStringFlag(cmdPartnerIADelete, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	cmdPartnerIADelete.Example = `The following example deletes a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" partner-attachment delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	AddBoolFlag(cmdPartnerNCDelete, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Delete the Partner Network Connect without any confirmation prompt")
+	AddBoolFlag(cmdPartnerNCDelete, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for a Partner Network Connect deletion to complete before returning control to the terminal")
+	AddStringFlag(cmdPartnerNCDelete, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdPartnerNCDelete.Example = `The following example deletes a Partner Network Connects with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" connect delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerIAUpdate := CmdBuilder(cmd, RunPartnerAttachmentUpdate, "update <partner-network-connect-id>",
 		"Update a Partner Interconnect Attachment's name and configuration", `Use this command to update the name and and configuration of a Partner Interconnect Attachment`, Writer, aliasOpt("u"))
@@ -275,8 +278,8 @@ func RunPartnerNCGet(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunPartnerAttachmentList lists Partner Attachment
-func RunPartnerAttachmentList(c *CmdConfig) error {
+// RunPartnerNCList lists Partner Network Connects
+func RunPartnerNCList(c *CmdConfig) error {
 
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
@@ -403,8 +406,8 @@ func RunGetPartnerAttachmentServiceKey(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunPartnerNetworkAttachmentDelete deletes an existing Partner Network Attachment by its identifier.
-func RunPartnerNetworkAttachmentDelete(c *CmdConfig) error {
+// RunPartnerNCDelete deletes an existing Partner Network Connect by its identifier.
+func RunPartnerNCDelete(c *CmdConfig) error {
 
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
