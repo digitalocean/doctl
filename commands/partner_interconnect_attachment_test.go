@@ -203,7 +203,7 @@ func TestInterconnectAttachmentsRegenerateServiceKey(t *testing.T) {
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunPartnerAttachmentRegenerateServiceKey(config)
+		err := RunPartnerNCRegenerateServiceKey(config)
 		assert.NoError(t, err)
 	})
 }
@@ -217,7 +217,7 @@ func TestInterconnectAttachmentsBgpAuthKey(t *testing.T) {
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunGetPartnerAttachmentBGPAuthKey(config)
+		err := RunGetPartnerNCBGPAuthKey(config)
 		assert.NoError(t, err)
 	})
 }
