@@ -31,6 +31,7 @@ type Snapshots []Snapshot
 type SnapshotsService interface {
 	List() (Snapshots, error)
 	ListVolume() (Snapshots, error)
+	ListVolumeSnapshotByRegion(region string) (Snapshots, error)
 	ListDroplet() (Snapshots, error)
 	Get(string) (*Snapshot, error)
 	Delete(string) error
@@ -81,6 +82,35 @@ func (ss *snapshotsService) List() (Snapshots, error) {
 func (ss *snapshotsService) ListVolume() (Snapshots, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ss.client.Snapshots.ListVolume(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(Snapshots, len(si))
+	for i := range si {
+		a := si[i].(godo.Snapshot)
+		list[i] = Snapshot{Snapshot: &a}
+	}
+
+	return list, nil
+}
+
+func (ss *snapshotsService) ListVolumeSnapshotByRegion(region string) (Snapshots, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := ss.client.Snapshots.ListVolumeSnapshotByRegion(context.TODO(), region, opt)
 		if err != nil {
 			return nil, nil, err
 		}
