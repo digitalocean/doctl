@@ -40,7 +40,7 @@ type KubernetesService interface {
 
 	CreateNodePool(ctx context.Context, clusterID string, req *KubernetesNodePoolCreateRequest) (*KubernetesNodePool, *Response, error)
 	GetNodePool(ctx context.Context, clusterID, poolID string) (*KubernetesNodePool, *Response, error)
-	GetNodePoolTemplate(ctx context.Context, clusterID string, nodePoolName string) (*KubernetesNodePoolTemplateResponse, *Response, error)
+	GetNodePoolTemplate(ctx context.Context, clusterID string, nodePoolName string) (*KubernetesNodePoolTemplate, *Response, error)
 	ListNodePools(ctx context.Context, clusterID string, opts *ListOptions) ([]*KubernetesNodePool, *Response, error)
 	UpdateNodePool(ctx context.Context, clusterID, poolID string, req *KubernetesNodePoolUpdateRequest) (*KubernetesNodePool, *Response, error)
 	// RecycleNodePoolNodes is DEPRECATED please use DeleteNode
@@ -55,6 +55,8 @@ type KubernetesService interface {
 
 	RunClusterlint(ctx context.Context, clusterID string, req *KubernetesRunClusterlintRequest) (string, *Response, error)
 	GetClusterlintResults(ctx context.Context, clusterID string, req *KubernetesGetClusterlintRequest) ([]*ClusterlintDiagnostic, *Response, error)
+
+	GetClusterStatusMessages(ctx context.Context, clusterID string, req *KubernetesGetClusterStatusMessagesRequest) ([]*KubernetesClusterStatusMessage, *Response, error)
 }
 
 var _ KubernetesService = &KubernetesServiceOp{}
@@ -190,6 +192,19 @@ type KubernetesRunClusterlintRequest struct {
 
 type KubernetesGetClusterlintRequest struct {
 	RunId string `json:"run_id"`
+}
+
+type clusterStatusMessagesRoot struct {
+	Messages []*KubernetesClusterStatusMessage `json:"messages"`
+}
+
+type KubernetesClusterStatusMessage struct {
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type KubernetesGetClusterStatusMessagesRequest struct {
+	Since *time.Time `json:"since"`
 }
 
 // KubernetesCluster represents a Kubernetes cluster.
@@ -435,19 +450,9 @@ type KubernetesNodePool struct {
 	Nodes []*KubernetesNode `json:"nodes,omitempty"`
 }
 
-// KubernetesNodePool represents a node pool template response from the node template endpoint
-type KubernetesNodePoolTemplateResponse struct {
-	ClusterUUID string                      `json:"cluster_uuid,omitempty"`
-	Name        string                      `json:"name,omitempty"`
-	Slug        string                      `json:"slug,omitempty"`
-	Template    *KubernetesNodePoolTemplate `json:"template,omitempty"`
-}
-
 // KubernetesNodePool represents the node pool template data for a given pool.
 type KubernetesNodePoolTemplate struct {
-	Labels      map[string]string            `json:"labels,omitempty"`
-	Capacity    *KubernetesNodePoolResources `json:"capacity,omitempty"`
-	Allocatable *KubernetesNodePoolResources `json:"allocatable,omitempty"`
+	Template *KubernetesNodeTemplate
 }
 
 // KubernetesNodePoolResources represents the resources within a given template for a node pool
@@ -468,6 +473,17 @@ type KubernetesNode struct {
 
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+}
+
+// KubernetesNodeTemplate represents a template in a node pool in a Kubernetes cluster.
+type KubernetesNodeTemplate struct {
+	ClusterUUID string                       `json:"cluster_uuid,omitempty"`
+	Name        string                       `json:"name,omitempty"`
+	Slug        string                       `json:"slug,omitempty"`
+	Labels      map[string]string            `json:"labels,omitempty"`
+	Taints      []string                     `json:"taints,omitempty"`
+	Capacity    *KubernetesNodePoolResources `json:"capacity,omitempty"`
+	Allocatable *KubernetesNodePoolResources `json:"allocatable,omitempty"`
 }
 
 // KubernetesNodeStatus represents the status of a particular Node in a Kubernetes cluster.
@@ -838,7 +854,7 @@ func (svc *KubernetesServiceOp) GetNodePool(ctx context.Context, clusterID, pool
 }
 
 // GetNodePoolTemplate retrieves the template used for a given node pool to scale up from zero.
-func (svc *KubernetesServiceOp) GetNodePoolTemplate(ctx context.Context, clusterID string, nodePoolName string) (*KubernetesNodePoolTemplateResponse, *Response, error) {
+func (svc *KubernetesServiceOp) GetNodePoolTemplate(ctx context.Context, clusterID string, nodePoolName string) (*KubernetesNodePoolTemplate, *Response, error) {
 	path, err := url.JoinPath(kubernetesClustersPath, clusterID, "node_pools_template", nodePoolName)
 	if err != nil {
 		return nil, nil, err
@@ -847,7 +863,7 @@ func (svc *KubernetesServiceOp) GetNodePoolTemplate(ctx context.Context, cluster
 	if err != nil {
 		return nil, nil, err
 	}
-	root := new(KubernetesNodePoolTemplateResponse)
+	root := new(KubernetesNodePoolTemplate)
 	resp, err := svc.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
@@ -1040,4 +1056,29 @@ func (svc *KubernetesServiceOp) GetClusterlintResults(ctx context.Context, clust
 		return nil, resp, err
 	}
 	return root.Diagnostics, resp, nil
+}
+
+func (svc *KubernetesServiceOp) GetClusterStatusMessages(ctx context.Context, clusterID string, req *KubernetesGetClusterStatusMessagesRequest) ([]*KubernetesClusterStatusMessage, *Response, error) {
+	path := fmt.Sprintf("%s/%s/status_messages", kubernetesClustersPath, clusterID)
+
+	if req != nil {
+		v := make(url.Values)
+		if req.Since != nil {
+			v.Set("since", req.Since.Format(time.RFC3339))
+		}
+		if query := v.Encode(); query != "" {
+			path = path + "?" + query
+		}
+	}
+
+	request, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(clusterStatusMessagesRoot)
+	resp, err := svc.client.Do(ctx, request, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Messages, resp, nil
 }

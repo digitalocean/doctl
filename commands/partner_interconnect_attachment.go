@@ -178,7 +178,7 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 
-	r := new(godo.PartnerInterconnectAttachmentCreateRequest)
+	r := new(godo.PartnerNetworkConnectCreateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
 	if err != nil {
 		return err
@@ -304,7 +304,7 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 	}
 	iaID := c.Args[0]
 
-	r := new(godo.PartnerInterconnectAttachmentUpdateRequest)
+	r := new(godo.PartnerNetworkConnectUpdateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
 	if err != nil {
 		return err
