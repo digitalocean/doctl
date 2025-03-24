@@ -113,27 +113,30 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 	cmdPartnerNCDelete.Example = `The following example deletes a Partner Network Connects with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPartnerIAUpdate := CmdBuilder(cmd, RunPartnerAttachmentUpdate, "update <partner-network-connect-id>",
-		"Update a Partner Interconnect Attachment's name and configuration", `Use this command to update the name and and configuration of a Partner Interconnect Attachment`, Writer, aliasOpt("u"))
-	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerAttachmentName, "", "",
-		"The Partner Interconnect Attachment's name", requiredOpt())
-	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerAttachmentVPCIDs, "", "",
-		"The Partner Interconnect Attachment's vpc ids", requiredOpt())
-	cmdPartnerIAUpdate.Example = `The following example updates the name of a Partner Interconnect Attachment with the ID ` +
+	cmdPartnerNCUpdate := CmdBuilder(cmd, RunPartnerNCUpdate, "update <partner-network-connect-id>",
+		"Update a Partner Network Connects name and configuration",
+		`Use this command to update the name and and configuration of a Partner Network Connect`, Writer, aliasOpt("u"))
+	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentName, "", "",
+		"The Partner Network Connects name", requiredOpt())
+	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentVPCIDs, "", "",
+		"The Partner Network Connects vpc ids", requiredOpt())
+	cmdPartnerNCUpdate.Example = `The following example updates the name of a Partner Network Connect with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
-		`: doctl network --type "partner" partner-attachment update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
+		`: doctl network --type "partner" connect update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
 vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
-	interconnectAttachmentRouteDetails := `
-- The Partner Interconnect Attachment ID
-- The Partner Interconnect Attachment Cidr`
+	partnerAttachmentRouteDetails := `
+- The Partner Attachment ID
+- The Partner Attachment Cidr`
 
-	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerAttachmentRouteList, "list-routes", "List Network Interconnect Attachment Routes", "Retrieves a list of the Network Interconnect Attachment Routes on your account, including the following information for each:"+interconnectAttachmentRouteDetails, Writer,
+	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerAttachmentRouteList, "list-routes",
+		"List Partner Attachment Routes",
+		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerAttachmentRouteDetails, Writer,
 		aliasOpt("ls-routes"), displayerType(&displayers.PartnerNetworkConnect{}))
-	AddStringFlag(cmdPartnerIARouteList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	cmdPartnerIARouteList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
-		` doctl network --type "partner" partner-attachment list-routes --format ID,Cidr `
+	AddStringFlag(cmdPartnerIARouteList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdPartnerIARouteList.Example = `The following example lists the Partner Attachment Routes on your account :` +
+		` doctl network --type "partner" connect list-routes --format ID,Cidr `
 
 	cmdGetPartnerIARegenerateServiceKey := CmdBuilder(cmd, RunPartnerAttachmentRegenerateServiceKey, "regenerate-service-key <partner-network-connect-id>",
 		"Regenerates a Service key of Partner Interconnect Attachment", "Regenerates information about a Service key of Partner Interconnect Attachment", Writer,
@@ -295,8 +298,8 @@ func RunPartnerNCList(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunPartnerAttachmentUpdate updates an existing Partner Attachment with new configuration.
-func RunPartnerAttachmentUpdate(c *CmdConfig) error {
+// RunPartnerNCUpdate updates an existing Partner Network Connect with new configuration.
+func RunPartnerNCUpdate(c *CmdConfig) error {
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
 	}
