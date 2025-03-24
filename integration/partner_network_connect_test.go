@@ -44,12 +44,12 @@ ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Pr
 12345    doctl-pia    active    50                             stage2    MEGAPORT         d35e5cb7-7957-4643-8e3a-1ab4eb3a494c    2025-01-30 12:00:00 +0000 UTC    0                                       0
 `
 
-	interconnectListRoutesOutput = `
+	pncListRoutesOutput = `
 ID                                      Cidr
 a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
 `
 
-	interconnectListRoutesResponse = `
+	pncListRoutesResponse = `
 {
   "remote_routes": [
 	{"id": "a0eb6eb0-fa38-41a8-a5de-1a75524667fe", "cidr": "169.250.0.0/29"}
@@ -69,25 +69,25 @@ a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
 }
 `
 
-	interconnectRegenerateServiceKeyOutput   = ``
-	interconnectRegenerateServiceKeyResponse = `{}`
+	pncRegenerateServiceKeyOutput   = ``
+	pncRegenerateServiceKeyResponse = `{}`
 
-	interconnectGetBgpAuthKeyOutput = `
+	pncGetBgpAuthKeyOutput = `
 Value
 test-bgp-auth-key
 	`
-	interconnectGetBgpAuthKeyResponse = `
+	pncGetBgpAuthKeyResponse = `
 {
 	"bgp_auth_key": {
 		"value": "test-bgp-auth-key"
 	}
 }`
-	interconnectGetServiceKeyOutput = `
+	pncGetServiceKeyOutput = `
 Value               State     CreatedAt
 test-service-key    active    2025-01-30 12:00:00 +0000 UTC	
 	`
 
-	interconnectGetServiceKeyResponse = `
+	pncGetServiceKeyResponse = `
 {
 	"service_key": {
 		"created_at": "2025-01-30T12:00:00Z",
@@ -97,7 +97,7 @@ test-service-key    active    2025-01-30 12:00:00 +0000 UTC
 }`
 )
 
-var _ = suite("partner_interconnect_attachments/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -107,7 +107,7 @@ var _ = suite("partner_interconnect_attachments/create", func(t *testing.T, when
 		expect = require.New(t)
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments":
+			case "/v2/partner_network_connect/attachments":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -156,7 +156,7 @@ var _ = suite("partner_interconnect_attachments/create", func(t *testing.T, when
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"create",
 				"--name", "doctl-pia",
 				"--connection-bandwidth-in-mbps", "50",
@@ -172,7 +172,7 @@ var _ = suite("partner_interconnect_attachments/create", func(t *testing.T, when
 	})
 })
 
-var _ = suite("partner_interconnect_attachments/list-routes", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -183,7 +183,7 @@ var _ = suite("partner_interconnect_attachments/list-routes", func(t *testing.T,
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/remote_routes":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/remote_routes":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -195,7 +195,7 @@ var _ = suite("partner_interconnect_attachments/list-routes", func(t *testing.T,
 					return
 				}
 
-				w.Write([]byte(interconnectListRoutesResponse))
+				w.Write([]byte(pncListRoutesResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -213,14 +213,14 @@ var _ = suite("partner_interconnect_attachments/list-routes", func(t *testing.T,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"list-routes",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(interconnectListRoutesOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(pncListRoutesOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -230,7 +230,7 @@ var _ = suite("partner_interconnect_attachments/list-routes", func(t *testing.T,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"list-routes",
 				"--format", "Cidr",
 				"--no-header",
@@ -244,7 +244,7 @@ var _ = suite("partner_interconnect_attachments/list-routes", func(t *testing.T,
 	})
 })
 
-var _ = suite("partner_interconnect_attachments/regenerate-service-key", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("partner_network_connect/regenerate-service-key", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -255,7 +255,7 @@ var _ = suite("partner_interconnect_attachments/regenerate-service-key", func(t 
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -267,7 +267,7 @@ var _ = suite("partner_interconnect_attachments/regenerate-service-key", func(t 
 					return
 				}
 
-				w.Write([]byte(interconnectRegenerateServiceKeyResponse))
+				w.Write([]byte(pncRegenerateServiceKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -285,19 +285,19 @@ var _ = suite("partner_interconnect_attachments/regenerate-service-key", func(t 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"regenerate-service-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(interconnectRegenerateServiceKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(pncRegenerateServiceKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
 
-var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -308,7 +308,7 @@ var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testi
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/bgp_auth_key":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/bgp_auth_key":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -320,7 +320,7 @@ var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testi
 					return
 				}
 
-				w.Write([]byte(interconnectGetBgpAuthKeyResponse))
+				w.Write([]byte(pncGetBgpAuthKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -338,14 +338,14 @@ var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testi
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"get-bgp-auth-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(interconnectGetBgpAuthKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(pncGetBgpAuthKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -355,7 +355,7 @@ var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testi
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"get-bgp-auth-key",
 				"--format", "Value",
 				"--no-header",
@@ -369,7 +369,7 @@ var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testi
 	})
 })
 
-var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -380,7 +380,7 @@ var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testin
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -392,7 +392,7 @@ var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testin
 					return
 				}
 
-				w.Write([]byte(interconnectGetServiceKeyResponse))
+				w.Write([]byte(pncGetServiceKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -410,14 +410,14 @@ var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testin
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"get-service-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(interconnectGetServiceKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(pncGetServiceKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -427,7 +427,7 @@ var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testin
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"interconnect-attachment",
+				"connect",
 				"get-service-key",
 				"--format", "Value",
 				"--no-header",
