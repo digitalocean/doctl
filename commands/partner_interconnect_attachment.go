@@ -118,9 +118,9 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 		`Use this command to update the name and and configuration of a Partner Network Connect`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentName, "", "",
-		"The Partner Network Connects name", requiredOpt())
+		"The Partner Network Connect name", requiredOpt())
 	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentVPCIDs, "", "",
-		"The Partner Network Connects vpc ids", requiredOpt())
+		"The Partner Network Connect vpc ids", requiredOpt())
 	cmdPartnerNCUpdate.Example = `The following example updates the name of a Partner Network Connect with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
 		`: doctl network --type "partner" connect update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
@@ -130,39 +130,42 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 - The Partner Attachment ID
 - The Partner Attachment Cidr`
 
-	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerAttachmentRouteList, "list-routes",
+	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerAttachmentRouteList, "list-routes <partner-network-connect-id>",
 		"List Partner Attachment Routes",
 		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerAttachmentRouteDetails, Writer,
 		aliasOpt("ls-routes"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddStringFlag(cmdPartnerIARouteList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerIARouteList.Example = `The following example lists the Partner Attachment Routes on your account :` +
-		` doctl network --type "partner" connect list-routes --format ID,Cidr `
+		` doctl network --type "partner" connect list-routes f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Cidr `
 
-	cmdGetPartnerIARegenerateServiceKey := CmdBuilder(cmd, RunPartnerAttachmentRegenerateServiceKey, "regenerate-service-key <partner-network-connect-id>",
-		"Regenerates a Service key of Partner Interconnect Attachment", "Regenerates information about a Service key of Partner Interconnect Attachment", Writer,
+	cmdPartnerNCRegenerateServiceKey := CmdBuilder(cmd, RunPartnerNCRegenerateServiceKey, "regenerate-service-key <partner-attachment-id>",
+		"Regenerates a Service key of Partner Attachment",
+		"Regenerates information about a Service key of Partner Attachment", Writer,
 		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerAttachmentRegenerateServiceKey{}))
-	AddStringFlag(cmdGetPartnerIARegenerateServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	cmdGetPartnerIARegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" partner-attachment regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	AddStringFlag(cmdPartnerNCRegenerateServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdPartnerNCRegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" connect regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdGetPartnerIAGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerAttachmentBGPAuthKey, "get-bgp-auth-key <partner-network-connect-id>",
-		"Retrieves a BGP Auth key of Partner Interconnect Attachment", "Retrieves information about a BGP Auth key of Partner Interconnect Attachment", Writer,
+	cmdGetPartnerNCGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerNCBGPAuthKey, "get-bgp-auth-key <partner-network-connect-id>",
+		"Retrieves a BGP Auth key of Partner Network Connect",
+		"Retrieves information about a BGP Auth key of Partner Network Connect", Writer,
 		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerAttachmentBgpAuthKey{}))
-	AddStringFlag(cmdGetPartnerIAGetBGPAuthKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	cmdGetPartnerIAGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" partner-attachment get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	AddStringFlag(cmdGetPartnerNCGetBGPAuthKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdGetPartnerNCGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" connect get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	interconnectAttachmentServiceKeyDetails := `
+	partnerAttachmentServiceKeyDetails := `
 - The Service key Value
 - The Service key State
 - The Service key CreatedAt`
 
 	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerAttachmentServiceKey, "get-service-key <partner-network-connect-id>",
-		"Retrieves a Service key of Partner Interconnect Attachment", "Retrieves information about a Service key of Partner Interconnect Attachment, including:"+interconnectAttachmentServiceKeyDetails, Writer,
+		"Retrieves a Service key of Partner Network Connect",
+		"Retrieves information about a Service key of Partner Network Connect, including:"+partnerAttachmentServiceKeyDetails, Writer,
 		aliasOpt("g-service-key"), displayerType(&displayers.PartnerAttachmentServiceKey{}))
-	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl network --type "partner" partner-attachment get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" connect get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
 }
@@ -334,8 +337,8 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunPartnerAttachmentRegenerateServiceKey regenerates a service key of existing Partner Attachment
-func RunPartnerAttachmentRegenerateServiceKey(c *CmdConfig) error {
+// RunPartnerNCRegenerateServiceKey regenerates a service key of existing Partner Network Connect
+func RunPartnerNCRegenerateServiceKey(c *CmdConfig) error {
 
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
@@ -359,8 +362,8 @@ func RunPartnerAttachmentRegenerateServiceKey(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunGetPartnerAttachmentBGPAuthKey get a bgp auth key of existing Partner Attachment
-func RunGetPartnerAttachmentBGPAuthKey(c *CmdConfig) error {
+// RunGetPartnerNCBGPAuthKey get a bgp auth key of existing Partner Network Connect
+func RunGetPartnerNCBGPAuthKey(c *CmdConfig) error {
 
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
@@ -384,7 +387,7 @@ func RunGetPartnerAttachmentBGPAuthKey(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunGetPartnerAttachmentServiceKey retrieves service key of existing Partner Attachment
+// RunGetPartnerAttachmentServiceKey retrieves service key of existing Partner Network Connect
 func RunGetPartnerAttachmentServiceKey(c *CmdConfig) error {
 
 	if err := ensurePartnerAttachmentType(c); err != nil {
