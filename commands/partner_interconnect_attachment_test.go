@@ -113,7 +113,7 @@ func TestInterconnectAttachmentsGet(t *testing.T) {
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunPartnerInterconnectAttachmentGet(config)
+		err := RunPartnerNCGet(config)
 		assert.NoError(t, err)
 	})
 }
@@ -122,7 +122,7 @@ func TestInterconnectAttachmentsGetNoID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		err := RunPartnerInterconnectAttachmentGet(config)
+		err := RunPartnerNCGet(config)
 		assert.Error(t, err)
 	})
 }
@@ -133,7 +133,7 @@ func TestInterconnectAttachmentsList(t *testing.T) {
 
 		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachments().Return(testPartnerIAList, nil)
 
-		err := RunPartnerInterconnectAttachmentList(config)
+		err := RunPartnerAttachmentList(config)
 		assert.NoError(t, err)
 	})
 }
@@ -148,7 +148,7 @@ func TestInterconnectAttachmentsDelete(t *testing.T) {
 		config.Args = append(config.Args, iaID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		err := RunPartnerInterconnectAttachmentDelete(config)
+		err := RunPartnerNetworkAttachmentDelete(config)
 		assert.NoError(t, err)
 	})
 }
@@ -167,7 +167,7 @@ func TestInterconnectAttachmentsUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, iaName)
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, vpcIDs)
 
-		err := RunPartnerInterconnectAttachmentUpdate(config)
+		err := RunPartnerAttachmentUpdate(config)
 		assert.NoError(t, err)
 	})
 }
@@ -176,7 +176,7 @@ func TestInterconnectAttachmentsUpdateNoID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		err := RunPartnerInterconnectAttachmentUpdate(config)
+		err := RunPartnerAttachmentUpdate(config)
 		assert.Error(t, err)
 	})
 }
@@ -189,7 +189,7 @@ func TestInterconnectAttachmentRoutesList(t *testing.T) {
 		config.Args = append(config.Args, iaID)
 		tm.partnerInterconnectAttachment.EXPECT().ListPartnerAttachmentRoutes(iaID).Return(testPartnerIARouteList, nil)
 
-		err := RunPartnerInterconnectAttachmentRouteList(config)
+		err := RunPartnerAttachmentRouteList(config)
 		assert.NoError(t, err)
 	})
 }
@@ -203,7 +203,7 @@ func TestInterconnectAttachmentsRegenerateServiceKey(t *testing.T) {
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunPartnerInterconnectAttachmentRegenerateServiceKey(config)
+		err := RunPartnerAttachmentRegenerateServiceKey(config)
 		assert.NoError(t, err)
 	})
 }
@@ -217,7 +217,7 @@ func TestInterconnectAttachmentsBgpAuthKey(t *testing.T) {
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunGetPartnerInterconnectAttachmentBGPAuthKey(config)
+		err := RunGetPartnerAttachmentBGPAuthKey(config)
 		assert.NoError(t, err)
 	})
 }
@@ -231,7 +231,7 @@ func TestInterconnectAttachmentsGetServiceKey(t *testing.T) {
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunGetPartnerInterconnectAttachmentServiceKey(config)
+		err := RunGetPartnerAttachmentServiceKey(config)
 		assert.NoError(t, err)
 	})
 }
