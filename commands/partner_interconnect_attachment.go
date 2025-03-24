@@ -178,7 +178,7 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 
-	r := new(godo.PartnerInterconnectAttachmentCreateRequest)
+	r := new(godo.PartnerNetworkConnectCreateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
 	if err != nil {
 		return err
@@ -246,7 +246,7 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerInterconnectAttachment{PartnerInterconnectAttachments: do.PartnerInterconnectAttachments{*pia}}
+	item := &displayers.PartnerInterconnectAttachment{PartnerInterconnectAttachments: do.PartnerNetworkConnects{*pia}}
 	return c.Display(item)
 }
 
@@ -270,7 +270,7 @@ func RunPartnerInterconnectAttachmentGet(c *CmdConfig) error {
 	}
 
 	item := &displayers.PartnerInterconnectAttachment{
-		PartnerInterconnectAttachments: do.PartnerInterconnectAttachments{*interconnectAttachment},
+		PartnerInterconnectAttachments: do.PartnerNetworkConnects{*interconnectAttachment},
 	}
 	return c.Display(item)
 }
@@ -304,7 +304,7 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 	}
 	iaID := c.Args[0]
 
-	r := new(godo.PartnerInterconnectAttachmentUpdateRequest)
+	r := new(godo.PartnerNetworkConnectUpdateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
 	if err != nil {
 		return err
@@ -323,7 +323,7 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 	}
 
 	item := &displayers.PartnerInterconnectAttachment{
-		PartnerInterconnectAttachments: do.PartnerInterconnectAttachments{*interconnectAttachment},
+		PartnerInterconnectAttachments: do.PartnerNetworkConnects{*interconnectAttachment},
 	}
 	return c.Display(item)
 }
@@ -466,7 +466,7 @@ func RunPartnerInterconnectAttachmentRouteList(c *CmdConfig) error {
 	iaID := c.Args[0]
 
 	pias := c.PartnerInterconnectAttachments()
-	routeList, err := pias.ListPartnerInterconnectAttachmentRoutes(iaID)
+	routeList, err := pias.ListPartnerAttachmentRoutes(iaID)
 	if err != nil {
 		return err
 	}
@@ -475,7 +475,7 @@ func RunPartnerInterconnectAttachmentRouteList(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-func waitForPIA(pias do.PartnerInterconnectAttachmentsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
+func waitForPIA(pias do.PartnerNetworkConnectsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
 	const maxAttempts = 360
 	const errStatus = "ERROR"
 	attempts := 0

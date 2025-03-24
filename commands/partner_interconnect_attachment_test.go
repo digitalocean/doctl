@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	testPartnerAttachment = do.PartnerInterconnectAttachment{
-		PartnerInterconnectAttachment: &godo.PartnerInterconnectAttachment{
+	testPartnerAttachment = do.PartnerNetworkConnect{
+		PartnerNetworkConnect: &godo.PartnerNetworkConnect{
 			ID:                        "test-id",
 			Name:                      "doctl-pia",
 			State:                     "active",
@@ -26,32 +26,32 @@ var (
 		},
 	}
 
-	testPartnerIAList = do.PartnerInterconnectAttachments{
+	testPartnerIAList = do.PartnerNetworkConnects{
 		testPartnerAttachment,
 	}
 
-	testPartnerAttachmentRoute = do.PartnerInterconnectAttachmentRoute{
+	testPartnerAttachmentRoute = do.PartnerAttachmentRoute{
 		RemoteRoute: &godo.RemoteRoute{
 			ID:   "test-route-id",
 			Cidr: "10.10.0.0/24",
 		},
 	}
 
-	testPartnerIARouteList = do.PartnerInterconnectAttachmentRoutes{
+	testPartnerIARouteList = do.PartnerAttachmentRoutes{
 		testPartnerAttachmentRoute,
 	}
 
-	testRegenerateServiceKey = do.PartnerInterconnectAttachmentRegenerateServiceKey{
+	testRegenerateServiceKey = do.PartnerAttachmentRegenerateServiceKey{
 		RegenerateServiceKey: &godo.RegenerateServiceKey{},
 	}
 
-	testBGPAuthKey = do.PartnerInterconnectAttachmentBGPAuthKey{
+	testBGPAuthKey = do.PartnerAttachmentBGPAuthKey{
 		BgpAuthKey: &godo.BgpAuthKey{
 			Value: "test-bgp-auth-key",
 		},
 	}
 
-	testServiceKey = do.PartnerInterconnectAttachmentServiceKey{
+	testServiceKey = do.PartnerAttachmentServiceKey{
 		ServiceKey: &godo.ServiceKey{
 			Value:     "test-service-key",
 			State:     "active",
@@ -80,7 +80,7 @@ func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN, 65002)
 		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP, "192.168.1.2")
 
-		expectedRequest := &godo.PartnerInterconnectAttachmentCreateRequest{
+		expectedRequest := &godo.PartnerNetworkConnectCreateRequest{
 			Name:                      "doctl-pia",
 			ConnectionBandwidthInMbps: 50,
 			Region:                    "stage2",
@@ -160,7 +160,7 @@ func TestInterconnectAttachmentsUpdate(t *testing.T) {
 		iaID := "ia-uuid1"
 		iaName := "ia-name"
 		vpcIDs := "f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268"
-		r := godo.PartnerInterconnectAttachmentUpdateRequest{Name: iaName, VPCIDs: strings.Split(vpcIDs, ",")}
+		r := godo.PartnerNetworkConnectUpdateRequest{Name: iaName, VPCIDs: strings.Split(vpcIDs, ",")}
 		tm.partnerInterconnectAttachment.EXPECT().UpdatePartnerInterconnectAttachment(iaID, &r).Return(&testPartnerAttachment, nil)
 
 		config.Args = append(config.Args, iaID)
@@ -187,7 +187,7 @@ func TestInterconnectAttachmentRoutesList(t *testing.T) {
 
 		iaID := "ia-uuid1"
 		config.Args = append(config.Args, iaID)
-		tm.partnerInterconnectAttachment.EXPECT().ListPartnerInterconnectAttachmentRoutes(iaID).Return(testPartnerIARouteList, nil)
+		tm.partnerInterconnectAttachment.EXPECT().ListPartnerAttachmentRoutes(iaID).Return(testPartnerIARouteList, nil)
 
 		err := RunPartnerInterconnectAttachmentRouteList(config)
 		assert.NoError(t, err)

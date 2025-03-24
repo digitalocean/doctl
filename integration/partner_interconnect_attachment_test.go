@@ -107,7 +107,7 @@ var _ = suite("partner_interconnect_attachments/create", func(t *testing.T, when
 		expect = require.New(t)
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments":
+			case "/v2/partner_network_connect/attachments":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -183,7 +183,7 @@ var _ = suite("partner_interconnect_attachments/list-routes", func(t *testing.T,
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/remote_routes":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/remote_routes":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -255,7 +255,7 @@ var _ = suite("partner_interconnect_attachments/regenerate-service-key", func(t 
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -308,7 +308,7 @@ var _ = suite("partner_interconnect_attachments/get-bgp-auth-key", func(t *testi
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/bgp_auth_key":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/bgp_auth_key":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -380,7 +380,7 @@ var _ = suite("partner_interconnect_attachments/get-service-key", func(t *testin
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/partner_interconnect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
+			case "/v2/partner_network_connect/attachments/c5537207-ebf0-47cb-bc10-6fac717cd672/service_key":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
