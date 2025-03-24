@@ -167,7 +167,7 @@ func TestInterconnectAttachmentsUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, iaName)
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, vpcIDs)
 
-		err := RunPartnerAttachmentUpdate(config)
+		err := RunPartnerNCUpdate(config)
 		assert.NoError(t, err)
 	})
 }
@@ -176,7 +176,7 @@ func TestInterconnectAttachmentsUpdateNoID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		err := RunPartnerAttachmentUpdate(config)
+		err := RunPartnerNCUpdate(config)
 		assert.Error(t, err)
 	})
 }
