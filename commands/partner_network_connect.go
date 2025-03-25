@@ -49,18 +49,18 @@ func PartnerNetworkConnects() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "connect",
-			Short: "Display commands that manage Partner Network Connect",
-			Long: `The commands under ` + "`" + `doctl network connect` + "`" + ` are for managing your Partner Network Connect.
+			Short: "Display commands that manage Partner Attachment",
+			Long: `The commands under ` + "`" + `doctl network connect` + "`" + ` are for managing your Partner Attachment.
 
-With the Partner Network Connect commands, you can get, list, create, update, or delete Partner Network Connect, and manage their configuration details.`,
+With the Partner Attachment commands, you can get, list, create, update, or delete Partner Attachment, and manage their configuration details.`,
 		},
 	}
 
 	cmdPartnerNCCreate := CmdBuilder(cmd, RunPartnerNCCreate, "create",
-		"Create a Partner Network Connect", "Use this command to create a new Partner Network Connect on your account.", Writer, aliasOpt("c"), displayerType(&displayers.PartnerNetworkConnect{}))
+		"Create a Partner Attachment", "Use this command to create a new Partner Attachment on your account.", Writer, aliasOpt("c"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 
-	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCName, "", "", "Name of the Partner Network Connect", requiredOpt())
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCName, "", "", "Name of the Partner Attachment", requiredOpt())
 	AddIntFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBandwidthInMbps, "", 0, "Connection Bandwidth in Mbps", requiredOpt())
 	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCRegion, "", "", "Region", requiredOpt())
 	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCNaaSProvider, "", "", "NaaS Provider", requiredOpt())
@@ -70,88 +70,88 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 	AddIntFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPPeerASN, "", 0, "BGP Peer ASN")
 	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPPeerRouterIP, "", "", "BGP Peer Router IP")
 	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPAuthKey, "", "", "BGP Auth Key")
-	cmdPartnerNCCreate.Example = `The following example creates a Partner Network Connect: doctl network connect create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
+	cmdPartnerNCCreate.Example = `The following example creates a Partner Attachment: doctl network connect create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	partnerNetworkConnectDetails := `
-- The Partner Network Connect ID
-- The Partner Network Connect Name
-- The Partner Network Connect State
-- The Partner Network Connect Connection Bandwidth in Mbps
-- The Partner Network Connect Region
-- The Partner Network Connect NaaS Provider
-- The Partner Network Connect VPC network IDs
-- The Partner Network Connect creation date, in ISO8601 combined date and time format
-- The Partner Network Connect BGP Local ASN
-- The Partner Network Connect BGP Local Router IP
-- The Partner Network Connect BGP Peer ASN
-- The Partner Network Connect BGP Peer Router IP`
+- The Partner Attachment Connect ID
+- The Partner Attachment Connect Name
+- The Partner Attachment Connect State
+- The Partner Attachment Connect Connection Bandwidth in Mbps
+- The Partner Attachment Connect Region
+- The Partner Attachment Connect NaaS Provider
+- The Partner Attachment Connect VPC network IDs
+- The Partner Attachment Connect creation date, in ISO8601 combined date and time format
+- The Partner Attachment Connect BGP Local ASN
+- The Partner Attachment Connect BGP Local Router IP
+- The Partner Attachment Connect BGP Peer ASN
+- The Partner Attachment Connect BGP Peer Router IP`
 
 	cmdPartnerNCGet := CmdBuilder(cmd, RunPartnerNCGet, "get <partner-network-connect-id>",
-		"Retrieves a Partner Network Connect",
-		"Retrieves information about a Partner Network Connect, including:"+partnerNetworkConnectDetails, Writer,
+		"Retrieves a Partner Attachment",
+		"Retrieves information about a Partner Attachment, including:"+partnerNetworkConnectDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddStringFlag(cmdPartnerNCGet, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdPartnerNCGet.Example = `The following example retrieves information about a Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdPartnerNCGet.Example = `The following example retrieves information about a Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPartnerNCList := CmdBuilder(cmd, RunPartnerNCList, "list", "List Partner Network Connects",
-		"Retrieves a list of the Partner Network Connects on your account, including the following information for each:"+partnerNetworkConnectDetails, Writer,
+	cmdPartnerNCList := CmdBuilder(cmd, RunPartnerNCList, "list", "List Partner Attachment",
+		"Retrieves a list of the Partner Attachment on your account, including the following information for each:"+partnerNetworkConnectDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddStringFlag(cmdPartnerNCList, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdPartnerNCList.Example = `The following example lists the Partner Network Connects on your account :` +
+	cmdPartnerNCList.Example = `The following example lists the Partner Attachment on your account :` +
 		` doctl network --type "partner" connect list --format Name,VPCIDs `
 
 	cmdPartnerNCDelete := CmdBuilder(cmd, RunPartnerNCDelete, "delete <partner-network-connect-id>",
-		"Deletes a Partner Network Connect",
-		"Deletes information about a Partner Network Connect. This is irreversible ", Writer,
+		"Deletes a Partner Attachment",
+		"Deletes information about a Partner Attachment. This is irreversible ", Writer,
 		aliasOpt("rm"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddBoolFlag(cmdPartnerNCDelete, doctl.ArgForce, doctl.ArgShortForce, false,
-		"Delete the Partner Network Connect without any confirmation prompt")
+		"Delete the Partner Attachment without any confirmation prompt")
 	AddBoolFlag(cmdPartnerNCDelete, doctl.ArgCommandWait, "", false,
-		"Boolean that specifies whether to wait for a Partner Network Connect deletion to complete before returning control to the terminal")
+		"Boolean that specifies whether to wait for a Partner Attachment deletion to complete before returning control to the terminal")
 	AddStringFlag(cmdPartnerNCDelete, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdPartnerNCDelete.Example = `The following example deletes a Partner Network Connects with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdPartnerNCDelete.Example = `The following example deletes a Partner Attachments with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerNCUpdate := CmdBuilder(cmd, RunPartnerNCUpdate, "update <partner-network-connect-id>",
-		"Update a Partner Network Connects name and configuration",
-		`Use this command to update the name and and configuration of a Partner Network Connect`, Writer, aliasOpt("u"))
+		"Update a Partner Attachments name and configuration",
+		`Use this command to update the name and and configuration of a Partner Attachment`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerNCName, "", "",
-		"The Partner Network Connect name", requiredOpt())
+		"The Partner Attachment name", requiredOpt())
 	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerNCVPCIDs, "", "",
-		"The Partner Network Connect vpc ids", requiredOpt())
-	cmdPartnerNCUpdate.Example = `The following example updates the name of a Partner Network Connect with the ID ` +
+		"The Partner Attachment vpc ids", requiredOpt())
+	cmdPartnerNCUpdate.Example = `The following example updates the name of a Partner Attachment with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
 		`: doctl network --type "partner" connect update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
 vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
 	partnerNCRouteDetails := `
-- The Partner Network Connect ID
-- The Partner Network Connect Cidr`
+- The Partner Attachment ID
+- The Partner Attachment Cidr`
 
 	cmdPartnerNCRouteList := CmdBuilder(cmd, RunPartnerNCRouteList, "list-routes <partner-network-connect-id>",
-		"List Partner Network Connect Routes",
-		"Retrieves a list of the Partner Network Connect Routes on your account, including the following information for each:"+partnerNCRouteDetails, Writer,
+		"List Partner Attachment Routes",
+		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerNCRouteDetails, Writer,
 		aliasOpt("ls-routes"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddStringFlag(cmdPartnerNCRouteList, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdPartnerNCRouteList.Example = `The following example lists the Partner Network Connect Routes on your account :` +
+	cmdPartnerNCRouteList.Example = `The following example lists the Partner Attachment Routes on your account :` +
 		` doctl network --type "partner" connect list-routes f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Cidr `
 
 	cmdPartnerNCRegenerateServiceKey := CmdBuilder(cmd, RunPartnerNCRegenerateServiceKey, "regenerate-service-key <partner-attachment-id>",
-		"Regenerates a Service key of Partner Network Connect",
-		"Regenerates information about a Service key of Partner Network Connect", Writer,
+		"Regenerates a Service key of Partner Attachment",
+		"Regenerates information about a Service key of Partner Attachment", Writer,
 		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerNCRegenerateServiceKey{}))
 	AddStringFlag(cmdPartnerNCRegenerateServiceKey, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdPartnerNCRegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdPartnerNCRegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdGetPartnerNCGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerNCBGPAuthKey, "get-bgp-auth-key <partner-network-connect-id>",
-		"Retrieves a BGP Auth key of Partner Network Connect",
-		"Retrieves information about a BGP Auth key of Partner Network Connect", Writer,
+		"Retrieves a BGP Auth key of Partner Attachment",
+		"Retrieves information about a BGP Auth key of Partner Attachment", Writer,
 		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerNCBgpAuthKey{}))
 	AddStringFlag(cmdGetPartnerNCGetBGPAuthKey, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdGetPartnerNCGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdGetPartnerNCGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	partnerNCServiceKeyDetails := `
@@ -160,11 +160,11 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 - The Service key CreatedAt`
 
 	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerNCServiceKey, "get-service-key <partner-network-connect-id>",
-		"Retrieves a Service key of Partner Network Connect",
-		"Retrieves information about a Service key of Partner Network Connect, including:"+partnerNCServiceKeyDetails, Writer,
+		"Retrieves a Service key of Partner Attachment",
+		"Retrieves information about a Service key of Partner Attachment, including:"+partnerNCServiceKeyDetails, Writer,
 		aliasOpt("g-service-key"), displayerType(&displayers.PartnerNCServiceKey{}))
 	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
@@ -444,15 +444,15 @@ func RunPartnerNCDelete(c *CmdConfig) error {
 		}
 
 		if wait {
-			notice("Partner Network Connect is in progress, waiting for Partner Network Connect to be deleted")
+			notice("Partner Attachment is in progress, waiting for Partner Attachment to be deleted")
 
 			err := waitForPNC(pncs, pncID, "DELETED", true)
 			if err != nil {
-				return fmt.Errorf("Partner Network Connect couldn't be deleted : %v", err)
+				return fmt.Errorf("Partner Attachment couldn't be deleted : %v", err)
 			}
-			notice("Partner Network Connect is successfully deleted")
+			notice("Partner Attachment is successfully deleted")
 		} else {
-			notice("Partner Network Connect deletion request accepted")
+			notice("Partner Attachment deletion request accepted")
 		}
 
 	} else {
