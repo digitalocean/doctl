@@ -8,7 +8,7 @@ import (
 )
 
 type PartnerNetworkConnect struct {
-	PartnerNetworkConnects do.PartnerAttachments
+	PartnerNetworkConnects do.PartnerNetworkConnects
 }
 
 var _ Displayable = &PartnerNetworkConnect{}
@@ -54,20 +54,21 @@ func (v *PartnerNetworkConnect) ColMap() map[string]string {
 func (v *PartnerNetworkConnect) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(v.PartnerNetworkConnects))
 
-	for _, ia := range v.PartnerNetworkConnects {
+	for _, item := range v.PartnerNetworkConnects {
+		pnc := item.PartnerNetworkConnect
 		o := map[string]any{
-			"ID":                        ia.ID,
-			"Name":                      ia.Name,
-			"State":                     ia.State,
-			"ConnectionBandwidthInMbps": ia.ConnectionBandwidthInMbps,
-			"Region":                    ia.Region,
-			"NaaSProvider":              ia.NaaSProvider,
-			"VPCIDs":                    strings.Join(ia.VPCIDs, ","),
-			"CreatedAt":                 ia.CreatedAt,
-			"BGPLocalASN":               ia.BGP.LocalASN,
-			"BGPLocalRouterIP":          ia.BGP.LocalRouterIP,
-			"BGPPeerASN":                ia.BGP.PeerASN,
-			"BGPPeerRouterIP":           ia.BGP.PeerRouterIP,
+			"ID":                        pnc.ID,
+			"Name":                      pnc.Name,
+			"State":                     pnc.State,
+			"ConnectionBandwidthInMbps": pnc.ConnectionBandwidthInMbps,
+			"Region":                    pnc.Region,
+			"NaaSProvider":              pnc.NaaSProvider,
+			"VPCIDs":                    strings.Join(pnc.VPCIDs, ","),
+			"CreatedAt":                 pnc.CreatedAt,
+			"BGPLocalASN":               pnc.BGP.LocalASN,
+			"BGPLocalRouterIP":          pnc.BGP.LocalRouterIP,
+			"BGPPeerASN":                pnc.BGP.PeerASN,
+			"BGPPeerRouterIP":           pnc.BGP.PeerRouterIP,
 		}
 		out = append(out, o)
 	}
@@ -75,34 +76,34 @@ func (v *PartnerNetworkConnect) KV() []map[string]any {
 	return out
 }
 
-type PartnerAttachmentRoute struct {
-	PartnerAttachmentRoutes do.PartnerAttachmentRoutes
+type PartnerNCRoute struct {
+	PartnerNetworkConnectRoutes do.PartnerNetworkConnectRoutes
 }
 
-var _ Displayable = &PartnerAttachmentRoute{}
+var _ Displayable = &PartnerNCRoute{}
 
-func (v *PartnerAttachmentRoute) JSON(out io.Writer) error {
-	return writeJSON(v.PartnerAttachmentRoutes, out)
+func (v *PartnerNCRoute) JSON(out io.Writer) error {
+	return writeJSON(v.PartnerNetworkConnectRoutes, out)
 }
 
-func (v *PartnerAttachmentRoute) Cols() []string {
+func (v *PartnerNCRoute) Cols() []string {
 	return []string{
 		"ID",
 		"Cidr",
 	}
 }
 
-func (v *PartnerAttachmentRoute) ColMap() map[string]string {
+func (v *PartnerNCRoute) ColMap() map[string]string {
 	return map[string]string{
 		"ID":   "ID",
 		"Cidr": "Cidr",
 	}
 }
 
-func (v *PartnerAttachmentRoute) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(v.PartnerAttachmentRoutes))
+func (v *PartnerNCRoute) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(v.PartnerNetworkConnectRoutes))
 
-	for _, ia := range v.PartnerAttachmentRoutes {
+	for _, ia := range v.PartnerNetworkConnectRoutes {
 		o := map[string]any{
 			"ID":   ia.ID,
 			"Cidr": ia.Cidr,
@@ -113,25 +114,25 @@ func (v *PartnerAttachmentRoute) KV() []map[string]any {
 	return out
 }
 
-type PartnerAttachmentRegenerateServiceKey struct {
-	RegenerateKey do.PartnerAttachmentRegenerateServiceKey
+type PartnerNCRegenerateServiceKey struct {
+	RegenerateKey do.PartnerNetworkConnectRegenerateServiceKey
 }
 
-var _ Displayable = &PartnerAttachmentRegenerateServiceKey{}
+var _ Displayable = &PartnerNCRegenerateServiceKey{}
 
-func (v *PartnerAttachmentRegenerateServiceKey) JSON(out io.Writer) error {
+func (v *PartnerNCRegenerateServiceKey) JSON(out io.Writer) error {
 	return writeJSON(v.RegenerateKey, out)
 }
 
-func (v *PartnerAttachmentRegenerateServiceKey) Cols() []string {
+func (v *PartnerNCRegenerateServiceKey) Cols() []string {
 	return []string{}
 }
 
-func (v *PartnerAttachmentRegenerateServiceKey) ColMap() map[string]string {
+func (v *PartnerNCRegenerateServiceKey) ColMap() map[string]string {
 	return map[string]string{}
 }
 
-func (v *PartnerAttachmentRegenerateServiceKey) KV() []map[string]any {
+func (v *PartnerNCRegenerateServiceKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{}
@@ -139,25 +140,25 @@ func (v *PartnerAttachmentRegenerateServiceKey) KV() []map[string]any {
 	return out
 }
 
-type PartnerAttachmentBgpAuthKey struct {
-	Key do.PartnerAttachmentBGPAuthKey
+type PartnerNCBgpAuthKey struct {
+	Key do.PartnerNetworkConnectBGPAuthKey
 }
 
-var _ Displayable = &PartnerAttachmentBgpAuthKey{}
+var _ Displayable = &PartnerNCBgpAuthKey{}
 
-func (v *PartnerAttachmentBgpAuthKey) JSON(out io.Writer) error {
+func (v *PartnerNCBgpAuthKey) JSON(out io.Writer) error {
 	return writeJSON(v.Key, out)
 }
 
-func (v *PartnerAttachmentBgpAuthKey) Cols() []string {
+func (v *PartnerNCBgpAuthKey) Cols() []string {
 	return []string{"Value"}
 }
 
-func (v *PartnerAttachmentBgpAuthKey) ColMap() map[string]string {
+func (v *PartnerNCBgpAuthKey) ColMap() map[string]string {
 	return map[string]string{"Value": "Value"}
 }
 
-func (v *PartnerAttachmentBgpAuthKey) KV() []map[string]any {
+func (v *PartnerNCBgpAuthKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{
@@ -167,17 +168,17 @@ func (v *PartnerAttachmentBgpAuthKey) KV() []map[string]any {
 	return out
 }
 
-type PartnerAttachmentServiceKey struct {
-	Key do.PartnerAttachmentServiceKey
+type PartnerNCServiceKey struct {
+	Key do.PartnerNetworkConnectServiceKey
 }
 
-var _ Displayable = &PartnerAttachmentServiceKey{}
+var _ Displayable = &PartnerNCServiceKey{}
 
-func (v *PartnerAttachmentServiceKey) JSON(out io.Writer) error {
+func (v *PartnerNCServiceKey) JSON(out io.Writer) error {
 	return writeJSON(v.Key, out)
 }
 
-func (v *PartnerAttachmentServiceKey) Cols() []string {
+func (v *PartnerNCServiceKey) Cols() []string {
 	return []string{
 		"Value",
 		"State",
@@ -185,7 +186,7 @@ func (v *PartnerAttachmentServiceKey) Cols() []string {
 	}
 }
 
-func (v *PartnerAttachmentServiceKey) ColMap() map[string]string {
+func (v *PartnerNCServiceKey) ColMap() map[string]string {
 	return map[string]string{
 		"Value":     "Value",
 		"State":     "State",
@@ -193,7 +194,7 @@ func (v *PartnerAttachmentServiceKey) ColMap() map[string]string {
 	}
 }
 
-func (v *PartnerAttachmentServiceKey) KV() []map[string]any {
+func (v *PartnerNCServiceKey) KV() []map[string]any {
 	out := make([]map[string]any, 0, 1)
 
 	o := map[string]any{

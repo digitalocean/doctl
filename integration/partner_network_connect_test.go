@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	partnerAttachmentCreateResponse = `
+	partnerNCCreateResponse = `
 {
   "partner_attachment": {
     "id": "12345",
@@ -39,7 +39,7 @@ var (
 }
 `
 
-	partnerAttachmentCreateOutput = `
+	partnerNCCreateOutput = `
 ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Provider    VPC IDs                                 Created At                       BGP Local ASN    BGP Local Router IP    BGP Peer ASN    BGP Peer Router IP
 12345    doctl-pia    active    50                             stage2    MEGAPORT         d35e5cb7-7957-4643-8e3a-1ab4eb3a494c    2025-01-30 12:00:00 +0000 UTC    0                                       0
 `
@@ -131,7 +131,7 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 				err = json.Unmarshal(reqBody, &request)
 				expect.NoError(err)
 
-				t, err := template.New("response").Parse(partnerAttachmentCreateResponse)
+				t, err := template.New("response").Parse(partnerNCCreateResponse)
 				expect.NoError(err)
 
 				var b []byte
@@ -168,8 +168,8 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			t.Log("printing output ", string(output))
-			t.Log("printing partnerAttachmentCreateOutput ", string(partnerAttachmentCreateOutput))
-			expect.Equal(strings.TrimSpace(partnerAttachmentCreateOutput), strings.TrimSpace(string(output)))
+			t.Log("printing partnerNCCreateOutput ", string(partnerNCCreateOutput))
+			expect.Equal(strings.TrimSpace(partnerNCCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })

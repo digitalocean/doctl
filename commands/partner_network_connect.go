@@ -56,21 +56,21 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 		},
 	}
 
-	cmdPartnerAttachmentCreate := CmdBuilder(cmd, RunPartnerAttachmentCreate, "create",
+	cmdPartnerNCCreate := CmdBuilder(cmd, RunPartnerNCCreate, "create",
 		"Create a Partner Network Connect", "Use this command to create a new Partner Network Connect on your account.", Writer, aliasOpt("c"), displayerType(&displayers.PartnerNetworkConnect{}))
-	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 
-	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentName, "", "", "Name of the Partner Network Connect", requiredOpt())
-	AddIntFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentConnectionBandwidthInMbps, "", 0, "Connection Bandwidth in Mbps", requiredOpt())
-	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentRegion, "", "", "Region", requiredOpt())
-	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentNaaSProvider, "", "", "NaaS Provider", requiredOpt())
-	AddStringSliceFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentVPCIDs, "", []string{}, "VPC network IDs", requiredOpt())
-	AddIntFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPLocalASN, "", 0, "BGP Local ASN")
-	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPLocalRouterIP, "", "", "BGP Local Router IP")
-	AddIntFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
-	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
-	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPAuthKey, "", "", "BGP Auth Key")
-	cmdPartnerAttachmentCreate.Example = `The following example creates a Partner Network Connect: doctl network connect create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCName, "", "", "Name of the Partner Network Connect", requiredOpt())
+	AddIntFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBandwidthInMbps, "", 0, "Connection Bandwidth in Mbps", requiredOpt())
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCRegion, "", "", "Region", requiredOpt())
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCNaaSProvider, "", "", "NaaS Provider", requiredOpt())
+	AddStringSliceFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCVPCIDs, "", []string{}, "VPC network IDs", requiredOpt())
+	AddIntFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPLocalASN, "", 0, "BGP Local ASN")
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPLocalRouterIP, "", "", "BGP Local Router IP")
+	AddIntFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPPeerASN, "", 0, "BGP Peer ASN")
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPPeerRouterIP, "", "", "BGP Peer Router IP")
+	AddStringFlag(cmdPartnerNCCreate, doctl.ArgPartnerNCBGPAuthKey, "", "", "BGP Auth Key")
+	cmdPartnerNCCreate.Example = `The following example creates a Partner Network Connect: doctl network connect create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	partnerNetworkConnectDetails := `
 - The Partner Network Connect ID
@@ -90,14 +90,14 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 		"Retrieves a Partner Network Connect",
 		"Retrieves information about a Partner Network Connect, including:"+partnerNetworkConnectDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.PartnerNetworkConnect{}))
-	AddStringFlag(cmdPartnerNCGet, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	AddStringFlag(cmdPartnerNCGet, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerNCGet.Example = `The following example retrieves information about a Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerNCList := CmdBuilder(cmd, RunPartnerNCList, "list", "List Partner Network Connects",
 		"Retrieves a list of the Partner Network Connects on your account, including the following information for each:"+partnerNetworkConnectDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.PartnerNetworkConnect{}))
-	AddStringFlag(cmdPartnerNCList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	AddStringFlag(cmdPartnerNCList, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerNCList.Example = `The following example lists the Partner Network Connects on your account :` +
 		` doctl network --type "partner" connect list --format Name,VPCIDs `
 
@@ -109,69 +109,69 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 		"Delete the Partner Network Connect without any confirmation prompt")
 	AddBoolFlag(cmdPartnerNCDelete, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for a Partner Network Connect deletion to complete before returning control to the terminal")
-	AddStringFlag(cmdPartnerNCDelete, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+	AddStringFlag(cmdPartnerNCDelete, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerNCDelete.Example = `The following example deletes a Partner Network Connects with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerNCUpdate := CmdBuilder(cmd, RunPartnerNCUpdate, "update <partner-network-connect-id>",
 		"Update a Partner Network Connects name and configuration",
 		`Use this command to update the name and and configuration of a Partner Network Connect`, Writer, aliasOpt("u"))
-	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
-	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentName, "", "",
+	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
+	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerNCName, "", "",
 		"The Partner Network Connect name", requiredOpt())
-	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerAttachmentVPCIDs, "", "",
+	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerNCVPCIDs, "", "",
 		"The Partner Network Connect vpc ids", requiredOpt())
 	cmdPartnerNCUpdate.Example = `The following example updates the name of a Partner Network Connect with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
 		`: doctl network --type "partner" connect update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
 vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
-	partnerAttachmentRouteDetails := `
-- The Partner Attachment ID
-- The Partner Attachment Cidr`
+	partnerNCRouteDetails := `
+- The Partner Network Connect ID
+- The Partner Network Connect Cidr`
 
-	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerAttachmentRouteList, "list-routes <partner-network-connect-id>",
-		"List Partner Attachment Routes",
-		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerAttachmentRouteDetails, Writer,
+	cmdPartnerNCRouteList := CmdBuilder(cmd, RunPartnerNCRouteList, "list-routes <partner-network-connect-id>",
+		"List Partner Network Connect Routes",
+		"Retrieves a list of the Partner Network Connect Routes on your account, including the following information for each:"+partnerNCRouteDetails, Writer,
 		aliasOpt("ls-routes"), displayerType(&displayers.PartnerNetworkConnect{}))
-	AddStringFlag(cmdPartnerIARouteList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdPartnerIARouteList.Example = `The following example lists the Partner Attachment Routes on your account :` +
+	AddStringFlag(cmdPartnerNCRouteList, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdPartnerNCRouteList.Example = `The following example lists the Partner Network Connect Routes on your account :` +
 		` doctl network --type "partner" connect list-routes f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Cidr `
 
 	cmdPartnerNCRegenerateServiceKey := CmdBuilder(cmd, RunPartnerNCRegenerateServiceKey, "regenerate-service-key <partner-attachment-id>",
-		"Regenerates a Service key of Partner Attachment",
-		"Regenerates information about a Service key of Partner Attachment", Writer,
-		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerAttachmentRegenerateServiceKey{}))
-	AddStringFlag(cmdPartnerNCRegenerateServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
-	cmdPartnerNCRegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		"Regenerates a Service key of Partner Network Connect",
+		"Regenerates information about a Service key of Partner Network Connect", Writer,
+		aliasOpt("regen-service-key"), displayerType(&displayers.PartnerNCRegenerateServiceKey{}))
+	AddStringFlag(cmdPartnerNCRegenerateServiceKey, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
+	cmdPartnerNCRegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdGetPartnerNCGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerNCBGPAuthKey, "get-bgp-auth-key <partner-network-connect-id>",
 		"Retrieves a BGP Auth key of Partner Network Connect",
 		"Retrieves information about a BGP Auth key of Partner Network Connect", Writer,
-		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerAttachmentBgpAuthKey{}))
-	AddStringFlag(cmdGetPartnerNCGetBGPAuthKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerNCBgpAuthKey{}))
+	AddStringFlag(cmdGetPartnerNCGetBGPAuthKey, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdGetPartnerNCGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	partnerAttachmentServiceKeyDetails := `
+	partnerNCServiceKeyDetails := `
 - The Service key Value
 - The Service key State
 - The Service key CreatedAt`
 
-	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerAttachmentServiceKey, "get-service-key <partner-network-connect-id>",
+	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerNCServiceKey, "get-service-key <partner-network-connect-id>",
 		"Retrieves a Service key of Partner Network Connect",
-		"Retrieves information about a Service key of Partner Network Connect, including:"+partnerAttachmentServiceKeyDetails, Writer,
-		aliasOpt("g-service-key"), displayerType(&displayers.PartnerAttachmentServiceKey{}))
-	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
+		"Retrieves information about a Service key of Partner Network Connect, including:"+partnerNCServiceKeyDetails, Writer,
+		aliasOpt("g-service-key"), displayerType(&displayers.PartnerNCServiceKey{}))
+	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Network Connect with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect get-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
 }
 
-func ensurePartnerAttachmentType(c *CmdConfig) error {
-	attachmentType, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentType)
+func ensurePartnerConnectType(c *CmdConfig) error {
+	attachmentType, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCType)
 	if err != nil {
 		return err
 	}
@@ -181,38 +181,38 @@ func ensurePartnerAttachmentType(c *CmdConfig) error {
 	return nil
 }
 
-// RunPartnerAttachmentCreate creates a new Partner Attachment with a given configuration.
-func RunPartnerAttachmentCreate(c *CmdConfig) error {
-	if err := ensurePartnerAttachmentType(c); err != nil {
+// RunPartnerNCCreate creates a new Partner Network Connect with a given configuration.
+func RunPartnerNCCreate(c *CmdConfig) error {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
 	r := new(godo.PartnerNetworkConnectCreateRequest)
-	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentName)
+	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCName)
 	if err != nil {
 		return err
 	}
 	r.Name = name
 
-	connBandwidth, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerAttachmentConnectionBandwidthInMbps)
+	connBandwidth, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerNCBandwidthInMbps)
 	if err != nil {
 		return err
 	}
 	r.ConnectionBandwidthInMbps = connBandwidth
 
-	region, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentRegion)
+	region, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCRegion)
 	if err != nil {
 		return err
 	}
 	r.Region = region
 
-	naasProvider, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentNaaSProvider)
+	naasProvider, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCNaaSProvider)
 	if err != nil {
 		return err
 	}
 	r.NaaSProvider = naasProvider
 
-	vpcIDs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgPartnerAttachmentVPCIDs)
+	vpcIDs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgPartnerNCVPCIDs)
 	if err != nil {
 		return err
 	}
@@ -220,31 +220,31 @@ func RunPartnerAttachmentCreate(c *CmdConfig) error {
 
 	bgpConfig := new(godo.BGP)
 
-	bgpLocalASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerAttachmentBGPLocalASN)
+	bgpLocalASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerNCBGPLocalASN)
 	if err != nil {
 		return err
 	}
 	bgpConfig.LocalASN = bgpLocalASN
 
-	bgpLocalRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentBGPLocalRouterIP)
+	bgpLocalRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCBGPLocalRouterIP)
 	if err != nil {
 		return err
 	}
 	bgpConfig.LocalRouterIP = bgpLocalRouterIP
 
-	bgpPeerASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerAttachmentBGPPeerASN)
+	bgpPeerASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerNCBGPPeerASN)
 	if err != nil {
 		return err
 	}
 	bgpConfig.PeerASN = bgpPeerASN
 
-	bgpPeerRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentBGPPeerRouterIP)
+	bgpPeerRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCBGPPeerRouterIP)
 	if err != nil {
 		return err
 	}
 	bgpConfig.PeerRouterIP = bgpPeerRouterIP
 
-	bgpAuthKey, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentBGPAuthKey)
+	bgpAuthKey, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCBGPAuthKey)
 	if err != nil {
 		bgpConfig.AuthKey = bgpAuthKey
 	}
@@ -255,14 +255,14 @@ func RunPartnerAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: do.PartnerAttachments{*pnc}}
+	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: do.PartnerNetworkConnects{*pnc}}
 	return c.Display(item)
 }
 
 // RunPartnerNCGet retrieves an existing Partner Network Connect by its identifier.
 func RunPartnerNCGet(c *CmdConfig) error {
 
-	if err := ensurePartnerAttachmentType(c); err != nil {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -279,7 +279,7 @@ func RunPartnerNCGet(c *CmdConfig) error {
 	}
 
 	item := &displayers.PartnerNetworkConnect{
-		PartnerNetworkConnects: do.PartnerAttachments{*networkConnects},
+		PartnerNetworkConnects: do.PartnerNetworkConnects{*networkConnects},
 	}
 	return c.Display(item)
 }
@@ -287,7 +287,7 @@ func RunPartnerNCGet(c *CmdConfig) error {
 // RunPartnerNCList lists Partner Network Connects
 func RunPartnerNCList(c *CmdConfig) error {
 
-	if err := ensurePartnerAttachmentType(c); err != nil {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -303,7 +303,7 @@ func RunPartnerNCList(c *CmdConfig) error {
 
 // RunPartnerNCUpdate updates an existing Partner Network Connect with new configuration.
 func RunPartnerNCUpdate(c *CmdConfig) error {
-	if err := ensurePartnerAttachmentType(c); err != nil {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -314,13 +314,13 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 	pncID := c.Args[0]
 
 	r := new(godo.PartnerNetworkConnectUpdateRequest)
-	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentName)
+	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCName)
 	if err != nil {
 		return err
 	}
 	r.Name = name
 
-	vpcIDs, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentVPCIDs)
+	vpcIDs, err := c.Doit.GetString(c.NS, doctl.ArgPartnerNCVPCIDs)
 	if err != nil {
 		return err
 	}
@@ -332,7 +332,7 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 	}
 
 	item := &displayers.PartnerNetworkConnect{
-		PartnerNetworkConnects: do.PartnerAttachments{*pnc},
+		PartnerNetworkConnects: do.PartnerNetworkConnects{*pnc},
 	}
 	return c.Display(item)
 }
@@ -340,7 +340,7 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 // RunPartnerNCRegenerateServiceKey regenerates a service key of existing Partner Network Connect
 func RunPartnerNCRegenerateServiceKey(c *CmdConfig) error {
 
-	if err := ensurePartnerAttachmentType(c); err != nil {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -356,7 +356,7 @@ func RunPartnerNCRegenerateServiceKey(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerAttachmentRegenerateServiceKey{
+	item := &displayers.PartnerNCRegenerateServiceKey{
 		RegenerateKey: *regenerateServiceKey,
 	}
 	return c.Display(item)
@@ -365,7 +365,7 @@ func RunPartnerNCRegenerateServiceKey(c *CmdConfig) error {
 // RunGetPartnerNCBGPAuthKey get a bgp auth key of existing Partner Network Connect
 func RunGetPartnerNCBGPAuthKey(c *CmdConfig) error {
 
-	if err := ensurePartnerAttachmentType(c); err != nil {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -381,16 +381,16 @@ func RunGetPartnerNCBGPAuthKey(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerAttachmentBgpAuthKey{
+	item := &displayers.PartnerNCBgpAuthKey{
 		Key: *bgpAuthKey,
 	}
 	return c.Display(item)
 }
 
-// RunGetPartnerAttachmentServiceKey retrieves service key of existing Partner Network Connect
-func RunGetPartnerAttachmentServiceKey(c *CmdConfig) error {
+// RunGetPartnerNCServiceKey retrieves service key of existing Partner Network Connect
+func RunGetPartnerNCServiceKey(c *CmdConfig) error {
 
-	if err := ensurePartnerAttachmentType(c); err != nil {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -406,7 +406,7 @@ func RunGetPartnerAttachmentServiceKey(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerAttachmentServiceKey{
+	item := &displayers.PartnerNCServiceKey{
 		Key: *serviceKey,
 	}
 	return c.Display(item)
@@ -415,7 +415,7 @@ func RunGetPartnerAttachmentServiceKey(c *CmdConfig) error {
 // RunPartnerNCDelete deletes an existing Partner Network Connect by its identifier.
 func RunPartnerNCDelete(c *CmdConfig) error {
 
-	if err := ensurePartnerAttachmentType(c); err != nil {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -462,9 +462,9 @@ func RunPartnerNCDelete(c *CmdConfig) error {
 	return nil
 }
 
-// RunPartnerAttachmentRouteList lists Partner Attachment routes
-func RunPartnerAttachmentRouteList(c *CmdConfig) error {
-	if err := ensurePartnerAttachmentType(c); err != nil {
+// RunPartnerNCRouteList lists Partner Network Connect routes
+func RunPartnerNCRouteList(c *CmdConfig) error {
+	if err := ensurePartnerConnectType(c); err != nil {
 		return err
 	}
 
@@ -475,12 +475,12 @@ func RunPartnerAttachmentRouteList(c *CmdConfig) error {
 	iaID := c.Args[0]
 
 	pncs := c.PartnerNetworkConnects()
-	routeList, err := pncs.ListPartnerAttachmentRoutes(iaID)
+	routeList, err := pncs.ListPartnerNetworkConnectRoutes(iaID)
 	if err != nil {
 		return err
 	}
 
-	item := &displayers.PartnerAttachmentRoute{PartnerAttachmentRoutes: routeList}
+	item := &displayers.PartnerNCRoute{PartnerNetworkConnectRoutes: routeList}
 	return c.Display(item)
 }
 
@@ -499,7 +499,7 @@ func waitForPNC(pncs do.PartnerNetworkConnectsService, iaID string, wantStatus s
 			}
 		}
 
-		networkConnect, err := pncs.GetPartnerNetworkConnect(iaID)
+		pnc, err := pncs.GetPartnerNetworkConnect(iaID)
 		if err != nil {
 			if terminateOnNotFound && strings.Contains(err.Error(), "not found") {
 				return nil
@@ -507,11 +507,11 @@ func waitForPNC(pncs do.PartnerNetworkConnectsService, iaID string, wantStatus s
 			return err
 		}
 
-		if networkConnect.State == errStatus {
+		if pnc.PartnerNetworkConnect.State == errStatus {
 			return fmt.Errorf("Partner Network Connect (%s) entered status `%s`", iaID, errStatus)
 		}
 
-		if networkConnect.State == wantStatus {
+		if pnc.PartnerNetworkConnect.State == wantStatus {
 			return nil
 		}
 
