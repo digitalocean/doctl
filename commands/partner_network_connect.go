@@ -86,7 +86,7 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 - The Partner Attachment Connect BGP Peer ASN
 - The Partner Attachment Connect BGP Peer Router IP`
 
-	cmdPartnerNCGet := CmdBuilder(cmd, RunPartnerNCGet, "get <partner-network-connect-id>",
+	cmdPartnerNCGet := CmdBuilder(cmd, RunPartnerNCGet, "get <partner-attachment-id>",
 		"Retrieves a Partner Attachment",
 		"Retrieves information about a Partner Attachment, including:"+partnerNetworkConnectDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.PartnerNetworkConnect{}))
@@ -101,7 +101,7 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 	cmdPartnerNCList.Example = `The following example lists the Partner Attachment on your account :` +
 		` doctl network --type "partner" connect list --format Name,VPCIDs `
 
-	cmdPartnerNCDelete := CmdBuilder(cmd, RunPartnerNCDelete, "delete <partner-network-connect-id>",
+	cmdPartnerNCDelete := CmdBuilder(cmd, RunPartnerNCDelete, "delete <partner-attachment-id>",
 		"Deletes a Partner Attachment",
 		"Deletes information about a Partner Attachment. This is irreversible ", Writer,
 		aliasOpt("rm"), displayerType(&displayers.PartnerNetworkConnect{}))
@@ -113,7 +113,7 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 	cmdPartnerNCDelete.Example = `The following example deletes a Partner Attachments with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPartnerNCUpdate := CmdBuilder(cmd, RunPartnerNCUpdate, "update <partner-network-connect-id>",
+	cmdPartnerNCUpdate := CmdBuilder(cmd, RunPartnerNCUpdate, "update <partner-attachment-id>",
 		"Update a Partner Attachments name and configuration",
 		`Use this command to update the name and and configuration of a Partner Attachment`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdPartnerNCUpdate, doctl.ArgPartnerNCType, "", "partner", "Specify connect type (e.g., partner)")
@@ -130,7 +130,7 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 - The Partner Attachment ID
 - The Partner Attachment Cidr`
 
-	cmdPartnerNCRouteList := CmdBuilder(cmd, RunPartnerNCRouteList, "list-routes <partner-network-connect-id>",
+	cmdPartnerNCRouteList := CmdBuilder(cmd, RunPartnerNCRouteList, "list-routes <partner-attachment-id>",
 		"List Partner Attachment Routes",
 		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerNCRouteDetails, Writer,
 		aliasOpt("ls-routes"), displayerType(&displayers.PartnerNetworkConnect{}))
@@ -146,7 +146,7 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 	cmdPartnerNCRegenerateServiceKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" connect regenerate-service-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdGetPartnerNCGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerNCBGPAuthKey, "get-bgp-auth-key <partner-network-connect-id>",
+	cmdGetPartnerNCGetBGPAuthKey := CmdBuilder(cmd, RunGetPartnerNCBGPAuthKey, "get-bgp-auth-key <partner-attachment-id>",
 		"Retrieves a BGP Auth key of Partner Attachment",
 		"Retrieves information about a BGP Auth key of Partner Attachment", Writer,
 		aliasOpt("g-bgp-auth-key"), displayerType(&displayers.PartnerNCBgpAuthKey{}))
@@ -159,7 +159,7 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 - The Service key State
 - The Service key CreatedAt`
 
-	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerNCServiceKey, "get-service-key <partner-network-connect-id>",
+	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerNCServiceKey, "get-service-key <partner-attachment-id>",
 		"Retrieves a Service key of Partner Attachment",
 		"Retrieves information about a Service key of Partner Attachment, including:"+partnerNCServiceKeyDetails, Writer,
 		aliasOpt("g-service-key"), displayerType(&displayers.PartnerNCServiceKey{}))
