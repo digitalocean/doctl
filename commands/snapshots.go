@@ -94,17 +94,23 @@ func RunSnapshotList(c *CmdConfig) error {
 	var matchedList []do.Snapshot
 	var list []do.Snapshot
 
-	if restype == "droplet" {
+	switch restype {
+	case "droplet":
 		list, err = ss.ListDroplet()
 		if err != nil {
 			return err
 		}
-	} else if restype == "volume" {
-		list, err = ss.ListVolume()
+	case "volume":
+		if region != "" {
+			list, err = ss.ListVolumeSnapshotByRegion(region)
+		} else {
+			list, err = ss.ListVolume()
+		}
 		if err != nil {
 			return err
 		}
-	} else {
+
+	default:
 		list, err = ss.List()
 		if err != nil {
 			return err
