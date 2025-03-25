@@ -70,8 +70,8 @@ type partnerNetworkConnectsService struct {
 	client *godo.Client
 }
 
-// NewPartnerInterconnectAttachmentsService builds an instance of PartnerNetworkConnectsService.
-func NewPartnerInterconnectAttachmentsService(client *godo.Client) PartnerNetworkConnectsService {
+// NewPartnerNetworkConnectsService builds an instance of PartnerNetworkConnectsService.
+func NewPartnerNetworkConnectsService(client *godo.Client) PartnerNetworkConnectsService {
 	return &partnerNetworkConnectsService{
 		client: client,
 	}

@@ -39,13 +39,13 @@ func Network() *Command {
 		},
 	}
 
-	cmd.AddCommand(PartnerInterconnectAttachments())
+	cmd.AddCommand(PartnerNetworkConnects())
 
 	return cmd
 }
 
-// PartnerInterconnectAttachments creates the interconnect attachments command.
-func PartnerInterconnectAttachments() *Command {
+// PartnerNetworkConnects creates the partner network connects command.
+func PartnerNetworkConnects() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "connect",
@@ -56,7 +56,7 @@ With the Partner Network Connect commands, you can get, list, create, update, or
 		},
 	}
 
-	cmdPartnerAttachmentCreate := CmdBuilder(cmd, RunPartnerInterconnectAttachmentCreate, "create",
+	cmdPartnerAttachmentCreate := CmdBuilder(cmd, RunPartnerAttachmentCreate, "create",
 		"Create a Partner Network Connect", "Use this command to create a new Partner Network Connect on your account.", Writer, aliasOpt("c"), displayerType(&displayers.PartnerNetworkConnect{}))
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 
@@ -181,8 +181,8 @@ func ensurePartnerAttachmentType(c *CmdConfig) error {
 	return nil
 }
 
-// RunPartnerInterconnectAttachmentCreate creates a new Partner Attachment with a given configuration.
-func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
+// RunPartnerAttachmentCreate creates a new Partner Attachment with a given configuration.
+func RunPartnerAttachmentCreate(c *CmdConfig) error {
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
 	}
@@ -249,13 +249,13 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 		bgpConfig.AuthKey = bgpAuthKey
 	}
 
-	pias := c.PartnerInterconnectAttachments()
-	pia, err := pias.Create(r)
+	pncs := c.PartnerNetworkConnects()
+	pnc, err := pncs.Create(r)
 	if err != nil {
 		return err
 	}
 
-	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: do.PartnerNetworkConnects{*pia}}
+	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: do.PartnerNetworkConnects{*pnc}}
 	return c.Display(item)
 }
 
@@ -272,8 +272,8 @@ func RunPartnerNCGet(c *CmdConfig) error {
 	}
 	iaID := c.Args[0]
 
-	pias := c.PartnerInterconnectAttachments()
-	networkConnects, err := pias.GetPartnerNetworkConnect(iaID)
+	pncs := c.PartnerNetworkConnects()
+	networkConnects, err := pncs.GetPartnerNetworkConnect(iaID)
 	if err != nil {
 		return err
 	}
@@ -291,7 +291,7 @@ func RunPartnerNCList(c *CmdConfig) error {
 		return err
 	}
 
-	pias := c.PartnerInterconnectAttachments()
+	pias := c.PartnerNetworkConnects()
 	list, err := pias.ListPartnerNetworkConnects()
 	if err != nil {
 		return err
@@ -311,7 +311,7 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	iaID := c.Args[0]
+	pncID := c.Args[0]
 
 	r := new(godo.PartnerNetworkConnectUpdateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentName)
@@ -326,13 +326,13 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 	}
 	r.VPCIDs = strings.Split(vpcIDs, ",")
 
-	interconnectAttachment, err := c.PartnerInterconnectAttachments().UpdatePartnerNetworkConnect(iaID, r)
+	pnc, err := c.PartnerNetworkConnects().UpdatePartnerNetworkConnect(pncID, r)
 	if err != nil {
 		return err
 	}
 
 	item := &displayers.PartnerNetworkConnect{
-		PartnerNetworkConnects: do.PartnerNetworkConnects{*interconnectAttachment},
+		PartnerNetworkConnects: do.PartnerNetworkConnects{*pnc},
 	}
 	return c.Display(item)
 }
@@ -350,8 +350,8 @@ func RunPartnerNCRegenerateServiceKey(c *CmdConfig) error {
 	}
 	iaID := c.Args[0]
 
-	pias := c.PartnerInterconnectAttachments()
-	regenerateServiceKey, err := pias.RegenerateServiceKey(iaID)
+	pncs := c.PartnerNetworkConnects()
+	regenerateServiceKey, err := pncs.RegenerateServiceKey(iaID)
 	if err != nil {
 		return err
 	}
@@ -373,10 +373,10 @@ func RunGetPartnerNCBGPAuthKey(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	iaID := c.Args[0]
+	pncID := c.Args[0]
 
-	pias := c.PartnerInterconnectAttachments()
-	bgpAuthKey, err := pias.GetBGPAuthKey(iaID)
+	pncs := c.PartnerNetworkConnects()
+	bgpAuthKey, err := pncs.GetBGPAuthKey(pncID)
 	if err != nil {
 		return err
 	}
@@ -398,10 +398,10 @@ func RunGetPartnerAttachmentServiceKey(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	iaID := c.Args[0]
+	pncID := c.Args[0]
 
-	pias := c.PartnerInterconnectAttachments()
-	serviceKey, err := pias.GetServiceKey(iaID)
+	pncs := c.PartnerNetworkConnects()
+	serviceKey, err := pncs.GetServiceKey(pncID)
 	if err != nil {
 		return err
 	}
@@ -423,7 +423,7 @@ func RunPartnerNCDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	iaID := c.Args[0]
+	pncID := c.Args[0]
 
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
@@ -432,8 +432,8 @@ func RunPartnerNCDelete(c *CmdConfig) error {
 
 	if force || AskForConfirmDelete("Partner Network Connect", 1) == nil {
 
-		pias := c.PartnerInterconnectAttachments()
-		err := pias.DeletePartnerNetworkConnect(iaID)
+		pncs := c.PartnerNetworkConnects()
+		err := pncs.DeletePartnerNetworkConnect(pncID)
 		if err != nil {
 			return err
 		}
@@ -446,7 +446,7 @@ func RunPartnerNCDelete(c *CmdConfig) error {
 		if wait {
 			notice("Partner Network Connect is in progress, waiting for Partner Network Connect to be deleted")
 
-			err := waitForPIA(pias, iaID, "DELETED", true)
+			err := waitForPNC(pncs, pncID, "DELETED", true)
 			if err != nil {
 				return fmt.Errorf("Partner Network Connect couldn't be deleted : %v", err)
 			}
@@ -474,8 +474,8 @@ func RunPartnerAttachmentRouteList(c *CmdConfig) error {
 	}
 	iaID := c.Args[0]
 
-	pias := c.PartnerInterconnectAttachments()
-	routeList, err := pias.ListPartnerAttachmentRoutes(iaID)
+	pncs := c.PartnerNetworkConnects()
+	routeList, err := pncs.ListPartnerAttachmentRoutes(iaID)
 	if err != nil {
 		return err
 	}
@@ -484,7 +484,7 @@ func RunPartnerAttachmentRouteList(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-func waitForPIA(pias do.PartnerNetworkConnectsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
+func waitForPNC(pncs do.PartnerNetworkConnectsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
 	const maxAttempts = 360
 	const errStatus = "ERROR"
 	attempts := 0
@@ -499,7 +499,7 @@ func waitForPIA(pias do.PartnerNetworkConnectsService, iaID string, wantStatus s
 			}
 		}
 
-		interconnectAttachment, err := pias.GetPartnerNetworkConnect(iaID)
+		networkConnect, err := pncs.GetPartnerNetworkConnect(iaID)
 		if err != nil {
 			if terminateOnNotFound && strings.Contains(err.Error(), "not found") {
 				return nil
@@ -507,11 +507,11 @@ func waitForPIA(pias do.PartnerNetworkConnectsService, iaID string, wantStatus s
 			return err
 		}
 
-		if interconnectAttachment.State == errStatus {
+		if networkConnect.State == errStatus {
 			return fmt.Errorf("Partner Network Connect (%s) entered status `%s`", iaID, errStatus)
 		}
 
-		if interconnectAttachment.State == wantStatus {
+		if networkConnect.State == wantStatus {
 			return nil
 		}
 
