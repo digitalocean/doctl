@@ -20,7 +20,7 @@ import (
 var (
 	partnerAttachmentCreateResponse = `
 {
-  "partner_interconnect_attachment": {
+  "partner_attachment": {
     "id": "12345",
     "name": "{{.Name}}",
     "state": "active",
@@ -167,6 +167,8 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			t.Log("printing output ", string(output))
+			t.Log("printing partnerAttachmentCreateOutput ", string(partnerAttachmentCreateOutput))
 			expect.Equal(strings.TrimSpace(partnerAttachmentCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
