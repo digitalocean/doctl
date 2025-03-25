@@ -256,6 +256,7 @@ type tcMocks struct {
 	appDockerEngineClient  *builder.MockDockerEngineClient
 	oauth                  *domocks.MockOAuthService
 	partnerNetworkConnects *domocks.MockPartnerNetworkConnectsService
+	spacesKeys             *domocks.MockSpacesKeysService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -306,6 +307,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		appDockerEngineClient:  builder.NewMockDockerEngineClient(ctrl),
 		oauth:                  domocks.NewMockOAuthService(ctrl),
 		partnerNetworkConnects: domocks.NewMockPartnerNetworkConnectsService(ctrl),
+		spacesKeys:             domocks.NewMockSpacesKeysService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -364,6 +366,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Serverless:             func() do.ServerlessService { return tm.serverless },
 		OAuth:                  func() do.OAuthService { return tm.oauth },
 		PartnerNetworkConnects: func() do.PartnerNetworkConnectsService { return tm.partnerNetworkConnects },
+		SpacesKeys:             func() do.SpacesKeysService { return tm.spacesKeys },
 	}
 
 	tFn(config, tm)

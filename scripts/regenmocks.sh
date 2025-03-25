@@ -47,3 +47,4 @@ mockgen -source reserved_ip_actions.go -package=mocks ReservedIPActionsService >
 mockgen -source reserved_ips.go -package=mocks ReservedIPsService > mocks/ReservedIPsService.go
 mockgen -source serverless.go -package=mocks ServerlessService > mocks/ServerlessService.go
 mockgen -source partner_network_connect.go  -package=mocks PartnerNetworkConnectsService > mocks/PartnerNetworkConnectsService.go
+mockgen -source spaces_keys.go -package=mocks SpacesKeysService > mocks/SpacesKeysService.go
