@@ -525,28 +525,28 @@ const (
 	// ArgVPCPeeringVPCID is id of the VPC.
 	ArgVPCPeeringVPCID = "vpc-id"
 
-	// ArgInterconnectAttachmentType is the type of the Interconnect Attachment e.g. "partner".
-	ArgInterconnectAttachmentType = "type"
-	// ArgPartnerInterconnectAttachmentName is a name of the Partner Interconnect Attachment.
-	ArgPartnerInterconnectAttachmentName = "name"
-	// ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps is the connection bandwidth in megabits per second.
-	ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps = "connection-bandwidth-in-mbps"
-	// ArgPartnerInterconnectAttachmentRegion is the region slug.
-	ArgPartnerInterconnectAttachmentRegion = "region"
-	// ArgPartnerInterconnectAttachmentNaaSProvider is the name of the Network as a Service provider
-	ArgPartnerInterconnectAttachmentNaaSProvider = "naas-provider"
-	// ArgPartnerInterconnectAttachmentVPCIDs are the IDs of the VPCs which the Partner Interconnect Attachment is connected
-	ArgPartnerInterconnectAttachmentVPCIDs = "vpc-ids"
-	// ArgPartnerInterconnectAttachmentBGPLocalASN is the BGP Autonomous System Number (ASN) of the local device
-	ArgPartnerInterconnectAttachmentBGPLocalASN = "bgp-local-asn"
-	// ArgPartnerInterconnectAttachmentBGPLocalRouterIP is the BGP IP address of the local device
-	ArgPartnerInterconnectAttachmentBGPLocalRouterIP = "bgp-local-router-ip"
-	// ArgPartnerInterconnectAttachmentBGPPeerASN is the BGP Autonomous System Number (ASN) of the peer device
-	ArgPartnerInterconnectAttachmentBGPPeerASN = "bgp-peer-asn"
-	// ArgPartnerInterconnectAttachmentBGPPeerIPAddress is the BGP IP address of the peer device
-	ArgPartnerInterconnectAttachmentBGPPeerRouterIP = "bgp-peer-router-ip"
-	// ArgPartnerInterconnectAttachmentBGPAuthKey is the BGP MD5 authentication key
-	ArgPartnerInterconnectAttachmentBGPAuthKey = "bgp-auth-key"
+	// ArgPartnerNCType is the type of the Partner Network Connect e.g. "partner".
+	ArgPartnerNCType = "type"
+	// ArgPartnerNCName is a name of the Partner Network Connect.
+	ArgPartnerNCName = "name"
+	// ArgPartnerNCBandwidthInMbps is the connection bandwidth in megabits per second.
+	ArgPartnerNCBandwidthInMbps = "connection-bandwidth-in-mbps"
+	// ArgPartnerNCRegion is the region slug.
+	ArgPartnerNCRegion = "region"
+	// ArgPartnerNCNaaSProvider is the name of the Network as a Service provider
+	ArgPartnerNCNaaSProvider = "naas-provider"
+	// ArgPartnerNCVPCIDs are the IDs of the VPCs which the Partner Network Connect is connected
+	ArgPartnerNCVPCIDs = "vpc-ids"
+	// ArgPartnerNCBGPLocalASN is the BGP Autonomous System Number (ASN) of the local device
+	ArgPartnerNCBGPLocalASN = "bgp-local-asn"
+	// ArgPartnerNCBGPLocalRouterIP is the BGP IP address of the local device
+	ArgPartnerNCBGPLocalRouterIP = "bgp-local-router-ip"
+	// ArgPartnerNCBGPPeerASN is the BGP Autonomous System Number (ASN) of the peer device
+	ArgPartnerNCBGPPeerASN = "bgp-peer-asn"
+	// ArgPartnerNCBGPPeerRouterIP is the BGP IP address of the peer device
+	ArgPartnerNCBGPPeerRouterIP = "bgp-peer-router-ip"
+	// ArgPartnerNCBGPAuthKey is the BGP MD5 authentication key
+	ArgPartnerNCBGPAuthKey = "bgp-auth-key"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
