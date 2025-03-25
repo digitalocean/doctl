@@ -42,10 +42,10 @@ func (m *MockPartnerNetworkConnectsService) EXPECT() *MockPartnerNetworkConnects
 }
 
 // Create mocks base method.
-func (m *MockPartnerNetworkConnectsService) Create(arg0 *godo.PartnerNetworkConnectCreateRequest) (*do.PartnerNetworkConnect, error) {
+func (m *MockPartnerNetworkConnectsService) Create(arg0 *godo.PartnerNetworkConnectCreateRequest) (*do.PartnerAttachment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0)
-	ret0, _ := ret[0].(*do.PartnerNetworkConnect)
+	ret0, _ := ret[0].(*do.PartnerAttachment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -86,10 +86,10 @@ func (mr *MockPartnerNetworkConnectsServiceMockRecorder) GetBGPAuthKey(pncID any
 }
 
 // GetPartnerNetworkConnect mocks base method.
-func (m *MockPartnerNetworkConnectsService) GetPartnerNetworkConnect(pncID string) (*do.PartnerNetworkConnect, error) {
+func (m *MockPartnerNetworkConnectsService) GetPartnerNetworkConnect(pncID string) (*do.PartnerAttachment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPartnerNetworkConnect", pncID)
-	ret0, _ := ret[0].(*do.PartnerNetworkConnect)
+	ret0, _ := ret[0].(*do.PartnerAttachment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -131,10 +131,10 @@ func (mr *MockPartnerNetworkConnectsServiceMockRecorder) ListPartnerAttachmentRo
 }
 
 // ListPartnerNetworkConnects mocks base method.
-func (m *MockPartnerNetworkConnectsService) ListPartnerNetworkConnects() (do.PartnerNetworkConnects, error) {
+func (m *MockPartnerNetworkConnectsService) ListPartnerNetworkConnects() (do.PartnerAttachments, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPartnerNetworkConnects")
-	ret0, _ := ret[0].(do.PartnerNetworkConnects)
+	ret0, _ := ret[0].(do.PartnerAttachments)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -161,10 +161,10 @@ func (mr *MockPartnerNetworkConnectsServiceMockRecorder) RegenerateServiceKey(pn
 }
 
 // UpdatePartnerNetworkConnect mocks base method.
-func (m *MockPartnerNetworkConnectsService) UpdatePartnerNetworkConnect(pncID string, req *godo.PartnerNetworkConnectUpdateRequest) (*do.PartnerNetworkConnect, error) {
+func (m *MockPartnerNetworkConnectsService) UpdatePartnerNetworkConnect(pncID string, req *godo.PartnerNetworkConnectUpdateRequest) (*do.PartnerAttachment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePartnerNetworkConnect", pncID, req)
-	ret0, _ := ret[0].(*do.PartnerNetworkConnect)
+	ret0, _ := ret[0].(*do.PartnerAttachment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -19,13 +19,13 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// PartnerNetworkConnect wraps a godo PartnerNetworkConnect.
-type PartnerNetworkConnect struct {
-	*godo.PartnerNetworkConnect
+// PartnerAttachment wraps a godo PartnerAttachment.
+type PartnerAttachment struct {
+	*godo.PartnerAttachment
 }
 
-// PartnerNetworkConnects is a slice of PartnerNetworkConnect.
-type PartnerNetworkConnects []PartnerNetworkConnect
+// PartnerAttachments is a slice of PartnerAttachment.
+type PartnerAttachments []PartnerAttachment
 
 // PartnerAttachmentRoute wraps a godo RemoteRoute.
 type PartnerAttachmentRoute struct {
@@ -53,11 +53,11 @@ type PartnerAttachmentServiceKey struct {
 // PartnerNetworkConnectsService is an interface for interacting with
 // DigitalOcean's partner network connect api.
 type PartnerNetworkConnectsService interface {
-	Create(*godo.PartnerNetworkConnectCreateRequest) (*PartnerNetworkConnect, error)
-	GetPartnerNetworkConnect(pncID string) (*PartnerNetworkConnect, error)
-	ListPartnerNetworkConnects() (PartnerNetworkConnects, error)
+	Create(*godo.PartnerNetworkConnectCreateRequest) (*PartnerAttachment, error)
+	GetPartnerNetworkConnect(pncID string) (*PartnerAttachment, error)
+	ListPartnerNetworkConnects() (PartnerAttachments, error)
 	DeletePartnerNetworkConnect(pncID string) error
-	UpdatePartnerNetworkConnect(pncID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerNetworkConnect, error)
+	UpdatePartnerNetworkConnect(pncID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerAttachment, error)
 	ListPartnerAttachmentRoutes(pncID string) (PartnerAttachmentRoutes, error)
 	GetBGPAuthKey(pncID string) (*PartnerAttachmentBGPAuthKey, error)
 	RegenerateServiceKey(pncID string) (*PartnerAttachmentRegenerateServiceKey, error)
@@ -78,25 +78,25 @@ func NewPartnerNetworkConnectsService(client *godo.Client) PartnerNetworkConnect
 }
 
 // Create creates a partner connect attachment.
-func (p *partnerNetworkConnectsService) Create(req *godo.PartnerNetworkConnectCreateRequest) (*PartnerNetworkConnect, error) {
+func (p *partnerNetworkConnectsService) Create(req *godo.PartnerNetworkConnectCreateRequest) (*PartnerAttachment, error) {
 	pia, _, err := p.client.PartnerNetworkConnect.Create(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerNetworkConnect{PartnerNetworkConnect: pia}, nil
+	return &PartnerAttachment{PartnerAttachment: pia}, nil
 }
 
 // GetPartnerNetworkConnect retrieves a partner connect attachment.
-func (p *partnerNetworkConnectsService) GetPartnerNetworkConnect(iaID string) (*PartnerNetworkConnect, error) {
+func (p *partnerNetworkConnectsService) GetPartnerNetworkConnect(iaID string) (*PartnerAttachment, error) {
 	partnerIA, _, err := p.client.PartnerNetworkConnect.Get(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerNetworkConnect{PartnerNetworkConnect: partnerIA}, nil
+	return &PartnerAttachment{PartnerAttachment: partnerIA}, nil
 }
 
 // ListPartnerNetworkConnects lists all partner connect attachments.
-func (p *partnerNetworkConnectsService) ListPartnerNetworkConnects() (PartnerNetworkConnects, error) {
+func (p *partnerNetworkConnectsService) ListPartnerNetworkConnects() (PartnerAttachments, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := p.client.PartnerNetworkConnect.List(context.TODO(), opt)
 		if err != nil {
@@ -116,10 +116,10 @@ func (p *partnerNetworkConnectsService) ListPartnerNetworkConnects() (PartnerNet
 		return nil, err
 	}
 
-	list := make([]PartnerNetworkConnect, len(si))
+	list := make([]PartnerAttachment, len(si))
 	for i := range si {
-		a := si[i].(*godo.PartnerNetworkConnect)
-		list[i] = PartnerNetworkConnect{PartnerNetworkConnect: a}
+		a := si[i].(*godo.PartnerAttachment)
+		list[i] = PartnerAttachment{PartnerAttachment: a}
 	}
 
 	return list, nil
@@ -132,13 +132,13 @@ func (p *partnerNetworkConnectsService) DeletePartnerNetworkConnect(iaID string)
 }
 
 // UpdatePartnerNetworkConnect updates a partner connect attachment.
-func (p *partnerNetworkConnectsService) UpdatePartnerNetworkConnect(iaID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerNetworkConnect, error) {
+func (p *partnerNetworkConnectsService) UpdatePartnerNetworkConnect(iaID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerAttachment, error) {
 	partnerIA, _, err := p.client.PartnerNetworkConnect.Update(context.TODO(), iaID, req)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PartnerNetworkConnect{PartnerNetworkConnect: partnerIA}, nil
+	return &PartnerAttachment{PartnerAttachment: partnerIA}, nil
 }
 
 // ListPartnerAttachmentRoutes lists all partner attachment routes.

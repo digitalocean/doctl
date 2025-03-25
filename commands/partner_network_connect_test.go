@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	testPartnerAttachment = do.PartnerNetworkConnect{
-		PartnerNetworkConnect: &godo.PartnerNetworkConnect{
+	testPartnerAttachment = do.PartnerAttachment{
+		PartnerAttachment: &godo.PartnerAttachment{
 			ID:                        "test-id",
 			Name:                      "doctl-pia",
 			State:                     "active",
@@ -26,7 +26,7 @@ var (
 		},
 	}
 
-	testPartnerIAList = do.PartnerNetworkConnects{
+	testPartnerIAList = do.PartnerAttachments{
 		testPartnerAttachment,
 	}
 

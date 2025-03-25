@@ -255,7 +255,7 @@ func RunPartnerAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: do.PartnerNetworkConnects{*pnc}}
+	item := &displayers.PartnerNetworkConnect{PartnerNetworkConnects: do.PartnerAttachments{*pnc}}
 	return c.Display(item)
 }
 
@@ -279,7 +279,7 @@ func RunPartnerNCGet(c *CmdConfig) error {
 	}
 
 	item := &displayers.PartnerNetworkConnect{
-		PartnerNetworkConnects: do.PartnerNetworkConnects{*networkConnects},
+		PartnerNetworkConnects: do.PartnerAttachments{*networkConnects},
 	}
 	return c.Display(item)
 }
@@ -332,7 +332,7 @@ func RunPartnerNCUpdate(c *CmdConfig) error {
 	}
 
 	item := &displayers.PartnerNetworkConnect{
-		PartnerNetworkConnects: do.PartnerNetworkConnects{*pnc},
+		PartnerNetworkConnects: do.PartnerAttachments{*pnc},
 	}
 	return c.Display(item)
 }

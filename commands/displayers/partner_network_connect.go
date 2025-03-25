@@ -8,7 +8,7 @@ import (
 )
 
 type PartnerNetworkConnect struct {
-	PartnerNetworkConnects do.PartnerNetworkConnects
+	PartnerNetworkConnects do.PartnerAttachments
 }
 
 var _ Displayable = &PartnerNetworkConnect{}
