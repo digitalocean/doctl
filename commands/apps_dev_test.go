@@ -9,6 +9,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/godo"
+	"github.com/docker/docker/api/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -24,6 +25,14 @@ func TestRunAppsDevBuild(t *testing.T) {
 			DockerfilePath: ".",
 		}},
 	}
+
+	imageList := []types.ImageSummary{{
+		ID:       uuid.New().String(),
+		RepoTags: []string{builder.CNBBuilderImage_Heroku22},
+		Labels: map[string]string{
+			"io.buildpacks.builder.metadata": "{\"stack\":{\"runImage\":{\"image\":\"digitaloceanapps/apps-run:heroku-22_3da9f73\"}}}",
+		},
+	}}
 
 	t.Run("with local app spec", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -43,6 +52,7 @@ func TestRunAppsDevBuild(t *testing.T) {
 
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
 			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), ws.Context(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
+			tm.appDockerEngineClient.EXPECT().ImageList(gomock.Any(), gomock.Any()).Return(imageList, nil).Times(2)
 
 			err = RunAppsDevBuild(config)
 			require.NoError(t, err)
@@ -57,6 +67,7 @@ func TestRunAppsDevBuild(t *testing.T) {
 			require.NoError(t, err, "getting workspace")
 			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), ws.Context(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
+			tm.appDockerEngineClient.EXPECT().ImageList(gomock.Any(), gomock.Any()).Return(imageList, nil).Times(2)
 
 			tm.apps.EXPECT().Get(appID).Times(1).Return(&godo.App{
 				Spec: sampleSpec,
