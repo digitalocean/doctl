@@ -19,86 +19,86 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// PartnerNetworkConnect wraps a godo PartnerNetworkConnect.
-type PartnerNetworkConnect struct {
-	PartnerNetworkConnect *godo.PartnerAttachment
+// PartnerAttachment wraps a godo PartnerAttachment.
+type PartnerAttachment struct {
+	PartnerAttachment *godo.PartnerAttachment
 }
 
-// PartnerNetworkConnects is a slice of PartnerNetworkConnect.
-type PartnerNetworkConnects []PartnerNetworkConnect
+// PartnerAttachments is a slice of PartnerAttachment.
+type PartnerAttachments []PartnerAttachment
 
-// PartnerNetworkConnectRoute wraps a godo RemoteRoute.
-type PartnerNetworkConnectRoute struct {
+// PartnerAttachmentRoute wraps a godo RemoteRoute.
+type PartnerAttachmentRoute struct {
 	*godo.RemoteRoute
 }
 
-// PartnerNetworkConnectRoutes is a slice of PartnerNetworkConnectRoute.
-type PartnerNetworkConnectRoutes []PartnerNetworkConnectRoute
+// PartnerAttachmentRoutes is a slice of PartnerAttachmentRoute.
+type PartnerAttachmentRoutes []PartnerAttachmentRoute
 
-// PartnerNetworkConnectBGPAuthKey wrap a godo BgpAuthKey.
-type PartnerNetworkConnectBGPAuthKey struct {
+// PartnerAttachmentBGPAuthKey wrap a godo BgpAuthKey.
+type PartnerAttachmentBGPAuthKey struct {
 	*godo.BgpAuthKey
 }
 
-// PartnerNetworkConnectRegenerateServiceKey wraps a godo RegenerateServiceKey.
-type PartnerNetworkConnectRegenerateServiceKey struct {
+// PartnerAttachmentRegenerateServiceKey wraps a godo RegenerateServiceKey.
+type PartnerAttachmentRegenerateServiceKey struct {
 	*godo.RegenerateServiceKey
 }
 
-// PartnerNetworkConnectServiceKey wraps a godo ServiceKey.
-type PartnerNetworkConnectServiceKey struct {
+// PartnerAttachmentServiceKey wraps a godo ServiceKey.
+type PartnerAttachmentServiceKey struct {
 	*godo.ServiceKey
 }
 
-// PartnerNetworkConnectsService is an interface for interacting with
-// DigitalOcean's partner network connect api.
-type PartnerNetworkConnectsService interface {
-	Create(*godo.PartnerNetworkConnectCreateRequest) (*PartnerNetworkConnect, error)
-	GetPartnerNetworkConnect(pncID string) (*PartnerNetworkConnect, error)
-	ListPartnerNetworkConnects() (PartnerNetworkConnects, error)
-	DeletePartnerNetworkConnect(pncID string) error
-	UpdatePartnerNetworkConnect(pncID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerNetworkConnect, error)
-	ListPartnerNetworkConnectRoutes(pncID string) (PartnerNetworkConnectRoutes, error)
-	GetBGPAuthKey(pncID string) (*PartnerNetworkConnectBGPAuthKey, error)
-	RegenerateServiceKey(pncID string) (*PartnerNetworkConnectRegenerateServiceKey, error)
-	GetServiceKey(pncID string) (*PartnerNetworkConnectServiceKey, error)
+// PartnerAttachmentsService is an interface for interacting with
+// DigitalOcean's partner attachment api.
+type PartnerAttachmentsService interface {
+	Create(*godo.PartnerAttachmentCreateRequest) (*PartnerAttachment, error)
+	GetPartnerAttachment(paID string) (*PartnerAttachment, error)
+	ListPartnerAttachments() (PartnerAttachments, error)
+	DeletePartnerAttachment(paID string) error
+	UpdatePartnerAttachment(paID string, req *godo.PartnerAttachmentUpdateRequest) (*PartnerAttachment, error)
+	ListPartnerAttachmentRoutes(paID string) (PartnerAttachmentRoutes, error)
+	GetBGPAuthKey(paID string) (*PartnerAttachmentBGPAuthKey, error)
+	RegenerateServiceKey(paID string) (*PartnerAttachmentRegenerateServiceKey, error)
+	GetServiceKey(paID string) (*PartnerAttachmentServiceKey, error)
 }
 
-var _ PartnerNetworkConnectsService = &partnerNetworkConnectsService{}
+var _ PartnerAttachmentsService = &partnerAttachmentsService{}
 
-type partnerNetworkConnectsService struct {
+type partnerAttachmentsService struct {
 	client *godo.Client
 }
 
-// NewPartnerNetworkConnectsService builds an instance of PartnerNetworkConnectsService.
-func NewPartnerNetworkConnectsService(client *godo.Client) PartnerNetworkConnectsService {
-	return &partnerNetworkConnectsService{
+// NewPartnerAttachmentsService builds an instance of PartnerAttachmentsService.
+func NewPartnerAttachmentsService(client *godo.Client) PartnerAttachmentsService {
+	return &partnerAttachmentsService{
 		client: client,
 	}
 }
 
 // Create creates a partner connect attachment.
-func (p *partnerNetworkConnectsService) Create(req *godo.PartnerNetworkConnectCreateRequest) (*PartnerNetworkConnect, error) {
-	pia, _, err := p.client.PartnerNetworkConnect.Create(context.TODO(), req)
+func (p *partnerAttachmentsService) Create(req *godo.PartnerAttachmentCreateRequest) (*PartnerAttachment, error) {
+	pia, _, err := p.client.PartnerAttachment.Create(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerNetworkConnect{PartnerNetworkConnect: pia}, nil
+	return &PartnerAttachment{PartnerAttachment: pia}, nil
 }
 
-// GetPartnerNetworkConnect retrieves a partner connect attachment.
-func (p *partnerNetworkConnectsService) GetPartnerNetworkConnect(iaID string) (*PartnerNetworkConnect, error) {
-	partnerIA, _, err := p.client.PartnerNetworkConnect.Get(context.TODO(), iaID)
+// GetPartnerAttachment retrieves a partner connect attachment.
+func (p *partnerAttachmentsService) GetPartnerAttachment(iaID string) (*PartnerAttachment, error) {
+	partnerIA, _, err := p.client.PartnerAttachment.Get(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerNetworkConnect{PartnerNetworkConnect: partnerIA}, nil
+	return &PartnerAttachment{PartnerAttachment: partnerIA}, nil
 }
 
-// ListPartnerNetworkConnects lists all partner connect attachments.
-func (p *partnerNetworkConnectsService) ListPartnerNetworkConnects() (PartnerNetworkConnects, error) {
+// ListPartnerAttachments lists all partner connect attachments.
+func (p *partnerAttachmentsService) ListPartnerAttachments() (PartnerAttachments, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := p.client.PartnerNetworkConnect.List(context.TODO(), opt)
+		list, resp, err := p.client.PartnerAttachment.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -116,35 +116,35 @@ func (p *partnerNetworkConnectsService) ListPartnerNetworkConnects() (PartnerNet
 		return nil, err
 	}
 
-	list := make([]PartnerNetworkConnect, len(si))
+	list := make([]PartnerAttachment, len(si))
 	for i := range si {
 		a := si[i].(*godo.PartnerAttachment)
-		list[i] = PartnerNetworkConnect{PartnerNetworkConnect: a}
+		list[i] = PartnerAttachment{PartnerAttachment: a}
 	}
 
 	return list, nil
 }
 
-// DeletePartnerNetworkConnect deletes a partner connect attachment.
-func (p *partnerNetworkConnectsService) DeletePartnerNetworkConnect(iaID string) error {
-	_, err := p.client.PartnerNetworkConnect.Delete(context.TODO(), iaID)
+// DeletePartnerAttachment deletes a partner connect attachment.
+func (p *partnerAttachmentsService) DeletePartnerAttachment(iaID string) error {
+	_, err := p.client.PartnerAttachment.Delete(context.TODO(), iaID)
 	return err
 }
 
-// UpdatePartnerNetworkConnect updates a partner network connect.
-func (p *partnerNetworkConnectsService) UpdatePartnerNetworkConnect(iaID string, req *godo.PartnerNetworkConnectUpdateRequest) (*PartnerNetworkConnect, error) {
-	partnerIA, _, err := p.client.PartnerNetworkConnect.Update(context.TODO(), iaID, req)
+// UpdatePartnerAttachment updates a partner attachment.
+func (p *partnerAttachmentsService) UpdatePartnerAttachment(iaID string, req *godo.PartnerAttachmentUpdateRequest) (*PartnerAttachment, error) {
+	partnerIA, _, err := p.client.PartnerAttachment.Update(context.TODO(), iaID, req)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PartnerNetworkConnect{PartnerNetworkConnect: partnerIA}, nil
+	return &PartnerAttachment{PartnerAttachment: partnerIA}, nil
 }
 
-// ListPartnerNetworkConnectRoutes lists all partner network connect routes.
-func (p *partnerNetworkConnectsService) ListPartnerNetworkConnectRoutes(iaID string) (PartnerNetworkConnectRoutes, error) {
+// ListPartnerAttachmentRoutes lists all partner attachment routes.
+func (p *partnerAttachmentsService) ListPartnerAttachmentRoutes(iaID string) (PartnerAttachmentRoutes, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := p.client.PartnerNetworkConnect.ListRoutes(context.TODO(), iaID, opt)
+		list, resp, err := p.client.PartnerAttachment.ListRoutes(context.TODO(), iaID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -162,38 +162,38 @@ func (p *partnerNetworkConnectsService) ListPartnerNetworkConnectRoutes(iaID str
 		return nil, err
 	}
 
-	list := make([]PartnerNetworkConnectRoute, len(si))
+	list := make([]PartnerAttachmentRoute, len(si))
 	for i := range si {
 		a := si[i].(*godo.RemoteRoute)
-		list[i] = PartnerNetworkConnectRoute{RemoteRoute: a}
+		list[i] = PartnerAttachmentRoute{RemoteRoute: a}
 	}
 
 	return list, nil
 }
 
 // GetBGPAuthKey retrieves a BGP auth key of a partner connect attachment.
-func (p *partnerNetworkConnectsService) GetBGPAuthKey(iaID string) (*PartnerNetworkConnectBGPAuthKey, error) {
-	bgpAuthKey, _, err := p.client.PartnerNetworkConnect.GetBGPAuthKey(context.TODO(), iaID)
+func (p *partnerAttachmentsService) GetBGPAuthKey(iaID string) (*PartnerAttachmentBGPAuthKey, error) {
+	bgpAuthKey, _, err := p.client.PartnerAttachment.GetBGPAuthKey(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerNetworkConnectBGPAuthKey{BgpAuthKey: bgpAuthKey}, nil
+	return &PartnerAttachmentBGPAuthKey{BgpAuthKey: bgpAuthKey}, nil
 }
 
 // RegenerateServiceKey regenerates a service key of a partner connect attachment.
-func (p *partnerNetworkConnectsService) RegenerateServiceKey(iaID string) (*PartnerNetworkConnectRegenerateServiceKey, error) {
-	regenerateServiceKey, _, err := p.client.PartnerNetworkConnect.RegenerateServiceKey(context.TODO(), iaID)
+func (p *partnerAttachmentsService) RegenerateServiceKey(iaID string) (*PartnerAttachmentRegenerateServiceKey, error) {
+	regenerateServiceKey, _, err := p.client.PartnerAttachment.RegenerateServiceKey(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerNetworkConnectRegenerateServiceKey{RegenerateServiceKey: regenerateServiceKey}, nil
+	return &PartnerAttachmentRegenerateServiceKey{RegenerateServiceKey: regenerateServiceKey}, nil
 }
 
 // GetServiceKey retrieves a service key of a partner connect attachment.
-func (p *partnerNetworkConnectsService) GetServiceKey(iaID string) (*PartnerNetworkConnectServiceKey, error) {
-	serviceKey, _, err := p.client.PartnerNetworkConnect.GetServiceKey(context.TODO(), iaID)
+func (p *partnerAttachmentsService) GetServiceKey(iaID string) (*PartnerAttachmentServiceKey, error) {
+	serviceKey, _, err := p.client.PartnerAttachment.GetServiceKey(context.TODO(), iaID)
 	if err != nil {
 		return nil, err
 	}
-	return &PartnerNetworkConnectServiceKey{ServiceKey: serviceKey}, nil
+	return &PartnerAttachmentServiceKey{ServiceKey: serviceKey}, nil
 }

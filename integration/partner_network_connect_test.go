@@ -44,12 +44,12 @@ ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Pr
 12345    doctl-pia    active    50                             stage2    MEGAPORT         d35e5cb7-7957-4643-8e3a-1ab4eb3a494c    2025-01-30 12:00:00 +0000 UTC    0                                       0
 `
 
-	pncListRoutesOutput = `
+	paListRoutesOutput = `
 ID                                      Cidr
 a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
 `
 
-	pncListRoutesResponse = `
+	paListRoutesResponse = `
 {
   "remote_routes": [
 	{"id": "a0eb6eb0-fa38-41a8-a5de-1a75524667fe", "cidr": "169.250.0.0/29"}
@@ -69,25 +69,25 @@ a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
 }
 `
 
-	pncRegenerateServiceKeyOutput   = ``
-	pncRegenerateServiceKeyResponse = `{}`
+	paRegenerateServiceKeyOutput   = ``
+	paRegenerateServiceKeyResponse = `{}`
 
-	pncGetBgpAuthKeyOutput = `
+	paGetBgpAuthKeyOutput = `
 Value
 test-bgp-auth-key
 	`
-	pncGetBgpAuthKeyResponse = `
+	paGetBgpAuthKeyResponse = `
 {
 	"bgp_auth_key": {
 		"value": "test-bgp-auth-key"
 	}
 }`
-	pncGetServiceKeyOutput = `
+	paGetServiceKeyOutput = `
 Value               State     CreatedAt
 test-service-key    active    2025-01-30 12:00:00 +0000 UTC	
 	`
 
-	pncGetServiceKeyResponse = `
+	paGetServiceKeyResponse = `
 {
 	"service_key": {
 		"created_at": "2025-01-30T12:00:00Z",
@@ -197,7 +197,7 @@ var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spe
 					return
 				}
 
-				w.Write([]byte(pncListRoutesResponse))
+				w.Write([]byte(paListRoutesResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -222,7 +222,7 @@ var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncListRoutesOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paListRoutesOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -269,7 +269,7 @@ var _ = suite("partner_network_connect/regenerate-service-key", func(t *testing.
 					return
 				}
 
-				w.Write([]byte(pncRegenerateServiceKeyResponse))
+				w.Write([]byte(paRegenerateServiceKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -294,7 +294,7 @@ var _ = suite("partner_network_connect/regenerate-service-key", func(t *testing.
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncRegenerateServiceKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paRegenerateServiceKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
@@ -322,7 +322,7 @@ var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, whe
 					return
 				}
 
-				w.Write([]byte(pncGetBgpAuthKeyResponse))
+				w.Write([]byte(paGetBgpAuthKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -347,7 +347,7 @@ var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, whe
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncGetBgpAuthKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paGetBgpAuthKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -394,7 +394,7 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 					return
 				}
 
-				w.Write([]byte(pncGetServiceKeyResponse))
+				w.Write([]byte(paGetServiceKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -419,7 +419,7 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncGetServiceKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paGetServiceKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
