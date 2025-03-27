@@ -18,7 +18,7 @@ var (
 			ID:                        "test-id",
 			Name:                      "doctl-pia",
 			State:                     "active",
-			ConnectionBandwidthInMbps: 1000,
+			ConnectionBandwidthInMbps: 50,
 			Region:                    "stage2",
 			NaaSProvider:              "MEGAPORT",
 			VPCIDs:                    []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"},
@@ -82,7 +82,7 @@ func TestPartnerAttachmentCreate(t *testing.T) {
 
 		expectedRequest := &godo.PartnerAttachmentCreateRequest{
 			Name:                      "doctl-pia",
-			ConnectionBandwidthInMbps: 1000,
+			ConnectionBandwidthInMbps: 50,
 			Region:                    "stage2",
 			NaaSProvider:              "MEGAPORT",
 			VPCIDs:                    []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"},
