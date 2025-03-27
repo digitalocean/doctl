@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	partnerNCCreateResponse = `
+	partnerAttachmentCreateResponse = `
 {
   "partner_attachment": {
     "id": "12345",
@@ -39,7 +39,7 @@ var (
 }
 `
 
-	partnerNCCreateOutput = `
+	partnerAttachmentCreateOutput = `
 ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Provider    VPC IDs                                 Created At                       BGP Local ASN    BGP Local Router IP    BGP Peer ASN    BGP Peer Router IP
 12345    doctl-pia    active    50                             stage2    MEGAPORT         d35e5cb7-7957-4643-8e3a-1ab4eb3a494c    2025-01-30 12:00:00 +0000 UTC    0                                       0
 `
@@ -131,7 +131,7 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 				err = json.Unmarshal(reqBody, &request)
 				expect.NoError(err)
 
-				t, err := template.New("response").Parse(partnerNCCreateResponse)
+				t, err := template.New("response").Parse(partnerAttachmentCreateResponse)
 				expect.NoError(err)
 
 				var b []byte
@@ -156,7 +156,7 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"create",
 				"--name", "doctl-pia",
 				"--connection-bandwidth-in-mbps", "50",
@@ -168,8 +168,8 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			t.Log("printing output ", string(output))
-			t.Log("printing partnerNCCreateOutput ", string(partnerNCCreateOutput))
-			expect.Equal(strings.TrimSpace(partnerNCCreateOutput), strings.TrimSpace(string(output)))
+			t.Log("printing partnerAttachmentCreateOutput ", string(partnerAttachmentCreateOutput))
+			expect.Equal(strings.TrimSpace(partnerAttachmentCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
@@ -215,7 +215,7 @@ var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"list-routes",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
@@ -232,7 +232,7 @@ var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"list-routes",
 				"--format", "Cidr",
 				"--no-header",
@@ -287,7 +287,7 @@ var _ = suite("partner_network_connect/regenerate-service-key", func(t *testing.
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"regenerate-service-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
@@ -340,7 +340,7 @@ var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, whe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-bgp-auth-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
@@ -357,7 +357,7 @@ var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, whe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-bgp-auth-key",
 				"--format", "Value",
 				"--no-header",
@@ -412,7 +412,7 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-service-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
@@ -429,7 +429,7 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-service-key",
 				"--format", "Value",
 				"--no-header",

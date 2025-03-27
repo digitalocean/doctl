@@ -126,13 +126,13 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 		`: doctl network --type "partner" attachment update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
 vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
-	partnerNCRouteDetails := `
+	partnerAttachmentRouteDetails := `
 - The Partner Attachment ID
 - The Partner Attachment Cidr`
 
 	cmdPartnerAttachmentRouteList := CmdBuilder(cmd, RunPartnerAttachmentRouteList, "list-routes <partner-attachment-id>",
 		"List Partner Attachment Routes",
-		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerNCRouteDetails, Writer,
+		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerAttachmentRouteDetails, Writer,
 		aliasOpt("ls-routes"), displayerType(&displayers.PartnerAttachment{}))
 	AddStringFlag(cmdPartnerAttachmentRouteList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerAttachmentRouteList.Example = `The following example lists the Partner Attachment Routes on your account :` +
@@ -154,14 +154,14 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 	cmdGetPartnerAttachmentGetBGPAuthKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" attachment get-bgp-auth-key f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	partnerNCServiceKeyDetails := `
+	partnerAttachmentServiceKeyDetails := `
 - The Service key Value
 - The Service key State
 - The Service key CreatedAt`
 
 	cmdGetPartnerIAServiceKey := CmdBuilder(cmd, RunGetPartnerAttachmentServiceKey, "get-service-key <partner-attachment-id>",
 		"Retrieves a Service key of Partner Attachment",
-		"Retrieves information about a Service key of Partner Attachment, including:"+partnerNCServiceKeyDetails, Writer,
+		"Retrieves information about a Service key of Partner Attachment, including:"+partnerAttachmentServiceKeyDetails, Writer,
 		aliasOpt("g-service-key"), displayerType(&displayers.PartnerAttachmentServiceKey{}))
 	AddStringFlag(cmdGetPartnerIAServiceKey, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdGetPartnerIAServiceKey.Example = `The following example retrieves information about a Service key of Partner Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
