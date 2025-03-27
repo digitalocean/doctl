@@ -35,7 +35,6 @@ func Network() *Command {
 			Short:   "Display commands that manage network products",
 			Long:    `The commands under ` + "`" + `doctl network` + "`" + ` are for managing network products`,
 			GroupID: manageResourcesGroup,
-			Hidden:  true,
 		},
 	}
 
