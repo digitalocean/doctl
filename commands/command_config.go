@@ -39,44 +39,44 @@ type CmdConfig struct {
 	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
-	Keys                   func() do.KeysService
-	Sizes                  func() do.SizesService
-	Regions                func() do.RegionsService
-	Images                 func() do.ImagesService
-	ImageActions           func() do.ImageActionsService
-	LoadBalancers          func() do.LoadBalancersService
-	ReservedIPs            func() do.ReservedIPsService
-	ReservedIPActions      func() do.ReservedIPActionsService
-	ReservedIPv6s          func() do.ReservedIPv6sService
-	Droplets               func() do.DropletsService
-	DropletActions         func() do.DropletActionsService
-	DropletAutoscale       func() do.DropletAutoscaleService
-	Domains                func() do.DomainsService
-	Actions                func() do.ActionsService
-	Account                func() do.AccountService
-	Balance                func() do.BalanceService
-	BillingHistory         func() do.BillingHistoryService
-	Invoices               func() do.InvoicesService
-	Tags                   func() do.TagsService
-	UptimeChecks           func() do.UptimeChecksService
-	Volumes                func() do.VolumesService
-	VolumeActions          func() do.VolumeActionsService
-	Snapshots              func() do.SnapshotsService
-	Certificates           func() do.CertificatesService
-	Firewalls              func() do.FirewallsService
-	CDNs                   func() do.CDNsService
-	Projects               func() do.ProjectsService
-	Kubernetes             func() do.KubernetesService
-	Databases              func() do.DatabasesService
-	Registry               func() do.RegistryService
-	VPCs                   func() do.VPCsService
-	OneClicks              func() do.OneClickService
-	Apps                   func() do.AppsService
-	Monitoring             func() do.MonitoringService
-	Serverless             func() do.ServerlessService
-	OAuth                  func() do.OAuthService
-	PartnerNetworkConnects func() do.PartnerNetworkConnectsService
-	SpacesKeys             func() do.SpacesKeysService
+	Keys               func() do.KeysService
+	Sizes              func() do.SizesService
+	Regions            func() do.RegionsService
+	Images             func() do.ImagesService
+	ImageActions       func() do.ImageActionsService
+	LoadBalancers      func() do.LoadBalancersService
+	ReservedIPs        func() do.ReservedIPsService
+	ReservedIPActions  func() do.ReservedIPActionsService
+	ReservedIPv6s      func() do.ReservedIPv6sService
+	Droplets           func() do.DropletsService
+	DropletActions     func() do.DropletActionsService
+	DropletAutoscale   func() do.DropletAutoscaleService
+	Domains            func() do.DomainsService
+	Actions            func() do.ActionsService
+	Account            func() do.AccountService
+	Balance            func() do.BalanceService
+	BillingHistory     func() do.BillingHistoryService
+	Invoices           func() do.InvoicesService
+	Tags               func() do.TagsService
+	UptimeChecks       func() do.UptimeChecksService
+	Volumes            func() do.VolumesService
+	VolumeActions      func() do.VolumeActionsService
+	Snapshots          func() do.SnapshotsService
+	Certificates       func() do.CertificatesService
+	Firewalls          func() do.FirewallsService
+	CDNs               func() do.CDNsService
+	Projects           func() do.ProjectsService
+	Kubernetes         func() do.KubernetesService
+	Databases          func() do.DatabasesService
+	Registry           func() do.RegistryService
+	VPCs               func() do.VPCsService
+	OneClicks          func() do.OneClickService
+	Apps               func() do.AppsService
+	Monitoring         func() do.MonitoringService
+	Serverless         func() do.ServerlessService
+	OAuth              func() do.OAuthService
+	PartnerAttachments func() do.PartnerAttachmentsService
+	SpacesKeys         func() do.SpacesKeysService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -133,8 +133,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
 			}
 			c.OAuth = func() do.OAuthService { return do.NewOAuthService(godoClient) }
-			c.PartnerNetworkConnects = func() do.PartnerNetworkConnectsService {
-				return do.NewPartnerNetworkConnectsService(godoClient)
+			c.PartnerAttachments = func() do.PartnerAttachmentsService {
+				return do.NewPartnerAttachmentsService(godoClient)
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 

@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	testPartnerNetworkConnect = do.PartnerNetworkConnect{
-		PartnerNetworkConnect: &godo.PartnerAttachment{
+	testPartnerAttachment = do.PartnerAttachment{
+		PartnerAttachment: &godo.PartnerAttachment{
 			ID:                        "test-id",
 			Name:                      "doctl-pia",
 			State:                     "active",
@@ -26,32 +26,32 @@ var (
 		},
 	}
 
-	testPartnerNCList = do.PartnerNetworkConnects{
-		testPartnerNetworkConnect,
+	testPartnerAttachmentList = do.PartnerAttachments{
+		testPartnerAttachment,
 	}
 
-	testPartnerNCRoute = do.PartnerNetworkConnectRoute{
+	testPartnerAttachmentRoute = do.PartnerAttachmentRoute{
 		RemoteRoute: &godo.RemoteRoute{
 			ID:   "test-route-id",
 			Cidr: "10.10.0.0/24",
 		},
 	}
 
-	testPartnerNCRouteList = do.PartnerNetworkConnectRoutes{
-		testPartnerNCRoute,
+	testPartnerAttachmentRouteList = do.PartnerAttachmentRoutes{
+		testPartnerAttachmentRoute,
 	}
 
-	testRegenerateServiceKey = do.PartnerNetworkConnectRegenerateServiceKey{
+	testRegenerateServiceKey = do.PartnerAttachmentRegenerateServiceKey{
 		RegenerateServiceKey: &godo.RegenerateServiceKey{},
 	}
 
-	testBGPAuthKey = do.PartnerNetworkConnectBGPAuthKey{
+	testBGPAuthKey = do.PartnerAttachmentBGPAuthKey{
 		BgpAuthKey: &godo.BgpAuthKey{
 			Value: "test-bgp-auth-key",
 		},
 	}
 
-	testServiceKey = do.PartnerNetworkConnectServiceKey{
+	testServiceKey = do.PartnerAttachmentServiceKey{
 		ServiceKey: &godo.ServiceKey{
 			Value:     "test-service-key",
 			State:     "active",
@@ -60,27 +60,27 @@ var (
 	}
 )
 
-func TestPartnerNetworkConnectsCommand(t *testing.T) {
-	cmd := PartnerNetworkConnects()
+func TestPartnerAttachmentsCommand(t *testing.T) {
+	cmd := PartnerAttachments()
 	assert.NotNil(t, cmd)
 
 	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "regenerate-service-key", "get-bgp-auth-key", "get-service-key")
 }
 
-func TestPartnerNCCreate(t *testing.T) {
+func TestPartnerAttachmentCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCName, "doctl-pia")
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCBandwidthInMbps, 50)
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCRegion, "stage2")
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCNaaSProvider, "MEGAPORT")
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCVPCIDs, []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"})
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCBGPLocalASN, 65001)
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCBGPLocalRouterIP, "192.168.1.1")
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCBGPPeerASN, 65002)
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCBGPPeerRouterIP, "192.168.1.2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, "doctl-pia")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBandwidthInMbps, 50)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentRegion, "stage2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentNaaSProvider, "MEGAPORT")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"})
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalASN, 65001)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalRouterIP, "192.168.1.1")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerASN, 65002)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "192.168.1.2")
 
-		expectedRequest := &godo.PartnerNetworkConnectCreateRequest{
+		expectedRequest := &godo.PartnerAttachmentCreateRequest{
 			Name:                      "doctl-pia",
 			ConnectionBandwidthInMbps: 50,
 			Region:                    "stage2",
@@ -88,150 +88,150 @@ func TestPartnerNCCreate(t *testing.T) {
 			VPCIDs:                    []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"},
 		}
 
-		tm.partnerNetworkConnects.EXPECT().Create(expectedRequest).Return(&testPartnerNetworkConnect, nil)
+		tm.partnerAttachments.EXPECT().Create(expectedRequest).Return(&testPartnerAttachment, nil)
 
-		err := RunPartnerNCCreate(config)
+		err := RunPartnerAttachmentCreate(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestPartnerNCCreateUnsupportedType(t *testing.T) {
+func TestPartnerAttachmentCreateUnsupportedType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "unsupported")
-		err := RunPartnerNCCreate(config)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "unsupported")
+		err := RunPartnerAttachmentCreate(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported attachment type")
 	})
 }
 
-func TestPartnerNCGet(t *testing.T) {
+func TestPartnerAttachmentGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		pncID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		tm.partnerNetworkConnects.EXPECT().GetPartnerNetworkConnect(pncID).Return(&testPartnerNetworkConnect, nil)
+		paID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
+		tm.partnerAttachments.EXPECT().GetPartnerAttachment(paID).Return(&testPartnerAttachment, nil)
 
-		config.Args = append(config.Args, pncID)
+		config.Args = append(config.Args, paID)
 
-		err := RunPartnerNCGet(config)
+		err := RunPartnerAttachmentGet(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestPartnerNCGetNoID(t *testing.T) {
+func TestPartnerAttachmentGetNoID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		err := RunPartnerNCGet(config)
+		err := RunPartnerAttachmentGet(config)
 		assert.Error(t, err)
 	})
 }
 
-func TestPartnerNCList(t *testing.T) {
+func TestPartnerAttachmentList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		tm.partnerNetworkConnects.EXPECT().ListPartnerNetworkConnects().Return(testPartnerNCList, nil)
+		tm.partnerAttachments.EXPECT().ListPartnerAttachments().Return(testPartnerAttachmentList, nil)
 
-		err := RunPartnerNCList(config)
+		err := RunPartnerAttachmentList(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestPartnerNCDelete(t *testing.T) {
+func TestPartnerAttachmentDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		tm.partnerNetworkConnects.EXPECT().DeletePartnerNetworkConnect(iaID).Return(nil)
+		tm.partnerAttachments.EXPECT().DeletePartnerAttachment(iaID).Return(nil)
 
 		config.Args = append(config.Args, iaID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		err := RunPartnerNCDelete(config)
+		err := RunPartnerAttachmentDelete(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestRunPartnerNCUpdate(t *testing.T) {
+func TestRunPartnerAttachmentUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "ia-uuid1"
 		iaName := "ia-name"
 		vpcIDs := "f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268"
-		r := godo.PartnerNetworkConnectUpdateRequest{Name: iaName, VPCIDs: strings.Split(vpcIDs, ",")}
-		tm.partnerNetworkConnects.EXPECT().UpdatePartnerNetworkConnect(iaID, &r).Return(&testPartnerNetworkConnect, nil)
+		r := godo.PartnerAttachmentUpdateRequest{Name: iaName, VPCIDs: strings.Split(vpcIDs, ",")}
+		tm.partnerAttachments.EXPECT().UpdatePartnerAttachment(iaID, &r).Return(&testPartnerAttachment, nil)
 
 		config.Args = append(config.Args, iaID)
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCName, iaName)
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCVPCIDs, vpcIDs)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, iaName)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, vpcIDs)
 
-		err := RunPartnerNCUpdate(config)
+		err := RunPartnerAttachmentUpdate(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestRunPartnerNCUpdateNoID(t *testing.T) {
+func TestRunPartnerAttachmentUpdateNoID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
-		err := RunPartnerNCUpdate(config)
+		err := RunPartnerAttachmentUpdate(config)
 		assert.Error(t, err)
 	})
 }
 
-func TestPartnerNCRouteList(t *testing.T) {
+func TestPartnerAttachmentRouteList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "ia-uuid1"
 		config.Args = append(config.Args, iaID)
-		tm.partnerNetworkConnects.EXPECT().ListPartnerNetworkConnectRoutes(iaID).Return(testPartnerNCRouteList, nil)
+		tm.partnerAttachments.EXPECT().ListPartnerAttachmentRoutes(iaID).Return(testPartnerAttachmentRouteList, nil)
 
-		err := RunPartnerNCRouteList(config)
+		err := RunPartnerAttachmentRouteList(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestPartnerNCRegenerateServiceKey(t *testing.T) {
+func TestPartnerAttachmentRegenerateServiceKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		tm.partnerNetworkConnects.EXPECT().RegenerateServiceKey(iaID).Return(&testRegenerateServiceKey, nil)
+		tm.partnerAttachments.EXPECT().RegenerateServiceKey(iaID).Return(&testRegenerateServiceKey, nil)
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunPartnerNCRegenerateServiceKey(config)
+		err := RunPartnerAttachmentRegenerateServiceKey(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestGetPartnerNCBGPAuthKey(t *testing.T) {
+func TestGetPartnerAttachmentBGPAuthKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		tm.partnerNetworkConnects.EXPECT().GetBGPAuthKey(iaID).Return(&testBGPAuthKey, nil)
+		tm.partnerAttachments.EXPECT().GetBGPAuthKey(iaID).Return(&testBGPAuthKey, nil)
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunGetPartnerNCBGPAuthKey(config)
+		err := RunGetPartnerAttachmentBGPAuthKey(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestGetPartnerNCServiceKey(t *testing.T) {
+func TestGetPartnerAttachmentServiceKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgPartnerNCType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
 
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		tm.partnerNetworkConnects.EXPECT().GetServiceKey(iaID).Return(&testServiceKey, nil)
+		tm.partnerAttachments.EXPECT().GetServiceKey(iaID).Return(&testServiceKey, nil)
 
 		config.Args = append(config.Args, iaID)
 
-		err := RunGetPartnerNCServiceKey(config)
+		err := RunGetPartnerAttachmentServiceKey(config)
 		assert.NoError(t, err)
 	})
 }

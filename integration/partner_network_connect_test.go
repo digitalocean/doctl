@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	partnerNCCreateResponse = `
+	partnerAttachmentCreateResponse = `
 {
   "partner_attachment": {
     "id": "12345",
@@ -39,17 +39,17 @@ var (
 }
 `
 
-	partnerNCCreateOutput = `
+	partnerAttachmentCreateOutput = `
 ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Provider    VPC IDs                                 Created At                       BGP Local ASN    BGP Local Router IP    BGP Peer ASN    BGP Peer Router IP
 12345    doctl-pia    active    50                             stage2    MEGAPORT         d35e5cb7-7957-4643-8e3a-1ab4eb3a494c    2025-01-30 12:00:00 +0000 UTC    0                                       0
 `
 
-	pncListRoutesOutput = `
+	paListRoutesOutput = `
 ID                                      Cidr
 a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
 `
 
-	pncListRoutesResponse = `
+	paListRoutesResponse = `
 {
   "remote_routes": [
 	{"id": "a0eb6eb0-fa38-41a8-a5de-1a75524667fe", "cidr": "169.250.0.0/29"}
@@ -69,25 +69,25 @@ a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
 }
 `
 
-	pncRegenerateServiceKeyOutput   = ``
-	pncRegenerateServiceKeyResponse = `{}`
+	paRegenerateServiceKeyOutput   = ``
+	paRegenerateServiceKeyResponse = `{}`
 
-	pncGetBgpAuthKeyOutput = `
+	paGetBgpAuthKeyOutput = `
 Value
 test-bgp-auth-key
 	`
-	pncGetBgpAuthKeyResponse = `
+	paGetBgpAuthKeyResponse = `
 {
 	"bgp_auth_key": {
 		"value": "test-bgp-auth-key"
 	}
 }`
-	pncGetServiceKeyOutput = `
+	paGetServiceKeyOutput = `
 Value               State     CreatedAt
 test-service-key    active    2025-01-30 12:00:00 +0000 UTC	
 	`
 
-	pncGetServiceKeyResponse = `
+	paGetServiceKeyResponse = `
 {
 	"service_key": {
 		"created_at": "2025-01-30T12:00:00Z",
@@ -131,7 +131,7 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 				err = json.Unmarshal(reqBody, &request)
 				expect.NoError(err)
 
-				t, err := template.New("response").Parse(partnerNCCreateResponse)
+				t, err := template.New("response").Parse(partnerAttachmentCreateResponse)
 				expect.NoError(err)
 
 				var b []byte
@@ -156,7 +156,7 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"create",
 				"--name", "doctl-pia",
 				"--connection-bandwidth-in-mbps", "50",
@@ -168,8 +168,8 @@ var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			t.Log("printing output ", string(output))
-			t.Log("printing partnerNCCreateOutput ", string(partnerNCCreateOutput))
-			expect.Equal(strings.TrimSpace(partnerNCCreateOutput), strings.TrimSpace(string(output)))
+			t.Log("printing partnerAttachmentCreateOutput ", string(partnerAttachmentCreateOutput))
+			expect.Equal(strings.TrimSpace(partnerAttachmentCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
@@ -197,7 +197,7 @@ var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spe
 					return
 				}
 
-				w.Write([]byte(pncListRoutesResponse))
+				w.Write([]byte(paListRoutesResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -215,14 +215,14 @@ var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"list-routes",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncListRoutesOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paListRoutesOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -232,7 +232,7 @@ var _ = suite("partner_network_connect/list-routes", func(t *testing.T, when spe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"list-routes",
 				"--format", "Cidr",
 				"--no-header",
@@ -269,7 +269,7 @@ var _ = suite("partner_network_connect/regenerate-service-key", func(t *testing.
 					return
 				}
 
-				w.Write([]byte(pncRegenerateServiceKeyResponse))
+				w.Write([]byte(paRegenerateServiceKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -287,14 +287,14 @@ var _ = suite("partner_network_connect/regenerate-service-key", func(t *testing.
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"regenerate-service-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncRegenerateServiceKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paRegenerateServiceKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
@@ -322,7 +322,7 @@ var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, whe
 					return
 				}
 
-				w.Write([]byte(pncGetBgpAuthKeyResponse))
+				w.Write([]byte(paGetBgpAuthKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -340,14 +340,14 @@ var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, whe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-bgp-auth-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncGetBgpAuthKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paGetBgpAuthKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -357,7 +357,7 @@ var _ = suite("partner_network_connect/get-bgp-auth-key", func(t *testing.T, whe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-bgp-auth-key",
 				"--format", "Value",
 				"--no-header",
@@ -394,7 +394,7 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 					return
 				}
 
-				w.Write([]byte(pncGetServiceKeyResponse))
+				w.Write([]byte(paGetServiceKeyResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -412,14 +412,14 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-service-key",
 				"c5537207-ebf0-47cb-bc10-6fac717cd672",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(pncGetServiceKeyOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(paGetServiceKeyOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -429,7 +429,7 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"network",
-				"connect",
+				"attachment",
 				"get-service-key",
 				"--format", "Value",
 				"--no-header",
