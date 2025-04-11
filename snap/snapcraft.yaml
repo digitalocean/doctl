@@ -8,7 +8,7 @@ description: |
   clusters, firewalls, load balancers, database clusters, domains, and more.
 license: Apache-2.0
 
-base: core20
+base: core22
 grade: stable
 confinement: strict
 
@@ -24,22 +24,23 @@ parts:
     override-build: |
       cd $SNAPCRAFT_PART_BUILD
       chmod +x doctl-launch
-      snapcraftctl build
+      craftctl default
+
   doctl:
     after: [launcher]
-    source: .
+    source: https://github.com/digitalocean/doctl
+    source-type: git
     plugin: go
+    build-snaps: [go/latest/stable]
     build-environment:
     # Results in installation to /snap/doctl/current/opt/sandbox
     - OVERRIDE_SANDBOX_DIR: "$SNAPCRAFT_PART_INSTALL/opt/sandbox"
     - SNAP_SANDBOX_INSTALL: "true"
     # Override to prevent 'invalid cross-device link' calling doctl
     - XDG_CONFIG_HOME: "$SNAPCRAFT_PART_INSTALL/tmp/.config"
-    override-pull: |
-      git clone https://github.com/digitalocean/doctl.git .
     override-build: |
       version=$(scripts/version.sh --snap)
-      snapcraftctl set-version ${version}
+      craftctl set version=${version}
 
       echo "==> Building doctl ${version} using $(go version)"
 

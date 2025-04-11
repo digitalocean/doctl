@@ -923,7 +923,7 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 		wsServer *httptest.Server
 		upgrader = websocket.Upgrader{}
 	)
-
+	now := time.Now().Format(time.RFC3339)
 	it.Before(func() {
 		expect = require.New(t)
 
@@ -985,20 +985,20 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 				data := struct {
 					Data string `json:"data"`
 				}{
-					Data: "fake logs\n",
+					Data: fmt.Sprintf("foo-service %v fake logs\n", now),
 				}
 				buf := new(bytes.Buffer)
 				json.NewEncoder(buf).Encode(data)
 
 				err = c.WriteMessage(websocket.TextMessage, buf.Bytes())
-				if err != nil {
-					require.NoError(t, err)
-				}
+				require.NoError(t, err)
 
 				if i == finish {
 					break
 				}
 			}
+			err = c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			require.NoError(t, err)
 		}))
 		logsURL = wsServer.URL
 	})
@@ -1018,7 +1018,29 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, "output: %v", string(output))
+
+		logLine := fmt.Sprintf("foo-service %v fake logs", now)
+		expectedOutput := fmt.Sprintf("%s\n%s\n%s\n%s\n%s", logLine, logLine, logLine, logLine, logLine)
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+	it("removes the prefix from an app's logs", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps",
+			"logs",
+			testAppUUID,
+			"service",
+			"--deployment="+testDeploymentUUID,
+			"--type=run",
+			"--tail=1",
+			"-f",
+			"--no-prefix",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err, "output: %v", string(output))
 
 		expectedOutput := "fake logs\nfake logs\nfake logs\nfake logs\nfake logs"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))

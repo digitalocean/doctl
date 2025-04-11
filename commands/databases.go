@@ -70,6 +70,10 @@ func Databases() *Command {
 - The date and time when the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 	cmdDatabaseGet.Example = `The following example retrieves the details for a database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the database's ID, engine, and engine version: doctl databases get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
+	cmdDatabaseGetCA := CmdBuilder(cmd, RunDatabaseGetCA, "get-ca <database-cluster-id>", "Provides the CA certificate for a DigitalOcean database", `Retrieves a database certificate`, Writer, aliasOpt("gc"), displayerType(&displayers.DatabaseCA{}))
+	cmdDatabaseGetCA.Example = `Retrieves the database certificate for the cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl databases get-ca f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+With the ` + "`" + `-o json flag` + "`" + `, the certificate to connect to the database is base64 encoded. To decode it: ` + "`" + `doctl databases get-ca <database-cluster-id> -o json | jq -r .certificate | base64 --decode` + "`"
+
 	nodeSizeDetails := "The size of the nodes in the database cluster, for example `db-s-1vcpu-1gb` indicates a 1 CPU, 1GB node. For a list of available size slugs, visit: https://docs.digitalocean.com/reference/api/api-reference/#tag/Databases"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
 	storageSizeMiBDetails := "The amount of disk space allocated to the cluster. Applicable for PostgreSQL and MySQL clusters. Each plan size has a default value but can be increased in increments up to a maximum amount. For ranges, visit: https://www.digitalocean.com/pricing/managed-databases"
@@ -131,12 +135,15 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	cmdDatabaseResize.Example = `The following example resizes a PostgreSQL or MySQL database to have two nodes, 16 vCPUs, 64 GB of memory, and 2048 GiB of storage space: doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000`
+	AddBoolFlag(cmdDatabaseResize, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for the resize to complete before returning control to the terminal")
+	cmdDatabaseResize.Example = `The following example resizes a PostgreSQL or MySQL database to have two nodes, 16 vCPUs, 64 GB of memory, and 2048 GiB of storage space: doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000 --wait true`
 
 	cmdDatabaseMigrate := CmdBuilder(cmd, RunDatabaseMigrate, "migrate <database-cluster-id>", "Migrate a database cluster to a new region", `Migrates the specified database cluster to a new region.`, Writer,
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, such as `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC network to create the database cluster in. The command uses the region's default VPC network if not specified.")
+	AddBoolFlag(cmdDatabaseMigrate, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database migration to complete before returning control to the terminal.")
 
 	cmdDatabaseFork := CmdBuilder(cmd, RunDatabaseFork, "fork <name>", "Create a new database cluster by forking an existing database cluster.", `Creates a new database cluster from an existing cluster. The forked database contains all of the data from the original database at the time the fork is created.`, Writer, aliasOpt("f"))
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
@@ -156,6 +163,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	cmd.AddCommand(databaseConfiguration())
 	cmd.AddCommand(databaseTopic())
 	cmd.AddCommand(databaseEvents())
+	cmd.AddCommand(databaseIndex())
 
 	return cmd
 }
@@ -185,6 +193,21 @@ func RunDatabaseGet(c *CmdConfig) error {
 	}
 
 	return displayDatabases(c, false, *db)
+}
+
+// RunDatabaseGetCA returns a CA certificate for a database
+func RunDatabaseGetCA(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+	dbCA, err := c.Databases().GetCA(id)
+	if err != nil {
+		return err
+	}
+
+	return displayDatabaseCA(c, dbCA)
 }
 
 // RunDatabaseCreate creates a database cluster
@@ -405,7 +428,7 @@ func convertUTCtoISO8601(restoreFromTimestamp string) (string, error) {
 	// accepts UTC time format from user (to match db list output) and converts it to ISO8601 for api parity.
 	date, error := time.Parse("2006-01-02 15:04:05 +0000 UTC", restoreFromTimestamp)
 	if error != nil {
-		return "", fmt.Errorf("Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
+		return "", fmt.Errorf("invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
 	}
 	dateFormatted := date.Format(time.RFC3339)
 
@@ -491,13 +514,40 @@ func RunDatabaseResize(c *CmdConfig) error {
 	}
 
 	id := c.Args[0]
+	dbs := c.Databases()
 
 	r, err := buildDatabaseResizeRequestFromArgs(c)
 	if err != nil {
 		return err
 	}
 
-	return c.Databases().Resize(id, r)
+	// Resize the database
+	err = dbs.Resize(id, r)
+	if err != nil {
+		return err
+	}
+
+	// Check if the --wait flag was passed
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		notice("Database resizing is in progress, waiting for database to be online")
+
+		err := waitForDatabaseReady(dbs, id)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state after resizing: %v",
+				err,
+			)
+		}
+
+		notice("Database resized successfully")
+	}
+
+	return nil
 }
 
 func buildDatabaseResizeRequestFromArgs(c *CmdConfig) (*godo.DatabaseResizeRequest, error) {
@@ -537,7 +587,32 @@ func RunDatabaseMigrate(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Databases().Migrate(id, r)
+	dbs := c.Databases()
+	err = dbs.Migrate(id, r)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		notice("Database migration is in progress, waiting for database to be online")
+
+		err := waitForDatabaseReady(dbs, id)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state after migration: %v",
+				err,
+			)
+		}
+
+		notice("Database migrated successfully")
+	}
+
+	return nil
 }
 
 func buildDatabaseMigrateRequestFromArgs(c *CmdConfig) (*godo.DatabaseMigrateRequest, error) {
@@ -566,7 +641,9 @@ func databaseMaintenanceWindow() *Command {
 			Short:   "Display commands for scheduling automatic maintenance on your database cluster",
 			Long: `The ` + "`" + `doctl databases maintenance-window` + "`" + ` commands allow you to schedule, and check the schedule of, maintenance windows for your databases.
 
-Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.`,
+Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.
+
+To install an update outside of a maintenance window, use the ` + "`" + `doctl databases maintenance-window install` + "`" + ` command.`,
 		},
 	}
 
@@ -594,6 +671,9 @@ To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceHour, "", "",
 		"The hour when maintenance updates are applied, in UTC 24-hour format. Example: '16:00')", requiredOpt())
 	cmdDatabaseCreate.Example = `The following example updates the maintenance window for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --day tuesday --hour 16:00`
+
+	cmdDatabaseInstallUpdate := CmdBuilder(cmd, RunDatabaseInstallUpdate, "install <database-cluster-id>", "Start installation of updates immediately", "Starts the installation of updates for the specified database cluster immediately outside of a maintenance window.", Writer, aliasOpt("i"))
+	cmdDatabaseInstallUpdate.Example = `The following example starts installation of updates for your databases with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window install ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
 
 	return cmd
 }
@@ -636,6 +716,15 @@ func RunDatabaseMaintenanceUpdate(c *CmdConfig) error {
 	return c.Databases().UpdateMaintenance(id, r)
 }
 
+// RunDatabaseInstallUpdate starts installation of updates
+func RunDatabaseInstallUpdate(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	id := c.Args[0]
+	return c.Databases().InstallUpdate(id)
+}
+
 func buildDatabaseUpdateMaintenanceRequestFromArgs(c *CmdConfig) (*godo.DatabaseUpdateMaintenanceRequest, error) {
 	r := &godo.DatabaseUpdateMaintenanceRequest{}
 
@@ -666,6 +755,7 @@ Database user accounts are scoped to one database cluster, to which they have fu
 		},
 	}
 	databaseKafkaACLsTxt := `A comma-separated list of kafka ACL rules, in ` + "`" + `topic:permission` + "`" + ` format.`
+	databaseOpenSearchACLsTxt := `A comma-separated list of OpenSearch ACL rules, in ` + "`" + `index:permission` + "`" + ` format.`
 	userDetailsDesc := `
 
 - The username for the user
@@ -694,6 +784,7 @@ To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases 
 	AddStringFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserMySQLAuthPlugin, "", "",
 		"Sets authorization plugin for a MySQL user. Possible values: `caching_sha2_password` or `mysql_native_password`")
 	AddStringSliceFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserKafkaACLs, "", []string{}, databaseKafkaACLsTxt)
+	AddStringSliceFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserOpenSearchACLs, "", []string{}, databaseOpenSearchACLsTxt)
 	cmdDatabaseUserCreate.Example = `The following example creates a new user with the username ` + "`" + `example-user` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases user create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-user`
 
 	cmdDatabaseUserResetAuth := CmdBuilder(cmd, RunDatabaseUserResetAuth, "reset <database-cluster-id> <user-name> <new-auth-mode>",
@@ -780,6 +871,17 @@ func RunDatabaseUserCreate(c *CmdConfig) error {
 		}
 	}
 
+	openSearchACLs, err := buildDatabaseCreateOpenSearchUserACLs(c)
+	if err != nil {
+		return err
+	}
+
+	if len(openSearchACLs) != 0 {
+		req.Settings = &godo.DatabaseUserSettings{
+			OpenSearchACL: openSearchACLs,
+		}
+	}
+
 	user, err := c.Databases().CreateUser(databaseID, req)
 	if err != nil {
 		return err
@@ -796,7 +898,7 @@ func buildDatabaseCreateKafkaUserACls(c *CmdConfig) (kafkaACls []*godo.KafkaACL,
 	for _, acl := range acls {
 		pair := strings.SplitN(acl, ":", 2)
 		if len(pair) != 2 {
-			return nil, fmt.Errorf("Unexpected input value [%v], must be a topic:permission pair", pair)
+			return nil, fmt.Errorf("unexpected input value [%v], must be a topic:permission pair", pair)
 		}
 
 		kafkaACl := new(godo.KafkaACL)
@@ -806,6 +908,26 @@ func buildDatabaseCreateKafkaUserACls(c *CmdConfig) (kafkaACls []*godo.KafkaACL,
 		kafkaACls = append(kafkaACls, kafkaACl)
 	}
 	return kafkaACls, nil
+}
+
+func buildDatabaseCreateOpenSearchUserACLs(c *CmdConfig) (openSearchACLs []*godo.OpenSearchACL, err error) {
+	acls, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDatabaseUserOpenSearchACLs)
+	if err != nil {
+		return nil, err
+	}
+	for _, acl := range acls {
+		pair := strings.SplitN(acl, ":", 2)
+		if len(pair) != 2 {
+			return nil, fmt.Errorf("unexpected input value [%v], must be a index:permission pair", pair)
+		}
+
+		openSearchACL := new(godo.OpenSearchACL)
+		openSearchACL.Index = pair[0]
+		openSearchACL.Permission = pair[1]
+
+		openSearchACLs = append(openSearchACLs, openSearchACL)
+	}
+	return openSearchACLs, nil
 }
 
 func RunDatabaseUserResetAuth(c *CmdConfig) error {
@@ -869,6 +991,11 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 
 func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
 	item := &displayers.DatabaseUsers{DatabaseUsers: users}
+	return c.Display(item)
+}
+
+func displayDatabaseCA(c *CmdConfig, dbCA *do.DatabaseCA) error {
+	item := &displayers.DatabaseCA{DatabaseCA: *dbCA}
 	return c.Display(item)
 }
 
@@ -1107,6 +1234,19 @@ We recommend starting with a pool size of about half your available connections 
 		"The name of the specific database within the database cluster", requiredOpt())
 	cmdDatabasePoolCreate.Example = `The following example creates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10 and sets the user to the database's default user: doctl databases pool create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --size 10`
 
+	cmdDatabasePoolUpdate := CmdBuilder(cmd, RunDatabasePoolUpdate,
+		"update <database-cluster-id> <pool-name>", "Update a connection pool for a database", `Updates the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
+		aliasOpt("u"),
+	)
+	AddStringFlag(cmdDatabasePoolUpdate, doctl.ArgDatabasePoolMode, "",
+		"transaction", "The pool mode for the connection pool, such as `session`, `transaction`, and `statement`")
+	AddIntFlag(cmdDatabasePoolUpdate, doctl.ArgSizeSlug, "", 0, "pool size")
+	AddStringFlag(cmdDatabasePoolUpdate, doctl.ArgDatabasePoolDBName, "", "",
+		"The name of the specific database within the database cluster")
+	AddStringFlag(cmdDatabasePoolUpdate, doctl.ArgDatabasePoolUserName, "", "",
+		"The username for the database user")
+	cmdDatabasePoolUpdate.Example = `The following example updates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10 and sets the user to the database's default user: doctl databases pool update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --size 10`
+
 	cmdDatabasePoolDelete := CmdBuilder(cmd, RunDatabasePoolDelete,
 		"delete <database-cluster-id> <pool-name>", "Delete a connection pool for a database", `Deletes the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
 		aliasOpt("rm"))
@@ -1200,6 +1340,62 @@ func buildDatabaseCreatePoolRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateP
 	req.User = user
 
 	return req, nil
+}
+
+// RunDatabasePoolUpdate updates a database pool.
+func RunDatabasePoolUpdate(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	poolName := c.Args[1]
+
+	pool, err := c.Databases().GetPool(databaseID, poolName)
+	if err != nil {
+		return err
+	}
+
+	req := &godo.DatabaseUpdatePoolRequest{}
+	size, err := c.Doit.GetInt(c.NS, doctl.ArgDatabasePoolSize)
+	if err != nil {
+		return err
+	}
+	if size != 0 {
+		req.Size = size
+	} else {
+		req.Size = pool.Size
+	}
+
+	db, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolDBName)
+	if err != nil {
+		return err
+	}
+	if db != "" {
+		req.Database = db
+	} else {
+		req.Database = pool.Database
+	}
+
+	mode, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolMode)
+	if err != nil {
+		return err
+	}
+	if mode != "" {
+		req.Mode = mode
+	} else {
+		req.Mode = pool.Mode
+	}
+
+	user, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolUserName)
+	if err != nil {
+		return err
+	}
+	if user != "" {
+		req.User = user
+	}
+
+	return c.Databases().UpdatePool(databaseID, poolName, req)
 }
 
 // RunDatabasePoolDelete deletes a database pool
@@ -1791,7 +1987,7 @@ func getDatabaseTopicConfigArgs(c *CmdConfig) *godo.TopicConfig {
 			res.MaxMessageBytes = &i
 		}
 	}
-	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMesssageDownConversionEnable)
+	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMessageDownConversionEnable)
 	if err == nil && bVal != nil {
 		res.MessageDownConversionEnable = bVal
 	}
@@ -1936,7 +2132,7 @@ This command lists the following details for each partition of a given topic in 
 			"Specifies the maximum time (in ms) that a message will remain uncompacted. This is only applicable if the logs have compaction enabled")
 		AddStringFlag(c, doctl.ArgDatabaseTopicMaxMessageBytes, "", "",
 			"Specifies the largest record batch (in bytes) that can be sent to the server. This is calculated after compression, if compression is enabled")
-		AddBoolFlag(c, doctl.ArgDatabaseTopicMesssageDownConversionEnable, "", true,
+		AddBoolFlag(c, doctl.ArgDatabaseTopicMessageDownConversionEnable, "", true,
 			"Specifies whether down-conversion of message formats is enabled to satisfy consumer requests")
 		AddStringFlag(c, doctl.ArgDatabaseTopicMessageFormatVersion, "", "",
 			"Specifies the message format version used by the broker to append messages to the logs. By setting a format version, all existing messages on disk must be smaller or equal to the specified version")
@@ -1992,7 +2188,7 @@ This command requires the ID of a database cluster, which you can retrieve by ca
 	databaseFirewallRulesTxt := `A comma-separated list of firewall rules, in ` + "`" + `type:value` + "`" + ` format.`
 
 	databaseFirewallUpdateDetails := `
-Replace the firewall rules for a specified database. This command requires the ` + "`" + `--rule` + "`" + ` flag. 
+Replace the firewall rules for a specified database. This command requires the ` + "`" + `--rule` + "`" + ` flag.
 
 You can configure multiple rules for the firewall by passing additional arguments in a comma-separated list with the ` + "`" + `--rule` + "`" + ` flag. Each rule passed using the ` + "`" + `--rule` + "`" + ` flag must be in a ` + "`" + `<type>:<value>` + "`" + ` format where:
 	 ` + "`" + `type` + "`" + ` is the type of resource that the firewall rule allows to access the database cluster. Possible values are:  ` + "`" + `droplet` + "`" + `, ` + "`" + `k8s` + "`" + `, ` + "`" + `ip_addr` + "`" + `, ` + "`" + `tag` + "`" + `, ` + "`" + `app` + "`" + `
@@ -2001,7 +2197,7 @@ You can configure multiple rules for the firewall by passing additional argument
 
 	databaseFirewallAddDetails :=
 		`
-Appends a single rule to the existing firewall rules of the specified database. 
+Appends a single rule to the existing firewall rules of the specified database.
 
 This command requires the ` + "`" + `--rule` + "`" + ` flag specifying the resource or resources allowed to access the database cluster. The rule passed to the ` + "`" + `--rule` + "`" + ` flag must be in a <type>:<value> format where:
 	- ` + "`" + `type` + "`" + ` is the type of resource that the firewall rule allows to access the database cluster. Possible values are:  ` + "`" + `droplet` + "`" + `, ` + "`" + `k8s", ` + "`" + `ip_addr` + "`" + `, ` + "`" + `tag` + "`" + `, ` + "`" + `app` + "`" + `
@@ -2283,8 +2479,13 @@ func databaseConfiguration() *Command {
 			Long:    "The subcommands of `doctl databases configuration` are used to view a database cluster's configuration.",
 		},
 	}
-	getConfigurationLongDesc := "Retrieves the configuration for the specified cluster, including its backup settings, temporary file limit, and session timeout values."
-	updateConfigurationLongDesc := "Updates the specified database cluster's configuration. Using this command, you can update varioous settings like backup times, temporary file limits, and session timeouts."
+	getConfigurationLongDesc := "Retrieves the advanced configuration for the specified cluster, including its backup settings, temporary file limit, and session timeout values."
+	updateConfigurationLongDesc := `Updates the specified database cluster's advanced configuration. Using this command, you can update various settings like backup times, temporary file limits, and session timeouts. Available settings vary by database engine.
+
+This command functions as a PATCH request, meaning that only the specified fields are updated. If a field is not specified, it will not be changed. The settings are passed using the ` + "`" + `--config-json` + "`" + ` flag, which takes a JSON object as its value.
+
+For a full list of available fields, see the API documentation: https://docs.digitalocean.com/reference/api/api-reference/#operation/databases_patch_config
+`
 
 	getDatabaseCfgCommand := CmdBuilder(
 
@@ -2298,6 +2499,9 @@ func databaseConfiguration() *Command {
 		displayerType(&displayers.MySQLConfiguration{}),
 		displayerType(&displayers.PostgreSQLConfiguration{}),
 		displayerType(&displayers.RedisConfiguration{}),
+		displayerType(&displayers.MongoDBConfiguration{}),
+		displayerType(&displayers.KafkaConfiguration{}),
+		displayerType(&displayers.OpensearchConfiguration{}),
 	)
 	AddStringFlag(
 		getDatabaseCfgCommand,
@@ -2333,6 +2537,7 @@ func databaseConfiguration() *Command {
 		"the desired configuration of the database cluster you want to update",
 		requiredOpt(),
 	)
+	updateDatabaseCfgCommand.Example = `The following command updates a MySQL database's time zone: doctl databases configuration update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --engine mysql --config-json '{"default_time_zone":"Africa/Maputo"}'`
 
 	return cmd
 }
@@ -2352,12 +2557,15 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql": nil,
-		"pg":    nil,
-		"redis": nil,
+		"mysql":      nil,
+		"pg":         nil,
+		"redis":      nil,
+		"mongodb":    nil,
+		"kafka":      nil,
+		"opensearch": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka', opensearch", c.NS)
 	}
 
 	dbId := args[0]
@@ -2391,7 +2599,38 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 			RedisConfig: *config,
 		}
 		return c.Display(&displayer)
+	} else if engine == "mongodb" {
+		config, err := c.Databases().GetMongoDBConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.MongoDBConfiguration{
+			MongoDBConfig: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "kafka" {
+		config, err := c.Databases().GetKafkaConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.KafkaConfiguration{
+			KafkaConfig: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "opensearch" {
+		config, err := c.Databases().GetOpensearchConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.OpensearchConfiguration{
+			OpensearchConfig: *config,
+		}
+		return c.Display(&displayer)
 	}
+
 	return nil
 }
 
@@ -2410,12 +2649,15 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql": nil,
-		"pg":    nil,
-		"redis": nil,
+		"mysql":      nil,
+		"pg":         nil,
+		"redis":      nil,
+		"mongodb":    nil,
+		"kafka":      nil,
+		"opensearch": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka', 'opensearch'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2439,7 +2681,23 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
+	} else if engine == "mongodb" {
+		err := c.Databases().UpdateMongoDBConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "kafka" {
+		err := c.Databases().UpdateKafkaConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "opensearch" {
+		err := c.Databases().UpdateOpensearchConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -2478,4 +2736,65 @@ func RunDatabaseEvents(c *CmdConfig) error {
 
 	item := &displayers.DatabaseEvents{DatabaseEvents: dbEvents}
 	return c.Display(item)
+}
+
+func databaseIndex() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "indexes",
+			Short: `Display commands to manage indexes for opensearch clusters`,
+			Long:  `The subcommands under ` + "`" + `doctl databases indexes` + "`" + ` enable the management of indexes for opensearch clusters`,
+		},
+	}
+
+	indexListDetails := `
+This command lists the following details for each index in an opensearch cluster:
+
+	- The Name of the index.
+	- The Status of the index.
+	- The Health of the index.
+	- The Number of Shards in the index.
+	- The Number of Replicas in the index.
+	- The Number of Documents in the index.
+	- The Size of the index.
+	`
+
+	CmdBuilder(cmd, RunDatabaseIndexList, "list <database-uuid>", "Retrieve a list of indexes for a given opensearch cluster", indexListDetails, Writer, displayerType(&displayers.DatabaseOpenSearchIndexes{}), aliasOpt("ls"))
+	cmdDatabaseIndexDelete := CmdBuilder(cmd, RunDatabaseIndexDelete, "delete <database-uuid> <index-name>", "Deletes an opensearch index by index name", "", Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdDatabaseIndexDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the opensearch index without a confirmation prompt")
+
+	return cmd
+}
+
+func RunDatabaseIndexList(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	indexes, err := c.Databases().ListIndexes(databaseID)
+	if err != nil {
+		return err
+	}
+	item := &displayers.DatabaseOpenSearchIndexes{DatabaseIndexes: indexes}
+	return c.Display(item)
+}
+
+func RunDatabaseIndexDelete(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("opensearch index", 1) == nil {
+		databaseID := c.Args[0]
+		indexName := c.Args[1]
+		return c.Databases().DeleteIndex(databaseID, indexName)
+	}
+
+	return errOperationAborted
 }

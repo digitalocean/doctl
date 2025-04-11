@@ -20,6 +20,7 @@ import (
 type MockSnapshotsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockSnapshotsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockSnapshotsServiceMockRecorder is the mock recorder for MockSnapshotsService.
@@ -111,4 +112,19 @@ func (m *MockSnapshotsService) ListVolume() (do.Snapshots, error) {
 func (mr *MockSnapshotsServiceMockRecorder) ListVolume() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVolume", reflect.TypeOf((*MockSnapshotsService)(nil).ListVolume))
+}
+
+// ListVolumeSnapshotByRegion mocks base method.
+func (m *MockSnapshotsService) ListVolumeSnapshotByRegion(region string) (do.Snapshots, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVolumeSnapshotByRegion", region)
+	ret0, _ := ret[0].(do.Snapshots)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVolumeSnapshotByRegion indicates an expected call of ListVolumeSnapshotByRegion.
+func (mr *MockSnapshotsServiceMockRecorder) ListVolumeSnapshotByRegion(region any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVolumeSnapshotByRegion", reflect.TypeOf((*MockSnapshotsService)(nil).ListVolumeSnapshotByRegion), region)
 }

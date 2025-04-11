@@ -54,7 +54,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "List images on your account", `Lists all private images on your account. To list public images, use the `+"`"+`--public`+"`"+` flag. This command returns the following information about each image:`+imageDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "Lists public images")
-	cmdImagesList.Example = `The following example lists all private images on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, distribution, and slug for each image: doctl compute image list --format ID,Distribution,Slug`
+	cmdImagesList.Example = `The following example lists all private images on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, distribution, slug and created for each image: doctl compute image list --format ID,Distribution,Slug,Created`
 
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-distribution", "List available distribution images", `Lists the distribution images available from DigitalOcean. This command returns the following information about each image:`+imageDetail, Writer,
@@ -90,7 +90,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 
 	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create <image-name>", "Create custom image", `Creates an image in your DigitalOcean account. Specify a URL to download the image from and the region to store the image in. You can add additional metadata to the image using the optional flags.`, Writer)
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "The URL to retrieve the image from", requiredOpt())
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "The slug of the region you want to store the image in. For a list of region slugs, use the `doctl compute region list` command.", requiredOpt())
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "The `slug` of the region you want to store the image in. For a list of region slugs, use the `doctl compute region list` command.", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "A custom image distribution slug to apply to the image")
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDescription, "", "", "An optional description of the image")
 	AddStringSliceFlag(cmdRunImagesCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to apply to the image")

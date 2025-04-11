@@ -65,20 +65,6 @@ func (d *Databases) Cols() []string {
 }
 
 func (d *Databases) ColMap() map[string]string {
-	if d.Short {
-		return map[string]string{
-			"ID":         "ID",
-			"Name":       "Name",
-			"Engine":     "Engine",
-			"Version":    "Version",
-			"NumNodes":   "Number of Nodes",
-			"Region":     "Region",
-			"Status":     "Status",
-			"Size":       "Size",
-			"StorageMib": "Storage (MiB)",
-		}
-	}
-
 	return map[string]string{
 		"ID":         "ID",
 		"Name":       "Name",
@@ -153,6 +139,36 @@ func (db *DatabaseBackups) KV() []map[string]any {
 	}
 
 	return out
+}
+
+type DatabaseCA struct {
+	DatabaseCA do.DatabaseCA
+}
+
+var _ Displayable = &DatabaseCA{}
+
+func (dc *DatabaseCA) JSON(out io.Writer) error {
+	return writeJSON(dc.DatabaseCA, out)
+}
+
+func (dc *DatabaseCA) Cols() []string {
+	return []string{
+		"Certificate",
+	}
+}
+
+func (dc *DatabaseCA) ColMap() map[string]string {
+	return map[string]string{
+		"Certificate": "Certificate",
+	}
+}
+
+func (dc *DatabaseCA) KV() []map[string]any {
+	return []map[string]any{
+		{
+			"Certificate": string(dc.DatabaseCA.Certificate),
+		},
+	}
 }
 
 type DatabaseUsers struct {
@@ -1161,6 +1177,48 @@ func (dc *MySQLConfiguration) KV() []map[string]any {
 			"value": *c.BinlogRetentionPeriod,
 		})
 	}
+	if c.InnodbChangeBufferMaxSize != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbChangeBufferMaxSize",
+			"value": *c.InnodbChangeBufferMaxSize,
+		})
+	}
+	if c.InnodbFlushNeighbors != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbFlushNeighbors",
+			"value": *c.InnodbFlushNeighbors,
+		})
+	}
+	if c.InnodbReadIoThreads != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbReadIoThreads",
+			"value": *c.InnodbReadIoThreads,
+		})
+	}
+	if c.InnodbThreadConcurrency != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbThreadConcurrency",
+			"value": *c.InnodbThreadConcurrency,
+		})
+	}
+	if c.InnodbWriteIoThreads != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbWriteIoThreads",
+			"value": *c.InnodbWriteIoThreads,
+		})
+	}
+	if c.NetBufferLength != nil {
+		o = append(o, map[string]any{
+			"key":   "NetBufferLength",
+			"value": *c.NetBufferLength,
+		})
+	}
+	if c.LogOutput != nil {
+		o = append(o, map[string]any{
+			"key":   "LogOutput",
+			"value": *c.LogOutput,
+		})
+	}
 
 	return o
 }
@@ -1548,6 +1606,26 @@ func (dc *PostgreSQLConfiguration) KV() []map[string]any {
 			"value": *c.TimeScaleDB.MaxBackgroundWorkers,
 		})
 	}
+
+	if c.SynchronousReplication != nil {
+		o = append(o, map[string]any{
+			"key":   "SynchronousReplication",
+			"value": *c.SynchronousReplication,
+		})
+	}
+	if c.StatMonitorEnable != nil {
+		o = append(o, map[string]any{
+			"key":   "StatMonitorEnable",
+			"value": *c.StatMonitorEnable,
+		})
+	}
+	if c.MaxFailoverReplicationTimeLag != nil {
+		o = append(o, map[string]any{
+			"key":   "MaxFailoverReplicationTimeLag",
+			"value": *c.MaxFailoverReplicationTimeLag,
+		})
+	}
+
 	return o
 }
 
@@ -1648,6 +1726,459 @@ func (dc *RedisConfiguration) KV() []map[string]any {
 	return o
 }
 
+type MongoDBConfiguration struct {
+	MongoDBConfig do.MongoDBConfig
+}
+
+var _ Displayable = &MongoDBConfiguration{}
+
+func (dc *MongoDBConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.MongoDBConfig, out)
+}
+
+func (dc *MongoDBConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *MongoDBConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *MongoDBConfiguration) KV() []map[string]any {
+	c := dc.MongoDBConfig
+	o := []map[string]any{}
+	if c.DefaultReadConcern != nil {
+		o = append(o, map[string]any{
+			"key":   "DefaultReadConcern",
+			"value": *c.DefaultReadConcern,
+		})
+	}
+	if c.DefaultWriteConcern != nil {
+		o = append(o, map[string]any{
+			"key":   "DefaultWriteConcern",
+			"value": *c.DefaultWriteConcern,
+		})
+	}
+	if c.SlowOpThresholdMs != nil {
+		o = append(o, map[string]any{
+			"key":   "SlowOpThresholdMs",
+			"value": *c.SlowOpThresholdMs,
+		})
+	}
+	if c.TransactionLifetimeLimitSeconds != nil {
+		o = append(o, map[string]any{
+			"key":   "TransactionLifetimeLimitSeconds",
+			"value": *c.TransactionLifetimeLimitSeconds,
+		})
+	}
+	if c.Verbosity != nil {
+		o = append(o, map[string]any{
+			"key":   "Verbosity",
+			"value": *c.Verbosity,
+		})
+	}
+
+	return o
+}
+
+type KafkaConfiguration struct {
+	KafkaConfig do.KafkaConfig
+}
+
+var _ Displayable = &KafkaConfiguration{}
+
+func (dc *KafkaConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.KafkaConfig, out)
+}
+
+func (dc *KafkaConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *KafkaConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *KafkaConfiguration) KV() []map[string]any {
+	c := dc.KafkaConfig
+	o := []map[string]any{}
+	if c.GroupInitialRebalanceDelayMs != nil {
+		o = append(o, map[string]any{
+			"key":   "GroupInitialRebalanceDelayMs",
+			"value": *c.GroupInitialRebalanceDelayMs,
+		})
+	}
+	if c.GroupMinSessionTimeoutMs != nil {
+		o = append(o, map[string]any{
+			"key":   "GroupMinSessionTimeoutMs",
+			"value": *c.GroupMinSessionTimeoutMs,
+		})
+	}
+	if c.GroupMaxSessionTimeoutMs != nil {
+		o = append(o, map[string]any{
+			"key":   "GroupMaxSessionTimeoutMs",
+			"value": *c.GroupMaxSessionTimeoutMs,
+		})
+	}
+	if c.MessageMaxBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "MessageMaxBytes",
+			"value": *c.MessageMaxBytes,
+		})
+	}
+	if c.LogCleanerDeleteRetentionMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogCleanerDeleteRetentionMs",
+			"value": *c.LogCleanerDeleteRetentionMs,
+		})
+	}
+	if c.LogCleanerMinCompactionLagMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogCleanerMinCompactionLagMs",
+			"value": *c.LogCleanerMinCompactionLagMs,
+		})
+	}
+	if c.LogFlushIntervalMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogFlushIntervalMs",
+			"value": *c.LogFlushIntervalMs,
+		})
+	}
+	if c.LogIndexIntervalBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "LogIndexIntervalBytes",
+			"value": *c.LogIndexIntervalBytes,
+		})
+	}
+	if c.LogMessageDownconversionEnable != nil {
+		o = append(o, map[string]any{
+			"key":   "LogMessageDownconversionEnable",
+			"value": *c.LogMessageDownconversionEnable,
+		})
+	}
+	if c.LogMessageTimestampDifferenceMaxMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogMessageTimestampDifferenceMaxMs",
+			"value": *c.LogMessageTimestampDifferenceMaxMs,
+		})
+	}
+	if c.LogPreallocate != nil {
+		o = append(o, map[string]any{
+			"key":   "LogPreallocate",
+			"value": *c.LogPreallocate,
+		})
+	}
+	if c.LogRetentionBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRetentionBytes",
+			"value": c.LogRetentionBytes.String(),
+		})
+	}
+	if c.LogRetentionHours != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRetentionHours",
+			"value": *c.LogRetentionHours,
+		})
+	}
+	if c.LogRetentionMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRetentionMs",
+			"value": c.LogRetentionMs.String(),
+		})
+	}
+	if c.LogRollJitterMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRollJitterMs",
+			"value": *c.LogRollJitterMs,
+		})
+	}
+	if c.LogSegmentDeleteDelayMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogSegmentDeleteDelayMs",
+			"value": *c.LogSegmentDeleteDelayMs,
+		})
+	}
+	if c.AutoCreateTopicsEnable != nil {
+		o = append(o, map[string]any{
+			"key":   "AutoCreateTopicsEnable",
+			"value": *c.AutoCreateTopicsEnable,
+		})
+	}
+
+	return o
+}
+
+type OpensearchConfiguration struct {
+	OpensearchConfig do.OpensearchConfig
+}
+
+var _ Displayable = &OpensearchConfiguration{}
+
+func (dc *OpensearchConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.OpensearchConfig, out)
+}
+
+func (dc *OpensearchConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *OpensearchConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *OpensearchConfiguration) KV() []map[string]any {
+	c := dc.OpensearchConfig
+	o := []map[string]any{}
+	if c.HttpMaxContentLengthBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "HttpMaxContentLengthBytes",
+			"value": *c.HttpMaxContentLengthBytes,
+		})
+	}
+	if c.HttpMaxHeaderSizeBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "HttpMaxHeaderSizeBytes",
+			"value": *c.HttpMaxHeaderSizeBytes,
+		})
+	}
+	if c.HttpMaxInitialLineLengthBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "HttpMaxInitialLineLengthBytes",
+			"value": *c.HttpMaxInitialLineLengthBytes,
+		})
+	}
+	if c.IndicesQueryBoolMaxClauseCount != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesQueryBoolMaxClauseCount",
+			"value": *c.IndicesQueryBoolMaxClauseCount,
+		})
+	}
+	if c.IndicesFielddataCacheSizePercentage != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesFielddataCacheSizePercentage",
+			"value": *c.IndicesFielddataCacheSizePercentage,
+		})
+	}
+	if c.IndicesMemoryIndexBufferSizePercentage != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesMemoryIndexBufferSizePercentage",
+			"value": *c.IndicesMemoryIndexBufferSizePercentage,
+		})
+	}
+	if c.IndicesMemoryMinIndexBufferSizeMb != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesMemoryMinIndexBufferSizeMb",
+			"value": *c.IndicesMemoryMinIndexBufferSizeMb,
+		})
+	}
+	if c.IndicesMemoryMaxIndexBufferSizeMb != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesMemoryMaxIndexBufferSizeMb",
+			"value": *c.IndicesMemoryMaxIndexBufferSizeMb,
+		})
+	}
+	if c.IndicesQueriesCacheSizePercentage != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesQueriesCacheSizePercentage",
+			"value": *c.IndicesQueriesCacheSizePercentage,
+		})
+	}
+	if c.IndicesRecoveryMaxMbPerSec != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesRecoveryMaxMbPerSec",
+			"value": *c.IndicesRecoveryMaxMbPerSec,
+		})
+	}
+	if c.IndicesRecoveryMaxConcurrentFileChunks != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesRecoveryMaxConcurrentFileChunks",
+			"value": *c.IndicesRecoveryMaxConcurrentFileChunks,
+		})
+	}
+	if c.ThreadPoolSearchSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchSize",
+			"value": *c.ThreadPoolSearchSize,
+		})
+	}
+	if c.ThreadPoolSearchThrottledSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchThrottledSize",
+			"value": *c.ThreadPoolSearchThrottledSize,
+		})
+	}
+	if c.ThreadPoolGetSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolGetSize",
+			"value": *c.ThreadPoolGetSize,
+		})
+	}
+	if c.ThreadPoolAnalyzeSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolAnalyzeSize",
+			"value": *c.ThreadPoolAnalyzeSize,
+		})
+	}
+	if c.ThreadPoolWriteSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolWriteSize",
+			"value": *c.ThreadPoolWriteSize,
+		})
+	}
+	if c.ThreadPoolForceMergeSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolForceMergeSize",
+			"value": *c.ThreadPoolForceMergeSize,
+		})
+	}
+	if c.ThreadPoolSearchQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchQueueSize",
+			"value": *c.ThreadPoolSearchQueueSize,
+		})
+	}
+	if c.ThreadPoolSearchThrottledQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchThrottledQueueSize",
+			"value": *c.ThreadPoolSearchThrottledQueueSize,
+		})
+	}
+	if c.ThreadPoolGetQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolGetQueueSize",
+			"value": *c.ThreadPoolGetQueueSize,
+		})
+	}
+	if c.ThreadPoolAnalyzeQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolAnalyzeQueueSize",
+			"value": *c.ThreadPoolAnalyzeQueueSize,
+		})
+	}
+	if c.ThreadPoolWriteQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolWriteQueueSize",
+			"value": *c.ThreadPoolWriteQueueSize,
+		})
+	}
+	if c.IsmEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmEnabled",
+			"value": *c.IsmEnabled,
+		})
+	}
+	if c.IsmHistoryEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryEnabled",
+			"value": *c.IsmHistoryEnabled,
+		})
+	}
+	if c.IsmHistoryMaxAgeHours != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryMaxAgeHours",
+			"value": *c.IsmHistoryMaxAgeHours,
+		})
+	}
+	if c.IsmHistoryMaxDocs != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryMaxDocs",
+			"value": *c.IsmHistoryMaxDocs,
+		})
+	}
+	if c.IsmHistoryRolloverCheckPeriodHours != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryRolloverCheckPeriodHours",
+			"value": *c.IsmHistoryRolloverCheckPeriodHours,
+		})
+	}
+	if c.IsmHistoryRolloverRetentionPeriodDays != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryRolloverRetentionPeriodDays",
+			"value": *c.IsmHistoryRolloverRetentionPeriodDays,
+		})
+	}
+	if c.SearchMaxBuckets != nil {
+		o = append(o, map[string]any{
+			"key":   "SearchMaxBuckets",
+			"value": *c.SearchMaxBuckets,
+		})
+	}
+	if c.ActionAutoCreateIndexEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "ActionAutoCreateIndexEnabled",
+			"value": *c.ActionAutoCreateIndexEnabled,
+		})
+	}
+	if c.EnableSecurityAudit != nil {
+		o = append(o, map[string]any{
+			"key":   "EnableSecurityAudit",
+			"value": *c.EnableSecurityAudit,
+		})
+	}
+	if c.ActionDestructiveRequiresName != nil {
+		o = append(o, map[string]any{
+			"key":   "ActionDestructiveRequiresName",
+			"value": *c.ActionDestructiveRequiresName,
+		})
+	}
+	if c.ClusterMaxShardsPerNode != nil {
+		o = append(o, map[string]any{
+			"key":   "ClusterMaxShardsPerNode",
+			"value": *c.ClusterMaxShardsPerNode,
+		})
+	}
+	if c.OverrideMainResponseVersion != nil {
+		o = append(o, map[string]any{
+			"key":   "OverrideMainResponseVersion",
+			"value": *c.OverrideMainResponseVersion,
+		})
+	}
+	if c.ScriptMaxCompilationsRate != nil {
+		o = append(o, map[string]any{
+			"key":   "ScriptMaxCompilationsRate",
+			"value": *c.ScriptMaxCompilationsRate,
+		})
+	}
+	if c.ClusterRoutingAllocationNodeConcurrentRecoveries != nil {
+		o = append(o, map[string]any{
+			"key":   "ClusterRoutingAllocationNodeConcurrentRecoveries",
+			"value": *c.ClusterRoutingAllocationNodeConcurrentRecoveries,
+		})
+	}
+	if c.ReindexRemoteWhitelist != nil {
+		o = append(o, map[string]any{
+			"key":   "ReindexRemoteWhitelist",
+			"value": c.ReindexRemoteWhitelist,
+		})
+	}
+	if c.PluginsAlertingFilterByBackendRolesEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "PluginsAlertingFilterByBackendRolesEnabled",
+			"value": *c.PluginsAlertingFilterByBackendRolesEnabled,
+		})
+	}
+
+	return o
+}
+
 type DatabaseEvents struct {
 	DatabaseEvents do.DatabaseEvents
 }
@@ -1689,5 +2220,62 @@ func (dr *DatabaseEvents) KV() []map[string]any {
 		}
 		out = append(out, o)
 	}
+	return out
+}
+
+type DatabaseOpenSearchIndexes struct {
+	DatabaseIndexes do.DatabaseIndexes
+}
+
+var _ Displayable = &DatabaseOpenSearchIndexes{}
+
+func (dt *DatabaseOpenSearchIndexes) JSON(out io.Writer) error {
+	return writeJSON(dt.DatabaseIndexes, out)
+}
+
+func (dt *DatabaseOpenSearchIndexes) Cols() []string {
+	return []string{
+		"Index Name",
+		"Status",
+		"Health",
+		"Size",
+		"Docs",
+		"Create At",
+		"Number of Shards",
+		"Number of Replica",
+	}
+}
+
+func (dt *DatabaseOpenSearchIndexes) ColMap() map[string]string {
+
+	return map[string]string{
+		"Index Name":        "Index Name",
+		"Status":            "Status",
+		"Health":            "Health",
+		"Size":              "Size",
+		"Docs":              "Docs",
+		"Create At":         "Create At",
+		"Number of Shards":  "Number of Shards",
+		"Number of Replica": "Number of Replica",
+	}
+}
+
+func (dt *DatabaseOpenSearchIndexes) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dt.DatabaseIndexes))
+
+	for _, t := range dt.DatabaseIndexes {
+		o := map[string]any{
+			"Index Name":        t.IndexName,
+			"Number of Shards":  t.NumberofShards,
+			"Number of Replica": t.NumberofReplicas,
+			"Status":            t.Status,
+			"Health":            t.Health,
+			"Size":              t.Size,
+			"Docs":              t.Docs,
+			"Create At":         t.CreateTime,
+		}
+		out = append(out, o)
+	}
+
 	return out
 }

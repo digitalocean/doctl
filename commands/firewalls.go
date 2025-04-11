@@ -55,7 +55,7 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 - The inbound rules for the firewall
 - The outbound rules for the firewall
 - The IDs of Droplets assigned to the firewall
-- The tags assigned to the firewall
+- The tags of Droplets assigned to the firewall
 `
 	inboundRulesTxt := `A comma-separated key-value list that defines an inbound rule. The rule must define a communication protocol, a port number, and a traffic source location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that resources can only receive TCP traffic on port 22 from addresses in the specified CIDR: ` + "`" + `protocol:tcp,ports:22,address:192.0.2.0/24` + "`" + `. 
 	
@@ -68,9 +68,9 @@ Available destination keys are: ` + "`" + `address` + "`" + `, ` + "`" + `drople
 
 Use a quoted string of space-separated values for multiple rules.`
 	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the cloud firewall, for example: `386734086,391669331`"
-	tagNameRulesTxt := "A comma-separated list of tag names to apply to the cloud firewall, for example: `frontend,backend`"
+	tagNameRulesTxt := "A comma-separated list of existing tags, for example: frontend,backend,env:prod. Droplets with these tags will be placed behind the cloud firewall"
 
-	cmdFirewallGet := CmdBuilder(cmd, RunFirewallGet, "get <id>", "Retrieve information about a cloud firewall", `Retrieves information about an existing cloud firewall, including:`+fwDetail, Writer, aliasOpt("g"), displayerType(&displayers.Firewall{}))
+	cmdFirewallGet := CmdBuilder(cmd, RunFirewallGet, "get <firewall-id>", "Retrieve information about a cloud firewall", `Retrieves information about an existing cloud firewall, including:`+fwDetail, Writer, aliasOpt("g"), displayerType(&displayers.Firewall{}))
 	cmdFirewallGet.Example = `The following example retrieves information about the cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdFirewallCreate := CmdBuilder(cmd, RunFirewallCreate, "create", "Create a new cloud firewall", `Creates a cloud firewall. This command must contain at least one inbound or outbound access rule.`, Writer, aliasOpt("c"), displayerType(&displayers.Firewall{}))
@@ -79,9 +79,9 @@ Use a quoted string of space-separated values for multiple rules.`
 	AddStringFlag(cmdFirewallCreate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
-	cmdFirewallCreate.Example = `The following example creates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplet: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331"`
+	cmdFirewallCreate.Example = `The following example creates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplets: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331" --tag-names "frontend,backend,k8s:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"`
 
-	cmdFirewallUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <id>", "Update a cloud firewall's configuration", `Updates the configuration of an existing cloud firewall. The request should contain a full representation of the firewall, including existing attributes. Any attributes that are not provided are reset to their default values.`, Writer, aliasOpt("u"), displayerType(&displayers.Firewall{}))
+	cmdFirewallUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <firewall-id>", "Update a cloud firewall's configuration", `Updates the configuration of an existing cloud firewall. The request should contain a full representation of the firewall, including existing attributes. Any attributes that are not provided are reset to their default values.`, Writer, aliasOpt("u"), displayerType(&displayers.Firewall{}))
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "The firewall's name", requiredOpt())
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgInboundRules, "", "", inboundRulesTxt)
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
@@ -95,32 +95,32 @@ Use a quoted string of space-separated values for multiple rules.`
 	cmdirewallListByDroplet := CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "List firewalls by Droplet", `Lists the cloud firewalls assigned to a Droplet.`, Writer, displayerType(&displayers.Firewall{}))
 	cmdirewallListByDroplet.Example = `The following example lists all cloud firewalls assigned to the Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute firewall list-by-droplet 386734086`
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id>...", "Permanently delete a cloud firewall", `Permanently deletes a cloud firewall. This is irreversible, but does not delete any Droplets assigned to the cloud firewall.`, Writer, aliasOpt("d", "rm"))
+	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <firewall-id>...", "Permanently delete a cloud firewall", `Permanently deletes a cloud firewall. This is irreversible, but does not delete any Droplets assigned to the cloud firewall.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the firewall without a confirmation prompt")
 	cmdRunRecordDelete.Example = `The following example deletes a cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdAddDroplets := CmdBuilder(cmd, RunFirewallAddDroplets, "add-droplets <id>", "Add Droplets to a cloud firewall", `Assigns Droplets to a cloud firewall on your account.`, Writer)
+	cmdAddDroplets := CmdBuilder(cmd, RunFirewallAddDroplets, "add-droplets <firewall-id>", "Add Droplets to a cloud firewall", `Assigns Droplets to a cloud firewall on your account.`, Writer)
 	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 	cmdAddDroplets.Example = `The following example assigns two Droplets to the cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall add-droplets f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --droplet-ids "386734086,391669331"`
 
-	cmdRemoveDroplets := CmdBuilder(cmd, RunFirewallRemoveDroplets, "remove-droplets <id>", "Remove Droplets from a cloud firewall", `Removes Droplets from a cloud firewall.`, Writer)
+	cmdRemoveDroplets := CmdBuilder(cmd, RunFirewallRemoveDroplets, "remove-droplets <firewall-id>", "Remove Droplets from a cloud firewall", `Removes Droplets from a cloud firewall.`, Writer)
 	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 	cmdRemoveDroplets.Example = `The following example removes two Droplets from a cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall remove-droplets f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --droplet-ids "386734086,391669331"`
 
-	cmdAddTags := CmdBuilder(cmd, RunFirewallAddTags, "add-tags <id>", "Add tags to a cloud firewall", `Add tags to a cloud firewall. This adds all assets using that tag to the firewall.`, Writer)
+	cmdAddTags := CmdBuilder(cmd, RunFirewallAddTags, "add-tags <firewall-id>", "Add tags to a cloud firewall", `Add tags to a cloud firewall. This adds all assets using that tag to the firewall.`, Writer)
 	AddStringSliceFlag(cmdAddTags, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
 	cmdAddTags.Example = `The following example adds two tags to a cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall add-tags f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --tag-names "frontend,backend"`
 
-	cmdRemoveTags := CmdBuilder(cmd, RunFirewallRemoveTags, "remove-tags <id>", "Remove tags from a cloud firewall", `Removes tags from a cloud firewall. This removes all assets using that tag from the firewall.`, Writer)
+	cmdRemoveTags := CmdBuilder(cmd, RunFirewallRemoveTags, "remove-tags <firewall-id>", "Remove tags from a cloud firewall", `Removes tags from a cloud firewall. This removes all assets using that tag from the firewall.`, Writer)
 	AddStringSliceFlag(cmdRemoveTags, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
 	cmdRemoveTags.Example = `The following example removes two tags from a cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall remove-tags f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --tag-names "frontend,backend"`
 
-	cmdAddRules := CmdBuilder(cmd, RunFirewallAddRules, "add-rules <id>", "Add inbound or outbound rules to a cloud firewall", `Add inbound or outbound rules to a cloud firewall.`, Writer)
+	cmdAddRules := CmdBuilder(cmd, RunFirewallAddRules, "add-rules <firewall-id>", "Add inbound or outbound rules to a cloud firewall", `Add inbound or outbound rules to a cloud firewall.`, Writer)
 	AddStringFlag(cmdAddRules, doctl.ArgInboundRules, "", "", inboundRulesTxt)
 	AddStringFlag(cmdAddRules, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 	cmdAddRules.Example = `The following example adds an inbound rule and an outbound rule to a cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall add-rules f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0"`
 
-	cmdRemoveRules := CmdBuilder(cmd, RunFirewallRemoveRules, "remove-rules <id>", "Remove inbound or outbound rules from a cloud firewall", `Remove inbound or outbound rules from a cloud firewall.`, Writer)
+	cmdRemoveRules := CmdBuilder(cmd, RunFirewallRemoveRules, "remove-rules <firewall-id>", "Remove inbound or outbound rules from a cloud firewall", `Remove inbound or outbound rules from a cloud firewall.`, Writer)
 	AddStringFlag(cmdRemoveRules, doctl.ArgInboundRules, "", "", inboundRulesTxt)
 	AddStringFlag(cmdRemoveRules, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 	cmdRemoveRules.Example = `The following example removes an inbound rule and an outbound rule from a cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall remove-rules f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0"`

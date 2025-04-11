@@ -54,8 +54,12 @@ const (
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.
 	ArgAppLogTail = "tail"
+	// ArgNoPrefix no prefix to json logs
+	ArgNoPrefix = "no-prefix"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
+	// ArgAppComponents is a list of components to restart.
+	ArgAppComponents = "components"
 	// ArgAppAlertDestinations is a path to an app alert destination file.
 	ArgAppAlertDestinations = "app-alert-destinations"
 	// ArgClusterName is a cluster name argument.
@@ -66,6 +70,10 @@ const (
 	ArgVPCUUID = "vpc-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
+	// ArgClusterSubnet is a cluster pod CIDR argument.
+	ArgClusterSubnet = "cluster-subnet"
+	// ArgServiceSubnet is a cluster service CIDR argument.
+	ArgServiceSubnet = "service-subnet"
 	// ArgClusterNodePool are a cluster's node pools arguments.
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
@@ -90,12 +98,42 @@ const (
 	ArgMajorVersion = "major-version"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+
+	// ArgAutoscaleID is an autoscale id argument.
+	ArgAutoscaleID = "id"
+	// ArgAutoscaleName is an autoscale name argument.
+	ArgAutoscaleName = "name"
+	// ArgAutoscaleMinInstances is an autoscale min instance argument.
+	ArgAutoscaleMinInstances = "min-instances"
+	// ArgAutoscaleMaxInstances is an autoscale max instance argument.
+	ArgAutoscaleMaxInstances = "max-instances"
+	// ArgAutoscaleCpuTarget is an autoscale target cpu utilization argument.
+	ArgAutoscaleCpuTarget = "cpu-target"
+	// ArgAutoscaleMemTarget is an autoscale target memory utilization argument.
+	ArgAutoscaleMemTarget = "mem-target"
+	// ArgAutoscaleCooldownMinutes is an autoscale cooldown duration (minutes) argument.
+	ArgAutoscaleCooldownMinutes = "cooldown-minutes"
+	// ArgAutoscaleTargetInstances is an autoscale target instance argument.
+	ArgAutoscaleTargetInstances = "target-instances"
+
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgEnableControlPlaneFirewall enable control plane firewall.
+	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
+	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
+	ArgControlPlaneFirewallAllowedAddresses = "control-plane-firewall-allowed-addresses"
+	// ArgClusterAutoscalerScaleDownUtilizationThreshold is the cluster autoscaler scale down utilization threshold
+	ArgClusterAutoscalerScaleDownUtilizationThreshold = "scale-down-utilization-threshold"
+	// ArgClusterAutoscalerScaleDownUnneededTime is the cluster autoscaler scale down unneeded time
+	ArgClusterAutoscalerScaleDownUnneededTime = "scale-down-unneeded-time"
+	// ArgEnableRoutingAgent enables the routing-agent cluster plugin.
+	ArgEnableRoutingAgent = "enable-routing-agent"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
 	ArgCommandUpsert = "upsert"
+	// ArgCommandUpdateSources tells the respective operation to also update the underlying sources.
+	ArgCommandUpdateSources = "update-sources"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
@@ -140,6 +178,12 @@ const (
 	ArgResourceType = "resource"
 	// ArgBackups is an enable backups argument.
 	ArgBackups = "enable-backups"
+	// ArgDropletBackupPolicyPlan sets a frequency plan for backups.
+	ArgDropletBackupPolicyPlan = "backup-policy-plan"
+	// ArgDropletBackupPolicyWeekday sets backup policy day of the week.
+	ArgDropletBackupPolicyWeekday = "backup-policy-weekday"
+	// ArgDropletBackupPolicyHour sets backup policy hour.
+	ArgDropletBackupPolicyHour = "backup-policy-hour"
 	// ArgIPv6 is an enable IPv6 argument.
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.
@@ -345,6 +389,10 @@ const (
 	ArgGlobalLoadBalancerCDNSettings = "glb-cdn-settings"
 	// ArgTargetLoadBalancerIDs is a list of target load balancer IDs.
 	ArgTargetLoadBalancerIDs = "target-lb-ids"
+	// ArgLoadBalancerNetwork is the type of network the load balancer is accessible from.
+	ArgLoadBalancerNetwork = "network"
+	// ArgLoadBalancerNetworkStack is the network stack type the load balancer will be configured with (e.g IPv4, Dual Stack: IPv4 and IPv6).
+	ArgLoadBalancerNetworkStack = "network-stack"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
@@ -400,6 +448,8 @@ const (
 	ArgDatabasePrivateConnectionBool = "private"
 	// ArgDatabaseUserKafkaACLs will specify permissions on topics in kafka clsuter
 	ArgDatabaseUserKafkaACLs = "acl"
+	// ArgDatabaseUserOpenSearchACLs will specify permissions on indexes in opensearch clsuter
+	ArgDatabaseUserOpenSearchACLs = "opensearch-acl"
 
 	// ArgDatabaseTopicReplicationFactor is the replication factor of a kafka topic
 	ArgDatabaseTopicReplicationFactor = "replication-factor"
@@ -423,8 +473,8 @@ const (
 	ArgDatabaseTopicMaxCompactionLagMS = "max-compaction-lag-ms"
 	// ArgDatabaseTopicMaxMessageBytes is the maximum size, in bytes, of the largest record batch that can be sent to the server
 	ArgDatabaseTopicMaxMessageBytes = "max-message-bytes"
-	// ArgDatabaseTopicMesssageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
-	ArgDatabaseTopicMesssageDownConversionEnable = "message-down-conversion-enable"
+	// ArgDatabaseTopicMessageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
+	ArgDatabaseTopicMessageDownConversionEnable = "message-down-conversion-enable"
 	// ArgDatabaseTopicMessageFormatVersion is the version used by the broker to append messages to the kafka topic logs
 	ArgDatabaseTopicMessageFormatVersion = "message-format-version"
 	// ArgDatabaseTopicMessageTimestampType is the timestamp used for messages
@@ -467,6 +517,36 @@ const (
 	ArgVPCDefault = "default"
 	// ArgVPCIPRange is a VPC range of IP addresses in CIDR notation.
 	ArgVPCIPRange = "ip-range"
+
+	// ArgVPCPeeringName is a name of the VPC Peering.
+	ArgVPCPeeringName = "name"
+	// ArgVPCPeeringVPCIDs is the vpc ids of the peering
+	ArgVPCPeeringVPCIDs = "vpc-ids"
+	// ArgVPCPeeringVPCID is id of the VPC.
+	ArgVPCPeeringVPCID = "vpc-id"
+
+	// ArgPartnerAttachmentType is the type of the Partner Attachment e.g. "partner".
+	ArgPartnerAttachmentType = "type"
+	// ArgPartnerAttachmentName is a name of the Partner Attachment.
+	ArgPartnerAttachmentName = "name"
+	// ArgPartnerAttachmentBandwidthInMbps is the connection bandwidth in megabits per second.
+	ArgPartnerAttachmentBandwidthInMbps = "connection-bandwidth-in-mbps"
+	// ArgPartnerAttachmentRegion is the region slug.
+	ArgPartnerAttachmentRegion = "region"
+	// ArgPartnerAttachmentNaaSProvider is the name of the Network as a Service provider
+	ArgPartnerAttachmentNaaSProvider = "naas-provider"
+	// ArgPartnerAttachmentVPCIDs are the IDs of the VPCs which the Partner Attachment is connected
+	ArgPartnerAttachmentVPCIDs = "vpc-ids"
+	// ArgPartnerAttachmentBGPLocalASN is the BGP Autonomous System Number (ASN) of the local device
+	ArgPartnerAttachmentBGPLocalASN = "bgp-local-asn"
+	// ArgPartnerAttachmentBGPLocalRouterIP is the BGP IP address of the local device
+	ArgPartnerAttachmentBGPLocalRouterIP = "bgp-local-router-ip"
+	// ArgPartnerAttachmentBGPPeerASN is the BGP Autonomous System Number (ASN) of the peer device
+	ArgPartnerAttachmentBGPPeerASN = "bgp-peer-asn"
+	// ArgPartnerAttachmentBGPPeerRouterIP is the BGP IP address of the peer device
+	ArgPartnerAttachmentBGPPeerRouterIP = "bgp-peer-router-ip"
+	// ArgPartnerAttachmentBGPAuthKey is the BGP MD5 authentication key
+	ArgPartnerAttachmentBGPAuthKey = "bgp-auth-key"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
@@ -544,4 +624,7 @@ const (
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
+
+	// ArgGPUs specifies to list GPU Droplets
+	ArgGPUs = "gpus"
 )

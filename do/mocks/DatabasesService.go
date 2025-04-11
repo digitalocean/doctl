@@ -21,6 +21,7 @@ import (
 type MockDatabasesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockDatabasesServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockDatabasesServiceMockRecorder is the mock recorder for MockDatabasesService.
@@ -158,6 +159,20 @@ func (mr *MockDatabasesServiceMockRecorder) DeleteDB(arg0, arg1 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDB", reflect.TypeOf((*MockDatabasesService)(nil).DeleteDB), arg0, arg1)
 }
 
+// DeleteIndex mocks base method.
+func (m *MockDatabasesService) DeleteIndex(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteIndex", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteIndex indicates an expected call of DeleteIndex.
+func (mr *MockDatabasesServiceMockRecorder) DeleteIndex(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteIndex", reflect.TypeOf((*MockDatabasesService)(nil).DeleteIndex), arg0, arg1)
+}
+
 // DeletePool mocks base method.
 func (m *MockDatabasesService) DeletePool(arg0, arg1 string) error {
 	m.ctrl.T.Helper()
@@ -229,6 +244,21 @@ func (mr *MockDatabasesServiceMockRecorder) Get(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDatabasesService)(nil).Get), arg0)
 }
 
+// GetCA mocks base method.
+func (m *MockDatabasesService) GetCA(arg0 string) (*do.DatabaseCA, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCA", arg0)
+	ret0, _ := ret[0].(*do.DatabaseCA)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCA indicates an expected call of GetCA.
+func (mr *MockDatabasesServiceMockRecorder) GetCA(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCA", reflect.TypeOf((*MockDatabasesService)(nil).GetCA), arg0)
+}
+
 // GetConnection mocks base method.
 func (m *MockDatabasesService) GetConnection(arg0 string, arg1 bool) (*do.DatabaseConnection, error) {
 	m.ctrl.T.Helper()
@@ -274,6 +304,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetFirewallRules(arg0 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFirewallRules", reflect.TypeOf((*MockDatabasesService)(nil).GetFirewallRules), arg0)
 }
 
+// GetKafkaConfiguration mocks base method.
+func (m *MockDatabasesService) GetKafkaConfiguration(databaseID string) (*do.KafkaConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKafkaConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.KafkaConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKafkaConfiguration indicates an expected call of GetKafkaConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetKafkaConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKafkaConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetKafkaConfiguration), databaseID)
+}
+
 // GetMaintenance mocks base method.
 func (m *MockDatabasesService) GetMaintenance(arg0 string) (*do.DatabaseMaintenanceWindow, error) {
 	m.ctrl.T.Helper()
@@ -289,6 +334,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetMaintenance(arg0 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).GetMaintenance), arg0)
 }
 
+// GetMongoDBConfiguration mocks base method.
+func (m *MockDatabasesService) GetMongoDBConfiguration(databaseID string) (*do.MongoDBConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMongoDBConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.MongoDBConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMongoDBConfiguration indicates an expected call of GetMongoDBConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetMongoDBConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMongoDBConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetMongoDBConfiguration), databaseID)
+}
+
 // GetMySQLConfiguration mocks base method.
 func (m *MockDatabasesService) GetMySQLConfiguration(databaseID string) (*do.MySQLConfig, error) {
 	m.ctrl.T.Helper()
@@ -302,6 +362,21 @@ func (m *MockDatabasesService) GetMySQLConfiguration(databaseID string) (*do.MyS
 func (mr *MockDatabasesServiceMockRecorder) GetMySQLConfiguration(databaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetMySQLConfiguration), databaseID)
+}
+
+// GetOpensearchConfiguration mocks base method.
+func (m *MockDatabasesService) GetOpensearchConfiguration(databaseID string) (*do.OpensearchConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpensearchConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.OpensearchConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOpensearchConfiguration indicates an expected call of GetOpensearchConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetOpensearchConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpensearchConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetOpensearchConfiguration), databaseID)
 }
 
 // GetPool mocks base method.
@@ -424,6 +499,20 @@ func (mr *MockDatabasesServiceMockRecorder) GetUser(arg0, arg1 any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockDatabasesService)(nil).GetUser), arg0, arg1)
 }
 
+// InstallUpdate mocks base method.
+func (m *MockDatabasesService) InstallUpdate(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallUpdate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallUpdate indicates an expected call of InstallUpdate.
+func (mr *MockDatabasesServiceMockRecorder) InstallUpdate(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallUpdate", reflect.TypeOf((*MockDatabasesService)(nil).InstallUpdate), arg0)
+}
+
 // List mocks base method.
 func (m *MockDatabasesService) List() (do.Databases, error) {
 	m.ctrl.T.Helper()
@@ -482,6 +571,21 @@ func (m *MockDatabasesService) ListDatabaseEvents(arg0 string) (do.DatabaseEvent
 func (mr *MockDatabasesServiceMockRecorder) ListDatabaseEvents(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatabaseEvents", reflect.TypeOf((*MockDatabasesService)(nil).ListDatabaseEvents), arg0)
+}
+
+// ListIndexes mocks base method.
+func (m *MockDatabasesService) ListIndexes(arg0 string) (do.DatabaseIndexes, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListIndexes", arg0)
+	ret0, _ := ret[0].(do.DatabaseIndexes)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListIndexes indicates an expected call of ListIndexes.
+func (mr *MockDatabasesServiceMockRecorder) ListIndexes(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexes", reflect.TypeOf((*MockDatabasesService)(nil).ListIndexes), arg0)
 }
 
 // ListOptions mocks base method.
@@ -649,6 +753,20 @@ func (mr *MockDatabasesServiceMockRecorder) UpdateFirewallRules(databaseID, req 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFirewallRules", reflect.TypeOf((*MockDatabasesService)(nil).UpdateFirewallRules), databaseID, req)
 }
 
+// UpdateKafkaConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateKafkaConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateKafkaConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateKafkaConfiguration indicates an expected call of UpdateKafkaConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateKafkaConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateKafkaConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateKafkaConfiguration), databaseID, confString)
+}
+
 // UpdateMaintenance mocks base method.
 func (m *MockDatabasesService) UpdateMaintenance(arg0 string, arg1 *godo.DatabaseUpdateMaintenanceRequest) error {
 	m.ctrl.T.Helper()
@@ -663,6 +781,20 @@ func (mr *MockDatabasesServiceMockRecorder) UpdateMaintenance(arg0, arg1 any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMaintenance), arg0, arg1)
 }
 
+// UpdateMongoDBConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateMongoDBConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMongoDBConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMongoDBConfiguration indicates an expected call of UpdateMongoDBConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateMongoDBConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMongoDBConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMongoDBConfiguration), databaseID, confString)
+}
+
 // UpdateMySQLConfiguration mocks base method.
 func (m *MockDatabasesService) UpdateMySQLConfiguration(databaseID, confString string) error {
 	m.ctrl.T.Helper()
@@ -675,6 +807,34 @@ func (m *MockDatabasesService) UpdateMySQLConfiguration(databaseID, confString s
 func (mr *MockDatabasesServiceMockRecorder) UpdateMySQLConfiguration(databaseID, confString any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMySQLConfiguration), databaseID, confString)
+}
+
+// UpdateOpensearchConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateOpensearchConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateOpensearchConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateOpensearchConfiguration indicates an expected call of UpdateOpensearchConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateOpensearchConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOpensearchConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateOpensearchConfiguration), databaseID, confString)
+}
+
+// UpdatePool mocks base method.
+func (m *MockDatabasesService) UpdatePool(arg0, arg1 string, arg2 *godo.DatabaseUpdatePoolRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePool", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePool indicates an expected call of UpdatePool.
+func (mr *MockDatabasesServiceMockRecorder) UpdatePool(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePool", reflect.TypeOf((*MockDatabasesService)(nil).UpdatePool), arg0, arg1, arg2)
 }
 
 // UpdatePostgreSQLConfiguration mocks base method.

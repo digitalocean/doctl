@@ -23,20 +23,20 @@ var _ = suite("database/replica", func(t *testing.T, when spec.G, it spec.S) {
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "v2/databases/1111/replicas/2222/promote":
+			case "/v2/databases/1111/replicas/2222/promote":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 
-				if req.Method != http.MethodGet {
+				if req.Method != http.MethodPut {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				w.Write([]byte(``))
 				w.WriteHeader(http.StatusNoContent)
+				w.Write([]byte(``))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -54,6 +54,7 @@ var _ = suite("database/replica", func(t *testing.T, when spec.G, it spec.S) {
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"databases",
+				"replica",
 				"promote",
 				"1111",
 				"2222",

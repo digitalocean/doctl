@@ -1,6 +1,7 @@
 package displayers
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -47,6 +48,9 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"Created",
 		"Updated",
 		"NodePools",
+		"Autoscaler.UtilizationThreshold",
+		"Autoscaler.UnneededTime",
+		"RoutingAgent",
 	}
 }
 
@@ -63,21 +67,24 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		}
 	}
 	return map[string]string{
-		"ID":             "ID",
-		"Name":           "Name",
-		"Region":         "Region",
-		"Version":        "Version",
-		"AutoUpgrade":    "Auto Upgrade",
-		"HAControlPlane": "HA Control Plane",
-		"ClusterSubnet":  "Cluster Subnet",
-		"ServiceSubnet":  "Service Subnet",
-		"IPv4":           "IPv4",
-		"Endpoint":       "Endpoint",
-		"Tags":           "Tags",
-		"Status":         "Status",
-		"Created":        "Created At",
-		"Updated":        "Updated At",
-		"NodePools":      "Node Pools",
+		"ID":                              "ID",
+		"Name":                            "Name",
+		"Region":                          "Region",
+		"Version":                         "Version",
+		"AutoUpgrade":                     "Auto Upgrade",
+		"HAControlPlane":                  "HA Control Plane",
+		"ClusterSubnet":                   "Cluster Subnet",
+		"ServiceSubnet":                   "Service Subnet",
+		"IPv4":                            "IPv4",
+		"Endpoint":                        "Endpoint",
+		"Tags":                            "Tags",
+		"Status":                          "Status",
+		"Created":                         "Created At",
+		"Updated":                         "Updated At",
+		"NodePools":                       "Node Pools",
+		"Autoscaler.UtilizationThreshold": "Autoscaler Scale Down Utilization",
+		"Autoscaler.UnneededTime":         "Autoscaler Scale Down Unneeded Time",
+		"RoutingAgent":                    "Routing Agent",
 	}
 }
 
@@ -95,22 +102,35 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 		}
 
 		o := map[string]any{
-			"ID":             cluster.ID,
-			"Name":           cluster.Name,
-			"Region":         cluster.RegionSlug,
-			"Version":        cluster.VersionSlug,
-			"AutoUpgrade":    cluster.AutoUpgrade,
-			"HAControlPlane": cluster.HA,
-			"ClusterSubnet":  cluster.ClusterSubnet,
-			"ServiceSubnet":  cluster.ServiceSubnet,
-			"IPv4":           cluster.IPv4,
-			"Endpoint":       cluster.Endpoint,
-			"Tags":           tags,
-			"Status":         cluster.Status.State,
-			"Created":        cluster.CreatedAt,
-			"Updated":        cluster.UpdatedAt,
-			"NodePools":      strings.Join(nodePools, " "),
+			"ID":                              cluster.ID,
+			"Name":                            cluster.Name,
+			"Region":                          cluster.RegionSlug,
+			"Version":                         cluster.VersionSlug,
+			"AutoUpgrade":                     cluster.AutoUpgrade,
+			"HAControlPlane":                  cluster.HA,
+			"ClusterSubnet":                   cluster.ClusterSubnet,
+			"ServiceSubnet":                   cluster.ServiceSubnet,
+			"IPv4":                            cluster.IPv4,
+			"Endpoint":                        cluster.Endpoint,
+			"Tags":                            tags,
+			"Status":                          cluster.Status.State,
+			"Created":                         cluster.CreatedAt,
+			"Updated":                         cluster.UpdatedAt,
+			"NodePools":                       strings.Join(nodePools, " "),
+			"Autoscaler.UtilizationThreshold": "",
+			"Autoscaler.UnneededTime":         "",
+			"RoutingAgent":                    cluster.RoutingAgent != nil && *cluster.RoutingAgent.Enabled,
 		}
+
+		if cfg := cluster.ClusterAutoscalerConfiguration; cfg != nil {
+			if cluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold != nil {
+				o["Autoscaler.UtilizationThreshold"] = fmt.Sprintf("%d%%", int(*cfg.ScaleDownUtilizationThreshold*100))
+			}
+			if cluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime != nil {
+				o["Autoscaler.UnneededTime"] = *cfg.ScaleDownUnneededTime
+			}
+		}
+
 		out = append(out, o)
 	}
 

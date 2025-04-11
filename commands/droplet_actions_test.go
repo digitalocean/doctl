@@ -17,13 +17,15 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDropletActionCommand(t *testing.T) {
 	cmd := DropletAction()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "change-kernel", "enable-backups", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
+	assertCommandNames(t, cmd, "change-kernel", "change-backup-policy", "enable-backups", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
 }
 
 func TestDropletActionsChangeKernel(t *testing.T) {
@@ -59,6 +61,24 @@ func TestDropletActionsEnableBackups(t *testing.T) {
 		err := RunDropletActionEnableBackups(config)
 		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
+	// Enable backups with a backup policy applied.
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		policy := &godo.DropletBackupPolicyRequest{
+			Plan:    "weekly",
+			Weekday: "SAT",
+			Hour:    godo.PtrTo(0),
+		}
+
+		tm.dropletActions.EXPECT().EnableBackupsWithPolicy(1, policy).Times(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, "1")
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyPlan, policy.Plan)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyWeekday, policy.Weekday)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyHour, policy.Hour)
+
+		err := RunDropletActionEnableBackups(config)
+		require.NoError(t, err)
+	})
 }
 
 func TestDropletActionsDisableBackups(t *testing.T) {
@@ -75,6 +95,26 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 
 		err := RunDropletActionDisableBackups(config)
 		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
+	})
+}
+
+func TestDropletActionsChangeBackupPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		policy := &godo.DropletBackupPolicyRequest{
+			Plan:    "weekly",
+			Weekday: "SAT",
+			Hour:    godo.PtrTo(0),
+		}
+
+		tm.dropletActions.EXPECT().ChangeBackupPolicy(1, policy).Times(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, "1")
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyPlan, policy.Plan)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyWeekday, policy.Weekday)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyHour, policy.Hour)
+
+		err := RunDropletActionChangeBackupPolicy(config)
+		require.NoError(t, err)
 	})
 }
 

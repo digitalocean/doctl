@@ -38,6 +38,14 @@ var _ = suite("compute/droplet/list", func(t *testing.T, when spec.G, it spec.S)
 
 				q := req.URL.Query()
 				tag := q.Get("tag_name")
+				dtype := q.Get("type")
+
+				if tag != "" && dtype != "" {
+					w.Write([]byte(`{"id": "unprocessible_entity", "message":"mutually exclusive query parameters"}`))
+					w.WriteHeader(http.StatusUnprocessableEntity)
+					return
+				}
+
 				if tag == "some-tag" {
 					w.Write([]byte(`{}`))
 					return
@@ -46,6 +54,10 @@ var _ = suite("compute/droplet/list", func(t *testing.T, when spec.G, it spec.S)
 				if tag == "regions" {
 					w.Write([]byte(dropletListRegionResponse))
 					return
+				}
+
+				if dtype == "gpus" {
+					w.Write([]byte(dropletListGPUsResponse))
 				}
 
 				w.Write([]byte(dropletListResponse))
@@ -73,6 +85,23 @@ var _ = suite("compute/droplet/list", func(t *testing.T, when spec.G, it spec.S)
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(dropletListOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("the gpu flag is passed", func() {
+		it("lists gpu droplets", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"droplet",
+				"list",
+				"--gpus",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(dropletGPUListOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -163,9 +192,30 @@ const (
   }]
 }`
 
+	dropletListGPUsResponse = `
+{
+  "droplets": [{
+    "id": 1111,
+    "name": "gpu-droplet",
+    "image": {
+      "distribution": "Ubuntu",
+      "name": "gpu-h100x8-640gb-200"
+    },
+    "region": {
+      "slug": "tor1"
+    },
+    "status": "active"
+  }]
+}`
+
 	dropletListOutput = `
 ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          VPC UUID    Status    Tags        Features    Volumes
 1111    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name                active    test,yes    remotes     some-volume-id
+`
+
+	dropletGPUListOutput = `
+ID      Name           Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region    Image                          VPC UUID    Status    Tags    Features    Volumes
+1111    gpu-droplet                                                  0         0        0       tor1      Ubuntu gpu-h100x8-640gb-200                active
 `
 
 	dropletListRegionOutput = `

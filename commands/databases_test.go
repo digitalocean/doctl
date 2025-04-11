@@ -66,6 +66,12 @@ var (
 		},
 	}
 
+	testDBClusterCA = do.DatabaseCA{
+		DatabaseCA: &godo.DatabaseCA{
+			Certificate: []byte("QQDDC9jMGIwYzNiZS0wZjY4LTRkY4OCCAaIwDQYJKoZIhvcNAQ"),
+		},
+	}
+
 	testKafkaDBCluster = do.Database{
 		Database: &godo.Database{
 			ID:          "ea93928g-8se0-929e-m1ns-029daj2k3j12",
@@ -205,6 +211,18 @@ var (
 		RedisConfig: &godo.RedisConfig{},
 	}
 
+	testMongoDBConfiguration = do.MongoDBConfig{
+		MongoDBConfig: &godo.MongoDBConfig{},
+	}
+
+	testKafkaConfiguration = do.KafkaConfig{
+		KafkaConfig: &godo.KafkaConfig{},
+	}
+
+	testOpensearchConfiguration = do.OpensearchConfig{
+		OpensearchConfig: &godo.OpensearchConfig{},
+	}
+
 	topicReplicationFactor = uint32(3)
 	testKafkaTopic         = do.DatabaseTopic{
 		DatabaseTopic: &godo.DatabaseTopic{
@@ -244,6 +262,7 @@ func TestDatabasesCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"list",
 		"get",
+		"get-ca",
 		"create",
 		"delete",
 		"connection",
@@ -262,6 +281,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"sql-mode",
 		"configuration",
 		"topics",
+		"indexes",
 	)
 }
 
@@ -271,6 +291,7 @@ func TestDatabaseMaintenanceWindowCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"update",
 		"get",
+		"install",
 	)
 }
 
@@ -293,6 +314,7 @@ func TestDatabasePoolCommand(t *testing.T) {
 		"list",
 		"get",
 		"create",
+		"update",
 		"delete",
 	)
 }
@@ -372,6 +394,31 @@ func TestDatabasesGet(t *testing.T) {
 	// ID not provided
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDatabaseGet(config)
+		assert.EqualError(t, doctl.NewMissingArgsErr(config.NS), err.Error())
+	})
+}
+
+func TestDatabasesGetCA(t *testing.T) {
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetCA(testDBCluster.ID).Return(&testDBClusterCA, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		err := RunDatabaseGetCA(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	notFound := "not-found"
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetCA(notFound).Return(nil, errTest)
+		config.Args = append(config.Args, notFound)
+		err := RunDatabaseGetCA(config)
+		assert.Error(t, err)
+	})
+
+	// ID not provided
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDatabaseGetCA(config)
 		assert.EqualError(t, doctl.NewMissingArgsErr(config.NS), err.Error())
 	})
 }
@@ -556,6 +603,19 @@ func TestDatabaseMigrate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Success with wait flag
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Migrate(testDBCluster.ID, r).Return(nil)
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil).AnyTimes() // Polling for status
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBCluster.RegionSlug)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
+
+		err := RunDatabaseMigrate(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().Migrate(testDBCluster.ID, r).Return(errTest)
@@ -582,6 +642,20 @@ func TestDatabaseResize(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
+
+		err := RunDatabaseResize(config)
+		assert.NoError(t, err)
+	})
+
+	// Success with wait flag
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Resize(testDBCluster.ID, r).Return(nil)
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
 
 		err := RunDatabaseResize(config)
 		assert.NoError(t, err)
@@ -860,6 +934,26 @@ func TestDatabaseUpdateMaintenance(t *testing.T) {
 	})
 }
 
+func TestDatabaseInstallUpdate(t *testing.T) {
+
+	// Success
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().InstallUpdate(testDBCluster.ID).Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		err := RunDatabaseInstallUpdate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().InstallUpdate(testDBCluster.ID).Return(errTest)
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseInstallUpdate(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
 func TestDatabasesUserGet(t *testing.T) {
 	// Successful call
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -955,6 +1049,29 @@ func TestDatabaseUserCreate(t *testing.T) {
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseUserKafkaACLs, "test:admin")
+
+		err := RunDatabaseUserCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Successful call with kafka acl set
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseCreateUserRequest{
+			Name: testDBUser.Name,
+			Settings: &godo.DatabaseUserSettings{
+				OpenSearchACL: []*godo.OpenSearchACL{
+					{
+						Permission: "admin",
+						Index:      "test",
+					},
+				},
+			},
+		}
+
+		tm.databases.EXPECT().CreateUser(testDBCluster.ID, r).Return(&testDBUser, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseUserOpenSearchACLs, "test:admin")
 
 		err := RunDatabaseUserCreate(config)
 		assert.NoError(t, err)
@@ -1166,6 +1283,55 @@ func TestDatabasePoolCreate_InboundUser(t *testing.T) {
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
 		err := RunDatabasePoolCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasePoolUpdate(t *testing.T) {
+	pool := *(testDBPool.DatabasePool)
+	pool.Connection = nil
+
+	r := &godo.DatabaseUpdatePoolRequest{
+		User:     pool.User,
+		Mode:     pool.Mode,
+		Size:     pool.Size,
+		Database: pool.Database,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetPool(testDBCluster.ID, pool.Name).Return(&do.DatabasePool{DatabasePool: &pool}, nil)
+		tm.databases.EXPECT().UpdatePool(testDBCluster.ID, pool.Name, r).Return(nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolMode, testDBPool.Mode)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolSize, testDBPool.Size)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolDBName, testDBPool.Database)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolUserName, testDBPool.User)
+
+		err := RunDatabasePoolUpdate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetPool(testDBCluster.ID, pool.Name).Return(&do.DatabasePool{
+			DatabasePool: &godo.DatabasePool{
+				User:     pool.User,
+				Name:     pool.Name,
+				Mode:     pool.Mode,
+				Size:     pool.Size,
+				Database: pool.Database,
+			},
+		}, nil)
+		tm.databases.EXPECT().UpdatePool(
+			testDBCluster.ID,
+			pool.Name,
+			gomock.AssignableToTypeOf(&godo.DatabaseUpdatePoolRequest{}),
+		).Return(errTest)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
+		err := RunDatabasePoolUpdate(config)
 		assert.EqualError(t, err, "error")
 	})
 }
@@ -1526,6 +1692,36 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetMongoDBConfiguration(testDBCluster.ID).Return(&testMongoDBConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongodb")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetKafkaConfiguration(testDBCluster.ID).Return(&testKafkaConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "kafka")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetOpensearchConfiguration(testDBCluster.ID).Return(&testOpensearchConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "opensearch")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDatabaseConfigurationGet(config)
 
 		assert.Equal(t, err, doctl.NewMissingArgsErr(config.NS))
@@ -1543,6 +1739,90 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 		config.Args = append(config.Args, testDBCluster.ID)
 
 		err := RunDatabaseConfigurationGet(config)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestDatabaseConfigurationUpdate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateMySQLConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mysql")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdatePostgreSQLConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "pg")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateRedisConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "redis")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateMongoDBConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongodb")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateKafkaConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "kafka")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateOpensearchConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "opensearch")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.Equal(t, err, doctl.NewMissingArgsErr(config.NS))
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testDBCluster.ID, "extra arg")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.Equal(t, err, doctl.NewTooManyArgsErr(config.NS))
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseConfigurationUpdate(config)
 
 		assert.Error(t, err)
 	})

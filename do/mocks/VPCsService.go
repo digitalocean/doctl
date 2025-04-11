@@ -21,6 +21,7 @@ import (
 type MockVPCsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockVPCsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockVPCsServiceMockRecorder is the mock recorder for MockVPCsService.
@@ -55,6 +56,21 @@ func (mr *MockVPCsServiceMockRecorder) Create(vpcr any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockVPCsService)(nil).Create), vpcr)
 }
 
+// CreateVPCPeering mocks base method.
+func (m *MockVPCsService) CreateVPCPeering(req *godo.VPCPeeringCreateRequest) (*do.VPCPeering, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPCPeering", req)
+	ret0, _ := ret[0].(*do.VPCPeering)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPCPeering indicates an expected call of CreateVPCPeering.
+func (mr *MockVPCsServiceMockRecorder) CreateVPCPeering(req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCPeering", reflect.TypeOf((*MockVPCsService)(nil).CreateVPCPeering), req)
+}
+
 // Delete mocks base method.
 func (m *MockVPCsService) Delete(vpcUUID string) error {
 	m.ctrl.T.Helper()
@@ -67,6 +83,20 @@ func (m *MockVPCsService) Delete(vpcUUID string) error {
 func (mr *MockVPCsServiceMockRecorder) Delete(vpcUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockVPCsService)(nil).Delete), vpcUUID)
+}
+
+// DeleteVPCPeering mocks base method.
+func (m *MockVPCsService) DeleteVPCPeering(peeringID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPCPeering", peeringID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPCPeering indicates an expected call of DeleteVPCPeering.
+func (mr *MockVPCsServiceMockRecorder) DeleteVPCPeering(peeringID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCPeering", reflect.TypeOf((*MockVPCsService)(nil).DeleteVPCPeering), peeringID)
 }
 
 // Get mocks base method.
@@ -84,6 +114,21 @@ func (mr *MockVPCsServiceMockRecorder) Get(vpcUUID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVPCsService)(nil).Get), vpcUUID)
 }
 
+// GetPeering mocks base method.
+func (m *MockVPCsService) GetPeering(peeringID string) (*do.VPCPeering, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPeering", peeringID)
+	ret0, _ := ret[0].(*do.VPCPeering)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPeering indicates an expected call of GetPeering.
+func (mr *MockVPCsServiceMockRecorder) GetPeering(peeringID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPeering", reflect.TypeOf((*MockVPCsService)(nil).GetPeering), peeringID)
+}
+
 // List mocks base method.
 func (m *MockVPCsService) List() (do.VPCs, error) {
 	m.ctrl.T.Helper()
@@ -97,6 +142,36 @@ func (m *MockVPCsService) List() (do.VPCs, error) {
 func (mr *MockVPCsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVPCsService)(nil).List))
+}
+
+// ListVPCPeerings mocks base method.
+func (m *MockVPCsService) ListVPCPeerings() (do.VPCPeerings, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVPCPeerings")
+	ret0, _ := ret[0].(do.VPCPeerings)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVPCPeerings indicates an expected call of ListVPCPeerings.
+func (mr *MockVPCsServiceMockRecorder) ListVPCPeerings() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCPeerings", reflect.TypeOf((*MockVPCsService)(nil).ListVPCPeerings))
+}
+
+// ListVPCPeeringsByVPCID mocks base method.
+func (m *MockVPCsService) ListVPCPeeringsByVPCID(vpcID string) (do.VPCPeerings, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVPCPeeringsByVPCID", vpcID)
+	ret0, _ := ret[0].(do.VPCPeerings)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVPCPeeringsByVPCID indicates an expected call of ListVPCPeeringsByVPCID.
+func (mr *MockVPCsServiceMockRecorder) ListVPCPeeringsByVPCID(vpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCPeeringsByVPCID", reflect.TypeOf((*MockVPCsService)(nil).ListVPCPeeringsByVPCID), vpcID)
 }
 
 // PartialUpdate mocks base method.
@@ -132,4 +207,19 @@ func (m *MockVPCsService) Update(vpcUUID string, vpcr *godo.VPCUpdateRequest) (*
 func (mr *MockVPCsServiceMockRecorder) Update(vpcUUID, vpcr any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockVPCsService)(nil).Update), vpcUUID, vpcr)
+}
+
+// UpdateVPCPeering mocks base method.
+func (m *MockVPCsService) UpdateVPCPeering(peeringID string, req *godo.VPCPeeringUpdateRequest) (*do.VPCPeering, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVPCPeering", peeringID, req)
+	ret0, _ := ret[0].(*do.VPCPeering)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateVPCPeering indicates an expected call of UpdateVPCPeering.
+func (mr *MockVPCsServiceMockRecorder) UpdateVPCPeering(peeringID, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVPCPeering", reflect.TypeOf((*MockVPCsService)(nil).UpdateVPCPeering), peeringID, req)
 }

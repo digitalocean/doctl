@@ -174,6 +174,6 @@ const (
   }
 }`
 	glbUpdateOutput = `
-ID               IP    Name           Status    Created At              Region    Size        Size Unit    VPC UUID    Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                   Forwarding Rules    Disable Lets Encrypt DNS Records
-updated-lb-id          my-glb-name    new       2024-04-09T16:10:11Z    <nil>     lb-small    1                                              false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3                        false`
+ID               IP    IPv6    Name           Status    Created At              Region    Size        Size Unit    VPC UUID    Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                                        Forwarding Rules    Firewall Rules    Disable Lets Encrypt DNS Records
+updated-lb-id                  my-glb-name    new       2024-04-09T16:10:11Z    <nil>     lb-small    1                                              false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3,proxy_protocol:<nil>                        <nil>             false`
 )

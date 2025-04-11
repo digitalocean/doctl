@@ -76,7 +76,7 @@ func Registry() *Command {
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgSubscriptionTier, "", "basic",
 		"Subscription tier for the new registry. For a list of possible values, use the `doctl registry options subscription-tiers` command.", requiredOpt())
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgRegionSlug, "", "",
-		"A slug indicating which datacenter region the registry reside in. For a list of supported region slugs, use the `doctl registry options available-regions` command")
+		"A `slug` indicating which datacenter region the registry reside in. For a list of supported region slugs, use the `doctl registry options available-regions` command")
 	cmdRunRegistryCreate.Example = `The following example creates a registry named ` + "`" + `example-registry` + "`" + ` in the NYC3 region: doctl registry create example-registry --region=nyc3`
 
 	getRegDesc := "Retrieves details about a private container registry, including its name and the endpoint used to access it."
@@ -223,7 +223,7 @@ func Repository() *Command {
 		"List manifests for a repository in a container registry", listRepositoryManifests,
 		Writer, aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
 	)
-	cmdListRepositoryManifests.Example = `The following example lists manifests in a repository named ` + "`" + `example-repository` + "`" + ` in a registry named ` + "`" + `example-registry` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time for each manifest: doctl registry repository list-manifests example-registry/example-repository --format Digest,UpdatedAt`
+	cmdListRepositoryManifests.Example = `The following example lists manifests in a repository named ` + "`" + `example-repository` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time for each manifest: doctl registry repository list-manifests example-repository --format Digest,UpdatedAt`
 
 	deleteManifestDesc := "Permanently deletes one or more repository manifests by digest."
 	cmdRunRepositoryDeleteManifest := CmdBuilder(

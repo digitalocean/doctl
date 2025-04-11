@@ -26,13 +26,14 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/displayers"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -276,12 +277,26 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"A `slug` indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
 		"The UUID of a VPC network to create the cluster in. Must be the UUID of a valid VPC in the same region specified for the cluster. If a VPC is not specified, the cluster is placed in the default VPC network for the region.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterSubnet, "", "",
+		"The CIDR block to use for the pod network. Must be a valid CIDR block. Defaults to `10.244.0.0/16`. If left empty/default the cluster will be created with a virtual network. If a custom one is provided, the cluster will be created as vpc-native cluster. VPC-native CIDR blocks cannot overlap within an account.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgServiceSubnet, "", "",
+		"The CIDR block to use for the service network. Must be a valid CIDR block. Defaults to `10.245.0.0/16`. If left empty/default the cluster will be created with a virtual network. If a custom one is provided, the cluster will be created as vpc-native cluster. VPC-native CIDR blocks cannot overlap within an account.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to `false`. To enable automatic upgrade, supply `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
+		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
+		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
+		"The unneed time for the cluster autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down. To set the scale-down-unneeded-time to a minute and 30 seconds for example, pass the string '1m30s'.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
+		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -328,6 +343,16 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Enables the highly-available control plane for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", false,
+		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRoutingAgent, "", false,
+		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
+		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
+		"The unneed time for the cluster autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down. To set the scale-down-unneeded-time to a minute and 30 seconds for example, pass the string '1m30s'.")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Updates the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -339,9 +364,9 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 	cmdKubeClusterUpgrade := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
 		"upgrade <id|name>", "Upgrades a cluster to a new Kubernetes version", `
 
-Upgrades a Kubernetes cluster. By default, this upgrades the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+"`"+`doctl k8s get-upgrades`+"`"+`.`, Writer)
+Upgrades a Kubernetes cluster. By default, this upgrades the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+"`"+`doctl k8s cluster get-upgrades`+"`"+`.`, Writer)
 	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
-		`The Kubernetes version to upgrade to. Use the `+"`"+`doctl k8s get-upgrades <cluster>`+"`"+` command for a list of available versions.
+		`The Kubernetes version to upgrade to. Use the `+"`"+`doctl k8s cluster get-upgrades <cluster>`+"`"+` command for a list of available versions.
 The special value `+"`"+`latest`+"`"+` selects the most recent patch version for your cluster's minor version.
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, the `+"`"+`latest`+"`"+` flag upgrades the cluster to 1.12.3.`)
 	cmdKubeClusterUpgrade.Example = `The following example upgrades a cluster named ` + "`" + `example-cluster` + "`" + ` to version 1.28.2: doctl kubernetes cluster upgrade example-cluster --version 1.28.2-do.0`
@@ -587,7 +612,7 @@ func kubernetesOneClicks() *Command {
 	cmdKubernetesOneClickList.Example = `The following example lists all available 1-click apps for Kubernetes: doctl kubernetes 1-click list`
 	cmdKubeOneClickInstall := CmdBuilder(cmd, RunKubernetesOneClickInstall, "install <cluster-id>", "Install 1-click apps on a Kubernetes cluster", "Installs 1-click applications on a Kubernetes cluster. Use the `--1-click` flag to specify one or multiple pieces of software to install on the cluster.", Writer, aliasOpt("in"), displayerType(&displayers.OneClick{}))
 	AddStringSliceFlag(cmdKubeOneClickInstall, doctl.ArgOneClicks, "", nil, "The 1-clicks application to install on the cluster. Multiple 1-clicks can be added simultaneously, for example: `--1-clicks moon,loki,netdata`")
-	cmdKubeOneClickInstall.Example = `The following example installs Loki and Netdata on a Kubernetes cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl kubernetes 1-click install f81d4fae-7dec-11d0-a765-00a0c91e6bf6> --1-clicks loki,netdata`
+	cmdKubeOneClickInstall.Example = `The following example installs Loki and Netdata on a Kubernetes cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl kubernetes 1-click install f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --1-clicks loki,netdata`
 
 	return cmd
 }
@@ -622,7 +647,7 @@ func RunKubernetesOneClickInstall(c *CmdConfig) error {
 		return err
 	}
 
-	notice(oneClickInstall)
+	notice("%s", oneClickInstall)
 	return nil
 }
 
@@ -751,6 +776,9 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			if err != nil {
 				warn("Cluster couldn't enter `running` state: %v", err)
 			}
+			if cluster == nil {
+				return errors.New("cluster vanished while waiting for creation")
+			}
 		}
 
 		if update {
@@ -768,7 +796,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			if err != nil {
 				warn("Failed to kick off 1-Click Application(s) install")
 			} else {
-				notice(messageResponse)
+				notice("%s", messageResponse)
 			}
 		}
 
@@ -1624,6 +1652,22 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	// empty "" is fine, the default region VPC will be resolved
 	r.VPCUUID = vpcUUID
 
+	podCIDR, err := c.Doit.GetString(c.NS, doctl.ArgClusterSubnet)
+	if err != nil {
+		return err
+	}
+	r.ClusterSubnet = podCIDR
+	svcCIDR, err := c.Doit.GetString(c.NS, doctl.ArgServiceSubnet)
+	if err != nil {
+		return err
+	}
+	r.ServiceSubnet = svcCIDR
+	// empty "" is fine, the default is still to use a virtual network and not be vpc-native.
+	// either both have to be set (vpc-native) or none (virtual network)
+	if c.Doit.IsSet(doctl.ArgClusterSubnet) != c.Doit.IsSet(doctl.ArgServiceSubnet) {
+		return fmt.Errorf("flags %q and %q both have to be set for vpc-native clusters or both unset for virtual network clusters", doctl.ArgClusterSubnet, doctl.ArgServiceSubnet)
+	}
+
 	version, err := getVersionOrLatest(c)
 	if err != nil {
 		return err
@@ -1647,6 +1691,65 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		return err
 	}
 	r.HA = ha
+
+	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	if err != nil {
+		return err
+	}
+	if enableControlPlaneFirewall != nil {
+		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
+			Enabled: enableControlPlaneFirewall,
+		}
+	}
+
+	enableRoutingAgent, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableRoutingAgent)
+	if err != nil {
+		return err
+	}
+	if enableRoutingAgent != nil {
+		r.RoutingAgent = &godo.KubernetesRoutingAgent{
+			Enabled: enableRoutingAgent,
+		}
+	}
+
+	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
+	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
+	if err != nil {
+		return err
+	}
+	if thresholdStr != "" {
+		scaleDownUtilizationThreshold, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			return err
+		}
+		clusterAutoscalerConfiguration.ScaleDownUtilizationThreshold = &scaleDownUtilizationThreshold
+	}
+
+	unneededTime, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime)
+	if err != nil {
+		return err
+	}
+	if unneededTime != "" {
+		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
+	}
+
+	if thresholdStr != "" || unneededTime != "" {
+		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
+	}
+
+	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if isSet {
+		if r.ControlPlaneFirewall == nil {
+			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
+		}
+		for i := range controlPlaneFirewallAllowedAddresses {
+			controlPlaneFirewallAllowedAddresses[i] = strings.TrimSpace(controlPlaneFirewallAllowedAddresses[i])
+		}
+		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
+	}
 
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
@@ -1737,6 +1840,66 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.HA = ha
+
+	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	if err != nil {
+		return err
+	}
+	if enableControlPlaneFirewall != nil {
+		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
+			Enabled: enableControlPlaneFirewall,
+		}
+	}
+
+	enableRoutingAgent, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableRoutingAgent)
+	if err != nil {
+		return err
+	}
+	if enableRoutingAgent != nil {
+		r.RoutingAgent = &godo.KubernetesRoutingAgent{
+			Enabled: enableRoutingAgent,
+		}
+	}
+
+	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
+	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
+	if err != nil {
+		return err
+	}
+	if thresholdStr != "" {
+		scaleDownUtilizationThreshold, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			return err
+		}
+		clusterAutoscalerConfiguration.ScaleDownUtilizationThreshold = &scaleDownUtilizationThreshold
+	}
+
+	unneededTime, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime)
+	if err != nil {
+		return err
+	}
+	if unneededTime != "" {
+		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
+	}
+
+	if thresholdStr != "" || unneededTime != "" {
+		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
+	}
+
+	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if isSet {
+		if r.ControlPlaneFirewall == nil {
+			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
+		}
+		for i := range controlPlaneFirewallAllowedAddresses {
+			controlPlaneFirewallAllowedAddresses[i] = strings.TrimSpace(controlPlaneFirewallAllowedAddresses[i])
+		}
+		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
+	}
+
 	return nil
 }
 
