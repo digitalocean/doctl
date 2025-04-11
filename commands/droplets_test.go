@@ -261,6 +261,7 @@ func TestDropletCreateWithProjectID(t *testing.T) {
 			SSHKeys: []godo.DropletCreateSSHKey{},
 		}
 		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.projects.EXPECT().Get(projectUUID).Return(&testProject, nil)
 		tm.projects.EXPECT().
 			AssignResources(projectUUID, []string{testDroplet.URN()}).
 			Return(do.ProjectResources{}, nil)
@@ -272,6 +273,15 @@ func TestDropletCreateWithProjectID(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgProjectID, projectUUID)
 
 		err := RunDropletCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestProjectsValidUUID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
+		tm.projects.EXPECT().Get(projectUUID).Return(&testProject, nil)
+		err := ValidateProjectUUID(config, "ab06e011-6dd1-4034-9293-201f71aba299")
 		assert.NoError(t, err)
 	})
 }

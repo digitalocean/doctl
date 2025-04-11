@@ -246,6 +246,13 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	if projectUUID != "" {
+		err := ValidateProjectUUID(c, projectUUID)
+		if err != nil {
+			return err
+		}
+	}
+
 	tagNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
 	if err != nil {
 		return err
@@ -353,6 +360,16 @@ func RunDropletCreate(c *CmdConfig) error {
 	}
 
 	return c.Display(item)
+}
+
+// ValidateProjectUUID checks if the given projectUUID exists
+func ValidateProjectUUID(c *CmdConfig, projectUUID string) error {
+	ps := c.Projects()
+	_, err := ps.Get(projectUUID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // RunDropletTag adds a tag to a droplet.
