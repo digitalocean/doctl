@@ -332,12 +332,12 @@ const (
 `
 	getProjectResponse = `{
 		"project": {
-			"id": "4e1bfbc3-dc3e-41f2-a18f-1b4d7ba71679",
-			"owner_uuid": "99525febec065ca37b2ffe4f852fd2b2581895e7",
+			"id": "00000000-0000-4000-8000-000000000000",
+			"owner_uuid": "00000000-0000-4000-8000-000000000000",
 			"owner_id": 258992,
-			"name": "my-web-api",
-			"description": "My website API",
-			"purpose": "Service or API",
+			"name": "some-project-name",
+			"description": "some-description",
+			"purpose": "some-purpose",
 			"environment": "Production",
 			"created_at": "2018-09-27T20:10:35Z",
 			"updated_at": "2018-09-27T20:10:35Z",
