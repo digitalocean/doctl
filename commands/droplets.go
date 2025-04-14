@@ -366,10 +366,7 @@ func RunDropletCreate(c *CmdConfig) error {
 func ValidateProjectUUID(c *CmdConfig, projectUUID string) error {
 	ps := c.Projects()
 	_, err := ps.Get(projectUUID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // RunDropletTag adds a tag to a droplet.

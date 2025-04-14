@@ -69,6 +69,9 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 				// since we've successfully tested all the behavior
 				// at this point
 				w.Write([]byte(dropletCreateResponse))
+			case "/v2/projects/00000000-0000-4000-8000-000000000000":
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(getProjectResponse))
 			case "/v2/projects/00000000-0000-4000-8000-000000000000/resources":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -327,7 +330,20 @@ const (
   ]
 }
 `
-
+	getProjectResponse = `{
+		"project": {
+			"id": "4e1bfbc3-dc3e-41f2-a18f-1b4d7ba71679",
+			"owner_uuid": "99525febec065ca37b2ffe4f852fd2b2581895e7",
+			"owner_id": 258992,
+			"name": "my-web-api",
+			"description": "My website API",
+			"purpose": "Service or API",
+			"environment": "Production",
+			"created_at": "2018-09-27T20:10:35Z",
+			"updated_at": "2018-09-27T20:10:35Z",
+			"is_default": false
+		}
+	}`
 	dropletCreateOutput = `
 ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          VPC UUID                                Status    Tags    Features    Volumes
 1111    some-droplet-name    1.2.3.4        7.7.7.7                        12        13       15      some-region-slug    some-distro some-image-name    00000000-0000-4000-8000-000000000000    active    yes     remotes     some-volume-id
