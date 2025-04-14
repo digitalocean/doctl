@@ -285,7 +285,7 @@ func TestProjectsValidOrInvalidUUID(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		err := ValidateProjectUUID(config, "ab06e011-6dd1-4034-9293-201f71-ba299")
+		err := ValidateProjectUUID(config, "ab06e011-6dd1-4034-9293-201f71-by299")
 		assert.Error(t, err)
 	})
 }
