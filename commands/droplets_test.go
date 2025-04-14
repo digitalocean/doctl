@@ -277,12 +277,16 @@ func TestDropletCreateWithProjectID(t *testing.T) {
 	})
 }
 
-func TestProjectsValidUUID(t *testing.T) {
+func TestProjectsValidOrInvalidUUID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
 		tm.projects.EXPECT().Get(projectUUID).Return(&testProject, nil)
 		err := ValidateProjectUUID(config, "ab06e011-6dd1-4034-9293-201f71aba299")
 		assert.NoError(t, err)
+	})
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := ValidateProjectUUID(config, "ab06e011-6dd1-4034-9293-201f71-ba299")
+		assert.Error(t, err)
 	})
 }
 
