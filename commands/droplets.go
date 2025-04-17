@@ -366,7 +366,7 @@ func RunDropletCreate(c *CmdConfig) error {
 // ValidateProjectUUID checks if the given projectUUID exists
 func ValidateProjectUUID(c *CmdConfig, projectUUID string) error {
 	if _, err := uuid.Parse(projectUUID); err != nil {
-		return err
+		return fmt.Errorf("Invalid Project UUID - %w", err)
 	}
 	ps := c.Projects()
 	_, err := ps.Get(projectUUID)
