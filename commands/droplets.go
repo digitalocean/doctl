@@ -27,6 +27,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/gobwas/glob"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -246,6 +247,13 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	if projectUUID != "" {
+		err := ValidateProjectUUID(c, projectUUID)
+		if err != nil {
+			return err
+		}
+	}
+
 	tagNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
 	if err != nil {
 		return err
@@ -353,6 +361,16 @@ func RunDropletCreate(c *CmdConfig) error {
 	}
 
 	return c.Display(item)
+}
+
+// ValidateProjectUUID checks if the given projectUUID exists
+func ValidateProjectUUID(c *CmdConfig, projectUUID string) error {
+	if _, err := uuid.Parse(projectUUID); err != nil {
+		return fmt.Errorf("Invalid Project UUID - %w", err)
+	}
+	ps := c.Projects()
+	_, err := ps.Get(projectUUID)
+	return err
 }
 
 // RunDropletTag adds a tag to a droplet.
