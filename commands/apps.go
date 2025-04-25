@@ -226,7 +226,8 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
 	AddStringFlag(console, doctl.ArgAppInstanceID, "", "", "Starts a console session for a specific instance ID. Optional, defaults to the first available pod.")
 
-	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
+	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web. For apps with multiple instances,
+	you can specify the instance id to start the console session for that particular instance. Note: avoid creating scripts or making changes that need to persist on these instances, as they are ephemeral and may be terminated at any time.`
 
 	listRegions := CmdBuilder(
 		cmd,
