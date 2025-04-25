@@ -393,6 +393,8 @@ const (
 	ArgLoadBalancerNetwork = "network"
 	// ArgLoadBalancerNetworkStack is the network stack type the load balancer will be configured with (e.g IPv4, Dual Stack: IPv4 and IPv6).
 	ArgLoadBalancerNetworkStack = "network-stack"
+	// ArgLoadBalancerTLSCipherPolicy is the tls cipher policy to be used for the load balancer
+	ArgLoadBalancerTLSCipherPolicy = "tls-cipher-policy"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
