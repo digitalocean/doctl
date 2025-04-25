@@ -150,7 +150,7 @@ This permanently deletes the app and all of its associated deployments.`,
 		RunAppsCreateDeployment,
 		"create-deployment <app id>",
 		"Creates a deployment",
-		`Creates an app using the provided app spec. To redeploy an existing app using its latest image or source code changes, use the --update-sources flag. To update an existing app’s spec configuration without pulling its latest changes or image, use the `+"`"+`--upsert`+"`"+` flag or `+"`"+`doctl apps update`+"`"+` command. 
+		`Creates an app using the provided app spec. To redeploy an existing app using its latest image or source code changes, use the --update-sources flag. To update an existing app’s spec configuration without pulling its latest changes or image, use the `+"`"+`--upsert`+"`"+` flag or `+"`"+`doctl apps update`+"`"+` command.
 `,
 		Writer,
 		aliasOpt("cd"),
@@ -199,7 +199,7 @@ Three types of logs are supported and can be specified with the --`+doctl.ArgApp
 - build
 - deploy
 - run
-- run_restarted 
+- run_restarted
 
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
@@ -217,13 +217,14 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	console := CmdBuilder(
 		cmd,
 		RunAppsConsole,
-		"console <app id> <component name>",
+		"console <app id> <component name> <instance id (optional)>",
 		"Starts a console session",
 		`Instantiates a console session for a component of an app.`,
 		Writer,
 		aliasOpt("cs"),
 	)
 	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
+	AddStringFlag(console, doctl.ArgAppInstanceID, "", "", "Starts a console session for a specific instance ID. Optional, defaults to the first available pod.")
 
 	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
 
@@ -799,13 +800,17 @@ func RunAppsConsole(c *CmdConfig) error {
 	}
 	appID := c.Args[0]
 	component := c.Args[1]
+	var instanceID string
+	if len(c.Args) >= 3 {
+		instanceID = c.Args[2]
+	}
 
 	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
 	if err != nil {
 		return err
 	}
 
-	execResp, err := c.Apps().GetExec(appID, deploymentID, component)
+	execResp, err := c.Apps().GetExec(appID, deploymentID, component, instanceID)
 	if err != nil {
 		return err
 	}
