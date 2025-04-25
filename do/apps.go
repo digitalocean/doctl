@@ -37,7 +37,7 @@ type AppsService interface {
 	ListDeployments(appID string) ([]*godo.Deployment, error)
 
 	GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool, tail int) (*godo.AppLogs, error)
-	GetExec(appID, deploymentID, component string) (*godo.AppExec, error)
+	GetExec(appID, deploymentID, component, instanceID string) (*godo.AppExec, error)
 
 	ListRegions() ([]*godo.AppRegion, error)
 
@@ -222,8 +222,8 @@ func (s *appsService) GetLogs(appID, deploymentID, component string, logType god
 	return logs, nil
 }
 
-func (s *appsService) GetExec(appID, deploymentID, component string) (*godo.AppExec, error) {
-	exec, _, err := s.client.Apps.GetExec(s.ctx, appID, deploymentID, component)
+func (s *appsService) GetExec(appID, deploymentID, component, instanceID string) (*godo.AppExec, error) {
+	exec, _, err := s.client.Apps.GetExec(s.ctx, appID, deploymentID, component, instanceID)
 	if err != nil {
 		return nil, err
 	}
