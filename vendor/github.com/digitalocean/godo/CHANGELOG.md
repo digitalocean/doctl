@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.143.0] - 2025-04-22
+
+- #815 - @StephenVarela - Support Load Balancers tls-cipher-policy
+
 ## [v1.142.0] - 2025-03-27
 
 - #813 - @lfundaro-do - partner-network-connect: fix typo
