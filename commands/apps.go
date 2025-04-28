@@ -810,7 +810,13 @@ func RunAppsConsole(c *CmdConfig) error {
 		return err
 	}
 
-	execResp, err := c.Apps().GetExec(appID, deploymentID, component, instanceID)
+	opts := &godo.AppGetExecOptions{
+		DeploymentID: deploymentID,
+		Component:    component,
+		InstanceID:   instanceID,
+	}
+	execResp, err := c.Apps().GetExecWithOpts(appID, opts)
+
 	if err != nil {
 		return err
 	}

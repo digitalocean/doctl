@@ -38,6 +38,7 @@ type AppsService interface {
 
 	GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool, tail int) (*godo.AppLogs, error)
 	GetExec(appID, deploymentID, component, instanceID string) (*godo.AppExec, error)
+	GetExecWithOpts(appID string, opts *godo.AppGetExecOptions) (*godo.AppExec, error)
 
 	ListRegions() ([]*godo.AppRegion, error)
 
