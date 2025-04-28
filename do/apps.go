@@ -37,6 +37,7 @@ type AppsService interface {
 	ListDeployments(appID string) ([]*godo.Deployment, error)
 
 	GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool, tail int) (*godo.AppLogs, error)
+	// Deprecated: Use GetExecWithOpts instead
 	GetExec(appID, deploymentID, component string) (*godo.AppExec, error)
 	GetExecWithOpts(appID string, opts *godo.AppGetExecOptions) (*godo.AppExec, error)
 
@@ -223,6 +224,7 @@ func (s *appsService) GetLogs(appID, deploymentID, component string, logType god
 	return logs, nil
 }
 
+// Deprecated. Use GetExecWithOpts instead
 func (s *appsService) GetExec(appID, deploymentID, component string) (*godo.AppExec, error) {
 	exec, _, err := s.client.Apps.GetExec(s.ctx, appID, deploymentID, component)
 	if err != nil {
