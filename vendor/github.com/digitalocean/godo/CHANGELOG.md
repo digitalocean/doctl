@@ -1,5 +1,13 @@
 # Change Log
 
+## [v1.144.0] - 2025-04-24
+
+- #818 - @dweinshenker - Support Valkey in DatabaseOptions
+
+## [v1.143.0] - 2025-04-22
+
+- #815 - @StephenVarela - Support Load Balancers tls-cipher-policy
+
 ## [v1.142.0] - 2025-03-27
 
 - #813 - @lfundaro-do - partner-network-connect: fix typo
