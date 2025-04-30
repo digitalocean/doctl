@@ -799,7 +799,7 @@ func RunAppsConsole(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	appID := c.Args[0]
-	component := c.Args[1]
+	componentName := c.Args[1]
 	var instanceID string
 	if len(c.Args) >= 3 {
 		instanceID = c.Args[2]
@@ -812,10 +812,9 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	opts := &godo.AppGetExecOptions{
 		DeploymentID: deploymentID,
-		Component:    component,
 		InstanceID:   instanceID,
 	}
-	execResp, err := c.Apps().GetExecWithOpts(appID, opts)
+	execResp, err := c.Apps().GetExecWithOpts(appID, componentName, opts)
 
 	if err != nil {
 		return err
