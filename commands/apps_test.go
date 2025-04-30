@@ -651,14 +651,13 @@ func TestRunAppsGetLogsWithAppNameAndDeploymentID(t *testing.T) {
 func TestRunAppsConsole(t *testing.T) {
 	appID := uuid.New().String()
 	deploymentID := uuid.New().String()
-	component := "service"
+	componentName := "service"
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		opts := &godo.AppGetExecOptions{
 			DeploymentID: deploymentID,
-			Component:    component,
 		}
-		tm.apps.EXPECT().GetExecWithOpts(appID, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+		tm.apps.EXPECT().GetExecWithOpts(appID, componentName, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
 		tm.terminal.EXPECT().ReadRawStdin(gomock.Any(), gomock.Any()).Times(1).Return(func() {}, nil)
 		tm.terminal.EXPECT().MonitorResizeEvents(gomock.Any(), gomock.Any()).Times(1).Return(nil)
@@ -673,7 +672,7 @@ func TestRunAppsConsole(t *testing.T) {
 			return tm.terminal
 		}
 
-		config.Args = append(config.Args, appID, component)
+		config.Args = append(config.Args, appID, componentName)
 		config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
 
 		err := RunAppsConsole(config)
@@ -683,10 +682,9 @@ func TestRunAppsConsole(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		opts := &godo.AppGetExecOptions{
 			DeploymentID: deploymentID,
-			Component:    component,
 			InstanceID:   "app-instance-1d34fg678-45f6",
 		}
-		tm.apps.EXPECT().GetExecWithOpts(appID, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+		tm.apps.EXPECT().GetExecWithOpts(appID, componentName, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
 		tm.terminal.EXPECT().ReadRawStdin(gomock.Any(), gomock.Any()).Times(1).Return(func() {}, nil)
 		tm.terminal.EXPECT().MonitorResizeEvents(gomock.Any(), gomock.Any()).Times(1).Return(nil)
@@ -701,7 +699,7 @@ func TestRunAppsConsole(t *testing.T) {
 			return tm.terminal
 		}
 
-		config.Args = append(config.Args, appID, component)
+		config.Args = append(config.Args, appID, componentName)
 		config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
 
 		err := RunAppsConsole(config)
