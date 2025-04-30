@@ -38,7 +38,7 @@ type AppsService interface {
 
 	GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool, tail int) (*godo.AppLogs, error)
 	// Deprecated: Use GetExecWithOpts instead
-	GetExec(appID, deploymentID, component string) (*godo.AppExec, error)
+	GetExec(appID, deploymentID, componentName string) (*godo.AppExec, error)
 	GetExecWithOpts(appID, componentName string, opts *godo.AppGetExecOptions) (*godo.AppExec, error)
 
 	ListRegions() ([]*godo.AppRegion, error)
@@ -225,15 +225,12 @@ func (s *appsService) GetLogs(appID, deploymentID, component string, logType god
 }
 
 // Deprecated. Use GetExecWithOpts instead
-func (s *appsService) GetExec(appID, deploymentID, component string) (*godo.AppExec, error) {
+func (s *appsService) GetExec(appID, deploymentID, componentName string) (*godo.AppExec, error) {
 	opts := &godo.AppGetExecOptions{
 		DeploymentID: deploymentID,
 	}
-	exec, _, err := s.client.Apps.GetExecWithOpts(s.ctx, appID, component, opts)
-	if err != nil {
-		return nil, err
-	}
-	return exec, nil
+
+	return s.GetExecWithOpts(appID, componentName, opts)
 }
 
 func (s *appsService) GetExecWithOpts(appID, componentName string, opts *godo.AppGetExecOptions) (*godo.AppExec, error) {
