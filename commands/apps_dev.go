@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/MakeNowJust/heredoc"
@@ -519,13 +520,15 @@ func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli bui
 		if ws.Config.CNBBuilderImage != "" {
 			images = append(images, ws.Config.CNBBuilderImage)
 		} else {
-			images = append(images, builder.CNBBuilderImage_Heroku18)
+			for _, f := range ws.Config.AppSpec.Features {
+				if strings.EqualFold(f, "buildpack-stack=ubuntu-18") {
+					images = append(images, builder.CNBBuilderImage_Heroku18)
+					images = append(images, builder.CNBAppsRunImage_Heroku18)
+				}
+			}
+			// Get stack run image from CNBBuilderImage_Heroku22.
 			images = append(images, builder.CNBBuilderImage_Heroku22)
 		}
-
-		// Get stack run image from CNBBuilderImage_Heroku22.
-		// Stack run-image for CNBBuilderImage_Heroku18 is hardcoded to heroku-18_c047ec7.
-		images = append(images, "digitaloceanapps/apps-run:heroku-18_c047ec7")
 	}
 
 	if componentSpec.GetType() == godo.AppComponentTypeStaticSite {
