@@ -224,7 +224,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 		aliasOpt("cs"),
 	)
 	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
-	AddStringFlag(console, doctl.ArgAppInstanceID, "", "", "Starts a console session for a specific instance ID. Optional, defaults to the first available instance. For apps with multiple instances, you can specify the instance id to start the console session for that particular instance.")
+	AddStringFlag(console, doctl.ArgAppInstanceName, "", "", "Starts a console session for a specific instance name. Optional, defaults to the first available instance. For apps with multiple instances, you can specify the instance name to start the console session for that particular instance.")
 
 	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web. To initiate a console session to a specific instance, append the instance id: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web sample-golang-5d9f95556c-5f58g`
 
@@ -800,9 +800,9 @@ func RunAppsConsole(c *CmdConfig) error {
 	}
 	appID := c.Args[0]
 	componentName := c.Args[1]
-	var instanceID string
+	var instanceName string
 	if len(c.Args) >= 3 {
-		instanceID = c.Args[2]
+		instanceName = c.Args[2]
 	}
 
 	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
@@ -812,7 +812,7 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	opts := &godo.AppGetExecOptions{
 		DeploymentID: deploymentID,
-		InstanceID:   instanceID,
+		InstanceName: instanceName,
 	}
 	execResp, err := c.Apps().GetExecWithOpts(appID, componentName, opts)
 

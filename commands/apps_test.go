@@ -652,7 +652,7 @@ func TestRunAppsConsole(t *testing.T) {
 	appID := uuid.New().String()
 	deploymentID := uuid.New().String()
 	componentName := "service"
-	instanceID := "app-instance-1d34fg678-45f6"
+	instanceName := "app-instance-1d34fg678-45f6"
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		opts := &godo.AppGetExecOptions{
@@ -683,7 +683,7 @@ func TestRunAppsConsole(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		opts := &godo.AppGetExecOptions{
 			DeploymentID: deploymentID,
-			InstanceID:   instanceID,
+			InstanceName:   instanceName,
 		}
 		tm.apps.EXPECT().GetExecWithOpts(appID, componentName, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
@@ -700,7 +700,7 @@ func TestRunAppsConsole(t *testing.T) {
 			return tm.terminal
 		}
 
-		config.Args = append(config.Args, appID, componentName, instanceID)
+		config.Args = append(config.Args, appID, componentName, instanceName)
 		config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
 
 		err := RunAppsConsole(config)
