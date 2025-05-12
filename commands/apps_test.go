@@ -683,7 +683,7 @@ func TestRunAppsConsole(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		opts := &godo.AppGetExecOptions{
 			DeploymentID: deploymentID,
-			InstanceName:   instanceName,
+			InstanceName: instanceName,
 		}
 		tm.apps.EXPECT().GetExecWithOpts(appID, componentName, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
