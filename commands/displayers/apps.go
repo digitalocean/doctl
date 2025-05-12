@@ -502,3 +502,42 @@ func (b Buildpacks) JSON(w io.Writer) error {
 	e.SetIndent("", "  ")
 	return e.Encode(b)
 }
+
+type AppInstances []*godo.AppInstance
+
+var _ Displayable = (*AppInstances)(nil)
+
+func (b AppInstances) Cols() []string {
+	return []string{
+		"ComponentName",
+		"ComponentType",
+		"InstanceName",
+	}
+}
+
+func (b AppInstances) ColMap() map[string]string {
+	return map[string]string{
+		"ComponentName": "ComponentName",
+		"ComponentType": "ComponentType",
+		"InstanceName": "InstanceName",
+	
+}
+
+func (a AppInstances) KV() []map[string]any {
+	out := make([]map[string]any, len(a))
+
+	for i, instance := range a {
+		out[i] = map[string]any{
+			"ComponentName":  instance.ComponentName,
+			"ComponentType":  instance.ComponentType,
+			"InstanceName":   instance.InstanceName,
+		}
+	}
+	return out
+}
+
+func (b AppInstances) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(b)
+}

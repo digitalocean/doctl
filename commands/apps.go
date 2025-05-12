@@ -1295,3 +1295,17 @@ func getIDByName(apps []*godo.App, name string) (string, error) {
 
 	return "", fmt.Errorf("app not found")
 }
+
+func RunGetAppInstances(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+
+	instances, err := c.Apps().GetAppInstances(appID, nil)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.Apps(instances))
+}
