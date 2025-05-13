@@ -1070,3 +1070,22 @@ func TestRunAppsUpgradeBuildpack(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestRunAppsGetInstances(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+
+		opts := &godo.GetAppInstancesOpts{}
+
+		tm.apps.EXPECT().GetAppInstances(appID, opts).Times(1).Return([]*godo.AppInstance{{
+			InstanceName:  "service-instance-1d34fg678-45f6",
+			ComponentType: "service",
+			ComponentName: "service-instance",
+		}}, nil)
+
+		config.Args = append(config.Args, appID)
+
+		err := RunGetAppInstances(config)
+		require.NoError(t, err)
+	})
+}

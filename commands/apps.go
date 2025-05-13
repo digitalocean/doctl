@@ -1320,7 +1320,8 @@ func RunGetAppInstances(c *CmdConfig) error {
 	}
 	appID := c.Args[0]
 
-	instances, err := c.Apps().GetAppInstances(appID, nil)
+	opts := &godo.GetAppInstancesOpts{}
+	instances, err := c.Apps().GetAppInstances(appID, opts)
 	if err != nil {
 		return err
 	}
