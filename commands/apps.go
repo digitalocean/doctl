@@ -217,7 +217,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	console := CmdBuilder(
 		cmd,
 		RunAppsConsole,
-		"console <app id> <component name> <instance id (optional)>",
+		"console <app id> <component name> <instance name (optional)>",
 		"Starts a console session",
 		`Instantiates a console session for a component of an app. Note: avoid creating scripts or making changes that need to persist on these instances, as they are ephemeral and may be terminated at any time`,
 		Writer,
