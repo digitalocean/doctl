@@ -1307,5 +1307,5 @@ func RunGetAppInstances(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(displayers.Apps(instances))
+	return c.Display(displayers.AppInstances(instances))
 }
