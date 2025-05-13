@@ -44,8 +44,8 @@ const (
 	ArgAppLogType = "type"
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
-	// ArgAppDeployment is the deployment ID.
-	ArgAppInstanceID = "instance-id"
+	// ArgAppInstanceName is the instance name of currently running instances (optional).
+	ArgAppInstanceName = "instance-name"
 	// ArgAppDevConfig is the path to the app dev link config.
 	ArgAppDevConfig = "dev-config"
 	// ArgBuildCommand is an optional build command to set for local development.

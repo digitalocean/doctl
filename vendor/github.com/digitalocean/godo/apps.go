@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	netURL "net/url"
 )
 
 const (
@@ -423,13 +424,25 @@ func (s *AppsServiceOp) GetExecWithOpts(ctx context.Context, appID, componentNam
 		url = fmt.Sprintf("%s/%s/deployments/%s/components/%s/exec", appsBasePath, appID, opts.DeploymentID, componentName)
 	}
 
-	type ExecRequestParams struct {
-		InstanceName string `json:"instance_name"`
+	params := map[string]string{
+		"instance_name": opts.InstanceName,
 	}
 
-	params := ExecRequestParams{InstanceName: opts.InstanceName}
+	urlValues := netURL.Values{}
 
-	req, err := s.client.NewRequest(ctx, http.MethodGet, url, params)
+	for k, v := range params {
+		if v == "" {
+			continue
+		}
+
+		urlValues.Add(k, v)
+	}
+
+	if len(urlValues) > 0 {
+		url = fmt.Sprintf("%s?%s", url, urlValues.Encode())
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, nil, err
 	}

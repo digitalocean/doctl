@@ -217,28 +217,16 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	console := CmdBuilder(
 		cmd,
 		RunAppsConsole,
-		"console <app id> <component name> <instance id (optional)>",
+		"console <app id> <component name> <instance name (optional)>",
 		"Starts a console session",
-		`Instantiates a console session for a component of an app.`,
+		`Instantiates a console session for a component of an app. Note: avoid creating scripts or making changes that need to persist on these instances, as they are ephemeral and may be terminated at any time`,
 		Writer,
 		aliasOpt("cs"),
 	)
 	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
-	AddStringFlag(console, doctl.ArgAppInstanceID, "", "", "Starts a console session for a specific instance ID. Optional, defaults to the first available pod.")
+	AddStringFlag(console, doctl.ArgAppInstanceName, "", "", "Starts a console session for a specific instance name. Optional, defaults to the first available instance. For apps with multiple instances, you can specify the instance name to start the console session for that particular instance.")
 
-	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
-
-	appInstances := CmdBuilder(
-		cmd,
-		RunGetAppInstances,
-		"instances <app id> ",
-		"Get app instances",
-		`Returns an app's currently running emphemeral compute instances.`,
-		Writer,
-		aliasOpt("i"),
-	)
-
-	appInstances.Example = `The following examples retrives the currently running, emphemeral compute instances for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps instances f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
+	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web. To initiate a console session to a specific instance, append the instance id: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web sample-golang-5d9f95556c-5f58g`
 
 	listRegions := CmdBuilder(
 		cmd,
@@ -811,10 +799,10 @@ func RunAppsConsole(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	appID := c.Args[0]
-	component := c.Args[1]
-	var instanceID string
+	componentName := c.Args[1]
+	var instanceName string
 	if len(c.Args) >= 3 {
-		instanceID = c.Args[2]
+		instanceName = c.Args[2]
 	}
 
 	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
@@ -822,7 +810,12 @@ func RunAppsConsole(c *CmdConfig) error {
 		return err
 	}
 
-	execResp, err := c.Apps().GetExec(appID, deploymentID, component, instanceID)
+	opts := &godo.AppGetExecOptions{
+		DeploymentID: deploymentID,
+		InstanceName: instanceName,
+	}
+	execResp, err := c.Apps().GetExecWithOpts(appID, componentName, opts)
+
 	if err != nil {
 		return err
 	}
@@ -1306,19 +1299,4 @@ func getIDByName(apps []*godo.App, name string) (string, error) {
 	}
 
 	return "", fmt.Errorf("app not found")
-}
-
-// RunGetAppInstances gets currently running emphemera compute instances for an app
-func RunGetAppInstances(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
-	}
-	appID := c.Args[0]
-
-	instances, err := c.Apps().GetAppInstances(appID, nil)
-	if err != nil {
-		return err
-	}
-
-	return c.Display(displayers.AppInstances(instances))
 }
