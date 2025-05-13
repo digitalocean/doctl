@@ -228,6 +228,18 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 
 	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
 
+	appInstances := CmdBuilder(
+		cmd,
+		RunGetAppInstances,
+		"instances <app id> ",
+		"Get app instances",
+		`Returns an app's currently running emphemeral compute instances.`,
+		Writer,
+		aliasOpt("i"),
+	)
+
+	appInstances.Example = `The following examples retrives the currently running, emphemeral compute instances for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps instances f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
+
 	listRegions := CmdBuilder(
 		cmd,
 		RunAppsListRegions,
@@ -1296,6 +1308,7 @@ func getIDByName(apps []*godo.App, name string) (string, error) {
 	return "", fmt.Errorf("app not found")
 }
 
+// RunGetAppInstances gets currently running emphemera compute instances for an app
 func RunGetAppInstances(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
