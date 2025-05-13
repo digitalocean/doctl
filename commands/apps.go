@@ -150,7 +150,7 @@ This permanently deletes the app and all of its associated deployments.`,
 		RunAppsCreateDeployment,
 		"create-deployment <app id>",
 		"Creates a deployment",
-		`Creates an app using the provided app spec. To redeploy an existing app using its latest image or source code changes, use the --update-sources flag. To update an existing app’s spec configuration without pulling its latest changes or image, use the `+"`"+`--upsert`+"`"+` flag or `+"`"+`doctl apps update`+"`"+` command. 
+		`Creates an app using the provided app spec. To redeploy an existing app using its latest image or source code changes, use the --update-sources flag. To update an existing app’s spec configuration without pulling its latest changes or image, use the `+"`"+`--upsert`+"`"+` flag or `+"`"+`doctl apps update`+"`"+` command.
 `,
 		Writer,
 		aliasOpt("cd"),
@@ -199,7 +199,7 @@ Three types of logs are supported and can be specified with the --`+doctl.ArgApp
 - build
 - deploy
 - run
-- run_restarted 
+- run_restarted
 
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
@@ -217,15 +217,16 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	console := CmdBuilder(
 		cmd,
 		RunAppsConsole,
-		"console <app id> <component name>",
+		"console <app id> <component name> <instance name (optional)>",
 		"Starts a console session",
-		`Instantiates a console session for a component of an app.`,
+		`Instantiates a console session for a component of an app. Note: avoid creating scripts or making changes that need to persist on these instances, as they are ephemeral and may be terminated at any time`,
 		Writer,
 		aliasOpt("cs"),
 	)
 	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
+	AddStringFlag(console, doctl.ArgAppInstanceName, "", "", "Starts a console session for a specific instance name. Optional, defaults to the first available instance. For apps with multiple instances, you can specify the instance name to start the console session for that particular instance.")
 
-	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
+	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web. To initiate a console session to a specific instance, append the instance id: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web sample-golang-5d9f95556c-5f58g`
 
 	listRegions := CmdBuilder(
 		cmd,
@@ -798,14 +799,23 @@ func RunAppsConsole(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	appID := c.Args[0]
-	component := c.Args[1]
+	componentName := c.Args[1]
+	var instanceName string
+	if len(c.Args) >= 3 {
+		instanceName = c.Args[2]
+	}
 
 	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
 	if err != nil {
 		return err
 	}
 
-	execResp, err := c.Apps().GetExec(appID, deploymentID, component)
+	opts := &godo.AppGetExecOptions{
+		DeploymentID: deploymentID,
+		InstanceName: instanceName,
+	}
+	execResp, err := c.Apps().GetExecWithOpts(appID, componentName, opts)
+
 	if err != nil {
 		return err
 	}
