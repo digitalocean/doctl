@@ -54,6 +54,8 @@ type AppsService interface {
 
 	ListBuildpacks() ([]*godo.Buildpack, error)
 	UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) (affectedComponents []string, deployment *godo.Deployment, err error)
+
+	GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error)
 }
 
 type appsService struct {
@@ -311,4 +313,12 @@ func (s *appsService) UpgradeBuildpack(appID string, options godo.UpgradeBuildpa
 		return nil, nil, err
 	}
 	return res.AffectedComponents, res.Deployment, nil
+}
+
+func (s *appsService) GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error) {
+	instances, _, err := s.client.Apps.GetAppInstances(s.ctx, appID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return instances, nil
 }
