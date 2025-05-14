@@ -367,6 +367,24 @@ type AppIngressSpecRuleStringMatch struct {
 	Exact  string `json:"exact,omitempty"`
 }
 
+// AppInstance struct for AppInstance
+type AppInstance struct {
+	ComponentName string                   `json:"component_name,omitempty"`
+	InstanceName  string                   `json:"instance_name,omitempty"`
+	ComponentType AppInstanceComponentType `json:"component_type,omitempty"`
+}
+
+// AppInstanceComponentType the model 'AppInstanceComponentType'
+type AppInstanceComponentType string
+
+// List of AppInstanceComponentType
+const (
+	APPINSTANCECOMPONENTTYPE_Unknown AppInstanceComponentType = "UNKNOWN"
+	APPINSTANCECOMPONENTTYPE_Service AppInstanceComponentType = "SERVICE"
+	APPINSTANCECOMPONENTTYPE_Worker  AppInstanceComponentType = "WORKER"
+	APPINSTANCECOMPONENTTYPE_Job     AppInstanceComponentType = "JOB"
+)
+
 // AppJobSpec struct for AppJobSpec
 type AppJobSpec struct {
 	// The name. Must be unique across all components within the same app.
@@ -539,9 +557,9 @@ type AppServiceSpecHealthCheck struct {
 	PeriodSeconds int32 `json:"period_seconds,omitempty"`
 	// The number of seconds after which the check times out. Default: 1 second, Minimum 1, Maximum 120.
 	TimeoutSeconds int32 `json:"timeout_seconds,omitempty"`
-	// The number of successful health checks before considered healthy. Default: 1 second, Minimum 1, Maximum 50. When used in liveness_health_check, Default: 1 second, Minimum 1, Maximum 1.
+	// The number of successful health checks before considered healthy. Default: 1, Minimum 1, Maximum 50. When used in liveness_health_check, Default: 1, Minimum 1, Maximum 1.
 	SuccessThreshold int32 `json:"success_threshold,omitempty"`
-	// The number of failed health checks before considered unhealthy. Default: 9 seconds, Minimum 1, Maximum 50. When used in liveness_health_check, Default: 18 seconds, Minimum 1, Maximum 50.
+	// The number of failed health checks before considered unhealthy. Default: 9, Minimum 1, Maximum 50. When used in liveness_health_check, Default: 18, Minimum 1, Maximum 50.
 	FailureThreshold int32 `json:"failure_threshold,omitempty"`
 	// The route path used for the HTTP health check ping. If not set, the HTTP health check will be disabled and a TCP health check used instead.
 	HTTPPath string `json:"http_path,omitempty"`
@@ -693,7 +711,6 @@ type Buildpack struct {
 
 // DeploymentCauseDetailsAutoscalerAction struct for DeploymentCauseDetailsAutoscalerAction
 type DeploymentCauseDetailsAutoscalerAction struct {
-	// Marker for the deployment being autoscaled. Necessary because the generation tooling can't handle empty messages.
 	Autoscaled bool `json:"autoscaled,omitempty"`
 }
 
@@ -1096,6 +1113,11 @@ type AppDomainValidation struct {
 // GetAppDatabaseConnectionDetailsResponse struct for GetAppDatabaseConnectionDetailsResponse
 type GetAppDatabaseConnectionDetailsResponse struct {
 	ConnectionDetails []*GetDatabaseConnectionDetailsResponse `json:"connection_details,omitempty"`
+}
+
+// GetAppInstancesResponse struct for GetAppInstancesResponse
+type GetAppInstancesResponse struct {
+	Instances []*AppInstance `json:"instances,omitempty"`
 }
 
 // GetDatabaseConnectionDetailsResponse struct for GetDatabaseConnectionDetailsResponse
