@@ -1,5 +1,8 @@
 # Change Log
 
+## [v1.147.0] - 2025-05-14
+
+- #831 - @thearyanahmed - Implement GetAppInstances - allowing users to list currently running compute instances
 
 ## [v1.146.1] - 2025-05-09
 
