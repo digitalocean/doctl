@@ -509,17 +509,17 @@ var _ Displayable = (*AppInstances)(nil)
 
 func (a AppInstances) Cols() []string {
 	return []string{
+		"Name",
 		"ComponentName",
 		"ComponentType",
-		"InstanceName",
 	}
 }
 
 func (a AppInstances) ColMap() map[string]string {
 	return map[string]string{
+		"Name":          "Name",
 		"ComponentName": "ComponentName",
 		"ComponentType": "ComponentType",
-		"InstanceName":  "InstanceName",
 	}
 }
 
@@ -528,9 +528,9 @@ func (a AppInstances) KV() []map[string]any {
 
 	for i, appInstance := range a {
 		out[i] = map[string]any{
+			"Name":          appInstance.InstanceName,
 			"ComponentName": appInstance.ComponentName,
 			"ComponentType": appInstance.ComponentType,
-			"InstanceName":  appInstance.InstanceName,
 		}
 	}
 	return out
