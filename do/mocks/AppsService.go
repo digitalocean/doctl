@@ -114,6 +114,21 @@ func (mr *MockAppsServiceMockRecorder) Get(appID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAppsService)(nil).Get), appID)
 }
 
+// GetAppInstances mocks base method.
+func (m *MockAppsService) GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAppInstances", appID, opts)
+	ret0, _ := ret[0].([]*godo.AppInstance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAppInstances indicates an expected call of GetAppInstances.
+func (mr *MockAppsServiceMockRecorder) GetAppInstances(appID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppInstances", reflect.TypeOf((*MockAppsService)(nil).GetAppInstances), appID, opts)
+}
+
 // GetDeployment mocks base method.
 func (m *MockAppsService) GetDeployment(appID, deploymentID string) (*godo.Deployment, error) {
 	m.ctrl.T.Helper()
