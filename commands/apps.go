@@ -1313,7 +1313,7 @@ func getIDByName(apps []*godo.App, name string) (string, error) {
 	return "", fmt.Errorf("app not found")
 }
 
-// RunGetAppInstances gets currently running emphemera compute instances for an app
+// RunGetAppInstances gets currently running ephemeral compute instances for an app
 func RunGetAppInstances(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
