@@ -46,7 +46,7 @@ const (
 	maxAPIFailures            = 5
 	timeoutFetchingKubeconfig = 30 * time.Second
 
-	defaultKubernetesNodeSize      = "s-1vcpu-2gb"
+	defaultKubernetesNodeSize      = "s-1vcpu-2gb-intel"
 	defaultKubernetesNodeCount     = 3
 	defaultKubernetesRegion        = "nyc1"
 	defaultKubernetesLatestVersion = "latest"
