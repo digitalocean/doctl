@@ -233,12 +233,12 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 		RunGetAppInstances,
 		"instances <app id> ",
 		"Get app instances",
-		`Returns an app's currently running emphemeral compute instances.`,
+		`Returns an app's currently running ephemeral compute instances.`,
 		Writer,
 		aliasOpt("i"),
 	)
 
-	appInstances.Example = `The following examples retrieves the currently running, emphemeral compute instances for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps instances f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
+	appInstances.Example = `The following examples retrieves the currently running, ephemeral compute instances for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps instances f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	listRegions := CmdBuilder(
 		cmd,
