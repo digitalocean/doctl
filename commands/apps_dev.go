@@ -553,27 +553,29 @@ func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli bui
 		return err
 	}
 
-	// Get stack run image from CNBBuilderImage_Heroku22.
-	builderImage, err := builder.GetImage(ctx, cli, builder.CNBBuilderImage_Heroku22)
-	if err != nil {
-		return err
-	}
-	metadataLabel := builderImage.Labels["io.buildpacks.builder.metadata"]
-
-	var metadata Metadata
-	err = json.Unmarshal([]byte(metadataLabel), &metadata)
-	if err != nil {
-		return err
-	}
-
-	exists, err := builder.ImageExists(ctx, cli, metadata.Stack.RunImage.Image)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		err := pullDockerImages(ctx, cli, []string{metadata.Stack.RunImage.Image})
+	if exist, _ := builder.ImageExists(ctx, cli, builder.CNBBuilderImage_Heroku22); exist {
+		// Get stack run image from CNBBuilderImage_Heroku22.
+		builderImage, err := builder.GetImage(ctx, cli, builder.CNBBuilderImage_Heroku22)
 		if err != nil {
 			return err
+		}
+		metadataLabel := builderImage.Labels["io.buildpacks.builder.metadata"]
+
+		var metadata Metadata
+		err = json.Unmarshal([]byte(metadataLabel), &metadata)
+		if err != nil {
+			return err
+		}
+
+		exists, err := builder.ImageExists(ctx, cli, metadata.Stack.RunImage.Image)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			err := pullDockerImages(ctx, cli, []string{metadata.Stack.RunImage.Image})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
