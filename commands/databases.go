@@ -1087,6 +1087,8 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["kafka"] = options.KafkaOptions.Regions
 	case "opensearch":
 		regions["opensearch"] = options.OpensearchOptions.Regions
+	case "valkey":
+		regions["valkey"] = options.ValkeyOptions.Regions
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
@@ -1094,6 +1096,7 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["redis"] = options.RedisOptions.Regions
 		regions["kafka"] = options.KafkaOptions.Regions
 		regions["opensearch"] = options.OpensearchOptions.Regions
+		regions["valkey"] = options.ValkeyOptions.Regions
 	}
 
 	return displayDatabaseRegionOptions(c, regions)
@@ -1122,6 +1125,8 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["kafka"] = options.KafkaOptions.Versions
 	case "opensearch":
 		versions["opensearch"] = options.OpensearchOptions.Versions
+	case "valkey":
+		versions["valkey"] = options.ValkeyOptions.Versions
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
@@ -1129,6 +1134,7 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["redis"] = options.RedisOptions.Versions
 		versions["kafka"] = options.KafkaOptions.Versions
 		versions["opensearch"] = options.OpensearchOptions.Versions
+		versions["valkey"] = options.ValkeyOptions.Versions
 	}
 
 	return displayDatabaseVersionOptions(c, versions)
@@ -1160,6 +1166,8 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.KafkaOptions.Layouts
 	case "opensearch":
 		layouts = options.OpensearchOptions.Layouts
+	case "valkey":
+		layouts = options.ValkeyOptions.Layouts
 	}
 
 	return displayDatabaseLayoutOptions(c, layouts)
