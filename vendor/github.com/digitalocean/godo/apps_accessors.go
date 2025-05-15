@@ -1037,6 +1037,30 @@ func (a *AppIngressSpecRuleStringMatch) GetPrefix() string {
 	return a.Prefix
 }
 
+// GetComponentName returns the ComponentName field.
+func (a *AppInstance) GetComponentName() string {
+	if a == nil {
+		return ""
+	}
+	return a.ComponentName
+}
+
+// GetComponentType returns the ComponentType field.
+func (a *AppInstance) GetComponentType() AppInstanceComponentType {
+	if a == nil {
+		return ""
+	}
+	return a.ComponentType
+}
+
+// GetInstanceName returns the InstanceName field.
+func (a *AppInstance) GetInstanceName() string {
+	if a == nil {
+		return ""
+	}
+	return a.InstanceName
+}
+
 // GetBandwidthAllowanceGib returns the BandwidthAllowanceGib field.
 func (a *AppInstanceSize) GetBandwidthAllowanceGib() string {
 	if a == nil {
