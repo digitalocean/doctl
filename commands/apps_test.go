@@ -24,7 +24,7 @@ func TestAppsCommand(t *testing.T) {
 	require.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
 		"console",
-		"instances",
+		"list-instances",
 		"create",
 		"get",
 		"list",
