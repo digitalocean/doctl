@@ -118,6 +118,21 @@ const (
 	// ArgAutoscaleTargetInstances is an autoscale target instance argument.
 	ArgAutoscaleTargetInstances = "target-instances"
 
+	// ArgEgressGatewayName is an egress gateway name argument.
+	ArgEgressGatewayName = "name"
+	// ArgEgressGatewayType is an egress gateway type argument.
+	ArgEgressGatewayType = "type"
+	// ArgEgressGatewayRegion is an egress gateway region argument.
+	ArgEgressGatewayRegion = "region"
+	// ArgEgressGatewayVPCs is an egress gateway vpcs argument.
+	ArgEgressGatewayVPCs = "vpcs"
+	// ArgEgressGatewayUDPTimeout is an egress gateway udp-timeout argument.
+	ArgEgressGatewayUDPTimeout = "udp-timeout"
+	// ArgEgressGatewayICMPTimeout is an egress gateway icmp-timeout argument.
+	ArgEgressGatewayICMPTimeout = "icmp-timeout"
+	// ArgEgressGatewayTCPTimeout is an egress gateway tcp-timeout argument.
+	ArgEgressGatewayTCPTimeout = "tcp-timeout"
+
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.

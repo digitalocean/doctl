@@ -52,6 +52,7 @@ type CmdConfig struct {
 	DropletActions     func() do.DropletActionsService
 	DropletAutoscale   func() do.DropletAutoscaleService
 	Domains            func() do.DomainsService
+	EgressGateways     func() do.EgressGatewaysService
 	Actions            func() do.ActionsService
 	Account            func() do.AccountService
 	Balance            func() do.BalanceService
@@ -107,6 +108,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
 			c.DropletAutoscale = func() do.DropletAutoscaleService { return do.NewDropletAutoscaleService(godoClient) }
 			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
+			c.EgressGateways = func() do.EgressGatewaysService { return do.NewEgressGatewaysService(godoClient) }
 			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
 			c.Balance = func() do.BalanceService { return do.NewBalanceService(godoClient) }
