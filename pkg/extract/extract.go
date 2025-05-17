@@ -103,7 +103,32 @@ func extractTarGz(source, target string) error {
 			os.Link(header.Linkname, path)
 
 		case tar.TypeSymlink:
-			os.Symlink(header.Linkname, path)
+			// Resolve the target of the symlink
+			resolvedLinkname, err := filepath.EvalSymlinks(filepath.Join(target, header.Linkname))
+			if err != nil {
+				return fmt.Errorf("failed to resolve symlink target %s: %w", header.Linkname, err)
+			}
+
+			// Ensure the resolved link target is within the target directory
+			if !strings.HasPrefix(resolvedLinkname, filepath.Clean(target)+string(os.PathSeparator)) {
+				return fmt.Errorf("illegal symlink target: %s", resolvedLinkname)
+			}
+
+			// Resolve the destination path
+			resolvedPath, err := filepath.EvalSymlinks(path)
+			if err != nil {
+				return fmt.Errorf("failed to resolve symlink destination %s: %w", path, err)
+			}
+
+			// Ensure the resolved destination path is within the target directory
+			if !strings.HasPrefix(resolvedPath, filepath.Clean(target)+string(os.PathSeparator)) {
+				return fmt.Errorf("illegal symlink destination: %s", resolvedPath)
+			}
+
+			// Create the symlink
+			if err := os.Symlink(resolvedLinkname, resolvedPath); err != nil {
+				return fmt.Errorf("failed to create symlink from %s to %s: %w", resolvedPath, resolvedLinkname, err)
+			}
 
 		default:
 			return fmt.Errorf("unknown type %s in %s", string(header.Typeflag), header.Name)
