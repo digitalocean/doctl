@@ -344,7 +344,7 @@ func (c *LiveConfig) Set(ns, key string, val any) {
 
 // IsSet checks if a config is set
 func (c *LiveConfig) IsSet(key string) bool {
-	matches := regexp.MustCompile("\b*--([a-z-_]+)").FindAllStringSubmatch(strings.Join(os.Args, " "), -1)
+	matches := regexp.MustCompile(`\b--([a-z-_]+)`).FindAllStringSubmatch(strings.Join(os.Args, " "), -1)
 	if len(matches) == 0 {
 		return false
 	}
