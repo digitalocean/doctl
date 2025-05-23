@@ -224,6 +224,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(Tags())
 	cmd.AddCommand(Volume())
 	cmd.AddCommand(VolumeAction())
+	cmd.AddCommand(GenAI())
 
 	// SSH is different since it doesn't have any subcommands. In this case, let's
 	// give it a parent at init time.

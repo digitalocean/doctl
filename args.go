@@ -631,4 +631,15 @@ const (
 
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
+
+	ArgAgentName        = "name"
+	ArgAgentInstruction = "instruction"
+	ArgModelId          = "model-id"
+	ArgAgentProjectId   = "project-id"
+	ArgAgentRegion      = "region"
+	ArgAnthropicKeyId   = "Anthropic-key-id"
+	ArgAgentDescription = "description"
+	ArgKnowledgeBaseId  = "knowledge-base-id"
+	ArgOpenAIKeyId      = "openai-key-id"
+	ArgTags             = "tags"
 )

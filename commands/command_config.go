@@ -77,6 +77,7 @@ type CmdConfig struct {
 	OAuth              func() do.OAuthService
 	PartnerAttachments func() do.PartnerAttachmentsService
 	SpacesKeys         func() do.SpacesKeysService
+	GenAI              func() do.AgentService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -137,6 +138,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return do.NewPartnerAttachmentsService(godoClient)
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
+			c.GenAI = func() do.AgentService { return do.NewAgentService(godoClient) }
 
 			return nil
 		},
