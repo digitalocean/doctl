@@ -631,4 +631,40 @@ const (
 
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
+
+	// ArgKnowledgeBaseDatabaseID is the ID of the database
+	ArgKnowledgeBaseDatabaseID = "database-id"
+
+	// ArgKnowledgeBaseID is the UUID of the knowledge base
+	ArgKnowledgeBaseName = "name"
+
+	// ArgKnowledgeBaseRegion is the region of the knowledge base
+	ArgKnowledgeBaseRegion = "region"
+
+	// ArgKnowledgeBaseProjectID is the project ID of the knowledge base
+	ArgKnowledgeBaseProjectID = "project-id"
+
+	// ArgKnowledgeBaseEmbeddingModelUUID is the UUID of the embedding model
+	ArgKnowledgeBaseEmbeddingModelUUID = "embedding-model-uuid"
+
+	// ArgKnowledgeBaseTags is the tags of the knowledge base
+	ArgKnowledgeBaseTags = "tags"
+
+	// ArgKnowledgeBaseVPCUUID is the UUID of the VPC
+	ArgKnowledgeBaseVPCUUID = "vpc-uuid"
+
+	// ArgKnowledgeBaseDataSource is the data source of the knowledge base
+	ArgKnowledgeBaseDataSource = "data-source"
+
+	// ArgKnowledgeBaseBaseURL is the base URL of the knowledge base
+	ArgKnowledgeBaseBaseURL = "base-url"
+
+	// ArgKnowledgeBaseCrawlingOption is the crawling option of the knowledge base
+	ArgKnowledgeBaseCrawlingOption = "crawling-option"
+
+	// ArgKnowledgeBaseEmbedMedia is the embed media option of the knowledge base
+	ArgKnowledgeBaseEmbedMedia = "embed-media"
+
+	// ArgKnowledgeBaseUUID is the UUID of the knowledge base
+	ArgKnowledgeBaseUUID = "uuid"
 )
