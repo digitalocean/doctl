@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -46,7 +49,7 @@ func KnowledgeBase() *Command {
 		RunKnowledgeBaseCreate,
 		"create",
 		"Creates a Knowledge Base.",
-		"Creates a Knowledge Base with the following parameters:",
+		"Creates a Knowledge Base and returns the follwoing information of Knowledge Base, including:"+knowledgebaseDetails,
 		Writer, aliasOpt("g"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
@@ -54,6 +57,7 @@ func KnowledgeBase() *Command {
 	AddStringFlag(cmdKnowledgeBaseCreate, "region", "", "", "The region of the Knowledge Base.", requiredOpt())
 	AddStringFlag(cmdKnowledgeBaseCreate, "project-id", "", "", "The project ID of the Knowledge Base.", requiredOpt())
 	AddStringFlag(cmdKnowledgeBaseCreate, "embedding-model-uuid", "", "", "The embedding model UUID of the Knowledge Base.", requiredOpt())
+	AddStringFlag(cmdKnowledgeBaseCreate, "data-sources", "", "", "JSON array of data source objects.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "database-id", "", "", "The database ID of the Knowledge Base.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "base-url", "", "", "The base URL of the Knowledge Base.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "crawling-option", "", "", "The crawling option of the Knowledge Base.")
@@ -156,7 +160,7 @@ func KnowledgeBase() *Command {
 	cmdDataSourceDelete.Example = "The following example deletes Data Sources like " + `00000000-0000-0000-0000-000000000000` + " from a Knowledge Base Id " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		" : `doctl genai knowledge-base delete-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 00000000-0000-0000-0000-000000000000`"
 
-	cmdAttachKnowledgeBaseDetails := "Attach a knowledge base to an agent."
+	cmdAttachKnowledgeBaseDetails := "Attach a knowledge base to an agent using knowledge base uuid and agent uuid. It returns the information of corresponding agent."
 	cmdAttachKnowledgeBase := CmdBuilder(
 		cmd,
 		RunAttachKnowledgeBase,
@@ -169,10 +173,10 @@ func KnowledgeBase() *Command {
 	cmdAttachKnowledgeBase.Example = "The following example attaches the Knowledge Base ID" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " to a specific agent ID" + "`" + `f81d4fae-0000-11d0-a765-000000000000` + "`" +
 		"  `doctl genai knowledge-base attach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
-	cmdDetachKnowledgeBaseDetails := "Detach a knowledge base from an agent."
+	cmdDetachKnowledgeBaseDetails := "Detach a knowledge base from an agent using knowledge base uuid and agent uuid."
 	cmdDetachKnowledgeBase := CmdBuilder(
 		cmd,
-		RunAttachKnowledgeBase,
+		RunDetachKnowledgeBase,
 		"detach <agent-uuid> <knowledgebase-uuid>",
 		"Detach a knowledge base from an agent.",
 		cmdDetachKnowledgeBaseDetails,
@@ -239,31 +243,14 @@ func RunKnowledgeBaseCreate(c *CmdConfig) error {
 		return err
 	}
 
-	baseUrl, err := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseBaseURL)
+	dataSourceArray, err := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseDataSource)
 	if err != nil {
 		return err
 	}
-
-	crawlingOption, err := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseCrawlingOption)
-	if err != nil {
+	fmt.Printf("dataSourceArray : %s", dataSourceArray)
+	var dataSources []godo.KnowledgeBaseDataSource
+	if err := json.Unmarshal([]byte(dataSourceArray), &dataSources); err != nil {
 		return err
-	}
-
-	embedMedia, err := c.Doit.GetBool(c.NS, doctl.ArgKnowledgeBaseEmbedMedia)
-	if err != nil {
-		return err
-	}
-
-	webCrawler := &godo.WebCrawlerDataSource{
-		BaseUrl:        baseUrl,
-		CrawlingOption: crawlingOption,
-		EmbedMedia:     embedMedia,
-	}
-
-	dataSources := []godo.KnowledgeBaseDataSource{
-		{
-			WebCrawlerDataSource: webCrawler,
-		},
 	}
 
 	req := &godo.KnowledgeBaseCreateRequest{

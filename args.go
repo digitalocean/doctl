@@ -654,7 +654,7 @@ const (
 	ArgKnowledgeBaseVPCUUID = "vpc-uuid"
 
 	// ArgKnowledgeBaseDataSource is the data source of the knowledge base
-	ArgKnowledgeBaseDataSource = "data-source"
+	ArgKnowledgeBaseDataSource = "data-sources"
 
 	// ArgKnowledgeBaseBaseURL is the base URL of the knowledge base
 	ArgKnowledgeBaseBaseURL = "base-url"
