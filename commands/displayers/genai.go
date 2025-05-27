@@ -95,11 +95,13 @@ func (v *KnowledgeBaseDataSource) ColMap() map[string]string {
 		"BucketName":           "BucketName",
 		"CreatedAt":            "CreatedAt",
 		"FileUploadDataSource": "FileUploadDataSource",
+		"LastIndexingJob":      "LastIndexingJob",
 		"ItemPath":             "ItemPath",
 		"Region":               "Region",
 		"SpacesDataSource":     "SpacesDataSource",
 		"UpdatedAt":            "UpdatedAt",
 		"UUID":                 "UUID",
+		"WebCrawlerDataSource": "WebCrawlerDataSource",
 	}
 }
 func (v *KnowledgeBaseDataSource) Cols() []string {
@@ -109,10 +111,12 @@ func (v *KnowledgeBaseDataSource) Cols() []string {
 		"CreatedAt",
 		"FileUploadDataSource",
 		"ItemPath",
+		"LastIndexingJob",
 		"Region",
 		"SpacesDataSource",
 		"UpdatedAt",
 		"UUID",
+		"WebCrawlerDataSource",
 	}
 }
 
@@ -125,10 +129,12 @@ func (v *KnowledgeBaseDataSource) KV() []map[string]any {
 			"CreatedAt":            kb.CreatedAt,
 			"FileUploadDataSource": kb.FileUploadDataSource,
 			"ItemPath":             kb.ItemPath,
+			"LastIndexingJob":      kb.LastIndexingJob,
 			"Region":               kb.Region,
 			"SpacesDataSource":     kb.SpacesDataSource,
 			"UpdatedAt":            kb.UpdatedAt,
 			"UUID":                 kb.UUID,
+			"WebCrawlerDataSource": kb.WebCrawlerDataSource,
 		}
 		out = append(out, o)
 	}

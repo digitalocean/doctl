@@ -667,4 +667,7 @@ const (
 
 	// ArgKnowledgeBaseUUID is the UUID of the knowledge base
 	ArgKnowledgeBaseUUID = "uuid"
+
+	// ArgKnowledgeBaseDataSourceID is the ID of the data source
+	ArgKnowledgeBaseDataSourceID = "data-source-id"
 )
