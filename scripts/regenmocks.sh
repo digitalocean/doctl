@@ -20,6 +20,7 @@ mockgen -source domains.go -package=mocks DomainService > mocks/DomainService.go
 mockgen -source droplet_actions.go -package=mocks DropletActionsService > mocks/DropletActionService.go
 mockgen -source droplet_autoscale.go -package=mocks DropletAutoscaleService > mocks/DropletAutoscaleService.go
 mockgen -source droplets.go -package=mocks DropletsService > mocks/DropletsService.go
+mockgen -source vpc_nat_gateways.go -package=mocks VPCNATGatewaysService > mocks/VPCNATGatewaysService.go
 mockgen -source firewalls.go -package=mocks FirewallsService > mocks/FirewallsService.go
 mockgen -source image_actions.go -package=mocks ImageActionsService > mocks/ImageActionsService.go
 mockgen -source images.go -package=mocks ImageService > mocks/ImageService.go

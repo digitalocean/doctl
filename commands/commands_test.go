@@ -246,6 +246,7 @@ type tcMocks struct {
 	registry              *domocks.MockRegistryService
 	sshRunner             *domocks.MockRunner
 	vpcs                  *domocks.MockVPCsService
+	vpcNatGateways        *domocks.MockVPCNATGatewaysService
 	oneClick              *domocks.MockOneClickService
 	listen                *domocks.MockListenerService
 	terminal              *domocks.MockTerminal
@@ -286,6 +287,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		uptimeChecks:          domocks.NewMockUptimeChecksService(ctrl),
 		volumes:               domocks.NewMockVolumesService(ctrl),
 		volumeActions:         domocks.NewMockVolumeActionsService(ctrl),
+		vpcNatGateways:        domocks.NewMockVPCNATGatewaysService(ctrl),
 		snapshots:             domocks.NewMockSnapshotsService(ctrl),
 		certificates:          domocks.NewMockCertificatesService(ctrl),
 		loadBalancers:         domocks.NewMockLoadBalancersService(ctrl),
@@ -350,6 +352,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		UptimeChecks:       func() do.UptimeChecksService { return tm.uptimeChecks },
 		Volumes:            func() do.VolumesService { return tm.volumes },
 		VolumeActions:      func() do.VolumeActionsService { return tm.volumeActions },
+		VPCNATGateways:     func() do.VPCNATGatewaysService { return tm.vpcNatGateways },
 		Snapshots:          func() do.SnapshotsService { return tm.snapshots },
 		Certificates:       func() do.CertificatesService { return tm.certificates },
 		LoadBalancers:      func() do.LoadBalancersService { return tm.loadBalancers },
