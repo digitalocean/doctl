@@ -233,7 +233,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   },
   "node_pools": [
     {
-      "size": "s-1vcpu-2gb",
+      "size": "s-1vcpu-2gb-intel",
       "count": 3,
       "name": "some-cluster-name-default-pool"
     }
@@ -260,7 +260,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
       "count": 2,
       "auto_scale": true,
       "name": "default",
-      "size": "s-1vcpu-2gb"
+      "size": "s-1vcpu-2gb-intel"
     }
   ]
 }
