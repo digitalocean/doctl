@@ -40,18 +40,14 @@ func (a *Agent) ColMap() map[string]string {
 	}
 }
 
-func (a *Agent) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(a.Agents))
+func (a *Agent) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(a.Agents))
 	for _, agent := range a.Agents {
 		modelID := ""
 		if agent.Model != nil {
 			modelID = agent.Model.Uuid
 		}
-		// tags := ""
-		// if len(agent.Tags) > 0 {
-		// 	tags = strings.Join(agent.Tags, ",")
-		// }
-		out = append(out, map[string]interface{}{
+		out = append(out, map[string]any{
 			"Id":         agent.Uuid,
 			"Name":       agent.Name,
 			"Region":     agent.Region,
