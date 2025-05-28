@@ -257,6 +257,7 @@ type tcMocks struct {
 	oauth                 *domocks.MockOAuthService
 	partnerAttachments    *domocks.MockPartnerAttachmentsService
 	spacesKeys            *domocks.MockSpacesKeysService
+	genAI                 *domocks.MockAgentService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -308,6 +309,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		oauth:                 domocks.NewMockOAuthService(ctrl),
 		partnerAttachments:    domocks.NewMockPartnerAttachmentsService(ctrl),
 		spacesKeys:            domocks.NewMockSpacesKeysService(ctrl),
+		genAI:                 domocks.NewMockAgentService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -367,6 +369,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OAuth:              func() do.OAuthService { return tm.oauth },
 		PartnerAttachments: func() do.PartnerAttachmentsService { return tm.partnerAttachments },
 		SpacesKeys:         func() do.SpacesKeysService { return tm.spacesKeys },
+		GenAI:              func() do.GenAIService { return tm.genAI },
 	}
 
 	tFn(config, tm)
