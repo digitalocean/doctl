@@ -95,6 +95,36 @@ func TestPartnerAttachmentCreate(t *testing.T) {
 	})
 }
 
+func TestPartnerAttachmentCreateWithRedundancyZone(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, "doctl-pia")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBandwidthInMbps, 50)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentRegion, "stage2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentNaaSProvider, "MEGAPORT")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"})
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalASN, 65001)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalRouterIP, "192.168.1.1")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerASN, 65002)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "192.168.1.2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentRedundancyZone, "MEGAPORT_RED")
+
+		expectedRequest := &godo.PartnerAttachmentCreateRequest{
+			Name:                      "doctl-pia",
+			ConnectionBandwidthInMbps: 50,
+			Region:                    "stage2",
+			NaaSProvider:              "MEGAPORT",
+			VPCIDs:                    []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"},
+			RedundancyZone:            "MEGAPORT_RED",
+		}
+
+		tm.partnerAttachments.EXPECT().Create(expectedRequest).Return(&testPartnerAttachment, nil)
+
+		err := RunPartnerAttachmentCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestPartnerAttachmentCreateUnsupportedType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "unsupported")
