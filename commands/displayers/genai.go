@@ -37,7 +37,6 @@ func (v *KnowledgeBase) ColMap() map[string]string {
 
 func (v *KnowledgeBase) Cols() []string {
 	return []string{
-		// Add appropriate column names here, for example:
 		"AddedToAgentAt",
 		"CreatedAt",
 		"DatabaseId",
@@ -91,7 +90,6 @@ func (v *KnowledgeBaseDataSource) JSON(out io.Writer) error {
 
 func (v *KnowledgeBaseDataSource) ColMap() map[string]string {
 	return map[string]string{
-		// Add appropriate column mappings here, for example:
 		"BucketName":           "BucketName",
 		"CreatedAt":            "CreatedAt",
 		"FileUploadDataSource": "FileUploadDataSource",
@@ -178,10 +176,10 @@ func (a *Agent) ColMap() map[string]string {
 	}
 }
 
-func (a *Agent) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(a.Agents))
+func (a *Agent) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(a.Agents))
 	for _, agent := range a.Agents {
-		out = append(out, map[string]interface{}{
+		out = append(out, map[string]any{
 			"Name":   agent.Name,
 			"Region": agent.Region,
 			//"Description": agent.Description,
