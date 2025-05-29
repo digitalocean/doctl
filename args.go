@@ -551,6 +551,8 @@ const (
 	ArgPartnerAttachmentBGPPeerRouterIP = "bgp-peer-router-ip"
 	// ArgPartnerAttachmentBGPAuthKey is the BGP MD5 authentication key
 	ArgPartnerAttachmentBGPAuthKey = "bgp-auth-key"
+	// ArgPartnerAttachmentRedundancyZone is the redundancy zone of the Partner Attachment
+	ArgPartnerAttachmentRedundancyZone = "redundancy-zone"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
