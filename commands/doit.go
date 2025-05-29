@@ -209,6 +209,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(DropletAutoscale())
 	cmd.AddCommand(Domain())
+	cmd.AddCommand(VPCNATGateway())
 	cmd.AddCommand(Firewall())
 	cmd.AddCommand(ReservedIP())
 	cmd.AddCommand(ReservedIPAction())
