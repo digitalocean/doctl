@@ -63,7 +63,7 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 		}))
 	})
 
-	when("valid knowlegde base id is passed", func() {
+	when("valid knowledge base id is passed", func() {
 		it("gets the knowledge base", func() {
 			aliases := []string{"get", "g"}
 

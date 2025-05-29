@@ -63,7 +63,7 @@ var _ = suite("genai/knowledgebase/detach", func(t *testing.T, when spec.G, it s
 		}))
 	})
 
-	when("valid agent id and knowlegde base id is passed", func() {
+	when("valid agent id and knowledge base id is passed", func() {
 		it("detaches the knowledge base from an agent", func() {
 			aliases := []string{"get", "g"}
 
@@ -85,7 +85,7 @@ var _ = suite("genai/knowledgebase/detach", func(t *testing.T, when spec.G, it s
 		})
 	})
 
-	when("invalid agent id or knowlegde base id is passed", func() {
+	when("invalid agent id or knowledge base id is passed", func() {
 		it("returns an error", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",

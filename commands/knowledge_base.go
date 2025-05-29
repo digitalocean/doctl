@@ -64,7 +64,7 @@ func KnowledgeBase() *Command {
 	// AddBoolFlag(cmdKnowledgeBaseCreate, "embed-media", "", false, "The embed media option of the Knowledge Base.")
 	AddStringSliceFlag(cmdKnowledgeBaseCreate, "tags", "", []string{}, "The tags of the Knowledge Base.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "vpc_uuid", "", "", "The VPC UUID of the Knowledge Base.")
-	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the paramters ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the parameters ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		` doctl genai knowledge-base create f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdKnowledgeBasesList := "List all knowledge bases for agents."
