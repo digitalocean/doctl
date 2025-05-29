@@ -52,7 +52,7 @@ func TestRunAppsDevBuild(t *testing.T) {
 
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
 			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), ws.Context(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
-			tm.appDockerEngineClient.EXPECT().ImageList(gomock.Any(), gomock.Any()).Return(imageList, nil).Times(2)
+			tm.appDockerEngineClient.EXPECT().ImageList(gomock.Any(), gomock.Any()).Return(imageList, nil).Times(3)
 
 			err = RunAppsDevBuild(config)
 			require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestRunAppsDevBuild(t *testing.T) {
 			require.NoError(t, err, "getting workspace")
 			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), ws.Context(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
-			tm.appDockerEngineClient.EXPECT().ImageList(gomock.Any(), gomock.Any()).Return(imageList, nil).Times(2)
+			tm.appDockerEngineClient.EXPECT().ImageList(gomock.Any(), gomock.Any()).Return(imageList, nil).Times(3)
 
 			tm.apps.EXPECT().Get(appID).Times(1).Return(&godo.App{
 				Spec: sampleSpec,

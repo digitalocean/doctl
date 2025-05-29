@@ -59,7 +59,7 @@ func Apps() *Command {
 		RunAppsCreate,
 		"create",
 		"Create an app",
-		`Create an app with the given app spec.`,
+		`Create an app with the given app spec. To create an app, App Platform must have access to your repository service. Click one of the following links to provide access for your preferred service: [GitHub](https://cloud.digitalocean.com/apps/gitlab/install), [GitLab](https://cloud.digitalocean.com/apps/gitlab/install), [BitBucket](https://cloud.digitalocean.com/apps/bitbucket/install)`,
 		Writer,
 		aliasOpt("c"),
 		displayerType(&displayers.Apps{}),
