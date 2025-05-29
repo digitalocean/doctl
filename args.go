@@ -670,4 +670,10 @@ const (
 
 	// ArgKnowledgeBaseDataSourceID is the ID of the data source
 	ArgKnowledgeBaseDataSourceID = "data-source-id"
+
+	// ArgKnowledgeBaseBucketName is of data source from Spaces
+	ArgKnowledgeBaseBucketName = "bucket-name"
+
+	// ArgKnowledgeBaseItemPath is the region of the knowledge base
+	ArgKnowledgeBaseItemPath = "item-path"
 )

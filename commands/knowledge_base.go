@@ -49,7 +49,7 @@ func KnowledgeBase() *Command {
 		RunKnowledgeBaseCreate,
 		"create",
 		"Creates a Knowledge Base.",
-		"Creates a Knowledge Base and returns the follwoing information of Knowledge Base, including:"+knowledgebaseDetails,
+		"Creates a Knowledge Base and returns the following information of Knowledge Base, including:"+knowledgebaseDetails,
 		Writer, aliasOpt("g"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
@@ -57,11 +57,11 @@ func KnowledgeBase() *Command {
 	AddStringFlag(cmdKnowledgeBaseCreate, "region", "", "", "The region of the Knowledge Base.", requiredOpt())
 	AddStringFlag(cmdKnowledgeBaseCreate, "project-id", "", "", "The project ID of the Knowledge Base.", requiredOpt())
 	AddStringFlag(cmdKnowledgeBaseCreate, "embedding-model-uuid", "", "", "The embedding model UUID of the Knowledge Base.", requiredOpt())
-	AddStringFlag(cmdKnowledgeBaseCreate, "data-sources", "", "", "JSON array of data source objects.")
+	AddStringFlag(cmdKnowledgeBaseCreate, "data-sources", "", "", "JSON array of data source objects.", requiredOpt())
 	AddStringFlag(cmdKnowledgeBaseCreate, "database-id", "", "", "The database ID of the Knowledge Base.")
-	AddStringFlag(cmdKnowledgeBaseCreate, "base-url", "", "", "The base URL of the Knowledge Base.")
-	AddStringFlag(cmdKnowledgeBaseCreate, "crawling-option", "", "", "The crawling option of the Knowledge Base.")
-	AddBoolFlag(cmdKnowledgeBaseCreate, "embed-media", "", false, "The embed media option of the Knowledge Base.")
+	// AddStringFlag(cmdKnowledgeBaseCreate, "base-url", "", "", "The base URL of the Knowledge Base.")
+	// AddStringFlag(cmdKnowledgeBaseCreate, "crawling-option", "", "", "The crawling option of the Knowledge Base.")
+	// AddBoolFlag(cmdKnowledgeBaseCreate, "embed-media", "", false, "The embed media option of the Knowledge Base.")
 	AddStringSliceFlag(cmdKnowledgeBaseCreate, "tags", "", []string{}, "The tags of the Knowledge Base.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "vpc_uuid", "", "", "The VPC UUID of the Knowledge Base.")
 	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the paramters ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
@@ -106,9 +106,10 @@ func KnowledgeBase() *Command {
 		"delete <knowledge-base-uuid>",
 		"Delete a knowledge base",
 		cmdKnowledgeBasesDeleteDetails,
-		Writer, aliasOpt("del"),
+		Writer, aliasOpt("del", "rm"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
+	AddBoolFlag(cmdKnowledgeBaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the knowledge base without a confirmation prompt")
 	cmdKnowledgeBaseDelete.Example = "The following command deletes the knowledge base based on its uuid " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` +
 		"`doctl genai knowledge-base delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
@@ -128,24 +129,21 @@ func KnowledgeBase() *Command {
 	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid."
 	cmdDataSourceAdd := CmdBuilder(
 		cmd,
-		RunKnowledgeBaseAddDataSources,
-		"add-datasources <knowledge-base-uuid>",
+		RunKnowledgeBaseAddDataSource,
+		"add-datasource <knowledge-base-uuid>",
 		"Add a datasource for knowledge base.",
 		cmdDataSourcesAddDetail,
-		Writer, aliasOpt("g-ds"),
+		Writer, aliasOpt("add-ds"),
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
-	cmdDataSourceAdd.Example = "The following example retrieves information about a Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		" : `doctl genai knowledge-base list-datasources f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
-	AddStringFlag(cmdDataSourceAdd, "name", "", "", "The name of the Knowledge Base.")
-	AddStringFlag(cmdDataSourceAdd, "project-id", "", "", "The project ID of the Knowledge Base.")
-	AddStringFlag(cmdDataSourceAdd, "embedding-model-uuid", "", "", "The embedding model UUID of the Knowledge Base.")
-	AddStringFlag(cmdDataSourceAdd, "base-url", "", "", "The base URL of the Knowledge Base.")
-	AddStringFlag(cmdDataSourceAdd, "crawling-option", "", "", "The crawling option of the Knowledge Base.")
-	AddBoolFlag(cmdDataSourceAdd, "embed-media", "", false, "The embed media option of the Knowledge Base.")
-	AddStringFlag(cmdDataSourceAdd, "database-id", "", "", "The database ID of the Knowledge Base.")
-	AddStringSliceFlag(cmdDataSourceAdd, "tags", "", []string{}, "The tags of the Knowledge Base. Example: --tags tag1,tag2,tag3")
-	AddStringFlag(cmdDataSourceAdd, "uuid", "", "", "The UUID of the Knowledge Base.")
+	cmdDataSourceAdd.Example = "The following example retrieves information about a Data Sources either with Spaces or Webcrawler with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		" : `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+	AddStringFlag(cmdDataSourceAdd, "bucket-name", "", "", "The bucket name of data source from Spaces")
+	AddStringFlag(cmdDataSourceAdd, "item-path", "", "", "Item path of data source from Spaces")
+	AddStringFlag(cmdDataSourceAdd, "region", "", "", "The region of the data source.")
+	AddStringFlag(cmdDataSourceAdd, "base-url", "", "", "The base URL of the web crawler data source.")
+	AddStringFlag(cmdDataSourceAdd, "crawling-option", "", "", "The crawling option of the web crawler data source.")
+	AddBoolFlag(cmdDataSourceAdd, "embed-media", "", false, "The embed media option of the web crawler data source.")
 
 	cmdDataSourcesDeleteDetail := "Delete a datasource for knowledge base using its id."
 	cmdDataSourceDelete := CmdBuilder(
@@ -154,9 +152,10 @@ func KnowledgeBase() *Command {
 		"delete-datasource <knowledge-base-uuid> <data-source-id>",
 		"Delete a datasource for knowledge base.",
 		cmdDataSourcesDeleteDetail,
-		Writer, aliasOpt("g-ds"),
+		Writer, aliasOpt("d-ds"),
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
+	AddBoolFlag(cmdDataSourceDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the datasource for knowledge base without a confirmation prompt")
 	cmdDataSourceDelete.Example = "The following example deletes Data Sources like " + `00000000-0000-0000-0000-000000000000` + " from a Knowledge Base Id " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		" : `doctl genai knowledge-base delete-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 00000000-0000-0000-0000-000000000000`"
 
@@ -199,6 +198,9 @@ func RunKnowledgeBasesList(c *CmdConfig) error {
 }
 
 func RunKnowledgeBaseGet(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
 	knowledgeBase, err := c.GenAI().GetKnowledgeBase(c.Args[0])
 	if err != nil {
 		return err
@@ -247,10 +249,10 @@ func RunKnowledgeBaseCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("dataSourceArray : %s", dataSourceArray)
+
 	var dataSources []godo.KnowledgeBaseDataSource
 	if err := json.Unmarshal([]byte(dataSourceArray), &dataSources); err != nil {
-		return err
+		return fmt.Errorf("failed to parse data sources: %w", err)
 	}
 
 	req := &godo.KnowledgeBaseCreateRequest{
@@ -272,6 +274,9 @@ func RunKnowledgeBaseCreate(c *CmdConfig) error {
 }
 
 func RunKnowledgeBaseUpdate(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
 	name, err := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseName)
 	if err != nil {
 		return err
@@ -318,11 +323,32 @@ func RunKnowledgeBaseUpdate(c *CmdConfig) error {
 }
 
 func RunKnowledgeBaseDelete(c *CmdConfig) error {
-	err := c.GenAI().DeleteKnowledgebase(c.Args[0])
-	return err
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	knowledgeBaseId := c.Args[0]
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("Knowledge Base", 1) == nil {
+		err := c.GenAI().DeleteKnowledgebase(knowledgeBaseId)
+		if err != nil {
+			return err
+		}
+		notice("Agent deleted successfully")
+	} else {
+		return fmt.Errorf("operation aborted")
+	}
+	return nil
 }
 
 func RunKnowledgeBaseListDataSources(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
 	knowledgeBaseDataSource, err := c.GenAI().ListKnowledgeBaseDataSources(c.Args[0])
 	if err != nil {
 		return err
@@ -330,10 +356,37 @@ func RunKnowledgeBaseListDataSources(c *CmdConfig) error {
 	return c.Display(&displayers.KnowledgeBaseDataSource{KnowledgeBaseDataSources: knowledgeBaseDataSource})
 }
 
-func RunKnowledgeBaseAddDataSources(c *CmdConfig) error {
+func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	region, _ := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseRegion)
+	bucketName, _ := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseBucketName)
+	itemPath, _ := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseItemPath)
+	baseUrl, _ := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseBaseURL)
+	crawlingOption, _ := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseCrawlingOption)
+	baseEmbedMedia, _ := c.Doit.GetBool(c.NS, doctl.ArgKnowledgeBaseEmbedMedia)
+
 	req := &godo.AddDataSourceRequest{
 		KnowledgeBaseUUID: c.Args[0],
 	}
+	if bucketName != "" || itemPath != "" || region != "" {
+		spacesDataSource := &godo.SpacesDataSource{
+			BucketName: bucketName,
+			ItemPath:   itemPath,
+			Region:     region,
+		}
+		req.SpacesDataSource = spacesDataSource
+	} else if baseUrl != "" || crawlingOption != "" {
+		webCrawlerDataSource := &godo.WebCrawlerDataSource{
+			BaseUrl:        baseUrl,
+			CrawlingOption: crawlingOption,
+			EmbedMedia:     baseEmbedMedia,
+		}
+		req.WebCrawlerDataSource = webCrawlerDataSource
+	}
+
 	knowledgeBaseDataSource, err := c.GenAI().AddKnowledgeBaseDataSource(c.Args[0], req)
 	if err != nil {
 		return err
@@ -342,11 +395,31 @@ func RunKnowledgeBaseAddDataSources(c *CmdConfig) error {
 }
 
 func RunKnowledgeBaseDeleteDataSource(c *CmdConfig) error {
-	err := c.GenAI().DeleteKnowledgeBaseDataSource(c.Args[0], c.Args[1])
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("DataSource of Knowledge Base", 1) == nil {
+		err := c.GenAI().DeleteKnowledgeBaseDataSource(c.Args[0], c.Args[1])
+		if err != nil {
+			return err
+		}
+		notice("DataSource of Knowledge Base deleted successfully")
+	} else {
+		return fmt.Errorf("operation aborted")
+	}
+
 	return err
 }
 
 func RunAttachKnowledgeBase(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
 	agent, err := c.GenAI().AttachKnowledgebase(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
@@ -355,6 +428,9 @@ func RunAttachKnowledgeBase(c *CmdConfig) error {
 }
 
 func RunDetachKnowledgeBase(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
 	agent, err := c.GenAI().DetachKnowledgebase(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
