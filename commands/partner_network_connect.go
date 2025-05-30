@@ -69,21 +69,23 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 	AddIntFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPAuthKey, "", "", "BGP Auth Key")
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentRedundancyZone, "", "", "Redundancy Zone (optional)")
 	cmdPartnerAttachmentCreate.Example = `The following example creates a Partner Attachment: doctl network connect create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	partnerAttachmentDetails := `
-- The Partner Attachment Connect ID
-- The Partner Attachment Connect Name
-- The Partner Attachment Connect State
-- The Partner Attachment Connect Connection Bandwidth in Mbps
-- The Partner Attachment Connect Region
-- The Partner Attachment Connect NaaS Provider
-- The Partner Attachment Connect VPC network IDs
-- The Partner Attachment Connect creation date, in ISO8601 combined date and time format
-- The Partner Attachment Connect BGP Local ASN
-- The Partner Attachment Connect BGP Local Router IP
-- The Partner Attachment Connect BGP Peer ASN
-- The Partner Attachment Connect BGP Peer Router IP`
+- The Partner Attachment ID
+- The Partner Attachment Name
+- The Partner Attachment State
+- The Partner Attachment Connection Bandwidth in Mbps
+- The Partner Attachment Region
+- The Partner Attachment NaaS Provider
+- The Partner Attachment VPC network IDs
+- The Partner Attachment creation date, in ISO8601 combined date and time format
+- The Partner Attachment BGP Local ASN
+- The Partner Attachment BGP Local Router IP
+- The Partner Attachment BGP Peer ASN
+- The Partner Attachment BGP Peer Router IP
+- The Partner Attachment Redundancy Zone`
 
 	cmdPartnerAttachmentGet := CmdBuilder(cmd, RunPartnerAttachmentGet, "get <partner-attachment-id>",
 		"Retrieves a Partner Attachment",
@@ -245,8 +247,15 @@ func RunPartnerAttachmentCreate(c *CmdConfig) error {
 
 	bgpAuthKey, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentBGPAuthKey)
 	if err != nil {
-		bgpConfig.AuthKey = bgpAuthKey
+		return err
 	}
+	bgpConfig.AuthKey = bgpAuthKey
+
+	redundancyZone, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentRedundancyZone)
+	if err != nil {
+		return err
+	}
+	r.RedundancyZone = redundancyZone
 
 	pas := c.PartnerAttachments()
 	pa, err := pas.Create(r)
