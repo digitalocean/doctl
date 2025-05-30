@@ -295,6 +295,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
 		"The unneed time for the cluster autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down. To set the scale-down-unneeded-time to a minute and 30 seconds for example, pass the string '1m30s'.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerExpanders, "", nil,
+		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this flag is empty, autoscaler will use its default expanders.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
@@ -351,6 +353,8 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
 		"The unneed time for the cluster autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down. To set the scale-down-unneeded-time to a minute and 30 seconds for example, pass the string '1m30s'.")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerExpanders, "", nil,
+		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this value is empty, autoscaler will use its default expanders. To unset expander customization, pass an empty string.")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
 		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
@@ -1733,7 +1737,15 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
 	}
 
-	if thresholdStr != "" || unneededTime != "" {
+	expanders, expandersAreSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgClusterAutoscalerExpanders)
+	if err != nil {
+		return err
+	}
+	if expandersAreSet {
+		clusterAutoscalerConfiguration.Expanders = expanders
+	}
+
+	if thresholdStr != "" || unneededTime != "" || expandersAreSet {
 		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
 	}
 
@@ -1882,7 +1894,15 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
 	}
 
-	if thresholdStr != "" || unneededTime != "" {
+	expanders, expandersAreSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgClusterAutoscalerExpanders)
+	if err != nil {
+		return err
+	}
+	if expandersAreSet {
+		clusterAutoscalerConfiguration.Expanders = expanders
+	}
+
+	if thresholdStr != "" || unneededTime != "" || expandersAreSet {
 		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
 	}
 

@@ -106,7 +106,8 @@ var (
 		},
 		"cluster_autoscaler_configuration": {
     		"scale_down_utilization_threshold": 0.5,
-    		"scale_down_unneeded_time": "1m30s"
+    		"scale_down_unneeded_time": "1m30s",
+			"expanders": ["priority", "random"]
     	},
 		"created_at": "2018-11-15T16:00:11Z",
 		"updated_at": "2018-11-15T16:00:11Z"
@@ -115,7 +116,8 @@ var (
 }
 `
 
-	k8sGetOutput = `ID                 Name               Region    Version              Auto Upgrade    HA Control Plane    Status     Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags          Created At                       Updated At                       Node Pools       Autoscaler Scale Down Utilization    Autoscaler Scale Down Unneeded Time    Routing Agent
-some-cluster-id    some-cluster-id    nyc3      some-kube-version    true            false               running                                                            production    2018-11-15 16:00:11 +0000 UTC    2018-11-15 16:00:11 +0000 UTC    frontend-pool    50%                                  1m30s                                  false
+	k8sGetOutput = `
+ID                 Name               Region    Version              Auto Upgrade    HA Control Plane    Status     Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags          Created At                       Updated At                       Node Pools       Autoscaler Scale Down Utilization    Autoscaler Scale Down Unneeded Time    Autoscaler Custom Expanders    Routing Agent
+some-cluster-id    some-cluster-id    nyc3      some-kube-version    true            false               running                                                            production    2018-11-15 16:00:11 +0000 UTC    2018-11-15 16:00:11 +0000 UTC    frontend-pool    50%                                  1m30s                                  priority, random               false
 `
 )
