@@ -50,6 +50,7 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"NodePools",
 		"Autoscaler.UtilizationThreshold",
 		"Autoscaler.UnneededTime",
+		"Autoscaler.Expanders",
 		"RoutingAgent",
 	}
 }
@@ -84,6 +85,7 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		"NodePools":                       "Node Pools",
 		"Autoscaler.UtilizationThreshold": "Autoscaler Scale Down Utilization",
 		"Autoscaler.UnneededTime":         "Autoscaler Scale Down Unneeded Time",
+		"Autoscaler.Expanders":            "Autoscaler Custom Expanders",
 		"RoutingAgent":                    "Routing Agent",
 	}
 }
@@ -119,6 +121,7 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 			"NodePools":                       strings.Join(nodePools, " "),
 			"Autoscaler.UtilizationThreshold": "",
 			"Autoscaler.UnneededTime":         "",
+			"Autoscaler.Expanders":            "",
 			"RoutingAgent":                    cluster.RoutingAgent != nil && *cluster.RoutingAgent.Enabled,
 		}
 
@@ -128,6 +131,9 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 			}
 			if cluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime != nil {
 				o["Autoscaler.UnneededTime"] = *cfg.ScaleDownUnneededTime
+			}
+			if cluster.ClusterAutoscalerConfiguration.Expanders != nil {
+				o["Autoscaler.Expanders"] = strings.Join(cfg.Expanders, ", ")
 			}
 		}
 
