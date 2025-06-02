@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.150.0] - 2025-05-29
+
+- #844 - @thearyanahmed - Add App Platform Edge Control settings
+
 ## [v1.149.0] - 2025-05-27
 
 - #839 - @asaha2 - Rename as vpc nat gateways

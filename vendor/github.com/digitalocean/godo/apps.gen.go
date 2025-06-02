@@ -602,6 +602,12 @@ type AppSpec struct {
 	Egress      *AppEgressSpec      `json:"egress,omitempty"`
 	Features    []string            `json:"features,omitempty"`
 	Maintenance *AppMaintenanceSpec `json:"maintenance,omitempty"`
+	// Specification to disable edge (CDN) cache for all domains of the app. Note that this feature is in private preview.
+	DisableEdgeCache bool `json:"disable_edge_cache,omitempty"`
+	// Specification to disable email obfuscation.
+	DisableEmailObfuscation bool `json:"disable_email_obfuscation,omitempty"`
+	// Specification to enable enhanced threat control mode, which takes necessary steps to prevent layer 7 DDoS for all domains of the app. Note that this feature is in private preview.
+	EnhancedThreatControlEnabled bool `json:"enhanced_threat_control_enabled,omitempty"`
 }
 
 // AppStaticSiteSpec struct for AppStaticSiteSpec
