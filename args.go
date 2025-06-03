@@ -128,6 +128,8 @@ const (
 	ArgClusterAutoscalerScaleDownUtilizationThreshold = "scale-down-utilization-threshold"
 	// ArgClusterAutoscalerScaleDownUnneededTime is the cluster autoscaler scale down unneeded time
 	ArgClusterAutoscalerScaleDownUnneededTime = "scale-down-unneeded-time"
+	// ArgClusterAutoscalerExpanders customizes the expanders used by the cluster autoscaler to scale up the cluster.
+	ArgClusterAutoscalerExpanders = "expanders"
 	// ArgEnableRoutingAgent enables the routing-agent cluster plugin.
 	ArgEnableRoutingAgent = "enable-routing-agent"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
@@ -551,6 +553,8 @@ const (
 	ArgPartnerAttachmentBGPPeerRouterIP = "bgp-peer-router-ip"
 	// ArgPartnerAttachmentBGPAuthKey is the BGP MD5 authentication key
 	ArgPartnerAttachmentBGPAuthKey = "bgp-auth-key"
+	// ArgPartnerAttachmentRedundancyZone is the redundancy zone of the Partner Attachment
+	ArgPartnerAttachmentRedundancyZone = "redundancy-zone"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"

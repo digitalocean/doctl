@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.148.0"
+	libraryVersion = "1.150.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -66,7 +66,7 @@ type Client struct {
 	Droplets            DropletsService
 	DropletActions      DropletActionsService
 	DropletAutoscale    DropletAutoscaleService
-	EgressGateways      EgressGatewaysService
+	VPCNATGateways      VPCNATGatewaysService
 	Firewalls           FirewallsService
 	FloatingIPs         FloatingIPsService
 	FloatingIPActions   FloatingIPActionsService
@@ -96,6 +96,7 @@ type Client struct {
 	UptimeChecks        UptimeChecksService
 	VPCs                VPCsService
 	PartnerAttachment   PartnerAttachmentService
+	GenAI               AgentService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -145,6 +146,15 @@ type ListOptions struct {
 
 	// Whether App responses should include project_id fields. The field will be empty if false or if omitted. (ListApps)
 	WithProjects bool `url:"with_projects,omitempty"`
+
+	// This parameter is used to only list agents that are deployed in the response.
+	Deployed bool `url:"only_deployed,omitempty"`
+
+	// This parameter is used to include models that are publicly available.
+	PublicOnly bool `url:"public_only,omitempty"`
+
+	// This parameter is used to include models according to the use cases.
+	Usecases []string `url:"usecases,omitempty"`
 }
 
 // TokenListOptions specifies the optional parameters to various List methods that support token pagination.
@@ -294,7 +304,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Kubernetes = &KubernetesServiceOp{client: c}
 	c.LoadBalancers = &LoadBalancersServiceOp{client: c}
 	c.Monitoring = &MonitoringServiceOp{client: c}
-	c.EgressGateways = &EgressGatewaysServiceOp{client: c}
+	c.VPCNATGateways = &VPCNATGatewaysServiceOp{client: c}
 	c.OneClick = &OneClickServiceOp{client: c}
 	c.Projects = &ProjectsServiceOp{client: c}
 	c.Regions = &RegionsServiceOp{client: c}
@@ -313,6 +323,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.UptimeChecks = &UptimeChecksServiceOp{client: c}
 	c.VPCs = &VPCsServiceOp{client: c}
 	c.PartnerAttachment = &PartnerAttachmentServiceOp{client: c}
+	c.GenAI = &AgentServiceOp{client: c}
 
 	c.headers = make(map[string]string)
 
