@@ -98,7 +98,7 @@ var _ = suite("genai/knowledge-base/delete", func(t *testing.T, when spec.G, it 
 		})
 	})
 
-	when("Knowledge basedoes not exist", func() {
+	when("Knowledge base does not exist", func() {
 		it("returns a not found error", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
@@ -196,7 +196,7 @@ var _ = suite("genai/knowledge-base/delete-datasource", func(t *testing.T, when 
 				}
 
 				w.WriteHeader(http.StatusNoContent)
-			case "/v2/genai/knowledge_bases/99999999-9999-4999-8999-999999999999/data_sources/99999999-9999-4999-8999-999999999999":
+			case "/v2/gen-ai/knowledge_bases/99999999-9999-4999-8999-999999999999/data_sources/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -276,7 +276,7 @@ var _ = suite("genai/knowledge-base/delete-datasource", func(t *testing.T, when 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "Error")
+			expect.Contains(string(output), "The resource you requested could not be found")
 		})
 	})
 

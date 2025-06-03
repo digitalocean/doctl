@@ -55,7 +55,7 @@ func (v *KnowledgeBase) Cols() []string {
 
 func (v *KnowledgeBase) KV() []map[string]any {
 	if v == nil || v.KnowledgeBases == nil {
-		return nil
+		return []map[string]any{}
 	}
 	out := make([]map[string]any, 0, len(v.KnowledgeBases))
 
@@ -122,6 +122,9 @@ func (v *KnowledgeBaseDataSource) Cols() []string {
 }
 
 func (v *KnowledgeBaseDataSource) KV() []map[string]any {
+	if v == nil || v.KnowledgeBaseDataSources == nil {
+		return []map[string]any{}
+	}
 	out := make([]map[string]any, 0, len(v.KnowledgeBaseDataSources))
 
 	for _, kb := range v.KnowledgeBaseDataSources {

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("genai/knowledge-base/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -176,6 +176,34 @@ var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spe
 
 				w.WriteHeader(http.StatusCreated)
 				w.Write([]byte(knowledgeBaseAddDataSourceResponse))
+			case "/v2/gen-ai/knowledge_bases/99999999-9999-4999-8999-999999999999/data_sources":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"id":"invalid_argument","message":"failed to get authorized KB"}`))
+			case "/v2/gen-ai/knowledge_bases/99999999-9999-4999-8999-999999999998/data_sources":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"id":"invalid_argument","message":"failed to validate knowledge base datasource input"}`))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -188,7 +216,7 @@ var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spe
 	})
 
 	when("required flags are passed", func() {
-		it("creates an knowledge base", func() {
+		it("creates a data source for knowledge base", func() {
 			aliases := []string{"add-datasource", "add-ds"}
 
 			for _, alias := range aliases {
@@ -211,7 +239,7 @@ var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spe
 	})
 
 	when("optional flags are passed", func() {
-		it("creates an agent with optional fields", func() {
+		it("creates a data source for knowledge base with optional fields", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -230,24 +258,27 @@ var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spe
 		})
 	})
 
-	when("required flags are missing", func() {
-		it("returns an error when crawling option is missing", func() {
+	when("when invalid knowledge base id is passed", func() {
+		it("return an error", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
 				"knowledge-base",
 				"add-datasource",
-				"00000000-0000-4000-8000-000000000000",
+				"99999999-9999-4999-8999-999999999999",
 				"--base-url", "https://example.com",
+				"--crawling-option", "DOMAIN",
 				"--embed-media", "true",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "failed to get authorized KB")
 		})
+	})
 
+	when("required parameters are missing", func() {
 		it("returns an error when base url is missing", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
@@ -255,14 +286,14 @@ var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spe
 				"genai",
 				"knowledge-base",
 				"add-datasource",
-				"00000000-0000-4000-8000-000000000000",
+				"99999999-9999-4999-8999-999999999998",
 				"--crawling-option", "DOMAIN",
 				"--embed-media", "true",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "error")
+			expect.Contains(string(output), "failed to validate knowledge base datasource input")
 		})
 	})
 })
@@ -290,6 +321,7 @@ AddedToAgentAt    CreatedAt                        DatabaseId                   
 	}
 }
 `
+
 	knowledgeBaseAddDataSourceOutput = `
 BucketName    CreatedAt                        FileUploadDataSource    ItemPath    LastIndexingJob    Region    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
               2025-05-29 12:17:56 +0000 UTC    <nil>                               <nil>                        <nil>               2025-05-29 12:17:56 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://example.com DOMAIN true}
@@ -297,23 +329,16 @@ BucketName    CreatedAt                        FileUploadDataSource    ItemPath 
 
 	knowledgeBaseAddDataSourceResponse = `
 {
-    "knowledge_base_data_sources": [
-        {
-            "uuid": "00000000-0000-4000-8000-000000000000",
-            "created_at": "2025-05-29T12:17:56Z",
-            "updated_at": "2025-05-29T12:17:56Z",
-            "region": null,
-            "spaces_data_source": null,
-            "file_upload_data_source": null,
-            "item_path": null,
-            "last_indexing_job": null,
-            "web_crawler_data_source": {
-                "base_url": "https://example.com",
-                "crawling_option": "DOMAIN",
-                "embed_media": true
-            }
-        }
-    ]
+	"knowledge_base_data_source": {
+		"uuid": "00000000-0000-4000-8000-000000000000",
+		"created_at": "2025-05-29T12:17:56Z",
+		"updated_at": "2025-05-29T12:17:56Z",
+		"web_crawler_data_source": {
+			"base_url": "https://example.com",
+			"crawling_option": "DOMAIN",
+            "embed_media": true
+		}
+	}
 }
 `
 )

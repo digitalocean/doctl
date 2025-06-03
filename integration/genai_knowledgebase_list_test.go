@@ -173,7 +173,8 @@ BucketName    CreatedAt                        FileUploadDataSource    ItemPath 
 			"updated_at": "2025-05-29T10:49:50Z",
 			"web_crawler_data_source": {
 				"base_url": "https://docs.digitalocean.com/data_source",
-				"crawling_option": "DOMAIN"
+				"crawling_option": "DOMAIN",
+				"embed_media":false
 			}
 		}
 	]

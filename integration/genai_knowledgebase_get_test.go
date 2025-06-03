@@ -84,7 +84,7 @@ var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spe
 		})
 	})
 
-	when("invalid knowledge base id is passed", func() {
+	when("knowledge base id is not passed", func() {
 		it("returns an error", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
@@ -96,7 +96,7 @@ var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing")
+			expect.Contains(string(output), "command is missing required arguments")
 		})
 	})
 
@@ -125,11 +125,12 @@ var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spe
 				"genai",
 				"knowledge-base",
 				"get",
-				"99999999-9999-4999-8999-99999999",
+				"99999999-9999-4999-8999-999999999999",
 			)
 
-			_, err := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 			expect.Error(err)
+			expect.Contains(string(output), "The resource you requested could not be found")
 		})
 	})
 })

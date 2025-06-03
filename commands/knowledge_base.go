@@ -379,7 +379,7 @@ func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
 			Region:     region,
 		}
 		req.SpacesDataSource = spacesDataSource
-	} else if baseUrl != "" || crawlingOption != "" {
+	} else if baseUrl != "" {
 		webCrawlerDataSource := &godo.WebCrawlerDataSource{
 			BaseUrl:        baseUrl,
 			CrawlingOption: crawlingOption,
