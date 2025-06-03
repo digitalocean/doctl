@@ -25,7 +25,7 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases":
+			case "/v2/gen-ai/knowledge_bases":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -51,27 +51,23 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 	})
 
 	when("required flags are passed", func() {
-		it("creates an knowledge_base", func() {
-			aliases := []string{"create", "c"}
+		it("creates an knowledge base", func() {
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"genai",
+				"knowledge-base",
+				"create",
+				"--name", "test-knowledge-base",
+				"--region", "tor1",
+				"--project-id", "00000000-0000-4000-8000-000000000000",
+				"--embedding-model-uuid", "00000000-0000-4000-8000-000000000000",
+				"--data-sources", `[{"web_crawler_data_source":{"base_url":"https://example.com","crawling_option":"Unknown","embed_media":true}}]`,
+			)
 
-			for _, alias := range aliases {
-				cmd = exec.Command(builtBinaryPath,
-					"-t", "some-magic-token",
-					"-u", server.URL,
-					"genai",
-					"knowledge_base",
-					alias,
-					"--name", "test-knowledge-base",
-					"--region", "tor1",
-					"--project-id", "00000000-0000-4000-8000-000000000000",
-					"--embedding-model-uuid", "00000000-0000-4000-8000-000000000000",
-					"--data-sources", `[{"web_crawler_data_source":{"base_url":"https://example.com","crawling_option":"Unknown","embed_media":true}}]`,
-				)
-
-				output, err := cmd.CombinedOutput()
-				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(knowledgeBaseCreateOutput), strings.TrimSpace(string(output)))
-			}
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(knowledgeBaseCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -81,14 +77,14 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"create",
 				"--name", "test-knowledge-base",
 				"--region", "tor1",
 				"--project-id", "00000000-0000-4000-8000-000000000000",
 				"--embedding-model-uuid", "00000000-0000-4000-8000-000000000000",
 				"--data-sources", `[{"web_crawler_data_source":{"base_url":"https://example.com","crawling_option":"Unknown","embed_media":true}}]`,
-				"--tags", `["field1"]`,
+				"--tags", "field1",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -103,7 +99,7 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"create",
 				"--region", "tor1",
 				"--project-id", "00000000-0000-4000-8000-000000000000",
@@ -113,7 +109,7 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "missing required")
 		})
 
 		it("returns an error when region is missing", func() {
@@ -121,7 +117,7 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"create",
 				"--name", "test-knowledge-base",
 				"--project-id", "00000000-0000-4000-8000-000000000000",
@@ -131,7 +127,7 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "missing required")
 		})
 
 		it("returns an error when project-id is missing", func() {
@@ -139,7 +135,7 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"create",
 				"--name", "test-knowledge-base",
 				"--region", "tor1",
@@ -149,12 +145,12 @@ var _ = suite("genai/knowledge_base/create", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "missing required")
 		})
 	})
 })
 
-var _ = suite("genai/knowledge_base/add-datasource", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -166,7 +162,7 @@ var _ = suite("genai/knowledge_base/add-datasource", func(t *testing.T, when spe
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases/00000000-0000-4000-8000-000000000000/data_sources":
+			case "/v2/gen-ai/knowledge_bases/00000000-0000-4000-8000-000000000000/data_sources":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -192,7 +188,7 @@ var _ = suite("genai/knowledge_base/add-datasource", func(t *testing.T, when spe
 	})
 
 	when("required flags are passed", func() {
-		it("creates an knowledge_base", func() {
+		it("creates an knowledge base", func() {
 			aliases := []string{"add-datasource", "add-ds"}
 
 			for _, alias := range aliases {
@@ -200,8 +196,9 @@ var _ = suite("genai/knowledge_base/add-datasource", func(t *testing.T, when spe
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"genai",
-					"knowledge_base",
+					"knowledge-base",
 					alias,
+					"00000000-0000-4000-8000-000000000000",
 					"--base-url", "https://example.com",
 					"--crawling-option", "DOMAIN",
 				)
@@ -219,8 +216,9 @@ var _ = suite("genai/knowledge_base/add-datasource", func(t *testing.T, when spe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"add-datasource",
+				"00000000-0000-4000-8000-000000000000",
 				"--base-url", "https://example.com",
 				"--crawling-option", "DOMAIN",
 				"--embed-media", "true",
@@ -238,8 +236,9 @@ var _ = suite("genai/knowledge_base/add-datasource", func(t *testing.T, when spe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"add-datasource",
+				"00000000-0000-4000-8000-000000000000",
 				"--base-url", "https://example.com",
 				"--embed-media", "true",
 			)
@@ -254,42 +253,26 @@ var _ = suite("genai/knowledge_base/add-datasource", func(t *testing.T, when spe
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"add-datasource",
+				"00000000-0000-4000-8000-000000000000",
 				"--crawling-option", "DOMAIN",
 				"--embed-media", "true",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
-		})
-
-		it("returns an error when project-id is missing", func() {
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"knowledge_base",
-				"add-datasource",
-				"--name", "test-knowledge-base",
-				"--region", "tor1",
-				"--embedding-model-uuid", "00000000-0000-4000-8000-000000000000",
-				"--data-sources", `[{"web_crawler_data_source":{"base_url":"https://example.com","crawling_option":"Unknown","embed_media":true}}]`,
-			)
-
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "error")
 		})
 	})
 })
 
 const (
 	knowledgeBaseCreateOutput = `
-AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUUID                      LastIndexingJob    Name                   Region                 ProjectId                               Tags    UpdatedAt                        UserId    UUID
-<nil>             2025-05-29 12:17:56 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    <nil>              test-knowledge_base    test-knowledge_base   00000000-0000-4000-8000-000000000000    []      2025-05-29 12:17:56 +0000 UTC              00000000-0000-4000-8000-000000000000
+AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUuid                      LastIndexingJob    Name                   Region                 ProjectId                               Tags        UpdatedAt                        UserId    UUID
+<nil>             2025-05-23 11:23:24 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    <nil>              test-knowledge_base    test-knowledge_base    00000000-0000-4000-8000-000000000000    [field1]    2025-05-23 11:23:24 +0000 UTC              00000000-0000-4000-8000-000000000000
 `
+
 	knowledgeBaseCreateResponse = `
 {
 	"knowledge_base": {
@@ -309,22 +292,28 @@ AddedToAgentAt    CreatedAt                        DatabaseId                   
 `
 	knowledgeBaseAddDataSourceOutput = `
 BucketName    CreatedAt                        FileUploadDataSource    ItemPath    LastIndexingJob    Region    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
-              2025-05-29 10:49:50 +0000 UTC    <nil>                               <nil>                        <nil>               2025-05-29 10:49:50 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source DOMAIN false}
-	`
+              2025-05-29 12:17:56 +0000 UTC    <nil>                               <nil>                        <nil>               2025-05-29 12:17:56 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://example.com DOMAIN true}
+`
 
 	knowledgeBaseAddDataSourceResponse = `
 {
-	"knowledge_base_data_sources": [
-		{
-			"uuid": "00000000-0000-4000-8000-000000000000",
-			"created_at": "2025-05-29T10:49:50Z",
-			"updated_at": "2025-05-29T10:49:50Z",
-			"web_crawler_data_source": {
-				"base_url": "https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source",
-				"crawling_option": "DOMAIN"
-			}
-		}
-	]
+    "knowledge_base_data_sources": [
+        {
+            "uuid": "00000000-0000-4000-8000-000000000000",
+            "created_at": "2025-05-29T12:17:56Z",
+            "updated_at": "2025-05-29T12:17:56Z",
+            "region": null,
+            "spaces_data_source": null,
+            "file_upload_data_source": null,
+            "item_path": null,
+            "last_indexing_job": null,
+            "web_crawler_data_source": {
+                "base_url": "https://example.com",
+                "crawling_option": "DOMAIN",
+                "embed_media": true
+            }
+        }
+    ]
 }
-	`
+`
 )

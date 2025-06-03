@@ -25,7 +25,7 @@ var _ = suite("genai/knowledgebase/list", func(t *testing.T, when spec.G, it spe
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases":
+			case "/v2/gen-ai/knowledge_bases":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -58,7 +58,7 @@ var _ = suite("genai/knowledgebase/list", func(t *testing.T, when spec.G, it spe
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"genai",
-					"knowledge_bases",
+					"knowledge-base",
 					alias,
 				)
 
@@ -82,7 +82,7 @@ var _ = suite("genai/knowledgebase/list-datasource", func(t *testing.T, when spe
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases/00000000-0000-4000-8000-000000000000/data_sources":
+			case "/v2/gen-ai/knowledge_bases/00000000-0000-4000-8000-000000000000/data_sources":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -115,13 +115,14 @@ var _ = suite("genai/knowledgebase/list-datasource", func(t *testing.T, when spe
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"genai",
-					"knowledge_bases",
+					"knowledge-base",
 					alias,
+					"00000000-0000-4000-8000-000000000000",
 				)
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(knowledgeBaseListOutput), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace(knowledgeBaseListDataSourceOutput), strings.TrimSpace(string(output)))
 			}
 		})
 	})
@@ -129,9 +130,8 @@ var _ = suite("genai/knowledgebase/list-datasource", func(t *testing.T, when spe
 
 const (
 	knowledgeBaseListOutput = `
-AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUUID                      LastIndexingJob                                                                                                                                                                                                                            Name                              Region                            ProjectId                               Tags                   UpdatedAt                        UserId    UUID
-<nil>             2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    &{0 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 0 0 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    deka-knowledge_base               deka-knowledge_base               00000000-0000-4000-8000-000000000000    []                     2025-05-29 09:12:33 +0000 UTC              00000000-0000-4000-8000-000000000000
-
+AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUuid                      LastIndexingJob                                                                                                                                                                                                                            Name                   Region                 ProjectId                               Tags    UpdatedAt                        UserId    UUID
+<nil>             2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    &{0 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 0 0 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    deka-knowledge_base    deka-knowledge_base    00000000-0000-4000-8000-000000000000    []      2025-05-29 09:12:33 +0000 UTC              00000000-0000-4000-8000-000000000000
 `
 
 	knowledgeBaseListResponse = `
@@ -160,9 +160,9 @@ AddedToAgentAt    CreatedAt                        DatabaseId                   
 }
 `
 	knowledgeBaseListDataSourceOutput = `
-BucketName    CreatedAt                        FileUploadDataSource    ItemPath    LastIndexingJob                                                                                                                                                                                                                            Region    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
-			2025-05-29 10:49:50 +0000 UTC    <nil>                               <nil>                                                                                                                                                                                                                                                <nil>               2025-05-29 10:49:50 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source DOMAIN false}
-			`
+BucketName    CreatedAt                        FileUploadDataSource    ItemPath    LastIndexingJob    Region    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
+              2025-05-29 10:49:50 +0000 UTC    <nil>                               <nil>                        <nil>               2025-05-29 10:49:50 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://docs.digitalocean.com/data_source DOMAIN false}
+`
 
 	knowledgeBaseListDataSourceResponse = `
 {
@@ -172,7 +172,7 @@ BucketName    CreatedAt                        FileUploadDataSource    ItemPath 
 			"created_at": "2025-05-29T10:49:50Z",
 			"updated_at": "2025-05-29T10:49:50Z",
 			"web_crawler_data_source": {
-				"base_url": "https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source",
+				"base_url": "https://docs.digitalocean.com/data_source",
 				"crawling_option": "DOMAIN"
 			}
 		}

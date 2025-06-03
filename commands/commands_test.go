@@ -369,7 +369,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OAuth:              func() do.OAuthService { return tm.oauth },
 		PartnerAttachments: func() do.PartnerAttachmentsService { return tm.partnerAttachments },
 		SpacesKeys:         func() do.SpacesKeysService { return tm.spacesKeys },
-		GenAI:              func() do.GenAIAgentService { return tm.genai },
+		GenAI:              func() do.GenAIService { return tm.genai },
 	}
 
 	tFn(config, tm)

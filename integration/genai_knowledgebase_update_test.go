@@ -25,7 +25,7 @@ var _ = suite("genai/knowledge-bases", func(t *testing.T, when spec.G, it spec.S
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/knowledge_bases/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -38,7 +38,7 @@ var _ = suite("genai/knowledge-bases", func(t *testing.T, when spec.G, it spec.S
 				}
 
 				w.Write([]byte(knowledgeBasesUpdateResponse))
-			case "/v2/genai/knowledge_bases/99999999-9999-4999-8999-999999999999":
+			case "/v2/gen-ai/knowledge_bases/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -82,14 +82,14 @@ var _ = suite("genai/knowledge-bases", func(t *testing.T, when spec.G, it spec.S
 				)
 
 				output, err := cmd.CombinedOutput()
-				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.NoError(err, fmt.Sprintf("received error output: %s", string(output)))
 				expect.Equal(strings.TrimSpace(knowledgeBasesUpdateOutput), strings.TrimSpace(string(output)))
 			}
 		})
 	})
 
 	when("all update fields are provided", func() {
-		it("updates the agent with all fields", func() {
+		it("updates the knowledge base with all fields", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -98,7 +98,10 @@ var _ = suite("genai/knowledge-bases", func(t *testing.T, when spec.G, it spec.S
 				"update",
 				"00000000-0000-4000-8000-000000000000",
 				"--name", "updated-agent",
-				"--description", "updated description",
+				"--tags", "updated,description",
+				"--embedding-model-uuid", "00000000-0000-4000-8000-000000000000",
+				"--project-id", "00000000-0000-4000-8000-000000000000",
+				"--database-id", "00000000-0000-4000-8000-000000000000",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -154,7 +157,7 @@ var _ = suite("genai/knowledge-bases", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "404")
+			expect.Contains(string(output), "failed to get knowledge base")
 		})
 	})
 
@@ -179,8 +182,8 @@ var _ = suite("genai/knowledge-bases", func(t *testing.T, when spec.G, it spec.S
 
 const (
 	knowledgeBasesUpdateOutput = `
-AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUUID                      LastIndexingJob                                                                                                                                                                                                                               Name                 Region               ProjectId                               Tags           UpdatedAt                        UserId    UUID
-<nil>             2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    &{1 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 1750 1 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    My Knowledge Base    My Knowledge Base    00000000-0000-4000-8000-000000000000    [tag1 tag2]    2025-05-29 14:29:23 +0000 UTC              00000000-0000-4000-8000-000000000000
+AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUuid                      LastIndexingJob                                                                                                                                                                                                                               Name                 Region               ProjectId                               Tags                UpdatedAt                        UserId    UUID
+<nil>             2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    &{1 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 1750 1 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    My Knowledge Base    My Knowledge Base    00000000-0000-4000-8000-000000000000    [example string]    2025-05-29 14:27:15 +0000 UTC              00000000-0000-4000-8000-000000000000
 `
 	knowledgeBasesUpdateResponse = `
 {

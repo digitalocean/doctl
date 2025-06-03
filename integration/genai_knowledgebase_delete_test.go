@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("genai/knowledge-base/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -24,7 +24,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases/delete/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/knowledge_bases/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -37,7 +37,8 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 				}
 
 				w.WriteHeader(http.StatusNoContent)
-			case "/v2/genai/knowledge_bases/delete/99999999-9999-4999-8999-999999999999":
+				w.Write([]byte(`{"message":"Knowledge Base deleted successfully"}`))
+			case "/v2/gen-ai/knowledge_bases/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -64,23 +65,19 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 	when("valid knowledge base ID is provided with force flag", func() {
 		it("deletes the knowledge-base", func() {
-			aliases := []string{"delete", "del", "rm"}
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"genai",
+				"knowledge-base",
+				"delete",
+				"00000000-0000-4000-8000-000000000000",
+				"--force",
+			)
 
-			for _, alias := range aliases {
-				cmd = exec.Command(builtBinaryPath,
-					"-t", "some-magic-token",
-					"-u", server.URL,
-					"genai",
-					"knowledge-base",
-					alias,
-					"00000000-0000-4000-8000-000000000000",
-					"--force",
-				)
-
-				output, err := cmd.CombinedOutput()
-				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Contains(string(output), " deleted successfully")
-			}
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Contains(string(output), "deleted successfully")
 		})
 	})
 
@@ -115,7 +112,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "404")
+			expect.Contains(string(output), "The resource you requested could not be found")
 		})
 	})
 
@@ -169,12 +166,12 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "connection")
+			expect.Contains(string(output), "no such host")
 		})
 	})
 })
 
-var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("genai/knowledge-base/delete-datasource", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -186,7 +183,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases/00000000-0000-4000-8000-000000000000/data_sources/00000000-0000-4000-8000-000000000000/":
+			case "/v2/gen-ai/knowledge_bases/00000000-0000-4000-8000-000000000000/data_sources/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -199,7 +196,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 				}
 
 				w.WriteHeader(http.StatusNoContent)
-			case "/v2/genai/knowledge_bases/99999999-9999-4999-8999-999999999999/data_sources/99999999-9999-4999-8999-999999999999/":
+			case "/v2/genai/knowledge_bases/99999999-9999-4999-8999-999999999999/data_sources/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -226,7 +223,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 	when("valid knowledge bases and data source ID is provided with force flag", func() {
 		it("deletes the data source from a knowledge base", func() {
-			aliases := []string{"delete", "del", "rm"}
+			aliases := []string{"delete-datasource", "d-ds"}
 
 			for _, alias := range aliases {
 				cmd = exec.Command(builtBinaryPath,
@@ -254,7 +251,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 				"-u", server.URL,
 				"genai",
 				"knowledge-base",
-				"delete",
+				"delete-datasource",
 				"--force",
 			)
 
@@ -271,7 +268,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 				"-u", server.URL,
 				"genai",
 				"knowledge-base",
-				"delete",
+				"delete-datasource",
 				"99999999-9999-4999-8999-999999999999",
 				"99999999-9999-4999-8999-999999999999",
 				"--force",
@@ -279,7 +276,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "404")
+			expect.Contains(string(output), "Error")
 		})
 	})
 
@@ -290,7 +287,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 				"-u", server.URL,
 				"genai",
 				"knowledge-base",
-				"delete",
+				"delete-datasource",
 				"00000000-0000-4000-8000-000000000000",
 				"00000000-0000-4000-8000-000000000000",
 			)
@@ -309,7 +306,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 				"-u", server.URL,
 				"genai",
 				"knowledge-base",
-				"delete",
+				"delete-datasource",
 				"00000000-0000-4000-8000-000000000000",
 				"00000000-0000-4000-8000-000000000000",
 				"-f",
@@ -317,7 +314,7 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Contains(string(output), "Agent deleted successfully")
+			expect.Contains(string(output), "DataSource of Knowledge Base deleted successfully")
 		})
 	})
 
@@ -328,15 +325,14 @@ var _ = suite("genai/knowledge_base/delete", func(t *testing.T, when spec.G, it 
 				"-u", "http://nonexistent-server.example.com",
 				"genai",
 				"knowledge-base",
-				"delete",
-				"00000000-0000-4000-8000-000000000000",
+				"delete-datasource",
 				"00000000-0000-4000-8000-000000000000",
 				"--force",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "connection")
+			expect.Contains(string(output), "error")
 		})
 	})
 })

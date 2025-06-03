@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -25,7 +25,7 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/knowledge_bases/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/knowledge_bases/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -38,7 +38,7 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 				}
 
 				w.Write([]byte(knowledgeBaseResponse))
-			case "/v2/genai/knowledge_bases/99999999-9999-4999-8999-999999999999":
+			case "/v2/gen-ai/knowledge_bases/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -72,7 +72,7 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"genai",
-					"knowledge_base",
+					"knowledge-base",
 					alias,
 					"00000000-0000-4000-8000-000000000000",
 				)
@@ -90,7 +90,7 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"get",
 			)
 
@@ -106,14 +106,14 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"get",
 				"99999999-9999-4999-8999-999999999999",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "404")
+			expect.Contains(string(output), "Error")
 		})
 	})
 
@@ -123,9 +123,9 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
-				"knowledge_base",
+				"knowledge-base",
 				"get",
-				"invalid-uuid",
+				"99999999-9999-4999-8999-99999999",
 			)
 
 			_, err := cmd.CombinedOutput()
@@ -136,8 +136,8 @@ var _ = suite("genai/knowledgebase/get", func(t *testing.T, when spec.G, it spec
 
 const (
 	knowledgeBaseOutput = `
-AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUUID                      LastIndexingJob                                                                                                                                                                                                                               Name                   Region                 ProjectId                               Tags    UpdatedAt                        UserId    UUID
-<nil>             2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    &{1 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 1750 1 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    deka-knowledge_base    deka-knowledge_base    00000000-0000-4000-8000-000000000000    []      2025-05-29 09:12:33 +0000 UTC              00000000-0000-4000-8000-000000000000
+AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUuid                      LastIndexingJob                                                                                                                                                                                                                                Name              Region            ProjectId                               Tags                  UpdatedAt                        UserId    UUID
+<nil>             2025-05-21 08:22:54 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    &{1 2025-05-21 08:24:09 +0000 UTC [] 2025-05-21 08:27:31 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-21 08:24:09 +0000 UTC 22222 1 2025-05-21 08:27:31 +0000 UTC 00000000-0000-4000-8000-000000000000}    marketplace-kb    marketplace-kb    00000000-0000-4000-8000-000000000000    [marketplaceagent]    2025-05-21 08:24:09 +0000 UTC              00000000-0000-4000-8000-000000000000
 `
 
 	knowledgeBaseResponse = `

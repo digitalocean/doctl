@@ -12,12 +12,12 @@ import (
 var (
 	testKnowledgeBase = do.KnowledgeBase{
 		KnowledgeBase: &godo.KnowledgeBase{
-			UUID:               "d35e5cb7-7957-4643-8e3a-1ab4eb3a494c",
+			Uuid:               "d35e5cb7-7957-4643-8e3a-1ab4eb3a494c",
 			Name:               "Test Knowledge Base",
 			Region:             "nyc3",
 			ProjectId:          "test-project-id",
 			DatabaseId:         "test-database-id",
-			EmbeddingModelUUID: "test-embedding-model-uuid",
+			EmbeddingModelUuid: "test-embedding-model-uuid",
 			IsPublic:           true,
 			Tags:               []string{"tag1", "tag2"},
 		},

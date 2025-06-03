@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledgebase/detach", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("genai/knowledge-base/detach", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -25,27 +25,27 @@ var _ = suite("genai/knowledgebase/detach", func(t *testing.T, when spec.G, it s
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/agents/00000000-0000-4000-8000-000000000000/knowledge-bases/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000000/knowledge_bases/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 
-				if req.Method != http.MethodGet {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				w.Write([]byte(knowledgeBaseResponse))
-			case "/v2/genai/agents/99999999-9999-4999-8999-999999999999/knowledge-bases/99999999-9999-4999-8999-999999999999":
+				w.Write([]byte(agentAttachResponse))
+			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999/knowledge_bases/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 
-				if req.Method != http.MethodGet {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
@@ -65,23 +65,39 @@ var _ = suite("genai/knowledgebase/detach", func(t *testing.T, when spec.G, it s
 
 	when("valid agent id and knowledge base id is passed", func() {
 		it("detaches the knowledge base from an agent", func() {
-			aliases := []string{"get", "g"}
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"genai",
+				"knowledge-base",
+				"detach",
+				"00000000-0000-4000-8000-000000000000",
+				"00000000-0000-4000-8000-000000000000",
+				"--force",
+			)
 
-			for _, alias := range aliases {
-				cmd = exec.Command(builtBinaryPath,
-					"-t", "some-magic-token",
-					"-u", server.URL,
-					"genai",
-					"knowledge-base",
-					alias,
-					"00000000-0000-4000-8000-000000000000",
-					"00000000-0000-4000-8000-000000000000",
-				)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Contains(strings.TrimSpace(string(output)), "Knowledge Base detached successfully")
 
-				output, err := cmd.CombinedOutput()
-				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(knowledgeBaseOutput), strings.TrimSpace(string(output)))
-			}
+		})
+	})
+
+	when("when force flag is not passed", func() {
+		it("unable to detache the knowledge base from an agent", func() {
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"genai",
+				"knowledge-base",
+				"detach",
+				"00000000-0000-4000-8000-000000000000",
+				"00000000-0000-4000-8000-000000000000",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.Error(err)
+			expect.Contains(string(output), "operation aborted")
 		})
 	})
 
@@ -95,11 +111,12 @@ var _ = suite("genai/knowledgebase/detach", func(t *testing.T, when spec.G, it s
 				"detach",
 				"99999999-9999-4999-8999-999999999999",
 				"99999999-9999-4999-8999-999999999999",
+				"--force",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing")
+			expect.Contains(string(output), "failed to unlink knowledge base")
 		})
 	})
 })

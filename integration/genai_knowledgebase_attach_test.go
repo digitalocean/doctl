@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledgebase/attach", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("genai/knowledge-base/attach", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -25,27 +25,27 @@ var _ = suite("genai/knowledgebase/attach", func(t *testing.T, when spec.G, it s
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/agents/00000000-0000-4000-8000-000000000000/knowledge-bases/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000000/knowledge_bases/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 
-				if req.Method != http.MethodGet {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				w.Write([]byte(knowledgeBaseResponse))
-			case "/v2/genai/agents/99999999-9999-4999-8999-999999999999/knowledge-bases/99999999-9999-4999-8999-999999999999":
+				w.Write([]byte(agentAttachResponse))
+			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999/knowledge_bases/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 
-				if req.Method != http.MethodGet {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
@@ -65,23 +65,19 @@ var _ = suite("genai/knowledgebase/attach", func(t *testing.T, when spec.G, it s
 
 	when("valid agent id and knowledge base id is passed", func() {
 		it("attaches the knowledge base to an agent", func() {
-			aliases := []string{"get", "g"}
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"genai",
+				"knowledge-base",
+				"attach",
+				"00000000-0000-4000-8000-000000000000",
+				"00000000-0000-4000-8000-000000000000",
+			)
 
-			for _, alias := range aliases {
-				cmd = exec.Command(builtBinaryPath,
-					"-t", "some-magic-token",
-					"-u", server.URL,
-					"genai",
-					"knowledge-base",
-					alias,
-					"00000000-0000-4000-8000-000000000000",
-					"00000000-0000-4000-8000-000000000000",
-				)
-
-				output, err := cmd.CombinedOutput()
-				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(knowledgeBaseOutput), strings.TrimSpace(string(output)))
-			}
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(agentCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -99,7 +95,28 @@ var _ = suite("genai/knowledgebase/attach", func(t *testing.T, when spec.G, it s
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing")
+			expect.Contains(string(output), "failed to link knowledge base")
 		})
 	})
 })
+
+const (
+	agentCreateOutput = `
+Name          Region    ProjectID                               CreatedAt                        UserId
+test-agent    tor1      00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    user1
+`
+
+	agentAttachResponse = `
+{
+  "agent": {
+    "uuid": "00000000-0000-4000-8000-000000000000",
+    "name": "test-agent",
+    "region": "tor1",
+    "project_id": "00000000-0000-4000-8000-000000000000",
+    "embedding_model_uuid": "00000000-0000-4000-8000-000000000000",
+    "created_at": "2023-01-01T00:00:00Z",
+    "user_id": "user1"
+  }
+}
+`
+)

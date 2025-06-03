@@ -50,7 +50,7 @@ func KnowledgeBase() *Command {
 		"create",
 		"Creates a Knowledge Base.",
 		"Creates a Knowledge Base and returns the following information of Knowledge Base, including:"+knowledgebaseDetails,
-		Writer, aliasOpt("g"),
+		Writer, aliasOpt("c"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
 	AddStringFlag(cmdKnowledgeBaseCreate, "name", "", "", "The name of the Knowledge Base.", requiredOpt())
@@ -87,7 +87,7 @@ func KnowledgeBase() *Command {
 		"update <knowledge-base-uuid>",
 		"Update a knowledge base",
 		cmdKnowledgeBasesUpdateDetail,
-		Writer, aliasOpt("ls"),
+		Writer, aliasOpt("u"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
 	AddStringFlag(cmdKnowledgeBasesUpdate, "name", "", "", "The name of the Knowledge Base.")
@@ -182,6 +182,7 @@ func KnowledgeBase() *Command {
 		Writer, aliasOpt("dth"),
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
+	AddBoolFlag(cmdDetachKnowledgeBase, doctl.ArgForce, doctl.ArgShortForce, false, "Detaches the knowledge base without a confirmation prompt")
 	cmdDetachKnowledgeBase.Example = "The following example detaches the Knowledge Base ID" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " from specific agent ID" + "`" + `f81d4fae-0000-11d0-a765-000000000000` + "`" +
 		"  `doctl genai knowledge-base detach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
@@ -338,7 +339,7 @@ func RunKnowledgeBaseDelete(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
-		notice("Agent deleted successfully")
+		notice("Knowledge Base deleted successfully")
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
@@ -431,9 +432,19 @@ func RunDetachKnowledgeBase(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	agent, err := c.GenAI().DetachKnowledgebase(c.Args[0], c.Args[1])
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.Agent{Agents: do.Agents{*agent}})
+
+	if force || AskForConfirmDelete("Detach Knowledge Base from an Agent?", 1) == nil {
+		agent, err := c.GenAI().DetachKnowledgebase(c.Args[0], c.Args[1])
+		if err != nil {
+			return err
+		}
+		notice("Knowledge Base detached successfully")
+		return c.Display(&displayers.Agent{Agents: do.Agents{*agent}})
+	} else {
+		return fmt.Errorf("operation aborted")
+	}
 }

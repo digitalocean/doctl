@@ -22,7 +22,7 @@ func (v *KnowledgeBase) ColMap() map[string]string {
 		"AddedToAgentAt":     "AddedToAgentAt",
 		"CreatedAt":          "CreatedAt",
 		"DatabaseId":         "DatabaseId",
-		"EmbeddingModelUUID": "EmbeddingModelUUID",
+		"EmbeddingModelUuid": "EmbeddingModelUuid",
 		"IsPublic":           "IsPublic",
 		"LastIndexingJob":    "LastIndexingJob",
 		"Name":               "Name",
@@ -41,7 +41,7 @@ func (v *KnowledgeBase) Cols() []string {
 		"CreatedAt",
 		"DatabaseId",
 		"IsPublic",
-		"EmbeddingModelUUID",
+		"EmbeddingModelUuid",
 		"LastIndexingJob",
 		"Name",
 		"Region",
@@ -54,6 +54,9 @@ func (v *KnowledgeBase) Cols() []string {
 }
 
 func (v *KnowledgeBase) KV() []map[string]any {
+	if v == nil || v.KnowledgeBases == nil {
+		return nil
+	}
 	out := make([]map[string]any, 0, len(v.KnowledgeBases))
 
 	for _, kb := range v.KnowledgeBases {
@@ -61,7 +64,7 @@ func (v *KnowledgeBase) KV() []map[string]any {
 			"AddedToAgentAt":     kb.AddedToAgentAt,
 			"CreatedAt":          kb.CreatedAt,
 			"DatabaseId":         kb.DatabaseId,
-			"EmbeddingModelUUID": kb.EmbeddingModelUUID,
+			"EmbeddingModelUuid": kb.EmbeddingModelUuid,
 			"IsPublic":           kb.IsPublic,
 			"LastIndexingJob":    kb.LastIndexingJob,
 			"Name":               kb.Name,
@@ -70,7 +73,7 @@ func (v *KnowledgeBase) KV() []map[string]any {
 			"Tags":               kb.Tags,
 			"UpdatedAt":          kb.UpdatedAt,
 			"UserId":             kb.UserId,
-			"UUID":               kb.UUID,
+			"UUID":               kb.Uuid,
 		}
 		out = append(out, o)
 	}

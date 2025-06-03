@@ -42,7 +42,7 @@ type KnowledgeBases []KnowledgeBase
 type KnowledgeBaseDataSources []KnowledgeBaseDataSource
 
 // AgentService is an interface for interacting with DigitalOcean's Agent API.
-type GenAIAgentService interface {
+type GenAIService interface {
 	// List() (Agents, error)
 	// Create(*godo.AgentCreateRequest) (*Agent, error)
 	// Get(agentID string) (*Agent, error)
@@ -61,21 +61,21 @@ type GenAIAgentService interface {
 	DetachKnowledgebase(agentId string, knowledgeBaseID string) (*Agent, error)
 }
 
-var _ GenAIAgentService = &agentService{}
+var _ GenAIService = &genAIService{}
 
-type agentService struct {
+type genAIService struct {
 	client *godo.Client
 }
 
 // NewAgentService builds an instance of AgentService.
-func NewGenAIAgentService(client *godo.Client) GenAIAgentService {
-	return &agentService{
+func NewGenAIService(client *godo.Client) GenAIService {
+	return &genAIService{
 		client: client,
 	}
 }
 
 // ListKnowledgeBases lists all knowledge bases for an agent.
-func (a *agentService) ListKnowledgeBases() (KnowledgeBases, error) {
+func (a *genAIService) ListKnowledgeBases() (KnowledgeBases, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := a.client.GenAI.ListKnowledgeBases(context.TODO(), opt)
 		if err != nil {
@@ -102,7 +102,7 @@ func (a *agentService) ListKnowledgeBases() (KnowledgeBases, error) {
 	return list, nil
 }
 
-func (a *agentService) GetKnowledgeBase(knowledgeBaseID string) (*KnowledgeBase, error) {
+func (a *genAIService) GetKnowledgeBase(knowledgeBaseID string) (*KnowledgeBase, error) {
 	kb, _, err := a.client.GenAI.GetKnowledgeBase(context.TODO(), knowledgeBaseID)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (a *agentService) GetKnowledgeBase(knowledgeBaseID string) (*KnowledgeBase,
 	return &KnowledgeBase{KnowledgeBase: kb}, nil
 }
 
-func (a *agentService) ListKnowledgeBaseDataSources(knowledgeBaseID string) (KnowledgeBaseDataSources, error) {
+func (a *genAIService) ListKnowledgeBaseDataSources(knowledgeBaseID string) (KnowledgeBaseDataSources, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := a.client.GenAI.ListDataSources(context.TODO(), knowledgeBaseID, opt)
 		if err != nil {
@@ -137,7 +137,7 @@ func (a *agentService) ListKnowledgeBaseDataSources(knowledgeBaseID string) (Kno
 	return list, nil
 }
 
-func (a *agentService) CreateKnowledgeBase(req *godo.KnowledgeBaseCreateRequest) (*KnowledgeBase, error) {
+func (a *genAIService) CreateKnowledgeBase(req *godo.KnowledgeBaseCreateRequest) (*KnowledgeBase, error) {
 	kb, _, err := a.client.GenAI.CreateKnowledgeBase(context.TODO(), req)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (a *agentService) CreateKnowledgeBase(req *godo.KnowledgeBaseCreateRequest)
 	return &KnowledgeBase{KnowledgeBase: kb}, nil
 }
 
-func (a *agentService) UpdateKnowledgebase(knowledgeBaseID string, req *godo.UpdateKnowledgeBaseRequest) (*KnowledgeBase, error) {
+func (a *genAIService) UpdateKnowledgebase(knowledgeBaseID string, req *godo.UpdateKnowledgeBaseRequest) (*KnowledgeBase, error) {
 	kb, _, err := a.client.GenAI.UpdateKnowledgeBase(context.TODO(), knowledgeBaseID, req)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func (a *agentService) UpdateKnowledgebase(knowledgeBaseID string, req *godo.Upd
 	return &KnowledgeBase{KnowledgeBase: kb}, nil
 }
 
-func (a *agentService) AddKnowledgeBaseDataSource(knowledgeBaseID string, req *godo.AddDataSourceRequest) (*KnowledgeBaseDataSource, error) {
+func (a *genAIService) AddKnowledgeBaseDataSource(knowledgeBaseID string, req *godo.AddDataSourceRequest) (*KnowledgeBaseDataSource, error) {
 	kb, _, err := a.client.GenAI.AddDataSource(context.TODO(), knowledgeBaseID, req)
 	if err != nil {
 		return nil, err
@@ -161,17 +161,17 @@ func (a *agentService) AddKnowledgeBaseDataSource(knowledgeBaseID string, req *g
 	return &KnowledgeBaseDataSource{KnowledgeBaseDataSource: kb}, nil
 }
 
-func (a *agentService) DeleteKnowledgeBaseDataSource(knowledgeBaseID string, dataSourceID string) error {
+func (a *genAIService) DeleteKnowledgeBaseDataSource(knowledgeBaseID string, dataSourceID string) error {
 	_, _, _, err := a.client.GenAI.DeleteDataSource(context.TODO(), knowledgeBaseID, dataSourceID)
 	return err
 }
 
-func (a *agentService) DeleteKnowledgebase(knowledgeBaseID string) error {
+func (a *genAIService) DeleteKnowledgebase(knowledgeBaseID string) error {
 	_, _, err := a.client.GenAI.DeleteKnowledgeBase(context.TODO(), knowledgeBaseID)
 	return err
 }
 
-func (a *agentService) AttachKnowledgebase(agentId string, knowledgeBaseID string) (*Agent, error) {
+func (a *genAIService) AttachKnowledgebase(agentId string, knowledgeBaseID string) (*Agent, error) {
 	agent, _, err := a.client.GenAI.AttachKnowledgeBase(context.TODO(), agentId, knowledgeBaseID)
 	if err != nil {
 		return &Agent{}, err
@@ -179,7 +179,7 @@ func (a *agentService) AttachKnowledgebase(agentId string, knowledgeBaseID strin
 	return &Agent{Agent: agent}, nil
 }
 
-func (a *agentService) DetachKnowledgebase(agentId string, knowledgeBaseID string) (*Agent, error) {
+func (a *genAIService) DetachKnowledgebase(agentId string, knowledgeBaseID string) (*Agent, error) {
 	agent, _, err := a.client.GenAI.DetachKnowledgeBase(context.TODO(), agentId, knowledgeBaseID)
 	if err != nil {
 		return &Agent{}, err
