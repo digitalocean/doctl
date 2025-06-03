@@ -1,5 +1,10 @@
 # Change Log
 
+
+## [v1.151.0] - 2025-06-03
+
+- #847 - @thearyanahmed - Apps add instance alias
+
 ## [v1.150.0] - 2025-05-29
 
 - #844 - @thearyanahmed - Add App Platform Edge Control settings
