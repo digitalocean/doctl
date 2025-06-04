@@ -26,17 +26,22 @@ func KnowledgeBase() *Command {
 		- The Knowledge Base Name
 		- The Knowledge Base Region
 		- The Knowledge Base Project ID
-		- The Knowledge Base Embedding Model UUID
+		- The Knowledge Base Database ID
+		- The Knowledge Base Last Indexing Job
 		- The Knowledge Base Created At
+		- The Knowledge Base Updated At
 		- The Knowledge Base Added To Agent At
 		- The Knowledge Base Embedding Model UUID
+		- The Knowledge Base Tags
+		- The Knowledge Base Is Public
+		- The Knowledge Base User ID
 	`
 
 	cmdKnowledgeBaseGet := CmdBuilder(
 		cmd,
 		RunKnowledgeBaseGet,
 		"get <knowledge-base-uuid>",
-		"Retrieves a Knowledge Base by its UUID.",
+		"Retrieves a Knowledge Base by its uuid.",
 		"Retrieves information about a Knowledge Base, including:"+knowledgebaseDetails,
 		Writer, aliasOpt("g"),
 		displayerType(&displayers.KnowledgeBase{}),
@@ -64,7 +69,7 @@ func KnowledgeBase() *Command {
 	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the parameters ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		` doctl genai knowledge-base create f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdKnowledgeBasesList := "List all knowledge bases for agents."
+	cmdKnowledgeBasesList := "List all knowledge bases for agents where each knowledge base contains the following information:\n" + knowledgebaseDetails
 	cmdKnowledgeBaseList := CmdBuilder(
 		cmd,
 		RunKnowledgeBasesList,
@@ -77,7 +82,7 @@ func KnowledgeBase() *Command {
 	cmdKnowledgeBaseList.Example = "The following command lists all knowledge base for agents " +
 		"`doctl genai knowledge-base list`"
 
-	cmdKnowledgeBasesUpdateDetail := "Update a knowledge base by its uuid."
+	cmdKnowledgeBasesUpdateDetail := "Update a knowledge base by its uuid and returns the updated information of the knowledge base with following details\n" + knowledgebaseDetails
 	cmdKnowledgeBasesUpdate := CmdBuilder(
 		cmd,
 		RunKnowledgeBaseUpdate,
@@ -96,18 +101,17 @@ func KnowledgeBase() *Command {
 	cmdKnowledgeBasesUpdate.Example = "The following command usdate the knowledge base by its uuid " +
 		"`doctl genai knowledge-base list`"
 
-	cmdKnowledgeBasesDeleteDetails := "Delete the knowledge bases by its uuid."
+	cmdKnowledgeBasesDeleteDetails := "Deletes the knowledge bases by its valid uuid."
 	cmdKnowledgeBaseDelete := CmdBuilder(
 		cmd,
 		RunKnowledgeBaseDelete,
 		"delete <knowledge-base-uuid>",
-		"Delete a knowledge base",
+		"Deletes a knowledge base",
 		cmdKnowledgeBasesDeleteDetails,
 		Writer, aliasOpt("del", "rm"),
-		displayerType(&displayers.KnowledgeBase{}),
 	)
 	AddBoolFlag(cmdKnowledgeBaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the knowledge base without a confirmation prompt")
-	cmdKnowledgeBaseDelete.Example = "The following command deletes the knowledge base based on its uuid " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` +
+	cmdKnowledgeBaseDelete.Example = "The following command deletes the knowledge base by its uuid " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` +
 		"`doctl genai knowledge-base delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdDataSourcesList := "List all datasource for knowledge base."
@@ -123,18 +127,19 @@ func KnowledgeBase() *Command {
 	cmdDataSourceList.Example = "The following example retrieves information about a Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		" : `doctl genai knowledge-base list-datasources f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
-	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid."
+	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid. Add only one Spaces or Webcrawler as a datasource. For more info about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source)"
 	cmdDataSourceAdd := CmdBuilder(
 		cmd,
 		RunKnowledgeBaseAddDataSource,
 		"add-datasource <knowledge-base-uuid>",
-		"Add a datasource for knowledge base.",
+		"Add one datasource for knowledge base.",
 		cmdDataSourcesAddDetail,
 		Writer, aliasOpt("add-ds"),
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
-	cmdDataSourceAdd.Example = "The following example retrieves information about a Data Sources either with Spaces or Webcrawler with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		" : `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+	cmdDataSourceAdd.Example = "The following example adds a Webcrawler Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		" : `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 ----base-url https://www.example.com/data_source --crawling-option DOMAIN --embed-media false` \n Similarly for spaces Data Sources, you can use the following command: " +
+		" \n `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --bucket-name my-bucket --item-path /path/to/item --region tor1`"
 	AddStringFlag(cmdDataSourceAdd, "bucket-name", "", "", "The bucket name of data source from Spaces")
 	AddStringFlag(cmdDataSourceAdd, "item-path", "", "", "Item path of data source from Spaces")
 	AddStringFlag(cmdDataSourceAdd, "region", "", "", "The region of the data source.")
@@ -150,10 +155,9 @@ func KnowledgeBase() *Command {
 		"Delete a datasource for knowledge base.",
 		cmdDataSourcesDeleteDetail,
 		Writer, aliasOpt("d-ds"),
-		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
 	AddBoolFlag(cmdDataSourceDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the datasource for knowledge base without a confirmation prompt")
-	cmdDataSourceDelete.Example = "The following example deletes Data Sources like " + `00000000-0000-0000-0000-000000000000` + " from a Knowledge Base Id " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdDataSourceDelete.Example = "The following example deletes data source having uuid like " + `00000000-0000-0000-0000-000000000000` + " from a Knowledge Base having uuid " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " Using the following command `" +
 		" : `doctl genai knowledge-base delete-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 00000000-0000-0000-0000-000000000000`"
 
 	cmdAttachKnowledgeBaseDetails := "Attach a knowledge base to an agent using knowledge base uuid and agent uuid. It returns the information of corresponding agent."
@@ -166,21 +170,21 @@ func KnowledgeBase() *Command {
 		Writer, aliasOpt("ath"),
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
-	cmdAttachKnowledgeBase.Example = "The following example attaches the Knowledge Base ID" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " to a specific agent ID" + "`" + `f81d4fae-0000-11d0-a765-000000000000` + "`" +
+	cmdAttachKnowledgeBase.Example = "The following example attaches the Knowledge Base having uuid - " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " to a specific agent having uuid -" + "`" + `f81d4fae-0000-11d0-a765-000000000000` + " using the following command`" +
 		"  `doctl genai knowledge-base attach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
-	cmdDetachKnowledgeBaseDetails := "Detach a knowledge base from an agent using knowledge base uuid and agent uuid."
+	cmdDetachKnowledgeBaseDetails := "Detaches a knowledge base from an agent using knowledge base uuid and agent uuid."
 	cmdDetachKnowledgeBase := CmdBuilder(
 		cmd,
 		RunDetachKnowledgeBase,
 		"detach <agent-uuid> <knowledgebase-uuid>",
-		"Detach a knowledge base from an agent.",
+		"Detaches a knowledge base from an agent.",
 		cmdDetachKnowledgeBaseDetails,
 		Writer, aliasOpt("dth"),
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
 	AddBoolFlag(cmdDetachKnowledgeBase, doctl.ArgForce, doctl.ArgShortForce, false, "Detaches the knowledge base without a confirmation prompt")
-	cmdDetachKnowledgeBase.Example = "The following example detaches the Knowledge Base ID" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " from specific agent ID" + "`" + `f81d4fae-0000-11d0-a765-000000000000` + "`" +
+	cmdDetachKnowledgeBase.Example = "The following example detaches the Knowledge Base having uuid " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " from specific agent with uuid as " + "`" + `f81d4fae-0000-11d0-a765-000000000000` + "`" +
 		"  `doctl genai knowledge-base detach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	return cmd
