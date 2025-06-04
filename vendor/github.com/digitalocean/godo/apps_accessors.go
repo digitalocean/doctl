@@ -1981,6 +1981,22 @@ func (a *AppSpec) GetDatabases() []*AppDatabaseSpec {
 	return a.Databases
 }
 
+// GetDisableEdgeCache returns the DisableEdgeCache field.
+func (a *AppSpec) GetDisableEdgeCache() bool {
+	if a == nil {
+		return false
+	}
+	return a.DisableEdgeCache
+}
+
+// GetDisableEmailObfuscation returns the DisableEmailObfuscation field.
+func (a *AppSpec) GetDisableEmailObfuscation() bool {
+	if a == nil {
+		return false
+	}
+	return a.DisableEmailObfuscation
+}
+
 // GetDomains returns the Domains field.
 func (a *AppSpec) GetDomains() []*AppDomainSpec {
 	if a == nil {
@@ -1995,6 +2011,14 @@ func (a *AppSpec) GetEgress() *AppEgressSpec {
 		return nil
 	}
 	return a.Egress
+}
+
+// GetEnhancedThreatControlEnabled returns the EnhancedThreatControlEnabled field.
+func (a *AppSpec) GetEnhancedThreatControlEnabled() bool {
+	if a == nil {
+		return false
+	}
+	return a.EnhancedThreatControlEnabled
 }
 
 // GetEnvs returns the Envs field.
