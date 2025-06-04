@@ -30,17 +30,20 @@ func (a *Agent) Cols() []string {
 
 func (a *Agent) ColMap() map[string]string {
 	return map[string]string{
-		"Id":         "Id",
+		"Id":         "ID",
 		"Name":       "Name",
 		"Region":     "Region",
-		"Project-id": "ProjectID",
-		"Model-id":   "ModelID",
-		"CreatedAt":  "CreatedAt",
-		"UserId":     "UserId",
+		"Project-id": "Project ID",
+		"Model-id":   "Model ID",
+		"CreatedAt":  "Created At",
+		"UserId":     "User ID",
 	}
 }
 
 func (a *Agent) KV() []map[string]any {
+	if a == nil || a.Agents == nil {
+		return []map[string]any{}
+	}
 	out := make([]map[string]any, 0, len(a.Agents))
 	for _, agent := range a.Agents {
 		modelID := ""

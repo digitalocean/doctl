@@ -25,7 +25,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/agents/00000000-0000-4000-8000-000000000000/deployment_visibility":
+			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000000/deployment_visibility":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -37,8 +37,19 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 					return
 				}
 
+				// Check the request body for invalid visibility values
+				body := make([]byte, req.ContentLength)
+				req.Body.Read(body)
+				if strings.Contains(string(body), "INVALID_VISIBILITY") {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte(`{"id":"bad_request","message":"Invalid visibility value provided."}`))
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
 				w.Write([]byte(agentUpdateVisibilityResponse))
-			case "/v2/genai/agents/99999999-9999-4999-8999-999999999999/deployment_visibility":
+			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999/deployment_visibility":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -110,7 +121,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing")
+			expect.Contains(string(output), "missing required arguments")
 		})
 	})
 
@@ -127,7 +138,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "missing required arguments")
 		})
 	})
 
@@ -145,7 +156,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "invalid")
+			expect.Contains(string(output), "Invalid visibility value provided")
 		})
 	})
 
@@ -162,8 +173,6 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 			)
 
 			output, err := cmd.CombinedOutput()
-			// This might succeed if the CLI normalizes case, or fail if it's strict
-			// Adjust expectation based on your CLI's behavior
 			if err != nil {
 				expect.Contains(string(output), "invalid")
 			} else {
@@ -175,11 +184,12 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 
 const (
 	agentUpdateVisibilityOutput = `
-ID                                     Name         Region    Project ID                             Model ID                               Created At                   User ID
-00000000-0000-4000-8000-000000000000   test-agent   tor1      00000000-0000-4000-8000-000000000000   00000000-0000-4000-8000-000000000000   2023-01-01T00:00:00Z         100000000
+ID                                      Name          Region    Project ID                              Model ID                                Created At                       User ID
+00000000-0000-4000-8000-000000000000    test-agent    tor1      00000000-0000-4000-8000-000000000000    00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    100000000
 `
 	agentUpdateVisibilityResponse = `
 {
+ "agent": {
   "uuid": "00000000-0000-4000-8000-000000000000",
   "name": "test-agent",
   "region": "tor1",
@@ -196,6 +206,7 @@ ID                                     Name         Region    Project ID        
   "temperature": 0.7,
   "retrieval_method": "RETRIEVAL_METHOD_UNKNOWN",
   "visibility": "VISIBILITY_PUBLIC"
+}
 }
 `
 )

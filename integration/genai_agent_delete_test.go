@@ -24,7 +24,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/agents/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -36,8 +36,9 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNoContent)
-			case "/v2/genai/agents/99999999-9999-4999-8999-999999999999":
+			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -49,6 +50,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte(`{"id":"not_found","message":"The resource you requested could not be found."}`))
 			default:
@@ -169,7 +171,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "connection")
+			expect.Contains(string(output), "no such host")
 		})
 	})
 })

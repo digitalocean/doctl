@@ -25,7 +25,7 @@ var _ = suite("genai/agent/list", func(t *testing.T, when spec.G, it spec.S) {
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/agents":
+			case "/v2/gen-ai/agents":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -37,6 +37,7 @@ var _ = suite("genai/agent/list", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				w.Header().Set("Content-Type", "application/json")
 				w.Write([]byte(agentListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -72,8 +73,8 @@ var _ = suite("genai/agent/list", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	agentListOutput = `
-ID                                     Name      Region    Project ID                             Model ID                               Created At                   User ID
-00000000-0000-4000-8000-000000000000   Agent1    tor1      00000000-0000-4000-8000-000000000000   00000000-0000-4000-8000-000000000000   2023-01-01T00:00:00Z         user1
+ID                                      Name      Region    Project ID                              Model ID                                Created At                       User ID
+00000000-0000-4000-8000-000000000000    Agent1    tor1      00000000-0000-4000-8000-000000000000    00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    user1
 `
 	agentListResponse = `
 {

@@ -130,8 +130,8 @@ func AgentCmd() *Command {
 	AddIntFlag(cmdAgentUpdate, doctl.ArgK, "", 0, "specifies how many results should be considered from an attached knowledge base")
 	AddIntFlag(cmdAgentUpdate, doctl.ArgMaxTokens, "", 0, "Specifies the maximum number of tokens the model can process in a single input or output, set as a number between 1 and 512. This determines the length of each response.")
 	AddStringFlag(cmdAgentUpdate, doctl.ArgRetrievalMethod, "", "", "Specifies the method used to retrieve information. The options are 'RETRIEVAL_METHOD_UNKNOWN', 'RETRIEVAL_METHOD_REWRITE','RETRIEVAL_METHOD_STEP_BACK','RETRIEVAL_METHOD_SUB_QUERIES' and 'RETRIEVAL_METHOD_NONE'. The default is 'RETRIEVAL_METHOD_UNKNOWN'.")
-	AddIntFlag(cmdAgentUpdate, doctl.ArgTemperature, "", 0, "Specifies the temperature of the model. The temperature is a number between 0 and 1 that determines how creative or random the model's responses are. A lower temperature results in more predictable responses, while a higher temperature results in more creative responses.")
-	AddIntFlag(cmdAgentUpdate, doctl.ArgTopProbability, "", 0, "the cumulative probability threshold for word selection, specified as a number between 0 and 1. Higher values allow for more diverse outputs, while lower values ensure focused and coherent responses.")
+	AddFloatFlag(cmdAgentUpdate, doctl.ArgTemperature, "", 0, "Specifies the temperature of the model. The temperature is a number between 0 and 1 that determines how creative or random the model's responses are. A lower temperature results in more predictable responses, while a higher temperature results in more creative responses.")
+	AddFloatFlag(cmdAgentUpdate, doctl.ArgTopProbability, "", 0, "the cumulative probability threshold for word selection, specified as a number between 0 and 1. Higher values allow for more diverse outputs, while lower values ensure focused and coherent responses.")
 	AddStringFlag(cmdAgentUpdate, doctl.ArgAgentId, "", "", "The ID of the agent to update")
 	cmdAgentUpdate.Example = `The following example updates the name of an Agent with the ID ` +
 		"`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `new-name` + "`" +
@@ -261,8 +261,8 @@ func RunAgentUpdate(c *CmdConfig) error {
 	k, _ := c.Doit.GetInt(c.NS, doctl.ArgK)
 	maxTokens, _ := c.Doit.GetInt(c.NS, doctl.ArgMaxTokens)
 	retrievalMethod, _ := c.Doit.GetString(c.NS, doctl.ArgRetrievalMethod)
-	temperature, _ := c.Doit.GetInt(c.NS, doctl.ArgTemperature)
-	top_p, _ := c.Doit.GetInt(c.NS, doctl.ArgTopProbability)
+	temperature, _ := c.Doit.GetFloat64(c.NS, doctl.ArgTemperature)
+	top_p, _ := c.Doit.GetFloat64(c.NS, doctl.ArgTopProbability)
 	anthropicKeyId, _ := c.Doit.GetString(c.NS, doctl.ArgAnthropicKeyId)
 	openAIKeyId, _ := c.Doit.GetString(c.NS, doctl.ArgOpenAIKeyId)
 	modelId, _ := c.Doit.GetString(c.NS, doctl.ArgModelId)

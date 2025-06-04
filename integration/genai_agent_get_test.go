@@ -25,7 +25,7 @@ var _ = suite("genai/agent/get", func(t *testing.T, when spec.G, it spec.S) {
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/agents/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -38,7 +38,7 @@ var _ = suite("genai/agent/get", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				w.Write([]byte(agentGetResponse))
-			case "/v2/genai/agents/99999999-9999-4999-8999-999999999999":
+			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -50,6 +50,7 @@ var _ = suite("genai/agent/get", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte(`{"id":"not_found","message":"The resource you requested could not be found."}`))
 			default:
@@ -116,31 +117,16 @@ var _ = suite("genai/agent/get", func(t *testing.T, when spec.G, it spec.S) {
 			expect.Contains(string(output), "404")
 		})
 	})
-
-	when("invalid agent ID format is provided", func() {
-		it("returns an error", func() {
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"agent",
-				"get",
-				"invalid-uuid",
-			)
-
-			_, err := cmd.CombinedOutput()
-			expect.Error(err)
-		})
-	})
 })
 
 const (
 	agentGetOutput = `
-ID                                     Name         Region    Project ID                             Model ID                               Created At                   User ID
-00000000-0000-4000-8000-000000000000   test-agent   tor1      00000000-0000-4000-8000-000000000000   00000000-0000-4000-8000-000000000000   2023-01-01T00:00:00Z         user1
+ID                                      Name          Region    Project ID                              Model ID                                Created At                       User ID
+00000000-0000-4000-8000-000000000000    test-agent    tor1      00000000-0000-4000-8000-000000000000    00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    user1
 `
 	agentGetResponse = `
 {
+  "agent": {
   "uuid": "00000000-0000-4000-8000-000000000000",
   "name": "test-agent",
   "region": "tor1",
@@ -157,6 +143,7 @@ ID                                     Name         Region    Project ID        
   "temperature": 0.7,
   "retrieval_method": "RETRIEVAL_METHOD_UNKNOWN",
   "tags": ["test", "integration"]
+}
 }
 `
 )

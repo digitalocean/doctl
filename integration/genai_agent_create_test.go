@@ -25,7 +25,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/genai/agents":
+			case "/v2/gen-ai/agents":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -37,6 +37,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
 				w.Write([]byte(agentCreateResponse))
 			default:
@@ -89,8 +90,6 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 				"--model-id", "00000000-0000-4000-8000-000000000000",
 				"--instruction", "You are a helpful assistant",
 				"--description", "A test agent for integration testing",
-				"--max-tokens", "100",
-				"--temperature", "0.7",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -115,7 +114,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "required arguments")
 		})
 
 		it("returns an error when instruction is missing", func() {
@@ -133,7 +132,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "missing required arguments")
 		})
 
 		it("returns an error when model-id is missing", func() {
@@ -151,18 +150,19 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "missing required arguments")
 		})
 	})
 })
 
 const (
 	agentCreateOutput = `
-ID                                     Name         Region    Project ID                             Model ID                               Created At                   User ID
-00000000-0000-4000-8000-000000000000   test-agent   tor1      00000000-0000-4000-8000-000000000000   00000000-0000-4000-8000-000000000000   2023-01-01T00:00:00Z         user1
+ID                                      Name          Region    Project ID                              Model ID                                Created At                       User ID
+00000000-0000-4000-8000-000000000000    test-agent    tor1      00000000-0000-4000-8000-000000000000    00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    user1
 `
 	agentCreateResponse = `
 {
+ "agent": {
   "uuid": "00000000-0000-4000-8000-000000000000",
   "name": "test-agent",
   "region": "tor1",
@@ -175,9 +175,8 @@ ID                                     Name         Region    Project ID        
   "created_at": "2023-01-01T00:00:00Z",
   "updated_at": "2023-01-01T00:00:00Z",
   "user_id": "user1",
-  "max_tokens": 100,
-  "temperature": 0.7,
   "retrieval_method": "RETRIEVAL_METHOD_UNKNOWN"
+}
 }
 `
 )
