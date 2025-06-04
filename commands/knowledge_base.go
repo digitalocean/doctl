@@ -49,7 +49,7 @@ func KnowledgeBase() *Command {
 		RunKnowledgeBaseCreate,
 		"create",
 		"Creates a Knowledge Base.",
-		"Creates a Knowledge Base and returns the following information of Knowledge Base, including:"+knowledgebaseDetails,
+		"Creates a Knowledge Base and returns the following information of Knowledge Base, For more information about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base)\n",
 		Writer, aliasOpt("c"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
@@ -59,9 +59,6 @@ func KnowledgeBase() *Command {
 	AddStringFlag(cmdKnowledgeBaseCreate, "embedding-model-uuid", "", "", "The embedding model UUID of the Knowledge Base.", requiredOpt())
 	AddStringFlag(cmdKnowledgeBaseCreate, "data-sources", "", "", "JSON array of data source objects.", requiredOpt())
 	AddStringFlag(cmdKnowledgeBaseCreate, "database-id", "", "", "The database ID of the Knowledge Base.")
-	// AddStringFlag(cmdKnowledgeBaseCreate, "base-url", "", "", "The base URL of the Knowledge Base.")
-	// AddStringFlag(cmdKnowledgeBaseCreate, "crawling-option", "", "", "The crawling option of the Knowledge Base.")
-	// AddBoolFlag(cmdKnowledgeBaseCreate, "embed-media", "", false, "The embed media option of the Knowledge Base.")
 	AddStringSliceFlag(cmdKnowledgeBaseCreate, "tags", "", []string{}, "The tags of the Knowledge Base.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "vpc_uuid", "", "", "The VPC UUID of the Knowledge Base.")
 	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the parameters ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
