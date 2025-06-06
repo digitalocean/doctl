@@ -37,7 +37,7 @@ var _ = suite("genai/knowledge-base/attach", func(t *testing.T, when spec.G, it 
 					return
 				}
 
-				w.Write([]byte(agentAttachResponse))
+				w.Write([]byte(agentResponse))
 			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999/knowledge_bases/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -77,7 +77,7 @@ var _ = suite("genai/knowledge-base/attach", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(agentCreateOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(agentOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -101,22 +101,30 @@ var _ = suite("genai/knowledge-base/attach", func(t *testing.T, when spec.G, it 
 })
 
 const (
-	agentCreateOutput = `
-Name          Region    ProjectID                               CreatedAt                        UserId
-test-agent    tor1      00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    user1
+	agentOutput = `
+ID                                      Name          Region    Project ID                              Model ID                                Created At                       User ID
+00000000-0000-4000-8000-000000000000    test-agent    tor1      00000000-0000-4000-8000-000000000000    00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    user1
 `
-
-	agentAttachResponse = `
+	agentResponse = `
 {
   "agent": {
-    "uuid": "00000000-0000-4000-8000-000000000000",
-    "name": "test-agent",
-    "region": "tor1",
-    "project_id": "00000000-0000-4000-8000-000000000000",
-    "embedding_model_uuid": "00000000-0000-4000-8000-000000000000",
-    "created_at": "2023-01-01T00:00:00Z",
-    "user_id": "user1"
-  }
+  "uuid": "00000000-0000-4000-8000-000000000000",
+  "name": "test-agent",
+  "region": "tor1",
+  "project_id": "00000000-0000-4000-8000-000000000000",
+  "model": {
+    "uuid": "00000000-0000-4000-8000-000000000000"
+  },
+  "instruction": "You are a helpful assistant",
+  "description": "A test agent for integration testing",
+  "created_at": "2023-01-01T00:00:00Z",
+  "updated_at": "2023-01-01T00:00:00Z",
+  "user_id": "user1",
+  "max_tokens": 100,
+  "temperature": 0.7,
+  "retrieval_method": "RETRIEVAL_METHOD_UNKNOWN",
+  "tags": ["test", "integration"]
+}
 }
 `
 )

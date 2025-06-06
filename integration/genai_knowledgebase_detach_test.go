@@ -37,7 +37,7 @@ var _ = suite("genai/knowledge-base/detach", func(t *testing.T, when spec.G, it 
 					return
 				}
 
-				w.Write([]byte(agentAttachResponse))
+				w.Write([]byte(agentResponse))
 			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999/knowledge_bases/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
