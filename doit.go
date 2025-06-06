@@ -220,6 +220,7 @@ type Config interface {
 	GetBoolPtr(ns, key string) (*bool, error)
 	GetInt(ns, key string) (int, error)
 	GetIntPtr(ns, key string) (*int, error)
+	GetFloat64(ns, key string) (float64, error)
 	GetStringSlice(ns, key string) ([]string, error)
 	GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error)
 	GetStringMapString(ns, key string) (map[string]string, error)
@@ -409,6 +410,17 @@ func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
 	return &val, nil
 }
 
+// GetFloat64 returns a config value as a float64.
+func (c *LiveConfig) GetFloat64(ns, key string) (float64, error) {
+	nskey := nskey(ns, key)
+	val := viper.GetFloat64(nskey)
+
+	if isRequired(nskey) && val == 0.0 {
+		return 0.0, NewMissingArgsErr(nskey)
+	}
+	return val, nil
+}
+
 // GetStringSlice returns a config value as a string slice.
 func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	nskey := nskey(ns, key)
@@ -578,6 +590,13 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 	}
 	val := c.v.GetInt(nskey)
 	return &val, nil
+}
+
+// GetFloat64 returns the float64 value for the key in the given namespace. Because
+// this is a mock implementation, and error will never be returned.
+func (c *TestConfig) GetFloat64(ns, key string) (float64, error) {
+	nskey := nskey(ns, key)
+	return c.v.GetFloat64(nskey), nil
 }
 
 // GetStringSlice returns the string slice value for the key in the given
