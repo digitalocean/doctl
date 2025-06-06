@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// // Test data
+// Test data
 var (
 	testAgent = do.Agent{
 		Agent: &godo.Agent{
