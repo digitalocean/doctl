@@ -2,7 +2,7 @@ package commands
 
 import "github.com/spf13/cobra"
 
-func GenAIAgent() *Command {
+func GenAI() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "genai",

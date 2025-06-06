@@ -190,7 +190,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Serverless())
 	DoitCmd.AddCommand(Spaces())
-	DoitCmd.AddCommand(GenAIAgent())
+	DoitCmd.AddCommand(GenAI())
 }
 
 func computeCmd() *Command {

@@ -43,12 +43,6 @@ type KnowledgeBaseDataSources []KnowledgeBaseDataSource
 
 // AgentService is an interface for interacting with DigitalOcean's Agent API.
 type GenAIService interface {
-	// List() (Agents, error)
-	// Create(*godo.AgentCreateRequest) (*Agent, error)
-	// Get(agentID string) (*Agent, error)
-	// Update(agentID string, req *godo.AgentUpdateRequest) (*Agent, error)
-	// Delete(agentID string) error
-	// UpdateVisibility(agentID string, req *godo.AgentVisibilityUpdateRequest) (*Agent, error)
 	ListKnowledgeBases() (KnowledgeBases, error)
 	GetKnowledgeBase(knowledgeBaseID string) (*KnowledgeBase, error)
 	CreateKnowledgeBase(req *godo.KnowledgeBaseCreateRequest) (*KnowledgeBase, error)
