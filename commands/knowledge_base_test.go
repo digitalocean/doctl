@@ -46,7 +46,7 @@ var (
 func TestKnowledgeBasesCommand(t *testing.T) {
 	cmd := KnowledgeBase()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "add-datasources", "attach", "create", "delete", "delete-datasource", "detach", "get", "list", "list-datasources", "update")
+	assertCommandNames(t, cmd, "add-datasource", "attach", "create", "delete", "delete-datasource", "detach", "get", "list", "list-datasources", "update")
 }
 
 func TestKnowledgeBaseGet(t *testing.T) {
@@ -101,6 +101,7 @@ func TestKnowledgeBaseDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"
 		config.Args = append(config.Args, knowledge_base_id)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 		tm.genai.EXPECT().DeleteKnowledgebase("00000000-0000-4000-8000-000000000000").Return(nil)
 		err := RunKnowledgeBaseDelete(config)
 		assert.NoError(t, err)
@@ -173,6 +174,7 @@ func TestKnowledgeBaseDeleteDataSource(t *testing.T) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"
 		data_source_id := "data-source-id"
 		config.Args = append(config.Args, knowledge_base_id, data_source_id)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		tm.genai.EXPECT().DeleteKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", "data-source-id").Return(nil)
 
@@ -217,6 +219,7 @@ func TestKnowledgeBaseDetach(t *testing.T) {
 		agent_id := "00000000-0000-4000-8000-000000000000"
 		knowledge_base_id := "00000000-0000-4000-8000-000000000001"
 		config.Args = append(config.Args, agent_id, knowledge_base_id)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		tm.genai.EXPECT().DetachKnowledgebase(agent_id, knowledge_base_id).Return(testAgent, nil)
 
