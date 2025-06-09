@@ -16,6 +16,7 @@ func VPCNATGateway() *Command {
 			Long: `Use the subcommands of ` + "`" + `doctl compute vpc-nat-gateway` + "`" + ` to perform actions on VPC NAT Gateways.
 
 You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
+			Hidden: true,
 		},
 	}
 
