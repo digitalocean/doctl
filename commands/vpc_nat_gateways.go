@@ -28,7 +28,7 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 		cmdVPCNATGatewayUpdate,
 	} {
 		AddStringFlag(c, doctl.ArgVPCNATGatewayName, "", "", "Name of the VPC NAT Gateway", requiredOpt())
-		AddStringFlag(c, doctl.ArgVPCNATGatewayType, "", "", "Gateway type", requiredOpt())
+		AddStringFlag(c, doctl.ArgVPCNATGatewayType, "", "PUBLIC", "Gateway type", requiredOpt())
 		AddStringFlag(c, doctl.ArgVPCNATGatewayRegion, "", "", "Gateway region", requiredOpt())
 		AddIntFlag(c, doctl.ArgVPCNATGatewaySize, "", 1, "Gateway size")
 		// Ingress VPCs is not a required arg for update cmd
