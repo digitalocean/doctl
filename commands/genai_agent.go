@@ -17,7 +17,7 @@ func AgentCmd() *Command {
 			Use:     "agent",
 			Aliases: []string{"agents", "a"},
 			Short:   "Display commands for working with GenAI agents",
-			Long:    "The subcommands of `doctl agent` manage your GenAI agents.",
+			Long:    "The subcommands of `doctl genai agent` manage your GenAI agents.",
 		},
 	}
 
@@ -42,7 +42,7 @@ func AgentCmd() *Command {
 	AddStringFlag(cmdAgentCreate, doctl.ArgKnowledgeBaseId, "", "", "Ids of the knowledge base(s) to attach to the agent")
 	AddStringFlag(cmdAgentCreate, doctl.ArgOpenAIKeyId, "", "", "OpenAI API key ID to use with OpenAI models")
 	AddStringFlag(cmdAgentCreate, doctl.ArgTags, "", "", "Applies a tag to the agent. ")
-	cmdAgentCreate.Example = `The following example creates an agent: doctl compute agent create --name "My Agent" --project-id "12345678-1234-1234-1234-123456789012" --model-id "12345678-1234-1234-1234-123456789013" --region "tor1" --instruction "You are an agent who thinks deeply about the world"`
+	cmdAgentCreate.Example = `The following example creates an agent: doctl genai agent create --name "My Agent" --project-id "12345678-1234-1234-1234-123456789012" --model-id "12345678-1234-1234-1234-123456789013" --region "tor1" --instruction "You are an agent who thinks deeply about the world"`
 
 	AgentDetails := `
 	- The Agent ID
@@ -65,7 +65,7 @@ func AgentCmd() *Command {
 	)
 	AddStringFlag(cmdAgentList, doctl.ArgAgentRegion, "", "", "Retrieves a list of Agents in a specified region")
 	AddStringFlag(cmdAgentList, doctl.ArgTag, "", "", "Retrieves a list of Agents with a specified tag")
-	cmdAgentList.Example = `The following example retrieves a list of all Agent in the ` + "`" + `tor1` + "`" + ` region: doctl compute agent list --region tor1`
+	cmdAgentList.Example = `The following example retrieves a list of all Agent in the ` + "`" + `tor1` + "`" + ` region: doctl genai agent list --region tor1`
 
 	cmdAgentGet := CmdBuilder(
 		cmd,
@@ -77,7 +77,7 @@ func AgentCmd() *Command {
 		aliasOpt("g"),
 		displayerType(&displayers.Agent{}),
 	)
-	cmdAgentGet.Example = `The following example retrieves information about an agent: doctl compute agent get 12345678-1234-1234-1234-123456789012`
+	cmdAgentGet.Example = `The following example retrieves information about an agent: doctl genai agent get 12345678-1234-1234-1234-123456789012`
 
 	cmdAgentUpdate := CmdBuilder(
 		cmd,
@@ -105,7 +105,7 @@ func AgentCmd() *Command {
 	AddStringFlag(cmdAgentUpdate, doctl.ArgAgentId, "", "", "The ID of the agent to update")
 	cmdAgentUpdate.Example = `The following example updates the name of an Agent with the ID ` +
 		"`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `new-name` + "`" +
-		`: doctl compute agent update 12345678-1234-1234-1234-123456789012 --name "new-name"`
+		`: doctl genai agent update 12345678-1234-1234-1234-123456789012 --name "new-name"`
 
 	cmdAgentDelete := CmdBuilder(
 		cmd,
@@ -117,7 +117,7 @@ func AgentCmd() *Command {
 		aliasOpt("d", "del", "rm"),
 	)
 	AddBoolFlag(cmdAgentDelete, doctl.ArgAgentForce, doctl.ArgShortForce, false, "Deletes the Agent without a confirmation prompt")
-	cmdAgentDelete.Example = `The following example deletes an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + `: doctl compute agent delete 12345678-1234-1234-1234-123456789012`
+	cmdAgentDelete.Example = `The following example deletes an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + `: doctl genai agent delete 12345678-1234-1234-1234-123456789012`
 
 	cmdAgentUpdateVisibility := CmdBuilder(
 		cmd,
@@ -129,7 +129,7 @@ func AgentCmd() *Command {
 		aliasOpt("uv", "update-visibility", "update-vis"),
 	)
 	AddStringFlag(cmdAgentUpdateVisibility, "visibility", "", "", "Agent deployment visibility. Possible Options: `VISIBILITY_PLAYGROUND`, `VISIBILITY_PUBLIC`, `VISIBILITY_PRIVATE`. Default: `VISIBILITY_UNKNOWN`", requiredOpt())
-	cmdAgentUpdateVisibility.Example = `The following example updates the visibility of an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `VISIBILITY_PUBLIC` + "`" + `: doctl compute agent update-visibility 12345678-1234-1234-1234-123456789012 --visibility 'VISIBILITY_PUBLIC'`
+	cmdAgentUpdateVisibility.Example = `The following example updates the visibility of an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `VISIBILITY_PUBLIC` + "`" + `: doctl genai agent update-visibility 12345678-1234-1234-1234-123456789012 --visibility 'VISIBILITY_PUBLIC'`
 
 	return cmd
 }

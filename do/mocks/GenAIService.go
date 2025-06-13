@@ -17,32 +17,32 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockAgentService is a mock of AgentService interface.
-type MockAgentService struct {
+// MockGenAIService is a mock of GenAIService interface.
+type MockGenAIService struct {
 	ctrl     *gomock.Controller
-	recorder *MockAgentServiceMockRecorder
+	recorder *MockGenAIServiceMockRecorder
 	isgomock struct{}
 }
 
-// MockAgentServiceMockRecorder is the mock recorder for MockAgentService.
-type MockAgentServiceMockRecorder struct {
-	mock *MockAgentService
+// MockGenAIServiceMockRecorder is the mock recorder for MockGenAIService.
+type MockGenAIServiceMockRecorder struct {
+	mock *MockGenAIService
 }
 
-// NewMockAgentService creates a new mock instance.
-func NewMockAgentService(ctrl *gomock.Controller) *MockAgentService {
-	mock := &MockAgentService{ctrl: ctrl}
-	mock.recorder = &MockAgentServiceMockRecorder{mock}
+// NewMockGenAIService creates a new mock instance.
+func NewMockGenAIService(ctrl *gomock.Controller) *MockGenAIService {
+	mock := &MockGenAIService{ctrl: ctrl}
+	mock.recorder = &MockGenAIServiceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockAgentService) EXPECT() *MockAgentServiceMockRecorder {
+func (m *MockGenAIService) EXPECT() *MockGenAIServiceMockRecorder {
 	return m.recorder
 }
 
 // CreateAgent mocks base method.
-func (m *MockAgentService) CreateAgent(req *godo.AgentCreateRequest) (*do.Agent, error) {
+func (m *MockGenAIService) CreateAgent(req *godo.AgentCreateRequest) (*do.Agent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAgent", req)
 	ret0, _ := ret[0].(*do.Agent)
@@ -51,13 +51,13 @@ func (m *MockAgentService) CreateAgent(req *godo.AgentCreateRequest) (*do.Agent,
 }
 
 // CreateAgent indicates an expected call of CreateAgent.
-func (mr *MockAgentServiceMockRecorder) CreateAgent(req any) *gomock.Call {
+func (mr *MockGenAIServiceMockRecorder) CreateAgent(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgent", reflect.TypeOf((*MockAgentService)(nil).CreateAgent), req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgent", reflect.TypeOf((*MockGenAIService)(nil).CreateAgent), req)
 }
 
 // DeleteAgent mocks base method.
-func (m *MockAgentService) DeleteAgent(agentID string) error {
+func (m *MockGenAIService) DeleteAgent(agentID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteAgent", agentID)
 	ret0, _ := ret[0].(error)
@@ -65,13 +65,13 @@ func (m *MockAgentService) DeleteAgent(agentID string) error {
 }
 
 // DeleteAgent indicates an expected call of DeleteAgent.
-func (mr *MockAgentServiceMockRecorder) DeleteAgent(agentID any) *gomock.Call {
+func (mr *MockGenAIServiceMockRecorder) DeleteAgent(agentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAgent", reflect.TypeOf((*MockAgentService)(nil).DeleteAgent), agentID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAgent", reflect.TypeOf((*MockGenAIService)(nil).DeleteAgent), agentID)
 }
 
 // GetAgent mocks base method.
-func (m *MockAgentService) GetAgent(agentID string) (*do.Agent, error) {
+func (m *MockGenAIService) GetAgent(agentID string) (*do.Agent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAgent", agentID)
 	ret0, _ := ret[0].(*do.Agent)
@@ -80,13 +80,13 @@ func (m *MockAgentService) GetAgent(agentID string) (*do.Agent, error) {
 }
 
 // GetAgent indicates an expected call of GetAgent.
-func (mr *MockAgentServiceMockRecorder) GetAgent(agentID any) *gomock.Call {
+func (mr *MockGenAIServiceMockRecorder) GetAgent(agentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgent", reflect.TypeOf((*MockAgentService)(nil).GetAgent), agentID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgent", reflect.TypeOf((*MockGenAIService)(nil).GetAgent), agentID)
 }
 
 // ListAgents mocks base method.
-func (m *MockAgentService) ListAgents() (do.Agents, error) {
+func (m *MockGenAIService) ListAgents() (do.Agents, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListAgents")
 	ret0, _ := ret[0].(do.Agents)
@@ -95,13 +95,13 @@ func (m *MockAgentService) ListAgents() (do.Agents, error) {
 }
 
 // ListAgents indicates an expected call of ListAgents.
-func (mr *MockAgentServiceMockRecorder) ListAgents() *gomock.Call {
+func (mr *MockGenAIServiceMockRecorder) ListAgents() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgents", reflect.TypeOf((*MockAgentService)(nil).ListAgents))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgents", reflect.TypeOf((*MockGenAIService)(nil).ListAgents))
 }
 
 // UpdateAgent mocks base method.
-func (m *MockAgentService) UpdateAgent(agentID string, req *godo.AgentUpdateRequest) (*do.Agent, error) {
+func (m *MockGenAIService) UpdateAgent(agentID string, req *godo.AgentUpdateRequest) (*do.Agent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAgent", agentID, req)
 	ret0, _ := ret[0].(*do.Agent)
@@ -110,13 +110,13 @@ func (m *MockAgentService) UpdateAgent(agentID string, req *godo.AgentUpdateRequ
 }
 
 // UpdateAgent indicates an expected call of UpdateAgent.
-func (mr *MockAgentServiceMockRecorder) UpdateAgent(agentID, req any) *gomock.Call {
+func (mr *MockGenAIServiceMockRecorder) UpdateAgent(agentID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgent", reflect.TypeOf((*MockAgentService)(nil).UpdateAgent), agentID, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgent", reflect.TypeOf((*MockGenAIService)(nil).UpdateAgent), agentID, req)
 }
 
 // UpdateAgentVisibility mocks base method.
-func (m *MockAgentService) UpdateAgentVisibility(agentID string, req *godo.AgentVisibilityUpdateRequest) (*do.Agent, error) {
+func (m *MockGenAIService) UpdateAgentVisibility(agentID string, req *godo.AgentVisibilityUpdateRequest) (*do.Agent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAgentVisibility", agentID, req)
 	ret0, _ := ret[0].(*do.Agent)
@@ -125,7 +125,7 @@ func (m *MockAgentService) UpdateAgentVisibility(agentID string, req *godo.Agent
 }
 
 // UpdateAgentVisibility indicates an expected call of UpdateAgentVisibility.
-func (mr *MockAgentServiceMockRecorder) UpdateAgentVisibility(agentID, req any) *gomock.Call {
+func (mr *MockGenAIServiceMockRecorder) UpdateAgentVisibility(agentID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentVisibility", reflect.TypeOf((*MockAgentService)(nil).UpdateAgentVisibility), agentID, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentVisibility", reflect.TypeOf((*MockGenAIService)(nil).UpdateAgentVisibility), agentID, req)
 }

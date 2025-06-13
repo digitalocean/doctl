@@ -23,6 +23,7 @@ func GenAI() *Command {
 			Aliases: []string{"ai"},
 			Short:   "Manage GenAI resources",
 			Long:    "The subcommands of `doctl genai` manage your GenAI resources.",
+			GroupID: manageResourcesGroup,
 		},
 	}
 
