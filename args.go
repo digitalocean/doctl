@@ -555,6 +555,8 @@ const (
 	ArgPartnerAttachmentBGPAuthKey = "bgp-auth-key"
 	// ArgPartnerAttachmentRedundancyZone is the redundancy zone of the Partner Attachment
 	ArgPartnerAttachmentRedundancyZone = "redundancy-zone"
+	// ArgPartnerAttachmentParentUUID is the ha parent uuid of the Partner Attachment
+	ArgPartnerAttachmentParentUUID = "parent-uuid"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"

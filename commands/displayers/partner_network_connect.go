@@ -31,6 +31,9 @@ func (v *PartnerAttachment) Cols() []string {
 		"BGPLocalRouterIP",
 		"BGPPeerASN",
 		"BGPPeerRouterIP",
+		"RedundancyZone",
+		"ParentUUID",
+		"Children",
 	}
 }
 
@@ -48,6 +51,9 @@ func (v *PartnerAttachment) ColMap() map[string]string {
 		"BGPLocalRouterIP":          "BGP Local Router IP",
 		"BGPPeerASN":                "BGP Peer ASN",
 		"BGPPeerRouterIP":           "BGP Peer Router IP",
+		"RedundancyZone":            "Redundancy Zone",
+		"ParentUUID":                "Parent UUID",
+		"Children":                  "Children UUIDs",
 	}
 }
 
@@ -69,6 +75,9 @@ func (v *PartnerAttachment) KV() []map[string]any {
 			"BGPLocalRouterIP":          pa.BGP.LocalRouterIP,
 			"BGPPeerASN":                pa.BGP.PeerASN,
 			"BGPPeerRouterIP":           pa.BGP.PeerRouterIP,
+			"RedundancyZone":            pa.RedundancyZone,
+			"ParentUUID":                pa.ParentUuid,
+			"Children":                  strings.Join(pa.Children, ","),
 		}
 		out = append(out, o)
 	}

@@ -13,6 +13,35 @@ import (
 )
 
 var (
+	testPartnerAttachmentWithRedundancyZone = do.PartnerAttachment{
+		PartnerAttachment: &godo.PartnerAttachment{
+			ID:                        "test-id",
+			Name:                      "doctl-pia",
+			State:                     "active",
+			ConnectionBandwidthInMbps: 50,
+			Region:                    "stage2",
+			NaaSProvider:              "MEGAPORT",
+			VPCIDs:                    []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"},
+			CreatedAt:                 time.Date(2025, 1, 30, 0, 0, 0, 0, time.UTC),
+			RedundancyZone:            "MEGAPORT_RED",
+		},
+	}
+
+	testPartnerAttachmentWithHA = do.PartnerAttachment{
+		PartnerAttachment: &godo.PartnerAttachment{
+			ID:                        "test-id",
+			Name:                      "doctl-pia",
+			State:                     "active",
+			ConnectionBandwidthInMbps: 50,
+			Region:                    "stage2",
+			NaaSProvider:              "MEGAPORT",
+			VPCIDs:                    []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"},
+			CreatedAt:                 time.Date(2025, 1, 30, 0, 0, 0, 0, time.UTC),
+			ParentUuid:                "fd1aad75-94ff-47f9-bae1-30c5d9caa14e",
+			Children:                  []string{"28cedc83-85bb-4398-a48e-d2735ca028ac"},
+		},
+	}
+
 	testPartnerAttachment = do.PartnerAttachment{
 		PartnerAttachment: &godo.PartnerAttachment{
 			ID:                        "test-id",
@@ -95,6 +124,36 @@ func TestPartnerAttachmentCreate(t *testing.T) {
 	})
 }
 
+func TestPartnerAttachmentCreateHA(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentName, "doctl-pia")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBandwidthInMbps, 50)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentRegion, "stage2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentNaaSProvider, "MEGAPORT")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentVPCIDs, []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"})
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalASN, 65001)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPLocalRouterIP, "192.168.1.1")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerASN, 65002)
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "192.168.1.2")
+		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentParentUUID, "fd1aad75-94ff-47f9-bae1-30c5d9caa14e")
+
+		expectedRequest := &godo.PartnerAttachmentCreateRequest{
+			Name:                      "doctl-pia",
+			ConnectionBandwidthInMbps: 50,
+			Region:                    "stage2",
+			NaaSProvider:              "MEGAPORT",
+			VPCIDs:                    []string{"d35e5cb7-7957-4643-8e3a-1ab4eb3a494c"},
+			ParentUuid:                "fd1aad75-94ff-47f9-bae1-30c5d9caa14e",
+		}
+
+		tm.partnerAttachments.EXPECT().Create(expectedRequest).Return(&testPartnerAttachmentWithHA, nil)
+
+		err := RunPartnerAttachmentCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestPartnerAttachmentCreateWithRedundancyZone(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgPartnerAttachmentType, "partner")
@@ -118,7 +177,7 @@ func TestPartnerAttachmentCreateWithRedundancyZone(t *testing.T) {
 			RedundancyZone:            "MEGAPORT_RED",
 		}
 
-		tm.partnerAttachments.EXPECT().Create(expectedRequest).Return(&testPartnerAttachment, nil)
+		tm.partnerAttachments.EXPECT().Create(expectedRequest).Return(&testPartnerAttachmentWithRedundancyZone, nil)
 
 		err := RunPartnerAttachmentCreate(config)
 		assert.NoError(t, err)

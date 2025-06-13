@@ -49,6 +49,8 @@ type PartnerAttachmentCreateRequest struct {
 	BGP BGP `json:"bgp,omitempty"`
 	// RedundancyZone is the redundancy zone of the Partner Attachment
 	RedundancyZone string `json:"redundancy_zone,omitempty"`
+	// Represents the uuid of the parent Partner Attachment if there is one
+	ParentUuid string `json:"parent_uuid,omitempty"`
 }
 
 type partnerAttachmentRequestBody struct {
@@ -198,6 +200,11 @@ type PartnerAttachment struct {
 	RedundancyZone string `json:"redundancy_zone,omitempty"`
 	// CreatedAt is time when this Partner Attachment was first created
 	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Represents the uuid of the parent Partner Attachment if there is one
+	ParentUuid string `json:"parent_uuid,omitempty"`
+	// Represents a slice of children Partner Attachment UUIDs associated
+	// with the given Partner Attachment if there are any
+	Children []string `json:"children,omitempty"`
 }
 
 type partnerNetworkConnectAttachmentRoot struct {
