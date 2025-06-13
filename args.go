@@ -635,4 +635,57 @@ const (
 
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
+
+	// Agent Args
+
+	// ArgAgentId is the ID of the agent.
+	ArgAgentId = "agent-id"
+
+	// ArgAgentName is the name of the agent.
+	ArgAgentName = "name"
+
+	// ArgAgentInstruction is the instruction for the agent.
+	ArgAgentInstruction = "instruction"
+
+	// ArgAgentModelId is the model ID for the agent.
+	ArgModelId = "model-id"
+
+	// ArgAgentProjectId is the project ID for the agent.
+	ArgAgentProjectId = "project-id"
+
+	// ArgAgentRegion is the region where the agent is deployed.
+	ArgAgentRegion = "region"
+
+	// ArgAnthropicKeyId is the Anthropic key ID for the agent.
+	ArgAnthropicKeyId = "Anthropic-key-id"
+
+	// ArgAgentDescription is the description for the agent.
+	ArgAgentDescription = "description"
+
+	// ArgKnowledgeBaseId is the knowledge base ID(s) attached to the agent.
+	ArgKnowledgeBaseId = "knowledge-base-id"
+
+	// ArgOpenAIKeyId is the OpenAI API key ID for the agent.
+	ArgOpenAIKeyId = "openai-key-id"
+
+	// ArgTags are the tags applied to the agent.
+	ArgTags = "tags"
+
+	// ArgAgentForce forces agent deletion without confirmation.
+	ArgAgentForce = "force"
+
+	// ArgK specifies how many results should be considered from an attached knowledge base.
+	ArgK = "k"
+
+	// ArgMaxTokens is the maximum number of tokens to generate in the response.
+	ArgMaxTokens = "max-tokens"
+
+	// ArgRetrievalMethod is the method used to retrieve information from the knowledge base.
+	ArgRetrievalMethod = "retrieval-method"
+
+	// ArgTemperature is the temperature for the response generation.
+	ArgTemperature = "temperature"
+
+	// ArgTopProbability is the top probability for the response generation.
+	ArgTopProbability = "top-p"
 )
