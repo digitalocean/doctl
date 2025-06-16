@@ -512,6 +512,7 @@ func (a AppInstances) Cols() []string {
 		"Name",
 		"ComponentName",
 		"ComponentType",
+		"InstanceAlias",
 	}
 }
 
@@ -520,6 +521,7 @@ func (a AppInstances) ColMap() map[string]string {
 		"Name":          "Name",
 		"ComponentName": "ComponentName",
 		"ComponentType": "ComponentType",
+		"InstanceAlias": "InstanceAlias",
 	}
 }
 
@@ -531,6 +533,7 @@ func (a AppInstances) KV() []map[string]any {
 			"Name":          appInstance.InstanceName,
 			"ComponentName": appInstance.ComponentName,
 			"ComponentType": appInstance.ComponentType,
+			"InstanceAlias": appInstance.InstanceAlias,
 		}
 	}
 	return out

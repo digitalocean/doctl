@@ -284,6 +284,17 @@ func AddIntFlag(cmd *Command, name, shorthand string, def int, desc string, opts
 	}
 }
 
+// AddFloatFlag adds an float flag to a command.
+func AddFloatFlag(cmd *Command, name, shorthand string, def float64, desc string, opts ...flagOpt) {
+	fn := flagName(cmd, name)
+	cmd.Flags().Float64P(name, shorthand, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
+}
+
 // AddBoolFlag adds a boolean flag to a command.
 func AddBoolFlag(cmd *Command, name, shorthand string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)

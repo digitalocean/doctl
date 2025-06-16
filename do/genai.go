@@ -43,6 +43,12 @@ type KnowledgeBaseDataSources []KnowledgeBaseDataSource
 
 // AgentService is an interface for interacting with DigitalOcean's Agent API.
 type GenAIService interface {
+	ListAgents() (Agents, error)
+	CreateAgent(req *godo.AgentCreateRequest) (*Agent, error)
+	GetAgent(agentID string) (*Agent, error)
+	UpdateAgent(agentID string, req *godo.AgentUpdateRequest) (*Agent, error)
+	DeleteAgent(agentID string) error
+	UpdateAgentVisibility(agentID string, req *godo.AgentVisibilityUpdateRequest) (*Agent, error)
 	ListKnowledgeBases() (KnowledgeBases, error)
 	GetKnowledgeBase(knowledgeBaseID string) (*KnowledgeBase, error)
 	CreateKnowledgeBase(req *godo.KnowledgeBaseCreateRequest) (*KnowledgeBase, error)
@@ -66,6 +72,75 @@ func NewGenAIService(client *godo.Client) GenAIService {
 	return &genAIService{
 		client: client,
 	}
+}
+
+// List lists all agents.
+func (a *genAIService) ListAgents() (Agents, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListAgents(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]Agent, len(si))
+	for i := range si {
+		a := si[i].(*godo.Agent)
+		list[i] = Agent{Agent: a}
+	}
+
+	return list, nil
+}
+
+// Create creates a new agent.
+func (a *genAIService) CreateAgent(req *godo.AgentCreateRequest) (*Agent, error) {
+	agent, _, err := a.client.GenAI.CreateAgent(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{Agent: agent}, nil
+}
+
+// Get retrieves an agent by ID.
+func (a *genAIService) GetAgent(agentID string) (*Agent, error) {
+	agent, _, err := a.client.GenAI.GetAgent(context.TODO(), agentID)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{Agent: agent}, nil
+}
+
+// Update updates an agent by ID.
+func (a *genAIService) UpdateAgent(agentID string, req *godo.AgentUpdateRequest) (*Agent, error) {
+	agent, _, err := a.client.GenAI.UpdateAgent(context.TODO(), agentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{Agent: agent}, nil
+}
+
+func (a *genAIService) DeleteAgent(agentID string) error {
+	_, _, err := a.client.GenAI.DeleteAgent(context.TODO(), agentID)
+	return err
+}
+
+// UpdateVisibility updates the visibility of an agent by ID.
+func (a *genAIService) UpdateAgentVisibility(agentID string, req *godo.AgentVisibilityUpdateRequest) (*Agent, error) {
+	agent, _, err := a.client.GenAI.UpdateAgentVisibility(context.TODO(), agentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{Agent: agent}, nil
 }
 
 // ListKnowledgeBases lists all knowledge bases for an agent.
