@@ -93,12 +93,9 @@ func (v *KnowledgeBaseDataSource) JSON(out io.Writer) error {
 
 func (v *KnowledgeBaseDataSource) ColMap() map[string]string {
 	return map[string]string{
-		"BucketName":           "BucketName",
 		"CreatedAt":            "CreatedAt",
 		"FileUploadDataSource": "FileUploadDataSource",
 		"LastIndexingJob":      "LastIndexingJob",
-		"ItemPath":             "ItemPath",
-		"Region":               "Region",
 		"SpacesDataSource":     "SpacesDataSource",
 		"UpdatedAt":            "UpdatedAt",
 		"UUID":                 "UUID",
@@ -108,12 +105,9 @@ func (v *KnowledgeBaseDataSource) ColMap() map[string]string {
 func (v *KnowledgeBaseDataSource) Cols() []string {
 	return []string{
 		// Add appropriate column names here, for example:
-		"BucketName",
 		"CreatedAt",
 		"FileUploadDataSource",
-		"ItemPath",
 		"LastIndexingJob",
-		"Region",
 		"SpacesDataSource",
 		"UpdatedAt",
 		"UUID",
@@ -129,15 +123,12 @@ func (v *KnowledgeBaseDataSource) KV() []map[string]any {
 
 	for _, kb := range v.KnowledgeBaseDataSources {
 		o := map[string]any{
-			"BucketName":           kb.BucketName,
 			"CreatedAt":            kb.CreatedAt,
 			"FileUploadDataSource": kb.FileUploadDataSource,
-			"ItemPath":             kb.ItemPath,
 			"LastIndexingJob":      kb.LastIndexingJob,
-			"Region":               kb.Region,
 			"SpacesDataSource":     kb.SpacesDataSource,
 			"UpdatedAt":            kb.UpdatedAt,
-			"UUID":                 kb.UUID,
+			"UUID":                 kb.Uuid,
 			"WebCrawlerDataSource": kb.WebCrawlerDataSource,
 		}
 		out = append(out, o)

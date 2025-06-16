@@ -9,6 +9,7 @@ func GenAI() *Command {
 			Aliases: []string{"ai"},
 			Short:   "Display commands that manage DigitalOcean GenAI Agents.",
 			Long:    "The subcommands of `doctl agents` allow you to access and manage GenAI Agents.",
+			GroupID: manageResourcesGroup,
 		},
 	}
 

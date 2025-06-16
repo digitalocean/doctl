@@ -42,7 +42,7 @@ func (m *MockGenAIService) EXPECT() *MockGenAIServiceMockRecorder {
 }
 
 // AddKnowledgeBaseDataSource mocks base method.
-func (m *MockGenAIService) AddKnowledgeBaseDataSource(knowledgeBaseID string, req *godo.AddDataSourceRequest) (*do.KnowledgeBaseDataSource, error) {
+func (m *MockGenAIService) AddKnowledgeBaseDataSource(knowledgeBaseID string, req *godo.AddKnowledgeBaseDataSourceRequest) (*do.KnowledgeBaseDataSource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddKnowledgeBaseDataSource", knowledgeBaseID, req)
 	ret0, _ := ret[0].(*do.KnowledgeBaseDataSource)
@@ -56,19 +56,19 @@ func (mr *MockGenAIServiceMockRecorder) AddKnowledgeBaseDataSource(knowledgeBase
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddKnowledgeBaseDataSource", reflect.TypeOf((*MockGenAIService)(nil).AddKnowledgeBaseDataSource), knowledgeBaseID, req)
 }
 
-// AttachKnowledgebase mocks base method.
-func (m *MockGenAIService) AttachKnowledgebase(agentId, knowledgeBaseID string) (*do.Agent, error) {
+// AttachKnowledgeBaseToAgent mocks base method.
+func (m *MockGenAIService) AttachKnowledgeBaseToAgent(agentId, knowledgeBaseID string) (*do.Agent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AttachKnowledgebase", agentId, knowledgeBaseID)
+	ret := m.ctrl.Call(m, "AttachKnowledgeBaseToAgent", agentId, knowledgeBaseID)
 	ret0, _ := ret[0].(*do.Agent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// AttachKnowledgebase indicates an expected call of AttachKnowledgebase.
-func (mr *MockGenAIServiceMockRecorder) AttachKnowledgebase(agentId, knowledgeBaseID any) *gomock.Call {
+// AttachKnowledgeBaseToAgent indicates an expected call of AttachKnowledgeBaseToAgent.
+func (mr *MockGenAIServiceMockRecorder) AttachKnowledgeBaseToAgent(agentId, knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachKnowledgebase", reflect.TypeOf((*MockGenAIService)(nil).AttachKnowledgebase), agentId, knowledgeBaseID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachKnowledgeBaseToAgent", reflect.TypeOf((*MockGenAIService)(nil).AttachKnowledgeBaseToAgent), agentId, knowledgeBaseID)
 }
 
 // CreateKnowledgeBase mocks base method.
@@ -86,6 +86,20 @@ func (mr *MockGenAIServiceMockRecorder) CreateKnowledgeBase(req any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKnowledgeBase", reflect.TypeOf((*MockGenAIService)(nil).CreateKnowledgeBase), req)
 }
 
+// DeleteKnowledgeBase mocks base method.
+func (m *MockGenAIService) DeleteKnowledgeBase(knowledgeBaseID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteKnowledgeBase", knowledgeBaseID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteKnowledgeBase indicates an expected call of DeleteKnowledgeBase.
+func (mr *MockGenAIServiceMockRecorder) DeleteKnowledgeBase(knowledgeBaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKnowledgeBase", reflect.TypeOf((*MockGenAIService)(nil).DeleteKnowledgeBase), knowledgeBaseID)
+}
+
 // DeleteKnowledgeBaseDataSource mocks base method.
 func (m *MockGenAIService) DeleteKnowledgeBaseDataSource(knowledgeBaseID, dataSourceID string) error {
 	m.ctrl.T.Helper()
@@ -100,33 +114,19 @@ func (mr *MockGenAIServiceMockRecorder) DeleteKnowledgeBaseDataSource(knowledgeB
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKnowledgeBaseDataSource", reflect.TypeOf((*MockGenAIService)(nil).DeleteKnowledgeBaseDataSource), knowledgeBaseID, dataSourceID)
 }
 
-// DeleteKnowledgebase mocks base method.
-func (m *MockGenAIService) DeleteKnowledgebase(knowledgeBaseID string) error {
+// DetachKnowledgeBaseToAgent mocks base method.
+func (m *MockGenAIService) DetachKnowledgeBaseToAgent(agentId, knowledgeBaseID string) (*do.Agent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteKnowledgebase", knowledgeBaseID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteKnowledgebase indicates an expected call of DeleteKnowledgebase.
-func (mr *MockGenAIServiceMockRecorder) DeleteKnowledgebase(knowledgeBaseID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKnowledgebase", reflect.TypeOf((*MockGenAIService)(nil).DeleteKnowledgebase), knowledgeBaseID)
-}
-
-// DetachKnowledgebase mocks base method.
-func (m *MockGenAIService) DetachKnowledgebase(agentId, knowledgeBaseID string) (*do.Agent, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DetachKnowledgebase", agentId, knowledgeBaseID)
+	ret := m.ctrl.Call(m, "DetachKnowledgeBaseToAgent", agentId, knowledgeBaseID)
 	ret0, _ := ret[0].(*do.Agent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DetachKnowledgebase indicates an expected call of DetachKnowledgebase.
-func (mr *MockGenAIServiceMockRecorder) DetachKnowledgebase(agentId, knowledgeBaseID any) *gomock.Call {
+// DetachKnowledgeBaseToAgent indicates an expected call of DetachKnowledgeBaseToAgent.
+func (mr *MockGenAIServiceMockRecorder) DetachKnowledgeBaseToAgent(agentId, knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachKnowledgebase", reflect.TypeOf((*MockGenAIService)(nil).DetachKnowledgebase), agentId, knowledgeBaseID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachKnowledgeBaseToAgent", reflect.TypeOf((*MockGenAIService)(nil).DetachKnowledgeBaseToAgent), agentId, knowledgeBaseID)
 }
 
 // GetKnowledgeBase mocks base method.
@@ -174,17 +174,17 @@ func (mr *MockGenAIServiceMockRecorder) ListKnowledgeBases() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKnowledgeBases", reflect.TypeOf((*MockGenAIService)(nil).ListKnowledgeBases))
 }
 
-// UpdateKnowledgebase mocks base method.
-func (m *MockGenAIService) UpdateKnowledgebase(knowledgeBaseID string, req *godo.UpdateKnowledgeBaseRequest) (*do.KnowledgeBase, error) {
+// UpdateKnowledgeBase mocks base method.
+func (m *MockGenAIService) UpdateKnowledgeBase(knowledgeBaseID string, req *godo.UpdateKnowledgeBaseRequest) (*do.KnowledgeBase, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateKnowledgebase", knowledgeBaseID, req)
+	ret := m.ctrl.Call(m, "UpdateKnowledgeBase", knowledgeBaseID, req)
 	ret0, _ := ret[0].(*do.KnowledgeBase)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UpdateKnowledgebase indicates an expected call of UpdateKnowledgebase.
-func (mr *MockGenAIServiceMockRecorder) UpdateKnowledgebase(knowledgeBaseID, req any) *gomock.Call {
+// UpdateKnowledgeBase indicates an expected call of UpdateKnowledgeBase.
+func (mr *MockGenAIServiceMockRecorder) UpdateKnowledgeBase(knowledgeBaseID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateKnowledgebase", reflect.TypeOf((*MockGenAIService)(nil).UpdateKnowledgebase), knowledgeBaseID, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateKnowledgeBase", reflect.TypeOf((*MockGenAIService)(nil).UpdateKnowledgeBase), knowledgeBaseID, req)
 }

@@ -369,9 +369,13 @@ type AppIngressSpecRuleStringMatch struct {
 
 // AppInstance struct for AppInstance
 type AppInstance struct {
-	ComponentName string                   `json:"component_name,omitempty"`
+	// The name of the component this instance belongs to.
+	ComponentName string `json:"component_name,omitempty"`
+	// The unique name identifying this specific instance.
 	InstanceName  string                   `json:"instance_name,omitempty"`
 	ComponentType AppInstanceComponentType `json:"component_type,omitempty"`
+	// An optional alias for the instance, used for display or identification.
+	InstanceAlias string `json:"instance_alias,omitempty"`
 }
 
 // AppInstanceComponentType the model 'AppInstanceComponentType'

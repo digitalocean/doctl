@@ -38,7 +38,7 @@ var (
 
 	testKBDataSource = do.KnowledgeBaseDataSource{
 		KnowledgeBaseDataSource: &godo.KnowledgeBaseDataSource{
-			UUID: "data-source-id",
+			Uuid: "data-source-id",
 		},
 	}
 )
@@ -80,7 +80,7 @@ func TestKnowledgeBaseCreate(t *testing.T) {
 			Name:               "Test Knowledge Base",
 			Region:             "tor1",
 			ProjectID:          "test-project-id",
-			EmbeddingModelUUID: "test-embedding-model-uuid",
+			EmbeddingModelUuid: "test-embedding-model-uuid",
 			DataSources: []godo.KnowledgeBaseDataSource{
 				{
 					WebCrawlerDataSource: &godo.WebCrawlerDataSource{
@@ -102,7 +102,7 @@ func TestKnowledgeBaseDelete(t *testing.T) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"
 		config.Args = append(config.Args, knowledge_base_id)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
-		tm.genai.EXPECT().DeleteKnowledgebase("00000000-0000-4000-8000-000000000000").Return(nil)
+		tm.genai.EXPECT().DeleteKnowledgeBase("00000000-0000-4000-8000-000000000000").Return(nil)
 		err := RunKnowledgeBaseDelete(config)
 		assert.NoError(t, err)
 	})
@@ -117,10 +117,10 @@ func TestKnowledgeBaseUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseProjectID, "updated-project-id")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseEmbeddingModelUUID, "updated-embedding-model-uuid")
 
-		tm.genai.EXPECT().UpdateKnowledgebase("00000000-0000-4000-8000-000000000000", &godo.UpdateKnowledgeBaseRequest{
+		tm.genai.EXPECT().UpdateKnowledgeBase("00000000-0000-4000-8000-000000000000", &godo.UpdateKnowledgeBaseRequest{
 			Name:               "Updated Knowledge Base",
 			ProjectID:          "updated-project-id",
-			EmbeddingModelUUID: "updated-embedding-model-uuid",
+			EmbeddingModelUuid: "updated-embedding-model-uuid",
 		}).Return(&testKnowledgeBase, nil)
 
 		err := RunKnowledgeBaseUpdate(config)
@@ -136,8 +136,8 @@ func TestKnowledgeBaseAddDataSource(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseBaseURL, "https://example.com")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseCrawlingOption, "Unknown")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseEmbedMedia, true)
-		tm.genai.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddDataSourceRequest{
-			KnowledgeBaseUUID: knowledge_base_id,
+		tm.genai.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddKnowledgeBaseDataSourceRequest{
+			KnowledgeBaseUuid: knowledge_base_id,
 			WebCrawlerDataSource: &godo.WebCrawlerDataSource{
 				BaseUrl:        "https://example.com",
 				CrawlingOption: "Unknown",
@@ -155,8 +155,8 @@ func TestKnowledgeBaseAddDataSource(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseBucketName, "sample-bucket")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseItemPath, "files/test")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseRegion, "tor1")
-		tm.genai.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddDataSourceRequest{
-			KnowledgeBaseUUID: knowledge_base_id,
+		tm.genai.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddKnowledgeBaseDataSourceRequest{
+			KnowledgeBaseUuid: knowledge_base_id,
 			SpacesDataSource: &godo.SpacesDataSource{
 				BucketName: "sample-bucket",
 				ItemPath:   "files/test",
@@ -191,7 +191,7 @@ func TestKnowledgeBaseListDataSources(t *testing.T) {
 		tm.genai.EXPECT().ListKnowledgeBaseDataSources("00000000-0000-4000-8000-000000000000").Return(do.KnowledgeBaseDataSources{
 			{
 				KnowledgeBaseDataSource: &godo.KnowledgeBaseDataSource{
-					UUID: "data-source-id",
+					Uuid: "data-source-id",
 				},
 			},
 		}, nil)
@@ -207,7 +207,7 @@ func TestKnowledgeBaseAttach(t *testing.T) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000001"
 		config.Args = append(config.Args, agent_id, knowledge_base_id)
 
-		tm.genai.EXPECT().AttachKnowledgebase(agent_id, knowledge_base_id).Return(testAgent, nil)
+		tm.genai.EXPECT().AttachKnowledgeBaseToAgent(agent_id, knowledge_base_id).Return(testAgent, nil)
 
 		err := RunAttachKnowledgeBase(config)
 		assert.NoError(t, err)
@@ -221,7 +221,7 @@ func TestKnowledgeBaseDetach(t *testing.T) {
 		config.Args = append(config.Args, agent_id, knowledge_base_id)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.genai.EXPECT().DetachKnowledgebase(agent_id, knowledge_base_id).Return(testAgent, nil)
+		tm.genai.EXPECT().DetachKnowledgeBaseToAgent(agent_id, knowledge_base_id).Return(testAgent, nil)
 
 		err := RunDetachKnowledgeBase(config)
 		assert.NoError(t, err)

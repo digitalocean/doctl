@@ -160,8 +160,8 @@ AddedToAgentAt    CreatedAt                        DatabaseId                   
 }
 `
 	knowledgeBaseListDataSourceOutput = `
-BucketName    CreatedAt                        FileUploadDataSource    ItemPath    LastIndexingJob    Region    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
-              2025-05-29 10:49:50 +0000 UTC    <nil>                               <nil>                        <nil>               2025-05-29 10:49:50 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://docs.digitalocean.com/data_source DOMAIN false}
+CreatedAt                        FileUploadDataSource    LastIndexingJob    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
+2025-05-29 10:49:50 +0000 UTC    <nil>                   <nil>              <nil>               2025-05-29 10:49:50 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://docs.digitalocean.com/data_source DOMAIN false}
 `
 
 	knowledgeBaseListDataSourceResponse = `

@@ -138,7 +138,7 @@ func KnowledgeBase() *Command {
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
 	cmdDataSourceAdd.Example = "The following example adds a Webcrawler Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		" : `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 ----base-url https://www.example.com/data_source --crawling-option DOMAIN --embed-media false` \n Similarly for spaces Data Sources, you can use the following command: " +
+		" : `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --base-url https://www.example.com/data_source --crawling-option DOMAIN --embed-media false` \n Similarly for spaces Data Sources, you can use the following command: " +
 		" \n `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --bucket-name my-bucket --item-path /path/to/item --region tor1`"
 	AddStringFlag(cmdDataSourceAdd, "bucket-name", "", "", "The bucket name of data source from Spaces")
 	AddStringFlag(cmdDataSourceAdd, "item-path", "", "", "Item path of data source from Spaces.")
@@ -261,11 +261,11 @@ func RunKnowledgeBaseCreate(c *CmdConfig) error {
 		DatabaseID:         databaseId,
 		DataSources:        dataSources,
 		Name:               name,
-		EmbeddingModelUUID: embeddingModelUUID,
+		EmbeddingModelUuid: embeddingModelUUID,
 		Region:             region,
 		ProjectID:          projectID,
 		Tags:               tags,
-		VPCUUIUD:           vpcUUID,
+		VPCUuid:            vpcUUID,
 	}
 
 	knowledgeBase, err := c.GenAI().CreateKnowledgeBase(req)
@@ -314,10 +314,10 @@ func RunKnowledgeBaseUpdate(c *CmdConfig) error {
 		Tags:               tags,
 		DatabaseID:         databaseId,
 		ProjectID:          projectID,
-		EmbeddingModelUUID: embeddingModelUUID,
-		UUID:               uuid,
+		EmbeddingModelUuid: embeddingModelUUID,
+		KnowledgeBaseUUID:  uuid,
 	}
-	knowledgeBase, err := c.GenAI().UpdateKnowledgebase(c.Args[0], req)
+	knowledgeBase, err := c.GenAI().UpdateKnowledgeBase(c.Args[0], req)
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func RunKnowledgeBaseDelete(c *CmdConfig) error {
 	}
 
 	if force || AskForConfirmDelete("Knowledge Base", 1) == nil {
-		err := c.GenAI().DeleteKnowledgebase(knowledgeBaseId)
+		err := c.GenAI().DeleteKnowledgeBase(knowledgeBaseId)
 		if err != nil {
 			return err
 		}
@@ -370,8 +370,8 @@ func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
 	crawlingOption, _ := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseCrawlingOption)
 	baseEmbedMedia, _ := c.Doit.GetBool(c.NS, doctl.ArgKnowledgeBaseEmbedMedia)
 
-	req := &godo.AddDataSourceRequest{
-		KnowledgeBaseUUID: c.Args[0],
+	req := &godo.AddKnowledgeBaseDataSourceRequest{
+		KnowledgeBaseUuid: c.Args[0],
 	}
 	if bucketName != "" || itemPath != "" || region != "" {
 		spacesDataSource := &godo.SpacesDataSource{
@@ -422,7 +422,7 @@ func RunAttachKnowledgeBase(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	agent, err := c.GenAI().AttachKnowledgebase(c.Args[0], c.Args[1])
+	agent, err := c.GenAI().AttachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -439,7 +439,7 @@ func RunDetachKnowledgeBase(c *CmdConfig) error {
 	}
 
 	if force || AskForConfirmDelete("Detach Knowledge Base from an Agent?", 1) == nil {
-		agent, err := c.GenAI().DetachKnowledgebase(c.Args[0], c.Args[1])
+		agent, err := c.GenAI().DetachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
 		if err != nil {
 			return err
 		}

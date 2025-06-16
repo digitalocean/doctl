@@ -1,5 +1,14 @@
 # Change Log
 
+## [v1.152.0] - 2025-06-16
+
+- #846 - @harshmaru7 - GenAI Knowledgebase endpoints 
+- #849 - @danaelhe - Databases: Add mongo_user_settings
+
+## [v1.151.0] - 2025-06-03
+
+- #847 - @thearyanahmed - Apps add instance alias
+
 ## [v1.150.0] - 2025-05-29
 
 - #844 - @thearyanahmed - Add App Platform Edge Control settings
