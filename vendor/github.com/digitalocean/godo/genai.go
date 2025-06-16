@@ -911,10 +911,6 @@ func (a Agent) String() string {
 	return Stringify(a)
 }
 
-func (a ApiKeyInfo) String() string {
-	return Stringify(a)
-}
-
 func (m Model) String() string {
 	return Stringify(m)
 }
@@ -924,5 +920,9 @@ func (a KnowledgeBase) String() string {
 }
 
 func (a KnowledgeBaseDataSource) String() string {
+	return Stringify(a)
+}
+
+func (a ApiKeyInfo) String() string {
 	return Stringify(a)
 }

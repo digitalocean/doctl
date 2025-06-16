@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// KnowledgeBaseCmd handles operation for KnowledgeBase using its subcommands.
 func KnowledgeBaseCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -190,6 +191,7 @@ func KnowledgeBaseCmd() *Command {
 	return cmd
 }
 
+// RunKnowledgeBaseList lists all knowledge bases for agents.
 func RunKnowledgeBasesList(c *CmdConfig) error {
 
 	knowledgeBases, err := c.GenAI().ListKnowledgeBases()
@@ -199,6 +201,7 @@ func RunKnowledgeBasesList(c *CmdConfig) error {
 	return c.Display(&displayers.KnowledgeBase{KnowledgeBases: knowledgeBases})
 }
 
+// RunKnowledgeBaseGet retrieves a knowledge base by its UUID.
 func RunKnowledgeBaseGet(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -210,6 +213,7 @@ func RunKnowledgeBaseGet(c *CmdConfig) error {
 	return c.Display(&displayers.KnowledgeBase{KnowledgeBases: do.KnowledgeBases{*knowledgeBase}})
 }
 
+// RunKnowledgeBaseCreate creates a new knowledge base.
 func RunKnowledgeBaseCreate(c *CmdConfig) error {
 
 	name, err := c.Doit.GetString(c.NS, doctl.ArgKnowledgeBaseName)
@@ -275,6 +279,7 @@ func RunKnowledgeBaseCreate(c *CmdConfig) error {
 	return c.Display(&displayers.KnowledgeBase{KnowledgeBases: do.KnowledgeBases{*knowledgeBase}})
 }
 
+// RunKnowledgeBaseUpdate updates an existing knowledge base.
 func RunKnowledgeBaseUpdate(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -324,6 +329,7 @@ func RunKnowledgeBaseUpdate(c *CmdConfig) error {
 	return c.Display(&displayers.KnowledgeBase{KnowledgeBases: do.KnowledgeBases{*knowledgeBase}})
 }
 
+// RunKnowledgeBaseDelete deletes a knowledge base by its UUID.
 func RunKnowledgeBaseDelete(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
@@ -347,6 +353,7 @@ func RunKnowledgeBaseDelete(c *CmdConfig) error {
 	return nil
 }
 
+// RunKnowledgeBaseListDataSources lists all data sources for a knowledge base.
 func RunKnowledgeBaseListDataSources(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -358,6 +365,7 @@ func RunKnowledgeBaseListDataSources(c *CmdConfig) error {
 	return c.Display(&displayers.KnowledgeBaseDataSource{KnowledgeBaseDataSources: knowledgeBaseDataSource})
 }
 
+// RunKnowledgeBaseAddDataSource adds a data source to a knowledge base.
 func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -396,6 +404,7 @@ func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
 	return c.Display(&displayers.KnowledgeBaseDataSource{KnowledgeBaseDataSources: do.KnowledgeBaseDataSources{*knowledgeBaseDataSource}})
 }
 
+// RunKnowledgeBaseDeleteDataSource deletes a data source from a knowledge base.
 func RunKnowledgeBaseDeleteDataSource(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -418,6 +427,7 @@ func RunKnowledgeBaseDeleteDataSource(c *CmdConfig) error {
 	return err
 }
 
+// RunAttachKnowledgeBase attaches a knowledge base to an agent.
 func RunAttachKnowledgeBase(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -429,6 +439,7 @@ func RunAttachKnowledgeBase(c *CmdConfig) error {
 	return c.Display(&displayers.Agent{Agents: do.Agents{*agent}})
 }
 
+// RunDetachKnowledgeBase detaches a knowledge base from an agent.
 func RunDetachKnowledgeBase(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)

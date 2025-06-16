@@ -75,7 +75,6 @@ func (v *KnowledgeBase) JSON(out io.Writer) error {
 
 func (v *KnowledgeBase) ColMap() map[string]string {
 	return map[string]string{
-		// Add appropriate column mappings here, for example:
 		"AddedToAgentAt":     "AddedToAgentAt",
 		"CreatedAt":          "CreatedAt",
 		"DatabaseId":         "DatabaseId",
@@ -161,7 +160,6 @@ func (v *KnowledgeBaseDataSource) ColMap() map[string]string {
 }
 func (v *KnowledgeBaseDataSource) Cols() []string {
 	return []string{
-		// Add appropriate column names here, for example:
 		"CreatedAt",
 		"FileUploadDataSource",
 		"LastIndexingJob",
