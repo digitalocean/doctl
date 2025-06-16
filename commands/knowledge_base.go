@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func KnowledgeBase() *Command {
+func KnowledgeBaseCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "knowledge-base",

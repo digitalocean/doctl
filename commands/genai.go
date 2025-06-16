@@ -30,7 +30,7 @@ func GenAI() *Command {
 	// Add the agent command as a subcommand to genai
 	cmd.AddCommand(AgentCmd())
 	// Add the knowledgebase command as a subcommand to genai
-	cmd.AddCommand(KnowledgeBase())
+	cmd.AddCommand(KnowledgeBaseCmd())
 
 	return cmd
 }

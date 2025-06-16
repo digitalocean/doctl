@@ -31,7 +31,7 @@ var (
 )
 
 func TestKnowledgeBasesCommand(t *testing.T) {
-	cmd := KnowledgeBase()
+	cmd := KnowledgeBaseCmd()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "add-datasource", "attach", "create", "delete", "delete-datasource", "detach", "get", "list", "list-datasources", "update")
 }
