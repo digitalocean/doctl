@@ -40,7 +40,7 @@ var (
 `
 
 	partnerAttachmentCreateOutput = `
-ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Provider    VPC IDs                                 Created At                       BGP Local ASN    BGP Local Router IP    BGP Peer ASN    BGP Peer Router IP     Redundancy Zone    Parent UUID    Children UUIDs
+ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Provider    VPC IDs                                 Created At                       BGP Local ASN    BGP Local Router IP    BGP Peer ASN    BGP Peer Router IP    Redundancy Zone    Parent UUID    Children UUIDs
 12345    doctl-pia    active    50                             stage2    MEGAPORT         d35e5cb7-7957-4643-8e3a-1ab4eb3a494c    2025-01-30 12:00:00 +0000 UTC    0                                       0
 `
 
