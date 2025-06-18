@@ -30,5 +30,7 @@ func GenAI() *Command {
 	// Add the agent command as a subcommand to genai
 	cmd.AddCommand(AgentCmd())
 
+	// cmd.AddCommand(AgentAPIKeyCmd())
+
 	return cmd
 }

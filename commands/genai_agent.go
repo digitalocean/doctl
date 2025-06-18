@@ -20,6 +20,7 @@ func AgentCmd() *Command {
 			Long:    "The subcommands of `doctl genai agent` manage your GenAI agents.",
 		},
 	}
+	cmd.AddCommand(AgentAPIKeyCmd())
 
 	cmdAgentCreate := CmdBuilder(
 		cmd,

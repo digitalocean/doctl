@@ -688,4 +688,13 @@ const (
 
 	// ArgTopProbability is the top probability for the response generation.
 	ArgTopProbability = "top-p"
+
+	// ArgAgentAPIKeyName is the name of API Key of the agent.
+	ArgAgentAPIKeyName = "name"
+
+	// ArgAgentUUID is the uuid of the agent.
+	ArgAgentUUID = "agent-uuid"
+
+	// ArgAgentUUID is the uuid of the apikey.
+	ArgAPIkeyUUID = "api-key-uuid"
 )

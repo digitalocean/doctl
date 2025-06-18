@@ -23,6 +23,12 @@ import (
 type Agent struct {
 	*godo.Agent
 }
+type ApiKeyInfo struct {
+	*godo.ApiKeyInfo
+}
+
+// ApiKeys is a slice of ApiKey.
+type ApiKeys []ApiKeyInfo
 
 // Agents is a slice of Agent.
 type Agents []Agent
@@ -35,6 +41,11 @@ type GenAIService interface {
 	UpdateAgent(agentID string, req *godo.AgentUpdateRequest) (*Agent, error)
 	DeleteAgent(agentID string) error
 	UpdateAgentVisibility(agentID string, req *godo.AgentVisibilityUpdateRequest) (*Agent, error)
+	ListAgentAPIKeys(agentId string) (ApiKeys, error)
+	CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*ApiKeyInfo, error)
+	UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error)
+	DeleteAgentAPIKey(agentID string, apikeyID string) error
+	RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error)
 }
 
 var _ GenAIService = &genAIService{}
@@ -117,4 +128,65 @@ func (a *genAIService) UpdateAgentVisibility(agentID string, req *godo.AgentVisi
 		return nil, err
 	}
 	return &Agent{Agent: agent}, nil
+}
+
+// CreateAgentAPIKey implements GenAIService.
+func (a *genAIService) CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*ApiKeyInfo, error) {
+	apikeyInfo, _, err := a.client.GenAI.CreateAgentAPIKey(context.TODO(), agentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
+}
+
+// DeleteAgentAPIKey implements GenAIService.
+func (a *genAIService) DeleteAgentAPIKey(agentID string, apikeyID string) error {
+	_, _, err := a.client.GenAI.DeleteAgentAPIKey(context.TODO(), agentID, apikeyID)
+	return err
+}
+
+// ListAgentAPIKeys implements GenAIService.
+func (a *genAIService) ListAgentAPIKeys(agentId string) (ApiKeys, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListAgentAPIKeys(context.TODO(), agentId, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]ApiKeyInfo, len(si))
+	for i := range si {
+		a := si[i].(*godo.ApiKeyInfo)
+		list[i] = ApiKeyInfo{ApiKeyInfo: a}
+	}
+
+	return list, nil
+}
+
+// RegenerateAgentAPIKey implements GenAIService.
+func (a *genAIService) RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error) {
+	apikeyInfo, _, err := a.client.GenAI.RegenerateAgentAPIKey(context.TODO(), agentID, apikeyID)
+	if err != nil {
+		return nil, err
+	}
+	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
+}
+
+// UpdateAgentAPIKey implements GenAIService.
+func (a *genAIService) UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error) {
+	apikeyInfo, _, err := a.client.GenAI.UpdateAgentAPIKey(context.TODO(), agentID, apikeyID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
 }
