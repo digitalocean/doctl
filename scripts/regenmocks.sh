@@ -49,3 +49,4 @@ mockgen -source reserved_ips.go -package=mocks ReservedIPsService > mocks/Reserv
 mockgen -source serverless.go -package=mocks ServerlessService > mocks/ServerlessService.go
 mockgen -source partner_network_connect.go  -package=mocks PartnerAttachmentsService > mocks/PartnerAttachmentsService.go
 mockgen -source spaces_keys.go -package=mocks SpacesKeysService > mocks/SpacesKeysService.go
+mockgen -source genai.go -package=mocks GenAIService > mocks/GenAIService.go
