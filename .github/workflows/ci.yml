@@ -42,3 +42,4 @@ jobs:
 
     - name: Run integration tests
       run: make test_integration
+      batman
