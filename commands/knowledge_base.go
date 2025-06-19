@@ -67,8 +67,8 @@ func KnowledgeBaseCmd() *Command {
 	AddStringFlag(cmdKnowledgeBaseCreate, "database-id", "", "", "The database ID of the Knowledge Base.")
 	AddStringSliceFlag(cmdKnowledgeBaseCreate, "tags", "", []string{}, "The tags of the Knowledge Base.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "vpc_uuid", "", "", "The VPC UUID of the Knowledge Base.")
-	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the parameters ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		` doctl genai knowledge-base create f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the parameters ` +
+		` doctl genai knowledge-base create --name example-kb --region tor1 --project-id 84e1e297-0000-0000-0000-1067cf2206e9 --embedding-model-uuid 22653204-79ed-11ef-bf8f-4e013e2ddde4 --data-sources '[{"web_crawler_data_source":{"base_url":"https://example.com/apps/","crawling_option":"UNKNOWN","embed_media": true}}]'`
 
 	cmdKnowledgeBasesList := "List all knowledge bases for agents where each knowledge base contains the following information:\n" + knowledgebaseDetails
 	cmdKnowledgeBaseList := CmdBuilder(
@@ -381,7 +381,7 @@ func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
 	req := &godo.AddKnowledgeBaseDataSourceRequest{
 		KnowledgeBaseUuid: c.Args[0],
 	}
-	if bucketName != "" || itemPath != "" || region != "" {
+	if bucketName != "" && region != "" {
 		spacesDataSource := &godo.SpacesDataSource{
 			BucketName: bucketName,
 			ItemPath:   itemPath,
@@ -395,6 +395,8 @@ func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
 			EmbedMedia:     baseEmbedMedia,
 		}
 		req.WebCrawlerDataSource = webCrawlerDataSource
+	} else {
+		return fmt.Errorf("either --bucket-name and --region or --base-url must be provided")
 	}
 
 	knowledgeBaseDataSource, err := c.GenAI().AddKnowledgeBaseDataSource(c.Args[0], req)

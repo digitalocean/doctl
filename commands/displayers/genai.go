@@ -158,6 +158,7 @@ func (v *KnowledgeBaseDataSource) ColMap() map[string]string {
 		"WebCrawlerDataSource": "WebCrawlerDataSource",
 	}
 }
+
 func (v *KnowledgeBaseDataSource) Cols() []string {
 	return []string{
 		"CreatedAt",

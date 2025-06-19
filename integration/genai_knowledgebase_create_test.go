@@ -293,7 +293,7 @@ var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "failed to validate knowledge base datasource input")
+			expect.Contains(string(output), "either --bucket-name and --region or --base-url must be provided")
 		})
 	})
 })
