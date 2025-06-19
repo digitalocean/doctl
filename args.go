@@ -118,6 +118,23 @@ const (
 	// ArgAutoscaleTargetInstances is an autoscale target instance argument.
 	ArgAutoscaleTargetInstances = "target-instances"
 
+	// ArgVPCNATGatewayName is a vpc nat gateway name argument.
+	ArgVPCNATGatewayName = "name"
+	// ArgVPCNATGatewayType is a vpc nat gateway type argument.
+	ArgVPCNATGatewayType = "type"
+	// ArgVPCNATGatewayRegion is a vpc nat gateway region argument.
+	ArgVPCNATGatewayRegion = "region"
+	// ArgVPCNATGatewaySize is a vpc nat gateway region argument.
+	ArgVPCNATGatewaySize = "size"
+	// ArgVPCNATGatewayVPCs is a vpc nat gateway vpcs argument.
+	ArgVPCNATGatewayVPCs = "vpcs"
+	// ArgVPCNATGatewayUDPTimeout is a vpc nat gateway udp-timeout argument.
+	ArgVPCNATGatewayUDPTimeout = "udp-timeout"
+	// ArgVPCNATGatewayICMPTimeout is a vpc nat gateway icmp-timeout argument.
+	ArgVPCNATGatewayICMPTimeout = "icmp-timeout"
+	// ArgVPCNATGatewayTCPTimeout is a vpc nat gateway tcp-timeout argument.
+	ArgVPCNATGatewayTCPTimeout = "tcp-timeout"
+
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
@@ -555,6 +572,8 @@ const (
 	ArgPartnerAttachmentBGPAuthKey = "bgp-auth-key"
 	// ArgPartnerAttachmentRedundancyZone is the redundancy zone of the Partner Attachment
 	ArgPartnerAttachmentRedundancyZone = "redundancy-zone"
+	// ArgPartnerAttachmentParentUUID is the ha parent uuid of the Partner Attachment
+	ArgPartnerAttachmentParentUUID = "parent-uuid"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
