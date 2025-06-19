@@ -141,7 +141,6 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 			c.GenAI = func() do.GenAIService { return do.NewGenAIService(godoClient) }
-
 			return nil
 		},
 
