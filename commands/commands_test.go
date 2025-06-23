@@ -118,6 +118,37 @@ var (
 	}
 	testReservedIPv6List = do.ReservedIPv6s{testReservedIPv6}
 
+	testBYOIPPrefixCreate = &godo.BYOIPPrefixCreateResp{
+		UUID:   "123e4567-e89b-12d3-a456-426614174000",
+		Region: "nyc1",
+		Status: "active",
+	}
+
+	testBYOIPPrefix = do.BYOIPPrefix{
+		BYOIPPrefix: &godo.BYOIPPrefix{
+			Prefix:        "10.1.1.1/24",
+			Region:        "nyc1",
+			Status:        "active",
+			UUID:          "123e4567-e89b-12d3-a456-426614174000",
+			FailureReason: "",
+			Validations:   nil,
+		},
+	}
+
+	testBYOIPPrefixList = do.BYOIPPrefixes{testBYOIPPrefix}
+
+	testBYOIPPrefixGetResources = do.BYOIPPrefixResources{
+		{
+			BYOIPPrefixResource: &godo.BYOIPPrefixResource{
+				ID:         1234,
+				BYOIP:      "10.1.1.23",
+				Resource:   "do:droplet:b5816aae-437a-4d82-b440-656af71a2ad4",
+				Region:     "nyc1",
+				AssignedAt: time.Now(),
+			},
+		},
+	}
+
 	testSnapshot = do.Snapshot{
 		Snapshot: &godo.Snapshot{
 			ID:      "1",
@@ -231,6 +262,7 @@ type tcMocks struct {
 	reservedIPs           *domocks.MockReservedIPsService
 	reservedIPActions     *domocks.MockReservedIPActionsService
 	reservedIPv6s         *domocks.MockReservedIPv6sService
+	byoipPrefixes         *domocks.MockBYOIPPrefixsService
 	domains               *domocks.MockDomainsService
 	uptimeChecks          *domocks.MockUptimeChecksService
 	volumes               *domocks.MockVolumesService
@@ -280,6 +312,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		reservedIPs:           domocks.NewMockReservedIPsService(ctrl),
 		reservedIPActions:     domocks.NewMockReservedIPActionsService(ctrl),
 		reservedIPv6s:         domocks.NewMockReservedIPv6sService(ctrl),
+		byoipPrefixes:         domocks.NewMockBYOIPPrefixsService(ctrl),
 		droplets:              domocks.NewMockDropletsService(ctrl),
 		dropletActions:        domocks.NewMockDropletActionsService(ctrl),
 		dropletAutoscale:      domocks.NewMockDropletAutoscaleService(ctrl),
@@ -341,6 +374,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		ReservedIPs:        func() do.ReservedIPsService { return tm.reservedIPs },
 		ReservedIPActions:  func() do.ReservedIPActionsService { return tm.reservedIPActions },
 		ReservedIPv6s:      func() do.ReservedIPv6sService { return tm.reservedIPv6s },
+		BYOIPPrefixes:      func() do.BYOIPPrefixsService { return tm.byoipPrefixes },
 		Droplets:           func() do.DropletsService { return tm.droplets },
 		DropletActions:     func() do.DropletActionsService { return tm.dropletActions },
 		DropletAutoscale:   func() do.DropletAutoscaleService { return tm.dropletAutoscale },

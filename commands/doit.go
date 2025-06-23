@@ -215,6 +215,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(ReservedIP())
 	cmd.AddCommand(ReservedIPAction())
 	cmd.AddCommand(ReservedIPv6())
+	cmd.AddCommand(BYOIPPrefix())
 	cmd.AddCommand(Images())
 	cmd.AddCommand(ImageAction())
 	cmd.AddCommand(LoadBalancer())

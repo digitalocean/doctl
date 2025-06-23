@@ -39,15 +39,17 @@ type CmdConfig struct {
 	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
-	Keys               func() do.KeysService
-	Sizes              func() do.SizesService
-	Regions            func() do.RegionsService
-	Images             func() do.ImagesService
-	ImageActions       func() do.ImageActionsService
-	LoadBalancers      func() do.LoadBalancersService
-	ReservedIPs        func() do.ReservedIPsService
-	ReservedIPActions  func() do.ReservedIPActionsService
-	ReservedIPv6s      func() do.ReservedIPv6sService
+	Keys              func() do.KeysService
+	Sizes             func() do.SizesService
+	Regions           func() do.RegionsService
+	Images            func() do.ImagesService
+	ImageActions      func() do.ImageActionsService
+	LoadBalancers     func() do.LoadBalancersService
+	ReservedIPs       func() do.ReservedIPsService
+	ReservedIPActions func() do.ReservedIPActionsService
+	ReservedIPv6s     func() do.ReservedIPv6sService
+	BYOIPPrefixes     func() do.BYOIPPrefixsService
+
 	Droplets           func() do.DropletsService
 	DropletActions     func() do.DropletActionsService
 	DropletAutoscale   func() do.DropletAutoscaleService
@@ -105,6 +107,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.ReservedIPs = func() do.ReservedIPsService { return do.NewReservedIPsService(godoClient) }
 			c.ReservedIPActions = func() do.ReservedIPActionsService { return do.NewReservedIPActionsService(godoClient) }
 			c.ReservedIPv6s = func() do.ReservedIPv6sService { return do.NewReservedIPv6sService(godoClient) }
+			c.BYOIPPrefixes = func() do.BYOIPPrefixsService { return do.NewBYOIPPrefixService(godoClient) }
 			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
 			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
 			c.DropletAutoscale = func() do.DropletAutoscaleService { return do.NewDropletAutoscaleService(godoClient) }
