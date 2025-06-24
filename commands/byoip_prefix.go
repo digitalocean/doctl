@@ -31,7 +31,7 @@ func BYOIPPrefix() *Command {
 		Command: &cobra.Command{
 			Use:     "byoip-prefix",
 			Short:   "Display commands to manage byoip prefixes",
-			Long:    `The sub-commands of ` + "`" + `doctl compute byoip-prefix` + "`" + ` manage byoip prefixes. Bring Your Own IP(BYOIP) Prefixes can be created and the IP addresses under that prefix can be used to assign to resources. BYOIP Prefixes are bound to the regions they are created in.`,
+			Long:    `The sub-commands of ` + "`" + `doctl network byoip-prefix` + "`" + ` manage byoip prefixes. Bring Your Own IP(BYOIP) Prefixes can be created and the IP addresses under that prefix can be used to assign to resources. BYOIP Prefixes are bound to the regions they are created in.`,
 			Aliases: []string{"byoip-prefixes"},
 		},
 	}
@@ -42,23 +42,23 @@ BYOIP Prefixes can be held in the region they were created in on your account.`,
 	AddStringFlag(cmdBYOIPPrefixCreate, doctl.ArgRegionSlug, "", "", "The region where to create the byoip prefix")
 	AddStringFlag(cmdBYOIPPrefixCreate, doctl.ArgPrefix, "", "", "The prefix to create")
 	AddStringFlag(cmdBYOIPPrefixCreate, doctl.ArgSignature, "", "", "The signature for the prefix")
-	cmdBYOIPPrefixCreate.Example = `The following example creates a byoip prefix in the ` + "`" + `nyc1` + "`" + ` region: doctl compute byoip-prefix create --region nyc1 --prefix "10.1.1.1/24" --signature "signature"`
+	cmdBYOIPPrefixCreate.Example = `The following example creates a byoip prefix in the ` + "`" + `nyc1` + "`" + ` region: doctl network byoip-prefix create --region nyc1 --prefix "10.1.1.1/24" --signature "signature"`
 
 	cmdBYOIPPrefixGet := CmdBuilder(cmd, RunBYOIPPrefixGet, "get <prefix-uuid>", "Retrieve information about a byoip prefix", "Retrieves detailed information about a BYOIP Prefix", Writer,
 		aliasOpt("g"), displayerType(&displayers.ReservedIPv6{}))
-	cmdBYOIPPrefixGet.Example = `The following example retrieves information about the byoip prefix ` + "`" + `5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0` + "`" + `: doctl compute byoip-prefix get 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
+	cmdBYOIPPrefixGet.Example = `The following example retrieves information about the byoip prefix ` + "`" + `5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0` + "`" + `: doctl network byoip-prefix get 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
 
 	cmdRunBYOIPPrefixDelete := CmdBuilder(cmd, RunBYOIPPrefixDelete, "delete <prefix-uuid>", "Permanently delete a BYOIP Prefix", "Permanently deletes a BYOIP Prefix. This is irreversible and it needs all IPs of the prefix to be unassigned", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunBYOIPPrefixDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the BYOIP Prefix without confirmation")
-	cmdRunBYOIPPrefixDelete.Example = `The following example deletes the byoip prefix ` + "`" + `5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0` + "`" + `: doctl compute byoip-prefix delete 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
+	cmdRunBYOIPPrefixDelete.Example = `The following example deletes the byoip prefix ` + "`" + `5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0` + "`" + `: doctl network byoip-prefix delete 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
 
 	cmdRunBYOIPPrefixList := CmdBuilder(cmd, RunBYOIPPrefixList, "list", "List all BYOIP Prefixes on your account", "Retrieves a list of all the BYOIP Prefixes in your account.", Writer,
 		aliasOpt("ls"), displayerType(&displayers.BYOIPPrefix{}))
-	cmdRunBYOIPPrefixList.Example = `The following example lists all byoip prefixes: doctl compute byoip-prefix list`
+	cmdRunBYOIPPrefixList.Example = `The following example lists all byoip prefixes: doctl network byoip-prefix list`
 
 	cmdRunBYOIPPrefixResourcesList := CmdBuilder(cmd, RunBYOIPPrefixResourcesGet, "resource", "List all the Resource for a BYOIP Prefix", "Retrieves a list of all the Resources in your prefix.", Writer,
 		aliasOpt("resources"), displayerType(&displayers.BYOIPPrefixResource{}))
-	cmdRunBYOIPPrefixResourcesList.Example = `The following example lists all resources in a byoip prefix: doctl compute byoip-prefix resources 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
+	cmdRunBYOIPPrefixResourcesList.Example = `The following example lists all resources in a byoip prefix: doctl network byoip-prefix resources 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
 
 	return cmd
 }
@@ -94,7 +94,6 @@ func RunBYOIPPrefixCreate(c *CmdConfig) error {
 
 	bpCreateResp, err := bps.Create(req)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
