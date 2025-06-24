@@ -281,7 +281,7 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 	case "app":
 		return RunAppsGet(c)
 	case "floatingipv6":
-		return RunBYOIPPrefixGet(c)
+		return RunReservedIPv6Get(c)
 	default:
 		return fmt.Errorf("%q is an invalid resource type, consult the documentation", parts[1])
 	}

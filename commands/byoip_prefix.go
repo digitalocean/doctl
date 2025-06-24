@@ -98,15 +98,11 @@ func RunBYOIPPrefixCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.BYOIPPrefix{BYOIPPrefixes: do.BYOIPPrefixes{
-		do.BYOIPPrefix{
-			BYOIPPrefix: &godo.BYOIPPrefix{
-				UUID:   bpCreateResp.UUID,
-				Region: bpCreateResp.Region,
-				Status: bpCreateResp.Status,
-			},
+	item := &displayers.BYOIPPrefixCreate{
+		BYOIPPrefixCreate: do.BYOIPPrefixCreate{
+			BYOIPPrefixCreateResp: bpCreateResp,
 		},
-	}}
+	}
 
 	return c.Display(item)
 }
@@ -123,12 +119,12 @@ func RunBYOIPPrefixGet(c *CmdConfig) error {
 	prefixUUID := c.Args[0]
 
 	if len(prefixUUID) < 1 {
-		return errors.New("Invalid BYOIP Prefix UUID")
+		return errors.New("invalid BYOIP Prefix UUID")
 	}
 
 	_, err = uuid.Parse(prefixUUID) // Validate UUID format
 	if err != nil {
-		return fmt.Errorf("Invalid BYOIP Prefix UUID: %s", prefixUUID)
+		return fmt.Errorf("invalid BYOIP Prefix UUID: %s", prefixUUID)
 	}
 
 	byoipPrefix, err := bp.Get(prefixUUID)

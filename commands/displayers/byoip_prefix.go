@@ -103,3 +103,36 @@ func (bpr *BYOIPPrefixResource) KV() []map[string]any {
 
 	return out
 }
+
+type BYOIPPrefixCreate struct {
+	do.BYOIPPrefixCreate
+}
+
+var _ Displayable = &BYOIPPrefixCreate{}
+
+func (bp *BYOIPPrefixCreate) JSON(out io.Writer) error {
+	return writeJSON(bp.BYOIPPrefixCreateResp, out)
+}
+
+func (bp *BYOIPPrefixCreate) Cols() []string {
+	return []string{
+		"UUID", "Region", "Status",
+	}
+}
+
+func (bp *BYOIPPrefixCreate) ColMap() map[string]string {
+	return map[string]string{
+		"Region": "Region", "Status": "Status", "UUID": "UUID",
+	}
+}
+
+func (bp *BYOIPPrefixCreate) KV() []map[string]any {
+
+	out := map[string]any{
+		"Region": bp.Region,
+		"Status": bp.Status,
+		"UUID":   bp.UUID,
+	}
+
+	return []map[string]any{out}
+}

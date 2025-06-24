@@ -24,6 +24,10 @@ type BYOIPPrefix struct {
 	BYOIPPrefix *godo.BYOIPPrefix
 }
 
+type BYOIPPrefixCreate struct {
+	*godo.BYOIPPrefixCreateResp
+}
+
 // BYOIPPrefixResource wraps a godo BYOIPPrefixResource.
 type BYOIPPrefixResource struct {
 	BYOIPPrefixResource *godo.BYOIPPrefixResource
