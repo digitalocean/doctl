@@ -30,8 +30,8 @@ func BYOIPPrefix() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "byoip-prefix",
-			Short:   "Display commands to manage byoip prefixes",
-			Long:    `The sub-commands of ` + "`" + `doctl network byoip-prefix` + "`" + ` manage byoip prefixes. Bring Your Own IP(BYOIP) Prefixes can be created and the IP addresses under that prefix can be used to assign to resources. BYOIP Prefixes are bound to the regions they are created in.`,
+			Short:   "Display commands to manage BYOIP Prefixes",
+			Long:    "The sub-commands of `doctl network byoip-prefix` manage Bring-Your-Own-IP (BYOIP) refixes. BYOIP Prefixes can be created and the IP addresses under that prefix can be used to assign to resources. BYOIP Prefixes are bound to the regions they are created in.",
 			Aliases: []string{"byoip-prefixes"},
 		},
 	}
