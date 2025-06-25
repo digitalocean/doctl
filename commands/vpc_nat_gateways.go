@@ -40,7 +40,7 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs", opts...)
 		AddIntFlag(c, doctl.ArgVPCNATGatewayUDPTimeout, "", 30, "UDP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayICMPTimeout, "", 30, "ICMP connection timeout (seconds)")
-		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 30, "TCP connection timeout (seconds)")
+		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 300, "TCP connection timeout (seconds)")
 	}
 
 	CmdBuilder(cmd, RunVPCNATGatewayGet, "get <gateway-id>", "Get a VPC NAT Gateway", "", Writer, displayerType(&displayers.VPCNATGateways{}))
