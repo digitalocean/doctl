@@ -707,4 +707,10 @@ const (
 
 	// ArgTopProbability is the top probability for the response generation.
 	ArgTopProbability = "top-p"
+
+	// ArgPrefix is a byoip prefix argument.
+	ArgPrefix = "prefix"
+
+	// ArgSignature is a byoip prefix argument.
+	ArgSignature = "signature"
 )
