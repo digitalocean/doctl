@@ -51,6 +51,10 @@ type BYOIPPrefixCreateResp struct {
 	Status string `json:"status"`
 }
 
+type byoipPrefixCreateRoot struct {
+	BYOIPPrefixCreate *BYOIPPrefixCreateResp `json:"byoip_prefix"`
+}
+
 // BYOIPPrefixResource represents a BYOIP resource allocations
 type BYOIPPrefixResource struct {
 	ID         uint64    `json:"id"`
@@ -171,13 +175,13 @@ func (r *BYOIPPrefixServiceOp) Create(ctx context.Context, byoipPrefix *BYOIPPre
 		return nil, nil, err
 	}
 
-	root := new(BYOIPPrefixCreateResp)
+	root := new(byoipPrefixCreateRoot)
 	resp, err := r.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return root, resp, err
+	return root.BYOIPPrefixCreate, resp, err
 }
 
 func (r *BYOIPPrefixServiceOp) Delete(ctx context.Context, uuid string) (*Response, error) {
