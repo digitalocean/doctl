@@ -39,6 +39,7 @@ func Network() *Command {
 	}
 
 	cmd.AddCommand(PartnerAttachments())
+	cmd.AddCommand(BYOIPPrefix())
 
 	return cmd
 }
