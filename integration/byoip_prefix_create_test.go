@@ -103,9 +103,11 @@ UUID									Region	Status
 `
 	byoipPrefixCreateResponse = `
 {
+"byoip_prefix": {
     "uuid": "78d564a7-bc3f-4489-be14-1fb714969213",
     "region": "nyc3",
     "status": "active"
+	}
 }
 `
 

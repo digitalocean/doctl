@@ -36,10 +36,6 @@ var _ = suite("network/byoip-prefix/get", func(t *testing.T, when spec.G, it spe
 					return
 				}
 
-				fmt.Println("Received request for /v2/byoip_prefixes/78d564a7-bc3f-4489-be14-1fb714969213")
-
-				fmt.Printf("%s", byoipPrefixGetResponse)
-
 				responseJSON := byoipPrefixGetResponse
 
 				w.Write([]byte(responseJSON))
