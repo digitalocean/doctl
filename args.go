@@ -752,4 +752,10 @@ const (
 
 	// ArgKnowledgeBaseItemPath is the region of the knowledge base
 	ArgKnowledgeBaseItemPath = "item-path"
+
+	// ArgPrefix is a byoip prefix argument.
+	ArgPrefix = "prefix"
+
+	// ArgSignature is a byoip prefix argument.
+	ArgSignature = "signature"
 )

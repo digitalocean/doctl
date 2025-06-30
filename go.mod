@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21
-	github.com/digitalocean/godo v1.152.1-0.20250617084318-782d39db47e5
+	github.com/digitalocean/godo v1.155.0
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.36.0
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/oauth2 v0.28.0
+	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sys v0.31.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.2
@@ -79,7 +79,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hokaccha/go-prettyjson v0.0.0-20210113012101-fb4e108d2519 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -123,7 +123,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect

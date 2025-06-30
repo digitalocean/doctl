@@ -29,18 +29,13 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 		cmdVPCNATGatewayUpdate,
 	} {
 		AddStringFlag(c, doctl.ArgVPCNATGatewayName, "", "", "Name of the VPC NAT Gateway", requiredOpt())
-		AddStringFlag(c, doctl.ArgVPCNATGatewayType, "", "PUBLIC", "Gateway type", requiredOpt())
+		AddStringFlag(c, doctl.ArgVPCNATGatewayType, "", "PUBLIC", "Gateway type")
 		AddStringFlag(c, doctl.ArgVPCNATGatewayRegion, "", "", "Gateway region", requiredOpt())
 		AddIntFlag(c, doctl.ArgVPCNATGatewaySize, "", 1, "Gateway size")
-		// Ingress VPCs is not a required arg for update cmd
-		var opts []flagOpt
-		if c.HasAlias("c") {
-			opts = append(opts, requiredOpt())
-		}
-		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs", opts...)
+		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayUDPTimeout, "", 30, "UDP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayICMPTimeout, "", 30, "ICMP connection timeout (seconds)")
-		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 30, "TCP connection timeout (seconds)")
+		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 300, "TCP connection timeout (seconds)")
 	}
 
 	CmdBuilder(cmd, RunVPCNATGatewayGet, "get <gateway-id>", "Get a VPC NAT Gateway", "", Writer, displayerType(&displayers.VPCNATGateways{}))

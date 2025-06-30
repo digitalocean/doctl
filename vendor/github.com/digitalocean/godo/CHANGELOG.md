@@ -1,5 +1,19 @@
 # Change Log
 
+## [v1.155.0] - 2025-06-26
+
+- #854 - @anup-deka - Implementation for Agent Route and Agent Versions 
+- #858 - @imaskm - Fix byoip create resp
+
+## [v1.154.0] - 2025-06-23
+
+- #856 - @imaskm - Fix byoip names with byoipPrefix
+
+## [v1.153.0] - 2025-06-23
+
+- #850 - @imaskm - Add byoip APIs support
+- #851 - @guptado - [VPC-4603] godo: PNC HA support
+
 ## [v1.152.0] - 2025-06-16
 
 - #846 - @harshmaru7 - GenAI Knowledgebase endpoints 
