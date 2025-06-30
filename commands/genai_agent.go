@@ -132,6 +132,18 @@ func AgentCmd() *Command {
 	AddStringFlag(cmdAgentUpdateVisibility, "visibility", "", "", "Agent deployment visibility. Possible Options: `VISIBILITY_PLAYGROUND`, `VISIBILITY_PUBLIC`, `VISIBILITY_PRIVATE`. Default: `VISIBILITY_UNKNOWN`", requiredOpt())
 	cmdAgentUpdateVisibility.Example = `The following example updates the visibility of an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `VISIBILITY_PUBLIC` + "`" + `: doctl genai agent update-visibility 12345678-1234-1234-1234-123456789012 --visibility 'VISIBILITY_PUBLIC'`
 
+	cmdAgentListVersions := CmdBuilder(
+		cmd,
+		RunAgentListVersions,
+		"list-versions",
+		"List versions for an agent",
+		"Retrieves a list of all the versions for an agent on your account",
+		Writer,
+		aliasOpt("lv", "list-versions"),
+		displayerType(&displayers.AgentVersion{}),
+	)
+	cmdAgentListVersions.Example = `The following example retrieves a list of all versions for an Agent with ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` region: doctl genai agent list-versions 12345678-1234-1234-1234-123456789012`
+
 	return cmd
 }
 
@@ -308,4 +320,19 @@ func RunAgentUpdateVisibility(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.Agent{Agents: do.Agents{*agent}})
+}
+
+// RunAgentListVersions lists all versions for an agent.
+func RunAgentListVersions(c *CmdConfig) error {
+	agentID, _ := c.Doit.GetString(c.NS, doctl.ArgAgentID)
+
+	agentVersions, err := c.GenAI().ListAgentVersions(agentID)
+	if err != nil {
+		return err
+	}
+
+	filtered := make(do.AgentVersions, 0, len(agentVersions))
+	filtered = append(filtered, agentVersions...)
+
+	return c.Display(&displayers.AgentVersion{AgentVersions: filtered})
 }

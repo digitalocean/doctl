@@ -27,11 +27,17 @@ type ApiKeyInfo struct {
 	*godo.ApiKeyInfo
 }
 
+type AgentVersion struct {
+	*godo.AgentVersion
+}
+
 // ApiKeys is a slice of ApiKey.
 type ApiKeys []ApiKeyInfo
 
 // Agents is a slice of Agent.
 type Agents []Agent
+
+type AgentVersions []AgentVersion
 
 // GenAIService is an interface for interacting with DigitalOcean's Agent API.
 type GenAIService interface {
@@ -41,6 +47,7 @@ type GenAIService interface {
 	UpdateAgent(agentID string, req *godo.AgentUpdateRequest) (*Agent, error)
 	DeleteAgent(agentID string) error
 	UpdateAgentVisibility(agentID string, req *godo.AgentVisibilityUpdateRequest) (*Agent, error)
+	ListAgentVersions(agentID string) (AgentVersions, error)
 	ListAgentAPIKeys(agentId string) (ApiKeys, error)
 	CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*ApiKeyInfo, error)
 	UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error)
@@ -189,4 +196,32 @@ func (a *genAIService) UpdateAgentAPIKey(agentID string, apikeyID string, req *g
 		return nil, err
 	}
 	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
+}
+
+func (a *genAIService) ListAgentVersions(agentID string) (AgentVersions, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListAgentVersions(context.TODO(), agentID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]AgentVersion, len(si))
+	for i := range si {
+		a := si[i].(*godo.AgentVersion)
+		list[i] = AgentVersion{AgentVersion: a}
+	}
+
+	return list, nil
+
 }

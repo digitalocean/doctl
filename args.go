@@ -693,8 +693,11 @@ const (
 	ArgAgentAPIKeyName = "name"
 
 	// ArgAgentUUID is the uuid of the agent.
-	ArgAgentUUID = "agent-uuid"
+	ArgAgentID = "agent-ud"
 
 	// ArgAgentUUID is the uuid of the apikey.
 	ArgAPIkeyUUID = "api-key-uuid"
+
+	// ArgAPIKeyForce forces API Key deletion without confirmation.
+	ArgAPIKeyForce = "force"
 )

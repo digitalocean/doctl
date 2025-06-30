@@ -123,6 +123,21 @@ func (mr *MockGenAIServiceMockRecorder) ListAgentAPIKeys(agentId interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgentAPIKeys", reflect.TypeOf((*MockGenAIService)(nil).ListAgentAPIKeys), agentId)
 }
 
+// ListAgentVersions mocks base method.
+func (m *MockGenAIService) ListAgentVersions(agentID string) (do.AgentVersions, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAgentVersions", agentID)
+	ret0, _ := ret[0].(do.AgentVersions)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAgentVersions indicates an expected call of ListAgentVersions.
+func (mr *MockGenAIServiceMockRecorder) ListAgentVersions(agentID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgentVersions", reflect.TypeOf((*MockGenAIService)(nil).ListAgentVersions), agentID)
+}
+
 // ListAgents mocks base method.
 func (m *MockGenAIService) ListAgents() (do.Agents, error) {
 	m.ctrl.T.Helper()
