@@ -711,7 +711,7 @@ const (
 	// ArgKnowledgeBaseDatabaseID is the ID of the database
 	ArgKnowledgeBaseDatabaseID = "database-id"
 
-	// ArgKnowledgeBaseID is the UUID of the knowledge base
+	// ArgKnowledgeBaseName is the name of the knowledge base
 	ArgKnowledgeBaseName = "name"
 
 	// ArgKnowledgeBaseRegion is the region of the knowledge base

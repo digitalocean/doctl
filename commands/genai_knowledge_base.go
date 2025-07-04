@@ -18,7 +18,7 @@ func KnowledgeBaseCmd() *Command {
 			Use:     "knowledge-base",
 			Aliases: []string{"kb"},
 			Short:   "Display commands that manage DigitalOcean Agent Knowledge Bases.",
-			Long:    "The subcommands of `doctl agent knowledge-base` allow you to access and manage knowledge bases of agents.",
+			Long:    "The subcommands of `doctl genai knowledge-base` allow you to access and manage knowledge bases of agents.",
 		},
 	}
 
@@ -99,8 +99,8 @@ func KnowledgeBaseCmd() *Command {
 	AddStringFlag(cmdKnowledgeBasesUpdate, "database-id", "", "", "The database ID of the Knowledge Base.")
 	AddStringSliceFlag(cmdKnowledgeBasesUpdate, "tags", "", []string{}, "The tags of the Knowledge Base. Example: --tags tag1,tag2,tag3")
 	AddStringFlag(cmdKnowledgeBasesUpdate, "uuid", "", "", "The UUID of the Knowledge Base.")
-	cmdKnowledgeBasesUpdate.Example = "The following command update the knowledge base by its uuid " +
-		"`doctl genai knowledge-base list`"
+	cmdKnowledgeBasesUpdate.Example = "The following command update tags and name of the knowledge base having the following uuid - 84e1e297-0000-0000-0000-1067cf2206e9 \n" +
+		"`doctl genai knowledge-base update 84e1e297-0000-0000-0000-1067cf2206e9 --tags updating,tags --name updated-kb`"
 
 	cmdKnowledgeBasesDeleteDetails := "Deletes the knowledge bases by its valid uuid."
 	cmdKnowledgeBaseDelete := CmdBuilder(
@@ -125,7 +125,7 @@ func KnowledgeBaseCmd() *Command {
 		Writer, aliasOpt("ls-ds"),
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
-	cmdDataSourceList.Example = "The following example retrieves information about a Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+	cmdDataSourceList.Example = "The following example retrieves information about all Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		" : `doctl genai knowledge-base list-datasources f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid. Add only one Spaces or Webcrawler as a datasource. For more info about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source)"
