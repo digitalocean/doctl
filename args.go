@@ -747,10 +747,10 @@ const (
 	// ArgKnowledgeBaseDataSourceID is the ID of the data source
 	ArgKnowledgeBaseDataSourceID = "data-source-id"
 
-	// ArgKnowledgeBaseBucketName is of data source from Spaces
+	// ArgKnowledgeBaseBucketName is name of data source from Spaces
 	ArgKnowledgeBaseBucketName = "bucket-name"
 
-	// ArgKnowledgeBaseItemPath is the region of the knowledge base
+	// ArgKnowledgeBaseItemPath is the item path of the data source
 	ArgKnowledgeBaseItemPath = "item-path"
 
 	// ArgPrefix is a byoip prefix argument.

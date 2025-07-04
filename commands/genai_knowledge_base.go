@@ -99,7 +99,7 @@ func KnowledgeBaseCmd() *Command {
 	AddStringFlag(cmdKnowledgeBasesUpdate, "database-id", "", "", "The database ID of the Knowledge Base.")
 	AddStringSliceFlag(cmdKnowledgeBasesUpdate, "tags", "", []string{}, "The tags of the Knowledge Base. Example: --tags tag1,tag2,tag3")
 	AddStringFlag(cmdKnowledgeBasesUpdate, "uuid", "", "", "The UUID of the Knowledge Base.")
-	cmdKnowledgeBasesUpdate.Example = "The following command usdate the knowledge base by its uuid " +
+	cmdKnowledgeBasesUpdate.Example = "The following command update the knowledge base by its uuid " +
 		"`doctl genai knowledge-base list`"
 
 	cmdKnowledgeBasesDeleteDetails := "Deletes the knowledge bases by its valid uuid."
@@ -178,7 +178,7 @@ func KnowledgeBaseCmd() *Command {
 	cmdDetachKnowledgeBase := CmdBuilder(
 		cmd,
 		RunDetachKnowledgeBase,
-		"detach <agent-uuid> <knowledgebase-uuid>",
+		"detach <agent-uuid> <knowledge-base-uuid>",
 		"Detaches a knowledge base from an agent",
 		cmdDetachKnowledgeBaseDetails,
 		Writer, aliasOpt("dth"),

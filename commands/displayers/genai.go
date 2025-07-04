@@ -124,7 +124,7 @@ func (v *KnowledgeBase) KV() []map[string]any {
 			"IsPublic":           kb.IsPublic,
 			"LastIndexingJob":    kb.LastIndexingJob,
 			"Name":               kb.Name,
-			"Region":             kb.Name,
+			"Region":             kb.Region,
 			"ProjectId":          kb.ProjectId,
 			"Tags":               kb.Tags,
 			"UpdatedAt":          kb.UpdatedAt,

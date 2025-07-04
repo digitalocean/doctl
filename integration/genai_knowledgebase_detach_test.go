@@ -84,7 +84,7 @@ var _ = suite("genai/knowledge-base/detach", func(t *testing.T, when spec.G, it 
 	})
 
 	when("when force flag is not passed", func() {
-		it("unable to detache the knowledge base from an agent", func() {
+		it("unable to detach the knowledge base from an agent", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
