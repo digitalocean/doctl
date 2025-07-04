@@ -130,8 +130,8 @@ var _ = suite("genai/knowledgebase/list-datasource", func(t *testing.T, when spe
 
 const (
 	knowledgeBaseListOutput = `
-AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUuid                      LastIndexingJob                                                                                                                                                                                                                            Name                   Region                 ProjectId                               Tags    UpdatedAt                        UserId    UUID
-<nil>             2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    &{0 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 0 0 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    deka-knowledge_base    deka-knowledge_base    00000000-0000-4000-8000-000000000000    []      2025-05-29 09:12:33 +0000 UTC              00000000-0000-4000-8000-000000000000
+Added To Agent At    Created At                       Database Id                             Is Public    Embedding Model Uuid                    Last Indexing Job                                                                                                                                                                                                                          Name                   Region                 Project Id                              Tags    Updated At                       User Id    UUID
+<nil>                2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false        00000000-0000-4000-8000-000000000000    &{0 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 0 0 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    deka-knowledge_base    deka-knowledge_base    00000000-0000-4000-8000-000000000000    []      2025-05-29 09:12:33 +0000 UTC               00000000-0000-4000-8000-000000000000
 `
 
 	knowledgeBaseListResponse = `
@@ -160,8 +160,8 @@ AddedToAgentAt    CreatedAt                        DatabaseId                   
 }
 `
 	knowledgeBaseListDataSourceOutput = `
-CreatedAt                        FileUploadDataSource    LastIndexingJob    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
-2025-05-29 10:49:50 +0000 UTC    <nil>                   <nil>              <nil>               2025-05-29 10:49:50 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://docs.digitalocean.com/data_source DOMAIN false}
+Created At                       File Upload Datasource    Last Indexing Job    Spaces Datasource    Updated At                       UUID                                    Web Crawler Datasource
+2025-05-29 10:49:50 +0000 UTC    <nil>                     <nil>                <nil>                2025-05-29 10:49:50 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://docs.digitalocean.com/data_source DOMAIN false}
 `
 
 	knowledgeBaseListDataSourceResponse = `

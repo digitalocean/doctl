@@ -75,18 +75,18 @@ func (v *KnowledgeBase) JSON(out io.Writer) error {
 
 func (v *KnowledgeBase) ColMap() map[string]string {
 	return map[string]string{
-		"AddedToAgentAt":     "AddedToAgentAt",
-		"CreatedAt":          "CreatedAt",
-		"DatabaseId":         "DatabaseId",
-		"EmbeddingModelUuid": "EmbeddingModelUuid",
-		"IsPublic":           "IsPublic",
-		"LastIndexingJob":    "LastIndexingJob",
+		"AddedToAgentAt":     "Added To Agent At",
+		"CreatedAt":          "Created At",
+		"DatabaseId":         "Database Id",
+		"EmbeddingModelUuid": "Embedding Model Uuid",
+		"IsPublic":           "Is Public",
+		"LastIndexingJob":    "Last Indexing Job",
 		"Name":               "Name",
 		"Region":             "Region",
-		"ProjectId":          "ProjectId",
+		"ProjectId":          "Project Id",
 		"Tags":               "Tags",
-		"UpdatedAt":          "UpdatedAt",
-		"UserId":             "UserId",
+		"UpdatedAt":          "Updated At",
+		"UserId":             "User Id",
 		"UUID":               "UUID",
 	}
 }
@@ -149,13 +149,13 @@ func (v *KnowledgeBaseDataSource) JSON(out io.Writer) error {
 
 func (v *KnowledgeBaseDataSource) ColMap() map[string]string {
 	return map[string]string{
-		"CreatedAt":            "CreatedAt",
-		"FileUploadDataSource": "FileUploadDataSource",
-		"LastIndexingJob":      "LastIndexingJob",
-		"SpacesDataSource":     "SpacesDataSource",
-		"UpdatedAt":            "UpdatedAt",
+		"CreatedAt":            "Created At",
+		"FileUploadDataSource": "File Upload Datasource",
+		"LastIndexingJob":      "Last Indexing Job",
+		"SpacesDataSource":     "Spaces Datasource",
+		"UpdatedAt":            "Updated At",
 		"UUID":                 "UUID",
-		"WebCrawlerDataSource": "WebCrawlerDataSource",
+		"WebCrawlerDataSource": "Web Crawler Datasource",
 	}
 }
 

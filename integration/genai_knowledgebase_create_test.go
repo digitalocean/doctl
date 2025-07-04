@@ -300,8 +300,8 @@ var _ = suite("genai/knowledge-base/add-datasource", func(t *testing.T, when spe
 
 const (
 	knowledgeBaseCreateOutput = `
-AddedToAgentAt    CreatedAt                        DatabaseId                              IsPublic    EmbeddingModelUuid                      LastIndexingJob    Name                   Region                 ProjectId                               Tags        UpdatedAt                        UserId    UUID
-<nil>             2025-05-23 11:23:24 +0000 UTC    00000000-0000-4000-8000-000000000000    false       00000000-0000-4000-8000-000000000000    <nil>              test-knowledge_base    test-knowledge_base    00000000-0000-4000-8000-000000000000    [field1]    2025-05-23 11:23:24 +0000 UTC              00000000-0000-4000-8000-000000000000
+Added To Agent At    Created At                       Database Id                             Is Public    Embedding Model Uuid                    Last Indexing Job    Name                   Region                 Project Id                              Tags        Updated At                       User Id    UUID
+<nil>                2025-05-23 11:23:24 +0000 UTC    00000000-0000-4000-8000-000000000000    false        00000000-0000-4000-8000-000000000000    <nil>                test-knowledge_base    test-knowledge_base    00000000-0000-4000-8000-000000000000    [field1]    2025-05-23 11:23:24 +0000 UTC               00000000-0000-4000-8000-000000000000
 `
 
 	knowledgeBaseCreateResponse = `
@@ -323,8 +323,8 @@ AddedToAgentAt    CreatedAt                        DatabaseId                   
 `
 
 	knowledgeBaseAddDataSourceOutput = `
-CreatedAt                        FileUploadDataSource    LastIndexingJob    SpacesDataSource    UpdatedAt                        UUID                                    WebCrawlerDataSource
-2025-05-29 12:17:56 +0000 UTC    <nil>                   <nil>              <nil>               2025-05-29 12:17:56 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://example.com DOMAIN true}
+Created At                       File Upload Datasource    Last Indexing Job    Spaces Datasource    Updated At                       UUID                                    Web Crawler Datasource
+2025-05-29 12:17:56 +0000 UTC    <nil>                     <nil>                <nil>                2025-05-29 12:17:56 +0000 UTC    00000000-0000-4000-8000-000000000000    &{https://example.com DOMAIN true}
 `
 
 	knowledgeBaseAddDataSourceResponse = `
