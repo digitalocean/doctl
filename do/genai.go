@@ -32,6 +32,10 @@ type KnowledgeBaseDataSource struct {
 	*godo.KnowledgeBaseDataSource
 }
 
+type AgentRouteResponse struct {
+	*godo.AgentRouteResponse
+}
+
 // Agents is a slice of Agent.
 type Agents []Agent
 
@@ -59,6 +63,9 @@ type GenAIService interface {
 	DeleteKnowledgeBaseDataSource(knowledgeBaseID string, dataSourceID string) error
 	AttachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error)
 	DetachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error)
+	AddAgentRoute(parentAgentID string, childAgentID string) (*AgentRouteResponse, error)
+	UpdateAgentRoute(parentAgentID string, childAgentID string, req *godo.AgentRouteUpdateRequest) (*AgentRouteResponse, error)
+	DeleteAgentRoute(parentAgentID string, childAgentID string) error
 }
 
 var _ GenAIService = &genAIService{}
@@ -254,4 +261,31 @@ func (a *genAIService) DetachKnowledgeBaseToAgent(agentId string, knowledgeBaseI
 		return &Agent{}, err
 	}
 	return &Agent{Agent: agent}, nil
+}
+
+func (a *genAIService) AddAgentRoute(parentAgentID string, childAgentID string) (*AgentRouteResponse, error) {
+	// Create the request object
+	req := &godo.AgentRouteCreateRequest{
+		ParentAgentUuid: parentAgentID,
+		ChildAgentUuid:  childAgentID,
+	}
+
+	routeResponse, _, err := a.client.GenAI.AddAgentRoute(context.TODO(), parentAgentID, childAgentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &AgentRouteResponse{AgentRouteResponse: routeResponse}, nil
+}
+
+func (a *genAIService) UpdateAgentRoute(parentAgentID string, childAgentID string, req *godo.AgentRouteUpdateRequest) (*AgentRouteResponse, error) {
+	routeResponse, _, err := a.client.GenAI.UpdateAgentRoute(context.TODO(), parentAgentID, childAgentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &AgentRouteResponse{AgentRouteResponse: routeResponse}, nil
+}
+
+func (a *genAIService) DeleteAgentRoute(parentAgentID string, childAgentID string) error {
+	_, _, err := a.client.GenAI.DeleteAgentRoute(context.TODO(), parentAgentID, childAgentID)
+	return err
 }
