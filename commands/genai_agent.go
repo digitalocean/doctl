@@ -21,6 +21,8 @@ func AgentCmd() *Command {
 		},
 	}
 
+	cmd.AddCommand(AgentRouteCmd())
+
 	cmdAgentCreate := CmdBuilder(
 		cmd,
 		RunAgentCreate,
