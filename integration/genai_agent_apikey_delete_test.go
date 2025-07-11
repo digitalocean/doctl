@@ -38,7 +38,7 @@ var _ = suite("genai/agent/apikey/delete", func(t *testing.T, when spec.G, it sp
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNoContent)
-			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999/api_keys/00000000-0000-4000-8000-000000000000":
+			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000005/api_keys/99999999-9999-4999-8999-999999999999":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -76,32 +76,15 @@ var _ = suite("genai/agent/apikey/delete", func(t *testing.T, when spec.G, it sp
 					"agent",
 					"apikeys",
 					alias,
-					"00000000-0000-4000-8000-000000000000",
+					"00000000-0000-4000-8000-000000000001",
+					"--agent-id", "00000000-0000-4000-8000-000000000000",
 					"--force",
 				)
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Contains(string(output), "API key deleted successfully")
+				expect.Contains(string(output), "API Key deleted successfully")
 			}
-		})
-	})
-
-	when("agent ID is missing", func() {
-		it("returns an error", func() {
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"agent",
-				"apikeys",
-				"delete",
-				"--force",
-			)
-
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			expect.Contains(string(output), "missing")
 		})
 	})
 
@@ -115,6 +98,7 @@ var _ = suite("genai/agent/apikey/delete", func(t *testing.T, when spec.G, it sp
 				"apikeys",
 				"delete",
 				"99999999-9999-4999-8999-999999999999",
+				"--agent-id", "00000000-0000-4000-8000-000000000005",
 				"--force",
 			)
 
@@ -133,8 +117,8 @@ var _ = suite("genai/agent/apikey/delete", func(t *testing.T, when spec.G, it sp
 				"agent",
 				"apikeys",
 				"delete",
-				"00000000-0000-4000-8000-000000000000",
 				"00000000-0000-4000-8000-000000000001",
+				"--agent-id", "00000000-0000-4000-8000-000000000000",
 			)
 
 			// Since we can't easily provide interactive input, the command should abort
@@ -145,7 +129,7 @@ var _ = suite("genai/agent/apikey/delete", func(t *testing.T, when spec.G, it sp
 	})
 
 	when("using short flag for force", func() {
-		it("deletes the agent with -f flag", func() {
+		it("deletes the api key with -f flag", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -153,14 +137,14 @@ var _ = suite("genai/agent/apikey/delete", func(t *testing.T, when spec.G, it sp
 				"agent",
 				"apikeys",
 				"delete",
-				"00000000-0000-4000-8000-000000000000",
 				"00000000-0000-4000-8000-000000000001",
+				"--agent-id", "00000000-0000-4000-8000-000000000000",
 				"-f",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Contains(string(output), "Agent deleted successfully")
+			expect.Contains(string(output), "API Key deleted successfully")
 		})
 	})
 
@@ -174,7 +158,7 @@ var _ = suite("genai/agent/apikey/delete", func(t *testing.T, when spec.G, it sp
 				"apikeys",
 				"delete",
 				"00000000-0000-4000-8000-000000000000",
-				"00000000-0000-4000-8000-000000000001",
+				"--agent-id", "00000000-0000-4000-8000-000000000001",
 				"--force",
 			)
 

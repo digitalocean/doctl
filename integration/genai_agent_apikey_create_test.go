@@ -39,7 +39,7 @@ var _ = suite("genai/agent/apikey/create", func(t *testing.T, when spec.G, it sp
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
-				w.Write([]byte(agentCreateResponse))
+				w.Write([]byte(agentApiKeyCreateResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -64,7 +64,7 @@ var _ = suite("genai/agent/apikey/create", func(t *testing.T, when spec.G, it sp
 					"apikeys",
 					alias,
 					"--name", "API Key One",
-					"--agent-uuid", "00000000-0000-4000-8000-000000000000",
+					"--agent-id", "00000000-0000-4000-8000-000000000000",
 				)
 
 				output, err := cmd.CombinedOutput()
@@ -110,8 +110,8 @@ var _ = suite("genai/agent/apikey/create", func(t *testing.T, when spec.G, it sp
 
 const (
 	agentApiKeyCreateOutput = `
-ID                                      Name              Created At                             Created By  			Secret Key                               Deleted At                
-123e4567-e89b-12d3-a456-426614174000    Key one          2023-01-01 00:00:00 +0000 UTC    			12345    		Test Secret Key					2023-01-01 00:00:00 +0000 UTC   
+ID                                      Name       Created By    Secret Key         Deleted At                       Created At
+123e4567-e89b-12d3-a456-426614174000    Key One    12345         Test Secret Key    2023-01-01 00:00:00 +0000 UTC    2023-01-01 00:00:00 +0000 UTC
 `
 	agentApiKeyCreateResponse = `
 

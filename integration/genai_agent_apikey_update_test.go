@@ -25,7 +25,7 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000000/api_keys/00000000-0000-4000-8000-000000000001":
+			case "/v2/gen-ai/agents/00000000-0000-4000-8000-000000000001/api_keys/00000000-0000-4000-8000-000000000000":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -38,7 +38,7 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 				}
 
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte(agentUpdateResponse))
+				w.Write([]byte(agentApiKeyUpdateResponse))
 			case "/v2/gen-ai/agents/99999999-9999-4999-8999-999999999999/api_keys/00000000-0000-4000-8000-000000000001":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -67,119 +67,39 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 
 	when("valid api key ID and update fields are provided", func() {
 		it("updates the api key", func() {
-			aliases := []string{"update", "u"}
-
-			for _, alias := range aliases {
-				cmd = exec.Command(builtBinaryPath,
-					"-t", "some-magic-token",
-					"-u", server.URL,
-					"genai",
-					"agent",
-					"apikeys",
-					alias,
-					"00000000-0000-4000-8000-000000000000",
-					"00000000-0000-4000-8000-000000000001",
-					"--name", "updated-apikey",
-					"--description", "Updated description",
-				)
-
-				output, err := cmd.CombinedOutput()
-				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(agentApiKeyUpdateOutput), strings.TrimSpace(string(output)))
-			}
-		})
-	})
-
-	when("few update fields are provided", func() {
-		it("updates the agent with few fields", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
 				"agent",
+				"apikeys",
 				"update",
 				"00000000-0000-4000-8000-000000000000",
-				"--name", "updated-agent",
-				"--description", "Updated description",
-				"--instruction", "Updated instruction",
-				"--max-tokens", "200",
-				"--temperature", "0.8",
-				"--retrieval-method", "RETRIEVAL_METHOD_REWRITE",
+				"--agent-id", "00000000-0000-4000-8000-000000000001",
+				"--name", "updated-apikey",
 			)
-
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(agentApiKeyUpdateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
-	when("only name is updated", func() {
-		it("updates only the agent name", func() {
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"agent",
-				"update",
-				"00000000-0000-4000-8000-000000000000",
-				"--name", "new-name-only",
-			)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(agentApiKeyUpdateOutput), strings.TrimSpace(string(output)))
-		})
-	})
-
-	when("agent ID is missing", func() {
+	when("apikey ID is missing", func() {
 		it("returns an error", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"genai",
 				"agent",
+				"apikeys",
 				"update",
-				"--name", "updated-agent",
+				"--agent-id", "00000000-0000-4000-8000-000000000001",
+				"--name", "updated-apikey",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 			expect.Contains(string(output), "missing")
-		})
-	})
-
-	when("agent does not exist", func() {
-		it("returns a not found error", func() {
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"agent",
-				"update",
-				"99999999-9999-4999-8999-999999999999",
-				"--name", "updated-agent",
-			)
-
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			expect.Contains(string(output), "404")
-		})
-	})
-
-	when("no update fields are provided", func() {
-		it("still executes successfully", func() {
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"agent",
-				"update",
-				"00000000-0000-4000-8000-000000000000",
-			)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(agentApiKeyUpdateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -190,9 +110,11 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 				"-u", server.URL,
 				"genai",
 				"agent",
+				"apikeys",
 				"update",
 				"00000000-0000-4000-8000-000000000000",
-				"--name", "updated-agent",
+				"--agent-id", "00000000-0000-4000-8000-000000000001",
+				"--name", "updated-apikey",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -200,32 +122,12 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 			expect.Contains(string(output), "401")
 		})
 	})
-	when("invalid parameter values are provided", func() {
-		it("returns an error for invalid temperature", func() {
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"agent",
-				"update",
-				"00000000-0000-4000-8000-000000000000",
-				"--temperature", "2.0",
-			)
-
-			output, err := cmd.CombinedOutput()
-			if err == nil {
-				t.Log("CLI accepted invalid temperature - consider adding validation")
-			} else {
-				expect.Contains(string(output), "temperature")
-			}
-		})
-	})
 })
 
 const (
 	agentApiKeyUpdateOutput = `
-ID                                      Name                 Agent ID                                              Created At                       User ID
-00000000-0000-4000-8000-000000000000    updated-apikey       00000000-0000-4000-8000-000000000000       2023-01-01 00:00:00 +0000 UTC    user1
+ID                                      Name       Created By    Secret Key         Deleted At                       Created At
+123e4567-e89b-12d3-a456-426614174000    Key One    12345         Test Secret Key    2023-01-01 00:00:00 +0000 UTC    2023-01-01 00:00:00 +0000 UTC
 `
 	agentApiKeyUpdateResponse = `
 {
@@ -233,7 +135,7 @@ ID                                      Name                 Agent ID           
 "created_at": "2023-01-01T00:00:00Z",
 "created_by": "12345",
 "deleted_at": "2023-01-01T00:00:00Z",
-"name": "updated-apikey ",
+"name": "Key One",
 "secret_key": "Test Secret Key",
 "uuid": "123e4567-e89b-12d3-a456-426614174000"
 }

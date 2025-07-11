@@ -692,9 +692,6 @@ const (
 	// ArgAgentAPIKeyName is the name of API Key of the agent.
 	ArgAgentAPIKeyName = "name"
 
-	// ArgAgentUUID is the uuid of the agent.
-	ArgAgentID = "agent-ud"
-
 	// ArgAgentUUID is the uuid of the apikey.
 	ArgAPIkeyUUID = "api-key-uuid"
 

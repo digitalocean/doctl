@@ -166,9 +166,23 @@ func (a *genAIService) ListAgentAPIKeys(agentId string) (ApiKeys, error) {
 		return si, resp, err
 	}
 
+	// Checking if there are no API keys we don't need to paginate
+	opt := &godo.ListOptions{Page: 1, PerPage: perPage}
+	res, _, err := f(opt)
+	if err != nil {
+		return nil, err
+	}
+	if len(res) == 0 {
+		return ApiKeys{}, nil
+	}
+
 	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(si) == 0 {
+		return ApiKeys{}, nil
 	}
 
 	list := make([]ApiKeyInfo, len(si))
