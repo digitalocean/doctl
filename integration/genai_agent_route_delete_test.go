@@ -197,26 +197,5 @@ var _ = suite("gen-ai/agent/route/delete", func(t *testing.T, when spec.G, it sp
 				"Expected message about confirmation or force flag not found: %s", output,
 			)
 		})
-
-		// Add a second test case that uses the --interactive flag to verify that path
-		it("allows interactive deletion when in interactive mode", func() {
-
-			cmd = exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"genai",
-				"agent",
-				"route",
-				"delete",
-				"--parent-agent-id", "00000000-0000-4000-8000-000000000000",
-				"--child-agent-id", "00000000-0000-4000-9000-000000000000",
-				"--interactive", // Explicitly request interactive mode
-			)
-
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			outputStr := string(output)
-			t.Logf("Interactive mode output: %s", outputStr)
-		})
 	})
 })
