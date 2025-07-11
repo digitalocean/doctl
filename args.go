@@ -758,4 +758,28 @@ const (
 
 	// ArgSignature is a byoip prefix argument.
 	ArgSignature = "signature"
+
+	// ArgAgentUUID is the UUID of the agent.
+	ArgAgentUUID = "agentid"
+
+	// ArgFunctionIDs is the name of the function.
+	ArgFunctionID = "functionid"
+
+	//ArgFunctionName is the name of the function.
+	ArgFunctionName = "name"
+
+	// ArgFunctionDescription is the description of the function.
+	ArgFunctionRouteDescription = "description"
+
+	// ArgFunctionRouteFaasName is the name of the function route in the DigitalOcean functions platform
+	ArgFunctionRouteFaasName = "faas-name"
+
+	// ArgFunctionRouteFaasNamespace is the namespace of the function route in the DigitalOcean functions platform
+	ArgFunctionRouteFaasNamespace = "faas-namespace"
+
+	// ArgFunctionRouteInputSchema is the input schema of the function route
+	ArgFunctionRouteInputSchema = "input-schema"
+
+	// ArgFunctionRouteOutputSchema is the output schema of the function route
+	ArgFunctionRouteOutputSchema = "output-schema"
 )
