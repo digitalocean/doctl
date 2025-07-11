@@ -59,6 +59,9 @@ type GenAIService interface {
 	DeleteKnowledgeBaseDataSource(knowledgeBaseID string, dataSourceID string) error
 	AttachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error)
 	DetachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error)
+	CreateFunctionRoute(id string, req *godo.FunctionRouteCreateRequest) (*Agent, error)
+	DeleteFunctionRoute(agent_id string, function_id string) (*Agent, error)
+	UpdateFunctionRoute(agent_id string, function_id string, req *godo.FunctionRouteUpdateRequest) (*Agent, error)
 }
 
 var _ GenAIService = &genAIService{}
