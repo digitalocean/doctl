@@ -36,6 +36,12 @@ type AgentRouteResponse struct {
 	*godo.AgentRouteResponse
 }
 
+type FunctionRoute struct {
+	*godo.AgentFunction
+}
+
+type FunctionRoutes []FunctionRoute
+
 // Agents is a slice of Agent.
 type Agents []Agent
 

@@ -21,6 +21,9 @@ func AgentCmd() *Command {
 		},
 	}
 
+	// Add the agent route command as a subcommand to genai agent
+	// cmd.AddCommand(AgentRouteCmd())
+	// Add the function route command as a subcommand to genai agent
 	cmd.AddCommand(FunctionRoute())
 
 	cmdAgentCreate := CmdBuilder(

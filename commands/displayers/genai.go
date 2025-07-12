@@ -192,3 +192,57 @@ func (v *KnowledgeBaseDataSource) KV() []map[string]any {
 
 	return out
 }
+
+type FunctionRoute struct {
+	Agent do.Agent
+}
+
+var _ Displayable = &FunctionRoute{}
+
+func (f *FunctionRoute) JSON(out io.Writer) error {
+	return writeJSON(f.Agent.Functions, out)
+}
+
+func (f *FunctionRoute) Cols() []string {
+	return []string{
+		"Uuid",
+		"Name",
+		"Description",
+		"FaasName",
+		"FaasNamespace",
+		"CreatedAt",
+		"UpdatedAt",
+	}
+}
+
+func (f *FunctionRoute) ColMap() map[string]string {
+	return map[string]string{
+		"Uuid":          "UUID",
+		"Name":          "Name",
+		"Description":   "Description",
+		"FaasName":      "FaaS Name",
+		"FaasNamespace": "FaaS Namespace",
+		"CreatedAt":     "Created At",
+		"UpdatedAt":     "Updated At",
+	}
+}
+
+func (f *FunctionRoute) KV() []map[string]any {
+	if f.Agent.Functions == nil {
+		return []map[string]any{}
+	}
+
+	out := make([]map[string]any, 0, len(f.Agent.Functions))
+	for _, fn := range f.Agent.Functions {
+		out = append(out, map[string]any{
+			"Uuid":          fn.Uuid,
+			"Name":          fn.Name,
+			"Description":   fn.Description,
+			"FaasName":      fn.FaasName,
+			"FaasNamespace": fn.FaasNamespace,
+			"CreatedAt":     fn.CreatedAt,
+			"UpdatedAt":     fn.UpdatedAt,
+		})
+	}
+	return out
+}

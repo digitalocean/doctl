@@ -6,32 +6,17 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
-
-// GenAI creates a new command for GenAI operations.
-func FunctionRouteCmd() *Command {
-	cmd := &Command{
-		Command: &cobra.Command{
-			Use:     "genai",
-			Aliases: []string{"genai"},
-			Short:   "Display commands that manage DigitalOcean GenAI Agents.",
-			Long:    "The subcommands of `doctl agents` allow you to access and manage GenAI Agents.",
-		},
-	}
-
-	return cmd
-}
 
 func FunctionRoute() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "functionroute",
 			Aliases: []string{"functionroute", "fr"},
-			Short:   "Display commands that manage function routes for GenAI Agents.",
-			Long:    "The subcommands of `doctl genai agent functionroute` allow you to access and manage function routes for GenAI Agents.",
+			Short:   "Display commands that manages function routes for GenAI Agents.",
+			Long:    "The subcommands of `doctl genai agent functionroute` allows you to access and manage function routes for GenAI Agents.",
 		},
 	}
 
@@ -42,7 +27,8 @@ func FunctionRoute() *Command {
 		"create",
 		"Creates a function route",
 		"Create a function route for your GenAI agent.The command requires values for the "+"`"+"--agentid"+"`"+"`"+"--description"+"`"+"`"+"--faas_name"+"`"+"`"+"--faas_namespace"+"`"+" "+"`"+"--function_name"+"`"+"`"+"--input_schema "+"`, and "+"`"+"--output_schema "+"`"+" flags.",
-		Writer, aliasOpt("c"), displayerType(&displayers.Agent{}))
+		Writer, aliasOpt("c"),
+		displayerType(&displayers.FunctionRoute{}))
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgAgentUUID, "", "", "GenAI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionName, "", "", "Name of the function.", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteDescription, "", "", "Description of the function.", requiredOpt())
@@ -59,7 +45,8 @@ func FunctionRoute() *Command {
 		"delete",
 		"Delete a function route",
 		"Use this command to delete a function route of an agent. The command requires values for the "+"`"+"--agentid"+"` and "+"`"+"--functionid"+"`"+" flags.",
-		Writer, aliasOpt("d", "del", "rm"))
+		Writer, aliasOpt("d", "del", "rm"),
+		displayerType(&displayers.FunctionRoute{}))
 	AddStringFlag(cmdFunctionRouteDelete, doctl.ArgAgentUUID, "", "", "GenAI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteDelete, doctl.ArgFunctionID, "", "", "Function route ID to delete", requiredOpt())
 	cmdFunctionRouteDelete.Example = `doctl genai agent functionroute delete  --agentid "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --functionid "e40dc785-5e69-11f0-bf8f-4e013e2ddde4"`
@@ -70,7 +57,8 @@ func FunctionRoute() *Command {
 		"update",
 		"Updates a function route",
 		"Use this command to update function route of an agent.The command requires values for the "+"`"+"--agentid"+"` and "+"`"+"--functionid"+"`"+" flags.",
-		Writer, aliasOpt("u"), displayerType(&displayers.Agent{}))
+		Writer, aliasOpt("u"),
+		displayerType(&displayers.FunctionRoute{}))
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgAgentUUID, "", "", "GenAI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionID, "", "", "Function route ID to update", requiredOpt())
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteDescription, "", "", "Updated description of the function route")
@@ -149,7 +137,8 @@ func RunFunctionRouteCreate(c *CmdConfig) error {
 	// return c.Display(&displayers.Agent{
 	// 	Agents: []godo.Agent{*functionRoute}, // ✔ satisfies do.Agents
 	// })
-	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
+	// return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
+	return c.Display(&displayers.FunctionRoute{Agent: *functionRoute})
 }
 
 // RunFunctionRouteUpdate updates an existing function route for a GenAI agent.
@@ -221,7 +210,8 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 		return err
 	}
 	// return c.Display(&displayers.Agent{Agents: *updated})
-	return c.Display(&displayers.Agent{Agents: do.Agents{*updated}})
+	// return c.Display(&displayers.Agent{Agents: do.Agents{*updated}})
+	return c.Display(&displayers.FunctionRoute{Agent: *updated})
 }
 
 // RunFunctionRouteDelete deletes a function route from a GenAI agent.
@@ -244,7 +234,8 @@ func RunFunctionRouteDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
+	// return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
 
 	// return c.Display(&displayers.Agent{Agents: *functionRoute})
+	return c.Display(&displayers.FunctionRoute{Agent: *functionRoute})
 }
