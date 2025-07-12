@@ -6,6 +6,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +21,6 @@ func FunctionRouteCmd() *Command {
 			Long:    "The subcommands of `doctl agents` allow you to access and manage GenAI Agents.",
 		},
 	}
-	cmd.AddCommand(FunctionRoute())
 
 	return cmd
 }
@@ -31,12 +31,18 @@ func FunctionRoute() *Command {
 			Use:     "functionroute",
 			Aliases: []string{"functionroute", "fr"},
 			Short:   "Display commands that manage function routes for GenAI Agents.",
-			Long:    "The subcommands of `doctl genai functionroute` allow you to access and manage function routes for GenAI Agents.",
+			Long:    "The subcommands of `doctl genai agent functionroute` allow you to access and manage function routes for GenAI Agents.",
 		},
 	}
 
 	// Create command
-	cmdFunctionRouteCreate := CmdBuilder(cmd, RunFunctionRouteCreate, "create", "Create a function route", "Create a function route for your GenAI agent", Writer, aliasOpt("c"), displayerType(&displayers.Agent{}))
+	cmdFunctionRouteCreate := CmdBuilder(
+		cmd,
+		RunFunctionRouteCreate,
+		"create",
+		"Creates a function route",
+		"Create a function route for your GenAI agent.The command requires values for the "+"`"+"--agentid"+"`"+"`"+"--description"+"`"+"`"+"--faas_name"+"`"+"`"+"--faas_namespace"+"`"+" "+"`"+"--function_name"+"`"+"`"+"--input_schema "+"`, and "+"`"+"--output_schema "+"`"+" flags.",
+		Writer, aliasOpt("c"), displayerType(&displayers.Agent{}))
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgAgentUUID, "", "", "GenAI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionName, "", "", "Name of the function.", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteDescription, "", "", "Description of the function.", requiredOpt())
@@ -44,15 +50,27 @@ func FunctionRoute() *Command {
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteFaasNamespace, "", "", "Namespace of the function route in the DigitalOcean functions platform", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteInputSchema, "", "", "Input schema of the function route", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteOutputSchema, "", "", "Output schema of the function route", requiredOpt())
-	cmdFunctionRouteCreate.Example = `The following example creates a function route named ` + "`" + `funzip` + "`" + `. The Function route is created for the Agent with UUID  ` + "`" + `1b418231-b7d6-11ef-bf8f-4e013e2ddde4` + "`" + `  with the description ` + "`" + `Use when you need the zipcode for a city` + "`" + ` and faas_name is ` + "`" + `default/get-zipcode` + "`" + `.`
+	cmdFunctionRouteCreate.Example = `doctl genai agent functionroute create --agentid "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --name "get-weather" --description "Creates a weather-lookup route" --faas-name "default/testing" --faas-namespace "fn-b90faf52-2b42-49c2-9792-75edfbb6f397" --input-schema '{"parameters":[{"name":"zipCode","in":"query","schema":{"type":"string"},"required":false,"description":"Zip description in input"},{"name":"measurement","in":"query","schema":{"type":"string","enum":["F","C"]},"required":false,"description":"Temperature unit (F or C)"}]}' --output-schema '{"properties":{"temperature":{"type":"number","description":"Temperature for the specified location"},"measurement":{"type":"string","description":"Unit used (F or C)"},"conditions":{"type":"string","description":"Weather conditions (Sunny, Cloudy, etc.)"}}}'`
 
 	// Delete command
-	cmdFunctionRouteDelete := CmdBuilder(cmd, RunFunctionRouteDelete, "delete", "Delete a function route", "Delete a function route from your GenAI agent", Writer, aliasOpt("d"))
+	cmdFunctionRouteDelete := CmdBuilder(
+		cmd,
+		RunFunctionRouteDelete,
+		"delete",
+		"Delete a function route",
+		"Use this command to delete a function route of an agent. The command requires values for the "+"`"+"--agentid"+"` and "+"`"+"--functionid"+"`"+" flags.",
+		Writer, aliasOpt("d", "del", "rm"))
 	AddStringFlag(cmdFunctionRouteDelete, doctl.ArgAgentUUID, "", "", "GenAI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteDelete, doctl.ArgFunctionID, "", "", "Function route ID to delete", requiredOpt())
+	cmdFunctionRouteDelete.Example = `doctl genai agent functionroute delete  --agentid "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --functionid "e40dc785-5e69-11f0-bf8f-4e013e2ddde4"`
 
 	// Update command
-	cmdFunctionRouteUpdate := CmdBuilder(cmd, RunFunctionRouteUpdate, "update", "Update a function route", "Update a function route for your GenAI agent", Writer, aliasOpt("u"), displayerType(&displayers.Agent{}))
+	cmdFunctionRouteUpdate := CmdBuilder(cmd,
+		RunFunctionRouteUpdate,
+		"update",
+		"Updates a function route",
+		"Use this command to update function route of an agent.The command requires values for the "+"`"+"--agentid"+"` and "+"`"+"--functionid"+"`"+" flags.",
+		Writer, aliasOpt("u"), displayerType(&displayers.Agent{}))
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgAgentUUID, "", "", "GenAI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionID, "", "", "Function route ID to update", requiredOpt())
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteDescription, "", "", "Updated description of the function route")
@@ -61,6 +79,7 @@ func FunctionRoute() *Command {
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteFaasNamespace, "", "", "Namespace of the function route in the DigitalOcean functions platform")
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteInputSchema, "", "", "Input schema of the function route")
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteOutputSchema, "", "", "Output schema of the function route")
+	cmdFunctionRouteUpdate.Example = `doctl genai agent functionroute update --agentid "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --functionid "e40dc785-5e69-11f0-bf8f-4e013e2ddde4"  --name "doctl-updated23"  --description "Creating via doctl again"  --faas-name "default/testing"  --faas-namespace "fn-b90faf52-2b42-49c2-9792-75edfbb6f397"  --input-schema '{"parameters": [{"name": "zipCode", "in": "query", "schema": { "type": "string" },"required": false, "description": "Zip description in input"},{"name": "measurement","in": "query", "schema": { "type": "string", "enum": ["F","C"]},"required": false, "description": "Temperature unit (F or C)"}]}'   --output-schema '{"properties": {"temperature": {"type": "number", "description": "Temperature for the specified location"}, "measurement": { "type": "string", "description": "Unit used (F or C)"},"conditions": { "type": "string","description": "Weather conditions (Sunny, Cloudy, etc.)"}}}'`
 
 	return cmd
 }
@@ -126,7 +145,11 @@ func RunFunctionRouteCreate(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&displayers.Agent{Agents: *functionRoute})
+	// return c.Display(&displayers.Agent{Agents: *functionRoute})
+	// return c.Display(&displayers.Agent{
+	// 	Agents: []godo.Agent{*functionRoute}, // ✔ satisfies do.Agents
+	// })
+	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
 }
 
 // RunFunctionRouteUpdate updates an existing function route for a GenAI agent.
@@ -143,7 +166,6 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr("agentid and functionid are required")
 	}
 
-	// ── gather user-supplied fields ───────────────────────────────────────────────
 	name, _ := c.Doit.GetString(c.NS, doctl.ArgFunctionName)
 	desc, _ := c.Doit.GetString(c.NS, doctl.ArgFunctionRouteDescription)
 	faasName, _ := c.Doit.GetString(c.NS, doctl.ArgFunctionRouteFaasName)
@@ -156,7 +178,6 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr("at least one field to update must be supplied")
 	}
 
-	// ── (de)serialize schemas only when present ──────────────────────────────────
 	var inSchema godo.FunctionInputSchema
 	if inSchemaStr != "" {
 		if err := json.Unmarshal([]byte(inSchemaStr), &inSchema); err != nil {
@@ -171,7 +192,6 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 		}
 	}
 
-	// ── build the request – only set what the user wants ─────────────────────────
 	req := &godo.FunctionRouteUpdateRequest{
 		AgentUuid:    agentUUID,
 		FunctionUuid: functionID,
@@ -200,7 +220,8 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.Agent{Agents: *updated})
+	// return c.Display(&displayers.Agent{Agents: *updated})
+	return c.Display(&displayers.Agent{Agents: do.Agents{*updated}})
 }
 
 // RunFunctionRouteDelete deletes a function route from a GenAI agent.
@@ -223,6 +244,7 @@ func RunFunctionRouteDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
 
-	return c.Display(&displayers.Agent{Agents: *functionRoute})
+	// return c.Display(&displayers.Agent{Agents: *functionRoute})
 }
