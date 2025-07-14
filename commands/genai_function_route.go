@@ -6,6 +6,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -211,7 +212,8 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 	}
 	// return c.Display(&displayers.Agent{Agents: *updated})
 	// return c.Display(&displayers.Agent{Agents: do.Agents{*updated}})
-	return c.Display(&displayers.FunctionRoute{Agent: *updated})
+	// return c.Display(&displayers.FunctionRoute{Agent: *updated})
+	return c.Display(&displayers.Agent{Agents: do.Agents{*updated}})
 }
 
 // RunFunctionRouteDelete deletes a function route from a GenAI agent.
@@ -234,8 +236,8 @@ func RunFunctionRouteDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	// return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
+	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
 
 	// return c.Display(&displayers.Agent{Agents: *functionRoute})
-	return c.Display(&displayers.FunctionRoute{Agent: *functionRoute})
+	// return c.Display(&displayers.FunctionRoute{Agent: *functionRoute})
 }

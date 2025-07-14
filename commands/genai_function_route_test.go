@@ -1,5 +1,3 @@
-// function_route_test.go
-
 package commands
 
 import (
