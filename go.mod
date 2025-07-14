@@ -133,4 +133,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
+//remove this after intergration tests are updated to use the latest godo
 replace github.com/digitalocean/godo => ../godo

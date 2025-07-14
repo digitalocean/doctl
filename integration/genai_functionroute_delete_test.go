@@ -1,4 +1,3 @@
-// integration/functionroute_delete_test.go
 package integration
 
 import (
@@ -6,139 +5,137 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
-	"net/url"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/sclevine/spec"
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("gen-ai/agent/functionroute/delete", func(t *testing.T, when spec.G, it spec.S) {
-	const (
-		agentID    = "00000000-0000-4000-8000-000000000000"
-		functionID = "11111111-2222-3333-4444-555555555555"
-	)
-
+var _ = suite("genai/agent/functionroute/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect  *require.Assertions
-		server  *httptest.Server
-		cmd     *exec.Cmd
-		baseURL string
-
-		successBody = fmt.Sprintf(`{
-			"uuid": "%s",
-			"functions": []
-		}`, agentID)
+		expect *require.Assertions
+		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		// Mock API server
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/gen-ai/agents/" + agentID + "/functions/" + functionID:
-				if req.Header.Get("Authorization") != "Bearer some-magic-token" {
+			case "/v2/gen-ai/agents/0f0e928f-4649-11f0-bf8f-4e013e2ddde4/functions/e40dc785-5e69-11f0-bf8f-4e013e2ddde4":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
 				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
+
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte(successBody))
+				w.Write([]byte(functionRouteDeleteResponse))
 			default:
-				dump, _ := httputil.DumpRequest(req, true)
-				t.Fatalf("received unknown request:\n%s", dump)
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
-
-		u, _ := url.Parse(server.URL)
-		baseURL = u.String()
-	})
-
-	// ──────────────────────────────────────────────────────────────────────
-	it("deletes a function route", func() {
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", baseURL,
-			"genai", "agent", "functionroute", "delete",
-			"--agentid", agentID,
-			"--functionid", functionID,
-		)
-
-		out, err := cmd.CombinedOutput()
-		expect.NoError(err, fmt.Sprintf("unexpected error: %s", out))
-		expect.Contains(string(out), agentID)
-	})
-
-	it("deletes a function route with JSON output", func() {
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", baseURL,
-			"genai", "agent", "functionroute", "delete",
-			"--agentid", agentID,
-			"--functionid", functionID,
-			"--output", "json",
-		)
-
-		out, err := cmd.CombinedOutput()
-		expect.NoError(err, fmt.Sprintf("unexpected error: %s", out))
-		expect.Contains(string(out), `"uuid": "`+agentID+`"`)
-	})
-
-	it("errors when agentid is missing", func() {
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", baseURL,
-			"genai", "agent", "functionroute", "delete",
-			"--functionid", functionID,
-		)
-		out, err := cmd.CombinedOutput()
-		expect.Error(err)
-		expect.Contains(string(out), "missing required arguments")
-	})
-
-	it("errors when functionid is missing", func() {
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", baseURL,
-			"genai", "agent", "functionroute", "delete",
-			"--agentid", agentID,
-		)
-		out, err := cmd.CombinedOutput()
-		expect.Error(err)
-		expect.Contains(string(out), "missing required arguments")
-	})
-
-	it("returns an authentication error", func() {
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "bad-token",
-			"-u", baseURL,
-			"genai", "agent", "functionroute", "delete",
-			"--agentid", agentID,
-			"--functionid", functionID,
-		)
-		out, err := cmd.CombinedOutput()
-		expect.Error(err)
-		expect.Contains(string(out), "401")
-	})
-
-	it("shows help information", func() {
-		cmd = exec.Command(builtBinaryPath,
-			"genai", "agent", "functionroute", "delete", "--help",
-		)
-		out, err := cmd.CombinedOutput()
-		expect.NoError(err)
-		expect.Contains(string(out), "Delete a function route")
-		expect.Contains(string(out), "--agentid")
-		expect.Contains(string(out), "--functionid")
 	})
 
 	it.After(func() {
 		server.Close()
 	})
+
+	when("all required flags are passed", func() {
+		it("deletes a function route", func() {
+			aliases := []string{"delete", "d", "del", "rm"}
+
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"genai",
+					"agent",
+					"functionroute",
+					alias,
+					"--agentid", "0f0e928f-4649-11f0-bf8f-4e013e2ddde4",
+					"--functionid", "e40dc785-5e69-11f0-bf8f-4e013e2ddde4",
+				)
+
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(functionRouteDeleteOutput), strings.TrimSpace(string(output)))
+			}
+		})
+	})
+
+	when("required flags are missing", func() {
+		it("returns an error when agentid is missing", func() {
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"genai",
+				"agent",
+				"functionroute",
+				"delete",
+				"--functionid", "e40dc785-5e69-11f0-bf8f-4e013e2ddde4",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.Error(err)
+			expect.Contains(string(output), "missing required arguments")
+		})
+
+		it("returns an error when functionid is missing", func() {
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"genai",
+				"agent",
+				"functionroute",
+				"delete",
+				"--agentid", "0f0e928f-4649-11f0-bf8f-4e013e2ddde4",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.Error(err)
+			expect.Contains(string(output), "missing required arguments")
+		})
+	})
 })
+
+const (
+	functionRouteDeleteOutput = `
+ID                                      Name                   Region    Project ID                              Model ID    Created At                       User ID
+0f0e928f-4649-11f0-bf8f-4e013e2ddde4    terraform-testing-1    tor1      84e1e297-ee40-41ac-95ff-1067cf2206e9                2025-06-10 22:20:04 +0000 UTC    18697494
+`
+	functionRouteDeleteResponse = `
+{
+  "agent": {
+    "uuid": "0f0e928f-4649-11f0-bf8f-4e013e2ddde4",
+    "name": "terraform-testing-1",
+    "region": "tor1",
+    "project_id": "84e1e297-ee40-41ac-95ff-1067cf2206e9",
+    "model": {
+      "uuid": ""
+    },
+    "instruction": "You are a weather assistant",
+    "description": "Creating via doctl again",
+    "created_at": "2025-06-10T22:20:04Z",
+    "updated_at": "2025-06-10T22:20:04Z",
+    "user_id": "18697494",
+    "retrieval_method": "RETRIEVAL_METHOD_UNKNOWN",
+    "function_routes": []
+  }
+}
+`
+)

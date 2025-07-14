@@ -138,8 +138,8 @@ func RunFunctionRouteCreate(c *CmdConfig) error {
 	// return c.Display(&displayers.Agent{
 	// 	Agents: []godo.Agent{*functionRoute}, // ✔ satisfies do.Agents
 	// })
-	// return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
-	return c.Display(&displayers.FunctionRoute{Agent: *functionRoute})
+	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
+	// return c.Display(&displayers.FunctionRoute{Agent: *functionRoute})
 }
 
 // RunFunctionRouteUpdate updates an existing function route for a GenAI agent.
@@ -236,6 +236,7 @@ func RunFunctionRouteDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
 	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
 
 	// return c.Display(&displayers.Agent{Agents: *functionRoute})
