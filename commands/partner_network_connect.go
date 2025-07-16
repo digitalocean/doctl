@@ -39,6 +39,7 @@ func Network() *Command {
 	}
 
 	cmd.AddCommand(PartnerAttachments())
+	cmd.AddCommand(BYOIPPrefix())
 
 	return cmd
 }
@@ -70,6 +71,7 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPAuthKey, "", "", "BGP Auth Key")
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentRedundancyZone, "", "", "Redundancy Zone (optional)")
+	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentParentUUID, "", "", "HA Parent UUID (optional)")
 	cmdPartnerAttachmentCreate.Example = `The following example creates a Partner Attachment: doctl network connect create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	partnerAttachmentDetails := `
@@ -85,7 +87,9 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 - The Partner Attachment BGP Local Router IP
 - The Partner Attachment BGP Peer ASN
 - The Partner Attachment BGP Peer Router IP
-- The Partner Attachment Redundancy Zone`
+- The Partner Attachment Redundancy Zone
+- The Partner Attachment Parent
+- The Partner Attachment Children`
 
 	cmdPartnerAttachmentGet := CmdBuilder(cmd, RunPartnerAttachmentGet, "get <partner-attachment-id>",
 		"Retrieves a Partner Attachment",
@@ -256,6 +260,12 @@ func RunPartnerAttachmentCreate(c *CmdConfig) error {
 		return err
 	}
 	r.RedundancyZone = redundancyZone
+
+	parentUUID, err := c.Doit.GetString(c.NS, doctl.ArgPartnerAttachmentParentUUID)
+	if err != nil {
+		return err
+	}
+	r.ParentUuid = parentUUID
 
 	pas := c.PartnerAttachments()
 	pa, err := pas.Create(r)

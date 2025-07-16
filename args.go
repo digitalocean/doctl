@@ -118,6 +118,23 @@ const (
 	// ArgAutoscaleTargetInstances is an autoscale target instance argument.
 	ArgAutoscaleTargetInstances = "target-instances"
 
+	// ArgVPCNATGatewayName is a vpc nat gateway name argument.
+	ArgVPCNATGatewayName = "name"
+	// ArgVPCNATGatewayType is a vpc nat gateway type argument.
+	ArgVPCNATGatewayType = "type"
+	// ArgVPCNATGatewayRegion is a vpc nat gateway region argument.
+	ArgVPCNATGatewayRegion = "region"
+	// ArgVPCNATGatewaySize is a vpc nat gateway region argument.
+	ArgVPCNATGatewaySize = "size"
+	// ArgVPCNATGatewayVPCs is a vpc nat gateway vpcs argument.
+	ArgVPCNATGatewayVPCs = "vpcs"
+	// ArgVPCNATGatewayUDPTimeout is a vpc nat gateway udp-timeout argument.
+	ArgVPCNATGatewayUDPTimeout = "udp-timeout"
+	// ArgVPCNATGatewayICMPTimeout is a vpc nat gateway icmp-timeout argument.
+	ArgVPCNATGatewayICMPTimeout = "icmp-timeout"
+	// ArgVPCNATGatewayTCPTimeout is a vpc nat gateway tcp-timeout argument.
+	ArgVPCNATGatewayTCPTimeout = "tcp-timeout"
+
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
@@ -555,6 +572,8 @@ const (
 	ArgPartnerAttachmentBGPAuthKey = "bgp-auth-key"
 	// ArgPartnerAttachmentRedundancyZone is the redundancy zone of the Partner Attachment
 	ArgPartnerAttachmentRedundancyZone = "redundancy-zone"
+	// ArgPartnerAttachmentParentUUID is the ha parent uuid of the Partner Attachment
+	ArgPartnerAttachmentParentUUID = "parent-uuid"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
@@ -688,6 +707,57 @@ const (
 
 	// ArgTopProbability is the top probability for the response generation.
 	ArgTopProbability = "top-p"
+
+	// ArgKnowledgeBaseDatabaseID is the ID of the database
+	ArgKnowledgeBaseDatabaseID = "database-id"
+
+	// ArgKnowledgeBaseName is the name of the knowledge base
+	ArgKnowledgeBaseName = "name"
+
+	// ArgKnowledgeBaseRegion is the region of the knowledge base
+	ArgKnowledgeBaseRegion = "region"
+
+	// ArgKnowledgeBaseProjectID is the project ID of the knowledge base
+	ArgKnowledgeBaseProjectID = "project-id"
+
+	// ArgKnowledgeBaseEmbeddingModelUUID is the UUID of the embedding model
+	ArgKnowledgeBaseEmbeddingModelUUID = "embedding-model-uuid"
+
+	// ArgKnowledgeBaseTags is the tags of the knowledge base
+	ArgKnowledgeBaseTags = "tags"
+
+	// ArgKnowledgeBaseVPCUUID is the UUID of the VPC
+	ArgKnowledgeBaseVPCUUID = "vpc-uuid"
+
+	// ArgKnowledgeBaseDataSource is the data source of the knowledge base
+	ArgKnowledgeBaseDataSource = "data-sources"
+
+	// ArgKnowledgeBaseBaseURL is the base URL of the knowledge base
+	ArgKnowledgeBaseBaseURL = "base-url"
+
+	// ArgKnowledgeBaseCrawlingOption is the crawling option of the knowledge base
+	ArgKnowledgeBaseCrawlingOption = "crawling-option"
+
+	// ArgKnowledgeBaseEmbedMedia is the embed media option of the knowledge base
+	ArgKnowledgeBaseEmbedMedia = "embed-media"
+
+	// ArgKnowledgeBaseUUID is the UUID of the knowledge base
+	ArgKnowledgeBaseUUID = "uuid"
+
+	// ArgKnowledgeBaseDataSourceID is the ID of the data source
+	ArgKnowledgeBaseDataSourceID = "data-source-id"
+
+	// ArgKnowledgeBaseBucketName is name of data source from Spaces
+	ArgKnowledgeBaseBucketName = "bucket-name"
+
+	// ArgKnowledgeBaseItemPath is the item path of the data source
+	ArgKnowledgeBaseItemPath = "item-path"
+
+	// ArgPrefix is a byoip prefix argument.
+	ArgPrefix = "prefix"
+
+	// ArgSignature is a byoip prefix argument.
+	ArgSignature = "signature"
 
 	// ArgAgentAPIKeyName is the name of API Key of the agent.
 	ArgAgentAPIKeyName = "name"

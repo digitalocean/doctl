@@ -39,19 +39,22 @@ type CmdConfig struct {
 	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
-	Keys               func() do.KeysService
-	Sizes              func() do.SizesService
-	Regions            func() do.RegionsService
-	Images             func() do.ImagesService
-	ImageActions       func() do.ImageActionsService
-	LoadBalancers      func() do.LoadBalancersService
-	ReservedIPs        func() do.ReservedIPsService
-	ReservedIPActions  func() do.ReservedIPActionsService
-	ReservedIPv6s      func() do.ReservedIPv6sService
+	Keys              func() do.KeysService
+	Sizes             func() do.SizesService
+	Regions           func() do.RegionsService
+	Images            func() do.ImagesService
+	ImageActions      func() do.ImageActionsService
+	LoadBalancers     func() do.LoadBalancersService
+	ReservedIPs       func() do.ReservedIPsService
+	ReservedIPActions func() do.ReservedIPActionsService
+	ReservedIPv6s     func() do.ReservedIPv6sService
+	BYOIPPrefixes     func() do.BYOIPPrefixsService
+
 	Droplets           func() do.DropletsService
 	DropletActions     func() do.DropletActionsService
 	DropletAutoscale   func() do.DropletAutoscaleService
 	Domains            func() do.DomainsService
+	VPCNATGateways     func() do.VPCNATGatewaysService
 	Actions            func() do.ActionsService
 	Account            func() do.AccountService
 	Balance            func() do.BalanceService
@@ -104,10 +107,12 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.ReservedIPs = func() do.ReservedIPsService { return do.NewReservedIPsService(godoClient) }
 			c.ReservedIPActions = func() do.ReservedIPActionsService { return do.NewReservedIPActionsService(godoClient) }
 			c.ReservedIPv6s = func() do.ReservedIPv6sService { return do.NewReservedIPv6sService(godoClient) }
+			c.BYOIPPrefixes = func() do.BYOIPPrefixsService { return do.NewBYOIPPrefixService(godoClient) }
 			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
 			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
 			c.DropletAutoscale = func() do.DropletAutoscaleService { return do.NewDropletAutoscaleService(godoClient) }
 			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
+			c.VPCNATGateways = func() do.VPCNATGatewaysService { return do.NewVPCNATGatewaysService(godoClient) }
 			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
 			c.Balance = func() do.BalanceService { return do.NewBalanceService(godoClient) }
@@ -139,7 +144,6 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 			c.GenAI = func() do.GenAIService { return do.NewGenAIService(godoClient) }
-
 			return nil
 		},
 
