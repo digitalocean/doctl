@@ -27,6 +27,7 @@ RUN apk add --update --no-cache \
         openssh
 
 WORKDIR /app
+ENV PATH="/app:$PATH"
 COPY --from=build /out/doctl /app/doctl
 
 RUN adduser -D user
