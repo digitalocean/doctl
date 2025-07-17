@@ -55,7 +55,7 @@ func KnowledgeBaseCmd() *Command {
 		RunKnowledgeBaseCreate,
 		"create",
 		"Creates a knowledge base",
-		"Creates a knowledge base and returns the following information \n"+knowledgebaseDetails+" \nFor more information about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base)\n",
+		"Creates a knowledge base and returns the following information \n"+knowledgebaseDetails+" \nFor more information about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform/operation/genai_create_knowledge_base)\n",
 		Writer, aliasOpt("c"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
