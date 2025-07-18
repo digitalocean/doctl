@@ -59,7 +59,7 @@ func TestFunctionRouteCreate(t *testing.T) {
 			CreateFunctionRoute(testAgentUUID, expReq).
 			Return(testAgentResponse, nil)
 
-		cfg.Doit.Set(cfg.NS, doctl.ArgAgentUUID, testAgentUUID)
+		cfg.Doit.Set(cfg.NS, doctl.ArgAgentId, testAgentUUID)
 		cfg.Doit.Set(cfg.NS, doctl.ArgFunctionName, "my-fn")
 		cfg.Doit.Set(cfg.NS, doctl.ArgFunctionRouteDescription, "unit-test create")
 		cfg.Doit.Set(cfg.NS, doctl.ArgFunctionRouteFaasName, "default/testing")
@@ -84,7 +84,7 @@ func TestFunctionRouteUpdate(t *testing.T) {
 			UpdateFunctionRoute(testAgentUUID, testFunctionUUID, expReq).
 			Return(testAgentResponse, nil)
 
-		cfg.Doit.Set(cfg.NS, doctl.ArgAgentUUID, testAgentUUID)
+		cfg.Doit.Set(cfg.NS, doctl.ArgAgentId, testAgentUUID)
 		cfg.Doit.Set(cfg.NS, doctl.ArgFunctionID, testFunctionUUID)
 		cfg.Doit.Set(cfg.NS, doctl.ArgFunctionRouteDescription, "updated-desc")
 		cfg.Doit.Set(cfg.NS, doctl.ArgFunctionRouteFaasName, "default/updated")
@@ -99,7 +99,7 @@ func TestFunctionRouteDelete(t *testing.T) {
 			DeleteFunctionRoute(testAgentUUID, testFunctionUUID).
 			Return(testAgentResponse, nil)
 
-		cfg.Doit.Set(cfg.NS, doctl.ArgAgentUUID, testAgentUUID)
+		cfg.Doit.Set(cfg.NS, doctl.ArgAgentId, testAgentUUID)
 		cfg.Doit.Set(cfg.NS, doctl.ArgFunctionID, testFunctionUUID)
 
 		assert.NoError(t, RunFunctionRouteDelete(cfg))

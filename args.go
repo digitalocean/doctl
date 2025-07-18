@@ -759,11 +759,8 @@ const (
 	// ArgSignature is a byoip prefix argument.
 	ArgSignature = "signature"
 
-	// ArgAgentUUID is the UUID of the agent.
-	ArgAgentUUID = "agentid"
-
 	// ArgFunctionIDs is the name of the function.
-	ArgFunctionID = "functionid"
+	ArgFunctionID = "function-id"
 
 	//ArgFunctionName is the name of the function.
 	ArgFunctionName = "name"
