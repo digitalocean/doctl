@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.157.0] - 2025-07-08
+
+- #866 - @ssaengs - fix: appHealth incorrectly keyed.
+- #867 - @harshmaru7 - Added OpenAI API Key Operations 
+
+## [v1.156.0] - 2025-07-07
+
+- #862 - @ssaengs - APPS: expose app health 
+- #863 - @SSharma-10 - Added Anthropic API Key Operations
+
 ## [v1.155.0] - 2025-06-26
 
 - #854 - @anup-deka - Implementation for Agent Route and Agent Versions 
