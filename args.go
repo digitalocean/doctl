@@ -771,6 +771,6 @@ const (
 	// ArgAgentRouteName is the name of the route.
 	ArgAgentRouteName = "route-name"
 
-	// ArgAgentRouteIfCase is the type of the route.
+	// ArgAgentRouteIfCase is the if-case condition for the route.
 	ArgAgentRouteIfCase = "if-case"
 )
