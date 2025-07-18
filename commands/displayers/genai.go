@@ -246,3 +246,50 @@ func (f *FunctionRoute) KV() []map[string]any {
 	}
 	return out
 }
+
+type AgentRoute struct {
+	AgentRouteResponses []do.AgentRouteResponse
+}
+
+var _ Displayable = &AgentRoute{}
+
+func (a *AgentRoute) JSON(out io.Writer) error {
+	return writeJSON(a.AgentRouteResponses, out)
+}
+
+func (a *AgentRoute) Cols() []string {
+	return []string{
+		"Id",
+		"ParentAgentId",
+		"ChildAgentId",
+		"Rollback",
+	}
+}
+
+func (a *AgentRoute) ColMap() map[string]string {
+	return map[string]string{
+		"Id":            "Id",
+		"ParentAgentId": "Parent Agent Id",
+		"ChildAgentId":  "Child Agent Id",
+		"Rollback":      "Rollback",
+	}
+}
+
+func (a *AgentRoute) KV() []map[string]any {
+	if a == nil || a.AgentRouteResponses == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(a.AgentRouteResponses))
+
+	for _, response := range a.AgentRouteResponses {
+		o := map[string]any{
+			"Id":            response.UUID,
+			"ParentAgentId": response.ParentAgentUuid,
+			"ChildAgentId":  response.ChildAgentUuid,
+			"Rollback":      response.Rollback,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}

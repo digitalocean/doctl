@@ -759,6 +759,21 @@ const (
 	// ArgSignature is a byoip prefix argument.
 	ArgSignature = "signature"
 
+	// ArgAgentParentID is the ID for the parent agent.
+	ArgParentAgentId = "parent-agent-id"
+
+	// ArgChildAgentID is the ID for the child agent.
+	ArgChildAgentId = "child-agent-id"
+
+	// ArgAgentRouteId is the UUID for the agent linkage.
+	ArgAgentRouteId = "route-id"
+
+	// ArgAgentRouteName is the name of the route.
+	ArgAgentRouteName = "route-name"
+
+	// ArgAgentRouteIfCase is the if-case condition for the route.
+	ArgAgentRouteIfCase = "if-case"
+
 	// ArgFunctionIDs is the name of the function.
 	ArgFunctionID = "function-id"
 

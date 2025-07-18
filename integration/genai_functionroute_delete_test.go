@@ -67,8 +67,8 @@ var _ = suite("genai/agent/functionroute/delete", func(t *testing.T, when spec.G
 					"agent",
 					"functionroute",
 					alias,
-					"--agentid", "0f0e928f-4649-11f0-bf8f-4e013e2ddde4",
-					"--functionid", "e40dc785-5e69-11f0-bf8f-4e013e2ddde4",
+					"--agent-id", "0f0e928f-4649-11f0-bf8f-4e013e2ddde4",
+					"--function-id", "e40dc785-5e69-11f0-bf8f-4e013e2ddde4",
 				)
 
 				output, err := cmd.CombinedOutput()
@@ -79,7 +79,7 @@ var _ = suite("genai/agent/functionroute/delete", func(t *testing.T, when spec.G
 	})
 
 	when("required flags are missing", func() {
-		it("returns an error when agentid is missing", func() {
+		it("returns an error when agent-id is missing", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -87,7 +87,7 @@ var _ = suite("genai/agent/functionroute/delete", func(t *testing.T, when spec.G
 				"agent",
 				"functionroute",
 				"delete",
-				"--functionid", "e40dc785-5e69-11f0-bf8f-4e013e2ddde4",
+				"--function-id", "e40dc785-5e69-11f0-bf8f-4e013e2ddde4",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -95,7 +95,7 @@ var _ = suite("genai/agent/functionroute/delete", func(t *testing.T, when spec.G
 			expect.Contains(string(output), "missing required arguments")
 		})
 
-		it("returns an error when functionid is missing", func() {
+		it("returns an error when function-id is missing", func() {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -103,7 +103,7 @@ var _ = suite("genai/agent/functionroute/delete", func(t *testing.T, when spec.G
 				"agent",
 				"functionroute",
 				"delete",
-				"--agentid", "0f0e928f-4649-11f0-bf8f-4e013e2ddde4",
+				"--agent-id", "0f0e928f-4649-11f0-bf8f-4e013e2ddde4",
 			)
 
 			output, err := cmd.CombinedOutput()
