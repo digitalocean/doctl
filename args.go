@@ -759,6 +759,42 @@ const (
 	// ArgSignature is a byoip prefix argument.
 	ArgSignature = "signature"
 
+	// ArgAgentParentID is the ID for the parent agent.
+	ArgParentAgentId = "parent-agent-id"
+
+	// ArgChildAgentID is the ID for the child agent.
+	ArgChildAgentId = "child-agent-id"
+
+	// ArgAgentRouteId is the UUID for the agent linkage.
+	ArgAgentRouteId = "route-id"
+
+	// ArgAgentRouteName is the name of the route.
+	ArgAgentRouteName = "route-name"
+
+	// ArgAgentRouteIfCase is the if-case condition for the route.
+	ArgAgentRouteIfCase = "if-case"
+
+	// ArgFunctionIDs is the name of the function.
+	ArgFunctionID = "function-id"
+
+	//ArgFunctionName is the name of the function.
+	ArgFunctionName = "name"
+
+	// ArgFunctionDescription is the description of the function.
+	ArgFunctionRouteDescription = "description"
+
+	// ArgFunctionRouteFaasName is the name of the function route in the DigitalOcean functions platform
+	ArgFunctionRouteFaasName = "faas-name"
+
+	// ArgFunctionRouteFaasNamespace is the namespace of the function route in the DigitalOcean functions platform
+	ArgFunctionRouteFaasNamespace = "faas-namespace"
+
+	// ArgFunctionRouteInputSchema is the input schema of the function route
+	ArgFunctionRouteInputSchema = "input-schema"
+
+	// ArgFunctionRouteOutputSchema is the output schema of the function route
+	ArgFunctionRouteOutputSchema = "output-schema"
+
 	// ArgAgentAPIKeyName is the name of API Key of the agent.
 	ArgAgentAPIKeyName = "name"
 

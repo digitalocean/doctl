@@ -200,6 +200,107 @@ func (v *KnowledgeBaseDataSource) KV() []map[string]any {
 	return out
 }
 
+type FunctionRoute struct {
+	Agent do.Agent
+}
+
+var _ Displayable = &FunctionRoute{}
+
+func (f *FunctionRoute) JSON(out io.Writer) error {
+	return writeJSON(f.Agent.Functions, out)
+}
+
+func (f *FunctionRoute) Cols() []string {
+	return []string{
+		"Uuid",
+		"Name",
+		"Description",
+		"FaasName",
+		"FaasNamespace",
+		"CreatedAt",
+		"UpdatedAt",
+	}
+}
+
+func (f *FunctionRoute) ColMap() map[string]string {
+	return map[string]string{
+		"Uuid":          "UUID",
+		"Name":          "Name",
+		"Description":   "Description",
+		"FaasName":      "FaaS Name",
+		"FaasNamespace": "FaaS Namespace",
+		"CreatedAt":     "Created At",
+		"UpdatedAt":     "Updated At",
+	}
+}
+
+func (f *FunctionRoute) KV() []map[string]any {
+	if f.Agent.Functions == nil {
+		return []map[string]any{}
+	}
+
+	out := make([]map[string]any, 0, len(f.Agent.Functions))
+	for _, fn := range f.Agent.Functions {
+		out = append(out, map[string]any{
+			"Uuid":          fn.Uuid,
+			"Name":          fn.Name,
+			"Description":   fn.Description,
+			"FaasName":      fn.FaasName,
+			"FaasNamespace": fn.FaasNamespace,
+			"CreatedAt":     fn.CreatedAt,
+			"UpdatedAt":     fn.UpdatedAt,
+		})
+	}
+	return out
+}
+
+type AgentRoute struct {
+	AgentRouteResponses []do.AgentRouteResponse
+}
+
+var _ Displayable = &AgentRoute{}
+
+func (a *AgentRoute) JSON(out io.Writer) error {
+	return writeJSON(a.AgentRouteResponses, out)
+}
+
+func (a *AgentRoute) Cols() []string {
+	return []string{
+		"Id",
+		"ParentAgentId",
+		"ChildAgentId",
+		"Rollback",
+	}
+}
+
+func (a *AgentRoute) ColMap() map[string]string {
+	return map[string]string{
+		"Id":            "Id",
+		"ParentAgentId": "Parent Agent Id",
+		"ChildAgentId":  "Child Agent Id",
+		"Rollback":      "Rollback",
+	}
+}
+
+func (a *AgentRoute) KV() []map[string]any {
+	if a == nil || a.AgentRouteResponses == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(a.AgentRouteResponses))
+
+	for _, response := range a.AgentRouteResponses {
+		o := map[string]any{
+			"Id":            response.UUID,
+			"ParentAgentId": response.ParentAgentUuid,
+			"ChildAgentId":  response.ChildAgentUuid,
+			"Rollback":      response.Rollback,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
 var _ Displayable = &ApiKeyInfo{}
 
 func (v *ApiKeyInfo) JSON(out io.Writer) error {
