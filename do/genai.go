@@ -47,8 +47,6 @@ type Agents []Agent
 
 type AgentVersions []AgentVersion
 
-type AgentVersions []AgentVersion
-
 // KnowledgeBases for Agents
 type KnowledgeBases []KnowledgeBase
 

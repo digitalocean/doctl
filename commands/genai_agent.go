@@ -154,7 +154,7 @@ func AgentCmd() *Command {
 		aliasOpt("lv", "list-versions"),
 		displayerType(&displayers.AgentVersion{}),
 	)
-	cmdAgentListVersions.Example = `The following example retrieves a list of all versions for an Agent with ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` region: doctl genai agent list-versions 12345678-1234-1234-1234-123456789012`
+	cmdAgentListVersions.Example = `The following example retrieves a list of all versions for an Agent with ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` : doctl genai agent list-versions 12345678-1234-1234-1234-123456789012`
 
 	return cmd
 }
