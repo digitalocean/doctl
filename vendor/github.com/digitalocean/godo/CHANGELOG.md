@@ -1,5 +1,13 @@
 # Change Log
 
+## [v1.159.0] - 2025-07-17
+
+- #871 - @ShivaniKumar1 - Add VPC Integration
+
+## [v1.158.0] - 2025-07-15
+
+- #869 - @kishlay-singh-DO - Function Route Endpoints
+
 ## [v1.157.0] - 2025-07-08
 
 - #866 - @ssaengs - fix: appHealth incorrectly keyed.
