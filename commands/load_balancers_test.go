@@ -116,8 +116,9 @@ func TestLoadBalancerCreate(t *testing.T) {
 				Deny:  []string{"cidr:1.2.0.0/16"},
 				Allow: []string{"ip:1.2.3.4", "ip:1.2.3.5"},
 			},
-			Network:      "EXTERNAL",
-			NetworkStack: "IPV4",
+			Network:         "EXTERNAL",
+			NetworkStack:    "IPV4",
+			TLSCipherPolicy: "STRONG",
 		}
 		disableLetsEncryptDNSRecords := true
 		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
@@ -139,6 +140,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAllowList, []string{"ip:1.2.3.4", "ip:1.2.3.5"})
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerNetwork, "EXTERNAL")
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerNetworkStack, "IPV4")
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerTLSCipherPolicy, "STRONG")
 
 		err := RunLoadBalancerCreate(config)
 		assert.NoError(t, err)

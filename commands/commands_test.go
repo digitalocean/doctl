@@ -118,6 +118,37 @@ var (
 	}
 	testReservedIPv6List = do.ReservedIPv6s{testReservedIPv6}
 
+	testBYOIPPrefixCreate = &godo.BYOIPPrefixCreateResp{
+		UUID:   "123e4567-e89b-12d3-a456-426614174000",
+		Region: "nyc1",
+		Status: "active",
+	}
+
+	testBYOIPPrefix = do.BYOIPPrefix{
+		BYOIPPrefix: &godo.BYOIPPrefix{
+			Prefix:        "10.1.1.1/24",
+			Region:        "nyc1",
+			Status:        "active",
+			UUID:          "123e4567-e89b-12d3-a456-426614174000",
+			FailureReason: "",
+			Validations:   nil,
+		},
+	}
+
+	testBYOIPPrefixList = do.BYOIPPrefixes{testBYOIPPrefix}
+
+	testBYOIPPrefixGetResources = do.BYOIPPrefixResources{
+		{
+			BYOIPPrefixResource: &godo.BYOIPPrefixResource{
+				ID:         1234,
+				BYOIP:      "10.1.1.23",
+				Resource:   "do:droplet:b5816aae-437a-4d82-b440-656af71a2ad4",
+				Region:     "nyc1",
+				AssignedAt: time.Now(),
+			},
+		},
+	}
+
 	testSnapshot = do.Snapshot{
 		Snapshot: &godo.Snapshot{
 			ID:      "1",
@@ -231,6 +262,7 @@ type tcMocks struct {
 	reservedIPs           *domocks.MockReservedIPsService
 	reservedIPActions     *domocks.MockReservedIPActionsService
 	reservedIPv6s         *domocks.MockReservedIPv6sService
+	byoipPrefixes         *domocks.MockBYOIPPrefixsService
 	domains               *domocks.MockDomainsService
 	uptimeChecks          *domocks.MockUptimeChecksService
 	volumes               *domocks.MockVolumesService
@@ -246,6 +278,7 @@ type tcMocks struct {
 	registry              *domocks.MockRegistryService
 	sshRunner             *domocks.MockRunner
 	vpcs                  *domocks.MockVPCsService
+	vpcNatGateways        *domocks.MockVPCNATGatewaysService
 	oneClick              *domocks.MockOneClickService
 	listen                *domocks.MockListenerService
 	terminal              *domocks.MockTerminal
@@ -257,6 +290,7 @@ type tcMocks struct {
 	oauth                 *domocks.MockOAuthService
 	partnerAttachments    *domocks.MockPartnerAttachmentsService
 	spacesKeys            *domocks.MockSpacesKeysService
+	genAI                 *domocks.MockGenAIService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -278,6 +312,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		reservedIPs:           domocks.NewMockReservedIPsService(ctrl),
 		reservedIPActions:     domocks.NewMockReservedIPActionsService(ctrl),
 		reservedIPv6s:         domocks.NewMockReservedIPv6sService(ctrl),
+		byoipPrefixes:         domocks.NewMockBYOIPPrefixsService(ctrl),
 		droplets:              domocks.NewMockDropletsService(ctrl),
 		dropletActions:        domocks.NewMockDropletActionsService(ctrl),
 		dropletAutoscale:      domocks.NewMockDropletAutoscaleService(ctrl),
@@ -286,6 +321,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		uptimeChecks:          domocks.NewMockUptimeChecksService(ctrl),
 		volumes:               domocks.NewMockVolumesService(ctrl),
 		volumeActions:         domocks.NewMockVolumeActionsService(ctrl),
+		vpcNatGateways:        domocks.NewMockVPCNATGatewaysService(ctrl),
 		snapshots:             domocks.NewMockSnapshotsService(ctrl),
 		certificates:          domocks.NewMockCertificatesService(ctrl),
 		loadBalancers:         domocks.NewMockLoadBalancersService(ctrl),
@@ -308,6 +344,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		oauth:                 domocks.NewMockOAuthService(ctrl),
 		partnerAttachments:    domocks.NewMockPartnerAttachmentsService(ctrl),
 		spacesKeys:            domocks.NewMockSpacesKeysService(ctrl),
+		genAI:                 domocks.NewMockGenAIService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -337,6 +374,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		ReservedIPs:        func() do.ReservedIPsService { return tm.reservedIPs },
 		ReservedIPActions:  func() do.ReservedIPActionsService { return tm.reservedIPActions },
 		ReservedIPv6s:      func() do.ReservedIPv6sService { return tm.reservedIPv6s },
+		BYOIPPrefixes:      func() do.BYOIPPrefixsService { return tm.byoipPrefixes },
 		Droplets:           func() do.DropletsService { return tm.droplets },
 		DropletActions:     func() do.DropletActionsService { return tm.dropletActions },
 		DropletAutoscale:   func() do.DropletAutoscaleService { return tm.dropletAutoscale },
@@ -350,6 +388,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		UptimeChecks:       func() do.UptimeChecksService { return tm.uptimeChecks },
 		Volumes:            func() do.VolumesService { return tm.volumes },
 		VolumeActions:      func() do.VolumeActionsService { return tm.volumeActions },
+		VPCNATGateways:     func() do.VPCNATGatewaysService { return tm.vpcNatGateways },
 		Snapshots:          func() do.SnapshotsService { return tm.snapshots },
 		Certificates:       func() do.CertificatesService { return tm.certificates },
 		LoadBalancers:      func() do.LoadBalancersService { return tm.loadBalancers },
@@ -367,6 +406,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OAuth:              func() do.OAuthService { return tm.oauth },
 		PartnerAttachments: func() do.PartnerAttachmentsService { return tm.partnerAttachments },
 		SpacesKeys:         func() do.SpacesKeysService { return tm.spacesKeys },
+		GenAI:              func() do.GenAIService { return tm.genAI },
 	}
 
 	tFn(config, tm)

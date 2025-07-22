@@ -190,6 +190,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Serverless())
 	DoitCmd.AddCommand(Spaces())
+	DoitCmd.AddCommand(GenAI())
 }
 
 func computeCmd() *Command {
@@ -209,6 +210,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(DropletAutoscale())
 	cmd.AddCommand(Domain())
+	cmd.AddCommand(VPCNATGateway())
 	cmd.AddCommand(Firewall())
 	cmd.AddCommand(ReservedIP())
 	cmd.AddCommand(ReservedIPAction())
@@ -276,6 +278,17 @@ func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...fla
 func AddIntFlag(cmd *Command, name, shorthand string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().IntP(name, shorthand, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
+}
+
+// AddFloatFlag adds an float flag to a command.
+func AddFloatFlag(cmd *Command, name, shorthand string, def float64, desc string, opts ...flagOpt) {
+	fn := flagName(cmd, name)
+	cmd.Flags().Float64P(name, shorthand, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
