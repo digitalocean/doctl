@@ -31,6 +31,10 @@ func GenAI() *Command {
 	cmd.AddCommand(AgentCmd())
 	// Add the knowledgebase command as a subcommand to genai
 	cmd.AddCommand(KnowledgeBaseCmd())
+	// Add the model command as a subcommand to genai
+	cmd.AddCommand(ListModelsCmd())
+	// Add the region command as a subcommand to genai
+	cmd.AddCommand(ListRegionsCmd())
 
 	return cmd
 }
