@@ -11,16 +11,20 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/listen"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestAppsCommand(t *testing.T) {
 	cmd := Apps()
 	require.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
+		"console",
+		"list-instances",
 		"create",
 		"get",
 		"list",
@@ -33,6 +37,7 @@ func TestAppsCommand(t *testing.T) {
 		"list-regions",
 		"logs",
 		"propose",
+		"restart",
 		"spec",
 		"tier",
 		"list-alerts",
@@ -341,6 +346,110 @@ func TestRunAppsCreateDeploymentWithWait(t *testing.T) {
 	})
 }
 
+func TestRunAppsRestart(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		deployment := &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+			Services: []*godo.DeploymentService{{
+				Name:             "service",
+				SourceCommitHash: "commit",
+			}},
+			Cause: "Manual",
+			Phase: godo.DeploymentPhase_PendingDeploy,
+			Progress: &godo.DeploymentProgress{
+				PendingSteps: 1,
+				RunningSteps: 0,
+				SuccessSteps: 0,
+				ErrorSteps:   0,
+				TotalSteps:   1,
+
+				Steps: []*godo.DeploymentProgressStep{{
+					Name:      "name",
+					Status:    "pending",
+					StartedAt: time.Now(),
+				}},
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		tm.apps.EXPECT().Restart(appID, []string{"component1", "component2"}).Times(1).Return(deployment, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgAppComponents, []string{"component1", "component2"})
+
+		err := RunAppsRestart(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsRestartWithWait(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		deployment := &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+			Services: []*godo.DeploymentService{{
+				Name:             "service",
+				SourceCommitHash: "commit",
+			}},
+			Cause: "Manual",
+			Phase: godo.DeploymentPhase_PendingDeploy,
+			Progress: &godo.DeploymentProgress{
+				PendingSteps: 1,
+				RunningSteps: 0,
+				SuccessSteps: 0,
+				ErrorSteps:   0,
+				TotalSteps:   1,
+
+				Steps: []*godo.DeploymentProgressStep{{
+					Name:      "name",
+					Status:    "pending",
+					StartedAt: time.Now(),
+				}},
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		activeDeployment := &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+			Services: []*godo.DeploymentService{{
+				Name:             "service",
+				SourceCommitHash: "commit",
+			}},
+			Cause: "Manual",
+			Phase: godo.DeploymentPhase_Active,
+			Progress: &godo.DeploymentProgress{
+				PendingSteps: 1,
+				RunningSteps: 0,
+				SuccessSteps: 1,
+				ErrorSteps:   0,
+				TotalSteps:   1,
+
+				Steps: []*godo.DeploymentProgressStep{{
+					Name:      "name",
+					Status:    "pending",
+					StartedAt: time.Now(),
+				}},
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		tm.apps.EXPECT().Restart(appID, nil).Times(1).Return(deployment, nil)
+		tm.apps.EXPECT().GetDeployment(appID, deployment.ID).Times(2).Return(activeDeployment, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
+
+		err := RunAppsRestart(config)
+		require.NoError(t, err)
+	})
+}
+
 func TestRunAppsGetDeployment(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		appID := uuid.New().String()
@@ -431,10 +540,10 @@ func TestRunAppsGetLogs(t *testing.T) {
 	for typeStr, logType := range types {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
-			tm.listen.EXPECT().Start().Times(1).Return(nil)
+			tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
 
 			tc := config.Doit.(*doctl.TestConfig)
-			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
+			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
 				assert.Equal(t, "aa-bb-11-cc-33", token)
 				assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
 				return tm.listen
@@ -450,6 +559,154 @@ func TestRunAppsGetLogs(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestRunAppsGetLogsWithAppName(t *testing.T) {
+	appName := "test-app"
+	component := "service"
+
+	testApp := &godo.App{
+		ID:   uuid.New().String(),
+		Spec: &testAppSpec,
+		ActiveDeployment: &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+		},
+	}
+
+	types := map[string]godo.AppLogType{
+		"build":  godo.AppLogTypeBuild,
+		"deploy": godo.AppLogTypeDeploy,
+		"run":    godo.AppLogTypeRun,
+	}
+
+	for typeStr, logType := range types {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.apps.EXPECT().Find(appName).Times(1).Return(testApp, nil)
+			tm.apps.EXPECT().GetLogs(testApp.ID, testApp.ActiveDeployment.ID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+			tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+
+			tc := config.Doit.(*doctl.TestConfig)
+			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+				assert.Equal(t, "aa-bb-11-cc-33", token)
+				assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+				return tm.listen
+			}
+
+			config.Args = append(config.Args, appName, component)
+			config.Doit.Set(config.NS, doctl.ArgAppDeployment, "")
+			config.Doit.Set(config.NS, doctl.ArgAppLogType, typeStr)
+			config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+			config.Doit.Set(config.NS, doctl.ArgAppLogTail, 1)
+
+			err := RunAppsGetLogs(config)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestRunAppsGetLogsWithAppNameAndDeploymentID(t *testing.T) {
+	appName := "test-app"
+	component := "service"
+
+	testApp := &godo.App{
+		ID:   uuid.New().String(),
+		Spec: &testAppSpec,
+		ActiveDeployment: &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+		},
+	}
+
+	types := map[string]godo.AppLogType{
+		"build":  godo.AppLogTypeBuild,
+		"deploy": godo.AppLogTypeDeploy,
+		"run":    godo.AppLogTypeRun,
+	}
+
+	for typeStr, logType := range types {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.apps.EXPECT().Find(appName).Times(1).Return(testApp, nil)
+			tm.apps.EXPECT().GetLogs(testApp.ID, testApp.ActiveDeployment.ID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+			tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+
+			tc := config.Doit.(*doctl.TestConfig)
+			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+				assert.Equal(t, "aa-bb-11-cc-33", token)
+				assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+				return tm.listen
+			}
+
+			config.Args = append(config.Args, appName, component)
+			config.Doit.Set(config.NS, doctl.ArgAppDeployment, testApp.ActiveDeployment.ID)
+			config.Doit.Set(config.NS, doctl.ArgAppLogType, typeStr)
+			config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+			config.Doit.Set(config.NS, doctl.ArgAppLogTail, 1)
+
+			err := RunAppsGetLogs(config)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestRunAppsConsole(t *testing.T) {
+	appID := uuid.New().String()
+	deploymentID := uuid.New().String()
+	componentName := "service"
+	instanceName := "app-instance-1d34fg678-45f6"
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		opts := &godo.AppGetExecOptions{
+			DeploymentID: deploymentID,
+		}
+		tm.apps.EXPECT().GetExecWithOpts(appID, componentName, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+		tm.terminal.EXPECT().ReadRawStdin(gomock.Any(), gomock.Any()).Times(1).Return(func() {}, nil)
+		tm.terminal.EXPECT().MonitorResizeEvents(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+
+		tc := config.Doit.(*doctl.TestConfig)
+		tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+			assert.Equal(t, "aa-bb-11-cc-33", token)
+			assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+			return tm.listen
+		}
+		tc.TerminalFn = func() terminal.Terminal {
+			return tm.terminal
+		}
+
+		config.Args = append(config.Args, appID, componentName)
+		config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
+
+		err := RunAppsConsole(config)
+		require.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		opts := &godo.AppGetExecOptions{
+			DeploymentID: deploymentID,
+			InstanceName: instanceName,
+		}
+		tm.apps.EXPECT().GetExecWithOpts(appID, componentName, opts).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+		tm.terminal.EXPECT().ReadRawStdin(gomock.Any(), gomock.Any()).Times(1).Return(func() {}, nil)
+		tm.terminal.EXPECT().MonitorResizeEvents(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+
+		tc := config.Doit.(*doctl.TestConfig)
+		tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+			assert.Equal(t, "aa-bb-11-cc-33", token)
+			assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+			return tm.listen
+		}
+		tc.TerminalFn = func() terminal.Terminal {
+			return tm.terminal
+		}
+
+		config.Args = append(config.Args, appID, componentName, instanceName)
+		config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
+
+		err := RunAppsConsole(config)
+		require.NoError(t, err)
+	})
 }
 
 const (
@@ -811,6 +1068,25 @@ func TestRunAppsUpgradeBuildpack(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgMajorVersion, 3)
 		config.Doit.Set(config.NS, doctl.ArgTriggerDeployment, true)
 		err := RunAppUpgradeBuildpack(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsGetInstances(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+
+		opts := &godo.GetAppInstancesOpts{}
+
+		tm.apps.EXPECT().GetAppInstances(appID, opts).Times(1).Return([]*godo.AppInstance{{
+			InstanceName:  "service-instance-1d34fg678-45f6",
+			ComponentType: "service",
+			ComponentName: "service-instance",
+		}}, nil)
+
+		config.Args = append(config.Args, appID)
+
+		err := RunGetAppInstances(config)
 		require.NoError(t, err)
 	})
 }

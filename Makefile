@@ -178,14 +178,8 @@ version:
 	@echo ""
 	@ORIGIN=${ORIGIN} scripts/version.sh
 
-.PHONY: _install_sembump
-_install_sembump:
-	@echo "=> installing/updating sembump tool"
-	@echo ""
-	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump
-
 .PHONY: tag
-tag: _install_sembump
+tag:
 	@echo "==> BUMP=${BUMP} tag"
 	@echo ""
 	@ORIGIN=${ORIGIN} scripts/bumpversion.sh

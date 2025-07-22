@@ -101,8 +101,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
 		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`")
-	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
-	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerNetwork)
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetworkStack, "", "", "The network stack type determines the allocation of ipv4/ipv6 addresses to the load balancer, e.g.: `IPV4` or `DUALSTACK`"+
+		" (NOTE: this feature is in private preview, contact DigitalOcean support to review its public availability.)")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerTLSCipherPolicy, "", "", "The tls cipher policy to be used for the load balancer, e.g.: `DEFAULT` or `STRONG`")
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <load-balancer-id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
@@ -147,6 +148,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"CDN cache settings global load balancer, e.g.: `is_enabled:true` ")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
 		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerTLSCipherPolicy, "", "", "The tls cipher policy to be used for the load balancer, e.g.: `DEFAULT` or `STRONG`")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
@@ -703,6 +705,20 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.Network = strings.ToUpper(network)
+
+	networkStack, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerNetworkStack)
+	if err != nil {
+		return err
+	}
+	r.NetworkStack = strings.ToUpper(networkStack)
+
+	tlsCipherPolicy, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerTLSCipherPolicy)
+	if err != nil {
+		return err
+	}
+	if tlsCipherPolicy != "" {
+		r.TLSCipherPolicy = strings.ToUpper(tlsCipherPolicy)
+	}
 
 	return nil
 }

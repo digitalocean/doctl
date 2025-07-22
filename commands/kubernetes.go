@@ -46,7 +46,7 @@ const (
 	maxAPIFailures            = 5
 	timeoutFetchingKubeconfig = 30 * time.Second
 
-	defaultKubernetesNodeSize      = "s-1vcpu-2gb"
+	defaultKubernetesNodeSize      = "s-1vcpu-2gb-intel"
 	defaultKubernetesNodeCount     = 3
 	defaultKubernetesRegion        = "nyc1"
 	defaultKubernetesLatestVersion = "latest"
@@ -291,6 +291,14 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
 		"A comma-separated list of allowed addresses that can access the control plane.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
+		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
+		"The unneed time for the cluster autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down. To set the scale-down-unneeded-time to a minute and 30 seconds for example, pass the string '1m30s'.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerExpanders, "", nil,
+		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this flag is empty, autoscaler will use its default expanders.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
+		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -339,6 +347,14 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", false,
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRoutingAgent, "", false,
+		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
+		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
+		"The unneed time for the cluster autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down. To set the scale-down-unneeded-time to a minute and 30 seconds for example, pass the string '1m30s'.")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerExpanders, "", nil,
+		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this value is empty, autoscaler will use its default expanders. To unset expander customization, pass an empty string.")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
 		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
@@ -352,9 +368,9 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 	cmdKubeClusterUpgrade := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
 		"upgrade <id|name>", "Upgrades a cluster to a new Kubernetes version", `
 
-Upgrades a Kubernetes cluster. By default, this upgrades the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+"`"+`doctl k8s get-upgrades`+"`"+`.`, Writer)
+Upgrades a Kubernetes cluster. By default, this upgrades the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+"`"+`doctl k8s cluster get-upgrades`+"`"+`.`, Writer)
 	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
-		`The Kubernetes version to upgrade to. Use the `+"`"+`doctl k8s get-upgrades <cluster>`+"`"+` command for a list of available versions.
+		`The Kubernetes version to upgrade to. Use the `+"`"+`doctl k8s cluster get-upgrades <cluster>`+"`"+` command for a list of available versions.
 The special value `+"`"+`latest`+"`"+` selects the most recent patch version for your cluster's minor version.
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, the `+"`"+`latest`+"`"+` flag upgrades the cluster to 1.12.3.`)
 	cmdKubeClusterUpgrade.Example = `The following example upgrades a cluster named ` + "`" + `example-cluster` + "`" + ` to version 1.28.2: doctl kubernetes cluster upgrade example-cluster --version 1.28.2-do.0`
@@ -635,7 +651,7 @@ func RunKubernetesOneClickInstall(c *CmdConfig) error {
 		return err
 	}
 
-	notice(oneClickInstall)
+	notice("%s", oneClickInstall)
 	return nil
 }
 
@@ -784,7 +800,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			if err != nil {
 				warn("Failed to kick off 1-Click Application(s) install")
 			} else {
-				notice(messageResponse)
+				notice("%s", messageResponse)
 			}
 		}
 
@@ -1690,6 +1706,49 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
+	enableRoutingAgent, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableRoutingAgent)
+	if err != nil {
+		return err
+	}
+	if enableRoutingAgent != nil {
+		r.RoutingAgent = &godo.KubernetesRoutingAgent{
+			Enabled: enableRoutingAgent,
+		}
+	}
+
+	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
+	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
+	if err != nil {
+		return err
+	}
+	if thresholdStr != "" {
+		scaleDownUtilizationThreshold, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			return err
+		}
+		clusterAutoscalerConfiguration.ScaleDownUtilizationThreshold = &scaleDownUtilizationThreshold
+	}
+
+	unneededTime, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime)
+	if err != nil {
+		return err
+	}
+	if unneededTime != "" {
+		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
+	}
+
+	expanders, expandersAreSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgClusterAutoscalerExpanders)
+	if err != nil {
+		return err
+	}
+	if expandersAreSet {
+		clusterAutoscalerConfiguration.Expanders = expanders
+	}
+
+	if thresholdStr != "" || unneededTime != "" || expandersAreSet {
+		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
+	}
+
 	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
 	if err != nil {
 		return err
@@ -1802,6 +1861,49 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
 			Enabled: enableControlPlaneFirewall,
 		}
+	}
+
+	enableRoutingAgent, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableRoutingAgent)
+	if err != nil {
+		return err
+	}
+	if enableRoutingAgent != nil {
+		r.RoutingAgent = &godo.KubernetesRoutingAgent{
+			Enabled: enableRoutingAgent,
+		}
+	}
+
+	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
+	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
+	if err != nil {
+		return err
+	}
+	if thresholdStr != "" {
+		scaleDownUtilizationThreshold, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			return err
+		}
+		clusterAutoscalerConfiguration.ScaleDownUtilizationThreshold = &scaleDownUtilizationThreshold
+	}
+
+	unneededTime, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime)
+	if err != nil {
+		return err
+	}
+	if unneededTime != "" {
+		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
+	}
+
+	expanders, expandersAreSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgClusterAutoscalerExpanders)
+	if err != nil {
+		return err
+	}
+	if expandersAreSet {
+		clusterAutoscalerConfiguration.Expanders = expanders
+	}
+
+	if thresholdStr != "" || unneededTime != "" || expandersAreSet {
+		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
 	}
 
 	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)

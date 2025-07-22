@@ -44,6 +44,8 @@ const (
 	ArgAppLogType = "type"
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
+	// ArgAppInstanceName is the instance name of currently running instances (optional).
+	ArgAppInstanceName = "instance-name"
 	// ArgAppDevConfig is the path to the app dev link config.
 	ArgAppDevConfig = "dev-config"
 	// ArgBuildCommand is an optional build command to set for local development.
@@ -58,6 +60,8 @@ const (
 	ArgNoPrefix = "no-prefix"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
+	// ArgAppComponents is a list of components to restart.
+	ArgAppComponents = "components"
 	// ArgAppAlertDestinations is a path to an app alert destination file.
 	ArgAppAlertDestinations = "app-alert-destinations"
 	// ArgClusterName is a cluster name argument.
@@ -96,16 +100,61 @@ const (
 	ArgMajorVersion = "major-version"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+
+	// ArgAutoscaleID is an autoscale id argument.
+	ArgAutoscaleID = "id"
+	// ArgAutoscaleName is an autoscale name argument.
+	ArgAutoscaleName = "name"
+	// ArgAutoscaleMinInstances is an autoscale min instance argument.
+	ArgAutoscaleMinInstances = "min-instances"
+	// ArgAutoscaleMaxInstances is an autoscale max instance argument.
+	ArgAutoscaleMaxInstances = "max-instances"
+	// ArgAutoscaleCpuTarget is an autoscale target cpu utilization argument.
+	ArgAutoscaleCpuTarget = "cpu-target"
+	// ArgAutoscaleMemTarget is an autoscale target memory utilization argument.
+	ArgAutoscaleMemTarget = "mem-target"
+	// ArgAutoscaleCooldownMinutes is an autoscale cooldown duration (minutes) argument.
+	ArgAutoscaleCooldownMinutes = "cooldown-minutes"
+	// ArgAutoscaleTargetInstances is an autoscale target instance argument.
+	ArgAutoscaleTargetInstances = "target-instances"
+
+	// ArgVPCNATGatewayName is a vpc nat gateway name argument.
+	ArgVPCNATGatewayName = "name"
+	// ArgVPCNATGatewayType is a vpc nat gateway type argument.
+	ArgVPCNATGatewayType = "type"
+	// ArgVPCNATGatewayRegion is a vpc nat gateway region argument.
+	ArgVPCNATGatewayRegion = "region"
+	// ArgVPCNATGatewaySize is a vpc nat gateway region argument.
+	ArgVPCNATGatewaySize = "size"
+	// ArgVPCNATGatewayVPCs is a vpc nat gateway vpcs argument.
+	ArgVPCNATGatewayVPCs = "vpcs"
+	// ArgVPCNATGatewayUDPTimeout is a vpc nat gateway udp-timeout argument.
+	ArgVPCNATGatewayUDPTimeout = "udp-timeout"
+	// ArgVPCNATGatewayICMPTimeout is a vpc nat gateway icmp-timeout argument.
+	ArgVPCNATGatewayICMPTimeout = "icmp-timeout"
+	// ArgVPCNATGatewayTCPTimeout is a vpc nat gateway tcp-timeout argument.
+	ArgVPCNATGatewayTCPTimeout = "tcp-timeout"
+
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
 	ArgControlPlaneFirewallAllowedAddresses = "control-plane-firewall-allowed-addresses"
+	// ArgClusterAutoscalerScaleDownUtilizationThreshold is the cluster autoscaler scale down utilization threshold
+	ArgClusterAutoscalerScaleDownUtilizationThreshold = "scale-down-utilization-threshold"
+	// ArgClusterAutoscalerScaleDownUnneededTime is the cluster autoscaler scale down unneeded time
+	ArgClusterAutoscalerScaleDownUnneededTime = "scale-down-unneeded-time"
+	// ArgClusterAutoscalerExpanders customizes the expanders used by the cluster autoscaler to scale up the cluster.
+	ArgClusterAutoscalerExpanders = "expanders"
+	// ArgEnableRoutingAgent enables the routing-agent cluster plugin.
+	ArgEnableRoutingAgent = "enable-routing-agent"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
 	ArgCommandUpsert = "upsert"
+	// ArgCommandUpdateSources tells the respective operation to also update the underlying sources.
+	ArgCommandUpdateSources = "update-sources"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
@@ -150,6 +199,12 @@ const (
 	ArgResourceType = "resource"
 	// ArgBackups is an enable backups argument.
 	ArgBackups = "enable-backups"
+	// ArgDropletBackupPolicyPlan sets a frequency plan for backups.
+	ArgDropletBackupPolicyPlan = "backup-policy-plan"
+	// ArgDropletBackupPolicyWeekday sets backup policy day of the week.
+	ArgDropletBackupPolicyWeekday = "backup-policy-weekday"
+	// ArgDropletBackupPolicyHour sets backup policy hour.
+	ArgDropletBackupPolicyHour = "backup-policy-hour"
 	// ArgIPv6 is an enable IPv6 argument.
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.
@@ -357,6 +412,10 @@ const (
 	ArgTargetLoadBalancerIDs = "target-lb-ids"
 	// ArgLoadBalancerNetwork is the type of network the load balancer is accessible from.
 	ArgLoadBalancerNetwork = "network"
+	// ArgLoadBalancerNetworkStack is the network stack type the load balancer will be configured with (e.g IPv4, Dual Stack: IPv4 and IPv6).
+	ArgLoadBalancerNetworkStack = "network-stack"
+	// ArgLoadBalancerTLSCipherPolicy is the tls cipher policy to be used for the load balancer
+	ArgLoadBalancerTLSCipherPolicy = "tls-cipher-policy"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
@@ -489,6 +548,33 @@ const (
 	// ArgVPCPeeringVPCID is id of the VPC.
 	ArgVPCPeeringVPCID = "vpc-id"
 
+	// ArgPartnerAttachmentType is the type of the Partner Attachment e.g. "partner".
+	ArgPartnerAttachmentType = "type"
+	// ArgPartnerAttachmentName is a name of the Partner Attachment.
+	ArgPartnerAttachmentName = "name"
+	// ArgPartnerAttachmentBandwidthInMbps is the connection bandwidth in megabits per second.
+	ArgPartnerAttachmentBandwidthInMbps = "connection-bandwidth-in-mbps"
+	// ArgPartnerAttachmentRegion is the region slug.
+	ArgPartnerAttachmentRegion = "region"
+	// ArgPartnerAttachmentNaaSProvider is the name of the Network as a Service provider
+	ArgPartnerAttachmentNaaSProvider = "naas-provider"
+	// ArgPartnerAttachmentVPCIDs are the IDs of the VPCs which the Partner Attachment is connected
+	ArgPartnerAttachmentVPCIDs = "vpc-ids"
+	// ArgPartnerAttachmentBGPLocalASN is the BGP Autonomous System Number (ASN) of the local device
+	ArgPartnerAttachmentBGPLocalASN = "bgp-local-asn"
+	// ArgPartnerAttachmentBGPLocalRouterIP is the BGP IP address of the local device
+	ArgPartnerAttachmentBGPLocalRouterIP = "bgp-local-router-ip"
+	// ArgPartnerAttachmentBGPPeerASN is the BGP Autonomous System Number (ASN) of the peer device
+	ArgPartnerAttachmentBGPPeerASN = "bgp-peer-asn"
+	// ArgPartnerAttachmentBGPPeerRouterIP is the BGP IP address of the peer device
+	ArgPartnerAttachmentBGPPeerRouterIP = "bgp-peer-router-ip"
+	// ArgPartnerAttachmentBGPAuthKey is the BGP MD5 authentication key
+	ArgPartnerAttachmentBGPAuthKey = "bgp-auth-key"
+	// ArgPartnerAttachmentRedundancyZone is the redundancy zone of the Partner Attachment
+	ArgPartnerAttachmentRedundancyZone = "redundancy-zone"
+	// ArgPartnerAttachmentParentUUID is the ha parent uuid of the Partner Attachment
+	ArgPartnerAttachmentParentUUID = "parent-uuid"
+
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
 	// ArgRegistry indicates the name of the registry.
@@ -568,4 +654,153 @@ const (
 
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
+
+	// Agent Args
+
+	// ArgAgentId is the ID of the agent.
+	ArgAgentId = "agent-id"
+
+	// ArgAgentName is the name of the agent.
+	ArgAgentName = "name"
+
+	// ArgAgentInstruction is the instruction for the agent.
+	ArgAgentInstruction = "instruction"
+
+	// ArgAgentModelId is the model ID for the agent.
+	ArgModelId = "model-id"
+
+	// ArgAgentProjectId is the project ID for the agent.
+	ArgAgentProjectId = "project-id"
+
+	// ArgAgentRegion is the region where the agent is deployed.
+	ArgAgentRegion = "region"
+
+	// ArgAnthropicKeyId is the Anthropic key ID for the agent.
+	ArgAnthropicKeyId = "Anthropic-key-id"
+
+	// ArgAgentDescription is the description for the agent.
+	ArgAgentDescription = "description"
+
+	// ArgKnowledgeBaseId is the knowledge base ID(s) attached to the agent.
+	ArgKnowledgeBaseId = "knowledge-base-id"
+
+	// ArgOpenAIKeyId is the OpenAI API key ID for the agent.
+	ArgOpenAIKeyId = "openai-key-id"
+
+	// ArgTags are the tags applied to the agent.
+	ArgTags = "tags"
+
+	// ArgAgentForce forces agent deletion without confirmation.
+	ArgAgentForce = "force"
+
+	// ArgK specifies how many results should be considered from an attached knowledge base.
+	ArgK = "k"
+
+	// ArgMaxTokens is the maximum number of tokens to generate in the response.
+	ArgMaxTokens = "max-tokens"
+
+	// ArgRetrievalMethod is the method used to retrieve information from the knowledge base.
+	ArgRetrievalMethod = "retrieval-method"
+
+	// ArgTemperature is the temperature for the response generation.
+	ArgTemperature = "temperature"
+
+	// ArgTopProbability is the top probability for the response generation.
+	ArgTopProbability = "top-p"
+
+	// ArgKnowledgeBaseDatabaseID is the ID of the database
+	ArgKnowledgeBaseDatabaseID = "database-id"
+
+	// ArgKnowledgeBaseName is the name of the knowledge base
+	ArgKnowledgeBaseName = "name"
+
+	// ArgKnowledgeBaseRegion is the region of the knowledge base
+	ArgKnowledgeBaseRegion = "region"
+
+	// ArgKnowledgeBaseProjectID is the project ID of the knowledge base
+	ArgKnowledgeBaseProjectID = "project-id"
+
+	// ArgKnowledgeBaseEmbeddingModelUUID is the UUID of the embedding model
+	ArgKnowledgeBaseEmbeddingModelUUID = "embedding-model-uuid"
+
+	// ArgKnowledgeBaseTags is the tags of the knowledge base
+	ArgKnowledgeBaseTags = "tags"
+
+	// ArgKnowledgeBaseVPCUUID is the UUID of the VPC
+	ArgKnowledgeBaseVPCUUID = "vpc-uuid"
+
+	// ArgKnowledgeBaseDataSource is the data source of the knowledge base
+	ArgKnowledgeBaseDataSource = "data-sources"
+
+	// ArgKnowledgeBaseBaseURL is the base URL of the knowledge base
+	ArgKnowledgeBaseBaseURL = "base-url"
+
+	// ArgKnowledgeBaseCrawlingOption is the crawling option of the knowledge base
+	ArgKnowledgeBaseCrawlingOption = "crawling-option"
+
+	// ArgKnowledgeBaseEmbedMedia is the embed media option of the knowledge base
+	ArgKnowledgeBaseEmbedMedia = "embed-media"
+
+	// ArgKnowledgeBaseUUID is the UUID of the knowledge base
+	ArgKnowledgeBaseUUID = "uuid"
+
+	// ArgKnowledgeBaseDataSourceID is the ID of the data source
+	ArgKnowledgeBaseDataSourceID = "data-source-id"
+
+	// ArgKnowledgeBaseBucketName is name of data source from Spaces
+	ArgKnowledgeBaseBucketName = "bucket-name"
+
+	// ArgKnowledgeBaseItemPath is the item path of the data source
+	ArgKnowledgeBaseItemPath = "item-path"
+
+	// ArgPrefix is a byoip prefix argument.
+	ArgPrefix = "prefix"
+
+	// ArgSignature is a byoip prefix argument.
+	ArgSignature = "signature"
+
+	// ArgAgentParentID is the ID for the parent agent.
+	ArgParentAgentId = "parent-agent-id"
+
+	// ArgChildAgentID is the ID for the child agent.
+	ArgChildAgentId = "child-agent-id"
+
+	// ArgAgentRouteId is the UUID for the agent linkage.
+	ArgAgentRouteId = "route-id"
+
+	// ArgAgentRouteName is the name of the route.
+	ArgAgentRouteName = "route-name"
+
+	// ArgAgentRouteIfCase is the if-case condition for the route.
+	ArgAgentRouteIfCase = "if-case"
+
+	// ArgFunctionIDs is the name of the function.
+	ArgFunctionID = "function-id"
+
+	//ArgFunctionName is the name of the function.
+	ArgFunctionName = "name"
+
+	// ArgFunctionDescription is the description of the function.
+	ArgFunctionRouteDescription = "description"
+
+	// ArgFunctionRouteFaasName is the name of the function route in the DigitalOcean functions platform
+	ArgFunctionRouteFaasName = "faas-name"
+
+	// ArgFunctionRouteFaasNamespace is the namespace of the function route in the DigitalOcean functions platform
+	ArgFunctionRouteFaasNamespace = "faas-namespace"
+
+	// ArgFunctionRouteInputSchema is the input schema of the function route
+	ArgFunctionRouteInputSchema = "input-schema"
+
+	// ArgFunctionRouteOutputSchema is the output schema of the function route
+	ArgFunctionRouteOutputSchema = "output-schema"
+
+	// ArgAgentAPIKeyName is the name of API Key of the agent.
+	ArgAgentAPIKeyName = "name"
+
+	// ArgAgentUUID is the uuid of the apikey.
+	ArgAPIkeyUUID = "api-key-uuid"
+
+	// ArgAPIKeyForce forces API Key deletion without confirmation.
+	ArgAPIKeyForce = "force"
 )

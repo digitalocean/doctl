@@ -1087,6 +1087,8 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["kafka"] = options.KafkaOptions.Regions
 	case "opensearch":
 		regions["opensearch"] = options.OpensearchOptions.Regions
+	case "valkey":
+		regions["valkey"] = options.ValkeyOptions.Regions
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
@@ -1094,6 +1096,7 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["redis"] = options.RedisOptions.Regions
 		regions["kafka"] = options.KafkaOptions.Regions
 		regions["opensearch"] = options.OpensearchOptions.Regions
+		regions["valkey"] = options.ValkeyOptions.Regions
 	}
 
 	return displayDatabaseRegionOptions(c, regions)
@@ -1122,6 +1125,8 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["kafka"] = options.KafkaOptions.Versions
 	case "opensearch":
 		versions["opensearch"] = options.OpensearchOptions.Versions
+	case "valkey":
+		versions["valkey"] = options.ValkeyOptions.Versions
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
@@ -1129,6 +1134,7 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["redis"] = options.RedisOptions.Versions
 		versions["kafka"] = options.KafkaOptions.Versions
 		versions["opensearch"] = options.OpensearchOptions.Versions
+		versions["valkey"] = options.ValkeyOptions.Versions
 	}
 
 	return displayDatabaseVersionOptions(c, versions)
@@ -1160,6 +1166,8 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.KafkaOptions.Layouts
 	case "opensearch":
 		layouts = options.OpensearchOptions.Layouts
+	case "valkey":
+		layouts = options.ValkeyOptions.Layouts
 	}
 
 	return displayDatabaseLayoutOptions(c, layouts)
@@ -2483,6 +2491,8 @@ func databaseConfiguration() *Command {
 	updateConfigurationLongDesc := `Updates the specified database cluster's advanced configuration. Using this command, you can update various settings like backup times, temporary file limits, and session timeouts. Available settings vary by database engine.
 
 This command functions as a PATCH request, meaning that only the specified fields are updated. If a field is not specified, it will not be changed. The settings are passed using the ` + "`" + `--config-json` + "`" + ` flag, which takes a JSON object as its value.
+
+For a full list of available fields, see the API documentation: https://docs.digitalocean.com/reference/api/api-reference/#operation/databases_patch_config
 `
 
 	getDatabaseCfgCommand := CmdBuilder(
@@ -2535,6 +2545,7 @@ This command functions as a PATCH request, meaning that only the specified field
 		"the desired configuration of the database cluster you want to update",
 		requiredOpt(),
 	)
+	updateDatabaseCfgCommand.Example = `The following command updates a MySQL database's time zone: doctl databases configuration update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --engine mysql --config-json '{"default_time_zone":"Africa/Maputo"}'`
 
 	return cmd
 }

@@ -261,8 +261,8 @@ IP             Region    Droplet ID    Droplet Name    Project ID
 }
 `
 	projectsResourcesGetLoadbalancerOutput = `
-ID                                      IP                 Name             Status    Created At              Region    Size        Size Unit    VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                                 Forwarding Rules                                                                                                  Disable Lets Encrypt DNS Records
-4de7ac8b-495b-4884-9a69-1050c6793cd6    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    nyc3      lb-small    <nil>        00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0,proxy_protocol:<nil>    entry_protocol:https,entry_port:444,target_protocol:https,target_port:443,certificate_id:,tls_passthrough:true    false
+ID                                      IP                 IPv6    Name             Status    Created At              Region    Size        Size Unit    VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                                 Forwarding Rules                                                                                                  Firewall Rules    Disable Lets Encrypt DNS Records
+4de7ac8b-495b-4884-9a69-1050c6793cd6    104.131.186.241            example-lb-01    new       2017-02-01T22:22:58Z    nyc3      lb-small    <nil>        00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0,proxy_protocol:<nil>    entry_protocol:https,entry_port:444,target_protocol:https,target_port:443,certificate_id:,tls_passthrough:true    <nil>             false
 `
 	projectsResourcesGetLoadbalancerResponse = `
 {
@@ -343,9 +343,10 @@ ID                                      Name       Size      Region    Filesyste
 }
 `
 	projectsResourcesGetKubernetesOutput = `
-ID    Name    Region    Version    Auto Upgrade    HA Control Plane    Status          Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags    Created At                       Updated At                       Node Pools
-      1111                         false           false               provisioning                                                            k8s     2021-01-29 16:02:02 +0000 UTC    0001-01-01 00:00:00 +0000 UTC    pool-test
+ID    Name    Region    Version    Auto Upgrade    HA Control Plane    Status          Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags    Created At                       Updated At                       Node Pools    Autoscaler Scale Down Utilization    Autoscaler Scale Down Unneeded Time    Autoscaler Custom Expanders    Routing Agent
+      1111                         false           false               provisioning                                                            k8s     2021-01-29 16:02:02 +0000 UTC    0001-01-01 00:00:00 +0000 UTC    pool-test                                                                                                                false
 `
+
 	projectsResourcesListKubernetesOutput = `
 	{
 		"kubernetes_clusters": [

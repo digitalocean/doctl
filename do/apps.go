@@ -15,24 +15,31 @@ package do
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 )
 
 // AppsService is the interface that wraps godo AppsService.
 type AppsService interface {
 	Create(req *godo.AppCreateRequest) (*godo.App, error)
+	Find(appRef string) (*godo.App, error)
 	Get(appID string) (*godo.App, error)
 	List(withProjects bool) ([]*godo.App, error)
 	Update(appID string, req *godo.AppUpdateRequest) (*godo.App, error)
 	Delete(appID string) error
 	Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error)
 
+	Restart(appID string, components []string) (*godo.Deployment, error)
 	CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error)
 	GetDeployment(appID, deploymentID string) (*godo.Deployment, error)
 	ListDeployments(appID string) ([]*godo.Deployment, error)
 
 	GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool, tail int) (*godo.AppLogs, error)
+	// Deprecated: Use GetExecWithOpts instead
+	GetExec(appID, deploymentID, componentName string) (*godo.AppExec, error)
+	GetExecWithOpts(appID, componentName string, opts *godo.AppGetExecOptions) (*godo.AppExec, error)
 
 	ListRegions() ([]*godo.AppRegion, error)
 
@@ -47,6 +54,8 @@ type AppsService interface {
 
 	ListBuildpacks() ([]*godo.Buildpack, error)
 	UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) (affectedComponents []string, deployment *godo.Deployment, err error)
+
+	GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error)
 }
 
 type appsService struct {
@@ -72,11 +81,32 @@ func (s *appsService) Create(req *godo.AppCreateRequest) (*godo.App, error) {
 	return app, nil
 }
 
+func (s *appsService) Find(appRef string) (*godo.App, error) {
+	_, err := uuid.Parse(appRef)
+	if err == nil {
+		return s.Get(appRef)
+	}
+
+	apps, err := s.List(false)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, app := range apps {
+		if app.Spec.Name == appRef {
+			return app, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Cannot find app %s", appRef)
+}
+
 func (s *appsService) Get(appID string) (*godo.App, error) {
 	app, _, err := s.client.Apps.Get(s.ctx, appID)
 	if err != nil {
 		return nil, err
 	}
+
 	return app, nil
 }
 
@@ -129,6 +159,16 @@ func (s *appsService) Propose(req *godo.AppProposeRequest) (*godo.AppProposeResp
 		return nil, err
 	}
 	return res, nil
+}
+
+func (s *appsService) Restart(appID string, components []string) (*godo.Deployment, error) {
+	deployment, _, err := s.client.Apps.Restart(s.ctx, appID, &godo.AppRestartRequest{
+		Components: components,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return deployment, nil
 }
 
 func (s *appsService) CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error) {
@@ -184,6 +224,23 @@ func (s *appsService) GetLogs(appID, deploymentID, component string, logType god
 		return nil, err
 	}
 	return logs, nil
+}
+
+// Deprecated. Use GetExecWithOpts instead
+func (s *appsService) GetExec(appID, deploymentID, componentName string) (*godo.AppExec, error) {
+	opts := &godo.AppGetExecOptions{
+		DeploymentID: deploymentID,
+	}
+
+	return s.GetExecWithOpts(appID, componentName, opts)
+}
+
+func (s *appsService) GetExecWithOpts(appID, componentName string, opts *godo.AppGetExecOptions) (*godo.AppExec, error) {
+	exec, _, err := s.client.Apps.GetExecWithOpts(s.ctx, appID, componentName, opts)
+	if err != nil {
+		return nil, err
+	}
+	return exec, nil
 }
 
 func (s *appsService) ListRegions() ([]*godo.AppRegion, error) {
@@ -256,4 +313,12 @@ func (s *appsService) UpgradeBuildpack(appID string, options godo.UpgradeBuildpa
 		return nil, nil, err
 	}
 	return res.AffectedComponents, res.Deployment, nil
+}
+
+func (s *appsService) GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error) {
+	instances, _, err := s.client.Apps.GetAppInstances(s.ctx, appID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return instances, nil
 }

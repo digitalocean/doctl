@@ -44,6 +44,18 @@ var _ = suite("compute/snapshot/list", func(t *testing.T, when spec.G, it spec.S
 				}
 
 				if resource == "volume" {
+					region := q.Get("region")
+					if region != "" {
+						response, ok := snapshotListVolumeByRegionResponse[region]
+						if !ok {
+							w.WriteHeader(http.StatusBadRequest)
+							return
+						}
+
+						w.Write([]byte(response))
+						return
+					}
+
 					w.Write([]byte(snapshotListVolumeResponse))
 					return
 				}
@@ -183,7 +195,121 @@ var _ = suite("compute/snapshot/list", func(t *testing.T, when spec.G, it spec.S
 			expect.Equal(strings.TrimSpace(snapshotListDropletRegionOutput), strings.TrimSpace(string(output)))
 		})
 	})
+
+	when("passing resource type and region together", func() {
+		it("displays only volume snapshots in the region", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"snapshot",
+				"list",
+				"--resource",
+				"volume",
+				"--region",
+				"nyc1",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(snapshotListVolumeRegionOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("passing invalid region to list snapshot", func() {
+		it("returns an error", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"snapshot",
+				"list",
+				"--resource",
+				"volume",
+				"--region",
+				"invalid-region",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.Error(err, fmt.Sprintf("received error output: %s", output))
+			expect.Contains(string(output), "400")
+		})
+	})
 })
+
+var (
+	snapshotListVolumeByRegionResponse = map[string]string{
+		"nyc1": `{
+		  "snapshots": [
+			{
+			  "id": "0a343fac-eacf-11e9-b96b-0a58ac144633",
+			  "name": "volume-nyc1-01-1570651053836",
+			  "regions": [
+				"nyc1"
+			  ],
+			  "created_at": "2019-10-09T19:57:36Z",
+			  "resource_id": "e2068b37-eace-11e9-85ad-0a58ac14430f",
+			  "resource_type": "volume",
+			  "min_disk_size": 100,
+			  "size_gigabytes": 0,
+			  "tags": []
+			},
+			{
+			  "id": "0e0adfa4-eacf-11e9-9e75-0a58ac14c13b",
+			  "name": "volume-nyc1-02-1570651061232",
+			  "regions": [
+				"nyc1"
+			  ],
+			  "created_at": "2025-01-09T19:57:42Z",
+			  "resource_id": "e2068b37-eace-11e9-85ad-0a58ac14430f",
+			  "resource_type": "volume",
+			  "min_disk_size": 200,
+			  "size_gigabytes": 0,
+			  "tags": []
+			}
+		  ],
+		  "links": {},
+		  "meta": {
+			"total": 2
+		  }
+		}`,
+
+		"lon1": `{
+			  "snapshots": [
+				{
+				  "id": "2e47a7c9-8b73-46db-9d33-f40c705e9e01",
+				  "name": "volume-lon1-01-1570651053836",
+				  "regions": [
+					"lon1"
+				  ],
+				  "created_at": "2024-10-09T19:57:36Z",
+				  "resource_id": "58dd79b0-f0ab-4a6d-9315-bae9be64ad8a",
+				  "resource_type": "volume",
+				  "min_disk_size": 100,
+				  "size_gigabytes": 0,
+				  "tags": []
+				},
+				{
+				  "id": "37d84570-ae79-4860-bb1b-52c69ae309f0",
+				  "name": "volume-lon1-01-1570651061232",
+				  "regions": [
+					"lon1"
+				  ],
+				  "created_at": "2024-11-09T19:57:42Z",
+				  "resource_id": "58dd79b0-f0ab-4a6d-9315-bae9be64ad8a",
+				  "resource_type": "volume",
+				  "min_disk_size": 100,
+				  "size_gigabytes": 0,
+				  "tags": []
+				}
+			  ],
+			  "links": {},
+			  "meta": {
+				"total": 2
+			  }
+			}`,
+	}
+)
 
 const (
 	snapshotListResponse = `
@@ -358,5 +484,10 @@ ID                                      Name                            Created 
 	snapshotListDropletRegionOutput = `
 ID          Name                                        Created at              Regions    Resource ID    Resource Type    Min Disk Size    Size        Tags
 53344211    ubuntu-s-1vcpu-1gb-nyc1-01-1570651077842    2019-10-09T19:57:59Z    [nyc1]     162347943      droplet          25               1.01 GiB
+`
+	snapshotListVolumeRegionOutput = `
+ID                                      Name                            Created at              Regions    Resource ID                             Resource Type    Min Disk Size    Size        Tags
+0a343fac-eacf-11e9-b96b-0a58ac144633    volume-nyc1-01-1570651053836    2019-10-09T19:57:36Z    [nyc1]     e2068b37-eace-11e9-85ad-0a58ac14430f    volume           100              0.00 GiB    
+0e0adfa4-eacf-11e9-9e75-0a58ac14c13b    volume-nyc1-02-1570651061232    2025-01-09T19:57:42Z    [nyc1]     e2068b37-eace-11e9-85ad-0a58ac14430f    volume           200              0.00 GiB
 `
 )

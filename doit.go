@@ -34,6 +34,7 @@ import (
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/client"
 	"github.com/spf13/viper"
@@ -210,7 +211,8 @@ type Config interface {
 	GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error)
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
+	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
+	Terminal() terminal.Terminal
 	Set(ns, key string, val any)
 	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
@@ -218,6 +220,7 @@ type Config interface {
 	GetBoolPtr(ns, key string) (*bool, error)
 	GetInt(ns, key string) (int, error)
 	GetIntPtr(ns, key string) (*int, error)
+	GetFloat64(ns, key string) (float64, error)
 	GetStringSlice(ns, key string) ([]string, error)
 	GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error)
 	GetStringMapString(ns, key string) (map[string]string, error)
@@ -326,8 +329,13 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 }
 
 // Listen creates a websocket connection
-func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
-	return listen.NewListener(url, token, schemaFunc, out)
+func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
+	return listen.NewListener(url, token, schemaFunc, out, inCh)
+}
+
+// Terminal returns a terminal.
+func (c *LiveConfig) Terminal() terminal.Terminal {
+	return terminal.New()
 }
 
 // Set sets a config key.
@@ -400,6 +408,17 @@ func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
 	}
 	val := viper.GetInt(nskey)
 	return &val, nil
+}
+
+// GetFloat64 returns a config value as a float64.
+func (c *LiveConfig) GetFloat64(ns, key string) (float64, error) {
+	nskey := nskey(ns, key)
+	val := viper.GetFloat64(nskey)
+
+	if isRequired(nskey) && val == 0.0 {
+		return 0.0, NewMissingArgsErr(nskey)
+	}
+	return val, nil
 }
 
 // GetStringSlice returns a config value as a string slice.
@@ -483,7 +502,8 @@ func isRequired(key string) bool {
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
 	SSHFn              func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
+	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
+	TerminalFn         func() terminal.Terminal
 	v                  *viper.Viper
 	IsSetMap           map[string]bool
 	DockerEngineClient builder.DockerEngineClient
@@ -497,8 +517,11 @@ func NewTestConfig() *TestConfig {
 		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
 			return &MockRunner{}
 		},
-		ListenFn: func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
+		ListenFn: func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
 			return &MockListener{}
+		},
+		TerminalFn: func() terminal.Terminal {
+			return &MockTerminal{}
 		},
 		v:        viper.New(),
 		IsSetMap: make(map[string]bool),
@@ -523,8 +546,13 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 }
 
 // Listen returns a mock websocket listener
-func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
-	return c.ListenFn(url, token, schemaFunc, out)
+func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
+	return c.ListenFn(url, token, schemaFunc, out, inCh)
+}
+
+// Terminal returns a mock terminal.
+func (c *TestConfig) Terminal() terminal.Terminal {
+	return c.TerminalFn()
 }
 
 // Set sets a config key.
@@ -562,6 +590,13 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 	}
 	val := c.v.GetInt(nskey)
 	return &val, nil
+}
+
+// GetFloat64 returns the float64 value for the key in the given namespace. Because
+// this is a mock implementation, and error will never be returned.
+func (c *TestConfig) GetFloat64(ns, key string) (float64, error) {
+	nskey := nskey(ns, key)
+	return c.v.GetFloat64(nskey), nil
 }
 
 // GetStringSlice returns the string slice value for the key in the given

@@ -116,8 +116,8 @@ You can build doctl in a local Docker container via `make docker_build`.
 
 ### Testing
 
-Run the tests locally via `make test`, or on Travis CI by pushing a branch to your fork
-on github.
+Run the tests locally via `make test`, or in [CI](.github/workflows/ci.yml) by pushing a branch to your fork
+on GitHub.
 
 #### Writing Tests
 
@@ -198,10 +198,9 @@ To cut a release, push a new tag (versioning discussed below).
 
 ### Tagging a release
 
-1. Run `make changes` to review the changes since the last
-   release. Based on the changes, decide what kind of release you are
-   doing (bugfix, feature or breaking).
-   `doctl` follows [semantic versioning](https://semver.org), ask if you aren't sure.
+1. Run `make changes` to review the changes since the last release.  
+Based on the changes, decide what kind of release you are doing (bugfix, feature or breaking).  
+`doctl` follows [semantic versioning](https://semver.org), ask if you aren't sure.  
 
 1. Synchronize your local repository with all the tags that have been created or updated on the remote main branch
     ```bash
@@ -209,11 +208,18 @@ To cut a release, push a new tag (versioning discussed below).
     git pull --tags
     ```
 
-1. Creates a new tag and push the tag to the remote repository named origin
-    ```bash
-    git tag <new-tag> # Example: git tag v1.113.0
-    git push origin tag <new-tag> # Example: git push origin tag v1.113.0
-    ```
+1. Tag the release using `BUMP=(bugfix|feature|breaking) make tag`.  
+Example:  
+
+```bash
+BUMP=minor make tag
+```  
+
+Notes on `BUMP=(bugfix|feature|breaking) make tag`:
+  - BUMP accepts: `bugfix`, `feature`, `breaking` as well as `patch`, `minor` and `major` values.
+  - The command assumes you have a remote repository named `origin` pointing to this repository. 
+  If you'd prefer to specify a different remote repository, you can do so by setting `ORIGIN=(preferred remote name)`.
+  - The new tag triggers the release.
 
 To learn a bit more about how that all works, check out [goreleaser](https://goreleaser.com/intro) 
 and the config we use for it: [.goreleaser.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.yml)

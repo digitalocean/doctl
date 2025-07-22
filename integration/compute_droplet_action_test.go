@@ -48,6 +48,8 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 				"/v2/droplets/4743/actions":    {method: http.MethodPost, body: `{"image":9999,"type":"rebuild"}`},
 				"/v2/droplets/884/actions":     {method: http.MethodPost, body: `{"disk":true,"size":"bigger","type":"resize"}`},
 				"/v2/droplets/789/actions/954": {method: http.MethodGet, body: `{}`},
+				"/v2/droplets/66/actions":      {method: http.MethodPost, body: `{"type":"enable_backups","backup_policy":{"plan":"weekly","weekday":"TUE","hour":16}}`},
+				"/v2/droplets/67/actions":      {method: http.MethodPost, body: `{"type":"change_backup_policy","backup_policy":{"plan":"weekly","weekday":"WED","hour":4}}`},
 			}
 
 			auth := req.Header.Get("Authorization")
@@ -78,7 +80,11 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 				expect.JSONEq(matchRequest.body, string(reqBody))
 			}
 
-			w.Write([]byte(dropletActionResponse))
+			if strings.Contains(matchRequest.body, "change_backup_policy") {
+				w.Write([]byte(dropletActionChangeBackupResponse))
+			} else {
+				w.Write([]byte(dropletActionResponse))
+			}
 		}))
 	})
 
@@ -110,6 +116,8 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 		{desc: "snapshot", args: []string{"snapshot", "48", "--snapshot-name", "best-snapshot"}},
 		{desc: "get", args: []string{"get", "789", "--action-id", "954"}},
 		{desc: "g", args: []string{"get", "789", "--action-id", "954"}},
+		{desc: "enable backups with policy", args: []string{"enable-backups", "66", "--backup-policy-plan", "weekly", "--backup-policy-weekday", "TUE", "--backup-policy-hour", "16"}},
+		{desc: "change backup policy", args: []string{"change-backup-policy", "67", "--backup-policy-plan", "weekly", "--backup-policy-weekday", "WED", "--backup-policy-hour", "4"}},
 	}
 
 	for _, c := range cases {
@@ -125,7 +133,11 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(dropletActionOutput), strings.TrimSpace(string(output)))
+				if strings.Contains(c.desc, "change backup policy") {
+					expect.Equal(strings.TrimSpace(dropletActionChangeBackupOutput), strings.TrimSpace(string(output)))
+				} else {
+					expect.Equal(strings.TrimSpace(dropletActionOutput), strings.TrimSpace(string(output)))
+				}
 			})
 		})
 	}
@@ -142,6 +154,31 @@ ID          Status         Type              Started At                       Co
     "id": 36804745,
     "status": "in-progress",
     "type": "enable_backups",
+    "started_at": "2014-11-14T16:30:56Z",
+    "completed_at": null,
+    "resource_id": 3164450,
+    "resource_type": "droplet",
+    "region": {
+      "name": "New York 3",
+      "slug": "nyc3",
+      "sizes": [ "s-24vcpu-128gb" ],
+      "features": [ "image_transfer" ],
+      "available": true
+    },
+    "region_slug": "nyc3"
+  }
+}
+`
+	dropletActionChangeBackupOutput = `
+ID          Status         Type                    Started At                       Completed At    Resource ID    Resource Type    Region
+36804745    in-progress    change_backup_policy    2014-11-14 16:30:56 +0000 UTC    <nil>           3164450        droplet          nyc3
+	`
+	dropletActionChangeBackupResponse = `
+{
+  "action": {
+    "id": 36804745,
+    "status": "in-progress",
+    "type": "change_backup_policy",
     "started_at": "2014-11-14T16:30:56Z",
     "completed_at": null,
     "resource_id": 3164450,

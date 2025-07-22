@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/MakeNowJust/heredoc"
@@ -498,6 +499,14 @@ func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
 	})
 }
 
+type Metadata struct {
+	Stack struct {
+		RunImage struct {
+			Image string `json:"image"`
+		} `json:"runImage"`
+	} `json:"stack"`
+}
+
 // PrepareEnvironment pulls required images, validates permissions, etc. in preparation for a component build.
 func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli builder.DockerEngineClient, componentSpec godo.AppBuildableComponentSpec) error {
 	template.Print("{{success checkmark}} preparing app dev environment{{nl}}", nil)
@@ -511,13 +520,15 @@ func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli bui
 		if ws.Config.CNBBuilderImage != "" {
 			images = append(images, ws.Config.CNBBuilderImage)
 		} else {
-			images = append(images, builder.CNBBuilderImage_Heroku18)
+			for _, f := range ws.Config.AppSpec.Features {
+				if strings.EqualFold(f, "buildpack-stack=ubuntu-18") {
+					images = append(images, builder.CNBBuilderImage_Heroku18)
+					images = append(images, builder.CNBAppsRunImage_Heroku18)
+				}
+			}
+			// Get stack run image from CNBBuilderImage_Heroku22.
 			images = append(images, builder.CNBBuilderImage_Heroku22)
 		}
-
-		// TODO: get stack run image from builder image md after we pull it, see below
-		images = append(images, "digitaloceanapps/apps-run:heroku-18_c047ec7")
-		images = append(images, "digitaloceanapps/apps-run:heroku-22_f7a0bf0")
 	}
 
 	if componentSpec.GetType() == godo.AppComponentTypeStaticSite {
@@ -542,12 +553,31 @@ func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli bui
 		return err
 	}
 
-	// TODO: get stack run image from builder image md
-	// builderImage, err := builder.GetImage(ctx, cli, cnbBuilderImage)
-	// if err != nil {
-	// 	return err
-	// }
-	// builderImage.Labels["io.buildpacks.builder.metadata"]
+	if exist, _ := builder.ImageExists(ctx, cli, builder.CNBBuilderImage_Heroku22); exist {
+		// Get stack run image from CNBBuilderImage_Heroku22.
+		builderImage, err := builder.GetImage(ctx, cli, builder.CNBBuilderImage_Heroku22)
+		if err != nil {
+			return err
+		}
+		metadataLabel := builderImage.Labels["io.buildpacks.builder.metadata"]
+
+		var metadata Metadata
+		err = json.Unmarshal([]byte(metadataLabel), &metadata)
+		if err != nil {
+			return err
+		}
+
+		exists, err := builder.ImageExists(ctx, cli, metadata.Stack.RunImage.Image)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			err := pullDockerImages(ctx, cli, []string{metadata.Stack.RunImage.Image})
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }

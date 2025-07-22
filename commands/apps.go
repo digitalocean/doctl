@@ -16,12 +16,14 @@ package commands
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -29,9 +31,12 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/yaml"
 )
 
@@ -54,7 +59,7 @@ func Apps() *Command {
 		RunAppsCreate,
 		"create",
 		"Create an app",
-		`Create an app with the given app spec.`,
+		`Create an app with the given app spec. To create an app, App Platform must have access to your repository service. Click one of the following links to provide access for your preferred service: [GitHub](https://cloud.digitalocean.com/apps/gitlab/install), [GitLab](https://cloud.digitalocean.com/apps/gitlab/install), [BitBucket](https://cloud.digitalocean.com/apps/bitbucket/install)`,
 		Writer,
 		aliasOpt("c"),
 		displayerType(&displayers.Apps{}),
@@ -62,7 +67,8 @@ func Apps() *Command {
 	AddStringFlag(create, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
-	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
+	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, `A boolean value that creates or updates an app’s configuration with the attached app spec. This does not pull changes from the app’s container registry or source repository. Instead, App Platform uses the image from the app’s most recent deployment. To additionally pull the latest changes from the app’s source, set the `+"`"+`--update-sources`+"`"+` flag.`)
+	AddBoolFlag(create, doctl.ArgCommandUpdateSources, "", false, "Boolean that specifies whether, on update, the app should also update its source code")
 	AddStringFlag(create, doctl.ArgProjectID, "", "", "The ID of the project to assign the created app and resources to. If not provided, the default project will be used.")
 	create.Example = `The following example creates an app in a project named ` + "`" + `example-project` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the new app's ID, ingress information, and creation date: doctl apps create --spec src/your-app.yaml --format ID,DefaultIngress,Created`
 
@@ -99,12 +105,13 @@ Only basic information is included with the text output format. For complete app
 		RunAppsUpdate,
 		"update <app id>",
 		"Updates an app",
-		`Updates the specified app with the given app spec. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)`,
+		`Updates an existing app with the attached app spec. By default, this does not retrieve the latest image from the app’s container registry or changes source repository. To deploy an app with changes from its source repository and app spec configuration, use the `+"`"+`--update-sources`+"`"+` flag. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)`,
 		Writer,
 		aliasOpt("u"),
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(update, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	AddBoolFlag(update, doctl.ArgCommandUpdateSources, "", false, "Boolean that specifies whether the app should also update its source code")
 	AddBoolFlag(update, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete updating before allowing further terminal input. This can be helpful for scripting.")
 	update.Example = `The following example updates an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the updated app's ID, ingress information, and creation date: doctl apps update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --spec src/your-app.yaml --format ID,DefaultIngress,Created`
@@ -123,12 +130,28 @@ This permanently deletes the app and all of its associated deployments.`,
 	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
 	deleteApp.Example = `The following example deletes an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
+	restartApp := CmdBuilder(
+		cmd,
+		RunAppsRestart,
+		"restart <app id>",
+		"Restarts an app",
+		`Restarts the specified app or some of its components.`,
+		Writer,
+		aliasOpt("r"),
+		displayerType(&displayers.Deployments{}),
+	)
+	AddStringSliceFlag(restartApp, doctl.ArgAppComponents, "", nil, "The components to restart. If not provided, all components are restarted.")
+	AddBoolFlag(restartApp, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for the restart to complete before allowing further terminal input. This can be helpful for scripting.")
+	restartApp.Example = `The following example restarts an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. Additionally, the command returns the app's ID and status: doctl apps restart f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Status`
+
 	deploymentCreate := CmdBuilder(
 		cmd,
 		RunAppsCreateDeployment,
 		"create-deployment <app id>",
 		"Creates a deployment",
-		`Deploys the app with the latest changes from your repository.`,
+		`Creates an app using the provided app spec. To redeploy an existing app using its latest image or source code changes, use the --update-sources flag. To update an existing app’s spec configuration without pulling its latest changes or image, use the `+"`"+`--upsert`+"`"+` flag or `+"`"+`doctl apps update`+"`"+` command.
+`,
 		Writer,
 		aliasOpt("cd"),
 		displayerType(&displayers.Deployments{}),
@@ -168,7 +191,7 @@ Only basic information is included with the text output format. For complete app
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
-		"logs <app id> <component name (defaults to all components)>",
+		"logs <app name or id> <component name (defaults to all components)>",
 		"Retrieves logs",
 		`Retrieves component logs for a deployment of an app.
 
@@ -176,7 +199,7 @@ Three types of logs are supported and can be specified with the --`+doctl.ArgApp
 - build
 - deploy
 - run
-- run_restarted 
+- run_restarted
 
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
@@ -190,6 +213,32 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	AddBoolFlag(logs, doctl.ArgNoPrefix, "", false, "Removes the prefix from logs. Useful for JSON structured logs")
 
 	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
+
+	console := CmdBuilder(
+		cmd,
+		RunAppsConsole,
+		"console <app id> <component name> <instance name (optional)>",
+		"Starts a console session",
+		`Instantiates a console session for a component of an app. Note: avoid creating scripts or making changes that need to persist on these instances, as they are ephemeral and may be terminated at any time`,
+		Writer,
+		aliasOpt("cs"),
+	)
+	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
+	AddStringFlag(console, doctl.ArgAppInstanceName, "", "", "Starts a console session for a specific instance name. Optional, defaults to the first available instance. For apps with multiple instances, you can specify the instance name to start the console session for that particular instance.")
+
+	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web. To initiate a console session to a specific instance, append the instance id: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web sample-golang-5d9f95556c-5f58g`
+
+	appInstances := CmdBuilder(
+		cmd,
+		RunGetAppInstances,
+		"list-instances <app id>",
+		"Get app instances",
+		`Returns an app's currently running ephemeral compute instances.`,
+		Writer,
+		aliasOpt("i"),
+	)
+
+	appInstances.Example = `The following examples retrieves the currently running, ephemeral compute instances for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps list-instances f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	listRegions := CmdBuilder(
 		cmd,
@@ -211,7 +260,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 
 Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
-		aliasOpt("c"),
+		aliasOpt("p"),
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(propose, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)", requiredOpt())
@@ -294,6 +343,11 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
+	updateSources, err := c.Doit.GetBool(c.NS, doctl.ArgCommandUpdateSources)
+	if err != nil {
+		return err
+	}
+
 	projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
 	if err != nil {
 		return err
@@ -314,7 +368,7 @@ func RunAppsCreate(c *CmdConfig) error {
 				return err
 			}
 
-			app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
+			app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec, UpdateAllSourceVersions: updateSources})
 			if err != nil {
 				return err
 			}
@@ -391,12 +445,17 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
+	updateSources, err := c.Doit.GetBool(c.NS, doctl.ArgCommandUpdateSources)
+	if err != nil {
+		return err
+	}
+
 	appSpec, err := apps.ReadAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
 
-	app, err := c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
+	app, err := c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec, UpdateAllSourceVersions: updateSources})
 	if err != nil {
 		return err
 	}
@@ -450,6 +509,48 @@ func RunAppsDelete(c *CmdConfig) error {
 	notice("App deleted")
 
 	return nil
+}
+
+// RunAppsRestart restarts an app.
+func RunAppsRestart(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	components, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAppComponents)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	deployment, err := c.Apps().Restart(appID, components)
+	if err != nil {
+		return err
+	}
+
+	var errs error
+
+	if wait {
+		apps := c.Apps()
+		notice("Restart is in progress, waiting for the restart to complete")
+		err := waitForActiveDeployment(apps, appID, deployment.ID)
+		if err != nil {
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			if err := c.Display(displayers.Deployments{deployment}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			return errs
+		}
+		deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
+	}
+
+	notice("Restarted")
+
+	return c.Display(displayers.Deployments{deployment})
 }
 
 // RunAppsCreateDeployment creates a deployment for an app.
@@ -573,17 +674,24 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if deploymentID == "" {
-		app, err := c.Apps().Get(appID)
+
+	_, err = uuid.Parse(appID)
+	if err != nil || deploymentID == "" {
+		app, err := c.Apps().Find(appID)
 		if err != nil {
 			return err
 		}
-		if app.ActiveDeployment != nil {
-			deploymentID = app.ActiveDeployment.ID
-		} else if app.InProgressDeployment != nil {
-			deploymentID = app.InProgressDeployment.ID
-		} else {
-			return fmt.Errorf("unable to retrieve logs; no deployment found for app %s", appID)
+
+		appID = app.ID
+
+		if deploymentID == "" {
+			if app.ActiveDeployment != nil {
+				deploymentID = app.ActiveDeployment.ID
+			} else if app.InProgressDeployment != nil {
+				deploymentID = app.InProgressDeployment.ID
+			} else {
+				return fmt.Errorf("unable to retrieve logs; no deployment found for app %s", appID)
+			}
 		}
 	}
 
@@ -662,8 +770,10 @@ func RunAppsGetLogs(c *CmdConfig) error {
 			url.Scheme = "wss"
 		}
 
-		listener := c.Doit.Listen(url, token, schemaFunc, c.Out)
-		err = listener.Start()
+		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, nil)
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		err = listener.Listen(ctx)
 		if err != nil {
 			return err
 		}
@@ -690,6 +800,126 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 	} else {
 		warn("No logs found for app component")
+	}
+
+	return nil
+}
+
+// RunAppsConsole initiates a console session for an app.
+func RunAppsConsole(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	componentName := c.Args[1]
+	var instanceName string
+	if len(c.Args) >= 3 {
+		instanceName = c.Args[2]
+	}
+
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
+	if err != nil {
+		return err
+	}
+
+	opts := &godo.AppGetExecOptions{
+		DeploymentID: deploymentID,
+		InstanceName: instanceName,
+	}
+	execResp, err := c.Apps().GetExecWithOpts(appID, componentName, opts)
+
+	if err != nil {
+		return err
+	}
+	url, err := url.Parse(execResp.URL)
+	if err != nil {
+		return err
+	}
+	token := url.Query().Get("token")
+
+	schemaFunc := func(message []byte) (io.Reader, error) {
+		data := struct {
+			Data string `json:"data"`
+		}{}
+		err = json.Unmarshal(message, &data)
+		if err != nil {
+			return nil, err
+		}
+		r := strings.NewReader(data.Data)
+		return r, nil
+	}
+
+	inputCh := make(chan []byte)
+
+	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, inputCh)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	grp, ctx := errgroup.WithContext(ctx)
+
+	term := c.Doit.Terminal()
+	stdinCh := make(chan string)
+	restoreTerminal, err := term.ReadRawStdin(ctx, stdinCh)
+	if err != nil {
+		return err
+	}
+	defer restoreTerminal()
+
+	resizeEvents := make(chan terminal.TerminalSize)
+	grp.Go(func() error {
+		return term.MonitorResizeEvents(ctx, resizeEvents)
+	})
+
+	grp.Go(func() error {
+		keepaliveTicker := time.NewTicker(30 * time.Second)
+		defer keepaliveTicker.Stop()
+		type stdinOp struct {
+			Op   string `json:"op"`
+			Data string `json:"data"`
+		}
+		type resizeOp struct {
+			Op     string `json:"op"`
+			Width  int    `json:"width"`
+			Height int    `json:"height"`
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case in := <-stdinCh:
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: in})
+				if err != nil {
+					return fmt.Errorf("error encoding stdin: %v", err)
+				}
+				inputCh <- b
+			case <-keepaliveTicker.C:
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: ""})
+				if err != nil {
+					return fmt.Errorf("error encoding keepalive event: %v", err)
+				}
+				inputCh <- b
+			case ev := <-resizeEvents:
+				b, err := json.Marshal(resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height})
+				if err != nil {
+					return fmt.Errorf("error encoding resize event: %v", err)
+				}
+				inputCh <- b
+			}
+		}
+	})
+
+	grp.Go(func() error {
+		err = listener.Listen(ctx)
+		if err != nil {
+			return err
+		}
+		cancel() // cancel the context to stop the other goroutines
+		return nil
+	})
+
+	if err := grp.Wait(); err != nil {
+		return err
 	}
 
 	return nil
@@ -1081,4 +1311,20 @@ func getIDByName(apps []*godo.App, name string) (string, error) {
 	}
 
 	return "", fmt.Errorf("app not found")
+}
+
+// RunGetAppInstances gets currently running ephemeral compute instances for an app
+func RunGetAppInstances(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+
+	opts := &godo.GetAppInstancesOpts{}
+	instances, err := c.Apps().GetAppInstances(appID, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.AppInstances(instances))
 }

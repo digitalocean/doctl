@@ -30,7 +30,7 @@ func Monitoring() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "monitoring",
-			Short: "[Beta] Display commands to manage monitoring",
+			Short: "Display commands to manage monitoring",
 			Long: `The sub-commands of ` + "`" + `doctl monitoring` + "`" + ` manage the monitoring on your account.
 
 You can create alert policies to monitor the resource consumption of your Droplets, and uptime checks to monitor the availability of your websites and services`,

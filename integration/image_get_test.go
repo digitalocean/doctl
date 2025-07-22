@@ -71,8 +71,9 @@ var _ = suite("compute/image/get", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	imageGetOutput = `
-ID         Name         Type    Distribution    Slug                Public    Min Disk
-6918990    14.04 x64            Ubuntu          ubuntu-16-04-x64    true      20`
+ID         Name         Type    Distribution    Slug                Public    Min Disk    Created
+6918990    14.04 x64            Ubuntu          ubuntu-16-04-x64    true      20          2014-10-17T20:24:33Z
+`
 	imageGetResponse = `{
   "image": {
     "id": 6918990,

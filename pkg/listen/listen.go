@@ -2,12 +2,13 @@ package listen
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"io"
 	"net/url"
-	"os"
-	"os/signal"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/sync/errgroup"
 )
 
 // SchemaFunc takes a slice of bytes and returns an io.Reader (See Listener.SchemaFunc)
@@ -27,34 +28,30 @@ type Listener struct {
 	// Out is an io.Writer to output to.
 	// doctl hint: this should usually be commands.CmdConfig.Out
 	Out io.Writer
-
-	done chan bool
-	stop chan bool
+	// InputCh is a channel to send input to the websocket
+	InCh <-chan []byte
 }
 
 // ListenerService listens to a websocket connection and outputs to the provided io.Writer
 type ListenerService interface {
-	Start() error
-	Stop()
+	Listen(ctx context.Context) error
 }
 
 var _ ListenerService = &Listener{}
 
 // NewListener returns a configured Listener
-func NewListener(url *url.URL, token string, schemaFunc SchemaFunc, out io.Writer) ListenerService {
+func NewListener(url *url.URL, token string, schemaFunc SchemaFunc, out io.Writer, inCh <-chan []byte) ListenerService {
 	return &Listener{
 		URL:        url,
 		Token:      token,
 		SchemaFunc: schemaFunc,
 		Out:        out,
-
-		done: make(chan bool),
-		stop: make(chan bool),
+		InCh:       inCh,
 	}
 }
 
-// Start makes the websocket connection and writes messages to the io.Writer
-func (l *Listener) Start() error {
+// Listen makes the websocket connection and writes messages to the io.Writer
+func (l *Listener) Listen(ctx context.Context) error {
 	if l.Token != "" {
 		params := l.URL.Query()
 		params.Set("token", l.Token)
@@ -63,19 +60,21 @@ func (l *Listener) Start() error {
 
 	c, _, err := websocket.DefaultDialer.Dial(l.URL.String(), nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating websocket connection: %w", err)
 	}
 	defer c.Close()
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-	done := l.done
-	go func() error {
+	done := make(chan struct{})
+	grp, ctx := errgroup.WithContext(ctx)
+	grp.Go(func() error {
 		defer close(done)
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
-				return err
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					return nil
+				}
+				return fmt.Errorf("error reading from websocket: %w", err)
 			}
 
 			var r io.Reader
@@ -90,34 +89,27 @@ func (l *Listener) Start() error {
 
 			io.Copy(l.Out, r)
 		}
-	}()
+	})
 
-	for {
-		select {
-		case <-done:
-			return nil
-		case <-interrupt:
-			return writeCloseMessage(c)
-		case <-l.stop:
-			return writeCloseMessage(c)
+	grp.Go(func() error {
+		for {
+			select {
+			case data := <-l.InCh:
+				if err := c.WriteMessage(websocket.TextMessage, data); err != nil {
+					return fmt.Errorf("error writing to websocket: %w", err)
+				}
+			case <-ctx.Done():
+				if err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
+					return fmt.Errorf("error writing close message: %w", err)
+				}
+				return nil
+			case <-done:
+				return nil
+			}
 		}
-	}
-}
-
-// Stop signals the Listener to close the websocket connection
-func (l *Listener) Stop() {
-	select {
-	case <-l.done:
-	default:
-		l.stop <- true
-	}
-}
-
-func writeCloseMessage(c *websocket.Conn) error {
-	err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	if err != nil {
+	})
+	if err := grp.Wait(); err != nil {
 		return err
 	}
-
 	return nil
 }

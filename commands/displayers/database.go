@@ -65,20 +65,6 @@ func (d *Databases) Cols() []string {
 }
 
 func (d *Databases) ColMap() map[string]string {
-	if d.Short {
-		return map[string]string{
-			"ID":         "ID",
-			"Name":       "Name",
-			"Engine":     "Engine",
-			"Version":    "Version",
-			"NumNodes":   "Number of Nodes",
-			"Region":     "Region",
-			"Status":     "Status",
-			"Size":       "Size",
-			"StorageMib": "Storage (MiB)",
-		}
-	}
-
 	return map[string]string{
 		"ID":         "ID",
 		"Name":       "Name",
@@ -388,6 +374,9 @@ func (do *DatabaseOptions) KV() []map[string]any {
 	}
 	if nonEmptyOptionsFn(do.DatabaseOptions.OpensearchOptions) {
 		engines = append(engines, "opensearch")
+	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.ValkeyOptions) {
+		engines = append(engines, "valkey")
 	}
 
 	out := make([]map[string]any, 0, len(engines))
@@ -1191,6 +1180,48 @@ func (dc *MySQLConfiguration) KV() []map[string]any {
 			"value": *c.BinlogRetentionPeriod,
 		})
 	}
+	if c.InnodbChangeBufferMaxSize != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbChangeBufferMaxSize",
+			"value": *c.InnodbChangeBufferMaxSize,
+		})
+	}
+	if c.InnodbFlushNeighbors != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbFlushNeighbors",
+			"value": *c.InnodbFlushNeighbors,
+		})
+	}
+	if c.InnodbReadIoThreads != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbReadIoThreads",
+			"value": *c.InnodbReadIoThreads,
+		})
+	}
+	if c.InnodbThreadConcurrency != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbThreadConcurrency",
+			"value": *c.InnodbThreadConcurrency,
+		})
+	}
+	if c.InnodbWriteIoThreads != nil {
+		o = append(o, map[string]any{
+			"key":   "InnodbWriteIoThreads",
+			"value": *c.InnodbWriteIoThreads,
+		})
+	}
+	if c.NetBufferLength != nil {
+		o = append(o, map[string]any{
+			"key":   "NetBufferLength",
+			"value": *c.NetBufferLength,
+		})
+	}
+	if c.LogOutput != nil {
+		o = append(o, map[string]any{
+			"key":   "LogOutput",
+			"value": *c.LogOutput,
+		})
+	}
 
 	return o
 }
@@ -1578,6 +1609,26 @@ func (dc *PostgreSQLConfiguration) KV() []map[string]any {
 			"value": *c.TimeScaleDB.MaxBackgroundWorkers,
 		})
 	}
+
+	if c.SynchronousReplication != nil {
+		o = append(o, map[string]any{
+			"key":   "SynchronousReplication",
+			"value": *c.SynchronousReplication,
+		})
+	}
+	if c.StatMonitorEnable != nil {
+		o = append(o, map[string]any{
+			"key":   "StatMonitorEnable",
+			"value": *c.StatMonitorEnable,
+		})
+	}
+	if c.MaxFailoverReplicationTimeLag != nil {
+		o = append(o, map[string]any{
+			"key":   "MaxFailoverReplicationTimeLag",
+			"value": *c.MaxFailoverReplicationTimeLag,
+		})
+	}
+
 	return o
 }
 
