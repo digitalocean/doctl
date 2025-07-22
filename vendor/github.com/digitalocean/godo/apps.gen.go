@@ -100,6 +100,7 @@ type App struct {
 	ProjectID string `json:"project_id,omitempty"`
 	// The dedicated egress ip addresses associated with the app.
 	DedicatedIps []*AppDedicatedIp `json:"dedicated_ips,omitempty"`
+	VPC          *AppVPC           `json:"vpc,omitempty"`
 }
 
 // AppAlertSpec Configuration of an alert for the app or a individual component.
@@ -303,6 +304,12 @@ type AppFunctionsSpec struct {
 	// A list of configured log forwarding destinations.
 	LogDestinations []*AppLogDestinationSpec `json:"log_destinations,omitempty"`
 	CORS            *AppCORSPolicy           `json:"cors,omitempty"`
+}
+
+// AppHealth struct for AppHealth
+type AppHealth struct {
+	Components          []*ComponentHealth          `json:"components,omitempty"`
+	FunctionsComponents []*FunctionsComponentHealth `json:"functions_components,omitempty"`
 }
 
 // AppIngressSpec Specification for app ingress configurations.
@@ -606,6 +613,8 @@ type AppSpec struct {
 	Egress      *AppEgressSpec      `json:"egress,omitempty"`
 	Features    []string            `json:"features,omitempty"`
 	Maintenance *AppMaintenanceSpec `json:"maintenance,omitempty"`
+  // Specification for VPC.
+	Vpc         *AppVpcSpec         `json:"vpc,omitempty"`
 	// Specification to disable edge (CDN) cache for all domains of the app. Note that this feature is in private preview.
 	DisableEdgeCache bool `json:"disable_edge_cache,omitempty"`
 	// Specification to disable email obfuscation.
@@ -652,6 +661,25 @@ type AppVariableDefinition struct {
 	Value string           `json:"value,omitempty"`
 	Scope AppVariableScope `json:"scope,omitempty"`
 	Type  AppVariableType  `json:"type,omitempty"`
+}
+
+// AppVPC The VPC configuration for the app.
+type AppVPC struct {
+	// The ID of the VPC (derived from the app spec).
+	ID string `json:"id,omitempty"`
+	// The private IP addresses allocated for the app in the customer's VPC.
+	EgressIPs []*AppVPCEgressIP `json:"egress_ips,omitempty"`
+}
+
+// AppVPCEgressIP struct for AppVPCEgressIP
+type AppVPCEgressIP struct {
+	IP string `json:"ip,omitempty"`
+}
+
+// AppVpcSpec Configuration of VPC.
+type AppVpcSpec struct {
+	// The id of the target VPC, in UUID format.
+	ID string `json:"id,omitempty"`
 }
 
 // AppWorkerSpec struct for AppWorkerSpec
@@ -759,6 +787,26 @@ type DeploymentCauseDetailsGitPush struct {
 	CommitSHA     string               `json:"commit_sha,omitempty"`
 	CommitMessage string               `json:"commit_message,omitempty"`
 }
+
+// ComponentHealth struct for ComponentHealth
+type ComponentHealth struct {
+	Name               string                `json:"name,omitempty"`
+	CPUUsagePercent    float64               `json:"cpu_usage_percent,omitempty"`
+	MemoryUsagePercent float64               `json:"memory_usage_percent,omitempty"`
+	ReplicasDesired    int64                 `json:"replicas_desired,omitempty"`
+	ReplicasReady      int64                 `json:"replicas_ready,omitempty"`
+	State              ComponentHealthStatus `json:"state,omitempty"`
+}
+
+// ComponentHealthStatus the model 'ComponentHealthStatus'
+type ComponentHealthStatus string
+
+// List of ComponentHealthStatus
+const (
+	COMPONENTHEALTHSTATUS_Unknown   ComponentHealthStatus = "UNKNOWN"
+	COMPONENTHEALTHSTATUS_Healthy   ComponentHealthStatus = "HEALTHY"
+	COMPONENTHEALTHSTATUS_Unhealthy ComponentHealthStatus = "UNHEALTHY"
+)
 
 // AppCORSPolicy struct for AppCORSPolicy
 type AppCORSPolicy struct {
@@ -1120,9 +1168,27 @@ type AppDomainValidation struct {
 	TXTValue string `json:"txt_value,omitempty"`
 }
 
+// FunctionsComponentHealth struct for FunctionsComponentHealth
+type FunctionsComponentHealth struct {
+	Name                            string                             `json:"name,omitempty"`
+	FunctionsComponentHealthMetrics []*FunctionsComponentHealthMetrics `json:"functions_component_health_metrics,omitempty"`
+}
+
+// FunctionsComponentHealthMetrics struct for FunctionsComponentHealthMetrics
+type FunctionsComponentHealthMetrics struct {
+	MetricLabel string  `json:"metric_label,omitempty"`
+	MetricValue float64 `json:"metric_value,omitempty"`
+	TimeWindow  string  `json:"time_window,omitempty"`
+}
+
 // GetAppDatabaseConnectionDetailsResponse struct for GetAppDatabaseConnectionDetailsResponse
 type GetAppDatabaseConnectionDetailsResponse struct {
 	ConnectionDetails []*GetDatabaseConnectionDetailsResponse `json:"connection_details,omitempty"`
+}
+
+// GetAppHealthResponse struct for GetAppHealthResponse
+type GetAppHealthResponse struct {
+	AppHealth *AppHealth `json:"app_health,omitempty"`
 }
 
 // GetAppInstancesResponse struct for GetAppInstancesResponse
