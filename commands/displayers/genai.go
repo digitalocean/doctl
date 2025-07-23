@@ -403,3 +403,53 @@ func (a *AgentVersion) KV() []map[string]any {
 	}
 	return out
 }
+
+type OpenAiApiKey struct {
+	OpenAiApiKeys do.OpenAiApiKeys
+}
+
+var _ Displayable = &OpenAiApiKey{}
+
+func (o *OpenAiApiKey) JSON(out io.Writer) error {
+	return writeJSON(o.OpenAiApiKeys, out)
+}
+
+func (o *OpenAiApiKey) Cols() []string {
+	return []string{
+		"Name",
+		"UUID",
+		"CreatedAt",
+		"CreatedBy",
+		"UpdatedAt",
+		"DeletedAt",
+	}
+}
+
+func (o *OpenAiApiKey) ColMap() map[string]string {
+	return map[string]string{
+		"Name":      "Name",
+		"UUID":      "UUID",
+		"CreatedAt": "Created At",
+		"CreatedBy": "Created By",
+		"UpdatedAt": "Updated At",
+		"DeletedAt": "Deleted At",
+	}
+}
+
+func (o *OpenAiApiKey) KV() []map[string]any {
+	if o == nil || o.OpenAiApiKeys == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(o.OpenAiApiKeys))
+	for _, key := range o.OpenAiApiKeys {
+		out = append(out, map[string]any{
+			"Name":      key.Name,
+			"UUID":      key.Uuid,
+			"CreatedAt": key.CreatedAt,
+			"CreatedBy": key.CreatedBy,
+			"UpdatedAt": key.UpdatedAt,
+			"DeletedAt": key.DeletedAt,
+		})
+	}
+	return out
+}
