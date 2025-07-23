@@ -57,6 +57,22 @@ type Agents []Agent
 
 type AgentVersions []AgentVersion
 
+// DatacenterRegion represents a datacenter region for GenAI services.
+type DatacenterRegion struct {
+	*godo.DatacenterRegions
+}
+
+// DatacenterRegions is a slice of DatacenterRegion.
+type DatacenterRegions []DatacenterRegion
+
+// Model represents an available model for GenAI services.
+type Model struct {
+	*godo.Model
+}
+
+// Models is a slice of Model.
+type Models []Model
+
 // KnowledgeBases for Agents
 type KnowledgeBases []KnowledgeBase
 
@@ -93,6 +109,8 @@ type GenAIService interface {
 	UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error)
 	DeleteAgentAPIKey(agentID string, apikeyID string) error
 	RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error)
+	ListDatacenterRegions() (DatacenterRegions, error)
+	ListAvailableModels() (Models, error)
 }
 
 var _ GenAIService = &genAIService{}
@@ -445,4 +463,58 @@ func (a *genAIService) ListAgentVersions(agentID string) (AgentVersions, error) 
 
 	return list, nil
 
+}
+
+func (a *genAIService) ListDatacenterRegions() (DatacenterRegions, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListDatacenterRegions(context.TODO())
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]DatacenterRegion, len(si))
+	for i := range si {
+		dc := si[i].(*godo.DatacenterRegions)
+		list[i] = DatacenterRegion{DatacenterRegions: dc}
+	}
+
+	return list, nil
+}
+
+func (a *genAIService) ListAvailableModels() (Models, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListAvailableModels(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]Model, len(si))
+	for i := range si {
+		m := si[i].(*godo.Model)
+		list[i] = Model{Model: m}
+	}
+
+	return list, nil
 }
