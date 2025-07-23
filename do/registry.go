@@ -376,8 +376,6 @@ func (rs *registryService) RevokeOAuthToken(token string, endpoint string) error
 	return err
 }
 
-// Multi-registry Open Beta service and methods
-
 // RegistriesService is the godo RegistriesService interface.
 type RegistriesService interface {
 	Get(string) (*Registry, error)

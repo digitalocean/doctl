@@ -1039,8 +1039,6 @@ func RunGetRegistryOptionsRegions(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// Multi-registry Open Beta commands
-
 // Registries creates the registries sub-command
 func Registries() *Command {
 	cmd := &Command{
