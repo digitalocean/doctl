@@ -1089,7 +1089,7 @@ func TestGetAvailableRegions(t *testing.T) {
 func TestRegistriesCreate(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			rcr := godo.RegistriesCreateRequest{
+			rcr := godo.RegistryCreateRequest{
 				Name:   testRegistryName,
 				Region: testRegistryRegion,
 			}
@@ -1108,7 +1108,7 @@ func TestRegistriesCreate(t *testing.T) {
 
 	t.Run("region omitted", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			rcr := godo.RegistriesCreateRequest{
+			rcr := godo.RegistryCreateRequest{
 				Name: testRegistryName,
 			}
 			tm.registries.EXPECT().Create(&rcr).Return(&testRegistry, nil)
@@ -1125,7 +1125,7 @@ func TestRegistriesCreate(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			rcr := godo.RegistriesCreateRequest{
+			rcr := godo.RegistryCreateRequest{
 				Name:   testRegistryName,
 				Region: testRegistryRegion,
 			}
