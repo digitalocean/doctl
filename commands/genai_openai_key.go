@@ -16,7 +16,7 @@ func OpenAIKeyCmd() *Command {
 			Use:     "openai-key",
 			Aliases: []string{"ok"},
 			Short:   "Display commands that manage DigitalOcean OpenAI API Keys.",
-			Long:    "The subcommands of `doctl genai knowledge-base` allow you to access and manage knowledge bases of agents.",
+			Long:    "The subcommands of `doctl genai openai-key` allow you to access and manage OpenAI API keys.",
 		},
 	}
 
