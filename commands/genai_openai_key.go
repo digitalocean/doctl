@@ -24,8 +24,8 @@ func OpenAIKeyCmd() *Command {
 		cmd,
 		RunOpenAIKeyList,
 		"list",
-		"Retrieves an OpenAI API Key",
-		"Retrieves information about an OpenAI API Key",
+		"Lists all OpenAI API Keys",
+		"Lists all OpenAI API Keys available in your account",
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.OpenAiApiKey{}),
 	)
@@ -48,8 +48,8 @@ func OpenAIKeyCmd() *Command {
 		cmd,
 		RunOpenAIKeyGetAgents,
 		"get-agents <openai-api-key-uuid>",
-		"Retrieves an OpenAI API Key by its UUID",
-		"Retrieves information about an OpenAI API Key",
+		"Lists agents using an OpenAI API Key",
+		"Lists all agents that are using the specified OpenAI API Key",
 		Writer, aliasOpt("ga"),
 		displayerType(&displayers.Agent{}),
 	)
