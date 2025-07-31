@@ -26,7 +26,7 @@ import (
 const (
 	// CNBBuilderImage represents the local cnb builder.
 	CNBBuilderImage_Heroku18 = "digitaloceanapps/cnb-local-builder:heroku-18_v0.73.1"
-	CNBBuilderImage_Heroku22 = "digitaloceanapps/cnb-local-builder:heroku-22_v0.83.0"
+	CNBBuilderImage_Heroku22 = "digitaloceanapps/cnb-local-builder:heroku-22_v0.87.0"
 
 	CNBAppsRunImage_Heroku18 = "digitaloceanapps/apps-run:heroku-18_c047ec7"
 
