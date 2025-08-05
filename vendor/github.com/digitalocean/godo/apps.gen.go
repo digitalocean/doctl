@@ -100,6 +100,7 @@ type App struct {
 	ProjectID string `json:"project_id,omitempty"`
 	// The dedicated egress ip addresses associated with the app.
 	DedicatedIps []*AppDedicatedIp `json:"dedicated_ips,omitempty"`
+	VPC          *AppVPC           `json:"vpc,omitempty"`
 }
 
 // AppAlertSpec Configuration of an alert for the app or a individual component.
@@ -612,6 +613,8 @@ type AppSpec struct {
 	Egress      *AppEgressSpec      `json:"egress,omitempty"`
 	Features    []string            `json:"features,omitempty"`
 	Maintenance *AppMaintenanceSpec `json:"maintenance,omitempty"`
+  // Specification for VPC.
+	Vpc         *AppVpcSpec         `json:"vpc,omitempty"`
 	// Specification to disable edge (CDN) cache for all domains of the app. Note that this feature is in private preview.
 	DisableEdgeCache bool `json:"disable_edge_cache,omitempty"`
 	// Specification to disable email obfuscation.
@@ -658,6 +661,25 @@ type AppVariableDefinition struct {
 	Value string           `json:"value,omitempty"`
 	Scope AppVariableScope `json:"scope,omitempty"`
 	Type  AppVariableType  `json:"type,omitempty"`
+}
+
+// AppVPC The VPC configuration for the app.
+type AppVPC struct {
+	// The ID of the VPC (derived from the app spec).
+	ID string `json:"id,omitempty"`
+	// The private IP addresses allocated for the app in the customer's VPC.
+	EgressIPs []*AppVPCEgressIP `json:"egress_ips,omitempty"`
+}
+
+// AppVPCEgressIP struct for AppVPCEgressIP
+type AppVPCEgressIP struct {
+	IP string `json:"ip,omitempty"`
+}
+
+// AppVpcSpec Configuration of VPC.
+type AppVpcSpec struct {
+	// The id of the target VPC, in UUID format.
+	ID string `json:"id,omitempty"`
 }
 
 // AppWorkerSpec struct for AppWorkerSpec
