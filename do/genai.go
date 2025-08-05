@@ -32,8 +32,30 @@ type KnowledgeBaseDataSource struct {
 	*godo.KnowledgeBaseDataSource
 }
 
+type AgentRouteResponse struct {
+	*godo.AgentRouteResponse
+}
+
+type FunctionRoute struct {
+	*godo.AgentFunction
+}
+
+type FunctionRoutes []FunctionRoute
+type ApiKeyInfo struct {
+	*godo.ApiKeyInfo
+}
+
+type AgentVersion struct {
+	*godo.AgentVersion
+}
+
+// ApiKeys is a slice of ApiKey.
+type ApiKeys []ApiKeyInfo
+
 // Agents is a slice of Agent.
 type Agents []Agent
+
+type AgentVersions []AgentVersion
 
 // KnowledgeBases for Agents
 type KnowledgeBases []KnowledgeBase
@@ -41,7 +63,7 @@ type KnowledgeBases []KnowledgeBase
 // KnowledgeBase DataSources for Agents
 type KnowledgeBaseDataSources []KnowledgeBaseDataSource
 
-// AgentService is an interface for interacting with DigitalOcean's Agent API.
+// GenAIService is an interface for interacting with DigitalOcean's Agent API.
 type GenAIService interface {
 	ListAgents() (Agents, error)
 	CreateAgent(req *godo.AgentCreateRequest) (*Agent, error)
@@ -59,6 +81,18 @@ type GenAIService interface {
 	DeleteKnowledgeBaseDataSource(knowledgeBaseID string, dataSourceID string) error
 	AttachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error)
 	DetachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error)
+	AddAgentRoute(parentAgentID string, childAgentID string) (*AgentRouteResponse, error)
+	UpdateAgentRoute(parentAgentID string, childAgentID string, req *godo.AgentRouteUpdateRequest) (*AgentRouteResponse, error)
+	DeleteAgentRoute(parentAgentID string, childAgentID string) error
+	CreateFunctionRoute(id string, req *godo.FunctionRouteCreateRequest) (*Agent, error)
+	DeleteFunctionRoute(agent_id string, function_id string) (*Agent, error)
+	UpdateFunctionRoute(agent_id string, function_id string, req *godo.FunctionRouteUpdateRequest) (*Agent, error)
+	ListAgentVersions(agentID string) (AgentVersions, error)
+	ListAgentAPIKeys(agentId string) (ApiKeys, error)
+	CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*ApiKeyInfo, error)
+	UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error)
+	DeleteAgentAPIKey(agentID string, apikeyID string) error
+	RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error)
 }
 
 var _ GenAIService = &genAIService{}
@@ -254,4 +288,161 @@ func (a *genAIService) DetachKnowledgeBaseToAgent(agentId string, knowledgeBaseI
 		return &Agent{}, err
 	}
 	return &Agent{Agent: agent}, nil
+}
+
+func (a *genAIService) AddAgentRoute(parentAgentID string, childAgentID string) (*AgentRouteResponse, error) {
+	// Create the request object
+	req := &godo.AgentRouteCreateRequest{
+		ParentAgentUuid: parentAgentID,
+		ChildAgentUuid:  childAgentID,
+	}
+
+	routeResponse, _, err := a.client.GenAI.AddAgentRoute(context.TODO(), parentAgentID, childAgentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &AgentRouteResponse{AgentRouteResponse: routeResponse}, nil
+}
+
+func (a *genAIService) UpdateAgentRoute(parentAgentID string, childAgentID string, req *godo.AgentRouteUpdateRequest) (*AgentRouteResponse, error) {
+	routeResponse, _, err := a.client.GenAI.UpdateAgentRoute(context.TODO(), parentAgentID, childAgentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &AgentRouteResponse{AgentRouteResponse: routeResponse}, nil
+}
+
+func (a *genAIService) DeleteAgentRoute(parentAgentID string, childAgentID string) error {
+	_, _, err := a.client.GenAI.DeleteAgentRoute(context.TODO(), parentAgentID, childAgentID)
+	return err
+}
+
+// CreateFunctionRoute creates a new function route for the specified agent
+func (s *genAIService) CreateFunctionRoute(id string, cr *godo.FunctionRouteCreateRequest) (*Agent, error) {
+	agent, _, err := s.client.GenAI.CreateFunctionRoute(context.TODO(), id, cr)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{Agent: agent}, nil
+}
+
+// DeleteFunctionRoute deletes a function route for the specified agent
+func (s *genAIService) DeleteFunctionRoute(agent_id string, function_id string) (*Agent, error) {
+	agent, _, err := s.client.GenAI.DeleteFunctionRoute(context.TODO(), agent_id, function_id)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{agent}, nil
+}
+
+// Update FunctionRoute updates a function route for the specified agent
+func (s *genAIService) UpdateFunctionRoute(agent_id string, function_id string, cr *godo.FunctionRouteUpdateRequest) (*Agent, error) {
+	agent, _, err := s.client.GenAI.UpdateFunctionRoute(context.TODO(), agent_id, function_id, cr)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{agent}, nil
+}
+
+// CreateAgentAPIKey implements GenAIService.
+func (a *genAIService) CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*ApiKeyInfo, error) {
+	apikeyInfo, _, err := a.client.GenAI.CreateAgentAPIKey(context.TODO(), agentID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
+}
+
+// DeleteAgentAPIKey implements GenAIService.
+func (a *genAIService) DeleteAgentAPIKey(agentID string, apikeyID string) error {
+	_, _, err := a.client.GenAI.DeleteAgentAPIKey(context.TODO(), agentID, apikeyID)
+	return err
+}
+
+// ListAgentAPIKeys implements GenAIService.
+func (a *genAIService) ListAgentAPIKeys(agentId string) (ApiKeys, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListAgentAPIKeys(context.TODO(), agentId, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	// Checking if there are no API keys we don't need to paginate
+	opt := &godo.ListOptions{Page: 1, PerPage: perPage}
+	res, _, err := f(opt)
+	if err != nil {
+		return nil, err
+	}
+	if len(res) == 0 {
+		return ApiKeys{}, nil
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(si) == 0 {
+		return ApiKeys{}, nil
+	}
+
+	list := make([]ApiKeyInfo, len(si))
+	for i := range si {
+		a := si[i].(*godo.ApiKeyInfo)
+		list[i] = ApiKeyInfo{ApiKeyInfo: a}
+	}
+
+	return list, nil
+}
+
+// RegenerateAgentAPIKey implements GenAIService.
+func (a *genAIService) RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error) {
+	apikeyInfo, _, err := a.client.GenAI.RegenerateAgentAPIKey(context.TODO(), agentID, apikeyID)
+	if err != nil {
+		return nil, err
+	}
+	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
+}
+
+// UpdateAgentAPIKey implements GenAIService.
+func (a *genAIService) UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error) {
+	apikeyInfo, _, err := a.client.GenAI.UpdateAgentAPIKey(context.TODO(), agentID, apikeyID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
+}
+
+func (a *genAIService) ListAgentVersions(agentID string) (AgentVersions, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListAgentVersions(context.TODO(), agentID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]AgentVersion, len(si))
+	for i := range si {
+		a := si[i].(*godo.AgentVersion)
+		list[i] = AgentVersion{AgentVersion: a}
+	}
+
+	return list, nil
+
 }
