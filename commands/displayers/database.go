@@ -1729,6 +1729,115 @@ func (dc *RedisConfiguration) KV() []map[string]any {
 	return o
 }
 
+type ValkeyConfiguration struct {
+	ValkeyConfig do.ValkeyConfig
+}
+
+var _ Displayable = &ValkeyConfiguration{}
+
+func (dc *ValkeyConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.ValkeyConfig, out)
+}
+
+func (dc *ValkeyConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *ValkeyConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *ValkeyConfiguration) KV() []map[string]any {
+	c := dc.ValkeyConfig
+	o := []map[string]any{}
+	if c.ValkeyMaxmemoryPolicy != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyMaxmemoryPolicy",
+			"value": *c.ValkeyMaxmemoryPolicy,
+		})
+	}
+	if c.ValkeyIOThreads != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyIOThreads",
+			"value": *c.ValkeyIOThreads,
+		})
+	}
+	if c.ValkeyLFULogFactor != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyLFULogFactor",
+			"value": *c.ValkeyLFULogFactor,
+		})
+	}
+	if c.ValkeyLFUDecayTime != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyLFUDecayTime",
+			"value": *c.ValkeyLFUDecayTime,
+		})
+	}
+	if c.ValkeySSL != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeySSL",
+			"value": *c.ValkeySSL,
+		})
+	}
+	if c.ValkeyTimeout != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyTimeout",
+			"value": *c.ValkeyTimeout,
+		})
+	}
+	if c.ValkeyNotifyKeyspaceEvents != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyNotifyKeyspaceEvents",
+			"value": *c.ValkeyNotifyKeyspaceEvents,
+		})
+	}
+	if c.ValkeyPersistence != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyPersistence",
+			"value": *c.ValkeyPersistence,
+		})
+	}
+	if c.ValkeyACLChannelsDefault != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyACLChannelsDefault",
+			"value": *c.ValkeyACLChannelsDefault,
+		})
+	}
+	if c.FrequentSnapshots != nil {
+		o = append(o, map[string]any{
+			"key":   "FrequentSnapshots",
+			"value": *c.FrequentSnapshots,
+		})
+	}
+	if c.ValkeyActiveExpireEffort != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyActiveExpireEffort",
+			"value": *c.ValkeyActiveExpireEffort,
+		})
+	}
+	if c.ValkeyPubSubClientOutputBufferLimit != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyPubSubClientOutputBufferLimit",
+			"value": *c.ValkeyPubSubClientOutputBufferLimit,
+		})
+	}
+	if c.ValkeyNumberOfDatabases != nil {
+		o = append(o, map[string]any{
+			"key":   "ValkeyNumberOfDatabases",
+			"value": *c.ValkeyNumberOfDatabases,
+		})
+	}
+
+	return o
+}
+
 type MongoDBConfiguration struct {
 	MongoDBConfig do.MongoDBConfig
 }
