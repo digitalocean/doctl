@@ -14,6 +14,7 @@ type SpacesKeysService interface {
 	Update(context.Context, string, *SpacesKeyUpdateRequest) (*SpacesKey, *Response, error)
 	Create(context.Context, *SpacesKeyCreateRequest) (*SpacesKey, *Response, error)
 	Delete(context.Context, string) (*Response, error)
+	Get(context.Context, string) (*SpacesKey, *Response, error)
 }
 
 // SpacesKeysServiceOp handles communication with the Spaces key related methods of the
@@ -162,4 +163,24 @@ func (s *SpacesKeysServiceOp) List(ctx context.Context, opts *ListOptions) ([]*S
 	}
 
 	return root.Keys, resp, nil
+}
+
+// Get retrieves a Spaces key.
+func (s *SpacesKeysServiceOp) Get(ctx context.Context, accessKey string) (*SpacesKey, *Response, error) {
+	if accessKey == "" {
+		return nil, nil, NewArgError("accessKey", "cannot be empty")
+	}
+
+	path := fmt.Sprintf("%s/%s", spacesKeysBasePath, accessKey)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(spacesKeyRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Key, resp, nil
 }

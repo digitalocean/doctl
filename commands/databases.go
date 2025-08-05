@@ -656,7 +656,7 @@ To install an update outside of a maintenance window, use the ` + "`" + `doctl d
 
 To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseMaintenanceWindow{}))
-	cmdMaintenanceGet.Example = `The following example retrieves the maintenance window for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+	cmdMaintenanceGet.Example = `The following example retrieves the maintenance window for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window get ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
 
 	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseMaintenanceUpdate,
 		"update <database-cluster-id>", "Update the maintenance window for a database cluster", `Updates the maintenance window for the specified database cluster.
@@ -1087,6 +1087,8 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["kafka"] = options.KafkaOptions.Regions
 	case "opensearch":
 		regions["opensearch"] = options.OpensearchOptions.Regions
+	case "valkey":
+		regions["valkey"] = options.ValkeyOptions.Regions
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
@@ -1094,6 +1096,7 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["redis"] = options.RedisOptions.Regions
 		regions["kafka"] = options.KafkaOptions.Regions
 		regions["opensearch"] = options.OpensearchOptions.Regions
+		regions["valkey"] = options.ValkeyOptions.Regions
 	}
 
 	return displayDatabaseRegionOptions(c, regions)
@@ -1122,6 +1125,8 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["kafka"] = options.KafkaOptions.Versions
 	case "opensearch":
 		versions["opensearch"] = options.OpensearchOptions.Versions
+	case "valkey":
+		versions["valkey"] = options.ValkeyOptions.Versions
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
@@ -1129,6 +1134,7 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["redis"] = options.RedisOptions.Versions
 		versions["kafka"] = options.KafkaOptions.Versions
 		versions["opensearch"] = options.OpensearchOptions.Versions
+		versions["valkey"] = options.ValkeyOptions.Versions
 	}
 
 	return displayDatabaseVersionOptions(c, versions)
@@ -1160,6 +1166,8 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.KafkaOptions.Layouts
 	case "opensearch":
 		layouts = options.OpensearchOptions.Layouts
+	case "valkey":
+		layouts = options.ValkeyOptions.Layouts
 	}
 
 	return displayDatabaseLayoutOptions(c, layouts)

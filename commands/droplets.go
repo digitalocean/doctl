@@ -27,6 +27,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/gobwas/glob"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -95,7 +96,7 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Applies a list of tags to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "Specifies whether or not the Droplet monitoring agent should be installed. By default, the agent is installed on new Droplets but installation errors are ignored. Set `--droplet-agent=false` to prevent installation. Set to `true` to make installation errors fatal.")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "A list of block storage volume IDs to attach to the Droplet")
-	cmdDropletCreate.Example = `The following example creates a Droplet named ` + "`" + `example-droplet` + "`" + ` with a two vCPUs, two GiB of RAM, and 20 GBs of disk space. The Droplet is created in the ` + "`" + `nyc1` + "`" + ` region and is based on the ` + "`" + `ubuntu-20-04-x64` + "`" + ` image. Additionally, the command uses the ` + "`" + `--user-data` + "`" + ` flag to run a Bash script the first time the Droplet boots up: doctl compute droplet create example-droplet --size s-2vcpu-2gb --image ubuntu-20-04-x64 --region nyc1 --user-data $'#!/bin/bash\n touch /root/example.txt; sudo apt update;sudo snap install doctl'`
+	cmdDropletCreate.Example = `The following example creates a Droplet named ` + "`" + `example-droplet` + "`" + ` with a two vCPUs, two GiB of RAM, and 20 GBs of disk space. The Droplet is created in the ` + "`" + `nyc1` + "`" + ` region and is based on the ` + "`" + `ubuntu-20-04-x64` + "`" + ` image. Additionally, the command uses the ` + "`" + `--user-data` + "`" + ` flag to run a Bash script the first time the Droplet boots up:` + "\n\n" + `doctl compute droplet create example-droplet --size s-2vcpu-2gb --image ubuntu-20-04-x64 --region nyc1 --user-data $'#!/bin/bash\n touch /root/example.txt; sudo apt update;sudo snap install doctl'` + "\n\n" + "Please note: In Windows Powershell, the example command would be the following instead: " + "\n\n" + "doctl compute droplet create example-droplet --size s-2vcpu-2gb --image ubuntu-20-04-x64 --region nyc1  --user-data \"#!/bin/bash`n touch /root/example.txt; sudo apt update;sudo snap install doctl\""
 
 	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Permanently delete a Droplet", `Permanently deletes a Droplet. This is irreversible.`, Writer,
 		aliasOpt("d", "del", "rm"))
@@ -246,6 +247,13 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	if projectUUID != "" {
+		err := ValidateProjectUUID(c, projectUUID)
+		if err != nil {
+			return err
+		}
+	}
+
 	tagNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
 	if err != nil {
 		return err
@@ -353,6 +361,16 @@ func RunDropletCreate(c *CmdConfig) error {
 	}
 
 	return c.Display(item)
+}
+
+// ValidateProjectUUID checks if the given projectUUID exists
+func ValidateProjectUUID(c *CmdConfig, projectUUID string) error {
+	if _, err := uuid.Parse(projectUUID); err != nil {
+		return fmt.Errorf("Invalid Project UUID - %w", err)
+	}
+	ps := c.Projects()
+	_, err := ps.Get(projectUUID)
+	return err
 }
 
 // RunDropletTag adds a tag to a droplet.

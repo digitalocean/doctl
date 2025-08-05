@@ -17,11 +17,12 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/spf13/viper"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps/builder"
-	"github.com/spf13/viper"
 )
 
 // CmdConfig is a command configuration.
@@ -38,43 +39,48 @@ type CmdConfig struct {
 	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
-	Keys                           func() do.KeysService
-	Sizes                          func() do.SizesService
-	Regions                        func() do.RegionsService
-	Images                         func() do.ImagesService
-	ImageActions                   func() do.ImageActionsService
-	LoadBalancers                  func() do.LoadBalancersService
-	ReservedIPs                    func() do.ReservedIPsService
-	ReservedIPActions              func() do.ReservedIPActionsService
-	ReservedIPv6s                  func() do.ReservedIPv6sService
-	Droplets                       func() do.DropletsService
-	DropletActions                 func() do.DropletActionsService
-	DropletAutoscale               func() do.DropletAutoscaleService
-	Domains                        func() do.DomainsService
-	Actions                        func() do.ActionsService
-	Account                        func() do.AccountService
-	Balance                        func() do.BalanceService
-	BillingHistory                 func() do.BillingHistoryService
-	Invoices                       func() do.InvoicesService
-	Tags                           func() do.TagsService
-	UptimeChecks                   func() do.UptimeChecksService
-	Volumes                        func() do.VolumesService
-	VolumeActions                  func() do.VolumeActionsService
-	Snapshots                      func() do.SnapshotsService
-	Certificates                   func() do.CertificatesService
-	Firewalls                      func() do.FirewallsService
-	CDNs                           func() do.CDNsService
-	Projects                       func() do.ProjectsService
-	Kubernetes                     func() do.KubernetesService
-	Databases                      func() do.DatabasesService
-	Registry                       func() do.RegistryService
-	VPCs                           func() do.VPCsService
-	OneClicks                      func() do.OneClickService
-	Apps                           func() do.AppsService
-	Monitoring                     func() do.MonitoringService
-	Serverless                     func() do.ServerlessService
-	OAuth                          func() do.OAuthService
-	PartnerInterconnectAttachments func() do.PartnerInterconnectAttachmentsService
+	Keys              func() do.KeysService
+	Sizes             func() do.SizesService
+	Regions           func() do.RegionsService
+	Images            func() do.ImagesService
+	ImageActions      func() do.ImageActionsService
+	LoadBalancers     func() do.LoadBalancersService
+	ReservedIPs       func() do.ReservedIPsService
+	ReservedIPActions func() do.ReservedIPActionsService
+	ReservedIPv6s     func() do.ReservedIPv6sService
+	BYOIPPrefixes     func() do.BYOIPPrefixsService
+
+	Droplets           func() do.DropletsService
+	DropletActions     func() do.DropletActionsService
+	DropletAutoscale   func() do.DropletAutoscaleService
+	Domains            func() do.DomainsService
+	VPCNATGateways     func() do.VPCNATGatewaysService
+	Actions            func() do.ActionsService
+	Account            func() do.AccountService
+	Balance            func() do.BalanceService
+	BillingHistory     func() do.BillingHistoryService
+	Invoices           func() do.InvoicesService
+	Tags               func() do.TagsService
+	UptimeChecks       func() do.UptimeChecksService
+	Volumes            func() do.VolumesService
+	VolumeActions      func() do.VolumeActionsService
+	Snapshots          func() do.SnapshotsService
+	Certificates       func() do.CertificatesService
+	Firewalls          func() do.FirewallsService
+	CDNs               func() do.CDNsService
+	Projects           func() do.ProjectsService
+	Kubernetes         func() do.KubernetesService
+	Databases          func() do.DatabasesService
+	Registry           func() do.RegistryService
+	VPCs               func() do.VPCsService
+	OneClicks          func() do.OneClickService
+	Apps               func() do.AppsService
+	Monitoring         func() do.MonitoringService
+	Serverless         func() do.ServerlessService
+	OAuth              func() do.OAuthService
+	PartnerAttachments func() do.PartnerAttachmentsService
+	SpacesKeys         func() do.SpacesKeysService
+	GenAI              func() do.GenAIService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -101,10 +107,12 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.ReservedIPs = func() do.ReservedIPsService { return do.NewReservedIPsService(godoClient) }
 			c.ReservedIPActions = func() do.ReservedIPActionsService { return do.NewReservedIPActionsService(godoClient) }
 			c.ReservedIPv6s = func() do.ReservedIPv6sService { return do.NewReservedIPv6sService(godoClient) }
+			c.BYOIPPrefixes = func() do.BYOIPPrefixsService { return do.NewBYOIPPrefixService(godoClient) }
 			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
 			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
 			c.DropletAutoscale = func() do.DropletAutoscaleService { return do.NewDropletAutoscaleService(godoClient) }
 			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
+			c.VPCNATGateways = func() do.VPCNATGatewaysService { return do.NewVPCNATGatewaysService(godoClient) }
 			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
 			c.Balance = func() do.BalanceService { return do.NewBalanceService(godoClient) }
@@ -131,10 +139,11 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
 			}
 			c.OAuth = func() do.OAuthService { return do.NewOAuthService(godoClient) }
-			c.PartnerInterconnectAttachments = func() do.PartnerInterconnectAttachmentsService {
-				return do.NewPartnerInterconnectAttachmentsService(godoClient)
+			c.PartnerAttachments = func() do.PartnerAttachmentsService {
+				return do.NewPartnerAttachmentsService(godoClient)
 			}
-
+			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
+			c.GenAI = func() do.GenAIService { return do.NewGenAIService(godoClient) }
 			return nil
 		},
 
