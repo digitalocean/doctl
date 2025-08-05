@@ -101,6 +101,21 @@ func (mr *MockGenAIServiceMockRecorder) CreateAgent(req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgent", reflect.TypeOf((*MockGenAIService)(nil).CreateAgent), req)
 }
 
+// CreateAgentAPIKey mocks base method.
+func (m *MockGenAIService) CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*do.ApiKeyInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAgentAPIKey", agentID, req)
+	ret0, _ := ret[0].(*do.ApiKeyInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAgentAPIKey indicates an expected call of CreateAgentAPIKey.
+func (mr *MockGenAIServiceMockRecorder) CreateAgentAPIKey(agentID, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgentAPIKey", reflect.TypeOf((*MockGenAIService)(nil).CreateAgentAPIKey), agentID, req)
+}
+
 // CreateFunctionRoute mocks base method.
 func (m *MockGenAIService) CreateFunctionRoute(id string, req *godo.FunctionRouteCreateRequest) (*do.Agent, error) {
 	m.ctrl.T.Helper()
@@ -131,21 +146,6 @@ func (mr *MockGenAIServiceMockRecorder) CreateKnowledgeBase(req any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKnowledgeBase", reflect.TypeOf((*MockGenAIService)(nil).CreateKnowledgeBase), req)
 }
 
-// CreateAgentAPIKey mocks base method.
-func (m *MockGenAIService) CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*do.ApiKeyInfo, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAgentAPIKey", agentID, req)
-	ret0, _ := ret[0].(*do.ApiKeyInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateAgentAPIKey indicates an expected call of CreateAgentAPIKey.
-func (mr *MockGenAIServiceMockRecorder) CreateAgentAPIKey(agentID, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgentAPIKey", reflect.TypeOf((*MockGenAIService)(nil).CreateAgentAPIKey), agentID, req)
-}
-
 // DeleteAgent mocks base method.
 func (m *MockGenAIService) DeleteAgent(agentID string) error {
 	m.ctrl.T.Helper()
@@ -158,6 +158,20 @@ func (m *MockGenAIService) DeleteAgent(agentID string) error {
 func (mr *MockGenAIServiceMockRecorder) DeleteAgent(agentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAgent", reflect.TypeOf((*MockGenAIService)(nil).DeleteAgent), agentID)
+}
+
+// DeleteAgentAPIKey mocks base method.
+func (m *MockGenAIService) DeleteAgentAPIKey(agentID, apikeyID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAgentAPIKey", agentID, apikeyID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAgentAPIKey indicates an expected call of DeleteAgentAPIKey.
+func (mr *MockGenAIServiceMockRecorder) DeleteAgentAPIKey(agentID, apikeyID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAgentAPIKey", reflect.TypeOf((*MockGenAIService)(nil).DeleteAgentAPIKey), agentID, apikeyID)
 }
 
 // DeleteAgentRoute mocks base method.
@@ -230,20 +244,6 @@ func (m *MockGenAIService) DetachKnowledgeBaseToAgent(agentId, knowledgeBaseID s
 func (mr *MockGenAIServiceMockRecorder) DetachKnowledgeBaseToAgent(agentId, knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachKnowledgeBaseToAgent", reflect.TypeOf((*MockGenAIService)(nil).DetachKnowledgeBaseToAgent), agentId, knowledgeBaseID)
-}
-
-// DeleteAgentAPIKey mocks base method.
-func (m *MockGenAIService) DeleteAgentAPIKey(agentID, apikeyID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAgentAPIKey", agentID, apikeyID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteAgentAPIKey indicates an expected call of DeleteAgentAPIKey.
-func (mr *MockGenAIServiceMockRecorder) DeleteAgentAPIKey(agentID, apikeyID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAgentAPIKey", reflect.TypeOf((*MockGenAIService)(nil).DeleteAgentAPIKey), agentID, apikeyID)
 }
 
 // GetAgent mocks base method.
@@ -381,21 +381,6 @@ func (mr *MockGenAIServiceMockRecorder) UpdateAgent(agentID, req any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgent", reflect.TypeOf((*MockGenAIService)(nil).UpdateAgent), agentID, req)
 }
 
-// UpdateAgentRoute mocks base method.
-func (m *MockGenAIService) UpdateAgentRoute(parentAgentID, childAgentID string, req *godo.AgentRouteUpdateRequest) (*do.AgentRouteResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAgentRoute", parentAgentID, childAgentID, req)
-	ret0, _ := ret[0].(*do.AgentRouteResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateAgentRoute indicates an expected call of UpdateAgentRoute.
-func (mr *MockGenAIServiceMockRecorder) UpdateAgentRoute(parentAgentID, childAgentID, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentRoute", reflect.TypeOf((*MockGenAIService)(nil).UpdateAgentRoute), parentAgentID, childAgentID, req)
-}
-
 // UpdateAgentAPIKey mocks base method.
 func (m *MockGenAIService) UpdateAgentAPIKey(agentID, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*do.ApiKeyInfo, error) {
 	m.ctrl.T.Helper()
@@ -409,6 +394,21 @@ func (m *MockGenAIService) UpdateAgentAPIKey(agentID, apikeyID string, req *godo
 func (mr *MockGenAIServiceMockRecorder) UpdateAgentAPIKey(agentID, apikeyID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentAPIKey", reflect.TypeOf((*MockGenAIService)(nil).UpdateAgentAPIKey), agentID, apikeyID, req)
+}
+
+// UpdateAgentRoute mocks base method.
+func (m *MockGenAIService) UpdateAgentRoute(parentAgentID, childAgentID string, req *godo.AgentRouteUpdateRequest) (*do.AgentRouteResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAgentRoute", parentAgentID, childAgentID, req)
+	ret0, _ := ret[0].(*do.AgentRouteResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAgentRoute indicates an expected call of UpdateAgentRoute.
+func (mr *MockGenAIServiceMockRecorder) UpdateAgentRoute(parentAgentID, childAgentID, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentRoute", reflect.TypeOf((*MockGenAIService)(nil).UpdateAgentRoute), parentAgentID, childAgentID, req)
 }
 
 // UpdateAgentVisibility mocks base method.
