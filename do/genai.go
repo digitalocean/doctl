@@ -49,6 +49,13 @@ type AgentVersion struct {
 	*godo.AgentVersion
 }
 
+type OpenAiApiKey struct {
+	*godo.OpenAiApiKey
+}
+
+// OpenAiApiKeys is a slice of OpenAiApiKey.
+type OpenAiApiKeys []OpenAiApiKey
+
 // ApiKeys is a slice of ApiKey.
 type ApiKeys []ApiKeyInfo
 
@@ -109,6 +116,12 @@ type GenAIService interface {
 	UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error)
 	DeleteAgentAPIKey(agentID string, apikeyID string) error
 	RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error)
+	ListOpenAIAPIKeys() (OpenAiApiKeys, error)
+	CreateOpenAIAPIKey(openaiAPIKeyCreate *godo.OpenAIAPIKeyCreateRequest) (*OpenAiApiKey, error)
+	GetOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKey, error)
+	UpdateOpenAIAPIKey(openaiApiKeyId string, openaiAPIKeyUpdate *godo.OpenAIAPIKeyUpdateRequest) (*OpenAiApiKey, error)
+	DeleteOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKey, error)
+	ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (Agents, error)
 	ListDatacenterRegions(servesInference, servesBatch *bool) (DatacenterRegions, error)
 	ListAvailableModels() (Models, error)
 }
@@ -463,6 +476,102 @@ func (a *genAIService) ListAgentVersions(agentID string) (AgentVersions, error) 
 
 	return list, nil
 
+}
+
+func (a *genAIService) ListOpenAIAPIKeys() (OpenAiApiKeys, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GenAI.ListOpenAIAPIKeys(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]OpenAiApiKey, len(si))
+	for i := range si {
+		ok := si[i].(*godo.OpenAiApiKey)
+		list[i] = OpenAiApiKey{OpenAiApiKey: ok}
+	}
+
+	return list, nil
+}
+
+func (a *genAIService) CreateOpenAIAPIKey(openaiAPIKeyCreate *godo.OpenAIAPIKeyCreateRequest) (*OpenAiApiKey, error) {
+	openaiApiKey, _, err := a.client.GenAI.CreateOpenAIAPIKey(context.TODO(), openaiAPIKeyCreate)
+	if err != nil {
+		return nil, err
+	}
+	return &OpenAiApiKey{OpenAiApiKey: openaiApiKey}, nil
+}
+
+func (a *genAIService) GetOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKey, error) {
+	openaiApiKey, _, err := a.client.GenAI.GetOpenAIAPIKey(context.TODO(), openaiApiKeyId)
+	if err != nil {
+		return nil, err
+	}
+	return &OpenAiApiKey{OpenAiApiKey: openaiApiKey}, nil
+}
+
+func (a *genAIService) UpdateOpenAIAPIKey(openaiApiKeyId string, openaiAPIKeyUpdate *godo.OpenAIAPIKeyUpdateRequest) (*OpenAiApiKey, error) {
+	openaiApiKey, _, err := a.client.GenAI.UpdateOpenAIAPIKey(context.TODO(), openaiApiKeyId, openaiAPIKeyUpdate)
+	if err != nil {
+		return nil, err
+	}
+	return &OpenAiApiKey{OpenAiApiKey: openaiApiKey}, nil
+}
+
+func (a *genAIService) DeleteOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKey, error) {
+	openaiApiKey, _, err := a.client.GenAI.DeleteOpenAIAPIKey(context.TODO(), openaiApiKeyId)
+	if err != nil {
+		return nil, err
+	}
+	return &OpenAiApiKey{OpenAiApiKey: openaiApiKey}, nil
+}
+
+func (a *genAIService) ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (Agents, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		agents, resp, err := a.client.GenAI.ListAgentsByOpenAIAPIKey(context.TODO(), openaiApiKeyId, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		list := make([]any, len(agents))
+		for i := range agents {
+			list[i] = agents[i]
+		}
+		return list, resp, nil
+	}
+
+	// Checking if there are no API keys we don't need to paginate
+	opt := &godo.ListOptions{Page: 1, PerPage: perPage}
+	res, _, err := f(opt)
+	if err != nil {
+		return nil, err
+	}
+	if len(res) == 0 {
+		return Agents{}, nil
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]Agent, len(si))
+	for i := range si {
+		a := si[i].(*godo.Agent)
+		list[i] = Agent{Agent: a}
+	}
+
+	return list, nil
 }
 
 func (a *genAIService) ListDatacenterRegions(servesInference, servesBatch *bool) (DatacenterRegions, error) {

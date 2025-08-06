@@ -35,6 +35,8 @@ func GenAI() *Command {
 	cmd.AddCommand(ListModelsCmd())
 	// Add the region command as a subcommand to genai
 	cmd.AddCommand(ListRegionsCmd())
+	// Add the OpenAI keys command as a subcommand to genai
+	cmd.AddCommand(OpenAIKeyCmd())
 
 	return cmd
 }
