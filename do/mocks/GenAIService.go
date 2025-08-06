@@ -146,6 +146,21 @@ func (mr *MockGenAIServiceMockRecorder) CreateKnowledgeBase(req any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKnowledgeBase", reflect.TypeOf((*MockGenAIService)(nil).CreateKnowledgeBase), req)
 }
 
+// CreateOpenAIAPIKey mocks base method.
+func (m *MockGenAIService) CreateOpenAIAPIKey(openaiAPIKeyCreate *godo.OpenAIAPIKeyCreateRequest) (*do.OpenAiApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOpenAIAPIKey", openaiAPIKeyCreate)
+	ret0, _ := ret[0].(*do.OpenAiApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateOpenAIAPIKey indicates an expected call of CreateOpenAIAPIKey.
+func (mr *MockGenAIServiceMockRecorder) CreateOpenAIAPIKey(openaiAPIKeyCreate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOpenAIAPIKey", reflect.TypeOf((*MockGenAIService)(nil).CreateOpenAIAPIKey), openaiAPIKeyCreate)
+}
+
 // DeleteAgent mocks base method.
 func (m *MockGenAIService) DeleteAgent(agentID string) error {
 	m.ctrl.T.Helper()
@@ -231,6 +246,21 @@ func (mr *MockGenAIServiceMockRecorder) DeleteKnowledgeBaseDataSource(knowledgeB
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKnowledgeBaseDataSource", reflect.TypeOf((*MockGenAIService)(nil).DeleteKnowledgeBaseDataSource), knowledgeBaseID, dataSourceID)
 }
 
+// DeleteOpenAIAPIKey mocks base method.
+func (m *MockGenAIService) DeleteOpenAIAPIKey(openaiApiKeyId string) (*do.OpenAiApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOpenAIAPIKey", openaiApiKeyId)
+	ret0, _ := ret[0].(*do.OpenAiApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteOpenAIAPIKey indicates an expected call of DeleteOpenAIAPIKey.
+func (mr *MockGenAIServiceMockRecorder) DeleteOpenAIAPIKey(openaiApiKeyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOpenAIAPIKey", reflect.TypeOf((*MockGenAIService)(nil).DeleteOpenAIAPIKey), openaiApiKeyId)
+}
+
 // DetachKnowledgeBaseToAgent mocks base method.
 func (m *MockGenAIService) DetachKnowledgeBaseToAgent(agentId, knowledgeBaseID string) (*do.Agent, error) {
 	m.ctrl.T.Helper()
@@ -274,6 +304,21 @@ func (m *MockGenAIService) GetKnowledgeBase(knowledgeBaseID string) (*do.Knowled
 func (mr *MockGenAIServiceMockRecorder) GetKnowledgeBase(knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKnowledgeBase", reflect.TypeOf((*MockGenAIService)(nil).GetKnowledgeBase), knowledgeBaseID)
+}
+
+// GetOpenAIAPIKey mocks base method.
+func (m *MockGenAIService) GetOpenAIAPIKey(openaiApiKeyId string) (*do.OpenAiApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenAIAPIKey", openaiApiKeyId)
+	ret0, _ := ret[0].(*do.OpenAiApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOpenAIAPIKey indicates an expected call of GetOpenAIAPIKey.
+func (mr *MockGenAIServiceMockRecorder) GetOpenAIAPIKey(openaiApiKeyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenAIAPIKey", reflect.TypeOf((*MockGenAIService)(nil).GetOpenAIAPIKey), openaiApiKeyId)
 }
 
 // ListAgentAPIKeys mocks base method.
@@ -321,6 +366,21 @@ func (mr *MockGenAIServiceMockRecorder) ListAgents() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgents", reflect.TypeOf((*MockGenAIService)(nil).ListAgents))
 }
 
+// ListAgentsByOpenAIAPIKey mocks base method.
+func (m *MockGenAIService) ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (do.Agents, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAgentsByOpenAIAPIKey", openaiApiKeyId)
+	ret0, _ := ret[0].(do.Agents)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAgentsByOpenAIAPIKey indicates an expected call of ListAgentsByOpenAIAPIKey.
+func (mr *MockGenAIServiceMockRecorder) ListAgentsByOpenAIAPIKey(openaiApiKeyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgentsByOpenAIAPIKey", reflect.TypeOf((*MockGenAIService)(nil).ListAgentsByOpenAIAPIKey), openaiApiKeyId)
+}
+
 // ListKnowledgeBaseDataSources mocks base method.
 func (m *MockGenAIService) ListKnowledgeBaseDataSources(knowledgeBaseID string) (do.KnowledgeBaseDataSources, error) {
 	m.ctrl.T.Helper()
@@ -349,6 +409,21 @@ func (m *MockGenAIService) ListKnowledgeBases() (do.KnowledgeBases, error) {
 func (mr *MockGenAIServiceMockRecorder) ListKnowledgeBases() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKnowledgeBases", reflect.TypeOf((*MockGenAIService)(nil).ListKnowledgeBases))
+}
+
+// ListOpenAIAPIKeys mocks base method.
+func (m *MockGenAIService) ListOpenAIAPIKeys() (do.OpenAiApiKeys, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOpenAIAPIKeys")
+	ret0, _ := ret[0].(do.OpenAiApiKeys)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListOpenAIAPIKeys indicates an expected call of ListOpenAIAPIKeys.
+func (mr *MockGenAIServiceMockRecorder) ListOpenAIAPIKeys() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOpenAIAPIKeys", reflect.TypeOf((*MockGenAIService)(nil).ListOpenAIAPIKeys))
 }
 
 // RegenerateAgentAPIKey mocks base method.
@@ -454,4 +529,19 @@ func (m *MockGenAIService) UpdateKnowledgeBase(knowledgeBaseID string, req *godo
 func (mr *MockGenAIServiceMockRecorder) UpdateKnowledgeBase(knowledgeBaseID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateKnowledgeBase", reflect.TypeOf((*MockGenAIService)(nil).UpdateKnowledgeBase), knowledgeBaseID, req)
+}
+
+// UpdateOpenAIAPIKey mocks base method.
+func (m *MockGenAIService) UpdateOpenAIAPIKey(openaiApiKeyId string, openaiAPIKeyUpdate *godo.OpenAIAPIKeyUpdateRequest) (*do.OpenAiApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateOpenAIAPIKey", openaiApiKeyId, openaiAPIKeyUpdate)
+	ret0, _ := ret[0].(*do.OpenAiApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateOpenAIAPIKey indicates an expected call of UpdateOpenAIAPIKey.
+func (mr *MockGenAIServiceMockRecorder) UpdateOpenAIAPIKey(openaiApiKeyId, openaiAPIKeyUpdate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOpenAIAPIKey", reflect.TypeOf((*MockGenAIService)(nil).UpdateOpenAIAPIKey), openaiApiKeyId, openaiAPIKeyUpdate)
 }
