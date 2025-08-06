@@ -499,6 +499,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetUser(arg0, arg1 any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockDatabasesService)(nil).GetUser), arg0, arg1)
 }
 
+// GetValkeyConfiguration mocks base method.
+func (m *MockDatabasesService) GetValkeyConfiguration(databaseID string) (*do.ValkeyConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValkeyConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.ValkeyConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetValkeyConfiguration indicates an expected call of GetValkeyConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetValkeyConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValkeyConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetValkeyConfiguration), databaseID)
+}
+
 // InstallUpdate mocks base method.
 func (m *MockDatabasesService) InstallUpdate(arg0 string) error {
 	m.ctrl.T.Helper()
@@ -877,4 +892,18 @@ func (m *MockDatabasesService) UpdateTopic(arg0, arg1 string, arg2 *godo.Databas
 func (mr *MockDatabasesServiceMockRecorder) UpdateTopic(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTopic", reflect.TypeOf((*MockDatabasesService)(nil).UpdateTopic), arg0, arg1, arg2)
+}
+
+// UpdateValkeyConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateValkeyConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateValkeyConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateValkeyConfiguration indicates an expected call of UpdateValkeyConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateValkeyConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateValkeyConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateValkeyConfiguration), databaseID, confString)
 }

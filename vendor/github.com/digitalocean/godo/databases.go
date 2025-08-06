@@ -154,12 +154,14 @@ type DatabasesService interface {
 	UpdateFirewallRules(context.Context, string, *DatabaseUpdateFirewallRulesRequest) (*Response, error)
 	GetPostgreSQLConfig(context.Context, string) (*PostgreSQLConfig, *Response, error)
 	GetRedisConfig(context.Context, string) (*RedisConfig, *Response, error)
+	GetValkeyConfig(context.Context, string) (*ValkeyConfig, *Response, error)
 	GetMySQLConfig(context.Context, string) (*MySQLConfig, *Response, error)
 	GetMongoDBConfig(context.Context, string) (*MongoDBConfig, *Response, error)
 	GetOpensearchConfig(context.Context, string) (*OpensearchConfig, *Response, error)
 	GetKafkaConfig(context.Context, string) (*KafkaConfig, *Response, error)
 	UpdatePostgreSQLConfig(context.Context, string, *PostgreSQLConfig) (*Response, error)
 	UpdateRedisConfig(context.Context, string, *RedisConfig) (*Response, error)
+	UpdateValkeyConfig(context.Context, string, *ValkeyConfig) (*Response, error)
 	UpdateMySQLConfig(context.Context, string, *MySQLConfig) (*Response, error)
 	UpdateMongoDBConfig(context.Context, string, *MongoDBConfig) (*Response, error)
 	UpdateOpensearchConfig(context.Context, string, *OpensearchConfig) (*Response, error)
@@ -670,6 +672,23 @@ type RedisConfig struct {
 	RedisACLChannelsDefault            *string `json:"redis_acl_channels_default,omitempty"`
 }
 
+// ValkeyConfig holds advanced configurations for Valkey database clusters.
+type ValkeyConfig struct {
+	ValkeyMaxmemoryPolicy               *string `json:"valkey_maxmemory_policy,omitempty"`
+	ValkeyIOThreads                     *int    `json:"valkey_io_threads,omitempty"`
+	ValkeyLFULogFactor                  *int    `json:"valkey_lfu_log_factor,omitempty"`
+	ValkeyLFUDecayTime                  *int    `json:"valkey_lfu_decay_time,omitempty"`
+	ValkeySSL                           *bool   `json:"valkey_ssl,omitempty"`
+	ValkeyTimeout                       *int    `json:"valkey_timeout,omitempty"`
+	ValkeyNotifyKeyspaceEvents          *string `json:"valkey_notify_keyspace_events,omitempty"`
+	ValkeyPersistence                   *string `json:"valkey_persistence,omitempty"`
+	ValkeyACLChannelsDefault            *string `json:"valkey_acl_channels_default,omitempty"`
+	FrequentSnapshots                   *bool   `json:"frequent_snapshots,omitempty"`
+	ValkeyActiveExpireEffort            *int    `json:"valkey_active_expire_effort,omitempty"`
+	ValkeyPubSubClientOutputBufferLimit *int    `json:"valkey_pubsub_client_output_buffer_limit,omitempty"`
+	ValkeyNumberOfDatabases             *int    `json:"valkey_number_of_databases,omitempty"`
+}
+
 // MySQLConfig holds advanced configurations for MySQL database clusters.
 type MySQLConfig struct {
 	ConnectTimeout               *int     `json:"connect_timeout,omitempty"`
@@ -816,6 +835,10 @@ type databaseRedisConfigRoot struct {
 	Config *RedisConfig `json:"config"`
 }
 
+type databaseValkeyConfigRoot struct {
+	Config *ValkeyConfig `json:"config"`
+}
+
 type databaseMySQLConfigRoot struct {
 	Config *MySQLConfig `json:"config"`
 }
@@ -904,9 +927,9 @@ type DatabaseOptions struct {
 	MySQLOptions       DatabaseEngineOptions `json:"mysql"`
 	PostgresSQLOptions DatabaseEngineOptions `json:"pg"`
 	RedisOptions       DatabaseEngineOptions `json:"redis"`
+	ValkeyOptions      DatabaseEngineOptions `json:"valkey"`
 	KafkaOptions       DatabaseEngineOptions `json:"kafka"`
 	OpensearchOptions  DatabaseEngineOptions `json:"opensearch"`
-	ValkeyOptions      DatabaseEngineOptions `json:"valkey"`
 }
 
 // DatabaseEngineOptions represents the configuration options that are available for a given database engine
@@ -1612,6 +1635,38 @@ func (svc *DatabasesServiceOp) UpdateRedisConfig(ctx context.Context, databaseID
 	return resp, nil
 }
 
+// GetValkeyConfig updates the config for a Valkey database cluster.
+func (svc *DatabasesServiceOp) GetValkeyConfig(ctx context.Context, databaseID string) (*ValkeyConfig, *Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(databaseValkeyConfigRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Config, resp, nil
+}
+
+// UpdateValkeyConfig updates the config for a Valkey database cluster.
+func (svc *DatabasesServiceOp) UpdateValkeyConfig(ctx context.Context, databaseID string, config *ValkeyConfig) (*Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	root := &databaseValkeyConfigRoot{
+		Config: config,
+	}
+	req, err := svc.client.NewRequest(ctx, http.MethodPatch, path, root)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
 // GetMySQLConfig retrieves the config for a MySQL database cluster.
 func (svc *DatabasesServiceOp) GetMySQLConfig(ctx context.Context, databaseID string) (*MySQLConfig, *Response, error) {
 	path := fmt.Sprintf(databaseConfigPath, databaseID)
@@ -2013,7 +2068,7 @@ func (svc *DatabasesServiceOp) DeleteLogsink(ctx context.Context, databaseID, lo
 }
 
 // StartOnlineMigration starts an online migration for a database. Migrating a cluster establishes a connection with an existing cluster
-// and replicates its contents to the target cluster. Online migration is only available for MySQL, PostgreSQL, and Redis clusters.
+// and replicates its contents to the target cluster. Online migration is only available for MySQL, PostgreSQL, Redis and Valkey clusters.
 func (svc *DatabasesServiceOp) StartOnlineMigration(ctx context.Context, databaseID string, onlineMigration *DatabaseStartOnlineMigrationRequest) (*DatabaseOnlineMigrationStatus, *Response, error) {
 	path := fmt.Sprintf(databaseOnlineMigrationsPath, databaseID)
 	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, onlineMigration)

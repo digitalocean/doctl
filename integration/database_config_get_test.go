@@ -60,6 +60,18 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 				}
 
 				w.Write([]byte(databaseConfigRedisGetResponse))
+			case "/v2/databases/valkey-database-id/config":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusTeapot)
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(databaseConfigValKeyGetResponse))
 			case "/v2/databases/mongodb-database-id/config":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -158,6 +170,24 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(databaseConfigRedisGetOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("all required flags are passed", func() {
+		it("gets the valkey database config", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"database",
+				"configuration",
+				"get",
+				"--engine", "valkey",
+				"valkey-database-id",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(databaseConfigValKeyGetOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
@@ -314,6 +344,37 @@ RedisACLChannelsDefault      allchannels
         "redis_notify_keyspace_events": "",
         "redis_persistence": "rdb",
         "redis_acl_channels_default": "allchannels"
+    }
+}`
+
+	databaseConfigValKeyGetOutput = `
+key                           value
+ValkeyMaxmemoryPolicy         noeviction
+ValkeyIOThreads               1
+ValkeyLFULogFactor            10
+ValkeyLFUDecayTime            1
+ValkeySSL                     true
+ValkeyTimeout                 600
+ValkeyNotifyKeyspaceEvents    KA
+ValkeyPersistence             rdb
+ValkeyACLChannelsDefault      allchannels
+FrequentSnapshots             true
+ValkeyActiveExpireEffort      1
+`
+
+	databaseConfigValKeyGetResponse = `{
+    "config": {
+        "valkey_maxmemory_policy": "noeviction",
+        "valkey_io_threads": 1,
+        "valkey_lfu_log_factor": 10,
+        "valkey_lfu_decay_time": 1,
+        "valkey_ssl": true,
+        "valkey_timeout": 600,
+        "valkey_notify_keyspace_events": "KA",
+        "valkey_persistence": "rdb",
+        "valkey_acl_channels_default": "allchannels",
+        "frequent_snapshots": true,
+        "valkey_active_expire_effort": 1
     }
 }`
 
