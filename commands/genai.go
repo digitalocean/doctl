@@ -31,6 +31,8 @@ func GenAI() *Command {
 	cmd.AddCommand(AgentCmd())
 	// Add the knowledgebase command as a subcommand to genai
 	cmd.AddCommand(KnowledgeBaseCmd())
+	// Add the OpenAI keys command as a subcommand to genai
+	cmd.AddCommand(OpenAIKeyCmd())
 
 	return cmd
 }

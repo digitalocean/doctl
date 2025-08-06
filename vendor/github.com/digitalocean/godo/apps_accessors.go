@@ -2533,6 +2533,22 @@ func (a *AppWorkerSpecTermination) GetGracePeriodSeconds() int32 {
 	return a.GracePeriodSeconds
 }
 
+// GetFrom returns the From field.
+func (a *AutoscalerActionScaleChange) GetFrom() int64 {
+	if a == nil {
+		return 0
+	}
+	return a.From
+}
+
+// GetTo returns the To field.
+func (a *AutoscalerActionScaleChange) GetTo() int64 {
+	if a == nil {
+		return 0
+	}
+	return a.To
+}
+
 // GetBranch returns the Branch field.
 func (b *BitbucketSourceSpec) GetBranch() string {
 	if b == nil {
@@ -2819,6 +2835,14 @@ func (d *DeploymentCauseDetailsAutoscalerAction) GetAutoscaled() bool {
 		return false
 	}
 	return d.Autoscaled
+}
+
+// GetScaledComponents returns the ScaledComponents map if it's non-nil, an empty map otherwise.
+func (d *DeploymentCauseDetailsAutoscalerAction) GetScaledComponents() map[string]AutoscalerActionScaleChange {
+	if d == nil || d.ScaledComponents == nil {
+		return map[string]AutoscalerActionScaleChange{}
+	}
+	return d.ScaledComponents
 }
 
 // GetEmail returns the Email field.

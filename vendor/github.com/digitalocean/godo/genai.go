@@ -11,6 +11,7 @@ import (
 const (
 	genAIBasePath                = "/v2/gen-ai/agents"
 	agentModelBasePath           = "/v2/gen-ai/models"
+	datacenterRegionsPath        = "/v2/gen-ai/regions"
 	agentRouteBasePath           = genAIBasePath + "/%s/child_agents/%s"
 	KnowledgeBasePath            = "/v2/gen-ai/knowledge_bases"
 	functionRouteBasePath        = genAIBasePath + "/%s/functions"
@@ -42,7 +43,6 @@ type GenAIService interface {
 	UpdateAgent(context.Context, string, *AgentUpdateRequest) (*Agent, *Response, error)
 	DeleteAgent(context.Context, string) (*Agent, *Response, error)
 	UpdateAgentVisibility(context.Context, string, *AgentVisibilityUpdateRequest) (*Agent, *Response, error)
-	ListModels(context.Context, *ListOptions) ([]*Model, *Response, error)
 	ListKnowledgeBases(ctx context.Context, opt *ListOptions) ([]KnowledgeBase, *Response, error)
 	CreateKnowledgeBase(ctx context.Context, knowledgeBaseCreate *KnowledgeBaseCreateRequest) (*KnowledgeBase, *Response, error)
 	ListKnowledgeBaseDataSources(ctx context.Context, knowledgeBaseID string, opt *ListOptions) ([]KnowledgeBaseDataSource, *Response, error)
@@ -73,6 +73,8 @@ type GenAIService interface {
 	CreateFunctionRoute(context.Context, string, *FunctionRouteCreateRequest) (*Agent, *Response, error)
 	DeleteFunctionRoute(context.Context, string, string) (*Agent, *Response, error)
 	UpdateFunctionRoute(context.Context, string, string, *FunctionRouteUpdateRequest) (*Agent, *Response, error)
+	ListAvailableModels(context.Context, *ListOptions) ([]*Model, *Response, error)
+	ListDatacenterRegions(context.Context, *bool, *bool) ([]*DatacenterRegions, *Response, error)
 }
 
 var _ GenAIService = &GenAIServiceOp{}
@@ -635,6 +637,18 @@ type FunctionRouteUpdateRequest struct {
 	OutputSchema  json.RawMessage     `json:"output_schema,omitempty"`
 }
 
+type DatacenterRegions struct {
+	Region             string `json:"region"`
+	InferenceUrl       string `json:"inference_url"`
+	ServesBatch        bool   `json:"serves_batch"`
+	ServesInference    bool   `json:"serves_inference"`
+	StreamInferenceUrl string `json:"stream_inference_url"`
+}
+
+type datacenterRegionsRoot struct {
+	DatacenterRegions []*DatacenterRegions `json:"regions"`
+}
+
 type genAIAgentKBRoot struct {
 	Agent *Agent `json:"agent"`
 }
@@ -865,29 +879,6 @@ func (s *GenAIServiceOp) UpdateAgentVisibility(ctx context.Context, id string, u
 	}
 
 	return root.Agent, resp, nil
-}
-
-// ListModels function returns a list of Gen AI Models
-func (s *GenAIServiceOp) ListModels(ctx context.Context, opt *ListOptions) ([]*Model, *Response, error) {
-	path, err := addOptions(agentModelBasePath, opt)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	root := new(genAIModelsRoot)
-	resp, err := s.client.Do(ctx, req, root)
-	if err != nil {
-		return nil, resp, err
-	}
-	if l := root.Links; l != nil {
-		resp.Links = l
-	}
-
-	return root.Models, resp, nil
 }
 
 // List all knowledge bases
@@ -1537,6 +1528,57 @@ func (g *GenAIServiceOp) UpdateFunctionRoute(ctx context.Context, agent_id strin
 	}
 
 	return root.Agent, resp, nil
+}
+
+// ListAvailableModels returns a list of available Gen AI models
+func (g *GenAIServiceOp) ListAvailableModels(ctx context.Context, opt *ListOptions) ([]*Model, *Response, error) {
+	path, err := addOptions(agentModelBasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := g.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(genAIModelsRoot)
+	resp, err := g.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.Models, resp, nil
+}
+
+// ListDatacenterRegions returns a list of available datacenter regions for Gen AI services
+func (g *GenAIServiceOp) ListDatacenterRegions(ctx context.Context, servesInference, servesBatch *bool) ([]*DatacenterRegions, *Response, error) {
+	path := datacenterRegionsPath
+
+	var params []string
+	if servesInference != nil {
+		params = append(params, fmt.Sprintf("serves_inference=%t", *servesInference))
+	}
+	if servesBatch != nil {
+		params = append(params, fmt.Sprintf("serves_batch=%t", *servesBatch))
+	}
+	if len(params) > 0 {
+		path = path + "?" + strings.Join(params, "&")
+	}
+
+	req, err := g.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(datacenterRegionsRoot)
+	resp, err := g.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.DatacenterRegions, resp, nil
 }
 
 func (a Agent) String() string {
