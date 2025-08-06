@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.161.0] - 2025-07-28
+
+- #883 - @ElanHasson - Add GitHub Actions workflow to generate CHANGELOG.md and update godo version
+- #879 - @ElanHasson - APPS - Add Autoscale succeeded alert support
+- #880 - @DO-rrao - [APICLI-2889] removed SET partner routes for partner attachment
+
+## [v1.160.0] - 2025-07-24
+
+- #877 - @m3co-code - impl new doks cluster options
+
 ## [v1.159.0] - 2025-07-17
 
 - #871 - @ShivaniKumar1 - Add VPC Integration
