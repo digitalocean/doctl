@@ -144,6 +144,13 @@ To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer
 	AddStringFlag(cmdAuthList, doctl.ArgFormat, "", "", "Columns for output in a comma-separated list. Possible values: `text`")
 	cmdAuthList.Example = `The following example lists the available contexts with the ` + "`" + `--format` + "`" + ` flag: doctl auth list`
 
+	cmdAuthToken := cmdBuilderWithInit(cmd, RunAuthToken, "token", "Display current authentication context API token", `Display the current authentication context's token that you created with `+"`"+`doctl auth init`+"`"+`.
+
+To switch between the contexts use `+"`"+`doctl auth switch --context <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts from: `+"`"+`doctl auth list`+"`"+`
+
+To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false, aliasOpt("t"))
+	cmdAuthToken.Example = `The following example displays the token of the current context: doctl auth token`
+
 	return cmd
 }
 
@@ -225,6 +232,13 @@ func RunAuthList(c *CmdConfig) error {
 		displayAuthContexts(c.Out, context, contexts)
 	}
 
+	return nil
+}
+
+// RunAuthToken displays the current context token from the user's doctl config.
+func RunAuthToken(c *CmdConfig) error {
+	accessToken := c.getContextAccessToken()
+	fmt.Println(accessToken)
 	return nil
 }
 
