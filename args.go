@@ -803,4 +803,10 @@ const (
 
 	// ArgAPIKeyForce forces API Key deletion without confirmation.
 	ArgAPIKeyForce = "force"
+
+	// ArgOpenAIKeyName is the name of the OpenAI API Key
+	ArgOpenAIKeyName = "name"
+
+	// ArgOpenAIKeyAPIKey is the API key for the OpenAI API Key
+	ArgOpenAIKeyAPIKey = "api-key"
 )

@@ -120,6 +120,11 @@ type RedisConfig struct {
 	*godo.RedisConfig
 }
 
+// ValkeyConfig is a wrapper for godo.ValkeyConfig
+type ValkeyConfig struct {
+	*godo.ValkeyConfig
+}
+
 // MongoDBConfig is a wrapper for godo.MongoDBConfig
 type MongoDBConfig struct {
 	*godo.MongoDBConfig
@@ -215,6 +220,7 @@ type DatabasesService interface {
 	GetMySQLConfiguration(databaseID string) (*MySQLConfig, error)
 	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
+	GetValkeyConfiguration(databaseID string) (*ValkeyConfig, error)
 	GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error)
 	GetKafkaConfiguration(databaseID string) (*KafkaConfig, error)
 	GetOpensearchConfiguration(databaseID string) (*OpensearchConfig, error)
@@ -222,6 +228,7 @@ type DatabasesService interface {
 	UpdateMySQLConfiguration(databaseID string, confString string) error
 	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
 	UpdateRedisConfiguration(databaseID string, confString string) error
+	UpdateValkeyConfiguration(databaseID string, confString string) error
 	UpdateMongoDBConfiguration(databaseID string, confString string) error
 	UpdateKafkaConfiguration(databaseID string, confString string) error
 	UpdateOpensearchConfiguration(databaseID string, confString string) error
@@ -716,6 +723,17 @@ func (ds *databasesService) GetRedisConfiguration(databaseID string) (*RedisConf
 	}, nil
 }
 
+func (ds *databasesService) GetValkeyConfiguration(databaseID string) (*ValkeyConfig, error) {
+	cfg, _, err := ds.client.Databases.GetValkeyConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ValkeyConfig{
+		ValkeyConfig: cfg,
+	}, nil
+}
+
 func (ds *databasesService) GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error) {
 	cfg, _, err := ds.client.Databases.GetMongoDBConfig(context.TODO(), databaseID)
 	if err != nil {
@@ -787,6 +805,21 @@ func (ds *databasesService) UpdateRedisConfiguration(databaseID string, confStri
 	}
 
 	_, err = ds.client.Databases.UpdateRedisConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateValkeyConfiguration(databaseID string, confString string) error {
+	var conf godo.ValkeyConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateValkeyConfig(context.TODO(), databaseID, &conf)
 	if err != nil {
 		return err
 	}
