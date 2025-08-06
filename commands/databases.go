@@ -47,7 +47,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, PostgreSQL, MongoDB, Kafka and Opensearch database services.",
+			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, Valkey, PostgreSQL, MongoDB, Kafka and Opensearch database services.",
 			GroupID: manageResourcesGroup,
 		},
 	}
@@ -56,7 +56,7 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine. Possible values: ` + "`redis`, `pg`, `mysql` , `mongodb`, `kafka`, `opensearch`" + `
+- The database engine. Possible values: ` + "`redis`, `valkey`, `pg`, `mysql` , `mongodb`, `kafka`, `opensearch`" + `
 - The engine version, such as ` + "`14`" + ` for PostgreSQL version 14
 - The number of nodes in the database cluster
 - The region the database cluster resides in, such as ` + "`sfo2`, " + "`nyc1`" + `
@@ -85,7 +85,7 @@ You can customize the configuration using the listed flags, all of which are opt
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The data center region where the database cluster resides, such as `nyc1` or `sfo2`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `redis`, `mongodb`, `kafka` and `opensearch`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `redis`, `valkey`, `mongodb`, `kafka` and `opensearch`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine's version, such as 14 for PostgreSQL version 14.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in. The command uses the region's default VPC if excluded.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster to restore from.")
@@ -656,7 +656,7 @@ To install an update outside of a maintenance window, use the ` + "`" + `doctl d
 
 To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseMaintenanceWindow{}))
-	cmdMaintenanceGet.Example = `The following example retrieves the maintenance window for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+	cmdMaintenanceGet.Example = `The following example retrieves the maintenance window for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window get ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
 
 	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseMaintenanceUpdate,
 		"update <database-cluster-id>", "Update the maintenance window for a database cluster", `Updates the maintenance window for the specified database cluster.
@@ -1016,19 +1016,19 @@ func databaseOptions() *Command {
 	cmdRegionOptions := CmdBuilder(cmd, RunDatabaseRegionOptions, "regions", "Retrieves a list of the available regions for a given database engine", `Lists the available regions for a given database engine. Some engines may not be available in certain regions.`,
 		Writer, aliasOpt("r"))
 	AddStringFlag(cmdRegionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`, `+"`"+`opensearch`+"`"+`,  `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`, `+"`"+`opensearch`+"`"+`,  `+"`"+`mongodb`+"`"+``)
 	cmdRegionOptions.Example = `The following example retrieves a list of the available regions for the PostgreSQL engine: doctl databases options regions --engine pg`
 
 	cmdVersionOptions := CmdBuilder(cmd, RunDatabaseVersionOptions, "versions", "Retrieves a list of the available versions for a given database engine", `Lists the available versions for a given database engine.`,
 		Writer, aliasOpt("v"))
 	AddStringFlag(cmdVersionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``)
 	cmdVersionOptions.Example = `The following example retrieves a list of the available versions for the PostgreSQL engine: doctl databases options versions --engine pg`
 
 	cmdSlugOptions := CmdBuilder(cmd, RunDatabaseSlugOptions, "slugs", "Retrieves a list of the available slugs for a given database engine", `Lists the available slugs for a given database engine.`,
 		Writer, aliasOpt("s"))
 	AddStringFlag(cmdSlugOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``, requiredOpt())
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``, requiredOpt())
 	cmdSlugOptions.Example = `The following example retrieves a list of the available slugs for the PostgreSQL engine: doctl databases options slugs --engine pg`
 
 	return cmd
@@ -2507,6 +2507,7 @@ For a full list of available fields, see the API documentation: https://docs.dig
 		displayerType(&displayers.MySQLConfiguration{}),
 		displayerType(&displayers.PostgreSQLConfiguration{}),
 		displayerType(&displayers.RedisConfiguration{}),
+		displayerType(&displayers.ValkeyConfiguration{}),
 		displayerType(&displayers.MongoDBConfiguration{}),
 		displayerType(&displayers.KafkaConfiguration{}),
 		displayerType(&displayers.OpensearchConfiguration{}),
@@ -2568,12 +2569,13 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 		"mysql":      nil,
 		"pg":         nil,
 		"redis":      nil,
+		"valkey":     nil,
 		"mongodb":    nil,
 		"kafka":      nil,
 		"opensearch": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka', opensearch", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', opensearch", c.NS)
 	}
 
 	dbId := args[0]
@@ -2607,6 +2609,16 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 			RedisConfig: *config,
 		}
 		return c.Display(&displayer)
+	} else if engine == "valkey" {
+		config, err := c.Databases().GetValkeyConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayers := displayers.ValkeyConfiguration{
+			ValkeyConfig: *config,
+		}
+		return c.Display(&displayers)
 	} else if engine == "mongodb" {
 		config, err := c.Databases().GetMongoDBConfiguration(dbId)
 		if err != nil {
@@ -2660,12 +2672,13 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		"mysql":      nil,
 		"pg":         nil,
 		"redis":      nil,
+		"valkey":     nil,
 		"mongodb":    nil,
 		"kafka":      nil,
 		"opensearch": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka', 'opensearch'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', 'opensearch'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2686,6 +2699,11 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		}
 	} else if engine == "redis" {
 		err := c.Databases().UpdateRedisConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "valkey" {
+		err := c.Databases().UpdateValkeyConfiguration(dbId, configJson)
 		if err != nil {
 			return err
 		}
