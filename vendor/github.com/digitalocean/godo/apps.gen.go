@@ -124,7 +124,7 @@ const (
 	AppAlertSpecOperator_LessThan            AppAlertSpecOperator = "LESS_THAN"
 )
 
-// AppAlertSpecRule  - CPU_UTILIZATION: Represents CPU for a given container instance. Only applicable at the component level.  - MEM_UTILIZATION: Represents RAM for a given container instance. Only applicable at the component level.  - RESTART_COUNT: Represents restart count for a given container instance. Only applicable at the component level.  - DEPLOYMENT_FAILED: Represents whether a deployment has failed. Only applicable at the app level.  - DEPLOYMENT_LIVE: Represents whether a deployment has succeeded. Only applicable at the app level.  - DEPLOYMENT_STARTED: Represents whether a deployment has started. Only applicable at the app level.  - DEPLOYMENT_CANCELED: Represents whether a deployment has been canceled. Only applicable at the app level.  - DOMAIN_FAILED: Represents whether a domain configuration has failed. Only applicable at the app level.  - DOMAIN_LIVE: Represents whether a domain configuration has succeeded. Only applicable at the app level.  - AUTOSCALE_FAILED: Represents whether autoscaling has failed. Only applicable at the app level.  - FUNCTIONS_ACTIVATION_COUNT: Represents an activation count for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_DURATION_MS: Represents the average duration for function runtimes. Only applicable to functions components.  - FUNCTIONS_ERROR_RATE_PER_MINUTE: Represents an error rate per minute for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_WAIT_TIME_MS: Represents the average wait time for functions. Only applicable to functions components.  - FUNCTIONS_ERROR_COUNT: Represents an error count for a given functions instance. Only applicable to functions components.  - FUNCTIONS_GB_RATE_PER_SECOND: Represents the rate of memory consumption (GB x seconds) for functions. Only applicable to functions components.
+// AppAlertSpecRule  - CPU_UTILIZATION: Represents CPU for a given container instance. Only applicable at the component level.  - MEM_UTILIZATION: Represents RAM for a given container instance. Only applicable at the component level.  - RESTART_COUNT: Represents restart count for a given container instance. Only applicable at the component level.  - DEPLOYMENT_FAILED: Represents whether a deployment has failed. Only applicable at the app level.  - DEPLOYMENT_LIVE: Represents whether a deployment has succeeded. Only applicable at the app level.  - DEPLOYMENT_STARTED: Represents whether a deployment has started. Only applicable at the app level.  - DEPLOYMENT_CANCELED: Represents whether a deployment has been canceled. Only applicable at the app level.  - DOMAIN_FAILED: Represents whether a domain configuration has failed. Only applicable at the app level.  - DOMAIN_LIVE: Represents whether a domain configuration has succeeded. Only applicable at the app level.  - AUTOSCALE_FAILED: Represents whether autoscaling has failed. Only applicable at the app level.  - AUTOSCALE_SUCCEEDED: Represents whether autoscaling has succeeded. Only applicable at the app level. - FUNCTIONS_ACTIVATION_COUNT: Represents an activation count for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_DURATION_MS: Represents the average duration for function runtimes. Only applicable to functions components.  - FUNCTIONS_ERROR_RATE_PER_MINUTE: Represents an error rate per minute for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_WAIT_TIME_MS: Represents the average wait time for functions. Only applicable to functions components.  - FUNCTIONS_ERROR_COUNT: Represents an error count for a given functions instance. Only applicable to functions components.  - FUNCTIONS_GB_RATE_PER_SECOND: Represents the rate of memory consumption (GB x seconds) for functions. Only applicable to functions components.
 type AppAlertSpecRule string
 
 // List of AppAlertSpecRule
@@ -140,6 +140,7 @@ const (
 	AppAlertSpecRule_DomainFailed                AppAlertSpecRule = "DOMAIN_FAILED"
 	AppAlertSpecRule_DomainLive                  AppAlertSpecRule = "DOMAIN_LIVE"
 	AppAlertSpecRule_AutoscaleFailed             AppAlertSpecRule = "AUTOSCALE_FAILED"
+	AppAlertSpecRule_AutoscaleSucceeded          AppAlertSpecRule = "AUTOSCALE_SUCCEEDED"
 	AppAlertSpecRule_FunctionsActivationCount    AppAlertSpecRule = "FUNCTIONS_ACTIVATION_COUNT"
 	AppAlertSpecRule_FunctionsAverageDurationMS  AppAlertSpecRule = "FUNCTIONS_AVERAGE_DURATION_MS"
 	AppAlertSpecRule_FunctionsErrorRatePerMinute AppAlertSpecRule = "FUNCTIONS_ERROR_RATE_PER_MINUTE"
@@ -613,7 +614,6 @@ type AppSpec struct {
 	Egress      *AppEgressSpec      `json:"egress,omitempty"`
 	Features    []string            `json:"features,omitempty"`
 	Maintenance *AppMaintenanceSpec `json:"maintenance,omitempty"`
-  // Specification for VPC.
 	Vpc         *AppVpcSpec         `json:"vpc,omitempty"`
 	// Specification to disable edge (CDN) cache for all domains of the app. Note that this feature is in private preview.
 	DisableEdgeCache bool `json:"disable_edge_cache,omitempty"`
@@ -722,6 +722,12 @@ type AppWorkerSpecTermination struct {
 	GracePeriodSeconds int32 `json:"grace_period_seconds,omitempty"`
 }
 
+// AutoscalerActionScaleChange struct for AutoscalerActionScaleChange
+type AutoscalerActionScaleChange struct {
+	From int64 `json:"from,omitempty"`
+	To   int64 `json:"to,omitempty"`
+}
+
 // BitbucketSourceSpec struct for BitbucketSourceSpec
 type BitbucketSourceSpec struct {
 	Repo         string `json:"repo,omitempty"`
@@ -749,7 +755,8 @@ type Buildpack struct {
 
 // DeploymentCauseDetailsAutoscalerAction struct for DeploymentCauseDetailsAutoscalerAction
 type DeploymentCauseDetailsAutoscalerAction struct {
-	Autoscaled bool `json:"autoscaled,omitempty"`
+	Autoscaled       bool                                   `json:"autoscaled,omitempty"`
+	ScaledComponents map[string]AutoscalerActionScaleChange `json:"scaled_components,omitempty"`
 }
 
 // DeploymentCauseDetailsDigitalOceanUser struct for DeploymentCauseDetailsDigitalOceanUser
