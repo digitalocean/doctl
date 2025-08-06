@@ -109,7 +109,7 @@ type GenAIService interface {
 	UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error)
 	DeleteAgentAPIKey(agentID string, apikeyID string) error
 	RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error)
-	ListDatacenterRegions() (DatacenterRegions, error)
+	ListDatacenterRegions(servesInference, servesBatch *bool) (DatacenterRegions, error)
 	ListAvailableModels() (Models, error)
 }
 
@@ -465,9 +465,9 @@ func (a *genAIService) ListAgentVersions(agentID string) (AgentVersions, error) 
 
 }
 
-func (a *genAIService) ListDatacenterRegions() (DatacenterRegions, error) {
+func (a *genAIService) ListDatacenterRegions(servesInference, servesBatch *bool) (DatacenterRegions, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := a.client.GenAI.ListDatacenterRegions(context.TODO())
+		list, resp, err := a.client.GenAI.ListDatacenterRegions(context.TODO(), servesInference, servesBatch)
 		if err != nil {
 			return nil, nil, err
 		}

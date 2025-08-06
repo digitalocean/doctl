@@ -18,6 +18,7 @@ import (
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,7 +71,9 @@ func TestListRegionsCommand(t *testing.T) {
 
 func TestRunGenAIListRegions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.genAI.EXPECT().ListDatacenterRegions().Return(testDatacenterRegions, nil)
+		tm.genAI.EXPECT().ListDatacenterRegions(nil, nil).Return(testDatacenterRegions, nil)
+
+		config.Command = &cobra.Command{}
 
 		err := RunGenAIListRegions(config)
 		assert.NoError(t, err)
@@ -79,7 +82,9 @@ func TestRunGenAIListRegions(t *testing.T) {
 
 func TestRunGenAIListRegionsError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.genAI.EXPECT().ListDatacenterRegions().Return(nil, assert.AnError)
+		tm.genAI.EXPECT().ListDatacenterRegions(nil, nil).Return(nil, assert.AnError)
+
+		config.Command = &cobra.Command{}
 
 		err := RunGenAIListRegions(config)
 		assert.Error(t, err)

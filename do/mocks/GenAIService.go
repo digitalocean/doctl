@@ -337,18 +337,18 @@ func (mr *MockGenAIServiceMockRecorder) ListAvailableModels() *gomock.Call {
 }
 
 // ListDatacenterRegions mocks base method.
-func (m *MockGenAIService) ListDatacenterRegions() (do.DatacenterRegions, error) {
+func (m *MockGenAIService) ListDatacenterRegions(servesInference, servesBatch *bool) (do.DatacenterRegions, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDatacenterRegions")
+	ret := m.ctrl.Call(m, "ListDatacenterRegions", servesInference, servesBatch)
 	ret0, _ := ret[0].(do.DatacenterRegions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListDatacenterRegions indicates an expected call of ListDatacenterRegions.
-func (mr *MockGenAIServiceMockRecorder) ListDatacenterRegions() *gomock.Call {
+func (mr *MockGenAIServiceMockRecorder) ListDatacenterRegions(servesInference, servesBatch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatacenterRegions", reflect.TypeOf((*MockGenAIService)(nil).ListDatacenterRegions))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatacenterRegions", reflect.TypeOf((*MockGenAIService)(nil).ListDatacenterRegions), servesInference, servesBatch)
 }
 
 // ListKnowledgeBaseDataSources mocks base method.

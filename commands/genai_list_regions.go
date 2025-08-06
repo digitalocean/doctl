@@ -16,11 +16,26 @@ The command returns the following details for each region:
 
 	cmd.Example = `doctl genai list-regions`
 
+	cmd.Flags().Bool("serves-inference", false, "Filter regions that serve inference")
+	cmd.Flags().Bool("serves-batch", false, "Filter regions that serve batch jobs")
+
 	return cmd
 }
 
 func RunGenAIListRegions(c *CmdConfig) error {
-	DatacenterRegions, err := c.GenAI().ListDatacenterRegions()
+	var servesInferencePtr, servesBatchPtr *bool
+
+	// Only set pointer if user passed the flag
+	if c.Command.Flags().Changed("serves-inference") {
+		val, _ := c.Command.Flags().GetBool("serves-inference")
+		servesInferencePtr = &val
+	}
+	if c.Command.Flags().Changed("serves-batch") {
+		val, _ := c.Command.Flags().GetBool("serves-batch")
+		servesBatchPtr = &val
+	}
+
+	DatacenterRegions, err := c.GenAI().ListDatacenterRegions(servesInferencePtr, servesBatchPtr)
 	if err != nil {
 		return err
 	}
