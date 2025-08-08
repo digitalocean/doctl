@@ -259,7 +259,7 @@ type serverlessService struct {
 
 const (
 	// Minimum required version of the functions deployer plugin code.
-	minServerlessVersion = "5.0.22"
+	minServerlessVersion = "5.0.21"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v18.17.1"
