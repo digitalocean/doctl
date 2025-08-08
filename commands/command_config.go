@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/digitalocean/doctl"
@@ -27,10 +28,11 @@ import (
 
 // CmdConfig is a command configuration.
 type CmdConfig struct {
-	NS   string
-	Doit doctl.Config
-	Out  io.Writer
-	Args []string
+	NS      string
+	Doit    doctl.Config
+	Out     io.Writer
+	Args    []string
+	Command *cobra.Command
 
 	initServices            func(*CmdConfig) error
 	getContextAccessToken   func() string
