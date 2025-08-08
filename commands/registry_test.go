@@ -1085,3 +1085,207 @@ func TestGetAvailableRegions(t *testing.T) {
 		})
 	})
 }
+
+func TestRegistriesCreate(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			rcr := godo.RegistryCreateRequest{
+				Name:   testRegistryName,
+				Region: testRegistryRegion,
+			}
+			tm.registries.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgRegionSlug, testRegistryRegion)
+
+			config.Registries = func() do.RegistriesService {
+				return tm.registries
+			}
+
+			err := RunRegistriesCreate(config)
+			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("region omitted", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			rcr := godo.RegistryCreateRequest{
+				Name: testRegistryName,
+			}
+			tm.registries.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+			config.Args = append(config.Args, testRegistryName)
+
+			config.Registries = func() do.RegistriesService {
+				return tm.registries
+			}
+
+			err := RunRegistriesCreate(config)
+			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("error", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			rcr := godo.RegistryCreateRequest{
+				Name:   testRegistryName,
+				Region: testRegistryRegion,
+			}
+			tm.registries.EXPECT().Create(&rcr).Return(nil, errTest)
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgRegionSlug, testRegistryRegion)
+
+			config.Registries = func() do.RegistriesService {
+				return tm.registries
+			}
+
+			err := RunRegistriesCreate(config)
+			assert.Error(t, err)
+			assert.Equal(t, errTest, err)
+		})
+	})
+}
+
+func TestRegistriesGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registries.EXPECT().Get(testRegistryName).Return(&testRegistry, nil)
+
+		config.Args = append(config.Args, testRegistryName)
+		config.Registries = func() do.RegistriesService {
+			return tm.registries
+		}
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		err := RunRegistriesGet(config)
+		assert.NoError(t, err)
+		output := buf.String()
+		assert.Contains(t, output, testRegistry.Name)
+	})
+}
+
+func TestRegistriesDelete(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registries.EXPECT().Delete(testRegistryName).Return(nil)
+
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+			config.Registries = func() do.RegistriesService {
+				return tm.registries
+			}
+
+			err := RunRegistriesDelete(config)
+			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("error", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registries.EXPECT().Delete(testRegistryName).Return(errTest)
+
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+			config.Registries = func() do.RegistriesService {
+				return tm.registries
+			}
+
+			err := RunRegistriesDelete(config)
+			assert.Error(t, err)
+			assert.Equal(t, errTest, err)
+		})
+	})
+}
+
+func TestRegistriesDockerConfig(t *testing.T) {
+	tests := []struct {
+		name          string
+		readWrite     bool
+		expirySeconds int
+		expect        func(m *mocks.MockRegistriesService)
+	}{
+		{
+			name:          "read-only-no-expiry",
+			readWrite:     false,
+			expirySeconds: 0,
+			expect: func(m *mocks.MockRegistriesService) {
+				m.EXPECT().DockerCredentials(testRegistryName, &godo.RegistryDockerCredentialsRequest{
+					ReadWrite: false,
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+		{
+			name:          "read-write-no-expiry",
+			readWrite:     true,
+			expirySeconds: 0,
+			expect: func(m *mocks.MockRegistriesService) {
+				m.EXPECT().DockerCredentials(testRegistryName, &godo.RegistryDockerCredentialsRequest{
+					ReadWrite: true,
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+		{
+			name:          "read-only-with-expiry",
+			readWrite:     false,
+			expirySeconds: 3600,
+			expect: func(m *mocks.MockRegistriesService) {
+				m.EXPECT().DockerCredentials(testRegistryName, &godo.RegistryDockerCredentialsRequest{
+					ReadWrite:     false,
+					ExpirySeconds: godo.PtrTo(3600),
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+		{
+			name:          "read-write-with-expiry",
+			readWrite:     true,
+			expirySeconds: 3600,
+			expect: func(m *mocks.MockRegistriesService) {
+				m.EXPECT().DockerCredentials(testRegistryName, &godo.RegistryDockerCredentialsRequest{
+					ReadWrite:     true,
+					ExpirySeconds: godo.PtrTo(3600),
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registries)
+				}
+
+				config.Args = append(config.Args, testRegistryName)
+				config.Doit.Set(config.NS, doctl.ArgReadWrite, test.readWrite)
+				config.Doit.Set(config.NS, doctl.ArgRegistryExpirySeconds, test.expirySeconds)
+
+				config.Registries = func() do.RegistriesService {
+					return tm.registries
+				}
+
+				var output bytes.Buffer
+				config.Out = &output
+
+				err := RunRegistriesDockerConfig(config)
+				assert.NoError(t, err)
+
+				expectedOutput := append(testDockerCredentials.DockerConfigJSON, '\n')
+				assert.Equal(t, expectedOutput, output.Bytes())
+			})
+		})
+	}
+}
+
+func TestRegistriesList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registries.EXPECT().List().Return([]do.Registry{testRegistry}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		err := RunRegistriesList(config)
+		assert.NoError(t, err)
+
+		output := buf.String()
+		assert.Contains(t, output, testRegistry.Name)
+	})
+}
