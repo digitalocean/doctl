@@ -52,13 +52,13 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 					w.Write([]byte(registryDockerCredentialsExpiryResponse))
 				} else if expiryParam == "2592000" {
 					// Default 30-day expiry response for first test
-					w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`))
+					w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`))
 				} else if expiryParam == "" {
 					if readWriteParam == "false" {
 						w.Write([]byte(registryDockerCredentialsReadOnlyRegistryResponse))
 					} else {
 						// Fallback for empty expiry (shouldn't happen with current doctl logic)
-						w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`))
+						w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`))
 					}
 				} else {
 					t.Fatalf("received unknown value: %s", expiryParam)
@@ -183,6 +183,9 @@ const (
 	expiringTest2RegistryHost = "expiring-test2.registry.com"
 	readOnlyTest3RegistryHost = "readonlyregistry-test3.registry.com"
 
-	registryDockerCredentialsExpiryResponse           = `{"auths":{"` + expiringTest2RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
-	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"` + readOnlyTest3RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
+	// Test Docker auth token (base64 encoded "credentials:thatexpire" for testing)
+	testDockerAuthToken = "Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="
+
+	registryDockerCredentialsExpiryResponse           = `{"auths":{"` + expiringTest2RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
+	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"` + readOnlyTest3RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
 )
