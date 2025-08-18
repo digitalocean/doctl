@@ -53,13 +53,13 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 					w.Write([]byte(registryDockerCredentialsExpiryResponse))
 				} else if expiryParam == "2592000" {
 					// Default 30-day expiry response for first test
-					w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`))
+					w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}` /* gitguardian:ignore */))
 				} else if expiryParam == "" {
 					if readWriteParam == "false" {
 						w.Write([]byte(registryDockerCredentialsReadOnlyRegistryResponse))
 					} else {
 						// Fallback for empty expiry (shouldn't happen with current doctl logic)
-						w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`))
+						w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}` /* gitguardian:ignore */))
 					}
 				} else {
 					t.Fatalf("received unknown value: %s", expiryParam)
@@ -187,8 +187,8 @@ const (
 
 var (
 	// Test Docker auth token (base64 encoded "testuser:testpass" for testing)
-	testDockerAuthToken = base64.StdEncoding.EncodeToString([]byte("testuser:testpass"))
+	testDockerAuthToken = base64.StdEncoding.EncodeToString([]byte("testuser:testpass")) // gitguardian:ignore
 
-	registryDockerCredentialsExpiryResponse           = `{"auths":{"` + expiringTest2RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
-	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"` + readOnlyTest3RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
+	registryDockerCredentialsExpiryResponse           = `{"auths":{"` + expiringTest2RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}` // gitguardian:ignore
+	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"` + readOnlyTest3RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}` // gitguardian:ignore
 )
