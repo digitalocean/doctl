@@ -24,8 +24,8 @@ var _ = suite("registries/list-repositories", func(t *testing.T, when spec.G, it
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Add("content-type", "application/json")
 
-			// Use regex to match the URL pattern: /v2/registry/{registry_name}/repositories
-			registryNameRegex := regexp.MustCompile(`/v2/registry/([^/]+)/repositories`)
+			// Use regex to match both URL patterns: /v2/registry/{registry_name}/repositories and /v2/registries/{registry_name}/repositories
+			registryNameRegex := regexp.MustCompile(`/v2/registr(?:y|ies)/([^/]+)/repositories`)
 			match := registryNameRegex.FindStringSubmatch(req.URL.Path)
 
 			if len(match) > 1 {
@@ -92,7 +92,8 @@ var _ = suite("registries/list-repositories", func(t *testing.T, when spec.G, it
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"registries",
-				"list-repositories",
+				"repository",
+				"list-v2",
 				"test-registry",
 			)
 

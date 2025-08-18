@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -25,60 +24,62 @@ var _ = suite("registries/garbage-collection", func(t *testing.T, when spec.G, i
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Add("content-type", "application/json")
 
-			// Use regex to match garbage collection URLs
-			if strings.Contains(req.URL.Path, "/garbage-collection") {
-				registryGCRegex := regexp.MustCompile(`/v2/registry/([^/]+)/garbage-collection`)
-				match := registryGCRegex.FindStringSubmatch(req.URL.Path)
+			auth := req.Header.Get("Authorization")
+			if auth != "Bearer some-magic-token" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 
-				if len(match) > 1 {
-					registryName := match[1]
-
-					switch req.Method {
-					case "POST":
-						// Start garbage collection
-						fmt.Fprintf(w, `{
-							"garbage_collection": {
-								"uuid": "gc-12345",
-								"registry_name": "%s",
-								"status": "requested",
-								"created_at": "2023-01-01T00:00:00Z"
-							}
-						}`, registryName)
-					case "GET":
-						// Get or list garbage collections
-						if strings.Contains(req.URL.Path, "gc-12345") {
-							// Get specific GC
-							fmt.Fprintf(w, `{
-								"garbage_collection": {
-									"uuid": "gc-12345",
-									"registry_name": "%s",
-									"status": "completed",
-									"created_at": "2023-01-01T00:00:00Z",
-									"updated_at": "2023-01-01T01:00:00Z",
-									"blobs_deleted": 10,
-									"freed_bytes": 1024000
-								}
-							}`, registryName)
-						} else {
-							// List all GCs
-							fmt.Fprintf(w, `{
-								"garbage_collections": [
-									{
-										"uuid": "gc-12345",
-										"registry_name": "%s",
-										"status": "completed",
-										"created_at": "2023-01-01T00:00:00Z",
-										"updated_at": "2023-01-01T01:00:00Z",
-										"blobs_deleted": 10,
-										"freed_bytes": 1024000
-									}
-								]
-							}`, registryName)
-						}
+			// Match the correct API patterns for registries
+			switch {
+			case strings.HasSuffix(req.URL.Path, "/garbage-collection") && req.Method == "POST":
+				// Start garbage collection: POST /v2/registries/{registry}/garbage-collection
+				registryName := strings.Split(req.URL.Path, "/")[3] // Extract registry name from path
+				w.WriteHeader(http.StatusCreated)
+				fmt.Fprintf(w, `{
+					"garbage_collection": {
+						"uuid": "gc-12345",
+						"registry_name": "%s",
+						"status": "requested",
+						"created_at": "2023-01-01T00:00:00Z",
+						"updated_at": "2023-01-01T00:00:00Z",
+						"blobs_deleted": 0,
+						"freed_bytes": 0
 					}
-				}
-			} else {
-				http.Error(w, "Not found", http.StatusNotFound)
+				}`, registryName)
+			case strings.HasSuffix(req.URL.Path, "/garbage-collection") && req.Method == "GET":
+				// Get active garbage collection: GET /v2/registries/{registry}/garbage-collection
+				registryName := strings.Split(req.URL.Path, "/")[3]
+				fmt.Fprintf(w, `{
+					"garbage_collection": {
+						"uuid": "gc-12345",
+						"registry_name": "%s",
+						"status": "completed",
+						"created_at": "2023-01-01T00:00:00Z",
+						"updated_at": "2023-01-01T01:00:00Z",
+						"blobs_deleted": 10,
+						"freed_bytes": 1024000
+					}
+				}`, registryName)
+			case strings.HasSuffix(req.URL.Path, "/garbage-collections") && req.Method == "GET":
+				// List garbage collections: GET /v2/registries/{registry}/garbage-collections
+				registryName := strings.Split(req.URL.Path, "/")[3]
+				fmt.Fprintf(w, `{
+					"garbage_collections": [
+						{
+							"uuid": "gc-12345",
+							"registry_name": "%s",
+							"status": "completed",
+							"created_at": "2023-01-01T00:00:00Z",
+							"updated_at": "2023-01-01T01:00:00Z",
+							"blobs_deleted": 10,
+							"freed_bytes": 1024000
+						}
+					]
+				}`, registryName)
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, `{"error": "Not found", "path": "%s"}`, req.URL.Path)
 			}
 		}))
 	})
@@ -89,7 +90,8 @@ var _ = suite("registries/garbage-collection", func(t *testing.T, when spec.G, i
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"registries",
-				"start-garbage-collection",
+				"garbage-collection",
+				"start",
 				"test-registry",
 				"--force",
 			)
@@ -107,7 +109,8 @@ var _ = suite("registries/garbage-collection", func(t *testing.T, when spec.G, i
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"registries",
-				"list-garbage-collections",
+				"garbage-collection",
+				"list",
 				"test-registry",
 			)
 
@@ -124,7 +127,8 @@ var _ = suite("registries/garbage-collection", func(t *testing.T, when spec.G, i
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"registries",
-				"get-garbage-collection",
+				"garbage-collection",
+				"get-active",
 				"test-registry",
 			)
 

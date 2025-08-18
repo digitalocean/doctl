@@ -16,10 +16,11 @@ import (
 
 var _ = suite("registries/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect         *require.Assertions
-		server         *httptest.Server
-		reqRegion      string // region provided in http create req
-		expectedRegion string // region in response
+		expect                 *require.Assertions
+		server                 *httptest.Server
+		reqRegion              string // region provided in http create req
+		expectedRegion         string // region in response
+		expectSubscriptionTier bool   // whether to expect subscription tier in request
 	)
 
 	it.Before(func() {
@@ -45,7 +46,9 @@ var _ = suite("registries/create", func(t *testing.T, when spec.G, it spec.S) {
 				expect.NoError(err)
 
 				var expectedJSON string
-				if reqRegion == "" {
+				if expectSubscriptionTier {
+					expectedJSON = registriesCreateRequestWithSubscriptionTier
+				} else if reqRegion == "" {
 					expectedJSON = registriesCreateRequest
 				} else {
 					expectedJSON = fmt.Sprintf(registriesCreateRequestWithRegion, reqRegion)
@@ -74,6 +77,7 @@ var _ = suite("registries/create", func(t *testing.T, when spec.G, it spec.S) {
 		)
 		reqRegion = ""
 		expectedRegion = "default"
+		expectSubscriptionTier = false
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
@@ -81,7 +85,7 @@ var _ = suite("registries/create", func(t *testing.T, when spec.G, it spec.S) {
 		expect.Equal(strings.TrimSpace(fmt.Sprintf(registryGetOutput, expectedRegion)), strings.TrimSpace(string(output)))
 	})
 
-	it("fails to create a registry with subscription tier specified", func() {
+	it("creates a registry with subscription tier specified", func() {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
@@ -92,11 +96,12 @@ var _ = suite("registries/create", func(t *testing.T, when spec.G, it spec.S) {
 		)
 		reqRegion = ""
 		expectedRegion = "default"
+		expectSubscriptionTier = true
 
 		output, err := cmd.CombinedOutput()
-		expect.Error(err)
+		expect.NoError(err)
 
-		expect.Contains(string(output), "Error: unknown flag")
+		expect.Equal(strings.TrimSpace(fmt.Sprintf(registryGetOutput, expectedRegion)), strings.TrimSpace(string(output)))
 	})
 
 	it("creates a registry with region specified", func() {
@@ -110,6 +115,7 @@ var _ = suite("registries/create", func(t *testing.T, when spec.G, it spec.S) {
 		)
 		reqRegion = "r1"
 		expectedRegion = "r1"
+		expectSubscriptionTier = false
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
@@ -121,13 +127,21 @@ var _ = suite("registries/create", func(t *testing.T, when spec.G, it spec.S) {
 const (
 	registriesCreateRequest = `
 {
-	"name": "my-registry"
+	"name": "my-registry",
+	"subscription_tier_slug": "basic"
 }
 `
 	registriesCreateRequestWithRegion = `
 {
 	"name": "my-registry",
-	"region": "%s"
+	"region": "%s",
+	"subscription_tier_slug": "basic"
+}
+`
+	registriesCreateRequestWithSubscriptionTier = `
+{
+	"name": "my-registry",
+	"subscription_tier_slug": "starter"
 }
 `
 	registriesCreateResponse = `

@@ -38,7 +38,7 @@ var _ = suite("registry/repository/delete-tag", func(t *testing.T, when spec.G, 
 				}
 
 				w.Write([]byte(registryGetResponse))
-			case "/v2/registry/my-registry/repositories/my-repo/tags/my-tag":
+			case "/v2/registries/my-registry/repositories/my-repo/tags/my-tag":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -66,9 +66,10 @@ var _ = suite("registry/repository/delete-tag", func(t *testing.T, when spec.G, 
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
-			"registry",
+			"registries",
 			"repository",
 			"delete-tag",
+			"my-registry",
 			"my-repo",
 			"my-tag",
 			"--force",
@@ -77,6 +78,6 @@ var _ = suite("registry/repository/delete-tag", func(t *testing.T, when spec.G, 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal("", strings.TrimSpace(string(output)))
+		expect.Equal("Successfully deleted 1 tag(s)", strings.TrimSpace(string(output)))
 	})
 })

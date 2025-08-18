@@ -24,7 +24,7 @@ var _ = suite("registries/options", func(t *testing.T, when spec.G, it spec.S) {
 			w.Header().Add("content-type", "application/json")
 
 			switch req.URL.Path {
-			case "/v2/registry/options":
+			case "/v2/registry/options", "/v2/registries/options":
 				fmt.Fprintf(w, `{
 					"options": {
 						"subscription_tiers": [
