@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -182,9 +183,11 @@ const (
 	expiringTest1RegistryHost = "expiring-test1.registry.com"
 	expiringTest2RegistryHost = "expiring-test2.registry.com"
 	readOnlyTest3RegistryHost = "readonlyregistry-test3.registry.com"
+)
 
-	// Test Docker auth token (base64 encoded "credentials:thatexpire" for testing)
-	testDockerAuthToken = "Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="
+var (
+	// Test Docker auth token (base64 encoded "testuser:testpass" for testing)
+	testDockerAuthToken = base64.StdEncoding.EncodeToString([]byte("testuser:testpass"))
 
 	registryDockerCredentialsExpiryResponse           = `{"auths":{"` + expiringTest2RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
 	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"` + readOnlyTest3RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
