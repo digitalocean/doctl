@@ -1,6 +1,7 @@
 package displayers
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/digitalocean/doctl/do"
@@ -449,6 +450,126 @@ func (o *OpenAiApiKey) KV() []map[string]any {
 			"CreatedBy": key.CreatedBy,
 			"UpdatedAt": key.UpdatedAt,
 			"DeletedAt": key.DeletedAt,
+		})
+	}
+	return out
+}
+
+type Model struct {
+	Models []do.Model
+}
+
+var _ Displayable = &Model{}
+
+func (m *Model) JSON(out io.Writer) error {
+	return writeJSON(m.Models, out)
+}
+func (m *Model) Cols() []string {
+	return []string{
+		"Id",
+		"Name",
+		"Agreement",
+		"CreatedAt",
+		"UpdatedAt",
+		"isFoundational",
+		"ParentId",
+		"UploadComplete",
+		"URL",
+		"Version",
+	}
+}
+
+func (m *Model) ColMap() map[string]string {
+	return map[string]string{
+		"Id":             "ID",
+		"Name":           "Name",
+		"Agreement":      "Agreement",
+		"CreatedAt":      "Created At",
+		"UpdatedAt":      "Updated At",
+		"isFoundational": "Is Foundational",
+		"ParentId":       "Parent ID",
+		"UploadComplete": "Upload Complete",
+		"URL":            "URL",
+		"Version":        "Version",
+	}
+}
+
+func (m *Model) KV() []map[string]any {
+	if m == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(m.Models))
+	for _, model := range m.Models {
+		// Format Agreement field
+		agreementName := ""
+		if model.Agreement != nil {
+			agreementName = model.Agreement.Name
+		}
+
+		// Format Version field
+		versionString := ""
+		if model.Version != nil {
+			versionString = fmt.Sprintf("%d.%d.%d", model.Version.Major, model.Version.Minor, model.Version.Patch)
+		}
+
+		out = append(out, map[string]any{
+			"Id":             model.Uuid,
+			"Name":           model.Name,
+			"Agreement":      agreementName,
+			"CreatedAt":      model.CreatedAt,
+			"UpdatedAt":      model.UpdatedAt,
+			"isFoundational": model.IsFoundational,
+			"ParentId":       model.ParentUuid,
+			"UploadComplete": model.UploadComplete,
+			"URL":            model.Url,
+			"Version":        versionString,
+		})
+	}
+	return out
+}
+
+type DatacenterRegion struct {
+	DatacenterRegions do.DatacenterRegions
+}
+
+var _ Displayable = &DatacenterRegion{}
+
+func (d *DatacenterRegion) JSON(out io.Writer) error {
+	return writeJSON(d.DatacenterRegions, out)
+}
+
+func (d *DatacenterRegion) Cols() []string {
+	return []string{
+		"InferenceURL",
+		"Region",
+		"ServesBatch",
+		"ServesInference",
+		"StreamInferenceUrl",
+	}
+}
+
+func (d *DatacenterRegion) ColMap() map[string]string {
+	return map[string]string{
+		"InferenceURL":       "Inference URL",
+		"Region":             "Region",
+		"ServesBatch":        "Serves Batch",
+		"ServesInference":    "Serves Inference",
+		"StreamInferenceUrl": "Stream Inference URL",
+	}
+}
+
+func (d *DatacenterRegion) KV() []map[string]any {
+	if d == nil || d.DatacenterRegions == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(d.DatacenterRegions))
+	for _, region := range d.DatacenterRegions {
+		out = append(out, map[string]any{
+			"InferenceURL":       region.InferenceUrl,
+			"Region":             region.Region,
+			"ServesBatch":        region.ServesBatch,
+			"ServesInference":    region.ServesInference,
+			"StreamInferenceUrl": region.StreamInferenceUrl,
 		})
 	}
 	return out
