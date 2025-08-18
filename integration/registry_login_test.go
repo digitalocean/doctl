@@ -48,17 +48,13 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 				readWriteParam := req.URL.Query().Get("read_write")
 				expiryParam := req.URL.Query().Get("expiry_seconds")
-				if expiryParam == "3600" {
+				if expiryParam == "3600" || expiryParam == "2592000" {
 					w.Write([]byte(registryDockerCredentialsExpiryResponse))
-				} else if expiryParam == "2592000" {
-					// Default 30-day expiry response for first test
-					w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`))
 				} else if expiryParam == "" {
 					if readWriteParam == "false" {
 						w.Write([]byte(registryDockerCredentialsReadOnlyRegistryResponse))
 					} else {
-						// Fallback for empty expiry (shouldn't happen with current doctl logic)
-						w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`))
+						w.Write([]byte(registryDockerCredentialsResponse))
 					}
 				} else {
 					t.Fatalf("received unknown value: %s", expiryParam)
@@ -101,7 +97,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\nNotice: Login valid for 30 days. Use the --expiry-seconds flag to set a shorter expiration or --never-expire for no expiration.\n", string(output))
 			for host := range dc.Auths {
-				expect.Equal(expiringTest1RegistryHost, host)
+				expect.Equal("expiring.registry.com", host)
 			}
 		})
 	})
@@ -135,7 +131,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
 			for host := range dc.Auths {
-				expect.Equal(expiringTest2RegistryHost, host)
+				expect.Equal("expiring.registry.com", host)
 			}
 		})
 	})
@@ -171,23 +167,13 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
 			for host := range dc.Auths {
-				expect.Equal(readOnlyTest3RegistryHost, host)
+				expect.Equal("readonlyregistry.registry.com", host)
 			}
 		})
 	})
 })
 
 const (
-	// Test hostnames for unique keychain entries
-	expiringTest1RegistryHost = "expiring-test1.registry.com"
-	expiringTest2RegistryHost = "expiring-test2.registry.com"
-	readOnlyTest3RegistryHost = "readonlyregistry-test3.registry.com"
-)
-
-var (
-	// Test Docker auth token (valid base64 encoding of "test:data" for testing)
-	testDockerAuthToken = "dGVzdDpkYXRh"
-
-	registryDockerCredentialsExpiryResponse           = `{"auths":{"` + expiringTest2RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
-	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"` + readOnlyTest3RegistryHost + `":{"auth":"` + testDockerAuthToken + `"}}}`
+	registryDockerCredentialsExpiryResponse           = `{"auths":{"expiring.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
+	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"readonlyregistry.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
 )

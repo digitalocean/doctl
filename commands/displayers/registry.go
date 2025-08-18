@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl/do"
-	"github.com/digitalocean/godo"
 )
 
 type Registry struct {
@@ -398,54 +397,6 @@ func (t *RegistryAvailableRegions) KV() []map[string]any {
 
 	for _, region := range t.Regions {
 		out = append(out, map[string]any{
-			"Slug": region,
-		})
-	}
-
-	return out
-}
-
-type RegistryOptions struct {
-	Options *godo.RegistryOptions
-}
-
-func (r *RegistryOptions) JSON(out io.Writer) error {
-	return writeJSON(r.Options, out)
-}
-
-func (r *RegistryOptions) Cols() []string {
-	return []string{
-		"Type",
-		"Name",
-		"Slug",
-	}
-}
-
-func (r *RegistryOptions) ColMap() map[string]string {
-	return map[string]string{
-		"Type": "Option Type",
-		"Name": "Name",
-		"Slug": "Slug/Region",
-	}
-}
-
-func (r *RegistryOptions) KV() []map[string]any {
-	out := make([]map[string]any, 0)
-
-	// Add subscription tiers
-	for _, tier := range r.Options.SubscriptionTiers {
-		out = append(out, map[string]any{
-			"Type": "subscription-tier",
-			"Name": tier.Name,
-			"Slug": tier.Slug,
-		})
-	}
-
-	// Add available regions
-	for _, region := range r.Options.AvailableRegions {
-		out = append(out, map[string]any{
-			"Type": "available-region",
-			"Name": region,
 			"Slug": region,
 		})
 	}

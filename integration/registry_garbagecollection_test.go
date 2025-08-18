@@ -111,18 +111,6 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 				default:
 					w.WriteHeader(http.StatusMethodNotAllowed)
 				}
-			case "/v2/registries/" + invalidRegistryName + "/garbage-collection":
-				w.WriteHeader(http.StatusNotFound)
-			case "/v2/registries/" + validRegistryName + "/garbage-collection":
-				switch req.Method {
-				case http.MethodPost:
-					w.WriteHeader(http.StatusCreated)
-					w.Write([]byte(gcResponseJSON))
-				case http.MethodGet:
-					w.Write([]byte(gcResponseJSON))
-				default:
-					w.WriteHeader(http.StatusMethodNotAllowed)
-				}
 			case "/v2/registry/" + invalidRegistryName + "/garbage-collections":
 				w.WriteHeader(http.StatusNotFound)
 			case "/v2/registry/" + validRegistryName + "/garbage-collections":
@@ -167,19 +155,13 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
-			"registries",
+			"registry",
 			"garbage-collection",
-			"start",
-			validRegistryName,
-			"--force",
+			"start", "--force",
 		)
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Logf("Command failed with error: %v", err)
-			t.Logf("Command output: %s", string(output))
-		}
-		expect.NoError(err)
 		expect.Equal(strings.TrimSpace(gcGetOutput), strings.TrimSpace(string(output)))
+		expect.NoError(err)
 	})
 
 	it("gets the active garbage collection", func() {
