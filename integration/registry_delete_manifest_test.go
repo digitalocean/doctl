@@ -38,7 +38,7 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 				}
 
 				w.Write([]byte(registryGetResponse))
-			case "/v2/registries/my-registry/repositories/my-repo/digests/sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270":
+			case "/v2/registry/my-registry/repositories/my-repo/digests/sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -66,10 +66,9 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
-			"registries",
+			"registry",
 			"repository",
 			"delete-manifest",
-			"my-registry",
 			"my-repo",
 			"sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270",
 			"--force",
@@ -78,6 +77,6 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal("Successfully deleted 1 manifest(s)", strings.TrimSpace(string(output)))
+		expect.Equal("", strings.TrimSpace(string(output)))
 	})
 })
