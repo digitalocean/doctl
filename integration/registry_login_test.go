@@ -52,13 +52,13 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 					w.Write([]byte(registryDockerCredentialsExpiryResponse))
 				} else if expiryParam == "2592000" {
 					// Default 30-day expiry response for first test
-					w.Write([]byte(`{"auths":{"expiring-test1.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`))
+					w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`))
 				} else if expiryParam == "" {
 					if readWriteParam == "false" {
 						w.Write([]byte(registryDockerCredentialsReadOnlyRegistryResponse))
 					} else {
 						// Fallback for empty expiry (shouldn't happen with current doctl logic)
-						w.Write([]byte(`{"auths":{"expiring-test1.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`))
+						w.Write([]byte(`{"auths":{"` + expiringTest1RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`))
 					}
 				} else {
 					t.Fatalf("received unknown value: %s", expiryParam)
@@ -101,7 +101,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\nNotice: Login valid for 30 days. Use the --expiry-seconds flag to set a shorter expiration or --never-expire for no expiration.\n", string(output))
 			for host := range dc.Auths {
-				expect.Equal("expiring-test1.registry.com", host)
+				expect.Equal(expiringTest1RegistryHost, host)
 			}
 		})
 	})
@@ -135,7 +135,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
 			for host := range dc.Auths {
-				expect.Equal("expiring-test2.registry.com", host)
+				expect.Equal(expiringTest2RegistryHost, host)
 			}
 		})
 	})
@@ -171,13 +171,18 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
 			for host := range dc.Auths {
-				expect.Equal("readonlyregistry-test3.registry.com", host)
+				expect.Equal(readOnlyTest3RegistryHost, host)
 			}
 		})
 	})
 })
 
 const (
-	registryDockerCredentialsExpiryResponse           = `{"auths":{"expiring-test2.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
-	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"readonlyregistry-test3.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
+	// Test hostnames for unique keychain entries
+	expiringTest1RegistryHost = "expiring-test1.registry.com"
+	expiringTest2RegistryHost = "expiring-test2.registry.com"
+	readOnlyTest3RegistryHost = "readonlyregistry-test3.registry.com"
+
+	registryDockerCredentialsExpiryResponse           = `{"auths":{"` + expiringTest2RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
+	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"` + readOnlyTest3RegistryHost + `":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
 )
