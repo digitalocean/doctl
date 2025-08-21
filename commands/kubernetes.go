@@ -353,6 +353,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
+		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
+		"Creates the cluster with amd gpu device metrics exporter plugin installed. Defaults to false. To enable it, supply --enable-amd-gpu-device-metrics-exporter-plugin=true.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
 		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
