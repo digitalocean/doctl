@@ -300,9 +300,18 @@ func (g *GarbageCollection) ColMap() map[string]string {
 }
 
 func (g *GarbageCollection) KV() []map[string]any {
+	if g == nil || g.GarbageCollections == nil {
+		return []map[string]any{}
+	}
+
 	out := make([]map[string]any, 0, len(g.GarbageCollections))
 
 	for _, gc := range g.GarbageCollections {
+		// Skip if the inner godo.GarbageCollection pointer is nil
+		if gc.GarbageCollection == nil {
+			continue
+		}
+
 		out = append(out, map[string]any{
 			"UUID":         gc.UUID,
 			"RegistryName": gc.RegistryName,

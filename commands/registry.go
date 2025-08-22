@@ -1915,6 +1915,11 @@ func RunRegistriesCancelGarbageCollection(c *CmdConfig) error {
 		return err
 	}
 
+	// Check for nil pointer before dereferencing
+	if gc == nil {
+		return fmt.Errorf("garbage collection cancellation completed but no details returned")
+	}
+
 	return displayGarbageCollections(c, *gc)
 }
 
