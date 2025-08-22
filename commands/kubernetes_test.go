@@ -48,6 +48,12 @@ var (
 			RoutingAgent: &godo.KubernetesRoutingAgent{
 				Enabled: boolPtr(true),
 			},
+			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDeviceMetricsExporterPlugin: &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
+				Enabled: boolPtr(true),
+			},
 		},
 	}
 
@@ -529,6 +535,12 @@ func TestKubernetesCreate(t *testing.T) {
 			RoutingAgent: &godo.KubernetesRoutingAgent{
 				Enabled: boolPtr(true),
 			},
+			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDeviceMetricsExporterPlugin: &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -556,6 +568,8 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -617,6 +631,12 @@ func TestKubernetesUpdate(t *testing.T) {
 			RoutingAgent: &godo.KubernetesRoutingAgent{
 				Enabled: boolPtr(true),
 			},
+			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDeviceMetricsExporterPlugin: &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -631,6 +651,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)

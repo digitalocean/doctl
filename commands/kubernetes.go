@@ -299,6 +299,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this flag is empty, autoscaler will use its default expanders.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
+		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
+		"Creates the cluster with amd gpu device metrics exporter plugin installed. Defaults to false. To enable it, supply --enable-amd-gpu-device-metrics-exporter-plugin=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -349,6 +353,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
+		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
+		"Creates the cluster with amd gpu device metrics exporter plugin installed. Defaults to false. To enable it, supply --enable-amd-gpu-device-metrics-exporter-plugin=true.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
 		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
@@ -1716,6 +1724,32 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
+	// We need to differentiate here if the option is set or not, as it defaults to a different value on the server-side
+	// depending on whether there are AMD GPU nodes in the cluster or not.
+	//
+	// If we would always send "false", even if the flag isn't set, we would essentially disable the defaulting.
+	if c.Doit.IsSet(doctl.ArgEnableAmdGpuDevicePlugin) {
+		enableAmdGpuDevicePlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableAmdGpuDevicePlugin)
+		if err != nil {
+			return err
+		}
+		if enableAmdGpuDevicePlugin != nil {
+			r.AmdGpuDevicePlugin = &godo.KubernetesAmdGpuDevicePlugin{
+				Enabled: enableAmdGpuDevicePlugin,
+			}
+		}
+	}
+
+	enableAmdGpuDeviceMetricsExporterPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin)
+	if err != nil {
+		return err
+	}
+	if enableAmdGpuDeviceMetricsExporterPlugin != nil {
+		r.AmdGpuDeviceMetricsExporterPlugin = &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
+			Enabled: enableAmdGpuDeviceMetricsExporterPlugin,
+		}
+	}
+
 	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
 	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
 	if err != nil {
@@ -1870,6 +1904,32 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	if enableRoutingAgent != nil {
 		r.RoutingAgent = &godo.KubernetesRoutingAgent{
 			Enabled: enableRoutingAgent,
+		}
+	}
+
+	// We need to differentiate here if the option is set or not, as it defaults to a different value on the server-side
+	// depending on whether there are AMD GPU nodes in the cluster or not.
+	//
+	// If we would always send "false", even if the flag isn't set, we would essentially disable the defaulting.
+	if c.Doit.IsSet(doctl.ArgEnableAmdGpuDevicePlugin) {
+		enableAmdGpuDevicePlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableAmdGpuDevicePlugin)
+		if err != nil {
+			return err
+		}
+		if enableAmdGpuDevicePlugin != nil {
+			r.AmdGpuDevicePlugin = &godo.KubernetesAmdGpuDevicePlugin{
+				Enabled: enableAmdGpuDevicePlugin,
+			}
+		}
+	}
+
+	enableAmdGpuDeviceMetricsExporterPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin)
+	if err != nil {
+		return err
+	}
+	if enableAmdGpuDeviceMetricsExporterPlugin != nil {
+		r.AmdGpuDeviceMetricsExporterPlugin = &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
+			Enabled: enableAmdGpuDeviceMetricsExporterPlugin,
 		}
 	}
 

@@ -149,6 +149,10 @@ const (
 	ArgClusterAutoscalerExpanders = "expanders"
 	// ArgEnableRoutingAgent enables the routing-agent cluster plugin.
 	ArgEnableRoutingAgent = "enable-routing-agent"
+	// ArgEnableAmdGpuDevicePlugin enables automatic amd gpu device plugin installation.
+	ArgEnableAmdGpuDevicePlugin = "enable-amd-gpu-device-plugin"
+	// ArgEnableAmdGpuDeviceMetricsExporterPlugin enables automatic amd gpu device metrics exporter plugin installation.
+	ArgEnableAmdGpuDeviceMetricsExporterPlugin = "enable-amd-gpu-device-metrics-exporter-plugin"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
