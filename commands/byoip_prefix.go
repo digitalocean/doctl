@@ -45,8 +45,13 @@ BYOIP Prefixes can be held in the region they were created in on your account.`,
 	cmdBYOIPPrefixCreate.Example = `The following example creates a byoip prefix in the ` + "`" + `nyc1` + "`" + ` region: doctl network byoip-prefix create --region nyc1 --prefix "10.1.1.1/24" --signature "signature"`
 
 	cmdBYOIPPrefixGet := CmdBuilder(cmd, RunBYOIPPrefixGet, "get <prefix-uuid>", "Retrieve information about a byoip prefix", "Retrieves detailed information about a BYOIP Prefix", Writer,
-		aliasOpt("g"), displayerType(&displayers.ReservedIPv6{}))
+		aliasOpt("g"), displayerType(&displayers.BYOIPPrefix{}))
 	cmdBYOIPPrefixGet.Example = `The following example retrieves information about the byoip prefix ` + "`" + `5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0` + "`" + `: doctl network byoip-prefix get 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
+
+	cmdBYOIPPrefixUpdate := CmdBuilder(cmd, RunBYOIPPrefixUpdate, "update <prefix-uuid>", "Update a BYOIP Prefix", "Updates the advertisement status of a BYOIP Prefix", Writer,
+		aliasOpt("u"), displayerType(&displayers.BYOIPPrefix{}))
+	AddBoolFlag(cmdBYOIPPrefixUpdate, doctl.ArgAdvertise, "", false, "Enable or disable advertisement of the BYOIP Prefix")
+	cmdBYOIPPrefixUpdate.Example = `The following example updates the byoip prefix ` + "`" + `5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0` + "`" + ` to enable advertisement: doctl network byoip-prefix update 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0 --advertise=true`
 
 	cmdRunBYOIPPrefixDelete := CmdBuilder(cmd, RunBYOIPPrefixDelete, "delete <prefix-uuid>", "Permanently delete a BYOIP Prefix", "Permanently deletes a BYOIP Prefix. This is irreversible and it needs all IPs of the prefix to be unassigned", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunBYOIPPrefixDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the BYOIP Prefix without confirmation")
@@ -137,6 +142,46 @@ func RunBYOIPPrefixGet(c *CmdConfig) error {
 	return c.Display(item)
 }
 
+// RunBYOIPPrefixUpdate updates a byoip prefix.
+func RunBYOIPPrefixUpdate(c *CmdConfig) error {
+	bp := c.BYOIPPrefixes()
+
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	prefixUUID := c.Args[0]
+
+	if len(prefixUUID) < 1 {
+		return errors.New("invalid BYOIP Prefix UUID")
+	}
+
+	_, err = uuid.Parse(prefixUUID) // Validate UUID format
+	if err != nil {
+		return fmt.Errorf("invalid BYOIP Prefix UUID: %s", prefixUUID)
+	}
+
+	advertise, err := c.Doit.GetBool(c.NS, doctl.ArgAdvertise)
+	if err != nil {
+		return err
+	}
+
+	req := &godo.BYOIPPrefixUpdateReq{
+		Advertise: &advertise,
+	}
+
+	byoipPrefix, err := bp.Update(prefixUUID, req)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.BYOIPPrefix{BYOIPPrefixes: do.BYOIPPrefixes{
+		*byoipPrefix,
+	}}
+	return c.Display(item)
+}
+
 // RunBYOIPPrefixDelete runs byoip prefix delete.
 func RunBYOIPPrefixDelete(c *CmdConfig) error {
 	bp := c.BYOIPPrefixes()
@@ -185,12 +230,12 @@ func RunBYOIPPrefixResourcesGet(c *CmdConfig) error {
 	prefixUUID := c.Args[0]
 
 	if len(prefixUUID) < 1 {
-		return errors.New("Invalid BYOIP Prefix UUID")
+		return errors.New("invalid BYOIP Prefix UUID")
 	}
 
 	_, err = uuid.Parse(prefixUUID) // Validate UUID format
 	if err != nil {
-		return fmt.Errorf("Invalid BYOIP Prefix UUID: %s", prefixUUID)
+		return fmt.Errorf("invalid BYOIP Prefix UUID: %s", prefixUUID)
 	}
 
 	list, err := bp.GetPrefixResources(prefixUUID)
