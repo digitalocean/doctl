@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("registries/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -24,21 +25,11 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Add("content-type", "application/json")
 
-			switch req.URL.Path {
-			case "/v2/registry":
-				auth := req.Header.Get("Authorization")
-				if auth != "Bearer some-magic-token" {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
+			// Use regex to match any registry name in the URL
+			registryPathRegex := regexp.MustCompile(`^/v2/registries/([^/]+)$`)
+			matches := registryPathRegex.FindStringSubmatch(req.URL.Path)
 
-				if req.Method != http.MethodGet {
-					w.WriteHeader(http.StatusMethodNotAllowed)
-					return
-				}
-
-				w.Write([]byte(registryGetResponse))
-			case "/v2/registries/my-registry/repositories/my-repo/digests/sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270":
+			if len(matches) == 2 {
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -51,7 +42,7 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 				}
 
 				w.WriteHeader(http.StatusNoContent)
-			default:
+			} else {
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
 					t.Fatal("failed to dump request")
@@ -62,22 +53,19 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 		}))
 	})
 
-	it("deletes repository manifest", func() {
+	it("deletes registry named my-registry", func() {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
 			"registries",
-			"repository",
-			"delete-manifest",
-			"my-registry",
-			"my-repo",
-			"sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270",
+			"delete",
 			"--force",
+			"my-registry",
 		)
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal("Successfully deleted 1 manifest(s)", strings.TrimSpace(string(output)))
+		expect.Equal("", strings.TrimSpace(string(output)))
 	})
 })

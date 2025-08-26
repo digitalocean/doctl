@@ -276,6 +276,7 @@ type tcMocks struct {
 	projects              *domocks.MockProjectsService
 	kubernetes            *domocks.MockKubernetesService
 	registry              *domocks.MockRegistryService
+	registries            *domocks.MockRegistriesService
 	sshRunner             *domocks.MockRunner
 	vpcs                  *domocks.MockVPCsService
 	vpcNatGateways        *domocks.MockVPCNATGatewaysService
@@ -331,6 +332,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		kubernetes:            domocks.NewMockKubernetesService(ctrl),
 		databases:             domocks.NewMockDatabasesService(ctrl),
 		registry:              domocks.NewMockRegistryService(ctrl),
+		registries:            domocks.NewMockRegistriesService(ctrl),
 		sshRunner:             domocks.NewMockRunner(ctrl),
 		vpcs:                  domocks.NewMockVPCsService(ctrl),
 		oneClick:              domocks.NewMockOneClickService(ctrl),
@@ -398,6 +400,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Kubernetes:         func() do.KubernetesService { return tm.kubernetes },
 		Databases:          func() do.DatabasesService { return tm.databases },
 		Registry:           func() do.RegistryService { return tm.registry },
+		Registries:         func() do.RegistriesService { return tm.registries },
 		VPCs:               func() do.VPCsService { return tm.vpcs },
 		OneClicks:          func() do.OneClickService { return tm.oneClick },
 		Apps:               func() do.AppsService { return tm.apps },

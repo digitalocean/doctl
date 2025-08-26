@@ -242,8 +242,6 @@ type RegistryValidateNameRequest struct {
 	Name string `json:"name"`
 }
 
-// Multi-registry Open Beta API structs
-
 type registriesRoot struct {
 	Registries             []*Registry `json:"registries,omitempty"`
 	TotalStorageUsageBytes uint64      `json:"total_storage_usage_bytes,omitempty"`

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 )
 
 type Registry struct {
@@ -299,9 +300,18 @@ func (g *GarbageCollection) ColMap() map[string]string {
 }
 
 func (g *GarbageCollection) KV() []map[string]any {
+	if g == nil || g.GarbageCollections == nil {
+		return []map[string]any{}
+	}
+
 	out := make([]map[string]any, 0, len(g.GarbageCollections))
 
 	for _, gc := range g.GarbageCollections {
+		// Skip if the inner godo.GarbageCollection pointer is nil
+		if gc.GarbageCollection == nil {
+			continue
+		}
+
 		out = append(out, map[string]any{
 			"UUID":         gc.UUID,
 			"RegistryName": gc.RegistryName,
@@ -397,6 +407,54 @@ func (t *RegistryAvailableRegions) KV() []map[string]any {
 
 	for _, region := range t.Regions {
 		out = append(out, map[string]any{
+			"Slug": region,
+		})
+	}
+
+	return out
+}
+
+type RegistryOptions struct {
+	Options *godo.RegistryOptions
+}
+
+func (r *RegistryOptions) JSON(out io.Writer) error {
+	return writeJSON(r.Options, out)
+}
+
+func (r *RegistryOptions) Cols() []string {
+	return []string{
+		"Type",
+		"Name",
+		"Slug",
+	}
+}
+
+func (r *RegistryOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Type": "Option Type",
+		"Name": "Name",
+		"Slug": "Slug/Region",
+	}
+}
+
+func (r *RegistryOptions) KV() []map[string]any {
+	out := make([]map[string]any, 0)
+
+	// Add subscription tiers
+	for _, tier := range r.Options.SubscriptionTiers {
+		out = append(out, map[string]any{
+			"Type": "subscription-tier",
+			"Name": tier.Name,
+			"Slug": tier.Slug,
+		})
+	}
+
+	// Add available regions
+	for _, region := range r.Options.AvailableRegions {
+		out = append(out, map[string]any{
+			"Type": "available-region",
+			"Name": region,
 			"Slug": region,
 		})
 	}
