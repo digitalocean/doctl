@@ -114,3 +114,18 @@ func (mr *MockBYOIPPrefixsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBYOIPPrefixsService)(nil).List))
 }
+
+// Update mocks base method.
+func (m *MockBYOIPPrefixsService) Update(prefixUUID string, ucr *godo.BYOIPPrefixUpdateReq) (*do.BYOIPPrefix, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", prefixUUID, ucr)
+	ret0, _ := ret[0].(*do.BYOIPPrefix)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockBYOIPPrefixsServiceMockRecorder) Update(prefixUUID, ucr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockBYOIPPrefixsService)(nil).Update), prefixUUID, ucr)
+}

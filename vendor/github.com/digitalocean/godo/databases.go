@@ -10,40 +10,44 @@ import (
 )
 
 const (
-	databaseBasePath                    = "/v2/databases"
-	databaseSinglePath                  = databaseBasePath + "/%s"
-	databaseCAPath                      = databaseBasePath + "/%s/ca"
-	databaseConfigPath                  = databaseBasePath + "/%s/config"
-	databaseResizePath                  = databaseBasePath + "/%s/resize"
-	databaseMigratePath                 = databaseBasePath + "/%s/migrate"
-	databaseMaintenancePath             = databaseBasePath + "/%s/maintenance"
-	databaseUpdateInstallationPath      = databaseBasePath + "/%s/install_update"
-	databaseBackupsPath                 = databaseBasePath + "/%s/backups"
-	databaseUsersPath                   = databaseBasePath + "/%s/users"
-	databaseUserPath                    = databaseBasePath + "/%s/users/%s"
-	databaseResetUserAuthPath           = databaseUserPath + "/reset_auth"
-	databaseDBPath                      = databaseBasePath + "/%s/dbs/%s"
-	databaseDBsPath                     = databaseBasePath + "/%s/dbs"
-	databasePoolPath                    = databaseBasePath + "/%s/pools/%s"
-	databasePoolsPath                   = databaseBasePath + "/%s/pools"
-	databaseReplicaPath                 = databaseBasePath + "/%s/replicas/%s"
-	databaseReplicasPath                = databaseBasePath + "/%s/replicas"
-	databaseEvictionPolicyPath          = databaseBasePath + "/%s/eviction_policy"
-	databaseSQLModePath                 = databaseBasePath + "/%s/sql_mode"
-	databaseFirewallRulesPath           = databaseBasePath + "/%s/firewall"
-	databaseOptionsPath                 = databaseBasePath + "/options"
-	databaseUpgradeMajorVersionPath     = databaseBasePath + "/%s/upgrade"
-	databasePromoteReplicaToPrimaryPath = databaseReplicaPath + "/promote"
-	databaseTopicPath                   = databaseBasePath + "/%s/topics/%s"
-	databaseTopicsPath                  = databaseBasePath + "/%s/topics"
-	databaseMetricsCredentialsPath      = databaseBasePath + "/metrics/credentials"
-	databaseEvents                      = databaseBasePath + "/%s/events"
-	databaseIndexesPath                 = databaseBasePath + "/%s/indexes"
-	databaseIndexPath                   = databaseBasePath + "/%s/indexes/%s"
-	databaseLogsinkPath                 = databaseBasePath + "/%s/logsink/%s"
-	databaseLogsinksPath                = databaseBasePath + "/%s/logsink"
-	databaseOnlineMigrationsPath        = databaseBasePath + "/%s/online-migration"
-	databaseOnlineMigrationPath         = databaseBasePath + "/%s/online-migration/%s"
+	databaseBasePath                             = "/v2/databases"
+	databaseSinglePath                           = databaseBasePath + "/%s"
+	databaseCAPath                               = databaseBasePath + "/%s/ca"
+	databaseConfigPath                           = databaseBasePath + "/%s/config"
+	databaseResizePath                           = databaseBasePath + "/%s/resize"
+	databaseMigratePath                          = databaseBasePath + "/%s/migrate"
+	databaseMaintenancePath                      = databaseBasePath + "/%s/maintenance"
+	databaseUpdateInstallationPath               = databaseBasePath + "/%s/install_update"
+	databaseBackupsPath                          = databaseBasePath + "/%s/backups"
+	databaseUsersPath                            = databaseBasePath + "/%s/users"
+	databaseUserPath                             = databaseBasePath + "/%s/users/%s"
+	databaseResetUserAuthPath                    = databaseUserPath + "/reset_auth"
+	databaseDBPath                               = databaseBasePath + "/%s/dbs/%s"
+	databaseDBsPath                              = databaseBasePath + "/%s/dbs"
+	databasePoolPath                             = databaseBasePath + "/%s/pools/%s"
+	databasePoolsPath                            = databaseBasePath + "/%s/pools"
+	databaseReplicaPath                          = databaseBasePath + "/%s/replicas/%s"
+	databaseReplicasPath                         = databaseBasePath + "/%s/replicas"
+	databaseEvictionPolicyPath                   = databaseBasePath + "/%s/eviction_policy"
+	databaseSQLModePath                          = databaseBasePath + "/%s/sql_mode"
+	databaseFirewallRulesPath                    = databaseBasePath + "/%s/firewall"
+	databaseOptionsPath                          = databaseBasePath + "/options"
+	databaseUpgradeMajorVersionPath              = databaseBasePath + "/%s/upgrade"
+	databasePromoteReplicaToPrimaryPath          = databaseReplicaPath + "/promote"
+	databaseTopicPath                            = databaseBasePath + "/%s/topics/%s"
+	databaseTopicsPath                           = databaseBasePath + "/%s/topics"
+	databaseMetricsCredentialsPath               = databaseBasePath + "/metrics/credentials"
+	databaseEvents                               = databaseBasePath + "/%s/events"
+	databaseIndexesPath                          = databaseBasePath + "/%s/indexes"
+	databaseIndexPath                            = databaseBasePath + "/%s/indexes/%s"
+	databaseLogsinkPath                          = databaseBasePath + "/%s/logsink/%s"
+	databaseLogsinksPath                         = databaseBasePath + "/%s/logsink"
+	databaseOnlineMigrationsPath                 = databaseBasePath + "/%s/online-migration"
+	databaseOnlineMigrationPath                  = databaseBasePath + "/%s/online-migration/%s"
+	databaseKafkaSchemaRegistryPath              = databaseBasePath + "/%s/schema-registry"
+	databaseKafkaSchemaRegistrySubjectPath       = databaseBasePath + "/%s/schema-registry/%s"
+	databaseKafkaSchemaRegistryConfigPath        = databaseBasePath + "/%s/schema-registry/config"
+	databaseKafkaSchemaRegistrySubjectConfigPath = databaseBasePath + "/%s/schema-registry/config/%s"
 )
 
 // SQL Mode constants allow for MySQL-specific SQL flavor configuration.
@@ -186,6 +190,14 @@ type DatabasesService interface {
 	StartOnlineMigration(ctx context.Context, databaseID string, onlineMigrationRequest *DatabaseStartOnlineMigrationRequest) (*DatabaseOnlineMigrationStatus, *Response, error)
 	StopOnlineMigration(ctx context.Context, databaseID, migrationID string) (*Response, error)
 	GetOnlineMigrationStatus(ctx context.Context, databaseID string) (*DatabaseOnlineMigrationStatus, *Response, error)
+	ListKafkaSchemaRegistry(ctx context.Context, databaseID string, opts *ListOptions) ([]DatabaseKafkaSchemaRegistrySubject, *Response, error)
+	CreateKafkaSchemaRegistry(ctx context.Context, databaseID string, createKafkaSchemaRegistry *DatabaseKafkaSchemaRegistryRequest) (*DatabaseKafkaSchemaRegistrySubject, *Response, error)
+	GetKafkaSchemaRegistry(ctx context.Context, databaseID, subject string) (*DatabaseKafkaSchemaRegistrySubject, *Response, error)
+	DeleteKafkaSchemaRegistry(ctx context.Context, databaseID, subject string) (*Response, error)
+	GetKafkaSchemaRegistryConfig(ctx context.Context, databaseID string) (*DatabaseKafkaSchemaRegistryConfig, *Response, error)
+	UpdateKafkaSchemaRegistryConfig(ctx context.Context, databaseID string, updateKafkaSchemaRegistryConfig *DatabaseKafkaSchemaRegistryConfig) (*DatabaseKafkaSchemaRegistryConfig, *Response, error)
+	GetKafkaSchemaRegistrySubjectConfig(ctx context.Context, databaseID, subject string) (*DatabaseKafkaSchemaRegistrySubjectConfigResponse, *Response, error)
+	UpdateKafkaSchemaRegistrySubjectConfig(ctx context.Context, databaseID, subject string, updateKafkaSchemaRegistrySubjectConfig *DatabaseKafkaSchemaRegistryConfig) (*DatabaseKafkaSchemaRegistrySubjectConfigResponse, *Response, error)
 }
 
 // DatabasesServiceOp handles communication with the Databases related methods
@@ -982,6 +994,32 @@ type IndexReplication struct {
 
 type databaseIndexesRoot struct {
 	Indexes []DatabaseIndex `json:"indexes"`
+}
+
+type DatabaseKafkaSchemaRegistrySubject struct {
+	SubjectName string `json:"subject_name"`
+	SchemaType  string `json:"schema_type"`
+	Schema      string `json:"schema"`
+	SchemaID    int    `json:"schema_id"`
+}
+
+type ListDatabaseKafkaSchemaRegistrySubjectsRoot struct {
+	Subjects []DatabaseKafkaSchemaRegistrySubject `json:"subjects"`
+}
+
+type DatabaseKafkaSchemaRegistryRequest struct {
+	SubjectName string `json:"subject_name"`
+	SchemaType  string `json:"schema_type"`
+	Schema      string `json:"schema"`
+}
+
+type DatabaseKafkaSchemaRegistryConfig struct {
+	CompatibilityLevel string `json:"compatibility_level"`
+}
+
+type DatabaseKafkaSchemaRegistrySubjectConfigResponse struct {
+	SubjectName        string `json:"subject_name"`
+	CompatibilityLevel string `json:"compatibility_level"`
 }
 
 // URN returns a URN identifier for the database
@@ -2112,4 +2150,135 @@ func (svc *DatabasesServiceOp) StopOnlineMigration(ctx context.Context, database
 		return resp, err
 	}
 	return resp, nil
+}
+
+// ListKafkaSchemaRegistry lists the kafka schema registry subjects
+func (svc *DatabasesServiceOp) ListKafkaSchemaRegistry(ctx context.Context, databaseID string, opts *ListOptions) ([]DatabaseKafkaSchemaRegistrySubject, *Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistryPath, databaseID)
+	path, err := addOptions(path, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ListDatabaseKafkaSchemaRegistrySubjectsRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Subjects, resp, nil
+}
+
+// CreateKafkaSchemaRegistry creates a kafka schema registry subject
+func (svc *DatabasesServiceOp) CreateKafkaSchemaRegistry(ctx context.Context, databaseID string, createKafkaSchemaRegistry *DatabaseKafkaSchemaRegistryRequest) (*DatabaseKafkaSchemaRegistrySubject, *Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistryPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodPost, path, createKafkaSchemaRegistry)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DatabaseKafkaSchemaRegistrySubject)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// GetKafkaSchemaRegistry retrieves a kafka schema registry subject
+func (svc *DatabasesServiceOp) GetKafkaSchemaRegistry(ctx context.Context, databaseID, subjectName string) (*DatabaseKafkaSchemaRegistrySubject, *Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistrySubjectPath, databaseID, subjectName)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DatabaseKafkaSchemaRegistrySubject)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// DeleteKafkaSchemaRegistry deletes a kafka schema registry subject
+func (svc *DatabasesServiceOp) DeleteKafkaSchemaRegistry(ctx context.Context, databaseID, subjectName string) (*Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistrySubjectPath, databaseID, subjectName)
+	req, err := svc.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// UpdateKafkaSchemaRegistryConfig updates the configuration for a kafka schema registry
+func (svc *DatabasesServiceOp) UpdateKafkaSchemaRegistryConfig(ctx context.Context, databaseID string, updateKafkaSchemaRegistryConfig *DatabaseKafkaSchemaRegistryConfig) (*DatabaseKafkaSchemaRegistryConfig, *Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistryConfigPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, updateKafkaSchemaRegistryConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DatabaseKafkaSchemaRegistryConfig)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// GetKafkaSchemaRegistryConfig retrieves the configuration for a kafka schema registry
+func (svc *DatabasesServiceOp) GetKafkaSchemaRegistryConfig(ctx context.Context, databaseID string) (*DatabaseKafkaSchemaRegistryConfig, *Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistryConfigPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DatabaseKafkaSchemaRegistryConfig)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// UpdateKafkaSchemaRegistrySubjectConfig updates the configuration for a kafka schema registry subject
+func (svc *DatabasesServiceOp) UpdateKafkaSchemaRegistrySubjectConfig(ctx context.Context, databaseID, subject string, updateKafkaSchemaRegistrySubjectConfig *DatabaseKafkaSchemaRegistryConfig) (*DatabaseKafkaSchemaRegistrySubjectConfigResponse, *Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistrySubjectConfigPath, databaseID, subject)
+	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, updateKafkaSchemaRegistrySubjectConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DatabaseKafkaSchemaRegistrySubjectConfigResponse)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// GetKafkaSchemaRegistrySubjectConfig retrieves the configuration for a kafka schema registry subject
+func (svc *DatabasesServiceOp) GetKafkaSchemaRegistrySubjectConfig(ctx context.Context, databaseID, subject string) (*DatabaseKafkaSchemaRegistrySubjectConfigResponse, *Response, error) {
+	path := fmt.Sprintf(databaseKafkaSchemaRegistrySubjectConfigPath, databaseID, subject)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DatabaseKafkaSchemaRegistrySubjectConfigResponse)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
 }

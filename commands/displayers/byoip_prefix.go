@@ -31,14 +31,14 @@ func (bp *BYOIPPrefix) JSON(out io.Writer) error {
 
 func (bp *BYOIPPrefix) Cols() []string {
 	return []string{
-		"Prefix", "Region", "Status", "UUID", "FailureReason", "Validations",
+		"Prefix", "Region", "Status", "UUID", "Advertised", "FailureReason", "Validations",
 	}
 }
 
 func (bp *BYOIPPrefix) ColMap() map[string]string {
 	return map[string]string{
 		"Prefix": "Prefix", "Region": "Region", "Status": "Status", "UUID": "UUID",
-		"FailureReason": "Failure Reason", "Validations": "Validations",
+		"Advertised": "Advertised", "FailureReason": "Failure Reason", "Validations": "Validations",
 	}
 }
 
@@ -52,6 +52,7 @@ func (bp *BYOIPPrefix) KV() []map[string]any {
 			"Region":        f.BYOIPPrefix.Region,
 			"Status":        f.BYOIPPrefix.Status,
 			"UUID":          f.BYOIPPrefix.UUID,
+			"Advertised":    f.BYOIPPrefix.Advertised,
 			"FailureReason": f.BYOIPPrefix.FailureReason,
 			"Validations":   f.BYOIPPrefix.Validations,
 		}

@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.163.0] - 2025-08-14
+
+- #889 - @bhardwajRahul - Enable Support for Kafka Schema Registry in Godo
+
 ## [1.162.0] - 2025-08-07
 
 - #875 - @dependabot[bot] - Bump golang.org/x/oauth2 from 0.23.0 to 0.27.0

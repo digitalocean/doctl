@@ -77,8 +77,8 @@ var _ = suite("network/byoip-prefix/get", func(t *testing.T, when spec.G, it spe
 
 const (
 	byoipPrefixGetOutput = `
-Prefix           Region    Status    UUID                                    Failure Reason    Validations
-10.1.1.1/24    	 nyc3      active    78d564a7-bc3f-4489-be14-1fb714969213                      []            
+Prefix           Region    Status    UUID                                    Advertised    Failure Reason    Validations
+10.1.1.1/24    	 nyc3      active    78d564a7-bc3f-4489-be14-1fb714969213   false                           []            
 `
 	byoipPrefixGetResponse = `
 {
@@ -87,6 +87,7 @@ Prefix           Region    Status    UUID                                    Fai
     "region": "nyc3",
     "status": "active",
 	"prefix": "10.1.1.1/24",
+	"advertised": false,
 	"validations": [],
 	"failure_reason": ""
 }
