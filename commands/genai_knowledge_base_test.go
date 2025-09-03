@@ -2,6 +2,7 @@ package commands
 
 import (
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -28,12 +29,30 @@ var (
 			Uuid: "data-source-id",
 		},
 	}
+
+	testIndexingJob = do.IndexingJob{
+		CompletedDatasources: 1,
+		CreatedAt:           &godo.Timestamp{Time: time.Now()},
+		DataSourceUuids:     []string{"data-source-uuid-1", "data-source-uuid-2"},
+		FinishedAt:          &godo.Timestamp{Time: time.Now()},
+		KnowledgeBaseUuid:   "kb-uuid-123",
+		Phase:               "BATCH_JOB_PHASE_SUCCEEDED",
+		StartedAt:           &godo.Timestamp{Time: time.Now()},
+		Status:              "INDEX_JOB_STATUS_COMPLETED",
+		Tokens:              1000,
+		TotalDatasources:    2,
+		TotalItemsFailed:    "0",
+		TotalItemsIndexed:   "100",
+		TotalItemsSkipped:   "5",
+		UpdatedAt:           &godo.Timestamp{Time: time.Now()},
+		Uuid:                "indexing-job-uuid-123",
+	}
 )
 
 func TestKnowledgeBasesCommand(t *testing.T) {
 	cmd := KnowledgeBaseCmd()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "add-datasource", "attach", "create", "delete", "delete-datasource", "detach", "get", "list", "list-datasources", "update")
+	assertCommandNames(t, cmd, "add-datasource", "attach", "create", "delete", "delete-datasource", "detach", "get", "list", "list-datasources", "list-indexing-jobs", "update")
 }
 
 func TestKnowledgeBaseGet(t *testing.T) {
@@ -211,6 +230,14 @@ func TestKnowledgeBaseDetach(t *testing.T) {
 		tm.genAI.EXPECT().DetachKnowledgeBaseToAgent(agent_id, knowledge_base_id).Return(&testAgent, nil)
 
 		err := RunDetachKnowledgeBase(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestKnowledgeBaseListIndexingJobs(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.genAI.EXPECT().ListIndexingJobs().Return(do.IndexingJobs{testIndexingJob}, nil)
+		err := RunKnowledgeBaseListIndexingJobs(config)
 		assert.NoError(t, err)
 	})
 }

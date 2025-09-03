@@ -411,6 +411,21 @@ func (mr *MockGenAIServiceMockRecorder) ListDatacenterRegions(servesInference, s
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatacenterRegions", reflect.TypeOf((*MockGenAIService)(nil).ListDatacenterRegions), servesInference, servesBatch)
 }
 
+// ListIndexingJobs mocks base method.
+func (m *MockGenAIService) ListIndexingJobs() (do.IndexingJobs, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListIndexingJobs")
+	ret0, _ := ret[0].(do.IndexingJobs)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListIndexingJobs indicates an expected call of ListIndexingJobs.
+func (mr *MockGenAIServiceMockRecorder) ListIndexingJobs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexingJobs", reflect.TypeOf((*MockGenAIService)(nil).ListIndexingJobs))
+}
+
 // ListKnowledgeBaseDataSources mocks base method.
 func (m *MockGenAIService) ListKnowledgeBaseDataSources(knowledgeBaseID string) (do.KnowledgeBaseDataSources, error) {
 	m.ctrl.T.Helper()

@@ -201,6 +201,86 @@ func (v *KnowledgeBaseDataSource) KV() []map[string]any {
 	return out
 }
 
+// IndexingJob displayer
+type IndexingJob struct {
+	IndexingJobs do.IndexingJobs
+}
+
+var _ Displayable = &IndexingJob{}
+
+func (v *IndexingJob) JSON(out io.Writer) error {
+	return writeJSON(v.IndexingJobs, out)
+}
+
+func (v *IndexingJob) ColMap() map[string]string {
+	return map[string]string{
+		"CompletedDatasources": "Completed Datasources",
+		"CreatedAt":            "Created At",
+		"DataSourceUuids":      "Data Source UUIDs",
+		"FinishedAt":           "Finished At",
+		"KnowledgeBaseUuid":    "Knowledge Base UUID",
+		"Phase":                "Phase",
+		"StartedAt":            "Started At",
+		"Status":               "Status",
+		"Tokens":               "Tokens",
+		"TotalDatasources":     "Total Datasources",
+		"TotalItemsFailed":     "Total Items Failed",
+		"TotalItemsIndexed":    "Total Items Indexed",
+		"TotalItemsSkipped":    "Total Items Skipped",
+		"UpdatedAt":            "Updated At",
+		"UUID":                 "UUID",
+	}
+}
+
+func (v *IndexingJob) Cols() []string {
+	return []string{
+		"UUID",
+		"KnowledgeBaseUuid",
+		"Phase",
+		"Status",
+		"CompletedDatasources",
+		"TotalDatasources",
+		"Tokens",
+		"TotalItemsIndexed",
+		"TotalItemsFailed",
+		"TotalItemsSkipped",
+		"CreatedAt",
+		"StartedAt",
+		"FinishedAt",
+		"UpdatedAt",
+	}
+}
+
+func (v *IndexingJob) KV() []map[string]any {
+	if v == nil || v.IndexingJobs == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(v.IndexingJobs))
+
+	for _, job := range v.IndexingJobs {
+		o := map[string]any{
+			"CompletedDatasources": job.CompletedDatasources,
+			"CreatedAt":            job.CreatedAt,
+			"DataSourceUuids":      job.DataSourceUuids,
+			"FinishedAt":           job.FinishedAt,
+			"KnowledgeBaseUuid":    job.KnowledgeBaseUuid,
+			"Phase":                job.Phase,
+			"StartedAt":            job.StartedAt,
+			"Status":               job.Status,
+			"Tokens":               job.Tokens,
+			"TotalDatasources":     job.TotalDatasources,
+			"TotalItemsFailed":     job.TotalItemsFailed,
+			"TotalItemsIndexed":    job.TotalItemsIndexed,
+			"TotalItemsSkipped":    job.TotalItemsSkipped,
+			"UpdatedAt":            job.UpdatedAt,
+			"UUID":                 job.Uuid,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
 type FunctionRoute struct {
 	Agent do.Agent
 }

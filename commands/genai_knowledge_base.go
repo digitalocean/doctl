@@ -161,6 +161,34 @@ func KnowledgeBaseCmd() *Command {
 	cmdDataSourceDelete.Example = "The following example deletes data source having uuid like " + `00000000-0000-0000-0000-000000000000` + " from a Knowledge Base having uuid " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " \nUsing the following command `" +
 		" : `doctl genai knowledge-base delete-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 00000000-0000-0000-0000-000000000000`"
 
+	cmdIndexingJobsList := "List all indexing jobs for knowledge bases. Each indexing job contains the following information:\n" +
+		"		- The indexing job UUID\n" +
+		"		- The knowledge base UUID\n" +
+		"		- The current phase of the job\n" +
+		"		- The job status\n" +
+		"		- The number of completed datasources\n" +
+		"		- The total number of datasources\n" +
+		"		- The number of tokens processed\n" +
+		"		- The number of items indexed\n" +
+		"		- The number of items failed\n" +
+		"		- The number of items skipped\n" +
+		"		- The creation timestamp\n" +
+		"		- The start timestamp\n" +
+		"		- The finish timestamp\n" +
+		"		- The update timestamp\n" +
+		"		- The data source UUIDs being processed"
+	cmdIndexingJobList := CmdBuilder(
+		cmd,
+		RunKnowledgeBaseListIndexingJobs,
+		"list-indexing-jobs",
+		"List all indexing jobs for knowledge bases",
+		cmdIndexingJobsList,
+		Writer, aliasOpt("ls-jobs"),
+		displayerType(&displayers.IndexingJob{}),
+	)
+	cmdIndexingJobList.Example = "The following command lists all indexing jobs for knowledge bases: " +
+		"`doctl genai knowledge-base list-indexing-jobs`"
+
 	cmdAttachKnowledgeBaseDetails := "Attach a knowledge base to an agent using knowledge base uuid and agent uuid. It returns the information of corresponding agent."
 	cmdAttachKnowledgeBase := CmdBuilder(
 		cmd,
@@ -461,4 +489,13 @@ func RunDetachKnowledgeBase(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
+}
+
+// RunKnowledgeBaseListIndexingJobs lists all indexing jobs for knowledge bases.
+func RunKnowledgeBaseListIndexingJobs(c *CmdConfig) error {
+	indexingJobs, err := c.GenAI().ListIndexingJobs()
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.IndexingJob{IndexingJobs: indexingJobs})
 }
