@@ -31,21 +31,23 @@ var (
 	}
 
 	testIndexingJob = do.IndexingJob{
-		CompletedDatasources: 1,
-		CreatedAt:           &godo.Timestamp{Time: time.Now()},
-		DataSourceUuids:     []string{"data-source-uuid-1", "data-source-uuid-2"},
-		FinishedAt:          &godo.Timestamp{Time: time.Now()},
-		KnowledgeBaseUuid:   "kb-uuid-123",
-		Phase:               "BATCH_JOB_PHASE_SUCCEEDED",
-		StartedAt:           &godo.Timestamp{Time: time.Now()},
-		Status:              "INDEX_JOB_STATUS_COMPLETED",
-		Tokens:              1000,
-		TotalDatasources:    2,
-		TotalItemsFailed:    "0",
-		TotalItemsIndexed:   "100",
-		TotalItemsSkipped:   "5",
-		UpdatedAt:           &godo.Timestamp{Time: time.Now()},
-		Uuid:                "indexing-job-uuid-123",
+		LastIndexingJob: &godo.LastIndexingJob{
+			CompletedDatasources: 1,
+			CreatedAt:            &godo.Timestamp{Time: time.Now()},
+			DataSourceUuids:      []string{"data-source-uuid-1", "data-source-uuid-2"},
+			FinishedAt:           &godo.Timestamp{Time: time.Now()},
+			KnowledgeBaseUuid:    "kb-uuid-123",
+			Phase:                "BATCH_JOB_PHASE_SUCCEEDED",
+			StartedAt:            &godo.Timestamp{Time: time.Now()},
+			Status:               "INDEX_JOB_STATUS_COMPLETED",
+			Tokens:               1000,
+			TotalDatasources:     2,
+			TotalItemsFailed:     "0",
+			TotalItemsIndexed:    "100",
+			TotalItemsSkipped:    "5",
+			UpdatedAt:            &godo.Timestamp{Time: time.Now()},
+			Uuid:                 "indexing-job-uuid-123",
+		},
 	}
 )
 

@@ -15,7 +15,6 @@ package do
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/digitalocean/godo"
 )
@@ -87,23 +86,9 @@ type KnowledgeBases []KnowledgeBase
 // KnowledgeBase DataSources for Agents
 type KnowledgeBaseDataSources []KnowledgeBaseDataSource
 
-// IndexingJob represents an indexing job with extended fields beyond LastIndexingJob
+// IndexingJob represents a job for indexing knowledge base content.
 type IndexingJob struct {
-	CompletedDatasources int             `json:"completed_datasources,omitempty"`
-	CreatedAt            *godo.Timestamp `json:"created_at,omitempty"`
-	DataSourceUuids      []string        `json:"data_source_uuids,omitempty"`
-	FinishedAt           *godo.Timestamp `json:"finished_at,omitempty"`
-	KnowledgeBaseUuid    string          `json:"knowledge_base_uuid,omitempty"`
-	Phase                string          `json:"phase,omitempty"`
-	StartedAt            *godo.Timestamp `json:"started_at,omitempty"`
-	Status               string          `json:"status,omitempty"`
-	Tokens               int             `json:"tokens,omitempty"`
-	TotalDatasources     int             `json:"total_datasources,omitempty"`
-	TotalItemsFailed     string          `json:"total_items_failed,omitempty"`
-	TotalItemsIndexed    string          `json:"total_items_indexed,omitempty"`
-	TotalItemsSkipped    string          `json:"total_items_skipped,omitempty"`
-	UpdatedAt            *godo.Timestamp `json:"updated_at,omitempty"`
-	Uuid                 string          `json:"uuid,omitempty"`
+	*godo.LastIndexingJob
 }
 
 // IndexingJobs is a slice of IndexingJob
@@ -655,45 +640,15 @@ func (a *genAIService) ListAvailableModels() (Models, error) {
 // ListIndexingJobs lists all indexing jobs for knowledge bases.
 func (a *genAIService) ListIndexingJobs() (IndexingJobs, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		// Make a direct HTTP request since godo doesn't support this endpoint yet
-		path := "/v2/gen-ai/indexing_jobs"
-
-		req, err := a.client.NewRequest(context.TODO(), "GET", path, nil)
+		resp, godoResp, err := a.client.GenAI.ListIndexingJobs(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
-
-		// Add pagination parameters
-		if opt != nil {
-			q := req.URL.Query()
-			if opt.Page > 0 {
-				q.Add("page", fmt.Sprintf("%d", opt.Page))
-			}
-			if opt.PerPage > 0 {
-				q.Add("per_page", fmt.Sprintf("%d", opt.PerPage))
-			}
-			req.URL.RawQuery = q.Encode()
+		si := make([]any, len(resp.Jobs))
+		for i := range resp.Jobs {
+			si[i] = &resp.Jobs[i]
 		}
-
-		// Response structure matching API specification
-		var response struct {
-			Jobs  []IndexingJob `json:"jobs"`
-			Links *godo.Links   `json:"links"`
-			Meta  *godo.Meta    `json:"meta"`
-		}
-
-		resp, err := a.client.Do(context.TODO(), req, &response)
-		if err != nil {
-			return nil, resp, err
-		}
-
-		// Convert to []any for PaginateResp
-		si := make([]any, len(response.Jobs))
-		for i := range response.Jobs {
-			si[i] = &response.Jobs[i]
-		}
-
-		return si, resp, nil
+		return si, godoResp, err
 	}
 
 	si, err := PaginateResp(f)
@@ -703,8 +658,8 @@ func (a *genAIService) ListIndexingJobs() (IndexingJobs, error) {
 
 	list := make([]IndexingJob, len(si))
 	for i := range si {
-		job := si[i].(*IndexingJob)
-		list[i] = *job
+		job := si[i].(*godo.LastIndexingJob)
+		list[i] = IndexingJob{LastIndexingJob: job}
 	}
 
 	return list, nil
