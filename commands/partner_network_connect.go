@@ -138,7 +138,7 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 	cmdPartnerAttachmentRouteList := CmdBuilder(cmd, RunPartnerAttachmentRouteList, "list-routes <partner-attachment-id>",
 		"List Partner Attachment Routes",
 		"Retrieves a list of the Partner Attachment Routes on your account, including the following information for each:"+partnerAttachmentRouteDetails, Writer,
-		aliasOpt("ls-routes"), displayerType(&displayers.PartnerAttachment{}))
+		aliasOpt("ls-routes"), displayerType(&displayers.PartnerAttachmentRoute{}))
 	AddStringFlag(cmdPartnerAttachmentRouteList, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerAttachmentRouteList.Example = `The following example lists the Partner Attachment Routes on your account :` +
 		` doctl network --type "partner" attachment list-routes f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Cidr `
