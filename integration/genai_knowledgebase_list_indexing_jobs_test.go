@@ -37,8 +37,6 @@ var _ = suite("genai/knowledgebase/list-indexing-jobs", func(t *testing.T, when 
 					return
 				}
 
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(indexingJobsListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -49,10 +47,6 @@ var _ = suite("genai/knowledgebase/list-indexing-jobs", func(t *testing.T, when 
 				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
-	})
-
-	it.After(func() {
-		server.Close()
 	})
 
 	when("required flags are passed", func() {
