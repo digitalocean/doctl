@@ -182,9 +182,10 @@ var _ = suite("genai/knowledge-bases", func(t *testing.T, when spec.G, it spec.S
 
 const (
 	knowledgeBasesUpdateOutput = `
-Added To Agent At    Created At                       Database Id                             Is Public    Embedding Model Uuid                    Last Indexing Job                                                                                                                                                                                                                             Name                 Region    Project Id                              Tags                Updated At                       User Id    UUID
-<nil>                2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false        00000000-0000-4000-8000-000000000000    &{1 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC 1750 1 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    My Knowledge Base    tor1      00000000-0000-4000-8000-000000000000    [example string]    2025-05-29 14:27:15 +0000 UTC               00000000-0000-4000-8000-000000000000
+Added To Agent At    Created At                       Database Id                             Is Public    Embedding Model Uuid                    Last Indexing Job                                                                                                                                                                                                                              Name                 Region    Project Id                              Tags                Updated At                       User Id    UUID
+<nil>                2025-05-29 09:07:59 +0000 UTC    00000000-0000-4000-8000-000000000000    false        00000000-0000-4000-8000-000000000000    &{1 2025-05-29 09:12:33 +0000 UTC [] 2025-05-29 09:13:00 +0000 UTC 00000000-0000-4000-8000-000000000000 BATCH_JOB_PHASE_SUCCEEDED 2025-05-29 09:12:33 +0000 UTC  1750 1 2025-05-29 09:13:13 +0000 UTC 00000000-0000-4000-8000-000000000000}    My Knowledge Base    tor1      00000000-0000-4000-8000-000000000000    [example string]    2025-05-29 14:27:15 +0000 UTC               00000000-0000-4000-8000-000000000000
 `
+
 	knowledgeBasesUpdateResponse = `
 {
 	"knowledge_base": {
