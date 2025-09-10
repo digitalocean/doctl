@@ -763,6 +763,9 @@ const (
 	// ArgSignature is a byoip prefix argument.
 	ArgSignature = "signature"
 
+	// ArgAdvertise is a byoip prefix argument.
+	ArgAdvertise = "advertise"
+
 	// ArgAgentParentID is the ID for the parent agent.
 	ArgParentAgentId = "parent-agent-id"
 
