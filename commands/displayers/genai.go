@@ -71,6 +71,85 @@ func (a *Agent) KV() []map[string]any {
 	return out
 }
 
+// IndexingJobDataSource displayer
+type IndexingJobDataSource struct {
+	IndexingJobDataSources do.IndexingJobDataSources
+}
+
+var _ Displayable = &IndexingJobDataSource{}
+
+func (v *IndexingJobDataSource) JSON(out io.Writer) error {
+	return writeJSON(v.IndexingJobDataSources, out)
+}
+
+func (v *IndexingJobDataSource) ColMap() map[string]string {
+	return map[string]string{
+		"DataSourceUuid":     "Data Source UUID",
+		"Status":             "Status",
+		"StartedAt":          "Started At",
+		"CompletedAt":        "Completed At",
+		"IndexedItemCount":   "Indexed Items",
+		"FailedItemCount":    "Failed Items",
+		"SkippedItemCount":   "Skipped Items",
+		"RemovedItemCount":   "Removed Items",
+		"IndexedFileCount":   "Indexed Files",
+		"TotalFileCount":     "Total Files",
+		"TotalBytes":         "Total Bytes",
+		"TotalBytesIndexed": "Total Bytes Indexed",
+		"ErrorMsg":          "Error Message",
+		"ErrorDetails":      "Error Details",
+	}
+}
+
+func (v *IndexingJobDataSource) Cols() []string {
+	return []string{
+		"DataSourceUuid",
+		"Status",
+		"StartedAt",
+		"CompletedAt",
+		"IndexedItemCount",
+		"FailedItemCount",
+		"SkippedItemCount",
+		"IndexedFileCount",
+		"TotalFileCount",
+	}
+}
+
+func (v *IndexingJobDataSource) KV() []map[string]any {
+	if v == nil || v.IndexingJobDataSources == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(v.IndexingJobDataSources))
+	for _, ds := range v.IndexingJobDataSources {
+		startedAt := ""
+		if ds.StartedAt != nil {
+			startedAt = ds.StartedAt.String()
+		}
+		completedAt := ""
+		if ds.CompletedAt != nil {
+			completedAt = ds.CompletedAt.String()
+		}
+		
+		out = append(out, map[string]any{
+			"DataSourceUuid":     ds.DataSourceUuid,
+			"Status":             ds.Status,
+			"StartedAt":          startedAt,
+			"CompletedAt":        completedAt,
+			"IndexedItemCount":   ds.IndexedItemCount,
+			"FailedItemCount":    ds.FailedItemCount,
+			"SkippedItemCount":   ds.SkippedItemCount,
+			"RemovedItemCount":   ds.RemovedItemCount,
+			"IndexedFileCount":   ds.IndexedFileCount,
+			"TotalFileCount":     ds.TotalFileCount,
+			"TotalBytes":         ds.TotalBytes,
+			"TotalBytesIndexed": ds.TotalBytesIndexed,
+			"ErrorMsg":          ds.ErrorMsg,
+			"ErrorDetails":      ds.ErrorDetails,
+		})
+	}
+	return out
+}
+
 type KnowledgeBase struct {
 	KnowledgeBases do.KnowledgeBases
 }

@@ -95,6 +95,70 @@ test-service-key    active    2025-01-30 12:00:00 +0000 UTC
 		"state": "active"
 	}
 }`
+
+	// Knowledge Base Operations
+	kbListDataSourcesOutput = `
+ID                                      Name           Type    Status    Created At
+a0eb6eb0-fa38-41a8-a5de-1a75524667fe    docs-source    file    active    2025-01-30 12:00:00 +0000 UTC
+b1fc7fc1-gb49-52b9-b6ef-2b86535778gf    api-source     url     pending   2025-01-30 12:05:00 +0000 UTC
+`
+
+	kbListDataSourcesResponse = `
+{
+  "data_sources": [
+    {
+      "id": "a0eb6eb0-fa38-41a8-a5de-1a75524667fe",
+      "name": "docs-source",
+      "type": "file",
+      "status": "active",
+      "created_at": "2025-01-30T12:00:00Z"
+    },
+    {
+      "id": "b1fc7fc1-gb49-52b9-b6ef-2b86535778gf",
+      "name": "api-source", 
+      "type": "url",
+      "status": "pending",
+      "created_at": "2025-01-30T12:05:00Z"
+    }
+  ],
+  "meta": {
+    "total": 2
+  }
+}`
+
+	kbGetIndexingJobStatusOutput = `
+ID                                      Status       Progress    Started At                       Completed At                     Error
+c2gd8gd2-hc60-63c0-c7fg-3c97646889hg    completed    100         2025-01-30 12:00:00 +0000 UTC   2025-01-30 12:15:00 +0000 UTC   
+`
+
+	kbGetIndexingJobStatusResponse = `
+{
+  "indexing_job": {
+    "id": "c2gd8gd2-hc60-63c0-c7fg-3c97646889hg",
+    "status": "completed",
+    "progress": 100,
+    "started_at": "2025-01-30T12:00:00Z",
+    "completed_at": "2025-01-30T12:15:00Z",
+    "error": ""
+  }
+}`
+
+	kbCancelIndexingJobOutput = `
+ID                                      Status       Progress    Started At                       Completed At    Error
+c2gd8gd2-hc60-63c0-c7fg-3c97646889hg    cancelled    50          2025-01-30 12:00:00 +0000 UTC                   
+`
+
+	kbCancelIndexingJobResponse = `
+{
+  "indexing_job": {
+    "id": "c2gd8gd2-hc60-63c0-c7fg-3c97646889hg", 
+    "status": "cancelled",
+    "progress": 50,
+    "started_at": "2025-01-30T12:00:00Z",
+    "completed_at": null,
+    "error": ""
+  }
+}`
 )
 
 var _ = suite("partner_network_connect/create", func(t *testing.T, when spec.G, it spec.S) {
@@ -439,6 +503,182 @@ var _ = suite("partner_network_connect/get-service-key", func(t *testing.T, when
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal("test-service-key", strings.TrimSpace(string(output)))
+		})
+	})
+})
+
+var _ = suite("knowledge_base_operations/list-data-sources", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			switch req.URL.Path {
+			case "/v2/knowledge_base/data_sources":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(kbListDataSourcesResponse))
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	when("no flags are passed", func() {
+		it("lists all data sources", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"knowledge_base",
+				"data_sources",
+				"list",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(kbListDataSourcesOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("format and no-header flags are passed", func() {
+		it("lists all data sources", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"knowledge_base",
+				"data_sources",
+				"list",
+				"--format", "Name,Type",
+				"--no-header",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal("docs-source file\napi-source url", strings.TrimSpace(string(output)))
+		})
+	})
+})
+
+var _ = suite("knowledge_base_operations/get-indexing-job-status", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			switch req.URL.Path {
+			case "/v2/knowledge_base/indexing_jobs/c2gd8gd2-hc60-63c0-c7fg-3c97646889hg":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(kbGetIndexingJobStatusResponse))
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	when("no flags are passed", func() {
+		it("gets the specified indexing job status", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"knowledge_base",
+				"indexing_jobs",
+				"get-status",
+				"c2gd8gd2-hc60-63c0-c7fg-3c97646889hg",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(kbGetIndexingJobStatusOutput), strings.TrimSpace(string(output)))
+		})
+	})
+})
+
+var _ = suite("knowledge_base_operations/cancel-indexing-job", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			switch req.URL.Path {
+			case "/v2/knowledge_base/indexing_jobs/c2gd8gd2-hc60-63c0-c7fg-3c97646889hg/cancel":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(kbCancelIndexingJobResponse))
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	when("no flags are passed", func() {
+		it("cancels the specified indexing job", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"knowledge_base",
+				"indexing_jobs",
+				"cancel",
+				"c2gd8gd2-hc60-63c0-c7fg-3c97646889hg",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(kbCancelIndexingJobOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })

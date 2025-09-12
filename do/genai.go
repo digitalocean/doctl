@@ -94,6 +94,14 @@ type IndexingJob struct {
 // IndexingJobs is a slice of IndexingJob
 type IndexingJobs []IndexingJob
 
+// IndexingJobDataSource represents an indexed data source within an indexing job
+type IndexingJobDataSource struct {
+	*godo.IndexedDataSource
+}
+
+// IndexingJobDataSources is a slice of IndexingJobDataSource
+type IndexingJobDataSources []IndexingJobDataSource
+
 // GenAIService is an interface for interacting with DigitalOcean's Agent API.
 type GenAIService interface {
 	ListAgents() (Agents, error)
@@ -133,6 +141,9 @@ type GenAIService interface {
 	ListDatacenterRegions(servesInference, servesBatch *bool) (DatacenterRegions, error)
 	ListAvailableModels() (Models, error)
 	ListIndexingJobs() (IndexingJobs, error)
+	GetIndexingJob(indexingJobID string) (*IndexingJob, error)
+	CancelIndexingJob(indexingJobID string) (*IndexingJob, error)
+	ListIndexingJobDataSources(indexingJobID string) (IndexingJobDataSources, error)
 }
 
 var _ GenAIService = &genAIService{}
@@ -660,6 +671,39 @@ func (a *genAIService) ListIndexingJobs() (IndexingJobs, error) {
 	for i := range si {
 		job := si[i].(*godo.LastIndexingJob)
 		list[i] = IndexingJob{LastIndexingJob: job}
+	}
+
+	return list, nil
+}
+
+// GetIndexingJob retrieves the status of a specific indexing job.
+func (a *genAIService) GetIndexingJob(indexingJobID string) (*IndexingJob, error) {
+	resp, _, err := a.client.GenAI.GetIndexingJob(context.TODO(), indexingJobID)
+	if err != nil {
+		return nil, err
+	}
+	return &IndexingJob{LastIndexingJob: &resp.Job}, nil
+}
+
+// CancelIndexingJob cancels a specific indexing job.
+func (a *genAIService) CancelIndexingJob(indexingJobID string) (*IndexingJob, error) {
+	resp, _, err := a.client.GenAI.CancelIndexingJob(context.TODO(), indexingJobID)
+	if err != nil {
+		return nil, err
+	}
+	return &IndexingJob{LastIndexingJob: &resp.Job}, nil
+}
+
+// ListIndexingJobDataSources lists all data sources for a specific indexing job.
+func (a *genAIService) ListIndexingJobDataSources(indexingJobID string) (IndexingJobDataSources, error) {
+	resp, _, err := a.client.GenAI.ListIndexingJobDataSources(context.TODO(), indexingJobID)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]IndexingJobDataSource, len(resp.IndexedDataSources))
+	for i := range resp.IndexedDataSources {
+		list[i] = IndexingJobDataSource{IndexedDataSource: &resp.IndexedDataSources[i]}
 	}
 
 	return list, nil

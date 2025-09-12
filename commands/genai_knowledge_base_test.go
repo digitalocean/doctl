@@ -49,12 +49,28 @@ var (
 			Uuid:                 "indexing-job-uuid-123",
 		},
 	}
+
+	testIndexingJobDataSource = do.IndexingJobDataSource{
+		IndexedDataSource: &godo.IndexedDataSource{
+			CompletedAt:       &godo.Timestamp{Time: time.Now()},
+			DataSourceUuid:    "data-source-uuid-1",
+			StartedAt:         &godo.Timestamp{Time: time.Now()},
+			Status:            "DATA_SOURCE_STATUS_COMPLETED",
+			IndexedItemCount:  "100",
+			FailedItemCount:   "0",
+			SkippedItemCount:  "5",
+			IndexedFileCount:  "50",
+			TotalFileCount:    "50",
+			TotalBytes:        "1024000",
+			TotalBytesIndexed: "1024000",
+		},
+	}
 )
 
 func TestKnowledgeBasesCommand(t *testing.T) {
 	cmd := KnowledgeBaseCmd()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "add-datasource", "attach", "create", "delete", "delete-datasource", "detach", "get", "list", "list-datasources", "list-indexing-jobs", "update")
+	assertCommandNames(t, cmd, "add-datasource", "attach", "cancel-indexing-job", "create", "delete", "delete-datasource", "detach", "get", "get-indexing-job", "list", "list-datasources", "list-indexing-job-data-sources", "list-indexing-jobs", "update")
 }
 
 func TestKnowledgeBaseGet(t *testing.T) {
@@ -240,6 +256,36 @@ func TestKnowledgeBaseListIndexingJobs(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.genAI.EXPECT().ListIndexingJobs().Return(do.IndexingJobs{testIndexingJob}, nil)
 		err := RunKnowledgeBaseListIndexingJobs(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestKnowledgeBaseGetIndexingJob(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		indexing_job_id := "indexing-job-uuid-123"
+		config.Args = append(config.Args, indexing_job_id)
+		tm.genAI.EXPECT().GetIndexingJob(indexing_job_id).Return(&testIndexingJob, nil)
+		err := RunKnowledgeBaseGetIndexingJob(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestKnowledgeBaseCancelIndexingJob(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		indexing_job_id := "indexing-job-uuid-123"
+		config.Args = append(config.Args, indexing_job_id)
+		tm.genAI.EXPECT().CancelIndexingJob(indexing_job_id).Return(&testIndexingJob, nil)
+		err := RunKnowledgeBaseCancelIndexingJob(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestKnowledgeBaseListIndexingJobDataSources(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		indexing_job_id := "indexing-job-uuid-123"
+		config.Args = append(config.Args, indexing_job_id)
+		tm.genAI.EXPECT().ListIndexingJobDataSources(indexing_job_id).Return(do.IndexingJobDataSources{testIndexingJobDataSource}, nil)
+		err := RunKnowledgeBaseListIndexingJobDataSources(config)
 		assert.NoError(t, err)
 	})
 }
