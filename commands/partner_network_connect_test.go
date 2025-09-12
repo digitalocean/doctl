@@ -61,7 +61,6 @@ var (
 
 	testPartnerAttachmentRoute = do.PartnerAttachmentRoute{
 		RemoteRoute: &godo.RemoteRoute{
-			ID:   "test-route-id",
 			Cidr: "10.10.0.0/24",
 		},
 	}
