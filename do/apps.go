@@ -56,6 +56,10 @@ type AppsService interface {
 	UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) (affectedComponents []string, deployment *godo.Deployment, err error)
 
 	GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error)
+
+	ListJobInvocations(appID string, opts *godo.ListJobInvocationsOptions) ([]*godo.JobInvocation, error)
+	GetJobInvocationLogs(appID, componentName, jobInvocationID string, logType godo.AppLogType, follow bool, tail int) (*godo.AppLogs, error)
+	GetJobInvocation(appID, jobInvocationID string) (*godo.JobInvocation, error)
 }
 
 type appsService struct {
