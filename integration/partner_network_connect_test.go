@@ -45,8 +45,8 @@ ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Pr
 `
 
 	paListRoutesOutput = `
-ID                                      Cidr
-a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
+				assert.Equal(t, "Cidr
+169.250.0.0/29", output)
 `
 
 	paListRoutesResponse = `
