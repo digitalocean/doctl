@@ -44,6 +44,7 @@ type BYOIPPrefixsService interface {
 	List() (BYOIPPrefixes, error)
 	Get(prefixUUID string) (*BYOIPPrefix, error)
 	Create(ficr *godo.BYOIPPrefixCreateReq) (*godo.BYOIPPrefixCreateResp, error)
+	Update(prefixUUID string, ucr *godo.BYOIPPrefixUpdateReq) (*BYOIPPrefix, error)
 	Delete(prefixUUID string) error
 
 	GetPrefixResources(prefixUUID string) (BYOIPPrefixResources, error)
@@ -107,6 +108,15 @@ func (bps *byoipPrefixService) Create(bpcr *godo.BYOIPPrefixCreateReq) (*godo.BY
 	}
 
 	return prefixCreateResp, nil
+}
+
+func (bps *byoipPrefixService) Update(prefixUUID string, bpur *godo.BYOIPPrefixUpdateReq) (*BYOIPPrefix, error) {
+	byoipPrefix, _, err := bps.client.BYOIPPrefixes.Update(context.TODO(), prefixUUID, bpur)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BYOIPPrefix{BYOIPPrefix: byoipPrefix}, nil
 }
 
 func (fis *byoipPrefixService) Delete(prefixUUID string) error {

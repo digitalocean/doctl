@@ -24,7 +24,7 @@ import (
 func TestBYOIPPrefixCommands(t *testing.T) {
 	cmd := BYOIPPrefix()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "delete", "get", "list", "resource")
+	assertCommandNames(t, cmd, "create", "delete", "get", "list", "resource", "update")
 }
 
 func TestBYOIPPrefixList(t *testing.T) {
@@ -77,5 +77,18 @@ func TestBYOIPPrefixResourcesGet(t *testing.T) {
 		config.Args = append(config.Args, "f00b8f02-11da-424b-b658-ad8cebfc5a56")
 
 		RunBYOIPPrefixResourcesGet(config)
+	})
+}
+
+func TestBYOIPPrefixUpdate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		uuid := "f00b8f02-11da-424b-b658-ad8cebfc5a56"
+		updateReq := &godo.BYOIPPrefixUpdateReq{Advertise: godo.PtrTo(true)}
+		tm.byoipPrefixes.EXPECT().Update(uuid, updateReq).Return(&testBYOIPPrefix, nil)
+
+		config.Args = append(config.Args, uuid)
+		config.Doit.Set(config.NS, doctl.ArgAdvertise, true)
+
+		assert.NoError(t, RunBYOIPPrefixUpdate(config))
 	})
 }
