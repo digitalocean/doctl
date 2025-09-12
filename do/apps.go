@@ -56,6 +56,10 @@ type AppsService interface {
 	UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) (affectedComponents []string, deployment *godo.Deployment, err error)
 
 	GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error)
+
+	ListJobInvocations(appID string, opts *godo.ListJobInvocationsOptions) ([]*godo.JobInvocation, error)
+	GetJobInvocation(appID string, jobInvocationId string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error)
+	GetJobInvocationLogs(appID, jobInvocationId string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error)
 }
 
 type appsService struct {
@@ -321,4 +325,28 @@ func (s *appsService) GetAppInstances(appID string, opts *godo.GetAppInstancesOp
 		return nil, err
 	}
 	return instances, nil
+}
+
+func (s *appsService) ListJobInvocations(appID string, opts *godo.ListJobInvocationsOptions) ([]*godo.JobInvocation, error) {
+	jobInvocations, _, err := s.client.Apps.ListJobInvocations(s.ctx, appID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return jobInvocations, nil
+}
+
+func (s *appsService) GetJobInvocation(appID string, jobInvocationId string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error) {
+	jobInvocation, _, err := s.client.Apps.GetJobInvocation(s.ctx, appID, jobInvocationId, opts)
+	if err != nil {
+		return nil, err
+	}
+	return jobInvocation, nil
+}
+
+func (s *appsService) GetJobInvocationLogs(appID, jobInvocationId string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error) {
+	jobLogs, _, err := s.client.Apps.GetJobInvocationLogs(s.ctx, appID, jobInvocationId, opts)
+	if err != nil {
+		return nil, err
+	}
+	return jobLogs, nil
 }
