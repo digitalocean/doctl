@@ -169,8 +169,6 @@ type ServiceKey struct {
 
 // RemoteRoute represents a route for a Partner Attachment.
 type RemoteRoute struct {
-	// ID is the generated ID of the Route
-	ID string `json:"id,omitempty"`
 	// Cidr is the CIDR of the route
 	Cidr string `json:"cidr,omitempty"`
 }

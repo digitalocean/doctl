@@ -56,6 +56,9 @@ type GenAIService interface {
 	UpdateKnowledgeBase(ctx context.Context, knowledgeBaseID string, update *UpdateKnowledgeBaseRequest) (*KnowledgeBase, *Response, error)
 	DeleteKnowledgeBase(ctx context.Context, knowledgeBaseID string) (string, *Response, error)
 	ListIndexingJobs(ctx context.Context, opt *ListOptions) (*IndexingJobsResponse, *Response, error)
+	GetIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error)
+	CancelIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error)
+	ListIndexingJobDataSources(ctx context.Context, indexingJobUUID string) (*IndexingJobDataSourcesResponse, *Response, error)
 	AttachKnowledgeBaseToAgent(ctx context.Context, agentID string, knowledgeBaseID string) (*Agent, *Response, error)
 	DetachKnowledgeBaseToAgent(ctx context.Context, agentID string, knowledgeBaseID string) (*Agent, *Response, error)
 	AddAgentRoute(context.Context, string, string, *AgentRouteCreateRequest) (*AgentRouteResponse, *Response, error)
@@ -367,6 +370,39 @@ type IndexingJobsResponse struct {
 	Jobs  []LastIndexingJob `json:"jobs"`
 	Links *Links            `json:"links,omitempty"`
 	Meta  *Meta             `json:"meta,omitempty"`
+}
+
+// IndexingJobResponse represents the response from retrieving a single indexing job
+type IndexingJobResponse struct {
+	Job LastIndexingJob `json:"job"`
+}
+
+// CancelIndexingJobRequest represents the request payload for cancelling an indexing job
+type CancelIndexingJobRequest struct {
+	UUID string `json:"uuid"`
+}
+
+// IndexedDataSource represents a data source within an indexing job
+type IndexedDataSource struct {
+	CompletedAt       *Timestamp `json:"completed_at,omitempty"`
+	DataSourceUuid    string     `json:"data_source_uuid,omitempty"`
+	ErrorDetails      string     `json:"error_details,omitempty"`
+	ErrorMsg          string     `json:"error_msg,omitempty"`
+	FailedItemCount   string     `json:"failed_item_count,omitempty"`
+	IndexedFileCount  string     `json:"indexed_file_count,omitempty"`
+	IndexedItemCount  string     `json:"indexed_item_count,omitempty"`
+	RemovedItemCount  string     `json:"removed_item_count,omitempty"`
+	SkippedItemCount  string     `json:"skipped_item_count,omitempty"`
+	StartedAt         *Timestamp `json:"started_at,omitempty"`
+	Status            string     `json:"status,omitempty"`
+	TotalBytes        string     `json:"total_bytes,omitempty"`
+	TotalBytesIndexed string     `json:"total_bytes_indexed,omitempty"`
+	TotalFileCount    string     `json:"total_file_count,omitempty"`
+}
+
+// IndexingJobDataSourcesResponse represents the response from listing data sources for an indexing job
+type IndexingJobDataSourcesResponse struct {
+	IndexedDataSources []IndexedDataSource `json:"indexed_data_sources"`
 }
 
 type AgentChatbotIdentifier struct {
@@ -960,6 +996,63 @@ func (s *GenAIServiceOp) ListIndexingJobs(ctx context.Context, opt *ListOptions)
 		Jobs:  root.Jobs,
 		Links: root.Links,
 		Meta:  root.Meta,
+	}
+
+	return result, resp, err
+}
+
+// ListIndexingJobDataSources returns the data sources for a specific indexing job
+func (s *GenAIServiceOp) ListIndexingJobDataSources(ctx context.Context, indexingJobUUID string) (*IndexingJobDataSourcesResponse, *Response, error) {
+	path := fmt.Sprintf(IndexingJobDataSourcesPath, indexingJobUUID)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(IndexingJobDataSourcesResponse)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return result, resp, err
+}
+
+// GetIndexingJob retrieves the status of a specific indexing job for a knowledge base
+func (s *GenAIServiceOp) GetIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error) {
+	path := fmt.Sprintf(IndexingJobByIDPath, indexingJobUUID)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(IndexingJobResponse)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return result, resp, err
+}
+
+// CancelIndexingJob cancels a specific indexing job for a knowledge base
+func (s *GenAIServiceOp) CancelIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error) {
+	path := fmt.Sprintf(IndexingJobCancelPath, indexingJobUUID)
+
+	// Create the request payload
+	cancelRequest := &CancelIndexingJobRequest{
+		UUID: indexingJobUUID,
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPut, path, cancelRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(IndexingJobResponse)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
 	}
 
 	return result, resp, err
