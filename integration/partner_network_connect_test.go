@@ -44,15 +44,13 @@ ID       Name         State     Connection Bandwidth (MBPS)    Region    NaaS Pr
 12345    doctl-pia    active    50                             stage2    MEGAPORT         d35e5cb7-7957-4643-8e3a-1ab4eb3a494c    2025-01-30 12:00:00 +0000 UTC    0                                       0
 `
 
-	paListRoutesOutput = `
-ID                                      Cidr
-a0eb6eb0-fa38-41a8-a5de-1a75524667fe    169.250.0.0/29
-`
+	paListRoutesOutput = `Cidr
+169.250.0.0/29`
 
 	paListRoutesResponse = `
 {
   "remote_routes": [
-	{"id": "a0eb6eb0-fa38-41a8-a5de-1a75524667fe", "cidr": "169.250.0.0/29"}
+	{"cidr": "169.250.0.0/29"}
   ],
   "links": {
     "pages": {

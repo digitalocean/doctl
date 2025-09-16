@@ -97,14 +97,12 @@ func (v *PartnerAttachmentRoute) JSON(out io.Writer) error {
 
 func (v *PartnerAttachmentRoute) Cols() []string {
 	return []string{
-		"ID",
 		"Cidr",
 	}
 }
 
 func (v *PartnerAttachmentRoute) ColMap() map[string]string {
 	return map[string]string{
-		"ID":   "ID",
 		"Cidr": "Cidr",
 	}
 }
@@ -114,7 +112,6 @@ func (v *PartnerAttachmentRoute) KV() []map[string]any {
 
 	for _, ia := range v.PartnerAttachmentRoutes {
 		o := map[string]any{
-			"ID":   ia.ID,
 			"Cidr": ia.Cidr,
 		}
 		out = append(out, o)
