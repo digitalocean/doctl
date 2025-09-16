@@ -101,7 +101,6 @@ func (mr *MockGenAIServiceMockRecorder) CancelIndexingJob(indexingJobID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelIndexingJob", reflect.TypeOf((*MockGenAIService)(nil).CancelIndexingJob), indexingJobID)
 }
 
-
 // CreateAgent mocks base method.
 func (m *MockGenAIService) CreateAgent(req *godo.AgentCreateRequest) (*do.Agent, error) {
 	m.ctrl.T.Helper()
@@ -436,6 +435,12 @@ func (m *MockGenAIService) ListDatacenterRegions(servesInference, servesBatch *b
 	return ret0, ret1
 }
 
+// ListDatacenterRegions indicates an expected call of ListDatacenterRegions.
+func (mr *MockGenAIServiceMockRecorder) ListDatacenterRegions(servesInference, servesBatch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatacenterRegions", reflect.TypeOf((*MockGenAIService)(nil).ListDatacenterRegions), servesInference, servesBatch)
+}
+
 // ListIndexingJobDataSources mocks base method.
 func (m *MockGenAIService) ListIndexingJobDataSources(indexingJobID string) (do.IndexingJobDataSources, error) {
 	m.ctrl.T.Helper()
@@ -464,12 +469,6 @@ func (m *MockGenAIService) ListIndexingJobs() (do.IndexingJobs, error) {
 func (mr *MockGenAIServiceMockRecorder) ListIndexingJobs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexingJobs", reflect.TypeOf((*MockGenAIService)(nil).ListIndexingJobs))
-}
-
-// ListDatacenterRegions indicates an expected call of ListDatacenterRegions.
-func (mr *MockGenAIServiceMockRecorder) ListDatacenterRegions(servesInference, servesBatch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatacenterRegions", reflect.TypeOf((*MockGenAIService)(nil).ListDatacenterRegions), servesInference, servesBatch)
 }
 
 // ListKnowledgeBaseDataSources mocks base method.
