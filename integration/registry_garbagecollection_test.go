@@ -217,7 +217,9 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 			"cancel",
 		)
 		output, err := cmd.CombinedOutput()
-		expectMsg := "Error: (garbage-collection.cancel) command is missing required arguments"
+		// NOTE(13/09/2025) this expected message was changed to have the "registry" prefix because now
+		// the sub-commands for "registry" and "registries" are distinguished by using overrideNS (override name space)
+		expectMsg := "Error: (registry.garbage-collection.cancel) command is missing required arguments"
 		expect.Equal(strings.TrimSpace(expectMsg), strings.TrimSpace(string(output)))
 		expect.Error(err)
 	})
