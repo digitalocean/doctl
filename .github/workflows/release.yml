@@ -3,11 +3,33 @@ name: tagged-release
 on:
   push:
     tags:
-      - 'v[1-9].[0-9]+.[0-9]+'
+      - 'v[1-9].[0-9]+.[0-9]'
 
 jobs:
+  integration-tests:
+    name: 'Integration Tests'
+    runs-on: 'ubuntu-latest'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.x
+
+      - name: Run integration tests
+        run: make test_integration
+
   github-release:
     name: 'GitHub Release'
+    needs: integration-tests
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
@@ -40,6 +62,7 @@ jobs:
 
   snapcraft-stable:
     name: 'Snapcraft: Stable Release'
+    needs: integration-tests
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
