@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("registries/repository/delete-tag", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -38,7 +38,7 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 				}
 
 				w.Write([]byte(registryGetResponse))
-			case "/v2/registry/my-registry/repositories/my-repo/digests/sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270":
+			case "/v2/registries/my-registry/repositories/my-repo/tags/my-tag":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -62,22 +62,22 @@ var _ = suite("registry/repository/delete-manifest", func(t *testing.T, when spe
 		}))
 	})
 
-	it("deletes repository manifest", func() {
+	it("deletes repository tag", func() {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
-			"registry",
+			"registries",
 			"repository",
-			"delete-manifest",
-			"--registry", "my-registry",
+			"delete-tag",
+			"my-registry",
 			"my-repo",
-			"sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270",
+			"my-tag",
 			"--force",
 		)
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Empty(strings.TrimSpace(string(output)))
+		expect.Equal("Successfully deleted 1 tag(s)", strings.TrimSpace(string(output)))
 	})
 })
