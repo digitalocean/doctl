@@ -3,40 +3,41 @@ name: tagged-release
 on:
   push:
     tags:
-      - 'v[1-9].[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  integration-tests:
-    name: 'Integration Tests'
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  check-beta:
+    name: 'Check Beta Release'
+    runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.24.x
-
-      - name: Run integration tests
-        run: make test_integration
+      - name: Verify beta tag exists
+        run: |
+          STABLE_TAG=${GITHUB_REF#refs/tags/}
+          BETA_TAG="${STABLE_TAG}-beta"
+          
+          echo "Checking for beta tag: $BETA_TAG"
+          
+          if git tag -l | grep -q "^${BETA_TAG}$"; then
+            echo "✅ Beta tag $BETA_TAG found"
+          else
+            echo "❌ Beta tag $BETA_TAG not found"
+            echo "Please create and test a beta release first: make beta-tag BUMP=<version>"
+            exit 1
+          fi
 
   github-release:
     name: 'GitHub Release'
-    needs: integration-tests
+    needs: check-beta
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # https://github.com/marketplace/actions/goreleaser-action#usage
-          # note the fetch-depth: 0 input in Checkout step. It is required for
-          # the changelog to work correctly
           fetch-depth: 0
 
       - name: Login to Docker Hub
@@ -48,7 +49,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.24.x
+          go-version: 1.21.x
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -61,13 +62,12 @@ jobs:
 
   snapcraft-stable:
     name: 'Snapcraft: Stable Release'
-    needs: integration-tests
+    needs: check-beta
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # fetch-depth: 0 fetches all history for all branches and tags
           fetch-depth: 0
 
       - name: Build snap
