@@ -188,7 +188,7 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Deployments{}),
 	)
 
-	CmdBuilder(
+	listJobInvocations := CmdBuilder(
 		cmd,
 		RunAppsListJobInvocations,
 		"list-job-invocations <app id>",
@@ -200,6 +200,11 @@ Only basic information is included with the text output format. For complete app
 		aliasOpt("lsji"),
 		displayerType(&displayers.JobInvocations{}),
 	)
+
+	AddStringSliceFlag(listJobInvocations, doctl.ArgAppDeployment, "", []string{}, "The deployment ID to filter job invocations for. If not provided, all job invocations for given app are returned.")
+	AddStringSliceFlag(listJobInvocations, doctl.ArgAppJobName, "", []string{}, "The job name to filter job invocations for. If not provided, all job invocations for given app are returned.")
+
+	listJobInvocations.Example = `The following example retrieves the list of job invocations for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the deployment ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` and the job ` + "`" + `cron` + "`" + `: doctl apps list-job-invocations f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --job-name cron --deployment 418b7972-fc67-41ea-ab4b-6f9477c4f7d8`
 
 	CmdBuilder(
 		cmd,
@@ -219,7 +224,7 @@ Only basic information is included with the text output format. For complete app
 		RunAppsGetLogs,
 		"logs <app name or id> <component name (defaults to all components)>",
 		"Retrieves logs",
-		`Retrieves component logs for a deployment of an app.
+		`Retrieves component logs for a deployment or a job invocation of an app.
 
 Three types of logs are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
 - build
@@ -227,12 +232,15 @@ Three types of logs are supported and can be specified with the --`+doctl.ArgApp
 - run
 - run_restarted
 
+To retrieve job invocation logs, pass the job invocation ID with the --`+doctl.ArgAppJobInvocation+` flag.
+
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
 		Writer,
 		aliasOpt("l"),
 	)
 	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "Retrieves logs for a specific deployment ID. Defaults to current deployment.")
+	AddStringFlag(logs, doctl.ArgAppJobInvocation, "", "", "Retrieves logs for a specific job invocation ID.")
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "Retrieves logs for a specific log type. Defaults to run logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Returns logs as they are emitted by the app.")
 	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Specifies the number of lines to show from the end of the log.")

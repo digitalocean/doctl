@@ -151,9 +151,9 @@ func (ji JobInvocations) ColMap() map[string]string {
 	return map[string]string{
 		"ID":        "ID",
 		"Jobname":   "Job Name",
-		"Created":   "CreatedAt",
-		"Started":   "StartedAt",
-		"Completed": "CompletedAt",
+		"Created":   "Created At",
+		"Started":   "Started At",
+		"Completed": "Completed At",
 		"Phase":     "Phase",
 		"Result":    "Result",
 	}
