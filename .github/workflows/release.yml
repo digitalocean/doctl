@@ -3,7 +3,18 @@ name: tagged-release
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[1-9].[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      stable_tag:
+        description: 'Stable tag to release'
+        required: true
+        type: string
+      promoted_from_beta:
+        description: 'Was this promoted from beta?'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   check-beta:
@@ -13,20 +24,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # https://github.com/marketplace/actions/goreleaser-action#usage
+          # note the fetch-depth: 0 input in Checkout step. It is required for
+          # the changelog to work correctly
           fetch-depth: 0
 
       - name: Verify beta tag exists
         run: |
-          STABLE_TAG=${GITHUB_REF#refs/tags/}
-          BETA_TAG="${STABLE_TAG}-beta"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            STABLE_TAG="${{ github.event.inputs.stable_tag }}"
+            echo "Manual trigger for: $STABLE_TAG"
+            if [ "${{ github.event.inputs.promoted_from_beta }}" = "true" ]; then
+              echo "✅ This is a beta promotion, skipping beta check"
+              exit 0
+            fi
+          else
+            STABLE_TAG=${GITHUB_REF#refs/tags/}
+            echo "Tag-triggered release for: $STABLE_TAG"
+          fi
           
+          BETA_TAG="${STABLE_TAG}-beta"
           echo "Checking for beta tag: $BETA_TAG"
           
           if git tag -l | grep -q "^${BETA_TAG}$"; then
             echo "✅ Beta tag $BETA_TAG found"
           else
             echo "❌ Beta tag $BETA_TAG not found"
-            echo "Please create and test a beta release first: make beta-tag BUMP=<version>"
+            echo "Please create and test a beta release first: make tag BUMP=<version>"
             exit 1
           fi
 
@@ -49,7 +73,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21.x
+          go-version: 1.24.x
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -68,6 +92,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # fetch-depth: 0 fetches all history for all branches and tags
           fetch-depth: 0
 
       - name: Build snap
