@@ -749,7 +749,10 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	case strings.ToLower(string(godo.AppLogTypeRunRestarted)):
 		logType = godo.AppLogTypeRunRestarted
 	default:
-		return fmt.Errorf("Invalid log type %s", logTypeStr)
+		// if jobInvocationID is provided, we can skip the logType validation as logType will be set to JOB_INVOCATION
+		if jobInvocationID == "" {
+			return fmt.Errorf("Invalid log type %s", logTypeStr)
+		}
 	}
 	logFollow, err := c.Doit.GetBool(c.NS, doctl.ArgAppLogFollow)
 	if err != nil {
@@ -1423,6 +1426,16 @@ func RunAppsGetJobInvocation(c *CmdConfig) error {
 	jobInvocationID := c.Args[1]
 
 	opts := &godo.GetJobInvocationOptions{}
+
+	jobName, err := c.Doit.GetString(c.NS, doctl.ArgAppJobName)
+	if err != nil {
+		return err
+	}
+
+	if jobName != "" {
+		opts.JobName = jobName
+	}
+
 	jobInvocation, err := c.Apps().GetJobInvocation(appID, jobInvocationID, opts)
 	if err != nil {
 		return err

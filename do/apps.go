@@ -58,8 +58,8 @@ type AppsService interface {
 	GetAppInstances(appID string, opts *godo.GetAppInstancesOpts) ([]*godo.AppInstance, error)
 
 	ListJobInvocations(appID string, opts *godo.ListJobInvocationsOptions) ([]*godo.JobInvocation, error)
-	GetJobInvocation(appID string, jobInvocationId string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error)
-	GetJobInvocationLogs(appID, jobInvocationId string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error)
+	GetJobInvocation(appID string, jobInvocationID string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error)
+	GetJobInvocationLogs(appID, jobInvocationID string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error)
 }
 
 type appsService struct {
@@ -335,16 +335,16 @@ func (s *appsService) ListJobInvocations(appID string, opts *godo.ListJobInvocat
 	return jobInvocations, nil
 }
 
-func (s *appsService) GetJobInvocation(appID string, jobInvocationId string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error) {
-	jobInvocation, _, err := s.client.Apps.GetJobInvocation(s.ctx, appID, jobInvocationId, opts)
+func (s *appsService) GetJobInvocation(appID string, jobInvocationID string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error) {
+	jobInvocation, _, err := s.client.Apps.GetJobInvocation(s.ctx, appID, jobInvocationID, opts)
 	if err != nil {
 		return nil, err
 	}
 	return jobInvocation, nil
 }
 
-func (s *appsService) GetJobInvocationLogs(appID, jobInvocationId string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error) {
-	jobLogs, _, err := s.client.Apps.GetJobInvocationLogs(s.ctx, appID, jobInvocationId, opts)
+func (s *appsService) GetJobInvocationLogs(appID, jobInvocationID string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error) {
+	jobLogs, _, err := s.client.Apps.GetJobInvocationLogs(s.ctx, appID, jobInvocationID, opts)
 	if err != nil {
 		return nil, err
 	}

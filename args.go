@@ -44,7 +44,7 @@ const (
 	ArgAppLogType = "type"
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
-	// ArgAppJobName is the deployment ID.
+	// ArgAppJobName is the job name.
 	ArgAppJobName = "job-name"
 	// ArgAppJobInvocation is the job invocation ID.
 	ArgAppJobInvocation = "job-invocation"
