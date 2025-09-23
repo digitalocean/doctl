@@ -76,7 +76,7 @@ jobs:
         id: version
         run: |
           BETA_TAG=${GITHUB_REF#refs/tags/}
-          STABLE_TAG=${BETA_TAG%-beta*}
+          STABLE_TAG=${BETA_TAG%-beta}
           echo "stable_tag=$STABLE_TAG" >> $GITHUB_OUTPUT
           echo "Beta tag: $BETA_TAG"
           echo "Stable tag: $STABLE_TAG"
