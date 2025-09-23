@@ -3,7 +3,7 @@ name: beta-release
 on:
   push:
     tags:
-      - 'v[1-9].[0-9]+.[0-9]+-beta*'
+      - 'v[1-9].[0-9]+.[0-9]+-beta'
 
 jobs:
   integration-tests:
