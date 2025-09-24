@@ -1,0 +1,91 @@
+name: beta-release
+
+on:
+  push:
+    tags:
+      - 'v[1-9].[0-9]+.[0-9]+-beta'
+
+jobs:
+  integration-tests:
+    name: 'Integration Tests'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.x
+
+      - name: Run integration tests
+        run: make test_integration
+
+  beta-release:
+    name: 'Beta Release'
+    needs: integration-tests
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.x
+
+      - name: Run GoReleaser (Beta)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Mark beta as pre-release
+        run: |
+          BETA_TAG=${GITHUB_REF#refs/tags/}
+          gh release edit "$BETA_TAG" --prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  promote-to-stable:
+    name: 'Promote to Stable'
+    needs: [integration-tests, beta-release]
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from beta tag
+        id: version
+        run: |
+          BETA_TAG=${GITHUB_REF#refs/tags/}
+          STABLE_TAG=${BETA_TAG%-beta}
+          echo "stable_tag=$STABLE_TAG" >> $GITHUB_OUTPUT
+          echo "Beta tag: $BETA_TAG"
+          echo "Stable tag: $STABLE_TAG"
+
+      - name: Create stable tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.stable_tag }}
+          git push origin ${{ steps.version.outputs.stable_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
