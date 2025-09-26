@@ -2,6 +2,7 @@ package godo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -562,6 +563,59 @@ type DatabaseCreateLogsinkRequest struct {
 	Config *DatabaseLogsinkConfig `json:"config"`
 }
 
+// MarshalJSON implements custom JSON marshaling for DatabaseCreateLogsinkRequest
+// to ensure the TLS field is always included for rsyslog sink types
+func (r DatabaseCreateLogsinkRequest) MarshalJSON() ([]byte, error) {
+	// For rsyslog, we need to ensure TLS field is always present
+	if r.Type == "rsyslog" {
+		type rsyslogConfig struct {
+			URL          string  `json:"url,omitempty"`
+			IndexPrefix  string  `json:"index_prefix,omitempty"`
+			IndexDaysMax int     `json:"index_days_max,omitempty"`
+			Timeout      float32 `json:"timeout,omitempty"`
+			Server       string  `json:"server,omitempty"`
+			Port         int     `json:"port,omitempty"`
+			TLS          bool    `json:"tls"` // Always include for rsyslog
+			Format       string  `json:"format,omitempty"`
+			Logline      string  `json:"logline,omitempty"`
+			SD           string  `json:"sd,omitempty"`
+			CA           string  `json:"ca,omitempty"`
+			Key          string  `json:"key,omitempty"`
+			Cert         string  `json:"cert,omitempty"`
+		}
+
+		// Create wrapper struct with rsyslog-specific config
+		wrapper := struct {
+			Name   string         `json:"sink_name"`
+			Type   string         `json:"sink_type"`
+			Config *rsyslogConfig `json:"config"`
+		}{
+			Name: r.Name,
+			Type: r.Type,
+			Config: &rsyslogConfig{
+				URL:          r.Config.URL,
+				IndexPrefix:  r.Config.IndexPrefix,
+				IndexDaysMax: r.Config.IndexDaysMax,
+				Timeout:      r.Config.Timeout,
+				Server:       r.Config.Server,
+				Port:         r.Config.Port,
+				TLS:          r.Config.TLS,
+				Format:       r.Config.Format,
+				Logline:      r.Config.Logline,
+				SD:           r.Config.SD,
+				CA:           r.Config.CA,
+				Key:          r.Config.Key,
+				Cert:         r.Config.Cert,
+			},
+		}
+		return json.Marshal(wrapper)
+	}
+
+	// For other sink types, use default marshaling
+	type alias DatabaseCreateLogsinkRequest
+	return json.Marshal(alias(r))
+}
+
 // DatabaseUpdateLogsinkRequest is used to update logsink for a database cluster
 type DatabaseUpdateLogsinkRequest struct {
 	Config *DatabaseLogsinkConfig `json:"config"`
@@ -918,6 +972,10 @@ type databaseTopicsRoot struct {
 
 type databaseLogsinksRoot struct {
 	Sinks []DatabaseLogsink `json:"sinks"`
+}
+
+type databaseLogsinkRoot struct {
+	Sink *DatabaseLogsink `json:"sink"`
 }
 
 type databaseMetricsCredentialsRoot struct {
@@ -2033,12 +2091,12 @@ func (svc *DatabasesServiceOp) CreateLogsink(ctx context.Context, databaseID str
 		return nil, nil, err
 	}
 
-	root := new(DatabaseLogsink)
+	root := new(databaseLogsinkRoot)
 	resp, err := svc.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
-	return root, resp, nil
+	return root.Sink, resp, nil
 }
 
 // GetLogsink gets a logsink for a database
@@ -2049,12 +2107,12 @@ func (svc *DatabasesServiceOp) GetLogsink(ctx context.Context, databaseID string
 		return nil, nil, err
 	}
 
-	root := new(DatabaseLogsink)
+	root := new(databaseLogsinkRoot)
 	resp, err := svc.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
-	return root, resp, nil
+	return root.Sink, resp, nil
 }
 
 // ListTopics returns all topics for a given kafka cluster
