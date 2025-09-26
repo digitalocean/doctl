@@ -279,6 +279,51 @@ func (mr *MockAppsServiceMockRecorder) ListDeployments(appID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployments", reflect.TypeOf((*MockAppsService)(nil).ListDeployments), appID)
 }
 
+// ListJobInvocations mocks base method.
+func (m *MockAppsService) ListJobInvocations(appID string, opts *godo.ListJobInvocationsOptions) ([]*godo.JobInvocation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobInvocations", appID, opts)
+	ret0, _ := ret[0].([]*godo.JobInvocation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListJobInvocations indicates an expected call of ListJobInvocations.
+func (mr *MockAppsServiceMockRecorder) ListJobInvocations(appID string, opts *godo.ListJobInvocationsOptions) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobInvocations", reflect.TypeOf((*MockAppsService)(nil).ListJobInvocations), appID, opts)
+}
+
+// GetJobInvocation mocks base method.
+func (m *MockAppsService) GetJobInvocation(appID, jobinvocationID string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetJobInvocation", appID, jobinvocationID, opts)
+	ret0, _ := ret[0].(*godo.JobInvocation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetJobInvocation indicates an expected call of GetJobInvocation.
+func (mr *MockAppsServiceMockRecorder) GetJobInvocation(appID, jobInvocationID string, opts *godo.GetJobInvocationOptions) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobInvocation", reflect.TypeOf((*MockAppsService)(nil).GetJobInvocation), appID, jobInvocationID, opts)
+}
+
+// GetJobInvocationLogs mocks base method.
+func (m *MockAppsService) GetJobInvocationLogs(appID, jobInvocationID string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetJobInvocationLogs", appID, jobInvocationID, opts)
+	ret0, _ := ret[0].(*godo.AppLogs)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetJobInvocationLogs indicates an expected call of GetJobInvocationLogs.
+func (mr *MockAppsServiceMockRecorder) GetJobInvocationLogs(appID, jobinvocationID string, opts *godo.GetJobInvocationLogsOptions) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobInvocationLogs", reflect.TypeOf((*MockAppsService)(nil).GetJobInvocationLogs), appID, jobinvocationID, opts)
+}
+
 // ListInstanceSizes mocks base method.
 func (m *MockAppsService) ListInstanceSizes() ([]*godo.AppInstanceSize, error) {
 	m.ctrl.T.Helper()

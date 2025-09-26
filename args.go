@@ -44,6 +44,10 @@ const (
 	ArgAppLogType = "type"
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
+	// ArgAppJobName is the job name.
+	ArgAppJobName = "job-name"
+	// ArgAppJobInvocation is the job invocation ID.
+	ArgAppJobInvocation = "job-invocation"
 	// ArgAppInstanceName is the instance name of currently running instances (optional).
 	ArgAppInstanceName = "instance-name"
 	// ArgAppDevConfig is the path to the app dev link config.
