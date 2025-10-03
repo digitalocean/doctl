@@ -143,7 +143,6 @@ func (ji JobInvocations) Cols() []string {
 		"Started",
 		"Completed",
 		"Phase",
-		"Result",
 	}
 }
 
@@ -155,7 +154,6 @@ func (ji JobInvocations) ColMap() map[string]string {
 		"Started":   "Started At",
 		"Completed": "Completed At",
 		"Phase":     "Phase",
-		"Result":    "Result",
 	}
 }
 
