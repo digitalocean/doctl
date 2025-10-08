@@ -74,7 +74,8 @@ jobs:
         uses: snapcore/action-build@v1
         id: build
 
-      - uses: snapcore/action-publish@master
+      - name: Publish snap
+        uses: snapcore/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_TOKEN }}
         with:
