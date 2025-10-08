@@ -188,12 +188,43 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Deployments{}),
 	)
 
+	listJobInvocations := CmdBuilder(
+		cmd,
+		RunAppsListJobInvocations,
+		"list-job-invocations <app id>",
+		"List all job invocations",
+		`List all job invocations for an app.
+
+Only basic information is included with the text output format. For complete app details including the app specs, use the JSON format.`,
+		Writer,
+		aliasOpt("lsji"),
+		displayerType(&displayers.JobInvocations{}),
+	)
+
+	AddStringSliceFlag(listJobInvocations, doctl.ArgAppDeployment, "", []string{}, "The deployment ID to filter job invocations for. If not provided, all job invocations for given app are returned.")
+	AddStringSliceFlag(listJobInvocations, doctl.ArgAppJobName, "", []string{}, "The job name to filter job invocations for. If not provided, all job invocations for given app are returned.")
+
+	listJobInvocations.Example = `The following example retrieves the list of job invocations for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the deployment ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` and the job ` + "`" + `cron` + "`" + `: doctl apps list-job-invocations f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --job-name cron --deployment 418b7972-fc67-41ea-ab4b-6f9477c4f7d8`
+
+	CmdBuilder(
+		cmd,
+		RunAppsGetJobInvocation,
+		"get-job-invocation <app id> <job invocation id>",
+		"Get a job invocation",
+		`Gets information about a specific job invocation for the given app, including when the job was created.
+
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+		Writer,
+		aliasOpt("gji"),
+		displayerType(&displayers.JobInvocations{}),
+	)
+
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
 		"logs <app name or id> <component name (defaults to all components)>",
 		"Retrieves logs",
-		`Retrieves component logs for a deployment of an app.
+		`Retrieves component logs for a deployment or a job invocation of an app.
 
 Three types of logs are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
 - build
@@ -201,12 +232,15 @@ Three types of logs are supported and can be specified with the --`+doctl.ArgApp
 - run
 - run_restarted
 
+To retrieve job invocation logs, pass the job invocation ID with the --`+doctl.ArgAppJobInvocation+` flag.
+
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
 		Writer,
 		aliasOpt("l"),
 	)
 	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "Retrieves logs for a specific deployment ID. Defaults to current deployment.")
+	AddStringFlag(logs, doctl.ArgAppJobInvocation, "", "", "Retrieves logs for a specific job invocation ID.")
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "Retrieves logs for a specific log type. Defaults to run logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Returns logs as they are emitted by the app.")
 	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Specifies the number of lines to show from the end of the log.")
@@ -675,6 +709,11 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		return err
 	}
 
+	jobInvocationID, err := c.Doit.GetString(c.NS, doctl.ArgAppJobInvocation)
+	if err != nil {
+		return err
+	}
+
 	_, err = uuid.Parse(appID)
 	if err != nil || deploymentID == "" {
 		app, err := c.Apps().Find(appID)
@@ -710,7 +749,10 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	case strings.ToLower(string(godo.AppLogTypeRunRestarted)):
 		logType = godo.AppLogTypeRunRestarted
 	default:
-		return fmt.Errorf("Invalid log type %s", logTypeStr)
+		// if jobInvocationID is provided, we can skip the logType validation as logType will be set to JOB_INVOCATION
+		if jobInvocationID == "" {
+			return fmt.Errorf("Invalid log type %s", logTypeStr)
+		}
 	}
 	logFollow, err := c.Doit.GetBool(c.NS, doctl.ArgAppLogFollow)
 	if err != nil {
@@ -726,7 +768,23 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		return err
 	}
 
-	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow, logTail)
+	var logs *godo.AppLogs
+	if jobInvocationID != "" {
+		if component == "" {
+			return fmt.Errorf("component name is required when job invocation id is provided")
+		}
+
+		opts := &godo.GetJobInvocationLogsOptions{
+			JobName:   component,
+			Follow:    logFollow,
+			TailLines: logTail,
+		}
+
+		logs, err = c.Apps().GetJobInvocationLogs(appID, jobInvocationID, opts)
+	} else {
+		logs, err = c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow, logTail)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -1327,4 +1385,61 @@ func RunGetAppInstances(c *CmdConfig) error {
 	}
 
 	return c.Display(displayers.AppInstances(instances))
+}
+
+// RunAppsListJobInvocations lists job invocations for a given app
+func RunAppsListJobInvocations(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
+	if err != nil {
+		return err
+	}
+
+	jobName, err := c.Doit.GetString(c.NS, doctl.ArgAppJobName)
+	if err != nil {
+		return err
+	}
+
+	opts := &godo.ListJobInvocationsOptions{
+		DeploymentID: deploymentID,
+		JobNames:     []string{jobName},
+	}
+
+	invocations, err := c.Apps().ListJobInvocations(appID, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.JobInvocations(invocations))
+}
+
+// RunAppsGetJobInvocation gets a job invocation for an app.
+func RunAppsGetJobInvocation(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	jobInvocationID := c.Args[1]
+
+	opts := &godo.GetJobInvocationOptions{}
+
+	jobName, err := c.Doit.GetString(c.NS, doctl.ArgAppJobName)
+	if err != nil {
+		return err
+	}
+
+	if jobName != "" {
+		opts.JobName = jobName
+	}
+
+	jobInvocation, err := c.Apps().GetJobInvocation(appID, jobInvocationID, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.JobInvocations{jobInvocation})
 }
