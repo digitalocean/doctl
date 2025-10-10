@@ -33,7 +33,9 @@ func TestAppsCommand(t *testing.T) {
 		"dev",
 		"create-deployment",
 		"get-deployment",
+		"get-job-invocation",
 		"list-deployments",
+		"list-job-invocations",
 		"list-regions",
 		"logs",
 		"propose",
@@ -1087,6 +1089,120 @@ func TestRunAppsGetInstances(t *testing.T) {
 		config.Args = append(config.Args, appID)
 
 		err := RunGetAppInstances(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsListJobInvocations(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		jobInvocations := []*godo.JobInvocation{{
+			ID:           uuid.New().String(),
+			JobName:      "job-name",
+			DeploymentID: uuid.New().String(),
+			Phase:        godo.JOBINVOCATIONPHASE_Succeeded,
+			Trigger: &godo.JobInvocationTrigger{
+				Type: godo.JOBINVOCATIONTRIGGERTYPE_Scheduled,
+				Scheduled: &godo.TriggerMetadataScheduled{
+					Schedule: &godo.AppJobSpecSchedule{
+						Cron:     "0 0 * * *",
+						TimeZone: "America/New_York",
+					},
+				},
+			},
+			CreatedAt:   time.Now(),
+			StartedAt:   time.Now(),
+			CompletedAt: time.Now(),
+		}}
+
+		opts := &godo.ListJobInvocationsOptions{
+			DeploymentID: jobInvocations[0].DeploymentID,
+			JobNames:     []string{jobInvocations[0].JobName},
+		}
+
+		tm.apps.EXPECT().ListJobInvocations(appID, opts).Times(1).Return(jobInvocations, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgAppDeployment, jobInvocations[0].DeploymentID)
+		config.Doit.Set(config.NS, doctl.ArgAppJobName, jobInvocations[0].JobName)
+
+		err := RunAppsListJobInvocations(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsGetJobInvocation(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		jobInvocation := &godo.JobInvocation{
+			ID:           uuid.New().String(),
+			JobName:      "job-name",
+			DeploymentID: uuid.New().String(),
+			Phase:        godo.JOBINVOCATIONPHASE_Succeeded,
+			Trigger: &godo.JobInvocationTrigger{
+				Type: godo.JOBINVOCATIONTRIGGERTYPE_Scheduled,
+				Scheduled: &godo.TriggerMetadataScheduled{
+					Schedule: &godo.AppJobSpecSchedule{
+						Cron:     "0 0 * * *",
+						TimeZone: "America/New_York",
+					},
+				},
+			},
+			CreatedAt:   time.Now(),
+			StartedAt:   time.Now(),
+			CompletedAt: time.Now(),
+		}
+
+		opts := &godo.GetJobInvocationOptions{
+			JobName: jobInvocation.JobName,
+		}
+
+		tm.apps.EXPECT().GetJobInvocation(appID, jobInvocation.ID, opts).Times(1).Return(jobInvocation, nil)
+
+		config.Args = append(config.Args, appID, jobInvocation.ID)
+		config.Doit.Set(config.NS, doctl.ArgAppJobName, jobInvocation.JobName)
+
+		err := RunAppsGetJobInvocation(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsGetJobInvocationLogs(t *testing.T) {
+	appID := uuid.New().String()
+	jobInvocationID := uuid.New().String()
+	jobName := "good-job"
+
+	testApp := &godo.App{
+		ID:   appID,
+		Spec: &testAppSpec,
+		ActiveDeployment: &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+		},
+	}
+
+	opts := &godo.GetJobInvocationLogsOptions{
+		JobName: jobName,
+		Follow:  true,
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.apps.EXPECT().Find(appID).Times(1).Return(testApp, nil)
+		tm.apps.EXPECT().GetJobInvocationLogs(appID, jobInvocationID, opts).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+
+		tc := config.Doit.(*doctl.TestConfig)
+		tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+			assert.Equal(t, "aa-bb-11-cc-33", token)
+			assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+			return tm.listen
+		}
+
+		config.Args = append(config.Args, appID, jobName)
+		config.Doit.Set(config.NS, doctl.ArgAppJobInvocation, jobInvocationID)
+		config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+
+		err := RunAppsGetLogs(config)
 		require.NoError(t, err)
 	})
 }
