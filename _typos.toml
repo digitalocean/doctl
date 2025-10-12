@@ -9,8 +9,29 @@ vas = "vas"
 splitted = "splitted"
 
 [default.extend-words]
-# Its not perfect at hashes yet
+# Hash-related typo
 cace = "cace"
 Wqs = "Wqs"
-# example and exmaple as two domain examples
+
+# Domain examples
 exmaple = "exmaple"
+
+# CLI-related typos
+doct = "doctl"
+doclt = "doctl"
+doctl' = "doctl"
+doctl;s = "doctl’s"
+doctl 's = "doctl’s"
+doctl`s = "doctl’s"
+doctl’ss = "doctl’s"
+
+# Markdown formatting quirks
+`doctl`'s = "doctl’s"
+`doctl` ’s = "doctl’s"
+`doctl`' = "doctl’s"
+
+# Common contributor typos
+intial = "initial"
+recieve = "receive"
+teh = "the"
+enviroment = "environment"
