@@ -35,7 +35,7 @@ elif [[ $(git status --porcelain -b | grep -e "ahead" -e "behind") != "" ]]; the
 fi  
 
 echo
-new_version="v${major}.${minor}.${patch}-beta"
+new_version="v${major}.${minor}.${patch}"
 
 git tag -m "release ${new_version}" -a "$new_version" && git push "${ORIGIN}" tag "$new_version"
 
