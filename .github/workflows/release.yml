@@ -114,7 +114,7 @@ jobs:
           # Create stable release with assets
           echo "Creating stable release with binaries..."
           gh release create "${{ steps.version.outputs.stable_tag }}" \
-            --title "Release ${{ steps.version.outputs.stable_tag }}" \
+            --title "${{ steps.version.outputs.stable_tag }}" \
             --notes "$RELEASE_NOTES" \
             --latest
         
