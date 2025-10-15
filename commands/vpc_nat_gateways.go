@@ -37,6 +37,9 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 300, "TCP connection timeout (seconds)")
 	}
 
+	AddStringFlag(cmdVPCNATGatewayCreate, doctl.ArgProjectID, "", "",
+		"Indicates which project to associate the VPC NAT Gateway with. If not specified, the VPC NAT Gateway will be placed in your default project.")
+
 	CmdBuilder(cmd, RunVPCNATGatewayGet, "get <gateway-id>", "Get a VPC NAT Gateway", "", Writer, displayerType(&displayers.VPCNATGateways{}))
 
 	CmdBuilder(cmd, RunVPCNATGatewayList, "list", "List all active VPC NAT Gateways", "", Writer, displayerType(&displayers.VPCNATGateways{}), aliasOpt("ls"))
@@ -47,7 +50,14 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 	return cmd
 }
 
-func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayRequest) error {
+type requestType int
+
+const (
+	createRequestType requestType = iota + 1
+	updateRequestType
+)
+
+func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayRequest, requestType requestType) error {
 	var hydrators = []func() error{
 		func() error {
 			name, err := c.Doit.GetString(c.NS, doctl.ArgVPCNATGatewayName)
@@ -116,6 +126,19 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 			return nil
 		},
 	}
+
+	if requestType == createRequestType {
+		hydrators = append(hydrators,
+			func() error {
+				projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
+				if err != nil {
+					return err
+				}
+				r.ProjectID = projectID
+				return nil
+			},
+		)
+	}
 	for _, hydrate := range hydrators {
 		if err := hydrate(); err != nil {
 			return err
@@ -127,7 +150,7 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 // RunVPCNATGatewayCreate creates a VPC NAT Gateway
 func RunVPCNATGatewayCreate(c *CmdConfig) error {
 	createReq := new(godo.VPCNATGatewayRequest)
-	if err := buildVPCNATGatewayRequestFromArgs(c, createReq); err != nil {
+	if err := buildVPCNATGatewayRequestFromArgs(c, createReq, createRequestType); err != nil {
 		return err
 	}
 	gateway, err := c.VPCNATGateways().Create(createReq)
@@ -146,7 +169,7 @@ func RunVPCNATGatewayUpdate(c *CmdConfig) error {
 	}
 	id := c.Args[0]
 	updateReq := new(godo.VPCNATGatewayRequest)
-	if err = buildVPCNATGatewayRequestFromArgs(c, updateReq); err != nil {
+	if err = buildVPCNATGatewayRequestFromArgs(c, updateReq, updateRequestType); err != nil {
 		return err
 	}
 	gateway, err := c.VPCNATGateways().Update(id, updateReq)

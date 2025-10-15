@@ -33,6 +33,7 @@ var (
 			UDPTimeoutSeconds:  30,
 			ICMPTimeoutSeconds: 30,
 			TCPTimeoutSeconds:  30,
+			ProjectID:          "0b0f3f3c-1d2e-4e5f-8f3c-0b0f3f3c1d2e",
 		},
 		{
 			ID:     "4d99fb28-b33d-4791-aff5-bf30f8f4f917",
@@ -57,6 +58,7 @@ var (
 			UDPTimeoutSeconds:  30,
 			ICMPTimeoutSeconds: 30,
 			TCPTimeoutSeconds:  30,
+			ProjectID:          "0b0f3f3c-1d2e-4e5f-8f3c-0b0f3f3c1d2e",
 		},
 	}
 )
@@ -82,6 +84,7 @@ func TestVPCNATGatewayCreate(t *testing.T) {
 			UDPTimeoutSeconds:  30,
 			ICMPTimeoutSeconds: 30,
 			TCPTimeoutSeconds:  30,
+			ProjectID:          "0b0f3f3c-1d2e-4e5f-8f3c-0b0f3f3c1d2e",
 		}
 
 		tm.vpcNatGateways.EXPECT().Create(&createReq).Return(testVPCNATGateways[0], nil)
@@ -94,6 +97,7 @@ func TestVPCNATGatewayCreate(t *testing.T) {
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayUDPTimeout, "30")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayICMPTimeout, "30")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayTCPTimeout, "30")
+		c.Doit.Set(c.NS, doctl.ArgProjectID, "0b0f3f3c-1d2e-4e5f-8f3c-0b0f3f3c1d2e")
 
 		err := RunVPCNATGatewayCreate(c)
 		assert.NoError(t, err)
