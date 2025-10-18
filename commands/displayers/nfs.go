@@ -123,17 +123,15 @@ func (na *NfsAction) JSON(out io.Writer) error {
 
 func (na *NfsAction) Cols() []string {
 	return []string{
-		"ID", "Status", "Type", "StartedAt", "CompletedAt", "ResourceID", "ResourceType", "Region",
+		"Status", "Type", "StartedAt", "ResourceID", "ResourceType", "Region",
 	}
 }
 
 func (na *NfsAction) ColMap() map[string]string {
 	return map[string]string{
-		"ID":           "ID",
 		"Status":       "Status",
 		"Type":         "Type",
 		"StartedAt":    "Started At",
-		"CompletedAt":  "Completed At",
 		"ResourceID":   "Resource ID",
 		"ResourceType": "Resource Type",
 		"Region":       "Region",
@@ -150,8 +148,8 @@ func (na *NfsAction) KV() []map[string]any {
 			region = x.RegionSlug
 		}
 		o := map[string]any{
-			"ID": x.ID, "Status": x.Status, "Type": x.Type,
-			"StartedAt": x.StartedAt, "CompletedAt": x.CompletedAt,
+			"Status": x.Status, "Type": x.Type,
+			"StartedAt":  x.StartedAt,
 			"ResourceID": x.ResourceID, "ResourceType": x.ResourceType,
 			"Region": region,
 		}
