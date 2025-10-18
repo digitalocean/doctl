@@ -14,7 +14,16 @@ limitations under the License.
 */
 package commands
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
+)
 
 // Nfs creates a new command that groups the subcommands for managing DigitalOcean NFS.
 func Nfs() *Command {
@@ -24,6 +33,7 @@ func Nfs() *Command {
 			Aliases: []string{},
 			Short:   "Display commands that manage DigitalOcean Network File Storage.",
 			Long:    "The subcommands of `doctl nfs` allow you to access and manage Network File Storage.",
+			GroupID: manageResourcesGroup,
 		},
 	}
 
@@ -55,11 +65,13 @@ doctl nfs create my-nfs-share --region 'nyc2' --size 100 --vpc-ids 74922c16-5466
 	cmdNfsResize := CmdBuilder(cmd, nfsResize, "resize [flags]", "Resize an NFS share.", "Resize an NFS share with the given ID and region.", Writer)
 	AddStringFlag(cmdNfsResize, "id", "", "", "the ID the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsResize, "region", "r", "", "the region where the NFS share resides", requiredOpt())
+	AddStringFlag(cmdNfsResize, "size", "s", "", "the size of the NFS share in GiB", requiredOpt())
+	AddBoolFlag(cmdNfsResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 	cmdNfsResize.Example =
-		`doctl nfs get --id b050990d-4337-4a9d-9c8d-9f759a83936a --region 'atl1'`
+		`doctl nfs resize --id b050990d-4337-4a9d-9c8d-9f759a83936a --region 'atl1' --size 1024`
 
 	cmd.AddCommand(nfsSnapshots())
-	
+
 	return cmd
 }
 
@@ -74,7 +86,9 @@ func nfsSnapshots() *Command {
 
 	cmdNfsSnapshotCreate := CmdBuilder(cmd, nfsSnapshotCreate, "create <name> [flags]", "Creates a snapshot of the NFS share", "Creates a snapshot of the NFS share with the given share ID", Writer)
 	cmdNfsSnapshotCreate.Example = `The following example creates a snapshot for a specified NFS share: doctl nfs snapshot create my-snapshot --share-id 0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d --region 'atl1'`
+	AddStringFlag(cmdNfsSnapshotCreate, "share-id", "", "", "the ID of the NFS share to snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotCreate, "region", "r", "", "the region where the NFS share resides", requiredOpt())
+	AddBoolFlag(cmdNfsSnapshotCreate, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdNfsSnapshotGet := CmdBuilder(cmd, nfsSnapshotGet, "get [flags]", "Get an NFS snapshot by ID.", "Get an NFS snapshot with the given ID and region.", Writer)
 	AddStringFlag(cmdNfsSnapshotGet, "id", "", "", "the ID the NFS snapshot", requiredOpt())
@@ -99,37 +113,229 @@ doctl nfs snapshot list --region 'atl1' --share-id b050990d-4337-4a9d-9c8d-9f759
 }
 
 func nfsCreate(c *CmdConfig) error {
-	return nil
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	sizeStr, err := c.Doit.GetString(c.NS, "size")
+	if err != nil {
+		return err
+	}
+
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		return fmt.Errorf("invalid size value: %v", err)
+	}
+
+	vpcIDs, err := c.Doit.GetStringSlice(c.NS, "vpc-ids")
+	if err != nil {
+		return err
+	}
+
+	r := &godo.NfsCreateRequest{
+		Name:    c.Args[0],
+		Region:  region,
+		SizeGib: size,
+		VpcIDs:  vpcIDs,
+	}
+
+	share, err := c.Nfs().Create(r)
+	if err != nil {
+		return err
+	}
+
+	return displayNfs(c, *share)
 }
 
 func nfsGet(c *CmdConfig) error {
-	return nil
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	share, err := c.Nfs().Get(id, region)
+	if err != nil {
+		return err
+	}
+
+	return displayNfs(c, *share)
 }
 
 func nfsList(c *CmdConfig) error {
-	return nil
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	shares, err := c.Nfs().List(region)
+	if err != nil {
+		return err
+	}
+
+	return displayNfs(c, shares...)
 }
 
 func nfsDelete(c *CmdConfig) error {
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	err = c.Nfs().Delete(id, region)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func nfsSnapshotCreate(c *CmdConfig) error {
-	return nil
+	shareID, err := c.Doit.GetString(c.NS, "share-id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	name := c.Args[0]
+
+	action, err := c.NfsActions().Snapshot(shareID, name, region)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := actionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
+	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
+	return c.Display(item)
 }
 
 func nfsSnapshotList(c *CmdConfig) error {
-	return nil
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	shareId, _ := c.Doit.GetString(c.NS, "share-id")
+
+	snapshots, err := c.Nfs().ListSnapshots(shareId, region)
+	if err != nil {
+		return err
+	}
+
+	return displayNfsSnapshots(c, snapshots...)
 }
 
 func nfsSnapshotGet(c *CmdConfig) error {
-	return nil
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := c.Nfs().GetSnapshot(id, region)
+	if err != nil {
+		return err
+	}
+
+	return displayNfsSnapshots(c, *snapshot)
 }
 
 func nfsSnapshotDelete(c *CmdConfig) error {
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	err = c.Nfs().DeleteSnapshot(id, region)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func nfsResize(c *CmdConfig) error {
-	return nil
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	sizeStr, err := c.Doit.GetString(c.NS, "size")
+	if err != nil {
+		return err
+	}
+
+	size, err := strconv.ParseUint(sizeStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid size value: %v", err)
+	}
+
+	action, err := c.NfsActions().Resize(id, size, region)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := actionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
+	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
+	return c.Display(item)
+}
+
+func displayNfs(c *CmdConfig, shares ...do.Nfs) error {
+	item := &displayers.Nfs{NfsShares: shares}
+	return c.Display(item)
+}
+
+func displayNfsSnapshots(c *CmdConfig, snapshots ...do.NfsSnapshot) error {
+	item := &displayers.NfsSnapshot{NfsSnapshots: snapshots}
+	return c.Display(item)
 }

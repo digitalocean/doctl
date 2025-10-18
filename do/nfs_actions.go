@@ -19,10 +19,18 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// Action is a wrapper for godo.Action
+type NfsAction struct {
+	*godo.NfsAction
+}
+
+// NfsActions is a slice of NfsAction.
+type NfsActions []NfsAction
+
 // NfsActionsService is an interface for interacting with DigitalOcean's NFS Actions API.
 type NfsActionsService interface {
-	Resize(id string, size uint64, region string) (*godo.Action, error)
-	Snapshot(id, name, region string) (*godo.Action, error)
+	Resize(id string, size uint64, region string) (*NfsAction, error)
+	Snapshot(id, name, region string) (*NfsAction, error)
 }
 
 type nfsActionsService struct {
@@ -38,18 +46,18 @@ func NewNfsActionsService(godoClient *godo.Client) NfsActionsService {
 	}
 }
 
-func (s *nfsActionsService) Resize(id string, size uint64, region string) (*godo.Action, error) {
+func (s *nfsActionsService) Resize(id string, size uint64, region string) (*NfsAction, error) {
 	action, _, err := s.client.NfsActions.Resize(context.TODO(), id, size, region)
 	if err != nil {
 		return nil, err
 	}
-	return action, nil
+	return &NfsAction{NfsAction: action}, nil
 }
 
-func (s *nfsActionsService) Snapshot(id, name, region string) (*godo.Action, error) {
+func (s *nfsActionsService) Snapshot(id, name, region string) (*NfsAction, error) {
 	action, _, err := s.client.NfsActions.Snapshot(context.TODO(), id, name, region)
 	if err != nil {
 		return nil, err
 	}
-	return action, nil
+	return &NfsAction{NfsAction: action}, nil
 }

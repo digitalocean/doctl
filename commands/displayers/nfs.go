@@ -53,13 +53,13 @@ func (n *Nfs) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(n.NfsShares))
 	for _, nfs := range n.NfsShares {
 		m := map[string]any{
-			"ID":      nfs.ID,
-			"Name":    nfs.Name,
-			"Size":    strconv.Itoa(nfs.SizeGib) + " GiB",
-			"Region":  nfs.Region,
-			"Status":  nfs.Status,
-			"Created": nfs.CreatedAt,
-			"VPC IDs": strings.Join(nfs.VpcIDs, ", "),
+			"ID":        nfs.ID,
+			"Name":      nfs.Name,
+			"Size":      strconv.Itoa(nfs.SizeGib) + " GiB",
+			"Region":    nfs.Region,
+			"Status":    nfs.Status,
+			"CreatedAt": nfs.CreatedAt,
+			"VpcIDs":    strings.Join(nfs.VpcIDs, ", "),
 		}
 		out = append(out, m)
 	}
@@ -108,5 +108,55 @@ func (n *NfsSnapshot) KV() []map[string]any {
 		}
 		out = append(out, m)
 	}
+	return out
+}
+
+type NfsAction struct {
+	NfsActions []do.NfsAction
+}
+
+var _ Displayable = &NfsAction{}
+
+func (na *NfsAction) JSON(out io.Writer) error {
+	return writeJSON(na.NfsActions, out)
+}
+
+func (na *NfsAction) Cols() []string {
+	return []string{
+		"ID", "Status", "Type", "StartedAt", "CompletedAt", "ResourceID", "ResourceType", "Region",
+	}
+}
+
+func (na *NfsAction) ColMap() map[string]string {
+	return map[string]string{
+		"ID":           "ID",
+		"Status":       "Status",
+		"Type":         "Type",
+		"StartedAt":    "Started At",
+		"CompletedAt":  "Completed At",
+		"ResourceID":   "Resource ID",
+		"ResourceType": "Resource Type",
+		"Region":       "Region",
+	}
+}
+
+func (na *NfsAction) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(na.NfsActions))
+	for _, x := range na.NfsActions {
+		region := ""
+		if x.Region != nil {
+			region = x.Region.Slug
+		} else if x.RegionSlug != "" {
+			region = x.RegionSlug
+		}
+		o := map[string]any{
+			"ID": x.ID, "Status": x.Status, "Type": x.Type,
+			"StartedAt": x.StartedAt, "CompletedAt": x.CompletedAt,
+			"ResourceID": x.ResourceID, "ResourceType": x.ResourceType,
+			"Region": region,
+		}
+		out = append(out, o)
+	}
+
 	return out
 }
