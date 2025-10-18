@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.167.0] - 2025-10-18
+
+- #921 - @sreeram-venkitesh - MNFS-164: Added NFS resize and snapshot APIs
+
 ## [1.166.0] - 2025-10-13
 
 - #912 - @sreeram-venkitesh - MNFS-164: Added NFS APIs
