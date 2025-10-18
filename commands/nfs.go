@@ -31,44 +31,47 @@ func Nfs() *Command {
 		Command: &cobra.Command{
 			Use:     "nfs",
 			Aliases: []string{},
-			Short:   "Display commands that manage DigitalOcean Network File Storage.",
+			Short:   "Display commands to manage network file storage",
 			Long:    "The subcommands of `doctl nfs` allow you to access and manage Network File Storage.",
 			GroupID: manageResourcesGroup,
 		},
 	}
 
-	cmdNfsCreate := CmdBuilder(cmd, nfsCreate, "create <name> [flags]", "Create an NFS share.", "Create an NFS share with the provided config.", Writer)
+	cmdNfsCreate := CmdBuilder(cmd, nfsCreate, "create [flags]", "Create an NFS share", "Create an NFS share with the provided config.", Writer)
+	AddStringFlag(cmdNfsCreate, "name", "n", "", "the name of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsCreate, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddStringFlag(cmdNfsCreate, "size", "s", "", "the size of the NFS share in GiB", requiredOpt())
 	AddStringSliceFlag(cmdNfsCreate, "vpc-ids", "", nil, "the list of VPC IDs that should be able to access the share", requiredOpt())
 	cmdNfsCreate.Example =
-		`doctl nfs create sammy-nfs-share --region 'atl1' --size 50 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b
-doctl nfs create my-nfs-share --region 'nyc2' --size 100 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b`
+		`doctl nfs create --name sammy-nfs-share --region 'atl1' --size 50 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b
+doctl nfs create --name my-nfs-share --region 'nyc2' --size 100 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b`
 
-	cmdNfsGet := CmdBuilder(cmd, nfsGet, "get [flags]", "Get an NFS share by ID.", "Get an NFS share with the given ID and region.", Writer)
+	cmdNfsGet := CmdBuilder(cmd, nfsGet, "get [flags]", "Get an NFS share by ID", "Get an NFS share with the given ID and region.", Writer, displayerType(&displayers.Nfs{}))
 	AddStringFlag(cmdNfsGet, "id", "", "", "the ID the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsGet, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	cmdNfsGet.Example =
-		`doctl nfs get --id b050990d-4337-4a9d-9c8d-9f759a83936a --region 'atl1'`
+		`doctl nfs get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a
+doctl nfs get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --format ID,Name,Status`
 
-	cmdNfsList := CmdBuilder(cmd, nfsList, "list [flags]", "List all NFS shares by region.", "List all NFS shares in the given region.", Writer)
+	cmdNfsList := CmdBuilder(cmd, nfsList, "list [flags]", "List all NFS shares by region", "List all NFS shares in the given region.", Writer, aliasOpt("ls"), displayerType(&displayers.Nfs{}))
 	AddStringFlag(cmdNfsList, "region", "r", "", "the region where the NFS shares reside", requiredOpt())
 	cmdNfsList.Example =
-		`doctl nfs list --region 'atl1'`
+		`doctl nfs list --region 'atl1'
+doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 
-	cmdNfsDelete := CmdBuilder(cmd, nfsDelete, "delete [flags]", "Delete an NFS share by ID.", "Delete an NFS share with the given ID and region.", Writer)
+	cmdNfsDelete := CmdBuilder(cmd, nfsDelete, "delete [flags]", "Delete an NFS share by ID", "Delete an NFS share with the given ID and region.", Writer)
 	AddStringFlag(cmdNfsDelete, "id", "", "", "the ID the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsDelete, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	cmdNfsDelete.Example =
-		`doctl nfs delete --id b050990d-4337-4a9d-9c8d-9f759a83936a --region 'atl1'`
+		`doctl nfs delete --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a`
 
-	cmdNfsResize := CmdBuilder(cmd, nfsResize, "resize [flags]", "Resize an NFS share.", "Resize an NFS share with the given ID and region.", Writer)
+	cmdNfsResize := CmdBuilder(cmd, nfsResize, "resize [flags]", "Resize an NFS share", "Resize an NFS share with the given ID and region.", Writer)
 	AddStringFlag(cmdNfsResize, "id", "", "", "the ID the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsResize, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddStringFlag(cmdNfsResize, "size", "s", "", "the size of the NFS share in GiB", requiredOpt())
 	AddBoolFlag(cmdNfsResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 	cmdNfsResize.Example =
-		`doctl nfs resize --id b050990d-4337-4a9d-9c8d-9f759a83936a --region 'atl1' --size 1024`
+		`doctl nfs resize --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --size 1024`
 
 	cmd.AddCommand(nfsSnapshots())
 
@@ -79,40 +82,48 @@ func nfsSnapshots() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "snapshot",
-			Short: "Display commands for NFS share snapshots.",
-			Long:  "The commands under `doctl nfs snapshot` are for displaying the commands for NFS shares snapshots.",
+			Short: "Display commands for NFS share's snapshots",
+			Long:  "The commands under `doctl nfs snapshot` are for managing NFS share's snapshots.",
 		},
 	}
 
-	cmdNfsSnapshotCreate := CmdBuilder(cmd, nfsSnapshotCreate, "create <name> [flags]", "Creates a snapshot of the NFS share", "Creates a snapshot of the NFS share with the given share ID", Writer)
-	cmdNfsSnapshotCreate.Example = `The following example creates a snapshot for a specified NFS share: doctl nfs snapshot create my-snapshot --share-id 0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d --region 'atl1'`
+	cmdNfsSnapshotCreate := CmdBuilder(cmd, nfsSnapshotCreate, "create [flags]", "Creates a snapshot of the NFS share", "Creates a snapshot of the NFS share with the given share ID.", Writer)
+	cmdNfsSnapshotCreate.Example = `The following example creates a snapshot for a specified NFS share: doctl nfs snapshot create --name my-snapshot --region 'atl1' --share-id 0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d`
+	AddStringFlag(cmdNfsSnapshotCreate, "name", "n", "", "the name of the NFS snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotCreate, "share-id", "", "", "the ID of the NFS share to snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotCreate, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddBoolFlag(cmdNfsSnapshotCreate, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
-	cmdNfsSnapshotGet := CmdBuilder(cmd, nfsSnapshotGet, "get [flags]", "Get an NFS snapshot by ID.", "Get an NFS snapshot with the given ID and region.", Writer)
+	cmdNfsSnapshotGet := CmdBuilder(cmd, nfsSnapshotGet, "get [flags]", "Get an NFS snapshot by ID", "Get an NFS snapshot with the given ID and region.", Writer, displayerType(&displayers.NfsSnapshot{}))
 	AddStringFlag(cmdNfsSnapshotGet, "id", "", "", "the ID the NFS snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotGet, "region", "r", "", "the region where the NFS snapshot resides", requiredOpt())
 	cmdNfsSnapshotGet.Example =
-		`doctl nfs snapshot get --id b050990d-4337-4a9d-9c8d-9f759a83936a --region 'atl1'`
+		`doctl nfs snapshot get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a
+doctl nfs snapshot get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --format ID,Name,Status`
 
-	cmdNfsSnapshotList := CmdBuilder(cmd, nfsSnapshotList, "list [flags]", "List all NFS snapshots by region.", "List all NFS snapshots in the given region.", Writer)
+	cmdNfsSnapshotList := CmdBuilder(cmd, nfsSnapshotList, "list [flags]", "List all NFS snapshots by region", "List all NFS snapshots in the given region.", Writer, aliasOpt("ls"), displayerType(&displayers.NfsSnapshot{}))
 	AddStringFlag(cmdNfsSnapshotList, "share-id", "", "", "the ID the NFS share to list snapshots of")
 	AddStringFlag(cmdNfsSnapshotList, "region", "r", "", "the region where the NFS shares reside", requiredOpt())
 	cmdNfsSnapshotList.Example =
 		`doctl nfs snapshot list --region 'atl1'
-doctl nfs snapshot list --region 'atl1' --share-id b050990d-4337-4a9d-9c8d-9f759a83936`
+doctl nfs snapshot list --region 'atl1' --share-id b050990d-4337-4a9d-9c8d-9f759a83936
+doctl nfs snapshot list --region 'atl1' --format ID,Name,Status,ShareID`
 
-	cmdNfsSnapshotDelete := CmdBuilder(cmd, nfsSnapshotDelete, "delete [flags]", "Delete an NFS share by ID.", "Delete an NFS share with the given ID and region.", Writer)
+	cmdNfsSnapshotDelete := CmdBuilder(cmd, nfsSnapshotDelete, "delete [flags]", "Delete an NFS share by ID", "Delete an NFS share with the given ID and region.", Writer)
 	AddStringFlag(cmdNfsSnapshotDelete, "id", "", "", "the ID the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotDelete, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	cmdNfsSnapshotDelete.Example =
-		`doctl nfs snapshot delete --id b050990d-4337-4a9d-9c8d-9f759a83936a --region 'atl1'`
+		`doctl nfs snapshot delete  --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a`
 
 	return cmd
 }
 
 func nfsCreate(c *CmdConfig) error {
+	name, err := c.Doit.GetString(c.NS, "name")
+	if err != nil {
+		return err
+	}
+
 	region, err := c.Doit.GetString(c.NS, "region")
 	if err != nil {
 		return err
@@ -134,7 +145,7 @@ func nfsCreate(c *CmdConfig) error {
 	}
 
 	r := &godo.NfsCreateRequest{
-		Name:    c.Args[0],
+		Name:    name,
 		Region:  region,
 		SizeGib: size,
 		VpcIDs:  vpcIDs,
@@ -201,6 +212,11 @@ func nfsDelete(c *CmdConfig) error {
 }
 
 func nfsSnapshotCreate(c *CmdConfig) error {
+	name, err := c.Doit.GetString(c.NS, "name")
+	if err != nil {
+		return err
+	}
+
 	shareID, err := c.Doit.GetString(c.NS, "share-id")
 	if err != nil {
 		return err
@@ -210,8 +226,6 @@ func nfsSnapshotCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-
-	name := c.Args[0]
 
 	action, err := c.NfsActions().Snapshot(shareID, name, region)
 	if err != nil {
