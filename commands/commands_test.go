@@ -292,6 +292,8 @@ type tcMocks struct {
 	partnerAttachments    *domocks.MockPartnerAttachmentsService
 	spacesKeys            *domocks.MockSpacesKeysService
 	genAI                 *domocks.MockGenAIService
+	nfs                   *domocks.MockNfsService
+	nfsActions            *domocks.MockNfsActionsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -347,6 +349,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		partnerAttachments:    domocks.NewMockPartnerAttachmentsService(ctrl),
 		spacesKeys:            domocks.NewMockSpacesKeysService(ctrl),
 		genAI:                 domocks.NewMockGenAIService(ctrl),
+		nfs:                   domocks.NewMockNfsService(ctrl),
+		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -410,6 +414,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		PartnerAttachments: func() do.PartnerAttachmentsService { return tm.partnerAttachments },
 		SpacesKeys:         func() do.SpacesKeysService { return tm.spacesKeys },
 		GenAI:              func() do.GenAIService { return tm.genAI },
+		Nfs:                func() do.NfsService { return tm.nfs },
+		NfsActions:         func() do.NfsActionsService { return tm.nfsActions },
 	}
 
 	tFn(config, tm)
