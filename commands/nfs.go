@@ -47,7 +47,7 @@ func Nfs() *Command {
 doctl nfs create --name my-nfs-share --region 'nyc2' --size 100 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b`
 
 	cmdNfsGet := CmdBuilder(cmd, nfsGet, "get [flags]", "Get an NFS share by ID", "Get an NFS share with the given ID and region.", Writer, displayerType(&displayers.Nfs{}))
-	AddStringFlag(cmdNfsGet, "id", "", "", "the ID the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsGet, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsGet, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	cmdNfsGet.Example =
 		`doctl nfs get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a
@@ -60,13 +60,13 @@ doctl nfs get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --format
 doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 
 	cmdNfsDelete := CmdBuilder(cmd, nfsDelete, "delete [flags]", "Delete an NFS share by ID", "Delete an NFS share with the given ID and region.", Writer, aliasOpt("rm"))
-	AddStringFlag(cmdNfsDelete, "id", "", "", "the ID the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsDelete, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsDelete, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	cmdNfsDelete.Example =
 		`doctl nfs delete --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a`
 
 	cmdNfsResize := CmdBuilder(cmd, nfsResize, "resize [flags]", "Resize an NFS share", "Resize an NFS share with the given ID and region.", Writer)
-	AddStringFlag(cmdNfsResize, "id", "", "", "the ID the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsResize, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsResize, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddStringFlag(cmdNfsResize, "size", "s", "", "the size of the NFS share in GiB", requiredOpt())
 	AddBoolFlag(cmdNfsResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
@@ -95,14 +95,14 @@ func nfsSnapshots() *Command {
 	AddBoolFlag(cmdNfsSnapshotCreate, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdNfsSnapshotGet := CmdBuilder(cmd, nfsSnapshotGet, "get [flags]", "Get an NFS snapshot by ID", "Get an NFS snapshot with the given ID and region.", Writer, displayerType(&displayers.NfsSnapshot{}), overrideCmdNS("nfs-snapshot"))
-	AddStringFlag(cmdNfsSnapshotGet, "id", "", "", "the ID the NFS snapshot", requiredOpt())
+	AddStringFlag(cmdNfsSnapshotGet, "id", "", "", "the ID of the NFS snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotGet, "region", "r", "", "the region where the NFS snapshot resides", requiredOpt())
 	cmdNfsSnapshotGet.Example =
 		`doctl nfs snapshot get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a
 doctl nfs snapshot get --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --format ID,Name,Status`
 
 	cmdNfsSnapshotList := CmdBuilder(cmd, nfsSnapshotList, "list [flags]", "List all NFS snapshots by region", "List all NFS snapshots in the given region.", Writer, aliasOpt("ls"), displayerType(&displayers.NfsSnapshot{}), overrideCmdNS("nfs-snapshot"))
-	AddStringFlag(cmdNfsSnapshotList, "share-id", "", "", "the ID the NFS share to list snapshots of")
+	AddStringFlag(cmdNfsSnapshotList, "share-id", "", "", "the NFS share ID to which snapshots belong")
 	AddStringFlag(cmdNfsSnapshotList, "region", "r", "", "the region where the NFS shares reside", requiredOpt())
 	cmdNfsSnapshotList.Example =
 		`doctl nfs snapshot list --region 'atl1'
@@ -110,7 +110,7 @@ doctl nfs snapshot list --region 'atl1' --share-id b050990d-4337-4a9d-9c8d-9f759
 doctl nfs snapshot list --region 'atl1' --format ID,Name,Status,ShareID`
 
 	cmdNfsSnapshotDelete := CmdBuilder(cmd, nfsSnapshotDelete, "delete [flags]", "Delete an NFS share by ID", "Delete an NFS share with the given ID and region.", Writer, aliasOpt("rm"), overrideCmdNS("nfs-snapshot"))
-	AddStringFlag(cmdNfsSnapshotDelete, "id", "", "", "the ID the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsSnapshotDelete, "id", "", "", "the ID of the NFS snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotDelete, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	cmdNfsSnapshotDelete.Example =
 		`doctl nfs snapshot delete  --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a`
