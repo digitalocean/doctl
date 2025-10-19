@@ -192,6 +192,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Serverless())
 	DoitCmd.AddCommand(Spaces())
 	DoitCmd.AddCommand(GenAI())
+	DoitCmd.AddCommand(Nfs())
 }
 
 func computeCmd() *Command {
