@@ -3,18 +3,7 @@ name: tagged-release
 on:
   push:
     tags:
-      - 'v[1-9].[0-9]+.[0-9]+-beta'  # Changed to trigger on beta tags
-  workflow_dispatch:
-    inputs:
-      stable_tag:
-        description: 'Stable tag to release'
-        required: true
-        type: string
-      promoted_from_beta:
-        description: 'Was this promoted from beta?'
-        required: false
-        type: boolean
-        default: false
+      - 'v[1-9].[0-9]+.[0-9]+'
 
 jobs:
   integration-tests:
@@ -37,14 +26,17 @@ jobs:
       - name: Run integration tests
         run: make test_integration
 
-  beta-release:
-    name: 'Beta Release'
+  github-release:
+    name: 'GitHub Release'
     needs: integration-tests
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # https://github.com/marketplace/actions/goreleaser-action#usage
+          # note the fetch-depth: 0 input in Checkout step. It is required for
+          # the changelog to work correctly
           fetch-depth: 0
 
       - name: Login to Docker Hub
@@ -58,7 +50,7 @@ jobs:
         with:
           go-version: 1.24.x
 
-      - name: Run GoReleaser (Beta)
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -67,75 +59,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Mark beta as pre-release
-        run: |
-          BETA_TAG=${GITHUB_REF#refs/tags/}
-          gh release edit "$BETA_TAG" --prerelease
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  promote-to-stable:
-    name: 'Promote to Stable'
-    needs: [integration-tests, beta-release]
-    runs-on: 'ubuntu-latest'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Extract version from beta tag
-        id: version
-        run: |
-          BETA_TAG=${GITHUB_REF#refs/tags/}
-          STABLE_TAG=${BETA_TAG%-beta}
-          echo "beta_tag=$BETA_TAG" >> $GITHUB_OUTPUT
-          echo "stable_tag=$STABLE_TAG" >> $GITHUB_OUTPUT
-          echo "Beta tag: $BETA_TAG"
-          echo "Stable tag: $STABLE_TAG"
-
-      - name: Create stable tag and release
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-        
-          # Create stable tag
-          git tag "${{ steps.version.outputs.stable_tag }}"
-          git push origin "${{ steps.version.outputs.stable_tag }}"
-        
-          # Get release notes from beta
-          RELEASE_NOTES=$(gh release view "${{ steps.version.outputs.beta_tag }}" --json body --jq .body)
-        
-          # Download all assets from beta release
-          echo "Downloading beta release assets..."
-          mkdir -p ./beta-assets
-          gh release download "${{ steps.version.outputs.beta_tag }}" --dir ./beta-assets
-        
-          # Create stable release with assets
-          echo "Creating stable release with binaries..."
-          gh release create "${{ steps.version.outputs.stable_tag }}" \
-            --title "${{ steps.version.outputs.stable_tag }}" \
-            --notes "$RELEASE_NOTES" \
-            --latest
-        
-          # Upload all binaries to stable release
-          if [ "$(ls -A ./beta-assets)" ]; then
-            echo "Uploading binaries to stable release..."
-            gh release upload "${{ steps.version.outputs.stable_tag }}" ./beta-assets/*
-          fi
-        
-          echo "✅ Successfully promoted with binaries to ${{ steps.version.outputs.stable_tag }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   snapcraft-stable:
     name: 'Snapcraft: Stable Release'
-    needs: promote-to-stable
+    needs: integration-tests
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # fetch-depth: 0 fetches all history for all branches and tags
           fetch-depth: 0
 
       - name: Build snap
