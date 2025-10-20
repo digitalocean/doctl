@@ -1319,7 +1319,6 @@ func RunDatabasePoolCreate(c *CmdConfig) error {
 
 	return displayDatabasePools(c, *pool)
 }
-
 func buildDatabaseCreatePoolRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreatePoolRequest, error) {
 	req := &godo.DatabaseCreatePoolRequest{Name: c.Args[1]}
 
@@ -1335,17 +1334,17 @@ func buildDatabaseCreatePoolRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateP
 	}
 	req.Size = size
 
-	db, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolDBName)
+	db, err := c.Doit.GetString(c.NS, doctl.ArgDago version
+tabasePoolDBName)
 	if err != nil {
 		return nil, err
 	}
 	req.Database = db
 
-	user, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolUserName)
-	if err != nil {
-		return nil, err
+	user, _ := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolUserName)
+	if user != "" {
+		req.User = user
 	}
-	req.User = user
 
 	return req, nil
 }
