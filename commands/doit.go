@@ -149,8 +149,22 @@ func defaultConfigHome() string {
 
 func configHome() string {
 	ch := defaultConfigHome()
-	err := os.MkdirAll(ch, 0755)
-	checkErr(err)
+
+	// Get the parent directory to check if it exists
+	parentDir := filepath.Dir(ch)
+
+	// Check if parent directory exists (could be a symlink or directory)
+	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+		// Parent doesn't exist, create it with MkdirAll
+		err = os.MkdirAll(parentDir, 0755)
+		checkErr(err)
+	}
+
+	// Now create the final directory (doctl) if it doesn't exist
+	if _, err := os.Stat(ch); os.IsNotExist(err) {
+		err = os.Mkdir(ch, 0755)
+		checkErr(err)
+	}
 
 	return ch
 }
