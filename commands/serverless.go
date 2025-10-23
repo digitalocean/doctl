@@ -98,6 +98,7 @@ list your namespaces.`,
 	// and hence are unknown to the portal.
 	AddStringFlag(connect, "apihost", "", "", "")
 	AddStringFlag(connect, "auth", "", "", "")
+	AddStringFlag(connect, "auth-key", "", "", "Authentication key for direct serverless connection")
 	connect.Flags().MarkHidden("apihost")
 	connect.Flags().MarkHidden("auth")
 
@@ -230,6 +231,8 @@ func RunServerlessConnect(c *CmdConfig) error {
 	// The presence of 'auth' and 'apihost' flags trumps other parts of the syntax, but both must be present.
 	apihost, _ := c.Doit.GetString(c.NS, "apihost")
 	auth, _ := c.Doit.GetString(c.NS, "auth")
+	authKey, _ := c.Doit.GetString(c.NS, "auth-key")
+
 	if len(apihost) > 0 && len(auth) > 0 {
 		namespace, err := sls.GetNamespaceFromCluster(apihost, auth)
 		if err != nil {
@@ -259,6 +262,48 @@ func RunServerlessConnect(c *CmdConfig) error {
 	}
 
 	ctx := context.TODO()
+
+	if len(authKey) > 0 {
+		// Validate auth-key format
+		if !strings.Contains(authKey, ":") {
+			return fmt.Errorf("auth-key must be in format 'uuid:key'")
+		}
+
+		// If namespace argument provided, use it directly
+		if len(c.Args) > 0 {
+			// Get the specific namespace the user requested
+			list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
+			if err != nil {
+				return err
+			}
+			if len(list) == 0 {
+				return fmt.Errorf("no namespace found matching '%s'", c.Args[0])
+			}
+			if len(list) > 1 {
+				return fmt.Errorf("multiple namespaces match '%s', please be more specific", c.Args[0])
+			}
+
+			// Use the found namespace with the provided auth-key
+			ns := list[0]
+			return connectWithAuthKey(sls, ns, authKey, c.Out)
+		} else {
+			// No namespace specified, show menu
+			list, err := getMatchingNamespaces(ctx, sls, "")
+			if err != nil {
+				return err
+			}
+			if len(list) == 0 {
+				return errors.New("you must create a namespace first")
+			}
+
+			// Let user choose, then connect with auth-key
+			ns := chooseFromList(list, c.Out)
+			if ns.Namespace == "" {
+				return nil // User chose to exit
+			}
+			return connectWithAuthKey(sls, ns, authKey, c.Out)
+		}
+	}
 
 	// If an arg is specified, retrieve the namespaces that match and proceed according to whether there
 	// are 0, 1, or >1 matches.
@@ -512,4 +557,28 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	}
 	template.Print(`{{success checkmark}} The requested resources have been undeployed.{{nl}}`, nil)
 	return nil
+}
+
+func connectWithAuthKey(sls do.ServerlessService, ns do.OutputNamespace, authKey string, out io.Writer) error {
+	// Test if the auth key works with this namespace's API host
+	namespace, err := sls.GetNamespaceFromCluster(ns.APIHost, authKey)
+	if err != nil {
+		return fmt.Errorf("failed to connect with provided auth-key: %w", err)
+	}
+
+	// Verify it matches the expected namespace
+	if namespace != ns.Namespace {
+		return fmt.Errorf("auth-key does not match namespace '%s'", ns.Namespace)
+	}
+
+	// Create credentials using the provided auth-key and namespace's API host
+	credential := do.ServerlessCredential{Auth: authKey}
+	creds := do.ServerlessCredentials{
+		APIHost:     ns.APIHost,
+		Namespace:   ns.Namespace,
+		Label:       ns.Label,
+		Credentials: map[string]map[string]do.ServerlessCredential{ns.APIHost: {ns.Namespace: credential}},
+	}
+
+	return finishConnecting(sls, creds, out)
 }
