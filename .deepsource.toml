@@ -1,0 +1,13 @@
+version = 1
+
+[[analyzers]]
+name = "go"
+
+  [analyzers.meta]
+  import_root = "github.com/Oghenesuvwe-dev/doctl"
+
+[[transformers]]
+name = "gofumpt"
+
+[[transformers]]
+name = "gofmt"
