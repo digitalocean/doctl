@@ -7,7 +7,7 @@ name = "go"
   import_root = "github.com/Oghenesuvwe-dev/doctl"
 
 [[transformers]]
-name = "gofmt"
+name = "gofumpt"
 
 [[transformers]]
-name = "gofumpt"
+name = "gofmt"
