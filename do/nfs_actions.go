@@ -31,6 +31,8 @@ type NfsActions []NfsAction
 type NfsActionsService interface {
 	Resize(id string, size uint64, region string) (*NfsAction, error)
 	Snapshot(id, name, region string) (*NfsAction, error)
+	Attach(id, vpcID, region string) (*NfsAction, error)
+	Detach(id, vpcID, region string) (*NfsAction, error)
 }
 
 type nfsActionsService struct {
@@ -56,6 +58,22 @@ func (s *nfsActionsService) Resize(id string, size uint64, region string) (*NfsA
 
 func (s *nfsActionsService) Snapshot(id, name, region string) (*NfsAction, error) {
 	action, _, err := s.client.NfsActions.Snapshot(context.TODO(), id, name, region)
+	if err != nil {
+		return nil, err
+	}
+	return &NfsAction{NfsAction: action}, nil
+}
+
+func (s *nfsActionsService) Attach(id, vpcID, region string) (*NfsAction, error) {
+	action, _, err := s.client.NfsActions.Attach(context.TODO(), id, vpcID, region)
+	if err != nil {
+		return nil, err
+	}
+	return &NfsAction{NfsAction: action}, nil
+}
+
+func (s *nfsActionsService) Detach(id, vpcID, region string) (*NfsAction, error) {
+	action, _, err := s.client.NfsActions.Detach(context.TODO(), id, vpcID, region)
 	if err != nil {
 		return nil, err
 	}
