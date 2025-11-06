@@ -40,6 +40,36 @@ func (m *MockNfsActionsService) EXPECT() *MockNfsActionsServiceMockRecorder {
 	return m.recorder
 }
 
+// Attach mocks base method.
+func (m *MockNfsActionsService) Attach(id, vpcID, region string) (*do.NfsAction, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Attach", id, vpcID, region)
+	ret0, _ := ret[0].(*do.NfsAction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Attach indicates an expected call of Attach.
+func (mr *MockNfsActionsServiceMockRecorder) Attach(id, vpcID, region any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Attach", reflect.TypeOf((*MockNfsActionsService)(nil).Attach), id, vpcID, region)
+}
+
+// Detach mocks base method.
+func (m *MockNfsActionsService) Detach(id, vpcID, region string) (*do.NfsAction, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Detach", id, vpcID, region)
+	ret0, _ := ret[0].(*do.NfsAction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Detach indicates an expected call of Detach.
+func (mr *MockNfsActionsServiceMockRecorder) Detach(id, vpcID, region any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Detach", reflect.TypeOf((*MockNfsActionsService)(nil).Detach), id, vpcID, region)
+}
+
 // Resize mocks base method.
 func (m *MockNfsActionsService) Resize(id string, size uint64, region string) (*do.NfsAction, error) {
 	m.ctrl.T.Helper()

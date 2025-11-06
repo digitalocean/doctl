@@ -59,7 +59,7 @@ var (
 func TestNfsCommand(t *testing.T) {
 	cmd := Nfs()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "delete", "snapshot", "resize")
+	assertCommandNames(t, cmd, "create", "list", "get", "delete", "snapshot", "resize", "attach", "detach")
 }
 
 func TestRunNfsCreate(t *testing.T) {
@@ -376,6 +376,114 @@ func TestRunNfsResize(t *testing.T) {
 				config.Doit.Set(config.NS, "wait", tc.wait)
 
 				err := nfsResize(config)
+				if tc.expectErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestRunNfsAttach(t *testing.T) {
+	testCases := []struct {
+		name      string
+		id        string
+		region    string
+		vpcID     string
+		wait      bool
+		expectErr bool
+	}{
+		{
+			name:      "success without wait",
+			id:        testId,
+			region:    "atl1",
+			vpcID:     "vpc-1234",
+			wait:      false,
+			expectErr: false,
+		},
+		{
+			name:      "success with wait",
+			id:        testId,
+			region:    "atl1",
+			vpcID:     "vpc-1234",
+			wait:      true,
+			expectErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if !tc.expectErr {
+					vpcID := "vpc-1234"
+					tm.nfsActions.EXPECT().Attach(tc.id, vpcID, tc.region).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+					}
+				}
+
+				config.Doit.Set(config.NS, "id", tc.id)
+				config.Doit.Set(config.NS, "region", tc.region)
+				config.Doit.Set(config.NS, "vpc_id", tc.vpcID)
+				config.Doit.Set(config.NS, "wait", tc.wait)
+
+				err := nfsAttach(config)
+				if tc.expectErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestRunNfsDetach(t *testing.T) {
+	testCases := []struct {
+		name      string
+		id        string
+		region    string
+		vpcID     string
+		wait      bool
+		expectErr bool
+	}{
+		{
+			name:      "success without wait",
+			id:        testId,
+			region:    "atl1",
+			vpcID:     "vpc-1234",
+			wait:      false,
+			expectErr: false,
+		},
+		{
+			name:      "success with wait",
+			id:        testId,
+			region:    "atl1",
+			vpcID:     "vpc-1234",
+			wait:      true,
+			expectErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if !tc.expectErr {
+					vpcID := "vpc-1234"
+					tm.nfsActions.EXPECT().Detach(tc.id, vpcID, tc.region).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+					}
+				}
+
+				config.Doit.Set(config.NS, "id", tc.id)
+				config.Doit.Set(config.NS, "region", tc.region)
+				config.Doit.Set(config.NS, "vpc_id", tc.vpcID)
+				config.Doit.Set(config.NS, "wait", tc.wait)
+
+				err := nfsDetach(config)
 				if tc.expectErr {
 					require.Error(t, err)
 				} else {

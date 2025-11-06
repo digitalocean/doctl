@@ -73,6 +73,22 @@ doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 	cmdNfsResize.Example =
 		`doctl nfs resize --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --size 1024`
 
+	cmdNfsAttach := CmdBuilder(cmd, nfsAttach, "attach [flags]", "Attach an NFS share to a VPC", "Attaches an NFS share to a VPC with the given ID and region.", Writer)
+	AddStringFlag(cmdNfsAttach, "id", "", "", "the ID of the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsAttach, "region", "r", "", "the region where the NFS share resides", requiredOpt())
+	AddStringFlag(cmdNfsAttach, "vpc_id", "", "", "the id of the VPC we want to attach NFS share to", requiredOpt())
+	AddBoolFlag(cmdNfsAttach, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	cmdNfsAttach.Example =
+		`doctl nfs attach --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --vpc_id example-vpc-id`
+
+	cmdNfsDetach := CmdBuilder(cmd, nfsDetach, "detach [flags]", "Detach an NFS share from a VPC", "Detaches an NFS share from a VPC with the given ID and region.", Writer)
+	AddStringFlag(cmdNfsDetach, "id", "", "", "the ID of the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsDetach, "region", "r", "", "the region where the NFS share resides", requiredOpt())
+	AddStringFlag(cmdNfsDetach, "vpc_id", "", "", "the id of the VPC we want to detach NFS share from", requiredOpt())
+	AddBoolFlag(cmdNfsDetach, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	cmdNfsDetach.Example =
+		`doctl nfs detach --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --vpc_id example-vpc-id`
+
 	cmd.AddCommand(nfsSnapshots())
 
 	return cmd
@@ -324,6 +340,80 @@ func nfsResize(c *CmdConfig) error {
 	}
 
 	action, err := c.NfsActions().Resize(id, size, region)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := actionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
+	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
+	return c.Display(item)
+}
+
+func nfsAttach(c *CmdConfig) error {
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	vpcIdStr, err := c.Doit.GetString(c.NS, "vpc_id")
+	if err != nil {
+		return err
+	}
+
+	action, err := c.NfsActions().Attach(id, vpcIdStr, region)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := actionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
+	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
+	return c.Display(item)
+}
+
+func nfsDetach(c *CmdConfig) error {
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	region, err := c.Doit.GetString(c.NS, "region")
+	if err != nil {
+		return err
+	}
+
+	vpcIdStr, err := c.Doit.GetString(c.NS, "vpc_id")
+	if err != nil {
+		return err
+	}
+
+	action, err := c.NfsActions().Detach(id, vpcIdStr, region)
 	if err != nil {
 		return err
 	}
