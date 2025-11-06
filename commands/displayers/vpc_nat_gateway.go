@@ -73,10 +73,13 @@ func (e *VPCNATGateways) KV() []map[string]any {
 				return strings.Join(egresses, ",")
 			}()
 			rowMap["Timeouts"] = func() string {
-				return fmt.Sprintf("udp:%ds,icmp:%ds,tcp:%ds",
-					rowGw.UDPTimeoutSeconds,
-					rowGw.ICMPTimeoutSeconds,
-					rowGw.TCPTimeoutSeconds)
+				if rowGw.UDPTimeoutSeconds > 0 && rowGw.ICMPTimeoutSeconds > 0 && rowGw.TCPTimeoutSeconds > 0 {
+					return fmt.Sprintf("udp:%ds,icmp:%ds,tcp:%ds",
+						rowGw.UDPTimeoutSeconds,
+						rowGw.ICMPTimeoutSeconds,
+						rowGw.TCPTimeoutSeconds)
+				}
+				return ""
 			}()
 			out = append(out, rowMap)
 		}
