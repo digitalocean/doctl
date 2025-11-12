@@ -98,6 +98,7 @@ list your namespaces.`,
 	// and hence are unknown to the portal.
 	AddStringFlag(connect, "apihost", "", "", "")
 	AddStringFlag(connect, "auth", "", "", "")
+	AddStringFlag(connect, "access-key", "", "", "Access key for direct serverless connection")
 	connect.Flags().MarkHidden("apihost")
 	connect.Flags().MarkHidden("auth")
 
@@ -230,6 +231,8 @@ func RunServerlessConnect(c *CmdConfig) error {
 	// The presence of 'auth' and 'apihost' flags trumps other parts of the syntax, but both must be present.
 	apihost, _ := c.Doit.GetString(c.NS, "apihost")
 	auth, _ := c.Doit.GetString(c.NS, "auth")
+	accessKey, _ := c.Doit.GetString(c.NS, "access-key")
+
 	if len(apihost) > 0 && len(auth) > 0 {
 		namespace, err := sls.GetNamespaceFromCluster(apihost, auth)
 		if err != nil {
@@ -260,9 +263,56 @@ func RunServerlessConnect(c *CmdConfig) error {
 
 	ctx := context.TODO()
 
+	if len(accessKey) > 0 {
+		// Validate access-key format - support new "dof_v1_" formats
+		if !strings.Contains(accessKey, ":") {
+			return fmt.Errorf("access-key must contain ':' separator (formats:'dof_v1_...:...')")
+		}
+
+		// If namespace argument provided, use it directly
+		if len(c.Args) > 0 {
+			// Get the specific namespace the user requested
+			list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
+			if err != nil {
+				return err
+			}
+			if len(list) == 0 {
+				return fmt.Errorf("no namespace found matching '%s'", c.Args[0])
+			}
+			if len(list) > 1 {
+				return fmt.Errorf("multiple namespaces match '%s', please be more specific", c.Args[0])
+			}
+
+			// Use the found namespace with the provided access-key
+			ns := list[0]
+			return connectWithAccessKey(sls, ns, accessKey, c.Out)
+		} else {
+			// No namespace specified, show menu
+			list, err := getMatchingNamespaces(ctx, sls, "")
+			if err != nil {
+				return err
+			}
+			if len(list) == 0 {
+				return errors.New("you must create a namespace first")
+			}
+
+			// Let user choose, then connect with access-key
+			ns := chooseFromList(list, c.Out)
+			if ns.Namespace == "" {
+				return nil // User chose to exit
+			}
+			return connectWithAccessKey(sls, ns, accessKey, c.Out)
+		}
+	}
+
 	// If an arg is specified, retrieve the namespaces that match and proceed according to whether there
 	// are 0, 1, or >1 matches.
 	if len(c.Args) > 0 {
+		// Show deprecation warning for the legacy connection method
+		fmt.Fprintf(c.Out, "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\n")
+		fmt.Fprintf(c.Out, "Please use 'doctl serverless connect %s --access-key <your-access-key>' instead.\n", c.Args[0])
+		fmt.Fprintf(c.Out, "This method will be removed in a future version.\n\n")
+
 		list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
 		if err != nil {
 			return err
@@ -272,6 +322,11 @@ func RunServerlessConnect(c *CmdConfig) error {
 		}
 		return connectFromList(ctx, sls, list, c.Out)
 	}
+	// Show deprecation warning for the legacy connection method
+	fmt.Fprintf(c.Out, "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\n")
+	fmt.Fprintf(c.Out, "Please use 'doctl serverless connect <namespace> --access-key <your-access-key>' instead.\n")
+	fmt.Fprintf(c.Out, "This method will be removed in a future version.\n\n")
+
 	list, err := getMatchingNamespaces(ctx, sls, "")
 	if err != nil {
 		return err
@@ -512,4 +567,28 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	}
 	template.Print(`{{success checkmark}} The requested resources have been undeployed.{{nl}}`, nil)
 	return nil
+}
+
+func connectWithAccessKey(sls do.ServerlessService, ns do.OutputNamespace, accessKey string, out io.Writer) error {
+	// Test if the access key works with this namespace's API host
+	namespace, err := sls.GetNamespaceFromCluster(ns.APIHost, accessKey)
+	if err != nil {
+		return fmt.Errorf("failed to connect with provided access-key: %w", err)
+	}
+
+	// Verify it matches the expected namespace
+	if namespace != ns.Namespace {
+		return fmt.Errorf("access-key does not match namespace '%s'", ns.Namespace)
+	}
+
+	// Create credentials using the provided access-key and namespace's API host
+	credential := do.ServerlessCredential{Auth: accessKey}
+	creds := do.ServerlessCredentials{
+		APIHost:     ns.APIHost,
+		Namespace:   ns.Namespace,
+		Label:       ns.Label,
+		Credentials: map[string]map[string]do.ServerlessCredential{ns.APIHost: {ns.Namespace: credential}},
+	}
+
+	return finishConnecting(sls, creds, out)
 }

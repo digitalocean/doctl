@@ -51,7 +51,7 @@ func TestServerlessConnect(t *testing.T) {
 					Label:     "something",
 				},
 			},
-			expectedOutput: "Connected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <your-access-key>' instead.\nThis method will be removed in a future version.\n\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
 		},
 		{
 			name: "two namespaces",
@@ -67,7 +67,7 @@ func TestServerlessConnect(t *testing.T) {
 					Label:     "another",
 				},
 			},
-			expectedOutput: "0: ns1 in nyc1, label=something\n1: ns2 in lon1, label=another\nChoose a namespace by number or 'x' to exit\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <your-access-key>' instead.\nThis method will be removed in a future version.\n\n0: ns1 in nyc1, label=something\n1: ns2 in lon1, label=another\nChoose a namespace by number or 'x' to exit\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
 		},
 		{
 			name: "use argument",
@@ -84,7 +84,7 @@ func TestServerlessConnect(t *testing.T) {
 				},
 			},
 			doctlArg:       "thing",
-			expectedOutput: "Connected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect thing --access-key <your-access-key>' instead.\nThis method will be removed in a future version.\n\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
 		},
 	}
 	for _, tt := range tests {
@@ -120,6 +120,184 @@ func TestServerlessConnect(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestServerlessConnectWithAccessKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+		config.Args = []string{"ns1"}
+
+		config.Doit.Set(config.NS, "access-key", "dof_v1_abc123:xyz789")
+
+		// Follow existing pattern: OutputNamespace has APIHost for access-key functionality
+		nsResponse := do.NamespaceListResponse{
+			Namespaces: []do.OutputNamespace{
+				{
+					Namespace: "ns1",
+					Region:    "nyc1",
+					Label:     "test-label",
+					APIHost:   "https://api.example.com",
+				},
+			},
+		}
+
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotConnected)
+		ctx := context.TODO()
+		tm.serverless.EXPECT().ListNamespaces(ctx).Return(nsResponse, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "dof_v1_abc123:xyz789").Return("ns1", nil)
+
+		// Note: WriteCredentials expects the credentials object that will be created
+		creds := do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "ns1",
+			Label:     "test-label",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"ns1": do.ServerlessCredential{Auth: "dof_v1_abc123:xyz789"},
+				},
+			},
+		}
+		tm.serverless.EXPECT().WriteCredentials(creds).Return(nil)
+
+		err := RunServerlessConnect(config)
+		require.NoError(t, err)
+		assert.Contains(t, buf.String(), "Connected to functions namespace 'ns1' on API host 'https://api.example.com' (label=test-label)")
+	})
+}
+
+func TestServerlessConnectWithInvalidAccessKey(t *testing.T) {
+	tests := []struct {
+		name       string
+		accessKey  string
+		args       []string
+		wantError  string
+		setupMocks bool
+	}{
+		{
+			name:       "no colon separator",
+			accessKey:  "invalid-key-no-colon",
+			args:       []string{"ns1"},
+			wantError:  "access-key must contain ':' separator",
+			setupMocks: true,
+		},
+		{
+			name:       "empty access key with args",
+			accessKey:  "",
+			args:       []string{"ns1"},
+			wantError:  "", // Should follow legacy path and show deprecation warning
+			setupMocks: true,
+		},
+		{
+			name:       "only colon",
+			accessKey:  ":",
+			args:       []string{"ns1"},
+			wantError:  "", // Valid format, but will fail auth in later test
+			setupMocks: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				buf := &bytes.Buffer{}
+				config.Out = buf
+
+				if len(tt.args) > 0 {
+					config.Args = tt.args
+				}
+
+				if tt.accessKey != "" {
+					config.Doit.Set(config.NS, "access-key", tt.accessKey)
+				}
+
+				if tt.setupMocks {
+					tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotConnected)
+
+					// Only expect ListNamespaces if we get past validation
+					if tt.wantError == "" {
+						ctx := context.TODO()
+						nsResponse := do.NamespaceListResponse{
+							Namespaces: []do.OutputNamespace{
+								{
+									Namespace: "ns1",
+									Region:    "nyc1",
+									Label:     "test-label",
+									APIHost:   "https://api.example.com",
+								},
+							},
+						}
+						tm.serverless.EXPECT().ListNamespaces(ctx).Return(nsResponse, nil)
+
+						var creds do.ServerlessCredentials
+
+						if tt.accessKey != "" {
+							// Access-key path: validate with cluster and create credentials
+							tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", tt.accessKey).Return("ns1", nil)
+
+							creds = do.ServerlessCredentials{
+								APIHost:   "https://api.example.com",
+								Namespace: "ns1",
+								Label:     "test-label",
+								Credentials: map[string]map[string]do.ServerlessCredential{
+									"https://api.example.com": {
+										"ns1": do.ServerlessCredential{Auth: tt.accessKey},
+									},
+								},
+							}
+						} else {
+							// Legacy path: use DigitalOcean API to get namespace credentials
+							creds = do.ServerlessCredentials{
+								APIHost:   "https://api.example.com",
+								Namespace: "ns1",
+								Label:     "test-label",
+							}
+							tm.serverless.EXPECT().GetNamespace(ctx, "ns1").Return(creds, nil)
+						}
+
+						tm.serverless.EXPECT().WriteCredentials(creds).Return(nil)
+					}
+				}
+
+				err := RunServerlessConnect(config)
+
+				if tt.wantError != "" {
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), tt.wantError)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestServerlessConnectWithFailingAccessKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+		config.Args = []string{"ns1"}
+		config.Doit.Set(config.NS, "access-key", "dof_v1_bad:key")
+
+		nsResponse := do.NamespaceListResponse{
+			Namespaces: []do.OutputNamespace{{
+				Namespace: "ns1",
+				Region:    "nyc1",
+				Label:     "test-label",
+				APIHost:   "https://api.example.com",
+			}},
+		}
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotConnected)
+		ctx := context.TODO()
+		tm.serverless.EXPECT().ListNamespaces(ctx).Return(nsResponse, nil)
+		// This is where the access-key fails - GetNamespaceFromCluster returns an error
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "dof_v1_bad:key").Return("", errors.New("invalid credentials"))
+
+		err := RunServerlessConnect(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to connect with provided access-key")
+		assert.Contains(t, err.Error(), "invalid credentials")
+	})
 }
 
 func TestServerlessStatusWhenConnected(t *testing.T) {
