@@ -195,6 +195,27 @@ func TestServerlessConnectWithInvalidAccessKey(t *testing.T) {
 			wantError:  "", // Valid format, but will fail auth in later test
 			setupMocks: true,
 		},
+		{
+			name:       "wrong prefix",
+			accessKey:  "wrong_prefix_token:secret",
+			args:       []string{"ns1"},
+			wantError:  "access-key must start with 'dof_v1_' prefix",
+			setupMocks: true,
+		},
+		{
+			name:       "correct prefix but empty token",
+			accessKey:  "dof_v1_:secret",
+			args:       []string{"ns1"},
+			wantError:  "access-key token part cannot be empty after 'dof_v1_' prefix",
+			setupMocks: true,
+		},
+		{
+			name:       "correct prefix but empty secret",
+			accessKey:  "dof_v1_token:",
+			args:       []string{"ns1"},
+			wantError:  "access-key secret part cannot be empty",
+			setupMocks: true,
+		},
 	}
 
 	for _, tt := range tests {

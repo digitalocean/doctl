@@ -40,6 +40,9 @@ var (
 	// errUndeployTrigPkg is the error returned when both --packages and --triggers are specified on undeploy
 	errUndeployTrigPkg = errors.New("the `--packages` and `--triggers` flags are mutually exclusive")
 
+	// accessKeyFormat defines the expected format for serverless access keys
+	accessKeyFormat = "dof_v1_<token>:<secret>"
+
 	// languageKeywords maps the backend's runtime category names to keywords accepted as languages
 	// Note: this table has all languages for which we possess samples.  Only those with currently
 	// active runtimes will display.
@@ -265,8 +268,8 @@ func RunServerlessConnect(c *CmdConfig) error {
 
 	if len(accessKey) > 0 {
 		// Validate access-key format - support new "dof_v1_" formats
-		if !strings.Contains(accessKey, ":") {
-			return fmt.Errorf("access-key must contain ':' separator (formats:'dof_v1_...:...')")
+		if err := validateAccessKeyFormat(accessKey); err != nil {
+			return err
 		}
 
 		// If namespace argument provided, use it directly
@@ -310,7 +313,7 @@ func RunServerlessConnect(c *CmdConfig) error {
 	if len(c.Args) > 0 {
 		// Show deprecation warning for the legacy connection method
 		fmt.Fprintf(c.Out, "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\n")
-		fmt.Fprintf(c.Out, "Please use 'doctl serverless connect %s --access-key <your-access-key>' instead.\n", c.Args[0])
+		fmt.Fprintf(c.Out, "Please use 'doctl serverless connect %s --access-key <%s>' instead.\n", c.Args[0], accessKeyFormat)
 		fmt.Fprintf(c.Out, "This method will be removed in a future version.\n\n")
 
 		list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
@@ -324,7 +327,7 @@ func RunServerlessConnect(c *CmdConfig) error {
 	}
 	// Show deprecation warning for the legacy connection method
 	fmt.Fprintf(c.Out, "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\n")
-	fmt.Fprintf(c.Out, "Please use 'doctl serverless connect <namespace> --access-key <your-access-key>' instead.\n")
+	fmt.Fprintf(c.Out, "Please use 'doctl serverless connect <namespace> --access-key <%s>' instead.\n", accessKeyFormat)
 	fmt.Fprintf(c.Out, "This method will be removed in a future version.\n\n")
 
 	list, err := getMatchingNamespaces(ctx, sls, "")
@@ -335,6 +338,41 @@ func RunServerlessConnect(c *CmdConfig) error {
 		return errors.New("you must create a namespace with `doctl serverless namespaces create`, specifying a region and label")
 	}
 	return connectFromList(ctx, sls, list, c.Out)
+}
+
+// validateAccessKeyFormat validates that the access key follows the expected format
+func validateAccessKeyFormat(accessKey string) error {
+	// Check for proper dof_v1_ prefix first (most specific check)
+	if !strings.HasPrefix(accessKey, "dof_v1_") {
+		return fmt.Errorf("access-key must start with 'dof_v1_' prefix (expected format: %s)", accessKeyFormat)
+	}
+
+	// Check for required colon separator
+	if !strings.Contains(accessKey, ":") {
+		return fmt.Errorf("access-key must contain ':' separator (expected format: %s)", accessKeyFormat)
+	}
+
+	// Split and validate both parts exist and are non-empty
+	parts := strings.Split(accessKey, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("access-key must contain exactly one ':' separator (expected format: %s)", accessKeyFormat)
+	}
+
+	token := parts[0]
+	secret := parts[1]
+
+	// Validate token part (after dof_v1_ prefix)
+	tokenPart := strings.TrimPrefix(token, "dof_v1_")
+	if len(tokenPart) == 0 {
+		return fmt.Errorf("access-key token part cannot be empty after 'dof_v1_' prefix (expected format: %s)", accessKeyFormat)
+	}
+
+	// Validate secret part is non-empty
+	if len(secret) == 0 {
+		return fmt.Errorf("access-key secret part cannot be empty (expected format: %s)", accessKeyFormat)
+	}
+
+	return nil
 }
 
 // connectFromList connects a namespace based on a non-empty list of namespaces.  If the list is
@@ -581,7 +619,7 @@ func connectWithAccessKey(sls do.ServerlessService, ns do.OutputNamespace, acces
 		return fmt.Errorf("access-key does not match namespace '%s'", ns.Namespace)
 	}
 
-	// Create credentials using the provided access-key and namespace's API host
+	// Save credentials using the provided access-key and namespace's API host
 	credential := do.ServerlessCredential{Auth: accessKey}
 	creds := do.ServerlessCredentials{
 		APIHost:     ns.APIHost,
