@@ -51,7 +51,7 @@ func TestServerlessConnect(t *testing.T) {
 					Label:     "something",
 				},
 			},
-			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <your-access-key>' instead.\nThis method will be removed in a future version.\n\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <dof_v1_<token>:<secret>>' instead.\nThis method will be removed in a future version.\n\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
 		},
 		{
 			name: "two namespaces",
@@ -67,7 +67,7 @@ func TestServerlessConnect(t *testing.T) {
 					Label:     "another",
 				},
 			},
-			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <your-access-key>' instead.\nThis method will be removed in a future version.\n\n0: ns1 in nyc1, label=something\n1: ns2 in lon1, label=another\nChoose a namespace by number or 'x' to exit\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <dof_v1_<token>:<secret>>' instead.\nThis method will be removed in a future version.\n\n0: ns1 in nyc1, label=something\n1: ns2 in lon1, label=another\nChoose a namespace by number or 'x' to exit\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
 		},
 		{
 			name: "use argument",
@@ -84,7 +84,7 @@ func TestServerlessConnect(t *testing.T) {
 				},
 			},
 			doctlArg:       "thing",
-			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect thing --access-key <your-access-key>' instead.\nThis method will be removed in a future version.\n\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedOutput: "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect thing --access-key <dof_v1_<token>:<secret>>' instead.\nThis method will be removed in a future version.\n\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
 		},
 	}
 	for _, tt := range tests {
@@ -178,7 +178,7 @@ func TestServerlessConnectWithInvalidAccessKey(t *testing.T) {
 			name:       "no colon separator",
 			accessKey:  "invalid-key-no-colon",
 			args:       []string{"ns1"},
-			wantError:  "access-key must contain ':' separator",
+			wantError:  "access-key must start with 'dof_v1_' prefix",
 			setupMocks: true,
 		},
 		{
@@ -192,7 +192,7 @@ func TestServerlessConnectWithInvalidAccessKey(t *testing.T) {
 			name:       "only colon",
 			accessKey:  ":",
 			args:       []string{"ns1"},
-			wantError:  "", // Valid format, but will fail auth in later test
+			wantError:  "access-key must start with 'dof_v1_' prefix",
 			setupMocks: true,
 		},
 		{

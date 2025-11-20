@@ -163,12 +163,18 @@ func RunAccessKeyRevoke(c *CmdConfig) error {
 // resolveTargetNamespace determines which namespace to operate on
 // If explicitNamespace is provided, use it; otherwise use the currently connected namespace
 func resolveTargetNamespace(c *CmdConfig, explicitNamespace string) (string, error) {
+	ss := c.Serverless()
+
 	if explicitNamespace != "" {
+		// VALIDATE NAMESPACE EXISTS
+		_, err := ss.GetNamespace(context.TODO(), explicitNamespace)
+		if err != nil {
+			return "", fmt.Errorf("namespace '%s' not found or not accessible", explicitNamespace)
+		}
 		return explicitNamespace, nil
 	}
 
 	// Use connected namespace
-	ss := c.Serverless()
 	if err := ss.CheckServerlessStatus(); err != nil {
 		return "", err
 	}
