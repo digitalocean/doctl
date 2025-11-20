@@ -93,8 +93,9 @@ func RunAccessKeyCreate(c *CmdConfig) error {
 	fmt.Fprintf(c.Out, "Notice: The secret key for \"%s\" is shown below.\n", name)
 	fmt.Fprintf(c.Out, "Please save this secret. You will not be able to see it again.\n\n")
 
-	// Display table with secret
-	return c.Display(&displayers.AccessKeys{AccessKeys: []do.AccessKey{accessKey}})
+	// Display table with full secret (using ForCreate to show complete secret)
+	displayKeys := &displayers.AccessKeys{AccessKeys: []do.AccessKey{accessKey}}
+	return c.Display(displayKeys.ForCreate())
 }
 
 // RunAccessKeyList handles the access key list command

@@ -20,7 +20,8 @@ import (
 )
 
 type AccessKeys struct {
-	AccessKeys []do.AccessKey
+	AccessKeys     []do.AccessKey
+	ShowFullSecret bool // When true, shows full secret (for creation), otherwise truncates/hides
 }
 
 var _ Displayable = &AccessKeys{}
@@ -57,15 +58,13 @@ func (ak *AccessKeys) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(ak.AccessKeys))
 
 	for _, key := range ak.AccessKeys {
-		// Show partial secret (first 8 chars + ...) if present, or "<hidden>" if not
+		// Show full secret during creation, hidden otherwise
 		secret := "<hidden>"
-		if key.Secret != "" {
-			if len(key.Secret) > 8 {
-				secret = key.Secret[:8] + "..."
-			} else {
-				secret = key.Secret
-			}
+		if key.Secret != "" && ak.ShowFullSecret {
+			// During creation: show the full secret
+			secret = key.Secret
 		}
+		// For all other cases (listing, etc.): always show "<hidden>"
 
 		// Format optional timestamp fields
 		expiresAt := ""
@@ -96,5 +95,5 @@ func (ak *AccessKeys) KV() []map[string]any {
 // ForCreate returns a displayer optimized for showing newly created access keys
 // This version shows the full secret since it's only displayed once
 func (ak *AccessKeys) ForCreate() *AccessKeys {
-	return &AccessKeys{AccessKeys: ak.AccessKeys}
+	return &AccessKeys{AccessKeys: ak.AccessKeys, ShowFullSecret: true}
 }
