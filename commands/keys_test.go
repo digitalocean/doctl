@@ -72,13 +72,13 @@ func TestAccessKeyCreate(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          []string
-		flags         map[string]interface{}
+		flags         map[string]any
 		expectedCalls func(*tcMocks)
 		expectedError string
 	}{
 		{
 			name: "create with connected namespace",
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				"name": "my-key",
 			},
 			expectedCalls: func(tm *tcMocks) {
@@ -89,7 +89,7 @@ func TestAccessKeyCreate(t *testing.T) {
 		},
 		{
 			name: "create with explicit namespace",
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				"name":      "my-key",
 				"namespace": "fn-explicit-namespace",
 			},
@@ -100,7 +100,7 @@ func TestAccessKeyCreate(t *testing.T) {
 		},
 		{
 			name: "create without name flag",
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				// name is required, but we'll pass empty string
 				"name": "",
 			},
@@ -114,7 +114,7 @@ func TestAccessKeyCreate(t *testing.T) {
 		},
 		{
 			name: "create with disconnected namespace",
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				"name": "my-key",
 			},
 			expectedCalls: func(tm *tcMocks) {
@@ -156,7 +156,7 @@ func TestAccessKeyList(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          []string
-		flags         map[string]interface{}
+		flags         map[string]any
 		expectedCalls func(*tcMocks)
 		expectedError string
 	}{
@@ -170,7 +170,7 @@ func TestAccessKeyList(t *testing.T) {
 		},
 		{
 			name: "list with explicit namespace",
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				"namespace": "fn-explicit-namespace",
 			},
 			expectedCalls: func(tm *tcMocks) {
@@ -224,14 +224,14 @@ func TestAccessKeyRevoke(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          []string
-		flags         map[string]interface{}
+		flags         map[string]any
 		expectedCalls func(*tcMocks)
 		expectedError string
 	}{
 		{
 			name: "revoke with connected namespace and force",
 			args: []string{"dof_v1_abc123def456"},
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				"force": true,
 			},
 			expectedCalls: func(tm *tcMocks) {
@@ -243,7 +243,7 @@ func TestAccessKeyRevoke(t *testing.T) {
 		{
 			name: "revoke with explicit namespace",
 			args: []string{"dof_v1_abc123def456"},
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				"namespace": "fn-explicit-namespace",
 				"force":     true,
 			},
@@ -265,7 +265,7 @@ func TestAccessKeyRevoke(t *testing.T) {
 		{
 			name: "revoke with disconnected namespace",
 			args: []string{"dof_v1_abc123def456"},
-			flags: map[string]interface{}{
+			flags: map[string]any{
 				"force": true,
 			},
 			expectedCalls: func(tm *tcMocks) {
