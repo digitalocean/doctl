@@ -52,7 +52,7 @@ var (
 func TestKeysCommand(t *testing.T) {
 	cmd := Keys()
 	assert.NotNil(t, cmd)
-	expected := []string{"create", "list", "revoke"}
+	expected := []string{"create", "list", "delete"}
 
 	names := []string{}
 	for _, c := range cmd.Commands() {
@@ -220,7 +220,7 @@ func TestAccessKeyList(t *testing.T) {
 	}
 }
 
-func TestAccessKeyRevoke(t *testing.T) {
+func TestAccessKeyDelete(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          []string
@@ -229,7 +229,7 @@ func TestAccessKeyRevoke(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "revoke with connected namespace and force",
+			name: "delete with connected namespace and force",
 			args: []string{"dof_v1_abc123def456"},
 			flags: map[string]any{
 				"force": true,
@@ -241,7 +241,7 @@ func TestAccessKeyRevoke(t *testing.T) {
 			},
 		},
 		{
-			name: "revoke with explicit namespace",
+			name: "delete with explicit namespace",
 			args: []string{"dof_v1_abc123def456"},
 			flags: map[string]any{
 				"namespace": "fn-explicit-namespace",
@@ -253,17 +253,17 @@ func TestAccessKeyRevoke(t *testing.T) {
 			},
 		},
 		{
-			name:          "revoke without key ID",
+			name:          "delete without key ID",
 			args:          []string{},
 			expectedError: "command is missing required arguments",
 		},
 		{
-			name:          "revoke with too many args",
+			name:          "delete with too many args",
 			args:          []string{"key1", "key2"},
 			expectedError: "command contains unsupported arguments",
 		},
 		{
-			name: "revoke with disconnected namespace",
+			name: "delete with disconnected namespace",
 			args: []string{"dof_v1_abc123def456"},
 			flags: map[string]any{
 				"force": true,
@@ -290,7 +290,7 @@ func TestAccessKeyRevoke(t *testing.T) {
 				// Set args
 				config.Args = tt.args
 
-				err := RunAccessKeyRevoke(config)
+				err := RunAccessKeyDelete(config)
 
 				if tt.expectedError != "" {
 					assert.Error(t, err)
@@ -425,7 +425,7 @@ func TestAccessKeyListOutput(t *testing.T) {
 	})
 }
 
-func TestAccessKeyRevokeOutput(t *testing.T) {
+func TestAccessKeyDeleteOutput(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
@@ -433,14 +433,13 @@ func TestAccessKeyRevokeOutput(t *testing.T) {
 		config.Args = []string{"dof_v1_abc123def456"}
 		config.Doit.Set(config.NS, "force", true)
 
-		expectedOutput := "Key dof_v1_abc123def456 has been revoked.\n"
+		expectedOutput := "Key dof_v1_abc123def456 has been deleted.\n"
 
 		tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 		tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
 		tm.serverless.EXPECT().DeleteNamespaceAccessKey(context.TODO(), "fn-test-namespace", "dof_v1_abc123def456").Return(nil)
 
-		err := RunAccessKeyRevoke(config)
-
+		err := RunAccessKeyDelete(config)
 		require.NoError(t, err)
 		assert.Equal(t, expectedOutput, buf.String())
 	})

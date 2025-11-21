@@ -31,7 +31,7 @@ func Keys() *Command {
 			Short: "Manage access keys for functions namespaces",
 			Long: `Access keys provide secure authentication for serverless operations without using your main DigitalOcean token.
 
-These commands allow you to create, list, and revoke namespace-specific access keys.
+These commands allow you to create, list, and delete namespace-specific access keys.
 Keys operate on the currently connected namespace by default, but can target any namespace using the --namespace flag.`,
 			Aliases: []string{"keys"},
 		},
@@ -56,15 +56,15 @@ Examples:
 		Writer, aliasOpt("ls"), displayerType(&displayers.AccessKeys{}))
 	AddStringFlag(list, "namespace", "", "", "target namespace (uses connected namespace if not specified)")
 
-	revoke := CmdBuilder(cmd, RunAccessKeyRevoke, "revoke <key-id>", "Revokes an access key",
-		`Permanently revokes an existing access key. This action cannot be undone.
+	delete := CmdBuilder(cmd, RunAccessKeyDelete, "delete <key-id>", "Deletes an access key",
+		`Permanently deletes an existing access key. This action cannot be undone.
 
 Examples:
-  doctl serverless key revoke dof_v1_a1b2c3d4e5f67890
-  doctl serverless key revoke dof_v1_a1b2c3d4e5f67890 --force`,
+  doctl serverless key delete dof_v1_a1b2c3d4e5f67890
+  doctl serverless key delete dof_v1_a1b2c3d4e5f67890 --force`,
 		Writer, aliasOpt("rm"))
-	AddStringFlag(revoke, "namespace", "", "", "target namespace (uses connected namespace if not specified)")
-	AddBoolFlag(revoke, "force", "f", false, "skip confirmation prompt")
+	AddStringFlag(delete, "namespace", "", "", "target namespace (uses connected namespace if not specified)")
+	AddBoolFlag(delete, "force", "f", false, "skip confirmation prompt")
 
 	return cmd
 }
@@ -123,8 +123,8 @@ func RunAccessKeyList(c *CmdConfig) error {
 	return c.Display(&displayers.AccessKeys{AccessKeys: keys})
 }
 
-// RunAccessKeyRevoke handles the access key revoke command
-func RunAccessKeyRevoke(c *CmdConfig) error {
+// RunAccessKeyDelete handles the access key delete command
+func RunAccessKeyDelete(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
 		return err
@@ -142,13 +142,13 @@ func RunAccessKeyRevoke(c *CmdConfig) error {
 
 	// Confirmation prompt unless --force
 	if !force {
-		fmt.Fprintf(c.Out, "Warning: Revoking this key is a permanent action.\n")
-		if err := AskForConfirm(fmt.Sprintf("revoke key %s", keyID)); err != nil {
+		fmt.Fprintf(c.Out, "Warning: Deleting this key is a permanent action.\n")
+		if err := AskForConfirm(fmt.Sprintf("delete key %s", keyID)); err != nil {
 			return err
 		}
 	}
 
-	// Revoke the key
+	// Delete the key
 	ss := c.Serverless()
 	ctx := context.TODO()
 
@@ -157,7 +157,7 @@ func RunAccessKeyRevoke(c *CmdConfig) error {
 		return err
 	}
 
-	fmt.Fprintf(c.Out, "Key %s has been revoked.\n", keyID)
+	fmt.Fprintf(c.Out, "Key %s has been deleted.\n", keyID)
 	return nil
 }
 
