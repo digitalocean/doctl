@@ -56,12 +56,12 @@ Examples:
 		Writer, aliasOpt("ls"), displayerType(&displayers.AccessKeys{}))
 	AddStringFlag(list, "namespace", "", "", "target namespace (uses connected namespace if not specified)")
 
-	delete := CmdBuilder(cmd, RunAccessKeyDelete, "delete <key-id>", "Deletes an access key",
+	delete := CmdBuilder(cmd, RunAccessKeyDelete, "delete <access-key>", "Deletes an access key",
 		`Permanently deletes an existing access key. This action cannot be undone.
 
 Examples:
-  doctl serverless key delete dof_v1_a1b2c3d4e5f67890
-  doctl serverless key delete dof_v1_a1b2c3d4e5f67890 --force`,
+  doctl serverless key delete <access-key>
+  doctl serverless key delete <access-key> --force`,
 		Writer, aliasOpt("rm"))
 	AddStringFlag(delete, "namespace", "", "", "target namespace (uses connected namespace if not specified)")
 	AddBoolFlag(delete, "force", "f", false, "skip confirmation prompt")

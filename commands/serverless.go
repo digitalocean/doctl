@@ -41,7 +41,7 @@ var (
 	errUndeployTrigPkg = errors.New("the `--packages` and `--triggers` flags are mutually exclusive")
 
 	// accessKeyFormat defines the expected format for serverless access keys
-	accessKeyFormat = "dof_v1_<token>:<secret>"
+	accessKeyFormat = "dof_v1_<access_key_id>:<secret>"
 
 	// languageKeywords maps the backend's runtime category names to keywords accepted as languages
 	// Note: this table has all languages for which we possess samples.  Only those with currently
