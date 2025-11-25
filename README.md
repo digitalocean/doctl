@@ -56,6 +56,8 @@ Use "doctl [command] --help" for more information about a command.
 
 See the [full reference documentation](https://www.digitalocean.com/docs/apis-clis/doctl/reference/) for information about each available command.
 
+## Table of Contents
+
 - [Installing `doctl`](#installing-doctl)
   - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
     - [MacOS](#macos)
