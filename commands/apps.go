@@ -213,7 +213,7 @@ Only basic information is included with the text output format. For complete app
 		"Get a job invocation",
 		`Gets information about a specific job invocation for the given app, including when the job was created.
 
-Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+Only basic information is included with the text output format. For the complete job invocation details, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("gji"),
 		displayerType(&displayers.JobInvocations{}),
@@ -226,7 +226,7 @@ Only basic information is included with the text output format. For complete app
 		"Cancel a job invocation",
 		`Cancels a specific job invocation for the given app.
 
-Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+Only basic information is included with the text output format. For the complete job invocation details, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("cji"),
 		displayerType(&displayers.JobInvocations{}),
