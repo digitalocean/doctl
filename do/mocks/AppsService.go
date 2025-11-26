@@ -309,6 +309,21 @@ func (mr *MockAppsServiceMockRecorder) GetJobInvocation(appID, jobInvocationID s
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobInvocation", reflect.TypeOf((*MockAppsService)(nil).GetJobInvocation), appID, jobInvocationID, opts)
 }
 
+// CancelJobInvocation mocks base method.
+func (m *MockAppsService) CancelJobInvocation(appID, jobinvocationID string, opts *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelJobInvocation", appID, jobinvocationID, opts)
+	ret0, _ := ret[0].(*godo.JobInvocation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CancelJobInvocation indicates an expected call of CancelJobInvocation.
+func (mr *MockAppsServiceMockRecorder) CancelJobInvocation(appID, jobInvocationID string, opts *godo.CancelJobInvocationOptions) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelJobInvocation", reflect.TypeOf((*MockAppsService)(nil).CancelJobInvocation), appID, jobInvocationID, opts)
+}
+
 // GetJobInvocationLogs mocks base method.
 func (m *MockAppsService) GetJobInvocationLogs(appID, jobInvocationID string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error) {
 	m.ctrl.T.Helper()

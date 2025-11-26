@@ -219,6 +219,19 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.JobInvocations{}),
 	)
 
+	CmdBuilder(
+		cmd,
+		RunAppsCancelJobInvocation,
+		"cancel-job-invocation <app id> <job invocation id>",
+		"Cancel a job invocation",
+		`Cancels a specific job invocation for the given app.
+
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+		Writer,
+		aliasOpt("cji"),
+		displayerType(&displayers.JobInvocations{}),
+	)
+
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
@@ -1437,6 +1450,33 @@ func RunAppsGetJobInvocation(c *CmdConfig) error {
 	}
 
 	jobInvocation, err := c.Apps().GetJobInvocation(appID, jobInvocationID, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.JobInvocations{jobInvocation})
+}
+
+// RunAppsGetJobInvocation gets a job invocation for an app.
+func RunAppsCancelJobInvocation(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	jobInvocationID := c.Args[1]
+
+	opts := &godo.CancelJobInvocationOptions{}
+
+	jobName, err := c.Doit.GetString(c.NS, doctl.ArgAppJobName)
+	if err != nil {
+		return err
+	}
+
+	if jobName != "" {
+		opts.JobName = jobName
+	}
+
+	jobInvocation, err := c.Apps().CancelJobInvocation(appID, jobInvocationID, opts)
 	if err != nil {
 		return err
 	}
