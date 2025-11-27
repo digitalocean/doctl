@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"strings"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
@@ -31,7 +33,8 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 		AddStringFlag(c, doctl.ArgVPCNATGatewayType, "", "PUBLIC", "Gateway type")
 		AddStringFlag(c, doctl.ArgVPCNATGatewayRegion, "", "", "Gateway region", requiredOpt())
 		AddIntFlag(c, doctl.ArgVPCNATGatewaySize, "", 1, "Gateway size")
-		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs")
+		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs, takes a kv-pair of Ingress VPC ID and optional 'default' to indicate the gateway to be set as default for the VPC"+
+			" (e.g. --vpcs 6df2c5f4-d2da-4bce-b8dc-e9d2b7bd5db6:default,abcd8994-7f1b-4512-bc2e-13d47ca68632)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayUDPTimeout, "", 30, "UDP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayICMPTimeout, "", 30, "ICMP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 300, "TCP connection timeout (seconds)")
@@ -97,7 +100,17 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 				return err
 			}
 			for _, vpc := range vpcs {
-				r.VPCs = append(r.VPCs, &godo.IngressVPC{VpcUUID: vpc})
+				if pieces := strings.Split(vpc, ":"); len(pieces) > 0 {
+					r.VPCs = append(r.VPCs, &godo.IngressVPC{
+						VpcUUID: pieces[0],
+						DefaultGateway: func() bool {
+							if len(pieces) > 1 && strings.EqualFold(pieces[1], "default") {
+								return true
+							}
+							return false
+						}(),
+					})
+				}
 			}
 			return nil
 		},
@@ -126,7 +139,6 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 			return nil
 		},
 	}
-
 	if requestType == createRequestType {
 		hydrators = append(hydrators,
 			func() error {

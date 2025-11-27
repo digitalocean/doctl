@@ -108,10 +108,16 @@ func TestVPCNATGatewayUpdate(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		gatewayID := "51154959-e07b-4093-98fb-828590ecc76d"
 		updateReq := godo.VPCNATGatewayRequest{
-			Name:               "test-vpc-nat-gateway-01-renamed", // update name
-			Type:               "PUBLIC",
-			Region:             "nyc3",
-			Size:               1,
+			Name:   "test-vpc-nat-gateway-01-renamed", // update name
+			Type:   "PUBLIC",
+			Region: "nyc3",
+			Size:   1,
+			VPCs: []*godo.IngressVPC{
+				{
+					VpcUUID:        "05790d02-c7e0-47d6-a917-5b4cf68cf5b7",
+					DefaultGateway: true, // update default gateway
+				},
+			},
 			UDPTimeoutSeconds:  50, // update timeouts
 			ICMPTimeoutSeconds: 50, // update timeouts
 			TCPTimeoutSeconds:  50, // update timeouts
@@ -124,6 +130,7 @@ func TestVPCNATGatewayUpdate(t *testing.T) {
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayType, "PUBLIC")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayRegion, "nyc3")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewaySize, "1")
+		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayVPCs, "05790d02-c7e0-47d6-a917-5b4cf68cf5b7:default")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayUDPTimeout, "50")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayICMPTimeout, "50")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayTCPTimeout, "50")
