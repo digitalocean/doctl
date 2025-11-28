@@ -284,6 +284,19 @@ To set a new default context, run `doctl auth switch --context <new-context-name
 
 The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` [environment variable](#environment-variables) are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
 
+## Quick Start: doctl CLI Cheat Sheet
+
+| Task                      | Command Example                          |
+|---------------------------|------------------------------------------|
+| Authenticate              | `doctl auth init`                        |
+| List Droplets             | `doctl compute droplet list`             |
+| Create Droplet            | `doctl compute droplet create <name>`    |
+| List Kubernetes Clusters | `doctl kubernetes cluster list`          |
+| Get Account Info          | `doctl account get`                      |
+
+For full command options, run `doctl help` or visit the [CLI reference](https://docs.digitalocean.com/reference/doctl/).
+
+
 ## Configuring Default Values
 
 The `doctl` configuration file is used to store your API Access Token as well as the defaults for command flags. If you find yourself using certain flags frequently, you can change their default values to avoid typing them every time. This can be useful when, for example, you want to change the username or port used for SSH.
