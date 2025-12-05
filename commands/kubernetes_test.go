@@ -541,6 +541,12 @@ func TestKubernetesCreate(t *testing.T) {
 			AmdGpuDeviceMetricsExporterPlugin: &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
 				Enabled: boolPtr(true),
 			},
+			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -570,6 +576,8 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -637,6 +645,12 @@ func TestKubernetesUpdate(t *testing.T) {
 			AmdGpuDeviceMetricsExporterPlugin: &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
 				Enabled: boolPtr(true),
 			},
+			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -653,6 +667,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
