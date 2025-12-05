@@ -54,6 +54,8 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"RoutingAgent",
 		"AmdGpuDevicePlugin",
 		"AmdGpuDeviceMetricsExporterPlugin",
+		"NvidiaGpuDevicePlugin",
+		"RDMASharedDevicePlugin",
 	}
 }
 
@@ -91,6 +93,8 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		"RoutingAgent":                      "Routing Agent",
 		"AmdGpuDevicePlugin":                "AMD GPU Device Plugin",
 		"AmdGpuDeviceMetricsExporterPlugin": "AMD GPU Device Metrics Exporter Plugin",
+		"NvidiaGpuDevicePlugin":             "NVIDIA GPU Device Plugin",
+		"RDMASharedDevicePlugin":            "RDMA Shared Device Plugin",
 	}
 }
 
@@ -129,6 +133,8 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 			"RoutingAgent":                      cluster.RoutingAgent != nil && *cluster.RoutingAgent.Enabled,
 			"AmdGpuDevicePlugin":                cluster.AmdGpuDevicePlugin != nil && *cluster.AmdGpuDevicePlugin.Enabled,
 			"AmdGpuDeviceMetricsExporterPlugin": cluster.AmdGpuDeviceMetricsExporterPlugin != nil && *cluster.AmdGpuDeviceMetricsExporterPlugin.Enabled,
+			"NvidiaGpuDevicePlugin":             cluster.NvidiaGpuDevicePlugin != nil && *cluster.NvidiaGpuDevicePlugin.Enabled,
+			"RDMASharedDevicePlugin":            cluster.RdmaSharedDevicePlugin != nil && *cluster.RdmaSharedDevicePlugin.Enabled,
 		}
 
 		if cfg := cluster.ClusterAutoscalerConfiguration; cfg != nil {

@@ -157,6 +157,10 @@ const (
 	ArgEnableAmdGpuDevicePlugin = "enable-amd-gpu-device-plugin"
 	// ArgEnableAmdGpuDeviceMetricsExporterPlugin enables automatic amd gpu device metrics exporter plugin installation.
 	ArgEnableAmdGpuDeviceMetricsExporterPlugin = "enable-amd-gpu-device-metrics-exporter-plugin"
+	// ArgEnableNvidiaGpuDevicePlugin enables automatic NVIDIA gpu device plugin installation.
+	ArgEnableNvidiaGpuDevicePlugin = "enable-nvidia-gpu-device-plugin"
+	// ArgEnableRDMASharedDevicePlugin enables automatic NVIDIA gpu device plugin installation.
+	ArgEnableRDMASharedDevicePlugin = "enable-rdma-shared-device-plugin"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
