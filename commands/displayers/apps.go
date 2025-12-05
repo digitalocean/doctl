@@ -131,6 +131,55 @@ func (d Deployments) JSON(w io.Writer) error {
 	return e.Encode(d)
 }
 
+type JobInvocations []*godo.JobInvocation
+
+var _ Displayable = (*JobInvocations)(nil)
+
+func (ji JobInvocations) Cols() []string {
+	return []string{
+		"ID",
+		"Jobname",
+		"Created",
+		"Started",
+		"Completed",
+		"Phase",
+	}
+}
+
+func (ji JobInvocations) ColMap() map[string]string {
+	return map[string]string{
+		"ID":        "ID",
+		"Jobname":   "Job Name",
+		"Created":   "Created At",
+		"Started":   "Started At",
+		"Completed": "Completed At",
+		"Phase":     "Phase",
+	}
+}
+
+func (ji JobInvocations) KV() []map[string]any {
+	out := make([]map[string]any, len(ji))
+
+	for i, invocation := range ji {
+
+		out[i] = map[string]any{
+			"ID":        invocation.ID,
+			"Jobname":   invocation.JobName,
+			"Created":   invocation.CreatedAt,
+			"Started":   invocation.StartedAt,
+			"Completed": invocation.CompletedAt,
+			"Phase":     invocation.Phase,
+		}
+	}
+	return out
+}
+
+func (d JobInvocations) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(d)
+}
+
 type AppRegions []*godo.AppRegion
 
 var _ Displayable = (*AppRegions)(nil)

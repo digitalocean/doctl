@@ -161,6 +161,73 @@ func KnowledgeBaseCmd() *Command {
 	cmdDataSourceDelete.Example = "The following example deletes data source having uuid like " + `00000000-0000-0000-0000-000000000000` + " from a Knowledge Base having uuid " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " \nUsing the following command `" +
 		" : `doctl genai knowledge-base delete-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 00000000-0000-0000-0000-000000000000`"
 
+	cmdIndexingJobsList := "List all indexing jobs for knowledge bases. Each indexing job contains the following information:\n" +
+		"		- The indexing job UUID\n" +
+		"		- The knowledge base UUID\n" +
+		"		- The current phase of the job\n" +
+		"		- The job status\n" +
+		"		- The number of completed datasources\n" +
+		"		- The total number of datasources\n" +
+		"		- The number of tokens processed\n" +
+		"		- The number of items indexed\n" +
+		"		- The number of items failed\n" +
+		"		- The number of items skipped\n" +
+		"		- The creation timestamp\n" +
+		"		- The start timestamp\n" +
+		"		- The finish timestamp\n" +
+		"		- The update timestamp\n" +
+		"		- The data source UUIDs being processed"
+	cmdIndexingJobList := CmdBuilder(
+		cmd,
+		RunKnowledgeBaseListIndexingJobs,
+		"list-indexing-jobs",
+		"List all indexing jobs for knowledge bases",
+		cmdIndexingJobsList,
+		Writer, aliasOpt("ls-jobs"),
+		displayerType(&displayers.IndexingJob{}),
+	)
+	cmdIndexingJobList.Example = "The following command lists all indexing jobs for knowledge bases: " +
+		"`doctl genai knowledge-base list-indexing-jobs`"
+
+	cmdGetIndexingJobDetails := "Retrieve the status of a specific indexing job by its UUID. This includes phase, status, progress information, and timestamps."
+	cmdGetIndexingJob := CmdBuilder(
+		cmd,
+		RunKnowledgeBaseGetIndexingJob,
+		"get-indexing-job <indexing-job-uuid>",
+		"Retrieve status of indexing job for a knowledge base",
+		cmdGetIndexingJobDetails,
+		Writer, aliasOpt("get-job"),
+		displayerType(&displayers.IndexingJob{}),
+	)
+	cmdGetIndexingJob.Example = "The following command retrieves the status of an indexing job with UUID `12345678-1234-1234-1234-123456789012`: " +
+		"`doctl genai knowledge-base get-indexing-job 12345678-1234-1234-1234-123456789012`"
+
+	cmdCancelIndexingJobDetails := "Cancel a running indexing job by its UUID. This will stop the indexing process and update the job status."
+	cmdCancelIndexingJob := CmdBuilder(
+		cmd,
+		RunKnowledgeBaseCancelIndexingJob,
+		"cancel-indexing-job <indexing-job-uuid>",
+		"Cancel indexing job for a knowledge base",
+		cmdCancelIndexingJobDetails,
+		Writer, aliasOpt("cancel-job"),
+		displayerType(&displayers.IndexingJob{}),
+	)
+	cmdCancelIndexingJob.Example = "The following command cancels an indexing job with UUID `12345678-1234-1234-1234-123456789012`: " +
+		"`doctl genai knowledge-base cancel-indexing-job 12345678-1234-1234-1234-123456789012`"
+
+	cmdListIndexingJobDataSourcesDetails := "List all data sources for a specific indexing job by its UUID. This shows the status and progress of each data source being processed."
+	cmdListIndexingJobDataSources := CmdBuilder(
+		cmd,
+		RunKnowledgeBaseListIndexingJobDataSources,
+		"list-indexing-job-data-sources <indexing-job-uuid>",
+		"List data sources for indexing job for a knowledge base",
+		cmdListIndexingJobDataSourcesDetails,
+		Writer, aliasOpt("ls-job-ds"),
+		displayerType(&displayers.IndexingJobDataSource{}),
+	)
+	cmdListIndexingJobDataSources.Example = "The following command lists all data sources for an indexing job with UUID `12345678-1234-1234-1234-123456789012`: " +
+		"`doctl genai knowledge-base list-indexing-job-data-sources 12345678-1234-1234-1234-123456789012`"
+
 	cmdAttachKnowledgeBaseDetails := "Attach a knowledge base to an agent using knowledge base uuid and agent uuid. It returns the information of corresponding agent."
 	cmdAttachKnowledgeBase := CmdBuilder(
 		cmd,
@@ -461,4 +528,49 @@ func RunDetachKnowledgeBase(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
+}
+
+// RunKnowledgeBaseListIndexingJobs lists all indexing jobs for knowledge bases.
+func RunKnowledgeBaseListIndexingJobs(c *CmdConfig) error {
+	indexingJobs, err := c.GenAI().ListIndexingJobs()
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.IndexingJob{IndexingJobs: indexingJobs})
+}
+
+// RunKnowledgeBaseGetIndexingJob retrieves the status of a specific indexing job.
+func RunKnowledgeBaseGetIndexingJob(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	indexingJob, err := c.GenAI().GetIndexingJob(c.Args[0])
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.IndexingJob{IndexingJobs: do.IndexingJobs{*indexingJob}})
+}
+
+// RunKnowledgeBaseCancelIndexingJob cancels a specific indexing job.
+func RunKnowledgeBaseCancelIndexingJob(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	indexingJob, err := c.GenAI().CancelIndexingJob(c.Args[0])
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.IndexingJob{IndexingJobs: do.IndexingJobs{*indexingJob}})
+}
+
+// RunKnowledgeBaseListIndexingJobDataSources lists all data sources for a specific indexing job.
+func RunKnowledgeBaseListIndexingJobDataSources(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	dataSources, err := c.GenAI().ListIndexingJobDataSources(c.Args[0])
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.IndexingJobDataSource{IndexingJobDataSources: dataSources})
 }

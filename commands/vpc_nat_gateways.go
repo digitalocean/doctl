@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"strings"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
@@ -31,11 +33,15 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 		AddStringFlag(c, doctl.ArgVPCNATGatewayType, "", "PUBLIC", "Gateway type")
 		AddStringFlag(c, doctl.ArgVPCNATGatewayRegion, "", "", "Gateway region", requiredOpt())
 		AddIntFlag(c, doctl.ArgVPCNATGatewaySize, "", 1, "Gateway size")
-		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs")
+		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs, takes a kv-pair of Ingress VPC ID and optional 'default' to indicate the gateway to be set as default for the VPC"+
+			" (e.g. --vpcs 6df2c5f4-d2da-4bce-b8dc-e9d2b7bd5db6:default,abcd8994-7f1b-4512-bc2e-13d47ca68632)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayUDPTimeout, "", 30, "UDP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayICMPTimeout, "", 30, "ICMP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 300, "TCP connection timeout (seconds)")
 	}
+
+	AddStringFlag(cmdVPCNATGatewayCreate, doctl.ArgProjectID, "", "",
+		"Indicates which project to associate the VPC NAT Gateway with. If not specified, the VPC NAT Gateway will be placed in your default project.")
 
 	CmdBuilder(cmd, RunVPCNATGatewayGet, "get <gateway-id>", "Get a VPC NAT Gateway", "", Writer, displayerType(&displayers.VPCNATGateways{}))
 
@@ -47,7 +53,14 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 	return cmd
 }
 
-func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayRequest) error {
+type requestType int
+
+const (
+	createRequestType requestType = iota + 1
+	updateRequestType
+)
+
+func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayRequest, requestType requestType) error {
 	var hydrators = []func() error{
 		func() error {
 			name, err := c.Doit.GetString(c.NS, doctl.ArgVPCNATGatewayName)
@@ -87,7 +100,17 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 				return err
 			}
 			for _, vpc := range vpcs {
-				r.VPCs = append(r.VPCs, &godo.IngressVPC{VpcUUID: vpc})
+				if pieces := strings.Split(vpc, ":"); len(pieces) > 0 {
+					r.VPCs = append(r.VPCs, &godo.IngressVPC{
+						VpcUUID: pieces[0],
+						DefaultGateway: func() bool {
+							if len(pieces) > 1 && strings.EqualFold(pieces[1], "default") {
+								return true
+							}
+							return false
+						}(),
+					})
+				}
 			}
 			return nil
 		},
@@ -116,6 +139,18 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 			return nil
 		},
 	}
+	if requestType == createRequestType {
+		hydrators = append(hydrators,
+			func() error {
+				projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
+				if err != nil {
+					return err
+				}
+				r.ProjectID = projectID
+				return nil
+			},
+		)
+	}
 	for _, hydrate := range hydrators {
 		if err := hydrate(); err != nil {
 			return err
@@ -127,7 +162,7 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 // RunVPCNATGatewayCreate creates a VPC NAT Gateway
 func RunVPCNATGatewayCreate(c *CmdConfig) error {
 	createReq := new(godo.VPCNATGatewayRequest)
-	if err := buildVPCNATGatewayRequestFromArgs(c, createReq); err != nil {
+	if err := buildVPCNATGatewayRequestFromArgs(c, createReq, createRequestType); err != nil {
 		return err
 	}
 	gateway, err := c.VPCNATGateways().Create(createReq)
@@ -146,7 +181,7 @@ func RunVPCNATGatewayUpdate(c *CmdConfig) error {
 	}
 	id := c.Args[0]
 	updateReq := new(godo.VPCNATGatewayRequest)
-	if err = buildVPCNATGatewayRequestFromArgs(c, updateReq); err != nil {
+	if err = buildVPCNATGatewayRequestFromArgs(c, updateReq, updateRequestType); err != nil {
 		return err
 	}
 	gateway, err := c.VPCNATGateways().Update(id, updateReq)
