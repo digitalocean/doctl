@@ -84,6 +84,8 @@ type CmdConfig struct {
 	PartnerAttachments func() do.PartnerAttachmentsService
 	SpacesKeys         func() do.SpacesKeysService
 	GenAI              func() do.GenAIService
+	Nfs                func() do.NfsService
+	NfsActions         func() do.NfsActionsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -148,6 +150,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 			c.GenAI = func() do.GenAIService { return do.NewGenAIService(godoClient) }
+			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
+			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
 			return nil
 		},
 
