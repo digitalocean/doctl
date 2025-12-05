@@ -54,6 +54,12 @@ var (
 			AmdGpuDeviceMetricsExporterPlugin: &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
 				Enabled: boolPtr(true),
 			},
+			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
+				Enabled: boolPtr(true),
+			},
 		},
 	}
 
