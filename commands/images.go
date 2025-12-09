@@ -94,7 +94,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "A custom image distribution slug to apply to the image")
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDescription, "", "", "An optional description of the image")
 	AddStringSliceFlag(cmdRunImagesCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to apply to the image")
-	cmdRunImagesCreate.Example = `The following example creates a custom image named ` + "`" + `Example Image` + "`" + ` from a URL and stores it in the ` + "`" + `nyc1` + "`" + ` region: doctl compute image create "Example Image" --image-url "https://example.com/image.iso" --region nyc1`
+	cmdRunImagesCreate.Example = `The following example creates a custom image named ` + "`" + `Example Image` + "`" + ` from a URL and stores it in the ` + "`" + `nyc1` + "`" + ` region: doctl compute image create "Example Image" --image-url "https://example.com/image.img" --region nyc1`
 
 	return cmd
 }
