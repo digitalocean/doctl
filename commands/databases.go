@@ -2493,6 +2493,32 @@ func databaseConfiguration() *Command {
 This command functions as a PATCH request, meaning that only the specified fields are updated. If a field is not specified, it will not be changed. The settings are passed using the ` + "`" + `--config-json` + "`" + ` flag, which takes a JSON object as its value.
 
 For a full list of available fields, see the API documentation: https://docs.digitalocean.com/reference/api/api-reference/#operation/databases_patch_config
+
+IMPORTANT: FieldMask for Partial Updates
+-----------------------------------------
+If you receive an error "the mask must be set with which fields are being updated", you need to include a FieldMask in your request.
+
+Some advanced configuration endpoints require a protobuf FieldMask (called 'mask') to explicitly identify which nested fields are being updated. This prevents accidental overwrites when sending partial updates.
+
+To include a mask in your configuration update, add it to the JSON payload passed via --config-json:
+
+Examples:
+
+  # Single field update (MySQL binlog retention)
+  doctl databases configuration update <CLUSTER_ID> --engine mysql \
+    --config-json '{"binlog_retention_period": 86400, "mask": {"paths": ["BinlogRetentionPeriod"]}}'
+
+  # Multiple fields
+  doctl databases configuration update <CLUSTER_ID> --engine mysql \
+    --config-json '{"max_allowed_packet": 67108864, "binlog_retention_period": 86400, "mask": {"paths": ["MaxAllowedPacket", "BinlogRetentionPeriod"]}}'
+
+Path Name Mapping:
+  The mask paths use PascalCase names (not snake_case). Common mappings:
+  - binlog_retention_period → BinlogRetentionPeriod
+  - max_allowed_packet      → MaxAllowedPacket
+  - connect_timeout         → ConnectTimeout
+
+Note: The GraphQL UI and some server-side logic will auto-generate masks for common MySQL scalar fields. However, including an explicit mask is the most reliable way to ensure your configuration update is accepted.
 `
 
 	getDatabaseCfgCommand := CmdBuilder(
