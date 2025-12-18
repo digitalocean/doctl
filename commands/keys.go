@@ -167,12 +167,21 @@ func resolveTargetNamespace(c *CmdConfig, explicitNamespace string) (string, err
 	ss := c.Serverless()
 
 	if explicitNamespace != "" {
-		// VALIDATE NAMESPACE EXISTS
-		_, err := ss.GetNamespace(context.TODO(), explicitNamespace)
+		// Match namespace by exact ID or exact label match
+		ctx := context.TODO()
+		allNamespaces, err := ss.ListNamespaces(ctx)
 		if err != nil {
-			return "", fmt.Errorf("namespace '%s' not found or not accessible", explicitNamespace)
+			return "", err
 		}
-		return explicitNamespace, nil
+
+		// Look for exact match by namespace ID or label
+		for _, ns := range allNamespaces.Namespaces {
+			if ns.Namespace == explicitNamespace || ns.Label == explicitNamespace {
+				return ns.Namespace, nil
+			}
+		}
+
+		return "", fmt.Errorf("namespace '%s' not found. Use exact namespace ID or label", explicitNamespace)
 	}
 
 	// Use connected namespace

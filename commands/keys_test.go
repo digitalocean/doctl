@@ -94,7 +94,9 @@ func TestAccessKeyCreate(t *testing.T) {
 				"namespace": "fn-explicit-namespace",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				tm.serverless.EXPECT().GetNamespace(context.TODO(), "fn-explicit-namespace").Return(do.ServerlessCredentials{Namespace: "fn-explicit-namespace", APIHost: "https://test.api.host"}, nil)
+				tm.serverless.EXPECT().ListNamespaces(context.TODO()).Return(do.NamespaceListResponse{
+					Namespaces: []do.OutputNamespace{{Namespace: "fn-explicit-namespace", Label: "explicit-label"}},
+				}, nil)
 				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-explicit-namespace", "my-key").Return(testAccessKey, nil)
 			},
 		},
@@ -174,7 +176,9 @@ func TestAccessKeyList(t *testing.T) {
 				"namespace": "fn-explicit-namespace",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				tm.serverless.EXPECT().GetNamespace(context.TODO(), "fn-explicit-namespace").Return(do.ServerlessCredentials{Namespace: "fn-explicit-namespace", APIHost: "https://test.api.host"}, nil)
+				tm.serverless.EXPECT().ListNamespaces(context.TODO()).Return(do.NamespaceListResponse{
+					Namespaces: []do.OutputNamespace{{Namespace: "fn-explicit-namespace", Label: "explicit-label"}},
+				}, nil)
 				tm.serverless.EXPECT().ListNamespaceAccessKeys(context.TODO(), "fn-explicit-namespace").Return(testAccessKeyList, nil)
 			},
 		},
@@ -248,7 +252,9 @@ func TestAccessKeyDelete(t *testing.T) {
 				"force":     true,
 			},
 			expectedCalls: func(tm *tcMocks) {
-				tm.serverless.EXPECT().GetNamespace(context.TODO(), "fn-explicit-namespace").Return(do.ServerlessCredentials{Namespace: "fn-explicit-namespace", APIHost: "https://test.api.host"}, nil)
+				tm.serverless.EXPECT().ListNamespaces(context.TODO()).Return(do.NamespaceListResponse{
+					Namespaces: []do.OutputNamespace{{Namespace: "fn-explicit-namespace", Label: "explicit-label"}},
+				}, nil)
 				tm.serverless.EXPECT().DeleteNamespaceAccessKey(context.TODO(), "fn-explicit-namespace", "dof_v1_abc123def456").Return(nil)
 			},
 		},
@@ -307,6 +313,7 @@ func TestResolveTargetNamespace(t *testing.T) {
 	tests := []struct {
 		name              string
 		explicitNamespace string
+		namespaceList     []do.OutputNamespace
 		credentialsReturn do.ServerlessCredentials
 		credentialsError  error
 		statusError       error
@@ -314,9 +321,22 @@ func TestResolveTargetNamespace(t *testing.T) {
 		expectedError     string
 	}{
 		{
-			name:              "explicit namespace provided",
+			name:              "explicit namespace by ID",
 			explicitNamespace: "fn-explicit",
+			namespaceList:     []do.OutputNamespace{{Namespace: "fn-explicit", Label: "my-label"}},
 			expectedNamespace: "fn-explicit",
+		},
+		{
+			name:              "explicit namespace by label",
+			explicitNamespace: "example1",
+			namespaceList:     []do.OutputNamespace{{Namespace: "fn-567e4303-277c-4394-a729-69295d71a5df", Label: "example1"}},
+			expectedNamespace: "fn-567e4303-277c-4394-a729-69295d71a5df",
+		},
+		{
+			name:              "namespace not found",
+			explicitNamespace: "nonexistent",
+			namespaceList:     []do.OutputNamespace{{Namespace: "fn-other", Label: "other-label"}},
+			expectedError:     "namespace 'nonexistent' not found. Use exact namespace ID or label",
 		},
 		{
 			name:              "use connected namespace",
@@ -359,12 +379,10 @@ func TestResolveTargetNamespace(t *testing.T) {
 						}
 					}
 				} else {
-					// For explicit namespace, we now need to mock GetNamespace validation call
-					mockCredentials := do.ServerlessCredentials{
-						Namespace: tt.explicitNamespace,
-						APIHost:   "https://test.api.host",
-					}
-					tm.serverless.EXPECT().GetNamespace(context.TODO(), tt.explicitNamespace).Return(mockCredentials, nil)
+					// For explicit namespace, we now need to mock ListNamespaces for pattern matching
+					tm.serverless.EXPECT().ListNamespaces(context.TODO()).Return(do.NamespaceListResponse{
+						Namespaces: tt.namespaceList,
+					}, nil)
 				}
 
 				namespace, err := resolveTargetNamespace(config, tt.explicitNamespace)
