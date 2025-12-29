@@ -41,10 +41,11 @@ Keys operate on the currently connected namespace by default, but can target any
 		`Creates a new access key for the specified namespace. The secret is displayed only once upon creation.
 
 Examples:
-  doctl serverless key create --name "my-laptop-key"
-  doctl serverless key create --name "ci-cd-key" --namespace fn-abc123`,
+  doctl serverless key create --name "my-laptop-key" --expiration 30d
+  doctl serverless key create --name "ci-cd-key" --namespace fn-abc123 --expiration never`,
 		Writer)
 	AddStringFlag(create, "name", "n", "", "name for the access key", requiredOpt())
+	AddStringFlag(create, "expiration", "e", "", "expiration period: 30d, 60d, 90d, 1y, or never", requiredOpt())
 	AddStringFlag(create, "namespace", "", "", "target namespace (uses connected namespace if not specified)")
 
 	list := CmdBuilder(cmd, RunAccessKeyList, "list", "Lists access keys",
@@ -73,6 +74,28 @@ Examples:
 func RunAccessKeyCreate(c *CmdConfig) error {
 	name, _ := c.Doit.GetString(c.NS, "name")
 	namespace, _ := c.Doit.GetString(c.NS, "namespace")
+	expirationStr, _ := c.Doit.GetString(c.NS, "expiration")
+
+	// Validate expiration
+	var expiresInSeconds *int64
+	switch expirationStr {
+	case "30d":
+		seconds := int64(30 * 24 * 60 * 60)
+		expiresInSeconds = &seconds
+	case "60d":
+		seconds := int64(60 * 24 * 60 * 60)
+		expiresInSeconds = &seconds
+	case "90d":
+		seconds := int64(90 * 24 * 60 * 60)
+		expiresInSeconds = &seconds
+	case "1y":
+		seconds := int64(365 * 24 * 60 * 60)
+		expiresInSeconds = &seconds
+	case "never":
+		expiresInSeconds = nil
+	default:
+		return fmt.Errorf("invalid expiration value '%s'. Must be one of: 30d, 60d, 90d, 1y, or never", expirationStr)
+	}
 
 	// Resolve target namespace
 	targetNamespace, err := resolveTargetNamespace(c, namespace)
@@ -84,7 +107,7 @@ func RunAccessKeyCreate(c *CmdConfig) error {
 	ss := c.Serverless()
 	ctx := context.TODO()
 
-	accessKey, err := ss.CreateNamespaceAccessKey(ctx, targetNamespace, name)
+	accessKey, err := ss.CreateNamespaceAccessKey(ctx, targetNamespace, name, expiresInSeconds)
 	if err != nil {
 		return err
 	}

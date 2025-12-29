@@ -261,7 +261,7 @@ type ServerlessService interface {
 	WriteProject(ServerlessProject) (string, error)
 	SetEffectiveCredentials(auth string, apihost string)
 	CredentialsPath() string
-	CreateNamespaceAccessKey(context.Context, string, string) (AccessKey, error)
+	CreateNamespaceAccessKey(context.Context, string, string, *int64) (AccessKey, error)
 	ListNamespaceAccessKeys(context.Context, string) ([]AccessKey, error)
 	DeleteNamespaceAccessKey(context.Context, string, string) error
 }
@@ -1497,9 +1497,12 @@ func validateFunctionLevelFields(serverlessAction *ServerlessFunction) ([]string
 }
 
 // CreateNamespaceAccessKey creates a new access key for the specified namespace
-func (s *serverlessService) CreateNamespaceAccessKey(ctx context.Context, namespace string, name string) (AccessKey, error) {
+func (s *serverlessService) CreateNamespaceAccessKey(ctx context.Context, namespace string, name string, expiresInSeconds *int64) (AccessKey, error) {
 	path := fmt.Sprintf("v2/functions/namespaces/%s/keys", namespace)
-	reqBody := map[string]string{"name": name}
+	reqBody := map[string]interface{}{"name": name}
+	if expiresInSeconds != nil {
+		reqBody["expires_in_seconds"] = *expiresInSeconds
+	}
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, reqBody)
 	if err != nil {
 		return AccessKey{}, err

@@ -79,50 +79,122 @@ func TestAccessKeyCreate(t *testing.T) {
 		{
 			name: "create with connected namespace",
 			flags: map[string]any{
-				"name": "my-key",
+				"name":       "my-key",
+				"expiration": "never",
 			},
 			expectedCalls: func(tm *tcMocks) {
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key").Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", (*int64)(nil)).Return(testAccessKey, nil)
 			},
 		},
 		{
 			name: "create with explicit namespace",
 			flags: map[string]any{
-				"name":      "my-key",
-				"namespace": "fn-explicit-namespace",
+				"name":       "my-key",
+				"namespace":  "fn-explicit-namespace",
+				"expiration": "never",
 			},
 			expectedCalls: func(tm *tcMocks) {
 				tm.serverless.EXPECT().ListNamespaces(context.TODO()).Return(do.NamespaceListResponse{
 					Namespaces: []do.OutputNamespace{{Namespace: "fn-explicit-namespace", Label: "explicit-label"}},
 				}, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-explicit-namespace", "my-key").Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-explicit-namespace", "my-key", (*int64)(nil)).Return(testAccessKey, nil)
 			},
 		},
 		{
 			name: "create without name flag",
 			flags: map[string]any{
 				// name is required, but we'll pass empty string
-				"name": "",
+				"name":       "",
+				"expiration": "never",
 			},
 			expectedCalls: func(tm *tcMocks) {
 				// It will still try to resolve namespace and then call create with empty name
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "").Return(do.AccessKey{}, assert.AnError)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "", (*int64)(nil)).Return(do.AccessKey{}, assert.AnError)
 			},
 			expectedError: "assert.AnError", // API will reject empty name
 		},
 		{
 			name: "create with disconnected namespace",
 			flags: map[string]any{
-				"name": "my-key",
+				"name":       "my-key",
+				"expiration": "never",
 			},
 			expectedCalls: func(tm *tcMocks) {
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotConnected)
 			},
 			expectedError: "serverless support is installed but not connected to a functions namespace",
+		},
+		{
+			name: "create with 30 days expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "30d",
+			},
+			expectedCalls: func(tm *tcMocks) {
+				expires := int64(30 * 24 * 60 * 60)
+				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
+				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+			},
+		},
+		{
+			name: "create with 60 days expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "60d",
+			},
+			expectedCalls: func(tm *tcMocks) {
+				expires := int64(60 * 24 * 60 * 60)
+				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
+				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+			},
+		},
+		{
+			name: "create with 90 days expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "90d",
+			},
+			expectedCalls: func(tm *tcMocks) {
+				expires := int64(90 * 24 * 60 * 60)
+				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
+				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+			},
+		},
+		{
+			name: "create with 1 year expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "1y",
+			},
+			expectedCalls: func(tm *tcMocks) {
+				expires := int64(365 * 24 * 60 * 60)
+				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
+				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+			},
+		},
+		{
+			name: "create with invalid expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "invalid",
+			},
+			expectedError: "invalid expiration value 'invalid'. Must be one of: 30d, 60d, 90d, 1y, or never",
+		},
+		{
+			name: "create with empty expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "",
+			},
+			expectedError: "invalid expiration value ''. Must be one of: 30d, 60d, 90d, 1y, or never",
 		},
 	}
 
