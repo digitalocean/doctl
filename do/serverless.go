@@ -1499,7 +1499,7 @@ func validateFunctionLevelFields(serverlessAction *ServerlessFunction) ([]string
 // CreateNamespaceAccessKey creates a new access key for the specified namespace
 func (s *serverlessService) CreateNamespaceAccessKey(ctx context.Context, namespace string, name string, expiresInSeconds *int64) (AccessKey, error) {
 	path := fmt.Sprintf("v2/functions/namespaces/%s/keys", namespace)
-	reqBody := map[string]interface{}{"name": name}
+	reqBody := map[string]any{"name": name}
 	if expiresInSeconds != nil {
 		reqBody["expires_in_seconds"] = *expiresInSeconds
 	}
