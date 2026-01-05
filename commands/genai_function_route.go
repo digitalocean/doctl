@@ -127,7 +127,7 @@ func RunFunctionRouteCreate(c *CmdConfig) error {
 		OutputSchema:  json.RawMessage(outputSchemaStr),
 	}
 
-	gs := c.GenAI()
+	gs := c.GradientAI()
 
 	functionRoute, err := gs.CreateFunctionRoute(agentUUID, req)
 	if err != nil {
@@ -200,7 +200,7 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 		req.OutputSchema = outSchema
 	}
 
-	gs := c.GenAI()
+	gs := c.GradientAI()
 	updated, err := gs.UpdateFunctionRoute(agentUUID, functionID, req)
 	if err != nil {
 		return err
@@ -224,7 +224,7 @@ func RunFunctionRouteDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr("agent-id and function-id are required")
 	}
 
-	gs := c.GenAI()
+	gs := c.GradientAI()
 	functionRoute, err := gs.DeleteFunctionRoute(agentUUID, functionID)
 	if err != nil {
 		return err

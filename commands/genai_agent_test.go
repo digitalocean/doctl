@@ -55,7 +55,7 @@ func TestRunAgentCreate(t *testing.T) {
 			Instruction: "You are an agent who thinks deeply about the world",
 		}
 
-		tm.genAI.EXPECT().CreateAgent(expectedRequest).Return(&testAgent, nil)
+		tm.gradientAI.EXPECT().CreateAgent(expectedRequest).Return(&testAgent, nil)
 
 		err := RunAgentCreate(config)
 		assert.NoError(t, err)
@@ -65,7 +65,7 @@ func TestRunAgentCreate(t *testing.T) {
 func TestRunAgentGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		agentID := "00000000-0000-4000-8000-000000000000"
-		tm.genAI.EXPECT().GetAgent(agentID).Return(&testAgent, nil)
+		tm.gradientAI.EXPECT().GetAgent(agentID).Return(&testAgent, nil)
 
 		config.Args = append(config.Args, agentID)
 
@@ -85,7 +85,7 @@ func TestRunAgentGetNoID(t *testing.T) {
 
 func TestRunAgentList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.genAI.EXPECT().ListAgents().Return(do.Agents{testAgent}, nil)
+		tm.gradientAI.EXPECT().ListAgents().Return(do.Agents{testAgent}, nil)
 
 		err := RunAgentList(config)
 		assert.NoError(t, err)
@@ -104,7 +104,7 @@ func TestRunAgentUpdate(t *testing.T) {
 			Description: "Updated instruction",
 		}
 
-		tm.genAI.EXPECT().UpdateAgent(agentID, expectedRequest).Return(&testAgent, nil)
+		tm.gradientAI.EXPECT().UpdateAgent(agentID, expectedRequest).Return(&testAgent, nil)
 
 		err := RunAgentUpdate(config)
 		assert.NoError(t, err)
@@ -117,7 +117,7 @@ func TestRunAgentDelete(t *testing.T) {
 		config.Args = []string{agentID}
 		config.Doit.Set(config.NS, doctl.ArgForce, true) // Force delete without confirmation
 
-		tm.genAI.EXPECT().DeleteAgent(agentID).Return(nil)
+		tm.gradientAI.EXPECT().DeleteAgent(agentID).Return(nil)
 
 		err := RunAgentDelete(config)
 		assert.NoError(t, err)
@@ -156,7 +156,7 @@ func TestRunAgentUpdateVisibility(t *testing.T) {
 			Visibility: "VISIBILITY_PUBLIC",
 		}
 
-		tm.genAI.EXPECT().UpdateAgentVisibility("00000000-0000-4000-8000-000000000000", expectedRequest).Return(&testAgent, nil)
+		tm.gradientAI.EXPECT().UpdateAgentVisibility("00000000-0000-4000-8000-000000000000", expectedRequest).Return(&testAgent, nil)
 
 		err := RunAgentUpdateVisibility(config)
 		assert.NoError(t, err)

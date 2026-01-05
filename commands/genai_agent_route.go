@@ -82,7 +82,7 @@ func RunAgentRouteAdd(c *CmdConfig) error {
 		return err
 	}
 
-	routeResponse, err := c.GenAI().AddAgentRoute(parentAgentID, childAgentID)
+	routeResponse, err := c.GradientAI().AddAgentRoute(parentAgentID, childAgentID)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func RunAgentRouteUpdate(c *CmdConfig) error {
 		UUID:            routeUUID,
 	}
 
-	routeResponse, err := c.GenAI().UpdateAgentRoute(parentAgentID, childAgentID, req)
+	routeResponse, err := c.GradientAI().UpdateAgentRoute(parentAgentID, childAgentID, req)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func RunAgentRouteDelete(c *CmdConfig) error {
 	}
 
 	if force || AskForConfirmDelete("Agent Route", 1) == nil {
-		err := c.GenAI().DeleteAgentRoute(parentAgentID, childAgentID)
+		err := c.GradientAI().DeleteAgentRoute(parentAgentID, childAgentID)
 		if err != nil {
 			return err
 		}
@@ -148,5 +148,5 @@ func RunAgentRouteDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	return c.GenAI().DeleteAgentRoute(parentAgentID, childAgentID)
+	return c.GradientAI().DeleteAgentRoute(parentAgentID, childAgentID)
 }

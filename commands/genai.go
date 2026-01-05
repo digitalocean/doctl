@@ -15,27 +15,27 @@ package commands
 
 import "github.com/spf13/cobra"
 
-// GenAI creates the genai command and adds the agent subcommand.
-func GenAI() *Command {
+// GradientAI creates the gradient command and adds the agent subcommand.
+func GradientAI() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "genai",
-			Aliases: []string{"ai"},
-			Short:   "Manage GenAI resources",
-			Long:    "The subcommands of `doctl genai` manage your GenAI resources.",
+			Use:     "gradient",
+			Aliases: []string{"ai", "genai"},
+			Short:   "Manage Gradient AI resources",
+			Long:    "The subcommands of `doctl gradient` manage your Gradient AI resources.",
 			GroupID: manageResourcesGroup,
 		},
 	}
 
-	// Add the agent command as a subcommand to genai
+	// Add the agent command as a subcommand to Gradient AI
 	cmd.AddCommand(AgentCmd())
-	// Add the knowledgebase command as a subcommand to genai
+	// Add the knowledgebase command as a subcommand to Gradient AI
 	cmd.AddCommand(KnowledgeBaseCmd())
-	// Add the model command as a subcommand to genai
+	// Add the model command as a subcommand to Gradient AI
 	cmd.AddCommand(ListModelsCmd())
-	// Add the region command as a subcommand to genai
+	// Add the region command as a subcommand to Gradient AI
 	cmd.AddCommand(ListRegionsCmd())
-	// Add the OpenAI keys command as a subcommand to genai
+	// Add the OpenAI keys command as a subcommand to Gradient AI
 	cmd.AddCommand(OpenAIKeyCmd())
 
 	return cmd

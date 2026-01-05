@@ -106,7 +106,7 @@ func AgentAPIKeyCmd() *Command {
 func RunAgentAPIKeyList(c *CmdConfig) error {
 	agentID, _ := c.Doit.GetString(c.NS, doctl.ArgAgentId)
 
-	apikeysInfo, err := c.GenAI().ListAgentAPIKeys(agentID)
+	apikeysInfo, err := c.GradientAI().ListAgentAPIKeys(agentID)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func RunAgentAPIKeyCreate(c *CmdConfig) error {
 		Name:      name,
 		AgentUuid: agentID,
 	}
-	apikeyInfo, err := c.GenAI().CreateAgentAPIKey(agentID, req)
+	apikeyInfo, err := c.GradientAI().CreateAgentAPIKey(agentID, req)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func RunAgentAPIKeyUpdate(c *CmdConfig) error {
 		AgentUuid:  agentID,
 		APIKeyUuid: apikeyID,
 	}
-	apikeyInfo, err := c.GenAI().UpdateAgentAPIKey(agentID, apikeyID, req)
+	apikeyInfo, err := c.GradientAI().UpdateAgentAPIKey(agentID, apikeyID, req)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func RunAgentAPIKeyDelete(c *CmdConfig) error {
 
 	// Ask for confirmation unless --force is set
 	if force || AskForConfirmDelete("ApiKey", 1) == nil {
-		apikeys := c.GenAI()
+		apikeys := c.GradientAI()
 		err := apikeys.DeleteAgentAPIKey(agentID, apikeyID)
 		if err != nil {
 			return err
@@ -199,7 +199,7 @@ func RunAgentAPIKeyRegenerate(c *CmdConfig) error {
 	apikeyID := c.Args[0]
 	agentID, _ := c.Doit.GetString(c.NS, doctl.ArgAgentId)
 
-	apikeyInfo, err := c.GenAI().RegenerateAgentAPIKey(agentID, apikeyID)
+	apikeyInfo, err := c.GradientAI().RegenerateAgentAPIKey(agentID, apikeyID)
 	if err != nil {
 		return err
 	}

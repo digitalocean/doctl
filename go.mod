@@ -2,6 +2,8 @@ module github.com/digitalocean/doctl
 
 go 1.24
 
+replace github.com/digitalocean/godo => /Users/adeka/dev/digitalocean/godo
+
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21

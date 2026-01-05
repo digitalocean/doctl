@@ -55,7 +55,7 @@ func TestFunctionRouteCreate(t *testing.T) {
 			OutputSchema:  json.RawMessage(outputSchemaJSON),
 		}
 
-		tm.genAI.EXPECT().
+		tm.gradientAI.EXPECT().
 			CreateFunctionRoute(testAgentUUID, expReq).
 			Return(testAgentResponse, nil)
 
@@ -80,7 +80,7 @@ func TestFunctionRouteUpdate(t *testing.T) {
 			FaasName:     "default/updated",
 		}
 
-		tm.genAI.EXPECT().
+		tm.gradientAI.EXPECT().
 			UpdateFunctionRoute(testAgentUUID, testFunctionUUID, expReq).
 			Return(testAgentResponse, nil)
 
@@ -95,7 +95,7 @@ func TestFunctionRouteUpdate(t *testing.T) {
 
 func TestFunctionRouteDelete(t *testing.T) {
 	withTestClient(t, func(cfg *CmdConfig, tm *tcMocks) {
-		tm.genAI.EXPECT().
+		tm.gradientAI.EXPECT().
 			DeleteFunctionRoute(testAgentUUID, testFunctionUUID).
 			Return(testAgentResponse, nil)
 

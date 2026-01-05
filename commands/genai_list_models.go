@@ -25,7 +25,7 @@ The command returns the following details for each model:
 }
 
 func RunGenAIListModels(c *CmdConfig) error {
-	models, err := c.GenAI().ListAvailableModels()
+	models, err := c.GradientAI().ListAvailableModels()
 	if err != nil {
 		return err
 	}

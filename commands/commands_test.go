@@ -291,7 +291,7 @@ type tcMocks struct {
 	oauth                 *domocks.MockOAuthService
 	partnerAttachments    *domocks.MockPartnerAttachmentsService
 	spacesKeys            *domocks.MockSpacesKeysService
-	genAI                 *domocks.MockGenAIService
+	gradientAI            *domocks.MockGradientAIService
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
 }
@@ -348,7 +348,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		oauth:                 domocks.NewMockOAuthService(ctrl),
 		partnerAttachments:    domocks.NewMockPartnerAttachmentsService(ctrl),
 		spacesKeys:            domocks.NewMockSpacesKeysService(ctrl),
-		genAI:                 domocks.NewMockGenAIService(ctrl),
+		gradientAI:            domocks.NewMockGradientAIService(ctrl),
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
 	}
@@ -413,7 +413,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OAuth:              func() do.OAuthService { return tm.oauth },
 		PartnerAttachments: func() do.PartnerAttachmentsService { return tm.partnerAttachments },
 		SpacesKeys:         func() do.SpacesKeysService { return tm.spacesKeys },
-		GenAI:              func() do.GenAIService { return tm.genAI },
+		GradientAI:         func() do.GradientAIService { return tm.gradientAI },
 		Nfs:                func() do.NfsService { return tm.nfs },
 		NfsActions:         func() do.NfsActionsService { return tm.nfsActions },
 	}

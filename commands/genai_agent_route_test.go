@@ -26,7 +26,7 @@ var (
 
 func TestAgentRouteAdd(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.genAI.EXPECT().AddAgentRoute(testParentAgentID, testChildAgentID).Return(testAgentRouteResponse, nil)
+		tm.gradientAI.EXPECT().AddAgentRoute(testParentAgentID, testChildAgentID).Return(testAgentRouteResponse, nil)
 
 		config.Args = []string{}
 		config.Doit.Set(config.NS, doctl.ArgParentAgentId, testParentAgentID)
@@ -50,7 +50,7 @@ func TestAgentRouteUpdate(t *testing.T) {
 			IfCase:          "test if case",
 		}
 
-		tm.genAI.EXPECT().UpdateAgentRoute(testParentAgentID, testChildAgentID, expectedReq).Return(testAgentRouteResponse, nil)
+		tm.gradientAI.EXPECT().UpdateAgentRoute(testParentAgentID, testChildAgentID, expectedReq).Return(testAgentRouteResponse, nil)
 
 		config.Args = []string{}
 		config.Doit.Set(config.NS, doctl.ArgParentAgentId, testParentAgentID)
@@ -66,7 +66,7 @@ func TestAgentRouteUpdate(t *testing.T) {
 
 func TestAgentRouteDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.genAI.EXPECT().DeleteAgentRoute(testParentAgentID, testChildAgentID).Return(nil)
+		tm.gradientAI.EXPECT().DeleteAgentRoute(testParentAgentID, testChildAgentID).Return(nil)
 
 		config.Args = []string{}
 		config.Doit.Set(config.NS, doctl.ArgParentAgentId, testParentAgentID)

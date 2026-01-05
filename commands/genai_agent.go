@@ -22,10 +22,10 @@ func AgentCmd() *Command {
 	}
 	cmd.AddCommand(AgentAPIKeyCmd())
 
-	// Add the agent route command as a subcommand to genai agent
+	// Add the agent route command as a subcommand to Gradient AI agent
 	cmd.AddCommand(AgentRouteCmd())
 
-	// Add the function route command as a subcommand to genai agent
+	// Add the function route command as a subcommand to Gradient AI agent
 	cmd.AddCommand(FunctionRoute())
 
 	cmdAgentCreate := CmdBuilder(
@@ -171,7 +171,7 @@ func RunAgentList(c *CmdConfig) error {
 	projectId, _ := c.Doit.GetString(c.NS, "project-id")
 	tag, _ := c.Doit.GetString(c.NS, "tag")
 
-	agents, err := c.GenAI().ListAgents()
+	agents, err := c.GradientAI().ListAgents()
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func RunAgentCreate(c *CmdConfig) error {
 		ProjectId:   projectId,
 		ModelUuid:   modelId,
 	}
-	agent, err := c.GenAI().CreateAgent(req)
+	agent, err := c.GradientAI().CreateAgent(req)
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func RunAgentGet(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	agentID := c.Args[0]
-	agent, err := c.GenAI().GetAgent(agentID)
+	agent, err := c.GradientAI().GetAgent(agentID)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func RunAgentUpdate(c *CmdConfig) error {
 		ProjectId:        projectId,
 		Tags:             tags,
 	}
-	agent, err := c.GenAI().UpdateAgent(agentID, req)
+	agent, err := c.GradientAI().UpdateAgent(agentID, req)
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func RunAgentDelete(c *CmdConfig) error {
 
 	// Ask for confirmation unless --force is set
 	if force || AskForConfirmDelete("Agent", 1) == nil {
-		agents := c.GenAI()
+		agents := c.GradientAI()
 		err := agents.DeleteAgent(agentID)
 		if err != nil {
 			return err
@@ -333,7 +333,7 @@ func RunAgentUpdateVisibility(c *CmdConfig) error {
 	req := &godo.AgentVisibilityUpdateRequest{
 		Visibility: visibility,
 	}
-	agent, err := c.GenAI().UpdateAgentVisibility(agentID, req)
+	agent, err := c.GradientAI().UpdateAgentVisibility(agentID, req)
 	if err != nil {
 		return err
 	}
@@ -347,7 +347,7 @@ func RunAgentListVersions(c *CmdConfig) error {
 	}
 	agentID := c.Args[0]
 
-	agentVersions, err := c.GenAI().ListAgentVersions(agentID)
+	agentVersions, err := c.GradientAI().ListAgentVersions(agentID)
 	if err != nil {
 		return err
 	}

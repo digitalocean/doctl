@@ -25,7 +25,7 @@ func TestRunAgentAPIKeyList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		agentID := "00000000-0000-4000-8000-000000000000"
 		config.Doit.Set(config.NS, doctl.ArgAgentId, agentID)
-		tm.genAI.EXPECT().ListAgentAPIKeys(agentID).Return(testAPIKeys, nil)
+		tm.gradientAI.EXPECT().ListAgentAPIKeys(agentID).Return(testAPIKeys, nil)
 
 		err := RunAgentAPIKeyList(config)
 		assert.NoError(t, err)
@@ -43,7 +43,7 @@ func TestRunAgentAPIKeyCreate(t *testing.T) {
 			Name:      name,
 			AgentUuid: agentID,
 		}
-		tm.genAI.EXPECT().CreateAgentAPIKey(agentID, expectedReq).Return(&testAPIKey, nil)
+		tm.gradientAI.EXPECT().CreateAgentAPIKey(agentID, expectedReq).Return(&testAPIKey, nil)
 
 		err := RunAgentAPIKeyCreate(config)
 		assert.NoError(t, err)
@@ -64,7 +64,7 @@ func TestRunAgentAPIKeyUpdate(t *testing.T) {
 			AgentUuid:  agentID,
 			APIKeyUuid: apikeyID,
 		}
-		tm.genAI.EXPECT().UpdateAgentAPIKey(agentID, apikeyID, expectedReq).Return(&testAPIKey, nil)
+		tm.gradientAI.EXPECT().UpdateAgentAPIKey(agentID, apikeyID, expectedReq).Return(&testAPIKey, nil)
 
 		err := RunAgentAPIKeyUpdate(config)
 		assert.NoError(t, err)
@@ -79,7 +79,7 @@ func TestRunAgentAPIKeyDelete(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentId, agentID)
 		config.Doit.Set(config.NS, doctl.ArgAgentForce, true)
 
-		tm.genAI.EXPECT().DeleteAgentAPIKey(agentID, apikeyID).Return(nil)
+		tm.gradientAI.EXPECT().DeleteAgentAPIKey(agentID, apikeyID).Return(nil)
 
 		err := RunAgentAPIKeyDelete(config)
 		assert.NoError(t, err)
@@ -93,7 +93,7 @@ func TestRunAgentAPIKeyRegenerate(t *testing.T) {
 		config.Args = []string{apikeyID}
 		config.Doit.Set(config.NS, doctl.ArgAgentId, agentID)
 
-		tm.genAI.EXPECT().RegenerateAgentAPIKey(agentID, apikeyID).Return(&testAPIKey, nil)
+		tm.gradientAI.EXPECT().RegenerateAgentAPIKey(agentID, apikeyID).Return(&testAPIKey, nil)
 		err := RunAgentAPIKeyRegenerate(config)
 		assert.NoError(t, err)
 	})
@@ -104,7 +104,7 @@ func TestRunAgentAPIKeyList_Error(t *testing.T) {
 		agentID := "agent-uuid"
 		config.Doit.Set(config.NS, doctl.ArgAgentId, agentID)
 
-		tm.genAI.EXPECT().ListAgentAPIKeys(agentID).Return(nil, errors.New("fail"))
+		tm.gradientAI.EXPECT().ListAgentAPIKeys(agentID).Return(nil, errors.New("fail"))
 
 		err := RunAgentAPIKeyList(config)
 		assert.Error(t, err)
@@ -122,7 +122,7 @@ func TestRunAgentAPIKeyCreate_Error(t *testing.T) {
 			Name:      name,
 			AgentUuid: agentID,
 		}
-		tm.genAI.EXPECT().CreateAgentAPIKey(agentID, expectedReq).Return(nil, errors.New("fail"))
+		tm.gradientAI.EXPECT().CreateAgentAPIKey(agentID, expectedReq).Return(nil, errors.New("fail"))
 
 		err := RunAgentAPIKeyCreate(config)
 		assert.Error(t, err)
