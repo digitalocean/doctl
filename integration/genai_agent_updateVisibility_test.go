@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/agent/update-visibility", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -79,7 +79,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"update-visibility",
 				"00000000-0000-4000-8000-000000000000",
@@ -95,7 +95,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"update-visibility",
 				"00000000-0000-4000-8000-000000000000",
@@ -113,7 +113,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"update-visibility",
 				"--visibility", "VISIBILITY_PUBLIC",
@@ -130,7 +130,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"update-visibility",
 				"00000000-0000-4000-8000-000000000000",
@@ -147,7 +147,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"update-visibility",
 				"00000000-0000-4000-8000-000000000000",
@@ -165,7 +165,7 @@ var _ = suite("genai/agent/update-visibility", func(t *testing.T, when spec.G, i
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"update-visibility",
 				"00000000-0000-4000-8000-000000000000",

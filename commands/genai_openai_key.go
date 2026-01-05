@@ -16,7 +16,7 @@ func OpenAIKeyCmd() *Command {
 			Use:     "openai-key",
 			Aliases: []string{"ok"},
 			Short:   "Display commands that manage DigitalOcean OpenAI API Keys.",
-			Long:    "The subcommands of `doctl genai openai-key` allow you to access and manage OpenAI API keys.",
+			Long:    "The subcommands of `doctl gradient openai-key` allow you to access and manage OpenAI API keys.",
 		},
 	}
 
@@ -30,7 +30,7 @@ func OpenAIKeyCmd() *Command {
 		displayerType(&displayers.OpenAiApiKey{}),
 	)
 	cmdOpenAIKeyList.Example = `The following example lists information about all OpenAI API Keys  ` + "\n" +
-		` doctl genai openai-key list `
+		` doctl gradient openai-key list `
 
 	cmdOpenAIKeyGet := CmdBuilder(
 		cmd,
@@ -42,7 +42,7 @@ func OpenAIKeyCmd() *Command {
 		displayerType(&displayers.OpenAiApiKey{}),
 	)
 	cmdOpenAIKeyGet.Example = `The following example retrieves information about an OpenAI API Key with ID - f81d4fae-0000-11d0-a765-000000000000` + "\n" +
-		` doctl genai openai-key get f81d4fae-0000-11d0-a765-000000000000`
+		` doctl gradient openai-key get f81d4fae-0000-11d0-a765-000000000000`
 
 	cmdOpenAIKeyGetAgents := CmdBuilder(
 		cmd,
@@ -54,7 +54,7 @@ func OpenAIKeyCmd() *Command {
 		displayerType(&displayers.Agent{}),
 	)
 	cmdOpenAIKeyGetAgents.Example = `The following example retrieves information about an OpenAI API Key with ID - f81d4fae-0000-11d0-a765-000000000000` + "\n" +
-		` doctl genai openai-key get-agents f81d4fae-0000-11d0-a765-000000000000 `
+		` doctl gradient openai-key get-agents f81d4fae-0000-11d0-a765-000000000000 `
 
 	cmdOpenAIKeyCreate := CmdBuilder(
 		cmd,
@@ -66,7 +66,7 @@ func OpenAIKeyCmd() *Command {
 		displayerType(&displayers.OpenAiApiKey{}),
 	)
 	cmdOpenAIKeyCreate.Example = `The following example creates an OpenAI API Key  ` + "\n" +
-		` doctl genai openai-key create --name my-key --api-key sk-1234567890abcdef1234567890abcdef `
+		` doctl gradient openai-key create --name my-key --api-key sk-1234567890abcdef1234567890abcdef `
 	AddStringFlag(cmdOpenAIKeyCreate, "name", "", "", "The name of the OpenAI API Key.", requiredOpt())
 	AddStringFlag(cmdOpenAIKeyCreate, "api-key", "", "", "The API key for the OpenAI API Key.", requiredOpt())
 
@@ -80,7 +80,7 @@ func OpenAIKeyCmd() *Command {
 		displayerType(&displayers.OpenAiApiKey{}),
 	)
 	cmdOpenAIKeyUpdate.Example = `The following example updates an OpenAI API Key with ID - f81d4fae-0000-11d0-a765-000000000000 ` + "\n" +
-		` doctl genai openai-key update f81d4fae-0000-11d0-a765-000000000000 --name my-key --api-key sk-1234567890abcdef1234567890abcdef `
+		` doctl gradient openai-key update f81d4fae-0000-11d0-a765-000000000000 --name my-key --api-key sk-1234567890abcdef1234567890abcdef `
 	AddStringFlag(cmdOpenAIKeyUpdate, "name", "", "", "The name of the OpenAI API Key.")
 	AddStringFlag(cmdOpenAIKeyUpdate, "api-key", "", "", "The API key for the OpenAI API Key.")
 
@@ -93,7 +93,7 @@ func OpenAIKeyCmd() *Command {
 		Writer, aliasOpt("rm"),
 	)
 	cmdOpenAIKeyDelete.Example = `The following example deletes an OpenAI API Key with ID - f81d4fae-0000-11d0-a765-000000000000 ` + "\n" +
-		` doctl genai openai-key delete f81d4fae-0000-11d0-a765-000000000000 ` + "\n" +
+		` doctl gradient openai-key delete f81d4fae-0000-11d0-a765-000000000000 ` + "\n" +
 		`Note - OpenAI Keys linked to DO Agents cannot be deleted unless you change it from agent`
 	AddBoolFlag(cmdOpenAIKeyDelete, doctl.ArgForce, "f", false, "Forces deletion without confirmation.")
 

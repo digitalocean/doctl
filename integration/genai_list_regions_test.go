@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/list-regions", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/list-regions", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -54,7 +54,7 @@ var _ = suite("genai/list-regions", func(t *testing.T, when spec.G, it spec.S) {
 				cmd := exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"genai",
+					"gradient",
 					alias,
 				)
 
@@ -74,7 +74,7 @@ https://inference.fra1.do.ai    fra1      true            true                ht
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"list-regions",
 				"--output", "json",
 			)

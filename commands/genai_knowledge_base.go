@@ -18,7 +18,7 @@ func KnowledgeBaseCmd() *Command {
 			Use:     "knowledge-base",
 			Aliases: []string{"kb"},
 			Short:   "Display commands that manage DigitalOcean Agent Knowledge Bases.",
-			Long:    "The subcommands of `doctl genai knowledge-base` allow you to access and manage knowledge bases of agents.",
+			Long:    "The subcommands of `doctl gradient knowledge-base` allow you to access and manage knowledge bases of agents.",
 		},
 	}
 
@@ -48,7 +48,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.KnowledgeBase{}),
 	)
 	cmdKnowledgeBaseGet.Example = `The following example retrieves information about a Knowledge Base with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		` doctl genai knowledge-base get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		` doctl gradient knowledge-base get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdKnowledgeBaseCreate := CmdBuilder(
 		cmd,
@@ -68,7 +68,7 @@ func KnowledgeBaseCmd() *Command {
 	AddStringSliceFlag(cmdKnowledgeBaseCreate, "tags", "", []string{}, "The tags of the Knowledge Base.")
 	AddStringFlag(cmdKnowledgeBaseCreate, "vpc_uuid", "", "", "The VPC UUID of the Knowledge Base.")
 	cmdKnowledgeBaseCreate.Example = `The following example creates Knowledge Base with the parameters ` +
-		` doctl genai knowledge-base create --name example-kb --region tor1 --project-id 84e1e297-0000-0000-0000-1067cf2206e9 --embedding-model-uuid 22653204-79ed-11ef-bf8f-4e013e2ddde4 --data-sources '[{"web_crawler_data_source":{"base_url":"https://example.com/apps/","crawling_option":"UNKNOWN","embed_media": true}}]'`
+		` doctl gradient knowledge-base create --name example-kb --region tor1 --project-id 84e1e297-0000-0000-0000-1067cf2206e9 --embedding-model-uuid 22653204-79ed-11ef-bf8f-4e013e2ddde4 --data-sources '[{"web_crawler_data_source":{"base_url":"https://example.com/apps/","crawling_option":"UNKNOWN","embed_media": true}}]'`
 
 	cmdKnowledgeBasesList := "List all knowledge bases for agents where each knowledge base contains the following information:\n" + knowledgebaseDetails
 	cmdKnowledgeBaseList := CmdBuilder(
@@ -81,7 +81,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.KnowledgeBase{}),
 	)
 	cmdKnowledgeBaseList.Example = "The following command lists all knowledge base for agents " +
-		"`doctl genai knowledge-base list`"
+		"`doctl gradient knowledge-base list`"
 
 	cmdKnowledgeBasesUpdateDetail := "Update a knowledge base by its uuid and returns the updated information of the knowledge base with following details\n" + knowledgebaseDetails
 	cmdKnowledgeBasesUpdate := CmdBuilder(
@@ -100,7 +100,7 @@ func KnowledgeBaseCmd() *Command {
 	AddStringSliceFlag(cmdKnowledgeBasesUpdate, "tags", "", []string{}, "The tags of the Knowledge Base. Example: --tags tag1,tag2,tag3")
 	AddStringFlag(cmdKnowledgeBasesUpdate, "uuid", "", "", "The UUID of the Knowledge Base.")
 	cmdKnowledgeBasesUpdate.Example = "The following command update tags and name of the knowledge base having the following uuid - 84e1e297-0000-0000-0000-1067cf2206e9 \n" +
-		"`doctl genai knowledge-base update 84e1e297-0000-0000-0000-1067cf2206e9 --tags updating,tags --name updated-kb`"
+		"`doctl gradient knowledge-base update 84e1e297-0000-0000-0000-1067cf2206e9 --tags updating,tags --name updated-kb`"
 
 	cmdKnowledgeBasesDeleteDetails := "Deletes the knowledge bases by its valid uuid."
 	cmdKnowledgeBaseDelete := CmdBuilder(
@@ -113,7 +113,7 @@ func KnowledgeBaseCmd() *Command {
 	)
 	AddBoolFlag(cmdKnowledgeBaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the knowledge base without a confirmation prompt")
 	cmdKnowledgeBaseDelete.Example = "The following command deletes the knowledge base by its uuid " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` +
-		"\n`doctl genai knowledge-base delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"\n`doctl gradient knowledge-base delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdDataSourcesList := "List all datasource for a valid knowledge base uuid."
 	cmdDataSourceList := CmdBuilder(
@@ -126,7 +126,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
 	cmdDataSourceList.Example = "The following example retrieves information about all Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		" : `doctl genai knowledge-base list-datasources f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		" : `doctl gradient knowledge-base list-datasources f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid. Add only one Spaces or Webcrawler as a datasource. For more info about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source)"
 	cmdDataSourceAdd := CmdBuilder(
@@ -139,8 +139,8 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
 	cmdDataSourceAdd.Example = "The following example adds a Webcrawler Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		" : `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --base-url https://www.example.com/data_source --crawling-option DOMAIN --embed-media false` \n Similarly for spaces Data Sources, you can use the following command: " +
-		" \n `doctl genai knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --bucket-name my-bucket --item-path /path/to/item --region tor1`"
+		" : `doctl gradient knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --base-url https://www.example.com/data_source --crawling-option DOMAIN --embed-media false` \n Similarly for spaces Data Sources, you can use the following command: " +
+		" \n `doctl gradient knowledge-base add-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --bucket-name my-bucket --item-path /path/to/item --region tor1`"
 	AddStringFlag(cmdDataSourceAdd, "bucket-name", "", "", "The bucket name of data source from Spaces")
 	AddStringFlag(cmdDataSourceAdd, "item-path", "", "", "Item path of data source from Spaces.")
 	AddStringFlag(cmdDataSourceAdd, "region", "", "", "The region of the data source.")
@@ -159,7 +159,7 @@ func KnowledgeBaseCmd() *Command {
 	)
 	AddBoolFlag(cmdDataSourceDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the datasource for knowledge base without a confirmation prompt")
 	cmdDataSourceDelete.Example = "The following example deletes data source having uuid like " + `00000000-0000-0000-0000-000000000000` + " from a Knowledge Base having uuid " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " \nUsing the following command `" +
-		" : `doctl genai knowledge-base delete-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 00000000-0000-0000-0000-000000000000`"
+		" : `doctl gradient knowledge-base delete-datasource f81d4fae-7dec-11d0-a765-00a0c91e6bf6 00000000-0000-0000-0000-000000000000`"
 
 	cmdIndexingJobsList := "List all indexing jobs for knowledge bases. Each indexing job contains the following information:\n" +
 		"		- The indexing job UUID\n" +
@@ -187,7 +187,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.IndexingJob{}),
 	)
 	cmdIndexingJobList.Example = "The following command lists all indexing jobs for knowledge bases: " +
-		"`doctl genai knowledge-base list-indexing-jobs`"
+		"`doctl gradient knowledge-base list-indexing-jobs`"
 
 	cmdGetIndexingJobDetails := "Retrieve the status of a specific indexing job by its UUID. This includes phase, status, progress information, and timestamps."
 	cmdGetIndexingJob := CmdBuilder(
@@ -200,7 +200,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.IndexingJob{}),
 	)
 	cmdGetIndexingJob.Example = "The following command retrieves the status of an indexing job with UUID `12345678-1234-1234-1234-123456789012`: " +
-		"`doctl genai knowledge-base get-indexing-job 12345678-1234-1234-1234-123456789012`"
+		"`doctl gradient knowledge-base get-indexing-job 12345678-1234-1234-1234-123456789012`"
 
 	cmdCancelIndexingJobDetails := "Cancel a running indexing job by its UUID. This will stop the indexing process and update the job status."
 	cmdCancelIndexingJob := CmdBuilder(
@@ -213,7 +213,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.IndexingJob{}),
 	)
 	cmdCancelIndexingJob.Example = "The following command cancels an indexing job with UUID `12345678-1234-1234-1234-123456789012`: " +
-		"`doctl genai knowledge-base cancel-indexing-job 12345678-1234-1234-1234-123456789012`"
+		"`doctl gradient knowledge-base cancel-indexing-job 12345678-1234-1234-1234-123456789012`"
 
 	cmdListIndexingJobDataSourcesDetails := "List all data sources for a specific indexing job by its UUID. This shows the status and progress of each data source being processed."
 	cmdListIndexingJobDataSources := CmdBuilder(
@@ -226,7 +226,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.IndexingJobDataSource{}),
 	)
 	cmdListIndexingJobDataSources.Example = "The following command lists all data sources for an indexing job with UUID `12345678-1234-1234-1234-123456789012`: " +
-		"`doctl genai knowledge-base list-indexing-job-data-sources 12345678-1234-1234-1234-123456789012`"
+		"`doctl gradient knowledge-base list-indexing-job-data-sources 12345678-1234-1234-1234-123456789012`"
 
 	cmdAttachKnowledgeBaseDetails := "Attach a knowledge base to an agent using knowledge base uuid and agent uuid. It returns the information of corresponding agent."
 	cmdAttachKnowledgeBase := CmdBuilder(
@@ -239,7 +239,7 @@ func KnowledgeBaseCmd() *Command {
 		displayerType(&displayers.KnowledgeBaseDataSource{}),
 	)
 	cmdAttachKnowledgeBase.Example = "The following example attaches the Knowledge Base having uuid - " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " to a specific agent having uuid - " + "`" + `f81d4fae-0000-11d0-a765-000000000000` + " \nUsing the following command : " +
-		"doctl genai knowledge-base attach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"doctl gradient knowledge-base attach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdDetachKnowledgeBaseDetails := "Detaches a knowledge base from an agent using knowledge base uuid and agent uuid."
 	cmdDetachKnowledgeBase := CmdBuilder(
@@ -253,7 +253,7 @@ func KnowledgeBaseCmd() *Command {
 	)
 	AddBoolFlag(cmdDetachKnowledgeBase, doctl.ArgForce, doctl.ArgShortForce, false, "Detaches the knowledge base without a confirmation prompt")
 	cmdDetachKnowledgeBase.Example = "The following example detaches the Knowledge Base having uuid " + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + " from specific agent with uuid as " + "`" + `f81d4fae-0000-11d0-a765-000000000000` + "`" +
-		"\n`doctl genai knowledge-base detach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"\n`doctl gradient knowledge-base detach f81d4fae-0000-11d0-a765-000000000000 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	return cmd
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/agent/apikeys/update", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -70,7 +70,7 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"apikeys",
 				"update",
@@ -89,7 +89,7 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"apikeys",
 				"update",
@@ -108,7 +108,7 @@ var _ = suite("genai/agent/apikeys/update", func(t *testing.T, when spec.G, it s
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "invalid-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"apikeys",
 				"update",

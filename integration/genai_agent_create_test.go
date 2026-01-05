@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -59,7 +59,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"genai",
+					"gradient",
 					"agent",
 					alias,
 					"--name", "test-agent",
@@ -81,7 +81,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"create",
 				"--name", "test-agent",
@@ -103,7 +103,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"create",
 				"--region", "tor1",
@@ -121,7 +121,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"create",
 				"--name", "test-agent",
@@ -139,7 +139,7 @@ var _ = suite("genai/agent/create", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"create",
 				"--name", "test-agent",

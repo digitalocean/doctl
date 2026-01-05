@@ -16,8 +16,8 @@ func AgentCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "agent",
 			Aliases: []string{"agents", "a"},
-			Short:   "Display commands for working with GenAI agents",
-			Long:    "The subcommands of `doctl genai agent` manage your GenAI agents.",
+			Short:   "Display commands for working with Gradient AI agents",
+			Long:    "The subcommands of `doctl gradient agent` manage your Gradient AI agents.",
 		},
 	}
 	cmd.AddCommand(AgentAPIKeyCmd())
@@ -32,8 +32,8 @@ func AgentCmd() *Command {
 		cmd,
 		RunAgentCreate,
 		"create <agent-name>...",
-		"Creates a GenAI agent",
-		"Creates a GenAI agent on your account. The command requires values for the "+"`"+"--name"+"`"+"`"+"--project-id"+"`"+"`"+"--model-id"+"`"+"`"+"--region"+"`"+", and "+"`"+"--instruction"+"`"+" flags.",
+		"Creates a Gradient AI agent",
+		"Creates a Gradient AI agent on your account. The command requires values for the "+"`"+"--name"+"`"+"`"+"--project-id"+"`"+"`"+"--model-id"+"`"+"`"+"--region"+"`"+", and "+"`"+"--instruction"+"`"+" flags.",
 		Writer,
 		aliasOpt("c"),
 		displayerType(&displayers.Agent{}),
@@ -49,7 +49,7 @@ func AgentCmd() *Command {
 	AddStringFlag(cmdAgentCreate, doctl.ArgKnowledgeBaseId, "", "", "Ids of the knowledge base(s) to attach to the agent")
 	AddStringFlag(cmdAgentCreate, doctl.ArgOpenAIKeyId, "", "", "OpenAI API key ID to use with OpenAI models")
 	AddStringFlag(cmdAgentCreate, doctl.ArgTags, "", "", "Applies a tag to the agent. ")
-	cmdAgentCreate.Example = `The following example creates an agent: doctl genai agent create --name "My Agent" --project-id "12345678-1234-1234-1234-123456789012" --model-id "12345678-1234-1234-1234-123456789013" --region "tor1" --instruction "You are an agent who thinks deeply about the world"`
+	cmdAgentCreate.Example = `The following example creates an agent: doctl gradient agent create --name "My Agent" --project-id "12345678-1234-1234-1234-123456789012" --model-id "12345678-1234-1234-1234-123456789013" --region "tor1" --instruction "You are an agent who thinks deeply about the world"`
 
 	AgentDetails := `
 	- The Agent ID
@@ -64,7 +64,7 @@ func AgentCmd() *Command {
 		cmd,
 		RunAgentList,
 		"list",
-		"List GenAI agents",
+		"List Gradient AI agents",
 		"Retrieves a list of all the agents on your account, including the following information for each:"+AgentDetails,
 		Writer,
 		aliasOpt("ls"),
@@ -72,7 +72,7 @@ func AgentCmd() *Command {
 	)
 	AddStringFlag(cmdAgentList, doctl.ArgAgentRegion, "", "", "Retrieves a list of Agents in a specified region")
 	AddStringFlag(cmdAgentList, doctl.ArgTag, "", "", "Retrieves a list of Agents with a specified tag")
-	cmdAgentList.Example = `The following example retrieves a list of all Agent in the ` + "`" + `tor1` + "`" + ` region: doctl genai agent list --region tor1`
+	cmdAgentList.Example = `The following example retrieves a list of all Agent in the ` + "`" + `tor1` + "`" + ` region: doctl gradient agent list --region tor1`
 
 	cmdAgentGet := CmdBuilder(
 		cmd,
@@ -84,13 +84,13 @@ func AgentCmd() *Command {
 		aliasOpt("g"),
 		displayerType(&displayers.Agent{}),
 	)
-	cmdAgentGet.Example = `The following example retrieves information about an agent: doctl genai agent get 12345678-1234-1234-1234-123456789012`
+	cmdAgentGet.Example = `The following example retrieves information about an agent: doctl gradient agent get 12345678-1234-1234-1234-123456789012`
 
 	cmdAgentUpdate := CmdBuilder(
 		cmd,
 		RunAgentUpdate,
 		"update <agent-id>",
-		"Updates a GenAI agent name and configuration",
+		"Updates a Gradient AI agent name and configuration",
 		"Use this command to update the name and configuration of an agent.",
 		Writer,
 		aliasOpt("u"),
@@ -112,31 +112,31 @@ func AgentCmd() *Command {
 	AddStringFlag(cmdAgentUpdate, doctl.ArgAgentId, "", "", "The ID of the agent to update")
 	cmdAgentUpdate.Example = `The following example updates the name of an Agent with the ID ` +
 		"`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `new-name` + "`" +
-		`: doctl genai agent update 12345678-1234-1234-1234-123456789012 --name "new-name"`
+		`: doctl gradient agent update 12345678-1234-1234-1234-123456789012 --name "new-name"`
 
 	cmdAgentDelete := CmdBuilder(
 		cmd,
 		RunAgentDelete,
 		"delete <agent-id>",
-		"Deletes a GenAI agent",
-		"Deletes a GenAI agent by ID.",
+		"Deletes a Gradient AI agent",
+		"Deletes a Gradient AI agent by ID.",
 		Writer,
 		aliasOpt("d", "del", "rm"),
 	)
 	AddBoolFlag(cmdAgentDelete, doctl.ArgAgentForce, doctl.ArgShortForce, false, "Deletes the Agent without a confirmation prompt")
-	cmdAgentDelete.Example = `The following example deletes an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + `: doctl genai agent delete 12345678-1234-1234-1234-123456789012`
+	cmdAgentDelete.Example = `The following example deletes an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + `: doctl gradient agent delete 12345678-1234-1234-1234-123456789012`
 
 	cmdAgentUpdateVisibility := CmdBuilder(
 		cmd,
 		RunAgentUpdateVisibility,
 		"update-visibility <agent-id>",
-		"Update visibility of a GenAI agent",
-		"Update the visibility of a GenAI agent.",
+		"Update visibility of a Gradient AI agent",
+		"Update the visibility of a Gradient AI agent.",
 		Writer,
 		aliasOpt("uv", "update-visibility", "update-vis"),
 	)
 	AddStringFlag(cmdAgentUpdateVisibility, "visibility", "", "", "Agent deployment visibility. Possible Options: `VISIBILITY_PLAYGROUND`, `VISIBILITY_PUBLIC`, `VISIBILITY_PRIVATE`. Default: `VISIBILITY_UNKNOWN`", requiredOpt())
-	cmdAgentUpdateVisibility.Example = `The following example updates the visibility of an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `VISIBILITY_PUBLIC` + "`" + `: doctl genai agent update-visibility 12345678-1234-1234-1234-123456789012 --visibility 'VISIBILITY_PUBLIC'`
+	cmdAgentUpdateVisibility.Example = `The following example updates the visibility of an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` to ` + "`" + `VISIBILITY_PUBLIC` + "`" + `: doctl gradient agent update-visibility 12345678-1234-1234-1234-123456789012 --visibility 'VISIBILITY_PUBLIC'`
 
 	AgentVersionDetails := `
 	- The Agent ID
@@ -160,7 +160,7 @@ func AgentCmd() *Command {
 		aliasOpt("lv", "list-versions"),
 		displayerType(&displayers.AgentVersion{}),
 	)
-	cmdAgentListVersions.Example = `The following example retrieves a list of all versions for an Agent with ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` : doctl genai agent list-versions 12345678-1234-1234-1234-123456789012`
+	cmdAgentListVersions.Example = `The following example retrieves a list of all versions for an Agent with ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + ` : doctl gradient agent list-versions 12345678-1234-1234-1234-123456789012`
 
 	return cmd
 }

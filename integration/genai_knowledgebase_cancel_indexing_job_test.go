@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledgebase/cancel-indexing-job", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/knowledgebase/cancel-indexing-job", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -55,7 +55,7 @@ var _ = suite("genai/knowledgebase/cancel-indexing-job", func(t *testing.T, when
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"knowledge-base",
 				"cancel-indexing-job",
 				"12345678-1234-1234-1234-123456789012",
@@ -72,7 +72,7 @@ var _ = suite("genai/knowledgebase/cancel-indexing-job", func(t *testing.T, when
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"knowledge-base",
 				"cancel-indexing-job",
 				"12345678-1234-1234-1234-123456789012",

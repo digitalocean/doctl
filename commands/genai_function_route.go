@@ -16,8 +16,8 @@ func FunctionRoute() *Command {
 		Command: &cobra.Command{
 			Use:     "functionroute",
 			Aliases: []string{"functionroute", "fr"},
-			Short:   "Display commands that manages function routes for GenAI Agents.",
-			Long:    "The subcommands of `doctl genai agent functionroute` allows you to access and manage function routes for GenAI Agents.",
+			Short:   "Display commands that manages function routes for Gradient AI Agents.",
+			Long:    "The subcommands of `doctl gradient agent functionroute` allows you to access and manage function routes for Gradient AI Agents.",
 		},
 	}
 
@@ -27,17 +27,17 @@ func FunctionRoute() *Command {
 		RunFunctionRouteCreate,
 		"create",
 		"Creates a function route",
-		"Create a function route for your GenAI agent.The command requires values for the "+"`"+"--agent-id"+"`"+"`"+"--description"+"`"+"`"+"--faas_name"+"`"+"`"+"--faas_namespace"+"`"+" "+"`"+"--function_name"+"`"+"`"+"--input_schema "+"`, and "+"`"+"--output_schema "+"`"+" flags.",
+		"Create a function route for your Gradient AI agent.The command requires values for the "+"`"+"--agent-id"+"`"+"`"+"--description"+"`"+"`"+"--faas_name"+"`"+"`"+"--faas_namespace"+"`"+" "+"`"+"--function_name"+"`"+"`"+"--input_schema "+"`, and "+"`"+"--output_schema "+"`"+" flags.",
 		Writer, aliasOpt("c"),
 		displayerType(&displayers.FunctionRoute{}))
-	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgAgentId, "", "", "GenAI Agent UUID", requiredOpt())
+	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgAgentId, "", "", "Gradient AI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionName, "", "", "Name of the function.", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteDescription, "", "", "Description of the function.", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteFaasName, "", "", "Name of the function route in the DigitalOcean functions platform", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteFaasNamespace, "", "", "Namespace of the function route in the DigitalOcean functions platform", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteInputSchema, "", "", "Input schema of the function route", requiredOpt())
 	AddStringFlag(cmdFunctionRouteCreate, doctl.ArgFunctionRouteOutputSchema, "", "", "Output schema of the function route", requiredOpt())
-	cmdFunctionRouteCreate.Example = `doctl genai agent functionroute create --agent-id "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --name "get-weather" --description "Creates a weather-lookup route" --faas-name "default/testing" --faas-namespace "fn-b90faf52-2b42-49c2-9792-75edfbb6f397" --input-schema '{"parameters":[{"name":"zipCode","in":"query","schema":{"type":"string"},"required":false,"description":"Zip description in input"},{"name":"measurement","in":"query","schema":{"type":"string","enum":["F","C"]},"required":false,"description":"Temperature unit (F or C)"}]}' --output-schema '{"properties":{"temperature":{"type":"number","description":"Temperature for the specified location"},"measurement":{"type":"string","description":"Unit used (F or C)"},"conditions":{"type":"string","description":"Weather conditions (Sunny, Cloudy, etc.)"}}}'`
+	cmdFunctionRouteCreate.Example = `doctl gradient agent functionroute create --agent-id "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --name "get-weather" --description "Creates a weather-lookup route" --faas-name "default/testing" --faas-namespace "fn-b90faf52-2b42-49c2-9792-75edfbb6f397" --input-schema '{"parameters":[{"name":"zipCode","in":"query","schema":{"type":"string"},"required":false,"description":"Zip description in input"},{"name":"measurement","in":"query","schema":{"type":"string","enum":["F","C"]},"required":false,"description":"Temperature unit (F or C)"}]}' --output-schema '{"properties":{"temperature":{"type":"number","description":"Temperature for the specified location"},"measurement":{"type":"string","description":"Unit used (F or C)"},"conditions":{"type":"string","description":"Weather conditions (Sunny, Cloudy, etc.)"}}}'`
 
 	// Delete command
 	cmdFunctionRouteDelete := CmdBuilder(
@@ -48,9 +48,9 @@ func FunctionRoute() *Command {
 		"Use this command to delete a function route of an agent. The command requires values for the "+"`"+"--agent-id"+"` and "+"`"+"--function-id"+"`"+" flags.",
 		Writer, aliasOpt("d", "del", "rm"),
 		displayerType(&displayers.FunctionRoute{}))
-	AddStringFlag(cmdFunctionRouteDelete, doctl.ArgAgentId, "", "", "GenAI Agent UUID", requiredOpt())
+	AddStringFlag(cmdFunctionRouteDelete, doctl.ArgAgentId, "", "", "Gradient AI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteDelete, doctl.ArgFunctionID, "", "", "Function route ID to delete", requiredOpt())
-	cmdFunctionRouteDelete.Example = `doctl genai agent functionroute delete  --agent-id "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --function-id "e40dc785-5e69-11f0-bf8f-4e013e2ddde4"`
+	cmdFunctionRouteDelete.Example = `doctl gradient agent functionroute delete  --agent-id "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --function-id "e40dc785-5e69-11f0-bf8f-4e013e2ddde4"`
 
 	// Update command
 	cmdFunctionRouteUpdate := CmdBuilder(cmd,
@@ -60,7 +60,7 @@ func FunctionRoute() *Command {
 		"Use this command to update function route of an agent.The command requires values for the "+"`"+"--agent-id"+"` and "+"`"+"--function-id"+"`"+" flags.",
 		Writer, aliasOpt("u"),
 		displayerType(&displayers.FunctionRoute{}))
-	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgAgentId, "", "", "GenAI Agent UUID", requiredOpt())
+	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgAgentId, "", "", "Gradient AI Agent UUID", requiredOpt())
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionID, "", "", "Function route ID to update", requiredOpt())
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteDescription, "", "", "Updated description of the function route")
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionName, "", "", "Name of the function.")
@@ -68,12 +68,12 @@ func FunctionRoute() *Command {
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteFaasNamespace, "", "", "Namespace of the function route in the DigitalOcean functions platform")
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteInputSchema, "", "", "Input schema of the function route")
 	AddStringFlag(cmdFunctionRouteUpdate, doctl.ArgFunctionRouteOutputSchema, "", "", "Output schema of the function route")
-	cmdFunctionRouteUpdate.Example = `doctl genai agent functionroute update --agent-id "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --function-id "e40dc785-5e69-11f0-bf8f-4e013e2ddde4"  --name "doctl-updated23"  --description "Creating via doctl again"  --faas-name "default/testing"  --faas-namespace "fn-b90faf52-2b42-49c2-9792-75edfbb6f397"  --input-schema '{"parameters": [{"name": "zipCode", "in": "query", "schema": { "type": "string" },"required": false, "description": "Zip description in input"},{"name": "measurement","in": "query", "schema": { "type": "string", "enum": ["F","C"]},"required": false, "description": "Temperature unit (F or C)"}]}'   --output-schema '{"properties": {"temperature": {"type": "number", "description": "Temperature for the specified location"}, "measurement": { "type": "string", "description": "Unit used (F or C)"},"conditions": { "type": "string","description": "Weather conditions (Sunny, Cloudy, etc.)"}}}'`
+	cmdFunctionRouteUpdate.Example = `doctl gradient agent functionroute update --agent-id "0f0e928f-4649-11f0-bf8f-4e013e2ddde4" --function-id "e40dc785-5e69-11f0-bf8f-4e013e2ddde4"  --name "doctl-updated23"  --description "Creating via doctl again"  --faas-name "default/testing"  --faas-namespace "fn-b90faf52-2b42-49c2-9792-75edfbb6f397"  --input-schema '{"parameters": [{"name": "zipCode", "in": "query", "schema": { "type": "string" },"required": false, "description": "Zip description in input"},{"name": "measurement","in": "query", "schema": { "type": "string", "enum": ["F","C"]},"required": false, "description": "Temperature unit (F or C)"}]}'   --output-schema '{"properties": {"temperature": {"type": "number", "description": "Temperature for the specified location"}, "measurement": { "type": "string", "description": "Unit used (F or C)"},"conditions": { "type": "string","description": "Weather conditions (Sunny, Cloudy, etc.)"}}}'`
 
 	return cmd
 }
 
-// RunFunctionRouteCreate creates a new function route for a GenAI agent.
+// RunFunctionRouteCreate creates a new function route for a Gradient AI agent.
 func RunFunctionRouteCreate(c *CmdConfig) error {
 	agentUUID, err := c.Doit.GetString(c.NS, doctl.ArgAgentId)
 	if err != nil {
@@ -137,7 +137,7 @@ func RunFunctionRouteCreate(c *CmdConfig) error {
 	return c.Display(&displayers.Agent{Agents: do.Agents{*functionRoute}})
 }
 
-// RunFunctionRouteUpdate updates an existing function route for a GenAI agent.
+// RunFunctionRouteUpdate updates an existing function route for a Gradient AI agent.
 func RunFunctionRouteUpdate(c *CmdConfig) error {
 	agentUUID, err := c.Doit.GetString(c.NS, doctl.ArgAgentId)
 	if err != nil {
@@ -209,7 +209,7 @@ func RunFunctionRouteUpdate(c *CmdConfig) error {
 	return c.Display(&displayers.Agent{Agents: do.Agents{*updated}})
 }
 
-// RunFunctionRouteDelete deletes a function route from a GenAI agent.
+// RunFunctionRouteDelete deletes a function route from a Gradient AI agent.
 func RunFunctionRouteDelete(c *CmdConfig) error {
 	agentUUID, err := c.Doit.GetString(c.NS, doctl.ArgAgentId)
 	if err != nil {

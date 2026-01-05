@@ -16,8 +16,8 @@ func AgentAPIKeyCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "apikeys",
 			Aliases: []string{"apikeys", "apk"},
-			Short:   "Display commands for working with API keys of GenAI agents",
-			Long:    "The subcommands of `doctl genai agent apikeys` manage your API Keys linked with agents.",
+			Short:   "Display commands for working with API keys of Gradient AI agents",
+			Long:    "The subcommands of `doctl gradient agent apikeys` manage your API Keys linked with agents.",
 		},
 	}
 
@@ -25,15 +25,15 @@ func AgentAPIKeyCmd() *Command {
 		cmd,
 		RunAgentAPIKeyCreate,
 		"create <apikey-name>...",
-		"Creates an api-key for your GenAI agent",
-		"Creates an API key for your GenAI agent on your account. The command requires values for the "+"`"+"--name"+"`"+"`"+"--agent-id"+"`"+" The API key is created in the specified agent.",
+		"Creates an api-key for your Gradient AI agent",
+		"Creates an API key for your Gradient AI agent on your account. The command requires values for the "+"`"+"--name"+"`"+"`"+"--agent-id"+"`"+" The API key is created in the specified agent.",
 		Writer,
 		aliasOpt("c"),
 		displayerType(&displayers.ApiKeyInfo{}),
 	)
 	AddStringFlag(cmdAgentAPIKeyCreate, doctl.ArgAgentId, "", "", "The ID of the agent to create API Keys into", requiredOpt())
 	AddStringFlag(cmdAgentAPIKeyCreate, doctl.ArgAgentAPIKeyName, "", "", "API Key name", requiredOpt())
-	cmdAgentAPIKeyCreate.Example = `The following example creates an apikey for an agent with ID ` + `12345678-1234-1234-1234-123456789013` + `: doctl genai agent apikeys create --name "My test API Keys" --agent-id "12345678-1234-1234-1234-123456789012"`
+	cmdAgentAPIKeyCreate.Example = `The following example creates an apikey for an agent with ID ` + `12345678-1234-1234-1234-123456789013` + `: doctl gradient agent apikeys create --name "My test API Keys" --agent-id "12345678-1234-1234-1234-123456789012"`
 
 	ApiKeyDetails := `
 	- The ApiKey ID
@@ -56,12 +56,12 @@ func AgentAPIKeyCmd() *Command {
 	)
 	AddStringFlag(cmdAgentAPIKeyList, doctl.ArgAgentId, "", "", "The ID of the agent for which to list API Keys")
 	cmdAgentAPIKeyList.Example = `The following example lists the apikeys for an agent with ID ` + `12345678-1234-1234-1234-123456789013` +
-		`: doctl genai agent apikeys list --agent-id "12345678-1234-1234-1234-123456789013" `
+		`: doctl gradient agent apikeys list --agent-id "12345678-1234-1234-1234-123456789013" `
 	cmdAgentAPIKeyUpdate := CmdBuilder(
 		cmd,
 		RunAgentAPIKeyUpdate,
 		"update <apikey-id>",
-		"Updates the name of an apikey of a GenAI agent ",
+		"Updates the name of an apikey of a Gradient AI agent ",
 		"Use this command to update the name of an API key.",
 		Writer,
 		aliasOpt("u"),
@@ -71,7 +71,7 @@ func AgentAPIKeyCmd() *Command {
 	AddStringFlag(cmdAgentAPIKeyUpdate, doctl.ArgAgentId, "", "", "The ID of the agent for which to update the API Key")
 	cmdAgentAPIKeyUpdate.Example = `The following example updates the name of an api-key with the ID ` +
 		"`" + `12345678-1234-1234-1234-123456789012` + `for an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789013` + "`" + ` to ` + "`" + `new-name` + "`" +
-		`: doctl genai agent apikeys update 12345678-1234-1234-1234-123456789012 --agent-id "12345678-1234-1234-1234-123456789013" --name "new-name"`
+		`: doctl gradient agent apikeys update 12345678-1234-1234-1234-123456789012 --agent-id "12345678-1234-1234-1234-123456789013" --name "new-name"`
 
 	cmdAgentAPIKeyDelete := CmdBuilder(
 		cmd,
@@ -85,7 +85,7 @@ func AgentAPIKeyCmd() *Command {
 	AddBoolFlag(cmdAgentAPIKeyDelete, doctl.ArgAPIKeyForce, doctl.ArgShortForce, false, "Deletes the API Key without a confirmation prompt")
 
 	AddStringFlag(cmdAgentAPIKeyDelete, doctl.ArgAgentId, "", "", "The ID of the agent for which to update the API Key")
-	cmdAgentAPIKeyDelete.Example = `The following example deletes an apikey with ID ` + "`" + `12345678-1234-1234-1234-123456789012` + `for an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789013` + "`" + `: doctl genai agent apikeys delete 12345678-1234-1234-1234-123456789012 --agent-id "12345678-1234-1234-1234-123456789013"`
+	cmdAgentAPIKeyDelete.Example = `The following example deletes an apikey with ID ` + "`" + `12345678-1234-1234-1234-123456789012` + `for an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789013` + "`" + `: doctl gradient agent apikeys delete 12345678-1234-1234-1234-123456789012 --agent-id "12345678-1234-1234-1234-123456789013"`
 
 	cmdAgentAPIKeyRegenerate := CmdBuilder(
 		cmd,
@@ -98,7 +98,7 @@ func AgentAPIKeyCmd() *Command {
 	)
 	AddStringFlag(cmdAgentAPIKeyRegenerate, doctl.ArgAgentId, "", "", "The ID of the agent for which to update the API Key")
 	cmdAgentAPIKeyRegenerate.Example = `The following example regenerates apikey with the ID ` + "`" + `12345678-1234-1234-1234-123456789012` + "`" + `for an agent with the ID ` + "`" + `12345678-1234-1234-1234-123456789013` + "`" +
-		`: doctl genai agent apikeys regen-api-key 12345678-1234-1234-1234-123456789012 --agent-id "12345678-1234-1234-1234-123456789013"`
+		`: doctl gradient agent apikeys regen-api-key 12345678-1234-1234-1234-123456789012 --agent-id "12345678-1234-1234-1234-123456789013"`
 	return cmd
 }
 

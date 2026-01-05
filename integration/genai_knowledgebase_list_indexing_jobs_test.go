@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledgebase/list-indexing-jobs", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/knowledgebase/list-indexing-jobs", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -57,7 +57,7 @@ var _ = suite("genai/knowledgebase/list-indexing-jobs", func(t *testing.T, when 
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"genai",
+					"gradient",
 					"knowledge-base",
 					alias,
 				)

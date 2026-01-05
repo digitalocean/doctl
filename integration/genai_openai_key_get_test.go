@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/openai-key/get", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/openai-key/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -68,7 +68,7 @@ var _ = suite("genai/openai-key/get", func(t *testing.T, when spec.G, it spec.S)
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"openai-key",
 				"get",
 			)
@@ -84,7 +84,7 @@ var _ = suite("genai/openai-key/get", func(t *testing.T, when spec.G, it spec.S)
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"openai-key",
 				"get",
 			)
@@ -100,7 +100,7 @@ var _ = suite("genai/openai-key/get", func(t *testing.T, when spec.G, it spec.S)
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"openai-key",
 				"get",
 				"99999999-9999-4999-8999-999999999999",
@@ -117,7 +117,7 @@ var _ = suite("genai/openai-key/get", func(t *testing.T, when spec.G, it spec.S)
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"openai-key",
 				"get",
 				"00000000-0000-4000-8000-000000000000",
@@ -130,7 +130,7 @@ var _ = suite("genai/openai-key/get", func(t *testing.T, when spec.G, it spec.S)
 	})
 })
 
-var _ = suite("genai/openai-key/get-agents", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/openai-key/get-agents", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -185,7 +185,7 @@ var _ = suite("genai/openai-key/get-agents", func(t *testing.T, when spec.G, it 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"openai-key",
 				"get-agents",
 			)
@@ -201,7 +201,7 @@ var _ = suite("genai/openai-key/get-agents", func(t *testing.T, when spec.G, it 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"openai-key",
 				"get-agents",
 				"99999999-9999-4999-8999-999999999999",
@@ -218,7 +218,7 @@ var _ = suite("genai/openai-key/get-agents", func(t *testing.T, when spec.G, it 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"openai-key",
 				"get-agents",
 				"00000000-0000-4000-8000-000000000000",

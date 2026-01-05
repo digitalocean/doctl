@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/knowledge-base/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -71,7 +71,7 @@ var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spe
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"genai",
+					"gradient",
 					"knowledge-base",
 					alias,
 					"00000000-0000-4000-8000-000000000000",
@@ -89,7 +89,7 @@ var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spe
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"knowledge-base",
 				"get",
 			)
@@ -105,7 +105,7 @@ var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spe
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"knowledge-base",
 				"get",
 				"99999999-9999-4999-8999-999999999999",
@@ -122,7 +122,7 @@ var _ = suite("genai/knowledge-base/get", func(t *testing.T, when spec.G, it spe
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"knowledge-base",
 				"get",
 				"99999999-9999-4999-8999-999999999999",

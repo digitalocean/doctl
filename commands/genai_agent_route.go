@@ -14,8 +14,8 @@ func AgentRouteCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "route",
 			Aliases: []string{"routes", "r"},
-			Short:   "Display commands for working with GenAI agent routes",
-			Long:    "The subcommands of `doctl genai agent route` manage your GenAI agent routes.",
+			Short:   "Display commands for working with Gradient AI agent routes",
+			Long:    "The subcommands of `doctl gradient agent route` manage your Gradient AI agent routes.",
 		},
 	}
 
@@ -34,7 +34,7 @@ func AgentRouteCmd() *Command {
 	AddStringFlag(cmdAddAgentRoute, doctl.ArgAgentRouteId, "", "", "Unique id of linkage")
 	AddStringFlag(cmdAddAgentRoute, doctl.ArgAgentRouteName, "", "", "Route name")
 	AddStringFlag(cmdAddAgentRoute, doctl.ArgAgentRouteIfCase, "", "", "Describes the case in which the child agent should be used")
-	cmdAddAgentRoute.Example = `doctl genai agent route add --parent-agent-id "12345678-1234-1234-1234-123456789012" --child-agent-id "12345678-1234-1234-1234-123456789013"`
+	cmdAddAgentRoute.Example = `doctl gradient agent route add --parent-agent-id "12345678-1234-1234-1234-123456789012" --child-agent-id "12345678-1234-1234-1234-123456789013"`
 
 	cmdUpdateAgentRoute := CmdBuilder(
 		cmd,
@@ -51,7 +51,7 @@ func AgentRouteCmd() *Command {
 	AddStringFlag(cmdUpdateAgentRoute, doctl.ArgAgentRouteId, "", "", "Unique id of linkage")
 	AddStringFlag(cmdUpdateAgentRoute, doctl.ArgAgentRouteName, "", "", "Route name")
 	AddStringFlag(cmdUpdateAgentRoute, doctl.ArgAgentRouteIfCase, "", "", "Describes the case in which the child agent should be used")
-	cmdUpdateAgentRoute.Example = `doctl genai agent route update --parent-agent-id "12345678-1234-1234-1234-123456789012" --child-agent-id "12345678-1234-1234-1234-123456789013" --route-name "test_route" --if-case "use this to get test information"`
+	cmdUpdateAgentRoute.Example = `doctl gradient agent route update --parent-agent-id "12345678-1234-1234-1234-123456789012" --child-agent-id "12345678-1234-1234-1234-123456789013" --route-name "test_route" --if-case "use this to get test information"`
 
 	cmdDeleteAgentRoute := CmdBuilder(
 		cmd,
@@ -65,7 +65,7 @@ func AgentRouteCmd() *Command {
 	AddStringFlag(cmdDeleteAgentRoute, doctl.ArgParentAgentId, "", "", "Parent agent ID (required)", requiredOpt())
 	AddStringFlag(cmdDeleteAgentRoute, doctl.ArgChildAgentId, "", "", "Child agent ID (required)", requiredOpt())
 	AddBoolFlag(cmdDeleteAgentRoute, doctl.ArgForce, doctl.ArgShortForce, false, "Force route deletion without confirmation")
-	cmdDeleteAgentRoute.Example = `doctl genai agent route delete --parent-agent-id "12345678-1234-1234-1234-123456789012" --child-agent-id "12345678-1234-1234-1234-123456789013"`
+	cmdDeleteAgentRoute.Example = `doctl gradient agent route delete --parent-agent-id "12345678-1234-1234-1234-123456789012" --child-agent-id "12345678-1234-1234-1234-123456789013"`
 
 	return cmd
 }

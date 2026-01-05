@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("gradient/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -72,7 +72,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"genai",
+					"gradient",
 					"agent",
 					alias,
 					"00000000-0000-4000-8000-000000000000",
@@ -91,7 +91,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"delete",
 				"--force",
@@ -108,7 +108,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"delete",
 				"99999999-9999-4999-8999-999999999999",
@@ -126,7 +126,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"delete",
 				"00000000-0000-4000-8000-000000000000",
@@ -144,7 +144,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"genai",
+				"gradient",
 				"agent",
 				"delete",
 				"00000000-0000-4000-8000-000000000000",
@@ -162,7 +162,7 @@ var _ = suite("genai/agent/delete", func(t *testing.T, when spec.G, it spec.S) {
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", "http://nonexistent-server.example.com",
-				"genai",
+				"gradient",
 				"agent",
 				"delete",
 				"00000000-0000-4000-8000-000000000000",

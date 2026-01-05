@@ -64,7 +64,7 @@ type Agents []Agent
 
 type AgentVersions []AgentVersion
 
-// DatacenterRegion represents a datacenter region for GenAI services.
+// DatacenterRegion represents a datacenter region for Gradient AI services.
 type DatacenterRegion struct {
 	*godo.DatacenterRegions
 }
@@ -72,7 +72,7 @@ type DatacenterRegion struct {
 // DatacenterRegions is a slice of DatacenterRegion.
 type DatacenterRegions []DatacenterRegion
 
-// Model represents an available model for GenAI services.
+// Model represents an available model for Gradient AI services.
 type Model struct {
 	*godo.Model
 }
@@ -395,7 +395,7 @@ func (s *gradientAIService) UpdateFunctionRoute(agent_id string, function_id str
 	return &Agent{agent}, nil
 }
 
-// CreateAgentAPIKey implements GenAIService.
+// CreateAgentAPIKey implements GradientAIService.
 func (a *gradientAIService) CreateAgentAPIKey(agentID string, req *godo.AgentAPIKeyCreateRequest) (*ApiKeyInfo, error) {
 	apikeyInfo, _, err := a.client.GradientAI.CreateAgentAPIKey(context.TODO(), agentID, req)
 	if err != nil {
@@ -404,13 +404,13 @@ func (a *gradientAIService) CreateAgentAPIKey(agentID string, req *godo.AgentAPI
 	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
 }
 
-// DeleteAgentAPIKey implements GenAIService.
+// DeleteAgentAPIKey implements GradientAIService.
 func (a *gradientAIService) DeleteAgentAPIKey(agentID string, apikeyID string) error {
 	_, _, err := a.client.GradientAI.DeleteAgentAPIKey(context.TODO(), agentID, apikeyID)
 	return err
 }
 
-// ListAgentAPIKeys implements GenAIService.
+// ListAgentAPIKeys implements GradientAIService.
 func (a *gradientAIService) ListAgentAPIKeys(agentId string) (ApiKeys, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := a.client.GradientAI.ListAgentAPIKeys(context.TODO(), agentId, opt)
@@ -452,7 +452,7 @@ func (a *gradientAIService) ListAgentAPIKeys(agentId string) (ApiKeys, error) {
 	return list, nil
 }
 
-// RegenerateAgentAPIKey implements GenAIService.
+// RegenerateAgentAPIKey implements GradientAIService.
 func (a *gradientAIService) RegenerateAgentAPIKey(agentID string, apikeyID string) (*ApiKeyInfo, error) {
 	apikeyInfo, _, err := a.client.GradientAI.RegenerateAgentAPIKey(context.TODO(), agentID, apikeyID)
 	if err != nil {
@@ -461,7 +461,7 @@ func (a *gradientAIService) RegenerateAgentAPIKey(agentID string, apikeyID strin
 	return &ApiKeyInfo{ApiKeyInfo: apikeyInfo}, nil
 }
 
-// UpdateAgentAPIKey implements GenAIService.
+// UpdateAgentAPIKey implements GradientAIService.
 func (a *gradientAIService) UpdateAgentAPIKey(agentID string, apikeyID string, req *godo.AgentAPIKeyUpdateRequest) (*ApiKeyInfo, error) {
 	apikeyInfo, _, err := a.client.GradientAI.UpdateAgentAPIKey(context.TODO(), agentID, apikeyID, req)
 	if err != nil {
