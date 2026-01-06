@@ -33,24 +33,31 @@ func (ak *AccessKeys) JSON(out io.Writer) error {
 
 // Cols implements Displayable.
 func (ak *AccessKeys) Cols() []string {
-	return []string{
+	cols := []string{
 		"ID",
 		"Name",
-		"Secret",
-		"CreatedAt",
-		"ExpiresAt",
 	}
+	// Only show Secret during creation (when ShowFullSecret is true)
+	if ak.ShowFullSecret {
+		cols = append(cols, "Secret")
+	}
+	cols = append(cols, "CreatedAt", "ExpiresAt")
+	return cols
 }
 
 // ColMap implements Displayable.
 func (ak *AccessKeys) ColMap() map[string]string {
-	return map[string]string{
+	colMap := map[string]string{
 		"ID":        "ID",
 		"Name":      "Name",
-		"Secret":    "Secret",
 		"CreatedAt": "Created At",
 		"ExpiresAt": "Expires At",
 	}
+	// Only include Secret column during creation
+	if ak.ShowFullSecret {
+		colMap["Secret"] = "Secret"
+	}
+	return colMap
 }
 
 // KV implements Displayable.
@@ -58,14 +65,6 @@ func (ak *AccessKeys) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(ak.AccessKeys))
 
 	for _, key := range ak.AccessKeys {
-		// Show full secret during creation, hidden otherwise
-		secret := "<hidden>"
-		if key.Secret != "" && ak.ShowFullSecret {
-			// During creation: show the full secret
-			secret = key.Secret
-		}
-		// For all other cases (listing, etc.): always show "<hidden>"
-
 		// Format optional timestamp fields
 		expiresAt := ""
 		if key.ExpiresAt != nil {
@@ -81,9 +80,13 @@ func (ak *AccessKeys) KV() []map[string]any {
 		m := map[string]any{
 			"ID":        displayID,
 			"Name":      key.Name,
-			"Secret":    secret,
 			"CreatedAt": key.CreatedAt.Format("2006-01-02 15:04:05 UTC"),
 			"ExpiresAt": expiresAt,
+		}
+
+		// Only include Secret field during creation (when API returns it)
+		if ak.ShowFullSecret && key.Secret != "" {
+			m["Secret"] = key.Secret
 		}
 
 		out = append(out, m)
