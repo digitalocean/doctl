@@ -16,6 +16,8 @@ package commands
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -41,11 +43,12 @@ Keys operate on the currently connected namespace by default, but can target any
 		`Creates a new access key for the specified namespace. The secret is displayed only once upon creation.
 
 Examples:
-  doctl serverless key create --name "my-laptop-key" --expiration 30d
-  doctl serverless key create --name "ci-cd-key" --namespace fn-abc123 --expiration never`,
+  doctl serverless key create --name "my-laptop-key" --expiration 7d
+  doctl serverless key create --name "ci-cd-key" --namespace fn-abc123 --expiration 24h
+  doctl serverless key create --name "permanent-key" --expiration never`,
 		Writer)
 	AddStringFlag(create, "name", "n", "", "name for the access key", requiredOpt())
-	AddStringFlag(create, "expiration", "e", "", "expiration period: 30d, 60d, 90d, 1y, or never", requiredOpt())
+	AddStringFlag(create, "expiration", "e", "", "expiration period: <int>h, <int>d (min 1h), or never (e.g., 1h, 7d, 30d)", requiredOpt())
 	AddStringFlag(create, "namespace", "", "", "target namespace (uses connected namespace if not specified)")
 
 	list := CmdBuilder(cmd, RunAccessKeyList, "list", "Lists access keys",
@@ -76,25 +79,16 @@ func RunAccessKeyCreate(c *CmdConfig) error {
 	namespace, _ := c.Doit.GetString(c.NS, "namespace")
 	expirationStr, _ := c.Doit.GetString(c.NS, "expiration")
 
-	// Validate expiration
+	// Validate and parse expiration
 	var expiresInSeconds *int64
-	switch expirationStr {
-	case "30d":
-		seconds := int64(30 * 24 * 60 * 60)
-		expiresInSeconds = &seconds
-	case "60d":
-		seconds := int64(60 * 24 * 60 * 60)
-		expiresInSeconds = &seconds
-	case "90d":
-		seconds := int64(90 * 24 * 60 * 60)
-		expiresInSeconds = &seconds
-	case "1y":
-		seconds := int64(365 * 24 * 60 * 60)
-		expiresInSeconds = &seconds
-	case "never":
+	if expirationStr == "never" {
 		expiresInSeconds = nil
-	default:
-		return fmt.Errorf("invalid expiration value '%s'. Must be one of: 30d, 60d, 90d, 1y, or never", expirationStr)
+	} else {
+		seconds, err := parseExpirationDuration(expirationStr)
+		if err != nil {
+			return err
+		}
+		expiresInSeconds = &seconds
 	}
 
 	// Resolve target namespace
@@ -221,4 +215,48 @@ func resolveTargetNamespace(c *CmdConfig, explicitNamespace string) (string, err
 	}
 
 	return creds.Namespace, nil
+}
+
+// parseExpirationDuration parses a duration string in format <int>h or <int>d
+// Returns the duration in seconds and validates minimum TTL of 1h
+func parseExpirationDuration(duration string) (int64, error) {
+	duration = strings.TrimSpace(duration)
+	if duration == "" {
+		return 0, fmt.Errorf("expiration duration cannot be empty")
+	}
+
+	// Check if it ends with 'h' (hour) or 'd' (day)
+	var unit string
+	var multiplier int64
+
+	if strings.HasSuffix(duration, "h") {
+		unit = "h"
+		multiplier = 3600 // seconds in an hour
+	} else if strings.HasSuffix(duration, "d") {
+		unit = "d"
+		multiplier = 86400 // seconds in a day
+	} else {
+		return 0, fmt.Errorf("invalid expiration format '%s'. Must be in format <int>h or <int>d (e.g., 1h, 7d)", duration)
+	}
+
+	// Extract the numeric part
+	numericPart := strings.TrimSuffix(duration, unit)
+	value, err := strconv.ParseInt(numericPart, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid expiration format '%s'. Must be in format <int>h or <int>d (e.g., 1h, 7d)", duration)
+	}
+
+	if value <= 0 {
+		return 0, fmt.Errorf("expiration duration must be a positive number")
+	}
+
+	// Calculate total seconds
+	seconds := value * multiplier
+
+	// Validate minimum TTL of 1 hour (3600 seconds)
+	if seconds < 3600 {
+		return 0, fmt.Errorf("minimum expiration duration is 1h (1 hour)")
+	}
+
+	return seconds, nil
 }
