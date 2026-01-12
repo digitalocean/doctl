@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -70,9 +72,34 @@ func AgentCmd() *Command {
 		aliasOpt("ls"),
 		displayerType(&displayers.Agent{}),
 	)
+	
+	// Existing filters
 	AddStringFlag(cmdAgentList, doctl.ArgAgentRegion, "", "", "Retrieves a list of Agents in a specified region")
 	AddStringFlag(cmdAgentList, doctl.ArgTag, "", "", "Retrieves a list of Agents with a specified tag")
-	cmdAgentList.Example = `The following example retrieves a list of all Agent in the ` + "`" + `tor1` + "`" + ` region: doctl genai agent list --region tor1`
+	
+	// New filtering options
+	AddStringFlag(cmdAgentList, doctl.ArgAgentName, "", "", "Filter agents by name (partial match)")
+	AddStringFlag(cmdAgentList, doctl.ArgModelId, "", "", "Filter agents by model ID")
+	AddStringFlag(cmdAgentList, doctl.ArgProjectID, "", "", "Filter agents by project ID")
+	AddStringFlag(cmdAgentList, "created-after", "", "", "Filter agents created after specified date (YYYY-MM-DD format)")
+	AddStringFlag(cmdAgentList, "created-before", "", "", "Filter agents created before specified date (YYYY-MM-DD format)")
+	
+	cmdAgentList.Example = `The following examples show various filtering options:
+  
+  # List all agents in tor1 region
+  doctl genai agent list --region tor1
+  
+  # List agents with specific tag
+  doctl genai agent list --tag production
+  
+  # List agents by name (partial match)
+  doctl genai agent list --name "chatbot"
+  
+  # List agents in a specific project
+  doctl genai agent list --project-id "12345678-1234-1234-1234-123456789012"
+  
+  # List agents created after 2024-01-01
+  doctl genai agent list --created-after "2024-01-01"`
 
 	cmdAgentGet := CmdBuilder(
 		cmd,
@@ -165,11 +192,16 @@ func AgentCmd() *Command {
 	return cmd
 }
 
-// RunAgentList lists all agents.
+// RunAgentList lists all agents with enhanced filtering capabilities.
 func RunAgentList(c *CmdConfig) error {
+	// Get filter parameters
 	region, _ := c.Doit.GetString(c.NS, "region")
 	projectId, _ := c.Doit.GetString(c.NS, "project-id")
 	tag, _ := c.Doit.GetString(c.NS, "tag")
+	name, _ := c.Doit.GetString(c.NS, "name")
+	modelId, _ := c.Doit.GetString(c.NS, "model-id")
+	createdAfter, _ := c.Doit.GetString(c.NS, "created-after")
+	createdBefore, _ := c.Doit.GetString(c.NS, "created-before")
 
 	agents, err := c.GenAI().ListAgents()
 	if err != nil {
@@ -178,27 +210,75 @@ func RunAgentList(c *CmdConfig) error {
 
 	filtered := make(do.Agents, 0, len(agents))
 	for _, agent := range agents {
-		if region != "" && agent.Agent.Region != region {
+		// Apply filters
+		if !matchesFilters(agent, region, projectId, tag, name, modelId, createdAfter, createdBefore) {
 			continue
-		}
-		if projectId != "" && agent.Agent.ProjectId != projectId {
-			continue
-		}
-		if tag != "" {
-			found := false
-			for _, t := range agent.Agent.Tags {
-				if t == tag {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
 		}
 		filtered = append(filtered, agent)
 	}
+	
 	return c.Display(&displayers.Agent{Agents: filtered})
+}
+
+// matchesFilters applies all filtering logic to determine if an agent should be included
+func matchesFilters(agent do.Agent, region, projectId, tag, name, modelId, createdAfter, createdBefore string) bool {
+	// Region filter
+	if region != "" && agent.Agent.Region != region {
+		return false
+	}
+	
+	// Project ID filter
+	if projectId != "" && agent.Agent.ProjectId != projectId {
+		return false
+	}
+	
+	// Tag filter (exact match)
+	if tag != "" {
+		found := false
+		for _, t := range agent.Agent.Tags {
+			if t == tag {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	
+	// Name filter (partial match, case-insensitive)
+	if name != "" && !strings.Contains(strings.ToLower(agent.Agent.Name), strings.ToLower(name)) {
+		return false
+	}
+	
+	// Model ID filter
+	if modelId != "" && agent.Agent.Model != nil && agent.Agent.Model.Uuid != modelId {
+		return false
+	}
+	
+	// Note: Status and Visibility filters are not available in current godo.Agent struct
+	
+	// Date filters
+	if createdAfter != "" || createdBefore != "" {
+		createdAt := agent.Agent.CreatedAt
+		if createdAt != nil && !createdAt.Time.IsZero() {
+			// Parse the input dates
+			if createdAfter != "" {
+				afterDate, err := time.Parse("2006-01-02", createdAfter)
+				if err == nil && createdAt.Time.Before(afterDate) {
+					return false
+				}
+			}
+			if createdBefore != "" {
+				beforeDate, err := time.Parse("2006-01-02", createdBefore)
+				if err == nil && createdAt.Time.After(beforeDate) {
+					return false
+				}
+			}
+		}
+	}
+	
+	return true
 }
 
 // RunAgentCreate creates a new agent.

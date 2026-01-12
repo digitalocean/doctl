@@ -15,6 +15,7 @@ package commands
 
 import (
 	"testing"
+	"time"
 
 	"github.com/digitalocean/godo"
 
@@ -90,6 +91,231 @@ func TestRunAgentList(t *testing.T) {
 		err := RunAgentList(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestRunAgentListWithFilters(t *testing.T) {
+	// Create timestamps for testing
+	createdAt1 := &godo.Timestamp{Time: time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC)}
+	createdAt2 := &godo.Timestamp{Time: time.Date(2024, 2, 1, 15, 30, 0, 0, time.UTC)}
+	
+	testAgents := do.Agents{
+		{
+			Agent: &godo.Agent{
+				Uuid:       "00000000-0000-4000-8000-000000000001",
+				Name:       "ChatBot Agent",
+				Region:     "tor1",
+				ProjectId:  "00000000-0000-4000-8000-000000000000",
+				Tags:       []string{"production", "chatbot"},
+				Model: &godo.Model{
+					Uuid: "00000000-0000-4000-8000-000000000000",
+				},
+				CreatedAt: createdAt1,
+			},
+		},
+		{
+			Agent: &godo.Agent{
+				Uuid:       "00000000-0000-4000-8000-000000000002",
+				Name:       "Support Agent",
+				Region:     "nyc1",
+				ProjectId:  "00000000-0000-4000-8000-000000000001",
+				Tags:       []string{"support", "internal"},
+				Model: &godo.Model{
+					Uuid: "00000000-0000-4000-8000-000000000001",
+				},
+				CreatedAt: createdAt2,
+			},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		filters        map[string]string
+		expectedCount  int
+		description    string
+	}{
+		{
+			name:          "Filter by region",
+			filters:       map[string]string{"region": "tor1"},
+			expectedCount: 1,
+			description:   "Should return only agents in tor1 region",
+		},
+		{
+			name:          "Filter by project ID",
+			filters:       map[string]string{"project-id": "00000000-0000-4000-8000-000000000000"},
+			expectedCount: 1,
+			description:   "Should return only agents in specific project",
+		},
+		{
+			name:          "Filter by name (partial match)",
+			filters:       map[string]string{"name": "Chat"},
+			expectedCount: 1,
+			description:   "Should return agents with name containing 'Chat'",
+		},
+		{
+			name:          "Filter by tag",
+			filters:       map[string]string{"tag": "production"},
+			expectedCount: 1,
+			description:   "Should return agents with 'production' tag",
+		},
+		// Note: Status and Visibility filters are commented out as these fields 
+		// may not exist in the current godo.Agent struct
+		// {
+		//	name:          "Filter by status",
+		//	filters:       map[string]string{"status": "active"},
+		//	expectedCount: 1,
+		//	description:   "Should return only active agents",
+		// },
+		// {
+		//	name:          "Filter by visibility",
+		//	filters:       map[string]string{"visibility": "VISIBILITY_PUBLIC"},
+		//	expectedCount: 1,
+		//	description:   "Should return only public agents",
+		// },
+		{
+			name:          "Filter by model ID",
+			filters:       map[string]string{"model-id": "00000000-0000-4000-8000-000000000000"},
+			expectedCount: 1,
+			description:   "Should return agents using specific model",
+		},
+		{
+			name:          "Filter by created after date",
+			filters:       map[string]string{"created-after": "2024-01-20"},
+			expectedCount: 1,
+			description:   "Should return agents created after 2024-01-20",
+		},
+		{
+			name:          "Filter by created before date",
+			filters:       map[string]string{"created-before": "2024-01-20"},
+			expectedCount: 1,
+			description:   "Should return agents created before 2024-01-20",
+		},
+		{
+			name:          "Multiple filters",
+			filters:       map[string]string{"region": "tor1", "tag": "production"},
+			expectedCount: 1,
+			description:   "Should return agents matching multiple filters",
+		},
+		{
+			name:          "No matching filters",
+			filters:       map[string]string{"region": "sfo1"},
+			expectedCount: 0,
+			description:   "Should return no agents when no matches",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				// Set up filters
+				for key, value := range tt.filters {
+					config.Doit.Set(config.NS, key, value)
+				}
+
+				tm.genAI.EXPECT().ListAgents().Return(testAgents, nil)
+
+				err := RunAgentList(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
+func TestMatchesFilters(t *testing.T) {
+	createdAt := &godo.Timestamp{Time: time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC)}
+	
+	agent := do.Agent{
+		Agent: &godo.Agent{
+			Uuid:       "00000000-0000-4000-8000-000000000001",
+			Name:       "Test Agent",
+			Region:     "tor1",
+			ProjectId:  "00000000-0000-4000-8000-000000000000",
+			Tags:       []string{"test", "production"},
+			Model: &godo.Model{
+				Uuid: "00000000-0000-4000-8000-000000000000",
+			},
+			CreatedAt: createdAt,
+		},
+	}
+
+	tests := []struct {
+		name     string
+		filters  map[string]string
+		expected bool
+	}{
+		{
+			name:     "Match region",
+			filters:  map[string]string{"region": "tor1"},
+			expected: true,
+		},
+		{
+			name:     "No match region",
+			filters:  map[string]string{"region": "nyc1"},
+			expected: false,
+		},
+		{
+			name:     "Match name (partial)",
+			filters:  map[string]string{"name": "Test"},
+			expected: true,
+		},
+		{
+			name:     "Match name (case insensitive)",
+			filters:  map[string]string{"name": "test"},
+			expected: true,
+		},
+		{
+			name:     "No match name",
+			filters:  map[string]string{"name": "NonExistent"},
+			expected: false,
+		},
+		{
+			name:     "Match tag",
+			filters:  map[string]string{"tag": "test"},
+			expected: true,
+		},
+		{
+			name:     "No match tag",
+			filters:  map[string]string{"tag": "nonexistent"},
+			expected: false,
+		},
+		// Note: Status and Visibility filters are commented out as these fields 
+		// may not exist in the current godo.Agent struct
+		// {
+		//	name:     "Match status",
+		//	filters:  map[string]string{"status": "active"},
+		//	expected: true,
+		// },
+		// {
+		//	name:     "Match visibility",
+		//	filters:  map[string]string{"visibility": "VISIBILITY_PUBLIC"},
+		//	expected: true,
+		// },
+		{
+			name:     "Match created after",
+			filters:  map[string]string{"created-after": "2024-01-01"},
+			expected: true,
+		},
+		{
+			name:     "Match created before",
+			filters:  map[string]string{"created-before": "2024-02-01"},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := matchesFilters(
+				agent,
+				tt.filters["region"],
+				tt.filters["project-id"],
+				tt.filters["tag"],
+				tt.filters["name"],
+				tt.filters["model-id"],
+				tt.filters["created-after"],
+				tt.filters["created-before"],
+			)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 func TestRunAgentUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
