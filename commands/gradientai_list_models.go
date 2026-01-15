@@ -5,7 +5,7 @@ import (
 )
 
 func ListModelsCmd() *Command {
-	cmd := CmdBuilder(nil, RunGenAIListModels, "list-models", "List Gradient AI models", `The `+"`doctl gradient list-models`"+` command lists all available Gradient AI models.
+	cmd := CmdBuilder(nil, RunGradientAIListModels, "list-models", "List Gradient AI models", `The `+"`doctl gradient list-models`"+` command lists all available Gradient AI models.
 
 The command returns the following details for each model:
 	- The model ID
@@ -24,7 +24,7 @@ The command returns the following details for each model:
 	return cmd
 }
 
-func RunGenAIListModels(c *CmdConfig) error {
+func RunGradientAIListModels(c *CmdConfig) error {
 	models, err := c.GradientAI().ListAvailableModels()
 	if err != nil {
 		return err

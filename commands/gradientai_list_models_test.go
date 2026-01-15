@@ -87,20 +87,20 @@ func TestListModelsCommand(t *testing.T) {
 	assert.Contains(t, cmd.Long, "doctl gradient list-models")
 }
 
-func TestRunGenAIListModels(t *testing.T) {
+func TestRunGradientAIListModels(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.gradientAI.EXPECT().ListAvailableModels().Return(testModels, nil)
 
-		err := RunGenAIListModels(config)
+		err := RunGradientAIListModels(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestRunGenAIListModelsError(t *testing.T) {
+func TestRunGradientAIListModelsError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.gradientAI.EXPECT().ListAvailableModels().Return(nil, assert.AnError)
 
-		err := RunGenAIListModels(config)
+		err := RunGradientAIListModels(config)
 		assert.Error(t, err)
 	})
 }

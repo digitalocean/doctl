@@ -69,24 +69,24 @@ func TestListRegionsCommand(t *testing.T) {
 	assert.Contains(t, cmd.Long, "doctl gradient list-regions")
 }
 
-func TestRunGenAIListRegions(t *testing.T) {
+func TestRunGradientAIListRegions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.gradientAI.EXPECT().ListDatacenterRegions(nil, nil).Return(testDatacenterRegions, nil)
 
 		config.Command = &cobra.Command{}
 
-		err := RunGenAIListRegions(config)
+		err := RunGradientAIListRegions(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestRunGenAIListRegionsError(t *testing.T) {
+func TestRunGradientAIListRegionsError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.gradientAI.EXPECT().ListDatacenterRegions(nil, nil).Return(nil, assert.AnError)
 
 		config.Command = &cobra.Command{}
 
-		err := RunGenAIListRegions(config)
+		err := RunGradientAIListRegions(config)
 		assert.Error(t, err)
 	})
 }

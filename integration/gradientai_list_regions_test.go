@@ -35,7 +35,7 @@ var _ = suite("gradient/list-regions", func(t *testing.T, when spec.G, it spec.S
 				}
 
 				w.Header().Set("content-type", "application/json")
-				fmt.Fprint(w, genaiListRegionsResponse)
+				fmt.Fprint(w, gradientaiListRegionsResponse)
 			default:
 				dump, err := httputil.DumpRequest(r, true)
 				if err != nil {
@@ -81,7 +81,7 @@ https://inference.fra1.do.ai    fra1      true            true                ht
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.JSONEq(genaiListRegionsJSONOutput, string(output))
+			expect.JSONEq(gradientaiListRegionsJSONOutput, string(output))
 		})
 	})
 
@@ -92,7 +92,7 @@ https://inference.fra1.do.ai    fra1      true            true                ht
 	})
 })
 
-const genaiListRegionsResponse = `{
+const gradientaiListRegionsResponse = `{
   "regions": [
     {
       "region": "nyc1",
@@ -111,7 +111,7 @@ const genaiListRegionsResponse = `{
   ]
 }`
 
-const genaiListRegionsJSONOutput = `[
+const gradientaiListRegionsJSONOutput = `[
   {
     "region": "nyc1",
     "inference_url": "https://inference.nyc1.do.ai",

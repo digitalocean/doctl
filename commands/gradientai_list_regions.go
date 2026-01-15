@@ -5,7 +5,7 @@ import (
 )
 
 func ListRegionsCmd() *Command {
-	cmd := CmdBuilder(nil, RunGenAIListRegions, "list-regions", "List Gradient AI regions", `The `+"`doctl gradient list-regions`"+` command lists all available Gradient AI regions.
+	cmd := CmdBuilder(nil, RunGradientAIListRegions, "list-regions", "List Gradient AI regions", `The `+"`doctl gradient list-regions`"+` command lists all available Gradient AI regions.
 
 The command returns the following details for each region:
 	- Inference URL: The URL for the inference server
@@ -22,7 +22,7 @@ The command returns the following details for each region:
 	return cmd
 }
 
-func RunGenAIListRegions(c *CmdConfig) error {
+func RunGradientAIListRegions(c *CmdConfig) error {
 	var servesInferencePtr, servesBatchPtr *bool
 
 	// Only set pointer if user passed the flag

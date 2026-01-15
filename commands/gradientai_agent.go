@@ -152,7 +152,7 @@ func AgentCmd() *Command {
 	cmdAgentListVersions := CmdBuilder(
 		cmd,
 		RunAgentListVersions,
-		"list-versions",
+		"list-versions <agent-id>",
 		"List versions for an agent",
 		"Retrieves a list of all the versions for an agent on your account including the following information for each version:\n"+
 			AgentVersionDetails,
