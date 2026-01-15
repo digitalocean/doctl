@@ -128,7 +128,7 @@ func KnowledgeBaseCmd() *Command {
 	cmdDataSourceList.Example = "The following example retrieves information about all Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		" : `doctl gradient knowledge-base list-datasources f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
-	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid. Add only one Spaces or Webcrawler as a datasource. For more info about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GenAI-Platform-(Public-Preview)/operation/genai_create_knowledge_base_data_source)"
+	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid. Add only one Spaces or Webcrawler as a datasource. For more info about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform/operation/genai_create_knowledge_base_data_source)"
 	cmdDataSourceAdd := CmdBuilder(
 		cmd,
 		RunKnowledgeBaseAddDataSource,
