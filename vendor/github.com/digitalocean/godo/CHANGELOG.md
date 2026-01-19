@@ -1,5 +1,23 @@
 # Change Log
 
+## [1.172.0] - 2026-01-13
+
+- #932 - @fumblehool - APPS-12654: Add CancelJobInvocation API
+- #939 - @anup-deka - Rebranding GenAI to Gradient AI
+- #914 - @brianteeman - Typo cannnot/cannot
+
+## [1.171.0] - 2025-12-17
+
+- #936 - @dillonledoux - Add fields to AgentCreateRequest for Gradient Agents
+
+## [1.170.0] - 2025-12-09
+
+- #933 - @do-joe - Nfs struct exposes Host and MountPath
+
+## [1.169.0] - 2025-11-13
+
+- #928 - @do-joe - Fix GetLogsink API Response Parsing to Match Actual API Behavior
+
 ## [1.168.0] - 2025-11-06
 
 - #926 - @niket-dujari - added provision for attach and detach share

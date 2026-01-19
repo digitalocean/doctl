@@ -49,6 +49,6 @@ mockgen -source reserved_ips.go -package=mocks ReservedIPsService > mocks/Reserv
 mockgen -source serverless.go -package=mocks ServerlessService > mocks/ServerlessService.go
 mockgen -source partner_network_connect.go  -package=mocks PartnerAttachmentsService > mocks/PartnerAttachmentsService.go
 mockgen -source spaces_keys.go -package=mocks SpacesKeysService > mocks/SpacesKeysService.go
-mockgen -source genai.go -package=mocks GenAIService > mocks/GenAIService.go
+mockgen -source gradientai.go -package=mocks GradientAIService > mocks/GradientAIService.go
 mockgen -source nfs.go -package=mocks NfsService > mocks/NfsService.go
 mockgen -source nfs_actions.go -package=mocks NfsActionsService > mocks/NfsActionsService.go
