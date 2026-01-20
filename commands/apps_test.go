@@ -36,6 +36,7 @@ func TestAppsCommand(t *testing.T) {
 		"get-job-invocation",
 		"list-deployments",
 		"list-job-invocations",
+		"cancel-job-invocation",
 		"list-regions",
 		"logs",
 		"propose",
@@ -1203,6 +1204,45 @@ func TestRunAppsGetJobInvocationLogs(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
 
 		err := RunAppsGetLogs(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsCancelJobInvocation(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		jobInvocation := &godo.JobInvocation{
+			ID:           uuid.New().String(),
+			JobName:      "job-name",
+			DeploymentID: uuid.New().String(),
+			Phase:        godo.JOBINVOCATIONPHASE_Pending,
+			Trigger: &godo.JobInvocationTrigger{
+				Type: godo.JOBINVOCATIONTRIGGERTYPE_Scheduled,
+				Scheduled: &godo.TriggerMetadataScheduled{
+					Schedule: &godo.AppJobSpecSchedule{
+						Cron:     "0 0 * * *",
+						TimeZone: "America/New_York",
+					},
+				},
+			},
+			CreatedAt:   time.Now(),
+			StartedAt:   time.Now(),
+			CompletedAt: time.Now(),
+		}
+
+		opts := &godo.CancelJobInvocationOptions{
+			JobName: jobInvocation.JobName,
+		}
+
+		tm.apps.EXPECT().CancelJobInvocation(appID, jobInvocation.ID, opts).Times(1).DoAndReturn(func(appID, jobInvocationID string, req *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error) {
+			jobInvocation.Phase = godo.JOBINVOCATIONPHASE_Canceled
+			return jobInvocation, nil
+		})
+
+		config.Args = append(config.Args, appID, jobInvocation.ID)
+		config.Doit.Set(config.NS, doctl.ArgAppJobName, jobInvocation.JobName)
+
+		err := RunAppsCancelJobInvocation(config)
 		require.NoError(t, err)
 	})
 }

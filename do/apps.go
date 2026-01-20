@@ -60,6 +60,7 @@ type AppsService interface {
 	ListJobInvocations(appID string, opts *godo.ListJobInvocationsOptions) ([]*godo.JobInvocation, error)
 	GetJobInvocation(appID string, jobInvocationID string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error)
 	GetJobInvocationLogs(appID, jobInvocationID string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error)
+	CancelJobInvocation(appID, jobInvocationID string, opts *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error)
 }
 
 type appsService struct {
@@ -349,4 +350,12 @@ func (s *appsService) GetJobInvocationLogs(appID, jobInvocationID string, opts *
 		return nil, err
 	}
 	return jobLogs, nil
+}
+
+func (s *appsService) CancelJobInvocation(appID, jobInvocationID string, opts *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error) {
+	jobInvocation, _, err := s.client.Apps.CancelJobInvocation(s.ctx, appID, jobInvocationID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return jobInvocation, nil
 }
