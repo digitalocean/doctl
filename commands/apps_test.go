@@ -36,6 +36,7 @@ func TestAppsCommand(t *testing.T) {
 		"get-job-invocation",
 		"list-deployments",
 		"list-job-invocations",
+		"cancel-job-invocation",
 		"list-regions",
 		"logs",
 		"propose",
