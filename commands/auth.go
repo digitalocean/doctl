@@ -353,13 +353,22 @@ func writeConfig() error {
 
 // defaultConfigFileWriter returns a writer to a newly created config.yaml file in the default config home.
 // When using the default config file path the default config home directory will be created; Otherwise
-// the custom config home directory must exist and be writable to the user issuing the auth command.
+// the custom config home directory will be created if it doesn't exist.
 func defaultConfigFileWriter() (io.WriteCloser, error) {
 	cfgFile := viper.GetString("config")
 
 	defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
 	if cfgFile == defaultCfgFile {
 		configHome()
+	} else {
+		// For custom config paths, ensure the parent directory exists
+		parentDir := filepath.Dir(cfgFile)
+		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+			err = os.MkdirAll(parentDir, 0755)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	f, err := os.Create(cfgFile)
