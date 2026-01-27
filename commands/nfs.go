@@ -180,12 +180,7 @@ func nfsGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
-
+	region, _ := c.Doit.GetString(c.NS, "region")
 	share, err := c.Nfs().Get(id, region)
 	if err != nil {
 		return err
@@ -195,11 +190,7 @@ func nfsGet(c *CmdConfig) error {
 }
 
 func nfsList(c *CmdConfig) error {
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
-
+	region, _ := c.Doit.GetString(c.NS, "region")
 	shares, err := c.Nfs().List(region)
 	if err != nil {
 		return err
@@ -214,10 +205,7 @@ func nfsDelete(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
+	region, _ := c.Doit.GetString(c.NS, "region")
 
 	err = c.Nfs().Delete(id, region)
 	if err != nil {
@@ -238,10 +226,7 @@ func nfsSnapshotCreate(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
+	region, _ := c.Doit.GetString(c.NS, "region")
 
 	action, err := c.NfsActions().Snapshot(shareID, name, region)
 	if err != nil {
@@ -265,10 +250,7 @@ func nfsSnapshotCreate(c *CmdConfig) error {
 }
 
 func nfsSnapshotList(c *CmdConfig) error {
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
+	region, _ := c.Doit.GetString(c.NS, "region")
 
 	shareId, _ := c.Doit.GetString(c.NS, "share-id")
 
@@ -286,10 +268,7 @@ func nfsSnapshotGet(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
+	region, _ := c.Doit.GetString(c.NS, "region")
 
 	snapshot, err := c.Nfs().GetSnapshot(id, region)
 	if err != nil {
@@ -305,10 +284,7 @@ func nfsSnapshotDelete(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
+	region, _ := c.Doit.GetString(c.NS, "region")
 
 	err = c.Nfs().DeleteSnapshot(id, region)
 	if err != nil {
@@ -324,10 +300,7 @@ func nfsResize(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
+	region, _ := c.Doit.GetString(c.NS, "region")
 
 	sizeStr, err := c.Doit.GetString(c.NS, "size")
 	if err != nil {
@@ -366,10 +339,7 @@ func nfsAttach(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
+	region, _ := c.Doit.GetString(c.NS, "region")
 
 	vpcIdStr, err := c.Doit.GetString(c.NS, "vpc_id")
 	if err != nil {
@@ -403,11 +373,7 @@ func nfsDetach(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, "region")
-	if err != nil {
-		return err
-	}
-
+	region, _ := c.Doit.GetString(c.NS, "region")
 	vpcIdStr, err := c.Doit.GetString(c.NS, "vpc_id")
 	if err != nil {
 		return err

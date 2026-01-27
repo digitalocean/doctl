@@ -371,7 +371,7 @@ type Workspace struct {
 	Name                string                `json:"name,omitempty"`
 	Description         string                `json:"description,omitempty"`
 	CreatedByEmail      string                `json:"created_by_email,omitempty"`
-	CreatedBy           uint64                `json:"created_by,omitempty"`
+	CreatedBy           string                `json:"created_by,omitempty"`
 	CreatedAt           *Timestamp            `json:"created_at,omitempty"`
 	UpdatedAt           *Timestamp            `json:"updated_at,omitempty"`
 	DeletedAt           *Timestamp            `json:"deleted_at,omitempty"`
