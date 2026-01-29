@@ -74,6 +74,10 @@ type Nfs struct {
 	CreatedAt string `json:"created_at"`
 	// VpcIDs is a list of VPC IDs that have access to the NFS share
 	VpcIDs []string `json:"vpc_ids"`
+	// Host is the IP address of the NFS server accessible from the associated VPC
+	Host string `json:"host"`
+	// MountPath is the path at which the share will be available
+	MountPath string `json:"mount_path"`
 }
 
 type NfsSnapshot struct {
@@ -162,9 +166,6 @@ func (s *NfsServiceOp) Get(ctx context.Context, nfsShareId string, region string
 	if nfsShareId == "" {
 		return nil, nil, NewArgError("id", "cannot be empty")
 	}
-	if region == "" {
-		return nil, nil, NewArgError("region", "cannot be empty")
-	}
 
 	path := fmt.Sprintf("%s/%s", nfsBasePath, nfsShareId)
 
@@ -190,10 +191,6 @@ func (s *NfsServiceOp) Get(ctx context.Context, nfsShareId string, region string
 
 // List returns a list of NFS shares.
 func (s *NfsServiceOp) List(ctx context.Context, opts *ListOptions, region string) ([]*Nfs, *Response, error) {
-	if region == "" {
-		return nil, nil, NewArgError("region", "cannot be empty")
-	}
-
 	path, err := addOptions(nfsBasePath, opts)
 	if err != nil {
 		return nil, nil, err
@@ -231,10 +228,6 @@ func (s *NfsServiceOp) Delete(ctx context.Context, nfsShareId string, region str
 	if nfsShareId == "" {
 		return nil, NewArgError("id", "cannot be empty")
 	}
-	if region == "" {
-		return nil, NewArgError("region", "cannot be empty")
-	}
-
 	path := fmt.Sprintf("%s/%s", nfsBasePath, nfsShareId)
 
 	deleteOpts := &nfsOptions{Region: region}
@@ -261,9 +254,6 @@ func (s *NfsServiceOp) GetSnapshot(ctx context.Context, nfsSnapshotID string, re
 	if nfsSnapshotID == "" {
 		return nil, nil, NewArgError("snapshotID", "cannot be empty")
 	}
-	if region == "" {
-		return nil, nil, NewArgError("region", "cannot be empty")
-	}
 
 	path := fmt.Sprintf("%s/%s", nfsSnapshotsBasePath, nfsSnapshotID)
 
@@ -289,9 +279,6 @@ func (s *NfsServiceOp) GetSnapshot(ctx context.Context, nfsSnapshotID string, re
 
 // List returns a list of NFS snapshots.
 func (s *NfsServiceOp) ListSnapshots(ctx context.Context, opts *ListOptions, nfsShareId, region string) ([]*NfsSnapshot, *Response, error) {
-	if region == "" {
-		return nil, nil, NewArgError("region", "cannot be empty")
-	}
 
 	path, err := addOptions(nfsSnapshotsBasePath, opts)
 	if err != nil {
@@ -330,10 +317,6 @@ func (s *NfsServiceOp) DeleteSnapshot(ctx context.Context, nfsSnapshotID string,
 	if nfsSnapshotID == "" {
 		return nil, NewArgError("snapshotID", "cannot be empty")
 	}
-	if region == "" {
-		return nil, NewArgError("region", "cannot be empty")
-	}
-
 	path := fmt.Sprintf("%s/%s", nfsSnapshotsBasePath, nfsSnapshotID)
 
 	deleteOpts := &nfsOptions{Region: region}

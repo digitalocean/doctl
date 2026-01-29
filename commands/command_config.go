@@ -83,7 +83,7 @@ type CmdConfig struct {
 	OAuth              func() do.OAuthService
 	PartnerAttachments func() do.PartnerAttachmentsService
 	SpacesKeys         func() do.SpacesKeysService
-	GenAI              func() do.GenAIService
+	GradientAI         func() do.GradientAIService
 	Nfs                func() do.NfsService
 	NfsActions         func() do.NfsActionsService
 }
@@ -149,7 +149,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return do.NewPartnerAttachmentsService(godoClient)
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
-			c.GenAI = func() do.GenAIService { return do.NewGenAIService(godoClient) }
+			c.GradientAI = func() do.GradientAIService { return do.NewGradientAIService(godoClient) }
 			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
 			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
 			return nil
