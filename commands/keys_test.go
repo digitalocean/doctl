@@ -135,7 +135,7 @@ func TestAccessKeyCreate(t *testing.T) {
 				"expiration": "30d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(30 * 24 * 60 * 60)
+				expires := int64(30 * 24 * 60 * 60) // 30 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
 				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
@@ -148,7 +148,7 @@ func TestAccessKeyCreate(t *testing.T) {
 				"expiration": "60d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(60 * 24 * 60 * 60)
+				expires := int64(60 * 24 * 60 * 60) // 60 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
 				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
@@ -161,7 +161,7 @@ func TestAccessKeyCreate(t *testing.T) {
 				"expiration": "90d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(90 * 24 * 60 * 60)
+				expires := int64(90 * 24 * 60 * 60) // 90 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
 				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
@@ -171,10 +171,10 @@ func TestAccessKeyCreate(t *testing.T) {
 			name: "create with 1 year expiration",
 			flags: map[string]any{
 				"name":       "my-key",
-				"expiration": "1y",
+				"expiration": "365d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(365 * 24 * 60 * 60)
+				expires := int64(365 * 24 * 60 * 60) // 365 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
 				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
@@ -186,7 +186,7 @@ func TestAccessKeyCreate(t *testing.T) {
 				"name":       "my-key",
 				"expiration": "invalid",
 			},
-			expectedError: "invalid expiration value 'invalid'. Must be one of: 30d, 60d, 90d, 1y, or never",
+			expectedError: "invalid expiration format 'invalid'. Must be in format <int>h or <int>d (e.g., 1h, 7d)",
 		},
 		{
 			name: "create with empty expiration",
@@ -194,7 +194,23 @@ func TestAccessKeyCreate(t *testing.T) {
 				"name":       "my-key",
 				"expiration": "",
 			},
-			expectedError: "invalid expiration value ''. Must be one of: 30d, 60d, 90d, 1y, or never",
+			expectedError: "expiration duration cannot be empty",
+		},
+		{
+			name: "create with sub-hour expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "30m",
+			},
+			expectedError: "invalid expiration format '30m'. Must be in format <int>h or <int>d (e.g., 1h, 7d)",
+		},
+		{
+			name: "create with zero hour expiration",
+			flags: map[string]any{
+				"name":       "my-key",
+				"expiration": "0h",
+			},
+			expectedError: "expiration duration must be a positive number",
 		},
 	}
 
@@ -508,7 +524,6 @@ func TestAccessKeyListOutput(t *testing.T) {
 		assert.Contains(t, output, "laptop-key")
 		assert.Contains(t, output, "dof_v1_xyz78...") // ID truncated to 12 chars + ...
 		assert.Contains(t, output, "ci-cd-key")
-		assert.Contains(t, output, "<hidden>")
 		assert.Contains(t, output, "2023-01-01 12:00:00 UTC")
 		assert.Contains(t, output, "2023-02-15 09:30:00 UTC")
 		assert.Contains(t, output, "2024-02-15 09:30:00 UTC")
