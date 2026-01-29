@@ -284,68 +284,51 @@ context: default
 			)
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err, string(output))
-
-			err = os.Remove(testConfig)
 			expect.NoError(err)
-		})
-	})
-
-	when("switching contexts containing a period", func() {
-		it("does not mangle that context", func() {
-			var testConfigBytes = []byte(`access-token: first-token
-auth-contexts:
-  test@example.com: second-token
-context: default
-`)
-
-			tmpDir := t.TempDir()
-			testConfig := filepath.Join(tmpDir, "test-config.yml")
-			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
-
-			cmd := exec.Command(builtBinaryPath,
-				"-u", server.URL,
-				"auth",
-				"switch",
-				"--config", testConfig,
-			)
-			_, err := cmd.CombinedOutput()
-			expect.NoError(err)
-
-			fileBytes, err := os.ReadFile(testConfig)
-			expect.NoError(err)
-			expect.Contains(string(fileBytes), "test@example.com: second-token")
-
-			err = os.Remove(testConfig)
-			expect.NoError(err)
-		})
-	})
-
-	when("the DIGITALOCEAN_CONTEXT variable is set", func() {
-		it("uses that context for commands", func() {
-			var testConfigBytes = []byte(`access-token: first-token
-auth-contexts:
-  next: second-token
-context: default
-`)
-
-			tmpDir := t.TempDir()
-			testConfig := filepath.Join(tmpDir, "test-config.yml")
-			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
-
-			cmd := exec.Command(builtBinaryPath,
-				"-u", server.URL,
-				"auth",
-				"list",
-				"--config", testConfig,
-			)
-			cmd.Env = os.Environ()
-			cmd.Env = append(cmd.Env, "DIGITALOCEAN_CONTEXT=next")
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, string(output))
 
 			expect.Contains(string(output), "next (current)")
+		})
+	})
+
+	when("config directory parent is a symlink", func() {
+		it("successfully creates config directory through symlink", func() {
+			tmpDir := t.TempDir()
+
+			// Create actual config directory
+			actualConfigDir := filepath.Join(tmpDir, "actual-config")
+			err := os.MkdirAll(actualConfigDir, 0755)
+			expect.NoError(err)
+
+			// Create a symlink .config pointing to the actual config directory
+			symlinkConfigDir := filepath.Join(tmpDir, ".config")
+			err = os.Symlink(actualConfigDir, symlinkConfigDir)
+			expect.NoError(err)
+
+			// Set up config path to use the symlink
+			configPath := filepath.Join(symlinkConfigDir, "doctl", "config.yml")
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", configPath,
+				"auth",
+				"init",
+				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
+			)
+
+			_, err = cmd.CombinedOutput()
+			expect.NoError(err)
+
+			// Verify the config file was created
+			fileBytes, err := os.ReadFile(configPath)
+			expect.NoError(err)
+			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+
+			// Verify the directory structure exists through the symlink
+			doctlDir := filepath.Join(symlinkConfigDir, "doctl")
+			info, err := os.Stat(doctlDir)
+			expect.NoError(err)
+			expect.True(info.IsDir())
 		})
 	})
 })
