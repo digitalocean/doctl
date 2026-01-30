@@ -85,7 +85,7 @@ func TestAccessKeyCreate(t *testing.T) {
 			expectedCalls: func(tm *tcMocks) {
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", (*int64)(nil)).Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", "").Return(testAccessKey, nil)
 			},
 		},
 		{
@@ -99,7 +99,7 @@ func TestAccessKeyCreate(t *testing.T) {
 				tm.serverless.EXPECT().ListNamespaces(context.TODO()).Return(do.NamespaceListResponse{
 					Namespaces: []do.OutputNamespace{{Namespace: "fn-explicit-namespace", Label: "explicit-label"}},
 				}, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-explicit-namespace", "my-key", (*int64)(nil)).Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-explicit-namespace", "my-key", "").Return(testAccessKey, nil)
 			},
 		},
 		{
@@ -113,7 +113,7 @@ func TestAccessKeyCreate(t *testing.T) {
 				// It will still try to resolve namespace and then call create with empty name
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "", (*int64)(nil)).Return(do.AccessKey{}, assert.AnError)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "", "").Return(do.AccessKey{}, assert.AnError)
 			},
 			expectedError: "assert.AnError", // API will reject empty name
 		},
@@ -135,10 +135,9 @@ func TestAccessKeyCreate(t *testing.T) {
 				"expiration": "30d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(30 * 24 * 60 * 60) // 30 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", "30d").Return(testAccessKey, nil)
 			},
 		},
 		{
@@ -148,10 +147,9 @@ func TestAccessKeyCreate(t *testing.T) {
 				"expiration": "60d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(60 * 24 * 60 * 60) // 60 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", "60d").Return(testAccessKey, nil)
 			},
 		},
 		{
@@ -161,10 +159,9 @@ func TestAccessKeyCreate(t *testing.T) {
 				"expiration": "90d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(90 * 24 * 60 * 60) // 90 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", "90d").Return(testAccessKey, nil)
 			},
 		},
 		{
@@ -174,10 +171,9 @@ func TestAccessKeyCreate(t *testing.T) {
 				"expiration": "365d",
 			},
 			expectedCalls: func(tm *tcMocks) {
-				expires := int64(365 * 24 * 60 * 60) // 365 days in seconds
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 				tm.serverless.EXPECT().ReadCredentials().Return(testServerlessCredentials, nil)
-				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", &expires).Return(testAccessKey, nil)
+				tm.serverless.EXPECT().CreateNamespaceAccessKey(context.TODO(), "fn-test-namespace", "my-key", "365d").Return(testAccessKey, nil)
 			},
 		},
 		{

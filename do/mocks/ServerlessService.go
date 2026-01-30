@@ -102,7 +102,7 @@ func (mr *MockServerlessServiceMockRecorder) CreateNamespace(arg0, arg1, arg2 an
 }
 
 // CreateNamespaceAccessKey mocks base method.
-func (m *MockServerlessService) CreateNamespaceAccessKey(arg0 context.Context, arg1, arg2 string, arg3 *int64) (do.AccessKey, error) {
+func (m *MockServerlessService) CreateNamespaceAccessKey(arg0 context.Context, arg1, arg2, arg3 string) (do.AccessKey, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateNamespaceAccessKey", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(do.AccessKey)

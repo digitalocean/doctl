@@ -71,14 +71,8 @@ func (ak *AccessKeys) KV() []map[string]any {
 			expiresAt = key.ExpiresAt.Format("2006-01-02 15:04:05 UTC")
 		}
 
-		// Truncate long IDs for display
-		displayID := key.ID
-		if len(displayID) > 12 {
-			displayID = displayID[:12] + "..."
-		}
-
 		m := map[string]any{
-			"ID":        displayID,
+			"ID":        key.ID,
 			"Name":      key.Name,
 			"CreatedAt": key.CreatedAt.Format("2006-01-02 15:04:05 UTC"),
 			"ExpiresAt": expiresAt,

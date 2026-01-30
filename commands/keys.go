@@ -80,15 +80,13 @@ func RunAccessKeyCreate(c *CmdConfig) error {
 	expirationStr, _ := c.Doit.GetString(c.NS, "expiration")
 
 	// Validate and parse expiration
-	var expiresInSeconds *int64
-	if expirationStr == "never" {
-		expiresInSeconds = nil
-	} else {
-		seconds, err := parseExpirationDuration(expirationStr)
+	expirationToSend := ""
+	if expirationStr != "never" {
+		_, err := parseExpirationDuration(expirationStr)
 		if err != nil {
 			return err
 		}
-		expiresInSeconds = &seconds
+		expirationToSend = expirationStr
 	}
 
 	// Resolve target namespace
@@ -101,7 +99,7 @@ func RunAccessKeyCreate(c *CmdConfig) error {
 	ss := c.Serverless()
 	ctx := context.TODO()
 
-	accessKey, err := ss.CreateNamespaceAccessKey(ctx, targetNamespace, name, expiresInSeconds)
+	accessKey, err := ss.CreateNamespaceAccessKey(ctx, targetNamespace, name, expirationToSend)
 	if err != nil {
 		return err
 	}

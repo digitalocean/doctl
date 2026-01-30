@@ -200,16 +200,17 @@ type AccessKey struct {
 	Name       string     `json:"name"`
 	CreatedAt  time.Time  `json:"created_at"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
-	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	LastUsedAt *time.Time `json:"updated_at,omitempty"`
 	Secret     string     `json:"secret,omitempty"` // Only populated when creating/regenerating
 }
 
 type AccessKeyListResponse struct {
-	Keys []AccessKey `json:"keys"`
+	AccessKeys []AccessKey `json:"access_keys"`
+	Count      int         `json:"count"`
 }
 
 type AccessKeyResponse struct {
-	Key AccessKey `json:"key"`
+	Key AccessKey `json:"access_key"`
 }
 
 type TriggerScheduledDetails struct {
@@ -261,7 +262,7 @@ type ServerlessService interface {
 	WriteProject(ServerlessProject) (string, error)
 	SetEffectiveCredentials(auth string, apihost string)
 	CredentialsPath() string
-	CreateNamespaceAccessKey(context.Context, string, string, *int64) (AccessKey, error)
+	CreateNamespaceAccessKey(context.Context, string, string, string) (AccessKey, error)
 	ListNamespaceAccessKeys(context.Context, string) ([]AccessKey, error)
 	DeleteNamespaceAccessKey(context.Context, string, string) error
 }
@@ -1497,11 +1498,11 @@ func validateFunctionLevelFields(serverlessAction *ServerlessFunction) ([]string
 }
 
 // CreateNamespaceAccessKey creates a new access key for the specified namespace
-func (s *serverlessService) CreateNamespaceAccessKey(ctx context.Context, namespace string, name string, expiresInSeconds *int64) (AccessKey, error) {
+func (s *serverlessService) CreateNamespaceAccessKey(ctx context.Context, namespace string, name string, expiration string) (AccessKey, error) {
 	path := fmt.Sprintf("v2/functions/namespaces/%s/keys", namespace)
 	reqBody := map[string]any{"name": name}
-	if expiresInSeconds != nil {
-		reqBody["expires_in_seconds"] = *expiresInSeconds
+	if expiration != "" && expiration != "never" {
+		reqBody["expires_in"] = expiration
 	}
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, reqBody)
 	if err != nil {
@@ -1527,7 +1528,7 @@ func (s *serverlessService) ListNamespaceAccessKeys(ctx context.Context, namespa
 	if err != nil {
 		return []AccessKey{}, err
 	}
-	return decoded.Keys, nil
+	return decoded.AccessKeys, nil
 }
 
 // DeleteNamespaceAccessKey deletes an access key from the specified namespace
