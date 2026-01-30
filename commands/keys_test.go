@@ -516,9 +516,9 @@ func TestAccessKeyListOutput(t *testing.T) {
 
 		// Test output contains expected elements
 		output := buf.String()
-		assert.Contains(t, output, "dof_v1_abc12...") // ID truncated to 12 chars + ...
+		assert.Contains(t, output, "dof_v1_abc123def456ghi789")
 		assert.Contains(t, output, "laptop-key")
-		assert.Contains(t, output, "dof_v1_xyz78...") // ID truncated to 12 chars + ...
+		assert.Contains(t, output, "dof_v1_xyz789abc123def456")
 		assert.Contains(t, output, "ci-cd-key")
 		assert.Contains(t, output, "2023-01-01 12:00:00 UTC")
 		assert.Contains(t, output, "2023-02-15 09:30:00 UTC")
