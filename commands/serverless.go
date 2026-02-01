@@ -315,7 +315,7 @@ func RunServerlessConnect(c *CmdConfig) error {
 	if len(c.Args) > 0 {
 		// Show deprecation warning for the legacy connection method
 		warn := fmt.Sprintf("Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect %s --access-key <%s>' instead.\nThis method will be removed in a future version.\n\n", c.Args[0], accessKeyFormat)
-		s := text.Warning.Sprintf(warn)
+		s := text.Warning.Sprint(warn)
 		// Trim trailing spaces from each line to avoid lipgloss padding causing wrap artifacts
 		parts := strings.Split(s, "\n")
 		for i := range parts {
@@ -335,7 +335,7 @@ func RunServerlessConnect(c *CmdConfig) error {
 	}
 	// Show deprecation warning for the legacy connection method
 	warn := fmt.Sprintf("Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <%s>' instead.\nThis method will be removed in a future version.\n\n", accessKeyFormat)
-	s := text.Warning.Sprintf(warn)
+	s := text.Warning.Sprint(warn)
 	// Trim trailing spaces from each line to avoid lipgloss padding causing wrap artifacts
 	parts := strings.Split(s, "\n")
 	for i := range parts {
