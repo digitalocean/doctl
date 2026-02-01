@@ -26,6 +26,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	text "github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -39,6 +40,9 @@ var (
 
 	// errUndeployTrigPkg is the error returned when both --packages and --triggers are specified on undeploy
 	errUndeployTrigPkg = errors.New("the `--packages` and `--triggers` flags are mutually exclusive")
+
+	// accessKeyFormat defines the expected format for serverless access keys
+	accessKeyFormat = "dof_v1_<access_key_id>:<secret>"
 
 	// languageKeywords maps the backend's runtime category names to keywords accepted as languages
 	// Note: this table has all languages for which we possess samples.  Only those with currently
@@ -98,6 +102,7 @@ list your namespaces.`,
 	// and hence are unknown to the portal.
 	AddStringFlag(connect, "apihost", "", "", "")
 	AddStringFlag(connect, "auth", "", "", "")
+	AddStringFlag(connect, "access-key", "", "", "Access key for direct serverless connection")
 	connect.Flags().MarkHidden("apihost")
 	connect.Flags().MarkHidden("auth")
 
@@ -138,6 +143,7 @@ the entire packages are removed.`, Writer)
 	cmd.AddCommand(Functions())
 	cmd.AddCommand(Namespaces())
 	cmd.AddCommand(Triggers())
+	cmd.AddCommand(Keys())
 	ServerlessExtras(cmd)
 	return cmd
 }
@@ -230,6 +236,8 @@ func RunServerlessConnect(c *CmdConfig) error {
 	// The presence of 'auth' and 'apihost' flags trumps other parts of the syntax, but both must be present.
 	apihost, _ := c.Doit.GetString(c.NS, "apihost")
 	auth, _ := c.Doit.GetString(c.NS, "auth")
+	accessKey, _ := c.Doit.GetString(c.NS, "access-key")
+
 	if len(apihost) > 0 && len(auth) > 0 {
 		namespace, err := sls.GetNamespaceFromCluster(apihost, auth)
 		if err != nil {
@@ -260,9 +268,62 @@ func RunServerlessConnect(c *CmdConfig) error {
 
 	ctx := context.TODO()
 
+	if len(accessKey) > 0 {
+		// Validate access-key format - support new "dof_v1_" formats
+		if err := validateAccessKeyFormat(accessKey); err != nil {
+			return err
+		}
+
+		// If namespace argument provided, use it directly
+		if len(c.Args) > 0 {
+			// Get the specific namespace the user requested
+			list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
+			if err != nil {
+				return err
+			}
+			if len(list) == 0 {
+				return fmt.Errorf("no namespace found matching '%s'", c.Args[0])
+			}
+			if len(list) > 1 {
+				return fmt.Errorf("multiple namespaces match '%s', please be more specific", c.Args[0])
+			}
+
+			// Use the found namespace with the provided access-key
+			ns := list[0]
+			return connectWithAccessKey(sls, ns, accessKey, c.Out)
+		} else {
+			// No namespace specified, show menu
+			list, err := getMatchingNamespaces(ctx, sls, "")
+			if err != nil {
+				return err
+			}
+			if len(list) == 0 {
+				return errors.New("you must create a namespace first")
+			}
+
+			// Let user choose, then connect with access-key
+			ns := chooseFromList(list, c.Out)
+			if ns.Namespace == "" {
+				return nil // User chose to exit
+			}
+			return connectWithAccessKey(sls, ns, accessKey, c.Out)
+		}
+	}
+
 	// If an arg is specified, retrieve the namespaces that match and proceed according to whether there
 	// are 0, 1, or >1 matches.
 	if len(c.Args) > 0 {
+		// Show deprecation warning for the legacy connection method
+		warn := fmt.Sprintf("Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect %s --access-key <%s>' instead.\nThis method will be removed in a future version.\n\n", c.Args[0], accessKeyFormat)
+		s := text.Warning.Sprint(warn)
+		// Trim trailing spaces from each line to avoid lipgloss padding causing wrap artifacts
+		parts := strings.Split(s, "\n")
+		for i := range parts {
+			parts[i] = strings.TrimRight(parts[i], " ")
+		}
+		s = strings.Join(parts, "\n")
+		fmt.Fprint(c.Out, s)
+
 		list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
 		if err != nil {
 			return err
@@ -272,6 +333,17 @@ func RunServerlessConnect(c *CmdConfig) error {
 		}
 		return connectFromList(ctx, sls, list, c.Out)
 	}
+	// Show deprecation warning for the legacy connection method
+	warn := fmt.Sprintf("Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <%s>' instead.\nThis method will be removed in a future version.\n\n", accessKeyFormat)
+	s := text.Warning.Sprint(warn)
+	// Trim trailing spaces from each line to avoid lipgloss padding causing wrap artifacts
+	parts := strings.Split(s, "\n")
+	for i := range parts {
+		parts[i] = strings.TrimRight(parts[i], " ")
+	}
+	s = strings.Join(parts, "\n")
+	fmt.Fprint(c.Out, s)
+
 	list, err := getMatchingNamespaces(ctx, sls, "")
 	if err != nil {
 		return err
@@ -280,6 +352,41 @@ func RunServerlessConnect(c *CmdConfig) error {
 		return errors.New("you must create a namespace with `doctl serverless namespaces create`, specifying a region and label")
 	}
 	return connectFromList(ctx, sls, list, c.Out)
+}
+
+// validateAccessKeyFormat validates that the access key follows the expected format
+func validateAccessKeyFormat(accessKey string) error {
+	// Check for proper dof_v1_ prefix first (most specific check)
+	if !strings.HasPrefix(accessKey, "dof_v1_") {
+		return fmt.Errorf("access-key must start with 'dof_v1_' prefix (expected format: %s)", accessKeyFormat)
+	}
+
+	// Check for required colon separator
+	if !strings.Contains(accessKey, ":") {
+		return fmt.Errorf("access-key must contain ':' separator (expected format: %s)", accessKeyFormat)
+	}
+
+	// Split and validate both parts exist and are non-empty
+	parts := strings.Split(accessKey, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("access-key must contain exactly one ':' separator (expected format: %s)", accessKeyFormat)
+	}
+
+	token := parts[0]
+	secret := parts[1]
+
+	// Validate token part (after dof_v1_ prefix)
+	tokenPart := strings.TrimPrefix(token, "dof_v1_")
+	if len(tokenPart) == 0 {
+		return fmt.Errorf("access-key token part cannot be empty after 'dof_v1_' prefix (expected format: %s)", accessKeyFormat)
+	}
+
+	// Validate secret part is non-empty
+	if len(secret) == 0 {
+		return fmt.Errorf("access-key secret part cannot be empty (expected format: %s)", accessKeyFormat)
+	}
+
+	return nil
 }
 
 // connectFromList connects a namespace based on a non-empty list of namespaces.  If the list is
@@ -512,4 +619,28 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	}
 	template.Print(`{{success checkmark}} The requested resources have been undeployed.{{nl}}`, nil)
 	return nil
+}
+
+func connectWithAccessKey(sls do.ServerlessService, ns do.OutputNamespace, accessKey string, out io.Writer) error {
+	// Test if the access key works with this namespace's API host
+	namespace, err := sls.GetNamespaceFromCluster(ns.APIHost, accessKey)
+	if err != nil {
+		return fmt.Errorf("failed to connect with provided access-key: %w", err)
+	}
+
+	// Verify it matches the expected namespace
+	if namespace != ns.Namespace {
+		return fmt.Errorf("access-key does not match namespace '%s'", ns.Namespace)
+	}
+
+	// Save credentials using the provided access-key and namespace's API host
+	credential := do.ServerlessCredential{Auth: accessKey}
+	creds := do.ServerlessCredentials{
+		APIHost:     ns.APIHost,
+		Namespace:   ns.Namespace,
+		Label:       ns.Label,
+		Credentials: map[string]map[string]do.ServerlessCredential{ns.APIHost: {ns.Namespace: credential}},
+	}
+
+	return finishConnecting(sls, creds, out)
 }
