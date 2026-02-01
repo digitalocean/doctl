@@ -26,6 +26,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	text "github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -313,9 +314,15 @@ func RunServerlessConnect(c *CmdConfig) error {
 	// are 0, 1, or >1 matches.
 	if len(c.Args) > 0 {
 		// Show deprecation warning for the legacy connection method
-		fmt.Fprintf(c.Out, "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\n")
-		fmt.Fprintf(c.Out, "Please use 'doctl serverless connect %s --access-key <%s>' instead.\n", c.Args[0], accessKeyFormat)
-		fmt.Fprintf(c.Out, "This method will be removed in a future version.\n\n")
+		warn := fmt.Sprintf("Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect %s --access-key <%s>' instead.\nThis method will be removed in a future version.\n\n", c.Args[0], accessKeyFormat)
+		s := text.Warning.Sprintf(warn)
+		// Trim trailing spaces from each line to avoid lipgloss padding causing wrap artifacts
+		parts := strings.Split(s, "\n")
+		for i := range parts {
+			parts[i] = strings.TrimRight(parts[i], " ")
+		}
+		s = strings.Join(parts, "\n")
+		fmt.Fprint(c.Out, s)
 
 		list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
 		if err != nil {
@@ -327,9 +334,15 @@ func RunServerlessConnect(c *CmdConfig) error {
 		return connectFromList(ctx, sls, list, c.Out)
 	}
 	// Show deprecation warning for the legacy connection method
-	fmt.Fprintf(c.Out, "Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\n")
-	fmt.Fprintf(c.Out, "Please use 'doctl serverless connect <namespace> --access-key <%s>' instead.\n", accessKeyFormat)
-	fmt.Fprintf(c.Out, "This method will be removed in a future version.\n\n")
+	warn := fmt.Sprintf("Warning: Connecting to serverless namespaces via DigitalOcean API is deprecated.\nPlease use 'doctl serverless connect <namespace> --access-key <%s>' instead.\nThis method will be removed in a future version.\n\n", accessKeyFormat)
+	s := text.Warning.Sprintf(warn)
+	// Trim trailing spaces from each line to avoid lipgloss padding causing wrap artifacts
+	parts := strings.Split(s, "\n")
+	for i := range parts {
+		parts[i] = strings.TrimRight(parts[i], " ")
+	}
+	s = strings.Join(parts, "\n")
+	fmt.Fprint(c.Out, s)
 
 	list, err := getMatchingNamespaces(ctx, sls, "")
 	if err != nil {
