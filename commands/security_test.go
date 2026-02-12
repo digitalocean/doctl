@@ -50,19 +50,14 @@ var (
 func TestSecurityCommand(t *testing.T) {
 	cmd := Security()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "scan", "finding")
-	assertCommandNames(t, cmd.childCommands[0], "create", "get", "latest", "list")
-	assertCommandNames(t, cmd.childCommands[1], "affected-resources")
+	assertCommandNames(t, cmd, "scans")
+	assertCommandNames(t, cmd.childCommands[0], "affected-resources", "create", "get", "latest", "list")
 }
 
 func TestSecurityScanCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		request := &godo.CreateScanRequest{
-			Resources: []string{"do:droplet"},
-		}
+		request := &godo.CreateScanRequest{}
 		tm.security.EXPECT().CreateScan(request).Return(&testSecurityScan, nil)
-
-		config.Doit.Set(config.NS, doctl.ArgSecurityScanResources, []string{"do:droplet"})
 
 		err := RunCmdSecurityScanCreate(config)
 		assert.NoError(t, err)
@@ -74,7 +69,7 @@ func TestSecurityScanGet(t *testing.T) {
 		opts := &godo.ScanFindingsOptions{Severity: "critical", Type: "CSPM"}
 		tm.security.EXPECT().GetScan(testSecurityScan.Scan.ID, opts).Return(&testSecurityScan, nil)
 
-		config.Args = append(config.Args, testSecurityScan.Scan.ID)
+		config.Args = append(config.Args, testSecurityScan.ID)
 		config.Doit.Set(config.NS, doctl.ArgSecurityScanFindingSeverity, "critical")
 		config.Doit.Set(config.NS, doctl.ArgSecurityScanFindingType, "CSPM")
 
@@ -108,7 +103,7 @@ func TestSecurityFindingAffectedResources(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.security.EXPECT().ListFindingAffectedResources("scan-uuid", "finding-uuid").Return(testSecurityAffectedResources, nil)
 
-		config.Doit.Set(config.NS, doctl.ArgSecurityFindingScanUUID, "scan-uuid")
+		config.Args = append(config.Args, "scan-uuid")
 		config.Doit.Set(config.NS, doctl.ArgSecurityFindingUUID, "finding-uuid")
 
 		err := RunCmdSecurityFindingAffectedResources(config)
