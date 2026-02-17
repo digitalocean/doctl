@@ -33,6 +33,7 @@ type NfsActionsService interface {
 	Snapshot(id, name, region string) (*NfsAction, error)
 	Attach(id, vpcID, region string) (*NfsAction, error)
 	Detach(id, vpcID, region string) (*NfsAction, error)
+	SwitchPerformanceTier(id, tier string) (*NfsAction, error)
 }
 
 type nfsActionsService struct {
@@ -74,6 +75,14 @@ func (s *nfsActionsService) Attach(id, vpcID, region string) (*NfsAction, error)
 
 func (s *nfsActionsService) Detach(id, vpcID, region string) (*NfsAction, error) {
 	action, _, err := s.client.NfsActions.Detach(context.TODO(), id, vpcID, region)
+	if err != nil {
+		return nil, err
+	}
+	return &NfsAction{NfsAction: action}, nil
+}
+
+func (s *nfsActionsService) SwitchPerformanceTier(id, tier string) (*NfsAction, error) {
+	action, _, err := s.client.NfsActions.SwitchPerformanceTier(context.TODO(), id, tier)
 	if err != nil {
 		return nil, err
 	}
