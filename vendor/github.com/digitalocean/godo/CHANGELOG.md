@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.175.0] - 2026-02-12
+
+- #952 - @bentranter - security: add cspm scanning functionality for public preview
+- #951 - @v-amanjain-afk - Add performance tier in nfs model
+
 ## [1.174.0] - 2026-02-09
 
 - #946 - @blesswinsamuel - apps: Update app spec to support InactivitySleep configuration

@@ -78,6 +78,8 @@ type Nfs struct {
 	Host string `json:"host"`
 	// MountPath is the path at which the share will be available
 	MountPath string `json:"mount_path"`
+	//PerformanceTier is the performance tier of the NFS share
+	PerformanceTier string `json:"performance_tier"`
 }
 
 type NfsSnapshot struct {
