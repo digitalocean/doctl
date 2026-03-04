@@ -57,13 +57,13 @@ func SecurityScan() *Command {
 	cmdScanCreate := CmdBuilder(cmd, RunCmdSecurityScanCreate, "create", "Create a CSPM scan", `Creates a new CSPM scan.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.SecurityScan{}))
 	AddBoolFlag(cmdScanCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a scan to complete before returning control to the terminal")
-	cmdScanCreate.Example = `The following example creates a CSPM scan for all droplets: doctl security scan create`
+	cmdScanCreate.Example = `The following example creates a CSPM scan for all droplets: doctl security scans create`
 
 	cmdScanGet := CmdBuilder(cmd, RunCmdSecurityScanGet, "get <scan-uuid>", "Get a CSPM scan", `Retrieves a CSPM scan and its findings.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.SecurityScan{}))
 	AddStringFlag(cmdScanGet, doctl.ArgSecurityScanFindingType, "", "", "Filter findings by type")
 	AddStringFlag(cmdScanGet, doctl.ArgSecurityScanFindingSeverity, "", "", "Filter findings by severity")
-	cmdScanGet.Example = `The following example retrieves a CSPM scan with findings filtered by severity: doctl security scan get 497dcba3-ecbf-4587-a2dd-5eb0665e6880 --severity critical`
+	cmdScanGet.Example = `The following example retrieves a CSPM scan with findings filtered by severity: doctl security scans get 497dcba3-ecbf-4587-a2dd-5eb0665e6880 --severity critical`
 
 	cmdScanLatest := CmdBuilder(cmd, RunCmdSecurityScanLatest, "latest", "Get the latest CSPM scan", `Retrieves the latest CSPM scan and its findings.`, Writer,
 		displayerType(&displayers.SecurityScan{}))
@@ -73,7 +73,7 @@ func SecurityScan() *Command {
 
 	cmdScanList := CmdBuilder(cmd, RunCmdSecurityScanList, "list", "List CSPM scans", `Retrieves a list of CSPM scans.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.SecurityScans{}))
-	cmdScanList.Example = `The following example lists all CSPM scans: doctl security scan list`
+	cmdScanList.Example = `The following example lists all CSPM scans: doctl security scans list`
 
 	cmdScanFindingAffectedResources := CmdBuilder(cmd, RunCmdSecurityFindingAffectedResources, "affected-resources <scan-uuid>", "List scan finding affected resources", `Retrieves the resources affected by the issue identified in a scan finding.`, Writer, displayerType(&displayers.SecurityAffectedResource{}))
 	AddStringFlag(cmdScanFindingAffectedResources, doctl.ArgSecurityFindingUUID, "", "", "Finding UUID to show affected resources for", requiredOpt())
