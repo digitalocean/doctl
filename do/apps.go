@@ -63,6 +63,7 @@ type AppsService interface {
 	CancelJobInvocation(appID, jobInvocationID string, opts *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error)
 
 	ListEvents(appID string, opts *godo.ListEventsOptions) ([]*godo.Event, error)
+	GetEvent(appID, eventID string) (*godo.Event, error)
 	CancelEvent(appID, eventID string) (*godo.Event, error)
 	GetEventLogs(appID, eventID string, opts *godo.GetEventLogsOptions) (*godo.AppLogs, error)
 }
@@ -370,6 +371,14 @@ func (s *appsService) ListEvents(appID string, opts *godo.ListEventsOptions) ([]
 		return nil, err
 	}
 	return events, nil
+}
+
+func (s *appsService) GetEvent(appID, eventID string) (*godo.Event, error) {
+	event, _, err := s.client.Apps.GetEvent(s.ctx, appID, eventID)
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
 }
 
 func (s *appsService) CancelEvent(appID, eventID string) (*godo.Event, error) {

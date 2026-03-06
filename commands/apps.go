@@ -261,6 +261,19 @@ Only basic information is included with the text output format. For the complete
 		displayerType(&displayers.Events{}),
 	)
 
+	CmdBuilder(
+		cmd,
+		RunAppsGetEvent,
+		"get-event <app id> <event id>",
+		"Get an event",
+		`Gets a single event for the given app.
+
+Only basic information is included with the text output format. For the complete event details, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+		Writer,
+		aliasOpt("ge"),
+		displayerType(&displayers.Events{}),
+	)
+
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
@@ -1564,6 +1577,22 @@ func RunAppsCancelEvent(c *CmdConfig) error {
 	eventID := c.Args[1]
 
 	event, err := c.Apps().CancelEvent(appID, eventID)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.Events{event})
+}
+
+// RunAppsGetEvent retrieves a single event for an app.
+func RunAppsGetEvent(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	eventID := c.Args[1]
+
+	event, err := c.Apps().GetEvent(appID, eventID)
 	if err != nil {
 		return err
 	}
