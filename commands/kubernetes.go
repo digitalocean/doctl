@@ -285,8 +285,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to `false`. To enable automatic upgrade, supply `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
-		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", true,
+		"Creates the cluster with a highly-available control plane. Defaults to true (aligns with API default for 1.36.0+); use --ha=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
