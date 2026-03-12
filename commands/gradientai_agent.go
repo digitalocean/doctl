@@ -49,7 +49,6 @@ func AgentCmd() *Command {
 	AddStringFlag(cmdAgentCreate, doctl.ArgKnowledgeBaseId, "", "", "Ids of the knowledge base(s) to attach to the agent")
 	AddStringFlag(cmdAgentCreate, doctl.ArgOpenAIKeyId, "", "", "OpenAI API key ID to use with OpenAI models")
 	AddStringFlag(cmdAgentCreate, doctl.ArgTags, "", "", "Applies a tag to the agent. ")
-	AddStringFlag(cmdAgentCreate, doctl.ArgWorkspaceUuid, "", "", "Identifier for the workspace")
 	cmdAgentCreate.Example = `The following example creates an agent: doctl gradient agent create --name "My Agent" --project-id "12345678-1234-1234-1234-123456789012" --model-id "12345678-1234-1234-1234-123456789013" --region "tor1" --instruction "You are an agent who thinks deeply about the world"`
 
 	AgentDetails := `
@@ -204,27 +203,23 @@ func RunAgentList(c *CmdConfig) error {
 
 // RunAgentCreate creates a new agent.
 func RunAgentCreate(c *CmdConfig) error {
-	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
+	name, err := c.Doit.GetString(c.NS, "name")
 	if err != nil {
 		return err
 	}
-	instruction, err := c.Doit.GetString(c.NS, doctl.ArgAgentInstruction)
+	instruction, err := c.Doit.GetString(c.NS, "instruction")
 	if err != nil {
 		return err
 	}
-	region, err := c.Doit.GetString(c.NS, doctl.ArgAgentRegion)
+	region, err := c.Doit.GetString(c.NS, "region")
 	if err != nil {
 		return err
 	}
-	projectId, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
+	projectId, err := c.Doit.GetString(c.NS, "project-id")
 	if err != nil {
 		return err
 	}
-	modelId, err := c.Doit.GetString(c.NS, doctl.ArgModelId)
-	if err != nil {
-		return err
-	}
-	workspaceUuid, err := c.Doit.GetString(c.NS, doctl.ArgWorkspaceUuid)
+	modelId, err := c.Doit.GetString(c.NS, "model-id")
 	if err != nil {
 		return err
 	}
@@ -235,11 +230,6 @@ func RunAgentCreate(c *CmdConfig) error {
 		ProjectId:   projectId,
 		ModelUuid:   modelId,
 	}
-
-	if workspaceUuid != "" {
-		req.WorkspaceUuid = workspaceUuid
-	}
-
 	agent, err := c.GradientAI().CreateAgent(req)
 	if err != nil {
 		return err

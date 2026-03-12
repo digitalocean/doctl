@@ -46,15 +46,13 @@ func TestRunAgentCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentProjectId, "00000000-0000-4000-8000-000000000000")
 		config.Doit.Set(config.NS, doctl.ArgModelId, "00000000-0000-4000-8000-000000000000")
 		config.Doit.Set(config.NS, doctl.ArgAgentInstruction, "You are an agent who thinks deeply about the world")
-		config.Doit.Set(config.NS, doctl.ArgWorkspaceUuid, "00000000-0000-4000-8000-000000000000")
 
 		expectedRequest := &godo.AgentCreateRequest{
-			Name:          "test-agent",
-			Region:        "tor1",
-			ProjectId:     "00000000-0000-4000-8000-000000000000",
-			ModelUuid:     "00000000-0000-4000-8000-000000000000",
-			Instruction:   "You are an agent who thinks deeply about the world",
-			WorkspaceUuid: "00000000-0000-4000-8000-000000000000",
+			Name:        "test-agent",
+			Region:      "tor1",
+			ProjectId:   "00000000-0000-4000-8000-000000000000",
+			ModelUuid:   "00000000-0000-4000-8000-000000000000",
+			Instruction: "You are an agent who thinks deeply about the world",
 		}
 
 		tm.gradientAI.EXPECT().CreateAgent(expectedRequest).Return(&testAgent, nil)

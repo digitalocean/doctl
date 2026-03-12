@@ -713,9 +713,6 @@ const (
 	// ArgTags are the tags applied to the agent.
 	ArgTags = "tags"
 
-	// ArgWorkspaceUuid is the UUID of the workspace the agent belongs to.
-	ArgWorkspaceUuid = "workspace-uuid"
-
 	// ArgAgentForce forces agent deletion without confirmation.
 	ArgAgentForce = "force"
 
