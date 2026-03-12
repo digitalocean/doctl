@@ -41,7 +41,7 @@ to choose your sample language for `+"`"+`doctl serverless init`+"`"+`.`,
 	deploy := CmdBuilder(cmd, RunServerlessExtraDeploy, "deploy <directory>", "Deploy a functions project to your functions namespace",
 		`At any time you can use `+"`"+`doctl serverless deploy`+"`"+` to upload the contents of a functions project in your file system for
 testing in your serverless namespace.  The project must be organized in the fashion expected by an App Platform Functions
-component.  The `+"`"+`doctl serverless init`+"`"+` command will create a properly organized directory for you to work in.`,
+component.  The `+"`"+`doctl serverless init`+"`"+` command will create a properly organized directory for you to work in. This command requires the `+"`"+`function:admin`+"`"+` scope on your API token.`,
 		Writer)
 	AddStringFlag(deploy, "env", "", "", "Path to runtime environment file")
 	AddStringFlag(deploy, "build-env", "", "", "Path to build-time environment file")

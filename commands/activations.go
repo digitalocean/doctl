@@ -45,7 +45,7 @@ func Activations() *Command {
 			Use:   "activations",
 			Short: "Retrieve activation records",
 			Long: `The subcommands of ` + "`" + `doctl serverless activations` + "`" + ` retrieve results, logs, or complete
-activation records of functions deployed to your functions namespace.`,
+activation records of functions deployed to your functions namespace. This command requires the ` + "`" + `function:admin` + "`" + ` scope on your API token.`,
 			Aliases: []string{"activation", "actv"},
 		},
 	}
