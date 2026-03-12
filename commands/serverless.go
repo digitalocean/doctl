@@ -92,7 +92,7 @@ The optional argument should be a (complete or partial) match to a namespace lab
 If there is no argument, all namespaces are matched.  If the result is exactly one namespace,
 you are connected to it.  If there are multiple namespaces, you have an opportunity to choose
 the one you want from a dialog.  Use `+"`"+`doctl serverless namespaces`+"`"+` to create, delete, and
-list your namespaces.`,
+list your namespaces. This command requires the `+"`"+`function:admin`+"`"+` scope on your API token.`,
 		Writer)
 	// The apihost and auth flags will always be hidden.  They support testing using doctl on clusters that are not in production
 	// and hence are unknown to the portal.
