@@ -37,7 +37,7 @@ func Functions() *Command {
 		Command: &cobra.Command{
 			Use:     "functions",
 			Short:   "Work with the functions in your namespace",
-			Long:    `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` manage your functions namespace, such as listing, reviewing, and invoking your functions.`,
+			Long:    `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` manage your functions namespace, such as listing, reviewing, and invoking your functions. This command requires the ` + "`" + `function:admin` + "`" + ` scope on your API token.`,
 			Aliases: []string{"function", "fn"},
 		},
 	}
