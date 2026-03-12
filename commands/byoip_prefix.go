@@ -63,7 +63,7 @@ BYOIP Prefixes can be held in the region they were created in on your account.`,
 
 	cmdRunBYOIPPrefixResourcesList := CmdBuilder(cmd, RunBYOIPPrefixResourcesGet, "resource", "List all the Resource for a BYOIP Prefix", "Retrieves a list of all the Resources in your prefix.", Writer,
 		aliasOpt("resources"), displayerType(&displayers.BYOIPPrefixResource{}))
-	cmdRunBYOIPPrefixResourcesList.Example = `The following example lists all resources in a byoip prefix: doctl network byoip-prefix resources 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
+	cmdRunBYOIPPrefixResourcesList.Example = `The following example lists all resources in a byoip prefix: doctl network byoip-prefix resource 5ae545c4-0ac4-42bb-9de5-8eca3d17f1c0`
 
 	return cmd
 }

@@ -72,7 +72,7 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentBGPAuthKey, "", "", "BGP Auth Key")
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentRedundancyZone, "", "", "Redundancy Zone (optional)")
 	AddStringFlag(cmdPartnerAttachmentCreate, doctl.ArgPartnerAttachmentParentUUID, "", "", "HA Parent UUID (optional)")
-	cmdPartnerAttachmentCreate.Example = `The following example creates a Partner Attachment: doctl network connect create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
+	cmdPartnerAttachmentCreate.Example = `The following example creates a Partner Attachment: doctl network attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	partnerAttachmentDetails := `
 - The Partner Attachment ID
