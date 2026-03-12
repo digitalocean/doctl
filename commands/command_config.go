@@ -86,6 +86,7 @@ type CmdConfig struct {
 	GradientAI         func() do.GradientAIService
 	Nfs                func() do.NfsService
 	NfsActions         func() do.NfsActionsService
+	Security           func() do.SecurityService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -152,6 +153,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.GradientAI = func() do.GradientAIService { return do.NewGradientAIService(godoClient) }
 			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
 			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
+			c.Security = func() do.SecurityService { return do.NewSecurityService(godoClient) }
 			return nil
 		},
 

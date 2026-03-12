@@ -661,6 +661,17 @@ const (
 	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
 	ArgAlertPolicySlackURLs = "slack-urls"
 
+	// Security Args
+
+	// ArgSecurityScanResources are the resources to scan.
+	ArgSecurityScanResources = "resources"
+	// ArgSecurityScanFindingSeverity filters findings by severity.
+	ArgSecurityScanFindingSeverity = "severity"
+	// ArgSecurityScanFindingType filters findings by type.
+	ArgSecurityScanFindingType = "type"
+	// ArgSecurityFindingUUID is the finding UUID for finding operations.
+	ArgSecurityFindingUUID = "finding-uuid"
+
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
 
