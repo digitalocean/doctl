@@ -617,6 +617,44 @@ func TestKubernetesCreate(t *testing.T) {
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
 	})
+
+	// Test HA default: when ArgHA is set to true (simulating the default when --ha is omitted),
+	// the create request includes HA: true.
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		clusterName := "ha-default-cluster"
+		r := godo.KubernetesClusterCreateRequest{
+			Name:        clusterName,
+			RegionSlug:  "sfo2",
+			VersionSlug: "1.13.0",
+			NodePools: []*godo.KubernetesNodePoolCreateRequest{
+				{
+					Name:  clusterName + "-default-pool",
+					Size:  "s-1vcpu-2gb",
+					Count: 3,
+				},
+			},
+			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
+				StartTime: "00:00",
+				Day:       godo.KubernetesMaintenanceDayAny,
+			},
+			AutoUpgrade:  false,
+			SurgeUpgrade: true,
+			HA:          true, // default when --ha is omitted
+		}
+		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
+
+		config.Args = append(config.Args, clusterName)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "sfo2")
+		config.Doit.Set(config.NS, doctl.ArgClusterVersionSlug, "1.13.0")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "s-1vcpu-2gb")
+		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, 3)
+		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
+		config.Doit.Set(config.NS, doctl.ArgSurgeUpgrade, true)
+		config.Doit.Set(config.NS, doctl.ArgHA, true) // simulates default when flag omitted
+
+		err := testK8sCmdService().RunKubernetesClusterCreate("s-1vcpu-2gb", 3)(config)
+		assert.NoError(t, err)
+	})
 }
 
 func TestKubernetesUpdate(t *testing.T) {
