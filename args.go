@@ -161,6 +161,10 @@ const (
 	ArgEnableNvidiaGpuDevicePlugin = "enable-nvidia-gpu-device-plugin"
 	// ArgEnableRDMASharedDevicePlugin enables automatic NVIDIA gpu device plugin installation.
 	ArgEnableRDMASharedDevicePlugin = "enable-rdma-shared-device-plugin"
+	// ArgKubernetesEnableSSO enables SSO as a method of authentication for the DOKS cluster.
+	ArgKubernetesEnableSSO = "enable-sso"
+	// ArgKubernetesRequireSSO requires SSO as the only method of authentication for the DOKS cluster.
+	ArgKubernetesRequireSSO = "require-sso"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
