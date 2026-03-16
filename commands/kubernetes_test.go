@@ -526,7 +526,7 @@ func TestKubernetesCreate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: true,
-			HA:          true,
+			HA:          boolPtr(true),
 			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
@@ -571,7 +571,7 @@ func TestKubernetesCreate(t *testing.T) {
 			),
 		})
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
-		config.Doit.Set(config.NS, doctl.ArgHA, testCluster.HA)
+		config.Doit.Set(config.NS, doctl.ArgHA, true)
 
 		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
@@ -615,6 +615,43 @@ func TestKubernetesCreate(t *testing.T) {
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 		tm.oneClick.EXPECT().InstallKubernetes(testCluster.ID, []string{"slug1", "slug2"})
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
+		assert.NoError(t, err)
+	})
+
+	// Test HA omitted: when ArgHA is not set, the create request has HA: nil (API applies version-specific default).
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		clusterName := "ha-omit-cluster"
+		r := godo.KubernetesClusterCreateRequest{
+			Name:        clusterName,
+			RegionSlug:  "sfo2",
+			VersionSlug: "1.13.0",
+			NodePools: []*godo.KubernetesNodePoolCreateRequest{
+				{
+					Name:  clusterName + "-default-pool",
+					Size:  "s-1vcpu-2gb",
+					Count: 3,
+				},
+			},
+			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
+				StartTime: "00:00",
+				Day:       godo.KubernetesMaintenanceDayAny,
+			},
+			AutoUpgrade:  false,
+			SurgeUpgrade: true,
+			HA:          nil, // omitted when --ha not passed
+		}
+		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
+
+		config.Args = append(config.Args, clusterName)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "sfo2")
+		config.Doit.Set(config.NS, doctl.ArgClusterVersionSlug, "1.13.0")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "s-1vcpu-2gb")
+		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, 3)
+		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
+		config.Doit.Set(config.NS, doctl.ArgSurgeUpgrade, true)
+		// Do NOT set ArgHA - simulates user omitting --ha
+
+		err := testK8sCmdService().RunKubernetesClusterCreate("s-1vcpu-2gb", 3)(config)
 		assert.NoError(t, err)
 	})
 }
