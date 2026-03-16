@@ -526,7 +526,7 @@ func TestKubernetesCreate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: true,
-			HA:          true,
+			HA:          boolPtr(true),
 			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
@@ -571,7 +571,7 @@ func TestKubernetesCreate(t *testing.T) {
 			),
 		})
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
-		config.Doit.Set(config.NS, doctl.ArgHA, testCluster.HA)
+		config.Doit.Set(config.NS, doctl.ArgHA, true)
 
 		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
@@ -618,10 +618,9 @@ func TestKubernetesCreate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	// Test HA default: when ArgHA is set to true (simulating the default when --ha is omitted),
-	// the create request includes HA: true.
+	// Test HA omitted: when ArgHA is not set, the create request has HA: nil (API applies version-specific default).
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		clusterName := "ha-default-cluster"
+		clusterName := "ha-omit-cluster"
 		r := godo.KubernetesClusterCreateRequest{
 			Name:        clusterName,
 			RegionSlug:  "sfo2",
@@ -639,7 +638,7 @@ func TestKubernetesCreate(t *testing.T) {
 			},
 			AutoUpgrade:  false,
 			SurgeUpgrade: true,
-			HA:          true, // default when --ha is omitted
+			HA:          nil, // omitted when --ha not passed
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -650,7 +649,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, 3)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgSurgeUpgrade, true)
-		config.Doit.Set(config.NS, doctl.ArgHA, true) // simulates default when flag omitted
+		// Do NOT set ArgHA - simulates user omitting --ha
 
 		err := testK8sCmdService().RunKubernetesClusterCreate("s-1vcpu-2gb", 3)(config)
 		assert.NoError(t, err)

@@ -54,6 +54,10 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				if strings.Contains(string(reqBody), "some-non-ha-cluster") {
 					matchedRequest = kubeClustersCreateNonHAJSONReq
 				}
+				// When --ha is omitted, request has no "ha" field; API applies version-specific default
+				if strings.Contains(string(reqBody), "some-cluster-name") && !strings.Contains(string(reqBody), `"ha"`) {
+					matchedRequest = kubeClustersCreateJSONReqOmitHA
+				}
 
 				expect.JSONEq(string(reqBody), matchedRequest)
 
@@ -284,6 +288,27 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "auto_upgrade": false,
   "surge_upgrade": true,
   "ha": true,
+  "maintenance_policy": {
+    "day": "any",
+    "duration": "",
+    "start_time": "00:00"
+  },
+  "node_pools": [
+    {
+      "size": "s-1vcpu-2gb-intel",
+      "count": 3,
+      "name": "some-cluster-name-default-pool"
+    }
+  ]
+}
+`
+	kubeClustersCreateJSONReqOmitHA = `
+{
+  "name": "some-cluster-name",
+  "region": "mars",
+  "version": "some-kube-version",
+  "auto_upgrade": false,
+  "surge_upgrade": true,
   "maintenance_policy": {
     "day": "any",
     "duration": "",
