@@ -99,3 +99,18 @@ func (mr *MockNfsActionsServiceMockRecorder) Snapshot(id, name, region any) *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockNfsActionsService)(nil).Snapshot), id, name, region)
 }
+
+// SwitchPerformanceTier mocks base method.
+func (m *MockNfsActionsService) SwitchPerformanceTier(id, tier string) (*do.NfsAction, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SwitchPerformanceTier", id, tier)
+	ret0, _ := ret[0].(*do.NfsAction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SwitchPerformanceTier indicates an expected call of SwitchPerformanceTier.
+func (mr *MockNfsActionsServiceMockRecorder) SwitchPerformanceTier(id, tier any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchPerformanceTier", reflect.TypeOf((*MockNfsActionsService)(nil).SwitchPerformanceTier), id, tier)
+}

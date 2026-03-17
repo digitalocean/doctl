@@ -42,9 +42,10 @@ func Nfs() *Command {
 	AddStringFlag(cmdNfsCreate, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddStringFlag(cmdNfsCreate, "size", "s", "", "the size of the NFS share in GiB", requiredOpt())
 	AddStringSliceFlag(cmdNfsCreate, "vpc-ids", "", nil, "the list of VPC IDs that should be able to access the share", requiredOpt())
+	AddStringFlag(cmdNfsCreate, "performance-tier", "", "", "the performance tier of the NFS share", requiredOpt())
 	cmdNfsCreate.Example =
-		`doctl nfs create --name sammy-nfs-share --region 'atl1' --size 50 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b
-doctl nfs create --name my-nfs-share --region 'nyc2' --size 100 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b`
+		`doctl nfs create --name sammy-nfs-share --region 'atl1' --size 50 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b --performance-tier standard
+doctl nfs create --name my-nfs-share --region 'nyc2' --size 100 --vpc-ids 74922c16-5466-42a5-ac58-0e8069918b6b --performance-tier standard`
 
 	cmdNfsGet := CmdBuilder(cmd, nfsGet, "get [flags]", "Get an NFS share by ID", "Get an NFS share with the given ID and region.", Writer, displayerType(&displayers.Nfs{}))
 	AddStringFlag(cmdNfsGet, "id", "", "", "the ID of the NFS share", requiredOpt())
@@ -88,6 +89,13 @@ doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 	AddBoolFlag(cmdNfsDetach, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 	cmdNfsDetach.Example =
 		`doctl nfs detach --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --vpc_id example-vpc-id`
+
+	cmdNfsSwitchPerformanceTier := CmdBuilder(cmd, nfsSwitchPerformanceTier, "switch-performance-tier [flags]", "Switch the performance tier of an NFS share", "Switch the performance tier of an NFS share with the given ID and tier.", Writer)
+	AddStringFlag(cmdNfsSwitchPerformanceTier, "id", "", "", "the ID of the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsSwitchPerformanceTier, "performance-tier", "", "", "the performance tier of the NFS share", requiredOpt())
+	AddBoolFlag(cmdNfsSwitchPerformanceTier, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	cmdNfsSwitchPerformanceTier.Example =
+		`doctl nfs switch-performance-tier --id b050990d-4337-4a9d-9c8d-9f759a83936a --performance-tier high`
 
 	cmd.AddCommand(nfsSnapshots())
 
@@ -160,11 +168,13 @@ func nfsCreate(c *CmdConfig) error {
 		return err
 	}
 
+	performanceTier, _ := c.Doit.GetString(c.NS, "performance-tier")
 	r := &godo.NfsCreateRequest{
-		Name:    name,
-		Region:  region,
-		SizeGib: size,
-		VpcIDs:  vpcIDs,
+		Name:            name,
+		Region:          region,
+		SizeGib:         size,
+		VpcIDs:          vpcIDs,
+		PerformanceTier: performanceTier,
 	}
 
 	share, err := c.Nfs().Create(r)
@@ -380,6 +390,38 @@ func nfsDetach(c *CmdConfig) error {
 	}
 
 	action, err := c.NfsActions().Detach(id, vpcIdStr, region)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := actionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
+	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
+	return c.Display(item)
+}
+
+func nfsSwitchPerformanceTier(c *CmdConfig) error {
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+
+	performanceTier, err := c.Doit.GetString(c.NS, "performance-tier")
+	if err != nil {
+		return err
+	}
+
+	action, err := c.NfsActions().SwitchPerformanceTier(id, performanceTier)
 	if err != nil {
 		return err
 	}

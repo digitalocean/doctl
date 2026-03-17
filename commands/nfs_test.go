@@ -59,7 +59,7 @@ var (
 func TestNfsCommand(t *testing.T) {
 	cmd := Nfs()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "delete", "snapshot", "resize", "attach", "detach")
+	assertCommandNames(t, cmd, "create", "list", "get", "delete", "snapshot", "resize", "attach", "detach", "switch-performance-tier")
 }
 
 func TestRunNfsCreate(t *testing.T) {
@@ -80,10 +80,11 @@ func TestRunNfsCreate(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				if !tc.expectErr {
 					req := &godo.NfsCreateRequest{
-						Name:    "sammy-share",
-						Region:  "atl1",
-						SizeGib: 1024,
-						VpcIDs:  []string{"a0ca4d02-1c86-4330-a4ff-310ee60c7de0"},
+						Name:            "sammy-share",
+						Region:          "atl1",
+						SizeGib:         1024,
+						VpcIDs:          []string{"a0ca4d02-1c86-4330-a4ff-310ee60c7de0"},
+						PerformanceTier: "standard",
 					}
 					tm.nfs.EXPECT().Create(req).Return(&testNfs, nil)
 				}
@@ -92,7 +93,7 @@ func TestRunNfsCreate(t *testing.T) {
 				config.Doit.Set(config.NS, "region", tc.args[1])
 				config.Doit.Set(config.NS, "size", tc.args[2])
 				config.Doit.Set(config.NS, "vpc-ids", []string{tc.args[3]})
-
+				config.Doit.Set(config.NS, "performance-tier", "standard")
 				err := nfsCreate(config)
 				if tc.expectErr {
 					require.Error(t, err)
@@ -484,6 +485,55 @@ func TestRunNfsDetach(t *testing.T) {
 				config.Doit.Set(config.NS, "wait", tc.wait)
 
 				err := nfsDetach(config)
+				if tc.expectErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestRunNfsSwitchPerformanceTier(t *testing.T) {
+	testCases := []struct {
+		name            string
+		id              string
+		performanceTier string
+		wait            bool
+		expectErr       bool
+	}{
+		{
+			name:            "success without wait",
+			id:              testId,
+			performanceTier: "standard",
+			wait:            false,
+			expectErr:       false,
+		},
+		{
+			name:            "success with wait",
+			id:              testId,
+			performanceTier: "premium",
+			wait:            true,
+			expectErr:       false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if !tc.expectErr {
+					tm.nfsActions.EXPECT().SwitchPerformanceTier(tc.id, tc.performanceTier).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+					}
+				}
+
+				config.Doit.Set(config.NS, "id", tc.id)
+				config.Doit.Set(config.NS, "performance-tier", tc.performanceTier)
+				config.Doit.Set(config.NS, "wait", tc.wait)
+
+				err := nfsSwitchPerformanceTier(config)
 				if tc.expectErr {
 					require.Error(t, err)
 				} else {

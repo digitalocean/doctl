@@ -294,6 +294,7 @@ type tcMocks struct {
 	gradientAI            *domocks.MockGradientAIService
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
+	security              *domocks.MockSecurityService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -351,6 +352,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		gradientAI:            domocks.NewMockGradientAIService(ctrl),
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
+		security:              domocks.NewMockSecurityService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -416,6 +418,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		GradientAI:         func() do.GradientAIService { return tm.gradientAI },
 		Nfs:                func() do.NfsService { return tm.nfs },
 		NfsActions:         func() do.NfsActionsService { return tm.nfsActions },
+		Security:           func() do.SecurityService { return tm.security },
 	}
 
 	tFn(config, tm)
