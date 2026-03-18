@@ -47,6 +47,9 @@ func TestAppsCommand(t *testing.T) {
 		"update-alert-destinations",
 		"list-buildpacks",
 		"upgrade-buildpack",
+		"cancel-event",
+		"get-event",
+		"list-events",
 	)
 }
 

@@ -48,6 +48,10 @@ const (
 	ArgAppJobName = "job-name"
 	// ArgAppJobInvocation is the job invocation ID.
 	ArgAppJobInvocation = "job-invocation"
+	// ArgAppEventID is the event ID.
+	ArgAppEventID = "event-id"
+	// ArgAppEventType is the event type filter.
+	ArgAppEventType = "event-type"
 	// ArgAppInstanceName is the instance name of currently running instances (optional).
 	ArgAppInstanceName = "instance-name"
 	// ArgAppDevConfig is the path to the app dev link config.
