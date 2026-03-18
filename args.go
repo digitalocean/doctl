@@ -846,4 +846,12 @@ const (
 
 	// ArgOpenAIKeyAPIKey is the API key for the OpenAI API Key
 	ArgOpenAIKeyAPIKey = "api-key"
+
+	// Dedicated Inference Args
+
+	// ArgDedicatedInferenceSpec is the path to a dedicated inference spec file.
+	ArgDedicatedInferenceSpec = "spec"
+
+	// ArgDedicatedInferenceHuggingFaceToken is the Hugging Face token (optional).
+	ArgDedicatedInferenceHuggingFaceToken = "hugging-face-token"
 )
