@@ -307,6 +307,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Creates the cluster with nvidia gpu device plugin installed. Defaults to true for clusters with NVIDIA GPUs and otherwise false. To always enable it, supply --enable-nvidia-gpu-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRDMASharedDevicePlugin, "", false,
 		"Creates the cluster with k8s-rdma-shared-dev-plugin device plugin installed. Defaults to true for clusters with GPU nodes connected to a dedicated high-speed networking fabric. To always enable it, supply --enable-rdma-shared-device-plugin=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgKubernetesEnableSSO, "", false,
+		"Creates the cluster with SSO method of authentication enabled. IDP for SSO is configured on the Team level.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgKubernetesRequireSSO, "", false,
+		"Creates the cluster with SSO required as the only method of authentication. IDP for SSO is configured on the Team level.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -365,6 +369,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with nvidia gpu device plugin installed. Defaults to true for clusters with NVIDIA GPUs and otherwise false. To always enable it, supply --enable-nvidia-gpu-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRDMASharedDevicePlugin, "", false,
 		"Creates the cluster with k8s-rdma-shared-dev-plugin device plugin installed. Defaults to true for clusters with GPU nodes connected to a dedicated high-speed networking fabric. To always enable it, supply --enable-rdma-shared-device-plugin=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesEnableSSO, "", false,
+		"Enables SSO method of authentication for the cluster. IDP for SSO is configured on the Team level.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesRequireSSO, "", false,
+		"Sets up SSO method of authentication as required for the cluster. IDP for SSO is configured on the Team level.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
 		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
@@ -1787,6 +1795,11 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
+	r.SSO, err = ssoConfigFromArgs(c)
+	if err != nil {
+		return fmt.Errorf("building SSO configuration: %w", err)
+	}
+
 	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
 	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
 	if err != nil {
@@ -1998,6 +2011,11 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 				Enabled: enableRDMASharedDevicePlugin,
 			}
 		}
+	}
+
+	r.SSO, err = ssoConfigFromArgs(c)
+	if err != nil {
+		return fmt.Errorf("building SSO configuration: %w", err)
 	}
 
 	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
@@ -2850,6 +2868,24 @@ func parseTaint(rawTaint string) (godo.Taint, error) {
 		Value:  value,
 		Effect: effect,
 	}, nil
+}
+
+func ssoConfigFromArgs(c *CmdConfig) (*godo.KubernetesClusterSSO, error) {
+	enableSSO, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgKubernetesEnableSSO)
+	if err != nil {
+		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesEnableSSO, err)
+	}
+	requireSSO, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgKubernetesRequireSSO)
+	if err != nil {
+		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesRequireSSO, err)
+	}
+	if enableSSO != nil || requireSSO != nil {
+		return &godo.KubernetesClusterSSO{
+			Enabled:  enableSSO,
+			Required: requireSSO,
+		}, nil
+	}
+	return nil, nil
 }
 
 func boolPtr(val bool) *bool {

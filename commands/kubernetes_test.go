@@ -553,6 +553,10 @@ func TestKubernetesCreate(t *testing.T) {
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			SSO: &godo.KubernetesClusterSSO{
+				Enabled:  boolPtr(true),
+				Required: boolPtr(false),
+			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -584,6 +588,8 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesRequireSSO, false)
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -657,6 +663,9 @@ func TestKubernetesUpdate(t *testing.T) {
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			SSO: &godo.KubernetesClusterSSO{
+				Enabled: boolPtr(true),
+			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -675,6 +684,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
