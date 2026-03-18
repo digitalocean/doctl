@@ -61,6 +61,11 @@ type AppsService interface {
 	GetJobInvocation(appID string, jobInvocationID string, opts *godo.GetJobInvocationOptions) (*godo.JobInvocation, error)
 	GetJobInvocationLogs(appID, jobInvocationID string, opts *godo.GetJobInvocationLogsOptions) (*godo.AppLogs, error)
 	CancelJobInvocation(appID, jobInvocationID string, opts *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error)
+
+	ListEvents(appID string, opts *godo.ListEventsOptions) ([]*godo.Event, error)
+	GetEvent(appID, eventID string) (*godo.Event, error)
+	CancelEvent(appID, eventID string) (*godo.Event, error)
+	GetEventLogs(appID, eventID string, opts *godo.GetEventLogsOptions) (*godo.AppLogs, error)
 }
 
 type appsService struct {
@@ -358,4 +363,36 @@ func (s *appsService) CancelJobInvocation(appID, jobInvocationID string, opts *g
 		return nil, err
 	}
 	return jobInvocation, nil
+}
+
+func (s *appsService) ListEvents(appID string, opts *godo.ListEventsOptions) ([]*godo.Event, error) {
+	events, _, err := s.client.Apps.ListEvents(s.ctx, appID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+func (s *appsService) GetEvent(appID, eventID string) (*godo.Event, error) {
+	event, _, err := s.client.Apps.GetEvent(s.ctx, appID, eventID)
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (s *appsService) CancelEvent(appID, eventID string) (*godo.Event, error) {
+	event, _, err := s.client.Apps.CancelEvent(s.ctx, appID, eventID)
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func (s *appsService) GetEventLogs(appID, eventID string, opts *godo.GetEventLogsOptions) (*godo.AppLogs, error) {
+	logs, _, err := s.client.Apps.GetEventLogs(s.ctx, appID, eventID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return logs, nil
 }
