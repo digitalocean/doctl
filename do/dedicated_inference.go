@@ -36,6 +36,7 @@ type DedicatedInferenceToken struct {
 type DedicatedInferenceService interface {
 	Create(req *godo.DedicatedInferenceCreateRequest) (*DedicatedInference, *DedicatedInferenceToken, error)
 	Get(id string) (*DedicatedInference, error)
+	Delete(id string) error
 }
 
 var _ DedicatedInferenceService = &dedicatedInferenceService{}
@@ -71,4 +72,10 @@ func (s *dedicatedInferenceService) Get(id string) (*DedicatedInference, error) 
 		return nil, err
 	}
 	return &DedicatedInference{DedicatedInference: d}, nil
+}
+
+// Delete deletes a dedicated inference endpoint by ID.
+func (s *dedicatedInferenceService) Delete(id string) error {
+	_, err := s.client.DedicatedInference.Delete(context.TODO(), id)
+	return err
 }

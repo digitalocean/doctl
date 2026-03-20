@@ -57,6 +57,20 @@ func (mr *MockDedicatedInferenceServiceMockRecorder) Create(req any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Create), req)
 }
 
+// Delete mocks base method.
+func (m *MockDedicatedInferenceService) Delete(id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockDedicatedInferenceServiceMockRecorder) Delete(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Delete), id)
+}
+
 // Get mocks base method.
 func (m *MockDedicatedInferenceService) Get(id string) (*do.DedicatedInference, error) {
 	m.ctrl.T.Helper()

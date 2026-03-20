@@ -72,6 +72,7 @@ func TestDedicatedInferenceCommand(t *testing.T) {
 	}
 	assert.True(t, subcommands["create"], "Expected create subcommand")
 	assert.True(t, subcommands["get"], "Expected get subcommand")
+	assert.True(t, subcommands["delete"], "Expected delete subcommand")
 }
 
 func TestRunDedicatedInferenceCreate(t *testing.T) {
@@ -165,6 +166,25 @@ func TestRunDedicatedInferenceGet(t *testing.T) {
 func TestRunDedicatedInferenceGet_MissingID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDedicatedInferenceGet(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceDelete(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.dedicatedInferences.EXPECT().Delete("00000000-0000-4000-8000-000000000000").Return(nil)
+
+		config.Args = append(config.Args, "00000000-0000-4000-8000-000000000000")
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+		err := RunDedicatedInferenceDelete(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceDelete_MissingID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDedicatedInferenceDelete(config)
 		assert.Error(t, err)
 	})
 }

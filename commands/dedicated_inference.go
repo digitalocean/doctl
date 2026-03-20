@@ -70,6 +70,18 @@ For more information, see https://docs.digitalocean.com/reference/api/digitaloce
 	)
 	cmdGet.Example = `The following example retrieves a dedicated inference endpoint: doctl dedicated-inference get 12345678-1234-1234-1234-123456789012`
 
+	cmdDelete := CmdBuilder(
+		cmd,
+		RunDedicatedInferenceDelete,
+		"delete <dedicated-inference-id>",
+		"Delete a dedicated inference endpoint",
+		`Deletes a dedicated inference endpoint by its ID. All associated resources will be destroyed.`,
+		Writer,
+		aliasOpt("d", "rm"),
+	)
+	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the dedicated inference endpoint without a confirmation prompt")
+	cmdDelete.Example = `The following example deletes a dedicated inference endpoint: doctl dedicated-inference delete 12345678-1234-1234-1234-123456789012`
+
 	return cmd
 }
 
@@ -153,4 +165,23 @@ func RunDedicatedInferenceGet(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.DedicatedInference{DedicatedInferences: do.DedicatedInferences{*endpoint}})
+}
+
+// RunDedicatedInferenceDelete deletes a dedicated inference endpoint by ID.
+func RunDedicatedInferenceDelete(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("dedicated inference endpoint", 1) == nil {
+		id := c.Args[0]
+		return c.DedicatedInferences().Delete(id)
+	}
+
+	return errOperationAborted
 }
