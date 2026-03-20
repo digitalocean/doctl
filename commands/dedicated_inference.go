@@ -54,7 +54,9 @@ Optionally provide a Hugging Face access token using `+"`"+`--hugging-face-token
 	)
 	AddStringFlag(cmdCreate, doctl.ArgDedicatedInferenceSpec, "", "", `Path to a dedicated inference spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgDedicatedInferenceHuggingFaceToken, "", "", "Hugging Face token for accessing gated models (optional)")
-	cmdCreate.Example = `The following example creates a dedicated inference endpoint using a spec file: doctl dedicated-inference create --spec spec.yaml --hugging-face-token "hf_mytoken"`
+	cmdCreate.Example = `The following example creates a dedicated inference endpoint using a spec file: doctl dedicated-inference create --spec spec.yaml --hugging-face-token "hf_mytoken"
+
+For more information, see https://docs.digitalocean.com/reference/api/digitalocean/#tag/Dedicated-Inference/operation/dedicatedInferences_create`
 
 	return cmd
 }
