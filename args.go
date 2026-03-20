@@ -854,4 +854,7 @@ const (
 
 	// ArgDedicatedInferenceHuggingFaceToken is the Hugging Face token (optional).
 	ArgDedicatedInferenceHuggingFaceToken = "hugging-face-token"
+
+	// ArgDedicatedInferenceAcceleratorSlug filters accelerators by slug (optional).
+	ArgDedicatedInferenceAcceleratorSlug = "slug"
 )
