@@ -48,6 +48,10 @@ const (
 	ArgAppJobName = "job-name"
 	// ArgAppJobInvocation is the job invocation ID.
 	ArgAppJobInvocation = "job-invocation"
+	// ArgAppEventID is the event ID.
+	ArgAppEventID = "event-id"
+	// ArgAppEventType is the event type filter.
+	ArgAppEventType = "event-type"
 	// ArgAppInstanceName is the instance name of currently running instances (optional).
 	ArgAppInstanceName = "instance-name"
 	// ArgAppDevConfig is the path to the app dev link config.
@@ -842,4 +846,12 @@ const (
 
 	// ArgOpenAIKeyAPIKey is the API key for the OpenAI API Key
 	ArgOpenAIKeyAPIKey = "api-key"
+
+	// Dedicated Inference Args
+
+	// ArgDedicatedInferenceSpec is the path to a dedicated inference spec file.
+	ArgDedicatedInferenceSpec = "spec"
+
+	// ArgDedicatedInferenceHuggingFaceToken is the Hugging Face token (optional).
+	ArgDedicatedInferenceHuggingFaceToken = "hugging-face-token"
 )

@@ -232,20 +232,64 @@ Only basic information is included with the text output format. For the complete
 		displayerType(&displayers.JobInvocations{}),
 	)
 
+	listEvents := CmdBuilder(
+		cmd,
+		RunAppsListEvents,
+		"list-events <app id>",
+		"List app events",
+		`Lists all events for the given app, including deployments and autoscaling events.
+
+Only basic information is included with the text output format. For the complete event details, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+		Writer,
+		aliasOpt("lse"),
+		displayerType(&displayers.Events{}),
+	)
+	AddStringSliceFlag(listEvents, doctl.ArgAppEventType, "", []string{}, "Filter events by type (e.g. DEPLOYMENT, AUTOSCALING).")
+
+	listEvents.Example = `The following example retrieves the list of events for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps list-events f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+
+	CmdBuilder(
+		cmd,
+		RunAppsCancelEvent,
+		"cancel-event <app id> <event id>",
+		"Cancel an event",
+		`Cancels an in-progress autoscaling event for the given app.
+
+Only basic information is included with the text output format. For the complete event details, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+		Writer,
+		aliasOpt("ce"),
+		displayerType(&displayers.Events{}),
+	)
+
+	CmdBuilder(
+		cmd,
+		RunAppsGetEvent,
+		"get-event <app id> <event id>",
+		"Get an event",
+		`Gets a single event for the given app.
+
+Only basic information is included with the text output format. For the complete event details, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
+		Writer,
+		aliasOpt("ge"),
+		displayerType(&displayers.Events{}),
+	)
+
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
 		"logs <app name or id> <component name (defaults to all components)>",
 		"Retrieves logs",
-		`Retrieves component logs for a deployment or a job invocation of an app.
+		`Retrieves component logs for a deployment, a job invocation, or an autoscaling event of an app.
 
-Three types of logs are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
+These types of logs are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
 - build
 - deploy
 - run
 - run_restarted
+- autoscale_event
 
 To retrieve job invocation logs, pass the job invocation ID with the --`+doctl.ArgAppJobInvocation+` flag.
+To retrieve autoscaling event logs, pass the event ID with the --`+doctl.ArgAppEventID+` flag.
 
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
@@ -254,6 +298,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	)
 	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "Retrieves logs for a specific deployment ID. Defaults to current deployment.")
 	AddStringFlag(logs, doctl.ArgAppJobInvocation, "", "", "Retrieves logs for a specific job invocation ID.")
+	AddStringFlag(logs, doctl.ArgAppEventID, "", "", "Retrieves logs for a specific autoscaling event ID.")
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "Retrieves logs for a specific log type. Defaults to run logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Returns logs as they are emitted by the app.")
 	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Specifies the number of lines to show from the end of the log.")
@@ -727,6 +772,11 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		return err
 	}
 
+	eventID, err := c.Doit.GetString(c.NS, doctl.ArgAppEventID)
+	if err != nil {
+		return err
+	}
+
 	_, err = uuid.Parse(appID)
 	if err != nil || deploymentID == "" {
 		app, err := c.Apps().Find(appID)
@@ -736,7 +786,7 @@ func RunAppsGetLogs(c *CmdConfig) error {
 
 		appID = app.ID
 
-		if deploymentID == "" {
+		if deploymentID == "" && eventID == "" {
 			if app.ActiveDeployment != nil {
 				deploymentID = app.ActiveDeployment.ID
 			} else if app.InProgressDeployment != nil {
@@ -761,9 +811,11 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		logType = godo.AppLogTypeRun
 	case strings.ToLower(string(godo.AppLogTypeRunRestarted)):
 		logType = godo.AppLogTypeRunRestarted
+	case strings.ToLower(string(godo.AppLogTypeAutoscaleEvent)):
+		logType = godo.AppLogTypeAutoscaleEvent
 	default:
-		// if jobInvocationID is provided, we can skip the logType validation as logType will be set to JOB_INVOCATION
-		if jobInvocationID == "" {
+		// if jobInvocationID or eventID is provided, we can skip the logType validation
+		if jobInvocationID == "" && eventID == "" {
 			return fmt.Errorf("Invalid log type %s", logTypeStr)
 		}
 	}
@@ -782,7 +834,14 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	}
 
 	var logs *godo.AppLogs
-	if jobInvocationID != "" {
+	if eventID != "" {
+		opts := &godo.GetEventLogsOptions{
+			Follow:    logFollow,
+			TailLines: logTail,
+		}
+
+		logs, err = c.Apps().GetEventLogs(appID, eventID, opts)
+	} else if jobInvocationID != "" {
 		if component == "" {
 			return fmt.Errorf("component name is required when job invocation id is provided")
 		}
@@ -1482,4 +1541,61 @@ func RunAppsCancelJobInvocation(c *CmdConfig) error {
 	}
 
 	return c.Display(displayers.JobInvocations{jobInvocation})
+}
+
+// RunAppsListEvents lists all events for an app.
+func RunAppsListEvents(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+
+	eventTypes, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAppEventType)
+	if err != nil {
+		return err
+	}
+
+	opts := &godo.ListEventsOptions{}
+	if len(eventTypes) > 0 {
+		opts.EventTypes = eventTypes
+	}
+
+	events, err := c.Apps().ListEvents(appID, opts)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.Events(events))
+}
+
+// RunAppsCancelEvent cancels an in-progress autoscaling event.
+func RunAppsCancelEvent(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	eventID := c.Args[1]
+
+	event, err := c.Apps().CancelEvent(appID, eventID)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.Events{event})
+}
+
+// RunAppsGetEvent retrieves a single event for an app.
+func RunAppsGetEvent(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	eventID := c.Args[1]
+
+	event, err := c.Apps().GetEvent(appID, eventID)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.Events{event})
 }
