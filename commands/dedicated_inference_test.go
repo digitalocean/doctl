@@ -65,15 +65,13 @@ func TestDedicatedInferenceCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "dedicated-inference", cmd.Name())
 
-	// Verify create is a subcommand
-	found := false
+	// Verify subcommands
+	subcommands := make(map[string]bool)
 	for _, c := range cmd.Commands() {
-		if c.Name() == "create" {
-			found = true
-			break
-		}
+		subcommands[c.Name()] = true
 	}
-	assert.True(t, found, "Expected create subcommand")
+	assert.True(t, subcommands["create"], "Expected create subcommand")
+	assert.True(t, subcommands["get"], "Expected get subcommand")
 }
 
 func TestRunDedicatedInferenceCreate(t *testing.T) {
@@ -150,5 +148,23 @@ func TestRunDedicatedInferenceCreate_WithHuggingFaceToken(t *testing.T) {
 
 		err = RunDedicatedInferenceCreate(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.dedicatedInferences.EXPECT().Get("00000000-0000-4000-8000-000000000000").Return(&testDedicatedInference, nil)
+
+		config.Args = append(config.Args, "00000000-0000-4000-8000-000000000000")
+
+		err := RunDedicatedInferenceGet(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceGet_MissingID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDedicatedInferenceGet(config)
+		assert.Error(t, err)
 	})
 }

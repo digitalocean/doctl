@@ -35,6 +35,7 @@ type DedicatedInferenceToken struct {
 // DedicatedInferenceService is an interface for interacting with DigitalOcean's Dedicated Inference API.
 type DedicatedInferenceService interface {
 	Create(req *godo.DedicatedInferenceCreateRequest) (*DedicatedInference, *DedicatedInferenceToken, error)
+	Get(id string) (*DedicatedInference, error)
 }
 
 var _ DedicatedInferenceService = &dedicatedInferenceService{}
@@ -61,4 +62,13 @@ func (s *dedicatedInferenceService) Create(req *godo.DedicatedInferenceCreateReq
 		token = &DedicatedInferenceToken{DedicatedInferenceToken: t}
 	}
 	return &DedicatedInference{DedicatedInference: d}, token, nil
+}
+
+// Get retrieves a dedicated inference endpoint by ID.
+func (s *dedicatedInferenceService) Get(id string) (*DedicatedInference, error) {
+	d, _, err := s.client.DedicatedInference.Get(context.TODO(), id)
+	if err != nil {
+		return nil, err
+	}
+	return &DedicatedInference{DedicatedInference: d}, nil
 }

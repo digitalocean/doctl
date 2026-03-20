@@ -56,3 +56,18 @@ func (mr *MockDedicatedInferenceServiceMockRecorder) Create(req any) *gomock.Cal
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Create), req)
 }
+
+// Get mocks base method.
+func (m *MockDedicatedInferenceService) Get(id string) (*do.DedicatedInference, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", id)
+	ret0, _ := ret[0].(*do.DedicatedInference)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockDedicatedInferenceServiceMockRecorder) Get(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Get), id)
+}
