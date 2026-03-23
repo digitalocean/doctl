@@ -57,6 +57,35 @@ func (mr *MockDedicatedInferenceServiceMockRecorder) Create(req any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Create), req)
 }
 
+// Delete mocks base method.
+func (m *MockDedicatedInferenceService) Delete(id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockDedicatedInferenceServiceMockRecorder) Delete(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Delete), id)
+}
+
+// ListAccelerators mocks base method.
+func (m *MockDedicatedInferenceService) ListAccelerators(diID string, slug string) (do.DedicatedInferenceAcceleratorInfos, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAccelerators", diID, slug)
+	ret0, _ := ret[0].(do.DedicatedInferenceAcceleratorInfos)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAccelerators indicates an expected call of ListAccelerators.
+func (mr *MockDedicatedInferenceServiceMockRecorder) ListAccelerators(diID any, slug any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccelerators", reflect.TypeOf((*MockDedicatedInferenceService)(nil).ListAccelerators), diID, slug)
+}
+
 // Get mocks base method.
 func (m *MockDedicatedInferenceService) Get(id string) (*do.DedicatedInference, error) {
 	m.ctrl.T.Helper()

@@ -71,3 +71,51 @@ func (d *DedicatedInference) KV() []map[string]any {
 	}
 	return out
 }
+
+// DedicatedInferenceAccelerator wraps a slice of accelerator info for display.
+type DedicatedInferenceAccelerator struct {
+	DedicatedInferenceAcceleratorInfos do.DedicatedInferenceAcceleratorInfos
+}
+
+var _ Displayable = &DedicatedInferenceAccelerator{}
+
+func (d *DedicatedInferenceAccelerator) JSON(out io.Writer) error {
+	return writeJSON(d.DedicatedInferenceAcceleratorInfos, out)
+}
+
+func (d *DedicatedInferenceAccelerator) Cols() []string {
+	return []string{
+		"ID",
+		"Name",
+		"Slug",
+		"Status",
+		"CreatedAt",
+	}
+}
+
+func (d *DedicatedInferenceAccelerator) ColMap() map[string]string {
+	return map[string]string{
+		"ID":        "ID",
+		"Name":      "Name",
+		"Slug":      "Slug",
+		"Status":    "Status",
+		"CreatedAt": "Created At",
+	}
+}
+
+func (d *DedicatedInferenceAccelerator) KV() []map[string]any {
+	if d == nil || d.DedicatedInferenceAcceleratorInfos == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(d.DedicatedInferenceAcceleratorInfos))
+	for _, a := range d.DedicatedInferenceAcceleratorInfos {
+		out = append(out, map[string]any{
+			"ID":        a.ID,
+			"Name":      a.Name,
+			"Slug":      a.Slug,
+			"Status":    a.Status,
+			"CreatedAt": a.CreatedAt,
+		})
+	}
+	return out
+}

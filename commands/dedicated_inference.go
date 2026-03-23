@@ -70,6 +70,34 @@ For more information, see https://docs.digitalocean.com/reference/api/digitaloce
 	)
 	cmdGet.Example = `The following example retrieves a dedicated inference endpoint: doctl dedicated-inference get 12345678-1234-1234-1234-123456789012`
 
+	cmdDelete := CmdBuilder(
+		cmd,
+		RunDedicatedInferenceDelete,
+		"delete <dedicated-inference-id>",
+		"Delete a dedicated inference endpoint",
+		`Deletes a dedicated inference endpoint by its ID. All associated resources will be destroyed.`,
+		Writer,
+		aliasOpt("d", "rm"),
+	)
+	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the dedicated inference endpoint without a confirmation prompt")
+	cmdDelete.Example = `The following example deletes a dedicated inference endpoint: doctl dedicated-inference delete 12345678-1234-1234-1234-123456789012`
+
+	cmdListAccelerators := CmdBuilder(
+		cmd,
+		RunDedicatedInferenceListAccelerators,
+		"list-accelerators <dedicated-inference-id>",
+		"List accelerators for a dedicated inference endpoint",
+		`Lists the accelerators provisioned for a dedicated inference endpoint, including their IDs, names, slugs, and statuses.
+Optionally use `+"`"+`--slug`+"`"+` to filter by accelerator slug.`,
+		Writer,
+		aliasOpt("la"),
+		displayerType(&displayers.DedicatedInferenceAccelerator{}),
+	)
+	AddStringFlag(cmdListAccelerators, doctl.ArgDedicatedInferenceAcceleratorSlug, "", "", "Filter accelerators by slug (optional)")
+	cmdListAccelerators.Example = `The following example lists accelerators for a dedicated inference endpoint: doctl dedicated-inference list-accelerators 12345678-1234-1234-1234-123456789012
+
+The following example filters by slug: doctl dedicated-inference list-accelerators 12345678-1234-1234-1234-123456789012 --slug gpu-mi300x1-192gb`
+
 	return cmd
 }
 
@@ -153,4 +181,39 @@ func RunDedicatedInferenceGet(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.DedicatedInference{DedicatedInferences: do.DedicatedInferences{*endpoint}})
+}
+
+// RunDedicatedInferenceListAccelerators lists accelerators for a dedicated inference endpoint.
+func RunDedicatedInferenceListAccelerators(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	diID := c.Args[0]
+
+	slug, _ := c.Doit.GetString(c.NS, doctl.ArgDedicatedInferenceAcceleratorSlug)
+
+	accelerators, err := c.DedicatedInferences().ListAccelerators(diID, slug)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.DedicatedInferenceAccelerator{DedicatedInferenceAcceleratorInfos: accelerators})
+}
+
+// RunDedicatedInferenceDelete deletes a dedicated inference endpoint by ID.
+func RunDedicatedInferenceDelete(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("dedicated inference endpoint", 1) == nil {
+		id := c.Args[0]
+		return c.DedicatedInferences().Delete(id)
+	}
+
+	return errOperationAborted
 }
