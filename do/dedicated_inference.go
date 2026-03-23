@@ -44,6 +44,7 @@ type DedicatedInferenceAcceleratorInfos []DedicatedInferenceAcceleratorInfo
 type DedicatedInferenceService interface {
 	Create(req *godo.DedicatedInferenceCreateRequest) (*DedicatedInference, *DedicatedInferenceToken, error)
 	Get(id string) (*DedicatedInference, error)
+	Update(id string, req *godo.DedicatedInferenceUpdateRequest) (*DedicatedInference, error)
 	Delete(id string) error
 	ListAccelerators(diID string, slug string) (DedicatedInferenceAcceleratorInfos, error)
 }
@@ -77,6 +78,15 @@ func (s *dedicatedInferenceService) Create(req *godo.DedicatedInferenceCreateReq
 // Get retrieves a dedicated inference endpoint by ID.
 func (s *dedicatedInferenceService) Get(id string) (*DedicatedInference, error) {
 	d, _, err := s.client.DedicatedInference.Get(context.TODO(), id)
+	if err != nil {
+		return nil, err
+	}
+	return &DedicatedInference{DedicatedInference: d}, nil
+}
+
+// Update updates a dedicated inference endpoint by ID.
+func (s *dedicatedInferenceService) Update(id string, req *godo.DedicatedInferenceUpdateRequest) (*DedicatedInference, error) {
+	d, _, err := s.client.DedicatedInference.Update(context.TODO(), id, req)
 	if err != nil {
 		return nil, err
 	}
