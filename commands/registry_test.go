@@ -129,7 +129,7 @@ var (
 	invalidGCUUID         = "invalid-gc-uuid"
 	testTime              = time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC)
 	testGarbageCollection = &do.GarbageCollection{
-		&godo.GarbageCollection{
+		GarbageCollection: &godo.GarbageCollection{
 			UUID:         testGCUUID,
 			RegistryName: testRegistryName,
 			Status:       testGCStatus,
