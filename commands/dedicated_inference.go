@@ -82,6 +82,22 @@ For more information, see https://docs.digitalocean.com/reference/api/digitaloce
 	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the dedicated inference endpoint without a confirmation prompt")
 	cmdDelete.Example = `The following example deletes a dedicated inference endpoint: doctl dedicated-inference delete 12345678-1234-1234-1234-123456789012`
 
+	cmdUpdate := CmdBuilder(
+		cmd,
+		RunDedicatedInferenceUpdate,
+		"update <dedicated-inference-id>",
+		"Update a dedicated inference endpoint",
+		`Updates a dedicated inference endpoint using a spec file in JSON or YAML format.
+Use the `+"`"+`--spec`+"`"+` flag to provide the path to the updated spec file.
+Optionally provide a Hugging Face access token using `+"`"+`--hugging-face-token`+"`"+`.`,
+		Writer,
+		aliasOpt("u"),
+		displayerType(&displayers.DedicatedInference{}),
+	)
+	AddStringFlag(cmdUpdate, doctl.ArgDedicatedInferenceSpec, "", "", `Path to a dedicated inference spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	AddStringFlag(cmdUpdate, doctl.ArgDedicatedInferenceHuggingFaceToken, "", "", "Hugging Face token for accessing gated models (optional)")
+	cmdUpdate.Example = `The following example updates a dedicated inference endpoint using a spec file: doctl dedicated-inference update 12345678-1234-1234-1234-123456789012 --spec spec.yaml`
+
 	cmdListAccelerators := CmdBuilder(
 		cmd,
 		RunDedicatedInferenceListAccelerators,
@@ -177,6 +193,41 @@ func RunDedicatedInferenceGet(c *CmdConfig) error {
 	id := c.Args[0]
 
 	endpoint, err := c.DedicatedInferences().Get(id)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.DedicatedInference{DedicatedInferences: do.DedicatedInferences{*endpoint}})
+}
+
+// RunDedicatedInferenceUpdate updates a dedicated inference endpoint.
+func RunDedicatedInferenceUpdate(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	id := c.Args[0]
+
+	specPath, err := c.Doit.GetString(c.NS, doctl.ArgDedicatedInferenceSpec)
+	if err != nil {
+		return err
+	}
+
+	spec, err := readDedicatedInferenceSpec(os.Stdin, specPath)
+	if err != nil {
+		return err
+	}
+
+	req := &godo.DedicatedInferenceUpdateRequest{
+		Spec: spec,
+	}
+
+	hfToken, _ := c.Doit.GetString(c.NS, doctl.ArgDedicatedInferenceHuggingFaceToken)
+	if hfToken != "" {
+		req.Secrets = &godo.DedicatedInferenceSecrets{
+			HuggingFaceToken: hfToken,
+		}
+	}
+
+	endpoint, err := c.DedicatedInferences().Update(id, req)
 	if err != nil {
 		return err
 	}

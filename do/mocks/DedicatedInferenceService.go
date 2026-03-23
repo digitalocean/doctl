@@ -100,3 +100,18 @@ func (mr *MockDedicatedInferenceServiceMockRecorder) Get(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Get), id)
 }
+
+// Update mocks base method.
+func (m *MockDedicatedInferenceService) Update(id string, req *godo.DedicatedInferenceUpdateRequest) (*do.DedicatedInference, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", id, req)
+	ret0, _ := ret[0].(*do.DedicatedInference)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockDedicatedInferenceServiceMockRecorder) Update(id any, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Update), id, req)
+}

@@ -72,6 +72,7 @@ func TestDedicatedInferenceCommand(t *testing.T) {
 	}
 	assert.True(t, subcommands["create"], "Expected create subcommand")
 	assert.True(t, subcommands["get"], "Expected get subcommand")
+	assert.True(t, subcommands["update"], "Expected update subcommand")
 	assert.True(t, subcommands["delete"], "Expected delete subcommand")
 	assert.True(t, subcommands["list-accelerators"], "Expected list-accelerators subcommand")
 }
@@ -186,6 +187,93 @@ func TestRunDedicatedInferenceDelete(t *testing.T) {
 func TestRunDedicatedInferenceDelete_MissingID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDedicatedInferenceDelete(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceUpdate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		specJSON := `{
+			"version": 0,
+			"name": "test-dedicated-inference",
+			"region": "nyc2",
+			"vpc": {"uuid": "00000000-0000-4000-8000-000000000001"},
+			"enable_public_endpoint": true,
+			"model_deployments": [
+				{
+					"model_slug": "mistral/mistral-7b-instruct-v3",
+					"model_provider": "hugging_face",
+					"accelerators": [
+						{"scale": 2, "type": "prefill", "accelerator_slug": "gpu-mi300x1-192gb"},
+						{"scale": 4, "type": "decode", "accelerator_slug": "gpu-mi300x1-192gb"}
+					]
+				}
+			]
+		}`
+		tmpFile := t.TempDir() + "/spec.json"
+		err := os.WriteFile(tmpFile, []byte(specJSON), 0644)
+		assert.NoError(t, err)
+
+		config.Args = append(config.Args, "00000000-0000-4000-8000-000000000000")
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceSpec, tmpFile)
+
+		expectedReq := &godo.DedicatedInferenceUpdateRequest{
+			Spec: testDedicatedInferenceSpecRequest,
+		}
+
+		updatedDI := testDedicatedInference
+		tm.dedicatedInferences.EXPECT().Update("00000000-0000-4000-8000-000000000000", expectedReq).Return(&updatedDI, nil)
+
+		err = RunDedicatedInferenceUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceUpdate_WithHuggingFaceToken(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		specJSON := `{
+			"version": 0,
+			"name": "test-dedicated-inference",
+			"region": "nyc2",
+			"vpc": {"uuid": "00000000-0000-4000-8000-000000000001"},
+			"enable_public_endpoint": true,
+			"model_deployments": [
+				{
+					"model_slug": "mistral/mistral-7b-instruct-v3",
+					"model_provider": "hugging_face",
+					"accelerators": [
+						{"scale": 2, "type": "prefill", "accelerator_slug": "gpu-mi300x1-192gb"},
+						{"scale": 4, "type": "decode", "accelerator_slug": "gpu-mi300x1-192gb"}
+					]
+				}
+			]
+		}`
+		tmpFile := t.TempDir() + "/spec.json"
+		err := os.WriteFile(tmpFile, []byte(specJSON), 0644)
+		assert.NoError(t, err)
+
+		config.Args = append(config.Args, "00000000-0000-4000-8000-000000000000")
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceSpec, tmpFile)
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceHuggingFaceToken, "hf_test_token")
+
+		expectedReq := &godo.DedicatedInferenceUpdateRequest{
+			Spec: testDedicatedInferenceSpecRequest,
+			Secrets: &godo.DedicatedInferenceSecrets{
+				HuggingFaceToken: "hf_test_token",
+			},
+		}
+
+		updatedDI := testDedicatedInference
+		tm.dedicatedInferences.EXPECT().Update("00000000-0000-4000-8000-000000000000", expectedReq).Return(&updatedDI, nil)
+
+		err = RunDedicatedInferenceUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceUpdate_MissingID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDedicatedInferenceUpdate(config)
 		assert.Error(t, err)
 	})
 }
