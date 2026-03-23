@@ -58,6 +58,18 @@ Optionally provide a Hugging Face access token using `+"`"+`--hugging-face-token
 
 For more information, see https://docs.digitalocean.com/reference/api/digitalocean/#tag/Dedicated-Inference/operation/dedicatedInferences_create`
 
+	cmdGet := CmdBuilder(
+		cmd,
+		RunDedicatedInferenceGet,
+		"get <dedicated-inference-id>",
+		"Retrieve a dedicated inference endpoint",
+		`Retrieves details about a dedicated inference endpoint, including its ID, name, region, status, VPC, endpoints, and deployment specs.`,
+		Writer,
+		aliasOpt("g"),
+		displayerType(&displayers.DedicatedInference{}),
+	)
+	cmdGet.Example = `The following example retrieves a dedicated inference endpoint: doctl dedicated-inference get 12345678-1234-1234-1234-123456789012`
+
 	return cmd
 }
 
@@ -123,6 +135,20 @@ func RunDedicatedInferenceCreate(c *CmdConfig) error {
 	}
 
 	endpoint, _, err := c.DedicatedInferences().Create(req)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.DedicatedInference{DedicatedInferences: do.DedicatedInferences{*endpoint}})
+}
+
+// RunDedicatedInferenceGet retrieves a dedicated inference endpoint by ID.
+func RunDedicatedInferenceGet(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	id := c.Args[0]
+
+	endpoint, err := c.DedicatedInferences().Get(id)
 	if err != nil {
 		return err
 	}
