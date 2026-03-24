@@ -44,7 +44,7 @@ var _ = suite("dedicated-inference/create-token", func(t *testing.T, when spec.G
 					t.Fatal("failed to read request body")
 				}
 
-				var createReq map[string]interface{}
+				var createReq map[string]any
 				err = json.Unmarshal(body, &createReq)
 				if err != nil {
 					t.Fatalf("failed to parse request body: %s", err)

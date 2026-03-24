@@ -45,7 +45,7 @@ var _ = suite("dedicated-inference/update", func(t *testing.T, when spec.G, it s
 					t.Fatal("failed to read request body")
 				}
 
-				var updateReq map[string]interface{}
+				var updateReq map[string]any
 				err = json.Unmarshal(body, &updateReq)
 				if err != nil {
 					t.Fatalf("failed to parse request body: %s", err)
