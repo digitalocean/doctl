@@ -173,7 +173,7 @@ Provide the dedicated inference ID and the token ID as arguments.`,
 		aliasOpt("rt"),
 	)
 	AddBoolFlag(cmdRevokeToken, doctl.ArgForce, doctl.ArgShortForce, false, "Revoke the token without a confirmation prompt")
-	cmdRevokeToken.Example = `The following example revokes an auth token: doctl dedicated-inference revoke-token 12345678-1234-1234-1234-123456789012 tok-abc123`
+	cmdRevokeToken.Example = `The following example revokes an auth token: doctl dedicated-inference revoke-token 12345678-1234-1234-1234-123456789012 12345678-0000-0000-1234-123456789012`
 
 	cmdGetSizes := CmdBuilder(
 		cmd,
