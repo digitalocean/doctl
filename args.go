@@ -857,4 +857,13 @@ const (
 
 	// ArgDedicatedInferenceAcceleratorSlug filters accelerators by slug (optional).
 	ArgDedicatedInferenceAcceleratorSlug = "slug"
+
+	// ArgDedicatedInferenceRegion filters dedicated inferences by region (optional).
+	ArgDedicatedInferenceRegion = "region"
+
+	// ArgDedicatedInferenceName filters dedicated inferences by name (optional).
+	ArgDedicatedInferenceName = "name"
+
+	// ArgDedicatedInferenceTokenName is the name for a dedicated inference auth token.
+	ArgDedicatedInferenceTokenName = "token-name"
 )

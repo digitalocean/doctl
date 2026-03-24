@@ -86,6 +86,111 @@ func (mr *MockDedicatedInferenceServiceMockRecorder) ListAccelerators(diID any, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccelerators", reflect.TypeOf((*MockDedicatedInferenceService)(nil).ListAccelerators), diID, slug)
 }
 
+// List mocks base method.
+func (m *MockDedicatedInferenceService) List(region string, name string) (do.DedicatedInferenceListItems, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", region, name)
+	ret0, _ := ret[0].(do.DedicatedInferenceListItems)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockDedicatedInferenceServiceMockRecorder) List(region any, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDedicatedInferenceService)(nil).List), region, name)
+}
+
+// Update mocks base method.
+func (m *MockDedicatedInferenceService) Update(id string, req *godo.DedicatedInferenceUpdateRequest) (*do.DedicatedInference, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", id, req)
+	ret0, _ := ret[0].(*do.DedicatedInference)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockDedicatedInferenceServiceMockRecorder) Update(id any, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockDedicatedInferenceService)(nil).Update), id, req)
+}
+
+// CreateToken mocks base method.
+func (m *MockDedicatedInferenceService) CreateToken(diID string, req *godo.DedicatedInferenceTokenCreateRequest) (*do.DedicatedInferenceToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateToken", diID, req)
+	ret0, _ := ret[0].(*do.DedicatedInferenceToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateToken indicates an expected call of CreateToken.
+func (mr *MockDedicatedInferenceServiceMockRecorder) CreateToken(diID any, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateToken", reflect.TypeOf((*MockDedicatedInferenceService)(nil).CreateToken), diID, req)
+}
+
+// ListTokens mocks base method.
+func (m *MockDedicatedInferenceService) ListTokens(diID string) (do.DedicatedInferenceTokens, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTokens", diID)
+	ret0, _ := ret[0].(do.DedicatedInferenceTokens)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTokens indicates an expected call of ListTokens.
+func (mr *MockDedicatedInferenceServiceMockRecorder) ListTokens(diID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTokens", reflect.TypeOf((*MockDedicatedInferenceService)(nil).ListTokens), diID)
+}
+
+// RevokeToken mocks base method.
+func (m *MockDedicatedInferenceService) RevokeToken(diID string, tokenID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeToken", diID, tokenID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeToken indicates an expected call of RevokeToken.
+func (mr *MockDedicatedInferenceServiceMockRecorder) RevokeToken(diID any, tokenID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeToken", reflect.TypeOf((*MockDedicatedInferenceService)(nil).RevokeToken), diID, tokenID)
+}
+
+// GetSizes mocks base method.
+func (m *MockDedicatedInferenceService) GetSizes() ([]string, do.DedicatedInferenceSizes, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSizes")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(do.DedicatedInferenceSizes)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetSizes indicates an expected call of GetSizes.
+func (mr *MockDedicatedInferenceServiceMockRecorder) GetSizes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSizes", reflect.TypeOf((*MockDedicatedInferenceService)(nil).GetSizes))
+}
+
+// GetGPUModelConfig mocks base method.
+func (m *MockDedicatedInferenceService) GetGPUModelConfig() (do.DedicatedInferenceGPUModelConfigs, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGPUModelConfig")
+	ret0, _ := ret[0].(do.DedicatedInferenceGPUModelConfigs)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGPUModelConfig indicates an expected call of GetGPUModelConfig.
+func (mr *MockDedicatedInferenceServiceMockRecorder) GetGPUModelConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGPUModelConfig", reflect.TypeOf((*MockDedicatedInferenceService)(nil).GetGPUModelConfig))
+}
+
 // Get mocks base method.
 func (m *MockDedicatedInferenceService) Get(id string) (*do.DedicatedInference, error) {
 	m.ctrl.T.Helper()
