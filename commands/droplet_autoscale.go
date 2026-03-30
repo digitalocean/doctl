@@ -57,6 +57,7 @@ You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale 
 		AddStringFlag(c, doctl.ArgVPCUUID, "", "", "Droplet VPC UUID")
 		AddBoolFlag(c, doctl.ArgDropletAgent, "", true, "Enable droplet agent")
 		AddStringFlag(c, doctl.ArgProjectID, "", "", "Droplet project ID")
+		AddBoolFlag(c, doctl.ArgPublicNetworking, "", true, "Enable public networking")
 		AddBoolFlag(c, doctl.ArgIPv6, "", true, "Enable droplet IPv6")
 		AddStringFlag(c, doctl.ArgUserData, "", "", "Droplet user data")
 	}
@@ -202,6 +203,14 @@ func buildDropletAutoscaleRequestFromArgs(c *CmdConfig, r *godo.DropletAutoscale
 				return err
 			}
 			r.DropletTemplate.WithDropletAgent = enableAgent
+			return nil
+		},
+		func() error {
+			publicNetworking, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgPublicNetworking)
+			if err != nil {
+				return err
+			}
+			r.DropletTemplate.PublicNetworking = publicNetworking
 			return nil
 		},
 		func() error {
