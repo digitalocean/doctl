@@ -666,6 +666,59 @@ func TestDropletCreateWithAgent(t *testing.T) {
 	}
 }
 
+func TestDropletCreateWithPublicNetworking(t *testing.T) {
+	boolF := false
+	boolT := true
+	tests := []struct {
+		name             string
+		publicNetworking *bool
+	}{
+		{
+			name:             "with public-networking true",
+			publicNetworking: &boolT,
+		},
+		{
+			name:             "with public-networking false",
+			publicNetworking: &boolF,
+		},
+		{
+			name:             "with public-networking unset",
+			publicNetworking: &boolT,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				dcr := &godo.DropletCreateRequest{
+					Name:              "droplet",
+					Region:            "nyc3",
+					Size:              "s-1gb-1vcpu",
+					Image:             godo.DropletCreateImage{ID: 0, Slug: "image"},
+					SSHKeys:           []godo.DropletCreateSSHKey{},
+					Backups:           false,
+					IPv6:              false,
+					PrivateNetworking: false,
+					PublicNetworking:  tt.publicNetworking,
+				}
+
+				tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+
+				config.Args = append(config.Args, "droplet")
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+				config.Doit.Set(config.NS, doctl.ArgSizeSlug, "s-1gb-1vcpu")
+				config.Doit.Set(config.NS, doctl.ArgImage, "image")
+				if tt.publicNetworking != nil {
+					config.Doit.Set(config.NS, doctl.ArgPublicNetworking, tt.publicNetworking)
+				}
+
+				err := RunDropletCreate(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
 func TestDropletGetBackupPolicy(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.droplets.EXPECT().GetBackupPolicy(testDropletBackupPolicy.DropletID).Return(&testDropletBackupPolicy, nil)

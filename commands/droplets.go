@@ -87,6 +87,9 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddIntFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enables private networking for the Droplet by provisioning it inside of your account's default VPC for the region")
+
+	AddBoolFlag(cmdDropletCreate, doctl.ArgPublicNetworking, "", true, "Enables public networking for the Droplet. By default, this is always enabled on new droplets, but by explicitly setting it to false, you can create a droplet with public networking entirely disabled.")
+
 	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Installs the DigitalOcean agent for additional monitoring")
 	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "An ID or slug specifying the image to use to create the Droplet, such as `ubuntu-20-04-x64`. Use the commands under `doctl compute image` to find additional images.",
 		requiredOpt())
@@ -217,6 +220,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	publicNetworking, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgPublicNetworking)
+	if err != nil {
+		return err
+	}
+
 	monitoring, err := c.Doit.GetBool(c.NS, doctl.ArgMonitoring)
 	if err != nil {
 		return err
@@ -318,6 +326,7 @@ func RunDropletCreate(c *CmdConfig) error {
 			BackupPolicy:      backupPolicy,
 			IPv6:              ipv6,
 			PrivateNetworking: privateNetworking,
+			PublicNetworking:  publicNetworking,
 			Monitoring:        monitoring,
 			SSHKeys:           sshKeys,
 			UserData:          userData,

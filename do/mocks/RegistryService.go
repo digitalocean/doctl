@@ -157,21 +157,6 @@ func (mr *MockRegistryServiceMockRecorder) Get() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRegistryService)(nil).Get))
 }
 
-// List mocks base method.
-func (m *MockRegistryService) List() ([]do.Registry, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].([]do.Registry)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockRegistryServiceMockRecorder) List() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRegistryService)(nil).List))
-}
-
 // GetAvailableRegions mocks base method.
 func (m *MockRegistryService) GetAvailableRegions() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -215,6 +200,21 @@ func (m *MockRegistryService) GetSubscriptionTiers() ([]do.RegistrySubscriptionT
 func (mr *MockRegistryServiceMockRecorder) GetSubscriptionTiers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionTiers", reflect.TypeOf((*MockRegistryService)(nil).GetSubscriptionTiers))
+}
+
+// List mocks base method.
+func (m *MockRegistryService) List() ([]do.Registry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].([]do.Registry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockRegistryServiceMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRegistryService)(nil).List))
 }
 
 // ListGarbageCollections mocks base method.

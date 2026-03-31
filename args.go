@@ -229,6 +229,8 @@ const (
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.
 	ArgPrivateNetworking = "enable-private-networking"
+	// ArgPublicNetworking is an enable public networking argument.
+	ArgPublicNetworking = "enable-public-networking"
 	// ArgMonitoring is an enable monitoring argument.
 	ArgMonitoring = "enable-monitoring"
 	// ArgDropletAgent is an argument for enabling/disabling the Droplet agent.
