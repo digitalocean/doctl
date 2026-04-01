@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.182.0] - 2026-03-31
+
+- #978 - @jkosanam - Add access key CRUD operations to FunctionsService
+- #980 - @kirineni-do - Add is managed field in response of list auth tokens
+
 ## [1.181.0] - 2026-03-30
 
 - #972 - @v-amanjain-afk - implemented reassign workflow

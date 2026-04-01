@@ -193,8 +193,8 @@ var _ = suite("dedicated-inference/create-token", func(t *testing.T, when spec.G
 
 const (
 	dedicatedInferenceCreateTokenOutput = `
-ID       Name        Value               Created At
-tok-1    my-token    secret-token-123    2023-01-01 00:00:00 +0000 UTC
+ID       Name        Is Managed    Value               Created At
+tok-1    my-token    false         secret-token-123    2023-01-01 00:00:00 +0000 UTC
 `
 	dedicatedInferenceCreateTokenFormatOutput = `
 ID       Name
@@ -207,6 +207,7 @@ tok-1    my-token
     "id": "tok-1",
     "name": "my-token",
     "value": "secret-token-123",
+    "is_managed": false,
     "created_at": "2023-01-01T00:00:00Z"
   }
 }

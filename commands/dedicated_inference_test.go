@@ -53,9 +53,10 @@ var (
 
 	testDedicatedInferenceToken = &do.DedicatedInferenceToken{
 		DedicatedInferenceToken: &godo.DedicatedInferenceToken{
-			ID:    "tok-1",
-			Name:  "default",
-			Value: "secret-token-value",
+			ID:        "tok-1",
+			Name:      "default",
+			Value:     "secret-token-value",
+			IsManaged: false,
 		},
 	}
 )
@@ -418,9 +419,10 @@ func TestRunDedicatedInferenceCreateToken(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		testToken := &do.DedicatedInferenceToken{
 			DedicatedInferenceToken: &godo.DedicatedInferenceToken{
-				ID:    "tok-123",
-				Name:  "my-token",
-				Value: "secret-value-abc",
+				ID:        "tok-123",
+				Name:      "my-token",
+				Value:     "secret-value-abc",
+				IsManaged: false,
 			},
 		}
 
@@ -450,14 +452,16 @@ func TestRunDedicatedInferenceListTokens(t *testing.T) {
 		testTokens := do.DedicatedInferenceTokens{
 			{
 				DedicatedInferenceToken: &godo.DedicatedInferenceToken{
-					ID:   "tok-1",
-					Name: "default",
+					ID:        "tok-1",
+					Name:      "default",
+					IsManaged: true,
 				},
 			},
 			{
 				DedicatedInferenceToken: &godo.DedicatedInferenceToken{
-					ID:   "tok-2",
-					Name: "my-token",
+					ID:        "tok-2",
+					Name:      "my-token",
+					IsManaged: false,
 				},
 			},
 		}

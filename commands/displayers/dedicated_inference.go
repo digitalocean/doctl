@@ -203,6 +203,7 @@ func (d *DedicatedInferenceTokenDisplayer) Cols() []string {
 	return []string{
 		"ID",
 		"Name",
+		"IsManaged",
 		"Value",
 		"CreatedAt",
 	}
@@ -212,6 +213,7 @@ func (d *DedicatedInferenceTokenDisplayer) ColMap() map[string]string {
 	return map[string]string{
 		"ID":        "ID",
 		"Name":      "Name",
+		"IsManaged": "Is Managed",
 		"Value":     "Value",
 		"CreatedAt": "Created At",
 	}
@@ -226,6 +228,7 @@ func (d *DedicatedInferenceTokenDisplayer) KV() []map[string]any {
 		out = append(out, map[string]any{
 			"ID":        t.ID,
 			"Name":      t.Name,
+			"IsManaged": t.IsManaged,
 			"Value":     t.Value,
 			"CreatedAt": t.CreatedAt,
 		})

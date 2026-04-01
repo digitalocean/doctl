@@ -182,11 +182,12 @@ type DedicatedInferenceAccelerator struct {
 	Scale           uint64 `json:"scale"`
 }
 
-// DedicatedInferenceToken represents an auth token returned on create.
+// DedicatedInferenceToken represents an auth token returned on create and list.
 type DedicatedInferenceToken struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Value     string    `json:"value,omitempty"`
+	IsManaged bool      `json:"is_managed"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
