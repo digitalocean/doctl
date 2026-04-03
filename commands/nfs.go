@@ -90,6 +90,14 @@ doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 	cmdNfsDetach.Example =
 		`doctl nfs detach --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --vpc_id example-vpc-id`
 
+	cmdNfsReassign := CmdBuilder(cmd, nfsReassign, "reassign [flags]", "Reassign an NFS share between VPCs", "Reassigns an NFS share from one VPC to another with the given ID.", Writer)
+	AddStringFlag(cmdNfsReassign, "id", "", "", "the ID of the NFS share", requiredOpt())
+	AddStringFlag(cmdNfsReassign, "old-vpc-id", "", "", "the id of the VPC we want to detach NFS share from", requiredOpt())
+	AddStringFlag(cmdNfsReassign, "new-vpc-id", "", "", "the id of the VPC we want to attach NFS share to", requiredOpt())
+	AddBoolFlag(cmdNfsReassign, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	cmdNfsReassign.Example =
+		`doctl nfs reassign --id b050990d-4337-4a9d-9c8d-9f759a83936a --old-vpc-id old-vpc-id --new-vpc-id new-vpc-id`
+
 	cmdNfsSwitchPerformanceTier := CmdBuilder(cmd, nfsSwitchPerformanceTier, "switch-performance-tier [flags]", "Switch the performance tier of an NFS share", "Switch the performance tier of an NFS share with the given ID and tier.", Writer)
 	AddStringFlag(cmdNfsSwitchPerformanceTier, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsSwitchPerformanceTier, "performance-tier", "", "", "the performance tier of the NFS share", requiredOpt())
@@ -390,6 +398,41 @@ func nfsDetach(c *CmdConfig) error {
 	}
 
 	action, err := c.NfsActions().Detach(id, vpcIdStr, region)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := actionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
+	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
+	return c.Display(item)
+}
+
+func nfsReassign(c *CmdConfig) error {
+	id, err := c.Doit.GetString(c.NS, "id")
+	if err != nil {
+		return err
+	}
+	oldVpcID, err := c.Doit.GetString(c.NS, "old-vpc-id")
+	if err != nil {
+		return err
+	}
+	newVpcID, err := c.Doit.GetString(c.NS, "new-vpc-id")
+	if err != nil {
+		return err
+	}
+
+	action, err := c.NfsActions().Reassign(id, oldVpcID, newVpcID)
 	if err != nil {
 		return err
 	}
