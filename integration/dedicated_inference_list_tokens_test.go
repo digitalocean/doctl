@@ -152,9 +152,9 @@ var _ = suite("dedicated-inference/list-tokens", func(t *testing.T, when spec.G,
 
 const (
 	dedicatedInferenceListTokensOutput = `
-ID       Name        Value    Created At
-tok-1    default              2023-01-01 00:00:00 +0000 UTC
-tok-2    my-token             2023-01-02 00:00:00 +0000 UTC
+ID       Name        Is Managed    Value    Created At
+tok-1    default     true                   2023-01-01 00:00:00 +0000 UTC
+tok-2    my-token    false                  2023-01-02 00:00:00 +0000 UTC
 `
 	dedicatedInferenceListTokensFormatOutput = `
 ID       Name
@@ -168,12 +168,14 @@ tok-2    my-token
     {
       "id": "tok-1",
       "name": "default",
-      "created_at": "2023-01-01T00:00:00Z"
+      "created_at": "2023-01-01T00:00:00Z",
+      "is_managed": true
     },
     {
       "id": "tok-2",
       "name": "my-token",
-      "created_at": "2023-01-02T00:00:00Z"
+      "created_at": "2023-01-02T00:00:00Z",
+      "is_managed": false
     }
   ],
   "links": {},
