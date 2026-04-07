@@ -59,7 +59,7 @@ var (
 func TestNfsCommand(t *testing.T) {
 	cmd := Nfs()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "delete", "snapshot", "resize", "attach", "detach", "switch-performance-tier")
+	assertCommandNames(t, cmd, "create", "list", "get", "delete", "snapshot", "resize", "attach", "detach", "reassign", "switch-performance-tier")
 }
 
 func TestRunNfsCreate(t *testing.T) {
@@ -485,6 +485,59 @@ func TestRunNfsDetach(t *testing.T) {
 				config.Doit.Set(config.NS, "wait", tc.wait)
 
 				err := nfsDetach(config)
+				if tc.expectErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestRunNfsReassign(t *testing.T) {
+	testCases := []struct {
+		name      string
+		id        string
+		oldVpcID  string
+		newVpcID  string
+		wait      bool
+		expectErr bool
+	}{
+		{
+			name:      "success without wait",
+			id:        testId,
+			oldVpcID:  "vpc-old",
+			newVpcID:  "vpc-new",
+			wait:      false,
+			expectErr: false,
+		},
+		{
+			name:      "success with wait",
+			id:        testId,
+			oldVpcID:  "vpc-old",
+			newVpcID:  "vpc-new",
+			wait:      true,
+			expectErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if !tc.expectErr {
+					tm.nfsActions.EXPECT().Reassign(tc.id, tc.oldVpcID, tc.newVpcID).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+					}
+				}
+
+				config.Doit.Set(config.NS, "id", tc.id)
+				config.Doit.Set(config.NS, "old-vpc-id", tc.oldVpcID)
+				config.Doit.Set(config.NS, "new-vpc-id", tc.newVpcID)
+				config.Doit.Set(config.NS, "wait", tc.wait)
+
+				err := nfsReassign(config)
 				if tc.expectErr {
 					require.Error(t, err)
 				} else {
