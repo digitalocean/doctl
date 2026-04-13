@@ -183,6 +183,7 @@ ID                                      Name                        Status
       "model_deployments": [
         {
           "model_id": "model-001",
+		  "provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
           "model_slug": "mistral/mistral-7b-instruct-v3",
           "model_provider": "hugging_face",
           "accelerators": [
@@ -218,6 +219,7 @@ ID                                      Name                        Status
       "model_deployments": [
         {
           "model_id": "model-001",
+		  "provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
           "model_slug": "mistral/mistral-7b-instruct-v3",
           "model_provider": "hugging_face",
           "accelerators": [

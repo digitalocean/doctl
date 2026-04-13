@@ -270,7 +270,8 @@ ID                                      Name                        Status
   "enable_public_endpoint": true,
   "model_deployments": [
     {
-      "model_slug": "mistral/mistral-7b-instruct-v3",
+	  "model_slug": "mistral/mistral-7b-instruct-v3",
+	  "provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
       "model_provider": "hugging_face",
       "accelerators": [
         {"scale": 3, "type": "prefill", "accelerator_slug": "gpu-mi300x1-192gb"},
@@ -288,6 +289,7 @@ vpc:
 enable_public_endpoint: true
 model_deployments:
   - model_slug: mistral/mistral-7b-instruct-v3
+    provider_model_id: mistralai/Mistral-7B-Instruct-v0.3
     model_provider: hugging_face
     accelerators:
       - scale: 3
@@ -322,6 +324,7 @@ model_deployments:
       "model_deployments": [
         {
           "model_id": "model-001",
+		  "provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
           "model_slug": "mistral/mistral-7b-instruct-v3",
           "model_provider": "hugging_face",
           "accelerators": [

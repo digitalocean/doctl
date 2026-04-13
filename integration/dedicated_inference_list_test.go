@@ -176,6 +176,7 @@ ID                                      Name         Status
       "name": "test-di-1",
       "region": "nyc2",
       "status": "ACTIVE",
+	  "provider_model_id": ["mistralai/Mistral-7B-Instruct-v0.3"],
       "vpc_uuid": "00000000-0000-4000-8000-000000000001",
       "endpoints": {
         "public_endpoint_fqdn": "public.di-1.example.com",
@@ -189,6 +190,7 @@ ID                                      Name         Status
       "name": "test-di-2",
       "region": "sfo3",
       "status": "PROVISIONING",
+	  "provider_model_id": ["meta-llama/Meta-Llama-3-8B-Instruct"],
       "vpc_uuid": "11111111-1111-4111-8111-111111111112",
       "endpoints": {
         "public_endpoint_fqdn": "public.di-2.example.com",
@@ -212,6 +214,7 @@ ID                                      Name         Status
       "name": "test-di-1",
       "region": "nyc2",
       "status": "ACTIVE",
+	  "provider_model_id": ["mistralai/Mistral-7B-Instruct-v0.3"],
       "vpc_uuid": "00000000-0000-4000-8000-000000000001",
       "endpoints": {
         "public_endpoint_fqdn": "public.di-1.example.com",
@@ -235,6 +238,7 @@ ID                                      Name         Status
       "name": "test-di-1",
       "region": "nyc2",
       "status": "ACTIVE",
+	  "provider_model_id": ["mistralai/Mistral-7B-Instruct-v0.3"],
       "vpc_uuid": "00000000-0000-4000-8000-000000000001",
       "endpoints": {
         "public_endpoint_fqdn": "public.di-1.example.com",
