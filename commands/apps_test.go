@@ -962,15 +962,15 @@ func TestRunAppSpecGet_AuthoritySerialization(t *testing.T) {
 	pathPrefixEmpty := ""
 
 	tests := []struct {
-		name         string
-		exact        *string
-		pathPrefix   *string // nil means use "/"
-		wantJSON     string
-		wantYAML     string
+		name       string
+		exact      *string
+		pathPrefix *string // nil means use "/"
+		wantJSON   string
+		wantYAML   string
 	}{
 		{
-			name:  "authority with empty exact string",
-			exact: &exactEmpty,
+			name:       "authority with empty exact string",
+			exact:      &exactEmpty,
 			pathPrefix: nil,
 			wantJSON: `{
   "name": "test",
@@ -1020,8 +1020,8 @@ services:
 `,
 		},
 		{
-			name:  "authority with non-empty exact string",
-			exact: &exactDomain,
+			name:       "authority with non-empty exact string",
+			exact:      &exactDomain,
 			pathPrefix: nil,
 			wantJSON: `{
   "name": "test",
@@ -1071,8 +1071,8 @@ services:
 `,
 		},
 		{
-			name:  "no authority set",
-			exact: nil,
+			name:       "no authority set",
+			exact:      nil,
 			pathPrefix: nil,
 			wantJSON: `{
   "name": "test",
@@ -1117,8 +1117,8 @@ services:
 `,
 		},
 		{
-			name:  "authority with empty exact string and empty path prefix",
-			exact: &exactEmpty,
+			name:       "authority with empty exact string and empty path prefix",
+			exact:      &exactEmpty,
 			pathPrefix: &pathPrefixEmpty,
 			wantJSON: `{
   "name": "test",
