@@ -955,6 +955,289 @@ services:
 	})
 }
 
+func TestRunAppSpecGet_AuthoritySerialization(t *testing.T) {
+	exactEmpty := ""
+	exactDomain := "example.com"
+	pathPrefixSlash := "/"
+	pathPrefixEmpty := ""
+
+	tests := []struct {
+		name         string
+		exact        *string
+		pathPrefix   *string // nil means use "/"
+		wantJSON     string
+		wantYAML     string
+	}{
+		{
+			name:  "authority with empty exact string",
+			exact: &exactEmpty,
+			pathPrefix: nil,
+			wantJSON: `{
+  "name": "test",
+  "services": [
+    {
+      "name": "service",
+      "github": {
+        "repo": "digitalocean/doctl",
+        "branch": "main"
+      }
+    }
+  ],
+  "ingress": {
+    "rules": [
+      {
+        "match": {
+          "path": {
+            "prefix": "/"
+          },
+          "authority": {
+            "exact": ""
+          }
+        },
+        "component": {
+          "name": "service"
+        }
+      }
+    ]
+  }
+}
+`,
+			wantYAML: `ingress:
+  rules:
+  - component:
+      name: service
+    match:
+      authority:
+        exact: ""
+      path:
+        prefix: /
+name: test
+services:
+- github:
+    branch: main
+    repo: digitalocean/doctl
+  name: service
+`,
+		},
+		{
+			name:  "authority with non-empty exact string",
+			exact: &exactDomain,
+			pathPrefix: nil,
+			wantJSON: `{
+  "name": "test",
+  "services": [
+    {
+      "name": "service",
+      "github": {
+        "repo": "digitalocean/doctl",
+        "branch": "main"
+      }
+    }
+  ],
+  "ingress": {
+    "rules": [
+      {
+        "match": {
+          "path": {
+            "prefix": "/"
+          },
+          "authority": {
+            "exact": "example.com"
+          }
+        },
+        "component": {
+          "name": "service"
+        }
+      }
+    ]
+  }
+}
+`,
+			wantYAML: `ingress:
+  rules:
+  - component:
+      name: service
+    match:
+      authority:
+        exact: example.com
+      path:
+        prefix: /
+name: test
+services:
+- github:
+    branch: main
+    repo: digitalocean/doctl
+  name: service
+`,
+		},
+		{
+			name:  "no authority set",
+			exact: nil,
+			pathPrefix: nil,
+			wantJSON: `{
+  "name": "test",
+  "services": [
+    {
+      "name": "service",
+      "github": {
+        "repo": "digitalocean/doctl",
+        "branch": "main"
+      }
+    }
+  ],
+  "ingress": {
+    "rules": [
+      {
+        "match": {
+          "path": {
+            "prefix": "/"
+          }
+        },
+        "component": {
+          "name": "service"
+        }
+      }
+    ]
+  }
+}
+`,
+			wantYAML: `ingress:
+  rules:
+  - component:
+      name: service
+    match:
+      path:
+        prefix: /
+name: test
+services:
+- github:
+    branch: main
+    repo: digitalocean/doctl
+  name: service
+`,
+		},
+		{
+			name:  "authority with empty exact string and empty path prefix",
+			exact: &exactEmpty,
+			pathPrefix: &pathPrefixEmpty,
+			wantJSON: `{
+  "name": "test",
+  "services": [
+    {
+      "name": "service",
+      "github": {
+        "repo": "digitalocean/doctl",
+        "branch": "main"
+      }
+    }
+  ],
+  "ingress": {
+    "rules": [
+      {
+        "match": {
+          "path": {
+            "prefix": ""
+          },
+          "authority": {
+            "exact": ""
+          }
+        },
+        "component": {
+          "name": "service"
+        }
+      }
+    ]
+  }
+}
+`,
+			wantYAML: `ingress:
+  rules:
+  - component:
+      name: service
+    match:
+      authority:
+        exact: ""
+      path:
+        prefix: ""
+name: test
+services:
+- github:
+    branch: main
+    repo: digitalocean/doctl
+  name: service
+`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				var authority *godo.AppIngressSpecRuleStringMatch
+				if tc.exact != nil {
+					authority = &godo.AppIngressSpecRuleStringMatch{Exact: tc.exact}
+				}
+
+				pathForMatch := &pathPrefixSlash
+				if tc.pathPrefix != nil {
+					pathForMatch = tc.pathPrefix
+				}
+
+				spec := &godo.AppSpec{
+					Name: "test",
+					Services: []*godo.AppServiceSpec{
+						{
+							Name: "service",
+							GitHub: &godo.GitHubSourceSpec{
+								Repo:   "digitalocean/doctl",
+								Branch: "main",
+							},
+						},
+					},
+					Ingress: &godo.AppIngressSpec{
+						Rules: []*godo.AppIngressSpecRule{
+							{
+								Match: &godo.AppIngressSpecRuleMatch{
+									Path:      &godo.AppIngressSpecRuleStringMatch{Prefix: pathForMatch},
+									Authority: authority,
+								},
+								Component: &godo.AppIngressSpecRuleRoutingComponent{Name: "service"},
+							},
+						},
+					},
+				}
+
+				app := &godo.App{
+					ID:   uuid.New().String(),
+					Spec: spec,
+				}
+
+				tm.apps.EXPECT().Get(app.ID).Times(2).Return(app, nil)
+
+				t.Run("json", func(t *testing.T) {
+					var buf bytes.Buffer
+					config.Doit.Set(config.NS, doctl.ArgFormat, "json")
+					config.Args = append(config.Args, app.ID)
+					config.Out = &buf
+
+					err := RunAppsSpecGet(config)
+					require.NoError(t, err)
+					require.Equal(t, tc.wantJSON, buf.String())
+				})
+
+				t.Run("yaml", func(t *testing.T) {
+					var buf bytes.Buffer
+					config.Doit.Set(config.NS, doctl.ArgFormat, "yaml")
+					config.Args = append(config.Args, app.ID)
+					config.Out = &buf
+
+					err := RunAppsSpecGet(config)
+					require.NoError(t, err)
+					require.Equal(t, tc.wantYAML, buf.String())
+				})
+			})
+		})
+	}
+}
 func TestRunAppsListRegions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		regions := []*godo.AppRegion{{

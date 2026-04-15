@@ -373,8 +373,8 @@ type AppIngressSpecRuleRoutingRedirect struct {
 // AppIngressSpecRuleStringMatch The string match configuration.
 type AppIngressSpecRuleStringMatch struct {
 	// Prefix-based match. For example, `/api` will match `/api`, `/api/`, and any nested paths such as `/api/v1/endpoint`.
-	Prefix string `json:"prefix,omitempty"`
-	Exact  string `json:"exact,omitempty"`
+	Prefix *string `json:"prefix,omitempty"`
+	Exact  *string `json:"exact,omitempty"`
 }
 
 type AppSecureHeaderSpec struct {
