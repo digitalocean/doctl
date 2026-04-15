@@ -54,7 +54,7 @@ var (
 			Type:   "snapshot",
 		},
 	}
-		testNfsActionIntID = 123456
+	testNfsActionIntID = 123456
 )
 
 func TestNfsCommand(t *testing.T) {
