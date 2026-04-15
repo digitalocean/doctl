@@ -25,6 +25,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func waitForNfsAction(c *CmdConfig, actionID string, pollTime int) error {
+	id, err := strconv.Atoi(actionID)
+	if err != nil {
+		return fmt.Errorf("invalid nfs action id %q: %w", actionID, err)
+	}
+
+	_, err = actionWait(c, id, pollTime)
+	return err
+}
+
 // Nfs creates a new command that groups the subcommands for managing DigitalOcean NFS.
 func Nfs() *Command {
 	cmd := &Command{
@@ -257,8 +267,7 @@ func nfsSnapshotCreate(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
-		if err != nil {
+		if err := waitForNfsAction(c, action.ID, 5); err != nil {
 			return err
 		}
 	}
@@ -341,8 +350,7 @@ func nfsResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
-		if err != nil {
+		if err := waitForNfsAction(c, action.ID, 5); err != nil {
 			return err
 		}
 	}
@@ -375,8 +383,7 @@ func nfsAttach(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
-		if err != nil {
+		if err := waitForNfsAction(c, action.ID, 5); err != nil {
 			return err
 		}
 	}
@@ -408,8 +415,7 @@ func nfsDetach(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
-		if err != nil {
+		if err := waitForNfsAction(c, action.ID, 5); err != nil {
 			return err
 		}
 	}
@@ -443,8 +449,7 @@ func nfsReassign(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
-		if err != nil {
+		if err := waitForNfsAction(c, action.ID, 5); err != nil {
 			return err
 		}
 	}
@@ -475,8 +480,7 @@ func nfsSwitchPerformanceTier(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
-		if err != nil {
+		if err := waitForNfsAction(c, action.ID, 5); err != nil {
 			return err
 		}
 	}
