@@ -23,8 +23,9 @@ var (
 		EnablePublicEndpoint: true,
 		ModelDeployments: []*godo.DedicatedInferenceModelRequest{
 			{
-				ModelSlug:     "mistral/mistral-7b-instruct-v3",
-				ModelProvider: "hugging_face",
+				ModelSlug:       "mistral/mistral-7b-instruct-v3",
+				ModelProvider:   "hugging_face",
+				ProviderModelID: "mistralai/Mistral-7B-Instruct-v0.3",
 				Accelerators: []*godo.DedicatedInferenceAcceleratorRequest{
 					{
 						Scale:           2,
@@ -96,6 +97,7 @@ func TestRunDedicatedInferenceCreate(t *testing.T) {
 			"model_deployments": [
 				{
 					"model_slug": "mistral/mistral-7b-instruct-v3",
+					"provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
 					"model_provider": "hugging_face",
 					"accelerators": [
 						{"scale": 2, "type": "prefill", "accelerator_slug": "gpu-mi300x1-192gb"},
@@ -132,6 +134,7 @@ func TestRunDedicatedInferenceCreate_WithHuggingFaceToken(t *testing.T) {
 			"model_deployments": [
 				{
 					"model_slug": "mistral/mistral-7b-instruct-v3",
+					"provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
 					"model_provider": "hugging_face",
 					"accelerators": [
 						{"scale": 2, "type": "prefill", "accelerator_slug": "gpu-mi300x1-192gb"},
@@ -202,6 +205,7 @@ func TestRunDedicatedInferenceUpdate(t *testing.T) {
 			"model_deployments": [
 				{
 					"model_slug": "mistral/mistral-7b-instruct-v3",
+					"provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
 					"model_provider": "hugging_face",
 					"accelerators": [
 						{"scale": 2, "type": "prefill", "accelerator_slug": "gpu-mi300x1-192gb"},
@@ -239,6 +243,7 @@ func TestRunDedicatedInferenceUpdate_WithHuggingFaceToken(t *testing.T) {
 			"model_deployments": [
 				{
 					"model_slug": "mistral/mistral-7b-instruct-v3",
+					"provider_model_id": "mistralai/Mistral-7B-Instruct-v0.3",
 					"model_provider": "hugging_face",
 					"accelerators": [
 						{"scale": 2, "type": "prefill", "accelerator_slug": "gpu-mi300x1-192gb"},
