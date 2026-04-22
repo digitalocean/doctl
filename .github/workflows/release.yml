@@ -14,12 +14,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           go-version: 1.24.x
 
@@ -32,7 +32,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # https://github.com/marketplace/actions/goreleaser-action#usage
           # note the fetch-depth: 0 input in Checkout step. It is required for
@@ -46,7 +46,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           go-version: 1.24.x
 
@@ -65,7 +65,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # fetch-depth: 0 fetches all history for all branches and tags
           fetch-depth: 0
@@ -74,7 +74,8 @@ jobs:
         uses: snapcore/action-build@v1
         id: build
 
-      - uses: snapcore/action-publish@master
+      - name: Publish snap
+        uses: snapcore/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_TOKEN }}
         with:
