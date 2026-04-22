@@ -1047,18 +1047,18 @@ func (a *AppIngressSpecRuleRoutingRedirect) GetUri() string {
 
 // GetExact returns the Exact field.
 func (a *AppIngressSpecRuleStringMatch) GetExact() string {
-	if a == nil {
+	if a == nil || a.Exact == nil {
 		return ""
 	}
-	return a.Exact
+	return *a.Exact
 }
 
 // GetPrefix returns the Prefix field.
 func (a *AppIngressSpecRuleStringMatch) GetPrefix() string {
-	if a == nil {
+	if a == nil || a.Prefix == nil {
 		return ""
 	}
-	return a.Prefix
+	return *a.Prefix
 }
 
 // GetComponentName returns the ComponentName field.
