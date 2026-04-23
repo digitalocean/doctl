@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.187.0"
+	libraryVersion = "1.185.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -101,7 +101,6 @@ type Client struct {
 	PartnerAttachment   PartnerAttachmentService
 	GradientAI          GradientAIService
 	DedicatedInference  DedicatedInferenceService
-	BatchInference      BatchInferenceService
 	BYOIPPrefixes       BYOIPPrefixesService
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -334,8 +333,6 @@ func NewClient(httpClient *http.Client) *Client {
 	c.PartnerAttachment = &PartnerAttachmentServiceOp{client: c}
 	c.GradientAI = &GradientAIServiceOp{client: c}
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
-	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
-	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
 
 	c.headers = make(map[string]string)
 
