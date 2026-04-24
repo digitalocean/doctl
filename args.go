@@ -193,6 +193,8 @@ const (
 	ArgKubernetesAlias = "alias"
 	// ArgKubeConfigExpirySeconds indicates the length of time the token in a kubeconfig will be valid in seconds.
 	ArgKubeConfigExpirySeconds = "expiry-seconds"
+	// ArgKubeConfigType selects the kubeconfig authentication mechanism: token, sso, or unset for the API default.
+	ArgKubeConfigType = "type"
 	// ArgImage is an image argument.
 	ArgImage = "image"
 	// ArgImageID is an image id argument.

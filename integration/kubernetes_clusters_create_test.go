@@ -226,6 +226,10 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "auto_upgrade": false,
   "surge_upgrade": true,
   "ha": true,
+  "sso": {
+    "enabled": false,
+    "required": false
+  },
   "maintenance_policy": {
     "day": "any",
     "duration": "",
@@ -248,6 +252,10 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "auto_upgrade": false,
   "surge_upgrade": true,
   "ha": true,
+  "sso": {
+    "enabled": false,
+    "required": false
+  },
   "maintenance_policy": {
     "day": "any",
     "duration": "",
