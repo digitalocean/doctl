@@ -49,7 +49,7 @@ var (
 	}
 	testNfsAction = do.NfsAction{
 		NfsAction: &godo.NfsAction{
-			ID:     123456,
+			ID:     "123456",
 			Status: "in-progress",
 			Type:   "snapshot",
 		},
