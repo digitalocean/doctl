@@ -379,7 +379,7 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 
 		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
 		assert.Equal(t, provider.remote, provider.written)
-		assert.Contains(t, provider.written.AuthInfos[""].Exec.Command, "commands.test")
+		assert.Contains(t, provider.written.AuthInfos["test-user"].Exec.Command, "commands.test")
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -392,8 +392,8 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 
 		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
 		assert.Equal(t, provider.remote, provider.written)
-		assert.Equal(t, provider.remote.AuthInfos[""].Token, provider.written.AuthInfos[""].Token)
-		assert.Nil(t, provider.written.AuthInfos[""].Exec)
+		assert.Equal(t, provider.remote.AuthInfos["test-user"].Token, provider.written.AuthInfos["test-user"].Token)
+		assert.Nil(t, provider.written.AuthInfos["test-user"].Exec)
 	})
 
 	// save the remote kubeconfig locally, verifying that the provided auth
@@ -423,7 +423,7 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 		assert.Equal(t, provider.remote, provider.written)
 
 		expectedExecContextArg := "--" + doctl.ArgContext + "=" + authContext
-		assert.Contains(t, provider.written.AuthInfos[""].Exec.Args, expectedExecContextArg)
+		assert.Contains(t, provider.written.AuthInfos["test-user"].Exec.Args, expectedExecContextArg)
 	})
 }
 
