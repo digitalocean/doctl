@@ -1,5 +1,31 @@
 # Change Log
 
+## [1.184.0] - 2026-04-01
+
+- #984 - Change ContextWindow to string
+
+## [1.183.0] - 2026-04-01
+
+- #982 - @venkatranabothu - GenAI: Expand Model struct with metadata and modalities
+
+## [1.182.0] - 2026-03-31
+
+- #978 - @jkosanam - Add access key CRUD operations to FunctionsService
+- #980 - @kirineni-do - Add is managed field in response of list auth tokens
+
+## [1.181.0] - 2026-03-30
+
+- #972 - @v-amanjain-afk - implemented reassign workflow
+- #977 - @anitgandhi - droplets: add optional public_networking bool to create request
+
+## [1.180.0] - 2026-03-27
+
+- #975 - @venkatranabothu - Add ModelAvailability to Model struct in GradientAI
+
+## [1.179.0] - 2026-03-25
+
+- #973 - @chandrudo - Added two functions for model retrieval
+
 ## [1.178.0] - 2026-03-16
 
 - #969 - @d-honeybadger - add support for DOKS SSO toggles

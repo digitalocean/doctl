@@ -14,6 +14,7 @@ type NfsActionsService interface {
 	Snapshot(ctx context.Context, nfsShareId string, nfsSnapshotName string, region string) (*NfsAction, *Response, error)
 	Attach(ctx context.Context, nfsShareId string, vpcID string, region string) (*NfsAction, *Response, error)
 	Detach(ctx context.Context, nfsShareId string, vpcID string, region string) (*NfsAction, *Response, error)
+	Reassign(ctx context.Context, nfsShareId, oldVpcID, newVpcID string) (*NfsAction, *Response, error)
 	SwitchPerformanceTier(ctx context.Context, nfsShareId string, tier string) (*NfsAction, *Response, error)
 }
 
@@ -70,6 +71,12 @@ type NfsDetachParams struct {
 	VpcID string `json:"vpc_id"`
 }
 
+// NfsReassignParams represents parameters for reassigning an NFS share from one VPC to another.
+type NfsReassignParams struct {
+	OldVpcID string `json:"old_vpc_id"`
+	NewVpcID string `json:"new_vpc_id"`
+}
+
 // NfsSwitchPerformanceTierParams represents parameters to switch the performance tier of an NFS share.
 type NfsSwitchPerformanceTierParams struct {
 	PerformanceTier string `json:"performance_tier"`
@@ -117,6 +124,19 @@ func (s *NfsActionsServiceOp) Detach(ctx context.Context, nfsShareId, vpcID, reg
 		Type: "detach",
 		Params: &NfsAttachParams{
 			VpcID: vpcID,
+		},
+	}
+
+	return s.doAction(ctx, nfsShareId, request)
+}
+
+// Reassign an NFS share from one VPC to another.
+func (s *NfsActionsServiceOp) Reassign(ctx context.Context, nfsShareId, oldVpcID, newVpcID string) (*NfsAction, *Response, error) {
+	request := &NfsActionRequest{
+		Type: "reassign",
+		Params: &NfsReassignParams{
+			OldVpcID: oldVpcID,
+			NewVpcID: newVpcID,
 		},
 	}
 

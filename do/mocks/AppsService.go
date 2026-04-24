@@ -40,21 +40,6 @@ func (m *MockAppsService) EXPECT() *MockAppsServiceMockRecorder {
 	return m.recorder
 }
 
-// CancelJobInvocation mocks base method.
-func (m *MockAppsService) CancelJobInvocation(appID, jobInvocationID string, opts *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CancelJobInvocation", appID, jobInvocationID, opts)
-	ret0, _ := ret[0].(*godo.JobInvocation)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CancelJobInvocation indicates an expected call of CancelJobInvocation.
-func (mr *MockAppsServiceMockRecorder) CancelJobInvocation(appID, jobInvocationID, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelJobInvocation", reflect.TypeOf((*MockAppsService)(nil).CancelJobInvocation), appID, jobInvocationID, opts)
-}
-
 // CancelEvent mocks base method.
 func (m *MockAppsService) CancelEvent(appID, eventID string) (*godo.Event, error) {
 	m.ctrl.T.Helper()
@@ -70,19 +55,19 @@ func (mr *MockAppsServiceMockRecorder) CancelEvent(appID, eventID any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelEvent", reflect.TypeOf((*MockAppsService)(nil).CancelEvent), appID, eventID)
 }
 
-// GetEvent mocks base method.
-func (m *MockAppsService) GetEvent(appID, eventID string) (*godo.Event, error) {
+// CancelJobInvocation mocks base method.
+func (m *MockAppsService) CancelJobInvocation(appID, jobInvocationID string, opts *godo.CancelJobInvocationOptions) (*godo.JobInvocation, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvent", appID, eventID)
-	ret0, _ := ret[0].(*godo.Event)
+	ret := m.ctrl.Call(m, "CancelJobInvocation", appID, jobInvocationID, opts)
+	ret0, _ := ret[0].(*godo.JobInvocation)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetEvent indicates an expected call of GetEvent.
-func (mr *MockAppsServiceMockRecorder) GetEvent(appID, eventID any) *gomock.Call {
+// CancelJobInvocation indicates an expected call of CancelJobInvocation.
+func (mr *MockAppsServiceMockRecorder) CancelJobInvocation(appID, jobInvocationID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvent", reflect.TypeOf((*MockAppsService)(nil).GetEvent), appID, eventID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelJobInvocation", reflect.TypeOf((*MockAppsService)(nil).CancelJobInvocation), appID, jobInvocationID, opts)
 }
 
 // Create mocks base method.
@@ -189,6 +174,36 @@ func (mr *MockAppsServiceMockRecorder) GetDeployment(appID, deploymentID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployment", reflect.TypeOf((*MockAppsService)(nil).GetDeployment), appID, deploymentID)
 }
 
+// GetEvent mocks base method.
+func (m *MockAppsService) GetEvent(appID, eventID string) (*godo.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvent", appID, eventID)
+	ret0, _ := ret[0].(*godo.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvent indicates an expected call of GetEvent.
+func (mr *MockAppsServiceMockRecorder) GetEvent(appID, eventID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvent", reflect.TypeOf((*MockAppsService)(nil).GetEvent), appID, eventID)
+}
+
+// GetEventLogs mocks base method.
+func (m *MockAppsService) GetEventLogs(appID, eventID string, opts *godo.GetEventLogsOptions) (*godo.AppLogs, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEventLogs", appID, eventID, opts)
+	ret0, _ := ret[0].(*godo.AppLogs)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEventLogs indicates an expected call of GetEventLogs.
+func (mr *MockAppsServiceMockRecorder) GetEventLogs(appID, eventID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEventLogs", reflect.TypeOf((*MockAppsService)(nil).GetEventLogs), appID, eventID, opts)
+}
+
 // GetExec mocks base method.
 func (m *MockAppsService) GetExec(appID, deploymentID, componentName string) (*godo.AppExec, error) {
 	m.ctrl.T.Helper()
@@ -217,21 +232,6 @@ func (m *MockAppsService) GetExecWithOpts(appID, componentName string, opts *god
 func (mr *MockAppsServiceMockRecorder) GetExecWithOpts(appID, componentName, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecWithOpts", reflect.TypeOf((*MockAppsService)(nil).GetExecWithOpts), appID, componentName, opts)
-}
-
-// GetEventLogs mocks base method.
-func (m *MockAppsService) GetEventLogs(appID, eventID string, opts *godo.GetEventLogsOptions) (*godo.AppLogs, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEventLogs", appID, eventID, opts)
-	ret0, _ := ret[0].(*godo.AppLogs)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetEventLogs indicates an expected call of GetEventLogs.
-func (mr *MockAppsServiceMockRecorder) GetEventLogs(appID, eventID, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEventLogs", reflect.TypeOf((*MockAppsService)(nil).GetEventLogs), appID, eventID, opts)
 }
 
 // GetInstanceSize mocks base method.
@@ -369,6 +369,21 @@ func (mr *MockAppsServiceMockRecorder) ListDeployments(appID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployments", reflect.TypeOf((*MockAppsService)(nil).ListDeployments), appID)
 }
 
+// ListEvents mocks base method.
+func (m *MockAppsService) ListEvents(appID string, opts *godo.ListEventsOptions) ([]*godo.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEvents", appID, opts)
+	ret0, _ := ret[0].([]*godo.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEvents indicates an expected call of ListEvents.
+func (mr *MockAppsServiceMockRecorder) ListEvents(appID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvents", reflect.TypeOf((*MockAppsService)(nil).ListEvents), appID, opts)
+}
+
 // ListInstanceSizes mocks base method.
 func (m *MockAppsService) ListInstanceSizes() ([]*godo.AppInstanceSize, error) {
 	m.ctrl.T.Helper()
@@ -397,21 +412,6 @@ func (m *MockAppsService) ListJobInvocations(appID string, opts *godo.ListJobInv
 func (mr *MockAppsServiceMockRecorder) ListJobInvocations(appID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobInvocations", reflect.TypeOf((*MockAppsService)(nil).ListJobInvocations), appID, opts)
-}
-
-// ListEvents mocks base method.
-func (m *MockAppsService) ListEvents(appID string, opts *godo.ListEventsOptions) ([]*godo.Event, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEvents", appID, opts)
-	ret0, _ := ret[0].([]*godo.Event)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListEvents indicates an expected call of ListEvents.
-func (mr *MockAppsServiceMockRecorder) ListEvents(appID, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvents", reflect.TypeOf((*MockAppsService)(nil).ListEvents), appID, opts)
 }
 
 // ListRegions mocks base method.

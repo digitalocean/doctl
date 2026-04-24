@@ -82,6 +82,8 @@ type GradientAIService interface {
 	DeleteFunctionRoute(context.Context, string, string) (*Agent, *Response, error)
 	UpdateFunctionRoute(context.Context, string, string, *FunctionRouteUpdateRequest) (*Agent, *Response, error)
 	ListAvailableModels(context.Context, *ListOptions) ([]*Model, *Response, error)
+	SearchModels(context.Context, string) ([]string, *Response, error)
+	GetModelByUUID(context.Context, string) (*Model, *Response, error)
 	ListDatacenterRegions(context.Context, *bool, *bool) ([]*DatacenterRegions, *Response, error)
 }
 
@@ -538,20 +540,33 @@ type ChatBot struct {
 
 // Model represents a Gradient AI Model
 type Model struct {
-	Agreement        *Agreement    `json:"agreement,omitempty"`
-	CreatedAt        *Timestamp    `json:"created_at,omitempty"`
-	InferenceName    string        `json:"inference_name,omitempty"`
-	InferenceVersion string        `json:"inference_version,omitempty"`
-	IsFoundational   bool          `json:"is_foundational,omitempty"`
-	Name             string        `json:"name,omitempty"`
-	ParentUuid       string        `json:"parent_uuid,omitempty"`
-	Provider         string        `json:"provider,omitempty"`
-	UpdatedAt        *Timestamp    `json:"updated_at,omitempty"`
-	UploadComplete   bool          `json:"upload_complete,omitempty"`
-	Url              string        `json:"url,omitempty"`
-	Usecases         []string      `json:"usecases,omitempty"`
-	Uuid             string        `json:"uuid,omitempty"`
-	Version          *ModelVersion `json:"version,omitempty"`
+	Agreement         *Agreement       `json:"agreement,omitempty"`
+	Capabilities      []string         `json:"capabilities,omitempty"`
+	ContextWindow     string           `json:"context_window,omitempty"`
+	CreatedAt         *Timestamp       `json:"created_at,omitempty"`
+	Description       string           `json:"description,omitempty"`
+	InferenceName     string           `json:"inference_name,omitempty"`
+	InferenceVersion  string           `json:"inference_version,omitempty"`
+	IsFoundational    bool             `json:"is_foundational,omitempty"`
+	ModelAvailability string           `json:"model_availability,omitempty"`
+	Modalities        *ModelModalities `json:"modalities,omitempty"`
+	Name              string           `json:"name,omitempty"`
+	ParameterCount    float64          `json:"parameter_count,omitempty"`
+	ParentUuid        string           `json:"parent_uuid,omitempty"`
+	Provider          string           `json:"provider,omitempty"`
+	Type              string           `json:"type,omitempty"`
+	UpdatedAt         *Timestamp       `json:"updated_at,omitempty"`
+	UploadComplete    bool             `json:"upload_complete,omitempty"`
+	Url               string           `json:"url,omitempty"`
+	Usecases          []string         `json:"usecases,omitempty"`
+	Uuid              string           `json:"uuid,omitempty"`
+	Version           *ModelVersion    `json:"version,omitempty"`
+}
+
+// ModelModalities represents the input and output modalities supported by a model
+type ModelModalities struct {
+	Input  []string `json:"input,omitempty"`
+	Output []string `json:"output,omitempty"`
 }
 
 // Agreement represents the agreement information of a Gradient AI Model
@@ -1810,6 +1825,40 @@ func (g *GradientAIServiceOp) ListAvailableModels(ctx context.Context, opt *List
 	}
 
 	return root.Models, resp, nil
+}
+
+// MCPSearchModels searches available models by name and returns the list of matching UUIDs.
+func (g *GradientAIServiceOp) SearchModels(ctx context.Context, query string) ([]string, *Response, error) {
+	models, resp, err := g.ListAvailableModels(ctx, nil)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	var uuids []string
+	lowerQuery := strings.ToLower(query)
+	for _, model := range models {
+		if strings.Contains(strings.ToLower(model.Name), lowerQuery) {
+			uuids = append(uuids, model.Uuid)
+		}
+	}
+
+	return uuids, resp, nil
+}
+
+// MCPSearchModelByUUID searches available models for a specific UUID and returns the model if it exists.
+func (g *GradientAIServiceOp) GetModelByUUID(ctx context.Context, uuid string) (*Model, *Response, error) {
+	models, resp, err := g.ListAvailableModels(ctx, nil)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	for _, model := range models {
+		if model.Uuid == uuid {
+			return model, resp, nil
+		}
+	}
+
+	return nil, resp, nil
 }
 
 // ListDatacenterRegions returns a list of available datacenter regions for Gradient AI services

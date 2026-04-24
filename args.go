@@ -229,6 +229,8 @@ const (
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.
 	ArgPrivateNetworking = "enable-private-networking"
+	// ArgPublicNetworking is an enable public networking argument.
+	ArgPublicNetworking = "enable-public-networking"
 	// ArgMonitoring is an enable monitoring argument.
 	ArgMonitoring = "enable-monitoring"
 	// ArgDropletAgent is an argument for enabling/disabling the Droplet agent.
@@ -846,4 +848,24 @@ const (
 
 	// ArgOpenAIKeyAPIKey is the API key for the OpenAI API Key
 	ArgOpenAIKeyAPIKey = "api-key"
+
+	// Dedicated Inference Args
+
+	// ArgDedicatedInferenceSpec is the path to a dedicated inference spec file.
+	ArgDedicatedInferenceSpec = "spec"
+
+	// ArgDedicatedInferenceHuggingFaceToken is the Hugging Face token (optional).
+	ArgDedicatedInferenceHuggingFaceToken = "hugging-face-token"
+
+	// ArgDedicatedInferenceAcceleratorSlug filters accelerators by slug (optional).
+	ArgDedicatedInferenceAcceleratorSlug = "slug"
+
+	// ArgDedicatedInferenceRegion filters dedicated inferences by region (optional).
+	ArgDedicatedInferenceRegion = "region"
+
+	// ArgDedicatedInferenceName filters dedicated inferences by name (optional).
+	ArgDedicatedInferenceName = "name"
+
+	// ArgDedicatedInferenceTokenName is the name for a dedicated inference auth token.
+	ArgDedicatedInferenceTokenName = "token-name"
 )
