@@ -116,6 +116,12 @@ func Kubernetes() *Command {
 	return cmd
 }
 
+type kubeconfigParams struct {
+	clusterID     string
+	expirySeconds int
+	cfgType       string
+}
+
 // KubeconfigProvider allows a user to read from a remote and local Kubeconfig, and write to a
 // local Kubeconfig.
 type KubeconfigProvider interface {
@@ -311,6 +317,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Creates the cluster with SSO method of authentication enabled.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgKubernetesRequireSSO, "", false,
 		"Creates the cluster with SSO required as the only method of authentication.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgKubernetesSSOIssuerURL, "", "",
+		"OIDC issuer URL for the cluster SSO configuration.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgKubernetesSSOClientID, "", "",
+		"OIDC client ID for the cluster SSO configuration.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -373,6 +383,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables SSO method of authentication for the cluster.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesRequireSSO, "", false,
 		"Sets up SSO method of authentication as required for the cluster.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesSSOIssuerURL, "", "",
+		"OIDC issuer URL for the cluster SSO configuration.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesSSOClientID, "", "",
+		"OIDC client ID for the cluster SSO configuration.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
 		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
@@ -1190,27 +1204,6 @@ func (s *KubernetesCommandService) RunKubernetesClusterListAssociatedResources(c
 
 // Kubeconfig
 
-func kubeconfigTypeFromFlag(c *CmdConfig) (string, error) {
-	s, err := c.Doit.GetString(c.NS, doctl.ArgKubeConfigType)
-	if err != nil {
-		return "", err
-	}
-	switch s {
-	case "":
-		return "", nil
-	case "token", "sso":
-		return s, nil
-	default:
-		return "", fmt.Errorf("invalid --type %q: must be token or sso", s)
-	}
-}
-
-type kubeconfigParams struct {
-	clusterID     string
-	expirySeconds int
-	cfgType       string
-}
-
 func kubeconfigParamsFromFlags(c *CmdConfig) (kubeconfigParams, error) {
 	params := kubeconfigParams{}
 
@@ -1218,7 +1211,7 @@ func kubeconfigParamsFromFlags(c *CmdConfig) (kubeconfigParams, error) {
 	if err != nil {
 		return params, fmt.Errorf("validating command arguments: %w", err)
 	}
-	cfgType, err := kubeconfigTypeFromFlag(c)
+	cfgType, err := c.Doit.GetString(c.NS, doctl.ArgKubeConfigType)
 	if err != nil {
 		return params, fmt.Errorf("parsing %s flag: %w", doctl.ArgKubeConfigType, err)
 	}
@@ -2927,6 +2920,12 @@ func parseTaint(rawTaint string) (godo.Taint, error) {
 }
 
 func ssoConfigFromArgs(c *CmdConfig) (*godo.KubernetesClusterSSO, error) {
+	if !c.Doit.IsSet(doctl.ArgKubernetesEnableSSO) &&
+		!c.Doit.IsSet(doctl.ArgKubernetesRequireSSO) &&
+		!c.Doit.IsSet(doctl.ArgKubernetesSSOIssuerURL) &&
+		!c.Doit.IsSet(doctl.ArgKubernetesSSOClientID) {
+		return nil, nil
+	}
 	enableSSO, err := c.Doit.GetBool(c.NS, doctl.ArgKubernetesEnableSSO)
 	if err != nil {
 		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesEnableSSO, err)
@@ -2936,9 +2935,20 @@ func ssoConfigFromArgs(c *CmdConfig) (*godo.KubernetesClusterSSO, error) {
 		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesRequireSSO, err)
 	}
 
+	issuerURL, err := c.Doit.GetString(c.NS, doctl.ArgKubernetesSSOIssuerURL)
+	if err != nil {
+		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesSSOIssuerURL, err)
+	}
+	clientID, err := c.Doit.GetString(c.NS, doctl.ArgKubernetesSSOClientID)
+	if err != nil {
+		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesSSOClientID, err)
+	}
+
 	cfg := &godo.KubernetesClusterSSO{
-		Enabled:  enableSSO,
-		Required: requireSSO,
+		Enabled:   enableSSO,
+		Required:  requireSSO,
+		IssuerURL: issuerURL,
+		ClientID:  clientID,
 	}
 	return cfg, nil
 }

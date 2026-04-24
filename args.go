@@ -166,9 +166,13 @@ const (
 	// ArgEnableRDMASharedDevicePlugin enables automatic NVIDIA gpu device plugin installation.
 	ArgEnableRDMASharedDevicePlugin = "enable-rdma-shared-device-plugin"
 	// ArgKubernetesEnableSSO enables SSO as a method of authentication for the DOKS cluster.
-	ArgKubernetesEnableSSO = "enable-sso"
+	ArgKubernetesEnableSSO = "sso-enabled"
 	// ArgKubernetesRequireSSO requires SSO as the only method of authentication for the DOKS cluster.
-	ArgKubernetesRequireSSO = "require-sso"
+	ArgKubernetesRequireSSO = "sso-required"
+	// ArgKubernetesSSOIssuerURL is the OIDC issuer URL for cluster SSO configuration.
+	ArgKubernetesSSOIssuerURL = "sso-issuer-url"
+	// ArgKubernetesSSOClientID is the OIDC client ID for cluster SSO configuration.
+	ArgKubernetesSSOClientID = "sso-client-id"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.

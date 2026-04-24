@@ -107,14 +107,14 @@ var (
 		Contexts: map[string]*clientcmdapi.Context{
 			"test-context": {
 				Cluster:  "test-cluster",
-				AuthInfo: "",
+				AuthInfo: "test-user",
 			},
 		},
 		Clusters: map[string]*clientcmdapi.Cluster{
 			"test-cluster": clientcmdapi.NewCluster(),
 		},
 		AuthInfos: map[string]*clientcmdapi.AuthInfo{
-			"": {Token: "test-token"},
+			"test-user": {Token: "test-token"},
 		},
 	}
 
@@ -184,17 +184,6 @@ var (
 		},
 	}
 )
-
-// testKubeconfigBytes is valid serialized kubeconfig for exercising Remote() against mocks.
-var testKubeconfigBytes []byte
-
-func init() {
-	b, err := clientcmd.Write(*testKubeconfig.DeepCopy())
-	if err != nil {
-		panic(err)
-	}
-	testKubeconfigBytes = b
-}
 
 type mockKubeconfigProvider struct {
 	local, remote, written clientcmdapi.Config
@@ -439,6 +428,9 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 }
 
 func TestKubernetesKubeconfigShow(t *testing.T) {
+	testKubeconfigBytes, err := clientcmd.Write(*testKubeconfig.DeepCopy())
+	assert.NoError(t, err)
+
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID, &godo.KubernetesClusterKubeconfigGetRequest{}).Return(testKubeconfigBytes, nil)
 		config.Args = append(config.Args, testCluster.ID)
@@ -471,13 +463,6 @@ func TestKubernetesKubeconfigShow(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKubeConfigType, "sso")
 		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
-	})
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testCluster.ID)
-		config.Doit.Set(config.NS, doctl.ArgKubeConfigType, "foo")
-		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
-		assert.ErrorContains(t, err, "invalid --type")
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -627,6 +612,10 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesRequireSSO, false)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
+		r.SSO.IssuerURL = "https://issuer.example"
+		r.SSO.ClientID = "oidc-client-id"
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -701,7 +690,9 @@ func TestKubernetesUpdate(t *testing.T) {
 				Enabled: boolPtr(true),
 			},
 			SSO: &godo.KubernetesClusterSSO{
-				Enabled: true,
+				Enabled:   true,
+				IssuerURL: "https://issuer.example",
+				ClientID:  "oidc-client-id",
 			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
@@ -722,6 +713,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -765,7 +758,9 @@ func TestKubernetesUpdate(t *testing.T) {
 				Enabled: boolPtr(true),
 			},
 			SSO: &godo.KubernetesClusterSSO{
-				Enabled: true,
+				Enabled:   true,
+				IssuerURL: "https://issuer.example",
+				ClientID:  "oidc-client-id",
 			},
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
@@ -787,6 +782,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
