@@ -469,7 +469,7 @@ Returns the raw YAML for the specified cluster's kubeconfig.`, Writer, aliasOpt(
 	AddIntFlag(cmdShowConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
 		"The length of time the cluster credentials are valid for, in seconds. By default, the credentials expire after seven days. If set, `token` kubeconfig type is implied.")
 	AddStringFlag(cmdShowConfig, doctl.ArgKubeConfigType, "", "",
-		"Kubeconfig authentication type: `token`, `sso`, or omit for the API default.")
+		"Kubeconfig authentication type: 'token', 'sso', or omit for the API default.")
 	cmdShowConfig.Example = `The following example shows the kubeconfig YAML for a cluster named ` + "`" + `example-cluster` + "`" + `: doctl kubernetes cluster kubeconfig show example-cluster`
 
 	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
@@ -483,7 +483,7 @@ Adds the credentials for the specified cluster to your local kubeconfig. After t
 	AddIntFlag(cmdSaveConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
 		"The length of time the cluster credentials are valid for, in seconds. By default, the credentials are automatically renewed as needed. If set, `token` kubeconfig type is implied.")
 	AddStringFlag(cmdSaveConfig, doctl.ArgKubeConfigType, "", "",
-		"Kubeconfig authentication type: `token`, `sso`, or omit for the API default.")
+		"Kubeconfig authentication type: 'token', 'sso', or omit for the API default.")
 	AddStringFlag(cmdSaveConfig, doctl.ArgKubernetesAlias, "", "", "An alias for the cluster context name. Defaults to 'do-[region]-[cluster-name]'")
 	cmdSaveConfig.Example = `The following example saves the credentials for a cluster named ` + "`" + `example-cluster` + "`" + ` to your local kubeconfig: doctl kubernetes cluster kubeconfig save example-cluster`
 
@@ -1249,11 +1249,11 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) err
 	if kubeconfig == nil {
 		return fmt.Errorf("received nil kubeconfig")
 	}
-	kubecnfigBytes, err := clientcmd.Write(*kubeconfig)
+	kubeconfigBytes, err := clientcmd.Write(*kubeconfig)
 	if err != nil {
 		return fmt.Errorf("serializing kubeconfig: %w", err)
 	}
-	_, err = c.Out.Write(kubecnfigBytes)
+	_, err = c.Out.Write(kubeconfigBytes)
 	if err != nil {
 		return fmt.Errorf("writing kubeconfig to output: %w", err)
 	}
@@ -2434,9 +2434,9 @@ func mergeKubeconfig(kubeconfigParams kubeconfigParams, remote, local *clientcmd
 			},
 		}
 	case remoteKubeconfigType == "sso":
-		// remote already has exec credential configured, just need to add the context flag which depends on the local configuration
 		local.AuthInfos[remoteCtx.AuthInfo] = remoteAuthInfo.DeepCopy()
-		local.AuthInfos[remoteCtx.AuthInfo].Exec.Args = append(local.AuthInfos[remoteCtx.AuthInfo].Exec.Args, "--context=", getCurrentAuthContextFn())
+		// in case doctl command is not in the PATH or is renamed
+		local.AuthInfos[remoteCtx.AuthInfo].Exec.Command = doctl.CommandName()
 	}
 
 	return nil
