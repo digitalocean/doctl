@@ -49,7 +49,7 @@ var (
 	}
 	testNfsAction = do.NfsAction{
 		NfsAction: &godo.NfsAction{
-			ID:     123456,
+			ID:     "123456",
 			Status: "in-progress",
 			Type:   "snapshot",
 		},
@@ -305,7 +305,7 @@ func TestRunNfsSnapshotCreate(t *testing.T) {
 				if !tc.expectErr {
 					tm.nfsActions.EXPECT().Snapshot(tc.shareID, tc.snapName, tc.region).Return(&testNfsAction, nil)
 					if tc.wait {
-						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
 					}
 				}
 
@@ -367,7 +367,7 @@ func TestRunNfsResize(t *testing.T) {
 					size := uint64(2048)
 					tm.nfsActions.EXPECT().Resize(tc.id, size, tc.region).Return(&testNfsAction, nil)
 					if tc.wait {
-						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
 					}
 				}
 
@@ -421,7 +421,7 @@ func TestRunNfsAttach(t *testing.T) {
 					vpcID := "vpc-1234"
 					tm.nfsActions.EXPECT().Attach(tc.id, vpcID, tc.region).Return(&testNfsAction, nil)
 					if tc.wait {
-						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
 					}
 				}
 
@@ -475,7 +475,7 @@ func TestRunNfsDetach(t *testing.T) {
 					vpcID := "vpc-1234"
 					tm.nfsActions.EXPECT().Detach(tc.id, vpcID, tc.region).Return(&testNfsAction, nil)
 					if tc.wait {
-						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
 					}
 				}
 
@@ -528,7 +528,7 @@ func TestRunNfsReassign(t *testing.T) {
 				if !tc.expectErr {
 					tm.nfsActions.EXPECT().Reassign(tc.id, tc.oldVpcID, tc.newVpcID).Return(&testNfsAction, nil)
 					if tc.wait {
-						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
 					}
 				}
 
@@ -578,7 +578,7 @@ func TestRunNfsSwitchPerformanceTier(t *testing.T) {
 				if !tc.expectErr {
 					tm.nfsActions.EXPECT().SwitchPerformanceTier(tc.id, tc.performanceTier).Return(&testNfsAction, nil)
 					if tc.wait {
-						tm.actions.EXPECT().Get(testNfsAction.ID).Return(&testAction, nil)
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
 					}
 				}
 

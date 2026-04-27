@@ -257,7 +257,7 @@ func nfsSnapshotCreate(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		_, err := nfsActionWait(c, action.ID, 5)
 		if err != nil {
 			return err
 		}
@@ -341,7 +341,7 @@ func nfsResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		_, err := nfsActionWait(c, action.ID, 5)
 		if err != nil {
 			return err
 		}
@@ -375,7 +375,7 @@ func nfsAttach(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		_, err := nfsActionWait(c, action.ID, 5)
 		if err != nil {
 			return err
 		}
@@ -408,7 +408,7 @@ func nfsDetach(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		_, err := nfsActionWait(c, action.ID, 5)
 		if err != nil {
 			return err
 		}
@@ -443,7 +443,7 @@ func nfsReassign(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		_, err := nfsActionWait(c, action.ID, 5)
 		if err != nil {
 			return err
 		}
@@ -475,7 +475,7 @@ func nfsSwitchPerformanceTier(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		_, err := nfsActionWait(c, action.ID, 5)
 		if err != nil {
 			return err
 		}
@@ -483,6 +483,14 @@ func nfsSwitchPerformanceTier(c *CmdConfig) error {
 
 	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
 	return c.Display(item)
+}
+
+func nfsActionWait(c *CmdConfig, actionID string, pollTime int) (*do.Action, error) {
+	id, err := strconv.Atoi(actionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid action ID %q: %w", actionID, err)
+	}
+	return actionWait(c, id, pollTime)
 }
 
 func displayNfs(c *CmdConfig, shares ...do.Nfs) error {
