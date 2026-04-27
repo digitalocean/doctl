@@ -28,7 +28,7 @@ var _ NfsActionsService = &NfsActionsServiceOp{}
 
 // NfsAction represents an NFS action
 type NfsAction struct {
-	ID           int        `json:"id"`
+	ID           string     `json:"id"`
 	Status       string     `json:"status"`
 	Type         string     `json:"type"`
 	StartedAt    *Timestamp `json:"started_at"`

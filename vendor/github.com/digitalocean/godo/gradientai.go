@@ -541,6 +541,7 @@ type ChatBot struct {
 // Model represents a Gradient AI Model
 type Model struct {
 	Agreement         *Agreement       `json:"agreement,omitempty"`
+	BenchmarkScore    json.RawMessage  `json:"benchmark_score,omitempty"`
 	Capabilities      []string         `json:"capabilities,omitempty"`
 	ContextWindow     string           `json:"context_window,omitempty"`
 	CreatedAt         *Timestamp       `json:"created_at,omitempty"`
@@ -553,6 +554,7 @@ type Model struct {
 	Name              string           `json:"name,omitempty"`
 	ParameterCount    float64          `json:"parameter_count,omitempty"`
 	ParentUuid        string           `json:"parent_uuid,omitempty"`
+	Pricing           *ModelPricing    `json:"pricing,omitempty"`
 	Provider          string           `json:"provider,omitempty"`
 	Type              string           `json:"type,omitempty"`
 	UpdatedAt         *Timestamp       `json:"updated_at,omitempty"`
@@ -581,6 +583,12 @@ type ModelVersion struct {
 	Major int `json:"major,omitempty"`
 	Minor int `json:"minor,omitempty"`
 	Patch int `json:"patch,omitempty"`
+}
+
+// ModelPricing represents the pricing per million tokens for a model
+type ModelPricing struct {
+	InputPricePerMillion  float64 `json:"input_price_per_million,omitempty"`
+	OutputPricePerMillion float64 `json:"output_price_per_million,omitempty"`
 }
 
 // AgentCreateRequest represents the request to create a new Gradient AI Agent
