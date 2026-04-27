@@ -251,6 +251,18 @@ func nfsSnapshotCreate(c *CmdConfig) error {
 		return err
 	}
 
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := nfsActionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
 	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
 	return c.Display(item)
 }
@@ -323,6 +335,18 @@ func nfsResize(c *CmdConfig) error {
 		return err
 	}
 
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := nfsActionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
 	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
 	return c.Display(item)
 }
@@ -345,6 +369,18 @@ func nfsAttach(c *CmdConfig) error {
 		return err
 	}
 
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := nfsActionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
 	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
 	return c.Display(item)
 }
@@ -364,6 +400,18 @@ func nfsDetach(c *CmdConfig) error {
 	action, err := c.NfsActions().Detach(id, vpcIdStr, region)
 	if err != nil {
 		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := nfsActionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
 	}
 
 	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
@@ -389,6 +437,18 @@ func nfsReassign(c *CmdConfig) error {
 		return err
 	}
 
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := nfsActionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
 	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
 	return c.Display(item)
 }
@@ -409,8 +469,28 @@ func nfsSwitchPerformanceTier(c *CmdConfig) error {
 		return err
 	}
 
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		_, err := nfsActionWait(c, action.ID, 5)
+		if err != nil {
+			return err
+		}
+	}
+
 	item := &displayers.NfsAction{NfsActions: []do.NfsAction{*action}}
 	return c.Display(item)
+}
+
+func nfsActionWait(c *CmdConfig, actionID string, pollTime int) (*do.Action, error) {
+	id, err := strconv.Atoi(actionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid action ID %q: %w", actionID, err)
+	}
+	return actionWait(c, id, pollTime)
 }
 
 func displayNfs(c *CmdConfig, shares ...do.Nfs) error {

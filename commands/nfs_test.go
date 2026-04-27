@@ -304,6 +304,9 @@ func TestRunNfsSnapshotCreate(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				if !tc.expectErr {
 					tm.nfsActions.EXPECT().Snapshot(tc.shareID, tc.snapName, tc.region).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
+					}
 				}
 
 				config.Doit.Set(config.NS, "name", tc.snapName)
@@ -363,6 +366,9 @@ func TestRunNfsResize(t *testing.T) {
 				if !tc.expectErr && tc.size != "invalid" {
 					size := uint64(2048)
 					tm.nfsActions.EXPECT().Resize(tc.id, size, tc.region).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
+					}
 				}
 
 				config.Doit.Set(config.NS, "id", tc.id)
@@ -414,6 +420,9 @@ func TestRunNfsAttach(t *testing.T) {
 				if !tc.expectErr {
 					vpcID := "vpc-1234"
 					tm.nfsActions.EXPECT().Attach(tc.id, vpcID, tc.region).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
+					}
 				}
 
 				config.Doit.Set(config.NS, "id", tc.id)
@@ -465,6 +474,9 @@ func TestRunNfsDetach(t *testing.T) {
 				if !tc.expectErr {
 					vpcID := "vpc-1234"
 					tm.nfsActions.EXPECT().Detach(tc.id, vpcID, tc.region).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
+					}
 				}
 
 				config.Doit.Set(config.NS, "id", tc.id)
@@ -515,6 +527,9 @@ func TestRunNfsReassign(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				if !tc.expectErr {
 					tm.nfsActions.EXPECT().Reassign(tc.id, tc.oldVpcID, tc.newVpcID).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
+					}
 				}
 
 				config.Doit.Set(config.NS, "id", tc.id)
@@ -562,6 +577,9 @@ func TestRunNfsSwitchPerformanceTier(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				if !tc.expectErr {
 					tm.nfsActions.EXPECT().SwitchPerformanceTier(tc.id, tc.performanceTier).Return(&testNfsAction, nil)
+					if tc.wait {
+						tm.actions.EXPECT().Get(123456).Return(&testAction, nil)
+					}
 				}
 
 				config.Doit.Set(config.NS, "id", tc.id)
