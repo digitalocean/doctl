@@ -2880,10 +2880,14 @@ func ssoConfigFromArgs(c *CmdConfig) (*godo.KubernetesClusterSSO, error) {
 		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesRequireSSO, err)
 	}
 	if enableSSO != nil || requireSSO != nil {
-		return &godo.KubernetesClusterSSO{
-			Enabled:  enableSSO,
-			Required: requireSSO,
-		}, nil
+		sso := &godo.KubernetesClusterSSO{}
+		if enableSSO != nil {
+			sso.Enabled = *enableSSO
+		}
+		if requireSSO != nil {
+			sso.Required = *requireSSO
+		}
+		return sso, nil
 	}
 	return nil, nil
 }
