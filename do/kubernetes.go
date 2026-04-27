@@ -124,7 +124,7 @@ func (k8s *kubernetesClusterService) Get(clusterID string) (*KubernetesCluster, 
 }
 
 func (k8s *kubernetesClusterService) GetKubeConfig(clusterID string) ([]byte, error) {
-	config, _, err := k8s.client.GetKubeConfig(context.TODO(), clusterID, nil)
+	config, _, err := k8s.client.GetKubeConfig(context.TODO(), clusterID, &godo.KubernetesClusterKubeconfigGetRequest{})
 	if err != nil {
 		return nil, err
 	}
