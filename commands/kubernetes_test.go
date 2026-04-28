@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/digitalocean/doctl"
@@ -105,13 +106,16 @@ var (
 		CurrentContext: "test-context",
 		Contexts: map[string]*clientcmdapi.Context{
 			"test-context": {
-				Cluster: "test-cluster",
+				Cluster:  "test-cluster",
+				AuthInfo: "test-user",
 			},
 		},
 		Clusters: map[string]*clientcmdapi.Cluster{
 			"test-cluster": clientcmdapi.NewCluster(),
 		},
-		AuthInfos: make(map[string]*clientcmdapi.AuthInfo),
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{
+			"test-user": {Token: "test-token"},
+		},
 	}
 
 	testK8sOneClickList = do.OneClicks{
@@ -185,7 +189,7 @@ type mockKubeconfigProvider struct {
 	local, remote, written clientcmdapi.Config
 }
 
-func (m *mockKubeconfigProvider) Remote(_ do.KubernetesService, _ string, _ int) (*clientcmdapi.Config, error) {
+func (m *mockKubeconfigProvider) Remote(_ do.KubernetesService, _ kubeconfigParams) (*clientcmdapi.Config, error) {
 	return &m.local, nil
 }
 
@@ -203,10 +207,12 @@ func (m *mockKubeconfigProvider) ConfigPath() string {
 }
 
 func testK8sCmdService() *KubernetesCommandService {
+	local := *testKubeconfig.DeepCopy()
+	remote := *testKubeconfig.DeepCopy()
 	return &KubernetesCommandService{
 		KubeconfigProvider: &mockKubeconfigProvider{
-			local:  testKubeconfig,
-			remote: testKubeconfig,
+			local:  local,
+			remote: remote,
 		},
 	}
 }
@@ -373,13 +379,12 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 
 		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
 		assert.Equal(t, provider.remote, provider.written)
-		assert.Contains(t, provider.written.AuthInfos[""].Exec.Command, "commands.test")
+		assert.Contains(t, provider.written.AuthInfos["test-user"].Exec.Command, "commands.test")
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		expirySeconds := int64(60)
 		config.Args = append(config.Args, testCluster.ID)
-		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, expirySeconds)
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, 60)
 
 		k8sCmdService := testK8sCmdService()
 		err := k8sCmdService.RunKubernetesKubeconfigSave(config)
@@ -387,8 +392,8 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 
 		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
 		assert.Equal(t, provider.remote, provider.written)
-		assert.Equal(t, provider.remote.AuthInfos[""].Token, provider.written.AuthInfos[""].Token)
-		assert.Nil(t, provider.written.AuthInfos[""].Exec)
+		assert.Equal(t, provider.remote.AuthInfos["test-user"].Token, provider.written.AuthInfos["test-user"].Token)
+		assert.Nil(t, provider.written.AuthInfos["test-user"].Exec)
 	})
 
 	// save the remote kubeconfig locally, verifying that the provided auth
@@ -418,37 +423,54 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 		assert.Equal(t, provider.remote, provider.written)
 
 		expectedExecContextArg := "--" + doctl.ArgContext + "=" + authContext
-		assert.Contains(t, provider.written.AuthInfos[""].Exec.Args, expectedExecContextArg)
+		assert.Contains(t, provider.written.AuthInfos["test-user"].Exec.Args, expectedExecContextArg)
 	})
 }
 
 func TestKubernetesKubeconfigShow(t *testing.T) {
+	testKubeconfigBytes, err := clientcmd.Write(*testKubeconfig.DeepCopy())
+	assert.NoError(t, err)
+
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		kubeconfig := []byte(`i'm some yaml`)
-		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID).Return(kubeconfig, nil)
+		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID, &godo.KubernetesClusterKubeconfigGetRequest{}).Return(testKubeconfigBytes, nil)
 		config.Args = append(config.Args, testCluster.ID)
-		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
+		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		kubeconfig := []byte(`i'm some yaml`)
 		expirySeconds := int64(60)
-		tm.kubernetes.EXPECT().GetKubeConfigWithExpiry(testCluster.ID, expirySeconds).Return(kubeconfig, nil)
+		tm.kubernetes.EXPECT().GetKubeConfigWithExpiry(testCluster.ID, expirySeconds).Return(testKubeconfigBytes, nil)
 		config.Args = append(config.Args, testCluster.ID)
-		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, expirySeconds)
-		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, 60)
+		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		kubeconfig := []byte(`i'm some yaml`)
 		// it'll see that no UUID is given and do a List call to find the cluster
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
-		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID).Return(kubeconfig, nil)
+		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID, &godo.KubernetesClusterKubeconfigGetRequest{}).Return(testKubeconfigBytes, nil)
 		config.Args = append(config.Args, testCluster.Name)
-		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
+		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		get := &godo.KubernetesClusterKubeconfigGetRequest{Type: "sso"}
+		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID, get).Return(testKubeconfigBytes, nil)
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigType, "sso")
+		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigType, "token")
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, 60)
+		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
+		assert.ErrorContains(t, err, "cannot use type flag")
 	})
 }
 
@@ -554,8 +576,8 @@ func TestKubernetesCreate(t *testing.T) {
 				Enabled: boolPtr(true),
 			},
 			SSO: &godo.KubernetesClusterSSO{
-				Enabled:  boolPtr(true),
-				Required: boolPtr(false),
+				Enabled:  true,
+				Required: false,
 			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
@@ -590,6 +612,10 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesRequireSSO, false)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
+		r.SSO.IssuerURL = "https://issuer.example"
+		r.SSO.ClientID = "oidc-client-id"
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -664,7 +690,9 @@ func TestKubernetesUpdate(t *testing.T) {
 				Enabled: boolPtr(true),
 			},
 			SSO: &godo.KubernetesClusterSSO{
-				Enabled: boolPtr(true),
+				Enabled:   true,
+				IssuerURL: "https://issuer.example",
+				ClientID:  "oidc-client-id",
 			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
@@ -685,6 +713,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -700,6 +730,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: boolPtr(false),
+			HA:          boolPtr(true),
 			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
@@ -714,6 +745,23 @@ func TestKubernetesUpdate(t *testing.T) {
 			RoutingAgent: &godo.KubernetesRoutingAgent{
 				Enabled: boolPtr(true),
 			},
+			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDeviceMetricsExporterPlugin: &godo.KubernetesAmdGpuDeviceMetricsExporterPlugin{
+				Enabled: boolPtr(true),
+			},
+			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
+				Enabled: boolPtr(true),
+			},
+			SSO: &godo.KubernetesClusterSSO{
+				Enabled:   true,
+				IssuerURL: "https://issuer.example",
+				ClientID:  "oidc-client-id",
+			},
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
@@ -723,11 +771,19 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
+		config.Doit.Set(config.NS, doctl.ArgHA, true)
 		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)

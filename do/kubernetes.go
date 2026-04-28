@@ -72,7 +72,7 @@ type KubernetesAssociatedResources struct {
 // KubernetesService is the godo KubernetesService interface.
 type KubernetesService interface {
 	Get(clusterID string) (*KubernetesCluster, error)
-	GetKubeConfig(clusterID string) ([]byte, error)
+	GetKubeConfig(clusterID string, get *godo.KubernetesClusterKubeconfigGetRequest) ([]byte, error)
 	GetKubeConfigWithExpiry(clusterID string, expirySeconds int64) ([]byte, error)
 	GetCredentials(clusterID string) (*KubernetesClusterCredentials, error)
 	GetUpgrades(clusterID string) (KubernetesVersions, error)
@@ -123,8 +123,11 @@ func (k8s *kubernetesClusterService) Get(clusterID string) (*KubernetesCluster, 
 	return &KubernetesCluster{KubernetesCluster: cluster}, nil
 }
 
-func (k8s *kubernetesClusterService) GetKubeConfig(clusterID string) ([]byte, error) {
-	config, _, err := k8s.client.GetKubeConfig(context.TODO(), clusterID)
+func (k8s *kubernetesClusterService) GetKubeConfig(clusterID string, get *godo.KubernetesClusterKubeconfigGetRequest) ([]byte, error) {
+	if get == nil {
+		get = &godo.KubernetesClusterKubeconfigGetRequest{}
+	}
+	config, _, err := k8s.client.GetKubeConfig(context.TODO(), clusterID, get)
 	if err != nil {
 		return nil, err
 	}

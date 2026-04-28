@@ -1,5 +1,20 @@
 # Change Log
 
+## [1.187.0] - 2026-04-22
+
+- #998 - @nhenning-do - Add BatchInferenceService for the inference proxy batch API
+- #995 - @d-honeybadger - DOKS: per cluster sso config
+
+## [1.186.0] - 2026-04-15
+
+- #992 - @venkatranabothu - Add model benchmark_score and pricing
+
+## [1.185.0] - 2026-04-14
+
+- #990 - @greeshmapill - APPS-12973: Add request based autoscaling changes to app spec
+- #989 - @andrehernandez0 - NfsAction - type inconsistency bug fix
+- #988 - @divyanshgupta-dodeveloper - NFRNC-701: Added provider model id to accommodate schema updates in DI Creation request
+
 ## [1.184.0] - 2026-04-01
 
 - #984 - Change ContextWindow to string

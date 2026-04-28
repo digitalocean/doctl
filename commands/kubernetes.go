@@ -116,10 +116,16 @@ func Kubernetes() *Command {
 	return cmd
 }
 
+type kubeconfigParams struct {
+	clusterID     string
+	expirySeconds int
+	cfgType       string
+}
+
 // KubeconfigProvider allows a user to read from a remote and local Kubeconfig, and write to a
 // local Kubeconfig.
 type KubeconfigProvider interface {
-	Remote(kube do.KubernetesService, clusterID string, expirySeconds int) (*clientcmdapi.Config, error)
+	Remote(kube do.KubernetesService, params kubeconfigParams) (*clientcmdapi.Config, error)
 	Local() (*clientcmdapi.Config, error)
 	Write(config *clientcmdapi.Config) error
 	ConfigPath() string
@@ -130,13 +136,13 @@ type kubeconfigProvider struct {
 }
 
 // Remote returns the kubeconfig for the cluster with the given ID from DOKS.
-func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string, expirySeconds int) (*clientcmdapi.Config, error) {
+func (p *kubeconfigProvider) Remote(kube do.KubernetesService, params kubeconfigParams) (*clientcmdapi.Config, error) {
 	var kubeconfig []byte
 	var err error
-	if expirySeconds > 0 {
-		kubeconfig, err = kube.GetKubeConfigWithExpiry(clusterID, int64(expirySeconds))
+	if params.expirySeconds > 0 {
+		kubeconfig, err = kube.GetKubeConfigWithExpiry(params.clusterID, int64(params.expirySeconds))
 	} else {
-		kubeconfig, err = kube.GetKubeConfig(clusterID)
+		kubeconfig, err = kube.GetKubeConfig(params.clusterID, &godo.KubernetesClusterKubeconfigGetRequest{Type: params.cfgType})
 	}
 	if err != nil {
 		return nil, err
@@ -308,9 +314,13 @@ After creating a cluster, a configuration context is added to kubectl and made a
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRDMASharedDevicePlugin, "", false,
 		"Creates the cluster with k8s-rdma-shared-dev-plugin device plugin installed. Defaults to true for clusters with GPU nodes connected to a dedicated high-speed networking fabric. To always enable it, supply --enable-rdma-shared-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgKubernetesEnableSSO, "", false,
-		"Creates the cluster with SSO method of authentication enabled. IDP for SSO is configured on the Team level.")
+		"Creates the cluster with SSO method of authentication enabled.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgKubernetesRequireSSO, "", false,
-		"Creates the cluster with SSO required as the only method of authentication. IDP for SSO is configured on the Team level.")
+		"Creates the cluster with SSO required as the only method of authentication.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgKubernetesSSOIssuerURL, "", "",
+		"OIDC issuer URL for the cluster SSO configuration.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgKubernetesSSOClientID, "", "",
+		"OIDC client ID for the cluster SSO configuration.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -370,9 +380,13 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRDMASharedDevicePlugin, "", false,
 		"Creates the cluster with k8s-rdma-shared-dev-plugin device plugin installed. Defaults to true for clusters with GPU nodes connected to a dedicated high-speed networking fabric. To always enable it, supply --enable-rdma-shared-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesEnableSSO, "", false,
-		"Enables SSO method of authentication for the cluster. IDP for SSO is configured on the Team level.")
+		"Enables SSO method of authentication for the cluster.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesRequireSSO, "", false,
-		"Sets up SSO method of authentication as required for the cluster. IDP for SSO is configured on the Team level.")
+		"Sets up SSO method of authentication as required for the cluster.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesSSOIssuerURL, "", "",
+		"OIDC issuer URL for the cluster SSO configuration.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesSSOClientID, "", "",
+		"OIDC client ID for the cluster SSO configuration.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
 		"The threshold value for the cluster autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of CPU requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down. To set the scale-down-utilization-threshold to 50%, pass the floating point value 0.5.")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
@@ -453,7 +467,9 @@ func kubernetesKubeconfig() *Command {
 	cmdShowConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
 Returns the raw YAML for the specified cluster's kubeconfig.`, Writer, aliasOpt("p", "g"))
 	AddIntFlag(cmdShowConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
-		"The length of time the cluster credentials are valid for, in seconds. By default, the credentials expire after seven days.")
+		"The length of time the cluster credentials are valid for, in seconds. By default, the credentials expire after seven days. If set, `token` kubeconfig type is implied.")
+	AddStringFlag(cmdShowConfig, doctl.ArgKubeConfigType, "", "",
+		"Kubeconfig authentication type: 'token', 'sso', or omit for the API default.")
 	cmdShowConfig.Example = `The following example shows the kubeconfig YAML for a cluster named ` + "`" + `example-cluster` + "`" + `: doctl kubernetes cluster kubeconfig show example-cluster`
 
 	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
@@ -465,7 +481,9 @@ Adds the credentials for the specified cluster to your local kubeconfig. After t
 		`, Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Sets the current kubectl context to that of the newest cluster in your account")
 	AddIntFlag(cmdSaveConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
-		"The length of time the cluster credentials are valid for, in seconds. By default, the credentials are automatically renewed as needed.")
+		"The length of time the cluster credentials are valid for, in seconds. By default, the credentials are automatically renewed as needed. If set, `token` kubeconfig type is implied.")
+	AddStringFlag(cmdSaveConfig, doctl.ArgKubeConfigType, "", "",
+		"Kubeconfig authentication type: 'token', 'sso', or omit for the API default.")
 	AddStringFlag(cmdSaveConfig, doctl.ArgKubernetesAlias, "", "", "An alias for the cluster context name. Defaults to 'do-[region]-[cluster-name]'")
 	cmdSaveConfig.Example = `The following example saves the credentials for a cluster named ` + "`" + `example-cluster` + "`" + ` to your local kubeconfig: doctl kubernetes cluster kubeconfig save example-cluster`
 
@@ -878,7 +896,7 @@ func (s *KubernetesCommandService) tryUpdateKubeconfig(kube do.KubernetesService
 	ctx, cancel := context.WithTimeout(context.TODO(), timeoutFetchingKubeconfig)
 	defer cancel()
 	for {
-		remoteConfig, err = s.KubeconfigProvider.Remote(kube, clusterID, 0)
+		remoteConfig, err = s.KubeconfigProvider.Remote(kube, kubeconfigParams{clusterID: clusterID})
 		if err != nil {
 			select {
 			case <-ctx.Done():
@@ -890,7 +908,7 @@ func (s *KubernetesCommandService) tryUpdateKubeconfig(kube do.KubernetesService
 			break
 		}
 	}
-	if err := s.writeOrAddToKubeconfig(clusterID, remoteConfig, setCurrentContext, 0); err != nil {
+	if err := s.writeOrAddToKubeconfig(kubeconfigParams{clusterID: clusterID}, remoteConfig, setCurrentContext); err != nil {
 		warn("Couldn't write cluster credentials: %v", err)
 	}
 }
@@ -1030,7 +1048,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 		if update {
 			// get the cluster's kubeconfig before issuing the delete, so that we can
 			// cleanup the entry from the local file
-			kubeconfig, err = kube.GetKubeConfig(clusterID)
+			kubeconfig, err = kube.GetKubeConfig(clusterID, &godo.KubernetesClusterKubeconfigGetRequest{})
 			if err != nil {
 				warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
 			}
@@ -1105,7 +1123,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 	if update {
 		// get the cluster's kubeconfig before issuing the delete, so that we can
 		// cleanup the entry from the local file
-		kubeconfig, err = kube.GetKubeConfig(clusterID)
+		kubeconfig, err = kube.GetKubeConfig(clusterID, &godo.KubernetesClusterKubeconfigGetRequest{})
 		if err != nil {
 			warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
 		}
@@ -1186,35 +1204,60 @@ func (s *KubernetesCommandService) RunKubernetesClusterListAssociatedResources(c
 
 // Kubeconfig
 
-// RunKubernetesKubeconfigShow retrieves an existing kubernetes config and prints it.
-func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) error {
+func kubeconfigParamsFromFlags(c *CmdConfig) (kubeconfigParams, error) {
+	params := kubeconfigParams{}
+
 	err := ensureOneArg(c)
 	if err != nil {
-		return err
+		return params, fmt.Errorf("validating command arguments: %w", err)
+	}
+	cfgType, err := c.Doit.GetString(c.NS, doctl.ArgKubeConfigType)
+	if err != nil {
+		return params, fmt.Errorf("parsing %s flag: %w", doctl.ArgKubeConfigType, err)
 	}
 	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgKubeConfigExpirySeconds)
 	if err != nil {
-		return err
+		return params, fmt.Errorf("parsing %s flag: %w", doctl.ArgKubeConfigExpirySeconds, err)
+	}
+	if expirySeconds > 0 && cfgType != "" {
+		return params, fmt.Errorf("cannot use %s flag with %s flag", doctl.ArgKubeConfigType, doctl.ArgKubeConfigExpirySeconds)
 	}
 
-	kube := c.Kubernetes()
 	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
-		return err
+		return params, fmt.Errorf("getting cluster ID: %w", err)
 	}
 
-	var kubeconfig []byte
-	if expirySeconds > 0 {
-		kubeconfig, err = kube.GetKubeConfigWithExpiry(clusterID, int64(expirySeconds))
-	} else {
-		kubeconfig, err = kube.GetKubeConfig(clusterID)
-	}
+	params.clusterID = clusterID
+	params.expirySeconds = expirySeconds
+	params.cfgType = cfgType
+
+	return params, nil
+}
+
+// RunKubernetesKubeconfigShow retrieves an existing kubernetes config and prints it.
+func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) error {
+	kubeconfigParams, err := kubeconfigParamsFromFlags(c)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.Out.Write(kubeconfig)
-	return err
+	kubeconfig, err := s.KubeconfigProvider.Remote(c.Kubernetes(), kubeconfigParams)
+	if err != nil {
+		return err
+	}
+	if kubeconfig == nil {
+		return fmt.Errorf("received nil kubeconfig")
+	}
+	kubeconfigBytes, err := clientcmd.Write(*kubeconfig)
+	if err != nil {
+		return fmt.Errorf("serializing kubeconfig: %w", err)
+	}
+	_, err = c.Out.Write(kubeconfigBytes)
+	if err != nil {
+		return fmt.Errorf("writing kubeconfig to output: %w", err)
+	}
+	return nil
 }
 
 func cachedExecCredentialPath(id string) string {
@@ -1339,22 +1382,12 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigExecCredential(c *CmdC
 
 // RunKubernetesKubeconfigSave retrieves an existing kubernetes config and saves it to your local kubeconfig.
 func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) error {
-	err := ensureOneArg(c)
-	if err != nil {
-		return err
-	}
-	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgKubeConfigExpirySeconds)
+	kubeconfigParams, err := kubeconfigParamsFromFlags(c)
 	if err != nil {
 		return err
 	}
 
-	kube := c.Kubernetes()
-	clusterID, err := clusterIDize(c, c.Args[0])
-	if err != nil {
-		return err
-	}
-
-	remoteKubeconfig, err := s.KubeconfigProvider.Remote(kube, clusterID, expirySeconds)
+	remoteKubeconfig, err := s.KubeconfigProvider.Remote(c.Kubernetes(), kubeconfigParams)
 	if err != nil {
 		return err
 	}
@@ -1375,13 +1408,13 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 		return err
 	}
 
-	path := cachedExecCredentialPath(clusterID)
+	path := cachedExecCredentialPath(kubeconfigParams.clusterID)
 	_, err = os.Stat(path)
 	if err == nil {
 		os.Remove(path)
 	}
 
-	return s.writeOrAddToKubeconfig(clusterID, remoteKubeconfig, setCurrentContext, expirySeconds)
+	return s.writeOrAddToKubeconfig(kubeconfigParams, remoteKubeconfig, setCurrentContext)
 }
 
 // RunKubernetesKubeconfigRemove retrieves an existing kubernetes config and removes it from your local kubeconfig.
@@ -1395,7 +1428,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigRemove(c *CmdConfig) e
 	if err != nil {
 		return err
 	}
-	kubeconfig, err := kube.GetKubeConfig(clusterID)
+	kubeconfig, err := kube.GetKubeConfig(clusterID, &godo.KubernetesClusterKubeconfigGetRequest{})
 	if err != nil {
 		return err
 	}
@@ -2305,7 +2338,7 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	return nil
 }
 
-func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remoteKubeconfig *clientcmdapi.Config, setCurrentContext bool, expirySeconds int) error {
+func (s *KubernetesCommandService) writeOrAddToKubeconfig(kubeconfigParams kubeconfigParams, remoteKubeconfig *clientcmdapi.Config, setCurrentContext bool) error {
 	localKubeconfig, err := s.KubeconfigProvider.Local()
 	if err != nil {
 		return err
@@ -2313,7 +2346,7 @@ func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remo
 
 	kubectlDefaults := s.KubeconfigProvider.ConfigPath()
 	notice("Adding cluster credentials to kubeconfig file found in %q", kubectlDefaults)
-	if err := mergeKubeconfig(clusterID, remoteKubeconfig, localKubeconfig, setCurrentContext, expirySeconds); err != nil {
+	if err := mergeKubeconfig(kubeconfigParams, remoteKubeconfig, localKubeconfig, setCurrentContext); err != nil {
 		return fmt.Errorf("Couldn't use the kubeconfig info received, %v", err)
 	}
 
@@ -2340,7 +2373,7 @@ func removeFromKubeconfig(kubeconfig []byte) error {
 // mergeKubeconfig merges a remote cluster's config file with a local config file,
 // assuming that the current context in the remote config file points to the
 // cluster details to add to the local config.
-func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCurrentContext bool, expirySeconds int) error {
+func mergeKubeconfig(kubeconfigParams kubeconfigParams, remote, local *clientcmdapi.Config, setCurrentContext bool) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
@@ -2364,14 +2397,26 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 		local.CurrentContext = remote.CurrentContext
 	}
 
+	remoteAuthInfo, ok := remote.AuthInfos[remoteCtx.AuthInfo]
+	if !ok {
+		// this is a bug in the backend, we received incomplete/non-sensical data
+		return fmt.Errorf("The remote config has no no auth info for user %q. This is a bug, please open a ticket with DigitalOcean.",
+			remoteCtx.AuthInfo,
+		)
+	}
+	remoteKubeconfigType := "token"
+	if remoteAuthInfo.Token == "" {
+		remoteKubeconfigType = "sso"
+	}
+
 	switch {
-	case expirySeconds > 0:
+	case remoteKubeconfigType == "token" && kubeconfigParams.expirySeconds > 0:
 		// When expirySeconds is passed, token based auth should be used as
 		// credentials should expire and not be renewed automatically
 		local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
-			Token: remote.AuthInfos[remoteCtx.AuthInfo].Token,
+			Token: remoteAuthInfo.Token,
 		}
-	default:
+	case remoteKubeconfigType == "token" && kubeconfigParams.expirySeconds == 0:
 		// Configure kubectl to call doctl to renew credentials automatically
 		local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
 			Exec: &clientcmdapi.ExecConfig{
@@ -2384,10 +2429,14 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 					"exec-credential",
 					"--version=v1beta1",
 					"--context=" + getCurrentAuthContextFn(),
-					clusterID,
+					kubeconfigParams.clusterID,
 				},
 			},
 		}
+	case remoteKubeconfigType == "sso":
+		local.AuthInfos[remoteCtx.AuthInfo] = remoteAuthInfo.DeepCopy()
+		// in case doctl command is not in the PATH or is renamed
+		local.AuthInfos[remoteCtx.AuthInfo].Exec.Command = doctl.CommandName()
 	}
 
 	return nil
@@ -2871,21 +2920,37 @@ func parseTaint(rawTaint string) (godo.Taint, error) {
 }
 
 func ssoConfigFromArgs(c *CmdConfig) (*godo.KubernetesClusterSSO, error) {
-	enableSSO, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgKubernetesEnableSSO)
+	if !c.Doit.IsSet(doctl.ArgKubernetesEnableSSO) &&
+		!c.Doit.IsSet(doctl.ArgKubernetesRequireSSO) &&
+		!c.Doit.IsSet(doctl.ArgKubernetesSSOIssuerURL) &&
+		!c.Doit.IsSet(doctl.ArgKubernetesSSOClientID) {
+		return nil, nil
+	}
+	enableSSO, err := c.Doit.GetBool(c.NS, doctl.ArgKubernetesEnableSSO)
 	if err != nil {
 		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesEnableSSO, err)
 	}
-	requireSSO, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgKubernetesRequireSSO)
+	requireSSO, err := c.Doit.GetBool(c.NS, doctl.ArgKubernetesRequireSSO)
 	if err != nil {
 		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesRequireSSO, err)
 	}
-	if enableSSO != nil || requireSSO != nil {
-		return &godo.KubernetesClusterSSO{
-			Enabled:  enableSSO,
-			Required: requireSSO,
-		}, nil
+
+	issuerURL, err := c.Doit.GetString(c.NS, doctl.ArgKubernetesSSOIssuerURL)
+	if err != nil {
+		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesSSOIssuerURL, err)
 	}
-	return nil, nil
+	clientID, err := c.Doit.GetString(c.NS, doctl.ArgKubernetesSSOClientID)
+	if err != nil {
+		return nil, fmt.Errorf("getting %s flag value: %w", doctl.ArgKubernetesSSOClientID, err)
+	}
+
+	cfg := &godo.KubernetesClusterSSO{
+		Enabled:   enableSSO,
+		Required:  requireSSO,
+		IssuerURL: issuerURL,
+		ClientID:  clientID,
+	}
+	return cfg, nil
 }
 
 func boolPtr(val bool) *bool {

@@ -256,8 +256,13 @@ func nfsSnapshotCreate(c *CmdConfig) error {
 		return err
 	}
 
+	actionID, err := strconv.Atoi(action.ID)
+	if err != nil {
+		return err
+	}
+
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		_, err := actionWait(c, actionID, 5)
 		if err != nil {
 			return err
 		}
@@ -341,7 +346,12 @@ func nfsResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		actionID, err := strconv.Atoi(action.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = actionWait(c, actionID, 5)
 		if err != nil {
 			return err
 		}
@@ -375,7 +385,12 @@ func nfsAttach(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		actionID, err := strconv.Atoi(action.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = actionWait(c, actionID, 5)
 		if err != nil {
 			return err
 		}
@@ -408,7 +423,12 @@ func nfsDetach(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		actionID, err := strconv.Atoi(action.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = actionWait(c, actionID, 5)
 		if err != nil {
 			return err
 		}
@@ -443,7 +463,12 @@ func nfsReassign(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		actionID, err := strconv.Atoi(action.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = actionWait(c, actionID, 5)
 		if err != nil {
 			return err
 		}
@@ -475,7 +500,12 @@ func nfsSwitchPerformanceTier(c *CmdConfig) error {
 	}
 
 	if wait {
-		_, err := actionWait(c, action.ID, 5)
+		actionID, err := strconv.Atoi(action.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = actionWait(c, actionID, 5)
 		if err != nil {
 			return err
 		}
