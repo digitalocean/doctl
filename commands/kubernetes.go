@@ -1048,7 +1048,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 		if update {
 			// get the cluster's kubeconfig before issuing the delete, so that we can
 			// cleanup the entry from the local file
-			kubeconfig, err = kube.GetKubeConfig(clusterID, nil)
+			kubeconfig, err = kube.GetKubeConfig(clusterID, &godo.KubernetesClusterKubeconfigGetRequest{})
 			if err != nil {
 				warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
 			}
@@ -1123,7 +1123,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 	if update {
 		// get the cluster's kubeconfig before issuing the delete, so that we can
 		// cleanup the entry from the local file
-		kubeconfig, err = kube.GetKubeConfig(clusterID, nil)
+		kubeconfig, err = kube.GetKubeConfig(clusterID, &godo.KubernetesClusterKubeconfigGetRequest{})
 		if err != nil {
 			warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
 		}
@@ -1428,7 +1428,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigRemove(c *CmdConfig) e
 	if err != nil {
 		return err
 	}
-	kubeconfig, err := kube.GetKubeConfig(clusterID, nil)
+	kubeconfig, err := kube.GetKubeConfig(clusterID, &godo.KubernetesClusterKubeconfigGetRequest{})
 	if err != nil {
 		return err
 	}
