@@ -139,12 +139,17 @@ func initConfig() {
 	}
 }
 
-// in case we ever want to change this, or let folks configure it...
-func defaultConfigHome() string {
+// defaultConfigHomeFn returns the root doctl config directory (…/doctl under the user
+// config dir). Tests may replace it to isolate config and cache paths on disk.
+var defaultConfigHomeFn = func() string {
 	cfgDir, err := os.UserConfigDir()
 	checkErr(err)
-
 	return filepath.Join(cfgDir, "doctl")
+}
+
+// in case we ever want to change this, or let folks configure it...
+func defaultConfigHome() string {
+	return defaultConfigHomeFn()
 }
 
 func configHome() string {

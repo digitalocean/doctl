@@ -173,6 +173,8 @@ const (
 	ArgKubernetesSSOIssuerURL = "sso-issuer-url"
 	// ArgKubernetesSSOClientID is the OIDC client ID for cluster SSO configuration.
 	ArgKubernetesSSOClientID = "sso-client-id"
+	// ArgKubernetesSSOLocalServerPort is the port to use for the local server which handles SSO authentication flow.
+	ArgKubernetesSSOLocalServerPort = "sso-local-server-port"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
@@ -328,7 +330,8 @@ const (
 	// ArgTriggerDeployment indicates whether to trigger a deployment
 	ArgTriggerDeployment = "trigger-deployment"
 	// ArgVersion is the version of the command to use
-	ArgVersion = "version"
+	ArgVersion          = "version"
+	ArgKubernetesSSOURL = "sso-url"
 	// ArgVerbose enables verbose output
 	ArgVerbose = "verbose"
 
