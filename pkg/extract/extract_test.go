@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/google/uuid"
@@ -72,7 +73,9 @@ func TestExtractTarGzWithContent(t *testing.T) {
 
 	info, err := os.Stat(filepath.Join(out, "myapp/bin/run.sh"))
 	require.NoError(t, err)
-	require.NotZero(t, info.Mode()&0111, "run.sh should be executable")
+	if runtime.GOOS != "windows" {
+		require.NotZero(t, info.Mode()&0111, "run.sh should be executable")
+	}
 
 	content, err = os.ReadFile(filepath.Join(out, "myapp/config.json"))
 	require.NoError(t, err)

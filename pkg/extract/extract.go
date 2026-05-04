@@ -28,9 +28,12 @@ func sanitizePath(target, name string) (string, error) {
 func sanitizeLinkTarget(target, linkname, entryPath string, isSymlink bool) error {
 	resolved := linkname
 	if isSymlink {
-		if !filepath.IsAbs(linkname) {
-			resolved = filepath.Join(filepath.Dir(entryPath), linkname)
+		// filepath.IsAbs is OS-specific; on Windows it returns false for Unix
+		// absolute paths like "/etc", so check the slash prefix explicitly too.
+		if filepath.IsAbs(linkname) || strings.HasPrefix(linkname, "/") {
+			return fmt.Errorf("illegal link target: %s -> %s", entryPath, linkname)
 		}
+		resolved = filepath.Join(filepath.Dir(entryPath), linkname)
 	}
 	resolved = filepath.Clean(resolved)
 	cleanTarget := filepath.Clean(target) + string(os.PathSeparator)
