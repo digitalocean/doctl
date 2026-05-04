@@ -186,16 +186,20 @@ func extractZip(source, target string) error {
 
 		err = f.Chmod(zf.Mode())
 		if err != nil {
+			f.Close()
 			return err
 		}
 
 		zippedFile, err := zf.Open()
 		if err != nil {
+			f.Close()
 			return err
 		}
 
 		_, err = io.Copy(f, zippedFile)
 		if err != nil {
+			f.Close()
+			zippedFile.Close()
 			return err
 		}
 		f.Close()
