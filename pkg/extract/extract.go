@@ -12,6 +12,37 @@ import (
 	"strings"
 )
 
+// sanitizePath validates that the resolved path falls within the extraction root.
+func sanitizePath(target, name string) (string, error) {
+	cleanTarget := filepath.Clean(target) + string(os.PathSeparator)
+	path := filepath.Join(target, name)
+	if !strings.HasPrefix(path, cleanTarget) {
+		return "", fmt.Errorf("illegal file path: %s", path)
+	}
+	return path, nil
+}
+
+// sanitizeLinkTarget validates that a hardlink or symlink target resolves to
+// a path within the extraction root. For symlinks the linkname is resolved
+// relative to the directory that will contain the link.
+func sanitizeLinkTarget(target, linkname, entryPath string, isSymlink bool) error {
+	resolved := linkname
+	if isSymlink {
+		// filepath.IsAbs is OS-specific; on Windows it returns false for Unix
+		// absolute paths like "/etc", so check the slash prefix explicitly too.
+		if filepath.IsAbs(linkname) || strings.HasPrefix(linkname, "/") {
+			return fmt.Errorf("illegal link target: %s -> %s", entryPath, linkname)
+		}
+		resolved = filepath.Join(filepath.Dir(entryPath), linkname)
+	}
+	resolved = filepath.Clean(resolved)
+	cleanTarget := filepath.Clean(target) + string(os.PathSeparator)
+	if !strings.HasPrefix(resolved, cleanTarget) {
+		return fmt.Errorf("illegal link target: %s -> %s", entryPath, linkname)
+	}
+	return nil
+}
+
 // Extract extracts files from an archive to the specified location. It supports
 // .tar.gz and .zip archives.
 func Extract(source, target string) error {
@@ -66,15 +97,14 @@ func extractTarGz(source, target string) error {
 		}
 
 		info := header.FileInfo()
-		path := filepath.Join(target, header.Name)
-		if !strings.HasPrefix(path, filepath.Clean(target)+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", path)
+		path, err := sanitizePath(target, header.Name)
+		if err != nil {
+			return err
 		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			err := os.MkdirAll(path, info.Mode())
-			if err != nil {
+			if err := os.MkdirAll(path, info.Mode()); err != nil {
 				return err
 			}
 
@@ -90,20 +120,32 @@ func extractTarGz(source, target string) error {
 
 			err = f.Chmod(info.Mode())
 			if err != nil {
+				f.Close()
 				return err
 			}
 
 			_, err = io.Copy(f, tarReader)
 			if err != nil {
+				f.Close()
 				return err
 			}
 			f.Close()
 
 		case tar.TypeLink:
-			os.Link(header.Linkname, path)
+			if err := sanitizeLinkTarget(target, header.Linkname, path, false); err != nil {
+				return err
+			}
+			if err := os.Link(header.Linkname, path); err != nil {
+				return err
+			}
 
 		case tar.TypeSymlink:
-			os.Symlink(header.Linkname, path)
+			if err := sanitizeLinkTarget(target, header.Linkname, path, true); err != nil {
+				return err
+			}
+			if err := os.Symlink(header.Linkname, path); err != nil {
+				return err
+			}
 
 		default:
 			return fmt.Errorf("unknown type %s in %s", string(header.Typeflag), header.Name)
@@ -121,9 +163,9 @@ func extractZip(source, target string) error {
 	defer zReader.Close()
 
 	for _, zf := range zReader.File {
-		path := filepath.Join(target, zf.Name)
-		if !strings.HasPrefix(path, filepath.Clean(target)+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", path)
+		path, err := sanitizePath(target, zf.Name)
+		if err != nil {
+			return err
 		}
 
 		if zf.FileInfo().IsDir() {
@@ -144,16 +186,20 @@ func extractZip(source, target string) error {
 
 		err = f.Chmod(zf.Mode())
 		if err != nil {
+			f.Close()
 			return err
 		}
 
 		zippedFile, err := zf.Open()
 		if err != nil {
+			f.Close()
 			return err
 		}
 
 		_, err = io.Copy(f, zippedFile)
 		if err != nil {
+			f.Close()
+			zippedFile.Close()
 			return err
 		}
 		f.Close()
