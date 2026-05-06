@@ -2400,7 +2400,7 @@ func mergeKubeconfig(kubeconfigParams kubeconfigParams, remote, local *clientcmd
 	remoteAuthInfo, ok := remote.AuthInfos[remoteCtx.AuthInfo]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
-		return fmt.Errorf("The remote config has no no auth info for user %q. This is a bug, please open a ticket with DigitalOcean.",
+		return fmt.Errorf("The remote config has no auth info for user %q. This is a bug, please open a ticket with DigitalOcean.",
 			remoteCtx.AuthInfo,
 		)
 	}
