@@ -89,7 +89,7 @@ func newLocalOIDCLogin(clientID, issuerURL string, opts ...LocalOIDCLoginOption)
 		ClientID:    clientID,
 		Endpoint:    provider.Endpoint(),
 		RedirectURL: t.redirectURL(),
-		Scopes:      []string{oidc.ScopeOpenID, "email", "groups"},
+		Scopes:      []string{oidc.ScopeOpenID, "email", "groups", "team_role"},
 	}
 
 	state := uuid.New().String()
