@@ -554,8 +554,8 @@ func TestKubernetesCreate(t *testing.T) {
 				Enabled: boolPtr(true),
 			},
 			SSO: &godo.KubernetesClusterSSO{
-				Enabled:  boolPtr(true),
-				Required: boolPtr(false),
+				Enabled:  true,
+				Required: false,
 			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
@@ -664,7 +664,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				Enabled: boolPtr(true),
 			},
 			SSO: &godo.KubernetesClusterSSO{
-				Enabled: boolPtr(true),
+				Enabled: true,
 			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
