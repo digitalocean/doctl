@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.189.0] - 2026-05-04
+
+**BREAKING CHANGE:** `AppIngressSpecRuleStringMatch.Prefix` and `.Exact` changed from `string` to `*string` to fix empty-string matching. Consumers that directly read or assign these fields will need to update their code. Use `godo.PtrTo("value")` for assignment and the `GetPrefix()`/`GetExact()` accessors for reading.
+
+- #994 - @aupadhyay-shark - App Ingress authority routing only supports exact matching #937
+
+## [1.188.0] - 2026-04-27
+
+- #1000 - @m3co-code - add new fields to k8s node pool template for auto-scaler
+
 ## [1.187.0] - 2026-04-22
 
 - #998 - @nhenning-do - Add BatchInferenceService for the inference proxy batch API

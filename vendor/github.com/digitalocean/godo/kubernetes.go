@@ -511,15 +511,17 @@ type KubernetesNodePoolTemplate struct {
 // This follows https://pkg.go.dev/k8s.io/kubernetes@v1.32.1/pkg/scheduler/framework#Resource to represent
 // node resources within the node object.
 type KubernetesNodePoolResources struct {
-	CPU    int64  `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	Pods   int64  `json:"pods,omitempty"`
+	CPU           int64  `json:"cpu,omitempty"` // deprecated in favor of cpuMilliCores
+	CpuMilliCores int64  `json:"cpu_milli_cores,omitempty"`
+	Memory        string `json:"memory,omitempty"`
+	Pods          int64  `json:"pods,omitempty"`
 }
 
 // KubernetesNodePoolGPUResources exposes model and GPU count of a node pool template
 type KubernetesNodePoolGPUResources struct {
-	Model string `json:"model"`
-	Count int64  `json:"count"`
+	Vendor string `json:"vendor"`
+	Model  string `json:"model"`
+	Count  int64  `json:"count"`
 }
 
 // KubernetesNode represents a Node in a node pool in a Kubernetes cluster.
