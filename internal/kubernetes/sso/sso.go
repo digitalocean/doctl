@@ -17,11 +17,15 @@ import (
 	"github.com/pkg/browser"
 )
 
-//go:embed auth_success.html
-var authSuccessHTML []byte
+var (
+	//go:embed auth_success.html
+	authSuccessHTML []byte
 
-//go:embed auth_error.html
-var authErrorHTML []byte
+	//go:embed auth_error.html
+	authErrorHTML []byte
+
+	now = time.Now
+)
 
 const (
 	defaultLocalServerPort uint16 = 8080
@@ -45,6 +49,8 @@ type localOIDCLogin struct {
 	oauth2Config oauth2.Config
 	state        string
 	codeVerifier string
+	nonce        string
+	provider     *oidc.Provider
 
 	ssoServer *ssoServer
 
@@ -89,15 +95,16 @@ func newLocalOIDCLogin(clientID, issuerURL string, opts ...LocalOIDCLoginOption)
 		ClientID:    clientID,
 		Endpoint:    provider.Endpoint(),
 		RedirectURL: t.redirectURL(),
-		Scopes:      []string{oidc.ScopeOpenID, "email", "groups", "team_role"},
+		Scopes:      []string{oidc.ScopeOpenID, "email", "team_role"},
 	}
 
 	state := uuid.New().String()
 	codeVerifier := oauth2.GenerateVerifier()
 	codeChallenge := oauth2.S256ChallengeOption(codeVerifier)
+	nonce := uuid.New().String()
 
 	ssoServer := &ssoServer{
-		authCodeURL: oauth2Config.AuthCodeURL(state, codeChallenge),
+		authCodeURL: oauth2Config.AuthCodeURL(state, codeChallenge, oidc.Nonce(nonce)),
 		logger:      t.logger,
 		authCodeCh:  make(chan authCodeResponse),
 		errorCh:     make(chan error),
@@ -106,7 +113,9 @@ func newLocalOIDCLogin(clientID, issuerURL string, opts ...LocalOIDCLoginOption)
 	t.oauth2Config = oauth2Config
 	t.state = state
 	t.codeVerifier = codeVerifier
+	t.nonce = nonce
 	t.ssoServer = ssoServer
+	t.provider = provider
 
 	return t, nil
 }
@@ -124,7 +133,7 @@ func (t *localOIDCLogin) getAuthCode(ctx context.Context) (string, error) {
 
 	server := &http.Server{
 		Handler: t.ssoServer,
-		Addr:    fmt.Sprintf(":%d", t.port),
+		Addr:    fmt.Sprintf("127.0.0.1:%d", t.port),
 	}
 	defer server.Close()
 
@@ -194,6 +203,15 @@ func (t *localOIDCLogin) getIDToken(ctx context.Context) (string, time.Time, err
 	idToken, ok := token.Extra("id_token").(string)
 	if !ok || idToken == "" {
 		return "", time.Time{}, errors.New("no ID token found")
+	}
+
+	verifier := t.provider.Verifier(&oidc.Config{ClientID: t.oauth2Config.ClientID, Now: now})
+	verifiedIDToken, err := verifier.Verify(ctx, idToken)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("could not verify ID token: %w", err)
+	}
+	if t.nonce != verifiedIDToken.Nonce {
+		return "", time.Time{}, fmt.Errorf("nonce did not match (wants %s but got %s)", t.nonce, verifiedIDToken.Nonce)
 	}
 
 	return idToken, token.Expiry, nil
