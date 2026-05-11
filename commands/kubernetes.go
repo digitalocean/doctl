@@ -488,7 +488,7 @@ Returns the raw YAML for the specified cluster's kubeconfig.`, Writer, aliasOpt(
 	cmdShowConfig.Example = `The following example shows the kubeconfig YAML for a cluster named ` + "`" + `example-cluster` + "`" + `: doctl kubernetes cluster kubeconfig show example-cluster`
 
 	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
-	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", execCredDesc, execCredDesc, Writer) //, hiddenCmd())
+	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", execCredDesc, execCredDesc, Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
 	AddStringFlag(cmdExecCredential, doctl.ArgKubernetesSSOIssuerURL, "", "", "")
 	AddStringFlag(cmdExecCredential, doctl.ArgKubernetesSSOClientID, "", "", "")
