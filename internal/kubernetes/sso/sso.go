@@ -195,7 +195,7 @@ func (t *localOIDCLogin) getIDToken(ctx context.Context) (string, time.Time, err
 	}
 
 	t.logger.Println("Received an authorization code, exchanging for ID token")
-	token, err := t.oauth2Config.Exchange(ctx, code, oauth2.S256ChallengeOption(t.codeVerifier), oauth2.VerifierOption(t.codeVerifier))
+	token, err := t.oauth2Config.Exchange(ctx, code, oauth2.VerifierOption(t.codeVerifier))
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("exchanging authorization code for ID token: %w", err)
 	}
