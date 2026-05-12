@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -28,12 +29,14 @@ import (
 	"github.com/blang/semver"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/kubernetes/sso"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -60,6 +63,14 @@ A typical workflow is to use ` + "`" + `doctl kubernetes cluster create` + "`" +
 
 The commands under ` + "`" + `doctl kubernetes options` + "`" + ` retrieve values used while creating clusters, such as the list of regions where cluster creation is supported.`
 )
+
+func init() {
+	// Borrowed from https://github.com/int128/kubelogin:
+	// In credential plugin mode, some browser launcher writes a message to stdout
+	// and it may break the credential json for client-go.
+	// This prevents the browser launcher from breaking the credential json.
+	browser.Stdout = os.Stderr
+}
 
 var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
 
@@ -207,6 +218,9 @@ func (p *kubeconfigProvider) ConfigPath() string {
 // KubernetesCommandService is used to execute Kubernetes commands.
 type KubernetesCommandService struct {
 	KubeconfigProvider KubeconfigProvider
+
+	// to be used for stubbing in testss
+	ssoLogin func(ctx context.Context, clientID, issuerURL string, opts ...sso.LocalOIDCLoginOption) (string, time.Time, error)
 }
 
 func kubernetesCommandService() *KubernetesCommandService {
@@ -214,6 +228,7 @@ func kubernetesCommandService() *KubernetesCommandService {
 		KubeconfigProvider: &kubeconfigProvider{
 			pathOptions: clientcmd.NewDefaultPathOptions(),
 		},
+		ssoLogin: sso.GetIDToken,
 	}
 }
 
@@ -475,6 +490,9 @@ Returns the raw YAML for the specified cluster's kubeconfig.`, Writer, aliasOpt(
 	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
 	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", execCredDesc, execCredDesc, Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
+	AddStringFlag(cmdExecCredential, doctl.ArgKubernetesSSOIssuerURL, "", "", "")
+	AddStringFlag(cmdExecCredential, doctl.ArgKubernetesSSOClientID, "", "", "")
+	AddIntFlag(cmdExecCredential, doctl.ArgKubernetesSSOLocalServerPort, "", 8080, "")
 
 	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
 Adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage the specified cluster.
@@ -1264,10 +1282,13 @@ func cachedExecCredentialPath(id string) string {
 	return filepath.Join(kubeconfigCachePath(), id+".json")
 }
 
+func cachedSSOExecCredentialPath(id string) string {
+	return filepath.Join(kubeconfigCachePath(), id+"_sso.json")
+}
+
 // loadCachedExecCredential attempts to load the cached exec credential from disk. Never errors
 // Returns nil if there's no credential, if it failed to load it, or if it's expired.
-func loadCachedExecCredential(id string) (*clientauthentication.ExecCredential, error) {
-	path := cachedExecCredentialPath(id)
+func loadCachedExecCredential(path string) (*clientauthentication.ExecCredential, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -1300,7 +1321,7 @@ func loadCachedExecCredential(id string) (*clientauthentication.ExecCredential, 
 }
 
 // cacheExecCredential caches an ExecCredential to the doctl cache directory
-func cacheExecCredential(id string, execCredential *clientauthentication.ExecCredential) error {
+func cacheExecCredential(path string, execCredential *clientauthentication.ExecCredential) error {
 	// Don't bother caching if there's no expiration set
 	if execCredential.Status.ExpirationTimestamp.IsZero() {
 		return nil
@@ -1311,7 +1332,6 @@ func cacheExecCredential(id string, execCredential *clientauthentication.ExecCre
 		return err
 	}
 
-	path := cachedExecCredentialPath(id)
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(0600))
 	if err != nil {
 		return err
@@ -1337,31 +1357,70 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigExecCredential(c *CmdC
 		return fmt.Errorf("Invalid version %q, expected 'v1beta1'", version)
 	}
 
+	var isSSO bool
+	ssoIssuerURL, err := c.Doit.GetString(c.NS, doctl.ArgKubernetesSSOIssuerURL)
+	if err != nil {
+		return fmt.Errorf("Checking %s flag: %v", doctl.ArgKubernetesSSOIssuerURL, err)
+	}
+	ssoClientID, err := c.Doit.GetString(c.NS, doctl.ArgKubernetesSSOClientID)
+	if err != nil {
+		return fmt.Errorf("Checking %s flag: %v", doctl.ArgKubernetesSSOClientID, err)
+	}
+	if (ssoIssuerURL != "" && ssoClientID == "") || (ssoIssuerURL == "" && ssoClientID != "") {
+		return fmt.Errorf("Invalid SSO configuration: issuer URL and client ID must be provided together")
+	}
+	isSSO = (ssoIssuerURL != "" && ssoClientID != "")
+
 	kube := c.Kubernetes()
+	// it's important that we don't print anything to stdout since this command
+	// is used by kubectl which relies on stdout to contain _only_ the credential
+	logger := log.New(os.Stderr, "doctl: ", log.LstdFlags)
 
 	clusterID := c.Args[0]
-	execCredential, err := loadCachedExecCredential(clusterID)
+	cachePath := cachedExecCredentialPath(clusterID)
+	if isSSO {
+		// store SSO credentials separately so that, if a user switches from SSO to token auth (or vice versa),
+		// we stop using the cached credentials and instead fetch new ones
+		cachePath = cachedSSOExecCredentialPath(clusterID)
+	}
+	execCredential, err := loadCachedExecCredential(cachePath)
 	if err != nil && Verbose {
 		warn("%v", err)
 	}
 
 	if execCredential != nil {
+		logger.Println("Using cached credential")
 		return json.NewEncoder(c.Out).Encode(execCredential)
 	}
 
-	credentials, err := kube.GetCredentials(clusterID)
-	if err != nil {
-		if errResponse, ok := err.(*godo.ErrorResponse); ok {
-			return fmt.Errorf("Failed to fetch credentials for cluster %q: %v", clusterID, errResponse.Message)
+	var token string
+	var expiry time.Time
+	if isSSO {
+		logger.Println("SSO login")
+		ssoLocalServerPort, err := c.Doit.GetInt(c.NS, doctl.ArgKubernetesSSOLocalServerPort)
+		if err != nil {
+			return fmt.Errorf("Checking %s flag: %v", doctl.ArgKubernetesSSOLocalServerPort, err)
 		}
-		return err
-	}
 
-	status := &clientauthentication.ExecCredentialStatus{
-		ClientCertificateData: string(credentials.ClientCertificateData),
-		ClientKeyData:         string(credentials.ClientKeyData),
-		ExpirationTimestamp:   &metav1.Time{Time: credentials.ExpiresAt},
-		Token:                 credentials.Token,
+		if ssoLocalServerPort <= 1024 || ssoLocalServerPort > 65535 {
+			return fmt.Errorf("Invalid %s flag: %d", doctl.ArgKubernetesSSOLocalServerPort, ssoLocalServerPort)
+		}
+
+		token, expiry, err = s.ssoLogin(context.Background(), ssoClientID, ssoIssuerURL, sso.WithLocalServerPort(uint16(ssoLocalServerPort)), sso.WithLogger(logger))
+		if err != nil {
+			return fmt.Errorf("Failed to get ID token: %w", err)
+		}
+	} else {
+		logger.Println("DO PAT login")
+		credentials, err := kube.GetCredentials(clusterID)
+		if err != nil {
+			if errResponse, ok := err.(*godo.ErrorResponse); ok {
+				return fmt.Errorf("Failed to fetch credentials for cluster %q: %v", clusterID, errResponse.Message)
+			}
+			return err
+		}
+		expiry = credentials.ExpiresAt
+		token = credentials.Token
 	}
 
 	execCredential = &clientauthentication.ExecCredential{
@@ -1369,11 +1428,14 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigExecCredential(c *CmdC
 			Kind:       execCredentialKind,
 			APIVersion: clientauthentication.SchemeGroupVersion.String(),
 		},
-		Status: status,
+		Status: &clientauthentication.ExecCredentialStatus{
+			Token:               token,
+			ExpirationTimestamp: &metav1.Time{Time: expiry},
+		},
 	}
 
 	// Don't error out when caching credentials, just print it if we're being verbose
-	if err := cacheExecCredential(clusterID, execCredential); err != nil && Verbose {
+	if err := cacheExecCredential(cachePath, execCredential); err != nil && Verbose {
 		warn("%v", err)
 	}
 
@@ -1408,10 +1470,14 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 		return err
 	}
 
-	path := cachedExecCredentialPath(kubeconfigParams.clusterID)
-	_, err = os.Stat(path)
-	if err == nil {
-		os.Remove(path)
+	for _, path := range []string{
+		cachedExecCredentialPath(kubeconfigParams.clusterID),
+		cachedSSOExecCredentialPath(kubeconfigParams.clusterID),
+	} {
+		_, err = os.Stat(path)
+		if err == nil {
+			os.Remove(path)
+		}
 	}
 
 	return s.writeOrAddToKubeconfig(kubeconfigParams, remoteKubeconfig, setCurrentContext)
