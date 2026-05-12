@@ -670,7 +670,7 @@ func TestKubernetesCreate(t *testing.T) {
 			},
 			AutoUpgrade:  false,
 			SurgeUpgrade: true,
-			HA:          nil, // omitted when --ha not passed
+			HA:           nil, // omitted when --ha not passed
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
