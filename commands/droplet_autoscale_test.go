@@ -82,6 +82,7 @@ func TestDropletAutoscaleCommand(t *testing.T) {
 }
 
 func TestDropletAutoscaleCreate(t *testing.T) {
+	falseT := false
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		createReq := godo.DropletAutoscalePoolRequest{
 			Name: "test-droplet-autoscale-pool-01",
@@ -96,6 +97,7 @@ func TestDropletAutoscaleCreate(t *testing.T) {
 				SSHKeys:          []string{"key-1", "key-2"},
 				VpcUUID:          "05790d02-c7e0-47d6-a917-5b4cf68cf5b7",
 				WithDropletAgent: true,
+				PublicNetworking: &falseT,
 				UserData:         "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n",
 			},
 		}
@@ -111,6 +113,7 @@ func TestDropletAutoscaleCreate(t *testing.T) {
 		c.Doit.Set(c.NS, doctl.ArgSSHKeys, []string{"key-1", "key-2"})
 		c.Doit.Set(c.NS, doctl.ArgVPCUUID, "05790d02-c7e0-47d6-a917-5b4cf68cf5b7")
 		c.Doit.Set(c.NS, doctl.ArgDropletAgent, "true")
+		c.Doit.Set(c.NS, doctl.ArgPublicNetworking, "false")
 		c.Doit.Set(c.NS, doctl.ArgUserData, "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n")
 
 		err := RunDropletAutoscaleCreate(c)

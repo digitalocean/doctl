@@ -412,6 +412,18 @@ func RunRegistryCreate(c *CmdConfig) error {
 func RunRegistryGet(c *CmdConfig) error {
 	reg, err := c.Registry().Get()
 	if err != nil {
+		if is412Error(err) {
+			// List available registries to show in the error message
+			registries, listErr := c.Registry().List()
+			if listErr == nil && len(registries) > 0 {
+				names := make([]string, len(registries))
+				for i, r := range registries {
+					names[i] = r.Name
+				}
+				return fmt.Errorf("multiple registries found. Please use 'doctl registries get <registry-name>' instead.\nAvailable registries: %s", strings.Join(names, ", "))
+			}
+			return fmt.Errorf("multiple registries found. Please use 'doctl registries get <registry-name>' instead")
+		}
 		return err
 	}
 
@@ -645,17 +657,9 @@ func RunRegistryLogout(c *CmdConfig) error {
 
 // RunListRepositories lists repositories for the registry
 func RunListRepositories(c *CmdConfig) error {
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistry)
+	registryName, err := getRegistryNameWithFallback(c)
 	if err != nil {
 		return err
-	}
-
-	if registryName == "" {
-		registry, err := c.Registry().Get()
-		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
-		}
-		registryName = registry.Name
 	}
 
 	repositories, err := c.Registry().ListRepositories(registryName)
@@ -668,17 +672,9 @@ func RunListRepositories(c *CmdConfig) error {
 
 // RunListRepositoriesV2 lists repositories for the registry
 func RunListRepositoriesV2(c *CmdConfig) error {
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistry)
+	registryName, err := getRegistryNameWithFallback(c)
 	if err != nil {
 		return err
-	}
-
-	if registryName == "" {
-		registry, err := c.Registry().Get()
-		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
-		}
-		registryName = registry.Name
 	}
 
 	repositories, err := c.Registry().ListRepositoriesV2(registryName)
@@ -696,17 +692,9 @@ func RunListRepositoryTags(c *CmdConfig) error {
 		return err
 	}
 
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistry)
+	registryName, err := getRegistryNameWithFallback(c)
 	if err != nil {
 		return err
-	}
-
-	if registryName == "" {
-		registry, err := c.Registry().Get()
-		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
-		}
-		registryName = registry.Name
 	}
 
 	tags, err := c.Registry().ListRepositoryTags(registryName, c.Args[0])
@@ -724,17 +712,9 @@ func RunListRepositoryManifests(c *CmdConfig) error {
 		return err
 	}
 
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistry)
+	registryName, err := getRegistryNameWithFallback(c)
 	if err != nil {
 		return err
-	}
-
-	if registryName == "" {
-		registry, err := c.Registry().Get()
-		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
-		}
-		registryName = registry.Name
 	}
 
 	manifests, err := c.Registry().ListRepositoryManifests(registryName, c.Args[0])
@@ -756,17 +736,9 @@ func RunRepositoryDeleteTag(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistry)
+	registryName, err := getRegistryNameWithFallback(c)
 	if err != nil {
 		return err
-	}
-
-	if registryName == "" {
-		registry, err := c.Registry().Get()
-		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
-		}
-		registryName = registry.Name
 	}
 
 	repository := c.Args[0]
@@ -801,17 +773,9 @@ func RunRepositoryDeleteManifest(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistry)
+	registryName, err := getRegistryNameWithFallback(c)
 	if err != nil {
 		return err
-	}
-
-	if registryName == "" {
-		registry, err := c.Registry().Get()
-		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
-		}
-		registryName = registry.Name
 	}
 
 	repository := c.Args[0]
@@ -833,6 +797,82 @@ func RunRepositoryDeleteManifest(c *CmdConfig) error {
 	}
 
 	return nil
+}
+
+// is412Error checks if an error is a 412 (Precondition Failed) response, which indicates
+// multiple registries exist and a specific registry name is required
+func is412Error(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check if it's a godo ErrorResponse with status 412
+	if errResp, ok := err.(*godo.ErrorResponse); ok {
+		return errResp.Response != nil && errResp.Response.StatusCode == 412
+	}
+	return false
+}
+
+// getRegistryNameWithFallback attempts to get a registry name from the flag first.
+// If not provided, it falls back to using c.Registry().Get(), but provides a helpful
+// error message if that fails due to multiple registries (412 error).
+func getRegistryNameWithFallback(c *CmdConfig) (string, error) {
+	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistry)
+	if err != nil {
+		return "", err
+	}
+
+	if registryName != "" {
+		return registryName, nil
+	}
+
+	// No registry name provided, try to get the default registry
+	registry, err := c.Registry().Get()
+	if err != nil {
+		if is412Error(err) {
+			// List available registries to show in the error message
+			registries, listErr := c.Registry().List()
+			if listErr == nil && len(registries) > 0 {
+				names := make([]string, len(registries))
+				for i, r := range registries {
+					names[i] = r.Name
+				}
+				return "", fmt.Errorf("multiple registries found. Please specify one with --registry <name>.\nAvailable registries: %s", strings.Join(names, ", "))
+			}
+			return "", fmt.Errorf("multiple registries found. Please specify one with --registry <name>")
+		}
+		return "", fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	return registry.Name, nil
+}
+
+// getRegistryNameFromArgs gets a registry name from command line args if provided,
+// otherwise falls back to getting the default registry. This is used by commands
+// that accept an optional positional registry argument.
+func getRegistryNameFromArgs(c *CmdConfig, args []string, argIndex int) (string, error) {
+	if len(args) > argIndex && args[argIndex] != "" {
+		return args[argIndex], nil
+	}
+
+	// No registry name in args, try to get the default registry
+	registry, err := c.Registry().Get()
+	if err != nil {
+		if is412Error(err) {
+			// List available registries to show in the error message
+			registries, listErr := c.Registry().List()
+			if listErr == nil && len(registries) > 0 {
+				names := make([]string, len(registries))
+				for i, r := range registries {
+					names[i] = r.Name
+				}
+				return "", fmt.Errorf("multiple registries found. Please specify registry as an argument.\nAvailable registries: %s", strings.Join(names, ", "))
+			}
+			return "", fmt.Errorf("multiple registries found. Please specify registry as an argument")
+		}
+		return "", fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	return registry.Name, nil
 }
 
 func displayRegistries(c *CmdConfig, registries ...do.Registry) error {
@@ -876,16 +916,15 @@ func displayRepositoryManifests(c *CmdConfig, manifests ...do.RepositoryManifest
 // registry.
 func RunStartGarbageCollection(c *CmdConfig) error {
 	var registryName string
+	var err error
 	// we anticipate supporting multiple registries in the future by allowing the
 	// user to specify a registry argument on the command line but defaulting to
 	// the default registry returned by c.Registry().Get()
 	if len(c.Args) == 0 {
-		var err error
-		registry, err := c.Registry().Get()
+		registryName, err = getRegistryNameFromArgs(c, c.Args, 0)
 		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
+			return err
 		}
-		registryName = registry.Name
 	} else if len(c.Args) == 1 {
 		registryName = c.Args[0]
 	} else {
@@ -936,16 +975,15 @@ func RunStartGarbageCollection(c *CmdConfig) error {
 // garbage collection.
 func RunGetGarbageCollection(c *CmdConfig) error {
 	var registryName string
+	var err error
 	// we anticipate supporting multiple registries in the future by allowing the
 	// user to specify a registry argument on the command line but defaulting to
 	// the default registry returned by c.Registry().Get()
 	if len(c.Args) == 0 {
-		var err error
-		registry, err := c.Registry().Get()
+		registryName, err = getRegistryNameFromArgs(c, c.Args, 0)
 		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
+			return err
 		}
-		registryName = registry.Name
 	} else if len(c.Args) == 1 {
 		registryName = c.Args[0]
 	} else {
@@ -964,16 +1002,15 @@ func RunGetGarbageCollection(c *CmdConfig) error {
 // garbage collection.
 func RunListGarbageCollections(c *CmdConfig) error {
 	var registryName string
+	var err error
 	// we anticipate supporting multiple registries in the future by allowing the
 	// user to specify a registry argument on the command line but defaulting to
 	// the default registry returned by c.Registry().Get()
 	if len(c.Args) == 0 {
-		var err error
-		registry, err := c.Registry().Get()
+		registryName, err = getRegistryNameFromArgs(c, c.Args, 0)
 		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
+			return err
 		}
-		registryName = registry.Name
 	} else if len(c.Args) == 1 {
 		registryName = c.Args[0]
 	} else {
@@ -994,6 +1031,7 @@ func RunCancelGarbageCollection(c *CmdConfig) error {
 	var (
 		registryName string
 		gcUUID       string
+		err          error
 	)
 
 	if len(c.Args) == 0 {
@@ -1011,14 +1049,13 @@ func RunCancelGarbageCollection(c *CmdConfig) error {
 	// user to specify a registry argument on the command line but defaulting to
 	// the default registry returned by c.Registry().Get()
 	if registryName == "" {
-		registry, err := c.Registry().Get()
+		registryName, err = getRegistryNameFromArgs(c, []string{}, 0)
 		if err != nil {
-			return fmt.Errorf("failed to get registry: %w", err)
+			return err
 		}
-		registryName = registry.Name
 	}
 
-	_, err := c.Registry().CancelGarbageCollection(registryName, gcUUID)
+	_, err = c.Registry().CancelGarbageCollection(registryName, gcUUID)
 	if err != nil {
 		return err
 	}

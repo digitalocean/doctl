@@ -194,6 +194,25 @@ type ServerlessTrigger struct {
 	ScheduledRuns    *TriggerScheduledRuns    `json:"scheduled_runs,omitempty"`
 }
 
+// AccessKey represents a namespace access key for serverless operations
+type AccessKey struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	CreatedAt  time.Time  `json:"created_at"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	LastUsedAt *time.Time `json:"updated_at,omitempty"`
+	Secret     string     `json:"secret,omitempty"` // Only populated when creating/regenerating
+}
+
+type AccessKeyListResponse struct {
+	AccessKeys []AccessKey `json:"access_keys"`
+	Count      int         `json:"count"`
+}
+
+type AccessKeyResponse struct {
+	Key AccessKey `json:"access_key"`
+}
+
 type TriggerScheduledDetails struct {
 	Cron string         `json:"cron,omitempty"`
 	Body map[string]any `json:"body,omitempty"`
@@ -243,6 +262,9 @@ type ServerlessService interface {
 	WriteProject(ServerlessProject) (string, error)
 	SetEffectiveCredentials(auth string, apihost string)
 	CredentialsPath() string
+	CreateNamespaceAccessKey(context.Context, string, string, string) (AccessKey, error)
+	ListNamespaceAccessKeys(context.Context, string) ([]AccessKey, error)
+	DeleteNamespaceAccessKey(context.Context, string, string) error
 }
 
 type serverlessService struct {
@@ -1473,4 +1495,49 @@ func validateFunctionLevelFields(serverlessAction *ServerlessFunction) ([]string
 	}
 
 	return forbiddenConfigs, nil
+}
+
+// CreateNamespaceAccessKey creates a new access key for the specified namespace
+func (s *serverlessService) CreateNamespaceAccessKey(ctx context.Context, namespace string, name string, expiration string) (AccessKey, error) {
+	path := fmt.Sprintf("v2/functions/namespaces/%s/keys", namespace)
+	reqBody := map[string]any{"name": name}
+	if expiration != "" && expiration != "never" {
+		reqBody["expires_in"] = expiration
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, reqBody)
+	if err != nil {
+		return AccessKey{}, err
+	}
+	decoded := new(AccessKeyResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return AccessKey{}, err
+	}
+	return decoded.Key, nil
+}
+
+// ListNamespaceAccessKeys lists all access keys for the specified namespace
+func (s *serverlessService) ListNamespaceAccessKeys(ctx context.Context, namespace string) ([]AccessKey, error) {
+	path := fmt.Sprintf("v2/functions/namespaces/%s/keys", namespace)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return []AccessKey{}, err
+	}
+	decoded := new(AccessKeyListResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return []AccessKey{}, err
+	}
+	return decoded.AccessKeys, nil
+}
+
+// DeleteNamespaceAccessKey deletes an access key from the specified namespace
+func (s *serverlessService) DeleteNamespaceAccessKey(ctx context.Context, namespace string, keyID string) error {
+	path := fmt.Sprintf("v2/functions/namespaces/%s/keys/%s", namespace, keyID)
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.Do(ctx, req, nil)
+	return err
 }

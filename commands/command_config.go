@@ -52,41 +52,42 @@ type CmdConfig struct {
 	ReservedIPv6s     func() do.ReservedIPv6sService
 	BYOIPPrefixes     func() do.BYOIPPrefixsService
 
-	Droplets           func() do.DropletsService
-	DropletActions     func() do.DropletActionsService
-	DropletAutoscale   func() do.DropletAutoscaleService
-	Domains            func() do.DomainsService
-	VPCNATGateways     func() do.VPCNATGatewaysService
-	Actions            func() do.ActionsService
-	Account            func() do.AccountService
-	Balance            func() do.BalanceService
-	BillingHistory     func() do.BillingHistoryService
-	Invoices           func() do.InvoicesService
-	Tags               func() do.TagsService
-	UptimeChecks       func() do.UptimeChecksService
-	Volumes            func() do.VolumesService
-	VolumeActions      func() do.VolumeActionsService
-	Snapshots          func() do.SnapshotsService
-	Certificates       func() do.CertificatesService
-	Firewalls          func() do.FirewallsService
-	CDNs               func() do.CDNsService
-	Projects           func() do.ProjectsService
-	Kubernetes         func() do.KubernetesService
-	Databases          func() do.DatabasesService
-	Registry           func() do.RegistryService
-	Registries         func() do.RegistriesService
-	VPCs               func() do.VPCsService
-	OneClicks          func() do.OneClickService
-	Apps               func() do.AppsService
-	Monitoring         func() do.MonitoringService
-	Serverless         func() do.ServerlessService
-	OAuth              func() do.OAuthService
-	PartnerAttachments func() do.PartnerAttachmentsService
-	SpacesKeys         func() do.SpacesKeysService
-	GradientAI         func() do.GradientAIService
-	Nfs                func() do.NfsService
-	NfsActions         func() do.NfsActionsService
-	Security           func() do.SecurityService
+	Droplets            func() do.DropletsService
+	DropletActions      func() do.DropletActionsService
+	DropletAutoscale    func() do.DropletAutoscaleService
+	Domains             func() do.DomainsService
+	VPCNATGateways      func() do.VPCNATGatewaysService
+	Actions             func() do.ActionsService
+	Account             func() do.AccountService
+	Balance             func() do.BalanceService
+	BillingHistory      func() do.BillingHistoryService
+	Invoices            func() do.InvoicesService
+	Tags                func() do.TagsService
+	UptimeChecks        func() do.UptimeChecksService
+	Volumes             func() do.VolumesService
+	VolumeActions       func() do.VolumeActionsService
+	Snapshots           func() do.SnapshotsService
+	Certificates        func() do.CertificatesService
+	Firewalls           func() do.FirewallsService
+	CDNs                func() do.CDNsService
+	Projects            func() do.ProjectsService
+	Kubernetes          func() do.KubernetesService
+	Databases           func() do.DatabasesService
+	Registry            func() do.RegistryService
+	Registries          func() do.RegistriesService
+	VPCs                func() do.VPCsService
+	OneClicks           func() do.OneClickService
+	Apps                func() do.AppsService
+	Monitoring          func() do.MonitoringService
+	Serverless          func() do.ServerlessService
+	OAuth               func() do.OAuthService
+	PartnerAttachments  func() do.PartnerAttachmentsService
+	SpacesKeys          func() do.SpacesKeysService
+	GradientAI          func() do.GradientAIService
+	DedicatedInferences func() do.DedicatedInferenceService
+	Nfs                 func() do.NfsService
+	NfsActions          func() do.NfsActionsService
+	Security            func() do.SecurityService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -151,6 +152,9 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 			c.GradientAI = func() do.GradientAIService { return do.NewGradientAIService(godoClient) }
+			c.DedicatedInferences = func() do.DedicatedInferenceService {
+				return do.NewDedicatedInferenceService(godoClient)
+			}
 			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
 			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
 			c.Security = func() do.SecurityService { return do.NewSecurityService(godoClient) }

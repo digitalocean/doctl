@@ -70,6 +70,7 @@ func (r *Registry) Endpoint() string {
 // RegistryService is the godo RegistryService interface.
 type RegistryService interface {
 	Get() (*Registry, error)
+	List() ([]Registry, error)
 	Create(*godo.RegistryCreateRequest) (*Registry, error)
 	Delete() error
 	DockerCredentials(*godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
@@ -111,6 +112,20 @@ func (rs *registryService) Get() (*Registry, error) {
 	}
 
 	return &Registry{Registry: r}, nil
+}
+
+func (rs *registryService) List() ([]Registry, error) {
+	registries, _, err := rs.client.Registries.List(rs.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]Registry, 0, len(registries))
+	for _, r := range registries {
+		list = append(list, Registry{Registry: r})
+	}
+
+	return list, nil
 }
 
 func (rs *registryService) Create(cr *godo.RegistryCreateRequest) (*Registry, error) {

@@ -70,6 +70,21 @@ func (mr *MockNfsActionsServiceMockRecorder) Detach(id, vpcID, region any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Detach", reflect.TypeOf((*MockNfsActionsService)(nil).Detach), id, vpcID, region)
 }
 
+// Reassign mocks base method.
+func (m *MockNfsActionsService) Reassign(id, oldVpcID, newVpcID string) (*do.NfsAction, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reassign", id, oldVpcID, newVpcID)
+	ret0, _ := ret[0].(*do.NfsAction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Reassign indicates an expected call of Reassign.
+func (mr *MockNfsActionsServiceMockRecorder) Reassign(id, oldVpcID, newVpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reassign", reflect.TypeOf((*MockNfsActionsService)(nil).Reassign), id, oldVpcID, newVpcID)
+}
+
 // Resize mocks base method.
 func (m *MockNfsActionsService) Resize(id string, size uint64, region string) (*do.NfsAction, error) {
 	m.ctrl.T.Helper()

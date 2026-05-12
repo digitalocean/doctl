@@ -48,6 +48,10 @@ const (
 	ArgAppJobName = "job-name"
 	// ArgAppJobInvocation is the job invocation ID.
 	ArgAppJobInvocation = "job-invocation"
+	// ArgAppEventID is the event ID.
+	ArgAppEventID = "event-id"
+	// ArgAppEventType is the event type filter.
+	ArgAppEventType = "event-type"
 	// ArgAppInstanceName is the instance name of currently running instances (optional).
 	ArgAppInstanceName = "instance-name"
 	// ArgAppDevConfig is the path to the app dev link config.
@@ -161,6 +165,14 @@ const (
 	ArgEnableNvidiaGpuDevicePlugin = "enable-nvidia-gpu-device-plugin"
 	// ArgEnableRDMASharedDevicePlugin enables automatic NVIDIA gpu device plugin installation.
 	ArgEnableRDMASharedDevicePlugin = "enable-rdma-shared-device-plugin"
+	// ArgKubernetesEnableSSO enables SSO as a method of authentication for the DOKS cluster.
+	ArgKubernetesEnableSSO = "sso-enabled"
+	// ArgKubernetesRequireSSO requires SSO as the only method of authentication for the DOKS cluster.
+	ArgKubernetesRequireSSO = "sso-required"
+	// ArgKubernetesSSOIssuerURL is the OIDC issuer URL for cluster SSO configuration.
+	ArgKubernetesSSOIssuerURL = "sso-issuer-url"
+	// ArgKubernetesSSOClientID is the OIDC client ID for cluster SSO configuration.
+	ArgKubernetesSSOClientID = "sso-client-id"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
@@ -185,6 +197,8 @@ const (
 	ArgKubernetesAlias = "alias"
 	// ArgKubeConfigExpirySeconds indicates the length of time the token in a kubeconfig will be valid in seconds.
 	ArgKubeConfigExpirySeconds = "expiry-seconds"
+	// ArgKubeConfigType selects the kubeconfig authentication mechanism: token, sso, or unset for the API default.
+	ArgKubeConfigType = "type"
 	// ArgImage is an image argument.
 	ArgImage = "image"
 	// ArgImageID is an image id argument.
@@ -221,6 +235,8 @@ const (
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.
 	ArgPrivateNetworking = "enable-private-networking"
+	// ArgPublicNetworking is an enable public networking argument.
+	ArgPublicNetworking = "enable-public-networking"
 	// ArgMonitoring is an enable monitoring argument.
 	ArgMonitoring = "enable-monitoring"
 	// ArgDropletAgent is an argument for enabling/disabling the Droplet agent.
@@ -713,6 +729,9 @@ const (
 	// ArgTags are the tags applied to the agent.
 	ArgTags = "tags"
 
+	// ArgWorkspaceUuid is the UUID of the workspace the agent belongs to.
+	ArgWorkspaceUuid = "workspace-uuid"
+
 	// ArgAgentForce forces agent deletion without confirmation.
 	ArgAgentForce = "force"
 
@@ -835,4 +854,24 @@ const (
 
 	// ArgOpenAIKeyAPIKey is the API key for the OpenAI API Key
 	ArgOpenAIKeyAPIKey = "api-key"
+
+	// Dedicated Inference Args
+
+	// ArgDedicatedInferenceSpec is the path to a dedicated inference spec file.
+	ArgDedicatedInferenceSpec = "spec"
+
+	// ArgDedicatedInferenceHuggingFaceToken is the Hugging Face token (optional).
+	ArgDedicatedInferenceHuggingFaceToken = "hugging-face-token"
+
+	// ArgDedicatedInferenceAcceleratorSlug filters accelerators by slug (optional).
+	ArgDedicatedInferenceAcceleratorSlug = "slug"
+
+	// ArgDedicatedInferenceRegion filters dedicated inferences by region (optional).
+	ArgDedicatedInferenceRegion = "region"
+
+	// ArgDedicatedInferenceName filters dedicated inferences by name (optional).
+	ArgDedicatedInferenceName = "name"
+
+	// ArgDedicatedInferenceTokenName is the name for a dedicated inference auth token.
+	ArgDedicatedInferenceTokenName = "token-name"
 )

@@ -180,6 +180,56 @@ func (d JobInvocations) JSON(w io.Writer) error {
 	return e.Encode(d)
 }
 
+type Events []*godo.Event
+
+var _ Displayable = (*Events)(nil)
+
+func (e Events) Cols() []string {
+	return []string{
+		"ID",
+		"Type",
+		"DeploymentID",
+		"Created",
+		"Phase",
+	}
+}
+
+func (e Events) ColMap() map[string]string {
+	return map[string]string{
+		"ID":           "ID",
+		"Type":         "Type",
+		"DeploymentID": "Deployment ID",
+		"Created":      "Created At",
+		"Phase":        "Phase",
+	}
+}
+
+func (e Events) KV() []map[string]any {
+	out := make([]map[string]any, len(e))
+
+	for i, event := range e {
+		var phase string
+		if event.Autoscaling != nil {
+			phase = string(event.Autoscaling.Phase)
+		}
+
+		out[i] = map[string]any{
+			"ID":           event.ID,
+			"Type":         string(event.Type),
+			"DeploymentID": event.DeploymentID,
+			"Created":      event.CreatedAt,
+			"Phase":        phase,
+		}
+	}
+	return out
+}
+
+func (d Events) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(d)
+}
+
 type AppRegions []*godo.AppRegion
 
 var _ Displayable = (*AppRegions)(nil)

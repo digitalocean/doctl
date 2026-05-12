@@ -149,8 +149,8 @@ upgrade_godo: _upgrade_godo vendor mocks
 vendor:
 	@echo "==> vendor dependencies"
 	@echo ""
-	go mod vendor
 	go mod tidy
+	go mod vendor
 
 .PHONY: clean
 clean:

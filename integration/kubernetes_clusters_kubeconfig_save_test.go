@@ -36,7 +36,18 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 					return
 				}
 
-				w.Write([]byte(kubeClustersConfigResponse))
+				switch req.URL.Query().Get("type") {
+				case "sso":
+					w.Write([]byte(kubeClustersSSOConfigResponse))
+					return
+				case "token", "":
+					w.Write([]byte(kubeClustersTokenConfigResponse))
+					return
+				default:
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+
 			case "/v2/kubernetes/clusters":
 				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
@@ -147,7 +158,92 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 			expect.Contains(string(fileBytes), fmt.Sprintf("name: %s", "newalias_test"))
 		})
 	})
+
+	when("passing type sso", func() {
+		it("merges an exec-based kubeconfig from the API", func() {
+			f, err := os.CreateTemp(t.TempDir(), "fake-kube-config")
+			expect.NoError(err)
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"kubernetes",
+				"clusters",
+				"kubeconfig",
+				"save",
+				"--type", "sso",
+				"some-cluster-name",
+			)
+
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("KUBECONFIG=%s", f.Name()),
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+
+			fileBytes, err := io.ReadAll(f)
+			expect.NoError(err)
+			err = f.Close()
+			expect.NoError(err)
+			cfg := string(fileBytes)
+			expect.Contains(cfg, fmt.Sprintf("command: %s", builtBinaryPath))
+			expect.Contains(cfg, "--issuer-url")
+			expect.NotContains(cfg, "token: some-token")
+		})
+	})
 })
+
+const kubeClustersSSOConfigResponse = `---
+apiVersion: v1
+kind: Config
+users:
+- name: some-user
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      command: doctl
+      args:
+        - kubernetes
+        - cluster
+        - kubeconfig
+        - exec-credential
+        - --version
+        - v1beta1
+        - --issuer-url
+        - https://sso.example.com
+        - --client-id
+        - some-client-id
+clusters:
+- cluster:
+    server: https://testcuster.com
+  name: some-cluster
+contexts:
+- context:
+    cluster: some-cluster
+    user: some-user
+  name: some-context
+current-context: some-context
+`
+
+const kubeClustersTokenConfigResponse = `---
+apiVersion: v1
+kind: Config
+users:
+- name: some-user
+  user:
+    token: some-token
+clusters:
+- cluster:
+    server: https://testcluster.com
+  name: some-cluster
+contexts:
+- context:
+    cluster: some-cluster
+    user: some-user
+  name: some-context
+current-context: some-context
+`
 
 const (
 	kubeClustersListResponse = `{
