@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authentication successful · DigitalOcean</title>
+  <style>
+    /*
+      DigitalOcean-inspired palette (primary blue #0080FF, navy accents, light UI).
+    */
+    :root {
+      --do-blue: #0080ff;
+      --do-blue-hover: #0069db;
+      --do-blue-soft: rgba(0, 128, 255, 0.12);
+      --do-navy: #031b4e;
+      --do-slate: #3d4d5c;
+      --do-muted: #627a86;
+      --do-border: #d7e0e8;
+      --do-surface: #ffffff;
+      --do-page-top: #e8f2ff;
+      --do-page-bottom: #f5f8fc;
+      --do-shadow: 0 4px 24px rgba(3, 27, 78, 0.08), 0 1px 3px rgba(3, 27, 78, 0.06);
+      --radius: 12px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: "Sailec Web", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      color: var(--do-slate);
+      background: linear-gradient(180deg, var(--do-page-top) 0%, var(--do-page-bottom) 42%, #ffffff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    main {
+      width: 100%;
+      max-width: 28rem;
+      background: var(--do-surface);
+      border: 1px solid var(--do-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--do-shadow);
+      padding: 0;
+      text-align: center;
+      overflow: hidden;
+      animation: rise 0.55s ease-out both;
+    }
+
+    .ribbon {
+      height: 4px;
+      background: linear-gradient(90deg, var(--do-blue) 0%, #47a8ff 50%, var(--do-blue) 100%);
+    }
+
+    .inner {
+      padding: 2.25rem 1.75rem 2rem;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .mark {
+      width: 4rem;
+      height: 4rem;
+      margin: 0 auto 1.35rem;
+      border-radius: 50%;
+      background: var(--do-blue);
+      box-shadow: 0 8px 24px rgba(0, 128, 255, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pop 0.45s cubic-bezier(0.34, 1.45, 0.64, 1) 0.1s both;
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(0.75);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .mark svg {
+      width: 2rem;
+      height: 2rem;
+      stroke: #ffffff;
+      stroke-width: 2.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-size: 1.375rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      color: var(--do-navy);
+      margin: 0 0 0.5rem;
+      line-height: 1.3;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--do-muted);
+      font-size: 0.9375rem;
+    }
+
+    footer {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--do-border);
+      font-size: 0.75rem;
+      color: var(--do-muted);
+      letter-spacing: 0.02em;
+    }
+
+    footer span {
+      color: var(--do-blue);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="ribbon" aria-hidden="true"></div>
+    <div class="inner">
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h1>Authentication successful</h1>
+      <p class="lead">You may close this window.</p>
+      <footer>
+        <span>DigitalOcean</span> · Kubernetes
+      </footer>
+    </div>
+  </main>
+</body>
+</html>

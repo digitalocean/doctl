@@ -1,19 +1,28 @@
 package commands
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientauthentication "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/kubernetes/sso"
 )
 
 var (
@@ -472,6 +481,157 @@ func TestKubernetesKubeconfigShow(t *testing.T) {
 		err := kubernetesCommandService().RunKubernetesKubeconfigShow(config)
 		assert.ErrorContains(t, err, "cannot use type flag")
 	})
+}
+
+func TestRunKubernetesKubeconfigExecCredential(t *testing.T) {
+	clusterIDWithCachedSSOCreds := "cluster-id-with-cached-sso-creds"
+	clusterIDWithCachedTokenCreds := "cluster-id-with-cached-token-creds"
+
+	testRoot := t.TempDir()
+	origConfigHomeFn := defaultConfigHome
+	defaultConfigHome = func() string {
+		return filepath.Join(testRoot, "doctl")
+	}
+	t.Cleanup(func() { defaultConfigHome = origConfigHomeFn })
+
+	execCredCacheDir := filepath.Join(testRoot, "doctl", "cache", "exec-credential")
+	require.NoError(t, os.MkdirAll(execCredCacheDir, 0o700))
+
+	// Truncate so JSON cache round-trips match (metav1 time encoding drops sub-second precision).
+	expiryCached := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
+	expiryNew := time.Now().Add(2 * time.Hour).UTC().Truncate(time.Second)
+	cachedCred := &clientauthentication.ExecCredential{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       execCredentialKind,
+			APIVersion: clientauthentication.SchemeGroupVersion.String(),
+		},
+		Status: &clientauthentication.ExecCredentialStatus{
+			Token:               "cached",
+			ExpirationTimestamp: &metav1.Time{Time: expiryCached},
+		},
+	}
+	fToken, err := os.Create(filepath.Join(execCredCacheDir, clusterIDWithCachedTokenCreds+".json"))
+	require.NoError(t, err)
+	require.NoError(t, json.NewEncoder(fToken).Encode(cachedCred))
+	require.NoError(t, fToken.Close())
+
+	fSSO, err := os.Create(filepath.Join(execCredCacheDir, clusterIDWithCachedSSOCreds+"_sso.json"))
+	require.NoError(t, err)
+	require.NoError(t, json.NewEncoder(fSSO).Encode(cachedCred))
+	require.NoError(t, fSSO.Close())
+
+	type execCredCase struct {
+		name         string
+		setArgs      func(config *CmdConfig)
+		prepareMocks func(t *testing.T, tm *tcMocks)
+		wantToken    string
+		wantExp      time.Time
+		assertCache  func(t *testing.T, cacheDir string, got clientauthentication.ExecCredential)
+	}
+
+	tests := []execCredCase{
+		{
+			name: "new token login",
+			setArgs: func(config *CmdConfig) {
+				// double-duty: also ensures that cached SSO cred is not used when token cred is requested
+				config.Args = []string{clusterIDWithCachedSSOCreds}
+				config.Doit.Set(config.NS, doctl.ArgVersion, "v1beta1")
+			},
+			prepareMocks: func(t *testing.T, tm *tcMocks) {
+				tm.kubernetes.EXPECT().GetCredentials(clusterIDWithCachedSSOCreds).Return(&do.KubernetesClusterCredentials{
+					KubernetesClusterCredentials: &godo.KubernetesClusterCredentials{
+						Token:     "do-token",
+						ExpiresAt: expiryNew,
+					},
+				}, nil)
+			},
+			wantToken: "do-token",
+			wantExp:   expiryNew,
+			assertCache: func(t *testing.T, cacheDir string, got clientauthentication.ExecCredential) {
+				p := filepath.Join(cacheDir, clusterIDWithCachedSSOCreds+".json")
+				onDisk, err := os.ReadFile(p)
+				require.NoError(t, err)
+				var cached clientauthentication.ExecCredential
+				require.NoError(t, json.Unmarshal(onDisk, &cached))
+				require.Equal(t, got.Status.Token, cached.Status.Token)
+				require.Equal(t, got.Status.ExpirationTimestamp.UTC(), cached.Status.ExpirationTimestamp.UTC())
+			},
+		},
+		{
+			name: "token cache hit",
+			setArgs: func(config *CmdConfig) {
+				config.Args = []string{clusterIDWithCachedTokenCreds}
+				config.Doit.Set(config.NS, doctl.ArgVersion, "v1beta1")
+			},
+			wantToken: "cached",
+			wantExp:   expiryCached,
+		},
+		{
+			name: "new sso login",
+			setArgs: func(config *CmdConfig) {
+				// double-duty: also ensures that cached token cred is not used when SSO cred is requested
+				config.Args = []string{clusterIDWithCachedTokenCreds}
+				config.Doit.Set(config.NS, doctl.ArgVersion, "v1beta1")
+				config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+				config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
+				config.Doit.Set(config.NS, doctl.ArgKubernetesSSOLocalServerPort, 8080)
+			},
+			wantToken: "oidc-id-token",
+			wantExp:   expiryNew,
+			assertCache: func(t *testing.T, cacheDir string, got clientauthentication.ExecCredential) {
+				p := filepath.Join(cacheDir, clusterIDWithCachedTokenCreds+"_sso.json")
+				onDisk, err := os.ReadFile(p)
+				require.NoError(t, err)
+				var cached clientauthentication.ExecCredential
+				require.NoError(t, json.Unmarshal(onDisk, &cached))
+				require.Equal(t, got.Status.Token, cached.Status.Token)
+				require.Equal(t, got.Status.ExpirationTimestamp.UTC(), cached.Status.ExpirationTimestamp.UTC())
+			},
+		},
+		{
+			name: "sso cache hit",
+			setArgs: func(config *CmdConfig) {
+				config.Args = []string{clusterIDWithCachedSSOCreds}
+				config.Doit.Set(config.NS, doctl.ArgVersion, "v1beta1")
+				config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
+				config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
+				config.Doit.Set(config.NS, doctl.ArgKubernetesSSOLocalServerPort, 8080)
+			},
+			wantToken: "cached",
+			wantExp:   expiryCached,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if tt.prepareMocks != nil {
+					tt.prepareMocks(t, tm)
+				}
+
+				var buf bytes.Buffer
+				config.Out = &buf
+				tt.setArgs(config)
+
+				svc := kubernetesCommandService()
+				svc.ssoLogin = func(ctx context.Context, clientID, issuerURL string, opts ...sso.LocalOIDCLoginOption) (string, time.Time, error) {
+					return "oidc-id-token", expiryNew, nil
+				}
+
+				err := svc.RunKubernetesKubeconfigExecCredential(config)
+				require.NoError(t, err)
+
+				var got clientauthentication.ExecCredential
+				require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+				require.Equal(t, tt.wantToken, got.Status.Token)
+				require.Equal(t, tt.wantExp.UTC(), got.Status.ExpirationTimestamp.UTC())
+
+				if tt.assertCache != nil {
+					tt.assertCache(t, execCredCacheDir, got)
+				}
+			})
+		})
+	}
 }
 
 func TestKubernetesList(t *testing.T) {

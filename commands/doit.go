@@ -140,7 +140,7 @@ func initConfig() {
 }
 
 // in case we ever want to change this, or let folks configure it...
-func defaultConfigHome() string {
+var defaultConfigHome = func() string {
 	cfgDir, err := os.UserConfigDir()
 	checkErr(err)
 
