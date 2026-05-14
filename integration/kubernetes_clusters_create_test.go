@@ -51,6 +51,13 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				if strings.Contains(string(reqBody), "some-node-pool-cluster") {
 					matchedRequest = kubeNodePoolCreateJSONReq
 				}
+				if strings.Contains(string(reqBody), "some-non-ha-cluster") {
+					matchedRequest = kubeClustersCreateNonHAJSONReq
+				}
+				// When --ha is omitted, request has no "ha" field; API applies version-specific default
+				if strings.Contains(string(reqBody), "some-cluster-name") && !strings.Contains(string(reqBody), `"ha"`) {
+					matchedRequest = kubeClustersCreateJSONReqOmitHA
+				}
 
 				expect.JSONEq(string(reqBody), matchedRequest)
 
@@ -115,6 +122,61 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(fmt.Sprintf(kubeClustersCreateOutput, f.Name())), strings.TrimSpace(string(output)))
+		})
+
+		it("creates a kube cluster with HA defaulting to true when --ha is omitted", func() {
+			f, err := os.CreateTemp(t.TempDir(), "fake-kube-config")
+			expect.NoError(err)
+
+			err = f.Close()
+			expect.NoError(err)
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"kubernetes",
+				"clusters",
+				"create",
+				"some-cluster-name",
+				"--region", "mars",
+				"--version", "some-kube-version",
+				"--1-clicks", "slug1",
+			)
+
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("KUBECONFIG=%s", f.Name()),
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(fmt.Sprintf(kubeClustersCreateOutput, f.Name())), strings.TrimSpace(string(output)))
+		})
+
+		it("creates a kube cluster with HA disabled when --ha=false", func() {
+			f, err := os.CreateTemp(t.TempDir(), "fake-kube-config")
+			expect.NoError(err)
+
+			err = f.Close()
+			expect.NoError(err)
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"kubernetes",
+				"clusters",
+				"create",
+				"some-non-ha-cluster",
+				"--region", "mars",
+				"--version", "some-kube-version",
+				"--ha=false",
+			)
+
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("KUBECONFIG=%s", f.Name()),
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 		})
 	})
 
@@ -236,6 +298,49 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
       "size": "s-1vcpu-2gb-intel",
       "count": 3,
       "name": "some-cluster-name-default-pool"
+    }
+  ]
+}
+`
+	kubeClustersCreateJSONReqOmitHA = `
+{
+  "name": "some-cluster-name",
+  "region": "mars",
+  "version": "some-kube-version",
+  "auto_upgrade": false,
+  "surge_upgrade": true,
+  "maintenance_policy": {
+    "day": "any",
+    "duration": "",
+    "start_time": "00:00"
+  },
+  "node_pools": [
+    {
+      "size": "s-1vcpu-2gb-intel",
+      "count": 3,
+      "name": "some-cluster-name-default-pool"
+    }
+  ]
+}
+`
+	kubeClustersCreateNonHAJSONReq = `
+{
+  "name": "some-non-ha-cluster",
+  "region": "mars",
+  "version": "some-kube-version",
+  "auto_upgrade": false,
+  "surge_upgrade": true,
+  "ha": false,
+  "maintenance_policy": {
+    "day": "any",
+    "duration": "",
+    "start_time": "00:00"
+  },
+  "node_pools": [
+    {
+      "size": "s-1vcpu-2gb-intel",
+      "count": 3,
+      "name": "some-non-ha-cluster-default-pool"
     }
   ]
 }
