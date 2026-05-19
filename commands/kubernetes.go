@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -1374,7 +1375,10 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigExecCredential(c *CmdC
 	kube := c.Kubernetes()
 	// it's important that we don't print anything to stdout since this command
 	// is used by kubectl which relies on stdout to contain _only_ the credential
-	logger := log.New(os.Stderr, "doctl: ", log.LstdFlags)
+	logger := log.New(io.Discard, "", 0)
+	if Verbose {
+		logger = log.New(os.Stderr, "doctl: ", log.LstdFlags)
+	}
 
 	clusterID := c.Args[0]
 	cachePath := cachedExecCredentialPath(clusterID)
