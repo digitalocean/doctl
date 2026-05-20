@@ -74,7 +74,7 @@ type DedicatedInferenceService interface {
 	Update(id string, req *godo.DedicatedInferenceUpdateRequest) (*DedicatedInference, error)
 	List(region string, name string) (DedicatedInferenceListItems, error)
 	Delete(id string) error
-	ListAccelerators(diID string, slug string) (DedicatedInferenceAcceleratorInfos, error)
+	ListAccelerators(diID string, slug string, page int, perPage int) (DedicatedInferenceAcceleratorInfos, error)
 	CreateToken(diID string, req *godo.DedicatedInferenceTokenCreateRequest) (*DedicatedInferenceToken, error)
 	ListTokens(diID string) (DedicatedInferenceTokens, error)
 	RevokeToken(diID string, tokenID string) error
@@ -161,31 +161,23 @@ func (s *dedicatedInferenceService) List(region string, name string) (DedicatedI
 }
 
 // ListAccelerators lists accelerators for a dedicated inference endpoint.
-func (s *dedicatedInferenceService) ListAccelerators(diID string, slug string) (DedicatedInferenceAcceleratorInfos, error) {
-	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := s.client.DedicatedInference.ListAccelerators(context.TODO(), diID, &godo.DedicatedInferenceListAcceleratorsOptions{Slug: slug, ListOptions: *opt})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		items := make([]any, len(list))
-		for i := range list {
-			items[i] = list[i]
-		}
-		return items, resp, nil
+func (s *dedicatedInferenceService) ListAccelerators(diID string, slug string, page int, perPage int) (DedicatedInferenceAcceleratorInfos, error) {
+	opts := &godo.DedicatedInferenceListAcceleratorsOptions{
+		Slug:        slug,
+		ListOptions: godo.ListOptions{Page: page, PerPage: perPage},
 	}
 
-	si, err := PaginateResp(f)
+	list, _, err := s.client.DedicatedInference.ListAccelerators(context.TODO(), diID, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	list := make(DedicatedInferenceAcceleratorInfos, len(si))
-	for i := range si {
-		a := si[i].(godo.DedicatedInferenceAcceleratorInfo)
-		list[i] = DedicatedInferenceAcceleratorInfo{DedicatedInferenceAcceleratorInfo: &a}
+	result := make(DedicatedInferenceAcceleratorInfos, len(list))
+	for i := range list {
+		a := list[i]
+		result[i] = DedicatedInferenceAcceleratorInfo{DedicatedInferenceAcceleratorInfo: &a}
 	}
-	return list, nil
+	return result, nil
 }
 
 // CreateToken creates a new auth token for a dedicated inference endpoint.

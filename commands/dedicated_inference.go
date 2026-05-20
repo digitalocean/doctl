@@ -47,16 +47,19 @@ func DedicatedInferenceCmd() *Command {
 		"Create a dedicated inference endpoint",
 		`Creates a dedicated inference endpoint on your account using a spec file in JSON or YAML format.
 Use the `+"`"+`--spec`+"`"+` flag to provide the path to the spec file.
-Optionally provide a Hugging Face access token using `+"`"+`--hugging-face-token`+"`"+`.`,
+Optionally provide a Hugging Face access token using `+"`"+`--hugging-face-token`+"`"+` for gated models.
+For more information, see https://docs.digitalocean.com/reference/api/digitalocean/#tag/Dedicated-Inference/operation/dedicatedInferences_create`,
 		Writer,
 		aliasOpt("c"),
 		displayerType(&displayers.DedicatedInference{}),
 	)
 	AddStringFlag(cmdCreate, doctl.ArgDedicatedInferenceSpec, "", "", `Path to a dedicated inference spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgDedicatedInferenceHuggingFaceToken, "", "", "Hugging Face token for accessing gated models (optional)")
-	cmdCreate.Example = `The following example creates a dedicated inference endpoint using a spec file: doctl dedicated-inference create --spec spec.yaml --hugging-face-token "hf_mytoken"
+	cmdCreate.Example = `The following example creates a dedicated inference endpoint using a YAML spec file: doctl dedicated-inference create --spec spec.yaml
 
-For more information, see https://docs.digitalocean.com/reference/api/digitalocean/#tag/Dedicated-Inference/operation/dedicatedInferences_create`
+The following example creates a dedicated inference endpoint for a gated Hugging Face model by also providing an access token: doctl dedicated-inference create --spec spec.yaml --hugging-face-token "hf_mytoken"
+
+The following example creates a dedicated inference endpoint by piping the spec from stdin: cat spec.yaml | doctl dedicated-inference create --spec -`
 
 	cmdGet := CmdBuilder(
 		cmd,
@@ -89,16 +92,19 @@ For more information, see https://docs.digitalocean.com/reference/api/digitaloce
 		"Update a dedicated inference endpoint",
 		`Updates a dedicated inference endpoint using a spec file in JSON or YAML format.
 Use the `+"`"+`--spec`+"`"+` flag to provide the path to the spec file.
-Optionally provide a Hugging Face access token using `+"`"+`--hugging-face-token`+"`"+`.`,
+Optionally provide a Hugging Face access token using `+"`"+`--hugging-face-token`+"`"+` for gated models.
+For more information, see https://docs.digitalocean.com/reference/api/digitalocean/#tag/Dedicated-Inference/operation/dedicatedInferences_update`,
 		Writer,
 		aliasOpt("u"),
 		displayerType(&displayers.DedicatedInference{}),
 	)
 	AddStringFlag(cmdUpdate, doctl.ArgDedicatedInferenceSpec, "", "", `Path to a dedicated inference spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddStringFlag(cmdUpdate, doctl.ArgDedicatedInferenceHuggingFaceToken, "", "", "Hugging Face token for accessing gated models (optional)")
-	cmdUpdate.Example = `The following example updates a dedicated inference endpoint using a spec file: doctl dedicated-inference update 12345678-1234-1234-1234-123456789012 --spec spec.yaml
+	cmdUpdate.Example = `The following example updates a dedicated inference endpoint using a YAML spec file: doctl dedicated-inference update 12345678-1234-1234-1234-123456789012 --spec spec.yaml
 
-For more information, see https://docs.digitalocean.com/reference/api/digitalocean/#tag/Dedicated-Inference/operation/dedicatedInferences_update`
+The following example updates a dedicated inference endpoint for a gated Hugging Face model by also providing an access token: doctl dedicated-inference update 12345678-1234-1234-1234-123456789012 --spec spec.yaml --hugging-face-token "hf_mytoken"
+
+The following example updates a dedicated inference endpoint by piping the spec from stdin: cat spec.yaml | doctl dedicated-inference update 12345678-1234-1234-1234-123456789012 --spec -`
 
 	cmdList := CmdBuilder(
 		cmd,
@@ -131,9 +137,13 @@ Optionally use `+"`"+`--slug`+"`"+` to filter by accelerator slug.`,
 		displayerType(&displayers.DedicatedInferenceAccelerator{}),
 	)
 	AddStringFlag(cmdListAccelerators, doctl.ArgDedicatedInferenceAcceleratorSlug, "", "", "Filter accelerators by slug (optional)")
+	AddIntFlag(cmdListAccelerators, doctl.ArgDedicatedInferenceAcceleratorPage, "", 1, "Page number for paginated results (optional)")
+	AddIntFlag(cmdListAccelerators, doctl.ArgDedicatedInferenceAcceleratorPerPage, "", 20, "Number of results per page (optional)")
 	cmdListAccelerators.Example = `The following example lists accelerators for a dedicated inference endpoint: doctl dedicated-inference list-accelerators 12345678-1234-1234-1234-123456789012
 
-The following example filters by slug: doctl dedicated-inference list-accelerators 12345678-1234-1234-1234-123456789012 --slug gpu-mi300x1-192gb`
+The following example filters by slug: doctl dedicated-inference list-accelerators 12345678-1234-1234-1234-123456789012 --slug gpu-mi300x1-192gb
+
+The following example retrieves the second page of accelerators with 10 results per page: doctl dedicated-inference list-accelerators 12345678-1234-1234-1234-123456789012 --page 2 --per-page 10`
 
 	cmdCreateToken := CmdBuilder(
 		cmd,
@@ -304,8 +314,10 @@ func RunDedicatedInferenceListAccelerators(c *CmdConfig) error {
 	diID := c.Args[0]
 
 	slug, _ := c.Doit.GetString(c.NS, doctl.ArgDedicatedInferenceAcceleratorSlug)
+	page, _ := c.Doit.GetInt(c.NS, doctl.ArgDedicatedInferenceAcceleratorPage)
+	perPage, _ := c.Doit.GetInt(c.NS, doctl.ArgDedicatedInferenceAcceleratorPerPage)
 
-	accelerators, err := c.DedicatedInferences().ListAccelerators(diID, slug)
+	accelerators, err := c.DedicatedInferences().ListAccelerators(diID, slug, page, perPage)
 	if err != nil {
 		return err
 	}

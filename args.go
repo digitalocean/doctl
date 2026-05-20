@@ -877,4 +877,10 @@ const (
 
 	// ArgDedicatedInferenceTokenName is the name for a dedicated inference auth token.
 	ArgDedicatedInferenceTokenName = "token-name"
+
+	// ArgDedicatedInferenceAcceleratorPage is the page number for paginated accelerator results.
+	ArgDedicatedInferenceAcceleratorPage = "page"
+
+	// ArgDedicatedInferenceAcceleratorPerPage is the number of accelerator results per page.
+	ArgDedicatedInferenceAcceleratorPerPage = "per-page"
 )

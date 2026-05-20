@@ -37,16 +37,25 @@ var _ = suite("dedicated-inference/list-accelerators", func(t *testing.T, when s
 					return
 				}
 
-				// Check for slug filter query param
-				slugFilter := req.URL.Query().Get("slug")
-				if slugFilter == "gpu-mi300x1-192gb" {
-					w.Header().Set("Content-Type", "application/json")
-					w.Write([]byte(dedicatedInferenceListAcceleratorsFilteredResponse))
-					return
-				}
-
+			// Check for slug filter query param
+			slugFilter := req.URL.Query().Get("slug")
+			if slugFilter == "gpu-mi300x1-192gb" {
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte(dedicatedInferenceListAcceleratorsResponse))
+				w.Write([]byte(dedicatedInferenceListAcceleratorsFilteredResponse))
+				return
+			}
+
+			// Check for pagination query params
+			pageParam := req.URL.Query().Get("page")
+			perPageParam := req.URL.Query().Get("per_page")
+			if pageParam == "2" && perPageParam == "10" {
+				w.Header().Set("Content-Type", "application/json")
+				w.Write([]byte(dedicatedInferenceListAcceleratorsPaginatedResponse))
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(dedicatedInferenceListAcceleratorsResponse))
 			case "/v2/dedicated-inferences/99999999-9999-4999-8999-999999999999/accelerators":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -173,6 +182,24 @@ var _ = suite("dedicated-inference/list-accelerators", func(t *testing.T, when s
 			expect.Equal(strings.TrimSpace(dedicatedInferenceListAcceleratorsOutput), strings.TrimSpace(string(output)))
 		})
 	})
+
+	when("pagination flags are provided", func() {
+		it("sends page and per_page query params and returns paginated results", func() {
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"dedicated-inference",
+				"list-accelerators",
+				"00000000-0000-4000-8000-000000000000",
+				"--page", "2",
+				"--per-page", "10",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(dedicatedInferenceListAcceleratorsPaginatedOutput), strings.TrimSpace(string(output)))
+		})
+	})
 })
 
 const (
@@ -229,6 +256,27 @@ acc-002    gpu-h100x1-80gb      ACTIVE
   "links": {},
   "meta": {
     "total": 1
+  }
+}
+`
+	dedicatedInferenceListAcceleratorsPaginatedOutput = `
+ID         Name             Slug                 Status    Created At
+acc-003    decode-gpu-2     gpu-h100x2-80gb      ACTIVE    2023-06-01 00:00:00 +0000 UTC
+`
+	dedicatedInferenceListAcceleratorsPaginatedResponse = `
+{
+  "accelerators": [
+    {
+      "id": "acc-003",
+      "name": "decode-gpu-2",
+      "slug": "gpu-h100x2-80gb",
+      "status": "ACTIVE",
+      "created_at": "2023-06-01T00:00:00Z"
+    }
+  ],
+  "links": {},
+  "meta": {
+    "total": 11
   }
 }
 `
