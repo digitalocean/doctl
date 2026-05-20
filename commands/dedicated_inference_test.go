@@ -381,9 +381,11 @@ func TestRunDedicatedInferenceListAccelerators(t *testing.T) {
 			},
 		}
 
-		tm.dedicatedInferences.EXPECT().ListAccelerators("00000000-0000-4000-8000-000000000000", "").Return(testAccelerators, nil)
+		tm.dedicatedInferences.EXPECT().ListAccelerators("00000000-0000-4000-8000-000000000000", "", 1, 20).Return(testAccelerators, nil)
 
 		config.Args = append(config.Args, "00000000-0000-4000-8000-000000000000")
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceAcceleratorPage, 1)
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceAcceleratorPerPage, 20)
 
 		err := RunDedicatedInferenceListAccelerators(config)
 		assert.NoError(t, err)
@@ -403,10 +405,36 @@ func TestRunDedicatedInferenceListAccelerators_WithSlug(t *testing.T) {
 			},
 		}
 
-		tm.dedicatedInferences.EXPECT().ListAccelerators("00000000-0000-4000-8000-000000000000", "gpu-mi300x1-192gb").Return(testAccelerators, nil)
+		tm.dedicatedInferences.EXPECT().ListAccelerators("00000000-0000-4000-8000-000000000000", "gpu-mi300x1-192gb", 1, 20).Return(testAccelerators, nil)
 
 		config.Args = append(config.Args, "00000000-0000-4000-8000-000000000000")
 		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceAcceleratorSlug, "gpu-mi300x1-192gb")
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceAcceleratorPage, 1)
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceAcceleratorPerPage, 20)
+
+		err := RunDedicatedInferenceListAccelerators(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRunDedicatedInferenceListAccelerators_WithPagination(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		testAccelerators := do.DedicatedInferenceAcceleratorInfos{
+			{
+				DedicatedInferenceAcceleratorInfo: &godo.DedicatedInferenceAcceleratorInfo{
+					ID:     "accel-3",
+					Name:   "gpu-h100x1-80gb",
+					Slug:   "gpu-h100x1-80gb",
+					Status: "ACTIVE",
+				},
+			},
+		}
+
+		tm.dedicatedInferences.EXPECT().ListAccelerators("00000000-0000-4000-8000-000000000000", "", 2, 10).Return(testAccelerators, nil)
+
+		config.Args = append(config.Args, "00000000-0000-4000-8000-000000000000")
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceAcceleratorPage, 2)
+		config.Doit.Set(config.NS, doctl.ArgDedicatedInferenceAcceleratorPerPage, 10)
 
 		err := RunDedicatedInferenceListAccelerators(config)
 		assert.NoError(t, err)
