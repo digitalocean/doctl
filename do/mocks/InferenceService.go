@@ -44,7 +44,7 @@ func (m *MockInferenceService) CreateAsyncInvocation(params *godo.AsyncInvocatio
 }
 
 // CreateAsyncInvocation indicates an expected call of CreateAsyncInvocation.
-func (mr *MockInferenceServiceMockRecorder) CreateAsyncInvocation(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateAsyncInvocation(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAsyncInvocation", reflect.TypeOf((*MockInferenceService)(nil).CreateAsyncInvocation), params)
 }
@@ -59,7 +59,7 @@ func (m *MockInferenceService) CreateChatCompletion(params *godo.ChatCompletionN
 }
 
 // CreateChatCompletion indicates an expected call of CreateChatCompletion.
-func (mr *MockInferenceServiceMockRecorder) CreateChatCompletion(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateChatCompletion(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateChatCompletion", reflect.TypeOf((*MockInferenceService)(nil).CreateChatCompletion), params)
 }
@@ -74,7 +74,7 @@ func (m *MockInferenceService) CreateChatCompletionStreaming(params *godo.ChatCo
 }
 
 // CreateChatCompletionStreaming indicates an expected call of CreateChatCompletionStreaming.
-func (mr *MockInferenceServiceMockRecorder) CreateChatCompletionStreaming(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateChatCompletionStreaming(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateChatCompletionStreaming", reflect.TypeOf((*MockInferenceService)(nil).CreateChatCompletionStreaming), params)
 }
@@ -89,7 +89,7 @@ func (m *MockInferenceService) CreateEmbedding(params *godo.EmbeddingNewParams) 
 }
 
 // CreateEmbedding indicates an expected call of CreateEmbedding.
-func (mr *MockInferenceServiceMockRecorder) CreateEmbedding(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateEmbedding(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEmbedding", reflect.TypeOf((*MockInferenceService)(nil).CreateEmbedding), params)
 }
@@ -104,7 +104,7 @@ func (m *MockInferenceService) CreateMessage(params *godo.MessageNewParams) (*go
 }
 
 // CreateMessage indicates an expected call of CreateMessage.
-func (mr *MockInferenceServiceMockRecorder) CreateMessage(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateMessage(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessage", reflect.TypeOf((*MockInferenceService)(nil).CreateMessage), params)
 }
@@ -119,7 +119,7 @@ func (m *MockInferenceService) CreateMessageStreaming(params *godo.MessageNewPar
 }
 
 // CreateMessageStreaming indicates an expected call of CreateMessageStreaming.
-func (mr *MockInferenceServiceMockRecorder) CreateMessageStreaming(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateMessageStreaming(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessageStreaming", reflect.TypeOf((*MockInferenceService)(nil).CreateMessageStreaming), params)
 }
@@ -134,7 +134,7 @@ func (m *MockInferenceService) CreateResponse(params *godo.ResponseNewParams) (*
 }
 
 // CreateResponse indicates an expected call of CreateResponse.
-func (mr *MockInferenceServiceMockRecorder) CreateResponse(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateResponse(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateResponse", reflect.TypeOf((*MockInferenceService)(nil).CreateResponse), params)
 }
@@ -149,7 +149,7 @@ func (m *MockInferenceService) CreateResponseStreaming(params *godo.ResponseNewP
 }
 
 // CreateResponseStreaming indicates an expected call of CreateResponseStreaming.
-func (mr *MockInferenceServiceMockRecorder) CreateResponseStreaming(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) CreateResponseStreaming(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateResponseStreaming", reflect.TypeOf((*MockInferenceService)(nil).CreateResponseStreaming), params)
 }
@@ -164,7 +164,7 @@ func (m *MockInferenceService) GenerateImage(params *godo.ImageGenerateParams) (
 }
 
 // GenerateImage indicates an expected call of GenerateImage.
-func (mr *MockInferenceServiceMockRecorder) GenerateImage(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) GenerateImage(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateImage", reflect.TypeOf((*MockInferenceService)(nil).GenerateImage), params)
 }
@@ -179,7 +179,7 @@ func (m *MockInferenceService) GenerateImageStreaming(params *godo.ImageGenerate
 }
 
 // GenerateImageStreaming indicates an expected call of GenerateImageStreaming.
-func (mr *MockInferenceServiceMockRecorder) GenerateImageStreaming(params interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) GenerateImageStreaming(params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateImageStreaming", reflect.TypeOf((*MockInferenceService)(nil).GenerateImageStreaming), params)
 }
@@ -194,7 +194,7 @@ func (m *MockInferenceService) GetAsyncInvocation(requestID string) (*godo.Async
 }
 
 // GetAsyncInvocation indicates an expected call of GetAsyncInvocation.
-func (mr *MockInferenceServiceMockRecorder) GetAsyncInvocation(requestID interface{}) *gomock.Call {
+func (mr *MockInferenceServiceMockRecorder) GetAsyncInvocation(requestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncInvocation", reflect.TypeOf((*MockInferenceService)(nil).GetAsyncInvocation), requestID)
 }

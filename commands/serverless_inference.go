@@ -878,7 +878,7 @@ func serverlessInferenceAsyncInvocationParams(c *CmdConfig) (*godo.AsyncInvocati
 			doctl.ArgInferencePrompt, doctl.ArgInferenceText, doctl.ArgInferenceRequest)
 	}
 
-	input := make(map[string]interface{})
+	input := make(map[string]any)
 	if prompt != "" {
 		input["prompt"] = prompt
 	}
