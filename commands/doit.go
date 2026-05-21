@@ -193,6 +193,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Spaces())
 	DoitCmd.AddCommand(GradientAI())
 	DoitCmd.AddCommand(DedicatedInferenceCmd())
+	DoitCmd.AddCommand(Inference())
 	DoitCmd.AddCommand(Nfs())
 	DoitCmd.AddCommand(Security())
 }

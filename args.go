@@ -877,4 +877,35 @@ const (
 
 	// ArgDedicatedInferenceTokenName is the name for a dedicated inference auth token.
 	ArgDedicatedInferenceTokenName = "token-name"
+
+	// Serverless inference API args (https://inference.do-ai.run).
+
+	// ArgInferenceModel is the model ID for a chat completion request.
+	ArgInferenceModel = "model"
+	// ArgInferenceMessage is the user message for a chat completion request.
+	ArgInferenceMessage = "message"
+	// ArgInferenceSystemMessage is an optional system message for a chat completion request.
+	ArgInferenceSystemMessage = "system-message"
+	// ArgInferenceRequest is a path to a JSON chat completion request body.
+	ArgInferenceRequest = "request"
+	// ArgInferenceStream enables SSE streaming for a chat completion request.
+	ArgInferenceStream = "stream"
+	// ArgInferenceTemperature is the sampling temperature for a chat completion request.
+	ArgInferenceTemperature = "temperature"
+	// ArgInferenceMaxTokens is the max tokens value for a chat completion request.
+	ArgInferenceMaxTokens = "max-tokens"
+	// ArgInferenceInput is the input text for embeddings or responses requests.
+	ArgInferenceInput = "input"
+	// ArgInferencePrompt is the prompt for image generation requests.
+	ArgInferencePrompt = "prompt"
+	// ArgInferenceInstructions is optional instructions for a responses request.
+	ArgInferenceInstructions = "instructions"
+	// ArgInferenceOutput is a file path to write generated image bytes.
+	ArgInferenceOutput = "output"
+	// ArgInferenceN is the number of images to generate.
+	ArgInferenceN = "n"
+	// ArgInferenceText is the text input for async text-to-speech invocations.
+	ArgInferenceText = "text"
+	// ArgInferenceSecondsTotal is the audio duration for async audio generation.
+	ArgInferenceSecondsTotal = "seconds-total"
 )

@@ -293,6 +293,7 @@ type tcMocks struct {
 	spacesKeys            *domocks.MockSpacesKeysService
 	gradientAI            *domocks.MockGradientAIService
 	dedicatedInferences   *domocks.MockDedicatedInferenceService
+	inference             *domocks.MockInferenceService
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
 	security              *domocks.MockSecurityService
@@ -352,6 +353,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		spacesKeys:            domocks.NewMockSpacesKeysService(ctrl),
 		gradientAI:            domocks.NewMockGradientAIService(ctrl),
 		dedicatedInferences:   domocks.NewMockDedicatedInferenceService(ctrl),
+		inference:             domocks.NewMockInferenceService(ctrl),
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
@@ -419,6 +421,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		SpacesKeys:          func() do.SpacesKeysService { return tm.spacesKeys },
 		GradientAI:          func() do.GradientAIService { return tm.gradientAI },
 		DedicatedInferences: func() do.DedicatedInferenceService { return tm.dedicatedInferences },
+		Inference:           func() do.InferenceService { return tm.inference },
 		Nfs:                 func() do.NfsService { return tm.nfs },
 		NfsActions:          func() do.NfsActionsService { return tm.nfsActions },
 		Security:            func() do.SecurityService { return tm.security },
