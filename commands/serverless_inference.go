@@ -190,6 +190,7 @@ func RunServerlessInferenceChatCompletionCreate(c *CmdConfig) error {
 		stream = true
 	}
 	if stream {
+		params.Stream = godo.PtrTo(true)
 		return runServerlessInferenceChatCompletionStream(c, params)
 	}
 	return runServerlessInferenceChatCompletion(c, params)
@@ -422,6 +423,7 @@ func RunServerlessInferenceImagesCreate(c *CmdConfig) error {
 		stream = true
 	}
 	if stream {
+		params.Stream = godo.PtrTo(true)
 		// partial_images must be > 0 for the API to send progressive events.
 		if params.PartialImages == nil {
 			params.PartialImages = godo.PtrTo(1)
@@ -440,6 +442,12 @@ func serverlessInferenceImageParams(c *CmdConfig) (*godo.ImageGenerateParams, er
 		params := new(godo.ImageGenerateParams)
 		if err := readServerlessInferenceJSON(requestPath, params); err != nil {
 			return nil, err
+		}
+		if params.N < 1 {
+			params.N = 1
+		}
+		if params.N > 10 {
+			return nil, fmt.Errorf("--%s must be between 1 and 10", doctl.ArgInferenceN)
 		}
 		return params, nil
 	}
@@ -619,6 +627,7 @@ func RunServerlessInferenceMessagesCreate(c *CmdConfig) error {
 		stream = true
 	}
 	if stream {
+		params.Stream = godo.PtrTo(true)
 		return runServerlessInferenceMessageStream(c, params)
 	}
 	return runServerlessInferenceMessage(c, params)
@@ -794,6 +803,7 @@ func RunServerlessInferenceResponsesCreate(c *CmdConfig) error {
 		stream = true
 	}
 	if stream {
+		params.Stream = godo.PtrTo(true)
 		return runServerlessInferenceResponseStream(c, params)
 	}
 	return runServerlessInferenceResponse(c, params)
@@ -889,15 +899,25 @@ func serverlessInferenceAsyncCmd() *Command {
 	}
 
 	create := CmdBuilder(cmd, RunServerlessInferenceAsyncCreate, "create", "Start an async invocation",
-		`Starts an asynchronous job for a fal model and returns a request ID. Use --model and --prompt for image or audio generation, --text for text-to-speech, or --request for a full JSON body. Poll the result using the get subcommand.`, Writer)
-	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "fal model ID (maps to model_id in the API)")
-	AddStringFlag(create, doctl.ArgInferencePrompt, "", "", "Prompt for image or audio generation (input.prompt)")
-	AddStringFlag(create, doctl.ArgInferenceText, "", "", "Text for text-to-speech generation (input.text)")
-	AddIntFlag(create, doctl.ArgInferenceSecondsTotal, "", 0, "Audio duration in seconds (input.seconds_total)")
-	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to JSON request body. Use \"-\" for stdin.")
-	AddStringSliceFlag(create, doctl.ArgTag, "", nil, "Tag in key=value form (repeatable)")
+		`Starts an asynchronous job for a fal model and returns a request ID.
+
+Use --model with:
+  --prompt   for image generation (e.g. fal-ai/flux/schnell) or audio generation (e.g. fal-ai/stable-audio-25/text-to-audio)
+  --text     for text-to-speech models (e.g. fal-ai/elevenlabs/tts/multilingual-v2)
+
+Use --request to send a full JSON body for any model.
+Poll the result with the get subcommand once you have a request ID.
+
+For full API reference see: https://docs.digitalocean.com/reference/api/reference/serverless-inference/#inference_create_async_invoke`, Writer)
+	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "fal model ID (required unless --request is set)")
+	AddStringFlag(create, doctl.ArgInferencePrompt, "", "", "Text prompt for image generation (e.g. fal-ai/flux/schnell) or audio generation (e.g. fal-ai/stable-audio-25/text-to-audio) models")
+	AddStringFlag(create, doctl.ArgInferenceText, "", "", "Text to convert to speech, used for text-to-speech models (e.g. fal-ai/elevenlabs/tts/multilingual-v2)")
+	AddIntFlag(create, doctl.ArgInferenceSecondsTotal, "", 0, "Desired audio duration in seconds, used with audio generation models (e.g. fal-ai/stable-audio-25/text-to-audio)")
+	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to a full JSON request body. Use \"-\" for stdin.")
+	AddStringSliceFlag(create, doctl.ArgTag, "", nil, "Tag in key=value form (repeatable, e.g. --tag env=prod)")
 	create.Example = `doctl inference async-invoke create --model fal-ai/flux/schnell --prompt "A futuristic city at sunset"
 doctl inference async-invoke create --model fal-ai/elevenlabs/tts/multilingual-v2 --text "Hello world"
+doctl inference async-invoke create --model fal-ai/stable-audio-25/text-to-audio --prompt "calm piano" --seconds-total 10
 doctl inference async-invoke create --request ./async-request.json`
 
 	get := CmdBuilder(cmd, RunServerlessInferenceAsyncGet, "get <request-id>", "Get an async invocation",
