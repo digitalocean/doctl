@@ -18,13 +18,13 @@ import (
 func Inference() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "inference",
-			Aliases: []string{"serverless-inference", "si"},
+			Use:     "serverless-inference",
+			Aliases: []string{"inference", "si"},
 			Short:   "Call DigitalOcean serverless inference APIs",
 			Long: `The subcommands of doctl inference call the serverless inference API at https://inference.do-ai.run.
 
 Authenticate using --access-token. The value may be a model access key or a DigitalOcean personal access token with full access; all scopes must be granted for the serverless inference API to work.`,
-			GroupID: manageResourcesGroup,
+			GroupID: serverlessInferenceGroup,
 		},
 	}
 
@@ -152,14 +152,14 @@ func serverlessInferenceChatCompletionsCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "chat-completions",
 			Aliases: []string{"chat", "chatcompletion"},
-			Short:   "Create chat completions",
-			Long:    "POST /v1/chat/completions. Use --stream for SSE output.",
+			Short:   "Display commands for creating chat completions",
+			Long:    "The subcommands of `doctl inference chat-completions` send chat-style prompts to a model and return responses.",
 		},
 	}
 
 	create := CmdBuilder(cmd, RunServerlessInferenceChatCompletionCreate, "create", "Create a chat completion",
-		`Use --request for a full JSON body, or --model with --message. With --stream, tokens are written as they arrive.`, Writer)
-	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID")
+		`Creates a chat completion using the specified model. Use --model and --message for quick prompts, or --request for a full JSON body. Use --stream to receive tokens as they arrive via server-sent events.`, Writer)
+	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceMessage, "", "", "User message (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceSystemMessage, "", "", "Optional system message")
 	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to JSON request body. Use \"-\" for stdin.")
@@ -167,8 +167,8 @@ func serverlessInferenceChatCompletionsCmd() *Command {
 	AddFloatFlag(create, doctl.ArgInferenceTemperature, "", 0, "Sampling temperature")
 	AddIntFlag(create, doctl.ArgInferenceMaxTokens, "", 0, "Maximum tokens to generate")
 
-	create.Example = `doctl inference chat-completions create --model openai-gpt-oss-20b --message "Hello"
-doctl inference chat-completions create --model openai-gpt-oss-20b --message "Hello" --stream
+	create.Example = `doctl inference chat-completions create --model llama3-8b-instruct --message "Hello"
+doctl inference chat-completions create --model llama3-8b-instruct --message "Hello" --stream
 doctl inference chat-completions create --request ./chat-request.json`
 
 	return cmd
@@ -310,28 +310,24 @@ func serverlessInferenceChatCompletionText(completion *godo.ChatCompletion) stri
 	return b.String()
 }
 
-func chatCompletionText(completion *godo.ChatCompletion) string {
-	return serverlessInferenceChatCompletionText(completion)
-}
-
 // --- embeddings ---
 
 func serverlessInferenceEmbeddingsCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "embeddings",
-			Short: "Create embedding vectors",
-			Long:  "POST /v1/embeddings.",
+			Short: "Display commands for creating embedding vectors",
+			Long:  "The subcommands of `doctl inference embeddings` convert text into dense vector representations for semantic search, RAG, and similarity matching.",
 		},
 	}
 
 	create := CmdBuilder(cmd, RunServerlessInferenceEmbeddingsCreate, "create", "Create embeddings",
-		`Use --request for a full JSON body, or --model with --input.`, Writer)
-	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID")
+		`Creates embedding vectors for the provided input text. Use --model and --input for quick requests, or --request for a full JSON body.`, Writer)
+	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceInput, "", "", "Input text (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to JSON request body. Use \"-\" for stdin.")
 
-	create.Example = `doctl inference embeddings create --model MODEL --input "hello"
+	create.Example = `doctl inference embeddings create --model qwen3-embedding-0.6b --input "hello"
 doctl inference embeddings create --request ./embedding-request.json`
 
 	return cmd
@@ -387,22 +383,22 @@ func serverlessInferenceImagesCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "images",
-			Short: "Generate images",
-			Long:  "POST /v1/images/generations.",
+			Short: "Display commands for generating images",
+			Long:  "The subcommands of `doctl inference images` generate images from text prompts.",
 		},
 	}
 
 	create := CmdBuilder(cmd, RunServerlessInferenceImagesCreate, "create", "Generate an image",
-		`Use --request for a full JSON body, or --model with --prompt. Use --output to write image bytes to a file.`, Writer)
-	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID")
+		`Generates an image from a text prompt. Use --model and --prompt for quick requests, or --request for a full JSON body. Use --output to write the generated image to a file.`, Writer)
+	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferencePrompt, "", "", "Image prompt (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to JSON request body. Use \"-\" for stdin.")
 	AddBoolFlag(create, doctl.ArgInferenceStream, "", false, "Stream partial images using SSE")
 	AddStringFlag(create, doctl.ArgInferenceOutput, "o", "", "Write the first image (base64 decoded) to this path")
 	AddIntFlag(create, doctl.ArgInferenceN, "", 1, "Number of images to generate")
 
-	create.Example = `doctl inference images create --model MODEL --prompt "a green cube" --output cube.png
-doctl inference images create --model MODEL --prompt "a green cube" --stream`
+	create.Example = `doctl inference images create --model openai-gpt-image-1 --prompt "a green cube" --output cube.png
+doctl inference images create --model openai-gpt-image-1 --prompt "a green cube" --stream`
 
 	return cmd
 }
@@ -518,20 +514,20 @@ func serverlessInferenceMessagesCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "messages",
-			Short: "Create Anthropic-style messages",
-			Long:  "POST /v1/messages.",
+			Short: "Display commands for creating Anthropic-style messages",
+			Long:  "The subcommands of `doctl inference messages` send prompts to Anthropic-compatible models and return responses.",
 		},
 	}
 
 	create := CmdBuilder(cmd, RunServerlessInferenceMessagesCreate, "create", "Create a message",
-		`Use --request for a full JSON body, or --model with --message and --max-tokens.`, Writer)
-	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID")
+		`Creates a message using the Anthropic-compatible messages API. Use --model and --message for quick prompts, or --request for a full JSON body.`, Writer)
+	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceMessage, "", "", "User message (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to JSON request body. Use \"-\" for stdin.")
 	AddBoolFlag(create, doctl.ArgInferenceStream, "", false, "Stream using server-sent events")
 	AddIntFlag(create, doctl.ArgInferenceMaxTokens, "", 1024, "Maximum tokens to generate")
 
-	create.Example = `doctl inference messages create --model MODEL --message "Hello" --max-tokens 256
+	create.Example = `doctl inference messages create --model claude-opus-4-6 --message "Hello" --max-tokens 256
 doctl inference messages create --request ./message-request.json --stream`
 
 	return cmd
@@ -655,13 +651,13 @@ func serverlessInferenceModelsCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "models",
-			Short: "List available models",
-			Long:  "GET /v1/models.",
+			Short: "Display commands for listing available inference models",
+			Long:  "The subcommands of `doctl inference models` list the models available to your inference API key.",
 		},
 	}
 
 	list := CmdBuilder(cmd, RunServerlessInferenceModelsList, "list", "List inference models",
-		`Lists models available to your inference API key.`, Writer, aliasOpt("ls"))
+		`Lists all models available to your inference API key, including their IDs and owners.`, Writer, aliasOpt("ls"))
 	list.Example = `doctl inference models list`
 
 	return cmd
@@ -689,21 +685,21 @@ func serverlessInferenceResponsesCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "responses",
-			Short: "Create responses",
-			Long:  "POST /v1/responses.",
+			Short: "Display commands for creating model responses",
+			Long:  "The subcommands of `doctl inference responses` send prompts to a model using the Responses API and return structured output.",
 		},
 	}
 
 	create := CmdBuilder(cmd, RunServerlessInferenceResponsesCreate, "create", "Create a response",
-		`Use --request for a full JSON body, or --model with --input.`, Writer)
-	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID")
+		`Creates a response using the Responses API. Use --model and --input for quick requests, or --request for a full JSON body. Use --stream to receive output as it is generated.`, Writer)
+	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "Model ID (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceInput, "", "", "Input text (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to JSON request body. Use \"-\" for stdin.")
 	AddBoolFlag(create, doctl.ArgInferenceStream, "", false, "Stream using server-sent events")
 	AddStringFlag(create, doctl.ArgInferenceInstructions, "", "", "Optional instructions")
 
-	create.Example = `doctl inference responses create --model MODEL --input "Hello"
-doctl inference responses create --model MODEL --input "Hello" --stream`
+	create.Example = `doctl inference responses create --model openai-gpt-oss-20b --input "Hello"
+doctl inference responses create --model openai-gpt-oss-20b --input "Hello" --stream`
 
 	return cmd
 }
@@ -807,13 +803,13 @@ func serverlessInferenceAsyncCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "async-invoke",
 			Aliases: []string{"async"},
-			Short:   "Manage async model invocations",
-			Long:    "POST/GET /v1/async-invoke.",
+			Short:   "Display commands for managing async model invocations",
+			Long:    "The subcommands of `doctl inference async-invoke` submit asynchronous jobs to fal models and retrieve their results.",
 		},
 	}
 
 	create := CmdBuilder(cmd, RunServerlessInferenceAsyncCreate, "create", "Start an async invocation",
-		`Use --request for a full JSON body, or --model with --prompt and/or --text. Image and audio fal models use --prompt; text-to-speech models use --text.`, Writer)
+		`Starts an asynchronous job for a fal model and returns a request ID. Use --model and --prompt for image or audio generation, --text for text-to-speech, or --request for a full JSON body. Poll the result using the get subcommand.`, Writer)
 	AddStringFlag(create, doctl.ArgInferenceModel, "m", "", "fal model ID (maps to model_id in the API)")
 	AddStringFlag(create, doctl.ArgInferencePrompt, "", "", "Prompt for image or audio generation (input.prompt)")
 	AddStringFlag(create, doctl.ArgInferenceText, "", "", "Text for text-to-speech generation (input.text)")
@@ -825,7 +821,7 @@ doctl inference async-invoke create --model fal-ai/elevenlabs/tts/multilingual-v
 doctl inference async-invoke create --request ./async-request.json`
 
 	get := CmdBuilder(cmd, RunServerlessInferenceAsyncGet, "get <request-id>", "Get an async invocation",
-		`Retrieves status and output when complete.`, Writer)
+		`Retrieves the status and output of an async invocation. Output is populated once the job reaches a terminal state (COMPLETED or FAILED).`, Writer)
 	get.Example = `doctl inference async-invoke get req_abc123`
 
 	return cmd
