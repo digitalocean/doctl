@@ -30,11 +30,11 @@ import (
 )
 
 const (
-	defaultConfigName         = "config.yaml" // default name of config file
-	manageResourcesGroup      = "manageResources"
-	configureDoctlGroup       = "configureDoctl"
-	viewBillingGroup          = "viewBilling"
-	serverlessInferenceGroup  = "serverlessInference"
+	defaultConfigName        = "config.yaml" // default name of config file
+	manageResourcesGroup     = "manageResources"
+	configureDoctlGroup      = "configureDoctl"
+	viewBillingGroup         = "viewBilling"
+	serverlessInferenceGroup = "serverlessInference"
 )
 
 var (
