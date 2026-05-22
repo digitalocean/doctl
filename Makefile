@@ -184,6 +184,12 @@ tag:
 	@echo ""
 	@ORIGIN=${ORIGIN} scripts/bumpversion.sh
 
+.PHONY: beta_tag
+beta_tag:
+	@echo "==> beta_tag (BUMP defaults to minor; pass BUMP=patch|major to override)"
+	@echo ""
+	@ORIGIN=${ORIGIN} scripts/beta_tag.sh
+
 .PHONY: _release
 _release:
 	@echo "=> releasing"

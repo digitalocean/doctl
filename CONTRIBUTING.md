@@ -21,6 +21,7 @@
       - [Build Scripts](#build-scripts)
   - [Releasing](#releasing)
     - [Tagging a release](#tagging-a-release)
+    - [Cutting a beta release](#cutting-a-beta-release)
     - [Snap](#snap)
     - [Updating Homebrew](#updating-homebrew)
 
@@ -223,3 +224,29 @@ Notes on `BUMP=(bugfix|feature|breaking) make tag`:
 
 To learn a bit more about how that all works, check out [goreleaser](https://goreleaser.com/intro) 
 and the config we use for it: [.goreleaser.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.yml)
+
+### Cutting a beta release
+
+Beta tags publish as GitHub prereleases (not marked Latest, not pushed to Docker Hub or Snap stable), so `action-doctl`'s `version: latest` continues to fetch GA only; customers consume betas by explicit version pin.
+
+1. Push your beta work to its branch. The repo must be clean and in sync with `origin`.
+
+1. Synchronize tags from the remote.
+    ```bash
+    git fetch --tags origin
+    ```
+
+1. Tag the beta using `BUMP=(bugfix|feature|breaking) make beta_tag`.  
+Example:  
+
+```bash
+make beta_tag
+```  
+
+Notes on `BUMP=(bugfix|feature|breaking) make beta_tag`:
+  - BUMP accepts: `bugfix`, `feature`, `breaking` as well as `patch`, `minor` and `major` values. Default is `minor` (`make tag` defaults to `patch`).
+  - The script computes `bump(BUMP, latest_GA_tag)` then auto-increments `-beta.N`. Do not pass `BETA=` manually.
+  - The command assumes you have a remote repository named `origin` pointing to this repository. If you'd prefer to specify a different remote repository, you can do so by setting `ORIGIN=(preferred remote name)`.
+  - The new tag triggers the [`beta-release`](.github/workflows/beta-release.yml) workflow.
+
+ the beta config we use: [.goreleaser.beta.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.beta.yml).
