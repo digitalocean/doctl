@@ -30,8 +30,8 @@ func TestRunServerlessInferenceChatCompletionCreate_NonStreaming(t *testing.T) {
 		}
 
 		tm.inference.EXPECT().
-			CreateChatCompletion(gomock.Any()).
-			DoAndReturn(func(params *godo.ChatCompletionNewParams) (*godo.ChatCompletion, error) {
+			CreateChatCompletion(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ any, params *godo.ChatCompletionNewParams) (*godo.ChatCompletion, error) {
 				assert.Equal(t, "openai-gpt-oss-20b", params.Model)
 				require.Len(t, params.Messages, 1)
 				require.NotNil(t, params.Messages[0].Content)
@@ -53,7 +53,7 @@ func TestRunServerlessInferenceChatCompletionCreate_Streaming(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgInferenceStream, true)
 
 		tm.inference.EXPECT().
-			CreateChatCompletionStreaming(gomock.Any()).
+			CreateChatCompletionStreaming(gomock.Any(), gomock.Any()).
 			Return(nil, assert.AnError)
 
 		err := RunServerlessInferenceChatCompletionCreate(config)
@@ -98,8 +98,8 @@ func TestRunServerlessInferenceAsyncCreate_FromFlags(t *testing.T) {
 
 		expected := &godo.AsyncInvocation{RequestID: "req_1", Status: "QUEUED"}
 		tm.inference.EXPECT().
-			CreateAsyncInvocation(gomock.Any()).
-			DoAndReturn(func(params *godo.AsyncInvocationNewParams) (*godo.AsyncInvocation, error) {
+			CreateAsyncInvocation(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ any, params *godo.AsyncInvocationNewParams) (*godo.AsyncInvocation, error) {
 				assert.Equal(t, "fal-ai/flux/schnell", params.ModelID)
 				assert.Equal(t, "sunset city", params.Input["prompt"])
 				require.Len(t, params.Tags, 1)

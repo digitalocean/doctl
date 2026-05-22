@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -184,6 +185,10 @@ func RunServerlessInferenceChatCompletionCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	// Also respect "stream": true embedded in a --request JSON body.
+	if !stream && params.Stream != nil && *params.Stream {
+		stream = true
+	}
 	if stream {
 		return runServerlessInferenceChatCompletionStream(c, params)
 	}
@@ -261,7 +266,7 @@ func inferenceChatCompletionParams(c *CmdConfig) (*godo.ChatCompletionNewParams,
 }
 
 func runServerlessInferenceChatCompletion(c *CmdConfig, params *godo.ChatCompletionNewParams) error {
-	completion, err := c.Inference().CreateChatCompletion(params)
+	completion, err := c.Inference().CreateChatCompletion(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -276,7 +281,7 @@ func runServerlessInferenceChatCompletion(c *CmdConfig, params *godo.ChatComplet
 }
 
 func runServerlessInferenceChatCompletionStream(c *CmdConfig, params *godo.ChatCompletionNewParams) error {
-	stream, err := c.Inference().CreateChatCompletionStreaming(params)
+	stream, err := c.Inference().CreateChatCompletionStreaming(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -338,7 +343,7 @@ func RunServerlessInferenceEmbeddingsCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	resp, err := c.Inference().CreateEmbedding(params)
+	resp, err := c.Inference().CreateEmbedding(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -394,8 +399,8 @@ func serverlessInferenceImagesCmd() *Command {
 	AddStringFlag(create, doctl.ArgInferencePrompt, "", "", "Image prompt (required unless --request is set)")
 	AddStringFlag(create, doctl.ArgInferenceRequest, "", "", "Path to JSON request body. Use \"-\" for stdin.")
 	AddBoolFlag(create, doctl.ArgInferenceStream, "", false, "Stream partial images using SSE")
-	AddStringFlag(create, doctl.ArgInferenceOutput, "o", "", "Write the first image (base64 decoded) to this path")
-	AddIntFlag(create, doctl.ArgInferenceN, "", 1, "Number of images to generate")
+	AddStringFlag(create, doctl.ArgInferenceOutput, "o", "", "Write generated image(s) to this path. For multiple images (--n > 1), files are named <base>-0.<ext>, <base>-1.<ext>, etc.")
+	AddIntFlag(create, doctl.ArgInferenceN, "", 1, "Number of images to generate (1–10)")
 
 	create.Example = `doctl inference images create --model openai-gpt-image-1 --prompt "a green cube" --output cube.png
 doctl inference images create --model openai-gpt-image-1 --prompt "a green cube" --stream`
@@ -412,7 +417,15 @@ func RunServerlessInferenceImagesCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	// Also respect "stream": true embedded in a --request JSON body.
+	if !stream && params.Stream != nil && *params.Stream {
+		stream = true
+	}
 	if stream {
+		// partial_images must be > 0 for the API to send progressive events.
+		if params.PartialImages == nil {
+			params.PartialImages = godo.PtrTo(1)
+		}
 		return runServerlessInferenceImageStream(c, params)
 	}
 	return runServerlessInferenceImage(c, params)
@@ -454,12 +467,15 @@ func serverlessInferenceImageParams(c *CmdConfig) (*godo.ImageGenerateParams, er
 	if n < 1 {
 		n = 1
 	}
+	if n > 10 {
+		return nil, fmt.Errorf("--%s must be between 1 and 10", doctl.ArgInferenceN)
+	}
 
 	return &godo.ImageGenerateParams{Model: model, Prompt: prompt, N: n}, nil
 }
 
 func runServerlessInferenceImage(c *CmdConfig, params *godo.ImageGenerateParams) error {
-	resp, err := c.Inference().GenerateImage(params)
+	resp, err := c.Inference().GenerateImage(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -469,43 +485,99 @@ func runServerlessInferenceImage(c *CmdConfig, params *godo.ImageGenerateParams)
 		return err
 	}
 	if outputPath != "" {
-		if len(resp.Data) == 0 || resp.Data[0].B64JSON == "" {
+		if len(resp.Data) == 0 {
 			return fmt.Errorf("no image data in response")
 		}
-		data, err := base64.StdEncoding.DecodeString(resp.Data[0].B64JSON)
+		if err := writeServerlessInferenceImages(c.Out, resp.Data, outputPath); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return writeServerlessInferenceJSON(c.Out, resp)
+}
+
+// writeServerlessInferenceImages decodes and writes each image to disk.
+// For a single image, the file is written to outputPath as-is.
+// For multiple images, files are written as <base>-0.<ext>, <base>-1.<ext>, etc.
+func writeServerlessInferenceImages(w io.Writer, images []godo.GeneratedImage, outputPath string) error {
+	ext := filepath.Ext(outputPath)
+	base := strings.TrimSuffix(outputPath, ext)
+
+	for i, img := range images {
+		if img.B64JSON == "" {
+			continue
+		}
+		path := outputPath
+		if len(images) > 1 {
+			path = fmt.Sprintf("%s-%d%s", base, i, ext)
+		}
+		data, err := base64.StdEncoding.DecodeString(img.B64JSON)
+		if err != nil {
+			return fmt.Errorf("decode image %d: %w", i, err)
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			return err
+		}
+		if !strings.EqualFold(Output, "json") {
+			if _, err := fmt.Fprintf(w, "wrote %s\n", path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func runServerlessInferenceImageStream(c *CmdConfig, params *godo.ImageGenerateParams) error {
+	stream, err := c.Inference().GenerateImageStreaming(c.Command.Context(), params)
+	if err != nil {
+		return err
+	}
+
+	outputPath, err := c.Doit.GetString(c.NS, doctl.ArgInferenceOutput)
+	if err != nil {
+		return err
+	}
+
+	jsonOut := strings.EqualFold(Output, "json")
+
+	// Track the last received b64 image data so we can write it to --output after the stream ends.
+	var lastB64 string
+	if err := runServerlessInferenceStream(c, stream, func() error {
+		ev := stream.Current()
+		if jsonOut {
+			return writeServerlessInferenceJSON(c.Out, ev)
+		}
+		if ev.B64JSON != "" {
+			lastB64 = ev.B64JSON
+			if strings.Contains(strings.ToLower(ev.Type), "completed") {
+				_, err := fmt.Fprintf(c.Out, "Image generation complete\n")
+				return err
+			}
+			_, err := fmt.Fprintf(c.Out, "Partial image received (index %d)\n", ev.PartialImageIndex)
+			return err
+		}
+		_, err := fmt.Fprintf(c.Out, "[%s]\n", ev.Type)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if outputPath != "" && lastB64 != "" {
+		data, err := base64.StdEncoding.DecodeString(lastB64)
 		if err != nil {
 			return fmt.Errorf("decode image: %w", err)
 		}
 		if err := os.WriteFile(outputPath, data, 0o644); err != nil {
 			return err
 		}
-		if !strings.EqualFold(Output, "json") {
+		if !jsonOut {
 			_, err = fmt.Fprintf(c.Out, "wrote %s\n", outputPath)
 			return err
 		}
 	}
 
-	return writeServerlessInferenceJSON(c.Out, resp)
-}
-
-func runServerlessInferenceImageStream(c *CmdConfig, params *godo.ImageGenerateParams) error {
-	stream, err := c.Inference().GenerateImageStreaming(params)
-	if err != nil {
-		return err
-	}
-	jsonOut := strings.EqualFold(Output, "json")
-	return runServerlessInferenceStream(c, stream, func() error {
-		ev := stream.Current()
-		if jsonOut {
-			return writeServerlessInferenceJSON(c.Out, ev)
-		}
-		if ev.B64JSON != "" {
-			_, err := fmt.Fprintf(c.Out, "[%s] partial image index %d\n", ev.Type, ev.PartialImageIndex)
-			return err
-		}
-		_, err := fmt.Fprintf(c.Out, "[%s]\n", ev.Type)
-		return err
-	})
+	return nil
 }
 
 // --- messages ---
@@ -541,6 +613,10 @@ func RunServerlessInferenceMessagesCreate(c *CmdConfig) error {
 	stream, err := serverlessInferenceStream(c)
 	if err != nil {
 		return err
+	}
+	// Also respect "stream": true embedded in a --request JSON body.
+	if !stream && params.Stream != nil && *params.Stream {
+		stream = true
 	}
 	if stream {
 		return runServerlessInferenceMessageStream(c, params)
@@ -598,7 +674,7 @@ func serverlessInferenceMessageParams(c *CmdConfig) (*godo.MessageNewParams, err
 }
 
 func runServerlessInferenceMessage(c *CmdConfig, params *godo.MessageNewParams) error {
-	msg, err := c.Inference().CreateMessage(params)
+	msg, err := c.Inference().CreateMessage(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -613,7 +689,7 @@ func runServerlessInferenceMessage(c *CmdConfig, params *godo.MessageNewParams) 
 }
 
 func runServerlessInferenceMessageStream(c *CmdConfig, params *godo.MessageNewParams) error {
-	stream, err := c.Inference().CreateMessageStreaming(params)
+	stream, err := c.Inference().CreateMessageStreaming(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -664,7 +740,7 @@ func serverlessInferenceModelsCmd() *Command {
 }
 
 func RunServerlessInferenceModelsList(c *CmdConfig) error {
-	list, err := c.Inference().ListModels()
+	list, err := c.Inference().ListModels(c.Command.Context())
 	if err != nil {
 		return err
 	}
@@ -712,6 +788,10 @@ func RunServerlessInferenceResponsesCreate(c *CmdConfig) error {
 	stream, err := serverlessInferenceStream(c)
 	if err != nil {
 		return err
+	}
+	// Also respect "stream": true embedded in a --request JSON body.
+	if !stream && params.Stream != nil && *params.Stream {
+		stream = true
 	}
 	if stream {
 		return runServerlessInferenceResponseStream(c, params)
@@ -762,7 +842,7 @@ func serverlessInferenceResponseParams(c *CmdConfig) (*godo.ResponseNewParams, e
 }
 
 func runServerlessInferenceResponse(c *CmdConfig, params *godo.ResponseNewParams) error {
-	resp, err := c.Inference().CreateResponse(params)
+	resp, err := c.Inference().CreateResponse(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -777,7 +857,7 @@ func runServerlessInferenceResponse(c *CmdConfig, params *godo.ResponseNewParams
 }
 
 func runServerlessInferenceResponseStream(c *CmdConfig, params *godo.ResponseNewParams) error {
-	stream, err := c.Inference().CreateResponseStreaming(params)
+	stream, err := c.Inference().CreateResponseStreaming(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -833,7 +913,7 @@ func RunServerlessInferenceAsyncCreate(c *CmdConfig) error {
 		return err
 	}
 
-	inv, err := c.Inference().CreateAsyncInvocation(params)
+	inv, err := c.Inference().CreateAsyncInvocation(c.Command.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -929,7 +1009,7 @@ func RunServerlessInferenceAsyncGet(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	inv, err := c.Inference().GetAsyncInvocation(c.Args[0])
+	inv, err := c.Inference().GetAsyncInvocation(c.Command.Context(), c.Args[0])
 	if err != nil {
 		return err
 	}

@@ -23,18 +23,18 @@ import (
 
 // InferenceService calls the serverless inference API at https://inference.do-ai.run/.
 type InferenceService interface {
-	CreateChatCompletion(params *godo.ChatCompletionNewParams) (*godo.ChatCompletion, error)
-	CreateChatCompletionStreaming(params *godo.ChatCompletionNewParams) (*godo.ChatCompletionStream, error)
-	CreateEmbedding(params *godo.EmbeddingNewParams) (*godo.CreateEmbeddingResponse, error)
-	GenerateImage(params *godo.ImageGenerateParams) (*godo.ImagesResponse, error)
-	GenerateImageStreaming(params *godo.ImageGenerateParams) (*godo.ImageGenerationStream, error)
-	CreateMessage(params *godo.MessageNewParams) (*godo.Message, error)
-	CreateMessageStreaming(params *godo.MessageNewParams) (*godo.MessageStream, error)
-	ListModels() (*godo.ModelList, error)
-	CreateResponse(params *godo.ResponseNewParams) (*godo.ResponsesResponse, error)
-	CreateResponseStreaming(params *godo.ResponseNewParams) (*godo.ResponseStream, error)
-	CreateAsyncInvocation(params *godo.AsyncInvocationNewParams) (*godo.AsyncInvocation, error)
-	GetAsyncInvocation(requestID string) (*godo.AsyncInvocation, error)
+	CreateChatCompletion(ctx context.Context, params *godo.ChatCompletionNewParams) (*godo.ChatCompletion, error)
+	CreateChatCompletionStreaming(ctx context.Context, params *godo.ChatCompletionNewParams) (*godo.ChatCompletionStream, error)
+	CreateEmbedding(ctx context.Context, params *godo.EmbeddingNewParams) (*godo.CreateEmbeddingResponse, error)
+	GenerateImage(ctx context.Context, params *godo.ImageGenerateParams) (*godo.ImagesResponse, error)
+	GenerateImageStreaming(ctx context.Context, params *godo.ImageGenerateParams) (*godo.ImageGenerationStream, error)
+	CreateMessage(ctx context.Context, params *godo.MessageNewParams) (*godo.Message, error)
+	CreateMessageStreaming(ctx context.Context, params *godo.MessageNewParams) (*godo.MessageStream, error)
+	ListModels(ctx context.Context) (*godo.ModelList, error)
+	CreateResponse(ctx context.Context, params *godo.ResponseNewParams) (*godo.ResponsesResponse, error)
+	CreateResponseStreaming(ctx context.Context, params *godo.ResponseNewParams) (*godo.ResponseStream, error)
+	CreateAsyncInvocation(ctx context.Context, params *godo.AsyncInvocationNewParams) (*godo.AsyncInvocation, error)
+	GetAsyncInvocation(ctx context.Context, requestID string) (*godo.AsyncInvocation, error)
 }
 
 type inferenceService struct {
@@ -48,62 +48,62 @@ func NewInferenceService(client *godo.Client) InferenceService {
 	return &inferenceService{client: client}
 }
 
-func (s *inferenceService) CreateChatCompletion(params *godo.ChatCompletionNewParams) (*godo.ChatCompletion, error) {
-	completion, _, err := s.client.Chat.Completions.New(context.TODO(), params)
+func (s *inferenceService) CreateChatCompletion(ctx context.Context, params *godo.ChatCompletionNewParams) (*godo.ChatCompletion, error) {
+	completion, _, err := s.client.Chat.Completions.New(ctx, params)
 	return completion, err
 }
 
-func (s *inferenceService) CreateChatCompletionStreaming(params *godo.ChatCompletionNewParams) (*godo.ChatCompletionStream, error) {
-	stream, _, err := s.client.Chat.Completions.NewStreaming(context.TODO(), params)
+func (s *inferenceService) CreateChatCompletionStreaming(ctx context.Context, params *godo.ChatCompletionNewParams) (*godo.ChatCompletionStream, error) {
+	stream, _, err := s.client.Chat.Completions.NewStreaming(ctx, params)
 	return stream, err
 }
 
-func (s *inferenceService) CreateEmbedding(params *godo.EmbeddingNewParams) (*godo.CreateEmbeddingResponse, error) {
-	resp, _, err := s.client.Embeddings.New(context.TODO(), params)
+func (s *inferenceService) CreateEmbedding(ctx context.Context, params *godo.EmbeddingNewParams) (*godo.CreateEmbeddingResponse, error) {
+	resp, _, err := s.client.Embeddings.New(ctx, params)
 	return resp, err
 }
 
-func (s *inferenceService) GenerateImage(params *godo.ImageGenerateParams) (*godo.ImagesResponse, error) {
-	resp, _, err := s.client.ImageGenerations.Generate(context.TODO(), params)
+func (s *inferenceService) GenerateImage(ctx context.Context, params *godo.ImageGenerateParams) (*godo.ImagesResponse, error) {
+	resp, _, err := s.client.ImageGenerations.Generate(ctx, params)
 	return resp, err
 }
 
-func (s *inferenceService) GenerateImageStreaming(params *godo.ImageGenerateParams) (*godo.ImageGenerationStream, error) {
-	stream, _, err := s.client.ImageGenerations.GenerateStreaming(context.TODO(), params)
+func (s *inferenceService) GenerateImageStreaming(ctx context.Context, params *godo.ImageGenerateParams) (*godo.ImageGenerationStream, error) {
+	stream, _, err := s.client.ImageGenerations.GenerateStreaming(ctx, params)
 	return stream, err
 }
 
-func (s *inferenceService) CreateMessage(params *godo.MessageNewParams) (*godo.Message, error) {
-	msg, _, err := s.client.Messages.New(context.TODO(), params)
+func (s *inferenceService) CreateMessage(ctx context.Context, params *godo.MessageNewParams) (*godo.Message, error) {
+	msg, _, err := s.client.Messages.New(ctx, params)
 	return msg, err
 }
 
-func (s *inferenceService) CreateMessageStreaming(params *godo.MessageNewParams) (*godo.MessageStream, error) {
-	stream, _, err := s.client.Messages.NewStreaming(context.TODO(), params)
+func (s *inferenceService) CreateMessageStreaming(ctx context.Context, params *godo.MessageNewParams) (*godo.MessageStream, error) {
+	stream, _, err := s.client.Messages.NewStreaming(ctx, params)
 	return stream, err
 }
 
-func (s *inferenceService) ListModels() (*godo.ModelList, error) {
-	list, _, err := s.client.Models.List(context.TODO())
+func (s *inferenceService) ListModels(ctx context.Context) (*godo.ModelList, error) {
+	list, _, err := s.client.Models.List(ctx)
 	return list, err
 }
 
-func (s *inferenceService) CreateResponse(params *godo.ResponseNewParams) (*godo.ResponsesResponse, error) {
-	resp, _, err := s.client.Responses.New(context.TODO(), params)
+func (s *inferenceService) CreateResponse(ctx context.Context, params *godo.ResponseNewParams) (*godo.ResponsesResponse, error) {
+	resp, _, err := s.client.Responses.New(ctx, params)
 	return resp, err
 }
 
-func (s *inferenceService) CreateResponseStreaming(params *godo.ResponseNewParams) (*godo.ResponseStream, error) {
-	stream, _, err := s.client.Responses.NewStreaming(context.TODO(), params)
+func (s *inferenceService) CreateResponseStreaming(ctx context.Context, params *godo.ResponseNewParams) (*godo.ResponseStream, error) {
+	stream, _, err := s.client.Responses.NewStreaming(ctx, params)
 	return stream, err
 }
 
-func (s *inferenceService) CreateAsyncInvocation(params *godo.AsyncInvocationNewParams) (*godo.AsyncInvocation, error) {
-	inv, _, err := s.client.AsyncInvocations.New(context.TODO(), params)
+func (s *inferenceService) CreateAsyncInvocation(ctx context.Context, params *godo.AsyncInvocationNewParams) (*godo.AsyncInvocation, error) {
+	inv, _, err := s.client.AsyncInvocations.New(ctx, params)
 	return inv, err
 }
 
-func (s *inferenceService) GetAsyncInvocation(requestID string) (*godo.AsyncInvocation, error) {
-	inv, _, err := s.client.AsyncInvocations.Get(context.TODO(), requestID)
+func (s *inferenceService) GetAsyncInvocation(ctx context.Context, requestID string) (*godo.AsyncInvocation, error) {
+	inv, _, err := s.client.AsyncInvocations.Get(ctx, requestID)
 	return inv, err
 }
