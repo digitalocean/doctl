@@ -877,4 +877,34 @@ const (
 
 	// ArgDedicatedInferenceTokenName is the name for a dedicated inference auth token.
 	ArgDedicatedInferenceTokenName = "token-name"
+
+	// ArgHarnessURL is the base URL for hosted agents harness-api (local PoC).
+	ArgHarnessURL = "harness-url"
+
+	// ArgHostedAgent is the managed agent type for doctl agents deploy.
+	ArgHostedAgent = "agent"
+
+	// ArgHostedAgentRepo is an optional repository hint at session creation.
+	ArgHostedAgentRepo = "repo"
+
+	// ArgHostedAgentSession is a harness session id.
+	ArgHostedAgentSession = "session"
+
+	// ArgAgentsGitHubToken is a GitHub PAT for clone/push/PR (env: GITHUB_TOKEN).
+	ArgAgentsGitHubToken = "github-token"
+
+	// ArgAgentsGitHubOwner is the GitHub user/org for PR targets (default: gane5hvarma).
+	ArgAgentsGitHubOwner = "github-owner"
+
+	// ArgAgentsOpenCodeAPIKey is the OpenCode Zen/Go subscription key (env: OPENCODE_API_KEY).
+	ArgAgentsOpenCodeAPIKey = "opencode-api-key"
+
+	// ArgAgentsOpenRouterAPIKey is the OpenRouter API key for free/paid models (env: OPENROUTER_API_KEY).
+	ArgAgentsOpenRouterAPIKey = "openrouter-api-key"
+
+	// ArgAgentsAnthropicAPIKey overrides the model key for opencode (env: ANTHROPIC_API_KEY).
+	ArgAgentsAnthropicAPIKey = "anthropic-api-key"
+
+	// ArgAgentsOpenCodeModel is opencode provider/model (env: OPENCODE_MODEL), e.g. opencode-go/glm-4.5.
+	ArgAgentsOpenCodeModel = "opencode-model"
 )
