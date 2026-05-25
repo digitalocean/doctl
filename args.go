@@ -907,4 +907,36 @@ const (
 
 	// ArgAgentsOpenCodeModel is opencode provider/model (env: OPENCODE_MODEL), e.g. opencode-go/glm-4.5.
 	ArgAgentsOpenCodeModel = "opencode-model"
+  
+	// Serverless inference API args (https://inference.do-ai.run).
+
+	// ArgInferenceModel is the model ID used across inference endpoints.
+	ArgInferenceModel = "model"
+	// ArgInferenceMessage is the user message used across chat and messages endpoints.
+	ArgInferenceMessage = "message"
+	// ArgInferenceSystemMessage is an optional system message for the chat-completions endpoint.
+	ArgInferenceSystemMessage = "system-message"
+	// ArgInferenceRequest is a path to a JSON request body, accepted by all inference endpoints.
+	ArgInferenceRequest = "request"
+	// ArgInferenceStream enables SSE streaming, accepted by chat-completions, messages, responses, and images endpoints.
+	ArgInferenceStream = "stream"
+	// ArgInferenceTemperature is the sampling temperature for the chat-completions endpoint.
+	ArgInferenceTemperature = "temperature"
+	// ArgInferenceMaxTokens is the maximum number of tokens to generate, used by chat-completions and messages endpoints.
+	ArgInferenceMaxTokens = "max-tokens"
+	// ArgInferenceInput is the input text for the embeddings and responses endpoints.
+	ArgInferenceInput = "input"
+	// ArgInferencePrompt is the text prompt for image generation and async-invoke endpoints.
+	ArgInferencePrompt = "prompt"
+	// ArgInferenceInstructions is optional system-level instructions for the responses endpoint.
+	ArgInferenceInstructions = "instructions"
+	// ArgInferenceOutput is a file path to write generated image bytes for the images endpoint.
+	ArgInferenceOutput = "output"
+	// ArgInferenceN is the number of images to generate (1–10) for the images endpoint.
+	ArgInferenceN = "n"
+	// ArgInferenceText is the text input for async text-to-speech invocations.
+	ArgInferenceText = "text"
+	// ArgInferenceSecondsTotal is the audio duration in seconds for async audio generation.
+	ArgInferenceSecondsTotal = "seconds-total"
+
 )

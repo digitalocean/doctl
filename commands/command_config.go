@@ -85,6 +85,7 @@ type CmdConfig struct {
 	SpacesKeys          func() do.SpacesKeysService
 	GradientAI          func() do.GradientAIService
 	DedicatedInferences func() do.DedicatedInferenceService
+	Inference           func() do.InferenceService
 	Nfs                 func() do.NfsService
 	NfsActions          func() do.NfsActionsService
 	Security            func() do.SecurityService
@@ -154,6 +155,9 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.GradientAI = func() do.GradientAIService { return do.NewGradientAIService(godoClient) }
 			c.DedicatedInferences = func() do.DedicatedInferenceService {
 				return do.NewDedicatedInferenceService(godoClient)
+			}
+			c.Inference = func() do.InferenceService {
+				return do.NewInferenceService(godoClient)
 			}
 			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
 			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
