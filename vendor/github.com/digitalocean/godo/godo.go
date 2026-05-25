@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.190.0"
+	libraryVersion = "1.191.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -103,6 +103,15 @@ type Client struct {
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
 	BYOIPPrefixes       BYOIPPrefixesService
+
+	// Serverless Inference resources at https://inference.do-ai.run.
+	Chat             *ChatService
+	Embeddings       *EmbeddingService
+	ImageGenerations *ImageGenerationService
+	Messages         *MessageService
+	Models           *ModelService
+	Responses        *ResponseService
+	AsyncInvocations *AsyncInvocationService
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
 
@@ -336,6 +345,15 @@ func NewClient(httpClient *http.Client) *Client {
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
+	serverlessInferenceURL, _ := url.Parse(defaultServerlessInferenceBaseURL)
+	t := newInferenceTransport(c, serverlessInferenceURL)
+	c.Chat = &ChatService{Completions: &ChatCompletionService{inferenceTransport: t}}
+	c.Embeddings = &EmbeddingService{inferenceTransport: t}
+	c.ImageGenerations = &ImageGenerationService{inferenceTransport: t}
+	c.Messages = &MessageService{inferenceTransport: t}
+	c.Models = &ModelService{inferenceTransport: t}
+	c.Responses = &ResponseService{inferenceTransport: t}
+	c.AsyncInvocations = &AsyncInvocationService{inferenceTransport: t}
 
 	c.headers = make(map[string]string)
 
@@ -603,6 +621,39 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 	}
 
 	return response, err
+}
+
+// DoStream sends an API request and returns the response with its body
+// left open for streaming consumption (e.g. text/event-stream). On 2xx,
+// the caller owns resp.Body and must close it. On non-2xx, the body is
+// drained and closed and the typed *ErrorResponse is returned.
+func (c *Client) DoStream(ctx context.Context, req *http.Request) (*Response, error) {
+	if c.rateLimiter != nil {
+		if err := c.rateLimiter.Wait(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	resp, err := DoRequestWithClient(ctx, c.HTTPClient, req)
+	if err != nil {
+		return nil, err
+	}
+	if c.onRequestCompleted != nil {
+		c.onRequestCompleted(req, resp)
+	}
+
+	response := newResponse(resp)
+	c.ratemtx.Lock()
+	c.Rate = response.Rate
+	c.ratemtx.Unlock()
+
+	if err := CheckResponse(resp); err != nil {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		return response, err
+	}
+
+	return response, nil
 }
 
 // DoRequest submits an HTTP request.
