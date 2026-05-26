@@ -603,6 +603,47 @@ func (dmw *DatabaseMaintenanceWindow) KV() []map[string]any {
 	return []map[string]any{o}
 }
 
+type DatabaseStorageAutoscale struct {
+	DatabaseStorageAutoscale do.DatabaseStorageAutoscale
+}
+
+var _ Displayable = &DatabaseStorageAutoscale{}
+
+func (dsa *DatabaseStorageAutoscale) JSON(out io.Writer) error {
+	return writeJSON(dsa.DatabaseStorageAutoscale, out)
+}
+
+func (dsa *DatabaseStorageAutoscale) Cols() []string {
+	return []string{
+		"Enabled",
+		"Threshold Percent",
+		"Increment GiB",
+	}
+}
+
+func (dsa *DatabaseStorageAutoscale) ColMap() map[string]string {
+	return map[string]string{
+		"Enabled":           "Enabled",
+		"Threshold Percent": "Threshold Percent",
+		"Increment GiB":     "Increment GiB",
+	}
+}
+
+func (dsa *DatabaseStorageAutoscale) KV() []map[string]any {
+	autoscale := dsa.DatabaseStorageAutoscale
+	o := map[string]any{
+		"Enabled": autoscale.Enabled,
+	}
+	if autoscale.ThresholdPercent != nil {
+		o["Threshold Percent"] = *autoscale.ThresholdPercent
+	}
+	if autoscale.IncrementGib != nil {
+		o["Increment GiB"] = *autoscale.IncrementGib
+	}
+
+	return []map[string]any{o}
+}
+
 type DatabaseDBs struct {
 	DatabaseDBs do.DatabaseDBs
 }
