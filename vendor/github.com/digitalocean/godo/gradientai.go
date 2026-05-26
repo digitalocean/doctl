@@ -131,6 +131,7 @@ type GradientAIService interface {
 	GetModelByUUID(context.Context, string) (*Model, *Response, error)
 	ListDatacenterRegions(context.Context, *bool, *bool) ([]*DatacenterRegions, *Response, error)
 	ListCustomModels(ctx context.Context, opt *CustomModelListOptions) (*CustomModelListResponse, *Response, error)
+	GetCustomModel(ctx context.Context, uuid string) (*CustomModel, *Response, error)
 	ImportCustomModel(ctx context.Context, importRequest *CustomModelImportRequest) (*CustomModelImportResponse, *Response, error)
 	DeleteCustomModel(ctx context.Context, uuid string) (*CustomModelDeleteResponse, *Response, error)
 	UpdateCustomModelMetadata(ctx context.Context, uuid string, updateRequest *CustomModelMetadataUpdateRequest) (*CustomModel, *Response, error)
@@ -2100,6 +2101,26 @@ func (s *GradientAIServiceOp) ListCustomModels(ctx context.Context, opt *CustomM
 		resp.Meta = m
 	}
 	return root, resp, nil
+}
+
+// GetCustomModel retrieves a single custom model by UUID.
+func (s *GradientAIServiceOp) GetCustomModel(ctx context.Context, uuid string) (*CustomModel, *Response, error) {
+	if uuid == "" {
+		return nil, nil, fmt.Errorf("uuid is required")
+	}
+	path := fmt.Sprintf(customModelByIDPath, uuid)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(customModelRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Model, resp, nil
 }
 
 // ImportCustomModel imports a new custom model from a supported source (HuggingFace, Spaces, etc.).
