@@ -30,10 +30,11 @@ import (
 )
 
 const (
-	defaultConfigName    = "config.yaml" // default name of config file
-	manageResourcesGroup = "manageResources"
-	configureDoctlGroup  = "configureDoctl"
-	viewBillingGroup     = "viewBilling"
+	defaultConfigName        = "config.yaml" // default name of config file
+	manageResourcesGroup     = "manageResources"
+	configureDoctlGroup      = "configureDoctl"
+	viewBillingGroup         = "viewBilling"
+	serverlessInferenceGroup = "serverlessInference"
 )
 
 var (
@@ -169,6 +170,7 @@ func Execute() {
 func addCommands() {
 
 	DoitCmd.AddGroup(&cobra.Group{ID: manageResourcesGroup, Title: "Manage DigitalOcean Resources:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: serverlessInferenceGroup, Title: "Inference:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: configureDoctlGroup, Title: "Configure doctl:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: viewBillingGroup, Title: "View Billing:"})
 
@@ -193,6 +195,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Spaces())
 	DoitCmd.AddCommand(GradientAI())
 	DoitCmd.AddCommand(DedicatedInferenceCmd())
+	DoitCmd.AddCommand(Inference())
 	DoitCmd.AddCommand(Nfs())
 	DoitCmd.AddCommand(Security())
 }
