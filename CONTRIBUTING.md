@@ -227,26 +227,22 @@ and the config we use for it: [.goreleaser.yml](https://github.com/digitalocean/
 
 ### Cutting a beta release
 
-Beta tags publish as GitHub prereleases (not marked Latest, not pushed to Docker Hub or Snap stable), so `action-doctl`'s `version: latest` continues to fetch GA only; customers consume betas by explicit version pin.
+Beta tags publish as GitHub prereleases — not marked Latest, not pushed to Docker Hub or Snap stable. Customers consume them via explicit version pin.
 
-1. Push your beta work to its branch. The repo must be clean and in sync with `origin`.
+1. Push your beta work to its branch. Repo must be clean and in sync with `origin`.
+1. Sync tags: `git fetch --tags origin`
+1. Run `make beta_tag`.
 
-1. Synchronize tags from the remote.
-    ```bash
-    git fetch --tags origin
-    ```
+Tags off the latest GA by default:
 
-1. Tag the beta using `BUMP=(bugfix|feature|breaking) make beta_tag`.  
-Example:  
+```
+v1.49.0           (latest GA)
+v1.49.0-beta.1    make beta_tag
+v1.49.0-beta.2    make beta_tag
+v1.50.0           (next GA, e.g. BUMP=minor make tag)
+v1.50.0-beta.1    make beta_tag    # now based on v1.50.0
+```
 
-```bash
-make beta_tag
-```  
+Optional `BUMP=patch|minor|major` bumps the base off the latest GA first (e.g. `BUMP=minor make beta_tag` on `v1.49.0` → `v1.50.0-beta.1`). The `-beta.N` suffix always auto-increments; do not pass `BETA=`. Set `ORIGIN=` to use a non-`origin` remote.
 
-Notes on `BUMP=(bugfix|feature|breaking) make beta_tag`:
-  - BUMP accepts: `bugfix`, `feature`, `breaking` as well as `patch`, `minor` and `major` values. Default is `minor` (`make tag` defaults to `patch`).
-  - The script computes `bump(BUMP, latest_GA_tag)` then auto-increments `-beta.N`. Do not pass `BETA=` manually.
-  - The command assumes you have a remote repository named `origin` pointing to this repository. If you'd prefer to specify a different remote repository, you can do so by setting `ORIGIN=(preferred remote name)`.
-  - The new tag triggers the [`beta-release`](.github/workflows/beta-release.yml) workflow.
-
- the beta config we use: [.goreleaser.beta.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.beta.yml).
+The new tag triggers the [`beta-release`](.github/workflows/beta-release.yml) workflow. See [.goreleaser.beta.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.beta.yml) for the build config.

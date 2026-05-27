@@ -4,24 +4,27 @@ set -euo pipefail
 
 ORIGIN=${ORIGIN:-origin}
 
-# Aliases: bugfix=patch, feature=minor, breaking=major.
-# Default for beta is "minor" because beta builds usually preview a new minor.
-BUMP=${BUMP:-minor}
+# Default: cut beta off the latest GA as-is (v1.49.0 → v1.49.0-beta.N).
+# BUMP=patch|minor|major (or bugfix|feature|breaking) bumps the base first.
+BUMP=${BUMP:-}
 
 set +e
 git fetch --tags "${ORIGIN}" &>/dev/null
 set -e
 
-# Latest GA tag only (vX.Y.Z) — beta tags must not affect the bump base.
+# Latest GA tag only (vX.Y.Z); beta tags are excluded.
 latest_ga_tag="$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)"
 if [[ -z "${latest_ga_tag}" ]]; then
-  echo "Error: no GA tag found (expected format vX.Y.Z)"
+  echo "Error: no GA tag found (expected format vX.Y.Z)."
+  echo "Create the first GA tag (e.g. with 'make tag') before cutting a beta."
   exit 1
 fi
 latest_ga="${latest_ga_tag#v}"
 
 IFS='.' read -r major minor patch <<< "${latest_ga}"
 case "${BUMP}" in
+  "")
+    ;;
   bugfix | patch)
     patch=$((patch + 1))
     ;;
@@ -37,12 +40,12 @@ case "${BUMP}" in
   *)
     echo "Error: invalid BUMP='${BUMP}'."
     echo "Use one of: bugfix, patch, feature, minor, breaking, major."
+    echo "Or unset BUMP to use the latest GA (${latest_ga_tag}) as-is."
     exit 1
     ;;
 esac
 target_base="${major}.${minor}.${patch}"
 
-# Next beta number for this base (auto-increment; no manual BETA=).
 base_escaped="${target_base//./\\.}"
 max_beta=0
 existing_beta_tags=()
@@ -77,7 +80,11 @@ if git rev-parse "${new_tag}" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Latest GA: ${latest_ga_tag} → BUMP=${BUMP} → beta base: v${target_base}"
+if [[ -n "${BUMP}" ]]; then
+  echo "Latest GA: ${latest_ga_tag} → BUMP=${BUMP} → beta base: v${target_base}"
+else
+  echo "Latest GA: ${latest_ga_tag} (no BUMP) → beta base: v${target_base}"
+fi
 if ((${#existing_beta_tags[@]} > 0)); then
   echo "Existing betas: ${existing_beta_tags[*]} → next: ${new_tag}"
 else

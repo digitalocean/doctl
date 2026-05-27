@@ -186,7 +186,7 @@ tag:
 
 .PHONY: beta_tag
 beta_tag:
-	@echo "==> beta_tag (BUMP defaults to minor; pass BUMP=patch|major to override)"
+	@echo "==> beta_tag (uses latest GA tag as-is by default; pass BUMP=patch|minor|major to bump off the latest GA before cutting the beta)"
 	@echo ""
 	@ORIGIN=${ORIGIN} scripts/beta_tag.sh
 
