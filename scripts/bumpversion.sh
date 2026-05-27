@@ -6,6 +6,10 @@ ORIGIN=${ORIGIN:-origin}
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 version="$("$DIR"/../scripts/version.sh -s)"
+if [[ -z "$version" ]]; then
+  echo "Error: no GA tag found (expected format vX.Y.Z)"
+  exit 1
+fi
 IFS='.' read -r major minor patch <<< "$version"
 
 # Bump defaults to patch. We provide friendly aliases
@@ -40,4 +44,3 @@ new_version="v${major}.${minor}.${patch}"
 git tag -m "release ${new_version}" -a "$new_version" && git push "${ORIGIN}" tag "$new_version"
 
 echo "Bumped version to ${new_version}"
- 

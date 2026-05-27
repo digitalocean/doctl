@@ -1,0 +1,149 @@
+# Does NOT run the public release pipeline (Docker :latest, Snap stable, Latest GH release).
+# Tag format must include a suffix after the semver patch, e.g. v1.149.0-beta.1
+# (public release.yml only matches v[1-9].[0-9]+.[0-9]+).
+
+
+name: beta-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing annotated tag to release (e.g. v1.149.0-beta.1)'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v[1-9].[0-9]+.[0-9]+-*'
+
+permissions:
+  contents: write
+
+jobs:
+  integration-tests:
+    name: 'Integration Tests'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.x
+
+      - name: Run integration tests
+        run: make test_integration
+
+  beta-release:
+    name: 'Beta Release'
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.x
+
+      - name: Run GoReleaser (beta)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean -f .goreleaser.beta.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: doctl-beta-${{ github.event.inputs.tag || github.ref_name }}
+          path: dist/*
+          retention-days: 90
+          if-no-files-found: error
+
+  # HEAD-checks every artifact at the URL pattern action-doctl uses, so
+  # customers pinning beta versions don't silently 404 if archive naming drifts.
+  verify-action-doctl-urls:
+    name: 'Verify action-doctl URL contract'
+    needs: beta-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: HEAD-check every archive at the action-doctl URL pattern
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VER="${TAG#v}"
+          BASE="https://github.com/digitalocean/doctl/releases/download/${TAG}"
+
+          # Mirror of action-doctl/main.js platform/arch switches:
+          #   process.platform: darwin | linux | win32(=>windows, ext=zip)
+          #   process.arch:     arm64  | x64(=>amd64) | ia32(=>386)
+          urls=(
+            "${BASE}/doctl-${VER}-darwin-amd64.tar.gz"
+            "${BASE}/doctl-${VER}-darwin-arm64.tar.gz"
+            "${BASE}/doctl-${VER}-linux-amd64.tar.gz"
+            "${BASE}/doctl-${VER}-linux-arm64.tar.gz"
+            "${BASE}/doctl-${VER}-linux-386.tar.gz"
+            "${BASE}/doctl-${VER}-windows-amd64.zip"
+            "${BASE}/doctl-${VER}-windows-arm64.zip"
+            "${BASE}/doctl-${VER}-windows-386.zip"
+          )
+
+          fail=0
+          for url in "${urls[@]}"; do
+            if curl --fail --silent --show-error --location --head "${url}" --output /dev/null; then
+              echo "ok   ${url}"
+            else
+              echo "FAIL ${url}"
+              fail=1
+            fi
+          done
+
+          if [[ "${fail}" -ne 0 ]]; then
+            echo
+            echo "One or more artifact URLs do not match the action-doctl URL pattern."
+            echo "Check archives.name_template in .goreleaser.beta.yml — it must produce"
+            echo "  doctl-<Version>-<Os>-<Arch>.{tar.gz|zip}"
+            echo "(no leading 'v' on the version segment of the filename)."
+            exit 1
+          fi
+
+      - name: Smoke-test linux-amd64 binary
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VER="${TAG#v}"
+          URL="https://github.com/digitalocean/doctl/releases/download/${TAG}/doctl-${VER}-linux-amd64.tar.gz"
+
+          curl --fail --silent --show-error --location "${URL}" --output /tmp/doctl.tgz
+          tar -xzf /tmp/doctl.tgz -C /tmp
+          chmod +x /tmp/doctl
+
+          out="$(/tmp/doctl version)"
+          echo "${out}"
+
+          # Binary's Version.String() is "Major.Minor.Patch-Label" with
+          # Label=beta (set in .goreleaser.beta.yml ldflags). The trailing
+          # ".N" of the tag is not embedded in the binary, so assert the
+          # base-and-label portion only.
+          base="${VER%%-*}"
+          expected="${base}-beta"
+          if ! grep -F -- "${expected}" <<<"${out}" >/dev/null; then
+            echo
+            echo "Smoke test failed: expected 'doctl version' output to contain '${expected}', got:"
+            echo "${out}"
+            exit 1
+          fi
