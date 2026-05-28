@@ -52,6 +52,7 @@ func (lb *LoadBalancer) Cols() []string {
 		"ForwardingRules",
 		"Firewall",
 		"DisableLetsEncryptDNSRecords",
+		"Domains",
 	}
 }
 
@@ -75,6 +76,7 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 		"ForwardingRules":              "Forwarding Rules",
 		"Firewall":                     "Firewall Rules",
 		"DisableLetsEncryptDNSRecords": "Disable Lets Encrypt DNS Records",
+		"Domains":                      "Domains",
 	}
 }
 
@@ -115,6 +117,11 @@ func (lb *LoadBalancer) KV() []map[string]any {
 		if l.Firewall != nil {
 			o["Firewall"] = prettyPrintStruct(l.Firewall)
 		}
+		var domains []string
+		for _, domain := range l.Domains {
+			domains = append(domains, domain.Name)
+		}
+		o["Domains"] = strings.Join(domains, ",")
 		out = append(out, o)
 	}
 
