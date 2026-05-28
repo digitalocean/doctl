@@ -90,7 +90,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err)
+			expect.NoError(err, string(output))
 
 			fileBytes, err := os.ReadFile(config)
 			expect.NoError(err)
@@ -124,7 +124,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err)
+			expect.NoError(err, string(output))
 
 			fileBytes, err := os.ReadFile(config)
 			expect.NoError(err)
@@ -160,7 +160,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err)
+			expect.NoError(err, string(output))
 
 			fileBytes, err := os.ReadFile(config)
 			expect.NoError(err)
