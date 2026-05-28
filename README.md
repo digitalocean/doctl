@@ -149,7 +149,7 @@ This allows `doctl` to add DigitalOcean container registry credentials to your D
 
 Users of NixOS or other [supported
 platforms](https://nixos.org/nixpkgs/) may install ```doctl``` from
-[Nixpkgs](https://nixos.org/nixos/packages.html#doctl). Please note
+[Nixpkgs](https://search.nixos.org/packages?channel=unstable&show=doctl&query=doctl). Please note
 this package is also community maintained and may not be on the latest
 version.
 
