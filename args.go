@@ -908,4 +908,9 @@ const (
 	ArgInferenceText = "text"
 	// ArgInferenceSecondsTotal is the audio duration in seconds for async audio generation.
 	ArgInferenceSecondsTotal = "seconds-total"
+
+	// Hosted Agents Args
+
+	// ArgAgentSpec is the path to an agent spec file.
+	ArgAgentSpec = "spec"
 )

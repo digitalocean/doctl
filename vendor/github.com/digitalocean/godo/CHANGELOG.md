@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.192.0] - 2026-05-19
+
+- #1010 - @SSharma-10 - Update readme
+- #1007 - @venkatranabothu - Add GetCustomModel API
+
 ## [1.191.0] - 2026-05-14
 
 - #1005 - Add Serverless Inference APIs

@@ -297,6 +297,7 @@ type tcMocks struct {
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
 	security              *domocks.MockSecurityService
+	hostedAgents          *domocks.MockHostedAgentsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -357,6 +358,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
+		hostedAgents:          domocks.NewMockHostedAgentsService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -425,6 +427,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Nfs:                 func() do.NfsService { return tm.nfs },
 		NfsActions:          func() do.NfsActionsService { return tm.nfsActions },
 		Security:            func() do.SecurityService { return tm.security },
+		HostedAgents:        func() do.HostedAgentsService { return tm.hostedAgents },
 	}
 
 	tFn(config, tm)

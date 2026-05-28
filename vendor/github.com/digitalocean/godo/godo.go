@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.191.0"
+	libraryVersion = "1.192.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -97,9 +97,11 @@ type Client struct {
 	StorageActions      StorageActionsService
 	Tags                TagsService
 	UptimeChecks        UptimeChecksService
+	VectorDBs           VectorDBsService
 	VPCs                VPCsService
 	PartnerAttachment   PartnerAttachmentService
 	GradientAI          GradientAIService
+	HostedAgents        HostedAgentsService
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
 	BYOIPPrefixes       BYOIPPrefixesService
@@ -339,9 +341,11 @@ func NewClient(httpClient *http.Client) *Client {
 	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}
 	c.UptimeChecks = &UptimeChecksServiceOp{client: c}
+	c.VectorDBs = &VectorDBsServiceOp{client: c}
 	c.VPCs = &VPCsServiceOp{client: c}
 	c.PartnerAttachment = &PartnerAttachmentServiceOp{client: c}
 	c.GradientAI = &GradientAIServiceOp{client: c}
+	c.HostedAgents = &HostedAgentsServiceOp{client: c}
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
