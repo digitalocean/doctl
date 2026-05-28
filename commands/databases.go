@@ -33,7 +33,10 @@ const (
 	defaultDatabaseNodeCount = 1
 	defaultDatabaseRegion    = "nyc1"
 	defaultDatabaseEngine    = "pg"
-	databaseListDetails      = `
+
+	defaultDatabaseStorageAutoscaleThresholdPercent = 80
+	defaultDatabaseStorageAutoscaleIncrementGib     = 10
+	databaseListDetails                             = `
 
 This command requires the ID of a database cluster, which you can retrieve by calling:
 
@@ -154,6 +157,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
+	cmd.AddCommand(databaseStorageAutoscale())
 	cmd.AddCommand(databaseUser())
 	cmd.AddCommand(databaseDB())
 	cmd.AddCommand(databasePool())
@@ -741,6 +745,138 @@ func buildDatabaseUpdateMaintenanceRequestFromArgs(c *CmdConfig) (*godo.Database
 	r.Hour = hour
 
 	return r, nil
+}
+
+func databaseStorageAutoscale() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "storage-autoscale",
+			Aliases: []string{"autoscale", "storage"},
+			Short:   "Display commands for managing database cluster storage autoscaling",
+			Long: `The ` + "`" + `doctl databases storage-autoscale` + "`" + ` commands allow you to view and update storage autoscaling settings for database clusters.
+
+When enabled, storage autoscaling automatically increases disk capacity when usage crosses a configured threshold.`,
+		},
+	}
+
+	cmdStorageAutoscaleGet := CmdBuilder(cmd, RunDatabaseStorageAutoscaleGet, "get <database-cluster-id>",
+		"Retrieve storage autoscaling settings for a database cluster", `Retrieves the storage autoscaling configuration for the specified database cluster, including:
+
+- Whether storage autoscaling is enabled
+- The storage usage percentage that triggers autoscaling
+- The amount of storage, in GiB, added when autoscaling triggers
+
+To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("g"),
+		displayerType(&displayers.DatabaseStorageAutoscale{}))
+	cmdStorageAutoscaleGet.Example = `The following example retrieves storage autoscaling settings for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases storage-autoscale get ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+
+	cmdStorageAutoscaleUpdate := CmdBuilder(cmd, RunDatabaseStorageAutoscaleUpdate,
+		"update <database-cluster-id>", "Update storage autoscaling settings for a database cluster", `Updates the storage autoscaling configuration for the specified database cluster.
+
+The `+"`"+`--enabled`+"`"+` is a required flag and must be `+"`"+`true`+"`"+` or `+"`"+`false`+"`"+`.
+
+When `+"`"+`--enabled`+"`"+` is `+"`"+`false`+"`"+`, storage autoscaling is disabled and threshold/increment flags are ignored.
+
+When `+"`"+`--enabled`+"`"+` is `+"`"+`true`+"`"+`, you may optionally set `+"`"+`--threshold-percent`+"`"+` and `+"`"+`--increment-gib`+"`"+`. When omitted, defaults of 80 (percent) and 10 (GiB) are used.
+
+To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("u"))
+	AddStringFlag(cmdStorageAutoscaleUpdate, doctl.ArgDatabaseStorageAutoscaleEnabled, "", "",
+		"Whether storage autoscaling is enabled for the database cluster; must be `true` or `false`", requiredOpt())
+	AddIntFlag(cmdStorageAutoscaleUpdate, doctl.ArgDatabaseStorageAutoscaleThresholdPercent, "", 0,
+		"The storage usage percentage that triggers autoscaling (only used when --enabled is true)")
+	AddIntFlag(cmdStorageAutoscaleUpdate, doctl.ArgDatabaseStorageAutoscaleIncrementGib, "", 0,
+		"The amount of storage, in GiB, to add when autoscaling triggers (only used when --enabled is true)")
+	cmdStorageAutoscaleUpdate.Example = `The following example enables storage autoscaling for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` with an 80% threshold and 10 GiB increment: doctl databases storage-autoscale update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --enabled true --threshold-percent 80 --increment-gib 10
+
+The following example enables storage autoscaling with platform defaults: doctl databases storage-autoscale update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --enabled true
+
+The following example disables storage autoscaling: doctl databases storage-autoscale update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --enabled false`
+
+	return cmd
+}
+
+// RunDatabaseStorageAutoscaleGet retrieves storage autoscaling settings for a database cluster.
+func RunDatabaseStorageAutoscaleGet(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+
+	autoscale, err := c.Databases().GetStorageAutoscale(id)
+	if err != nil {
+		return err
+	}
+
+	return displayDatabaseStorageAutoscale(c, *autoscale)
+}
+
+func displayDatabaseStorageAutoscale(c *CmdConfig, autoscale do.DatabaseStorageAutoscale) error {
+	item := &displayers.DatabaseStorageAutoscale{DatabaseStorageAutoscale: autoscale}
+	return c.Display(item)
+}
+
+// RunDatabaseStorageAutoscaleUpdate updates storage autoscaling settings for a database cluster.
+func RunDatabaseStorageAutoscaleUpdate(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+	r, err := buildDatabaseStorageAutoscaleRequestFromArgs(c)
+	if err != nil {
+		return err
+	}
+
+	return c.Databases().UpdateStorageAutoscale(id, r)
+}
+
+func buildDatabaseStorageAutoscaleRequestFromArgs(c *CmdConfig) (*godo.DatabaseStorageAutoscale, error) {
+	if c.Command == nil {
+		return nil, errors.New("command flags are not available")
+	}
+
+	flags := c.Command.Flags()
+
+	enabledStr, err := flags.GetString(doctl.ArgDatabaseStorageAutoscaleEnabled)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(enabledStr) == "" {
+		return nil, doctl.NewMissingArgsErr(doctl.ArgDatabaseStorageAutoscaleEnabled)
+	}
+
+	enabled, err := strconv.ParseBool(enabledStr)
+	if err != nil {
+		return nil, fmt.Errorf("%q is not a valid boolean for --enabled (use true or false)", enabledStr)
+	}
+
+	if !enabled {
+		return &godo.DatabaseStorageAutoscale{Enabled: false}, nil
+	}
+
+	thresholdPercent := defaultDatabaseStorageAutoscaleThresholdPercent
+	if flags.Changed(doctl.ArgDatabaseStorageAutoscaleThresholdPercent) {
+		thresholdPercent, err = flags.GetInt(doctl.ArgDatabaseStorageAutoscaleThresholdPercent)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	incrementGib := uint64(defaultDatabaseStorageAutoscaleIncrementGib)
+	if flags.Changed(doctl.ArgDatabaseStorageAutoscaleIncrementGib) {
+		val, err := flags.GetInt(doctl.ArgDatabaseStorageAutoscaleIncrementGib)
+		if err != nil {
+			return nil, err
+		}
+		incrementGib = uint64(val)
+	}
+
+	return &godo.DatabaseStorageAutoscale{
+		Enabled:          true,
+		ThresholdPercent: &thresholdPercent,
+		IncrementGib:     &incrementGib,
+	}, nil
 }
 
 func databaseUser() *Command {

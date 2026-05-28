@@ -469,6 +469,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetSQLMode(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSQLMode", reflect.TypeOf((*MockDatabasesService)(nil).GetSQLMode), arg0)
 }
 
+// GetStorageAutoscale mocks base method.
+func (m *MockDatabasesService) GetStorageAutoscale(arg0 string) (*do.DatabaseStorageAutoscale, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStorageAutoscale", arg0)
+	ret0, _ := ret[0].(*do.DatabaseStorageAutoscale)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStorageAutoscale indicates an expected call of GetStorageAutoscale.
+func (mr *MockDatabasesServiceMockRecorder) GetStorageAutoscale(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStorageAutoscale", reflect.TypeOf((*MockDatabasesService)(nil).GetStorageAutoscale), arg0)
+}
+
 // GetTopic mocks base method.
 func (m *MockDatabasesService) GetTopic(arg0, arg1 string) (*do.DatabaseTopic, error) {
 	m.ctrl.T.Helper()
@@ -878,6 +893,20 @@ func (m *MockDatabasesService) UpdateRedisConfiguration(databaseID, confString s
 func (mr *MockDatabasesServiceMockRecorder) UpdateRedisConfiguration(databaseID, confString any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRedisConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateRedisConfiguration), databaseID, confString)
+}
+
+// UpdateStorageAutoscale mocks base method.
+func (m *MockDatabasesService) UpdateStorageAutoscale(arg0 string, arg1 *godo.DatabaseStorageAutoscale) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStorageAutoscale", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateStorageAutoscale indicates an expected call of UpdateStorageAutoscale.
+func (mr *MockDatabasesServiceMockRecorder) UpdateStorageAutoscale(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStorageAutoscale", reflect.TypeOf((*MockDatabasesService)(nil).UpdateStorageAutoscale), arg0, arg1)
 }
 
 // UpdateTopic mocks base method.
