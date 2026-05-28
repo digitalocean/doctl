@@ -1341,11 +1341,8 @@ func buildDatabaseCreatePoolRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateP
 	}
 	req.Database = db
 
-	user, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolUserName)
-	if err != nil {
-		return nil, err
-	}
-	req.User = user
+       user, _ := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolUserName)
+       req.User = user
 
 	return req, nil
 }
