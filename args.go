@@ -80,6 +80,8 @@ const (
 	ArgVPCUUID = "vpc-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
+	// ArgWorkerSubnetUUID is a cluster worker subnet UUID argument.
+	ArgWorkerSubnetUUID = "worker-subnet-uuid"
 	// ArgClusterSubnet is a cluster pod CIDR argument.
 	ArgClusterSubnet = "cluster-subnet"
 	// ArgServiceSubnet is a cluster service CIDR argument.
