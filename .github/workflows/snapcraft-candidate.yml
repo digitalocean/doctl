@@ -11,7 +11,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
         with:
           # fetch-depth: 0 fetches all history for all branches and tags
           fetch-depth: 0
@@ -20,7 +20,8 @@ jobs:
         uses: snapcore/action-build@v1
         id: build
 
-      - uses: snapcore/action-publish@master
+      - name: Publish snap
+        uses: snapcore/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_TOKEN }}
         with:
