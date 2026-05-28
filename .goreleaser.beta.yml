@@ -1,0 +1,50 @@
+# Customer beta releases. Used by .github/workflows/beta-release.yml
+# only — not by the public tagged-release workflow.
+project_name: doctl
+version: 2
+builds:
+- main: ./cmd/doctl/main.go
+  env:
+  - CGO_ENABLED=0
+  - GO111MODULE=on
+  flags:
+  - -mod=vendor
+  - -v
+  ldflags:
+  - -X github.com/digitalocean/doctl.Build={{ .ShortCommit }}
+  - -X github.com/digitalocean/doctl.Major={{ .Major }}
+  - -X github.com/digitalocean/doctl.Minor={{ .Minor }}
+  - -X github.com/digitalocean/doctl.Patch={{ .Patch }}
+  - -X github.com/digitalocean/doctl.Label=beta
+  goos:
+  - windows
+  - darwin
+  - linux
+  ignore:
+  - goos: darwin
+    goarch: 386
+
+archives:
+- name_template: "doctl-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+  format_overrides:
+  - goos: windows
+    format: zip
+  files: [a-workaround-to-include-only-the-binary*]
+  wrap_in_directory: false
+
+source:
+  enabled: true
+  name_template: 'doctl-{{ .Version }}-source'
+
+checksum:
+  name_template: "doctl-{{ .Version }}-checksums.sha256"
+
+release:
+  github:
+    owner: digitalocean
+    name: doctl
+  prerelease: true
+  make_latest: false
+
+changelog:
+  disable: false

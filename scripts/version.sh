@@ -22,7 +22,15 @@ Options:
 "
 
 semver() {
-  git tag -l | sort --version-sort | tail -n1 | cut -c 2-
+  # Prefer the latest GA tag (vX.Y.Z). Beta tags must not be reported as
+  # "latest" so callers like snap/snapcraft.yaml and scripts/_build.sh keep
+  # producing GA-based versions while a beta line is in flight.
+  local v
+  v="$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort --version-sort | tail -n1 | cut -c 2-)"
+  if [[ -z "$v" ]]; then
+    v="$(git tag -l | sort --version-sort | tail -n1 | cut -c 2-)"
+  fi
+  echo "$v"
 }
 
 branch() {

@@ -21,6 +21,7 @@
       - [Build Scripts](#build-scripts)
   - [Releasing](#releasing)
     - [Tagging a release](#tagging-a-release)
+    - [Cutting a beta release](#cutting-a-beta-release)
     - [Snap](#snap)
     - [Updating Homebrew](#updating-homebrew)
 
@@ -223,3 +224,25 @@ Notes on `BUMP=(bugfix|feature|breaking) make tag`:
 
 To learn a bit more about how that all works, check out [goreleaser](https://goreleaser.com/intro) 
 and the config we use for it: [.goreleaser.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.yml)
+
+### Cutting a beta release
+
+Beta tags publish as GitHub prereleases — not marked Latest, not pushed to Docker Hub or Snap stable. Customers consume them via explicit version pin.
+
+1. Push your beta work to its branch. Repo must be clean and in sync with `origin`.
+1. Sync tags: `git fetch --tags origin`
+1. Run `make beta_tag`.
+
+Tags off the latest GA by default:
+
+```
+v1.49.0           (latest GA)
+v1.49.0-beta.1    make beta_tag
+v1.49.0-beta.2    make beta_tag
+v1.50.0           (next GA, e.g. BUMP=minor make tag)
+v1.50.0-beta.1    make beta_tag    # now based on v1.50.0
+```
+
+Optional `BUMP=patch|minor|major` bumps the base off the latest GA first (e.g. `BUMP=minor make beta_tag` on `v1.49.0` → `v1.50.0-beta.1`). The `-beta.N` suffix always auto-increments; do not pass `BETA=`. Set `ORIGIN=` to use a non-`origin` remote.
+
+The new tag triggers the [`beta-release`](.github/workflows/beta-release.yml) workflow. See [.goreleaser.beta.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.beta.yml) for the build config.
