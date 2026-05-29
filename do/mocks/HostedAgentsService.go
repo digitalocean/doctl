@@ -46,7 +46,7 @@ func (m *MockHostedAgentsService) CreateSession(arg0 *godo.HostedAgentSessionCre
 }
 
 // CreateSession indicates an expected call of CreateSession.
-func (mr *MockHostedAgentsServiceMockRecorder) CreateSession(arg0 interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) CreateSession(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSession), arg0)
 }
@@ -60,7 +60,7 @@ func (m *MockHostedAgentsService) DestroySession(sessionID string) error {
 }
 
 // DestroySession indicates an expected call of DestroySession.
-func (mr *MockHostedAgentsServiceMockRecorder) DestroySession(sessionID interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) DestroySession(sessionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DestroySession", reflect.TypeOf((*MockHostedAgentsService)(nil).DestroySession), sessionID)
 }
@@ -75,7 +75,7 @@ func (m *MockHostedAgentsService) GetSession(sessionID string) (*do.HostedAgentS
 }
 
 // GetSession indicates an expected call of GetSession.
-func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSession", reflect.TypeOf((*MockHostedAgentsService)(nil).GetSession), sessionID)
 }
@@ -90,7 +90,7 @@ func (m *MockHostedAgentsService) ListSessions(arg0 *godo.HostedAgentSessionList
 }
 
 // ListSessions indicates an expected call of ListSessions.
-func (mr *MockHostedAgentsServiceMockRecorder) ListSessions(arg0 interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) ListSessions(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSessions", reflect.TypeOf((*MockHostedAgentsService)(nil).ListSessions), arg0)
 }
@@ -104,7 +104,7 @@ func (m *MockHostedAgentsService) ResolveHITL(sessionID, requestID string, body 
 }
 
 // ResolveHITL indicates an expected call of ResolveHITL.
-func (mr *MockHostedAgentsServiceMockRecorder) ResolveHITL(sessionID, requestID, body interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) ResolveHITL(sessionID, requestID, body any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveHITL", reflect.TypeOf((*MockHostedAgentsService)(nil).ResolveHITL), sessionID, requestID, body)
 }
@@ -119,7 +119,7 @@ func (m *MockHostedAgentsService) SendInput(sessionID string, input *godo.Hosted
 }
 
 // SendInput indicates an expected call of SendInput.
-func (mr *MockHostedAgentsServiceMockRecorder) SendInput(sessionID, input interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) SendInput(sessionID, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendInput", reflect.TypeOf((*MockHostedAgentsService)(nil).SendInput), sessionID, input)
 }
@@ -134,7 +134,7 @@ func (m *MockHostedAgentsService) StartOAuthFlow(sessionID, provider string, bod
 }
 
 // StartOAuthFlow indicates an expected call of StartOAuthFlow.
-func (mr *MockHostedAgentsServiceMockRecorder) StartOAuthFlow(sessionID, provider, body interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) StartOAuthFlow(sessionID, provider, body any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartOAuthFlow", reflect.TypeOf((*MockHostedAgentsService)(nil).StartOAuthFlow), sessionID, provider, body)
 }
@@ -149,7 +149,7 @@ func (m *MockHostedAgentsService) StreamSession(ctx context.Context, sessionID s
 }
 
 // StreamSession indicates an expected call of StreamSession.
-func (mr *MockHostedAgentsServiceMockRecorder) StreamSession(ctx, sessionID, opt interface{}) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) StreamSession(ctx, sessionID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamSession", reflect.TypeOf((*MockHostedAgentsService)(nil).StreamSession), ctx, sessionID, opt)
 }
