@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.193.0] - 2026-05-26
+
+- #1015 - @nbhoot157 - Add VectorDBs service for vector database API support
+- #1018 - @gangasingh01 - mod: added support for get and update StorageAutoscale endpoints
+- #1016 - @ritheek-pitti-do - Added Cancel Eval and DeletePreset Endpoints
+- #1014 - @venkatranabothu - Add Delete Model Evaluation Run API support
+- #1013 - @d-honeybadger - add worker_subnet_uuid field to doks methods
+- #1012 - @sshirolkar - add pricing for non-token based models in godo 
+
 ## [1.192.0] - 2026-05-19
 
 - #1010 - @SSharma-10 - Update readme

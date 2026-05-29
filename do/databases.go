@@ -87,6 +87,11 @@ type DatabaseMaintenanceWindow struct {
 	*godo.DatabaseMaintenanceWindow
 }
 
+// DatabaseStorageAutoscale is a wrapper for godo.DatabaseStorageAutoscale
+type DatabaseStorageAutoscale struct {
+	*godo.DatabaseStorageAutoscale
+}
+
 // DatabaseFirewallRule is a wrapper for godo.DatabaseFirewallRule
 type DatabaseFirewallRule struct {
 	*godo.DatabaseFirewallRule
@@ -184,6 +189,9 @@ type DatabasesService interface {
 	GetMaintenance(string) (*DatabaseMaintenanceWindow, error)
 	UpdateMaintenance(string, *godo.DatabaseUpdateMaintenanceRequest) error
 	InstallUpdate(string) error
+
+	GetStorageAutoscale(string) (*DatabaseStorageAutoscale, error)
+	UpdateStorageAutoscale(string, *godo.DatabaseStorageAutoscale) error
 
 	GetUser(string, string) (*DatabaseUser, error)
 	ListUsers(string) (DatabaseUsers, error)
@@ -367,6 +375,21 @@ func (ds *databasesService) UpdateMaintenance(databaseID string, req *godo.Datab
 
 func (ds *databasesService) InstallUpdate(databaseID string) error {
 	_, err := ds.client.Databases.InstallUpdate(context.TODO(), databaseID)
+
+	return err
+}
+
+func (ds *databasesService) GetStorageAutoscale(databaseID string) (*DatabaseStorageAutoscale, error) {
+	autoscale, _, err := ds.client.Databases.GetStorageAutoscale(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DatabaseStorageAutoscale{DatabaseStorageAutoscale: autoscale}, nil
+}
+
+func (ds *databasesService) UpdateStorageAutoscale(databaseID string, req *godo.DatabaseStorageAutoscale) error {
+	_, err := ds.client.Databases.UpdateStorageAutoscale(context.TODO(), databaseID, req)
 
 	return err
 }

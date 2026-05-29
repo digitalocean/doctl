@@ -789,6 +789,14 @@ func TestKubernetesCreate(t *testing.T) {
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
 
+		// Test with worker subnet specified
+		config.Doit.Set(config.NS, doctl.ArgWorkerSubnetUUID, "worker-subnet-uuid")
+		r.WorkerSubnetUUID = "worker-subnet-uuid"
+		testCluster.WorkerSubnetUUID = "worker-subnet-uuid"
+		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
+		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
+		assert.NoError(t, err)
+
 		// Test vpc-native
 		const podNetwork = "10.100.0.0/16"
 		const serviceNetwork = "10.101.0.0/16"
