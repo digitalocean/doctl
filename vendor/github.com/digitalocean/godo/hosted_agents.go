@@ -1,0 +1,551 @@
+package godo
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+)
+
+const (
+	hostedAgentsBasePath              = "/v2/agents"
+	hostedAgentsSessionsBasePath      = hostedAgentsBasePath + "/sessions"
+	hostedAgentSessionByIDPath        = hostedAgentsSessionsBasePath + "/%s"
+	hostedAgentSessionStreamPath      = hostedAgentSessionByIDPath + "/stream"
+	hostedAgentSessionInputPath       = hostedAgentSessionByIDPath + "/input"
+	hostedAgentSessionHITLPath        = hostedAgentSessionByIDPath + "/hitl/%s"
+	hostedAgentSessionOAuthPath       = hostedAgentSessionByIDPath + "/oauth/%s"
+	hostedAgentSessionSandboxExecPath = hostedAgentSessionByIDPath + "/sandbox/exec"
+)
+
+// HostedAgentsService exposes the DigitalOcean Hosted Agents session API
+// (HarnessAPI from harness.proto). Routes live under /v2/agents/sessions.
+type HostedAgentsService interface {
+	CreateSession(context.Context, *HostedAgentSessionCreateRequest) (*HostedAgentSession, *Response, error)
+	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
+	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
+	DestroySession(context.Context, string) (*Response, error)
+	StreamSession(context.Context, string, *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error)
+	SendInput(context.Context, string, *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error)
+	ResolveHITL(context.Context, string, string, *HostedAgentResolveHITLRequest) (*Response, error)
+	StartOAuthFlow(context.Context, string, string, *HostedAgentStartOAuthFlowRequest) (*HostedAgentStartOAuthFlowResponse, *Response, error)
+	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
+}
+
+// HostedAgentsServiceOp handles communication with Hosted Agents session methods.
+type HostedAgentsServiceOp struct {
+	client *Client
+}
+
+var _ HostedAgentsService = &HostedAgentsServiceOp{}
+
+// HostedAgentKind identifies the agent runtime provisioned for a session.
+type HostedAgentKind string
+
+const (
+	HostedAgentKindUnspecified HostedAgentKind = "AGENT_KIND_UNSPECIFIED"
+	HostedAgentKindClaudeCode  HostedAgentKind = "AGENT_KIND_CLAUDE_CODE"
+	HostedAgentKindOpenCode    HostedAgentKind = "AGENT_KIND_OPENCODE"
+	HostedAgentKindNone        HostedAgentKind = "AGENT_KIND_NONE"
+)
+
+// HostedAgentSessionStatus is the lifecycle status of a hosted agent session.
+type HostedAgentSessionStatus string
+
+const (
+	HostedAgentSessionStatusUnspecified  HostedAgentSessionStatus = "SESSION_STATUS_UNSPECIFIED"
+	HostedAgentSessionStatusProvisioning HostedAgentSessionStatus = "SESSION_STATUS_PROVISIONING"
+	HostedAgentSessionStatusReady        HostedAgentSessionStatus = "SESSION_STATUS_READY"
+	HostedAgentSessionStatusDetached     HostedAgentSessionStatus = "SESSION_STATUS_DETACHED"
+	HostedAgentSessionStatusDestroying   HostedAgentSessionStatus = "SESSION_STATUS_DESTROYING"
+	HostedAgentSessionStatusDestroyed    HostedAgentSessionStatus = "SESSION_STATUS_DESTROYED"
+	HostedAgentSessionStatusFailed       HostedAgentSessionStatus = "SESSION_STATUS_FAILED"
+)
+
+// HostedAgentProviderAuthState tracks OAuth authorization for an external provider.
+type HostedAgentProviderAuthState string
+
+const (
+	HostedAgentProviderAuthStateUnspecified HostedAgentProviderAuthState = "PROVIDER_AUTH_STATE_UNSPECIFIED"
+	HostedAgentProviderAuthStateNone        HostedAgentProviderAuthState = "PROVIDER_AUTH_STATE_NONE"
+	HostedAgentProviderAuthStatePending     HostedAgentProviderAuthState = "PROVIDER_AUTH_STATE_PENDING"
+	HostedAgentProviderAuthStateAuthorized  HostedAgentProviderAuthState = "PROVIDER_AUTH_STATE_AUTHORIZED"
+	HostedAgentProviderAuthStateExpired     HostedAgentProviderAuthState = "PROVIDER_AUTH_STATE_EXPIRED"
+)
+
+// HostedAgentRunState is the lifecycle state of a single agent run.
+type HostedAgentRunState string
+
+const (
+	HostedAgentRunStateUnspecified  HostedAgentRunState = "RUN_STATE_UNSPECIFIED"
+	HostedAgentRunStateQueued       HostedAgentRunState = "RUN_STATE_QUEUED"
+	HostedAgentRunStateRunning      HostedAgentRunState = "RUN_STATE_RUNNING"
+	HostedAgentRunStateAwaitingHITL HostedAgentRunState = "RUN_STATE_AWAITING_HITL"
+	HostedAgentRunStatePaused       HostedAgentRunState = "RUN_STATE_PAUSED"
+	HostedAgentRunStateCompleted    HostedAgentRunState = "RUN_STATE_COMPLETED"
+	HostedAgentRunStateFailed       HostedAgentRunState = "RUN_STATE_FAILED"
+)
+
+// HostedAgentHITLActionKind classifies a human-in-the-loop approval request.
+type HostedAgentHITLActionKind string
+
+const (
+	HostedAgentHITLActionUnspecified               HostedAgentHITLActionKind = "HITL_ACTION_KIND_UNSPECIFIED"
+	HostedAgentHITLActionBash                      HostedAgentHITLActionKind = "HITL_ACTION_BASH"
+	HostedAgentHITLActionFileWriteOutsideWorkspace HostedAgentHITLActionKind = "HITL_ACTION_FILE_WRITE_OUTSIDE_WORKSPACE"
+	HostedAgentHITLActionGitHubCommitPush          HostedAgentHITLActionKind = "HITL_ACTION_GITHUB_COMMIT_PUSH"
+	HostedAgentHITLActionGitHubCreatePR            HostedAgentHITLActionKind = "HITL_ACTION_GITHUB_CREATE_PR"
+	HostedAgentHITLActionGitHubBranchDelete        HostedAgentHITLActionKind = "HITL_ACTION_GITHUB_BRANCH_DELETE"
+	HostedAgentHITLActionGitHubForcePush           HostedAgentHITLActionKind = "HITL_ACTION_GITHUB_FORCE_PUSH"
+)
+
+// HostedAgentHITLOutcome is the user's decision on a HITL request.
+type HostedAgentHITLOutcome string
+
+const (
+	HostedAgentHITLOutcomeUnspecified HostedAgentHITLOutcome = "HITL_OUTCOME_UNSPECIFIED"
+	HostedAgentHITLOutcomeApprove     HostedAgentHITLOutcome = "HITL_OUTCOME_APPROVE"
+	HostedAgentHITLOutcomeReject      HostedAgentHITLOutcome = "HITL_OUTCOME_REJECT"
+	HostedAgentHITLOutcomeDefer       HostedAgentHITLOutcome = "HITL_OUTCOME_DEFER"
+)
+
+// HostedAgentResolutionSource records where a HITL decision originated.
+type HostedAgentResolutionSource string
+
+const (
+	HostedAgentResolutionSourceUnspecified     HostedAgentResolutionSource = "RESOLUTION_SOURCE_UNSPECIFIED"
+	HostedAgentResolutionSourceInlineKeystroke HostedAgentResolutionSource = "RESOLUTION_SOURCE_INLINE_KEYSTROKE"
+	HostedAgentResolutionSourceOutOfBand       HostedAgentResolutionSource = "RESOLUTION_SOURCE_OUT_OF_BAND"
+)
+
+// HostedAgentOAuthFlowKind identifies the OAuth UX flow.
+type HostedAgentOAuthFlowKind string
+
+const (
+	HostedAgentOAuthFlowKindUnspecified HostedAgentOAuthFlowKind = "OAUTH_FLOW_KIND_UNSPECIFIED"
+	HostedAgentOAuthFlowKindWebCallback HostedAgentOAuthFlowKind = "OAUTH_FLOW_KIND_WEB_CALLBACK"
+	HostedAgentOAuthFlowKindDevice      HostedAgentOAuthFlowKind = "OAUTH_FLOW_KIND_DEVICE"
+)
+
+// HostedAgentRunFailureCode classifies a failed run.
+type HostedAgentRunFailureCode string
+
+const (
+	HostedAgentRunFailureCodeUnspecified    HostedAgentRunFailureCode = "RUN_FAILURE_CODE_UNSPECIFIED"
+	HostedAgentRunFailureCodeModelError     HostedAgentRunFailureCode = "RUN_FAILURE_CODE_MODEL_ERROR"
+	HostedAgentRunFailureCodeModelTimeout   HostedAgentRunFailureCode = "RUN_FAILURE_CODE_MODEL_TIMEOUT"
+	HostedAgentRunFailureCodeToolError      HostedAgentRunFailureCode = "RUN_FAILURE_CODE_TOOL_ERROR"
+	HostedAgentRunFailureCodeSandboxLost    HostedAgentRunFailureCode = "RUN_FAILURE_CODE_SANDBOX_LOST"
+	HostedAgentRunFailureCodeHITLRejected   HostedAgentRunFailureCode = "RUN_FAILURE_CODE_HITL_REJECTED"
+	HostedAgentRunFailureCodeBudgetExceeded HostedAgentRunFailureCode = "RUN_FAILURE_CODE_BUDGET_EXCEEDED"
+	HostedAgentRunFailureCodeInternal       HostedAgentRunFailureCode = "RUN_FAILURE_CODE_INTERNAL"
+)
+
+// HostedAgentEventKind is the SSE event discriminator for session stream payloads.
+type HostedAgentEventKind string
+
+const (
+	HostedAgentEventKindUnspecified       HostedAgentEventKind = "EVENT_KIND_UNSPECIFIED"
+	HostedAgentEventKindRunStarted        HostedAgentEventKind = "EVENT_KIND_RUN_STARTED"
+	HostedAgentEventKindTokenChunk        HostedAgentEventKind = "EVENT_KIND_TOKEN_CHUNK"
+	HostedAgentEventKindToolCallStarted   HostedAgentEventKind = "EVENT_KIND_TOOL_CALL_STARTED"
+	HostedAgentEventKindToolCallCompleted HostedAgentEventKind = "EVENT_KIND_TOOL_CALL_COMPLETED"
+	HostedAgentEventKindHITLRequested     HostedAgentEventKind = "EVENT_KIND_HITL_REQUESTED"
+	HostedAgentEventKindHITLResolved      HostedAgentEventKind = "EVENT_KIND_HITL_RESOLVED"
+	HostedAgentEventKindRunCompleted      HostedAgentEventKind = "EVENT_KIND_RUN_COMPLETED"
+	HostedAgentEventKindRunFailed         HostedAgentEventKind = "EVENT_KIND_RUN_FAILED"
+	HostedAgentEventKindSessionUpdated    HostedAgentEventKind = "EVENT_KIND_SESSION_UPDATED"
+)
+
+// HostedAgentSession is a provisioned hosted-agent sandbox session.
+type HostedAgentSession struct {
+	SessionID    string                                  `json:"session_id"`
+	TeamID       uint64                                  `json:"team_id"`
+	AgentKind    HostedAgentKind                         `json:"agent_kind"`
+	Status       HostedAgentSessionStatus                `json:"status"`
+	SandboxID    string                                  `json:"sandbox_id,omitempty"`
+	CreatedAt    Timestamp                               `json:"created_at"`
+	LastEventAt  Timestamp                               `json:"last_event_at"`
+	RepoHint     string                                  `json:"repo_hint,omitempty"`
+	ProviderAuth map[string]HostedAgentProviderAuthState `json:"provider_auth,omitempty"`
+}
+
+// HostedAgentRun represents a single execution within a session.
+type HostedAgentRun struct {
+	RunID                string              `json:"run_id"`
+	SessionID            string              `json:"session_id"`
+	State                HostedAgentRunState `json:"state"`
+	StartedAt            Timestamp           `json:"started_at"`
+	EndedAt              *Timestamp          `json:"ended_at,omitempty"`
+	CumulativeCostMicros int64               `json:"cumulative_cost_micros"`
+}
+
+// HostedAgentHITLRequest is a pending human-in-the-loop approval.
+type HostedAgentHITLRequest struct {
+	RequestID string                    `json:"request_id"`
+	SessionID string                    `json:"session_id"`
+	RunID     string                    `json:"run_id"`
+	Action    HostedAgentHITLActionKind `json:"action"`
+	Details   map[string]interface{}    `json:"details,omitempty"`
+	Workdir   string                    `json:"workdir,omitempty"`
+	Deadline  *Timestamp                `json:"deadline,omitempty"`
+}
+
+// HostedAgentHITLDecision records a resolved HITL request.
+type HostedAgentHITLDecision struct {
+	RequestID string                 `json:"request_id"`
+	Outcome   HostedAgentHITLOutcome `json:"outcome"`
+	Actor     string                 `json:"actor,omitempty"`
+	At        Timestamp              `json:"at"`
+	Reason    string                 `json:"reason,omitempty"`
+}
+
+// HostedAgentEvent is one SSE payload from GET /v2/agents/sessions/{id}/stream.
+type HostedAgentEvent struct {
+	EventID   string               `json:"event_id"`
+	SessionID string               `json:"session_id"`
+	RunID     string               `json:"run_id,omitempty"`
+	TeamID    uint64               `json:"team_id"`
+	At        Timestamp            `json:"at"`
+	Kind      HostedAgentEventKind `json:"kind"`
+	Payload   json.RawMessage      `json:"payload,omitempty"`
+}
+
+// HostedAgentSessionCreateRequest is the body for POST /v2/agents/sessions.
+type HostedAgentSessionCreateRequest struct {
+	AgentKind          HostedAgentKind `json:"agent_kind"`
+	RepoHint           string          `json:"repo_hint,omitempty"`
+	IdleTimeoutSeconds int64           `json:"idle_timeout_seconds,omitempty"`
+}
+
+// HostedAgentSessionListOptions specifies optional list filters.
+type HostedAgentSessionListOptions struct {
+	PageToken string                   `url:"page_token,omitempty"`
+	PageSize  int                      `url:"page_size,omitempty"`
+	Status    HostedAgentSessionStatus `url:"status,omitempty"`
+}
+
+// HostedAgentSessionsListResponse is returned by GET /v2/agents/sessions.
+type HostedAgentSessionsListResponse struct {
+	Sessions      []HostedAgentSession `json:"sessions"`
+	NextPageToken string               `json:"next_page_token"`
+}
+
+// HostedAgentSessionStreamOptions configures the session SSE stream.
+type HostedAgentSessionStreamOptions struct {
+	ReplayFrom string
+	ReplayOnly bool
+}
+
+// HostedAgentSendInputRequest is the body for POST .../input.
+type HostedAgentSendInputRequest struct {
+	Text string `json:"text"`
+}
+
+// HostedAgentSendInputResponse is returned by POST .../input.
+type HostedAgentSendInputResponse struct {
+	RunID string `json:"run_id"`
+}
+
+// HostedAgentResolveHITLRequest is the body for POST .../hitl/{requestID}.
+type HostedAgentResolveHITLRequest struct {
+	Outcome HostedAgentHITLOutcome      `json:"outcome"`
+	Reason  string                      `json:"reason,omitempty"`
+	Source  HostedAgentResolutionSource `json:"source,omitempty"`
+}
+
+// HostedAgentStartOAuthFlowRequest is the body for POST .../oauth/{provider}.
+type HostedAgentStartOAuthFlowRequest struct {
+	RequestedScopes []string `json:"requested_scopes,omitempty"`
+}
+
+// HostedAgentStartOAuthFlowResponse is returned by POST .../oauth/{provider}.
+type HostedAgentStartOAuthFlowResponse struct {
+	AuthorizeURL string                   `json:"authorize_url"`
+	FlowKind     HostedAgentOAuthFlowKind `json:"flow_kind"`
+}
+
+// HostedAgentSandboxExecRequest is the body for POST .../sandbox/exec.
+type HostedAgentSandboxExecRequest struct {
+	Argv           []string `json:"argv"`
+	Workdir        string   `json:"workdir,omitempty"`
+	TimeoutSeconds int64    `json:"timeout_seconds,omitempty"`
+}
+
+// HostedAgentSandboxExecResponse is returned by POST .../sandbox/exec.
+type HostedAgentSandboxExecResponse struct {
+	ExitCode int    `json:"exit_code"`
+	Stdout   string `json:"stdout,omitempty"`
+	Stderr   string `json:"stderr,omitempty"`
+}
+
+type hostedAgentSessionRoot struct {
+	Session *HostedAgentSession `json:"session"`
+}
+
+// CreateSession provisions a new hosted agent session.
+func (s *HostedAgentsServiceOp) CreateSession(ctx context.Context, create *HostedAgentSessionCreateRequest) (*HostedAgentSession, *Response, error) {
+	if create == nil {
+		return nil, nil, errors.New("hosted agents: create request is required")
+	}
+	if create.AgentKind == "" || create.AgentKind == HostedAgentKindUnspecified {
+		return nil, nil, errors.New("hosted agents: agent_kind is required")
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodPost, hostedAgentsSessionsBasePath, create)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(hostedAgentSessionRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if root.Session == nil {
+		return nil, resp, errors.New("hosted agents: create session returned no session")
+	}
+	return root.Session, resp, nil
+}
+
+// ListSessions returns sessions visible to the caller's team.
+func (s *HostedAgentsServiceOp) ListSessions(ctx context.Context, opt *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error) {
+	path, err := addOptions(hostedAgentsSessionsBasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentSessionsListResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// GetSession returns a single session by ID.
+func (s *HostedAgentsServiceOp) GetSession(ctx context.Context, sessionID string) (*HostedAgentSession, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionByIDPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(hostedAgentSessionRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if root.Session == nil {
+		return nil, resp, errors.New("hosted agents: get session returned no session")
+	}
+	return root.Session, resp, nil
+}
+
+// DestroySession tears down a session. The API returns HTTP 204 on success.
+func (s *HostedAgentsServiceOp) DestroySession(ctx context.Context, sessionID string) (*Response, error) {
+	if sessionID == "" {
+		return nil, errors.New("hosted agents: session id is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionByIDPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// StreamSession opens the SSE stream for a session. Callers MUST Close the stream.
+func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID string, opt *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionStreamPath, sessionID)
+	if opt != nil {
+		q := url.Values{}
+		if opt.ReplayFrom != "" {
+			q.Set("replay_from", opt.ReplayFrom)
+		}
+		if opt.ReplayOnly {
+			q.Set("replay_only", "true")
+		}
+		if encoded := q.Encode(); encoded != "" {
+			path += "?" + encoded
+		}
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Connection", "keep-alive")
+
+	resp, err := s.client.DoStream(ctx, req)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &HostedAgentSessionStream{
+		raw:  NewSSEReader(resp.Body),
+		body: resp.Body,
+	}, resp, nil
+}
+
+// SendInput enqueues user text for the in-sandbox agent runtime.
+func (s *HostedAgentsServiceOp) SendInput(ctx context.Context, sessionID string, input *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if input == nil {
+		return nil, nil, errors.New("hosted agents: input is required")
+	}
+	if strings.TrimSpace(input.Text) == "" {
+		return nil, nil, errors.New("hosted agents: text is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionInputPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, input)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentSendInputResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// ResolveHITL submits a human-in-the-loop decision. The API returns HTTP 204 on success.
+func (s *HostedAgentsServiceOp) ResolveHITL(ctx context.Context, sessionID, requestID string, body *HostedAgentResolveHITLRequest) (*Response, error) {
+	if sessionID == "" {
+		return nil, errors.New("hosted agents: session id is required")
+	}
+	if requestID == "" {
+		return nil, errors.New("hosted agents: request id is required")
+	}
+	if body == nil {
+		return nil, errors.New("hosted agents: resolve request is required")
+	}
+	if body.Outcome == "" || body.Outcome == HostedAgentHITLOutcomeUnspecified {
+		return nil, errors.New("hosted agents: outcome is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionHITLPath, sessionID, requestID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// StartOAuthFlow begins a provider OAuth authorization for the session.
+func (s *HostedAgentsServiceOp) StartOAuthFlow(ctx context.Context, sessionID, provider string, body *HostedAgentStartOAuthFlowRequest) (*HostedAgentStartOAuthFlowResponse, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if provider == "" {
+		return nil, nil, errors.New("hosted agents: provider is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionOAuthPath, sessionID, provider)
+	var payload interface{}
+	if body != nil {
+		payload = body
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, payload)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentStartOAuthFlowResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// ExecInSandbox runs a command inside the session sandbox.
+func (s *HostedAgentsServiceOp) ExecInSandbox(ctx context.Context, sessionID string, body *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if body == nil {
+		return nil, nil, errors.New("hosted agents: exec request is required")
+	}
+	if len(body.Argv) == 0 {
+		return nil, nil, errors.New("hosted agents: argv is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionSandboxExecPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentSandboxExecResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// HostedAgentSessionStream is a typed iterator over a session SSE stream.
+type HostedAgentSessionStream struct {
+	raw     *SSEReader
+	body    io.ReadCloser
+	current HostedAgentEvent
+	err     error
+	done    bool
+}
+
+// Next advances to the next event. Returns false on EOF or error.
+func (s *HostedAgentSessionStream) Next() bool {
+	for {
+		if s.done || s.err != nil {
+			return false
+		}
+		ev, err := s.raw.Next()
+		if errors.Is(err, io.EOF) {
+			s.done = true
+			return false
+		}
+		if err != nil {
+			s.err = err
+			return false
+		}
+		if len(ev.Data) == 0 {
+			continue
+		}
+		var event HostedAgentEvent
+		if err := json.Unmarshal(ev.Data, &event); err != nil {
+			s.err = err
+			return false
+		}
+		if event.EventID == "" && ev.ID != "" {
+			event.EventID = ev.ID
+		}
+		if event.Kind == "" && ev.Event != "" {
+			event.Kind = HostedAgentEventKind(ev.Event)
+		}
+		s.current = event
+		return true
+	}
+}
+
+// Current returns the most recent event produced by Next.
+func (s *HostedAgentSessionStream) Current() HostedAgentEvent { return s.current }
+
+// Err returns any non-EOF error encountered during iteration.
+func (s *HostedAgentSessionStream) Err() error { return s.err }
+
+// Close releases the underlying HTTP response body. Always call Close.
+func (s *HostedAgentSessionStream) Close() error {
+	if s.body == nil {
+		return nil
+	}
+	return s.body.Close()
+}
