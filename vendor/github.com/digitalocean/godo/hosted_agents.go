@@ -12,13 +12,11 @@ import (
 )
 
 const (
-	hostedAgentsBasePath              = "/v2/agents"
-	hostedAgentsSessionsBasePath      = hostedAgentsBasePath + "/sessions"
+	hostedAgentsSessionsBasePath      = "/v2/agents/sessions"
 	hostedAgentSessionByIDPath        = hostedAgentsSessionsBasePath + "/%s"
 	hostedAgentSessionStreamPath      = hostedAgentSessionByIDPath + "/stream"
 	hostedAgentSessionInputPath       = hostedAgentSessionByIDPath + "/input"
 	hostedAgentSessionHITLPath        = hostedAgentSessionByIDPath + "/hitl/%s"
-	hostedAgentSessionOAuthPath       = hostedAgentSessionByIDPath + "/oauth/%s"
 	hostedAgentSessionSandboxExecPath = hostedAgentSessionByIDPath + "/sandbox/exec"
 )
 
@@ -32,7 +30,6 @@ type HostedAgentsService interface {
 	StreamSession(context.Context, string, *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error)
 	SendInput(context.Context, string, *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error)
 	ResolveHITL(context.Context, string, string, *HostedAgentResolveHITLRequest) (*Response, error)
-	StartOAuthFlow(context.Context, string, string, *HostedAgentStartOAuthFlowRequest) (*HostedAgentStartOAuthFlowResponse, *Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
 }
 
@@ -120,15 +117,6 @@ const (
 	HostedAgentResolutionSourceUnspecified     HostedAgentResolutionSource = "RESOLUTION_SOURCE_UNSPECIFIED"
 	HostedAgentResolutionSourceInlineKeystroke HostedAgentResolutionSource = "RESOLUTION_SOURCE_INLINE_KEYSTROKE"
 	HostedAgentResolutionSourceOutOfBand       HostedAgentResolutionSource = "RESOLUTION_SOURCE_OUT_OF_BAND"
-)
-
-// HostedAgentOAuthFlowKind identifies the OAuth UX flow.
-type HostedAgentOAuthFlowKind string
-
-const (
-	HostedAgentOAuthFlowKindUnspecified HostedAgentOAuthFlowKind = "OAUTH_FLOW_KIND_UNSPECIFIED"
-	HostedAgentOAuthFlowKindWebCallback HostedAgentOAuthFlowKind = "OAUTH_FLOW_KIND_WEB_CALLBACK"
-	HostedAgentOAuthFlowKindDevice      HostedAgentOAuthFlowKind = "OAUTH_FLOW_KIND_DEVICE"
 )
 
 // HostedAgentRunFailureCode classifies a failed run.
@@ -256,17 +244,6 @@ type HostedAgentResolveHITLRequest struct {
 	Outcome HostedAgentHITLOutcome      `json:"outcome"`
 	Reason  string                      `json:"reason,omitempty"`
 	Source  HostedAgentResolutionSource `json:"source,omitempty"`
-}
-
-// HostedAgentStartOAuthFlowRequest is the body for POST .../oauth/{provider}.
-type HostedAgentStartOAuthFlowRequest struct {
-	RequestedScopes []string `json:"requested_scopes,omitempty"`
-}
-
-// HostedAgentStartOAuthFlowResponse is returned by POST .../oauth/{provider}.
-type HostedAgentStartOAuthFlowResponse struct {
-	AuthorizeURL string                   `json:"authorize_url"`
-	FlowKind     HostedAgentOAuthFlowKind `json:"flow_kind"`
 }
 
 // HostedAgentSandboxExecRequest is the body for POST .../sandbox/exec.
@@ -442,31 +419,6 @@ func (s *HostedAgentsServiceOp) ResolveHITL(ctx context.Context, sessionID, requ
 		return nil, err
 	}
 	return s.client.Do(ctx, req, nil)
-}
-
-// StartOAuthFlow begins a provider OAuth authorization for the session.
-func (s *HostedAgentsServiceOp) StartOAuthFlow(ctx context.Context, sessionID, provider string, body *HostedAgentStartOAuthFlowRequest) (*HostedAgentStartOAuthFlowResponse, *Response, error) {
-	if sessionID == "" {
-		return nil, nil, errors.New("hosted agents: session id is required")
-	}
-	if provider == "" {
-		return nil, nil, errors.New("hosted agents: provider is required")
-	}
-	path := fmt.Sprintf(hostedAgentSessionOAuthPath, sessionID, provider)
-	var payload interface{}
-	if body != nil {
-		payload = body
-	}
-	req, err := s.client.NewRequest(ctx, http.MethodPost, path, payload)
-	if err != nil {
-		return nil, nil, err
-	}
-	root := new(HostedAgentStartOAuthFlowResponse)
-	resp, err := s.client.Do(ctx, req, root)
-	if err != nil {
-		return nil, resp, err
-	}
-	return root, resp, nil
 }
 
 // ExecInSandbox runs a command inside the session sandbox.

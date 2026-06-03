@@ -28,38 +28,11 @@ import (
 func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "auth", "destroy")
 
-	authCmd := findChild(cmd, "auth")
-	if assert.NotNil(t, authCmd, "expected `auth` subcommand on `agents`") {
-		assertCommandNames(t, authCmd, "github")
-	}
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy")
 }
 
 func TestAgents_helpers(t *testing.T) {
-	t.Run("agentKindFor", func(t *testing.T) {
-		cases := []struct {
-			in      string
-			want    godo.HostedAgentKind
-			wantErr bool
-		}{
-			{"claude-code", godo.HostedAgentKindClaudeCode, false},
-			{"CLAUDE", godo.HostedAgentKindClaudeCode, false},
-			{"opencode", godo.HostedAgentKindOpenCode, false},
-			{"none", godo.HostedAgentKindNone, false},
-			{"bogus", "", true},
-		}
-		for _, tc := range cases {
-			got, err := agentKindFor(tc.in)
-			if tc.wantErr {
-				assert.Error(t, err, "input=%q", tc.in)
-				continue
-			}
-			assert.NoError(t, err, "input=%q", tc.in)
-			assert.Equal(t, tc.want, got, "input=%q", tc.in)
-		}
-	})
-
 	t.Run("hitlOutcomeFor", func(t *testing.T) {
 		cases := []struct {
 			in      string
@@ -80,26 +53,6 @@ func TestAgents_helpers(t *testing.T) {
 			assert.NoError(t, err, "input=%q", tc.in)
 			assert.Equal(t, tc.want, got, "input=%q", tc.in)
 		}
-	})
-}
-
-func TestRunAgentsStart(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		want := &godo.HostedAgentSessionCreateRequest{
-			AgentKind: godo.HostedAgentKindClaudeCode,
-			RepoHint:  "acme/payments",
-		}
-		tm.hostedAgents.EXPECT().CreateSession(want).Return(&do.HostedAgentSession{
-			HostedAgentSession: &godo.HostedAgentSession{
-				SessionID: "sess_test",
-				AgentKind: godo.HostedAgentKindClaudeCode,
-				Status:    godo.HostedAgentSessionStatusReady,
-			},
-		}, nil)
-
-		config.Doit.Set(config.NS, "agent", "claude-code")
-		config.Doit.Set(config.NS, "repo", "acme/payments")
-		assert.NoError(t, RunAgentsStart(config))
 	})
 }
 
@@ -142,9 +95,9 @@ mystery: yes
 	})
 }
 
-// TestRunAgentsStart_FromSpec covers the --spec branch: spec YAML on disk,
-// --repo flag overrides the spec's repo_hint.
-func TestRunAgentsStart_FromSpec(t *testing.T) {
+// TestRunAgentsStart drives the spec-only path: the yaml on disk is parsed and
+// the resulting create request is sent to godo verbatim.
+func TestRunAgentsStart(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	err := os.WriteFile(specPath, []byte(`agent_kind: AGENT_KIND_OPENCODE
@@ -156,7 +109,7 @@ idle_timeout_seconds: 1800
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		want := &godo.HostedAgentSessionCreateRequest{
 			AgentKind:          godo.HostedAgentKindOpenCode,
-			RepoHint:           "override/repo", // --repo wins over spec
+			RepoHint:           "spec/repo",
 			IdleTimeoutSeconds: 1800,
 		}
 		tm.hostedAgents.EXPECT().CreateSession(want).Return(&do.HostedAgentSession{
@@ -168,7 +121,6 @@ idle_timeout_seconds: 1800
 		}, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		config.Doit.Set(config.NS, "repo", "override/repo")
 		assert.NoError(t, RunAgentsStart(config))
 	})
 }
@@ -208,29 +160,4 @@ func TestRunAgentsApprove(t *testing.T) {
 		config.Args = []string{"sess_test", "req_1", "approve"}
 		assert.NoError(t, RunAgentsApprove(config))
 	})
-}
-
-func TestRunAgentsAuthGitHub_NoWait(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().
-			StartOAuthFlow("sess_test", "github", &godo.HostedAgentStartOAuthFlowRequest{}).
-			Return(&godo.HostedAgentStartOAuthFlowResponse{
-				AuthorizeURL: "https://example.invalid/authorize",
-				FlowKind:     godo.HostedAgentOAuthFlowKindWebCallback,
-			}, nil)
-
-		config.Doit.Set(config.NS, "session", "sess_test")
-		config.Doit.Set(config.NS, "no-open", true)
-		config.Doit.Set(config.NS, "no-wait", true)
-		assert.NoError(t, RunAgentsAuthGitHub(config))
-	})
-}
-
-func findChild(cmd *Command, name string) *Command {
-	for _, child := range cmd.ChildCommands() {
-		if child.Name() == name {
-			return child
-		}
-	}
-	return nil
 }

@@ -124,21 +124,6 @@ func (mr *MockHostedAgentsServiceMockRecorder) SendInput(sessionID, input any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendInput", reflect.TypeOf((*MockHostedAgentsService)(nil).SendInput), sessionID, input)
 }
 
-// StartOAuthFlow mocks base method.
-func (m *MockHostedAgentsService) StartOAuthFlow(sessionID, provider string, body *godo.HostedAgentStartOAuthFlowRequest) (*godo.HostedAgentStartOAuthFlowResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartOAuthFlow", sessionID, provider, body)
-	ret0, _ := ret[0].(*godo.HostedAgentStartOAuthFlowResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StartOAuthFlow indicates an expected call of StartOAuthFlow.
-func (mr *MockHostedAgentsServiceMockRecorder) StartOAuthFlow(sessionID, provider, body any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartOAuthFlow", reflect.TypeOf((*MockHostedAgentsService)(nil).StartOAuthFlow), sessionID, provider, body)
-}
-
 // StreamSession mocks base method.
 func (m *MockHostedAgentsService) StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
 	m.ctrl.T.Helper()

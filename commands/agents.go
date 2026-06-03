@@ -30,9 +30,9 @@ import (
 	"sync"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
-	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
@@ -46,24 +46,20 @@ func Agents() *Command {
 			Short:   "Launch and manage hosted DigitalOcean agent sessions",
 			Long: `The ` + "`" + `doctl agents` + "`" + ` commands manage hosted coding-agent sessions running in DigitalOcean sandboxes.
 
-A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.`,
-			GroupID: manageResourcesGroup,
+A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.`,
+			GroupID: hostedAgentsGroup,
 		},
 	}
 
 	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start",
 		"Start a new agent session",
-		`Creates a new agent session and prints its session id and status.
+		`Creates a new agent session from an agent spec file and prints its session id and status.
 
-The `+"`"+`--agent`+"`"+` flag selects the agent kind (`+"`"+`claude-code`+"`"+` or `+"`"+`opencode`+"`"+`). The optional `+"`"+`--repo`+"`"+` flag passes a repo hint to the agent's initial environment.
-
-Alternatively, pass `+"`"+`--spec`+"`"+` with a YAML or JSON file describing the session. Any `+"`"+`--agent`+"`"+` / `+"`"+`--repo`+"`"+` flag given alongside `+"`"+`--spec`+"`"+` overrides the matching field in the file.`,
-		Writer, aliasOpt("deploy"))
-	AddStringFlag(cmdStart, "agent", "", "claude-code", "Agent kind: claude-code | opencode")
-	AddStringFlag(cmdStart, "repo", "", "", "Optional repo hint (e.g. owner/repo)")
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent spec in JSON or YAML format. Set to "-" to read from stdin.`)
-	cmdStart.Example = `doctl agents start --agent claude-code --repo acme/payments
-doctl agents start --spec agent-spec.yaml`
+The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML or JSON file describing the session. The server parses and validates the spec — all session configuration (agent kind, repo hint, idle timeout, etc.) lives in the file.`,
+		Writer, aliasOpt("deploy"),
+		displayerType(&displayers.HostedAgentSession{}))
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	cmdStart.Example = `doctl agents start --spec agent-spec.yaml`
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session-id>",
 		"Attach to an agent session",
@@ -73,16 +69,17 @@ Type `+"`"+`/help`+"`"+` once attached to see the inline command list. Pending H
 		Writer, aliasOpt("chat"))
 	cmdAttach.Example = `doctl agents attach sess_abc123`
 
-	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
+	CmdBuilder(cmd, RunAgentsList, "list",
 		"List agent sessions",
 		"Lists all agent sessions visible to the caller.",
-		Writer, aliasOpt("ls"))
-	AddStringFlag(cmdList, doctl.ArgFormat, "", "", "Columns for output in a comma-separated list. Possible values: `text`")
+		Writer, aliasOpt("ls"),
+		displayerType(&displayers.HostedAgentSession{}))
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session-id>",
 		"Show a single agent session",
-		"Prints the JSON representation of one agent session.",
-		Writer, aliasOpt("get"))
+		"Prints details of one agent session.",
+		Writer, aliasOpt("get"),
+		displayerType(&displayers.HostedAgentSession{}))
 
 	CmdBuilder(cmd, RunAgentsLogs, "logs <session-id>",
 		"Replay the full event history for a session",
@@ -91,10 +88,8 @@ Type `+"`"+`/help`+"`"+` once attached to see the inline command list. Pending H
 
 	CmdBuilder(cmd, RunAgentsApprove, "approve <session-id> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
-		"Approves, rejects, or defers a pending HITL request without attaching the interactive TUI. The resolution source is recorded as `RESOLUTION_SOURCE_OUT_OF_BAND`.",
+		"Approves, rejects, or defers a pending HITL request without attaching the interactive TUI. The resolution source is recorded as `RESOLUTION_SOURCE_OUT_OF_BAND`. Inside an attached session, the same outcomes are available as `/a`, `/r`, `/d` slash commands.",
 		Writer)
-
-	cmd.AddCommand(agentsAuth())
 
 	CmdBuilder(cmd, RunAgentsDestroy, "destroy <session-id>",
 		"Destroy an agent session",
@@ -104,106 +99,27 @@ Type `+"`"+`/help`+"`"+` once attached to see the inline command list. Pending H
 	return cmd
 }
 
-func agentsAuth() *Command {
-	cmd := &Command{
-		Command: &cobra.Command{
-			Use:   "auth",
-			Short: "Authorize external providers for a session",
-			Long:  "Manage per-session OAuth links (currently only `github`). Tokens are stored server-side; the developer never sees a token value.",
-		},
-	}
-
-	cmdGitHub := CmdBuilder(cmd, RunAgentsAuthGitHub, "github",
-		"Authorize GitHub for a session",
-		`Starts the GitHub OAuth flow for an existing session, opens the authorize URL in the default browser, and waits for the server-side completion event.
-
-The command returns as soon as the session reports `+"`"+`provider_auth["github"] == PROVIDER_AUTH_STATE_AUTHORIZED`+"`"+`.`,
-		Writer)
-	AddStringFlag(cmdGitHub, "session", "", "", "Session id", requiredOpt())
-	AddBoolFlag(cmdGitHub, "no-open", "", false, "Do not auto-open the authorize URL in a browser")
-	AddBoolFlag(cmdGitHub, "no-wait", "", false, "Return as soon as the authorize URL is known; do not wait for completion")
-	cmdGitHub.Example = `doctl agents auth github --session sess_abc123`
-
-	return cmd
-}
-
 // --- runners ----------------------------------------------------------------
 
-// RunAgentsStart creates a new hosted agent session.
+// RunAgentsStart creates a new hosted agent session from a spec file.
 //
-// Inputs come from one of two sources:
-//   - `--spec <path>`: parses a YAML/JSON file matching godo.HostedAgentSessionCreateRequest.
-//   - `--agent` + `--repo`: build the request inline from individual flags.
-//
-// If both are provided, the flags override matching fields in the spec.
+// v0 only supports `--spec <path>`. The file is parsed locally into a
+// godo.HostedAgentSessionCreateRequest and POSTed as JSON.
 func RunAgentsStart(c *CmdConfig) error {
 	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
 		return err
 	}
-	agent, err := c.Doit.GetString(c.NS, "agent")
+	req, err := readAgentSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
-	}
-	repo, err := c.Doit.GetString(c.NS, "repo")
-	if err != nil {
-		return err
-	}
-
-	var req *godo.HostedAgentSessionCreateRequest
-	if specPath != "" {
-		req, err = readAgentSpec(os.Stdin, specPath)
-		if err != nil {
-			return err
-		}
-		// Flags override spec fields when both are provided. Note: --agent has
-		// a default of "claude-code", so we only override when the user passed
-		// it explicitly (i.e. the spec lacks an agent_kind).
-		if req.AgentKind == "" {
-			kind, err := agentKindFor(agent)
-			if err != nil {
-				return err
-			}
-			req.AgentKind = kind
-		}
-		if repo != "" {
-			req.RepoHint = repo
-		}
-	} else {
-		kind, err := agentKindFor(agent)
-		if err != nil {
-			return err
-		}
-		req = &godo.HostedAgentSessionCreateRequest{
-			AgentKind: kind,
-			RepoHint:  repo,
-		}
 	}
 
 	sess, err := c.HostedAgents().CreateSession(req)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(c.Out, "Session created: %s\n", sess.SessionID)
-	fmt.Fprintf(c.Out, "  Agent:   %s\n", sess.AgentKind)
-	fmt.Fprintf(c.Out, "  Status:  %s\n", sess.Status)
-	if sess.SandboxID != "" {
-		fmt.Fprintf(c.Out, "  Sandbox: %s\n", sess.SandboxID)
-	}
-	return nil
-}
-
-func agentKindFor(s string) (godo.HostedAgentKind, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "claude-code", "claude":
-		return godo.HostedAgentKindClaudeCode, nil
-	case "opencode":
-		return godo.HostedAgentKindOpenCode, nil
-	case "none":
-		return godo.HostedAgentKindNone, nil
-	default:
-		return "", fmt.Errorf("unknown --agent value %q; expected claude-code or opencode", s)
-	}
+	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}})
 }
 
 // RunAgentsList lists hosted agent sessions visible to the caller.
@@ -212,19 +128,10 @@ func RunAgentsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if len(sessions) == 0 {
-		fmt.Fprintln(c.Out, "(no sessions)")
-		return nil
-	}
-	fmt.Fprintf(c.Out, "%-26s %-22s %-28s %s\n", "SESSION", "AGENT", "STATUS", "CREATED")
-	for _, s := range sessions {
-		fmt.Fprintf(c.Out, "%-26s %-22s %-28s %s\n",
-			s.SessionID, s.AgentKind, s.Status, s.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"))
-	}
-	return nil
+	return c.Display(&displayers.HostedAgentSession{Sessions: sessions})
 }
 
-// RunAgentsShow prints one session as indented JSON.
+// RunAgentsShow prints one session.
 func RunAgentsShow(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
@@ -233,12 +140,7 @@ func RunAgentsShow(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	out, err := json.MarshalIndent(sess.HostedAgentSession, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(c.Out, string(out))
-	return nil
+	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}})
 }
 
 // RunAgentsDestroy tears down a session.
@@ -334,11 +236,6 @@ func RunAgentsAttach(c *CmdConfig) error {
 		return err
 	}
 	fmt.Fprintf(c.Out, "Connected to %s (%s)\n", sessionID, sess.AgentKind)
-	if state, ok := sess.ProviderAuth["github"]; ok && state == godo.HostedAgentProviderAuthStateAuthorized {
-		fmt.Fprintln(c.Out, "GitHub: authorized")
-	} else {
-		fmt.Fprintf(c.Out, "GitHub: not authorized (run `doctl agents auth github --session %s`)\n", sessionID)
-	}
 	fmt.Fprintln(c.Out, "Type a message and press Enter to send. Ctrl-D to detach. Type `/help` for HITL commands.")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -465,61 +362,6 @@ func resolveFromAttach(svc do.HostedAgentsService, sessionID string, parts []str
 		Outcome: outcome,
 		Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
 	})
-}
-
-// RunAgentsAuthGitHub starts the GitHub OAuth flow for a session and (unless
-// --no-wait) blocks until provider_auth["github"] flips to AUTHORIZED.
-func RunAgentsAuthGitHub(c *CmdConfig) error {
-	sessionID, err := c.Doit.GetString(c.NS, "session")
-	if err != nil {
-		return err
-	}
-	if sessionID == "" {
-		return errors.New("--session is required")
-	}
-	noOpen, _ := c.Doit.GetBool(c.NS, "no-open")
-	noWait, _ := c.Doit.GetBool(c.NS, "no-wait")
-
-	svc := c.HostedAgents()
-	resp, err := svc.StartOAuthFlow(sessionID, "github", &godo.HostedAgentStartOAuthFlowRequest{})
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(c.Out, "Initiating GitHub OAuth flow...")
-	fmt.Fprintf(c.Out, "  -> %s\n", resp.AuthorizeURL)
-	fmt.Fprintln(c.Out, "  (paste this URL if your browser did not open)")
-
-	if !noOpen {
-		_ = browser.OpenURL(resp.AuthorizeURL)
-	}
-	if noWait {
-		return nil
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	stream, err := svc.StreamSession(ctx, sessionID, nil)
-	if err != nil {
-		return err
-	}
-	defer stream.Close()
-
-	fmt.Fprintln(c.Out, "Waiting for authorization...")
-	for stream.Next() {
-		ev := stream.Current()
-		if ev.Kind != godo.HostedAgentEventKindSessionUpdated {
-			continue
-		}
-		var p sessionUpdatedPayload
-		if err := json.Unmarshal(ev.Payload, &p); err != nil {
-			continue
-		}
-		if state, ok := p.SessionDelta.ProviderAuth["github"]; ok && state == godo.HostedAgentProviderAuthStateAuthorized {
-			notice("GitHub authorized (token stored server-side, scope: session %s)", sessionID)
-			return nil
-		}
-	}
-	return stream.Err()
 }
 
 // --- event payload helpers --------------------------------------------------

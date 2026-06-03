@@ -34,7 +34,6 @@ type HostedAgentsService interface {
 	DestroySession(sessionID string) error
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
-	StartOAuthFlow(sessionID, provider string, body *godo.HostedAgentStartOAuthFlowRequest) (*godo.HostedAgentStartOAuthFlowResponse, error)
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 }
 
@@ -91,11 +90,6 @@ func (s *hostedAgentsService) SendInput(sessionID string, input *godo.HostedAgen
 func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
 	_, err := s.client.HostedAgents.ResolveHITL(context.TODO(), sessionID, requestID, body)
 	return err
-}
-
-func (s *hostedAgentsService) StartOAuthFlow(sessionID, provider string, body *godo.HostedAgentStartOAuthFlowRequest) (*godo.HostedAgentStartOAuthFlowResponse, error) {
-	resp, _, err := s.client.HostedAgents.StartOAuthFlow(context.TODO(), sessionID, provider, body)
-	return resp, err
 }
 
 // StreamSession opens the SSE stream and returns the typed godo iterator. The

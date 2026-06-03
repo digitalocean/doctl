@@ -9,36 +9,41 @@ import (
 )
 
 const (
-	gradientBasePath               = "/v2/gen-ai/agents"
-	agentModelBasePath             = "/v2/gen-ai/models"
-	datacenterRegionsPath          = "/v2/gen-ai/regions"
-	agentRouteBasePath             = gradientBasePath + "/%s/child_agents/%s"
-	KnowledgeBasePath              = "/v2/gen-ai/knowledge_bases"
-	functionRouteBasePath          = gradientBasePath + "/%s/functions"
-	KnowledgeBaseDataSourcesPath   = KnowledgeBasePath + "/%s/data_sources"
-	GetKnowledgeBaseByIDPath       = KnowledgeBasePath + "/%s"
-	UpdateKnowledgeBaseByIDPath    = KnowledgeBasePath + "/%s"
-	DeleteKnowledgeBaseByIDPath    = KnowledgeBasePath + "/%s"
-	AgentKnowledgeBasePath         = "/v2/gen-ai/agents" + "/%s/knowledge_bases/%s"
-	DeleteDataSourcePath           = KnowledgeBasePath + "/%s/data_sources/%s"
-	IndexingJobsPath               = "/v2/gen-ai/indexing_jobs"
-	IndexingJobByIDPath            = IndexingJobsPath + "/%s"
-	IndexingJobCancelPath          = IndexingJobsPath + "/%s/cancel"
-	IndexingJobDataSourcesPath     = IndexingJobsPath + "/%s/data_sources"
-	AnthropicAPIKeysPath           = "/v2/gen-ai/anthropic/keys"
-	AnthropicAPIKeyByIDPath        = AnthropicAPIKeysPath + "/%s"
-	OpenAIAPIKeysPath              = "/v2/gen-ai/openai/keys"
-	UpdateFunctionRoutePath        = functionRouteBasePath + "/%s"
-	DeleteFunctionRoutePath        = functionRouteBasePath + "/%s"
-	customModelsBasePath           = "/v2/gen-ai/custom_models"
-	customModelImportPath          = customModelsBasePath + "/import"
-	customModelByIDPath            = customModelsBasePath + "/%s"
-	customModelMetadataPath        = customModelsBasePath + "/%s/metadata"
-	modelEvaluationRunsBasePath    = "/v2/gen-ai/model_evaluation_runs"
-	modelEvaluationRunByIDPath     = modelEvaluationRunsBasePath + "/%s"
-	modelEvaluationRunCancelPath   = modelEvaluationRunsBasePath + "/%s/cancel"
-	modelEvaluationPresetsBasePath = "/v2/gen-ai/model_evaluation_presets"
-	modelEvaluationPresetByIDPath  = modelEvaluationPresetsBasePath + "/%s"
+	gradientBasePath                         = "/v2/gen-ai/agents"
+	agentModelBasePath                       = "/v2/gen-ai/models"
+	inferenceRoutersBasePath                 = agentModelBasePath + "/routers"
+	inferenceRouterTaskPresetsPath           = inferenceRoutersBasePath + "/tasks/presets"
+	datacenterRegionsPath                    = "/v2/gen-ai/regions"
+	agentRouteBasePath                       = gradientBasePath + "/%s/child_agents/%s"
+	KnowledgeBasePath                        = "/v2/gen-ai/knowledge_bases"
+	functionRouteBasePath                    = gradientBasePath + "/%s/functions"
+	KnowledgeBaseDataSourcesPath             = KnowledgeBasePath + "/%s/data_sources"
+	GetKnowledgeBaseByIDPath                 = KnowledgeBasePath + "/%s"
+	UpdateKnowledgeBaseByIDPath              = KnowledgeBasePath + "/%s"
+	DeleteKnowledgeBaseByIDPath              = KnowledgeBasePath + "/%s"
+	AgentKnowledgeBasePath                   = "/v2/gen-ai/agents" + "/%s/knowledge_bases/%s"
+	DeleteDataSourcePath                     = KnowledgeBasePath + "/%s/data_sources/%s"
+	IndexingJobsPath                         = "/v2/gen-ai/indexing_jobs"
+	IndexingJobByIDPath                      = IndexingJobsPath + "/%s"
+	IndexingJobCancelPath                    = IndexingJobsPath + "/%s/cancel"
+	IndexingJobDataSourcesPath               = IndexingJobsPath + "/%s/data_sources"
+	AnthropicAPIKeysPath                     = "/v2/gen-ai/anthropic/keys"
+	AnthropicAPIKeyByIDPath                  = AnthropicAPIKeysPath + "/%s"
+	OpenAIAPIKeysPath                        = "/v2/gen-ai/openai/keys"
+	UpdateFunctionRoutePath                  = functionRouteBasePath + "/%s"
+	DeleteFunctionRoutePath                  = functionRouteBasePath + "/%s"
+	customModelsBasePath                     = "/v2/gen-ai/custom_models"
+	customModelImportPath                    = customModelsBasePath + "/import"
+	customModelByIDPath                      = customModelsBasePath + "/%s"
+	customModelMetadataPath                  = customModelsBasePath + "/%s/metadata"
+	modelEvaluationRunsBasePath              = "/v2/gen-ai/model_evaluation_runs"
+	modelEvaluationRunByIDPath               = modelEvaluationRunsBasePath + "/%s"
+	modelEvaluationRunCancelPath             = modelEvaluationRunsBasePath + "/%s/cancel"
+	modelEvaluationRunResultsDownloadURLPath = modelEvaluationRunsBasePath + "/%s/results/download_url"
+	modelEvaluationPresetsBasePath           = "/v2/gen-ai/model_evaluation_presets"
+	modelEvaluationPresetByIDPath            = modelEvaluationPresetsBasePath + "/%s"
+	modelEvaluationMetricsBasePath           = "/v2/gen-ai/model_evaluation_metrics"
+	modelEvaluationDatasetUploadURLsPath     = "/v2/gen-ai/model_evaluation/datasets/file_upload_presigned_urls"
 )
 
 // CustomModelStatus represents the status of a custom model.
@@ -116,6 +121,26 @@ const (
 	CandidateModelSourceRouter     CandidateModelSource = "CANDIDATE_MODEL_SOURCE_ROUTER"
 )
 
+// ModelEvaluationRunSortField is the field used to sort model evaluation run
+// list results.
+type ModelEvaluationRunSortField string
+
+const (
+	ModelEvaluationRunSortFieldUnspecified ModelEvaluationRunSortField = "MODEL_EVALUATION_RUN_SORT_FIELD_UNSPECIFIED"
+	ModelEvaluationRunSortFieldCreatedAt   ModelEvaluationRunSortField = "MODEL_EVALUATION_RUN_SORT_FIELD_CREATED_AT"
+	ModelEvaluationRunSortFieldStatus      ModelEvaluationRunSortField = "MODEL_EVALUATION_RUN_SORT_FIELD_STATUS"
+)
+
+// ModelEvaluationRunSortDirection is the sort direction for model evaluation
+// run list results.
+type ModelEvaluationRunSortDirection string
+
+const (
+	ModelEvaluationRunSortDirectionUnspecified ModelEvaluationRunSortDirection = "SORT_DIRECTION_UNSPECIFIED"
+	ModelEvaluationRunSortDirectionAsc         ModelEvaluationRunSortDirection = "SORT_DIRECTION_ASC"
+	ModelEvaluationRunSortDirectionDesc        ModelEvaluationRunSortDirection = "SORT_DIRECTION_DESC"
+)
+
 // GradientAIService is an interface for interfacing with the Gradient AI Agent endpoints
 // of the DigitalOcean API.
 // See https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform for more details.
@@ -165,6 +190,12 @@ type GradientAIService interface {
 	CreateFunctionRoute(context.Context, string, *FunctionRouteCreateRequest) (*Agent, *Response, error)
 	DeleteFunctionRoute(context.Context, string, string) (*Agent, *Response, error)
 	UpdateFunctionRoute(context.Context, string, string, *FunctionRouteUpdateRequest) (*Agent, *Response, error)
+	ListInferenceRouters(context.Context, *ListOptions) ([]*InferenceRouterSummary, *Response, error)
+	GetInferenceRouter(context.Context, string) (*InferenceRouter, *Response, error)
+	CreateInferenceRouter(context.Context, *InferenceRouterCreateRequest) (*InferenceRouter, *Response, error)
+	UpdateInferenceRouter(context.Context, string, *InferenceRouterUpdateRequest) (*InferenceRouter, *Response, error)
+	DeleteInferenceRouter(context.Context, string) (*InferenceRouterDeleteResponse, *Response, error)
+	ListInferenceRouterTaskPresets(context.Context, *ListOptions) ([]*InferenceRouterTaskPreset, *Response, error)
 	ListAvailableModels(context.Context, *ListOptions) ([]*Model, *Response, error)
 	SearchModels(context.Context, string) ([]string, *Response, error)
 	GetModelByUUID(context.Context, string) (*Model, *Response, error)
@@ -177,6 +208,14 @@ type GradientAIService interface {
 	DeleteModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunDeleteResponse, *Response, error)
 	DeleteModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetDeleteResponse, *Response, error)
 	CancelModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunCancelResponse, *Response, error)
+	CreateModelEvaluationRun(ctx context.Context, createRequest *CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreateResponse, *Response, error)
+	CreateModelEvalDatasetUploadPresignedURLs(ctx context.Context, createRequest *CreateModelEvalDatasetUploadPresignedURLsRequest) (*CreateModelEvalDatasetUploadPresignedURLsResponse, *Response, error)
+	GetModelEvaluationRun(ctx context.Context, evalRunUUID string, opt *ModelEvaluationRunGetOptions) (*ModelEvaluationRunGetResponse, *Response, error)
+	GetModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetGetResponse, *Response, error)
+	GetModelEvaluationRunResultsDownloadURL(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunResultsDownloadURLResponse, *Response, error)
+	ListModelEvaluationRuns(ctx context.Context, opt *ModelEvaluationRunListOptions) (*ModelEvaluationRunListResponse, *Response, error)
+	ListModelEvaluationPresets(ctx context.Context) (*ModelEvaluationPresetListResponse, *Response, error)
+	ListModelEvaluationMetrics(ctx context.Context) (*ModelEvaluationMetricListResponse, *Response, error)
 }
 
 var _ GradientAIService = &GradientAIServiceOp{}
@@ -940,6 +979,79 @@ type DatacenterRegions struct {
 
 type datacenterRegionsRoot struct {
 	DatacenterRegions []*DatacenterRegions `json:"regions"`
+}
+
+// InferenceRouterSummary is a compact inference router returned from list operations.
+type InferenceRouterSummary struct {
+	UUID        string `json:"uuid,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+// InferenceRouterConfig holds routing configuration for an inference router.
+type InferenceRouterConfig struct {
+	FallbackModels []string        `json:"fallback_models,omitempty"`
+	Policies       json.RawMessage `json:"policies,omitempty"`
+}
+
+// InferenceRouter represents a GenAI inference router resource.
+type InferenceRouter struct {
+	UUID        string                 `json:"uuid,omitempty"`
+	Name        string                 `json:"name,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	CreatedAt   *Timestamp             `json:"created_at,omitempty"`
+	UpdatedAt   *Timestamp             `json:"updated_at,omitempty"`
+	Config      *InferenceRouterConfig `json:"config,omitempty"`
+}
+
+// InferenceRouterCreateRequest defines the body for creating an inference router.
+// Field names match POST /v2/gen-ai/models/routers (see DigitalOcean API / pydo.genai.create_model_router).
+// FallbackModels must contain at least one non-empty model name (enforced by CreateInferenceRouter).
+type InferenceRouterCreateRequest struct {
+	Name           string          `json:"name"`
+	Description    string          `json:"description,omitempty"`
+	Policies       json.RawMessage `json:"policies,omitempty"`
+	FallbackModels []string        `json:"fallback_models"`
+}
+
+// InferenceRouterUpdateRequest defines the body for updating an inference router.
+type InferenceRouterUpdateRequest struct {
+	Name           string           `json:"name,omitempty"`
+	Description    string           `json:"description,omitempty"`
+	Policies       *json.RawMessage `json:"policies,omitempty"`
+	FallbackModels []string         `json:"fallback_models,omitempty"`
+}
+
+// InferenceRouterDeleteResponse is returned when deleting an inference router.
+type InferenceRouterDeleteResponse struct {
+	UUID string `json:"uuid,omitempty"`
+}
+
+// InferenceRouterTaskPreset is a catalog preset task for inference router policies (use TaskSlug in policy JSON).
+// See GET /v2/gen-ai/models/routers/tasks/presets.
+type InferenceRouterTaskPreset struct {
+	TaskSlug    string   `json:"task_slug,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	Category    string   `json:"category,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Models      []string `json:"models,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+}
+
+type inferenceRouterTaskPresetsRoot struct {
+	Tasks []*InferenceRouterTaskPreset `json:"tasks"`
+	Links *Links                       `json:"links,omitempty"`
+	Meta  *Meta                        `json:"meta,omitempty"`
+}
+
+type inferenceRoutersRoot struct {
+	Routers []*InferenceRouterSummary `json:"model_routers"`
+	Links   *Links                    `json:"links,omitempty"`
+	Meta    *Meta                     `json:"meta,omitempty"`
+}
+
+type inferenceRouterRoot struct {
+	Router *InferenceRouter `json:"model_router"`
 }
 
 type gradientAgentKBRoot struct {
@@ -1915,6 +2027,163 @@ func (g *GradientAIServiceOp) UpdateFunctionRoute(ctx context.Context, agent_id 
 	return root.Agent, resp, nil
 }
 
+// ListInferenceRouters returns a page of inference routers.
+func (s *GradientAIServiceOp) ListInferenceRouters(ctx context.Context, opt *ListOptions) ([]*InferenceRouterSummary, *Response, error) {
+	path, err := addOptions(inferenceRoutersBasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(inferenceRoutersRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
+	}
+
+	return root.Routers, resp, nil
+}
+
+// ListInferenceRouterTaskPresets returns a page of preset tasks for building inference router policies.
+func (s *GradientAIServiceOp) ListInferenceRouterTaskPresets(ctx context.Context, opt *ListOptions) ([]*InferenceRouterTaskPreset, *Response, error) {
+	path, err := addOptions(inferenceRouterTaskPresetsPath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(inferenceRouterTaskPresetsRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
+	}
+
+	return root.Tasks, resp, nil
+}
+
+// GetInferenceRouter retrieves an inference router by UUID.
+func (s *GradientAIServiceOp) GetInferenceRouter(ctx context.Context, uuid string) (*InferenceRouter, *Response, error) {
+	if uuid == "" {
+		return nil, nil, fmt.Errorf("uuid is required")
+	}
+
+	path := fmt.Sprintf("%s/%s", inferenceRoutersBasePath, uuid)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(inferenceRouterRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Router, resp, nil
+}
+
+// CreateInferenceRouter creates a new inference router.
+func (s *GradientAIServiceOp) CreateInferenceRouter(ctx context.Context, create *InferenceRouterCreateRequest) (*InferenceRouter, *Response, error) {
+	if create == nil {
+		return nil, nil, fmt.Errorf("create request is required")
+	}
+	if create.Name == "" {
+		return nil, nil, fmt.Errorf("name is required")
+	}
+	if len(create.FallbackModels) == 0 {
+		return nil, nil, fmt.Errorf("fallback_models is required")
+	}
+	for i, m := range create.FallbackModels {
+		if strings.TrimSpace(m) == "" {
+			return nil, nil, fmt.Errorf("fallback_models[%d] must not be empty", i)
+		}
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, inferenceRoutersBasePath, create)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(inferenceRouterRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Router, resp, nil
+}
+
+// UpdateInferenceRouter updates an inference router. At least one field in the update request must be set.
+func (s *GradientAIServiceOp) UpdateInferenceRouter(ctx context.Context, uuid string, update *InferenceRouterUpdateRequest) (*InferenceRouter, *Response, error) {
+	if uuid == "" {
+		return nil, nil, fmt.Errorf("uuid is required")
+	}
+	if update == nil {
+		return nil, nil, fmt.Errorf("update request is required")
+	}
+	if update.Name == "" && update.Description == "" && update.Policies == nil && len(update.FallbackModels) == 0 {
+		return nil, nil, fmt.Errorf("at least one of name, description, policies, or fallback_models must be set")
+	}
+
+	path := fmt.Sprintf("%s/%s", inferenceRoutersBasePath, uuid)
+	req, err := s.client.NewRequest(ctx, http.MethodPut, path, update)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(inferenceRouterRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Router, resp, nil
+}
+
+// DeleteInferenceRouter deletes an inference router by UUID.
+func (s *GradientAIServiceOp) DeleteInferenceRouter(ctx context.Context, uuid string) (*InferenceRouterDeleteResponse, *Response, error) {
+	if uuid == "" {
+		return nil, nil, fmt.Errorf("uuid is required")
+	}
+
+	path := fmt.Sprintf("%s/%s", inferenceRoutersBasePath, uuid)
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	out := new(InferenceRouterDeleteResponse)
+	resp, err := s.client.Do(ctx, req, out)
+	if err != nil {
+		return nil, resp, err
+	}
+	if out.UUID == "" {
+		out.UUID = uuid
+	}
+
+	return out, resp, nil
+}
+
 // ListAvailableModels returns a list of available Gradient AI models
 func (g *GradientAIServiceOp) ListAvailableModels(ctx context.Context, opt *ListOptions) ([]*Model, *Response, error) {
 	path, err := addOptions(agentModelBasePath, opt)
@@ -2100,9 +2369,13 @@ type CustomModelImportRequest struct {
 
 // CustomModelMetadataUpdateRequest is the request body for updating custom model metadata.
 type CustomModelMetadataUpdateRequest struct {
-	Name        string           `json:"name,omitempty"`
-	Description string           `json:"description,omitempty"`
-	Tags        *CustomModelTags `json:"tags,omitempty"`
+	Name             string           `json:"name,omitempty"`
+	Description      string           `json:"description,omitempty"`
+	Tags             *CustomModelTags `json:"tags,omitempty"`
+	InputModalities  []string         `json:"input_modalities,omitempty"`
+	OutputModalities []string         `json:"output_modalities,omitempty"`
+	Parameters       string           `json:"parameters,omitempty"`
+	License          string           `json:"license,omitempty"`
 }
 
 // CustomModelListResponse is the response returned by ListCustomModels.
@@ -2333,7 +2606,466 @@ func (s *GradientAIServiceOp) CancelModelEvaluationRun(ctx context.Context, eval
 	return root, resp, nil
 }
 
-// UpdateCustomModelMetadata updates the metadata (description, tags, name) of an existing custom model.
+// CandidateInferenceConfig is the inference configuration applied to the
+// candidate model when running a model evaluation run.
+type CandidateInferenceConfig struct {
+	MaxTokens    int64   `json:"max_tokens,omitempty"`
+	StopToken    string  `json:"stop_token,omitempty"`
+	SystemPrompt string  `json:"system_prompt,omitempty"`
+	Temperature  float32 `json:"temperature,omitempty"`
+}
+
+// PresignedUrlFile describes a single file for which a presigned upload URL is
+// requested when uploading a model evaluation dataset.
+type PresignedUrlFile struct {
+	FileName string `json:"file_name,omitempty"`
+	FileSize string `json:"file_size,omitempty"`
+}
+
+// FilePresignedUrlResponse describes the presigned URL details returned for a
+// single requested file.
+type FilePresignedUrlResponse struct {
+	ExpiresAt        *Timestamp `json:"expires_at,omitempty"`
+	ObjectKey        string     `json:"object_key,omitempty"`
+	OriginalFileName string     `json:"original_file_name,omitempty"`
+	PresignedURL     string     `json:"presigned_url,omitempty"`
+}
+
+// CreateModelEvalDatasetUploadPresignedURLsRequest is the request body for
+// creating presigned URLs for uploading model evaluation dataset files.
+type CreateModelEvalDatasetUploadPresignedURLsRequest struct {
+	Files []*PresignedUrlFile `json:"files,omitempty"`
+}
+
+// CreateModelEvalDatasetUploadPresignedURLsResponse is the response returned by
+// CreateModelEvalDatasetUploadPresignedURLs.
+type CreateModelEvalDatasetUploadPresignedURLsResponse struct {
+	RequestID string                      `json:"request_id,omitempty"`
+	Uploads   []*FilePresignedUrlResponse `json:"uploads,omitempty"`
+}
+
+// CreateModelEvaluationRunRequest is the request body for creating a model
+// evaluation run.
+type CreateModelEvaluationRunRequest struct {
+	CandidateInferenceConfig *CandidateInferenceConfig `json:"candidate_inference_config,omitempty"`
+	CandidateModelName       string                    `json:"candidate_model_name,omitempty"`
+	CandidateModelSource     CandidateModelSource      `json:"candidate_model_source,omitempty"`
+	CandidateModelUUID       string                    `json:"candidate_model_uuid,omitempty"`
+	DatasetUUID              string                    `json:"dataset_uuid,omitempty"`
+	EvalPresetUUID           string                    `json:"eval_preset_uuid,omitempty"`
+	JudgeModelUUID           string                    `json:"judge_model_uuid,omitempty"`
+	MetricUUIDs              []string                  `json:"metric_uuids,omitempty"`
+	Name                     string                    `json:"name,omitempty"`
+	PresetName               string                    `json:"preset_name,omitempty"`
+	SaveAsPreset             bool                      `json:"save_as_preset,omitempty"`
+	Source                   string                    `json:"source,omitempty"`
+	StarMetric               *StarMetric               `json:"star_metric,omitempty"`
+}
+
+// ModelEvaluationRunCreateResponse is the response returned by
+// CreateModelEvaluationRun.
+type ModelEvaluationRunCreateResponse struct {
+	EvalRunUuid string `json:"eval_run_uuid,omitempty"`
+}
+
+// ModelEvaluationPreset is a saved, reusable configuration for model
+// evaluation runs.
+type ModelEvaluationPreset struct {
+	CreatedAt      *Timestamp          `json:"created_at,omitempty"`
+	DatasetName    string              `json:"dataset_name,omitempty"`
+	DatasetUuid    string              `json:"dataset_uuid,omitempty"`
+	EvalPresetUuid string              `json:"eval_preset_uuid,omitempty"`
+	JudgeModelName string              `json:"judge_model_name,omitempty"`
+	JudgeModelUuid string              `json:"judge_model_uuid,omitempty"`
+	Metrics        []*EvaluationMetric `json:"metrics,omitempty"`
+	Name           string              `json:"name,omitempty"`
+	StarMetric     *StarMetric         `json:"star_metric,omitempty"`
+}
+
+// MetricResultSummary represents per-metric aggregated pass/fail statistics
+// across all prompts in an evaluation run.
+type MetricResultSummary struct {
+	Description string  `json:"description,omitempty"`
+	FailPercent float64 `json:"fail_percent,omitempty"`
+	MetricName  string  `json:"metric_name,omitempty"`
+	MetricUuid  string  `json:"metric_uuid,omitempty"`
+	PassPercent float64 `json:"pass_percent,omitempty"`
+}
+
+// LatencyMetrics contains latency metrics for candidate model invocations,
+// expressed in milliseconds.
+type LatencyMetrics struct {
+	AvgE2ELatencyMs float64 `json:"avg_e2e_latency_ms,omitempty"`
+	MaxE2ELatencyMs float64 `json:"max_e2e_latency_ms,omitempty"`
+	MinE2ELatencyMs float64 `json:"min_e2e_latency_ms,omitempty"`
+	P50LatencyMs    float64 `json:"p50_latency_ms,omitempty"`
+	P90LatencyMs    float64 `json:"p90_latency_ms,omitempty"`
+	P95LatencyMs    float64 `json:"p95_latency_ms,omitempty"`
+}
+
+// TokenUsage contains aggregated token usage statistics for an evaluation run.
+type TokenUsage struct {
+	TotalCandidateInputTokens  string `json:"total_candidate_input_tokens,omitempty"`
+	TotalCandidateOutputTokens string `json:"total_candidate_output_tokens,omitempty"`
+	TotalCandidateTokens       string `json:"total_candidate_tokens,omitempty"`
+	TotalJudgeInputTokens      string `json:"total_judge_input_tokens,omitempty"`
+	TotalJudgeOutputTokens     string `json:"total_judge_output_tokens,omitempty"`
+	TotalJudgeTokens           string `json:"total_judge_tokens,omitempty"`
+}
+
+// PerformanceMetrics contains performance metrics (latency and token usage)
+// for an evaluation run. All performance metrics are for the candidate model
+// unless noted otherwise.
+type PerformanceMetrics struct {
+	CandidateLatency *LatencyMetrics `json:"candidate_latency,omitempty"`
+	TokenUsage       *TokenUsage     `json:"token_usage,omitempty"`
+}
+
+// TokenPricing contains the token pricing breakdown for a single model.
+type TokenPricing struct {
+	InputCost  float64 `json:"input_cost,omitempty"`
+	OutputCost float64 `json:"output_cost,omitempty"`
+	TotalCost  float64 `json:"total_cost,omitempty"`
+}
+
+// ModelPricingEntry contains the pricing entry for a specific model used in
+// an evaluation run.
+type ModelPricingEntry struct {
+	ModelName   string        `json:"model_name,omitempty"`
+	ModelUuid   string        `json:"model_uuid,omitempty"`
+	Pricing     *TokenPricing `json:"pricing,omitempty"`
+	PromptCount int64         `json:"prompt_count,omitempty"`
+}
+
+// EvaluationPricing contains the pricing breakdown for an evaluation run.
+type EvaluationPricing struct {
+	Currency                 string               `json:"currency,omitempty"`
+	JudgeModelPricing        *TokenPricing        `json:"judge_model_pricing,omitempty"`
+	PerCandidateModelPricing []*ModelPricingEntry `json:"per_candidate_model_pricing,omitempty"`
+	TotalCost                float64              `json:"total_cost,omitempty"`
+}
+
+// StarMetricSummary contains the star metric summary with identifying details
+// and threshold for an evaluation run.
+type StarMetricSummary struct {
+	MetricName string  `json:"metric_name,omitempty"`
+	MetricUuid string  `json:"metric_uuid,omitempty"`
+	Threshold  float32 `json:"threshold,omitempty"`
+}
+
+// PerModelResultSummary represents a per-model breakdown of evaluation
+// results for router evaluations.
+type PerModelResultSummary struct {
+	MetricSummaries    []*MetricResultSummary `json:"metric_summaries,omitempty"`
+	ModelName          string                 `json:"model_name,omitempty"`
+	PerformanceMetrics *PerformanceMetrics    `json:"performance_metrics,omitempty"`
+	PromptCount        int64                  `json:"prompt_count,omitempty"`
+}
+
+// PerModelResultSummaries wraps the per-model summaries used inside a
+// ModelEvaluationRunResultSummary.
+type PerModelResultSummaries struct {
+	Summaries []*PerModelResultSummary `json:"summaries,omitempty"`
+}
+
+// ModelEvaluationRunResultSummary contains the aggregated result summary for
+// a completed model evaluation run.
+type ModelEvaluationRunResultSummary struct {
+	EndTime              *Timestamp               `json:"end_time,omitempty"`
+	MetricSummaries      []*MetricResultSummary   `json:"metric_summaries,omitempty"`
+	OverallScorePercent  float64                  `json:"overall_score_percent,omitempty"`
+	PerModelSummaries    *PerModelResultSummaries `json:"per_model_summaries,omitempty"`
+	PerformanceMetrics   *PerformanceMetrics      `json:"performance_metrics,omitempty"`
+	Pricing              *EvaluationPricing       `json:"pricing,omitempty"`
+	StarMetricSummary    *StarMetricSummary       `json:"star_metric_summary,omitempty"`
+	StartTime            *Timestamp               `json:"start_time,omitempty"`
+	TotalDurationSeconds int64                    `json:"total_duration_seconds,omitempty"`
+}
+
+// ModelEvaluationRunDetail is the full view of a model evaluation run
+// returned when fetching a specific run.
+type ModelEvaluationRunDetail struct {
+	CandidateInferenceConfig *CandidateInferenceConfig        `json:"candidate_inference_config,omitempty"`
+	CandidateModelName       string                           `json:"candidate_model_name,omitempty"`
+	CandidateModelSource     CandidateModelSource             `json:"candidate_model_source,omitempty"`
+	CandidateModelUuid       string                           `json:"candidate_model_uuid,omitempty"`
+	CompletedAt              *Timestamp                       `json:"completed_at,omitempty"`
+	CreatedAt                *Timestamp                       `json:"created_at,omitempty"`
+	DatasetName              string                           `json:"dataset_name,omitempty"`
+	DatasetUuid              string                           `json:"dataset_uuid,omitempty"`
+	ErrorDescription         string                           `json:"error_description,omitempty"`
+	EvalPresetName           string                           `json:"eval_preset_name,omitempty"`
+	EvalPresetUuid           string                           `json:"eval_preset_uuid,omitempty"`
+	EvalRunUuid              string                           `json:"eval_run_uuid,omitempty"`
+	JudgeModelName           string                           `json:"judge_model_name,omitempty"`
+	JudgeModelUuid           string                           `json:"judge_model_uuid,omitempty"`
+	Metrics                  []*EvaluationMetric              `json:"metrics,omitempty"`
+	Name                     string                           `json:"name,omitempty"`
+	ResultSummary            *ModelEvaluationRunResultSummary `json:"result_summary,omitempty"`
+	StarMetric               *StarMetric                      `json:"star_metric,omitempty"`
+	StartedAt                *Timestamp                       `json:"started_at,omitempty"`
+	Status                   ModelEvaluationRunStatus         `json:"status,omitempty"`
+}
+
+// ModelEvaluationMetricResult represents the per-metric score and judge
+// reasoning for a single prompt in an evaluation run.
+type ModelEvaluationMetricResult struct {
+	ErrorDescription string                    `json:"error_description,omitempty"`
+	MetricName       string                    `json:"metric_name,omitempty"`
+	MetricValueType  EvaluationMetricValueType `json:"metric_value_type,omitempty"`
+	NumberValue      float64                   `json:"number_value,omitempty"`
+	Reasoning        string                    `json:"reasoning,omitempty"`
+	StringValue      string                    `json:"string_value,omitempty"`
+}
+
+// ModelEvaluationResult represents the per-prompt result for a model
+// evaluation run.
+type ModelEvaluationResult struct {
+	CandidateModelName string                         `json:"candidate_model_name,omitempty"`
+	CandidateModelUuid string                         `json:"candidate_model_uuid,omitempty"`
+	GroundTruth        string                         `json:"ground_truth,omitempty"`
+	Input              string                         `json:"input,omitempty"`
+	MetricResults      []*ModelEvaluationMetricResult `json:"metric_results,omitempty"`
+	Output             string                         `json:"output,omitempty"`
+}
+
+// ModelEvaluationRunGetOptions specifies optional pagination parameters for
+// the per-prompt results returned by GetModelEvaluationRun.
+type ModelEvaluationRunGetOptions struct {
+	Page    int `url:"page,omitempty"`
+	PerPage int `url:"per_page,omitempty"`
+}
+
+// ModelEvaluationRunGetResponse is the response returned by
+// GetModelEvaluationRun. It contains the run detail and a paginated list of
+// per-prompt evaluation results.
+type ModelEvaluationRunGetResponse struct {
+	Run     *ModelEvaluationRunDetail `json:"run,omitempty"`
+	Results []*ModelEvaluationResult  `json:"results,omitempty"`
+	Links   *Links                    `json:"links,omitempty"`
+	Meta    *Meta                     `json:"meta,omitempty"`
+}
+
+// ModelEvaluationPresetGetResponse is the response returned by
+// GetModelEvaluationPreset.
+type ModelEvaluationPresetGetResponse struct {
+	Preset *ModelEvaluationPreset `json:"preset,omitempty"`
+}
+
+// ModelEvaluationRunResultsDownloadURLResponse is the response returned by
+// GetModelEvaluationRunResultsDownloadURL. It contains a presigned URL pointing
+// to the gzip-compressed JSON results file.
+type ModelEvaluationRunResultsDownloadURLResponse struct {
+	DownloadURL string     `json:"download_url,omitempty"`
+	ExpiresAt   *Timestamp `json:"expires_at,omitempty"`
+}
+
+// ModelEvaluationRunListOptions specifies optional parameters for listing
+// model evaluation runs.
+type ModelEvaluationRunListOptions struct {
+	EvalPresetUUID string                          `url:"eval_preset_uuid,omitempty"`
+	Status         ModelEvaluationRunStatus        `url:"status,omitempty"`
+	Statuses       []ModelEvaluationRunStatus      `url:"statuses,omitempty"`
+	CandidateTypes []CandidateModelSource          `url:"candidate_types,omitempty"`
+	Search         string                          `url:"search,omitempty"`
+	SortBy         ModelEvaluationRunSortField     `url:"sort_by,omitempty"`
+	SortDirection  ModelEvaluationRunSortDirection `url:"sort_direction,omitempty"`
+	ListOptions
+}
+
+// ModelEvaluationRunListResponse is the response returned by
+// ListModelEvaluationRuns.
+type ModelEvaluationRunListResponse struct {
+	Runs  []*ModelEvaluationRunSummary `json:"runs,omitempty"`
+	Links *Links                       `json:"links,omitempty"`
+	Meta  *Meta                        `json:"meta,omitempty"`
+}
+
+// ModelEvaluationPresetListResponse is the response returned by
+// ListModelEvaluationPresets.
+type ModelEvaluationPresetListResponse struct {
+	Presets []*ModelEvaluationPreset `json:"presets,omitempty"`
+}
+
+// ModelEvaluationMetricListResponse is the response returned by
+// ListModelEvaluationMetrics.
+type ModelEvaluationMetricListResponse struct {
+	Metrics []*EvaluationMetric `json:"metrics,omitempty"`
+}
+
+// CreateModelEvaluationRun creates a new model evaluation run.
+func (s *GradientAIServiceOp) CreateModelEvaluationRun(ctx context.Context, createRequest *CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreateResponse, *Response, error) {
+	if createRequest == nil {
+		return nil, nil, fmt.Errorf("create request is required")
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, modelEvaluationRunsBasePath, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelEvaluationRunCreateResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// CreateModelEvalDatasetUploadPresignedURLs creates presigned URLs that can be
+// used to upload model evaluation dataset files.
+func (s *GradientAIServiceOp) CreateModelEvalDatasetUploadPresignedURLs(ctx context.Context, createRequest *CreateModelEvalDatasetUploadPresignedURLsRequest) (*CreateModelEvalDatasetUploadPresignedURLsResponse, *Response, error) {
+	if createRequest == nil {
+		return nil, nil, fmt.Errorf("create request is required")
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, modelEvaluationDatasetUploadURLsPath, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(CreateModelEvalDatasetUploadPresignedURLsResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// GetModelEvaluationRun retrieves a model evaluation run by UUID. Optional
+// pagination options control the per-prompt results page returned alongside
+// the run detail.
+func (s *GradientAIServiceOp) GetModelEvaluationRun(ctx context.Context, evalRunUUID string, opt *ModelEvaluationRunGetOptions) (*ModelEvaluationRunGetResponse, *Response, error) {
+	if evalRunUUID == "" {
+		return nil, nil, fmt.Errorf("eval run uuid is required")
+	}
+	path := fmt.Sprintf(modelEvaluationRunByIDPath, evalRunUUID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelEvaluationRunGetResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
+	}
+	return root, resp, nil
+}
+
+// GetModelEvaluationPreset retrieves a saved model evaluation preset by UUID.
+func (s *GradientAIServiceOp) GetModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetGetResponse, *Response, error) {
+	if evalPresetUUID == "" {
+		return nil, nil, fmt.Errorf("eval preset uuid is required")
+	}
+	path := fmt.Sprintf(modelEvaluationPresetByIDPath, evalPresetUUID)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelEvaluationPresetGetResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// GetModelEvaluationRunResultsDownloadURL returns a presigned download URL
+// (gzip-compressed JSON) for a model evaluation run's results.
+func (s *GradientAIServiceOp) GetModelEvaluationRunResultsDownloadURL(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunResultsDownloadURLResponse, *Response, error) {
+	if evalRunUUID == "" {
+		return nil, nil, fmt.Errorf("eval run uuid is required")
+	}
+	path := fmt.Sprintf(modelEvaluationRunResultsDownloadURLPath, evalRunUUID)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelEvaluationRunResultsDownloadURLResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// ListModelEvaluationRuns lists model evaluation runs. Results can be filtered
+// by preset UUID, status (single or multiple), candidate model source types,
+// and a free-text search across run, candidate model, and dataset names. The
+// result set can also be sorted via SortBy / SortDirection.
+func (s *GradientAIServiceOp) ListModelEvaluationRuns(ctx context.Context, opt *ModelEvaluationRunListOptions) (*ModelEvaluationRunListResponse, *Response, error) {
+	path, err := addOptions(modelEvaluationRunsBasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelEvaluationRunListResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
+	}
+	return root, resp, nil
+}
+
+// ListModelEvaluationPresets lists all saved model evaluation presets.
+func (s *GradientAIServiceOp) ListModelEvaluationPresets(ctx context.Context) (*ModelEvaluationPresetListResponse, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, modelEvaluationPresetsBasePath, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelEvaluationPresetListResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// ListModelEvaluationMetrics lists all available metrics that can be selected
+// when creating a model evaluation run.
+func (s *GradientAIServiceOp) ListModelEvaluationMetrics(ctx context.Context) (*ModelEvaluationMetricListResponse, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, modelEvaluationMetricsBasePath, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelEvaluationMetricListResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// UpdateCustomModelMetadata updates the metadata of an existing custom model.
 func (s *GradientAIServiceOp) UpdateCustomModelMetadata(ctx context.Context, uuid string, updateRequest *CustomModelMetadataUpdateRequest) (*CustomModel, *Response, error) {
 	if uuid == "" {
 		return nil, nil, fmt.Errorf("uuid is required")
@@ -2390,4 +3122,20 @@ func (a IndexingJobResponse) String() string {
 
 func (a IndexingJobDataSourcesResponse) String() string {
 	return Stringify(a)
+}
+
+func (r InferenceRouterSummary) String() string {
+	return Stringify(r)
+}
+
+func (r InferenceRouter) String() string {
+	return Stringify(r)
+}
+
+func (r InferenceRouterConfig) String() string {
+	return Stringify(r)
+}
+
+func (r InferenceRouterDeleteResponse) String() string {
+	return Stringify(r)
 }
