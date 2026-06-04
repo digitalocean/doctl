@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.194.1] - 2026-06-03
+
+- #1023 - @SSharma-10 - godo beta release
+- #1024 - @venkatranabothu - Add Spaces editable fields to Custom Model metadata
+- #1019 - @ritheek-pitti-do - Added evals endpoints
+- #1017 - @d-isaacson - Add inference router APIs
+
 ## [1.193.0] - 2026-05-26
 
 - #1015 - @nbhoot157 - Add VectorDBs service for vector database API support
