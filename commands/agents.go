@@ -34,7 +34,6 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
 )
 
 // Agents creates the `doctl agents` command tree.
@@ -53,12 +52,12 @@ A session is one long-lived agent process (Claude Code, OpenCode, ...) running i
 
 	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start",
 		"Start a new agent session",
-		`Creates a new agent session from an agent spec file and prints its session id and status.
+		`Creates a new agent session from an agent manifest file and prints its session id and status.
 
-The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML or JSON file describing the session. The server parses and validates the spec — all session configuration (agent kind, repo hint, idle timeout, etc.) lives in the file.`,
+The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. The manifest is sent verbatim to the server, which owns parsing and validation.`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin.`, requiredOpt())
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml`
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session-id>",
@@ -101,25 +100,53 @@ Type `+"`"+`/help`+"`"+` once attached to see the inline command list. Pending H
 
 // --- runners ----------------------------------------------------------------
 
-// RunAgentsStart creates a new hosted agent session from a spec file.
-//
-// v0 only supports `--spec <path>`. The file is parsed locally into a
-// godo.HostedAgentSessionCreateRequest and POSTed as JSON.
+// RunAgentsStart creates a new hosted agent session by uploading an agent
+// manifest verbatim.
 func RunAgentsStart(c *CmdConfig) error {
 	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
 		return err
 	}
-	req, err := readAgentSpec(os.Stdin, specPath)
+
+	manifest, err := readManifest(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
 
-	sess, err := c.HostedAgents().CreateSession(req)
+	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest)
 	if err != nil {
 		return err
 	}
 	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}})
+}
+
+// readManifest returns the spec file as raw bytes. path "-" reads from stdin.
+// The only client-side validation is "non-empty after trim" so a stray
+// `--spec /dev/null` fails fast instead of hitting the server.
+func readManifest(stdin io.Reader, path string) ([]byte, error) {
+	var src io.Reader
+	if path == "-" && stdin != nil {
+		src = stdin
+	} else {
+		f, err := os.Open(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("opening manifest: %s does not exist", path)
+			}
+			return nil, fmt.Errorf("opening manifest: %w", err)
+		}
+		defer f.Close()
+		src = f
+	}
+
+	raw, err := io.ReadAll(src)
+	if err != nil {
+		return nil, fmt.Errorf("reading manifest: %w", err)
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return nil, fmt.Errorf("manifest is empty")
+	}
+	return raw, nil
 }
 
 // RunAgentsList lists hosted agent sessions visible to the caller.
@@ -492,42 +519,4 @@ func renderHITLRequest(w io.Writer, req godo.HostedAgentHITLRequest) {
 	}
 	fmt.Fprintf(w, "  request_id: %s\n", req.RequestID)
 	fmt.Fprintf(w, "  (resolve with `/a %s`, `/r %s`, or `/d %s`)\n", req.RequestID, req.RequestID, req.RequestID)
-}
-
-// readAgentSpec reads a hosted-agent session spec from a file path (or stdin
-// when path is "-"), normalizes YAML to JSON, and strictly decodes it into a
-// godo.HostedAgentSessionCreateRequest.
-func readAgentSpec(stdin io.Reader, path string) (*godo.HostedAgentSessionCreateRequest, error) {
-	var src io.Reader
-	if path == "-" && stdin != nil {
-		src = stdin
-	} else {
-		f, err := os.Open(path)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, fmt.Errorf("opening spec: %s does not exist", path)
-			}
-			return nil, fmt.Errorf("opening spec: %w", err)
-		}
-		defer f.Close()
-		src = f
-	}
-
-	raw, err := io.ReadAll(src)
-	if err != nil {
-		return nil, fmt.Errorf("reading spec: %w", err)
-	}
-
-	jsonBytes, err := yaml.YAMLToJSON(raw)
-	if err != nil {
-		return nil, fmt.Errorf("parsing spec: %w", err)
-	}
-	dec := json.NewDecoder(bytes.NewReader(jsonBytes))
-	dec.DisallowUnknownFields()
-
-	var req godo.HostedAgentSessionCreateRequest
-	if err := dec.Decode(&req); err != nil {
-		return nil, fmt.Errorf("parsing spec: %w", err)
-	}
-	return &req, nil
 }

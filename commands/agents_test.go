@@ -25,6 +25,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const sampleManifest = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+metadata:
+  name: test-agent
+spec:
+  adapter: opencode
+`
+
 func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
@@ -56,69 +64,57 @@ func TestAgents_helpers(t *testing.T) {
 	})
 }
 
-func TestReadAgentSpec(t *testing.T) {
-	t.Run("yaml from file", func(t *testing.T) {
+func TestReadManifest(t *testing.T) {
+	t.Run("from file", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "agent.yaml")
-		err := os.WriteFile(path, []byte(`agent_kind: AGENT_KIND_CLAUDE_CODE
-repo_hint: acme/payments
-idle_timeout_seconds: 3600
-`), 0o644)
-		assert.NoError(t, err)
+		assert.NoError(t, os.WriteFile(path, []byte(sampleManifest), 0o644))
 
-		req, err := readAgentSpec(nil, path)
+		raw, err := readManifest(nil, path)
 		assert.NoError(t, err)
-		assert.Equal(t, godo.HostedAgentKindClaudeCode, req.AgentKind)
-		assert.Equal(t, "acme/payments", req.RepoHint)
-		assert.Equal(t, int64(3600), req.IdleTimeoutSeconds)
+		assert.Equal(t, sampleManifest, string(raw))
 	})
 
-	t.Run("json from stdin", func(t *testing.T) {
-		req, err := readAgentSpec(strings.NewReader(`{"agent_kind":"AGENT_KIND_OPENCODE","repo_hint":"foo/bar"}`), "-")
+	t.Run("from stdin", func(t *testing.T) {
+		raw, err := readManifest(strings.NewReader(sampleManifest), "-")
 		assert.NoError(t, err)
-		assert.Equal(t, godo.HostedAgentKindOpenCode, req.AgentKind)
-		assert.Equal(t, "foo/bar", req.RepoHint)
-	})
-
-	t.Run("unknown field is rejected", func(t *testing.T) {
-		_, err := readAgentSpec(strings.NewReader(`agent_kind: AGENT_KIND_CLAUDE_CODE
-mystery: yes
-`), "-")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "mystery")
+		assert.Equal(t, sampleManifest, string(raw))
 	})
 
 	t.Run("missing file", func(t *testing.T) {
-		_, err := readAgentSpec(nil, filepath.Join(t.TempDir(), "nope.yaml"))
+		_, err := readManifest(nil, filepath.Join(t.TempDir(), "nope.yaml"))
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "does not exist")
 	})
+
+	t.Run("empty manifest", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "empty.yaml")
+		assert.NoError(t, os.WriteFile(path, []byte("   \n  \t\n"), 0o644))
+
+		_, err := readManifest(nil, path)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "empty")
+	})
 }
 
-// TestRunAgentsStart drives the spec-only path: the yaml on disk is parsed and
-// the resulting create request is sent to godo verbatim.
+// TestRunAgentsStart covers --spec on disk uploaded as a raw application/x-yaml
+// body via CreateSessionFromManifest.
 func TestRunAgentsStart(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
-	err := os.WriteFile(specPath, []byte(`agent_kind: AGENT_KIND_OPENCODE
-repo_hint: spec/repo
-idle_timeout_seconds: 1800
-`), 0o644)
-	assert.NoError(t, err)
+	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		want := &godo.HostedAgentSessionCreateRequest{
-			AgentKind:          godo.HostedAgentKindOpenCode,
-			RepoHint:           "spec/repo",
-			IdleTimeoutSeconds: 1800,
-		}
-		tm.hostedAgents.EXPECT().CreateSession(want).Return(&do.HostedAgentSession{
-			HostedAgentSession: &godo.HostedAgentSession{
-				SessionID: "sess_test",
-				AgentKind: godo.HostedAgentKindOpenCode,
-				Status:    godo.HostedAgentSessionStatusReady,
-			},
-		}, nil)
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest([]byte(sampleManifest)).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					AgentKind: godo.HostedAgentKindOpenCode,
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		assert.NoError(t, RunAgentsStart(config))

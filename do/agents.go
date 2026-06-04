@@ -28,7 +28,9 @@ type HostedAgentSession struct {
 // It folds (response, err) into err and uses context.TODO() so command runners
 // stay terse, matching the pattern used by every other do/* service.
 type HostedAgentsService interface {
-	CreateSession(*godo.HostedAgentSessionCreateRequest) (*HostedAgentSession, error)
+	// CreateSessionFromManifest POSTs the manifest bytes verbatim with
+	// Content-Type: application/x-yaml. Server owns schema validation.
+	CreateSessionFromManifest(manifest []byte) (*HostedAgentSession, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
 	DestroySession(sessionID string) error
@@ -48,8 +50,8 @@ func NewHostedAgentsService(client *godo.Client) HostedAgentsService {
 	return &hostedAgentsService{client: client}
 }
 
-func (s *hostedAgentsService) CreateSession(r *godo.HostedAgentSessionCreateRequest) (*HostedAgentSession, error) {
-	sess, _, err := s.client.HostedAgents.CreateSession(context.TODO(), r)
+func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.CreateSessionFromManifest(context.TODO(), manifest)
 	if err != nil {
 		return nil, err
 	}

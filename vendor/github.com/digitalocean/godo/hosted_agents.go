@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,8 @@ import (
 )
 
 const (
+	hostedAgentManifestMediaType = "application/x-yaml"
+
 	hostedAgentsSessionsBasePath      = "/v2/agents/sessions"
 	hostedAgentSessionByIDPath        = hostedAgentsSessionsBasePath + "/%s"
 	hostedAgentSessionStreamPath      = hostedAgentSessionByIDPath + "/stream"
@@ -23,7 +26,13 @@ const (
 // HostedAgentsService exposes the DigitalOcean Hosted Agents session API
 // (HarnessAPI from harness.proto). Routes live under /v2/agents/sessions.
 type HostedAgentsService interface {
+	// CreateSession provisions a session using the legacy JSON body (agent_kind,
+	// repo_hint, idle_timeout_seconds). Prefer CreateSessionFromManifest for the
+	// agents.digitalocean.com/v1alpha1 Agent manifest.
 	CreateSession(context.Context, *HostedAgentSessionCreateRequest) (*HostedAgentSession, *Response, error)
+	// CreateSessionFromManifest uploads a customer Agent manifest YAML document.
+	// The request uses Content-Type: application/x-yaml.
+	CreateSessionFromManifest(context.Context, []byte) (*HostedAgentSession, *Response, error)
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
@@ -285,6 +294,44 @@ func (s *HostedAgentsServiceOp) CreateSession(ctx context.Context, create *Hoste
 		return nil, resp, errors.New("hosted agents: create session returned no session")
 	}
 	return root.Session, resp, nil
+}
+
+func (s *HostedAgentsServiceOp) CreateSessionFromManifest(ctx context.Context, manifest []byte) (*HostedAgentSession, *Response, error) {
+	if len(bytes.TrimSpace(manifest)) == 0 {
+		return nil, nil, errors.New("hosted agents: manifest is required")
+	}
+	req, err := s.newCreateSessionPostRequest(ctx, bytes.NewReader(manifest), hostedAgentManifestMediaType)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.doCreateSession(ctx, req)
+}
+
+func (s *HostedAgentsServiceOp) doCreateSession(ctx context.Context, req *http.Request) (*HostedAgentSession, *Response, error) {
+	root := new(hostedAgentSessionRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if root.Session == nil {
+		return nil, resp, errors.New("hosted agents: create session returned no session")
+	}
+	return root.Session, resp, nil
+}
+
+func (s *HostedAgentsServiceOp) newCreateSessionPostRequest(ctx context.Context, body io.Reader, contentType string) (*http.Request, error) {
+	u, err := s.client.BaseURL.Parse(hostedAgentsSessionsBasePath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Accept", mediaType)
+	req.Header.Set("User-Agent", s.client.UserAgent)
+	return req, nil
 }
 
 // ListSessions returns sessions visible to the caller's team.

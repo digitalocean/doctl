@@ -36,19 +36,19 @@ func (m *MockHostedAgentsService) EXPECT() *MockHostedAgentsServiceMockRecorder 
 	return m.recorder
 }
 
-// CreateSession mocks base method.
-func (m *MockHostedAgentsService) CreateSession(arg0 *godo.HostedAgentSessionCreateRequest) (*do.HostedAgentSession, error) {
+// CreateSessionFromManifest mocks base method.
+func (m *MockHostedAgentsService) CreateSessionFromManifest(manifest []byte) (*do.HostedAgentSession, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSession", arg0)
+	ret := m.ctrl.Call(m, "CreateSessionFromManifest", manifest)
 	ret0, _ := ret[0].(*do.HostedAgentSession)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CreateSession indicates an expected call of CreateSession.
-func (mr *MockHostedAgentsServiceMockRecorder) CreateSession(arg0 any) *gomock.Call {
+// CreateSessionFromManifest indicates an expected call of CreateSessionFromManifest.
+func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifest(manifest any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSession), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSessionFromManifest", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSessionFromManifest), manifest)
 }
 
 // DestroySession mocks base method.
