@@ -159,6 +159,8 @@ const (
 	ArgClusterAutoscalerExpanders = "expanders"
 	// ArgEnableRoutingAgent enables the routing-agent cluster plugin.
 	ArgEnableRoutingAgent = "enable-routing-agent"
+	// ArgEnableCorednsAutoscaler enables the CoreDNS Autoscaler cluster plugin.
+	ArgEnableCorednsAutoscaler = "enable-coredns-autoscaler"
 	// ArgEnableAmdGpuDevicePlugin enables automatic amd gpu device plugin installation.
 	ArgEnableAmdGpuDevicePlugin = "enable-amd-gpu-device-plugin"
 	// ArgEnableAmdGpuDeviceMetricsExporterPlugin enables automatic amd gpu device metrics exporter plugin installation.
