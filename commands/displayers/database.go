@@ -366,8 +366,14 @@ func (do *DatabaseOptions) KV() []map[string]any {
 	if nonEmptyOptionsFn(do.DatabaseOptions.MySQLOptions) {
 		engines = append(engines, "mysql")
 	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.AdvancedMySQLOptions) {
+		engines = append(engines, "advanced_mysql")
+	}
 	if nonEmptyOptionsFn(do.DatabaseOptions.PostgresSQLOptions) {
 		engines = append(engines, "pg")
+	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.AdvancedPostgresSQLOptions) {
+		engines = append(engines, "advanced_pg")
 	}
 	if nonEmptyOptionsFn(do.DatabaseOptions.KafkaOptions) {
 		engines = append(engines, "kafka")
