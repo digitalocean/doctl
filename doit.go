@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
@@ -298,6 +299,10 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string)
 
 		client.HTTPClient.Transport = r
 	}
+
+	// Stamp the host UUID on hosted-agents requests. Wrapped after the trace
+	// recorder so --trace surfaces the header; no-op when Get() is empty.
+	client.HTTPClient.Transport = deviceid.NewTransport(client.HTTPClient.Transport, deviceid.Get())
 
 	return client, nil
 }
