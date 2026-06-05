@@ -43,7 +43,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // inAgentsScope matches the base path exactly or any sub-resource, but not
-// look-alikes like "/v2/agents/sessionsfoo".
+// a prefix-only match like "/v2/agents/sessionsfoo".
 func inAgentsScope(req *http.Request) bool {
 	if req == nil || req.URL == nil {
 		return false
