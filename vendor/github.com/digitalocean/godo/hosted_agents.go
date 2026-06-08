@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -142,20 +143,32 @@ const (
 	HostedAgentRunFailureCodeInternal       HostedAgentRunFailureCode = "RUN_FAILURE_CODE_INTERNAL"
 )
 
-// HostedAgentEventKind is the SSE event discriminator for session stream payloads.
+// HostedAgentEventKind is the SSE event discriminator for session stream
+// payloads. The values are the canonical SPI event type names (dot-separated)
+// emitted on the wire's `type` field — NOT proto enum names. They mirror the
+// spi.EventType constants owned by the hosted-agents stack.
 type HostedAgentEventKind string
 
 const (
-	HostedAgentEventKindUnspecified       HostedAgentEventKind = "EVENT_KIND_UNSPECIFIED"
-	HostedAgentEventKindRunStarted        HostedAgentEventKind = "EVENT_KIND_RUN_STARTED"
-	HostedAgentEventKindTokenChunk        HostedAgentEventKind = "EVENT_KIND_TOKEN_CHUNK"
-	HostedAgentEventKindToolCallStarted   HostedAgentEventKind = "EVENT_KIND_TOOL_CALL_STARTED"
-	HostedAgentEventKindToolCallCompleted HostedAgentEventKind = "EVENT_KIND_TOOL_CALL_COMPLETED"
-	HostedAgentEventKindHITLRequested     HostedAgentEventKind = "EVENT_KIND_HITL_REQUESTED"
-	HostedAgentEventKindHITLResolved      HostedAgentEventKind = "EVENT_KIND_HITL_RESOLVED"
-	HostedAgentEventKindRunCompleted      HostedAgentEventKind = "EVENT_KIND_RUN_COMPLETED"
-	HostedAgentEventKindRunFailed         HostedAgentEventKind = "EVENT_KIND_RUN_FAILED"
-	HostedAgentEventKindSessionUpdated    HostedAgentEventKind = "EVENT_KIND_SESSION_UPDATED"
+	HostedAgentEventKindUnspecified          HostedAgentEventKind = ""
+	HostedAgentEventKindRunStarted           HostedAgentEventKind = "run.started"
+	HostedAgentEventKindTokenChunk           HostedAgentEventKind = "run.token_delta"
+	HostedAgentEventKindToolCallStarted      HostedAgentEventKind = "run.tool_call_started"
+	HostedAgentEventKindToolCallCompleted    HostedAgentEventKind = "run.tool_call_completed"
+	HostedAgentEventKindHITLRequested        HostedAgentEventKind = "run.human_input_requested"
+	HostedAgentEventKindHITLResolved         HostedAgentEventKind = "run.human_input_received"
+	HostedAgentEventKindRunCompleted         HostedAgentEventKind = "run.completed"
+	HostedAgentEventKindRunFailed            HostedAgentEventKind = "run.failed"
+	HostedAgentEventKindRunPaused            HostedAgentEventKind = "run.paused"
+	HostedAgentEventKindRunResumed           HostedAgentEventKind = "run.resumed"
+	HostedAgentEventKindSessionUpdated       HostedAgentEventKind = "session.updated"
+	HostedAgentEventKindRunStateCheckpointed HostedAgentEventKind = "run.state_checkpointed"
+	HostedAgentEventKindRunHandoff           HostedAgentEventKind = "run.handoff"
+	HostedAgentEventKindRunUsageRecorded     HostedAgentEventKind = "run.usage_recorded"
+	HostedAgentEventKindRunSandboxAllocated  HostedAgentEventKind = "run.sandbox_allocated"
+	HostedAgentEventKindRunSandboxReleased   HostedAgentEventKind = "run.sandbox_released"
+	HostedAgentEventKindRunCostAccrued       HostedAgentEventKind = "run.cost_accrued"
+	HostedAgentEventKindRunLog               HostedAgentEventKind = "run.log"
 )
 
 // HostedAgentSession is a provisioned hosted-agent sandbox session.
@@ -202,14 +215,57 @@ type HostedAgentHITLDecision struct {
 }
 
 // HostedAgentEvent is one SSE payload from GET /v2/agents/sessions/{id}/stream.
+//
+// The server serializes the SPI canonical event envelope, whose JSON shape
+// differs from this struct's field names: the discriminator is `type` (not
+// `kind`), the per-kind body is `data` (not `payload`), the timestamp is
+// `timestamp` (not `at`), and the team id rides as a decimal string in
+// `tenant_id`. UnmarshalJSON maps that wire shape onto these fields, so callers
+// read Kind/Payload/At/TeamID directly.
 type HostedAgentEvent struct {
+	EventID   string
+	SessionID string
+	RunID     string
+	TeamID    uint64
+	Seq       uint64
+	At        Timestamp
+	Kind      HostedAgentEventKind
+	Payload   json.RawMessage
+}
+
+// hostedAgentEventWire is the on-the-wire SPI canonical event envelope.
+type hostedAgentEventWire struct {
 	EventID   string               `json:"event_id"`
+	RunID     string               `json:"run_id"`
+	TenantID  string               `json:"tenant_id"`
 	SessionID string               `json:"session_id"`
-	RunID     string               `json:"run_id,omitempty"`
-	TeamID    uint64               `json:"team_id"`
-	At        Timestamp            `json:"at"`
-	Kind      HostedAgentEventKind `json:"kind"`
-	Payload   json.RawMessage      `json:"payload,omitempty"`
+	Timestamp Timestamp            `json:"timestamp"`
+	Seq       uint64               `json:"seq"`
+	Type      HostedAgentEventKind `json:"type"`
+	Data      json.RawMessage      `json:"data"`
+}
+
+// UnmarshalJSON decodes the SPI canonical event wire shape.
+func (e *HostedAgentEvent) UnmarshalJSON(b []byte) error {
+	var w hostedAgentEventWire
+	if err := json.Unmarshal(b, &w); err != nil {
+		return err
+	}
+	e.EventID = w.EventID
+	e.RunID = w.RunID
+	e.SessionID = w.SessionID
+	e.Seq = w.Seq
+	e.At = w.Timestamp
+	e.Kind = w.Type
+	e.Payload = w.Data
+	if w.TenantID != "" {
+		id, err := strconv.ParseUint(w.TenantID, 10, 64)
+		if err != nil {
+			return fmt.Errorf("hosted agents: tenant_id %q: %w", w.TenantID, err)
+		}
+		e.TeamID = id
+	}
+	return nil
 }
 
 // HostedAgentSessionCreateRequest is the body for POST /v2/agents/sessions.
