@@ -68,13 +68,14 @@ type KubernetesServiceOp struct {
 
 // KubernetesClusterCreateRequest represents a request to create a Kubernetes cluster.
 type KubernetesClusterCreateRequest struct {
-	Name          string   `json:"name,omitempty"`
-	RegionSlug    string   `json:"region,omitempty"`
-	VersionSlug   string   `json:"version,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	VPCUUID       string   `json:"vpc_uuid,omitempty"`
-	ClusterSubnet string   `json:"cluster_subnet,omitempty"`
-	ServiceSubnet string   `json:"service_subnet,omitempty"`
+	Name             string   `json:"name,omitempty"`
+	RegionSlug       string   `json:"region,omitempty"`
+	VersionSlug      string   `json:"version,omitempty"`
+	Tags             []string `json:"tags,omitempty"`
+	VPCUUID          string   `json:"vpc_uuid,omitempty"`
+	WorkerSubnetUUID string   `json:"worker_subnet_uuid,omitempty"`
+	ClusterSubnet    string   `json:"cluster_subnet,omitempty"`
+	ServiceSubnet    string   `json:"service_subnet,omitempty"`
 
 	// HA enables a highly available control plane. When omitted, the API applies
 	// version-based defaults: false for versions < 1.36, true for versions >= 1.36.
@@ -225,16 +226,17 @@ type KubernetesGetClusterStatusMessagesRequest struct {
 
 // KubernetesCluster represents a Kubernetes cluster.
 type KubernetesCluster struct {
-	ID            string   `json:"id,omitempty"`
-	Name          string   `json:"name,omitempty"`
-	RegionSlug    string   `json:"region,omitempty"`
-	VersionSlug   string   `json:"version,omitempty"`
-	ClusterSubnet string   `json:"cluster_subnet,omitempty"`
-	ServiceSubnet string   `json:"service_subnet,omitempty"`
-	IPv4          string   `json:"ipv4,omitempty"`
-	Endpoint      string   `json:"endpoint,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	VPCUUID       string   `json:"vpc_uuid,omitempty"`
+	ID               string   `json:"id,omitempty"`
+	Name             string   `json:"name,omitempty"`
+	RegionSlug       string   `json:"region,omitempty"`
+	VersionSlug      string   `json:"version,omitempty"`
+	ClusterSubnet    string   `json:"cluster_subnet,omitempty"`
+	ServiceSubnet    string   `json:"service_subnet,omitempty"`
+	IPv4             string   `json:"ipv4,omitempty"`
+	Endpoint         string   `json:"endpoint,omitempty"`
+	Tags             []string `json:"tags,omitempty"`
+	VPCUUID          string   `json:"vpc_uuid,omitempty"`
+	WorkerSubnetUUID string   `json:"worker_subnet_uuid,omitempty"`
 
 	// Cluster runs a highly available control plane
 	HA bool `json:"ha,omitempty"`
