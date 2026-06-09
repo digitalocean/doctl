@@ -2338,6 +2338,50 @@ func (dc *OpensearchConfiguration) KV() []map[string]any {
 	return o
 }
 
+type AdvancedPostgresConfiguration struct {
+	AdvancedPostgresConfig do.AdvancedPostgresConfig
+}
+
+var _ Displayable = &AdvancedPostgresConfiguration{}
+
+func (dc *AdvancedPostgresConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.AdvancedPostgresConfig, out)
+}
+
+func (dc *AdvancedPostgresConfiguration) Cols() []string {
+	return []string{
+		"Name",
+		"Value",
+		"Default Value",
+		"Requires Restart",
+		"Description",
+	}
+}
+
+func (dc *AdvancedPostgresConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"Name":             "Name",
+		"Value":            "Value",
+		"Default Value":    "Default Value",
+		"Requires Restart": "Requires Restart",
+		"Description":      "Description",
+	}
+}
+
+func (dc *AdvancedPostgresConfiguration) KV() []map[string]any {
+	o := []map[string]any{}
+	for _, p := range dc.AdvancedPostgresConfig.PGParameters {
+		o = append(o, map[string]any{
+			"Name":             p.Name,
+			"Value":            p.Value,
+			"Default Value":    p.DefaultValue,
+			"Requires Restart": p.RequiresRestart,
+			"Description":      p.Description,
+		})
+	}
+	return o
+}
+
 type DatabaseEvents struct {
 	DatabaseEvents do.DatabaseEvents
 }
