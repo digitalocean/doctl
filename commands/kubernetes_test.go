@@ -70,6 +70,9 @@ var (
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			CorednsAutoscaler: &godo.KubernetesCorednsAutoscaler{
+				Enabled: boolPtr(true),
+			},
 		},
 	}
 
@@ -735,6 +738,9 @@ func TestKubernetesCreate(t *testing.T) {
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			CorednsAutoscaler: &godo.KubernetesCorednsAutoscaler{
+				Enabled: boolPtr(true),
+			},
 			SSO: &godo.KubernetesClusterSSO{
 				Enabled:  true,
 				Required: false,
@@ -770,6 +776,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesRequireSSO, false)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
@@ -894,6 +901,9 @@ func TestKubernetesUpdate(t *testing.T) {
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			CorednsAutoscaler: &godo.KubernetesCorednsAutoscaler{
+				Enabled: boolPtr(true),
+			},
 			SSO: &godo.KubernetesClusterSSO{
 				Enabled:   true,
 				IssuerURL: "https://issuer.example",
@@ -917,6 +927,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
 		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")
@@ -962,6 +973,9 @@ func TestKubernetesUpdate(t *testing.T) {
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			CorednsAutoscaler: &godo.KubernetesCorednsAutoscaler{
+				Enabled: boolPtr(true),
+			},
 			SSO: &godo.KubernetesClusterSSO{
 				Enabled:   true,
 				IssuerURL: "https://issuer.example",
@@ -986,6 +1000,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
 		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOClientID, "oidc-client-id")

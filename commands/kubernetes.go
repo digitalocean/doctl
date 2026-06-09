@@ -323,6 +323,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this flag is empty, autoscaler will use its default expanders.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableCorednsAutoscaler, "", false,
+		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --enable-coredns-autoscaler=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
 		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
@@ -389,6 +391,8 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableCorednsAutoscaler, "", false,
+		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). To always enable it, supply --enable-coredns-autoscaler=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
 		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
@@ -1851,6 +1855,20 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
+	// Only forward the CoreDNS Autoscaler flag when the user explicitly sets it so the
+	// server-side defaulting (version-based) isn't suppressed by sending an unset "false".
+	if c.Doit.IsSet(doctl.ArgEnableCorednsAutoscaler) {
+		enableCorednsAutoscaler, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableCorednsAutoscaler)
+		if err != nil {
+			return err
+		}
+		if enableCorednsAutoscaler != nil {
+			r.CorednsAutoscaler = &godo.KubernetesCorednsAutoscaler{
+				Enabled: enableCorednsAutoscaler,
+			}
+		}
+	}
+
 	// We need to differentiate here if the option is set or not, as it defaults to a different value on the server-side
 	// depending on whether there are AMD GPU nodes in the cluster or not.
 	// If we would always send "false", even if the flag isn't set, we would essentially disable the defaulting.
@@ -2065,6 +2083,20 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	if enableRoutingAgent != nil {
 		r.RoutingAgent = &godo.KubernetesRoutingAgent{
 			Enabled: enableRoutingAgent,
+		}
+	}
+
+	// Only forward the CoreDNS Autoscaler flag when the user explicitly sets it so we don't
+	// disable existing state on a no-op update by sending an unset "false".
+	if c.Doit.IsSet(doctl.ArgEnableCorednsAutoscaler) {
+		enableCorednsAutoscaler, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableCorednsAutoscaler)
+		if err != nil {
+			return err
+		}
+		if enableCorednsAutoscaler != nil {
+			r.CorednsAutoscaler = &godo.KubernetesCorednsAutoscaler{
+				Enabled: enableCorednsAutoscaler,
+			}
 		}
 	}
 
