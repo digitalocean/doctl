@@ -8,10 +8,11 @@ import (
 // HeaderName is coordinated with the harness-api server. Rename in lockstep.
 const HeaderName = "X-Device-UUID"
 
-// agentsSessionsBase mirrors godo's hostedAgentsSessionsBasePath.
-const agentsSessionsBase = "/v2/agents/sessions"
+// agentsBase matches the harness-api middleware mount point. Every request
+// under /v2/agents receives the header
+const agentsBase = "/v2/agents"
 
-// Transport stamps HeaderName on requests under agentsSessionsBase.
+// Transport stamps HeaderName on requests under agentsBase.
 type Transport struct {
 	Base http.RoundTripper
 	ID   string
@@ -43,11 +44,11 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // inAgentsScope matches the base path exactly or any sub-resource, but not
-// a prefix-only match like "/v2/agents/sessionsfoo".
+// a prefix-only match like "/v2/agentsfoo".
 func inAgentsScope(req *http.Request) bool {
 	if req == nil || req.URL == nil {
 		return false
 	}
 	p := req.URL.Path
-	return p == agentsSessionsBase || strings.HasPrefix(p, agentsSessionsBase+"/")
+	return p == agentsBase || strings.HasPrefix(p, agentsBase+"/")
 }

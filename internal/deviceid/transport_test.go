@@ -42,12 +42,15 @@ func doGET(t *testing.T, c *http.Client, urlStr string) {
 
 func TestTransport_StampsHeaderInAgentsScope(t *testing.T) {
 	cases := []string{
+		"/v2/agents",                                // bare root
+		"/v2/agents/",                               // trailing slash
 		"/v2/agents/sessions",                       // POST create / GET list
 		"/v2/agents/sessions/sess_abc",              // GET / DELETE single
 		"/v2/agents/sessions/sess_abc/input",        // POST input
 		"/v2/agents/sessions/sess_abc/stream",       // SSE
 		"/v2/agents/sessions/sess_abc/hitl/req_xyz", // HITL resolve
 		"/v2/agents/sessions/sess_abc/sandbox/exec", // sandbox exec
+		"/v2/agents/templates",                      // any future hosted-agents sub-resource
 	}
 	for _, p := range cases {
 		t.Run(strings.TrimPrefix(p, "/"), func(t *testing.T) {
@@ -69,14 +72,11 @@ func TestTransport_OmitsHeaderOutOfScope(t *testing.T) {
 		"/v2/droplets",
 		"/v2/kubernetes/clusters",
 		"/v2/registry",
-		"/v2/gen-ai/agents",       // GradientAI agents, a different feature — must NOT leak
-		"/v2/gen-ai/agents/abc",   //
-		"/v2/agents",              // bare /v2/agents — not in hosted-agents scope
-		"/v2/agents/",             // trailing-slash root, still not /sessions
-		"/v2/agents/templates",    // hypothetical sibling resource — must NOT leak
-		"/v2/agents/sessionsfoo",  // prefix-look-alike — must NOT match base
-		"/v2/agents/sessionsfoo/", //
-		"/",                       // root
+		"/v2/gen-ai/agents",     // GradientAI agents, a different feature — must NOT leak
+		"/v2/gen-ai/agents/abc", //
+		"/v2/agentsfoo",         // prefix-only match — must NOT match base
+		"/v2/agentsfoo/",        //
+		"/",                     // root
 	}
 	for _, p := range cases {
 		t.Run(strings.TrimPrefix(p, "/"), func(t *testing.T) {
