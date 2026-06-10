@@ -282,12 +282,12 @@ func RunAgentsAttach(c *CmdConfig) error {
 			case godo.HostedAgentEventKindHITLRequested:
 				var p hitlRequestedPayload
 				if err := json.Unmarshal(ev.Payload, &p); err == nil {
-					pending.set(p.Request.RequestID)
+					pending.set(p.HitlID)
 				}
 			case godo.HostedAgentEventKindHITLResolved:
 				var p hitlResolvedPayload
 				if err := json.Unmarshal(ev.Payload, &p); err == nil {
-					pending.clearIf(p.Decision.RequestID)
+					pending.clearIf(p.HitlID)
 				}
 			}
 			renderEvent(c.Out, ev)
@@ -344,8 +344,18 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			}
 			continue
 		}
-		if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
+		resp, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line})
+		if err != nil {
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
+			continue
+		}
+		// Acknowledge the submit right away. The agent runtime can take tens of
+		// seconds to boot and produce its first token; without this line the
+		// wait looks like a hang and users re-submit, spawning a second run.
+		if resp != nil && resp.RunID != "" {
+			fmt.Fprintf(c.Out, "(queued as %s; waiting for the agent...)\n", resp.RunID)
+		} else {
+			fmt.Fprintln(c.Out, "(queued; waiting for the agent...)")
 		}
 	}
 }
@@ -393,34 +403,39 @@ func resolveFromAttach(svc do.HostedAgentsService, sessionID string, parts []str
 
 // --- event payload helpers --------------------------------------------------
 //
-// godo defines the generic HostedAgentEvent envelope but leaves the per-kind
-// payload as json.RawMessage. The shapes below are local mirrors used only for
-// rendering and are not on any HTTP wire — they exist to keep the rendering
-// switch tidy.
+// godo decodes the SPI canonical event envelope and leaves the per-kind body
+// (the wire's `data` object) as json.RawMessage on HostedAgentEvent.Payload.
+// The shapes below mirror the SPI data structs (spi/events.go) for the kinds
+// doctl renders; they exist to keep the rendering switch tidy.
 
 type tokenChunkPayload struct {
 	Text string `json:"text"`
 }
 
 type runStartedPayload struct {
-	Run godo.HostedAgentRun `json:"run"`
+	Agent string `json:"agent"`
 }
 
 type toolCallStartedPayload struct {
-	ToolName string `json:"tool_name"`
+	Name string `json:"name"`
 }
 
 type toolCallCompletedPayload struct {
+	OK         bool   `json:"ok"`
 	DurationMS int64  `json:"duration_ms"`
 	Summary    string `json:"summary,omitempty"`
 }
 
 type hitlRequestedPayload struct {
-	Request godo.HostedAgentHITLRequest `json:"request"`
+	HitlID  string         `json:"hitl_id"`
+	Payload map[string]any `json:"payload"`
 }
 
 type hitlResolvedPayload struct {
-	Decision godo.HostedAgentHITLDecision `json:"decision"`
+	HitlID  string `json:"hitl_id"`
+	Outcome int32  `json:"outcome"`
+	Actor   string `json:"actor,omitempty"`
+	Reason  string `json:"reason,omitempty"`
 }
 
 type runCompletedPayload struct {
@@ -430,13 +445,8 @@ type runCompletedPayload struct {
 }
 
 type runFailedPayload struct {
-	Code    godo.HostedAgentRunFailureCode `json:"code"`
-	Message string                         `json:"message,omitempty"`
-}
-
-type sessionUpdatedPayload struct {
-	SessionDelta  godo.HostedAgentSession `json:"session_delta"`
-	ChangedFields []string                `json:"changed_fields"`
+	Code    int32  `json:"code"`
+	Message string `json:"message,omitempty"`
 }
 
 func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
@@ -449,12 +459,16 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindRunStarted:
 		var p runStartedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n[run %s started]\n", p.Run.RunID)
+			if p.Agent != "" {
+				fmt.Fprintf(w, "\n[run %s started (%s)]\n", ev.RunID, p.Agent)
+			} else {
+				fmt.Fprintf(w, "\n[run %s started]\n", ev.RunID)
+			}
 		}
 	case godo.HostedAgentEventKindToolCallStarted:
 		var p toolCallStartedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n> %s ...\n", p.ToolName)
+			fmt.Fprintf(w, "\n> %s ...\n", p.Name)
 		}
 	case godo.HostedAgentEventKindToolCallCompleted:
 		var p toolCallCompletedPayload
@@ -468,12 +482,12 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindHITLRequested:
 		var p hitlRequestedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			renderHITLRequest(w, p.Request)
+			renderHITLRequest(w, p.HitlID, p.Payload)
 		}
 	case godo.HostedAgentEventKindHITLResolved:
 		var p hitlResolvedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n[HITL %s -> %s]\n", p.Decision.RequestID, p.Decision.Outcome)
+			fmt.Fprintf(w, "\n[HITL %s -> %s]\n", p.HitlID, hitlOutcomeLabel(p.Outcome))
 		}
 	case godo.HostedAgentEventKindRunCompleted:
 		var p runCompletedPayload
@@ -484,39 +498,40 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindRunFailed:
 		var p runFailedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n[run failed: %s %s]\n", p.Code, p.Message)
+			if p.Message != "" {
+				fmt.Fprintf(w, "\n[run failed: %s (code %d)]\n", p.Message, p.Code)
+			} else {
+				fmt.Fprintf(w, "\n[run failed: code %d]\n", p.Code)
+			}
 		}
 	case godo.HostedAgentEventKindSessionUpdated:
-		var p sessionUpdatedPayload
-		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n[session updated: %v]\n", p.ChangedFields)
-		}
+		fmt.Fprint(w, "\n[session updated]\n")
 	}
 }
 
-func renderHITLRequest(w io.Writer, req godo.HostedAgentHITLRequest) {
-	fmt.Fprintln(w, "\n\n[HITL] Action requires approval:")
-	switch req.Action {
-	case godo.HostedAgentHITLActionBash:
-		if cmd, ok := req.Details["command"].(string); ok {
-			fmt.Fprintf(w, "  bash: %s\n", cmd)
-		}
-		if req.Workdir != "" {
-			fmt.Fprintf(w, "  workdir: %s\n", req.Workdir)
-		}
-	case godo.HostedAgentHITLActionGitHubCreatePR:
-		fmt.Fprintln(w, "  github.create_pr")
-		for _, k := range []string{"title", "branch", "base", "repo"} {
-			if v, ok := req.Details[k].(string); ok {
-				fmt.Fprintf(w, "    %s: %s\n", k, v)
-			}
-		}
+// hitlOutcomeLabel maps the proto HITLOutcome int carried on the SPI
+// human_input_received event to a human-readable verb.
+func hitlOutcomeLabel(code int32) string {
+	switch code {
+	case 1:
+		return "approve"
+	case 2:
+		return "reject"
+	case 3:
+		return "defer"
 	default:
-		fmt.Fprintf(w, "  action: %s\n", req.Action)
-		for k, v := range req.Details {
-			fmt.Fprintf(w, "    %s: %v\n", k, v)
+		return fmt.Sprintf("outcome %d", code)
+	}
+}
+
+func renderHITLRequest(w io.Writer, hitlID string, payload map[string]any) {
+	fmt.Fprintln(w, "\n\n[HITL] Action requires approval:")
+	if len(payload) > 0 {
+		// MarshalIndent sorts map keys, so output is stable run-to-run.
+		if b, err := json.MarshalIndent(payload, "  ", "  "); err == nil {
+			fmt.Fprintf(w, "  %s\n", b)
 		}
 	}
-	fmt.Fprintf(w, "  request_id: %s\n", req.RequestID)
-	fmt.Fprintf(w, "  (resolve with `/a %s`, `/r %s`, or `/d %s`)\n", req.RequestID, req.RequestID, req.RequestID)
+	fmt.Fprintf(w, "  hitl_id: %s\n", hitlID)
+	fmt.Fprintf(w, "  (resolve with `/a %s`, `/r %s`, or `/d %s`)\n", hitlID, hitlID, hitlID)
 }
