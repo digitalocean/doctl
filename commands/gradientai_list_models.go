@@ -4,8 +4,8 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 )
 
-func ListModelsCmd() *Command {
-	cmd := CmdBuilder(nil, RunGradientAIListModels, "list-models", "List Gradient AI models", `The `+"`doctl gradient list-models`"+` command lists all available Gradient AI models.
+func ListModelsCmd(parent *Command) *Command {
+	cmd := CmdBuilder(parent, RunGradientAIListModels, "list-models", "List Gradient AI models", `The `+"`doctl gradient list-models`"+` command lists all available Gradient AI models.
 
 The command returns the following details for each model:
 	- The model ID
