@@ -99,9 +99,9 @@ var _ = suite("gen-ai/agent/route/update", func(t *testing.T, when spec.G, it sp
 		expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 		outputStr := string(output)
 
-		expect.Contains(outputStr, "Id")
-		expect.Contains(outputStr, "Parent Agent Id")
-		expect.Contains(outputStr, "Child Agent Id")
+		expect.Contains(outputStr, "ID")
+		expect.Contains(outputStr, "Parent Agent ID")
+		expect.Contains(outputStr, "Child Agent ID")
 		expect.Contains(outputStr, "Rollback")
 
 		expect.Contains(outputStr, "00000000-0000-4000-a000-000000000000")

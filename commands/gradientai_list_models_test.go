@@ -116,7 +116,7 @@ func TestRunGradientAIListModelsFormatNoHeader(t *testing.T) {
 		var buf bytes.Buffer
 		config.NS = "gradient.list-models"
 		config.Out = &buf
-		config.Doit.Set(config.NS, doctl.ArgFormat, "Id,Name")
+		config.Doit.Set(config.NS, doctl.ArgFormat, "ID,Name")
 		config.Doit.Set(config.NS, doctl.ArgNoHeader, true)
 
 		err := RunGradientAIListModels(config)
