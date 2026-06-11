@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.195.0] - 2026-06-09
+
+- #1033 - @chandrudo - Add UpdateModelEvaluationRun to GradientAI service
+- #1030 - @ritheek-pitti-do - Add ListEvaluationDatasets API and example
+- #1028 - @gangasingh01 - added support for ADVANCED PG configuration
+- #1026 - @gangasingh01 - Added support for ADVANCED_MYSQL and ADVANCED_PG engines in listoptions endpoint
+- #1027 - @SSharma-10 - rename beta release
+
 ## [1.194.1] - 2026-06-03
 
 - #1023 - @SSharma-10 - godo beta release

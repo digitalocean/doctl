@@ -50,7 +50,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, Valkey, PostgreSQL, MongoDB, Kafka and Opensearch database services.",
+			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, Valkey, PostgreSQL, MongoDB, Kafka, Opensearch and Advanced PostgreSQL and Advanced MySQL databases services.",
 			GroupID: manageResourcesGroup,
 		},
 	}
@@ -59,7 +59,7 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine. Possible values: ` + "`redis`, `valkey`, `pg`, `mysql` , `mongodb`, `kafka`, `opensearch`" + `
+- The database engine. Possible values: ` + "`redis`, `valkey`, `pg`, `mysql`, `mongodb`, `kafka`, `opensearch` `advanced_pg`, `advanced_mysql`" + `
 - The engine version, such as ` + "`14`" + ` for PostgreSQL version 14
 - The number of nodes in the database cluster
 - The region the database cluster resides in, such as ` + "`sfo2`, " + "`nyc1`" + `
@@ -88,7 +88,7 @@ You can customize the configuration using the listed flags, all of which are opt
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The data center region where the database cluster resides, such as `nyc1` or `sfo2`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `redis`, `valkey`, `mongodb`, `kafka` and `opensearch`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `advanced_pg`, `advanced_mysql`, `redis`, `valkey`, `mongodb`, `kafka` and `opensearch`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine's version, such as 14 for PostgreSQL version 14.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in. The command uses the region's default VPC if excluded.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster to restore from.")
@@ -1152,19 +1152,19 @@ func databaseOptions() *Command {
 	cmdRegionOptions := CmdBuilder(cmd, RunDatabaseRegionOptions, "regions", "Retrieves a list of the available regions for a given database engine", `Lists the available regions for a given database engine. Some engines may not be available in certain regions.`,
 		Writer, aliasOpt("r"))
 	AddStringFlag(cmdRegionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`, `+"`"+`opensearch`+"`"+`,  `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`advanced_mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`advanced_pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`, `+"`"+`opensearch`+"`"+`,  `+"`"+`mongodb`+"`"+``)
 	cmdRegionOptions.Example = `The following example retrieves a list of the available regions for the PostgreSQL engine: doctl databases options regions --engine pg`
 
 	cmdVersionOptions := CmdBuilder(cmd, RunDatabaseVersionOptions, "versions", "Retrieves a list of the available versions for a given database engine", `Lists the available versions for a given database engine.`,
 		Writer, aliasOpt("v"))
 	AddStringFlag(cmdVersionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`advanced_mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`advanced_pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``)
 	cmdVersionOptions.Example = `The following example retrieves a list of the available versions for the PostgreSQL engine: doctl databases options versions --engine pg`
 
 	cmdSlugOptions := CmdBuilder(cmd, RunDatabaseSlugOptions, "slugs", "Retrieves a list of the available slugs for a given database engine", `Lists the available slugs for a given database engine.`,
 		Writer, aliasOpt("s"))
 	AddStringFlag(cmdSlugOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``, requiredOpt())
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`advanced_mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`advanced_pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``, requiredOpt())
 	cmdSlugOptions.Example = `The following example retrieves a list of the available slugs for the PostgreSQL engine: doctl databases options slugs --engine pg`
 
 	return cmd
@@ -1215,8 +1215,12 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["mongodb"] = options.MongoDBOptions.Regions
 	case "mysql":
 		regions["mysql"] = options.MySQLOptions.Regions
+	case "advanced_mysql":
+		regions["advanced_mysql"] = options.AdvancedMySQLOptions.Regions
 	case "pg":
 		regions["pg"] = options.PostgresSQLOptions.Regions
+	case "advanced_pg":
+		regions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Regions
 	case "redis":
 		regions["redis"] = options.RedisOptions.Regions
 	case "kafka":
@@ -1228,7 +1232,9 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
+		regions["advanced_mysql"] = options.AdvancedMySQLOptions.Regions
 		regions["pg"] = options.PostgresSQLOptions.Regions
+		regions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Regions
 		regions["redis"] = options.RedisOptions.Regions
 		regions["kafka"] = options.KafkaOptions.Regions
 		regions["opensearch"] = options.OpensearchOptions.Regions
@@ -1253,8 +1259,12 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["mongodb"] = options.MongoDBOptions.Versions
 	case "mysql":
 		versions["mysql"] = options.MySQLOptions.Versions
+	case "advanced_mysql":
+		versions["advanced_mysql"] = options.AdvancedMySQLOptions.Versions
 	case "pg":
 		versions["pg"] = options.PostgresSQLOptions.Versions
+	case "advanced_pg":
+		versions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Versions
 	case "redis":
 		versions["redis"] = options.RedisOptions.Versions
 	case "kafka":
@@ -1266,7 +1276,9 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
+		versions["advanced_mysql"] = options.AdvancedMySQLOptions.Versions
 		versions["pg"] = options.PostgresSQLOptions.Versions
+		versions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Versions
 		versions["redis"] = options.RedisOptions.Versions
 		versions["kafka"] = options.KafkaOptions.Versions
 		versions["opensearch"] = options.OpensearchOptions.Versions
@@ -1294,8 +1306,12 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.MongoDBOptions.Layouts
 	case "mysql":
 		layouts = options.MySQLOptions.Layouts
+	case "advanced_mysql":
+		layouts = options.AdvancedMySQLOptions.Layouts
 	case "pg":
 		layouts = options.PostgresSQLOptions.Layouts
+	case "advanced_pg":
+		layouts = options.AdvancedPostgresSQLOptions.Layouts
 	case "redis":
 		layouts = options.RedisOptions.Layouts
 	case "kafka":
