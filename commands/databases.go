@@ -33,7 +33,10 @@ const (
 	defaultDatabaseNodeCount = 1
 	defaultDatabaseRegion    = "nyc1"
 	defaultDatabaseEngine    = "pg"
-	databaseListDetails      = `
+
+	defaultDatabaseStorageAutoscaleThresholdPercent = 80
+	defaultDatabaseStorageAutoscaleIncrementGib     = 10
+	databaseListDetails                             = `
 
 This command requires the ID of a database cluster, which you can retrieve by calling:
 
@@ -47,7 +50,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, Valkey, PostgreSQL, MongoDB, Kafka and Opensearch database services.",
+			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, Valkey, PostgreSQL, MongoDB, Kafka, Opensearch and Advanced PostgreSQL and Advanced MySQL databases services.",
 			GroupID: manageResourcesGroup,
 		},
 	}
@@ -56,7 +59,7 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine. Possible values: ` + "`redis`, `valkey`, `pg`, `mysql` , `mongodb`, `kafka`, `opensearch`" + `
+- The database engine. Possible values: ` + "`redis`, `valkey`, `pg`, `mysql`, `mongodb`, `kafka`, `opensearch` `advanced_pg`, `advanced_mysql`" + `
 - The engine version, such as ` + "`14`" + ` for PostgreSQL version 14
 - The number of nodes in the database cluster
 - The region the database cluster resides in, such as ` + "`sfo2`, " + "`nyc1`" + `
@@ -85,7 +88,7 @@ You can customize the configuration using the listed flags, all of which are opt
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The data center region where the database cluster resides, such as `nyc1` or `sfo2`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `redis`, `valkey`, `mongodb`, `kafka` and `opensearch`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `advanced_pg`, `advanced_mysql`, `redis`, `valkey`, `mongodb`, `kafka` and `opensearch`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine's version, such as 14 for PostgreSQL version 14.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in. The command uses the region's default VPC if excluded.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster to restore from.")
@@ -154,6 +157,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
+	cmd.AddCommand(databaseStorageAutoscale())
 	cmd.AddCommand(databaseUser())
 	cmd.AddCommand(databaseDB())
 	cmd.AddCommand(databasePool())
@@ -743,6 +747,138 @@ func buildDatabaseUpdateMaintenanceRequestFromArgs(c *CmdConfig) (*godo.Database
 	return r, nil
 }
 
+func databaseStorageAutoscale() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "storage-autoscale",
+			Aliases: []string{"autoscale", "storage"},
+			Short:   "Display commands for managing database cluster storage autoscaling",
+			Long: `The ` + "`" + `doctl databases storage-autoscale` + "`" + ` commands allow you to view and update storage autoscaling settings for database clusters.
+
+When enabled, storage autoscaling automatically increases disk capacity when usage crosses a configured threshold.`,
+		},
+	}
+
+	cmdStorageAutoscaleGet := CmdBuilder(cmd, RunDatabaseStorageAutoscaleGet, "get <database-cluster-id>",
+		"Retrieve storage autoscaling settings for a database cluster", `Retrieves the storage autoscaling configuration for the specified database cluster, including:
+
+- Whether storage autoscaling is enabled
+- The storage usage percentage that triggers autoscaling
+- The amount of storage, in GiB, added when autoscaling triggers
+
+To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("g"),
+		displayerType(&displayers.DatabaseStorageAutoscale{}))
+	cmdStorageAutoscaleGet.Example = `The following example retrieves storage autoscaling settings for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases storage-autoscale get ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+
+	cmdStorageAutoscaleUpdate := CmdBuilder(cmd, RunDatabaseStorageAutoscaleUpdate,
+		"update <database-cluster-id>", "Update storage autoscaling settings for a database cluster", `Updates the storage autoscaling configuration for the specified database cluster.
+
+The `+"`"+`--enabled`+"`"+` is a required flag and must be `+"`"+`true`+"`"+` or `+"`"+`false`+"`"+`.
+
+When `+"`"+`--enabled`+"`"+` is `+"`"+`false`+"`"+`, storage autoscaling is disabled and threshold/increment flags are ignored.
+
+When `+"`"+`--enabled`+"`"+` is `+"`"+`true`+"`"+`, you may optionally set `+"`"+`--threshold-percent`+"`"+` and `+"`"+`--increment-gib`+"`"+`. When omitted, defaults of 80 (percent) and 10 (GiB) are used.
+
+To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("u"))
+	AddStringFlag(cmdStorageAutoscaleUpdate, doctl.ArgDatabaseStorageAutoscaleEnabled, "", "",
+		"Whether storage autoscaling is enabled for the database cluster; must be `true` or `false`", requiredOpt())
+	AddIntFlag(cmdStorageAutoscaleUpdate, doctl.ArgDatabaseStorageAutoscaleThresholdPercent, "", 0,
+		"The storage usage percentage that triggers autoscaling (only used when --enabled is true)")
+	AddIntFlag(cmdStorageAutoscaleUpdate, doctl.ArgDatabaseStorageAutoscaleIncrementGib, "", 0,
+		"The amount of storage, in GiB, to add when autoscaling triggers (only used when --enabled is true)")
+	cmdStorageAutoscaleUpdate.Example = `The following example enables storage autoscaling for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` with an 80% threshold and 10 GiB increment: doctl databases storage-autoscale update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --enabled true --threshold-percent 80 --increment-gib 10
+
+The following example enables storage autoscaling with platform defaults: doctl databases storage-autoscale update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --enabled true
+
+The following example disables storage autoscaling: doctl databases storage-autoscale update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --enabled false`
+
+	return cmd
+}
+
+// RunDatabaseStorageAutoscaleGet retrieves storage autoscaling settings for a database cluster.
+func RunDatabaseStorageAutoscaleGet(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+
+	autoscale, err := c.Databases().GetStorageAutoscale(id)
+	if err != nil {
+		return err
+	}
+
+	return displayDatabaseStorageAutoscale(c, *autoscale)
+}
+
+func displayDatabaseStorageAutoscale(c *CmdConfig, autoscale do.DatabaseStorageAutoscale) error {
+	item := &displayers.DatabaseStorageAutoscale{DatabaseStorageAutoscale: autoscale}
+	return c.Display(item)
+}
+
+// RunDatabaseStorageAutoscaleUpdate updates storage autoscaling settings for a database cluster.
+func RunDatabaseStorageAutoscaleUpdate(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+	r, err := buildDatabaseStorageAutoscaleRequestFromArgs(c)
+	if err != nil {
+		return err
+	}
+
+	return c.Databases().UpdateStorageAutoscale(id, r)
+}
+
+func buildDatabaseStorageAutoscaleRequestFromArgs(c *CmdConfig) (*godo.DatabaseStorageAutoscale, error) {
+	if c.Command == nil {
+		return nil, errors.New("command flags are not available")
+	}
+
+	flags := c.Command.Flags()
+
+	enabledStr, err := flags.GetString(doctl.ArgDatabaseStorageAutoscaleEnabled)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(enabledStr) == "" {
+		return nil, doctl.NewMissingArgsErr(doctl.ArgDatabaseStorageAutoscaleEnabled)
+	}
+
+	enabled, err := strconv.ParseBool(enabledStr)
+	if err != nil {
+		return nil, fmt.Errorf("%q is not a valid boolean for --enabled (use true or false)", enabledStr)
+	}
+
+	if !enabled {
+		return &godo.DatabaseStorageAutoscale{Enabled: false}, nil
+	}
+
+	thresholdPercent := defaultDatabaseStorageAutoscaleThresholdPercent
+	if flags.Changed(doctl.ArgDatabaseStorageAutoscaleThresholdPercent) {
+		thresholdPercent, err = flags.GetInt(doctl.ArgDatabaseStorageAutoscaleThresholdPercent)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	incrementGib := uint64(defaultDatabaseStorageAutoscaleIncrementGib)
+	if flags.Changed(doctl.ArgDatabaseStorageAutoscaleIncrementGib) {
+		val, err := flags.GetInt(doctl.ArgDatabaseStorageAutoscaleIncrementGib)
+		if err != nil {
+			return nil, err
+		}
+		incrementGib = uint64(val)
+	}
+
+	return &godo.DatabaseStorageAutoscale{
+		Enabled:          true,
+		ThresholdPercent: &thresholdPercent,
+		IncrementGib:     &incrementGib,
+	}, nil
+}
+
 func databaseUser() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -1016,19 +1152,19 @@ func databaseOptions() *Command {
 	cmdRegionOptions := CmdBuilder(cmd, RunDatabaseRegionOptions, "regions", "Retrieves a list of the available regions for a given database engine", `Lists the available regions for a given database engine. Some engines may not be available in certain regions.`,
 		Writer, aliasOpt("r"))
 	AddStringFlag(cmdRegionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`, `+"`"+`opensearch`+"`"+`,  `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`advanced_mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`advanced_pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`, `+"`"+`opensearch`+"`"+`,  `+"`"+`mongodb`+"`"+``)
 	cmdRegionOptions.Example = `The following example retrieves a list of the available regions for the PostgreSQL engine: doctl databases options regions --engine pg`
 
 	cmdVersionOptions := CmdBuilder(cmd, RunDatabaseVersionOptions, "versions", "Retrieves a list of the available versions for a given database engine", `Lists the available versions for a given database engine.`,
 		Writer, aliasOpt("v"))
 	AddStringFlag(cmdVersionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`advanced_mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`advanced_pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``)
 	cmdVersionOptions.Example = `The following example retrieves a list of the available versions for the PostgreSQL engine: doctl databases options versions --engine pg`
 
 	cmdSlugOptions := CmdBuilder(cmd, RunDatabaseSlugOptions, "slugs", "Retrieves a list of the available slugs for a given database engine", `Lists the available slugs for a given database engine.`,
 		Writer, aliasOpt("s"))
 	AddStringFlag(cmdSlugOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``, requiredOpt())
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`advanced_mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`advanced_pg`+"`"+`,  `+"`"+`redis`+"`"+`, `+"`"+`valkey`+"`"+`, `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``, requiredOpt())
 	cmdSlugOptions.Example = `The following example retrieves a list of the available slugs for the PostgreSQL engine: doctl databases options slugs --engine pg`
 
 	return cmd
@@ -1079,8 +1215,12 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["mongodb"] = options.MongoDBOptions.Regions
 	case "mysql":
 		regions["mysql"] = options.MySQLOptions.Regions
+	case "advanced_mysql":
+		regions["advanced_mysql"] = options.AdvancedMySQLOptions.Regions
 	case "pg":
 		regions["pg"] = options.PostgresSQLOptions.Regions
+	case "advanced_pg":
+		regions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Regions
 	case "redis":
 		regions["redis"] = options.RedisOptions.Regions
 	case "kafka":
@@ -1092,7 +1232,9 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
+		regions["advanced_mysql"] = options.AdvancedMySQLOptions.Regions
 		regions["pg"] = options.PostgresSQLOptions.Regions
+		regions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Regions
 		regions["redis"] = options.RedisOptions.Regions
 		regions["kafka"] = options.KafkaOptions.Regions
 		regions["opensearch"] = options.OpensearchOptions.Regions
@@ -1117,8 +1259,12 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["mongodb"] = options.MongoDBOptions.Versions
 	case "mysql":
 		versions["mysql"] = options.MySQLOptions.Versions
+	case "advanced_mysql":
+		versions["advanced_mysql"] = options.AdvancedMySQLOptions.Versions
 	case "pg":
 		versions["pg"] = options.PostgresSQLOptions.Versions
+	case "advanced_pg":
+		versions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Versions
 	case "redis":
 		versions["redis"] = options.RedisOptions.Versions
 	case "kafka":
@@ -1130,7 +1276,9 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
+		versions["advanced_mysql"] = options.AdvancedMySQLOptions.Versions
 		versions["pg"] = options.PostgresSQLOptions.Versions
+		versions["advanced_pg"] = options.AdvancedPostgresSQLOptions.Versions
 		versions["redis"] = options.RedisOptions.Versions
 		versions["kafka"] = options.KafkaOptions.Versions
 		versions["opensearch"] = options.OpensearchOptions.Versions
@@ -1158,8 +1306,12 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.MongoDBOptions.Layouts
 	case "mysql":
 		layouts = options.MySQLOptions.Layouts
+	case "advanced_mysql":
+		layouts = options.AdvancedMySQLOptions.Layouts
 	case "pg":
 		layouts = options.PostgresSQLOptions.Layouts
+	case "advanced_pg":
+		layouts = options.AdvancedPostgresSQLOptions.Layouts
 	case "redis":
 		layouts = options.RedisOptions.Layouts
 	case "kafka":
@@ -2506,6 +2658,7 @@ For a full list of available fields, see the API documentation: https://docs.dig
 		aliasOpt("g"),
 		displayerType(&displayers.MySQLConfiguration{}),
 		displayerType(&displayers.PostgreSQLConfiguration{}),
+		displayerType(&displayers.AdvancedPostgresConfiguration{}),
 		displayerType(&displayers.RedisConfiguration{}),
 		displayerType(&displayers.ValkeyConfiguration{}),
 		displayerType(&displayers.MongoDBConfiguration{}),
@@ -2566,16 +2719,17 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql":      nil,
-		"pg":         nil,
-		"redis":      nil,
-		"valkey":     nil,
-		"mongodb":    nil,
-		"kafka":      nil,
-		"opensearch": nil,
+		"mysql":       nil,
+		"pg":          nil,
+		"advanced_pg": nil,
+		"redis":       nil,
+		"valkey":      nil,
+		"mongodb":     nil,
+		"kafka":       nil,
+		"opensearch":  nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', opensearch", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'advanced_pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', opensearch", c.NS)
 	}
 
 	dbId := args[0]
@@ -2597,6 +2751,16 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 
 		displayer := displayers.PostgreSQLConfiguration{
 			PostgreSQLConfig: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "advanced_pg" {
+		config, err := c.Databases().GetAdvancedPostgresConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.AdvancedPostgresConfiguration{
+			AdvancedPostgresConfig: *config,
 		}
 		return c.Display(&displayer)
 	} else if engine == "redis" {
@@ -2669,16 +2833,17 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql":      nil,
-		"pg":         nil,
-		"redis":      nil,
-		"valkey":     nil,
-		"mongodb":    nil,
-		"kafka":      nil,
-		"opensearch": nil,
+		"mysql":       nil,
+		"pg":          nil,
+		"advanced_pg": nil,
+		"redis":       nil,
+		"valkey":      nil,
+		"mongodb":     nil,
+		"kafka":       nil,
+		"opensearch":  nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', 'opensearch'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'advanced_pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', 'opensearch'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2694,6 +2859,11 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		}
 	} else if engine == "pg" {
 		err := c.Databases().UpdatePostgreSQLConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "advanced_pg" {
+		err := c.Databases().UpdateAdvancedPostgresConfiguration(dbId, configJson)
 		if err != nil {
 			return err
 		}

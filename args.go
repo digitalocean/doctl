@@ -80,6 +80,8 @@ const (
 	ArgVPCUUID = "vpc-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
+	// ArgWorkerSubnetUUID is a cluster worker subnet UUID argument.
+	ArgWorkerSubnetUUID = "worker-subnet-uuid"
 	// ArgClusterSubnet is a cluster pod CIDR argument.
 	ArgClusterSubnet = "cluster-subnet"
 	// ArgServiceSubnet is a cluster service CIDR argument.
@@ -157,6 +159,8 @@ const (
 	ArgClusterAutoscalerExpanders = "expanders"
 	// ArgEnableRoutingAgent enables the routing-agent cluster plugin.
 	ArgEnableRoutingAgent = "enable-routing-agent"
+	// ArgEnableCorednsAutoscaler enables the CoreDNS Autoscaler cluster plugin.
+	ArgEnableCorednsAutoscaler = "enable-coredns-autoscaler"
 	// ArgEnableAmdGpuDevicePlugin enables automatic amd gpu device plugin installation.
 	ArgEnableAmdGpuDevicePlugin = "enable-amd-gpu-device-plugin"
 	// ArgEnableAmdGpuDeviceMetricsExporterPlugin enables automatic amd gpu device metrics exporter plugin installation.
@@ -488,6 +492,12 @@ const (
 	ArgDatabaseMaintenanceDay = "day"
 	// ArgDatabaseMaintenanceHour is the new hour for the maintenance window
 	ArgDatabaseMaintenanceHour = "hour"
+	// ArgDatabaseStorageAutoscaleEnabled enables or disables storage autoscaling for a database cluster
+	ArgDatabaseStorageAutoscaleEnabled = "enabled"
+	// ArgDatabaseStorageAutoscaleThresholdPercent is the storage usage percentage that triggers autoscaling
+	ArgDatabaseStorageAutoscaleThresholdPercent = "threshold-percent"
+	// ArgDatabaseStorageAutoscaleIncrementGib is the amount of storage, in GiB, to add when autoscaling triggers
+	ArgDatabaseStorageAutoscaleIncrementGib = "increment-gib"
 	// ArgDatabasePoolUserName is the name of user for use with connection pool
 	ArgDatabasePoolUserName = "user"
 	// ArgDatabasePoolDBName is the database for use with connection pool

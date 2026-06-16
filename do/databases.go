@@ -87,6 +87,11 @@ type DatabaseMaintenanceWindow struct {
 	*godo.DatabaseMaintenanceWindow
 }
 
+// DatabaseStorageAutoscale is a wrapper for godo.DatabaseStorageAutoscale
+type DatabaseStorageAutoscale struct {
+	*godo.DatabaseStorageAutoscale
+}
+
 // DatabaseFirewallRule is a wrapper for godo.DatabaseFirewallRule
 type DatabaseFirewallRule struct {
 	*godo.DatabaseFirewallRule
@@ -113,6 +118,11 @@ type MySQLConfig struct {
 // PostgreSQLConfig is a wrapper for godo.PostgreSQLConfig
 type PostgreSQLConfig struct {
 	*godo.PostgreSQLConfig
+}
+
+// AdvancedPostgresConfig is a wrapper for godo.AdvancedPostgresConfig
+type AdvancedPostgresConfig struct {
+	*godo.AdvancedPostgresConfig
 }
 
 // RedisConfig is a wrapper for godo.RedisConfig
@@ -185,6 +195,9 @@ type DatabasesService interface {
 	UpdateMaintenance(string, *godo.DatabaseUpdateMaintenanceRequest) error
 	InstallUpdate(string) error
 
+	GetStorageAutoscale(string) (*DatabaseStorageAutoscale, error)
+	UpdateStorageAutoscale(string, *godo.DatabaseStorageAutoscale) error
+
 	GetUser(string, string) (*DatabaseUser, error)
 	ListUsers(string) (DatabaseUsers, error)
 	CreateUser(string, *godo.DatabaseCreateUserRequest) (*DatabaseUser, error)
@@ -219,6 +232,7 @@ type DatabasesService interface {
 
 	GetMySQLConfiguration(databaseID string) (*MySQLConfig, error)
 	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
+	GetAdvancedPostgresConfiguration(databaseID string) (*AdvancedPostgresConfig, error)
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
 	GetValkeyConfiguration(databaseID string) (*ValkeyConfig, error)
 	GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error)
@@ -227,6 +241,7 @@ type DatabasesService interface {
 
 	UpdateMySQLConfiguration(databaseID string, confString string) error
 	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
+	UpdateAdvancedPostgresConfiguration(databaseID string, confString string) error
 	UpdateRedisConfiguration(databaseID string, confString string) error
 	UpdateValkeyConfiguration(databaseID string, confString string) error
 	UpdateMongoDBConfiguration(databaseID string, confString string) error
@@ -367,6 +382,21 @@ func (ds *databasesService) UpdateMaintenance(databaseID string, req *godo.Datab
 
 func (ds *databasesService) InstallUpdate(databaseID string) error {
 	_, err := ds.client.Databases.InstallUpdate(context.TODO(), databaseID)
+
+	return err
+}
+
+func (ds *databasesService) GetStorageAutoscale(databaseID string) (*DatabaseStorageAutoscale, error) {
+	autoscale, _, err := ds.client.Databases.GetStorageAutoscale(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DatabaseStorageAutoscale{DatabaseStorageAutoscale: autoscale}, nil
+}
+
+func (ds *databasesService) UpdateStorageAutoscale(databaseID string, req *godo.DatabaseStorageAutoscale) error {
+	_, err := ds.client.Databases.UpdateStorageAutoscale(context.TODO(), databaseID, req)
 
 	return err
 }
@@ -712,6 +742,17 @@ func (ds *databasesService) GetPostgreSQLConfiguration(databaseID string) (*Post
 	}, nil
 }
 
+func (ds *databasesService) GetAdvancedPostgresConfiguration(databaseID string) (*AdvancedPostgresConfig, error) {
+	cfg, _, err := ds.client.Databases.GetAdvancedPostgresSQLConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AdvancedPostgresConfig{
+		AdvancedPostgresConfig: cfg,
+	}, nil
+}
+
 func (ds *databasesService) GetRedisConfiguration(databaseID string) (*RedisConfig, error) {
 	cfg, _, err := ds.client.Databases.GetRedisConfig(context.TODO(), databaseID)
 	if err != nil {
@@ -790,6 +831,21 @@ func (ds *databasesService) UpdatePostgreSQLConfiguration(databaseID string, con
 	}
 
 	_, err = ds.client.Databases.UpdatePostgreSQLConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateAdvancedPostgresConfiguration(databaseID string, confString string) error {
+	var conf godo.AdvancedPostgresConfigUpdate
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateAdvancedPostgresSQLConfig(context.TODO(), databaseID, &conf)
 	if err != nil {
 		return err
 	}

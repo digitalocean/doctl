@@ -36,6 +36,14 @@ var (
 		Hour: "10:00",
 	}
 
+	testGODOStorageAutoscaleThresholdPercent = 70
+	testGODOStorageAutoscaleIncrementGib     = uint64(20)
+	testGODOStorageAutoscale                 = &godo.DatabaseStorageAutoscale{
+		Enabled:          true,
+		ThresholdPercent: &testGODOStorageAutoscaleThresholdPercent,
+		IncrementGib:     &testGODOStorageAutoscaleIncrementGib,
+	}
+
 	testBackUpRestore = &godo.DatabaseBackupRestore{
 		DatabaseName:    "sunny-db-cluster",
 		BackupCreatedAt: "2023-02-01T17:32:15Z",
@@ -128,6 +136,10 @@ var (
 		DatabaseMaintenanceWindow: testGODOMainWindow,
 	}
 
+	testDBStorageAutoscale = do.DatabaseStorageAutoscale{
+		DatabaseStorageAutoscale: testGODOStorageAutoscale,
+	}
+
 	testDBBackup = do.DatabaseBackup{
 		DatabaseBackup: &godo.DatabaseBackup{
 			CreatedAt:     time.Now(),
@@ -207,6 +219,19 @@ var (
 		PostgreSQLConfig: &godo.PostgreSQLConfig{},
 	}
 
+	testAdvancedPostgresConfiguration = do.AdvancedPostgresConfig{
+		AdvancedPostgresConfig: &godo.AdvancedPostgresConfig{
+			PGParameters: []godo.AdvancedPostgresPGParameter{
+				{
+					Name:            "max_connections",
+					Value:           "100",
+					DefaultValue:    "100",
+					RequiresRestart: false,
+				},
+			},
+		},
+	}
+
 	testRedisConfiguration = do.RedisConfig{
 		RedisConfig: &godo.RedisConfig{},
 	}
@@ -275,6 +300,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"replica",
 		"options",
 		"maintenance-window",
+		"storage-autoscale",
 		"user",
 		"pool",
 		"db",
@@ -292,6 +318,15 @@ func TestDatabaseMaintenanceWindowCommand(t *testing.T) {
 		"update",
 		"get",
 		"install",
+	)
+}
+
+func TestDatabaseStorageAutoscaleCommand(t *testing.T) {
+	cmd := databaseStorageAutoscale()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd,
+		"update",
+		"get",
 	)
 }
 
@@ -930,6 +965,76 @@ func TestDatabaseUpdateMaintenance(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDatabaseMaintenanceHour, testDBMainWindow.Hour)
 
 		err := RunDatabaseMaintenanceUpdate(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseGetStorageAutoscale(t *testing.T) {
+	// Success
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetStorageAutoscale(testDBCluster.ID).Return(&testDBStorageAutoscale, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseStorageAutoscaleGet(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetStorageAutoscale(testDBCluster.ID).Return(nil, errTest)
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseStorageAutoscaleGet(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseUpdateStorageAutoscale(t *testing.T) {
+	defaultThreshold := defaultDatabaseStorageAutoscaleThresholdPercent
+	defaultIncrement := uint64(defaultDatabaseStorageAutoscaleIncrementGib)
+
+	rEnabled := &godo.DatabaseStorageAutoscale{
+		Enabled:          true,
+		ThresholdPercent: &defaultThreshold,
+		IncrementGib:     &defaultIncrement,
+	}
+	rDisabled := &godo.DatabaseStorageAutoscale{Enabled: false}
+
+	setStorageAutoscaleUpdateFlags := func(config *CmdConfig, enabled string) {
+		for _, child := range databaseStorageAutoscale().Commands() {
+			if child.Name() == "update" {
+				config.Command = child
+				break
+			}
+		}
+		assert.NotNil(t, config.Command)
+		assert.NoError(t, config.Command.Flags().Set(doctl.ArgDatabaseStorageAutoscaleEnabled, enabled))
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateStorageAutoscale(testDBCluster.ID, rEnabled).Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		setStorageAutoscaleUpdateFlags(config, "true")
+
+		err := RunDatabaseStorageAutoscaleUpdate(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateStorageAutoscale(testDBCluster.ID, rDisabled).Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		setStorageAutoscaleUpdateFlags(config, "false")
+
+		err := RunDatabaseStorageAutoscaleUpdate(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateStorageAutoscale(testDBCluster.ID, rEnabled).Return(errTest)
+		config.Args = append(config.Args, testDBCluster.ID)
+		setStorageAutoscaleUpdateFlags(config, "true")
+
+		err := RunDatabaseStorageAutoscaleUpdate(config)
 		assert.EqualError(t, err, errTest.Error())
 	})
 }
@@ -1682,6 +1787,16 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetAdvancedPostgresConfiguration(testDBCluster.ID).Return(&testAdvancedPostgresConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "advanced_pg")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().GetRedisConfiguration(testDBCluster.ID).Return(&testRedisConfiguration, nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "redis")
@@ -1759,6 +1874,16 @@ func TestDatabaseConfigurationUpdate(t *testing.T) {
 		tm.databases.EXPECT().UpdatePostgreSQLConfiguration(testDBCluster.ID, "").Return(nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "pg")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateAdvancedPostgresConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "advanced_pg")
 
 		err := RunDatabaseConfigurationUpdate(config)
 

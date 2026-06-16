@@ -366,8 +366,14 @@ func (do *DatabaseOptions) KV() []map[string]any {
 	if nonEmptyOptionsFn(do.DatabaseOptions.MySQLOptions) {
 		engines = append(engines, "mysql")
 	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.AdvancedMySQLOptions) {
+		engines = append(engines, "advanced_mysql")
+	}
 	if nonEmptyOptionsFn(do.DatabaseOptions.PostgresSQLOptions) {
 		engines = append(engines, "pg")
+	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.AdvancedPostgresSQLOptions) {
+		engines = append(engines, "advanced_pg")
 	}
 	if nonEmptyOptionsFn(do.DatabaseOptions.KafkaOptions) {
 		engines = append(engines, "kafka")
@@ -598,6 +604,47 @@ func (dmw *DatabaseMaintenanceWindow) KV() []map[string]any {
 		"Day":     mw.Day,
 		"Hour":    mw.Hour,
 		"Pending": mw.Pending,
+	}
+
+	return []map[string]any{o}
+}
+
+type DatabaseStorageAutoscale struct {
+	DatabaseStorageAutoscale do.DatabaseStorageAutoscale
+}
+
+var _ Displayable = &DatabaseStorageAutoscale{}
+
+func (dsa *DatabaseStorageAutoscale) JSON(out io.Writer) error {
+	return writeJSON(dsa.DatabaseStorageAutoscale, out)
+}
+
+func (dsa *DatabaseStorageAutoscale) Cols() []string {
+	return []string{
+		"Enabled",
+		"Threshold Percent",
+		"Increment GiB",
+	}
+}
+
+func (dsa *DatabaseStorageAutoscale) ColMap() map[string]string {
+	return map[string]string{
+		"Enabled":           "Enabled",
+		"Threshold Percent": "Threshold Percent",
+		"Increment GiB":     "Increment GiB",
+	}
+}
+
+func (dsa *DatabaseStorageAutoscale) KV() []map[string]any {
+	autoscale := dsa.DatabaseStorageAutoscale
+	o := map[string]any{
+		"Enabled": autoscale.Enabled,
+	}
+	if autoscale.ThresholdPercent != nil {
+		o["Threshold Percent"] = *autoscale.ThresholdPercent
+	}
+	if autoscale.IncrementGib != nil {
+		o["Increment GiB"] = *autoscale.IncrementGib
 	}
 
 	return []map[string]any{o}
@@ -2288,6 +2335,50 @@ func (dc *OpensearchConfiguration) KV() []map[string]any {
 		})
 	}
 
+	return o
+}
+
+type AdvancedPostgresConfiguration struct {
+	AdvancedPostgresConfig do.AdvancedPostgresConfig
+}
+
+var _ Displayable = &AdvancedPostgresConfiguration{}
+
+func (dc *AdvancedPostgresConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.AdvancedPostgresConfig, out)
+}
+
+func (dc *AdvancedPostgresConfiguration) Cols() []string {
+	return []string{
+		"Name",
+		"Value",
+		"Default Value",
+		"Requires Restart",
+		"Description",
+	}
+}
+
+func (dc *AdvancedPostgresConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"Name":             "Name",
+		"Value":            "Value",
+		"Default Value":    "Default Value",
+		"Requires Restart": "Requires Restart",
+		"Description":      "Description",
+	}
+}
+
+func (dc *AdvancedPostgresConfiguration) KV() []map[string]any {
+	o := []map[string]any{}
+	for _, p := range dc.AdvancedPostgresConfig.PGParameters {
+		o = append(o, map[string]any{
+			"Name":             p.Name,
+			"Value":            p.Value,
+			"Default Value":    p.DefaultValue,
+			"Requires Restart": p.RequiresRestart,
+			"Description":      p.Description,
+		})
+	}
 	return o
 }
 

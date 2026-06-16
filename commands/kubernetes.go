@@ -299,6 +299,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"A `slug` indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
 		"The UUID of a VPC network to create the cluster in. Must be the UUID of a valid VPC in the same region specified for the cluster. If a VPC is not specified, the cluster is placed in the default VPC network for the region.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgWorkerSubnetUUID, "", "",
+		fmt.Sprintf("The UUID of the subnet to place worker nodes in. Must be a valid subnet in the cluster VPC. Requires that %s is also specified.", doctl.ArgClusterVPCUUID))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterSubnet, "", "",
 		"The CIDR block to use for the pod network. Must be a valid CIDR block. Defaults to `10.244.0.0/16`. If left empty/default the cluster will be created with a virtual network. If a custom one is provided, the cluster will be created as vpc-native cluster. VPC-native CIDR blocks cannot overlap within an account.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgServiceSubnet, "", "",
@@ -321,6 +323,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this flag is empty, autoscaler will use its default expanders.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableCorednsAutoscaler, "", false,
+		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --enable-coredns-autoscaler=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
 		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
@@ -387,6 +391,8 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableCorednsAutoscaler, "", false,
+		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). To always enable it, supply --enable-coredns-autoscaler=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
 		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
@@ -1783,6 +1789,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	// empty "" is fine, the default region VPC will be resolved
 	r.VPCUUID = vpcUUID
 
+	workerSubnetUUID, err := c.Doit.GetString(c.NS, doctl.ArgWorkerSubnetUUID)
+	if err != nil {
+		return err
+	}
+	r.WorkerSubnetUUID = workerSubnetUUID
+
 	podCIDR, err := c.Doit.GetString(c.NS, doctl.ArgClusterSubnet)
 	if err != nil {
 		return err
@@ -1840,6 +1852,20 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	if enableRoutingAgent != nil {
 		r.RoutingAgent = &godo.KubernetesRoutingAgent{
 			Enabled: enableRoutingAgent,
+		}
+	}
+
+	// Only forward the CoreDNS Autoscaler flag when the user explicitly sets it so the
+	// server-side defaulting (version-based) isn't suppressed by sending an unset "false".
+	if c.Doit.IsSet(doctl.ArgEnableCorednsAutoscaler) {
+		enableCorednsAutoscaler, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableCorednsAutoscaler)
+		if err != nil {
+			return err
+		}
+		if enableCorednsAutoscaler != nil {
+			r.CorednsAutoscaler = &godo.KubernetesCorednsAutoscaler{
+				Enabled: enableCorednsAutoscaler,
+			}
 		}
 	}
 
@@ -2057,6 +2083,20 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	if enableRoutingAgent != nil {
 		r.RoutingAgent = &godo.KubernetesRoutingAgent{
 			Enabled: enableRoutingAgent,
+		}
+	}
+
+	// Only forward the CoreDNS Autoscaler flag when the user explicitly sets it so we don't
+	// disable existing state on a no-op update by sending an unset "false".
+	if c.Doit.IsSet(doctl.ArgEnableCorednsAutoscaler) {
+		enableCorednsAutoscaler, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableCorednsAutoscaler)
+		if err != nil {
+			return err
+		}
+		if enableCorednsAutoscaler != nil {
+			r.CorednsAutoscaler = &godo.KubernetesCorednsAutoscaler{
+				Enabled: enableCorednsAutoscaler,
+			}
 		}
 	}
 
