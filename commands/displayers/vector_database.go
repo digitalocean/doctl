@@ -74,12 +74,12 @@ func (v *VectorDBs) KV() []map[string]any {
 
 	for _, db := range v.VectorDBs {
 		o := map[string]any{
-			"ID":     db.ID,
-			"Name":   db.Name,
-			"Region": db.Region,
-			"Status": db.Status,
-			"Size":   db.Size,
-			"Tags":   strings.Join(db.Tags, ","),
+			"ID":      db.ID,
+			"Name":    db.Name,
+			"Region":  db.Region,
+			"Status":  db.Status,
+			"Size":    db.Size,
+			"Tags":    strings.Join(db.Tags, ","),
 			"Created": db.CreatedAt,
 		}
 		if db.Endpoints != nil {
