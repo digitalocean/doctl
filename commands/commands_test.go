@@ -297,6 +297,7 @@ type tcMocks struct {
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
 	security              *domocks.MockSecurityService
+	secrets               *domocks.MockSecretsService
 	vectorDBs             *domocks.MockVectorDBsService
 }
 
@@ -358,6 +359,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
+		secrets:               domocks.NewMockSecretsService(ctrl),
 		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
 	}
 
@@ -427,6 +429,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Nfs:                 func() do.NfsService { return tm.nfs },
 		NfsActions:          func() do.NfsActionsService { return tm.nfsActions },
 		Security:            func() do.SecurityService { return tm.security },
+		Secrets:             func() do.SecretsService { return tm.secrets },
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
 	}
 
