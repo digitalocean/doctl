@@ -53,3 +53,4 @@ mockgen -source gradientai.go -package=mocks GradientAIService > mocks/GradientA
 mockgen -source inference.go -package=mocks InferenceService > mocks/InferenceService.go
 mockgen -source nfs.go -package=mocks NfsService > mocks/NfsService.go
 mockgen -source nfs_actions.go -package=mocks NfsActionsService > mocks/NfsActionsService.go
+mockgen -source vector_databases.go -package=mocks VectorDBsService > mocks/VectorDBsService.go

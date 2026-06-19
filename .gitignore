@@ -26,3 +26,6 @@ prime/
 stage/
 doctl_v*.snap
 snap/.snapcraft/
+
+# Test binary
+doctl-test
