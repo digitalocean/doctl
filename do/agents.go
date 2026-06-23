@@ -31,7 +31,7 @@ type HostedAgentsService interface {
 	// CreateSessionFromManifest POSTs the manifest bytes verbatim with
 	// Content-Type: application/x-yaml. Server owns schema validation.
 	CreateSessionFromManifest(manifest []byte) (*HostedAgentSession, error)
-	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, error)
+	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
 	DestroySession(sessionID string) error
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
@@ -58,17 +58,17 @@ func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte) (*Hoste
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
 }
 
-func (s *hostedAgentsService) ListSessions(opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, error) {
+func (s *hostedAgentsService) ListSessions(opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error) {
 	resp, _, err := s.client.HostedAgents.ListSessions(context.TODO(), opt)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	out := make([]HostedAgentSession, len(resp.Sessions))
 	for i := range resp.Sessions {
 		sess := resp.Sessions[i]
 		out[i] = HostedAgentSession{HostedAgentSession: &sess}
 	}
-	return out, nil
+	return out, resp.NextPageToken, nil
 }
 
 func (s *hostedAgentsService) GetSession(sessionID string) (*HostedAgentSession, error) {

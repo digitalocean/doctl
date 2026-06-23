@@ -127,8 +127,28 @@ func TestRunAgentsStart(t *testing.T) {
 
 func TestRunAgentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{}, nil)
+		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{}, "", nil)
 		assert.NoError(t, RunAgentsList(config))
+	})
+}
+
+func TestRunAgentsList_Pagination(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentSessionListOptions{
+			PageSize: 2,
+			Status:   godo.HostedAgentSessionStatusReady,
+		}
+		tm.hostedAgents.EXPECT().ListSessions(want).Return([]do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"}},
+		}, "1561", nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentPageSize, 2)
+		config.Doit.Set(config.NS, doctl.ArgAgentStatus, string(godo.HostedAgentSessionStatusReady))
+
+		assert.NoError(t, RunAgentsList(config))
+		assert.Contains(t, buf.String(), "Next page token: 1561")
 	})
 }
 

@@ -923,4 +923,13 @@ const (
 
 	// ArgAgentSpec is the path to an agent spec file.
 	ArgAgentSpec = "spec"
+
+	// ArgAgentPageSize is the maximum number of sessions to return per page.
+	ArgAgentPageSize = "page-size"
+
+	// ArgAgentPageToken is the pagination cursor from a previous list response.
+	ArgAgentPageToken = "page-token"
+
+	// ArgAgentStatus filters sessions by lifecycle status.
+	ArgAgentStatus = "status"
 )

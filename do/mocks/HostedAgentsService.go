@@ -81,12 +81,13 @@ func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID any) *gomock
 }
 
 // ListSessions mocks base method.
-func (m *MockHostedAgentsService) ListSessions(arg0 *godo.HostedAgentSessionListOptions) ([]do.HostedAgentSession, error) {
+func (m *MockHostedAgentsService) ListSessions(arg0 *godo.HostedAgentSessionListOptions) ([]do.HostedAgentSession, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListSessions", arg0)
 	ret0, _ := ret[0].([]do.HostedAgentSession)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ListSessions indicates an expected call of ListSessions.

@@ -68,11 +68,15 @@ Type `+"`"+`/help`+"`"+` once attached to see the inline command list. Pending H
 		Writer, aliasOpt("chat"))
 	cmdAttach.Example = `doctl agents attach sess_abc123`
 
-	CmdBuilder(cmd, RunAgentsList, "list",
+	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
 		"List agent sessions",
-		"Lists all agent sessions visible to the caller.",
+		`Lists agent sessions visible to the caller. Supports pagination and status filtering via `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, and `+"`"+`--status`+"`"+`. When more pages exist, the next page token is printed after the table.`,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentSession{}))
+	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
+	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
+	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
+	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session-id>",
 		"Show a single agent session",
@@ -151,11 +155,50 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 
 // RunAgentsList lists hosted agent sessions visible to the caller.
 func RunAgentsList(c *CmdConfig) error {
-	sessions, err := c.HostedAgents().ListSessions(nil)
+	opt, err := agentsListOptions(c)
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: sessions})
+	sessions, nextPageToken, err := c.HostedAgents().ListSessions(opt)
+	if err != nil {
+		return err
+	}
+	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
+		return err
+	}
+	if nextPageToken != "" {
+		fmt.Fprintf(c.Out, "Next page token: %s\n", nextPageToken)
+	}
+	return nil
+}
+
+func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error) {
+	pageSize, err := c.Doit.GetInt(c.NS, doctl.ArgAgentPageSize)
+	if err != nil {
+		return nil, err
+	}
+	pageToken, err := c.Doit.GetString(c.NS, doctl.ArgAgentPageToken)
+	if err != nil {
+		return nil, err
+	}
+	status, err := c.Doit.GetString(c.NS, doctl.ArgAgentStatus)
+	if err != nil {
+		return nil, err
+	}
+	if pageSize == 0 && pageToken == "" && status == "" {
+		return nil, nil
+	}
+	opt := &godo.HostedAgentSessionListOptions{}
+	if pageSize > 0 {
+		opt.PageSize = pageSize
+	}
+	if pageToken != "" {
+		opt.PageToken = pageToken
+	}
+	if status != "" {
+		opt.Status = godo.HostedAgentSessionStatus(status)
+	}
+	return opt, nil
 }
 
 // RunAgentsShow prints one session.
