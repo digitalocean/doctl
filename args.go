@@ -655,6 +655,13 @@ const (
 	// ArgDatabaseFirewallRuleUUID is the UUID for the firewall rules.
 	ArgDatabaseFirewallRuleUUID = "uuid"
 
+	// ArgVectorDBDefaultQuantization is the default quantization setting for a vector database.
+	ArgVectorDBDefaultQuantization = "default-quantization"
+	// ArgVectorDBEnableAutoSchema enables automatic schema creation for a vector database.
+	ArgVectorDBEnableAutoSchema = "enable-auto-schema"
+	// ArgVectorDBWeaviateVersion is the Weaviate version for a vector database.
+	ArgVectorDBWeaviateVersion = "weaviate-version"
+
 	// Monitoring Args
 
 	// ArgAlertPolicyDescription is the flag to pass in the alert policy description.

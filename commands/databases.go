@@ -2658,6 +2658,7 @@ For a full list of available fields, see the API documentation: https://docs.dig
 		aliasOpt("g"),
 		displayerType(&displayers.MySQLConfiguration{}),
 		displayerType(&displayers.PostgreSQLConfiguration{}),
+		displayerType(&displayers.AdvancedPostgresConfiguration{}),
 		displayerType(&displayers.RedisConfiguration{}),
 		displayerType(&displayers.ValkeyConfiguration{}),
 		displayerType(&displayers.MongoDBConfiguration{}),
@@ -2718,16 +2719,17 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql":      nil,
-		"pg":         nil,
-		"redis":      nil,
-		"valkey":     nil,
-		"mongodb":    nil,
-		"kafka":      nil,
-		"opensearch": nil,
+		"mysql":       nil,
+		"pg":          nil,
+		"advanced_pg": nil,
+		"redis":       nil,
+		"valkey":      nil,
+		"mongodb":     nil,
+		"kafka":       nil,
+		"opensearch":  nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', opensearch", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'advanced_pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', opensearch", c.NS)
 	}
 
 	dbId := args[0]
@@ -2749,6 +2751,16 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 
 		displayer := displayers.PostgreSQLConfiguration{
 			PostgreSQLConfig: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "advanced_pg" {
+		config, err := c.Databases().GetAdvancedPostgresConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.AdvancedPostgresConfiguration{
+			AdvancedPostgresConfig: *config,
 		}
 		return c.Display(&displayer)
 	} else if engine == "redis" {
@@ -2821,16 +2833,17 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql":      nil,
-		"pg":         nil,
-		"redis":      nil,
-		"valkey":     nil,
-		"mongodb":    nil,
-		"kafka":      nil,
-		"opensearch": nil,
+		"mysql":       nil,
+		"pg":          nil,
+		"advanced_pg": nil,
+		"redis":       nil,
+		"valkey":      nil,
+		"mongodb":     nil,
+		"kafka":       nil,
+		"opensearch":  nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', 'opensearch'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'advanced_pg', 'mysql', 'redis', 'valkey', 'mongodb', 'kafka', 'opensearch'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2846,6 +2859,11 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		}
 	} else if engine == "pg" {
 		err := c.Databases().UpdatePostgreSQLConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "advanced_pg" {
+		err := c.Databases().UpdateAdvancedPostgresConfiguration(dbId, configJson)
 		if err != nil {
 			return err
 		}

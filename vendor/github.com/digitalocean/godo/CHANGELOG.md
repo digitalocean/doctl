@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.196.0] - 2026-06-16
+
+- #1035 - @bpatra-drop - Add support for evaluation dataset delete api
+- #1022 - @nbhoot157 - Add ProjectID to VectorDBCreateRequest
+
 ## [1.195.0] - 2026-06-09
 
 - #1033 - @chandrudo - Add UpdateModelEvaluationRun to GradientAI service

@@ -120,6 +120,11 @@ type PostgreSQLConfig struct {
 	*godo.PostgreSQLConfig
 }
 
+// AdvancedPostgresConfig is a wrapper for godo.AdvancedPostgresConfig
+type AdvancedPostgresConfig struct {
+	*godo.AdvancedPostgresConfig
+}
+
 // RedisConfig is a wrapper for godo.RedisConfig
 type RedisConfig struct {
 	*godo.RedisConfig
@@ -227,6 +232,7 @@ type DatabasesService interface {
 
 	GetMySQLConfiguration(databaseID string) (*MySQLConfig, error)
 	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
+	GetAdvancedPostgresConfiguration(databaseID string) (*AdvancedPostgresConfig, error)
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
 	GetValkeyConfiguration(databaseID string) (*ValkeyConfig, error)
 	GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error)
@@ -235,6 +241,7 @@ type DatabasesService interface {
 
 	UpdateMySQLConfiguration(databaseID string, confString string) error
 	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
+	UpdateAdvancedPostgresConfiguration(databaseID string, confString string) error
 	UpdateRedisConfiguration(databaseID string, confString string) error
 	UpdateValkeyConfiguration(databaseID string, confString string) error
 	UpdateMongoDBConfiguration(databaseID string, confString string) error
@@ -735,6 +742,17 @@ func (ds *databasesService) GetPostgreSQLConfiguration(databaseID string) (*Post
 	}, nil
 }
 
+func (ds *databasesService) GetAdvancedPostgresConfiguration(databaseID string) (*AdvancedPostgresConfig, error) {
+	cfg, _, err := ds.client.Databases.GetAdvancedPostgresSQLConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AdvancedPostgresConfig{
+		AdvancedPostgresConfig: cfg,
+	}, nil
+}
+
 func (ds *databasesService) GetRedisConfiguration(databaseID string) (*RedisConfig, error) {
 	cfg, _, err := ds.client.Databases.GetRedisConfig(context.TODO(), databaseID)
 	if err != nil {
@@ -813,6 +831,21 @@ func (ds *databasesService) UpdatePostgreSQLConfiguration(databaseID string, con
 	}
 
 	_, err = ds.client.Databases.UpdatePostgreSQLConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateAdvancedPostgresConfiguration(databaseID string, confString string) error {
+	var conf godo.AdvancedPostgresConfigUpdate
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateAdvancedPostgresSQLConfig(context.TODO(), databaseID, &conf)
 	if err != nil {
 		return err
 	}

@@ -298,6 +298,7 @@ type tcMocks struct {
 	nfsActions            *domocks.MockNfsActionsService
 	security              *domocks.MockSecurityService
 	hostedAgents          *domocks.MockHostedAgentsService
+	vectorDBs             *domocks.MockVectorDBsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -359,6 +360,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
 		hostedAgents:          domocks.NewMockHostedAgentsService(ctrl),
+		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -428,6 +430,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		NfsActions:          func() do.NfsActionsService { return tm.nfsActions },
 		Security:            func() do.SecurityService { return tm.security },
 		HostedAgents:        func() do.HostedAgentsService { return tm.hostedAgents },
+		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
 	}
 
 	tFn(config, tm)
