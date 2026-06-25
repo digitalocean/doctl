@@ -92,20 +92,74 @@ func TestParseSecretValues(t *testing.T) {
 }
 
 func TestReadSecretValuesInteractive(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("password=secret\napi_key=abc\n\n"))
+	keys := []string{"password", "api_key", ""}
+	values := []string{"secret", "abc"}
+	keyIdx, valIdx := 0, 0
 
-	values, err := readSecretValuesInteractive(out, reader, "prompt")
+	oldPromptKey := promptSecretKeyFunc
+	oldPromptValue := promptSecretValueFunc
+	defer func() {
+		promptSecretKeyFunc = oldPromptKey
+		promptSecretValueFunc = oldPromptValue
+	}()
+
+	promptSecretKeyFunc = func() (string, error) {
+		k := keys[keyIdx]
+		keyIdx++
+		return k, nil
+	}
+	promptSecretValueFunc = func(key string) (string, error) {
+		assert.Contains(t, []string{"password", "api_key"}, key)
+		v := values[valIdx]
+		valIdx++
+		return v, nil
+	}
+
+	out := &bytes.Buffer{}
+	result, err := readSecretValuesInteractive(out, "prompt")
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"password": "secret", "api_key": "abc"}, values)
+	assert.Equal(t, map[string]string{"password": "secret", "api_key": "abc"}, result)
 	assert.Contains(t, out.String(), "prompt")
 }
 
-func TestReadSecretValuesInteractiveEmpty(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("\n"))
+func TestReadSecretValuesInteractiveDuplicateKey(t *testing.T) {
+	oldPromptKey := promptSecretKeyFunc
+	oldPromptValue := promptSecretValueFunc
+	defer func() {
+		promptSecretKeyFunc = oldPromptKey
+		promptSecretValueFunc = oldPromptValue
+	}()
 
-	_, err := readSecretValuesInteractive(out, reader, "prompt")
+	keyCalls := 0
+	promptSecretKeyFunc = func() (string, error) {
+		keyCalls++
+		if keyCalls == 1 {
+			return "password", nil
+		}
+		return "password", nil
+	}
+	promptSecretValueFunc = func(key string) (string, error) {
+		return "secret", nil
+	}
+
+	out := &bytes.Buffer{}
+	_, err := readSecretValuesInteractive(out, "prompt")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "duplicate key")
+}
+
+func TestReadSecretValuesInteractiveEmpty(t *testing.T) {
+	oldPromptKey := promptSecretKeyFunc
+	defer func() {
+		promptSecretKeyFunc = oldPromptKey
+	}()
+
+	promptSecretKeyFunc = func() (string, error) {
+		return "", nil
+	}
+
+	out := &bytes.Buffer{}
+	_, err := readSecretValuesInteractive(out, "prompt")
 	assert.Error(t, err)
 }
 
@@ -253,6 +307,8 @@ func TestResolveSecretRegionUsesFlag(t *testing.T) {
 
 func TestResolveSecretRegionRequiresFlagWhenNonInteractive(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		defer withInteractive(false)()
+
 		_, err := resolveSecretRegion(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), doctl.ArgRegionSlug)
@@ -316,6 +372,8 @@ func TestResolveSecretVersionUsesFlag(t *testing.T) {
 
 func TestResolveSecretVersionRequiresFlagWhenNonInteractive(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		defer withInteractive(false)()
+
 		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(nil, assert.AnError)
 
 		_, err := resolveSecretVersion(config, "prod-db-creds", "nyc3")
@@ -326,6 +384,8 @@ func TestResolveSecretVersionRequiresFlagWhenNonInteractive(t *testing.T) {
 
 func TestCollectSecretValuesRequiresFlagsWhenNonInteractive(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		defer withInteractive(false)()
+
 		config.Args = []string{"prod-db-creds"}
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
 
@@ -333,4 +393,12 @@ func TestCollectSecretValuesRequiresFlagsWhenNonInteractive(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), doctl.ArgSecretValue)
 	})
+}
+
+func withInteractive(enabled bool) func() {
+	prev := Interactive
+	Interactive = enabled
+	return func() {
+		Interactive = prev
+	}
 }

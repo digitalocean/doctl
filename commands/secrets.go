@@ -22,14 +22,12 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/input"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
-
-// secretValuesReader reads interactive secret value input. It can be replaced in tests.
-var secretValuesReader = bufio.NewReader(os.Stdin)
 
 // secretRegionReader reads interactive region input. It can be replaced in tests.
 var secretRegionReader = bufio.NewReader(os.Stdin)
@@ -40,11 +38,21 @@ var secretNameReader = bufio.NewReader(os.Stdin)
 // secretVersionReader reads interactive version input. It can be replaced in tests.
 var secretVersionReader = bufio.NewReader(os.Stdin)
 
+// promptSecretKeyFunc prompts for a secret key name. It can be replaced in tests.
+var promptSecretKeyFunc = defaultPromptSecretKey
+
+// promptSecretValueFunc prompts for a secret value. It can be replaced in tests.
+var promptSecretValueFunc = defaultPromptSecretValue
+
 var exampleSecretRegions = []string{"nyc3", "sfo3", "ams3", "fra1", "sgp1", "lon1"}
 
-const secretRegionFlagDesc = "Region where the secret is stored. If omitted, you are prompted when running interactively."
+const secretRegionFlagDesc = "Region where the secret is stored. If omitted, you are prompted when running with --interactive."
 
 const secretVersionFlagDesc = "Current version of the secret to update. If omitted, the current version is used when it can be determined from the API."
+
+func secretsPromptsEnabled() bool {
+	return Interactive && term.IsTerminal(int(os.Stdin.Fd()))
+}
 
 // Secrets creates the secrets command hierarchy.
 func Secrets() *Command {
@@ -61,11 +69,11 @@ Each secret is a named container in a region that holds one or more key-value pa
 
 	cmdCreate := CmdBuilder(cmd, RunCmdSecretsCreate, "create <name>", "Create a secret", `Creates a secret container in the specified region and stores key-value pairs inside it.
 
-If no `+"`"+`--value`+"`"+` flags are provided, key-value pairs are read interactively from stdin.`, Writer,
+If no `+"`"+`--value`+"`"+` flags are provided, key-value pairs are read interactively with --interactive. You are prompted for each key, then each value is masked.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.SecretWriteResult{}))
 	AddStringFlag(cmdCreate, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringSliceFlag(cmdCreate, doctl.ArgSecretValue, "", nil,
-		"Key-value pair in key=value format (repeatable). If omitted, values are read interactively.")
+		"Key-value pair in key=value format (repeatable). If omitted, keys and masked values are read with --interactive.")
 	cmdCreate.Example = `The following example creates a secret with key-value pairs: doctl secrets create prod-db-creds --region nyc3 --value password=super-secret --value api_key=abc123`
 
 	cmdGet := CmdBuilder(cmd, RunCmdSecretsGet, "get <name>", "Get a secret", `Retrieves a secret container and its key-value pairs.`, Writer,
@@ -89,7 +97,7 @@ This replaces the entire contents of the secret. Include every key you want to k
 	AddStringFlag(cmdUpdate, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddIntFlag(cmdUpdate, doctl.ArgSecretVersion, "", 0, secretVersionFlagDesc)
 	AddStringSliceFlag(cmdUpdate, doctl.ArgSecretValue, "", nil,
-		"Key-value pair in key=value format (repeatable). If omitted, values are read interactively.")
+		"Key-value pair in key=value format (repeatable). If omitted, keys and masked values are read with --interactive.")
 	cmdUpdate.Example = `The following example updates a secret: doctl secrets update prod-db-creds --region nyc3 --version 1 --value password=new-secret --value api_key=abc123`
 
 	cmdDelete := CmdBuilder(cmd, RunCmdSecretsDelete, "delete <name>", "Delete a secret", `Schedules a secret container for soft deletion.`, Writer, aliasOpt("d", "rm"))
@@ -258,8 +266,8 @@ func collectSecretValues(c *CmdConfig) (map[string]string, error) {
 	if len(flags) > 0 {
 		return parseSecretValues(flags)
 	}
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return nil, fmt.Errorf("must specify at least one --%s when not running interactively", doctl.ArgSecretValue)
+	if !secretsPromptsEnabled() {
+		return nil, fmt.Errorf("must specify at least one --%s when running with --no-interactive", doctl.ArgSecretValue)
 	}
 
 	name := ""
@@ -268,7 +276,7 @@ func collectSecretValues(c *CmdConfig) (map[string]string, error) {
 	}
 	region, _ := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 
-	return readSecretValuesInteractive(os.Stderr, secretValuesReader, secretValuePromptCreate(name, region))
+	return readSecretValuesInteractive(os.Stderr, secretValuePromptCreate(name, region))
 }
 
 func collectSecretValuesForUpdate(c *CmdConfig, name, region string) (map[string]string, error) {
@@ -279,18 +287,29 @@ func collectSecretValuesForUpdate(c *CmdConfig, name, region string) (map[string
 	if len(flags) > 0 {
 		return parseSecretValues(flags)
 	}
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return nil, fmt.Errorf("must specify at least one --%s when not running interactively", doctl.ArgSecretValue)
+	if !secretsPromptsEnabled() {
+		return nil, fmt.Errorf("must specify at least one --%s when running with --no-interactive", doctl.ArgSecretValue)
 	}
 
-	return readSecretValuesInteractive(os.Stderr, secretValuesReader, secretValuePromptUpdate(name, region))
+	return readSecretValuesInteractive(os.Stderr, secretValuePromptUpdate(name, region))
+}
+
+func defaultPromptSecretKey() (string, error) {
+	return input.New("Enter key name (submit empty to finish): ").Prompt()
+}
+
+func defaultPromptSecretValue(key string) (string, error) {
+	return input.New(fmt.Sprintf("Enter value for %q: ", key),
+		input.WithHidden(),
+		input.WithRequired(),
+	).Prompt()
 }
 
 func resolveSecretName(c *CmdConfig) (string, error) {
 	if len(c.Args) > 0 && c.Args[0] != "" {
 		return c.Args[0], nil
 	}
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
+	if !secretsPromptsEnabled() {
 		return "", doctl.NewMissingArgsErr(c.NS)
 	}
 
@@ -339,7 +358,7 @@ func resolveSecretVersion(c *CmdConfig, name, region string) (int, error) {
 		return secret.Version, nil
 	}
 
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
+	if !secretsPromptsEnabled() {
 		return 0, fmt.Errorf("must specify --%s when the current version cannot be determined", doctl.ArgSecretVersion)
 	}
 
@@ -382,8 +401,8 @@ func resolveSecretRegion(c *CmdConfig) (string, error) {
 	if region != "" {
 		return region, nil
 	}
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return "", fmt.Errorf("must specify --%s when not running interactively", doctl.ArgRegionSlug)
+	if !secretsPromptsEnabled() {
+		return "", fmt.Errorf("must specify --%s when running with --no-interactive", doctl.ArgRegionSlug)
 	}
 
 	region, err = readSecretRegionInteractive(os.Stderr, secretRegionReader)
@@ -415,18 +434,18 @@ func readSecretRegionInteractive(out io.Writer, in *bufio.Reader) (string, error
 func secretValuePromptCreate(name, region string) string {
 	if name != "" && region != "" {
 		return fmt.Sprintf(`Creating secret %q in %s.
-Enter key-value pairs to store in this secret (key=value format, one per line).
-Press Enter on an empty line when done.`, name, region)
+Enter key-value pairs to store in this secret.
+Submit an empty key name when you are done.`, name, region)
 	}
 
-	return `Enter key-value pairs to store in this secret (key=value format, one per line).
-Press Enter on an empty line when done.`
+	return `Enter key-value pairs to store in this secret.
+Submit an empty key name when you are done.`
 }
 
 func secretValuePromptUpdate(name, region string) string {
 	return fmt.Sprintf(`Updating secret %q in %s.
 This replaces all key-value pairs in the secret. Enter the full set you want to keep.
-Enter key-value pairs (key=value format, one per line). Press Enter on an empty line when done.`, name, region)
+Submit an empty key name when you are done.`, name, region)
 }
 
 func parseSecretValues(lines []string) (map[string]string, error) {
@@ -458,28 +477,30 @@ func parseSecretValueLine(line string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-func readSecretValuesInteractive(out io.Writer, in *bufio.Reader, prompt string) (map[string]string, error) {
+func readSecretValuesInteractive(out io.Writer, prompt string) (map[string]string, error) {
 	fmt.Fprintln(out, prompt)
 
 	values := make(map[string]string)
 	for {
-		line, err := in.ReadString('\n')
+		key, err := promptSecretKeyFunc()
 		if err != nil {
 			return nil, err
 		}
 
-		line = strings.TrimSpace(line)
-		if line == "" {
+		key = strings.TrimSpace(key)
+		if key == "" {
 			break
 		}
 
-		key, value, err := parseSecretValueLine(line)
-		if err != nil {
-			return nil, err
-		}
 		if _, exists := values[key]; exists {
 			return nil, fmt.Errorf("duplicate key %q", key)
 		}
+
+		value, err := promptSecretValueFunc(key)
+		if err != nil {
+			return nil, err
+		}
+
 		values[key] = value
 	}
 
