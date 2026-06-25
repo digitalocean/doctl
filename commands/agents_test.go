@@ -414,11 +414,229 @@ func TestHitlLetterShortcut(t *testing.T) {
 
 func TestAttachPrompt(t *testing.T) {
 	p := &pendingHITL{}
-	assert.Equal(t, "> ", attachPrompt(p))
+	assert.Equal(t, "> ", attachPrompt(p), "empty queue")
+
 	p.set("hitl_42")
-	assert.Equal(t, "[y/n/d] > ", attachPrompt(p))
+	assert.Equal(t, "[y/n/d] > ", attachPrompt(p), "exactly one pending — no count noise")
+
+	p.set("hitl_43")
+	p.set("hitl_44")
+	assert.Equal(t, "[y/n/d] (3 pending) > ", attachPrompt(p), "count surfaces when >1 queued")
+
+	p.clearIf("hitl_43")
+	assert.Equal(t, "[y/n/d] (2 pending) > ", attachPrompt(p), "count reflects mid-queue removal")
+
 	p.clearIf("hitl_42")
-	assert.Equal(t, "> ", attachPrompt(p))
+	p.clearIf("hitl_44")
+	assert.Equal(t, "> ", attachPrompt(p), "drained")
+}
+
+// TestPendingHITLQueue locks in the FIFO + dedupe + arbitrary-position-remove
+// semantics that multi-HITL UX depends on.
+func TestPendingHITLQueue(t *testing.T) {
+	t.Run("FIFO order; get returns oldest", func(t *testing.T) {
+		p := &pendingHITL{}
+		p.set("h1")
+		p.set("h2")
+		p.set("h3")
+		assert.Equal(t, "h1", p.get())
+		assert.Equal(t, 3, p.len())
+
+		p.clearIf("h1")
+		assert.Equal(t, "h2", p.get(), "head advances to next oldest after clear")
+		assert.Equal(t, 2, p.len())
+	})
+
+	t.Run("dedupe: re-setting same id is a no-op", func(t *testing.T) {
+		p := &pendingHITL{}
+		p.set("h1")
+		p.set("h1")
+		p.set("h1", "bash")
+		assert.Equal(t, 1, p.len(), "duplicate set must not enlarge the queue (SSE replay safe)")
+	})
+
+	t.Run("empty id is rejected", func(t *testing.T) {
+		p := &pendingHITL{}
+		p.set("")
+		assert.Equal(t, 0, p.len())
+	})
+
+	t.Run("clearIf removes from any position, not just head", func(t *testing.T) {
+		p := &pendingHITL{}
+		p.set("h1")
+		p.set("h2")
+		p.set("h3")
+
+		p.clearIf("h2")
+		assert.Equal(t, 2, p.len())
+		assert.Equal(t, "h1", p.get(), "head is unaffected when middle is removed")
+
+		ids := []string{}
+		for _, e := range p.list() {
+			ids = append(ids, e.id)
+		}
+		assert.Equal(t, []string{"h1", "h3"}, ids, "order preserved across mid-queue removal")
+	})
+
+	t.Run("clearIf on unknown id is a no-op", func(t *testing.T) {
+		p := &pendingHITL{}
+		p.set("h1")
+		p.clearIf("h999")
+		assert.Equal(t, 1, p.len())
+	})
+
+	t.Run("action label is carried through to /pending", func(t *testing.T) {
+		p := &pendingHITL{}
+		p.set("h1", "HITL_ACTION_BASH")
+		p.set("h2") // no action provided
+		list := p.list()
+		assert.Equal(t, "HITL_ACTION_BASH", list[0].action)
+		assert.Equal(t, "", list[1].action)
+	})
+}
+
+// TestSingleKeystrokeAdvancesQueue: after resolving the head, the next
+// keystroke must target the next-oldest entry without the user retyping
+// the id. This is the core multi-HITL UX contract.
+func TestSingleKeystrokeAdvancesQueue(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		pending := &pendingHITL{}
+		pending.set("h1", "HITL_ACTION_BASH")
+		pending.set("h2", "HITL_ACTION_BASH")
+
+		// "y\n" approves head (h1); the loop sees pending still has h2 and
+		// drops back into HITL keystroke mode. "n\n" rejects h2.
+		tm.hostedAgents.EXPECT().ResolveHITL("sess_x", "h1", &godo.HostedAgentResolveHITLRequest{
+			Outcome: godo.HostedAgentHITLOutcomeApprove,
+			Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+		}).Return(nil)
+		tm.hostedAgents.EXPECT().ResolveHITL("sess_x", "h2", &godo.HostedAgentResolveHITLRequest{
+			Outcome: godo.HostedAgentHITLOutcomeReject,
+			Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+		}).Return(nil)
+
+		err := attachLoop(config, config.HostedAgents(), "sess_x",
+			strings.NewReader("y\nn\n"), pending)
+		assert.NoError(t, err)
+		assert.Equal(t, 0, pending.len(), "both HITLs must be drained after two keystrokes")
+
+		out := buf.String()
+		assert.Contains(t, out, "[y/n/d] (2 pending) > ", "first prompt shows the multi-pending count")
+		assert.Contains(t, out, "[y/n/d] > ", "after resolving one, prompt drops to plain HITL prompt")
+	})
+}
+
+// TestListPendingHITLs covers the /pending command output for empty, single,
+// and multi-entry queues.
+func TestListPendingHITLs(t *testing.T) {
+	t.Run("empty queue", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			var buf bytes.Buffer
+			config.Out = &buf
+			assert.NoError(t, listPendingHITLs(config, &pendingHITL{}))
+			assert.Contains(t, buf.String(), "(no HITL approvals pending)")
+		})
+	})
+
+	t.Run("multi-entry queue marks head with *", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			var buf bytes.Buffer
+			config.Out = &buf
+			p := &pendingHITL{}
+			p.set("h1", "HITL_ACTION_BASH")
+			p.set("h2", "HITL_ACTION_GITHUB_COMMIT_PUSH")
+			p.set("h3") // no action
+
+			assert.NoError(t, listPendingHITLs(config, p))
+			out := buf.String()
+			assert.Contains(t, out, "3 HITL approval(s) pending")
+			assert.Contains(t, out, "* h1  (HITL_ACTION_BASH)", "head marked with *")
+			assert.Contains(t, out, "  h2  (HITL_ACTION_GITHUB_COMMIT_PUSH)", "non-head not marked")
+			assert.Contains(t, out, "  h3\n", "missing action falls back to id only")
+		})
+	})
+}
+
+// TestHandleAttachCommandPending exercises the /pending verb dispatch.
+func TestHandleAttachCommandPending(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		p := &pendingHITL{}
+		p.set("h1", "HITL_ACTION_BASH")
+
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/pending", p))
+		assert.Contains(t, buf.String(), "1 HITL approval(s) pending")
+		assert.Contains(t, buf.String(), "* h1  (HITL_ACTION_BASH)")
+	})
+}
+
+// TestResolveFromAttachClearsQueue: an explicit /a <id> must remove that id
+// from the queue (not just the head), mirroring keystroke-resolve semantics.
+func TestResolveFromAttachClearsQueue(t *testing.T) {
+	withTestClient(t, func(_ *CmdConfig, tm *tcMocks) {
+		p := &pendingHITL{}
+		p.set("h1")
+		p.set("h2")
+		p.set("h3")
+
+		tm.hostedAgents.EXPECT().
+			ResolveHITL("sess_x", "h2", &godo.HostedAgentResolveHITLRequest{
+				Outcome: godo.HostedAgentHITLOutcomeApprove,
+				Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+			}).Return(nil)
+
+		err := resolveFromAttach(tm.hostedAgents, "sess_x",
+			[]string{"/a", "h2"}, p, godo.HostedAgentHITLOutcomeApprove)
+		assert.NoError(t, err)
+		assert.Equal(t, 2, p.len(), "h2 must be gone from the middle of the queue")
+		assert.Equal(t, "h1", p.get(), "head unchanged")
+	})
+
+	t.Run("server failure preserves the queue", func(t *testing.T) {
+		withTestClient(t, func(_ *CmdConfig, tm *tcMocks) {
+			p := &pendingHITL{}
+			p.set("h1")
+
+			tm.hostedAgents.EXPECT().
+				ResolveHITL("sess_x", "h1", &godo.HostedAgentResolveHITLRequest{
+					Outcome: godo.HostedAgentHITLOutcomeApprove,
+					Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+				}).Return(errors.New("boom"))
+
+			err := resolveFromAttach(tm.hostedAgents, "sess_x",
+				[]string{"/a", "h1"}, p, godo.HostedAgentHITLOutcomeApprove)
+			assert.Error(t, err)
+			assert.Equal(t, 1, p.len(), "queue survives a failed resolve so the user can retry")
+		})
+	})
+}
+
+// TestHITLActionLabel: action label extraction tolerates the loose payload
+// shape (any of action/kind/tool/name; otherwise empty).
+func TestHITLActionLabel(t *testing.T) {
+	cases := []struct {
+		name    string
+		payload map[string]any
+		want    string
+	}{
+		{"action key", map[string]any{"action": "HITL_ACTION_BASH"}, "HITL_ACTION_BASH"},
+		{"kind key", map[string]any{"kind": "tool_call"}, "tool_call"},
+		{"tool key", map[string]any{"tool": "bash"}, "bash"},
+		{"name key", map[string]any{"name": "git_push"}, "git_push"},
+		{"prefers action over fallbacks", map[string]any{"action": "primary", "kind": "secondary"}, "primary"},
+		{"non-string value is ignored", map[string]any{"action": 42}, ""},
+		{"empty string is ignored", map[string]any{"action": ""}, ""},
+		{"nil map", nil, ""},
+		{"unknown keys", map[string]any{"foo": "bar"}, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, hitlActionLabel(tc.payload))
+		})
+	}
 }
 
 // TestReadHITLKeystroke pins the non-TTY fallback contract: no raw mode,

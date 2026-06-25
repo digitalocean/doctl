@@ -545,7 +545,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		case godo.HostedAgentEventKindHITLRequested:
 			var p hitlRequestedPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
-				pending.set(p.HitlID)
+				pending.set(p.HitlID, hitlActionLabel(p.Payload))
 			}
 		case godo.HostedAgentEventKindHITLResolved:
 			var p hitlResolvedPayload
@@ -585,29 +585,79 @@ func sleepCtx(ctx context.Context, d time.Duration) bool {
 	}
 }
 
+// pendingEntry is one HITL approval waiting on the user.
+type pendingEntry struct {
+	id     string
+	action string // tool / kind hint shown by /pending; "" if unknown
+}
+
+// pendingHITL is a FIFO queue of HITL approvals. The head (entries[0]) is
+// what single-keystroke y/n/d resolves; the rest are surfaced by /pending and
+// resolvable by explicit id via /a /r /d.
 type pendingHITL struct {
-	mu sync.Mutex
-	id string
+	mu      sync.Mutex
+	entries []pendingEntry
 }
 
-func (p *pendingHITL) set(id string) {
+// set enqueues id at the tail if not already queued. action is optional and
+// used only for display; pass "" if unknown. Re-enqueueing the same id is a
+// no-op so duplicate HITLRequested events (e.g. SSE replay) don't double-up.
+func (p *pendingHITL) set(id string, action ...string) {
+	if id == "" {
+		return
+	}
 	p.mu.Lock()
-	p.id = id
-	p.mu.Unlock()
+	defer p.mu.Unlock()
+	for _, e := range p.entries {
+		if e.id == id {
+			return
+		}
+	}
+	a := ""
+	if len(action) > 0 {
+		a = action[0]
+	}
+	p.entries = append(p.entries, pendingEntry{id: id, action: a})
 }
 
+// get returns the head (oldest) id, or "" if the queue is empty.
 func (p *pendingHITL) get() string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.id
+	if len(p.entries) == 0 {
+		return ""
+	}
+	return p.entries[0].id
 }
 
+// clearIf removes id from anywhere in the queue. Used by both the optimistic
+// post-resolve clear and the server's HITLResolved event, which may target
+// a non-head entry (resolved by another device or by /a <id>).
 func (p *pendingHITL) clearIf(id string) {
 	p.mu.Lock()
-	if p.id == id {
-		p.id = ""
+	defer p.mu.Unlock()
+	for i, e := range p.entries {
+		if e.id == id {
+			p.entries = append(p.entries[:i], p.entries[i+1:]...)
+			return
+		}
 	}
-	p.mu.Unlock()
+}
+
+// len returns the queue depth (used to flip the prompt to show "(N pending)").
+func (p *pendingHITL) len() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.entries)
+}
+
+// list returns a snapshot of all pending entries in arrival order.
+func (p *pendingHITL) list() []pendingEntry {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make([]pendingEntry, len(p.entries))
+	copy(out, p.entries)
+	return out
 }
 
 func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, pending *pendingHITL) error {
@@ -694,12 +744,19 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 	}
 }
 
-// attachPrompt returns "[y/n/d] > " when HITL is pending, else "> ".
+// attachPrompt reflects the HITL queue depth so the user knows when more than
+// one approval is waiting. The single-keystroke shortcut always targets the
+// head; the count nudges the user to use /pending if they want to see the rest.
 func attachPrompt(pending *pendingHITL) string {
-	if pending.get() != "" {
+	n := pending.len()
+	switch {
+	case n == 0:
+		return "> "
+	case n == 1:
 		return "[y/n/d] > "
+	default:
+		return fmt.Sprintf("[y/n/d] (%d pending) > ", n)
 	}
-	return "> "
 }
 
 // attachState bundles the line buffer, pending HITL id, and the synchronized
@@ -1081,15 +1138,18 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	switch verb {
 	case "/help":
 		fmt.Fprintln(c.Out, "When a HITL approval is pending (single keystroke; no Enter needed in a TTY):")
-		fmt.Fprintln(c.Out, "  y | a             approve")
-		fmt.Fprintln(c.Out, "  n | r             reject")
-		fmt.Fprintln(c.Out, "  d                 defer")
+		fmt.Fprintln(c.Out, "  y | a             approve the oldest pending request")
+		fmt.Fprintln(c.Out, "  n | r             reject  the oldest pending request")
+		fmt.Fprintln(c.Out, "  d                 defer   the oldest pending request")
 		fmt.Fprintln(c.Out, "  (piped input: send `yes` / `no` / `defer` followed by a newline)")
-		fmt.Fprintln(c.Out, "Or with an explicit request id:")
-		fmt.Fprintln(c.Out, "  /a [request-id]   approve a pending HITL request (defaults to most recent)")
-		fmt.Fprintln(c.Out, "  /r [request-id]   reject a pending HITL request")
-		fmt.Fprintln(c.Out, "  /d [request-id]   defer a pending HITL request")
+		fmt.Fprintln(c.Out, "With an explicit request id (works on any queued request):")
+		fmt.Fprintln(c.Out, "  /a [request-id]   approve (defaults to the oldest pending)")
+		fmt.Fprintln(c.Out, "  /r [request-id]   reject")
+		fmt.Fprintln(c.Out, "  /d [request-id]   defer")
+		fmt.Fprintln(c.Out, "  /pending          list all HITL approvals waiting on you")
 		return nil
+	case "/pending":
+		return listPendingHITLs(c, pending)
 	case "/a", "/approve":
 		return resolveFromAttach(svc, sessionID, parts, pending, godo.HostedAgentHITLOutcomeApprove)
 	case "/r", "/reject":
@@ -1099,6 +1159,29 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	default:
 		return fmt.Errorf("unknown command %q (try /help)", verb)
 	}
+}
+
+// listPendingHITLs renders the current HITL queue. The head is marked with
+// "*" because that's what a single keystroke will resolve next.
+func listPendingHITLs(c *CmdConfig, pending *pendingHITL) error {
+	list := pending.list()
+	if len(list) == 0 {
+		fmt.Fprintln(c.Out, "(no HITL approvals pending)")
+		return nil
+	}
+	fmt.Fprintf(c.Out, "%d HITL approval(s) pending (oldest first; * is next for single-keystroke y/n/d):\n", len(list))
+	for i, e := range list {
+		marker := " "
+		if i == 0 {
+			marker = "*"
+		}
+		if e.action != "" {
+			fmt.Fprintf(c.Out, "  %s %s  (%s)\n", marker, e.id, e.action)
+		} else {
+			fmt.Fprintf(c.Out, "  %s %s\n", marker, e.id)
+		}
+	}
+	return nil
 }
 
 func resolveFromAttach(svc do.HostedAgentsService, sessionID string, parts []string, pending *pendingHITL, outcome godo.HostedAgentHITLOutcome) error {
@@ -1111,10 +1194,16 @@ func resolveFromAttach(svc do.HostedAgentsService, sessionID string, parts []str
 	if id == "" {
 		return errors.New("no pending HITL request; provide a request id explicitly")
 	}
-	return svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
+	if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
 		Outcome: outcome,
 		Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
-	})
+	}); err != nil {
+		return err
+	}
+	// Optimistic local clear so the queue / prompt reflects the resolution
+	// immediately, before the server's HITLResolved event comes back over SSE.
+	pending.clearIf(id)
+	return nil
 }
 
 // runSeparator visually divides agent output from the next user prompt.
@@ -1249,6 +1338,22 @@ func renderHITLRequest(w io.Writer, hitlID string, payload map[string]any) {
 		}
 	}
 	fmt.Fprintf(w, "  hitl_id: %s\n", hitlID)
-	fmt.Fprintln(w, "  Press y/n/d to approve, reject, or defer (single keystroke; no Enter needed in a TTY).")
-	fmt.Fprintf(w, "  (or use `/a %s`, `/r %s`, `/d %s` with the explicit id)\n", hitlID, hitlID, hitlID)
+	fmt.Fprintln(w, "  Press y/n/d to approve, reject, or defer the oldest pending request (single keystroke; no Enter needed in a TTY).")
+	fmt.Fprintf(w, "  Use `/a %s`, `/r %s`, `/d %s` to target this request explicitly; `/pending` lists all queued approvals.\n", hitlID, hitlID, hitlID)
+}
+
+// hitlActionLabel pulls the best human-readable label out of a HITLRequested
+// payload map. The harness-api wire shape isn't strongly typed in our event
+// payload (it's a generic JSON object), so we try a couple of plausible keys.
+// Returns "" if no label is present so the caller can decide how to render.
+func hitlActionLabel(payload map[string]any) string {
+	if payload == nil {
+		return ""
+	}
+	for _, key := range []string{"action", "kind", "tool", "name"} {
+		if v, ok := payload[key].(string); ok && v != "" {
+			return v
+		}
+	}
+	return ""
 }
