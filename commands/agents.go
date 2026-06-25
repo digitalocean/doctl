@@ -25,15 +25,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // Agents creates the `doctl agents` command tree.
@@ -62,9 +65,9 @@ The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching t
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session-id>",
 		"Attach to an agent session",
-		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input.
+		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. A dropped SSE connection is reconnected automatically and the server replays any events missed during the gap.
 
-Type `+"`"+`/help`+"`"+` once attached to see the inline command list. Pending HITL prompts can be resolved with `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, or `+"`"+`/d <request-id>`+"`"+`. Ctrl-D detaches without destroying the session.`,
+When a HITL approval is pending, the prompt switches to `+"`"+`[y/n/d] > `+"`"+` and a single keystroke resolves it -- no Enter required in an interactive terminal: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
 		Writer, aliasOpt("chat"))
 	cmdAttach.Example = `doctl agents attach sess_abc123`
 
@@ -290,10 +293,8 @@ func RunAgentsLogs(c *CmdConfig) error {
 	return stream.Err()
 }
 
-// RunAgentsAttach opens the interactive TUI for an existing session. One
-// goroutine pumps the SSE iterator, the main goroutine reads stdin. Typed text
-// becomes a SendInput call; `/a`, `/r`, `/d` followed by a request id resolves
-// a HITL prompt; Ctrl-D detaches.
+// RunAgentsAttach opens the interactive TUI: one goroutine drains the SSE
+// stream (with auto-reconnect), the main goroutine reads stdin.
 func RunAgentsAttach(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
@@ -303,41 +304,285 @@ func RunAgentsAttach(c *CmdConfig) error {
 
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
+		if msg, terminal := classifyStreamError(err); terminal {
+			return errors.New(strings.TrimSpace(msg))
+		}
 		return err
 	}
+
+	pending := &pendingHITL{}
+	cursor := &eventCursor{}
+	state := newAttachState(c.Out, pending)
+
+	// All writes flow through the display so events don't clobber the user's
+	// in-progress input once raw mode is on. Pass-through until raw=true.
+	originalOut := c.Out
+	c.Out = state.display
+	defer func() { c.Out = originalOut }()
+
 	fmt.Fprintf(c.Out, "Connected to %s (%s)\n", sessionID, sess.AgentKind)
-	fmt.Fprintln(c.Out, "Type a message and press Enter to send. Ctrl-D to detach. Type `/help` for HITL commands.")
+	fmt.Fprintln(c.Out, "Type a message and press Enter to send. Ctrl-D to detach. HITL approvals are single-keystroke: y/a approve, n/r reject, d defer. Type `/help` for the full command list.")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pending := &pendingHITL{}
-	stream, err := svc.StreamSession(ctx, sessionID, nil)
-	if err != nil {
-		return err
+	thinking := newThinkingState(c.Out)
+	defer thinking.stop()
+
+	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking)
+
+	return runAttach(c, svc, sessionID, os.Stdin, state)
+}
+
+// runAttach dispatches to the raw-mode TTY loop or the legacy bufio line-mode
+// loop based on whether stdin is an interactive terminal.
+func runAttach(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState) error {
+	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		return attachLoopTTY(c, svc, sessionID, f, state)
 	}
-	defer stream.Close()
+	return attachLoop(c, svc, sessionID, in, state.pending)
+}
 
-	go func() {
-		for stream.Next() {
-			ev := stream.Current()
-			switch ev.Kind {
-			case godo.HostedAgentEventKindHITLRequested:
-				var p hitlRequestedPayload
-				if err := json.Unmarshal(ev.Payload, &p); err == nil {
-					pending.set(p.HitlID)
-				}
-			case godo.HostedAgentEventKindHITLResolved:
-				var p hitlResolvedPayload
-				if err := json.Unmarshal(ev.Payload, &p); err == nil {
-					pending.clearIf(p.HitlID)
-				}
-			}
-			renderEvent(c.Out, ev)
+// eventCursor holds the EventID of the latest event rendered. The stream
+// goroutine writes; reconnect attempts read. Empty string means "no events
+// rendered yet" and the server will start from the live tail.
+type eventCursor struct {
+	mu sync.Mutex
+	id string
+}
+
+func (c *eventCursor) set(id string) {
+	if id == "" {
+		return
+	}
+	c.mu.Lock()
+	c.id = id
+	c.mu.Unlock()
+}
+
+func (c *eventCursor) get() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.id
+}
+
+// Backoff schedule for reconnects. Caps at maxReconnectBackoff and retries
+// indefinitely; users break out via Ctrl-D (which cancels ctx) or Ctrl-C.
+const (
+	initialReconnectBackoff = 1 * time.Second
+	maxReconnectBackoff     = 30 * time.Second
+)
+
+// thinkingState shows a spinner between RunStarted and the first real
+// output. Animates above the prompt when out is a *promptDisplay; falls back
+// to a one-shot "(thinking...)" print otherwise (pipes, line-mode).
+type thinkingState struct {
+	mu     sync.Mutex
+	out    io.Writer
+	active bool
+	cancel context.CancelFunc
+}
+
+func newThinkingState(out io.Writer) *thinkingState {
+	return &thinkingState{out: out}
+}
+
+func (s *thinkingState) start() {
+	s.mu.Lock()
+	if s.active {
+		s.mu.Unlock()
+		return
+	}
+	s.active = true
+
+	// Lands above the prompt in raw mode; the animator below redraws this
+	// same line every 80ms when a display is available.
+	fmt.Fprintln(s.out, "(thinking...)")
+
+	display, ok := s.out.(*promptDisplay)
+	if !ok {
+		s.mu.Unlock()
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
+	s.mu.Unlock()
+	go s.animate(ctx, display)
+}
+
+func (s *thinkingState) stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.active {
+		return
+	}
+	s.active = false
+	if s.cancel != nil {
+		s.cancel()
+		s.cancel = nil
+	}
+	// Replace whatever frame is on screen with the plain text marker so the
+	// transcript doesn't keep a frozen braille glyph in scrollback.
+	if display, ok := s.out.(*promptDisplay); ok {
+		display.spinnerReset()
+	}
+}
+
+func (s *thinkingState) animate(ctx context.Context, d *promptDisplay) {
+	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	ix := 0
+	d.spinnerFrame(frames[ix])
+	t := time.NewTicker(80 * time.Millisecond)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			ix = (ix + 1) % len(frames)
+			d.spinnerFrame(frames[ix])
 		}
-	}()
+	}
+}
 
-	return attachLoop(c, svc, sessionID, os.Stdin, pending)
+// streamWithReconnect drains the SSE iterator and reconnects on transient
+// errors with bounded backoff, replaying from cursor.get(). Returns when ctx
+// is cancelled or the server cleanly ends the stream.
+func streamWithReconnect(
+	ctx context.Context,
+	svc do.HostedAgentsService,
+	sessionID string,
+	out io.Writer,
+	pending *pendingHITL,
+	cursor *eventCursor,
+	thinking *thinkingState,
+) {
+	backoff := initialReconnectBackoff
+	attempt := 0
+
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		opt := &godo.HostedAgentSessionStreamOptions{ReplayFrom: cursor.get()}
+		stream, err := svc.StreamSession(ctx, sessionID, opt)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			thinking.stop()
+			if msg, terminal := classifyStreamError(err); terminal {
+				fmt.Fprintln(out, msg)
+				return
+			}
+			attempt++
+			fmt.Fprintf(out, "\n(reconnect attempt %d failed: %v; retrying in %s)\n", attempt, err, backoff)
+			if !sleepCtx(ctx, backoff) {
+				return
+			}
+			backoff = nextBackoff(backoff)
+			continue
+		}
+
+		if attempt > 0 {
+			fmt.Fprintln(out, "(reconnected)")
+		}
+		attempt = 0
+		backoff = initialReconnectBackoff
+
+		drainStream(stream, out, pending, cursor, thinking)
+		streamErr := stream.Err()
+		stream.Close()
+
+		if ctx.Err() != nil {
+			return
+		}
+		if streamErr == nil {
+			return
+		}
+		thinking.stop()
+		if msg, terminal := classifyStreamError(streamErr); terminal {
+			fmt.Fprintln(out, msg)
+			return
+		}
+		fmt.Fprintf(out, "\n(stream dropped: %v; reconnecting in %s)\n", streamErr, backoff)
+		if !sleepCtx(ctx, backoff) {
+			return
+		}
+		backoff = nextBackoff(backoff)
+	}
+}
+
+// classifyStreamError returns (user-facing message, terminal). Terminal
+// errors stop the reconnect loop (auth, missing session, V0 single-connection
+// rejection); status codes follow harness-api's apierr convention.
+func classifyStreamError(err error) (string, bool) {
+	var er *godo.ErrorResponse
+	if !errors.As(err, &er) || er.Response == nil {
+		return "", false
+	}
+	switch er.Response.StatusCode {
+	case http.StatusUnauthorized:
+		return fmt.Sprintf("\nAuthentication failed: %s\nRun `doctl auth init` and try again.", er.Message), true
+	case http.StatusForbidden:
+		return fmt.Sprintf("\nAccess denied: %s", er.Message), true
+	case http.StatusNotFound:
+		return fmt.Sprintf("\nSession not found: %s", er.Message), true
+	case http.StatusConflict:
+		// V0 single-connection rejection. er.Message carries device + when.
+		return fmt.Sprintf("\nSession already attached on another device: %s\nDetach there first, then re-run `doctl agents attach`.", er.Message), true
+	}
+	return "", false
+}
+
+// drainStream consumes events until the iterator stops, rendering each one
+// and updating the HITL pending map, the reconnect cursor, and the spinner.
+func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState) {
+	for stream.Next() {
+		ev := stream.Current()
+		switch ev.Kind {
+		case godo.HostedAgentEventKindHITLRequested:
+			var p hitlRequestedPayload
+			if err := json.Unmarshal(ev.Payload, &p); err == nil {
+				pending.set(p.HitlID)
+			}
+		case godo.HostedAgentEventKindHITLResolved:
+			var p hitlResolvedPayload
+			if err := json.Unmarshal(ev.Payload, &p); err == nil {
+				pending.clearIf(p.HitlID)
+			}
+		}
+
+		if ev.Kind == godo.HostedAgentEventKindRunStarted {
+			renderEvent(out, ev)
+			thinking.start()
+		} else {
+			thinking.stop()
+			renderEvent(out, ev)
+		}
+		cursor.set(ev.EventID)
+	}
+}
+
+func nextBackoff(cur time.Duration) time.Duration {
+	next := cur * 2
+	if next > maxReconnectBackoff {
+		return maxReconnectBackoff
+	}
+	return next
+}
+
+// sleepCtx waits for d or returns false immediately if ctx is cancelled.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
 }
 
 type pendingHITL struct {
@@ -368,7 +613,40 @@ func (p *pendingHITL) clearIf(id string) {
 func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, pending *pendingHITL) error {
 	reader := bufio.NewReader(in)
 	for {
-		fmt.Fprint(c.Out, "\n> ")
+		fmt.Fprint(c.Out, "\n", attachPrompt(pending))
+
+		// HITL pending + TTY: single keystroke decides. Non-TTY falls back to
+		// the bufio line-mode branch below.
+		if id := pending.get(); id != "" {
+			outcome, key, action := readHITLKeystroke(in)
+			switch action {
+			case hitlKeyResolve:
+				fmt.Fprintf(c.Out, "%c\n", key)
+				if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
+					Outcome: outcome,
+					Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+				}); err != nil {
+					fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+				} else {
+					// Clear client-side now; the server's HITLResolved event
+					// will arrive over SSE and call clearIf again (idempotent).
+					// Without this, the next loop iteration re-enters raw mode
+					// and blocks on stdin until the SSE round-trip completes,
+					// which the user sees as "had to press Enter after y".
+					pending.clearIf(id)
+				}
+				continue
+			case hitlKeyDetach:
+				fmt.Fprintln(c.Out)
+				return nil
+			case hitlKeyIgnore:
+				fmt.Fprintln(c.Out, "(press y, n, or d to resolve the pending approval, or Ctrl-D to detach)")
+				continue
+			case hitlKeyFallback:
+				// Non-TTY — fall through to line mode.
+			}
+		}
+
 		line, err := reader.ReadString('\n')
 		if errors.Is(err, io.EOF) {
 			fmt.Fprintln(c.Out)
@@ -381,6 +659,20 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 		if line == "" {
 			continue
 		}
+		// Line-mode HITL shortcut (piped input only).
+		if outcome, ok := hitlLetterShortcut(line); ok {
+			if id := pending.get(); id != "" {
+				if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
+					Outcome: outcome,
+					Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+				}); err != nil {
+					fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+				} else {
+					pending.clearIf(id)
+				}
+				continue
+			}
+		}
 		if strings.HasPrefix(line, "/") {
 			if err := handleAttachCommand(c, svc, sessionID, line, pending); err != nil {
 				fmt.Fprintf(c.Out, "error: %v\n", err)
@@ -392,15 +684,390 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
 			continue
 		}
-		// Acknowledge the submit right away. The agent runtime can take tens of
-		// seconds to boot and produce its first token; without this line the
-		// wait looks like a hang and users re-submit, spawning a second run.
+		// Ack immediately; the first agent token can be tens of seconds away
+		// and without this users re-submit, spawning a duplicate run.
 		if resp != nil && resp.RunID != "" {
 			fmt.Fprintf(c.Out, "(queued as %s; waiting for the agent...)\n", resp.RunID)
 		} else {
 			fmt.Fprintln(c.Out, "(queued; waiting for the agent...)")
 		}
 	}
+}
+
+// attachPrompt returns "[y/n/d] > " when HITL is pending, else "> ".
+func attachPrompt(pending *pendingHITL) string {
+	if pending.get() != "" {
+		return "[y/n/d] > "
+	}
+	return "> "
+}
+
+// attachState bundles the line buffer, pending HITL id, and the synchronized
+// display that the SSE goroutine writes through.
+type attachState struct {
+	pending *pendingHITL
+	display *promptDisplay
+	mu      sync.Mutex // guards lineBuf
+	lineBuf []byte
+}
+
+func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
+	s := &attachState{pending: pending}
+	s.display = &promptDisplay{
+		out:    out,
+		prompt: func() string { return attachPrompt(pending) },
+		lineBuf: func() string {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return string(s.lineBuf)
+		},
+	}
+	return s
+}
+
+// promptDisplay serializes terminal writes between the input loop and the
+// SSE goroutine. In raw mode it tracks whether the cursor sits on the prompt
+// line or mid-stream so that streaming tokens don't get wiped, events drop
+// to a fresh line, and HITL prompt flips render instantly. Pass-through
+// otherwise.
+type promptDisplay struct {
+	mu      sync.Mutex
+	out     io.Writer
+	prompt  func() string
+	lineBuf func() string
+	raw     bool
+	// midLine: cursor is at the end of a previous tokenless write. Next
+	// Write must not clear-line, next echo must not paint to that line.
+	midLine bool
+}
+
+func (p *promptDisplay) setRaw(on bool) {
+	p.mu.Lock()
+	p.raw = on
+	p.mu.Unlock()
+}
+
+func (p *promptDisplay) Write(b []byte) (int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw {
+		return p.out.Write(b)
+	}
+	if len(b) == 0 {
+		return 0, nil
+	}
+
+	startsWithNL := b[0] == '\n'
+	endsWithNL := b[len(b)-1] == '\n'
+
+	if p.midLine {
+		// Inject a separator only for discrete events that don't already
+		// start with \n — so "(thinking...)" doesn't glue onto a token stream.
+		if !startsWithNL && endsWithNL {
+			fmt.Fprint(p.out, "\r\n")
+		}
+	} else {
+		fmt.Fprint(p.out, "\r\x1b[K")
+	}
+
+	if _, err := io.WriteString(p.out, strings.ReplaceAll(string(b), "\n", "\r\n")); err != nil {
+		return 0, err
+	}
+
+	if endsWithNL {
+		fmt.Fprintf(p.out, "%s%s", p.prompt(), p.lineBuf())
+		p.midLine = false
+	} else {
+		p.midLine = true
+	}
+	return len(b), nil
+}
+
+// echo writes a single keystroke for user feedback. Silent mid-stream so
+// chars don't land on the agent's line; lineBuf still captures them and they
+// reappear on the next prompt redraw.
+func (p *promptDisplay) echo(b []byte) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.raw && p.midLine {
+		return
+	}
+	p.out.Write(b)
+}
+
+// redraw re-renders prompt + lineBuf. Flips "> " <-> "[y/n/d] > " the moment
+// HITL state changes, no Enter needed.
+func (p *promptDisplay) redraw() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw {
+		return
+	}
+	if p.midLine {
+		fmt.Fprint(p.out, "\r\n")
+		p.midLine = false
+	}
+	fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), p.lineBuf())
+}
+
+// spinnerFrame redraws the "(thinking...)" line one row above the prompt.
+// DECSC/DECRC (\x1b7 / \x1b8) save+restore the cursor so the prompt row
+// below is preserved. No-op in non-raw or mid-stream state.
+func (p *promptDisplay) spinnerFrame(frame string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.midLine {
+		return
+	}
+	fmt.Fprintf(p.out, "\x1b7\x1b[A\r\x1b[K%s thinking...\x1b8", frame)
+}
+
+// spinnerReset replaces the spinner frame with the plain "(thinking...)"
+// text so a frozen braille glyph doesn't sit in scrollback.
+func (p *promptDisplay) spinnerReset() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.midLine {
+		return
+	}
+	fmt.Fprint(p.out, "\x1b7\x1b[A\r\x1b[K(thinking...)\x1b8")
+}
+
+// attachLoopTTY runs the raw-mode byte-by-byte input state machine. A 50ms
+// ticker polls pending-HITL so a HITL event flips the prompt instantly,
+// without needing the user to press Enter to "wake up" the loop.
+func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f *os.File, state *attachState) error {
+	fd := int(f.Fd())
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		// Raw mode unavailable; fall back to bufio line mode.
+		return attachLoop(c, svc, sessionID, f, state.pending)
+	}
+	defer term.Restore(fd, oldState)
+
+	state.display.setRaw(true)
+	defer state.display.setRaw(false)
+
+	state.display.redraw()
+
+	bytesCh := make(chan byte, 64)
+	readErrCh := make(chan error, 1)
+	go func() {
+		var buf [1]byte
+		for {
+			n, err := f.Read(buf[:])
+			if err != nil {
+				readErrCh <- err
+				return
+			}
+			if n == 1 {
+				bytesCh <- buf[0]
+			}
+		}
+	}()
+
+	// 50ms ticker so HITL arrival reflows the prompt even when the user idles.
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	lastPending := state.pending.get()
+	for {
+		if cur := state.pending.get(); cur != lastPending {
+			state.display.redraw()
+			lastPending = cur
+		}
+		select {
+		case b := <-bytesCh:
+			stop, err := handleAttachByte(c, svc, sessionID, b, state)
+			if err != nil {
+				return err
+			}
+			if stop {
+				return nil
+			}
+		case <-ticker.C:
+		case err := <-readErrCh:
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+// handleAttachByte is the per-byte state machine. stop=true exits the loop
+// (Ctrl-C, Ctrl-D on empty line).
+func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState) (stop bool, err error) {
+	if id := state.pending.get(); id != "" {
+		var outcome godo.HostedAgentHITLOutcome
+		var matched bool
+		switch b {
+		case 'y', 'Y', 'a', 'A':
+			outcome, matched = godo.HostedAgentHITLOutcomeApprove, true
+		case 'n', 'N', 'r', 'R':
+			outcome, matched = godo.HostedAgentHITLOutcomeReject, true
+		case 'd', 'D':
+			outcome, matched = godo.HostedAgentHITLOutcomeDefer, true
+		case 0x03, 0x04: // Ctrl-C / Ctrl-D
+			state.display.echo([]byte("\r\n"))
+			return true, nil
+		}
+		if !matched {
+			// Ignore non-HITL bytes while HITL pending.
+			return false, nil
+		}
+		state.display.echo([]byte{b, '\r', '\n'})
+		if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
+			Outcome: outcome,
+			Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+		}); err != nil {
+			fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+		} else {
+			state.pending.clearIf(id)
+		}
+		state.display.redraw()
+		return false, nil
+	}
+
+	switch b {
+	case 0x0d, 0x0a: // Enter
+		state.mu.Lock()
+		line := strings.TrimSpace(string(state.lineBuf))
+		state.lineBuf = state.lineBuf[:0]
+		state.mu.Unlock()
+		state.display.echo([]byte("\r\n"))
+		if line != "" {
+			processAttachLine(c, svc, sessionID, line, state)
+		}
+		state.display.redraw()
+		return false, nil
+	case 0x7f, 0x08: // Backspace / DEL
+		state.mu.Lock()
+		if len(state.lineBuf) > 0 {
+			state.lineBuf = state.lineBuf[:len(state.lineBuf)-1]
+			state.mu.Unlock()
+			state.display.echo([]byte("\b \b"))
+		} else {
+			state.mu.Unlock()
+		}
+		return false, nil
+	case 0x03: // Ctrl-C
+		state.display.echo([]byte("\r\n"))
+		return true, nil
+	case 0x04: // Ctrl-D
+		state.mu.Lock()
+		empty := len(state.lineBuf) == 0
+		state.mu.Unlock()
+		if empty {
+			state.display.echo([]byte("\r\n"))
+			return true, nil
+		}
+		return false, nil
+	default:
+		// Printable ASCII only; escape sequences, UTF-8 multibyte, and arrow
+		// keys are dropped (no history / cursor movement in V0).
+		if b >= 0x20 && b < 0x7f {
+			state.mu.Lock()
+			state.lineBuf = append(state.lineBuf, b)
+			state.mu.Unlock()
+			state.display.echo([]byte{b})
+		}
+		return false, nil
+	}
+}
+
+// processAttachLine dispatches an Enter-submitted line: HITL word shortcut,
+// slash command, or SendInput.
+func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState) {
+	if outcome, ok := hitlLetterShortcut(line); ok {
+		if id := state.pending.get(); id != "" {
+			if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
+				Outcome: outcome,
+				Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+			}); err != nil {
+				fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+			} else {
+				state.pending.clearIf(id)
+			}
+			return
+		}
+	}
+	if strings.HasPrefix(line, "/") {
+		if err := handleAttachCommand(c, svc, sessionID, line, state.pending); err != nil {
+			fmt.Fprintf(c.Out, "error: %v\n", err)
+		}
+		return
+	}
+	resp, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line})
+	if err != nil {
+		fmt.Fprintf(c.Out, "send failed: %v\n", err)
+		return
+	}
+	if resp != nil && resp.RunID != "" {
+		fmt.Fprintf(c.Out, "(queued as %s; waiting for the agent...)\n", resp.RunID)
+	} else {
+		fmt.Fprintln(c.Out, "(queued; waiting for the agent...)")
+	}
+}
+
+// hitlLetterShortcut is the line-mode (piped / non-TTY) HITL path. Interactive
+// terminals go through readHITLKeystroke instead. Returns (_, false) for any
+// input that should fall through to slash-command / SendInput handling.
+func hitlLetterShortcut(line string) (godo.HostedAgentHITLOutcome, bool) {
+	switch strings.ToLower(line) {
+	case "y", "yes", "a":
+		return godo.HostedAgentHITLOutcomeApprove, true
+	case "n", "no", "r":
+		return godo.HostedAgentHITLOutcomeReject, true
+	case "d", "defer":
+		return godo.HostedAgentHITLOutcomeDefer, true
+	}
+	return "", false
+}
+
+type hitlKeyAction int
+
+const (
+	hitlKeyFallback hitlKeyAction = iota // not a TTY; caller should use bufio line mode
+	hitlKeyResolve                       // y/n/d pressed; outcome is set
+	hitlKeyDetach                        // Ctrl-C / Ctrl-D
+	hitlKeyIgnore                        // any other key; byte was consumed
+)
+
+// readHITLKeystroke captures one y/n/d keystroke from an interactive terminal
+// with no Enter. Returns hitlKeyFallback on non-TTY input so tests and pipes
+// can use the bufio line-mode path.
+func readHITLKeystroke(in io.Reader) (godo.HostedAgentHITLOutcome, byte, hitlKeyAction) {
+	f, ok := in.(*os.File)
+	if !ok {
+		return "", 0, hitlKeyFallback
+	}
+	fd := int(f.Fd())
+	if !term.IsTerminal(fd) {
+		return "", 0, hitlKeyFallback
+	}
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return "", 0, hitlKeyFallback
+	}
+	defer term.Restore(fd, oldState)
+
+	var buf [1]byte
+	n, err := f.Read(buf[:])
+	if err != nil || n != 1 {
+		return "", 0, hitlKeyFallback
+	}
+	switch buf[0] {
+	case 'y', 'Y', 'a', 'A':
+		return godo.HostedAgentHITLOutcomeApprove, buf[0], hitlKeyResolve
+	case 'n', 'N', 'r', 'R':
+		return godo.HostedAgentHITLOutcomeReject, buf[0], hitlKeyResolve
+	case 'd', 'D':
+		return godo.HostedAgentHITLOutcomeDefer, buf[0], hitlKeyResolve
+	case 0x03, 0x04: // Ctrl-C, Ctrl-D
+		return "", buf[0], hitlKeyDetach
+	}
+	return "", buf[0], hitlKeyIgnore
 }
 
 // handleAttachCommand parses a slash command. `/a`, `/r`, `/d` accept either a
@@ -413,6 +1080,12 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	verb := parts[0]
 	switch verb {
 	case "/help":
+		fmt.Fprintln(c.Out, "When a HITL approval is pending (single keystroke; no Enter needed in a TTY):")
+		fmt.Fprintln(c.Out, "  y | a             approve")
+		fmt.Fprintln(c.Out, "  n | r             reject")
+		fmt.Fprintln(c.Out, "  d                 defer")
+		fmt.Fprintln(c.Out, "  (piped input: send `yes` / `no` / `defer` followed by a newline)")
+		fmt.Fprintln(c.Out, "Or with an explicit request id:")
 		fmt.Fprintln(c.Out, "  /a [request-id]   approve a pending HITL request (defaults to most recent)")
 		fmt.Fprintln(c.Out, "  /r [request-id]   reject a pending HITL request")
 		fmt.Fprintln(c.Out, "  /d [request-id]   defer a pending HITL request")
@@ -444,12 +1117,11 @@ func resolveFromAttach(svc do.HostedAgentsService, sessionID string, parts []str
 	})
 }
 
-// --- event payload helpers --------------------------------------------------
-//
-// godo decodes the SPI canonical event envelope and leaves the per-kind body
-// (the wire's `data` object) as json.RawMessage on HostedAgentEvent.Payload.
-// The shapes below mirror the SPI data structs (spi/events.go) for the kinds
-// doctl renders; they exist to keep the rendering switch tidy.
+// runSeparator visually divides agent output from the next user prompt.
+const runSeparator = "────────────────────────────────────────"
+
+// Payload shapes mirror the SPI data structs (spi/events.go) for the kinds
+// doctl renders. godo leaves HostedAgentEvent.Payload as json.RawMessage.
 
 type tokenChunkPayload struct {
 	Text string `json:"text"`
@@ -537,6 +1209,7 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
 			fmt.Fprintf(w, "\n[run done: %d in / %d out tokens, $%.4f]\n",
 				p.TotalTokensIn, p.TotalTokensOut, float64(p.RunCostMicros)/1_000_000)
+			fmt.Fprintln(w, runSeparator)
 		}
 	case godo.HostedAgentEventKindRunFailed:
 		var p runFailedPayload
@@ -546,14 +1219,15 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 			} else {
 				fmt.Fprintf(w, "\n[run failed: code %d]\n", p.Code)
 			}
+			fmt.Fprintln(w, runSeparator)
 		}
 	case godo.HostedAgentEventKindSessionUpdated:
 		fmt.Fprint(w, "\n[session updated]\n")
 	}
 }
 
-// hitlOutcomeLabel maps the proto HITLOutcome int carried on the SPI
-// human_input_received event to a human-readable verb.
+// hitlOutcomeLabel maps the proto HITLOutcome int (on the SPI
+// human_input_received event) to a human-readable verb.
 func hitlOutcomeLabel(code int32) string {
 	switch code {
 	case 1:
@@ -570,11 +1244,11 @@ func hitlOutcomeLabel(code int32) string {
 func renderHITLRequest(w io.Writer, hitlID string, payload map[string]any) {
 	fmt.Fprintln(w, "\n\n[HITL] Action requires approval:")
 	if len(payload) > 0 {
-		// MarshalIndent sorts map keys, so output is stable run-to-run.
 		if b, err := json.MarshalIndent(payload, "  ", "  "); err == nil {
 			fmt.Fprintf(w, "  %s\n", b)
 		}
 	}
 	fmt.Fprintf(w, "  hitl_id: %s\n", hitlID)
-	fmt.Fprintf(w, "  (resolve with `/a %s`, `/r %s`, or `/d %s`)\n", hitlID, hitlID, hitlID)
+	fmt.Fprintln(w, "  Press y/n/d to approve, reject, or defer (single keystroke; no Enter needed in a TTY).")
+	fmt.Fprintf(w, "  (or use `/a %s`, `/r %s`, `/d %s` with the explicit id)\n", hitlID, hitlID, hitlID)
 }
