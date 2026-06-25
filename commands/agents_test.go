@@ -15,8 +15,11 @@ package commands
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,6 +31,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 const sampleManifest = `apiVersion: agents.digitalocean.com/v1alpha1
@@ -42,7 +46,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy")
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "upload", "download")
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -180,6 +184,142 @@ func TestRunAgentsApprove(t *testing.T) {
 		assert.NoError(t, RunAgentsApprove(config))
 	})
 }
+
+func TestRunAgentsUpload(t *testing.T) {
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "main.go")
+	contents := []byte("package main\n\nfunc main() {}\n")
+	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
+
+	wantSum := sha256.Sum256(contents)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			UploadWorkspace("sess_test", gomock.Any()).
+			DoAndReturn(func(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error) {
+				assert.Equal(t, "src/main.go", input.Path)
+				assert.False(t, input.IsArchive)
+				assert.Equal(t, hex.EncodeToString(wantSum[:]), input.ContentSHA256)
+				body, err := io.ReadAll(input.Body)
+				assert.NoError(t, err)
+				assert.Equal(t, contents, body)
+				return &godo.HostedAgentWorkspaceUploadResponse{
+					Path:         "/workspace/src/main.go",
+					BytesWritten: int64(len(contents)),
+				}, nil
+			})
+
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src/main.go")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		assert.NoError(t, RunAgentsUpload(config))
+	})
+}
+
+func TestRunAgentsUpload_Archive(t *testing.T) {
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "bundle.tar")
+	contents := []byte("not really a tar, but bytes are bytes")
+	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			UploadWorkspace("sess_test", gomock.Any()).
+			DoAndReturn(func(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error) {
+				assert.True(t, input.IsArchive)
+				return &godo.HostedAgentWorkspaceUploadResponse{Path: "/workspace/src", BytesWritten: int64(len(contents))}, nil
+			})
+
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentArchive, true)
+		assert.NoError(t, RunAgentsUpload(config))
+	})
+}
+
+func TestRunAgentsUpload_MissingFile(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src/main.go")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, filepath.Join(t.TempDir(), "nope.go"))
+		err := RunAgentsUpload(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "does not exist")
+	})
+}
+
+func TestRunAgentsDownload(t *testing.T) {
+	dir := t.TempDir()
+	saveTo := filepath.Join(dir, "out.go")
+	contents := "package main\n\nfunc main() {}\n"
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dl := &godo.HostedAgentWorkspaceDownload{
+			Body: io.NopCloser(strings.NewReader(contents)),
+		}
+		tm.hostedAgents.EXPECT().
+			DownloadWorkspace(gomock.Any(), "sess_test", &godo.HostedAgentWorkspaceDownloadRequest{Path: "src/main.go"}).
+			Return(dl, nil)
+
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src/main.go")
+		config.Doit.Set(config.NS, doctl.ArgAgentSaveTo, saveTo)
+		assert.NoError(t, RunAgentsDownload(config))
+
+		got, err := os.ReadFile(saveTo)
+		assert.NoError(t, err)
+		assert.Equal(t, contents, string(got))
+	})
+}
+
+// TestRunAgentsDownload_DiscardOnError pins the integrity contract: when the
+// body errors (e.g. godo reports a missing/invalid X-Content-Sha256 trailer),
+// the partial output must be discarded and no destination file left behind.
+func TestRunAgentsDownload_DiscardOnError(t *testing.T) {
+	dir := t.TempDir()
+	saveTo := filepath.Join(dir, "out.go")
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dl := &godo.HostedAgentWorkspaceDownload{
+			Body: &flakyReadCloser{
+				data: []byte("partial payload"),
+				err:  errors.New("missing X-Content-Sha256 integrity trailer"),
+			},
+		}
+		tm.hostedAgents.EXPECT().
+			DownloadWorkspace(gomock.Any(), "sess_test", &godo.HostedAgentWorkspaceDownloadRequest{Path: "src/main.go"}).
+			Return(dl, nil)
+
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src/main.go")
+		config.Doit.Set(config.NS, doctl.ArgAgentSaveTo, saveTo)
+		err := RunAgentsDownload(config)
+		assert.Error(t, err)
+
+		_, statErr := os.Stat(saveTo)
+		assert.True(t, os.IsNotExist(statErr), "destination must not exist after a failed transfer")
+	})
+}
+
+// flakyReadCloser emits data once, then returns err, mimicking a stream that
+// truncates with a verification error at EOF.
+type flakyReadCloser struct {
+	data []byte
+	err  error
+	read bool
+}
+
+func (f *flakyReadCloser) Read(p []byte) (int, error) {
+	if !f.read {
+		f.read = true
+		n := copy(p, f.data)
+		return n, nil
+	}
+	return 0, f.err
+}
+
+func (f *flakyReadCloser) Close() error { return nil }
 
 // TestHostedAgentEventDecodesSPIWire regression-guards the SPI envelope
 // (type/data/timestamp/tenant_id) -> godo HostedAgentEvent mapping.

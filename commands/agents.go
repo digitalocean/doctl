@@ -21,12 +21,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -101,6 +104,29 @@ When a HITL approval is pending, the prompt switches to `+"`"+`[y/n/d] > `+"`"+`
 		"Destroy an agent session",
 		"Tears down the workspace sandbox and removes the session.",
 		Writer, aliasOpt("rm"))
+
+	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session-id>",
+		"Upload a file into a session workspace",
+		`Streams a local file (or tar archive) into the session's sandbox workspace.
+
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is a tar that the server should extract at the destination. doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. Files larger than 500 MiB are rejected by the server.`,
+		Writer,
+		displayerType(&displayers.HostedAgentWorkspaceUpload{}))
+	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
+	AddStringFlag(cmdUpload, doctl.ArgAgentLocalFile, "", "", "Path to the local file to upload", requiredOpt())
+	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as a tar archive to extract at the destination")
+	cmdUpload.Example = `doctl agents upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
+
+	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session-id>",
+		"Download a file from a session workspace",
+		`Streams a file (or tar archive) out of the session's sandbox workspace and writes it to a local destination.
+
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download is chunked and the integrity SHA-256 arrives as an HTTP trailer after the body; doctl hashes the bytes as it writes them and verifies the trailer once the stream completes. A missing trailer or checksum mismatch means the transfer was truncated or corrupted, so the partial output is discarded and the command fails.`,
+		Writer)
+	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
+	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
+	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
+	cmdDownload.Example = `doctl agents download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
 	return cmd
 }
@@ -226,6 +252,155 @@ func RunAgentsDestroy(c *CmdConfig) error {
 	}
 	notice("Session %s destroyed", c.Args[0])
 	return nil
+}
+
+// RunAgentsUpload streams a local file (or tar archive) into a session's
+// workspace sandbox. The SHA-256 of the payload is computed up front and
+// forwarded so the guest can verify what it received.
+func RunAgentsUpload(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	sessionID := c.Args[0]
+
+	workspacePath, err := c.Doit.GetString(c.NS, doctl.ArgAgentWorkspacePath)
+	if err != nil {
+		return err
+	}
+	localFile, err := c.Doit.GetString(c.NS, doctl.ArgAgentLocalFile)
+	if err != nil {
+		return err
+	}
+	isArchive, err := c.Doit.GetBool(c.NS, doctl.ArgAgentArchive)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(localFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("opening upload file: %s does not exist", localFile)
+		}
+		return fmt.Errorf("opening upload file: %w", err)
+	}
+	defer f.Close()
+
+	// Hash the payload before sending so the X-Content-Sha256 header is set on
+	// the request; rewind afterward so the same bytes stream as the body.
+	sum, err := hashFile(f)
+	if err != nil {
+		return fmt.Errorf("hashing upload file: %w", err)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("rewinding upload file: %w", err)
+	}
+
+	resp, err := c.HostedAgents().UploadWorkspace(sessionID, &godo.HostedAgentWorkspaceUploadRequest{
+		Path:          workspacePath,
+		IsArchive:     isArchive,
+		ContentSHA256: sum,
+		Body:          f,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.HostedAgentWorkspaceUpload{Uploads: []*godo.HostedAgentWorkspaceUploadResponse{resp}})
+}
+
+// hashFile returns the hex-encoded SHA-256 of r, reading it to EOF.
+func hashFile(r io.Reader) (string, error) {
+	h := sha256.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// RunAgentsDownload streams a file (or tar archive) out of a session workspace.
+// The godo download body hashes the stream and verifies the SHA-256 trailer
+// only after the body is fully drained, so the integrity error surfaces at EOF
+// (or on Close). The bytes are written to a temporary file first and only moved
+// into place once the transfer verifies; a truncated or corrupted transfer is
+// discarded.
+func RunAgentsDownload(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	sessionID := c.Args[0]
+
+	workspacePath, err := c.Doit.GetString(c.NS, doctl.ArgAgentWorkspacePath)
+	if err != nil {
+		return err
+	}
+	saveTo, err := c.Doit.GetString(c.NS, doctl.ArgAgentSaveTo)
+	if err != nil {
+		return err
+	}
+	asArchive, err := c.Doit.GetBool(c.NS, doctl.ArgAgentArchive)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	dl, err := c.HostedAgents().DownloadWorkspace(ctx, sessionID, &godo.HostedAgentWorkspaceDownloadRequest{
+		Path:      workspacePath,
+		AsArchive: asArchive,
+	})
+	if err != nil {
+		return err
+	}
+
+	written, err := streamDownloadToFile(dl, saveTo)
+	if err != nil {
+		return err
+	}
+
+	notice("Downloaded %d bytes to %s", written, saveTo)
+	return nil
+}
+
+// streamDownloadToFile copies the verified download body into saveTo. It writes
+// to a sibling temp file and renames it into place only after the body reads to
+// EOF and Close both succeed (which is where godo surfaces an invalid integrity
+// trailer). On any failure the temp file is removed so no partial/corrupt
+// output is left behind.
+func streamDownloadToFile(dl *godo.HostedAgentWorkspaceDownload, saveTo string) (int64, error) {
+	dir := filepath.Dir(saveTo)
+	tmp, err := os.CreateTemp(dir, ".doctl-download-*")
+	if err != nil {
+		return 0, fmt.Errorf("creating temp file: %w", err)
+	}
+	tmpName := tmp.Name()
+
+	cleanup := func() {
+		tmp.Close()
+		os.Remove(tmpName)
+	}
+
+	// io.Copy drains the body to EOF, which triggers godo's trailer
+	// verification; a missing or mismatched checksum is returned here.
+	written, copyErr := io.Copy(tmp, dl.Body)
+	closeBodyErr := dl.Body.Close()
+	if copyErr != nil {
+		cleanup()
+		return 0, fmt.Errorf("downloading workspace file: %w", copyErr)
+	}
+	if closeBodyErr != nil {
+		cleanup()
+		return 0, fmt.Errorf("downloading workspace file: %w", closeBodyErr)
+	}
+
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpName)
+		return 0, fmt.Errorf("flushing download: %w", err)
+	}
+	if err := os.Rename(tmpName, saveTo); err != nil {
+		os.Remove(tmpName)
+		return 0, fmt.Errorf("saving download to %s: %w", saveTo, err)
+	}
+	return written, nil
 }
 
 // RunAgentsApprove resolves a pending HITL request out of band.

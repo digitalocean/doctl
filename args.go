@@ -939,4 +939,16 @@ const (
 
 	// ArgAgentStatus filters sessions by lifecycle status.
 	ArgAgentStatus = "status"
+
+	// ArgAgentWorkspacePath is the path inside the session workspace root (/workspace).
+	ArgAgentWorkspacePath = "workspace-path"
+
+	// ArgAgentLocalFile is the local file streamed up during a workspace upload.
+	ArgAgentLocalFile = "local-file"
+
+	// ArgAgentSaveTo is the local destination for a workspace download.
+	ArgAgentSaveTo = "save-to"
+
+	// ArgAgentArchive treats the workspace payload as a tar archive.
+	ArgAgentArchive = "archive"
 )

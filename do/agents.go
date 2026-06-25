@@ -37,6 +37,13 @@ type HostedAgentsService interface {
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
+	// UploadWorkspace streams a file (or tar archive) into the session workspace.
+	UploadWorkspace(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error)
+	// DownloadWorkspace streams a file (or tar archive) out of the session
+	// workspace. The caller MUST read the returned Body to EOF and then Close
+	// it; both verify the SHA-256 integrity trailer and surface a truncated or
+	// corrupted transfer as an error.
+	DownloadWorkspace(ctx context.Context, sessionID string, input *godo.HostedAgentWorkspaceDownloadRequest) (*godo.HostedAgentWorkspaceDownload, error)
 }
 
 type hostedAgentsService struct {
@@ -100,4 +107,17 @@ func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *god
 func (s *hostedAgentsService) StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
 	stream, _, err := s.client.HostedAgents.StreamSession(ctx, sessionID, opt)
 	return stream, err
+}
+
+func (s *hostedAgentsService) UploadWorkspace(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error) {
+	resp, _, err := s.client.HostedAgents.UploadWorkspace(context.TODO(), sessionID, input)
+	return resp, err
+}
+
+// DownloadWorkspace opens the streaming download and returns the godo result.
+// The caller MUST read Body to EOF and then Close it. ctx is passed straight
+// through so cancellation aborts the in-flight stream.
+func (s *hostedAgentsService) DownloadWorkspace(ctx context.Context, sessionID string, input *godo.HostedAgentWorkspaceDownloadRequest) (*godo.HostedAgentWorkspaceDownload, error) {
+	dl, _, err := s.client.HostedAgents.DownloadWorkspace(ctx, sessionID, input)
+	return dl, err
 }

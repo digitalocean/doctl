@@ -17,6 +17,7 @@ import (
 	"io"
 
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 )
 
 // HostedAgentSession wraps one or more hosted-agent sessions for display. The
@@ -72,6 +73,48 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			"SandboxID": s.SandboxID,
 			"RepoHint":  s.RepoHint,
 			"CreatedAt": s.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		})
+	}
+	return out
+}
+
+// HostedAgentWorkspaceUpload renders the result of `doctl agents upload`.
+type HostedAgentWorkspaceUpload struct {
+	Uploads []*godo.HostedAgentWorkspaceUploadResponse
+}
+
+var _ Displayable = &HostedAgentWorkspaceUpload{}
+
+func (h *HostedAgentWorkspaceUpload) JSON(out io.Writer) error {
+	if len(h.Uploads) == 1 {
+		return writeJSON(h.Uploads[0], out)
+	}
+	return writeJSON(h.Uploads, out)
+}
+
+func (h *HostedAgentWorkspaceUpload) Cols() []string {
+	return []string{"Path", "BytesWritten"}
+}
+
+func (h *HostedAgentWorkspaceUpload) ColMap() map[string]string {
+	return map[string]string{
+		"Path":         "Path",
+		"BytesWritten": "BytesWritten",
+	}
+}
+
+func (h *HostedAgentWorkspaceUpload) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Uploads))
+	for _, u := range h.Uploads {
+		if u == nil {
+			continue
+		}
+		out = append(out, map[string]any{
+			"Path":         u.Path,
+			"BytesWritten": u.BytesWritten,
 		})
 	}
 	return out

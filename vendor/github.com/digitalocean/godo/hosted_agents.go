@@ -3,9 +3,12 @@ package godo
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,14 +17,21 @@ import (
 )
 
 const (
-	hostedAgentManifestMediaType = "application/x-yaml"
+	hostedAgentManifestMediaType  = "application/x-yaml"
+	hostedAgentWorkspaceMediaType = "application/octet-stream"
 
-	hostedAgentsSessionsBasePath      = "/v2/agents/sessions"
-	hostedAgentSessionByIDPath        = hostedAgentsSessionsBasePath + "/%s"
-	hostedAgentSessionStreamPath      = hostedAgentSessionByIDPath + "/stream"
-	hostedAgentSessionInputPath       = hostedAgentSessionByIDPath + "/input"
-	hostedAgentSessionHITLPath        = hostedAgentSessionByIDPath + "/hitl/%s"
-	hostedAgentSessionSandboxExecPath = hostedAgentSessionByIDPath + "/sandbox/exec"
+	hostedAgentsSessionsBasePath            = "/v2/agents/sessions"
+	hostedAgentSessionByIDPath              = hostedAgentsSessionsBasePath + "/%s"
+	hostedAgentSessionStreamPath            = hostedAgentSessionByIDPath + "/stream"
+	hostedAgentSessionInputPath             = hostedAgentSessionByIDPath + "/input"
+	hostedAgentSessionHITLPath              = hostedAgentSessionByIDPath + "/hitl/%s"
+	hostedAgentSessionSandboxExecPath       = hostedAgentSessionByIDPath + "/sandbox/exec"
+	hostedAgentSessionWorkspaceUploadPath   = hostedAgentSessionByIDPath + "/workspace/upload"
+	hostedAgentSessionWorkspaceDownloadPath = hostedAgentSessionByIDPath + "/workspace/download"
+
+	workspaceContentSHA256Header = "X-Content-Sha256"
+	workspaceIsArchiveHeader     = "X-Workspace-Is-Archive"
+	workspaceSizeBytesHeader     = "X-Workspace-Size-Bytes"
 )
 
 // HostedAgentsService exposes the DigitalOcean Hosted Agents session API
@@ -41,6 +51,8 @@ type HostedAgentsService interface {
 	SendInput(context.Context, string, *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error)
 	ResolveHITL(context.Context, string, string, *HostedAgentResolveHITLRequest) (*Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
+	UploadWorkspace(context.Context, string, *HostedAgentWorkspaceUploadRequest) (*HostedAgentWorkspaceUploadResponse, *Response, error)
+	DownloadWorkspace(context.Context, string, *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error)
 }
 
 // HostedAgentsServiceOp handles communication with Hosted Agents session methods.
@@ -325,6 +337,44 @@ type HostedAgentSandboxExecResponse struct {
 	Stderr   string `json:"stderr,omitempty"`
 }
 
+// HostedAgentWorkspaceUploadRequest is the input for UploadWorkspace.
+type HostedAgentWorkspaceUploadRequest struct {
+	// Path is the destination resolved inside the workspace root (/workspace). Required.
+	Path string
+	// IsArchive indicates Body is a tar archive to extract at Path.
+	IsArchive bool
+	// ContentSHA256 is an optional hex SHA-256 digest of the payload, forwarded to the guest for verification.
+	ContentSHA256 string
+	// Body is the raw file or tar bytes to upload. Required.
+	Body io.Reader
+}
+
+// HostedAgentWorkspaceUploadResponse is returned by UploadWorkspace.
+type HostedAgentWorkspaceUploadResponse struct {
+	Path         string `json:"path"`
+	BytesWritten int64  `json:"bytes_written"`
+}
+
+// HostedAgentWorkspaceDownloadRequest is the input for DownloadWorkspace.
+type HostedAgentWorkspaceDownloadRequest struct {
+	// Path is the source resolved inside the workspace root (/workspace). Required.
+	Path string
+	// AsArchive tar-streams the directory at Path when true.
+	AsArchive bool
+}
+
+// HostedAgentWorkspaceDownload is the streaming result of DownloadWorkspace.
+// Body verifies the SHA-256 integrity trailer: read it to EOF and then Close
+// it. A missing trailer or checksum mismatch is surfaced as an error; discard
+// the output in that case.
+type HostedAgentWorkspaceDownload struct {
+	Body io.ReadCloser
+	// IsArchive is true when the payload is a tar stream.
+	IsArchive bool
+	// SizeBytes is the X-Workspace-Size-Bytes hint (0 when unknown); not a Content-Length.
+	SizeBytes int64
+}
+
 type hostedAgentSessionRoot struct {
 	Session *HostedAgentSession `json:"session"`
 }
@@ -546,6 +596,156 @@ func (s *HostedAgentsServiceOp) ExecInSandbox(ctx context.Context, sessionID str
 		return nil, resp, err
 	}
 	return root, resp, nil
+}
+
+// UploadWorkspace streams a file (or tar archive) into the session workspace.
+func (s *HostedAgentsServiceOp) UploadWorkspace(ctx context.Context, sessionID string, input *HostedAgentWorkspaceUploadRequest) (*HostedAgentWorkspaceUploadResponse, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if input == nil {
+		return nil, nil, errors.New("hosted agents: upload request is required")
+	}
+	if input.Path == "" {
+		return nil, nil, errors.New("hosted agents: path is required")
+	}
+	if input.Body == nil {
+		return nil, nil, errors.New("hosted agents: body is required")
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionWorkspaceUploadPath, sessionID)
+	u, err := s.client.BaseURL.Parse(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	q := url.Values{}
+	q.Set("path", input.Path)
+	if input.IsArchive {
+		q.Set("is_archive", "true")
+	}
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), input.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Set("Content-Type", hostedAgentWorkspaceMediaType)
+	req.Header.Set("Accept", mediaType)
+	req.Header.Set("User-Agent", s.client.UserAgent)
+	if input.ContentSHA256 != "" {
+		req.Header.Set(workspaceContentSHA256Header, input.ContentSHA256)
+	}
+
+	root := new(HostedAgentWorkspaceUploadResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// DownloadWorkspace streams a file (or tar archive) out of the session
+// workspace. Callers MUST read the returned Body to EOF and then Close it; both
+// verify the SHA-256 integrity trailer.
+func (s *HostedAgentsServiceOp) DownloadWorkspace(ctx context.Context, sessionID string, input *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if input == nil {
+		return nil, nil, errors.New("hosted agents: download request is required")
+	}
+	if input.Path == "" {
+		return nil, nil, errors.New("hosted agents: path is required")
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionWorkspaceDownloadPath, sessionID)
+	q := url.Values{}
+	q.Set("path", input.Path)
+	if input.AsArchive {
+		q.Set("as_archive", "true")
+	}
+	path += "?" + q.Encode()
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Set("Accept", hostedAgentWorkspaceMediaType)
+
+	resp, err := s.client.DoStream(ctx, req)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	out := &HostedAgentWorkspaceDownload{
+		Body: &workspaceDownloadBody{
+			resp:   resp.Response,
+			body:   resp.Body,
+			hasher: sha256.New(),
+		},
+	}
+	if archive, perr := strconv.ParseBool(strings.TrimSpace(resp.Header.Get(workspaceIsArchiveHeader))); perr == nil {
+		out.IsArchive = archive
+	}
+	if hint := strings.TrimSpace(resp.Header.Get(workspaceSizeBytesHeader)); hint != "" {
+		if n, perr := strconv.ParseInt(hint, 10, 64); perr == nil {
+			out.SizeBytes = n
+		}
+	}
+	return out, resp, nil
+}
+
+// workspaceDownloadBody hashes bytes as they are read and verifies the
+// X-Content-Sha256 trailer at EOF, since Go only populates response trailers
+// once the body is fully consumed.
+type workspaceDownloadBody struct {
+	resp     *http.Response
+	body     io.ReadCloser
+	hasher   hash.Hash
+	verified bool
+	verr     error
+}
+
+func (b *workspaceDownloadBody) Read(p []byte) (int, error) {
+	n, err := b.body.Read(p)
+	if n > 0 {
+		b.hasher.Write(p[:n])
+	}
+	if errors.Is(err, io.EOF) {
+		if verr := b.verify(); verr != nil {
+			return n, verr
+		}
+	}
+	return n, err
+}
+
+func (b *workspaceDownloadBody) verify() error {
+	if b.verified {
+		return b.verr
+	}
+	b.verified = true
+
+	want := strings.TrimSpace(b.resp.Trailer.Get(workspaceContentSHA256Header))
+	if want == "" {
+		b.verr = errors.New("hosted agents: missing X-Content-Sha256 integrity trailer; workspace download was truncated or corrupted")
+		return b.verr
+	}
+	got := hex.EncodeToString(b.hasher.Sum(nil))
+	if !strings.EqualFold(want, got) {
+		b.verr = fmt.Errorf("hosted agents: workspace download checksum mismatch: want %q, got %q", want, got)
+		return b.verr
+	}
+	return nil
+}
+
+func (b *workspaceDownloadBody) Close() error {
+	if cerr := b.body.Close(); cerr != nil {
+		return cerr
+	}
+	if b.verified {
+		return b.verr
+	}
+	return nil
 }
 
 // HostedAgentSessionStream is a typed iterator over a session SSE stream.
