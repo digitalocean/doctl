@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -23,20 +22,14 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/input"
+	"github.com/digitalocean/doctl/commands/charm/list"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
-
-// secretRegionReader reads interactive region input. It can be replaced in tests.
-var secretRegionReader = bufio.NewReader(os.Stdin)
-
-// secretNameReader reads interactive secret name input. It can be replaced in tests.
-var secretNameReader = bufio.NewReader(os.Stdin)
-
-// secretVersionReader reads interactive version input. It can be replaced in tests.
-var secretVersionReader = bufio.NewReader(os.Stdin)
 
 // promptSecretKeyFunc prompts for a secret key name. It can be replaced in tests.
 var promptSecretKeyFunc = defaultPromptSecretKey
@@ -46,12 +39,27 @@ var promptSecretValueFunc = defaultPromptSecretValue
 
 var exampleSecretRegions = []string{"nyc3", "sfo3", "ams3", "fra1", "sgp1", "lon1"}
 
-const secretRegionFlagDesc = "Region where the secret is stored. If omitted, you are prompted when running with --interactive."
+const (
+	secretRegionFlagDesc  = "Region where the secret is stored. If omitted, you are prompted when running with --interactive."
+	secretVersionFlagDesc = "Current version of the secret to update. If omitted, the current version is used when it can be determined from the API."
+	secretValueFlagDesc   = "Key-value pair in key=value format (repeatable). Values may be read from a file with key=@path or from stdin with key=-. If omitted, keys and masked values are read with --interactive."
+	secretMaskedValue     = "********"
+)
 
-const secretVersionFlagDesc = "Current version of the secret to update. If omitted, the current version is used when it can be determined from the API."
+type secretRegionListItem struct {
+	slug string
+}
+
+func (i secretRegionListItem) Title() string       { return i.slug }
+func (i secretRegionListItem) Description() string { return "" }
+func (i secretRegionListItem) FilterValue() string { return i.slug }
 
 func secretsPromptsEnabled() bool {
 	return Interactive && term.IsTerminal(int(os.Stdin.Fd()))
+}
+
+func secretNotice(msg string, args ...any) {
+	fmt.Fprintf(os.Stderr, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
 }
 
 // Secrets creates the secrets command hierarchy.
@@ -69,17 +77,22 @@ Each secret is a named container in a region that holds one or more key-value pa
 
 	cmdCreate := CmdBuilder(cmd, RunCmdSecretsCreate, "create <name>", "Create a secret", `Creates a secret container in the specified region and stores key-value pairs inside it.
 
-If no `+"`"+`--value`+"`"+` flags are provided, key-value pairs are read interactively with --interactive. You are prompted for each key, then each value is masked.`, Writer,
+If no `+"`"+`--value`+"`"+` or `+"`"+`--from-env-file`+"`"+` flags are provided, key-value pairs are read interactively with --interactive. You are prompted for each key, then each value is masked.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.SecretWriteResult{}))
 	AddStringFlag(cmdCreate, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
-	AddStringSliceFlag(cmdCreate, doctl.ArgSecretValue, "", nil,
-		"Key-value pair in key=value format (repeatable). If omitted, keys and masked values are read with --interactive.")
-	cmdCreate.Example = `The following example creates a secret with key-value pairs: doctl secrets create prod-db-creds --region nyc3 --value password=super-secret --value api_key=abc123`
+	AddStringSliceFlag(cmdCreate, doctl.ArgSecretValue, "", nil, secretValueFlagDesc)
+	AddStringFlag(cmdCreate, doctl.ArgSecretFromEnvFile, "", "", "Path to an env file containing key-value pairs to store in the secret.")
+	cmdCreate.Example = `The following example creates a secret with key-value pairs: doctl secrets create prod-db-creds --region nyc3 --value password=@./pw.txt --value api_key=-`
 
-	cmdGet := CmdBuilder(cmd, RunCmdSecretsGet, "get <name>", "Get a secret", `Retrieves a secret container and its key-value pairs.`, Writer,
+	cmdGet := CmdBuilder(cmd, RunCmdSecretsGet, "get <name>", "Get a secret", `Retrieves a secret container and its key-value pairs.
+
+Secret values are masked by default. Use --show to reveal them, or --key with --raw to print a single value for scripting.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Secret{}))
 	AddStringFlag(cmdGet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
-	cmdGet.Example = `The following example retrieves a secret: doctl secrets get prod-db-creds --region nyc3`
+	AddStringFlag(cmdGet, doctl.ArgKey, "", "", "Return only the value for this key.")
+	AddBoolFlag(cmdGet, doctl.ArgSecretShow, "", false, "Reveal secret values instead of masking them.")
+	AddBoolFlag(cmdGet, doctl.ArgSecretRaw, "", false, "Write the value for --key to stdout with no formatting.")
+	cmdGet.Example = `The following example retrieves a secret: doctl secrets get prod-db-creds --region nyc3 --key password --raw`
 
 	cmdList := CmdBuilder(cmd, RunCmdSecretsList, "list", "List secrets", `Retrieves a list of secret containers across all regions. Values are not included.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Secrets{}))
@@ -96,13 +109,14 @@ This replaces the entire contents of the secret. Include every key you want to k
 		displayerType(&displayers.SecretWriteResult{}))
 	AddStringFlag(cmdUpdate, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddIntFlag(cmdUpdate, doctl.ArgSecretVersion, "", 0, secretVersionFlagDesc)
-	AddStringSliceFlag(cmdUpdate, doctl.ArgSecretValue, "", nil,
-		"Key-value pair in key=value format (repeatable). If omitted, keys and masked values are read with --interactive.")
-	cmdUpdate.Example = `The following example updates a secret: doctl secrets update prod-db-creds --region nyc3 --version 1 --value password=new-secret --value api_key=abc123`
+	AddStringSliceFlag(cmdUpdate, doctl.ArgSecretValue, "", nil, secretValueFlagDesc)
+	AddStringFlag(cmdUpdate, doctl.ArgSecretFromEnvFile, "", "", "Path to an env file containing key-value pairs to store in the secret.")
+	cmdUpdate.Example = `The following example updates a secret: doctl secrets update prod-db-creds --region nyc3 --version 1 --value password=@./pw.txt`
 
 	cmdDelete := CmdBuilder(cmd, RunCmdSecretsDelete, "delete <name>", "Delete a secret", `Schedules a secret container for soft deletion.`, Writer, aliasOpt("d", "rm"))
 	AddStringFlag(cmdDelete, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
-	cmdDelete.Example = `The following example deletes a secret: doctl secrets delete prod-db-creds --region nyc3`
+	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the secret without a confirmation prompt.")
+	cmdDelete.Example = `The following example deletes a secret: doctl secrets delete prod-db-creds --region nyc3 --force`
 
 	cmdRestore := CmdBuilder(cmd, RunCmdSecretsRestore, "restore <name>", "Restore a secret", `Restores a secret container that was scheduled for deletion.`, Writer)
 	AddStringFlag(cmdRestore, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
@@ -152,12 +166,53 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		return err
 	}
 
+	key, err := c.Doit.GetString(c.NS, doctl.ArgKey)
+	if err != nil {
+		return err
+	}
+
+	show, err := c.Doit.GetBool(c.NS, doctl.ArgSecretShow)
+	if err != nil {
+		return err
+	}
+
+	raw, err := c.Doit.GetBool(c.NS, doctl.ArgSecretRaw)
+	if err != nil {
+		return err
+	}
+
+	if raw && key == "" {
+		return fmt.Errorf("--%s requires --%s", doctl.ArgSecretRaw, doctl.ArgKey)
+	}
+
 	secret, err := c.Secrets().Get(name, region)
 	if err != nil {
 		return err
 	}
 
-	return c.Display(&displayers.Secret{Secret: *secret})
+	if raw {
+		value, ok := secret.Values[key]
+		if !ok {
+			return fmt.Errorf("key %q not found in secret %q", key, name)
+		}
+		_, err = fmt.Fprint(c.Out, value)
+		return err
+	}
+
+	displaySecret := cloneSecret(*secret)
+	if key != "" {
+		value, ok := secret.Values[key]
+		if !ok {
+			return fmt.Errorf("key %q not found in secret %q", key, name)
+		}
+		displaySecret.Values = map[string]string{key: value}
+	}
+
+	if !show {
+		displaySecret = maskSecretValues(displaySecret)
+	}
+
+	return c.Display(&displayers.Secret{Secret: displaySecret})
 }
 
 // RunCmdSecretsList lists secret containers.
@@ -168,7 +223,7 @@ func RunCmdSecretsList(c *CmdConfig) error {
 	}
 
 	if len(list.UnavailableRegions) > 0 {
-		notice("Some regions were unavailable: %s", strings.Join(list.UnavailableRegions, ", "))
+		secretNotice("Some regions were unavailable: %s", strings.Join(list.UnavailableRegions, ", "))
 	}
 
 	return c.Display(&displayers.Secrets{Secrets: list.Secrets})
@@ -240,7 +295,16 @@ func RunCmdSecretsDelete(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Secrets().Delete(name, region)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("secret", 1) == nil {
+		return c.Secrets().Delete(name, region)
+	}
+
+	return errOperationAborted
 }
 
 // RunCmdSecretsRestore restores a secret container scheduled for deletion.
@@ -259,15 +323,16 @@ func RunCmdSecretsRestore(c *CmdConfig) error {
 }
 
 func collectSecretValues(c *CmdConfig) (map[string]string, error) {
-	flags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSecretValue)
+	values, err := loadSecretValuesFromFlags(c)
 	if err != nil {
 		return nil, err
 	}
-	if len(flags) > 0 {
-		return parseSecretValues(flags)
+	if len(values) > 0 {
+		return values, nil
 	}
 	if !secretsPromptsEnabled() {
-		return nil, fmt.Errorf("must specify at least one --%s when running with --no-interactive", doctl.ArgSecretValue)
+		return nil, fmt.Errorf("must specify at least one --%s or --%s when running with --no-interactive",
+			doctl.ArgSecretValue, doctl.ArgSecretFromEnvFile)
 	}
 
 	name := ""
@@ -280,18 +345,65 @@ func collectSecretValues(c *CmdConfig) (map[string]string, error) {
 }
 
 func collectSecretValuesForUpdate(c *CmdConfig, name, region string) (map[string]string, error) {
+	values, err := loadSecretValuesFromFlags(c)
+	if err != nil {
+		return nil, err
+	}
+	if len(values) > 0 {
+		return values, nil
+	}
+	if !secretsPromptsEnabled() {
+		return nil, fmt.Errorf("must specify at least one --%s or --%s when running with --no-interactive",
+			doctl.ArgSecretValue, doctl.ArgSecretFromEnvFile)
+	}
+
+	return readSecretValuesInteractive(os.Stderr, secretValuePromptUpdate(name, region))
+}
+
+func loadSecretValuesFromFlags(c *CmdConfig) (map[string]string, error) {
+	values := make(map[string]string)
+
+	envFile, err := c.Doit.GetString(c.NS, doctl.ArgSecretFromEnvFile)
+	if err != nil {
+		return nil, err
+	}
+	if envFile != "" {
+		envValues, err := loadSecretValuesFromEnvFile(envFile)
+		if err != nil {
+			return nil, err
+		}
+		for key, value := range envValues {
+			values[key] = value
+		}
+	}
+
 	flags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSecretValue)
 	if err != nil {
 		return nil, err
 	}
 	if len(flags) > 0 {
-		return parseSecretValues(flags)
-	}
-	if !secretsPromptsEnabled() {
-		return nil, fmt.Errorf("must specify at least one --%s when running with --no-interactive", doctl.ArgSecretValue)
+		flagValues, err := parseSecretValues(flags)
+		if err != nil {
+			return nil, err
+		}
+		for key, value := range flagValues {
+			values[key] = value
+		}
 	}
 
-	return readSecretValuesInteractive(os.Stderr, secretValuePromptUpdate(name, region))
+	return values, nil
+}
+
+func loadSecretValuesFromEnvFile(path string) (map[string]string, error) {
+	envs, err := godotenv.Read(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading env file: %w", err)
+	}
+	if len(envs) == 0 {
+		return nil, fmt.Errorf("env file %q contains no key-value pairs", path)
+	}
+
+	return envs, nil
 }
 
 func defaultPromptSecretKey() (string, error) {
@@ -313,28 +425,12 @@ func resolveSecretName(c *CmdConfig) (string, error) {
 		return "", doctl.NewMissingArgsErr(c.NS)
 	}
 
-	name, err := readSecretNameInteractive(os.Stderr, secretNameReader)
+	name, err := input.New("Enter the secret name: ", input.WithRequired()).Prompt()
 	if err != nil {
 		return "", err
 	}
 
 	c.Args = []string{name}
-
-	return name, nil
-}
-
-func readSecretNameInteractive(out io.Writer, in *bufio.Reader) (string, error) {
-	fmt.Fprint(out, "Enter the secret name: ")
-
-	line, err := in.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-
-	name := strings.TrimSpace(line)
-	if name == "" {
-		return "", fmt.Errorf("secret name is required")
-	}
 
 	return name, nil
 }
@@ -353,7 +449,7 @@ func resolveSecretVersion(c *CmdConfig, name, region string) (int, error) {
 
 	secret, err := c.Secrets().Get(name, region)
 	if err == nil && secret.Version > 0 {
-		notice("Using current version %d of %q in %s", secret.Version, name, region)
+		secretNotice("Using current version %d of %q in %s", secret.Version, name, region)
 		c.Doit.Set(c.NS, doctl.ArgSecretVersion, secret.Version)
 		return secret.Version, nil
 	}
@@ -362,33 +458,27 @@ func resolveSecretVersion(c *CmdConfig, name, region string) (int, error) {
 		return 0, fmt.Errorf("must specify --%s when the current version cannot be determined", doctl.ArgSecretVersion)
 	}
 
-	version, err := readSecretVersionInteractive(os.Stderr, secretVersionReader, name, region)
+	versionStr, err := input.New(
+		fmt.Sprintf("Enter the current version of %q in %s to update: ", name, region),
+		input.WithRequired(),
+		input.WithValidator(func(value string) error {
+			version, err := strconv.Atoi(strings.TrimSpace(value))
+			if err != nil || version <= 0 {
+				return fmt.Errorf("version must be a positive integer")
+			}
+			return nil
+		}),
+	).Prompt()
 	if err != nil {
 		return 0, err
+	}
+
+	version, err := strconv.Atoi(strings.TrimSpace(versionStr))
+	if err != nil {
+		return 0, fmt.Errorf("version must be a positive integer")
 	}
 
 	c.Doit.Set(c.NS, doctl.ArgSecretVersion, version)
-
-	return version, nil
-}
-
-func readSecretVersionInteractive(out io.Writer, in *bufio.Reader, name, region string) (int, error) {
-	fmt.Fprintf(out, "Version is required. Enter the current version of %q in %s to update.\nVersion: ", name, region)
-
-	line, err := in.ReadString('\n')
-	if err != nil {
-		return 0, err
-	}
-
-	line = strings.TrimSpace(line)
-	if line == "" {
-		return 0, fmt.Errorf("version is required")
-	}
-
-	version, err := strconv.Atoi(line)
-	if err != nil || version <= 0 {
-		return 0, fmt.Errorf("version must be a positive integer")
-	}
 
 	return version, nil
 }
@@ -405,7 +495,7 @@ func resolveSecretRegion(c *CmdConfig) (string, error) {
 		return "", fmt.Errorf("must specify --%s when running with --no-interactive", doctl.ArgRegionSlug)
 	}
 
-	region, err = readSecretRegionInteractive(os.Stderr, secretRegionReader)
+	region, err = promptSecretRegion()
 	if err != nil {
 		return "", err
 	}
@@ -415,20 +505,23 @@ func resolveSecretRegion(c *CmdConfig) (string, error) {
 	return region, nil
 }
 
-func readSecretRegionInteractive(out io.Writer, in *bufio.Reader) (string, error) {
-	fmt.Fprintf(out, "Region is required. Enter the region slug where the secret is stored.\nExamples: %s\nRegion: ", strings.Join(exampleSecretRegions, ", "))
+func promptSecretRegion() (string, error) {
+	items := make([]list.Item, len(exampleSecretRegions))
+	for i, region := range exampleSecretRegions {
+		items[i] = secretRegionListItem{slug: region}
+	}
 
-	line, err := in.ReadString('\n')
+	selected, err := list.New(items).Select()
 	if err != nil {
 		return "", err
 	}
 
-	region := strings.TrimSpace(line)
-	if region == "" {
-		return "", fmt.Errorf("region is required")
+	item, ok := selected.(secretRegionListItem)
+	if !ok {
+		return "", fmt.Errorf("invalid region selection")
 	}
 
-	return region, nil
+	return item.slug, nil
 }
 
 func secretValuePromptCreate(name, region string) string {
@@ -462,7 +555,13 @@ func parseSecretValues(lines []string) (map[string]string, error) {
 		if _, exists := values[key]; exists {
 			return nil, fmt.Errorf("duplicate key %q", key)
 		}
-		values[key] = value
+
+		resolved, err := resolveSecretValueInput(value)
+		if err != nil {
+			return nil, err
+		}
+
+		values[key] = resolved
 	}
 
 	return values, nil
@@ -475,6 +574,63 @@ func parseSecretValueLine(line string) (string, string, error) {
 	}
 
 	return parts[0], parts[1], nil
+}
+
+func resolveSecretValueInput(value string) (string, error) {
+	if value == "-" {
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimRight(string(data), "\r\n"), nil
+	}
+
+	if strings.HasPrefix(value, "@") {
+		path := strings.TrimPrefix(value, "@")
+		if path == "" {
+			return "", fmt.Errorf("file path is required after @")
+		}
+
+		content, err := readInputFromFile(path)
+		if err != nil {
+			return "", err
+		}
+
+		return strings.TrimRight(content, "\r\n"), nil
+	}
+
+	return value, nil
+}
+
+func maskSecretValues(secret do.Secret) do.Secret {
+	maskedValues := make(map[string]string, len(secret.Values))
+	for key := range secret.Values {
+		maskedValues[key] = secretMaskedValue
+	}
+
+	masked := cloneSecret(secret)
+	masked.Values = maskedValues
+
+	return masked
+}
+
+func cloneSecret(secret do.Secret) do.Secret {
+	values := make(map[string]string, len(secret.Values))
+	for key, value := range secret.Values {
+		values[key] = value
+	}
+
+	return do.Secret{
+		Secret: &godo.Secret{
+			Name:              secret.Name,
+			Region:            secret.Region,
+			Version:           secret.Version,
+			Values:            values,
+			CreatedAt:         secret.CreatedAt,
+			UpdatedAt:         secret.UpdatedAt,
+			DeleteRequestedAt: secret.DeleteRequestedAt,
+		},
+	}
 }
 
 func readSecretValuesInteractive(out io.Writer, prompt string) (map[string]string, error) {

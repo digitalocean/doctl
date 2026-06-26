@@ -712,8 +712,14 @@ const (
 
 	// ArgSecretValue is a key-value pair for a secret in key=value format.
 	ArgSecretValue = "value"
+	// ArgSecretFromEnvFile loads key-value pairs from an env file.
+	ArgSecretFromEnvFile = "from-env-file"
 	// ArgSecretVersion is the current version of a secret for update operations.
 	ArgSecretVersion = "version"
+	// ArgSecretShow reveals secret values instead of masking them on get.
+	ArgSecretShow = "show"
+	// ArgSecretRaw writes a single secret value to stdout with no formatting.
+	ArgSecretRaw = "raw"
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"

@@ -14,9 +14,8 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"bytes"
-	"strings"
+	"os"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -89,6 +88,48 @@ func TestParseSecretValues(t *testing.T) {
 		_, err := parseSecretValues([]string{"invalid"})
 		assert.Error(t, err)
 	})
+}
+
+func TestParseSecretValuesFromFile(t *testing.T) {
+	path := t.TempDir() + "/pw.txt"
+	err := os.WriteFile(path, []byte("super-secret\n"), 0o600)
+	assert.NoError(t, err)
+
+	values, err := parseSecretValues([]string{"password=@" + path})
+	assert.NoError(t, err)
+	assert.Equal(t, "super-secret", values["password"])
+}
+
+func TestParseSecretValuesFromStdin(t *testing.T) {
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }()
+
+	r, w, err := os.Pipe()
+	assert.NoError(t, err)
+	os.Stdin = r
+
+	_, err = w.WriteString("from-stdin")
+	assert.NoError(t, err)
+	assert.NoError(t, w.Close())
+
+	values, err := parseSecretValues([]string{"password=-"})
+	assert.NoError(t, err)
+	assert.Equal(t, "from-stdin", values["password"])
+}
+
+func TestLoadSecretValuesFromEnvFile(t *testing.T) {
+	path := t.TempDir() + "/.env"
+	err := os.WriteFile(path, []byte("password=secret\napi_key=abc\n"), 0o600)
+	assert.NoError(t, err)
+
+	values, err := loadSecretValuesFromEnvFile(path)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"password": "secret", "api_key": "abc"}, values)
+}
+
+func TestMaskSecretValues(t *testing.T) {
+	masked := maskSecretValues(testSecret)
+	assert.Equal(t, secretMaskedValue, masked.Values["password"])
 }
 
 func TestReadSecretValuesInteractive(t *testing.T) {
@@ -193,6 +234,34 @@ func TestRunCmdSecretsGet(t *testing.T) {
 	})
 }
 
+func TestRunCmdSecretsGetRaw(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&testSecret, nil)
+
+		config.Args = []string{"prod-db-creds"}
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Doit.Set(config.NS, doctl.ArgKey, "password")
+		config.Doit.Set(config.NS, doctl.ArgSecretRaw, true)
+		config.Out = &bytes.Buffer{}
+
+		err := RunCmdSecretsGet(config)
+		assert.NoError(t, err)
+		assert.Equal(t, "super-secret", config.Out.(*bytes.Buffer).String())
+	})
+}
+
+func TestRunCmdSecretsGetRawRequiresKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"prod-db-creds"}
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Doit.Set(config.NS, doctl.ArgSecretRaw, true)
+
+		err := RunCmdSecretsGet(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), doctl.ArgKey)
+	})
+}
+
 func TestRunCmdSecretsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.secrets.EXPECT().List().Return(&testSecretsList, nil)
@@ -258,6 +327,7 @@ func TestRunCmdSecretsDelete(t *testing.T) {
 
 		config.Args = []string{"prod-db-creds"}
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunCmdSecretsDelete(config)
 		assert.NoError(t, err)
@@ -274,25 +344,6 @@ func TestRunCmdSecretsRestore(t *testing.T) {
 		err := RunCmdSecretsRestore(config)
 		assert.NoError(t, err)
 	})
-}
-
-func TestReadSecretRegionInteractive(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("nyc3\n"))
-
-	region, err := readSecretRegionInteractive(out, reader)
-	assert.NoError(t, err)
-	assert.Equal(t, "nyc3", region)
-	assert.Contains(t, out.String(), "Examples:")
-	assert.Contains(t, out.String(), "nyc3")
-}
-
-func TestReadSecretRegionInteractiveEmpty(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("\n"))
-
-	_, err := readSecretRegionInteractive(out, reader)
-	assert.Error(t, err)
 }
 
 func TestResolveSecretRegionUsesFlag(t *testing.T) {
@@ -315,24 +366,6 @@ func TestResolveSecretRegionRequiresFlagWhenNonInteractive(t *testing.T) {
 	})
 }
 
-func TestReadSecretNameInteractive(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("prod-db-creds\n"))
-
-	name, err := readSecretNameInteractive(out, reader)
-	assert.NoError(t, err)
-	assert.Equal(t, "prod-db-creds", name)
-	assert.Contains(t, out.String(), "Enter the secret name")
-}
-
-func TestReadSecretNameInteractiveEmpty(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("\n"))
-
-	_, err := readSecretNameInteractive(out, reader)
-	assert.Error(t, err)
-}
-
 func TestResolveSecretNameUsesArg(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
 		config.Args = []string{"prod-db-creds"}
@@ -341,23 +374,6 @@ func TestResolveSecretNameUsesArg(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "prod-db-creds", name)
 	})
-}
-
-func TestReadSecretVersionInteractive(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("2\n"))
-
-	version, err := readSecretVersionInteractive(out, reader, "prod-db-creds", "nyc3")
-	assert.NoError(t, err)
-	assert.Equal(t, 2, version)
-}
-
-func TestReadSecretVersionInteractiveInvalid(t *testing.T) {
-	out := &bytes.Buffer{}
-	reader := bufio.NewReader(strings.NewReader("abc\n"))
-
-	_, err := readSecretVersionInteractive(out, reader, "prod-db-creds", "nyc3")
-	assert.Error(t, err)
 }
 
 func TestResolveSecretVersionUsesFlag(t *testing.T) {
@@ -392,6 +408,21 @@ func TestCollectSecretValuesRequiresFlagsWhenNonInteractive(t *testing.T) {
 		_, err := collectSecretValues(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), doctl.ArgSecretValue)
+		assert.Contains(t, err.Error(), doctl.ArgSecretFromEnvFile)
+	})
+}
+
+func TestLoadSecretValuesFromFlagsEnvFile(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		path := t.TempDir() + "/.env"
+		err := os.WriteFile(path, []byte("password=secret\n"), 0o600)
+		assert.NoError(t, err)
+
+		config.Doit.Set(config.NS, doctl.ArgSecretFromEnvFile, path)
+
+		values, err := loadSecretValuesFromFlags(config)
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{"password": "secret"}, values)
 	})
 }
 
