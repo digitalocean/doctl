@@ -625,6 +625,19 @@ func TestPendingHITLQueue(t *testing.T) {
 		assert.Equal(t, 1, p.len())
 	})
 
+	t.Run("reset drains the whole queue and reports the count", func(t *testing.T) {
+		p := &pendingHITL{}
+		p.set("h1")
+		p.set("h2")
+		p.set("h3")
+
+		assert.Equal(t, 3, p.reset(), "reset returns how many were cleared")
+		assert.Equal(t, 0, p.len(), "queue is empty after reset")
+		assert.Equal(t, "", p.get(), "no head after reset")
+
+		assert.Equal(t, 0, p.reset(), "reset on an empty queue clears nothing")
+	})
+
 	t.Run("action label is carried through to /pending", func(t *testing.T) {
 		p := &pendingHITL{}
 		p.set("h1", "HITL_ACTION_BASH")
@@ -911,6 +924,18 @@ func TestPromptDisplay(t *testing.T) {
 		s.display.spinnerFrame("⠋")
 		assert.Equal(t, "", buf.String(), "spinner must not animate while tokens stream")
 	})
+
+	t.Run("spinnerInit reserves a line and redraws the prompt below it", func(t *testing.T) {
+		var buf bytes.Buffer
+		pending := &pendingHITL{}
+		s := newAttachState(&buf, pending)
+		s.display.setRaw(true)
+
+		s.display.spinnerInit("⠋")
+		// Spinner on its own line, then the prompt one row below it.
+		assert.Equal(t, "\r\x1b[K⠋ thinking...\r\n> ", buf.String())
+		assert.False(t, s.display.midLine)
+	})
 }
 
 func TestEventCursor(t *testing.T) {
@@ -1017,6 +1042,165 @@ func TestClassifyStreamError(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestIsRunTerminalErr pins the SendInput 409 case where the session's run is
+// already terminal — only that specific error should trip the friendly
+// detach-and-restart path, not other 409s or unrelated errors.
+func TestIsRunTerminalErr(t *testing.T) {
+	mkErr := func(status int, message string) error {
+		return &godo.ErrorResponse{
+			Response: &http.Response{StatusCode: status},
+			Message:  message,
+		}
+	}
+
+	mkNestedErr := func(status int, message string) error {
+		return &godo.ErrorResponse{
+			Response: &http.Response{StatusCode: status},
+			NestedError: &struct {
+				Code    int    `json:"code"`
+				Message string `json:"message"`
+			}{Code: status, Message: message},
+		}
+	}
+
+	cases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "409 run is terminal (top-level message) matches",
+			err:  mkErr(http.StatusConflict, "invalid transition for run 019f...: run is terminal; create a new one"),
+			want: true,
+		},
+		{
+			name: "409 run is terminal (nested harness-api envelope) matches",
+			err:  mkNestedErr(http.StatusConflict, "invalid transition for run 019f...: run is terminal; create a new one"),
+			want: true,
+		},
+		{
+			name: "409 single-connection rejection does not match",
+			err:  mkErr(http.StatusConflict, "already attached on device abc-123"),
+			want: false,
+		},
+		{
+			name: "500 with terminal text does not match",
+			err:  mkErr(http.StatusInternalServerError, "run is terminal"),
+			want: false,
+		},
+		{
+			name: "non-godo error does not match",
+			err:  errors.New("network: connection reset"),
+			want: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isRunTerminalErr(tc.err))
+		})
+	}
+}
+
+// TestSessionLimitErr pins the `agents start` 409 returned when the team is at
+// its active-session cap — only that specific 409 should trip the friendly
+// "destroy a session" hint, not other 409s or unrelated errors.
+func TestSessionLimitErr(t *testing.T) {
+	mkErr := func(status int, message string) error {
+		return &godo.ErrorResponse{
+			Response: &http.Response{StatusCode: status},
+			Message:  message,
+		}
+	}
+	mkNestedErr := func(status int, message string) error {
+		return &godo.ErrorResponse{
+			Response: &http.Response{StatusCode: status},
+			NestedError: &struct {
+				Code    int    `json:"code"`
+				Message string `json:"message"`
+			}{Code: status, Message: message},
+		}
+	}
+
+	cases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "409 session limit (top-level) matches",
+			err:  mkErr(http.StatusConflict, "team is at the limit of 4 active sessions"),
+			want: true,
+		},
+		{
+			name: "409 session limit (nested envelope) matches",
+			err:  mkNestedErr(http.StatusConflict, "team is at the limit of 4 active sessions"),
+			want: true,
+		},
+		{
+			name: "409 run is terminal does not match",
+			err:  mkErr(http.StatusConflict, "run is terminal; create a new one"),
+			want: false,
+		},
+		{
+			name: "non-godo error does not match",
+			err:  errors.New("network: connection reset"),
+			want: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, sessionLimitErr(tc.err))
+		})
+	}
+}
+
+// TestTokenDeduper pins the reasoning-double-print fix: a consolidated delta
+// that repeats the whole accumulated segment is suppressed, while distinct
+// text, short repeats, and post-reset segments still render.
+func TestTokenDeduper(t *testing.T) {
+	t.Run("consolidated repeat of a streamed segment is suppressed", func(t *testing.T) {
+		d := &tokenDeduper{}
+		// Reasoning streamed as pieces.
+		assert.True(t, d.allow("The user wants me to "))
+		assert.True(t, d.allow("run six commands."))
+		// Same block re-sent as one consolidated delta.
+		assert.False(t, d.allow("The user wants me to run six commands."))
+		// The real answer still renders.
+		assert.True(t, d.allow("Sure, here goes."))
+	})
+
+	t.Run("single-delta block repeated once is suppressed", func(t *testing.T) {
+		d := &tokenDeduper{}
+		block := "The user said hello - a simple greeting."
+		assert.True(t, d.allow(block))
+		assert.False(t, d.allow(block))
+	})
+
+	t.Run("short repeats are not suppressed", func(t *testing.T) {
+		d := &tokenDeduper{}
+		assert.True(t, d.allow("ok\n"))
+		assert.True(t, d.allow("ok\n"))
+	})
+
+	t.Run("empty text is always allowed and inert", func(t *testing.T) {
+		d := &tokenDeduper{}
+		assert.True(t, d.allow("a long enough block of text"))
+		assert.True(t, d.allow(""))
+		// The empty delta must not have altered the segment, so the real
+		// repeat is still caught.
+		assert.False(t, d.allow("a long enough block of text"))
+	})
+
+	t.Run("reset starts a fresh segment", func(t *testing.T) {
+		d := &tokenDeduper{}
+		block := "a long enough block of text"
+		assert.True(t, d.allow(block))
+		d.reset()
+		// After a structural boundary the same text is legitimate again.
+		assert.True(t, d.allow(block))
+	})
 }
 
 func TestNextBackoff(t *testing.T) {

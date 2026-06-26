@@ -148,6 +148,10 @@ func RunAgentsStart(c *CmdConfig) error {
 
 	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest)
 	if err != nil {
+		if sessionLimitErr(err) {
+			msg, _, _ := agentAPIError(err)
+			return fmt.Errorf("%s. Free a slot by destroying one: run `doctl agents list` to find a session ID, then `doctl agents destroy SESSION_ID`", strings.TrimRight(msg, "."))
+		}
 		return err
 	}
 	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}})
@@ -556,7 +560,10 @@ type thinkingState struct {
 	out    io.Writer
 	active bool
 	cancel context.CancelFunc
+	done   chan struct{}
 }
+
+var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 func newThinkingState(out io.Writer) *thinkingState {
 	return &thinkingState{out: out}
@@ -570,52 +577,60 @@ func (s *thinkingState) start() {
 	}
 	s.active = true
 
-	// Lands above the prompt in raw mode; the animator below redraws this
-	// same line every 80ms when a display is available.
-	fmt.Fprintln(s.out, "(thinking...)")
-
 	display, ok := s.out.(*promptDisplay)
 	if !ok {
+		fmt.Fprintln(s.out, "(thinking...)")
 		s.mu.Unlock()
 		return
 	}
+	// Reserve the spinner line and draw its first frame atomically so no
+	// redraw or token can slip in between and shift the line the animator
+	// (and stop) expect one row above the prompt.
+	display.spinnerInit(spinnerFrames[0])
 	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
 	s.cancel = cancel
+	s.done = done
 	s.mu.Unlock()
-	go s.animate(ctx, display)
+	go s.animate(ctx, display, done)
 }
 
 func (s *thinkingState) stop() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if !s.active {
+		s.mu.Unlock()
 		return
 	}
 	s.active = false
-	if s.cancel != nil {
-		s.cancel()
-		s.cancel = nil
+	cancel, done := s.cancel, s.done
+	s.cancel, s.done = nil, nil
+	s.mu.Unlock()
+
+	if cancel != nil {
+		cancel()
 	}
-	// Replace whatever frame is on screen with the plain text marker so the
-	// transcript doesn't keep a frozen braille glyph in scrollback.
+	// Wait for the animator to exit before touching the line, so no stray
+	// frame lands after we replace it.
+	if done != nil {
+		<-done
+	}
 	if display, ok := s.out.(*promptDisplay); ok {
-		display.spinnerReset()
+		display.spinnerStop()
 	}
 }
 
-func (s *thinkingState) animate(ctx context.Context, d *promptDisplay) {
-	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-	ix := 0
-	d.spinnerFrame(frames[ix])
+func (s *thinkingState) animate(ctx context.Context, d *promptDisplay, done chan struct{}) {
+	defer close(done)
 	t := time.NewTicker(80 * time.Millisecond)
 	defer t.Stop()
+	ix := 0
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			ix = (ix + 1) % len(frames)
-			d.spinnerFrame(frames[ix])
+			ix = (ix + 1) % len(spinnerFrames)
+			d.spinnerFrame(spinnerFrames[ix])
 		}
 	}
 }
@@ -634,6 +649,9 @@ func streamWithReconnect(
 ) {
 	backoff := initialReconnectBackoff
 	attempt := 0
+	// Persisted across reconnects so a cursor-replayed segment is still
+	// recognised as a repeat.
+	dedup := &tokenDeduper{}
 
 	for {
 		if ctx.Err() != nil {
@@ -666,7 +684,7 @@ func streamWithReconnect(
 		attempt = 0
 		backoff = initialReconnectBackoff
 
-		drainStream(stream, out, pending, cursor, thinking)
+		drainStream(stream, out, pending, cursor, thinking, dedup)
 		streamErr := stream.Err()
 		stream.Close()
 
@@ -711,9 +729,43 @@ func classifyStreamError(err error) (string, bool) {
 	return "", false
 }
 
+// isRunTerminalErr reports the harness-api 409 returned when input is sent to
+// a session whose run is already terminal; recovery is a fresh `agents start`.
+func isRunTerminalErr(err error) bool {
+	msg, status, ok := agentAPIError(err)
+	return ok && status == http.StatusConflict &&
+		strings.Contains(strings.ToLower(msg), "run is terminal")
+}
+
+// agentAPIError unwraps err to a *godo.ErrorResponse and returns its effective
+// message and HTTP status. The reason lives in NestedError.Message when the
+// top-level Message is empty (harness-api's {"error":{...}} envelope).
+func agentAPIError(err error) (message string, status int, ok bool) {
+	var er *godo.ErrorResponse
+	if !errors.As(err, &er) || er.Response == nil {
+		return "", 0, false
+	}
+	msg := er.Message
+	if msg == "" && er.NestedError != nil {
+		msg = er.NestedError.Message
+	}
+	return msg, er.Response.StatusCode, true
+}
+
+// sessionLimitErr reports the 409 from `agents start` when the team has hit its
+// active-session cap (e.g. "team is at the limit of 4 active sessions").
+func sessionLimitErr(err error) bool {
+	msg, status, ok := agentAPIError(err)
+	if !ok || status != http.StatusConflict {
+		return false
+	}
+	lower := strings.ToLower(msg)
+	return strings.Contains(lower, "limit of") && strings.Contains(lower, "active sessions")
+}
+
 // drainStream consumes events until the iterator stops, rendering each one
 // and updating the HITL pending map, the reconnect cursor, and the spinner.
-func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState) {
+func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, dedup *tokenDeduper) {
 	for stream.Next() {
 		ev := stream.Current()
 		switch ev.Kind {
@@ -729,15 +781,59 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			}
 		}
 
-		if ev.Kind == godo.HostedAgentEventKindRunStarted {
+		switch ev.Kind {
+		case godo.HostedAgentEventKindRunStarted:
+			dedup.reset()
 			renderEvent(out, ev)
 			thinking.start()
-		} else {
+		case godo.HostedAgentEventKindTokenChunk:
 			thinking.stop()
+			var p tokenChunkPayload
+			if err := json.Unmarshal(ev.Payload, &p); err == nil && dedup.allow(p.Text) {
+				fmt.Fprint(out, p.Text)
+			}
+		default:
+			thinking.stop()
+			dedup.reset()
 			renderEvent(out, ev)
 		}
+
+		// A finished run means the server has cancelled any still-pending tool
+		// calls, so flush the local queue rather than leave stale entries.
+		if ev.Kind == godo.HostedAgentEventKindRunCompleted || ev.Kind == godo.HostedAgentEventKindRunFailed {
+			if n := pending.reset(); n > 0 {
+				fmt.Fprintf(out, "(%d pending approval(s) cancelled — run ended)\n", n)
+			}
+		}
+
 		cursor.set(ev.EventID)
 	}
+}
+
+// minDedupeLen keeps short, legitimately-repeated output (e.g. "ok\n") from
+// being swallowed; double-emitted reasoning blocks are always longer.
+const minDedupeLen = 8
+
+// tokenDeduper drops a run.token_delta that repeats the whole segment already
+// printed in the current text run — some adapters stream the model's reasoning
+// live and then re-send it as one consolidated delta.
+type tokenDeduper struct {
+	seg strings.Builder
+}
+
+func (d *tokenDeduper) allow(text string) bool {
+	if text == "" {
+		return true
+	}
+	if d.seg.Len() >= minDedupeLen && text == d.seg.String() {
+		return false
+	}
+	d.seg.WriteString(text)
+	return true
+}
+
+func (d *tokenDeduper) reset() {
+	d.seg.Reset()
 }
 
 func nextBackoff(cur time.Duration) time.Duration {
@@ -835,6 +931,15 @@ func (p *pendingHITL) list() []pendingEntry {
 	return out
 }
 
+// reset drops every queued entry and returns how many were cleared.
+func (p *pendingHITL) reset() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	n := len(p.entries)
+	p.entries = nil
+	return n
+}
+
 func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, pending *pendingHITL) error {
 	reader := bufio.NewReader(in)
 	for {
@@ -906,6 +1011,12 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 		}
 		resp, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line})
 		if err != nil {
+			if isRunTerminalErr(err) {
+				fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
+				fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
+				fmt.Fprintln(c.Out, "(detaching)")
+				return nil
+			}
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
 			continue
 		}
@@ -1042,7 +1153,25 @@ func (p *promptDisplay) redraw() {
 	fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), p.lineBuf())
 }
 
-// spinnerFrame redraws the "(thinking...)" line one row above the prompt.
+// spinnerInit reserves the spinner's own line above the prompt and draws the
+// first frame, then redraws the prompt below it — all in one locked write so
+// the spinner row and the prompt row stay adjacent for spinnerFrame/spinnerStop.
+func (p *promptDisplay) spinnerInit(frame string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw {
+		return
+	}
+	if p.midLine {
+		fmt.Fprint(p.out, "\r\n")
+		p.midLine = false
+	} else {
+		fmt.Fprint(p.out, "\r\x1b[K")
+	}
+	fmt.Fprintf(p.out, "%s thinking...\r\n%s%s", frame, p.prompt(), p.lineBuf())
+}
+
+// spinnerFrame redraws the spinner line one row above the prompt.
 // DECSC/DECRC (\x1b7 / \x1b8) save+restore the cursor so the prompt row
 // below is preserved. No-op in non-raw or mid-stream state.
 func (p *promptDisplay) spinnerFrame(frame string) {
@@ -1054,9 +1183,9 @@ func (p *promptDisplay) spinnerFrame(frame string) {
 	fmt.Fprintf(p.out, "\x1b7\x1b[A\r\x1b[K%s thinking...\x1b8", frame)
 }
 
-// spinnerReset replaces the spinner frame with the plain "(thinking...)"
-// text so a frozen braille glyph doesn't sit in scrollback.
-func (p *promptDisplay) spinnerReset() {
+// spinnerStop replaces the spinner frame with the plain "(thinking...)" text
+// so a frozen braille glyph doesn't sit in scrollback.
+func (p *promptDisplay) spinnerStop() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw || p.midLine {
@@ -1169,7 +1298,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.mu.Unlock()
 		state.display.echo([]byte("\r\n"))
 		if line != "" {
-			processAttachLine(c, svc, sessionID, line, state)
+			if detach := processAttachLine(c, svc, sessionID, line, state); detach {
+				return true, nil
+			}
 		}
 		state.display.redraw()
 		return false, nil
@@ -1209,8 +1340,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 }
 
 // processAttachLine dispatches an Enter-submitted line: HITL word shortcut,
-// slash command, or SendInput.
-func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState) {
+// slash command, or SendInput. Returns detach=true when the session can no
+// longer accept input (terminal run) and the loop should exit.
+func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState) (detach bool) {
 	if outcome, ok := hitlLetterShortcut(line); ok {
 		if id := state.pending.get(); id != "" {
 			if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
@@ -1221,25 +1353,32 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 			} else {
 				state.pending.clearIf(id)
 			}
-			return
+			return false
 		}
 	}
 	if strings.HasPrefix(line, "/") {
 		if err := handleAttachCommand(c, svc, sessionID, line, state.pending); err != nil {
 			fmt.Fprintf(c.Out, "error: %v\n", err)
 		}
-		return
+		return false
 	}
 	resp, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line})
 	if err != nil {
+		if isRunTerminalErr(err) {
+			fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
+			fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
+			fmt.Fprintln(c.Out, "(detaching)")
+			return true
+		}
 		fmt.Fprintf(c.Out, "send failed: %v\n", err)
-		return
+		return false
 	}
 	if resp != nil && resp.RunID != "" {
 		fmt.Fprintf(c.Out, "(queued as %s; waiting for the agent...)\n", resp.RunID)
 	} else {
 		fmt.Fprintln(c.Out, "(queued; waiting for the agent...)")
 	}
+	return false
 }
 
 // hitlLetterShortcut is the line-mode (piped / non-TTY) HITL path. Interactive
