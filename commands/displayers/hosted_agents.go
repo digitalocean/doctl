@@ -42,7 +42,7 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSession) Cols() []string {
-	return []string{"SessionID", "AgentKind", "Status", "SandboxID", "RepoHint", "CreatedAt"}
+	return []string{"SessionID", "AgentKind", "Status", "RepoHint", "CreatedAt"}
 }
 
 func (h *HostedAgentSession) ColMap() map[string]string {
@@ -50,7 +50,6 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"SessionID": "Session",
 		"AgentKind": "Agent",
 		"Status":    "Status",
-		"SandboxID": "Sandbox",
 		"RepoHint":  "Repo",
 		"CreatedAt": "Created",
 	}
@@ -69,7 +68,6 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			"SessionID": s.SessionID,
 			"AgentKind": s.AgentKind,
 			"Status":    s.Status,
-			"SandboxID": s.SandboxID,
 			"RepoHint":  s.RepoHint,
 			"CreatedAt": s.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		})
