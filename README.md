@@ -68,6 +68,7 @@ See the [full reference documentation](https://www.digitalocean.com/docs/apis-cl
     - [Nix supported OS](#nix-supported-os)
   - [Docker Hub](#docker-hub)
   - [Downloading a Release from GitHub](#downloading-a-release-from-github)
+  - [Installing Beta Releases](#installing-beta-releases)
   - [Building with Docker](#building-with-docker)
   - [Building the Development Version from Source](#building-the-development-version-from-source)
   - [Dependencies](#dependencies)
@@ -204,6 +205,81 @@ sudo mv ~/doctl /usr/local/bin
 ```
 
 Windows users can follow [How to: Add Tool Locations to the PATH Environment Variable](https://msdn.microsoft.com/en-us/library/office/ee537574(v=office.14).aspx) in order to add `doctl` to their `PATH`.
+
+### Installing Beta Releases
+
+New features are sometimes shipped in **beta releases** ahead of a general
+availability (GA) release so they can be tried out early. Beta releases are
+tagged `vX.Y.Z-beta.N` and published on the [Releases
+page](https://github.com/digitalocean/doctl/releases), marked as
+**"Pre-release"**.
+
+> **Note:** The package managers above (Homebrew, Snap, dnf) install the
+> latest **GA** release only — they do **not** include beta/preview features.
+> To use a preview feature, install the beta build with one of the methods
+> below. This is expected behavior, not a bug.
+
+#### Install a beta with `go install` (quickest)
+
+If you have a [Go environment](https://go.dev/doc/install) configured, the
+fastest way is to install a specific beta tag directly. Check the [Releases
+page](https://github.com/digitalocean/doctl/releases) for the latest `-beta`
+tag and use it in place of `v<version>-beta.<n>`:
+
+```
+go install github.com/digitalocean/doctl/cmd/doctl@v<version>-beta.<n>
+```
+
+This drops the `doctl` binary in `$(go env GOPATH)/bin`; make sure that
+directory is on your `PATH`.
+
+#### Build a beta from source
+
+With a configured [Go environment](https://go.dev/doc/install), build directly
+from the beta tag (or a feature branch):
+
+```
+git clone https://github.com/digitalocean/doctl.git
+cd doctl
+git checkout v<version>-beta.<n>
+go build -o doctl ./cmd/doctl
+sudo mv ./doctl /usr/local/bin
+```
+
+#### Download a prebuilt beta from GitHub (no Go required)
+
+If you don't have a Go environment, open the [Releases
+page](https://github.com/digitalocean/doctl/releases), choose the latest
+`-beta` release, and download the archive for your platform. For example, on
+GNU/Linux:
+
+```
+curl -sL https://github.com/digitalocean/doctl/releases/download/v<version>-beta.<n>/doctl-<version>-beta.<n>-linux-amd64.tar.gz | tar -xzv
+sudo mv ./doctl /usr/local/bin
+```
+
+If the asset filename pattern differs, copy the exact download URL from the
+release page rather than guessing it.
+
+#### Verify the installed version
+
+```
+doctl version
+```
+
+The reported version should match the `-beta` tag you installed. Beta builds
+may contain features that are still changing and are generally less stable than
+GA releases.
+
+#### Example
+
+For instance, to install the `v1.163.0-beta.2` tag with `go install`:
+
+```
+go install github.com/digitalocean/doctl/cmd/doctl@v1.163.0-beta.2
+doctl version
+# doctl version 1.163.0-beta.2-...
+```
 
 ### Building with Docker
 
