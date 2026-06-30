@@ -189,7 +189,6 @@ type HostedAgentSession struct {
 	TeamID       uint64                                  `json:"team_id"`
 	AgentKind    HostedAgentKind                         `json:"agent_kind"`
 	Status       HostedAgentSessionStatus                `json:"status"`
-	SandboxID    string                                  `json:"sandbox_id,omitempty"`
 	CreatedAt    Timestamp                               `json:"created_at"`
 	LastEventAt  Timestamp                               `json:"last_event_at"`
 	RepoHint     string                                  `json:"repo_hint,omitempty"`
