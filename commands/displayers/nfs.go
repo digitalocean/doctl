@@ -158,3 +158,53 @@ func (na *NfsAction) KV() []map[string]any {
 
 	return out
 }
+
+type NfsAccessPoint struct {
+	NfsAccessPoints []do.NfsAccessPoint
+}
+
+var _ Displayable = &NfsAccessPoint{}
+
+func (n *NfsAccessPoint) JSON(out io.Writer) error {
+	return writeJSON(n.NfsAccessPoints, out)
+}
+
+func (n *NfsAccessPoint) Cols() []string {
+	return []string{
+		"ID", "Name", "ShareID", "Path", "Status", "IsDefault", "VpcIDs", "CreatedAt", "UpdatedAt",
+	}
+}
+
+func (n *NfsAccessPoint) ColMap() map[string]string {
+	return map[string]string{
+		"ID":        "ID",
+		"Name":      "Name",
+		"ShareID":   "Share ID",
+		"Path":      "Path",
+		"Status":    "Status",
+		"IsDefault": "Default",
+		"VpcIDs":    "VPC IDs",
+		"CreatedAt": "Created At",
+		"UpdatedAt": "Updated At",
+	}
+}
+
+func (n *NfsAccessPoint) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(n.NfsAccessPoints))
+	for _, ap := range n.NfsAccessPoints {
+		m := map[string]any{
+			"ID":        ap.ID,
+			"Name":      ap.Name,
+			"ShareID":   ap.ShareID,
+			"Path":      ap.Path,
+			"Status":    ap.Status,
+			"IsDefault": ap.IsDefault,
+			"VpcIDs":    strings.Join(ap.VpcIDs, ", "),
+			"CreatedAt": ap.CreatedAt,
+			"UpdatedAt": ap.UpdatedAt,
+		}
+		out = append(out, m)
+	}
+
+	return out
+}

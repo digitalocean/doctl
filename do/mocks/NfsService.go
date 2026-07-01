@@ -56,6 +56,21 @@ func (mr *MockNfsServiceMockRecorder) Create(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNfsService)(nil).Create), arg0)
 }
 
+// CreateAccessPoint mocks base method.
+func (m *MockNfsService) CreateAccessPoint(shareID string, arg1 *do.NfsAccessPointCreateRequest) (*do.NfsAccessPointActionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAccessPoint", shareID, arg1)
+	ret0, _ := ret[0].(*do.NfsAccessPointActionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAccessPoint indicates an expected call of CreateAccessPoint.
+func (mr *MockNfsServiceMockRecorder) CreateAccessPoint(shareID, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccessPoint", reflect.TypeOf((*MockNfsService)(nil).CreateAccessPoint), shareID, arg1)
+}
+
 // Delete mocks base method.
 func (m *MockNfsService) Delete(id, region string) error {
 	m.ctrl.T.Helper()
@@ -68,6 +83,21 @@ func (m *MockNfsService) Delete(id, region string) error {
 func (mr *MockNfsServiceMockRecorder) Delete(id, region any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNfsService)(nil).Delete), id, region)
+}
+
+// DeleteAccessPoint mocks base method.
+func (m *MockNfsService) DeleteAccessPoint(accessPointID string) (*do.NfsAccessPointActionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAccessPoint", accessPointID)
+	ret0, _ := ret[0].(*do.NfsAccessPointActionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteAccessPoint indicates an expected call of DeleteAccessPoint.
+func (mr *MockNfsServiceMockRecorder) DeleteAccessPoint(accessPointID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAccessPoint", reflect.TypeOf((*MockNfsService)(nil).DeleteAccessPoint), accessPointID)
 }
 
 // DeleteSnapshot mocks base method.
@@ -99,6 +129,21 @@ func (mr *MockNfsServiceMockRecorder) Get(id, region any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNfsService)(nil).Get), id, region)
 }
 
+// GetAccessPoint mocks base method.
+func (m *MockNfsService) GetAccessPoint(accessPointID string) (*do.NfsAccessPoint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccessPoint", accessPointID)
+	ret0, _ := ret[0].(*do.NfsAccessPoint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccessPoint indicates an expected call of GetAccessPoint.
+func (mr *MockNfsServiceMockRecorder) GetAccessPoint(accessPointID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccessPoint", reflect.TypeOf((*MockNfsService)(nil).GetAccessPoint), accessPointID)
+}
+
 // GetSnapshot mocks base method.
 func (m *MockNfsService) GetSnapshot(snapshotID, region string) (*do.NfsSnapshot, error) {
 	m.ctrl.T.Helper()
@@ -127,6 +172,21 @@ func (m *MockNfsService) List(region string) ([]do.Nfs, error) {
 func (mr *MockNfsServiceMockRecorder) List(region any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNfsService)(nil).List), region)
+}
+
+// ListAccessPoints mocks base method.
+func (m *MockNfsService) ListAccessPoints(shareID, status string) ([]do.NfsAccessPoint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAccessPoints", shareID, status)
+	ret0, _ := ret[0].([]do.NfsAccessPoint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAccessPoints indicates an expected call of ListAccessPoints.
+func (mr *MockNfsServiceMockRecorder) ListAccessPoints(shareID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccessPoints", reflect.TypeOf((*MockNfsService)(nil).ListAccessPoints), shareID, status)
 }
 
 // ListSnapshots mocks base method.

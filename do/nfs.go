@@ -29,6 +29,44 @@ type NfsSnapshot struct {
 	*godo.NfsSnapshot
 }
 
+// NfsAccessPoint wraps an NFS access point payload.
+type NfsAccessPoint struct {
+	ID           string               `json:"id"`
+	Name         string               `json:"name"`
+	ShareID      string               `json:"share_id"`
+	Path         string               `json:"path"`
+	Status       string               `json:"status"`
+	AccessPolicy NfsAccessPointPolicy `json:"access_policy"`
+	CreatedAt    string               `json:"created_at"`
+	UpdatedAt    string               `json:"updated_at"`
+	IsDefault    bool                 `json:"is_default"`
+	VpcID        *string              `json:"vpc_id,omitempty"`
+	VpcIDs       []string             `json:"vpc_ids,omitempty"`
+}
+
+// NfsAccessPointPolicy describes access policy settings for an access point.
+type NfsAccessPointPolicy struct {
+	Anonuid                    uint64   `json:"anonuid"`
+	Anongid                    uint64   `json:"anongid"`
+	Protocols                  []string `json:"protocols"`
+	SquashConfig               string   `json:"squash_config"`
+	IdentityEnforcementEnabled bool     `json:"identity_enforcement_enabled"`
+}
+
+// NfsAccessPointCreateRequest describes the create access point request payload.
+type NfsAccessPointCreateRequest struct {
+	Name         string               `json:"name"`
+	Path         string               `json:"path"`
+	AccessPolicy NfsAccessPointPolicy `json:"access_policy"`
+	VpcID        string               `json:"vpc_id"`
+}
+
+// NfsAccessPointActionResponse wraps mutation responses for access points.
+type NfsAccessPointActionResponse struct {
+	AccessPoint *NfsAccessPoint `json:"access_point"`
+	Action      *godo.NfsAction `json:"action"`
+}
+
 // NfsService is an interface for interacting with DigitalOcean's NFS API.
 type NfsService interface {
 	List(region string) ([]Nfs, error)
@@ -38,6 +76,10 @@ type NfsService interface {
 	ListSnapshots(shareID, region string) ([]NfsSnapshot, error)
 	GetSnapshot(snapshotID, region string) (*NfsSnapshot, error)
 	DeleteSnapshot(snapshotID, region string) error
+	CreateAccessPoint(shareID string, r *NfsAccessPointCreateRequest) (*NfsAccessPointActionResponse, error)
+	GetAccessPoint(accessPointID string) (*NfsAccessPoint, error)
+	ListAccessPoints(shareID string, status string) ([]NfsAccessPoint, error)
+	DeleteAccessPoint(accessPointID string) (*NfsAccessPointActionResponse, error)
 }
 
 type nfsService struct {
@@ -143,4 +185,124 @@ func (s *nfsService) GetSnapshot(snapshotID, region string) (*NfsSnapshot, error
 func (s *nfsService) DeleteSnapshot(snapshotID, region string) error {
 	_, err := s.client.Nfs.DeleteSnapshot(context.TODO(), snapshotID, region)
 	return err
+}
+
+func (s *nfsService) CreateAccessPoint(shareID string, r *NfsAccessPointCreateRequest) (*NfsAccessPointActionResponse, error) {
+	resp, _, err := s.client.Nfs.CreateAccessPoint(context.TODO(), shareID, nfsAccessPointCreateRequestToGodo(r))
+	if err != nil {
+		return nil, err
+	}
+
+	return nfsAccessPointActionResponseFromGodo(resp), nil
+}
+
+func (s *nfsService) GetAccessPoint(accessPointID string) (*NfsAccessPoint, error) {
+	ap, _, err := s.client.Nfs.GetAccessPoint(context.TODO(), accessPointID)
+	if err != nil {
+		return nil, err
+	}
+
+	return nfsAccessPointFromGodo(ap), nil
+}
+
+func (s *nfsService) ListAccessPoints(shareID string, status string) ([]NfsAccessPoint, error) {
+	opts := &godo.NfsListAccessPointsOptions{}
+	if status != "" {
+		opts.Status = godo.NfsAccessPointStatus(status)
+	}
+
+	list, _, err := s.client.Nfs.ListAccessPoints(context.TODO(), shareID, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]NfsAccessPoint, 0, len(list))
+	for _, ap := range list {
+		if converted := nfsAccessPointFromGodo(ap); converted != nil {
+			out = append(out, *converted)
+		}
+	}
+
+	return out, nil
+}
+
+func (s *nfsService) DeleteAccessPoint(accessPointID string) (*NfsAccessPointActionResponse, error) {
+	resp, _, err := s.client.Nfs.DeleteAccessPoint(context.TODO(), accessPointID)
+	if err != nil {
+		return nil, err
+	}
+
+	return nfsAccessPointActionResponseFromGodo(resp), nil
+}
+
+func nfsAccessPointCreateRequestToGodo(r *NfsAccessPointCreateRequest) *godo.NfsCreateAccessPointRequest {
+	protocols := make([]godo.NfsAccessPolicyProtocol, 0, len(r.AccessPolicy.Protocols))
+	for _, p := range r.AccessPolicy.Protocols {
+		protocols = append(protocols, godo.NfsAccessPolicyProtocol(p))
+	}
+
+	return &godo.NfsCreateAccessPointRequest{
+		Name:  r.Name,
+		Path:  r.Path,
+		VpcID: r.VpcID,
+		AccessPolicy: godo.NfsAccessPolicy{
+			Anonuid:                    r.AccessPolicy.Anonuid,
+			Anongid:                    r.AccessPolicy.Anongid,
+			Protocols:                  protocols,
+			SquashConfig:               godo.NfsSquashConfig(r.AccessPolicy.SquashConfig),
+			IdentityEnforcementEnabled: r.AccessPolicy.IdentityEnforcementEnabled,
+		},
+	}
+}
+
+func nfsAccessPointFromGodo(ap *godo.NfsAccessPoint) *NfsAccessPoint {
+	if ap == nil {
+		return nil
+	}
+
+	protocols := make([]string, 0, len(ap.AccessPolicy.Protocols))
+	for _, p := range ap.AccessPolicy.Protocols {
+		protocols = append(protocols, string(p))
+	}
+
+	return &NfsAccessPoint{
+		ID:      ap.ID,
+		Name:    ap.Name,
+		ShareID: ap.ShareID,
+		Path:    ap.Path,
+		Status:  string(ap.Status),
+		AccessPolicy: NfsAccessPointPolicy{
+			Anonuid:                    ap.AccessPolicy.Anonuid,
+			Anongid:                    ap.AccessPolicy.Anongid,
+			Protocols:                  protocols,
+			SquashConfig:               string(ap.AccessPolicy.SquashConfig),
+			IdentityEnforcementEnabled: ap.AccessPolicy.IdentityEnforcementEnabled,
+		},
+		CreatedAt: ap.CreatedAt,
+		UpdatedAt: ap.UpdatedAt,
+		IsDefault: ap.IsDefault,
+		VpcID:     ap.VpcID,
+		VpcIDs:    nfsAccessPointVpcIDs(ap),
+	}
+}
+
+func nfsAccessPointVpcIDs(ap *godo.NfsAccessPoint) []string {
+	if len(ap.VpcIDs) > 0 {
+		return ap.VpcIDs
+	}
+	if ap.VpcID != nil && *ap.VpcID != "" {
+		return []string{*ap.VpcID}
+	}
+	return nil
+}
+
+func nfsAccessPointActionResponseFromGodo(resp *godo.NfsAccessPointActionResponse) *NfsAccessPointActionResponse {
+	if resp == nil {
+		return nil
+	}
+
+	return &NfsAccessPointActionResponse{
+		AccessPoint: nfsAccessPointFromGodo(resp.AccessPoint),
+		Action:      resp.Action,
+	}
 }
