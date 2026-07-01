@@ -351,14 +351,16 @@ func TestRenderEvent(t *testing.T) {
 		want    string
 	}{
 		{"token chunk", godo.HostedAgentEventKindTokenChunk, "", `{"text":"Paris"}`, "Paris"},
-		{"run started", godo.HostedAgentEventKindRunStarted, "run-1", `{"agent":"codex"}`, "\n[run run-1 started (codex)]\n"},
-		{"run started no agent", godo.HostedAgentEventKindRunStarted, "run-2", `{}`, "\n[run run-2 started]\n"},
-		{"tool call started", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"bash"}`, "\n> bash ...\n"},
-		{"tool call completed", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":true,"duration_ms":12,"summary":"ran ls"}`, "  ran ls (12ms)\n"},
-		{"run completed", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":3,"total_tokens_out":5,"run_cost_micros":1234}`, "\n[run done: 3 in / 5 out tokens, $0.0012]\n" + runSeparator + "\n"},
-		{"run failed", godo.HostedAgentEventKindRunFailed, "", `{"code":5,"message":"hitl rejected"}`, "\n[run failed: hitl rejected (code 5)]\n" + runSeparator + "\n"},
-		{"hitl resolved", godo.HostedAgentEventKindHITLResolved, "", `{"hitl_id":"hitl_1","outcome":1}`, "\n[HITL hitl_1 -> approve]\n"},
-		{"session updated", godo.HostedAgentEventKindSessionUpdated, "", `{}`, "\n[session updated]\n"},
+		{"run started", godo.HostedAgentEventKindRunStarted, "run-1", `{"agent":"codex"}`, "\n▶ run started\n"},
+		{"run started no agent", godo.HostedAgentEventKindRunStarted, "run-2", `{}`, "\n▶ run started\n"},
+		{"tool call started", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"bash"}`, "\n▸ bash\n"},
+		{"tool call completed", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":true,"duration_ms":12,"summary":"ran ls"}`, "  ✓ ran ls (12ms)\n"},
+		{"tool call failed", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":false,"duration_ms":3,"summary":"boom"}`, "  ✗ boom (3ms)\n"},
+		{"run completed", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":3,"total_tokens_out":5,"run_cost_micros":1234}`, "\n✓ run complete · 3 in / 5 out tokens · $0.0012\n" + runSeparator + "\n"},
+		{"run completed no usage", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":0,"total_tokens_out":0,"run_cost_micros":0}`, "\n✓ run complete\n" + runSeparator + "\n"},
+		{"run failed", godo.HostedAgentEventKindRunFailed, "", `{"code":5,"message":"hitl rejected"}`, "\n✗ run failed: hitl rejected (code 5)\n" + runSeparator + "\n"},
+		{"hitl resolved", godo.HostedAgentEventKindHITLResolved, "", `{"hitl_id":"hitl_1","outcome":1}`, "\n#hitl_1 approve\n"},
+		{"session updated", godo.HostedAgentEventKindSessionUpdated, "", `{}`, "\n• session updated\n"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -394,14 +396,199 @@ func TestRenderEventHITLRequested(t *testing.T) {
 		Payload: json.RawMessage(`{"hitl_id":"hitl_42","payload":{"command":"rm -rf /tmp/x"}}`),
 	})
 	out := buf.String()
-	assert.Contains(t, out, "[HITL] Action requires approval:")
+	assert.Contains(t, out, "Approval required")
 	assert.Contains(t, out, "rm -rf /tmp/x")
-	assert.Contains(t, out, "hitl_id: hitl_42")
-	assert.Contains(t, out, "/a hitl_42")
+	assert.Contains(t, out, "hitl_42")
+	// Outcomes are not duplicated here; the interactive menu shows them.
+	assert.NotContains(t, out, "approve / reject / defer")
+	// The verbose payload dump is gone.
+	assert.NotContains(t, out, "Action requires approval")
 }
 
-// TestAttachLoopAcknowledgesSend: a successful submit prints "(queued ...)"
-// immediately so the multi-second wait for the first token doesn't read as a hang.
+func TestShortHITLID(t *testing.T) {
+	assert.Equal(t, "#dab4b4bc", shortHITLID("h-0510a11b-02ea-4b7a-86f6-18f8dab4b4bc"))
+	assert.Equal(t, "#hitl_42", shortHITLID("hitl_42"))
+	assert.Equal(t, "#abc", shortHITLID("h-abc"))
+	// Time-ordered ids that share a leading prefix must stay distinguishable.
+	a := shortHITLID("019f1dfc-f017-70e2-9eac-2ea470a55ac2")
+	b := shortHITLID("019f1dfc-f017-70e2-9eac-2ea470a55ffff")
+	assert.NotEqual(t, a, b, "ids sharing a time prefix should not collide")
+}
+
+// TestHITLCommandSummaryNested covers the recursive command search used to pull
+// a command out of adapter-specific nested payload shapes.
+func TestHITLCommandSummaryNested(t *testing.T) {
+	assert.Equal(t, "ls -la", hitlCommandSummary(map[string]any{
+		"tool": map[string]any{"input": map[string]any{"command": "ls -la"}},
+	}))
+	assert.Equal(t, "git status", hitlCommandSummary(map[string]any{
+		"bash": map[string]any{"cmd": "git status"},
+	}))
+}
+
+// TestToolCommandLine verifies the tool-call line prefers the real command from
+// arguments/input and falls back to the tool name.
+func TestToolCommandLine(t *testing.T) {
+	var p toolCallStartedPayload
+	assert.NoError(t, json.Unmarshal([]byte(`{"name":"bash","arguments":{"command":"uname -a"}}`), &p))
+	assert.Equal(t, "uname -a", p.commandLine())
+
+	var p2 toolCallStartedPayload
+	assert.NoError(t, json.Unmarshal([]byte(`{"name":"bash","input":{"cmd":"ls"}}`), &p2))
+	assert.Equal(t, "ls", p2.commandLine())
+
+	var p3 toolCallStartedPayload
+	assert.NoError(t, json.Unmarshal([]byte(`{"name":"read_file"}`), &p3))
+	assert.Equal(t, "read_file", p3.commandLine())
+}
+
+// TestRenderMarkdownColorizesCode confirms that, with styling enabled, a code
+// block is rendered with ANSI escape sequences (syntax highlighting), not raw.
+func TestRenderMarkdownColorizesCode(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	out := renderMarkdown("```python\nprint('hello')\n```\n")
+	assert.Contains(t, out, "\x1b[", "code block should contain ANSI color escapes")
+	assert.NotContains(t, out, "```", "markdown fences should be consumed, not printed literally")
+}
+
+// TestNormalizeCodeFences covers the salvage path for the malformed Markdown
+// the agent commonly streams: fences glued to prose and/or an unclosed block.
+func TestNormalizeCodeFences(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			"fence glued to sentence gets its own line",
+			"Here is code.```python\nprint(1)\n```\n",
+			"Here is code.\n```python\nprint(1)\n```\n",
+		},
+		{
+			"unclosed block gets a closing fence",
+			"see:\n```python\nprint(1)",
+			"see:\n```python\nprint(1)\n```\n",
+		},
+		{
+			"well-formed input is unchanged",
+			"```go\nfmt.Println()\n```\n",
+			"```go\nfmt.Println()\n```\n",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, normalizeCodeFences(tc.in))
+		})
+	}
+}
+
+// TestRenderMarkdownSalvagesGluedFence is the end-to-end check: a fence glued to
+// a sentence (as the agent emits) still renders as a highlighted code block.
+func TestRenderMarkdownSalvagesGluedFence(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	out := renderMarkdown("It's straightforward.```python\nfor n in range(3):\n    print(n)\n```\n")
+	assert.Contains(t, out, "\x1b[", "glued-fence code should still be syntax-highlighted")
+	assert.NotContains(t, out, "```", "fences should be consumed, not printed literally")
+}
+
+func TestHITLCommandSummary(t *testing.T) {
+	cases := []struct {
+		name    string
+		payload map[string]any
+		want    string
+	}{
+		{"command key", map[string]any{"command": "git status"}, "git status"},
+		{"cmd key", map[string]any{"cmd": "ls -la"}, "ls -la"},
+		{"argv joins", map[string]any{"argv": []any{"git", "switch", "-c", "feat"}}, "git switch -c feat"},
+		{"nested details", map[string]any{"details": map[string]any{"command": "rm -rf x"}}, "rm -rf x"},
+		{"action fallback", map[string]any{"action": string(godo.HostedAgentHITLActionGitHubCreatePR)}, "create a pull request"},
+		{"unknown action passthrough", map[string]any{"kind": "HITL_ACTION_CUSTOM"}, "HITL_ACTION_CUSTOM"},
+		{"empty", map[string]any{}, ""},
+		{"nil", nil, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, hitlCommandSummary(tc.payload))
+		})
+	}
+}
+
+func TestHITLOutcomeForSelection(t *testing.T) {
+	assert.Equal(t, godo.HostedAgentHITLOutcomeApprove, hitlOutcomeForSelection(0))
+	assert.Equal(t, godo.HostedAgentHITLOutcomeReject, hitlOutcomeForSelection(1))
+	assert.Equal(t, godo.HostedAgentHITLOutcomeDefer, hitlOutcomeForSelection(2))
+	assert.Equal(t, godo.HostedAgentHITLOutcomeApprove, hitlOutcomeForSelection(99))
+}
+
+// TestHITLMenuPromptPlain verifies the arrow menu with styling disabled: the
+// selected option is bracketed and the queue depth is surfaced.
+func TestHITLMenuPromptPlain(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	defer func() { stylingEnabled = prev }()
+
+	assert.Contains(t, hitlMenuPrompt(0, 1), "[Approve (y)]")
+	assert.Contains(t, hitlMenuPrompt(1, 1), "[Reject (n)]")
+	assert.Contains(t, hitlMenuPrompt(2, 1), "[Defer (d)]")
+	// Unselected options still advertise their shortcut key.
+	assert.Contains(t, hitlMenuPrompt(0, 1), "Reject (n)")
+	assert.Contains(t, hitlMenuPrompt(0, 3), "3 pending")
+}
+
+// TestAttachStateHITLSelection covers the arrow-key selection wrap-around and
+// that the prompt reflects the current selection.
+func TestAttachStateHITLSelection(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	defer func() { stylingEnabled = prev }()
+
+	pending := &pendingHITL{}
+	s := newAttachState(io.Discard, pending)
+	assert.Equal(t, "> ", s.promptString(), "no menu without a pending approval")
+
+	pending.set("h1", "HITL_ACTION_BASH")
+	assert.Contains(t, s.promptString(), "[Approve (y)]")
+
+	s.moveHITLSelection(1)
+	assert.Equal(t, 1, s.hitlSelection())
+	assert.Contains(t, s.promptString(), "[Reject (n)]")
+
+	s.moveHITLSelection(-1) // back to approve
+	s.moveHITLSelection(-1) // wraps to defer
+	assert.Equal(t, 2, s.hitlSelection())
+
+	s.resetHITLSelection()
+	assert.Equal(t, 0, s.hitlSelection())
+}
+
+// TestMsgAccumulatorPlain confirms buffered tokens flush as-is when styling is
+// off (no markdown rewriting) and that flush resets the buffer.
+func TestMsgAccumulatorPlain(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	defer func() { stylingEnabled = prev }()
+
+	var buf bytes.Buffer
+	acc := &msgAccumulator{}
+	acc.add("## Title\n")
+	acc.add("some **body**")
+	acc.flush(&buf)
+	assert.Equal(t, "## Title\nsome **body**\n", buf.String())
+
+	buf.Reset()
+	acc.flush(&buf) // nothing buffered
+	assert.Equal(t, "", buf.String())
+}
+
+// TestAttachLoopAcknowledgesSend: a successful submit prints a "waiting"
+// acknowledgement immediately so the multi-second wait for the first token
+// doesn't read as a hang.
 func TestAttachLoopAcknowledgesSend(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		var buf bytes.Buffer
@@ -413,7 +600,7 @@ func TestAttachLoopAcknowledgesSend(t *testing.T) {
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
 			strings.NewReader("What is the capital of France?\n"), &pendingHITL{})
 		assert.NoError(t, err)
-		assert.Contains(t, buf.String(), "(queued as run-abc; waiting for the agent...)")
+		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
 }
 
@@ -519,7 +706,7 @@ func TestAttachLoopHITLShortcutIgnoredWithoutPending(t *testing.T) {
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
 			strings.NewReader("y\n"), &pendingHITL{})
 		assert.NoError(t, err)
-		assert.Contains(t, buf.String(), "(queued as run-1")
+		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
 }
 
@@ -888,7 +1075,12 @@ func TestPromptDisplay(t *testing.T) {
 		buf.Reset()
 		pending.set("hitl_99")
 		s.display.redraw()
-		assert.Equal(t, "\r\x1b[K[y/n/d] > ", buf.String())
+		// In raw mode the prompt flips to the arrow-navigable approve/reject/defer
+		// menu (with per-option shortcut keys), not the plain "> " prompt.
+		assert.Contains(t, buf.String(), "\r\x1b[K")
+		assert.Contains(t, buf.String(), "[Approve (y)]")
+		assert.Contains(t, buf.String(), "Reject (n)")
+		assert.Contains(t, buf.String(), "Defer (d)")
 	})
 
 	t.Run("echo is silent mid-stream so keystrokes don't land on the agent's line", func(t *testing.T) {

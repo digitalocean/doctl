@@ -34,13 +34,171 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
+
+// stylingEnabled gates ANSI color and markdown rendering. It is flipped on by
+// the interactive entrypoints (attach/logs) when stdout is a real terminal and
+// NO_COLOR is unset; it stays false in unit tests and piped output so their
+// results are plain and deterministic.
+var stylingEnabled bool
+
+// Agent chat palette, sourced from doctl's shared color scheme.
+var (
+	colSuccess   = charm.Colors.Success
+	colError     = charm.Colors.Error
+	colWarning   = charm.Colors.Warning
+	colHighlight = charm.Colors.Highlight
+	colMuted     = charm.Colors.Muted
+)
+
+// detectStyling reports whether ANSI styling should be emitted for the current
+// process: stdout is a terminal and NO_COLOR is unset.
+func detectStyling() bool {
+	if os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
+// colorize applies a foreground color when styling is enabled, else returns s.
+func colorize(s string, c lipgloss.Color) string {
+	if !stylingEnabled {
+		return s
+	}
+	return lipgloss.NewStyle().Foreground(c).Render(s)
+}
+
+// boldColor applies a bold foreground color when styling is enabled.
+func boldColor(s string, c lipgloss.Color) string {
+	if !stylingEnabled {
+		return s
+	}
+	return lipgloss.NewStyle().Foreground(c).Bold(true).Render(s)
+}
+
+// renderMarkdown turns a markdown document into styled terminal text. With
+// styling disabled (pipes, CI, unit tests) it returns the text unchanged so
+// scripts keep clean, greppable output.
+func renderMarkdown(text string) string {
+	if strings.TrimSpace(text) == "" {
+		return ""
+	}
+	if !stylingEnabled {
+		return text
+	}
+	r, err := glamour.NewTermRenderer(
+		glamour.WithStandardStyle("dark"),
+		glamour.WithColorProfile(termenv.TrueColor),
+		glamour.WithWordWrap(mdWrapWidth()),
+		// Keep line breaks the agent emits. Without this, Markdown collapses
+		// single newlines into spaces, so code the agent writes without a
+		// well-formed fence (e.g. a ```lang tag mid-sentence) gets flattened
+		// onto one line and becomes unreadable.
+		glamour.WithPreservedNewLines(),
+	)
+	if err != nil {
+		return text
+	}
+	out, err := r.Render(normalizeCodeFences(text))
+	if err != nil {
+		return text
+	}
+	return out
+}
+
+// normalizeCodeFences rewrites the agent's Markdown so every ``` code-fence
+// marker starts on its own line, and any opening fence with an info string
+// (```python) is closed by a bare ``` before end-of-message.
+//
+// Streamed agent output routinely glues an opening fence to the end of a
+// sentence ("...straightforward.```python") and/or never emits a closing
+// fence. Either mistake stops the Markdown parser from recognizing the code
+// block, so the code renders as flowed plain text with its indentation
+// collapsed. Detaching the fences (and balancing an odd one) lets the renderer
+// syntax-highlight the block and preserve indentation verbatim.
+func normalizeCodeFences(s string) string {
+	var b strings.Builder
+	b.Grow(len(s) + 16)
+	atLineStart := true
+	fences := 0
+	i := 0
+	for i < len(s) {
+		if strings.HasPrefix(s[i:], "```") {
+			if !atLineStart {
+				b.WriteByte('\n')
+			}
+			b.WriteString("```")
+			i += 3
+			fences++
+			// Copy the rest of the fence line (the info string, e.g. "python")
+			// verbatim; the code body starts on the following line.
+			for i < len(s) && s[i] != '\n' {
+				b.WriteByte(s[i])
+				i++
+			}
+			atLineStart = false
+			continue
+		}
+		c := s[i]
+		b.WriteByte(c)
+		atLineStart = c == '\n'
+		i++
+	}
+	// An odd fence count means a block was opened but never closed; add the
+	// missing closing fence so the parser renders it as code rather than
+	// swallowing the rest of the message.
+	if fences%2 == 1 {
+		if !atLineStart {
+			b.WriteByte('\n')
+		}
+		b.WriteString("```\n")
+	}
+	return b.String()
+}
+
+// mdWrapWidth is the word-wrap column for markdown, clamped to a readable range.
+func mdWrapWidth() int {
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w >= 40 {
+		if w > 100 {
+			return 100
+		}
+		return w
+	}
+	return 80
+}
+
+// msgAccumulator buffers an assistant turn's streamed token deltas so the whole
+// message can be rendered as markdown once it's complete, rather than emitting
+// raw tokens one at a time.
+type msgAccumulator struct {
+	buf strings.Builder
+}
+
+func (m *msgAccumulator) add(s string) { m.buf.WriteString(s) }
+
+// flush renders the buffered message as markdown and writes it, then resets.
+func (m *msgAccumulator) flush(out io.Writer) {
+	if m.buf.Len() == 0 {
+		return
+	}
+	text := m.buf.String()
+	m.buf.Reset()
+	rendered := renderMarkdown(text)
+	if !strings.HasSuffix(rendered, "\n") {
+		rendered += "\n"
+	}
+	fmt.Fprint(out, rendered)
+}
 
 // Agents creates the `doctl agents` command tree.
 func Agents() *Command {
@@ -70,7 +228,7 @@ The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching t
 		"Attach to an agent session",
 		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. A dropped SSE connection is reconnected automatically and the server replays any events missed during the gap.
 
-When a HITL approval is pending, the prompt switches to `+"`"+`[y/n/d] > `+"`"+` and a single keystroke resolves it -- no Enter required in an interactive terminal: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
+When a HITL approval is pending, the prompt switches to a compact approve/reject/defer menu showing the command awaiting approval. In an interactive terminal you can move the highlight with the arrow keys and press Enter, or resolve directly with a single keystroke -- no Enter required: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
 		Writer, aliasOpt("chat"))
 	cmdAttach.Example = `doctl agents attach sess_abc123`
 
@@ -448,6 +606,8 @@ func RunAgentsLogs(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
+	stylingEnabled = detectStyling()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -459,16 +619,24 @@ func RunAgentsLogs(c *CmdConfig) error {
 	}
 	defer stream.Close()
 
+	// TOKEN_CHUNK events stream token-by-token; buffer them so the whole
+	// assistant message renders as markdown at once. Other event kinds are
+	// discrete: flush any buffered message first, then print with a header.
+	acc := &msgAccumulator{}
 	for stream.Next() {
 		ev := stream.Current()
-		// TOKEN_CHUNK events stream token-by-token without trailing newlines so
-		// they render as one continuous line; printing a per-event header here
-		// would land mid-line. Other event kinds are discrete and get a header.
-		if ev.Kind != godo.HostedAgentEventKindTokenChunk {
-			fmt.Fprintf(c.Out, "[%s] %s\n", ev.At.Time.UTC().Format("2006-01-02T15:04:05Z"), ev.Kind)
+		if ev.Kind == godo.HostedAgentEventKindTokenChunk {
+			var p tokenChunkPayload
+			if err := json.Unmarshal(ev.Payload, &p); err == nil {
+				acc.add(p.Text)
+			}
+			continue
 		}
+		acc.flush(c.Out)
+		fmt.Fprintf(c.Out, "[%s] %s\n", ev.At.Time.UTC().Format("2006-01-02T15:04:05Z"), ev.Kind)
 		renderEvent(c.Out, ev)
 	}
+	acc.flush(c.Out)
 	return stream.Err()
 }
 
@@ -480,6 +648,8 @@ func RunAgentsAttach(c *CmdConfig) error {
 	}
 	sessionID := c.Args[0]
 	svc := c.HostedAgents()
+
+	stylingEnabled = detectStyling()
 
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
@@ -499,8 +669,7 @@ func RunAgentsAttach(c *CmdConfig) error {
 	c.Out = state.display
 	defer func() { c.Out = originalOut }()
 
-	fmt.Fprintf(c.Out, "Connected to %s (%s)\n", sessionID, sess.AgentKind)
-	fmt.Fprintln(c.Out, "Type a message and press Enter to send. Ctrl-D to detach. HITL approvals are single-keystroke: y/a approve, n/r reject, d defer. Type `/help` for the full command list.")
+	printAttachBanner(c.Out, sessionID, sess.AgentKind)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -766,6 +935,19 @@ func sessionLimitErr(err error) bool {
 // drainStream consumes events until the iterator stops, rendering each one
 // and updating the HITL pending map, the reconnect cursor, and the spinner.
 func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, dedup *tokenDeduper) {
+	// acc buffers the current assistant turn's tokens; the thinking spinner
+	// stays up for the whole turn and the buffered text is rendered as markdown
+	// when the run finishes or a discrete event interrupts it.
+	acc := &msgAccumulator{}
+	// awaiting is a FIFO queue of HITL approvals whose lines haven't printed
+	// yet: we hold each until a paired tool-call reveals the command being
+	// approved, so the approval shows "● Approval required · <command>" on one
+	// line. A queue (not a single slot) is required because the adapter can
+	// enqueue several approvals before the matching tool calls arrive; pairing
+	// them oldest-first keeps each line labelled instead of blanking the first.
+	// The summary captured from the HITL payload is the fallback label when no
+	// paired tool call arrives to name the command.
+	var awaiting []awaitingApproval
 	for stream.Next() {
 		ev := stream.Current()
 		switch ev.Kind {
@@ -783,17 +965,49 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 
 		switch ev.Kind {
 		case godo.HostedAgentEventKindRunStarted:
+			thinking.stop()
+			acc.flush(out)
+			flushAwaitingApproval(out, &awaiting)
 			dedup.reset()
 			renderEvent(out, ev)
 			thinking.start()
 		case godo.HostedAgentEventKindTokenChunk:
-			thinking.stop()
 			var p tokenChunkPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil && dedup.allow(p.Text) {
-				fmt.Fprint(out, p.Text)
+				acc.add(p.Text)
+			}
+		case godo.HostedAgentEventKindHITLRequested:
+			thinking.stop()
+			acc.flush(out)
+			dedup.reset()
+			var p hitlRequestedPayload
+			if err := json.Unmarshal(ev.Payload, &p); err == nil {
+				awaiting = append(awaiting, awaitingApproval{id: p.HitlID, summary: hitlCommandSummary(p.Payload)})
+			}
+		case godo.HostedAgentEventKindToolCallStarted:
+			thinking.stop()
+			acc.flush(out)
+			dedup.reset()
+			var p toolCallStartedPayload
+			_ = json.Unmarshal(ev.Payload, &p)
+			cmd := p.commandLine()
+			if len(awaiting) > 0 {
+				// Pair with the oldest waiting approval. Prefer the tool call's
+				// command; fall back to the label the HITL payload carried so
+				// the line is never blank.
+				a := awaiting[0]
+				awaiting = awaiting[1:]
+				if cmd == "" {
+					cmd = a.summary
+				}
+				renderApprovalLine(out, a.id, cmd)
+			} else {
+				renderToolStart(out, cmd)
 			}
 		default:
 			thinking.stop()
+			acc.flush(out)
+			flushAwaitingApproval(out, &awaiting)
 			dedup.reset()
 			renderEvent(out, ev)
 		}
@@ -808,6 +1022,29 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 
 		cursor.set(ev.EventID)
 	}
+	// Stream ended without a terminal run event (e.g. transient disconnect):
+	// render whatever assistant text we have so it isn't lost.
+	thinking.stop()
+	acc.flush(out)
+	flushAwaitingApproval(out, &awaiting)
+}
+
+// awaitingApproval is a HITL approval whose line is deferred until a paired
+// tool call names the command. summary is the fallback label extracted from the
+// HITL payload itself, used when no paired tool call arrives.
+type awaitingApproval struct {
+	id      string
+	summary string
+}
+
+// flushAwaitingApproval prints any still-unpaired approval lines (oldest
+// first), using the label captured from each HITL payload when no tool call
+// named the command, then clears the queue.
+func flushAwaitingApproval(out io.Writer, awaiting *[]awaitingApproval) {
+	for _, a := range *awaiting {
+		renderApprovalLine(out, a.id, a.summary)
+	}
+	*awaiting = nil
 }
 
 // minDedupeLen keeps short, legitimately-repeated output (e.g. "ok\n") from
@@ -1009,8 +1246,9 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			}
 			continue
 		}
-		resp, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line})
-		if err != nil {
+		// Ack immediately; the first agent token can be tens of seconds away
+		// and without this users re-submit, spawning a duplicate run.
+		if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 			if isRunTerminalErr(err) {
 				fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
 				fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
@@ -1020,13 +1258,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
 			continue
 		}
-		// Ack immediately; the first agent token can be tens of seconds away
-		// and without this users re-submit, spawning a duplicate run.
-		if resp != nil && resp.RunID != "" {
-			fmt.Fprintf(c.Out, "(queued as %s; waiting for the agent...)\n", resp.RunID)
-		} else {
-			fmt.Fprintln(c.Out, "(queued; waiting for the agent...)")
-		}
+		fmt.Fprintln(c.Out, colorize("… waiting for the agent", colMuted))
 	}
 }
 
@@ -1050,15 +1282,17 @@ func attachPrompt(pending *pendingHITL) string {
 type attachState struct {
 	pending *pendingHITL
 	display *promptDisplay
-	mu      sync.Mutex // guards lineBuf
+	mu      sync.Mutex // guards lineBuf and hitlSel
 	lineBuf []byte
+	hitlSel int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
+	esc     int // arrow-key escape-sequence parse state (0 none, 1 ESC, 2 ESC[)
 }
 
 func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 	s := &attachState{pending: pending}
 	s.display = &promptDisplay{
 		out:    out,
-		prompt: func() string { return attachPrompt(pending) },
+		prompt: s.promptString,
 		lineBuf: func() string {
 			s.mu.Lock()
 			defer s.mu.Unlock()
@@ -1066,6 +1300,39 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 		},
 	}
 	return s
+}
+
+// promptString is the raw-mode prompt. With no pending approval it's the plain
+// input prompt; while an approval is pending it becomes the arrow-navigable
+// approve/reject/defer menu.
+func (s *attachState) promptString() string {
+	n := s.pending.len()
+	if n == 0 {
+		return "> "
+	}
+	s.mu.Lock()
+	sel := s.hitlSel
+	s.mu.Unlock()
+	return hitlMenuPrompt(sel, n)
+}
+
+// moveHITLSelection shifts the highlighted menu option, wrapping around.
+func (s *attachState) moveHITLSelection(delta int) {
+	s.mu.Lock()
+	s.hitlSel = ((s.hitlSel+delta)%3 + 3) % 3
+	s.mu.Unlock()
+}
+
+func (s *attachState) hitlSelection() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.hitlSel
+}
+
+func (s *attachState) resetHITLSelection() {
+	s.mu.Lock()
+	s.hitlSel = 0
+	s.mu.Unlock()
 }
 
 // promptDisplay serializes terminal writes between the input loop and the
@@ -1183,15 +1450,15 @@ func (p *promptDisplay) spinnerFrame(frame string) {
 	fmt.Fprintf(p.out, "\x1b7\x1b[A\r\x1b[K%s thinking...\x1b8", frame)
 }
 
-// spinnerStop replaces the spinner frame with the plain "(thinking...)" text
-// so a frozen braille glyph doesn't sit in scrollback.
+// spinnerStop erases the spinner line entirely so no "(thinking...)" text or
+// frozen braille glyph is left behind in scrollback once the run produces output.
 func (p *promptDisplay) spinnerStop() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw || p.midLine {
 		return
 	}
-	fmt.Fprint(p.out, "\x1b7\x1b[A\r\x1b[K(thinking...)\x1b8")
+	fmt.Fprint(p.out, "\x1b7\x1b[A\r\x1b[K\x1b8")
 }
 
 // attachLoopTTY runs the raw-mode byte-by-byte input state machine. A 50ms
@@ -1259,6 +1526,35 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 // handleAttachByte is the per-byte state machine. stop=true exits the loop
 // (Ctrl-C, Ctrl-D on empty line).
 func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState) (stop bool, err error) {
+	// Arrow-key escape sequences arrive as three bytes: ESC, '[' (or 'O'), then
+	// A/B/C/D. Consume them here and use them only to move the HITL selection.
+	if state.esc == 2 {
+		state.esc = 0
+		if state.pending.get() != "" {
+			switch b {
+			case 'A', 'D': // up / left
+				state.moveHITLSelection(-1)
+				state.display.redraw()
+			case 'B', 'C': // down / right
+				state.moveHITLSelection(1)
+				state.display.redraw()
+			}
+		}
+		return false, nil
+	}
+	if state.esc == 1 {
+		state.esc = 0
+		if b == '[' || b == 'O' {
+			state.esc = 2
+			return false, nil
+		}
+		// Lone ESC or unrecognized sequence: fall through and handle b normally.
+	}
+	if b == 0x1b { // ESC — start of a possible arrow sequence
+		state.esc = 1
+		return false, nil
+	}
+
 	if id := state.pending.get(); id != "" {
 		var outcome godo.HostedAgentHITLOutcome
 		var matched bool
@@ -1269,15 +1565,21 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			outcome, matched = godo.HostedAgentHITLOutcomeReject, true
 		case 'd', 'D':
 			outcome, matched = godo.HostedAgentHITLOutcomeDefer, true
+		case 0x0d, 0x0a: // Enter confirms the highlighted menu option
+			outcome, matched = hitlOutcomeForSelection(state.hitlSelection()), true
 		case 0x03, 0x04: // Ctrl-C / Ctrl-D
 			state.display.echo([]byte("\r\n"))
 			return true, nil
 		}
 		if !matched {
-			// Ignore non-HITL bytes while HITL pending.
+			// Ignore other bytes while HITL pending.
 			return false, nil
 		}
-		state.display.echo([]byte{b, '\r', '\n'})
+		if b == 0x0d || b == 0x0a {
+			state.display.echo([]byte("\r\n"))
+		} else {
+			state.display.echo([]byte{b, '\r', '\n'})
+		}
 		if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
 			Outcome: outcome,
 			Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
@@ -1286,6 +1588,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		} else {
 			state.pending.clearIf(id)
 		}
+		state.resetHITLSelection()
 		state.display.redraw()
 		return false, nil
 	}
@@ -1362,8 +1665,7 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 		}
 		return false
 	}
-	resp, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line})
-	if err != nil {
+	if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 		if isRunTerminalErr(err) {
 			fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
 			fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
@@ -1373,11 +1675,7 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 		fmt.Fprintf(c.Out, "send failed: %v\n", err)
 		return false
 	}
-	if resp != nil && resp.RunID != "" {
-		fmt.Fprintf(c.Out, "(queued as %s; waiting for the agent...)\n", resp.RunID)
-	} else {
-		fmt.Fprintln(c.Out, "(queued; waiting for the agent...)")
-	}
+	fmt.Fprintln(c.Out, colorize("… waiting for the agent", colMuted))
 	return false
 }
 
@@ -1451,7 +1749,8 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	verb := parts[0]
 	switch verb {
 	case "/help":
-		fmt.Fprintln(c.Out, "When a HITL approval is pending (single keystroke; no Enter needed in a TTY):")
+		fmt.Fprintln(c.Out, "When a HITL approval is pending (no Enter needed in a TTY):")
+		fmt.Fprintln(c.Out, "  ↑ / ↓ then Enter  move the highlight and confirm the selected outcome")
 		fmt.Fprintln(c.Out, "  y | a             approve the oldest pending request")
 		fmt.Fprintln(c.Out, "  n | r             reject  the oldest pending request")
 		fmt.Fprintln(c.Out, "  d                 defer   the oldest pending request")
@@ -1535,7 +1834,27 @@ type runStartedPayload struct {
 }
 
 type toolCallStartedPayload struct {
-	Name string `json:"name"`
+	Name      string          `json:"name"`
+	Arguments json.RawMessage `json:"arguments"`
+	Input     json.RawMessage `json:"input"`
+}
+
+// commandLine returns the most descriptive one-liner for a tool call: the
+// actual command pulled from arguments/input when present, otherwise the tool
+// name (e.g. "bash").
+func (p toolCallStartedPayload) commandLine() string {
+	for _, raw := range []json.RawMessage{p.Arguments, p.Input} {
+		if len(raw) == 0 {
+			continue
+		}
+		var m map[string]any
+		if json.Unmarshal(raw, &m) == nil {
+			if cmd := searchCommand(m, 3); cmd != "" {
+				return cmd
+			}
+		}
+	}
+	return p.Name
 }
 
 type toolCallCompletedPayload struct {
@@ -1575,27 +1894,26 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 			fmt.Fprint(w, p.Text)
 		}
 	case godo.HostedAgentEventKindRunStarted:
-		var p runStartedPayload
-		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			if p.Agent != "" {
-				fmt.Fprintf(w, "\n[run %s started (%s)]\n", ev.RunID, p.Agent)
-			} else {
-				fmt.Fprintf(w, "\n[run %s started]\n", ev.RunID)
-			}
-		}
+		// The server sometimes echoes the prompt in `agent`, so don't render it;
+		// keep the marker clean and let the spinner convey activity.
+		fmt.Fprintf(w, "\n%s\n", colorize("▶ run started", colMuted))
 	case godo.HostedAgentEventKindToolCallStarted:
 		var p toolCallStartedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n> %s ...\n", p.Name)
+			renderToolStart(w, p.commandLine())
 		}
 	case godo.HostedAgentEventKindToolCallCompleted:
 		var p toolCallCompletedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			if p.Summary != "" {
-				fmt.Fprintf(w, "  %s (%dms)\n", p.Summary, p.DurationMS)
-			} else {
-				fmt.Fprintf(w, "  ok (%dms)\n", p.DurationMS)
+			mark := colorize("✓", colSuccess)
+			if !p.OK {
+				mark = colorize("✗", colError)
 			}
+			summary := p.Summary
+			if summary == "" {
+				summary = "done"
+			}
+			fmt.Fprintf(w, "  %s %s %s\n", mark, summary, colorize(fmt.Sprintf("(%dms)", p.DurationMS), colMuted))
 		}
 	case godo.HostedAgentEventKindHITLRequested:
 		var p hitlRequestedPayload
@@ -1605,27 +1923,51 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindHITLResolved:
 		var p hitlResolvedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n[HITL %s -> %s]\n", p.HitlID, hitlOutcomeLabel(p.Outcome))
+			fmt.Fprintf(w, "\n%s %s\n",
+				colorize(shortHITLID(p.HitlID), colMuted), hitlOutcomeStyled(p.Outcome))
 		}
 	case godo.HostedAgentEventKindRunCompleted:
 		var p runCompletedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			fmt.Fprintf(w, "\n[run done: %d in / %d out tokens, $%.4f]\n",
-				p.TotalTokensIn, p.TotalTokensOut, float64(p.RunCostMicros)/1_000_000)
-			fmt.Fprintln(w, runSeparator)
+			// Only show the usage/cost segment when the adapter actually
+			// reported it; some adapters (e.g. opencode) send all zeros,
+			// which looks broken rather than informative.
+			summary := "run complete"
+			if p.TotalTokensIn > 0 || p.TotalTokensOut > 0 || p.RunCostMicros > 0 {
+				summary = fmt.Sprintf("run complete · %d in / %d out tokens · $%.4f",
+					p.TotalTokensIn, p.TotalTokensOut, float64(p.RunCostMicros)/1_000_000)
+			}
+			fmt.Fprintf(w, "\n%s %s\n", colorize("✓", colSuccess), colorize(summary, colMuted))
+			fmt.Fprintln(w, colorize(runSeparator, colMuted))
 		}
 	case godo.HostedAgentEventKindRunFailed:
 		var p runFailedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
+			msg := fmt.Sprintf("run failed: code %d", p.Code)
 			if p.Message != "" {
-				fmt.Fprintf(w, "\n[run failed: %s (code %d)]\n", p.Message, p.Code)
-			} else {
-				fmt.Fprintf(w, "\n[run failed: code %d]\n", p.Code)
+				msg = fmt.Sprintf("run failed: %s (code %d)", p.Message, p.Code)
 			}
-			fmt.Fprintln(w, runSeparator)
+			fmt.Fprintf(w, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
+			fmt.Fprintln(w, colorize(runSeparator, colMuted))
 		}
 	case godo.HostedAgentEventKindSessionUpdated:
-		fmt.Fprint(w, "\n[session updated]\n")
+		fmt.Fprintf(w, "\n%s\n", colorize("• session updated", colMuted))
+	}
+}
+
+// hitlOutcomeStyled renders a HITL outcome verb with a matching color:
+// approve green, reject red, defer yellow.
+func hitlOutcomeStyled(code int32) string {
+	label := hitlOutcomeLabel(code)
+	switch code {
+	case 1:
+		return colorize(label, colSuccess)
+	case 2:
+		return colorize(label, colError)
+	case 3:
+		return colorize(label, colWarning)
+	default:
+		return colorize(label, colMuted)
 	}
 }
 
@@ -1644,16 +1986,191 @@ func hitlOutcomeLabel(code int32) string {
 	}
 }
 
+// printAttachBanner renders the styled connection header and a compact help
+// key shown when an interactive session is attached.
+func printAttachBanner(w io.Writer, sessionID string, kind godo.HostedAgentKind) {
+	fmt.Fprintf(w, "\n%s  %s\n", boldColor("● Connected", colSuccess), colorize(sessionID, colHighlight))
+	fmt.Fprintf(w, "  %s\n\n", colorize(fmt.Sprintf("agent %s · Ctrl-D to detach", prettyAgentKind(kind)), colMuted))
+
+	row := func(label, desc string) {
+		fmt.Fprintf(w, "  %s  %s\n", boldColor(fmt.Sprintf("%-8s", label), colHighlight), desc)
+	}
+	yn := colorize("y", colSuccess) + colorize("/a", colSuccess) + " approve · " +
+		colorize("n", colError) + colorize("/r", colError) + " reject · " +
+		colorize("d", colWarning) + " defer"
+	row("send", "type a message and press Enter")
+	row("approve", "↑/↓ then Enter, or "+yn)
+	row("help", "type "+boldColor("/help", colHighlight)+" for the full command list")
+	fmt.Fprintln(w)
+}
+
+// prettyAgentKind turns AGENT_KIND_OPENCODE into a friendly "opencode" label.
+func prettyAgentKind(k godo.HostedAgentKind) string {
+	s := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(string(k), "AGENT_KIND_"), "_", " "))
+	if s == "" || s == "unspecified" {
+		return "agent"
+	}
+	return s
+}
+
+// renderHITLRequest prints a single compact, color-coded approval line: the
+// command (or a human-readable action label) plus a short id for out-of-band
+// targeting. The outcomes are intentionally omitted here since the interactive
+// menu prompt already shows them.
 func renderHITLRequest(w io.Writer, hitlID string, payload map[string]any) {
-	fmt.Fprintln(w, "\n\n[HITL] Action requires approval:")
-	if len(payload) > 0 {
-		if b, err := json.MarshalIndent(payload, "  ", "  "); err == nil {
-			fmt.Fprintf(w, "  %s\n", b)
+	renderApprovalLine(w, hitlID, hitlCommandSummary(payload))
+}
+
+// renderApprovalLine prints the one-line approval prompt with an optional
+// command and a short id. The outcomes are shown by the interactive menu.
+func renderApprovalLine(w io.Writer, hitlID, cmd string) {
+	parts := []string{boldColor("● Approval required", colWarning)}
+	if cmd != "" {
+		parts = append(parts, boldColor(cmd, colHighlight))
+	} else {
+		// The adapter didn't tell us what this approval is for (no command in
+		// the HITL payload and no paired tool call). Label it rather than
+		// leaving a bare id that reads as a glitch.
+		parts = append(parts, colorize("action pending", colMuted))
+	}
+	parts = append(parts, colorize(shortHITLID(hitlID), colMuted))
+	fmt.Fprintf(w, "\n%s\n", strings.Join(parts, colorize("  ·  ", colMuted)))
+}
+
+// renderToolStart prints the "running a tool" line.
+func renderToolStart(w io.Writer, cmd string) {
+	fmt.Fprintf(w, "\n%s %s\n", colorize("▸", colHighlight), boldColor(cmd, colHighlight))
+}
+
+// shortHITLID trims a HITL id to a compact "#xxxxxxxx" form for display; the
+// full id is still available via `/pending`.
+//
+// It uses the trailing characters, not the leading ones: HITL ids are
+// time-ordered (ULID / UUIDv7), so requests created close together share a
+// leading prefix. A prefix would render many distinct approvals as the same
+// "#019f1dfc"; the tail carries the entropy that keeps them distinguishable.
+func shortHITLID(id string) string {
+	s := strings.TrimPrefix(id, "h-")
+	s = strings.ReplaceAll(s, "-", "")
+	if len(s) > 8 {
+		s = s[len(s)-8:]
+	}
+	return "#" + s
+}
+
+// hitlCommandSummary extracts the best one-line command/action label from a
+// HITLRequested payload. The wire shape is a generic JSON object, so search the
+// common command keys (recursing one level into nested objects) and argv, then
+// fall back to a friendly name for the action kind.
+func hitlCommandSummary(payload map[string]any) string {
+	if s := searchCommand(payload, 3); s != "" {
+		return s
+	}
+	if lbl := hitlActionLabel(payload); lbl != "" {
+		return prettyHITLAction(lbl)
+	}
+	return ""
+}
+
+// searchCommand looks for a command string (or argv array) at the top level of
+// m, then recurses into nested maps up to depth levels deep.
+func searchCommand(m map[string]any, depth int) string {
+	if m == nil || depth < 0 {
+		return ""
+	}
+	for _, key := range []string{"command", "cmd", "command_line", "commandline", "script"} {
+		if v, ok := m[key].(string); ok && v != "" {
+			return v
 		}
 	}
-	fmt.Fprintf(w, "  hitl_id: %s\n", hitlID)
-	fmt.Fprintln(w, "  Press y/n/d to approve, reject, or defer the oldest pending request (single keystroke; no Enter needed in a TTY).")
-	fmt.Fprintf(w, "  Use `/a %s`, `/r %s`, `/d %s` to target this request explicitly; `/pending` lists all queued approvals.\n", hitlID, hitlID, hitlID)
+	if argv, ok := m["argv"].([]any); ok && len(argv) > 0 {
+		parts := make([]string, 0, len(argv))
+		for _, a := range argv {
+			if s, ok := a.(string); ok {
+				parts = append(parts, s)
+			}
+		}
+		if len(parts) > 0 {
+			return strings.Join(parts, " ")
+		}
+	}
+	for _, v := range m {
+		if sub, ok := v.(map[string]any); ok {
+			if s := searchCommand(sub, depth-1); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+// prettyHITLAction maps a HITL action-kind constant to a human-readable verb;
+// unknown values are returned as-is.
+func prettyHITLAction(s string) string {
+	switch godo.HostedAgentHITLActionKind(s) {
+	case godo.HostedAgentHITLActionBash:
+		return "run a shell command"
+	case godo.HostedAgentHITLActionFileWriteOutsideWorkspace:
+		return "write a file outside the workspace"
+	case godo.HostedAgentHITLActionGitHubCommitPush:
+		return "commit and push to GitHub"
+	case godo.HostedAgentHITLActionGitHubCreatePR:
+		return "create a pull request"
+	case godo.HostedAgentHITLActionGitHubBranchDelete:
+		return "delete a branch"
+	case godo.HostedAgentHITLActionGitHubForcePush:
+		return "force-push to GitHub"
+	}
+	return s
+}
+
+// hitlOutcomeForSelection maps the arrow-menu index (0/1/2) to an outcome.
+func hitlOutcomeForSelection(sel int) godo.HostedAgentHITLOutcome {
+	switch sel {
+	case 1:
+		return godo.HostedAgentHITLOutcomeReject
+	case 2:
+		return godo.HostedAgentHITLOutcomeDefer
+	default:
+		return godo.HostedAgentHITLOutcomeApprove
+	}
+}
+
+// hitlMenuPrompt renders the single-line, arrow-navigable approve/reject/defer
+// menu shown as the prompt while a HITL request is pending. sel is the
+// highlighted option; n is the queue depth.
+func hitlMenuPrompt(sel, n int) string {
+	labels := [3]string{"Approve", "Reject", "Defer"}
+	keys := [3]string{"y", "n", "d"}
+	colors := [3]lipgloss.Color{colSuccess, colError, colWarning}
+	parts := make([]string, 3)
+	for i := 0; i < 3; i++ {
+		// Pair each label with its shortcut key so the two input methods
+		// (arrow-navigate vs. press-a-key) read as one thing, not two
+		// unrelated groups.
+		label := fmt.Sprintf("%s (%s)", labels[i], keys[i])
+		if i == sel {
+			parts[i] = hitlOptionSelected(label, colors[i])
+		} else {
+			parts[i] = colorize(label, colMuted)
+		}
+	}
+	menu := strings.Join(parts, "   ")
+	hint := colorize("↑/↓ + Enter, or press a key", colMuted)
+	pendingNote := ""
+	if n > 1 {
+		pendingNote = colorize(fmt.Sprintf(" · %d pending", n), colMuted)
+	}
+	return fmt.Sprintf("%s   %s%s > ", menu, hint, pendingNote)
+}
+
+// hitlOptionSelected styles the highlighted menu option. Without styling it
+// falls back to bracketing so the selection is still visible.
+func hitlOptionSelected(label string, c lipgloss.Color) string {
+	if !stylingEnabled {
+		return "[" + label + "]"
+	}
+	return lipgloss.NewStyle().Foreground(c).Bold(true).Reverse(true).Render(" " + label + " ")
 }
 
 // hitlActionLabel pulls the best human-readable label out of a HITLRequested
