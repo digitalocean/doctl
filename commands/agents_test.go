@@ -155,6 +155,22 @@ func TestRunAgentsList_Pagination(t *testing.T) {
 	})
 }
 
+func TestRunAgentsList_NameFilter(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentSessionListOptions{Name: "Named-E2E-Test"}
+		tm.hostedAgents.EXPECT().ListSessions(want).Return([]do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1", Name: "Named-E2E-Test"}},
+		}, "", nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "Named-E2E-Test")
+
+		assert.NoError(t, RunAgentsList(config))
+		assert.Contains(t, buf.String(), "Named-E2E-Test")
+	})
+}
+
 func TestRunAgentsShow(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(&do.HostedAgentSession{

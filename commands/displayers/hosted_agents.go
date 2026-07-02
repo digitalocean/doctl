@@ -43,12 +43,13 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSession) Cols() []string {
-	return []string{"SessionID", "AgentKind", "Status", "RepoHint", "CreatedAt"}
+	return []string{"SessionID", "Name", "AgentKind", "Status", "RepoHint", "CreatedAt"}
 }
 
 func (h *HostedAgentSession) ColMap() map[string]string {
 	return map[string]string{
 		"SessionID": "Session",
+		"Name":      "Name",
 		"AgentKind": "Agent",
 		"Status":    "Status",
 		"RepoHint":  "Repo",
@@ -67,6 +68,7 @@ func (h *HostedAgentSession) KV() []map[string]any {
 		}
 		out = append(out, map[string]any{
 			"SessionID": s.SessionID,
+			"Name":      s.Name,
 			"AgentKind": s.AgentKind,
 			"Status":    s.Status,
 			"RepoHint":  s.RepoHint,

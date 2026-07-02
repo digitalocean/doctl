@@ -69,6 +69,7 @@ const (
 	HostedAgentKindUnspecified HostedAgentKind = "AGENT_KIND_UNSPECIFIED"
 	HostedAgentKindClaudeCode  HostedAgentKind = "AGENT_KIND_CLAUDE_CODE"
 	HostedAgentKindOpenCode    HostedAgentKind = "AGENT_KIND_OPENCODE"
+	HostedAgentKindCodexCLI    HostedAgentKind = "AGENT_KIND_CODEX_CLI"
 	HostedAgentKindNone        HostedAgentKind = "AGENT_KIND_NONE"
 )
 
@@ -186,6 +187,7 @@ const (
 // HostedAgentSession is a provisioned hosted-agent sandbox session.
 type HostedAgentSession struct {
 	SessionID    string                                  `json:"session_id"`
+	Name         string                                  `json:"name,omitempty"`
 	TeamID       uint64                                  `json:"team_id"`
 	AgentKind    HostedAgentKind                         `json:"agent_kind"`
 	Status       HostedAgentSessionStatus                `json:"status"`
@@ -291,6 +293,7 @@ type HostedAgentSessionListOptions struct {
 	PageToken string                   `url:"page_token,omitempty"`
 	PageSize  int                      `url:"page_size,omitempty"`
 	Status    HostedAgentSessionStatus `url:"status,omitempty"`
+	Name      string                   `url:"name,omitempty"`
 }
 
 // HostedAgentSessionsListResponse is returned by GET /v2/agents/sessions.

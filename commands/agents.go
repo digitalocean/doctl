@@ -43,6 +43,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"golang.org/x/term"
 )
 
@@ -234,13 +235,14 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
 		"List agent sessions",
-		`Lists agent sessions visible to the caller. Supports pagination and status filtering via `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, and `+"`"+`--status`+"`"+`. When more pages exist, the next page token is printed after the table.`,
+		`Lists agent sessions visible to the caller. Supports pagination and filtering via `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, `+"`"+`--status`+"`"+`, and `+"`"+`--name`+"`"+`. When more pages exist, the next page token is printed after the table.`,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
-	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY`
+	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
+	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session-id>",
 		"Show a single agent session",
@@ -357,7 +359,9 @@ func RunAgentsList(c *CmdConfig) error {
 	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
 		return err
 	}
-	if nextPageToken != "" {
+	// Keep JSON output clean: the page-token hint would otherwise be appended
+	// after the JSON array and break downstream parsers like jq.
+	if nextPageToken != "" && viper.GetString("output") != "json" {
 		fmt.Fprintf(c.Out, "Next page token: %s\n", nextPageToken)
 	}
 	return nil
@@ -376,7 +380,11 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	if err != nil {
 		return nil, err
 	}
-	if pageSize == 0 && pageToken == "" && status == "" {
+	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
+	if err != nil {
+		return nil, err
+	}
+	if pageSize == 0 && pageToken == "" && status == "" && name == "" {
 		return nil, nil
 	}
 	opt := &godo.HostedAgentSessionListOptions{}
@@ -388,6 +396,9 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	}
 	if status != "" {
 		opt.Status = godo.HostedAgentSessionStatus(status)
+	}
+	if name != "" {
+		opt.Name = name
 	}
 	return opt, nil
 }
