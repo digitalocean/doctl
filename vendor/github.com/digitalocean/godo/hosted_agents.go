@@ -26,6 +26,8 @@ const (
 	hostedAgentSessionInputPath             = hostedAgentSessionByIDPath + "/input"
 	hostedAgentSessionHITLPath              = hostedAgentSessionByIDPath + "/hitl/%s"
 	hostedAgentSessionSandboxExecPath       = hostedAgentSessionByIDPath + "/sandbox/exec"
+	hostedAgentSessionPausePath             = hostedAgentSessionByIDPath + "/pause"
+	hostedAgentSessionResumePath            = hostedAgentSessionByIDPath + "/resume"
 	hostedAgentSessionWorkspaceUploadPath   = hostedAgentSessionByIDPath + "/workspace/upload"
 	hostedAgentSessionWorkspaceDownloadPath = hostedAgentSessionByIDPath + "/workspace/download"
 
@@ -47,6 +49,8 @@ type HostedAgentsService interface {
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
+	PauseSession(context.Context, string) (*Response, error)
+	ResumeSession(context.Context, string) (*Response, error)
 	StreamSession(context.Context, string, *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error)
 	SendInput(context.Context, string, *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error)
 	ResolveHITL(context.Context, string, string, *HostedAgentResolveHITLRequest) (*Response, error)
@@ -84,6 +88,7 @@ const (
 	HostedAgentSessionStatusDestroying   HostedAgentSessionStatus = "SESSION_STATUS_DESTROYING"
 	HostedAgentSessionStatusDestroyed    HostedAgentSessionStatus = "SESSION_STATUS_DESTROYED"
 	HostedAgentSessionStatusFailed       HostedAgentSessionStatus = "SESSION_STATUS_FAILED"
+	HostedAgentSessionStatusPaused       HostedAgentSessionStatus = "SESSION_STATUS_PAUSED"
 )
 
 // HostedAgentProviderAuthState tracks OAuth authorization for an external provider.
@@ -488,6 +493,30 @@ func (s *HostedAgentsServiceOp) DestroySession(ctx context.Context, sessionID st
 	}
 	path := fmt.Sprintf(hostedAgentSessionByIDPath, sessionID)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+func (s *HostedAgentsServiceOp) PauseSession(ctx context.Context, sessionID string) (*Response, error) {
+	if sessionID == "" {
+		return nil, errors.New("hosted agents: session id is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionPausePath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+func (s *HostedAgentsServiceOp) ResumeSession(ctx context.Context, sessionID string) (*Response, error) {
+	if sessionID == "" {
+		return nil, errors.New("hosted agents: session id is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionResumePath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
 	if err != nil {
 		return nil, err
 	}

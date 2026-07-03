@@ -46,7 +46,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "upload", "download")
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download")
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -186,6 +186,22 @@ func TestRunAgentsDestroy(t *testing.T) {
 		tm.hostedAgents.EXPECT().DestroySession("sess_test").Return(nil)
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsDestroy(config))
+	})
+}
+
+func TestRunAgentsPause(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().PauseSession("sess_test").Return(nil)
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsPause(config))
+	})
+}
+
+func TestRunAgentsResume(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsResume(config))
 	})
 }
 

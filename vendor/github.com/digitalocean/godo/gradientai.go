@@ -36,6 +36,8 @@ const (
 	customModelImportPath                    = customModelsBasePath + "/import"
 	customModelByIDPath                      = customModelsBasePath + "/%s"
 	customModelMetadataPath                  = customModelsBasePath + "/%s/metadata"
+	customEvaluationMetricsPath              = "/v2/gen-ai/custom_evaluation_metrics"
+	customEvaluationMetricByIDPath           = customEvaluationMetricsPath + "/%s"
 	modelEvaluationRunsBasePath              = "/v2/gen-ai/model_evaluation_runs"
 	modelEvaluationRunByIDPath               = modelEvaluationRunsBasePath + "/%s"
 	modelEvaluationRunCancelPath             = modelEvaluationRunsBasePath + "/%s/cancel"
@@ -218,6 +220,9 @@ type GradientAIService interface {
 	ImportCustomModel(ctx context.Context, importRequest *CustomModelImportRequest) (*CustomModelImportResponse, *Response, error)
 	DeleteCustomModel(ctx context.Context, uuid string) (*CustomModelDeleteResponse, *Response, error)
 	UpdateCustomModelMetadata(ctx context.Context, uuid string, updateRequest *CustomModelMetadataUpdateRequest) (*CustomModel, *Response, error)
+	CreateCustomEvaluationMetric(ctx context.Context, createRequest *CreateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error)
+	UpdateCustomEvaluationMetric(ctx context.Context, metricUUID string, updateRequest *UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error)
+	DeleteCustomEvaluationMetric(ctx context.Context, metricUUID string) (*Response, error)
 	DeleteModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunDeleteResponse, *Response, error)
 	DeleteModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetDeleteResponse, *Response, error)
 	CancelModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunCancelResponse, *Response, error)
@@ -514,6 +519,15 @@ const (
 	MetricCategoryModelFit          EvaluationMetricCategory = "METRIC_CATEGORY_MODEL_FIT"
 )
 
+// EvaluationMetricSource distinguishes platform catalog metrics from user-defined LLM-as-judge metrics.
+type EvaluationMetricSource string
+
+const (
+	EvaluationMetricSourceUnspecified EvaluationMetricSource = "EVALUATION_METRIC_SOURCE_UNSPECIFIED"
+	EvaluationMetricSourceBuiltin     EvaluationMetricSource = "EVALUATION_METRIC_SOURCE_BUILTIN"
+	EvaluationMetricSourceCustom      EvaluationMetricSource = "EVALUATION_METRIC_SOURCE_CUSTOM"
+)
+
 // Workspace represents a workspace containing agents and evaluation test cases.
 type Workspace struct {
 	UUID                string                `json:"uuid,omitempty"`
@@ -552,17 +566,50 @@ type EvaluationTestCase struct {
 
 // EvaluationMetric represents an evaluation metric definition.
 type EvaluationMetric struct {
-	MetricUUID      string                    `json:"metric_uuid,omitempty"`
-	MetricName      string                    `json:"metric_name,omitempty"`
-	Description     string                    `json:"description,omitempty"`
-	MetricType      EvaluationMetricType      `json:"metric_type,omitempty"`
-	MetricValueType EvaluationMetricValueType `json:"metric_value_type,omitempty"`
-	RangeMin        float32                   `json:"range_min,omitempty"`
-	RangeMax        float32                   `json:"range_max,omitempty"`
-	Inverted        bool                      `json:"inverted,omitempty"`
-	Category        EvaluationMetricCategory  `json:"category,omitempty"`
-	IsMetricGoal    bool                      `json:"is_metric_goal,omitempty"`
-	MetricRank      uint32                    `json:"metric_rank,omitempty"`
+	MetricUUID        string                            `json:"metric_uuid,omitempty"`
+	MetricName        string                            `json:"metric_name,omitempty"`
+	Description       string                            `json:"description,omitempty"`
+	MetricType        EvaluationMetricType              `json:"metric_type,omitempty"`
+	MetricValueType   EvaluationMetricValueType         `json:"metric_value_type,omitempty"`
+	RangeMin          float32                           `json:"range_min,omitempty"`
+	RangeMax          float32                           `json:"range_max,omitempty"`
+	Inverted          bool                              `json:"inverted,omitempty"`
+	Category          EvaluationMetricCategory          `json:"category,omitempty"`
+	IsMetricGoal      bool                              `json:"is_metric_goal,omitempty"`
+	MetricRank        uint32                            `json:"metric_rank,omitempty"`
+	Source            EvaluationMetricSource            `json:"source,omitempty"`
+	CustomEvalConfig  *CustomEvaluationMetricConfig     `json:"custom_eval_config,omitempty"`
+	AssociatedPresets []AssociatedModelEvaluationPreset `json:"associated_presets,omitempty"`
+}
+
+// CustomEvaluationMetricConfig represents the LLM-as-judge scoring configuration for custom evaluation metrics.
+type CustomEvaluationMetricConfig struct {
+	RequiresGroundTruth bool       `json:"requires_ground_truth,omitempty"`
+	ScoringPrompt       string     `json:"scoring_prompt,omitempty"`
+	CreatedAt           *Timestamp `json:"created_at,omitempty"`
+	UpdatedAt           *Timestamp `json:"updated_at,omitempty"`
+	DeletedAt           *Timestamp `json:"deleted_at,omitempty"`
+}
+
+// AssociatedModelEvaluationPreset identifies a saved model evaluation preset that references a custom metric.
+type AssociatedModelEvaluationPreset struct {
+	EvalPresetUUID string `json:"eval_preset_uuid,omitempty"`
+	Name           string `json:"name,omitempty"`
+}
+
+// CreateCustomEvaluationMetricRequest is the request payload for creating a custom evaluation metric.
+type CreateCustomEvaluationMetricRequest struct {
+	MetricName  string                        `json:"metric_name,omitempty"`
+	Description string                        `json:"description,omitempty"`
+	Config      *CustomEvaluationMetricConfig `json:"config,omitempty"`
+}
+
+// UpdateCustomEvaluationMetricRequest is the request payload for updating a custom evaluation metric.
+type UpdateCustomEvaluationMetricRequest struct {
+	MetricUUID  string                        `json:"metric_uuid,omitempty"`
+	MetricName  string                        `json:"metric_name,omitempty"`
+	Description string                        `json:"description,omitempty"`
+	Config      *CustomEvaluationMetricConfig `json:"config,omitempty"`
 }
 
 // EvaluationDataset represents the dataset information for an evaluation.
@@ -2421,6 +2468,10 @@ type customModelRoot struct {
 	Model *CustomModel `json:"model"`
 }
 
+type customEvaluationMetricRoot struct {
+	Metric *EvaluationMetric `json:"metric"`
+}
+
 // ListCustomModels returns the list of custom models for the team.
 func (s *GradientAIServiceOp) ListCustomModels(ctx context.Context, opt *CustomModelListOptions) (*CustomModelListResponse, *Response, error) {
 	path, err := addOptions(customModelsBasePath, opt)
@@ -3229,6 +3280,64 @@ func (s *GradientAIServiceOp) UpdateCustomModelMetadata(ctx context.Context, uui
 		return nil, resp, err
 	}
 	return root.Model, resp, nil
+}
+
+// CreateCustomEvaluationMetric creates a custom model-evaluation metric.
+func (s *GradientAIServiceOp) CreateCustomEvaluationMetric(ctx context.Context, createRequest *CreateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error) {
+	if createRequest == nil {
+		return nil, nil, fmt.Errorf("create request is required")
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, customEvaluationMetricsPath, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(customEvaluationMetricRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Metric, resp, nil
+}
+
+// UpdateCustomEvaluationMetric updates an existing custom model-evaluation metric.
+func (s *GradientAIServiceOp) UpdateCustomEvaluationMetric(ctx context.Context, metricUUID string, updateRequest *UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error) {
+	if metricUUID == "" {
+		return nil, nil, fmt.Errorf("metricUUID is required")
+	}
+	if updateRequest == nil {
+		return nil, nil, fmt.Errorf("update request is required")
+	}
+
+	path := fmt.Sprintf(customEvaluationMetricByIDPath, metricUUID)
+	req, err := s.client.NewRequest(ctx, http.MethodPut, path, updateRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(customEvaluationMetricRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Metric, resp, nil
+}
+
+// DeleteCustomEvaluationMetric soft-deletes a custom model-evaluation metric.
+func (s *GradientAIServiceOp) DeleteCustomEvaluationMetric(ctx context.Context, metricUUID string) (*Response, error) {
+	if metricUUID == "" {
+		return nil, fmt.Errorf("metricUUID is required")
+	}
+
+	path := fmt.Sprintf(customEvaluationMetricByIDPath, metricUUID)
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.client.Do(ctx, req, nil)
+	return resp, err
 }
 
 func (a Agent) String() string {

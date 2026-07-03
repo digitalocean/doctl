@@ -34,6 +34,8 @@ type HostedAgentsService interface {
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
 	DestroySession(sessionID string) error
+	PauseSession(sessionID string) error
+	ResumeSession(sessionID string) error
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
@@ -88,6 +90,16 @@ func (s *hostedAgentsService) GetSession(sessionID string) (*HostedAgentSession,
 
 func (s *hostedAgentsService) DestroySession(sessionID string) error {
 	_, err := s.client.HostedAgents.DestroySession(context.TODO(), sessionID)
+	return err
+}
+
+func (s *hostedAgentsService) PauseSession(sessionID string) error {
+	_, err := s.client.HostedAgents.PauseSession(context.TODO(), sessionID)
+	return err
+}
+
+func (s *hostedAgentsService) ResumeSession(sessionID string) error {
+	_, err := s.client.HostedAgents.ResumeSession(context.TODO(), sessionID)
 	return err
 }
 

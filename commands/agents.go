@@ -265,6 +265,18 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		"Tears down the workspace sandbox and removes the session.",
 		Writer, aliasOpt("rm"))
 
+	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session-id>",
+		"Pause an agent session",
+		"Pauses a running agent session. The sandbox is preserved and the session can be resumed later with `doctl agents resume`.",
+		Writer)
+	cmdPause.Example = `doctl agents pause sess_abc123`
+
+	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session-id>",
+		"Resume a paused agent session",
+		"Resumes a previously paused agent session.",
+		Writer)
+	cmdResume.Example = `doctl agents resume sess_abc123`
+
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session-id>",
 		"Upload a file into a session workspace",
 		`Streams a local file (or tar archive) into the session's sandbox workspace.
@@ -424,6 +436,30 @@ func RunAgentsDestroy(c *CmdConfig) error {
 		return err
 	}
 	notice("Session %s destroyed", c.Args[0])
+	return nil
+}
+
+// RunAgentsPause pauses a session.
+func RunAgentsPause(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	if err := c.HostedAgents().PauseSession(c.Args[0]); err != nil {
+		return err
+	}
+	notice("Session %s paused", c.Args[0])
+	return nil
+}
+
+// RunAgentsResume resumes a paused session.
+func RunAgentsResume(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	if err := c.HostedAgents().ResumeSession(c.Args[0]); err != nil {
+		return err
+	}
+	notice("Session %s resumed", c.Args[0])
 	return nil
 }
 
