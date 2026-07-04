@@ -103,9 +103,12 @@ func TestAuthInitConfig(t *testing.T) {
 
 func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfw := cfgFileWriter
+	origToken := Token
+	Token = "valid-token"
 	viper.Set(doctl.ArgAccessToken, "valid-token")
 	defer func() {
 		cfgFileWriter = cfw
+		Token = origToken
 		viper.Set(doctl.ArgAccessToken, nil)
 	}()
 
@@ -123,11 +126,37 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 	})
 }
 
+func TestAuthInitPromptsWhenTokenExists(t *testing.T) {
+	cfw := cfgFileWriter
+	// Simulate an existing (possibly expired) token in the config.
+	viper.Set(doctl.ArgAccessToken, "expired-token")
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set(doctl.ArgAccessToken, nil)
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "new-valid-token", nil
+	}
+
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestAuthForcesLowercase(t *testing.T) {
 	cfw := cfgFileWriter
+	origToken := Token
+	Token = "valid-token"
 	viper.Set(doctl.ArgAccessToken, "valid-token")
 	defer func() {
 		cfgFileWriter = cfw
+		Token = origToken
 		viper.Set(doctl.ArgAccessToken, nil)
 	}()
 
