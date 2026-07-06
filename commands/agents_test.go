@@ -661,7 +661,7 @@ func TestRenderEvent(t *testing.T) {
 		{"run completed", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":3,"total_tokens_out":5,"run_cost_micros":1234}`, "\n✓ run complete · 3 in / 5 out tokens · $0.0012\n" + runSeparator + "\n"},
 		{"run completed no usage", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":0,"total_tokens_out":0,"run_cost_micros":0}`, "\n✓ run complete\n" + runSeparator + "\n"},
 		{"run failed", godo.HostedAgentEventKindRunFailed, "", `{"code":5,"message":"hitl rejected"}`, "\n✗ run failed: hitl rejected (code 5)\n" + runSeparator + "\n"},
-		{"hitl resolved", godo.HostedAgentEventKindHITLResolved, "", `{"hitl_id":"hitl_1","outcome":1}`, "\n#hitl_1 approve\n"},
+		{"hitl resolved", godo.HostedAgentEventKindHITLResolved, "", `{"hitl_id":"hitl_1","outcome":1}`, "\nhitl_1 approve\n"},
 		{"session updated", godo.HostedAgentEventKindSessionUpdated, "", `{}`, "\n• session updated\n"},
 	}
 	for _, tc := range cases {
@@ -692,29 +692,19 @@ func TestErrorResponseSurfacesNestedMessage(t *testing.T) {
 }
 
 func TestRenderEventHITLRequested(t *testing.T) {
+	const fullID = "019f1dfc-f017-70e2-9eac-2ea470a55ac2"
 	var buf bytes.Buffer
 	renderEvent(&buf, godo.HostedAgentEvent{
 		Kind:    godo.HostedAgentEventKindHITLRequested,
-		Payload: json.RawMessage(`{"hitl_id":"hitl_42","payload":{"command":"rm -rf /tmp/x"}}`),
+		Payload: json.RawMessage(`{"hitl_id":"` + fullID + `","payload":{"command":"rm -rf /tmp/x"}}`),
 	})
 	out := buf.String()
 	assert.Contains(t, out, "Approval required")
 	assert.Contains(t, out, "rm -rf /tmp/x")
-	assert.Contains(t, out, "hitl_42")
-	// Outcomes are not duplicated here; the interactive menu shows them.
+	assert.Contains(t, out, fullID)
+	assert.NotContains(t, out, "#a55ac2")
 	assert.NotContains(t, out, "approve / reject / defer")
-	// The verbose payload dump is gone.
 	assert.NotContains(t, out, "Action requires approval")
-}
-
-func TestShortHITLID(t *testing.T) {
-	assert.Equal(t, "#dab4b4bc", shortHITLID("h-0510a11b-02ea-4b7a-86f6-18f8dab4b4bc"))
-	assert.Equal(t, "#hitl_42", shortHITLID("hitl_42"))
-	assert.Equal(t, "#abc", shortHITLID("h-abc"))
-	// Time-ordered ids that share a leading prefix must stay distinguishable.
-	a := shortHITLID("019f1dfc-f017-70e2-9eac-2ea470a55ac2")
-	b := shortHITLID("019f1dfc-f017-70e2-9eac-2ea470a55ffff")
-	assert.NotEqual(t, a, b, "ids sharing a time prefix should not collide")
 }
 
 // TestHITLCommandSummaryNested covers the recursive command search used to pull

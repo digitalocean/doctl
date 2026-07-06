@@ -818,6 +818,7 @@ func RunAgentsLogs(c *CmdConfig) error {
 		}
 		acc.flush(c.Out)
 		fmt.Fprintf(c.Out, "[%s] %s\n", ev.At.Time.UTC().Format("2006-01-02T15:04:05Z"), ev.Kind)
+		// Show the full hitl_id so request ids are copyable for out-of-band approve.
 		renderEvent(c.Out, ev)
 	}
 	acc.flush(c.Out)
@@ -2111,7 +2112,7 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		var p hitlResolvedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
 			fmt.Fprintf(w, "\n%s %s\n",
-				colorize(shortHITLID(p.HitlID), colMuted), hitlOutcomeStyled(p.Outcome))
+				colorize(p.HitlID, colMuted), hitlOutcomeStyled(p.Outcome))
 		}
 	case godo.HostedAgentEventKindRunCompleted:
 		var p runCompletedPayload
@@ -2201,15 +2202,16 @@ func prettyAgentKind(k godo.HostedAgentKind) string {
 }
 
 // renderHITLRequest prints a single compact, color-coded approval line: the
-// command (or a human-readable action label) plus a short id for out-of-band
-// targeting. The outcomes are intentionally omitted here since the interactive
-// menu prompt already shows them.
+// command (or a human-readable action label) plus the full hitl_id so it can be
+// copied for out-of-band approve. Outcomes are omitted here since the
+// interactive menu prompt already shows them.
 func renderHITLRequest(w io.Writer, hitlID string, payload map[string]any) {
 	renderApprovalLine(w, hitlID, hitlCommandSummary(payload))
 }
 
 // renderApprovalLine prints the one-line approval prompt with an optional
-// command and a short id. The outcomes are shown by the interactive menu.
+// command and the full HITL request id. The outcomes are shown by the
+// interactive menu.
 func renderApprovalLine(w io.Writer, hitlID, cmd string) {
 	parts := []string{boldColor("● Approval required", colWarning)}
 	if cmd != "" {
@@ -2220,29 +2222,13 @@ func renderApprovalLine(w io.Writer, hitlID, cmd string) {
 		// leaving a bare id that reads as a glitch.
 		parts = append(parts, colorize("action pending", colMuted))
 	}
-	parts = append(parts, colorize(shortHITLID(hitlID), colMuted))
+	parts = append(parts, colorize(hitlID, colMuted))
 	fmt.Fprintf(w, "\n%s\n", strings.Join(parts, colorize("  ·  ", colMuted)))
 }
 
 // renderToolStart prints the "running a tool" line.
 func renderToolStart(w io.Writer, cmd string) {
 	fmt.Fprintf(w, "\n%s %s\n", colorize("▸", colHighlight), boldColor(cmd, colHighlight))
-}
-
-// shortHITLID trims a HITL id to a compact "#xxxxxxxx" form for display; the
-// full id is still available via `/pending`.
-//
-// It uses the trailing characters, not the leading ones: HITL ids are
-// time-ordered (ULID / UUIDv7), so requests created close together share a
-// leading prefix. A prefix would render many distinct approvals as the same
-// "#019f1dfc"; the tail carries the entropy that keeps them distinguishable.
-func shortHITLID(id string) string {
-	s := strings.TrimPrefix(id, "h-")
-	s = strings.ReplaceAll(s, "-", "")
-	if len(s) > 8 {
-		s = s[len(s)-8:]
-	}
-	return "#" + s
 }
 
 // hitlCommandSummary extracts the best one-line command/action label from a
