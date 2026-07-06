@@ -44,8 +44,8 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"golang.org/x/term"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // stylingEnabled gates ANSI color and markdown rendering. It is flipped on by
@@ -222,11 +222,14 @@ Commands that act on a single session accept either the session ID or its name. 
 		"Start a new agent session",
 		`Creates a new agent session from an agent manifest file and prints its session id and status.
 
-The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. The manifest is sent verbatim to the server, which owns parsing and validation.`,
+The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. The manifest is sent to the server, which owns parsing and validation.
+
+Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin.`, requiredOpt())
-	cmdStart.Example = `doctl agents start --spec agent-spec.yaml`
+	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's metadata.name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
+	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session`
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
 		"Attach to an agent session",
@@ -315,8 +318,18 @@ func RunAgentsStart(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
+	if err != nil {
+		return err
+	}
 
 	manifest, err := readManifest(os.Stdin, specPath)
+	if err != nil {
+		return err
+	}
+	// --name is a convenience that sets the manifest's metadata.name. When it's
+	// omitted the manifest is sent verbatim and the server auto-generates a name.
+	manifest, err = injectManifestName(manifest, name)
 	if err != nil {
 		return err
 	}
@@ -361,6 +374,38 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 	return raw, nil
 }
 
+// injectManifestName sets metadata.name on the manifest to name. An empty name
+// returns the manifest unchanged so the server can auto-generate one. The
+// server still owns full manifest validation (including name syntax); this only
+// wires the --name convenience flag into the YAML the server parses.
+func injectManifestName(manifest []byte, name string) ([]byte, error) {
+	if name == "" {
+		return manifest, nil
+	}
+
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil {
+		return nil, fmt.Errorf("parsing manifest to apply --name: %w", err)
+	}
+	if doc == nil {
+		doc = map[string]any{}
+	}
+
+	// yaml.v2 decodes nested mappings as map[any]any.
+	meta, ok := doc["metadata"].(map[any]any)
+	if !ok {
+		meta = map[any]any{}
+	}
+	meta["name"] = name
+	doc["metadata"] = meta
+
+	out, err := yaml.Marshal(doc)
+	if err != nil {
+		return nil, fmt.Errorf("applying --name to manifest: %w", err)
+	}
+	return out, nil
+}
+
 // RunAgentsList lists hosted agent sessions visible to the caller.
 func RunAgentsList(c *CmdConfig) error {
 	opt, err := agentsListOptions(c)
@@ -374,10 +419,12 @@ func RunAgentsList(c *CmdConfig) error {
 	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
 		return err
 	}
-	// Keep JSON output clean: the page-token hint would otherwise be appended
-	// after the JSON array and break downstream parsers like jq.
-	if nextPageToken != "" && viper.GetString("output") != "json" {
-		fmt.Fprintf(c.Out, "Next page token: %s\n", nextPageToken)
+	if nextPageToken != "" {
+		if Output == "json" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", nextPageToken)
+		} else {
+			fmt.Fprintf(c.Out, "Next page token: %s\n", nextPageToken)
+		}
 	}
 	return nil
 }
@@ -433,11 +480,23 @@ func looksLikeSessionID(ref string) bool {
 	return sessionUUIDRe.MatchString(ref) || strings.HasPrefix(ref, sessionIDPrefix)
 }
 
+// terminalSessionStatuses are the lifecycle states in which a session no longer
+// owns its name (the name is freed for reuse). They're excluded from name
+// resolution so a destroyed session can't shadow a live one that reused the name.
+func isTerminalSessionStatus(s godo.HostedAgentSessionStatus) bool {
+	switch s {
+	case godo.HostedAgentSessionStatusDestroying,
+		godo.HostedAgentSessionStatusDestroyed,
+		godo.HostedAgentSessionStatusFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // resolveSessionRef turns a user-supplied session reference into a session ID.
 // References that already look like an ID (a UUID) are returned unchanged with
 // no API call, so existing scripts keep working with no added latency.
-// Otherwise the reference is treated as a session name and resolved via a
-// name-filtered list; the match must be unique.
 func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 	if ref == "" {
 		return "", errors.New("a session ID or name is required")
@@ -451,26 +510,27 @@ func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 		return "", fmt.Errorf("resolving session name %q: %w", ref, err)
 	}
 
-	// The server-side name filter may be fuzzy, so keep only exact matches to
-	// avoid resolving the wrong session.
-	matches := make([]do.HostedAgentSession, 0, len(sessions))
+	// The name filter is case-insensitive server-side; mirror that here while
+	// keeping only exact (not fuzzy/substring) matches, and drop terminal
+	// sessions whose name has been freed for reuse.
+	live := make([]do.HostedAgentSession, 0, len(sessions))
 	for _, s := range sessions {
-		if s.Name == ref {
-			matches = append(matches, s)
+		if strings.EqualFold(s.Name, ref) && !isTerminalSessionStatus(s.Status) {
+			live = append(live, s)
 		}
 	}
 
-	switch len(matches) {
+	switch len(live) {
 	case 0:
-		return "", fmt.Errorf("no session found with name %q; pass a session ID or run `doctl agents list` to see available sessions", ref)
+		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl agents list` to see available sessions", ref)
 	case 1:
-		return matches[0].SessionID, nil
+		return live[0].SessionID, nil
 	default:
-		ids := make([]string, 0, len(matches))
-		for _, m := range matches {
+		ids := make([]string, 0, len(live))
+		for _, m := range live {
 			ids = append(ids, m.SessionID)
 		}
-		return "", fmt.Errorf("multiple sessions are named %q; pass a session ID instead: %s", ref, strings.Join(ids, ", "))
+		return "", fmt.Errorf("many agent sessions go by the name %q, they have the following IDs: %s", ref, strings.Join(ids, ", "))
 	}
 }
 

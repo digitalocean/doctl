@@ -32,6 +32,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const sampleManifest = `apiVersion: agents.digitalocean.com/v1alpha1
@@ -128,6 +129,74 @@ func TestRunAgentsStart(t *testing.T) {
 	})
 }
 
+func TestRunAgentsStart_WithName(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// The manifest sent to the server must carry metadata.name = the flag.
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any()).
+			DoAndReturn(func(manifest []byte) (*do.HostedAgentSession, error) {
+				var doc map[string]any
+				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
+				meta, ok := doc["metadata"].(map[any]any)
+				assert.True(t, ok, "metadata should be a mapping")
+				assert.Equal(t, "my-session", meta["name"])
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
+func TestInjectManifestName(t *testing.T) {
+	t.Run("empty name leaves manifest untouched", func(t *testing.T) {
+		out, err := injectManifestName([]byte(sampleManifest), "")
+		assert.NoError(t, err)
+		assert.Equal(t, sampleManifest, string(out))
+	})
+
+	t.Run("sets metadata.name", func(t *testing.T) {
+		out, err := injectManifestName([]byte(sampleManifest), "my-session")
+		assert.NoError(t, err)
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		meta, ok := doc["metadata"].(map[any]any)
+		assert.True(t, ok)
+		assert.Equal(t, "my-session", meta["name"])
+	})
+
+	t.Run("overrides an existing metadata.name", func(t *testing.T) {
+		const withName = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+metadata:
+  name: original
+spec:
+  adapter: opencode
+`
+		out, err := injectManifestName([]byte(withName), "override")
+		assert.NoError(t, err)
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		meta := doc["metadata"].(map[any]any)
+		assert.Equal(t, "override", meta["name"])
+		// unrelated fields survive
+		spec := doc["spec"].(map[any]any)
+		assert.Equal(t, "opencode", spec["adapter"])
+	})
+
+	t.Run("invalid yaml errors", func(t *testing.T) {
+		_, err := injectManifestName([]byte("::: not yaml :::"), "x")
+		assert.Error(t, err)
+	})
+}
+
 func TestRunAgentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{}, "", nil)
@@ -152,6 +221,48 @@ func TestRunAgentsList_Pagination(t *testing.T) {
 
 		assert.NoError(t, RunAgentsList(config))
 		assert.Contains(t, buf.String(), "Next page token: 1561")
+	})
+}
+
+// TestRunAgentsList_JSONPaginationCleanStdout pins the fix for MARSOHS-235: under
+// -o json the pagination hint must not be written to stdout (it would follow the
+// JSON array and break parsers like jq). It goes to stderr instead so the cursor
+// is still available.
+func TestRunAgentsList_JSONPaginationCleanStdout(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentSessionListOptions{PageSize: 2}
+		tm.hostedAgents.EXPECT().ListSessions(want).Return([]do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"}},
+		}, "1561", nil)
+
+		Output = "json"
+		defer func() { Output = "text" }()
+
+		// Capture stderr, where the human-readable cursor hint must land.
+		oldStderr := os.Stderr
+		r, w, err := os.Pipe()
+		assert.NoError(t, err)
+		os.Stderr = w
+		defer func() { os.Stderr = oldStderr }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentPageSize, 2)
+
+		runErr := RunAgentsList(config)
+
+		assert.NoError(t, w.Close())
+		os.Stderr = oldStderr
+		stderrOut, _ := io.ReadAll(r)
+
+		assert.NoError(t, runErr)
+
+		stdout := buf.String()
+		// stdout must stay clean, parseable JSON with no trailing hint.
+		assert.NotContains(t, stdout, "Next page token")
+		assert.True(t, json.Valid([]byte(stdout)), "stdout must be valid JSON, got: %q", stdout)
+		// the cursor is still surfaced, on stderr.
+		assert.Contains(t, string(stderrOut), "Next page token: 1561")
 	})
 }
 
@@ -270,7 +381,51 @@ func TestResolveSessionRef(t *testing.T) {
 
 			_, err := resolveSessionRef(config.HostedAgents(), "ghost")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "no session found")
+			assert.Contains(t, err.Error(), "no agent session goes by the name")
+		})
+	})
+
+	t.Run("case-insensitive name match", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "My-Agent"}).
+				Return([]do.HostedAgentSession{
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_42", Name: "my-agent"}},
+				}, "", nil)
+
+			got, err := resolveSessionRef(config.HostedAgents(), "My-Agent")
+			assert.NoError(t, err)
+			assert.Equal(t, "sess_42", got)
+		})
+	})
+
+	t.Run("terminal sessions are excluded so a live reuse wins", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "reused"}).
+				Return([]do.HostedAgentSession{
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_dead1", Name: "reused", Status: godo.HostedAgentSessionStatusDestroyed}},
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_dead2", Name: "reused", Status: godo.HostedAgentSessionStatusFailed}},
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_live", Name: "reused", Status: godo.HostedAgentSessionStatusReady}},
+				}, "", nil)
+
+			got, err := resolveSessionRef(config.HostedAgents(), "reused")
+			assert.NoError(t, err)
+			assert.Equal(t, "sess_live", got)
+		})
+	})
+
+	t.Run("only terminal matches errors as not found", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "gone"}).
+				Return([]do.HostedAgentSession{
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_dead", Name: "gone", Status: godo.HostedAgentSessionStatusDestroyed}},
+				}, "", nil)
+
+			_, err := resolveSessionRef(config.HostedAgents(), "gone")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "no agent session goes by the name")
 		})
 	})
 
@@ -285,6 +440,7 @@ func TestResolveSessionRef(t *testing.T) {
 
 			_, err := resolveSessionRef(config.HostedAgents(), "dup")
 			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "many agent sessions go by the name")
 			assert.Contains(t, err.Error(), "sess_a")
 			assert.Contains(t, err.Error(), "sess_b")
 		})
