@@ -40,9 +40,14 @@ var promptSecretValueFunc = defaultPromptSecretValue
 var exampleSecretRegions = []string{"nyc3", "sfo3", "ams3", "fra1", "sgp1", "lon1"}
 
 const (
-	secretRegionFlagDesc  = "Region where the secret is stored. If omitted, you are prompted when running with --interactive."
-	secretValueFlagDesc   = "Key-value pair in key=value format (repeatable). Values may be read from a file with key=@path or from stdin with key=-. If omitted, keys and masked values are read with --interactive."
-	secretMaskedValue     = "********"
+	exampleSecretName   = "my-secret"
+	exampleSecretKey    = "key"
+	exampleSecretKeyAlt = "other-key"
+	exampleSecretValue  = "value"
+
+	secretRegionFlagDesc = "Region where the secret is stored. If omitted, you are prompted when running with --interactive."
+	secretValueFlagDesc  = "Key-value pair in key=value format (repeatable). Values may be read from a file with key=@path or from stdin with key=-. If omitted, keys and masked values are read with --interactive."
+	secretMaskedValue    = "********"
 )
 
 type secretRegionListItem struct {
@@ -81,7 +86,7 @@ If no `+"`"+`--value`+"`"+` or `+"`"+`--from-env-file`+"`"+` flags are provided,
 	AddStringFlag(cmdCreate, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringSliceFlag(cmdCreate, doctl.ArgSecretValue, "", nil, secretValueFlagDesc)
 	AddStringFlag(cmdCreate, doctl.ArgSecretFromEnvFile, "", "", "Path to an env file containing key-value pairs to store in the secret.")
-	cmdCreate.Example = `The following example creates a secret with key-value pairs: doctl secrets create prod-db-creds --region nyc3 --value password=@./pw.txt --value api_key=-`
+	cmdCreate.Example = `The following example creates a secret with key-value pairs: doctl secrets create ` + exampleSecretName + ` --region nyc3 --value ` + exampleSecretKey + `=@./value.txt --value ` + exampleSecretKeyAlt + `=-`
 
 	cmdGet := CmdBuilder(cmd, RunCmdSecretsGet, "get <name>", "Get a secret", `Retrieves a secret container and its key-value pairs.
 
@@ -91,7 +96,7 @@ Secret values are masked by default. Use --show to reveal them, or --key with --
 	AddStringFlag(cmdGet, doctl.ArgKey, "", "", "Return only the value for this key.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretShow, "", false, "Reveal secret values instead of masking them.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretRaw, "", false, "Write the value for --key to stdout with no formatting.")
-	cmdGet.Example = `The following example retrieves a secret: doctl secrets get prod-db-creds --region nyc3 --key password --raw`
+	cmdGet.Example = `The following example retrieves a secret: doctl secrets get ` + exampleSecretName + ` --region nyc3 --key ` + exampleSecretKey + ` --raw`
 
 	cmdList := CmdBuilder(cmd, RunCmdSecretsList, "list", "List secrets", `Retrieves a list of secret containers across all regions. Values are not included.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Secrets{}))
@@ -100,7 +105,7 @@ Secret values are masked by default. Use --show to reveal them, or --key with --
 	cmdListVersions := CmdBuilder(cmd, RunCmdSecretsListVersions, "list-versions <name>", "List secret versions", `Retrieves version history for a secret container.`, Writer,
 		displayerType(&displayers.SecretVersions{}))
 	AddStringFlag(cmdListVersions, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
-	cmdListVersions.Example = `The following example lists versions for a secret: doctl secrets list-versions prod-db-creds --region nyc3`
+	cmdListVersions.Example = `The following example lists versions for a secret: doctl secrets list-versions ` + exampleSecretName + ` --region nyc3`
 
 	cmdSet := CmdBuilder(cmd, RunCmdSecretsSet, "set <name>", "Set keys on a secret", `Adds or updates key-value pairs on a secret without removing existing keys.
 
@@ -109,7 +114,7 @@ Fetches the current secret, merges in the provided keys, and writes a new versio
 	AddStringFlag(cmdSet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringSliceFlag(cmdSet, doctl.ArgSecretValue, "", nil, secretValueFlagDesc)
 	AddStringFlag(cmdSet, doctl.ArgSecretFromEnvFile, "", "", "Path to an env file containing key-value pairs to store in the secret.")
-	cmdSet.Example = `The following example sets a key on a secret: doctl secrets set prod-db-creds --region nyc3 --value password=@./pw.txt`
+	cmdSet.Example = `The following example sets a key on a secret: doctl secrets set ` + exampleSecretName + ` --region nyc3 --value ` + exampleSecretKey + `=@./value.txt`
 
 	cmdUnset := CmdBuilder(cmd, RunCmdSecretsUnset, "unset <name>", "Remove keys from a secret", `Removes key-value pairs from a secret without affecting other keys.
 
@@ -117,7 +122,7 @@ Fetches the current secret, removes the specified keys, and writes a new version
 		displayerType(&displayers.SecretWriteResult{}))
 	AddStringFlag(cmdUnset, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringSliceFlag(cmdUnset, doctl.ArgKey, "", nil, "Key to remove (repeatable).", requiredOpt())
-	cmdUnset.Example = `The following example removes a key from a secret: doctl secrets unset prod-db-creds --region nyc3 --key api_key`
+	cmdUnset.Example = `The following example removes a key from a secret: doctl secrets unset ` + exampleSecretName + ` --region nyc3 --key ` + exampleSecretKeyAlt
 
 	cmdUpdate := CmdBuilder(cmd, RunCmdSecretsUpdate, "update <name>", "Replace a secret", `Replaces all key-value pairs in a secret with a new version.
 
@@ -128,16 +133,16 @@ This removes any keys not included in the update. Use `+"`"+`secrets set`+"`"+` 
 	AddBoolFlag(cmdUpdate, doctl.ArgForce, doctl.ArgShortForce, false, "Replace the secret without prompting when keys would be removed.")
 	AddStringSliceFlag(cmdUpdate, doctl.ArgSecretValue, "", nil, secretValueFlagDesc)
 	AddStringFlag(cmdUpdate, doctl.ArgSecretFromEnvFile, "", "", "Path to an env file containing key-value pairs to store in the secret.")
-	cmdUpdate.Example = `The following example replaces a secret: doctl secrets update prod-db-creds --region nyc3 --replace --value password=@./pw.txt --value api_key=abc123`
+	cmdUpdate.Example = `The following example replaces a secret: doctl secrets update ` + exampleSecretName + ` --region nyc3 --replace --value ` + exampleSecretKey + `=@./value.txt --value ` + exampleSecretKeyAlt + `=` + exampleSecretValue
 
 	cmdDelete := CmdBuilder(cmd, RunCmdSecretsDelete, "delete <name>", "Delete a secret", `Schedules a secret container for soft deletion.`, Writer, aliasOpt("d", "rm"))
 	AddStringFlag(cmdDelete, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the secret without a confirmation prompt.")
-	cmdDelete.Example = `The following example deletes a secret: doctl secrets delete prod-db-creds --region nyc3 --force`
+	cmdDelete.Example = `The following example deletes a secret: doctl secrets delete ` + exampleSecretName + ` --region nyc3 --force`
 
 	cmdRestore := CmdBuilder(cmd, RunCmdSecretsRestore, "restore <name>", "Restore a secret", `Restores a secret container that was scheduled for deletion.`, Writer)
 	AddStringFlag(cmdRestore, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
-	cmdRestore.Example = `The following example restores a secret: doctl secrets restore prod-db-creds --region nyc3`
+	cmdRestore.Example = `The following example restores a secret: doctl secrets restore ` + exampleSecretName + ` --region nyc3`
 
 	return cmd
 }
