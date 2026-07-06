@@ -26,15 +26,15 @@ import (
 )
 
 var (
-	testSecretName       = "my-secret"
-	testSecretKey        = "key"
-	testSecretKey2       = "other-key"
-	testSecretKey3       = "third-key"
-	testSecretVal        = "value"
-	testSecretVal2       = "value-2"
-	testSecretVal3       = "value-3"
-	testSecretValNew     = "value-new"
-	testSecretValFromFile = "file-value"
+	testSecretName         = "my-secret"
+	testSecretKey          = "key"
+	testSecretKey2         = "other-key"
+	testSecretKey3         = "third-key"
+	testSecretVal          = "value"
+	testSecretVal2         = "value-2"
+	testSecretVal3         = "value-3"
+	testSecretValNew       = "value-new"
+	testSecretValFromFile  = "file-value"
 	testSecretValFromStdin = "stdin-value"
 
 	testSecretWriteResult = do.SecretWriteResult{
