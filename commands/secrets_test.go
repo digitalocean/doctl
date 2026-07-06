@@ -29,7 +29,7 @@ var (
 		SecretWriteResult: &godo.SecretWriteResult{
 			Name:    "prod-db-creds",
 			Region:  "nyc3",
-			Version: 1,
+			Version: 2,
 		},
 	}
 
@@ -40,6 +40,7 @@ var (
 			Version: 1,
 			Values: map[string]string{
 				"password": "super-secret",
+				"api_key":  "abc123",
 			},
 			CreatedAt: "2026-06-08T12:00:00Z",
 		},
@@ -58,7 +59,7 @@ var (
 func TestSecretsCommand(t *testing.T) {
 	cmd := Secrets()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "delete", "get", "list", "list-versions", "restore", "update")
+	assertCommandNames(t, cmd, "create", "delete", "get", "list", "list-versions", "restore", "set", "unset", "update")
 }
 
 func TestParseSecretValues(t *testing.T) {
@@ -128,8 +129,53 @@ func TestLoadSecretValuesFromEnvFile(t *testing.T) {
 }
 
 func TestMaskSecretValues(t *testing.T) {
-	masked := maskSecretValues(testSecret)
+	secret := cloneSecret(testSecret)
+	masked := maskSecretValues(secret)
 	assert.Equal(t, secretMaskedValue, masked.Values["password"])
+}
+
+func TestMergeSecretValues(t *testing.T) {
+	current := map[string]string{"password": "old", "api_key": "abc"}
+	updates := map[string]string{"password": "new", "token": "xyz"}
+
+	merged := mergeSecretValues(current, updates)
+	assert.Equal(t, map[string]string{
+		"password": "new",
+		"api_key":  "abc",
+		"token":    "xyz",
+	}, merged)
+}
+
+func TestUnsetSecretKeys(t *testing.T) {
+	current := map[string]string{"password": "secret", "api_key": "abc"}
+
+	values, err := unsetSecretKeys(current, []string{"api_key"})
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"password": "secret"}, values)
+}
+
+func TestUnsetSecretKeysMissingKey(t *testing.T) {
+	current := map[string]string{"password": "secret"}
+
+	_, err := unsetSecretKeys(current, []string{"api_key"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestUnsetSecretKeysRemovesAll(t *testing.T) {
+	current := map[string]string{"password": "secret"}
+
+	_, err := unsetSecretKeys(current, []string{"password"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "at least one key-value pair")
+}
+
+func TestRemovedSecretKeys(t *testing.T) {
+	current := map[string]string{"password": "secret", "api_key": "abc", "token": "xyz"}
+	next := map[string]string{"password": "secret"}
+
+	removed := removedSecretKeys(current, next)
+	assert.Equal(t, []string{"api_key", "token"}, removed)
 }
 
 func TestReadSecretValuesInteractive(t *testing.T) {
@@ -222,9 +268,53 @@ func TestRunCmdSecretsCreate(t *testing.T) {
 	})
 }
 
+func TestRunCmdSecretsSet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		secret := cloneSecret(testSecret)
+		request := &godo.SecretUpdateRequest{
+			Region:  "nyc3",
+			Version: 1,
+			Values: map[string]string{
+				"password": "new-secret",
+				"api_key":  "abc123",
+			},
+		}
+		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&secret, nil)
+		tm.secrets.EXPECT().Update("prod-db-creds", request).Return(&testSecretWriteResult, nil)
+
+		config.Args = []string{"prod-db-creds"}
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Doit.Set(config.NS, doctl.ArgSecretValue, []string{"password=new-secret"})
+
+		err := RunCmdSecretsSet(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRunCmdSecretsUnset(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		secret := cloneSecret(testSecret)
+		request := &godo.SecretUpdateRequest{
+			Region:  "nyc3",
+			Version: 1,
+			Values:  map[string]string{"password": "super-secret"},
+		}
+		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&secret, nil)
+		tm.secrets.EXPECT().Update("prod-db-creds", request).Return(&testSecretWriteResult, nil)
+
+		config.Args = []string{"prod-db-creds"}
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Doit.Set(config.NS, doctl.ArgKey, []string{"api_key"})
+
+		err := RunCmdSecretsUnset(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestRunCmdSecretsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&testSecret, nil)
+		secret := cloneSecret(testSecret)
+		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&secret, nil)
 
 		config.Args = []string{"prod-db-creds"}
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
@@ -236,7 +326,8 @@ func TestRunCmdSecretsGet(t *testing.T) {
 
 func TestRunCmdSecretsGetRaw(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&testSecret, nil)
+		secret := cloneSecret(testSecret)
+		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&secret, nil)
 
 		config.Args = []string{"prod-db-creds"}
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
@@ -283,37 +374,33 @@ func TestRunCmdSecretsListVersions(t *testing.T) {
 	})
 }
 
-func TestRunCmdSecretsUpdate(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		request := &godo.SecretUpdateRequest{
-			Region:  "nyc3",
-			Version: 1,
-			Values:  map[string]string{"password": "new-secret"},
-		}
-		tm.secrets.EXPECT().Update("prod-db-creds", request).Return(&testSecretWriteResult, nil)
-
+func TestRunCmdSecretsUpdateRequiresReplace(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
 		config.Args = []string{"prod-db-creds"}
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
-		config.Doit.Set(config.NS, doctl.ArgSecretVersion, 1)
 		config.Doit.Set(config.NS, doctl.ArgSecretValue, []string{"password=new-secret"})
 
 		err := RunCmdSecretsUpdate(config)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), doctl.ArgSecretReplace)
 	})
 }
 
-func TestRunCmdSecretsUpdateUsesCurrentVersion(t *testing.T) {
+func TestRunCmdSecretsUpdateReplace(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		secret := cloneSecret(testSecret)
 		request := &godo.SecretUpdateRequest{
 			Region:  "nyc3",
 			Version: 1,
 			Values:  map[string]string{"password": "new-secret"},
 		}
-		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&testSecret, nil)
+		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(&secret, nil)
 		tm.secrets.EXPECT().Update("prod-db-creds", request).Return(&testSecretWriteResult, nil)
 
 		config.Args = []string{"prod-db-creds"}
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Doit.Set(config.NS, doctl.ArgSecretReplace, true)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 		config.Doit.Set(config.NS, doctl.ArgSecretValue, []string{"password=new-secret"})
 
 		err := RunCmdSecretsUpdate(config)
@@ -373,28 +460,6 @@ func TestResolveSecretNameUsesArg(t *testing.T) {
 		name, err := resolveSecretName(config)
 		assert.NoError(t, err)
 		assert.Equal(t, "prod-db-creds", name)
-	})
-}
-
-func TestResolveSecretVersionUsesFlag(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgSecretVersion, 3)
-
-		version, err := resolveSecretVersion(config, "prod-db-creds", "nyc3")
-		assert.NoError(t, err)
-		assert.Equal(t, 3, version)
-	})
-}
-
-func TestResolveSecretVersionRequiresFlagWhenNonInteractive(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		defer withInteractive(false)()
-
-		tm.secrets.EXPECT().Get("prod-db-creds", "nyc3").Return(nil, assert.AnError)
-
-		_, err := resolveSecretVersion(config, "prod-db-creds", "nyc3")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), doctl.ArgSecretVersion)
 	})
 }
 

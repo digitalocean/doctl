@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
+	"sort"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -41,7 +41,6 @@ var exampleSecretRegions = []string{"nyc3", "sfo3", "ams3", "fra1", "sgp1", "lon
 
 const (
 	secretRegionFlagDesc  = "Region where the secret is stored. If omitted, you are prompted when running with --interactive."
-	secretVersionFlagDesc = "Current version of the secret to update. If omitted, the current version is used when it can be determined from the API."
 	secretValueFlagDesc   = "Key-value pair in key=value format (repeatable). Values may be read from a file with key=@path or from stdin with key=-. If omitted, keys and masked values are read with --interactive."
 	secretMaskedValue     = "********"
 )
@@ -103,15 +102,33 @@ Secret values are masked by default. Use --show to reveal them, or --key with --
 	AddStringFlag(cmdListVersions, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	cmdListVersions.Example = `The following example lists versions for a secret: doctl secrets list-versions prod-db-creds --region nyc3`
 
-	cmdUpdate := CmdBuilder(cmd, RunCmdSecretsUpdate, "update <name>", "Update a secret", `Updates a secret container by replacing all key-value pairs with a new version.
+	cmdSet := CmdBuilder(cmd, RunCmdSecretsSet, "set <name>", "Set keys on a secret", `Adds or updates key-value pairs on a secret without removing existing keys.
 
-This replaces the entire contents of the secret. Include every key you want to keep.`, Writer,
+Fetches the current secret, merges in the provided keys, and writes a new version.`, Writer,
+		displayerType(&displayers.SecretWriteResult{}))
+	AddStringFlag(cmdSet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
+	AddStringSliceFlag(cmdSet, doctl.ArgSecretValue, "", nil, secretValueFlagDesc)
+	AddStringFlag(cmdSet, doctl.ArgSecretFromEnvFile, "", "", "Path to an env file containing key-value pairs to store in the secret.")
+	cmdSet.Example = `The following example sets a key on a secret: doctl secrets set prod-db-creds --region nyc3 --value password=@./pw.txt`
+
+	cmdUnset := CmdBuilder(cmd, RunCmdSecretsUnset, "unset <name>", "Remove keys from a secret", `Removes key-value pairs from a secret without affecting other keys.
+
+Fetches the current secret, removes the specified keys, and writes a new version.`, Writer,
+		displayerType(&displayers.SecretWriteResult{}))
+	AddStringFlag(cmdUnset, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
+	AddStringSliceFlag(cmdUnset, doctl.ArgKey, "", nil, "Key to remove (repeatable).", requiredOpt())
+	cmdUnset.Example = `The following example removes a key from a secret: doctl secrets unset prod-db-creds --region nyc3 --key api_key`
+
+	cmdUpdate := CmdBuilder(cmd, RunCmdSecretsUpdate, "update <name>", "Replace a secret", `Replaces all key-value pairs in a secret with a new version.
+
+This removes any keys not included in the update. Use `+"`"+`secrets set`+"`"+` to add or change keys, or `+"`"+`secrets unset`+"`"+` to remove keys. Pass `+"`"+`--replace`+"`"+` to confirm full replacement.`, Writer,
 		displayerType(&displayers.SecretWriteResult{}))
 	AddStringFlag(cmdUpdate, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
-	AddIntFlag(cmdUpdate, doctl.ArgSecretVersion, "", 0, secretVersionFlagDesc)
+	AddBoolFlag(cmdUpdate, doctl.ArgSecretReplace, "", false, "Replace the entire secret. Required to perform a full replacement.")
+	AddBoolFlag(cmdUpdate, doctl.ArgForce, doctl.ArgShortForce, false, "Replace the secret without prompting when keys would be removed.")
 	AddStringSliceFlag(cmdUpdate, doctl.ArgSecretValue, "", nil, secretValueFlagDesc)
 	AddStringFlag(cmdUpdate, doctl.ArgSecretFromEnvFile, "", "", "Path to an env file containing key-value pairs to store in the secret.")
-	cmdUpdate.Example = `The following example updates a secret: doctl secrets update prod-db-creds --region nyc3 --version 1 --value password=@./pw.txt`
+	cmdUpdate.Example = `The following example replaces a secret: doctl secrets update prod-db-creds --region nyc3 --replace --value password=@./pw.txt --value api_key=abc123`
 
 	cmdDelete := CmdBuilder(cmd, RunCmdSecretsDelete, "delete <name>", "Delete a secret", `Schedules a secret container for soft deletion.`, Writer, aliasOpt("d", "rm"))
 	AddStringFlag(cmdDelete, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
@@ -249,8 +266,8 @@ func RunCmdSecretsListVersions(c *CmdConfig) error {
 	return c.Display(&displayers.SecretVersions{Versions: versions})
 }
 
-// RunCmdSecretsUpdate updates a secret container.
-func RunCmdSecretsUpdate(c *CmdConfig) error {
+// RunCmdSecretsSet adds or updates keys on a secret without removing existing keys.
+func RunCmdSecretsSet(c *CmdConfig) error {
 	name, err := resolveSecretName(c)
 	if err != nil {
 		return err
@@ -261,26 +278,88 @@ func RunCmdSecretsUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	version, err := resolveSecretVersion(c, name, region)
+	updates, err := collectSecretValuesForSet(c, name, region)
 	if err != nil {
 		return err
 	}
 
-	values, err := collectSecretValuesForUpdate(c, name, region)
+	current, err := c.Secrets().Get(name, region)
 	if err != nil {
 		return err
 	}
 
-	result, err := c.Secrets().Update(name, &godo.SecretUpdateRequest{
-		Region:  region,
-		Version: version,
-		Values:  values,
-	})
+	values := mergeSecretValues(current.Values, updates)
+
+	return writeSecret(c, name, region, values, current.Version)
+}
+
+// RunCmdSecretsUnset removes keys from a secret.
+func RunCmdSecretsUnset(c *CmdConfig) error {
+	name, err := resolveSecretName(c)
 	if err != nil {
 		return err
 	}
 
-	return c.Display(&displayers.SecretWriteResult{Result: *result})
+	region, err := resolveSecretRegion(c)
+	if err != nil {
+		return err
+	}
+
+	keys, err := collectSecretKeys(c)
+	if err != nil {
+		return err
+	}
+
+	current, err := c.Secrets().Get(name, region)
+	if err != nil {
+		return err
+	}
+
+	values, err := unsetSecretKeys(current.Values, keys)
+	if err != nil {
+		return err
+	}
+
+	return writeSecret(c, name, region, values, current.Version)
+}
+
+// RunCmdSecretsUpdate replaces all key-value pairs in a secret.
+func RunCmdSecretsUpdate(c *CmdConfig) error {
+	replace, err := c.Doit.GetBool(c.NS, doctl.ArgSecretReplace)
+	if err != nil {
+		return err
+	}
+	if !replace {
+		return fmt.Errorf("update replaces all keys; use `secrets set` to add or change keys, `secrets unset` to remove keys, or pass --%s to replace the entire secret",
+			doctl.ArgSecretReplace)
+	}
+
+	name, err := resolveSecretName(c)
+	if err != nil {
+		return err
+	}
+
+	region, err := resolveSecretRegion(c)
+	if err != nil {
+		return err
+	}
+
+	newValues, err := collectSecretValuesForReplace(c, name, region)
+	if err != nil {
+		return err
+	}
+
+	current, err := c.Secrets().Get(name, region)
+	if err != nil {
+		return err
+	}
+
+	removed := removedSecretKeys(current.Values, newValues)
+	if err := confirmSecretKeysRemoved(c, name, removed); err != nil {
+		return err
+	}
+
+	return writeSecret(c, name, region, newValues, current.Version)
 }
 
 // RunCmdSecretsDelete schedules a secret container for deletion.
@@ -344,7 +423,7 @@ func collectSecretValues(c *CmdConfig) (map[string]string, error) {
 	return readSecretValuesInteractive(os.Stderr, secretValuePromptCreate(name, region))
 }
 
-func collectSecretValuesForUpdate(c *CmdConfig, name, region string) (map[string]string, error) {
+func collectSecretValuesForSet(c *CmdConfig, name, region string) (map[string]string, error) {
 	values, err := loadSecretValuesFromFlags(c)
 	if err != nil {
 		return nil, err
@@ -357,7 +436,117 @@ func collectSecretValuesForUpdate(c *CmdConfig, name, region string) (map[string
 			doctl.ArgSecretValue, doctl.ArgSecretFromEnvFile)
 	}
 
-	return readSecretValuesInteractive(os.Stderr, secretValuePromptUpdate(name, region))
+	return readSecretValuesInteractive(os.Stderr, secretValuePromptSet(name, region))
+}
+
+func collectSecretValuesForReplace(c *CmdConfig, name, region string) (map[string]string, error) {
+	values, err := loadSecretValuesFromFlags(c)
+	if err != nil {
+		return nil, err
+	}
+	if len(values) > 0 {
+		return values, nil
+	}
+	if !secretsPromptsEnabled() {
+		return nil, fmt.Errorf("must specify at least one --%s or --%s when running with --no-interactive",
+			doctl.ArgSecretValue, doctl.ArgSecretFromEnvFile)
+	}
+
+	return readSecretValuesInteractive(os.Stderr, secretValuePromptReplace(name, region))
+}
+
+func collectSecretKeys(c *CmdConfig) ([]string, error) {
+	keys, err := c.Doit.GetStringSlice(c.NS, doctl.ArgKey)
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("must specify at least one --%s", doctl.ArgKey)
+	}
+
+	return keys, nil
+}
+
+func mergeSecretValues(current, updates map[string]string) map[string]string {
+	values := cloneStringMap(current)
+	for key, value := range updates {
+		values[key] = value
+	}
+
+	return values
+}
+
+func unsetSecretKeys(current map[string]string, keys []string) (map[string]string, error) {
+	values := cloneStringMap(current)
+	for _, key := range keys {
+		if _, ok := values[key]; !ok {
+			return nil, fmt.Errorf("key %q not found in secret", key)
+		}
+		delete(values, key)
+	}
+	if len(values) == 0 {
+		return nil, fmt.Errorf("secret must contain at least one key-value pair")
+	}
+
+	return values, nil
+}
+
+func removedSecretKeys(current, next map[string]string) []string {
+	var removed []string
+	for key := range current {
+		if _, ok := next[key]; !ok {
+			removed = append(removed, key)
+		}
+	}
+	sort.Strings(removed)
+
+	return removed
+}
+
+func confirmSecretKeysRemoved(c *CmdConfig, name string, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if force {
+		return nil
+	}
+
+	message := fmt.Sprintf("remove keys %s from %q", strings.Join(keys, ", "), name)
+	if err := AskForConfirm(message); err != nil {
+		if err == ErrExitSilently {
+			return err
+		}
+		return errOperationAborted
+	}
+
+	return nil
+}
+
+func writeSecret(c *CmdConfig, name, region string, values map[string]string, version int) error {
+	result, err := c.Secrets().Update(name, &godo.SecretUpdateRequest{
+		Region:  region,
+		Version: version,
+		Values:  values,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.Display(&displayers.SecretWriteResult{Result: *result})
+}
+
+func cloneStringMap(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+
+	return out
 }
 
 func loadSecretValuesFromFlags(c *CmdConfig) (map[string]string, error) {
@@ -435,54 +624,6 @@ func resolveSecretName(c *CmdConfig) (string, error) {
 	return name, nil
 }
 
-func resolveSecretVersion(c *CmdConfig, name, region string) (int, error) {
-	versionPtr, err := c.Doit.GetIntPtr(c.NS, doctl.ArgSecretVersion)
-	if err != nil {
-		return 0, err
-	}
-	if versionPtr != nil {
-		if *versionPtr <= 0 {
-			return 0, fmt.Errorf("version must be a positive integer")
-		}
-		return *versionPtr, nil
-	}
-
-	secret, err := c.Secrets().Get(name, region)
-	if err == nil && secret.Version > 0 {
-		secretNotice("Using current version %d of %q in %s", secret.Version, name, region)
-		c.Doit.Set(c.NS, doctl.ArgSecretVersion, secret.Version)
-		return secret.Version, nil
-	}
-
-	if !secretsPromptsEnabled() {
-		return 0, fmt.Errorf("must specify --%s when the current version cannot be determined", doctl.ArgSecretVersion)
-	}
-
-	versionStr, err := input.New(
-		fmt.Sprintf("Enter the current version of %q in %s to update: ", name, region),
-		input.WithRequired(),
-		input.WithValidator(func(value string) error {
-			version, err := strconv.Atoi(strings.TrimSpace(value))
-			if err != nil || version <= 0 {
-				return fmt.Errorf("version must be a positive integer")
-			}
-			return nil
-		}),
-	).Prompt()
-	if err != nil {
-		return 0, err
-	}
-
-	version, err := strconv.Atoi(strings.TrimSpace(versionStr))
-	if err != nil {
-		return 0, fmt.Errorf("version must be a positive integer")
-	}
-
-	c.Doit.Set(c.NS, doctl.ArgSecretVersion, version)
-
-	return version, nil
-}
-
 func resolveSecretRegion(c *CmdConfig) (string, error) {
 	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
@@ -535,8 +676,14 @@ Submit an empty key name when you are done.`, name, region)
 Submit an empty key name when you are done.`
 }
 
-func secretValuePromptUpdate(name, region string) string {
-	return fmt.Sprintf(`Updating secret %q in %s.
+func secretValuePromptSet(name, region string) string {
+	return fmt.Sprintf(`Setting keys on secret %q in %s.
+Enter key-value pairs to add or update. Existing keys not listed here are kept.
+Submit an empty key name when you are done.`, name, region)
+}
+
+func secretValuePromptReplace(name, region string) string {
+	return fmt.Sprintf(`Replacing secret %q in %s.
 This replaces all key-value pairs in the secret. Enter the full set you want to keep.
 Submit an empty key name when you are done.`, name, region)
 }

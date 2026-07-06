@@ -720,6 +720,8 @@ const (
 	ArgSecretShow = "show"
 	// ArgSecretRaw writes a single secret value to stdout with no formatting.
 	ArgSecretRaw = "raw"
+	// ArgSecretReplace replaces all key-value pairs in a secret on update.
+	ArgSecretReplace = "replace"
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
