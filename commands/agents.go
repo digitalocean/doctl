@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -210,7 +211,9 @@ func Agents() *Command {
 			Short:   "Launch and manage hosted DigitalOcean agent sessions",
 			Long: `The ` + "`" + `doctl agents` + "`" + ` commands manage hosted coding-agent sessions running in DigitalOcean sandboxes.
 
-A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.`,
+A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.
+
+Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.`,
 			GroupID: hostedAgentsGroup,
 		},
 	}
@@ -225,13 +228,13 @@ The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching t
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin.`, requiredOpt())
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml`
 
-	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session-id>",
+	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
 		"Attach to an agent session",
 		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. A dropped SSE connection is reconnected automatically and the server replays any events missed during the gap.
 
 When a HITL approval is pending, the prompt switches to a compact approve/reject/defer menu showing the command awaiting approval. In an interactive terminal you can move the highlight with the arrow keys and press Enter, or resolve directly with a single keystroke -- no Enter required: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
 		Writer, aliasOpt("chat"))
-	cmdAttach.Example = `doctl agents attach sess_abc123`
+	cmdAttach.Example = `doctl agents attach sess_abc123; doctl agents attach my-session-name`
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
 		"List agent sessions",
@@ -244,40 +247,40 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent`
 
-	CmdBuilder(cmd, RunAgentsShow, "show <session-id>",
+	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show a single agent session",
 		"Prints details of one agent session.",
 		Writer, aliasOpt("get"),
 		displayerType(&displayers.HostedAgentSession{}))
 
-	CmdBuilder(cmd, RunAgentsLogs, "logs <session-id>",
+	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the full event history for a session",
 		"Replays the full server-side event history for a session, then exits.",
 		Writer)
 
-	CmdBuilder(cmd, RunAgentsApprove, "approve <session-id> <request-id> <approve|reject|defer>",
+	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
 		"Approves, rejects, or defers a pending HITL request without attaching the interactive TUI. The resolution source is recorded as `RESOLUTION_SOURCE_OUT_OF_BAND`. Inside an attached session, the same outcomes are available as `/a`, `/r`, `/d` slash commands.",
 		Writer)
 
-	CmdBuilder(cmd, RunAgentsDestroy, "destroy <session-id>",
+	CmdBuilder(cmd, RunAgentsDestroy, "destroy <session>",
 		"Destroy an agent session",
 		"Tears down the workspace sandbox and removes the session.",
 		Writer, aliasOpt("rm"))
 
-	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session-id>",
+	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
 		"Pause an agent session",
 		"Pauses a running agent session. The sandbox is preserved and the session can be resumed later with `doctl agents resume`.",
 		Writer)
 	cmdPause.Example = `doctl agents pause sess_abc123`
 
-	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session-id>",
+	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
 		"Resume a paused agent session",
 		"Resumes a previously paused agent session.",
 		Writer)
 	cmdResume.Example = `doctl agents resume sess_abc123`
 
-	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session-id>",
+	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
 		`Streams a local file (or tar archive) into the session's sandbox workspace.
 
@@ -289,7 +292,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as a tar archive to extract at the destination")
 	cmdUpload.Example = `doctl agents upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
 
-	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session-id>",
+	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
 		`Streams a file (or tar archive) out of the session's sandbox workspace and writes it to a local destination.
 
@@ -415,12 +418,78 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	return opt, nil
 }
 
+// sessionIDPrefix is a legacy/opaque session-ID prefix. Session IDs are
+// canonically UUIDs, but we also accept this prefix defensively.
+const sessionIDPrefix = "sess_"
+
+// sessionUUIDRe matches the canonical hosted-agent session ID format (a UUID,
+// e.g. 019f275e-96dc-7ea0-98bd-9ecf2a0834c3). It lets us tell an ID from a
+// human-supplied session name without an API round-trip.
+var sessionUUIDRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// looksLikeSessionID reports whether ref is already a session ID rather than a
+// name, so it can be used directly without a name lookup.
+func looksLikeSessionID(ref string) bool {
+	return sessionUUIDRe.MatchString(ref) || strings.HasPrefix(ref, sessionIDPrefix)
+}
+
+// resolveSessionRef turns a user-supplied session reference into a session ID.
+// References that already look like an ID (a UUID) are returned unchanged with
+// no API call, so existing scripts keep working with no added latency.
+// Otherwise the reference is treated as a session name and resolved via a
+// name-filtered list; the match must be unique.
+func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
+	if ref == "" {
+		return "", errors.New("a session ID or name is required")
+	}
+	if looksLikeSessionID(ref) {
+		return ref, nil
+	}
+
+	sessions, _, err := svc.ListSessions(&godo.HostedAgentSessionListOptions{Name: ref})
+	if err != nil {
+		return "", fmt.Errorf("resolving session name %q: %w", ref, err)
+	}
+
+	// The server-side name filter may be fuzzy, so keep only exact matches to
+	// avoid resolving the wrong session.
+	matches := make([]do.HostedAgentSession, 0, len(sessions))
+	for _, s := range sessions {
+		if s.Name == ref {
+			matches = append(matches, s)
+		}
+	}
+
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("no session found with name %q; pass a session ID or run `doctl agents list` to see available sessions", ref)
+	case 1:
+		return matches[0].SessionID, nil
+	default:
+		ids := make([]string, 0, len(matches))
+		for _, m := range matches {
+			ids = append(ids, m.SessionID)
+		}
+		return "", fmt.Errorf("multiple sessions are named %q; pass a session ID instead: %s", ref, strings.Join(ids, ", "))
+	}
+}
+
+// sessionIDArg validates that exactly one positional argument was supplied and
+// resolves it (either a session ID or a session name) to a session ID.
+func sessionIDArg(c *CmdConfig) (string, error) {
+	if err := ensureOneArg(c); err != nil {
+		return "", err
+	}
+	return resolveSessionRef(c.HostedAgents(), c.Args[0])
+}
+
 // RunAgentsShow prints one session.
 func RunAgentsShow(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
 		return err
 	}
-	sess, err := c.HostedAgents().GetSession(c.Args[0])
+	sess, err := c.HostedAgents().GetSession(sessionID)
 	if err != nil {
 		return err
 	}
@@ -429,37 +498,40 @@ func RunAgentsShow(c *CmdConfig) error {
 
 // RunAgentsDestroy tears down a session.
 func RunAgentsDestroy(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
 		return err
 	}
-	if err := c.HostedAgents().DestroySession(c.Args[0]); err != nil {
+	if err := c.HostedAgents().DestroySession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s destroyed", c.Args[0])
+	notice("Session %s destroyed", sessionID)
 	return nil
 }
 
 // RunAgentsPause pauses a session.
 func RunAgentsPause(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
 		return err
 	}
-	if err := c.HostedAgents().PauseSession(c.Args[0]); err != nil {
+	if err := c.HostedAgents().PauseSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s paused", c.Args[0])
+	notice("Session %s paused", sessionID)
 	return nil
 }
 
 // RunAgentsResume resumes a paused session.
 func RunAgentsResume(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
 		return err
 	}
-	if err := c.HostedAgents().ResumeSession(c.Args[0]); err != nil {
+	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s resumed", c.Args[0])
+	notice("Session %s resumed", sessionID)
 	return nil
 }
 
@@ -467,10 +539,10 @@ func RunAgentsResume(c *CmdConfig) error {
 // workspace sandbox. The SHA-256 of the payload is computed up front and
 // forwarded so the guest can verify what it received.
 func RunAgentsUpload(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
 		return err
 	}
-	sessionID := c.Args[0]
 
 	workspacePath, err := c.Doit.GetString(c.NS, doctl.ArgAgentWorkspacePath)
 	if err != nil {
@@ -532,10 +604,10 @@ func hashFile(r io.Reader) (string, error) {
 // into place once the transfer verifies; a truncated or corrupted transfer is
 // discarded.
 func RunAgentsDownload(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
 		return err
 	}
-	sessionID := c.Args[0]
 
 	workspacePath, err := c.Doit.GetString(c.NS, doctl.ArgAgentWorkspacePath)
 	if err != nil {
@@ -620,7 +692,11 @@ func RunAgentsApprove(c *CmdConfig) error {
 	if len(c.Args) > 3 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	sessionID, requestID := c.Args[0], c.Args[1]
+	sessionID, err := resolveSessionRef(c.HostedAgents(), c.Args[0])
+	if err != nil {
+		return err
+	}
+	requestID := c.Args[1]
 	outcome, err := hitlOutcomeFor(c.Args[2])
 	if err != nil {
 		return err
@@ -650,7 +726,8 @@ func hitlOutcomeFor(s string) (godo.HostedAgentHITLOutcome, error) {
 
 // RunAgentsLogs replays the full event history for a session, then exits.
 func RunAgentsLogs(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
 		return err
 	}
 	stylingEnabled = detectStyling()
@@ -658,7 +735,7 @@ func RunAgentsLogs(c *CmdConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	stream, err := c.HostedAgents().StreamSession(ctx, c.Args[0], &godo.HostedAgentSessionStreamOptions{
+	stream, err := c.HostedAgents().StreamSession(ctx, sessionID, &godo.HostedAgentSessionStreamOptions{
 		ReplayOnly: true,
 	})
 	if err != nil {
@@ -693,8 +770,11 @@ func RunAgentsAttach(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	sessionID := c.Args[0]
 	svc := c.HostedAgents()
+	sessionID, err := resolveSessionRef(svc, c.Args[0])
+	if err != nil {
+		return err
+	}
 
 	stylingEnabled = detectStyling()
 

@@ -205,6 +205,120 @@ func TestRunAgentsResume(t *testing.T) {
 	})
 }
 
+func TestResolveSessionRef(t *testing.T) {
+	t.Run("uuid id passes through without a lookup", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			// No ListSessions expectation: a UUID ref must not trigger a name
+			// lookup. Pins the regression where real UUID IDs were mistaken for
+			// names.
+			const id = "019f275e-96dc-7ea0-98bd-9ecf2a0834c3"
+			got, err := resolveSessionRef(config.HostedAgents(), id)
+			assert.NoError(t, err)
+			assert.Equal(t, id, got)
+		})
+	})
+
+	t.Run("prefixed id passes through without a lookup", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			got, err := resolveSessionRef(config.HostedAgents(), "sess_abc123")
+			assert.NoError(t, err)
+			assert.Equal(t, "sess_abc123", got)
+		})
+	})
+
+	t.Run("empty ref errors", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			_, err := resolveSessionRef(config.HostedAgents(), "")
+			assert.Error(t, err)
+		})
+	})
+
+	t.Run("unique name resolves to id", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "my-agent"}).
+				Return([]do.HostedAgentSession{
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_42", Name: "my-agent"}},
+				}, "", nil)
+
+			got, err := resolveSessionRef(config.HostedAgents(), "my-agent")
+			assert.NoError(t, err)
+			assert.Equal(t, "sess_42", got)
+		})
+	})
+
+	t.Run("fuzzy server matches are filtered to exact name", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "demo"}).
+				Return([]do.HostedAgentSession{
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1", Name: "demo"}},
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_2", Name: "demo-2"}},
+				}, "", nil)
+
+			got, err := resolveSessionRef(config.HostedAgents(), "demo")
+			assert.NoError(t, err)
+			assert.Equal(t, "sess_1", got)
+		})
+	})
+
+	t.Run("no match errors", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "ghost"}).
+				Return([]do.HostedAgentSession{}, "", nil)
+
+			_, err := resolveSessionRef(config.HostedAgents(), "ghost")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "no session found")
+		})
+	})
+
+	t.Run("ambiguous name errors and lists ids", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "dup"}).
+				Return([]do.HostedAgentSession{
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_a", Name: "dup"}},
+					{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_b", Name: "dup"}},
+				}, "", nil)
+
+			_, err := resolveSessionRef(config.HostedAgents(), "dup")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "sess_a")
+			assert.Contains(t, err.Error(), "sess_b")
+		})
+	})
+
+	t.Run("list error is surfaced", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListSessions(&godo.HostedAgentSessionListOptions{Name: "boom"}).
+				Return(nil, "", errors.New("network down"))
+
+			_, err := resolveSessionRef(config.HostedAgents(), "boom")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "network down")
+		})
+	})
+}
+
+// TestRunAgentsDestroy_ByName verifies a session command resolves a name to an
+// ID (via the name-filtered list) before acting on it.
+func TestRunAgentsDestroy_ByName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListSessions(&godo.HostedAgentSessionListOptions{Name: "my-agent"}).
+			Return([]do.HostedAgentSession{
+				{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_resolved", Name: "my-agent"}},
+			}, "", nil)
+		tm.hostedAgents.EXPECT().DestroySession("sess_resolved").Return(nil)
+
+		config.Args = []string{"my-agent"}
+		assert.NoError(t, RunAgentsDestroy(config))
+	})
+}
+
 func TestRunAgentsApprove(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		want := &godo.HostedAgentResolveHITLRequest{
