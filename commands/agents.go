@@ -299,7 +299,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		"Download a file from a session workspace",
 		`Streams a file (or tar archive) out of the session's sandbox workspace and writes it to a local destination.
 
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download is chunked and the integrity SHA-256 arrives as an HTTP trailer after the body; doctl hashes the bytes as it writes them and verifies the trailer once the stream completes. A missing trailer or checksum mismatch means the transfer was truncated or corrupted, so the partial output is discarded and the command fails.`,
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download is chunked and an integrity SHA-256 may arrive as an HTTP trailer after the body; doctl hashes the bytes as it writes them and, when the trailer is present, verifies it once the stream completes. Integrity verification is best-effort: a checksum mismatch discards the partial output and fails the command, but a missing trailer is tolerated because some HTTP intermediaries (e.g. Cloudflare) strip response trailers.`,
 		Writer)
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
@@ -658,11 +658,12 @@ func hashFile(r io.Reader) (string, error) {
 }
 
 // RunAgentsDownload streams a file (or tar archive) out of a session workspace.
-// The godo download body hashes the stream and verifies the SHA-256 trailer
-// only after the body is fully drained, so the integrity error surfaces at EOF
-// (or on Close). The bytes are written to a temporary file first and only moved
-// into place once the transfer verifies; a truncated or corrupted transfer is
-// discarded.
+// The godo download body hashes the stream and, when the server sends the
+// SHA-256 trailer, verifies it after the body is fully drained, so a checksum
+// mismatch surfaces at EOF (or on Close). A missing trailer is tolerated (some
+// intermediaries strip response trailers). The bytes are written to a temporary
+// file first and only moved into place once the transfer completes without a
+// verification error; a mismatched transfer is discarded.
 func RunAgentsDownload(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
@@ -702,11 +703,11 @@ func RunAgentsDownload(c *CmdConfig) error {
 	return nil
 }
 
-// streamDownloadToFile copies the verified download body into saveTo. It writes
-// to a sibling temp file and renames it into place only after the body reads to
-// EOF and Close both succeed (which is where godo surfaces an invalid integrity
-// trailer). On any failure the temp file is removed so no partial/corrupt
-// output is left behind.
+// streamDownloadToFile copies the download body into saveTo. It writes to a
+// sibling temp file and renames it into place only after the body reads to EOF
+// and Close both succeed (which is where godo surfaces a checksum mismatch when
+// the integrity trailer is present). On any failure the temp file is removed so
+// no partial/corrupt output is left behind.
 func streamDownloadToFile(dl *godo.HostedAgentWorkspaceDownload, saveTo string) (int64, error) {
 	dir := filepath.Dir(saveTo)
 	tmp, err := os.CreateTemp(dir, ".doctl-download-*")
@@ -721,7 +722,8 @@ func streamDownloadToFile(dl *godo.HostedAgentWorkspaceDownload, saveTo string) 
 	}
 
 	// io.Copy drains the body to EOF, which triggers godo's trailer
-	// verification; a missing or mismatched checksum is returned here.
+	// verification; a mismatched checksum is returned here (a missing trailer
+	// is tolerated by godo and does not error).
 	written, copyErr := io.Copy(tmp, dl.Body)
 	closeBodyErr := dl.Body.Close()
 	if copyErr != nil {

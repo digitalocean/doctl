@@ -371,9 +371,9 @@ type HostedAgentWorkspaceDownloadRequest struct {
 }
 
 // HostedAgentWorkspaceDownload is the streaming result of DownloadWorkspace.
-// Body verifies the SHA-256 integrity trailer: read it to EOF and then Close
-// it. A missing trailer or checksum mismatch is surfaced as an error; discard
-// the output in that case.
+// Body verifies the SHA-256 integrity trailer when present: read it to EOF
+// and then Close it. A checksum mismatch errors; a missing trailer is
+// tolerated (some intermediaries strip response trailers).
 type HostedAgentWorkspaceDownload struct {
 	Body io.ReadCloser
 	// IsArchive is true when the payload is a tar stream.
@@ -676,8 +676,8 @@ func (s *HostedAgentsServiceOp) UploadWorkspace(ctx context.Context, sessionID s
 }
 
 // DownloadWorkspace streams a file (or tar archive) out of the session
-// workspace. Callers MUST read the returned Body to EOF and then Close it; both
-// verify the SHA-256 integrity trailer.
+// workspace. Callers MUST read the returned Body to EOF and then Close it;
+// both verify the SHA-256 integrity trailer when present.
 func (s *HostedAgentsServiceOp) DownloadWorkspace(ctx context.Context, sessionID string, input *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
@@ -727,8 +727,8 @@ func (s *HostedAgentsServiceOp) DownloadWorkspace(ctx context.Context, sessionID
 }
 
 // workspaceDownloadBody hashes bytes as they are read and verifies the
-// X-Content-Sha256 trailer at EOF, since Go only populates response trailers
-// once the body is fully consumed.
+// X-Content-Sha256 trailer at EOF. A missing trailer is tolerated; only a
+// mismatch is a hard failure.
 type workspaceDownloadBody struct {
 	resp     *http.Response
 	body     io.ReadCloser
@@ -758,8 +758,8 @@ func (b *workspaceDownloadBody) verify() error {
 
 	want := strings.TrimSpace(b.resp.Trailer.Get(workspaceContentSHA256Header))
 	if want == "" {
-		b.verr = errors.New("hosted agents: missing X-Content-Sha256 integrity trailer; workspace download was truncated or corrupted")
-		return b.verr
+		// Some intermediaries (e.g. Cloudflare) strip response trailers.
+		return nil
 	}
 	got := hex.EncodeToString(b.hasher.Sum(nil))
 	if !strings.EqualFold(want, got) {

@@ -2762,7 +2762,6 @@ type CreateModelEvaluationRunRequest struct {
 	MetricUUIDs              []string                  `json:"metric_uuids,omitempty"`
 	Name                     string                    `json:"name,omitempty"`
 	PresetName               string                    `json:"preset_name,omitempty"`
-	SaveAsPreset             bool                      `json:"save_as_preset,omitempty"`
 	Source                   string                    `json:"source,omitempty"`
 	StarMetric               *StarMetric               `json:"star_metric,omitempty"`
 }
