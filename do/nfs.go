@@ -282,18 +282,7 @@ func nfsAccessPointFromGodo(ap *godo.NfsAccessPoint) *NfsAccessPoint {
 		UpdatedAt: ap.UpdatedAt,
 		IsDefault: ap.IsDefault,
 		VpcID:     ap.VpcID,
-		VpcIDs:    nfsAccessPointVpcIDs(ap),
 	}
-}
-
-func nfsAccessPointVpcIDs(ap *godo.NfsAccessPoint) []string {
-	if len(ap.VpcIDs) > 0 {
-		return ap.VpcIDs
-	}
-	if ap.VpcID != nil && *ap.VpcID != "" {
-		return []string{*ap.VpcID}
-	}
-	return nil
 }
 
 func nfsAccessPointActionResponseFromGodo(resp *godo.NfsAccessPointActionResponse) *NfsAccessPointActionResponse {
