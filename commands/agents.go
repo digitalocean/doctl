@@ -233,7 +233,7 @@ Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`me
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
 		"Attach to an agent session",
-		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. A dropped SSE connection is reconnected automatically and the server replays any events missed during the gap.
+		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. If the SSE connection drops, doctl shows Reconnecting... and retries automatically (5 attempts with backoff). If reconnection fails, it prints an error and stops the stream.
 
 When a HITL approval is pending, the prompt switches to a compact approve/reject/defer menu showing the command awaiting approval. In an interactive terminal you can move the highlight with the arrow keys and press Enter, or resolve directly with a single keystroke -- no Enter required: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
 		Writer, aliasOpt("chat"))
@@ -878,7 +878,7 @@ func runAttach(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io
 	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
 		return attachLoopTTY(c, svc, sessionID, f, state)
 	}
-	return attachLoop(c, svc, sessionID, in, state.pending)
+	return attachLoop(c, svc, sessionID, in, state)
 }
 
 // eventCursor holds the EventID of the latest event rendered. The stream
@@ -904,12 +904,26 @@ func (c *eventCursor) get() string {
 	return c.id
 }
 
-// Backoff schedule for reconnects. Caps at maxReconnectBackoff and retries
-// indefinitely; users break out via Ctrl-D (which cancels ctx) or Ctrl-C.
+// Backoff schedule for auto reconnects between attempts. maxAutoReconnectAttempts
+// bounds CONSECUTIVE failed reconnects, not the lifetime total: a connection
+// that stays healthy resets the budget (see healthyStreamDuration).
 const (
-	initialReconnectBackoff = 1 * time.Second
-	maxReconnectBackoff     = 30 * time.Second
+	maxAutoReconnectAttempts = 5
+	initialReconnectBackoff  = 1 * time.Second
+	maxReconnectBackoff      = 30 * time.Second
+	msgReconnecting          = "Reconnecting..."
+	msgReconnectFailed       = "Failed to reconnect to agent activity stream."
 )
+
+// healthyStreamDuration is how long a stream must stay connected before a
+// mid-stream drop is treated as a normal idle timeout (which resets the
+// reconnect budget) rather than a failing connection. This lets a long, quiet
+// attach survive an unbounded number of server idle drops while still giving up
+// on a session that keeps dropping immediately. Overridable in tests.
+var healthyStreamDuration = 30 * time.Second
+
+// streamClock returns the current time; overridable in tests.
+var streamClock = time.Now
 
 // thinkingState shows a spinner between RunStarted and the first real
 // output. Animates above the prompt when out is a *promptDisplay; falls back
@@ -995,8 +1009,11 @@ func (s *thinkingState) animate(ctx context.Context, d *promptDisplay, done chan
 }
 
 // streamWithReconnect drains the SSE iterator and reconnects on transient
-// errors with bounded backoff, replaying from cursor.get(). Returns when ctx
-// is cancelled or the server cleanly ends the stream.
+// errors. It shows Reconnecting... before each retry and gives up (printing
+// msgReconnectFailed) only after maxAutoReconnectAttempts CONSECUTIVE failures.
+// A connection that stays up for at least healthyStreamDuration before dropping
+// is treated as a normal server idle timeout and resets the failure budget, so
+// a long, quiet attach can recover from an unbounded number of idle drops.
 func streamWithReconnect(
 	ctx context.Context,
 	svc do.HostedAgentsService,
@@ -1006,43 +1023,47 @@ func streamWithReconnect(
 	cursor *eventCursor,
 	thinking *thinkingState,
 ) {
-	backoff := initialReconnectBackoff
-	attempt := 0
-	// Persisted across reconnects so a cursor-replayed segment is still
-	// recognised as a repeat.
 	dedup := &tokenDeduper{}
+	backoff := initialReconnectBackoff
+	failures := 0
+	reconnecting := false
 
 	for {
 		if ctx.Err() != nil {
 			return
 		}
 
+		// Show the reconnect notice on every attempt after the first, whether
+		// this is a retry after a failed connect or a fresh reconnect after a
+		// healthy idle drop. The failure budget below governs when we give up;
+		// it must not gate this message, since a healthy drop resets the budget
+		// to zero and would otherwise silently suppress the notice.
+		if reconnecting {
+			fmt.Fprintf(out, "\n%s\n", msgReconnecting)
+		}
+		reconnecting = true
+
 		opt := &godo.HostedAgentSessionStreamOptions{ReplayFrom: cursor.get()}
 		stream, err := svc.StreamSession(ctx, sessionID, opt)
 		if err != nil {
-			if ctx.Err() != nil {
-				return
-			}
 			thinking.stop()
 			if msg, terminal := classifyStreamError(err); terminal {
 				fmt.Fprintln(out, msg)
 				return
 			}
-			attempt++
-			fmt.Fprintf(out, "\n(reconnect attempt %d failed: %v; retrying in %s)\n", attempt, err, backoff)
-			if !sleepCtx(ctx, backoff) {
+			failures++
+			if failures >= maxAutoReconnectAttempts {
+				fmt.Fprintf(out, "\n%s\n", msgReconnectFailed)
+				return
+			}
+			if !reconnectSleepFn(ctx, backoff) {
 				return
 			}
 			backoff = nextBackoff(backoff)
 			continue
 		}
 
-		if attempt > 0 {
-			fmt.Fprintln(out, "(reconnected)")
-		}
-		attempt = 0
-		backoff = initialReconnectBackoff
-
+		connectedAt := streamClock()
 		drainStream(stream, out, pending, cursor, thinking, dedup)
 		streamErr := stream.Err()
 		stream.Close()
@@ -1050,21 +1071,46 @@ func streamWithReconnect(
 		if ctx.Err() != nil {
 			return
 		}
-		if streamErr == nil {
-			return
-		}
+
 		thinking.stop()
-		if msg, terminal := classifyStreamError(streamErr); terminal {
-			fmt.Fprintln(out, msg)
+
+		// An interactive attach ends only when the user detaches (ctx cancel,
+		// handled above) or the session is gone (a terminal error). Any other
+		// stream end is an unexpected drop we reconnect from — including a clean
+		// EOF, which is how a server idle-timeout close looks (err == nil). A
+		// genuinely finished session surfaces as a terminal error (404) on the
+		// next connect, which stops the loop below.
+		if streamErr != nil {
+			if msg, terminal := classifyStreamError(streamErr); terminal {
+				fmt.Fprintln(out, msg)
+				return
+			}
+		}
+
+		// A drop after a healthy, long-lived connection is a normal idle
+		// timeout, not a failing session: reset the budget and backoff so the
+		// attach keeps recovering. Only rapid, back-to-back drops accumulate
+		// toward the give-up limit.
+		if streamClock().Sub(connectedAt) >= healthyStreamDuration {
+			failures = 0
+			backoff = initialReconnectBackoff
+		} else {
+			failures++
+		}
+		if failures >= maxAutoReconnectAttempts {
+			fmt.Fprintf(out, "\n%s\n", msgReconnectFailed)
 			return
 		}
-		fmt.Fprintf(out, "\n(stream dropped: %v; reconnecting in %s)\n", streamErr, backoff)
-		if !sleepCtx(ctx, backoff) {
+		if !reconnectSleepFn(ctx, backoff) {
 			return
 		}
 		backoff = nextBackoff(backoff)
 	}
 }
+
+// reconnectSleepFn is the backoff wait between reconnect attempts. Tests may
+// replace it to avoid real-time delays.
+var reconnectSleepFn = sleepCtx
 
 // classifyStreamError returns (user-facing message, terminal). Terminal
 // errors stop the reconnect loop (auth, missing session, V0 single-connection
@@ -1367,7 +1413,8 @@ func (p *pendingHITL) reset() int {
 	return n
 }
 
-func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, pending *pendingHITL) error {
+func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState) error {
+	pending := state.pending
 	reader := bufio.NewReader(in)
 	for {
 		fmt.Fprint(c.Out, "\n", attachPrompt(pending))
@@ -1659,7 +1706,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
 		// Raw mode unavailable; fall back to bufio line mode.
-		return attachLoop(c, svc, sessionID, f, state.pending)
+		return attachLoop(c, svc, sessionID, f, state)
 	}
 	defer term.Restore(fd, oldState)
 

@@ -15,20 +15,25 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -42,6 +47,13 @@ metadata:
 spec:
   adapter: opencode
 `
+
+func testAttachStateFromPending(pending *pendingHITL) *attachState {
+	if pending == nil {
+		pending = &pendingHITL{}
+	}
+	return &attachState{pending: pending}
+}
 
 func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
@@ -890,7 +902,7 @@ func TestAttachLoopAcknowledgesSend(t *testing.T) {
 			Return(&godo.HostedAgentSendInputResponse{RunID: "run-abc"}, nil)
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("What is the capital of France?\n"), &pendingHITL{})
+			strings.NewReader("What is the capital of France?\n"), testAttachStateFromPending(nil))
 		assert.NoError(t, err)
 		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
@@ -928,7 +940,7 @@ func TestAttachLoopHITLLetterShortcut(t *testing.T) {
 					}).Return(nil)
 
 				err := attachLoop(config, config.HostedAgents(), "sess_x",
-					strings.NewReader(tc.input), pending)
+					strings.NewReader(tc.input), testAttachStateFromPending(pending))
 				assert.NoError(t, err)
 				assert.Contains(t, buf.String(), "[y/n/d] > ")
 			})
@@ -956,7 +968,7 @@ func TestAttachLoopClearsPendingAfterResolve(t *testing.T) {
 		// Line-mode `y\n` exercises the same resolve+clear path; the raw-mode
 		// branch shares the clearIf call.
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\n"), pending)
+			strings.NewReader("y\n"), testAttachStateFromPending(pending))
 		assert.NoError(t, err)
 		assert.Equal(t, "", pending.get(), "pending must be cleared after successful resolve")
 	})
@@ -978,7 +990,7 @@ func TestAttachLoopKeepsPendingOnResolveError(t *testing.T) {
 			}).Return(errors.New("boom"))
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\n"), pending)
+			strings.NewReader("y\n"), testAttachStateFromPending(pending))
 		assert.NoError(t, err)
 		assert.Equal(t, "hitl_42", pending.get(), "pending must survive a failed resolve")
 		assert.Contains(t, buf.String(), "resolve failed: boom")
@@ -996,7 +1008,7 @@ func TestAttachLoopHITLShortcutIgnoredWithoutPending(t *testing.T) {
 			Return(&godo.HostedAgentSendInputResponse{RunID: "run-1"}, nil)
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\n"), &pendingHITL{})
+			strings.NewReader("y\n"), testAttachStateFromPending(&pendingHITL{}))
 		assert.NoError(t, err)
 		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
@@ -1150,7 +1162,7 @@ func TestSingleKeystrokeAdvancesQueue(t *testing.T) {
 		}).Return(nil)
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\nn\n"), pending)
+			strings.NewReader("y\nn\n"), testAttachStateFromPending(pending))
 		assert.NoError(t, err)
 		assert.Equal(t, 0, pending.len(), "both HITLs must be drained after two keystrokes")
 
@@ -1696,4 +1708,352 @@ func TestNextBackoff(t *testing.T) {
 		}
 	}
 	assert.Equal(t, maxReconnectBackoff, cur)
+}
+
+// stubReconnectSleep replaces reconnect backoff with a no-op so streamWithReconnect
+// tests finish instantly.
+func stubReconnectSleep(t *testing.T) {
+	t.Helper()
+	old := reconnectSleepFn
+	reconnectSleepFn = func(ctx context.Context, _ time.Duration) bool {
+		return ctx.Err() == nil
+	}
+	t.Cleanup(func() { reconnectSleepFn = old })
+}
+
+// sseFrame builds one SPI-style SSE data frame for hosted-agent stream tests.
+func sseFrame(eventID, eventType, dataJSON string) string {
+	return fmt.Sprintf(
+		"id: %s\ndata: {\"event_id\":\"%s\",\"type\":\"%s\",\"data\":%s}\n\n",
+		eventID, eventID, eventType, dataJSON,
+	)
+}
+
+// hostedAgentSSEHandler writes one SSE body and optionally fails mid-stream.
+func hostedAgentSSEHandler(sse string, trailErr error) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		if trailErr == nil {
+			_, _ = io.WriteString(w, sse)
+			return
+		}
+		_, _ = io.WriteString(w, sse)
+		// Trailing corrupt frame forces a non-EOF stream error after the first event.
+		_, _ = io.WriteString(w, "data: {not-json\n\n")
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+	}
+}
+
+func openHostedAgentStream(t *testing.T, client *godo.Client, opt *godo.HostedAgentSessionStreamOptions) *godo.HostedAgentSessionStream {
+	t.Helper()
+	stream, _, err := client.HostedAgents.StreamSession(context.Background(), "sess_x", opt)
+	assert.NoError(t, err)
+	return stream
+}
+
+// terminalStreamErr is the 404 a gone session returns; it stops the reconnect
+// loop. Tests append it as the final StreamSession result so a stream that ends
+// on a clean EOF (which now reconnects) has a deterministic terminal stop.
+func terminalStreamErr() *godo.ErrorResponse {
+	return &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: http.StatusNotFound,
+			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/sessions/sess_x/stream", nil),
+		},
+		Message: "session not found",
+	}
+}
+
+// TestStreamWithReconnect_cleanEOFReconnectsUntilTerminal pins the idle-timeout
+// fix: a clean EOF (how a server idle-timeout close looks, err == nil) is an
+// unexpected drop for an interactive attach, so it must reconnect rather than
+// silently exit. The attach stops only once the session is gone, which surfaces
+// as a terminal error (404) on the next connect.
+func TestStreamWithReconnect_cleanEOFReconnectsUntilTerminal(t *testing.T) {
+	stubReconnectSleep(t)
+
+	evt := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	gomock.InOrder(
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				return openHostedAgentStream(t, client, opt), nil
+			}),
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			Return(nil, terminalStreamErr()),
+	)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.Contains(t, out, "session updated")
+	assert.Contains(t, out, msgReconnecting, "a clean EOF must trigger a visible reconnect")
+	assert.NotContains(t, out, msgReconnectFailed)
+}
+
+func TestStreamWithReconnect_successOnSecondAttempt(t *testing.T) {
+	stubReconnectSleep(t)
+
+	evt := sseFrame("evt-2", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	gomock.InOrder(
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			Return(nil, errors.New("connection reset by peer")),
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				stream := openHostedAgentStream(t, client, opt)
+				return stream, nil
+			}),
+		// The successful connect ends on a clean EOF, which now reconnects;
+		// a terminal error gives the loop a deterministic stop.
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			Return(nil, terminalStreamErr()),
+	)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.Contains(t, out, msgReconnecting)
+	assert.Contains(t, out, "session updated")
+	assert.NotContains(t, out, msgReconnectFailed)
+}
+
+func TestStreamWithReconnect_exhaustedRetries(t *testing.T) {
+	stubReconnectSleep(t)
+
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		Return(nil, errors.New("connection reset by peer")).
+		Times(maxAutoReconnectAttempts)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.Equal(t, maxAutoReconnectAttempts-1, strings.Count(out, msgReconnecting))
+	assert.Contains(t, out, msgReconnectFailed)
+}
+
+func TestStreamWithReconnect_terminalErrorNoRetry(t *testing.T) {
+	stubReconnectSleep(t)
+
+	authErr := &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/sessions/sess_x/stream", nil),
+		},
+		Message: "token expired",
+	}
+
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		Return(nil, authErr).
+		Times(1)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.Contains(t, out, "Authentication failed")
+	assert.NotContains(t, out, msgReconnecting)
+	assert.NotContains(t, out, msgReconnectFailed)
+}
+
+func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
+	stubReconnectSleep(t)
+
+	evt1 := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	evt2 := sseFrame("evt-2", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+
+	var (
+		mu    sync.Mutex
+		calls int
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		n := calls
+		replayFrom := r.URL.Query().Get("replay_from")
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		switch n {
+		case 1:
+			assert.Empty(t, replayFrom)
+			_, _ = io.WriteString(w, evt1)
+			_, _ = io.WriteString(w, "data: {not-json\n\n")
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+		case 2:
+			assert.Equal(t, "evt-1", replayFrom)
+			_, _ = io.WriteString(w, evt2)
+		default:
+			t.Fatalf("unexpected stream call %d", n)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	gomock.InOrder(
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				stream := openHostedAgentStream(t, client, opt)
+				return stream, nil
+			}),
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				stream := openHostedAgentStream(t, client, opt)
+				return stream, nil
+			}),
+		// evt2 ends on a clean EOF, which now reconnects; stop deterministically.
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			Return(nil, terminalStreamErr()),
+	)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.Equal(t, 2, strings.Count(out, "session updated"), "both events should render after replay reconnect")
+	assert.Contains(t, out, msgReconnecting)
+	assert.NotContains(t, out, msgReconnectFailed)
+}
+
+// TestStreamWithReconnect_healthyDropsDoNotExhaustBudget pins the fix for the
+// long-quiet-attach bug: a stream that stays connected past healthyStreamDuration
+// before each idle drop must reset the reconnect budget, so an attach survives
+// more than maxAutoReconnectAttempts idle timeouts over its lifetime.
+func TestStreamWithReconnect_healthyDropsDoNotExhaustBudget(t *testing.T) {
+	stubReconnectSleep(t)
+
+	// Treat every drop as a healthy (long-lived) connection.
+	oldDur := healthyStreamDuration
+	healthyStreamDuration = 0
+	t.Cleanup(func() { healthyStreamDuration = oldDur })
+
+	// More idle drops than the consecutive-failure budget, then a terminal stop.
+	idleDrops := maxAutoReconnectAttempts + 3
+
+	var (
+		mu    sync.Mutex
+		calls int
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		n := calls
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		frame := sseFrame(fmt.Sprintf("evt-%d", n), string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+		_, _ = io.WriteString(w, frame)
+		// Force a non-EOF mid-stream drop after delivering an event.
+		_, _ = io.WriteString(w, "data: {not-json\n\n")
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	gomock.InOrder(
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				return openHostedAgentStream(t, client, opt), nil
+			}).
+			Times(idleDrops),
+		mock.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			Return(nil, terminalStreamErr()),
+	)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.NotContains(t, out, msgReconnectFailed, "healthy idle drops must not exhaust the reconnect budget")
+	assert.Equal(t, idleDrops, strings.Count(out, "session updated"), "every reconnect should keep rendering events")
+	// A healthy drop resets the failure budget to zero, but the user must still
+	// see the reconnect notice on each reconnect attempt after the first.
+	assert.Equal(t, idleDrops, strings.Count(out, msgReconnecting), "each healthy-drop reconnect must still show the notice")
+}
+
+// TestStreamWithReconnect_rapidDropsExhaustBudget pins the complementary case:
+// back-to-back drops that never stay connected long enough still give up after
+// maxAutoReconnectAttempts.
+func TestStreamWithReconnect_rapidDropsExhaustBudget(t *testing.T) {
+	stubReconnectSleep(t)
+
+	// No connection is ever considered healthy.
+	oldDur := healthyStreamDuration
+	healthyStreamDuration = time.Hour
+	t.Cleanup(func() { healthyStreamDuration = oldDur })
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		// Immediately corrupt frame => mid-stream drop with no useful event.
+		_, _ = io.WriteString(w, "data: {not-json\n\n")
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+			return openHostedAgentStream(t, client, opt), nil
+		}).
+		Times(maxAutoReconnectAttempts)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.Equal(t, maxAutoReconnectAttempts-1, strings.Count(out, msgReconnecting))
+	assert.Contains(t, out, msgReconnectFailed)
 }
