@@ -32,6 +32,7 @@ const (
 	databaseEvictionPolicyPath                   = databaseBasePath + "/%s/eviction_policy"
 	databaseSQLModePath                          = databaseBasePath + "/%s/sql_mode"
 	databaseFirewallRulesPath                    = databaseBasePath + "/%s/firewall"
+	databaseDOSettingsPath                       = databaseBasePath + "/%s/do_settings"
 	databaseOptionsPath                          = databaseBasePath + "/options"
 	databaseUpgradeMajorVersionPath              = databaseBasePath + "/%s/upgrade"
 	databasePromoteReplicaToPrimaryPath          = databaseReplicaPath + "/promote"
@@ -160,6 +161,8 @@ type DatabasesService interface {
 	SetSQLMode(context.Context, string, ...string) (*Response, error)
 	GetFirewallRules(context.Context, string) ([]DatabaseFirewallRule, *Response, error)
 	UpdateFirewallRules(context.Context, string, *DatabaseUpdateFirewallRulesRequest) (*Response, error)
+	GetDOSettings(context.Context, string) (*DOSettings, *Response, error)
+	UpdateDOSettings(context.Context, string, *DatabaseUpdateDOSettingsRequest) (*Response, error)
 	GetPostgreSQLConfig(context.Context, string) (*PostgreSQLConfig, *Response, error)
 	GetRedisConfig(context.Context, string) (*RedisConfig, *Response, error)
 	GetValkeyConfig(context.Context, string) (*ValkeyConfig, *Response, error)
@@ -273,6 +276,16 @@ type ServiceAddress struct {
 // DOSettings contains DigitalOcean-specific settings for a database cluster.
 type DOSettings struct {
 	ServiceCnames []string `json:"service_cnames,omitempty"`
+}
+
+// doSettingsRoot is the API response wrapper for GET /do_settings.
+type doSettingsRoot struct {
+	DOSettings *DOSettings `json:"do_settings"`
+}
+
+// DatabaseUpdateDOSettingsRequest is used to update DigitalOcean-specific settings.
+type DatabaseUpdateDOSettingsRequest struct {
+	DOSettings *DOSettings `json:"do_settings"`
 }
 
 // DatabaseUser represents a user in the database
@@ -1738,6 +1751,31 @@ func (svc *DatabasesServiceOp) GetFirewallRules(ctx context.Context, databaseID 
 func (svc *DatabasesServiceOp) UpdateFirewallRules(ctx context.Context, databaseID string, firewallRulesReq *DatabaseUpdateFirewallRulesRequest) (*Response, error) {
 	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
 	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, firewallRulesReq)
+	if err != nil {
+		return nil, err
+	}
+	return svc.client.Do(ctx, req, nil)
+}
+
+// GetDOSettings retrieves the DigitalOcean-specific settings for a given cluster.
+func (svc *DatabasesServiceOp) GetDOSettings(ctx context.Context, databaseID string) (*DOSettings, *Response, error) {
+	path := fmt.Sprintf(databaseDOSettingsPath, databaseID)
+	root := new(doSettingsRoot)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.DOSettings, resp, nil
+}
+
+// UpdateDOSettings updates the DigitalOcean-specific settings for a given cluster.
+func (svc *DatabasesServiceOp) UpdateDOSettings(ctx context.Context, databaseID string, updateReq *DatabaseUpdateDOSettingsRequest) (*Response, error) {
+	path := fmt.Sprintf(databaseDOSettingsPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, updateReq)
 	if err != nil {
 		return nil, err
 	}
