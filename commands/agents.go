@@ -287,7 +287,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		"Upload a file into a session workspace",
 		`Streams a local file (or tar archive) into the session's sandbox workspace.
 
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is a tar that the server should extract at the destination. doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. Files larger than 500 MiB are rejected by the server.`,
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is a tar that the server should extract at the destination. doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. Files larger than 50 MiB are rejected.`,
 		Writer,
 		displayerType(&displayers.HostedAgentWorkspaceUpload{}))
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
@@ -299,7 +299,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		"Download a file from a session workspace",
 		`Streams a file (or tar archive) out of the session's sandbox workspace and writes it to a local destination.
 
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download is chunked and an integrity SHA-256 may arrive as an HTTP trailer after the body; doctl hashes the bytes as it writes them and, when the trailer is present, verifies it once the stream completes. Integrity verification is best-effort: a checksum mismatch discards the partial output and fails the command, but a missing trailer is tolerated because some HTTP intermediaries (e.g. Cloudflare) strip response trailers.`,
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download is chunked and an integrity SHA-256 may arrive as an HTTP trailer after the body; doctl hashes the bytes as it writes them and, when the trailer is present, verifies it once the stream completes. Integrity verification is best-effort: a checksum mismatch discards the partial output and fails the command, but a missing trailer is tolerated because some HTTP intermediaries (e.g. Cloudflare) strip response trailers. Files larger than 50 MiB are rejected by the server.`,
 		Writer)
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
@@ -595,6 +595,11 @@ func RunAgentsResume(c *CmdConfig) error {
 	return nil
 }
 
+// maxWorkspaceTransferBytes is the workspace upload/download size cap enforced by
+// harness-api (internal/sandbox/workspace.go MaxWorkspaceUploadBytes). Keep
+// upload/download help text in sync with this value.
+const maxWorkspaceTransferBytes = 50 << 20 // 50 MiB
+
 // RunAgentsUpload streams a local file (or tar archive) into a session's
 // workspace sandbox. The SHA-256 of the payload is computed up front and
 // forwarded so the guest can verify what it received.
@@ -617,11 +622,19 @@ func RunAgentsUpload(c *CmdConfig) error {
 		return err
 	}
 
-	f, err := os.Open(localFile)
+	info, err := os.Stat(localFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("opening upload file: %s does not exist", localFile)
 		}
+		return fmt.Errorf("opening upload file: %w", err)
+	}
+	if info.Size() > maxWorkspaceTransferBytes {
+		return fmt.Errorf("upload file exceeds the workspace transfer limit of 50 MiB (%d bytes)", maxWorkspaceTransferBytes)
+	}
+
+	f, err := os.Open(localFile)
+	if err != nil {
 		return fmt.Errorf("opening upload file: %w", err)
 	}
 	defer f.Close()

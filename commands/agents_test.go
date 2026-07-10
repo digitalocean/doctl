@@ -563,6 +563,24 @@ func TestRunAgentsUpload_MissingFile(t *testing.T) {
 	})
 }
 
+func TestRunAgentsUpload_FileTooLarge(t *testing.T) {
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "big.bin")
+	f, err := os.Create(localPath)
+	assert.NoError(t, err)
+	assert.NoError(t, f.Truncate(maxWorkspaceTransferBytes+1))
+	assert.NoError(t, f.Close())
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "big.bin")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		err := RunAgentsUpload(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "50 MiB")
+	})
+}
+
 func TestRunAgentsDownload(t *testing.T) {
 	dir := t.TempDir()
 	saveTo := filepath.Join(dir, "out.go")
