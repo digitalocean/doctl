@@ -42,6 +42,8 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 
 	AddStringFlag(cmdVPCNATGatewayCreate, doctl.ArgProjectID, "", "",
 		"Indicates which project to associate the VPC NAT Gateway with. If not specified, the VPC NAT Gateway will be placed in your default project.")
+	AddStringFlag(cmdVPCNATGatewayCreate, doctl.ArgVPCNATGatewayIP, "", "",
+		"An optional BYOIP address to assign as the public egress IP. Must be an unassigned BYOIP on your account in the same region. When omitted, a system-allocated reserved IP is provisioned.")
 
 	CmdBuilder(cmd, RunVPCNATGatewayGet, "get <gateway-id>", "Get a VPC NAT Gateway", "", Writer, displayerType(&displayers.VPCNATGateways{}))
 
@@ -147,6 +149,20 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 					return err
 				}
 				r.ProjectID = projectID
+				return nil
+			},
+			func() error {
+				ip, err := c.Doit.GetString(c.NS, doctl.ArgVPCNATGatewayIP)
+				if err != nil {
+					return err
+				}
+				if ip != "" {
+					r.Egresses = &godo.Egresses{
+						PublicGateways: []*godo.PublicGateway{
+							{IP: ip},
+						},
+					}
+				}
 				return nil
 			},
 		)

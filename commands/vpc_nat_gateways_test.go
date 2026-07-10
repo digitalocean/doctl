@@ -81,6 +81,11 @@ func TestVPCNATGatewayCreate(t *testing.T) {
 					VpcUUID: "05790d02-c7e0-47d6-a917-5b4cf68cf5b7",
 				},
 			},
+			Egresses: &godo.Egresses{
+				PublicGateways: []*godo.PublicGateway{
+					{IP: "203.0.113.10"},
+				},
+			},
 			UDPTimeoutSeconds:  30,
 			ICMPTimeoutSeconds: 30,
 			TCPTimeoutSeconds:  30,
@@ -98,6 +103,7 @@ func TestVPCNATGatewayCreate(t *testing.T) {
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayICMPTimeout, "30")
 		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayTCPTimeout, "30")
 		c.Doit.Set(c.NS, doctl.ArgProjectID, "0b0f3f3c-1d2e-4e5f-8f3c-0b0f3f3c1d2e")
+		c.Doit.Set(c.NS, doctl.ArgVPCNATGatewayIP, "203.0.113.10")
 
 		err := RunVPCNATGatewayCreate(c)
 		assert.NoError(t, err)
