@@ -148,7 +148,7 @@ func TestAuthForcesLowercase(t *testing.T) {
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
 
-		contexts = map[string]any{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
+		contexts = map[string]any{"TestCapitalCase": "token"}
 		viper.Set("auth-contexts", contexts)
 		viper.Set("context", "contextDoesntExist")
 		err = RunAuthSwitch(config)
@@ -160,6 +160,47 @@ func TestAuthForcesLowercase(t *testing.T) {
 		// should not error because context does exist
 		assert.NoError(t, err)
 	})
+}
+
+func TestAuthSwitchDefaultDoesNotPolluteAuthContexts(t *testing.T) {
+	cfw := cfgFileWriter
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set("auth-contexts", nil)
+		viper.Set("context", nil)
+		Context = ""
+	}()
+
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		viper.Set("auth-contexts", map[string]any{
+			"teamadf": "dop_v1_fake_team_token",
+		})
+		viper.Set("context", "teamadf")
+		Context = doctl.ArgDefaultContext
+
+		err := RunAuthSwitch(config)
+		assert.NoError(t, err)
+		assert.Equal(t, doctl.ArgDefaultContext, viper.GetString("context"))
+
+		contexts := viper.GetStringMapString("auth-contexts")
+		_, hasDefault := contexts[doctl.ArgDefaultContext]
+		assert.False(t, hasDefault, "auth-contexts must not contain a synthetic default entry")
+		assert.Equal(t, "dop_v1_fake_team_token", contexts["teamadf"])
+	})
+}
+
+func TestEnsureDefaultContextAndKeysOrderDoesNotMutate(t *testing.T) {
+	contexts := map[string]any{
+		"teamadf": true,
+	}
+
+	keys := ensureDefaultContextAndKeysOrder(contexts)
+	assert.Equal(t, []string{doctl.ArgDefaultContext, "teamadf"}, keys)
+
+	_, hasDefault := contexts[doctl.ArgDefaultContext]
+	assert.False(t, hasDefault, "ensureDefaultContextAndKeysOrder must not mutate the input map")
 }
 
 func TestAuthList(t *testing.T) {
