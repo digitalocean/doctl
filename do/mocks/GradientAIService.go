@@ -131,6 +131,21 @@ func (mr *MockGradientAIServiceMockRecorder) CreateAgentAPIKey(agentID, req any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgentAPIKey", reflect.TypeOf((*MockGradientAIService)(nil).CreateAgentAPIKey), agentID, req)
 }
 
+// CreateAnthropicAPIKey mocks base method.
+func (m *MockGradientAIService) CreateAnthropicAPIKey(anthropicAPIKeyCreate *godo.AnthropicAPIKeyCreateRequest) (*do.AnthropicApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAnthropicAPIKey", anthropicAPIKeyCreate)
+	ret0, _ := ret[0].(*do.AnthropicApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAnthropicAPIKey indicates an expected call of CreateAnthropicAPIKey.
+func (mr *MockGradientAIServiceMockRecorder) CreateAnthropicAPIKey(anthropicAPIKeyCreate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnthropicAPIKey", reflect.TypeOf((*MockGradientAIService)(nil).CreateAnthropicAPIKey), anthropicAPIKeyCreate)
+}
+
 // CreateFunctionRoute mocks base method.
 func (m *MockGradientAIService) CreateFunctionRoute(id string, req *godo.FunctionRouteCreateRequest) (*do.Agent, error) {
 	m.ctrl.T.Helper()
@@ -216,6 +231,21 @@ func (m *MockGradientAIService) DeleteAgentRoute(parentAgentID, childAgentID str
 func (mr *MockGradientAIServiceMockRecorder) DeleteAgentRoute(parentAgentID, childAgentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAgentRoute", reflect.TypeOf((*MockGradientAIService)(nil).DeleteAgentRoute), parentAgentID, childAgentID)
+}
+
+// DeleteAnthropicAPIKey mocks base method.
+func (m *MockGradientAIService) DeleteAnthropicAPIKey(anthropicApiKeyId string) (*do.AnthropicApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAnthropicAPIKey", anthropicApiKeyId)
+	ret0, _ := ret[0].(*do.AnthropicApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteAnthropicAPIKey indicates an expected call of DeleteAnthropicAPIKey.
+func (mr *MockGradientAIServiceMockRecorder) DeleteAnthropicAPIKey(anthropicApiKeyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAnthropicAPIKey", reflect.TypeOf((*MockGradientAIService)(nil).DeleteAnthropicAPIKey), anthropicApiKeyId)
 }
 
 // DeleteFunctionRoute mocks base method.
@@ -304,6 +334,21 @@ func (m *MockGradientAIService) GetAgent(agentID string) (*do.Agent, error) {
 func (mr *MockGradientAIServiceMockRecorder) GetAgent(agentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgent", reflect.TypeOf((*MockGradientAIService)(nil).GetAgent), agentID)
+}
+
+// GetAnthropicAPIKey mocks base method.
+func (m *MockGradientAIService) GetAnthropicAPIKey(anthropicApiKeyId string) (*do.AnthropicApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnthropicAPIKey", anthropicApiKeyId)
+	ret0, _ := ret[0].(*do.AnthropicApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnthropicAPIKey indicates an expected call of GetAnthropicAPIKey.
+func (mr *MockGradientAIServiceMockRecorder) GetAnthropicAPIKey(anthropicApiKeyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnthropicAPIKey", reflect.TypeOf((*MockGradientAIService)(nil).GetAnthropicAPIKey), anthropicApiKeyId)
 }
 
 // GetIndexingJob mocks base method.
@@ -396,6 +441,21 @@ func (mr *MockGradientAIServiceMockRecorder) ListAgents() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgents", reflect.TypeOf((*MockGradientAIService)(nil).ListAgents))
 }
 
+// ListAgentsByAnthropicAPIKey mocks base method.
+func (m *MockGradientAIService) ListAgentsByAnthropicAPIKey(anthropicApiKeyId string) (do.Agents, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAgentsByAnthropicAPIKey", anthropicApiKeyId)
+	ret0, _ := ret[0].(do.Agents)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAgentsByAnthropicAPIKey indicates an expected call of ListAgentsByAnthropicAPIKey.
+func (mr *MockGradientAIServiceMockRecorder) ListAgentsByAnthropicAPIKey(anthropicApiKeyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgentsByAnthropicAPIKey", reflect.TypeOf((*MockGradientAIService)(nil).ListAgentsByAnthropicAPIKey), anthropicApiKeyId)
+}
+
 // ListAgentsByOpenAIAPIKey mocks base method.
 func (m *MockGradientAIService) ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (do.Agents, error) {
 	m.ctrl.T.Helper()
@@ -409,6 +469,21 @@ func (m *MockGradientAIService) ListAgentsByOpenAIAPIKey(openaiApiKeyId string) 
 func (mr *MockGradientAIServiceMockRecorder) ListAgentsByOpenAIAPIKey(openaiApiKeyId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgentsByOpenAIAPIKey", reflect.TypeOf((*MockGradientAIService)(nil).ListAgentsByOpenAIAPIKey), openaiApiKeyId)
+}
+
+// ListAnthropicAPIKeys mocks base method.
+func (m *MockGradientAIService) ListAnthropicAPIKeys() (do.AnthropicApiKeys, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAnthropicAPIKeys")
+	ret0, _ := ret[0].(do.AnthropicApiKeys)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAnthropicAPIKeys indicates an expected call of ListAnthropicAPIKeys.
+func (mr *MockGradientAIServiceMockRecorder) ListAnthropicAPIKeys() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnthropicAPIKeys", reflect.TypeOf((*MockGradientAIService)(nil).ListAnthropicAPIKeys))
 }
 
 // ListAvailableModels mocks base method.
@@ -589,6 +664,21 @@ func (m *MockGradientAIService) UpdateAgentVisibility(agentID string, req *godo.
 func (mr *MockGradientAIServiceMockRecorder) UpdateAgentVisibility(agentID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentVisibility", reflect.TypeOf((*MockGradientAIService)(nil).UpdateAgentVisibility), agentID, req)
+}
+
+// UpdateAnthropicAPIKey mocks base method.
+func (m *MockGradientAIService) UpdateAnthropicAPIKey(anthropicApiKeyId string, anthropicAPIKeyUpdate *godo.AnthropicAPIKeyUpdateRequest) (*do.AnthropicApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAnthropicAPIKey", anthropicApiKeyId, anthropicAPIKeyUpdate)
+	ret0, _ := ret[0].(*do.AnthropicApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAnthropicAPIKey indicates an expected call of UpdateAnthropicAPIKey.
+func (mr *MockGradientAIServiceMockRecorder) UpdateAnthropicAPIKey(anthropicApiKeyId, anthropicAPIKeyUpdate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnthropicAPIKey", reflect.TypeOf((*MockGradientAIService)(nil).UpdateAnthropicAPIKey), anthropicApiKeyId, anthropicAPIKeyUpdate)
 }
 
 // UpdateFunctionRoute mocks base method.

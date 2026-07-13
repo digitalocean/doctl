@@ -614,6 +614,56 @@ func (o *OpenAiApiKey) KV() []map[string]any {
 	return out
 }
 
+type AnthropicApiKey struct {
+	AnthropicApiKeys do.AnthropicApiKeys
+}
+
+var _ Displayable = &AnthropicApiKey{}
+
+func (a *AnthropicApiKey) JSON(out io.Writer) error {
+	return writeJSON(a.AnthropicApiKeys, out)
+}
+
+func (a *AnthropicApiKey) Cols() []string {
+	return []string{
+		"Name",
+		"UUID",
+		"CreatedAt",
+		"CreatedBy",
+		"UpdatedAt",
+		"DeletedAt",
+	}
+}
+
+func (a *AnthropicApiKey) ColMap() map[string]string {
+	return map[string]string{
+		"Name":      "Name",
+		"UUID":      "UUID",
+		"CreatedAt": "Created At",
+		"CreatedBy": "Created By",
+		"UpdatedAt": "Updated At",
+		"DeletedAt": "Deleted At",
+	}
+}
+
+func (a *AnthropicApiKey) KV() []map[string]any {
+	if a == nil || a.AnthropicApiKeys == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(a.AnthropicApiKeys))
+	for _, key := range a.AnthropicApiKeys {
+		out = append(out, map[string]any{
+			"Name":      key.Name,
+			"UUID":      key.Uuid,
+			"CreatedAt": key.CreatedAt,
+			"CreatedBy": key.CreatedBy,
+			"UpdatedAt": key.UpdatedAt,
+			"DeletedAt": key.DeletedAt,
+		})
+	}
+	return out
+}
+
 type Model struct {
 	Models []do.Model
 }
