@@ -323,8 +323,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Customizes expanders used by cluster-autoscaler. The autoscaler will apply each expander from the provided comma-separated list to narrow down the selection of node types created to scale up, until either a single node type is left, or the list of expanders is exhausted. Available expanders: random, least-waste, priority. If this flag is empty, autoscaler will use its default expanders.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableP2pOciRegistryPlugin, "", false,
-		"Creates the cluster with Peer-to-peer OCI registry plugin enabled. Defaults to false. To enable it, supply --enable-p2p-oci-registry-plugin=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnablePeerToPeerOciRegistryPlugin, "", false,
+		"Creates the cluster with Peer-to-peer OCI registry plugin enabled. Defaults to false. To enable it, supply --enable-peer-to-peer-oci-registry-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableCorednsAutoscaler, "", false,
 		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --enable-coredns-autoscaler=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
@@ -393,8 +393,8 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRoutingAgent, "", false,
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
-	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableP2pOciRegistryPlugin, "", false,
-		"Creates the cluster with Peer-to-peer OCI registry plugin enabled. Defaults to false. To enable it, supply --enable-p2p-oci-registry-plugin=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnablePeerToPeerOciRegistryPlugin, "", false,
+		"Creates the cluster with Peer-to-peer OCI registry plugin enabled. Defaults to false. To enable it, supply --enable-peer-to-peer-oci-registry-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableCorednsAutoscaler, "", false,
 		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). To always enable it, supply --enable-coredns-autoscaler=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
@@ -1859,7 +1859,7 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
-	enableP2pOciRegistryPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableP2pOciRegistryPlugin)
+	enableP2pOciRegistryPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnablePeerToPeerOciRegistryPlugin)
 	if err != nil {
 		return err
 	}
@@ -2100,7 +2100,7 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		}
 	}
 
-	enableP2pOciRegistryPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableP2pOciRegistryPlugin)
+	enableP2pOciRegistryPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnablePeerToPeerOciRegistryPlugin)
 	if err != nil {
 		return err
 	}
