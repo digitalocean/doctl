@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -16,8 +14,8 @@ import (
 
 // rpcMessage is a JSON-RPC 2.0 envelope, minus the "jsonrpc" field itself —
 // the real codex app-server protocol omits "jsonrpc":"2.0" on the wire
-// (confirmed by the protocol capture), and codex --remote doesn't require it
-// either, so the proxy matches what's actually sent instead of adding a
+// (confirmed by the M0 protocol capture), and codex --remote doesn't require
+// it either, so the proxy matches what's actually sent instead of adding a
 // field nothing checks.
 type rpcMessage struct {
 	ID     json.RawMessage `json:"id,omitempty"`
@@ -33,79 +31,14 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-// wsNotifier serializes every write to a WebSocket connection — replies from
-// the main read/dispatch loop and asynchronous notifications from a facade's
-// background goroutines alike — behind one mutex. gorilla/websocket conns
-// aren't safe for concurrent writers; once a facade can push notifications on
-// its own timeline (Notifier), there are always at least two potential
-// writers, so this is required, not defensive.
-type wsNotifier struct {
-	mu   sync.Mutex
-	conn *websocket.Conn
-}
-
-func (w *wsNotifier) writeMessage(msg rpcMessage) error {
-	out, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("marshal %s: %w", msg.Method, err)
-	}
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.conn.WriteMessage(websocket.TextMessage, out)
-}
-
-// Notify implements agentproxy.Notifier.
-func (w *wsNotifier) Notify(method string, params any) error {
-	return w.writeMessage(rpcMessage{Method: method, Params: mustRawMessage(params)})
-}
-
-func mustRawMessage(v any) json.RawMessage {
-	if v == nil {
-		return nil
-	}
-	data, err := json.Marshal(v)
-	if err != nil {
-		// A facade handed us a value that can't marshal — a programmer error
-		// in that facade, not a runtime condition to recover from gracefully.
-		panic(fmt.Sprintf("agentproxy: params do not marshal to JSON: %v", err))
-	}
-	return data
-}
-
 // Serve binds a WebSocket listener on 127.0.0.1:port — never "localhost"
 // (IPv6 ::1 resolution can fail to connect) or 0.0.0.0 (codex requires auth
 // for non-loopback listeners, and there's no reason to expose this beyond the
-// machine anyway) — and speaks newFacade's JSON-RPC protocol to exactly one
+// machine anyway) — and speaks facade's JSON-RPC protocol to exactly one
 // connected client at a time, until ctx is canceled.
-func Serve(ctx context.Context, port int, newFacade func() Facade) error {
-	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		return err
-	}
-	return ServeListener(ctx, ln, newFacade)
-}
+func Serve(ctx context.Context, port int, facade Facade) error {
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
 
-// ServeListener is Serve, except it speaks newFacade's protocol over an
-// already-bound listener instead of binding one from a port number itself.
-//
-// This exists for tests: picking a free ephemeral port ahead of time (e.g.
-// via net.Listen("tcp", "127.0.0.1:0")) and having a *separate* call to Serve
-// re-bind that same port number is inherently racy — anything else on the
-// machine could grab it in between. Handing the already-bound *net.Listener
-// straight to ServeListener closes that race window entirely: the listener
-// is accepting connections (into the kernel backlog, at least) from the
-// moment net.Listen returns, before this function is even called.
-//
-// newFacade is called once per accepted connection, not once for the whole
-// listener: a facade like codex's carries per-connection state (in-flight
-// turns, whether its event loop is running), and only one client connects at
-// a time anyway (see the slot below), so reusing one Facade instance across
-// a disconnect/reconnect would leak that state into the new connection —
-// notifications from a still-unwinding previous connection's background
-// goroutine could even land on the new socket via a shared notifier. A fresh
-// Facade per connection starts clean and makes the previous one's goroutines
-// (if still winding down) entirely self-contained.
-func ServeListener(ctx context.Context, ln net.Listener, newFacade func() Facade) error {
 	// One slot: the first upgrade takes it, a second concurrent attempt is
 	// refused until the first disconnects and returns it.
 	slot := make(chan struct{}, 1)
@@ -128,29 +61,15 @@ func ServeListener(ctx context.Context, ln net.Listener, newFacade func() Facade
 		}
 		defer conn.Close()
 
-		// Own context for this connection's lifetime, not r.Context(): after
-		// Upgrade hijacks the connection, the request context's cancellation
-		// semantics on disconnect are no longer guaranteed. This is what a
-		// facade's background goroutines (e.g. streaming a turn's tokens)
-		// watch to know when to stop.
-		connCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		facade := newFacade()
-		notifier := &wsNotifier{conn: conn}
-		if na, ok := facade.(NotifierAware); ok {
-			na.SetNotifier(notifier)
-		}
-
 		log.Printf("agentproxy: client connected from %s", r.RemoteAddr)
-		handleConn(connCtx, conn, facade, notifier)
+		handleConn(r.Context(), conn, facade)
 		log.Printf("agentproxy: client disconnected")
 	})
 
-	server := &http.Server{Handler: mux}
+	server := &http.Server{Addr: addr, Handler: mux}
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- server.Serve(ln) }()
+	go func() { errCh <- server.ListenAndServe() }()
 
 	select {
 	case err := <-errCh:
@@ -172,7 +91,7 @@ func ServeListener(ctx context.Context, ln net.Listener, newFacade func() Facade
 // structurally, rather than in each facade's Dispatch, so a facade can never
 // recreate the "TUI hangs forever on a logged-and-dropped request" bug by
 // forgetting to answer.
-func handleConn(ctx context.Context, conn *websocket.Conn, facade Facade, notifier *wsNotifier) {
+func handleConn(ctx context.Context, conn *websocket.Conn, facade Facade) {
 	for {
 		_, data, err := conn.ReadMessage()
 		if err != nil {
@@ -212,7 +131,12 @@ func handleConn(ctx context.Context, conn *websocket.Conn, facade Facade, notifi
 			reply.Result = result
 		}
 
-		if err := notifier.writeMessage(reply); err != nil {
+		out, err := json.Marshal(reply)
+		if err != nil {
+			log.Printf("agentproxy: failed to marshal reply for %s: %v", msg.Method, err)
+			continue
+		}
+		if err := conn.WriteMessage(websocket.TextMessage, out); err != nil {
 			log.Printf("agentproxy: write error: %v", err)
 			return
 		}

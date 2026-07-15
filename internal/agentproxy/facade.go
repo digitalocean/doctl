@@ -34,20 +34,3 @@ var ErrMethodNotFound = &RPCError{Code: -32601, Message: "method not found"}
 type Facade interface {
 	Dispatch(ctx context.Context, method string, params json.RawMessage) (result any, err error)
 }
-
-// Notifier lets a Facade push a server-initiated JSON-RPC notification to the
-// connected client at any time — not just synchronously in reply to a
-// request. Needed for events that arrive asynchronously from the harness
-// (streamed tokens, turn completion) on their own timeline, well after the
-// request that kicked off the turn has already been answered.
-type Notifier interface {
-	Notify(method string, params any) error
-}
-
-// NotifierAware is implemented by facades that need to push asynchronous
-// notifications rather than only answer synchronous requests. The bridge
-// calls SetNotifier once per connection, before handing it any messages, so
-// Dispatch can stash it and use it later from a background goroutine.
-type NotifierAware interface {
-	SetNotifier(Notifier)
-}

@@ -407,9 +407,7 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	return agentproxy.Serve(ctx, port, func() agentproxy.Facade {
-		return &codex.Facade{SessionID: sessionID, Sessions: svc}
-	})
+	return agentproxy.Serve(ctx, port, &codex.Facade{SessionID: sessionID})
 }
 
 // readManifest returns the spec file as raw bytes. path "-" reads from stdin.
