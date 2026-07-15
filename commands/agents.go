@@ -29,6 +29,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -41,6 +42,8 @@ import (
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/agentproxy"
+	"github.com/digitalocean/doctl/internal/agentproxy/codex"
 	"github.com/digitalocean/godo"
 	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
@@ -231,6 +234,22 @@ Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`me
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's metadata.name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session`
 
+	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
+		"Run a local facade that lets a coding-agent CLI drive a hosted session",
+		`Starts a local WebSocket server that impersonates a coding-agent's own app-server protocol, so the unmodified CLI can attach to a hosted session as if it were a local backend.
+
+`+"`"+`--type`+"`"+` selects which protocol to impersonate (v1: `+"`"+`codex`+"`"+` only; future agents get their own facade behind this same command, not a new command). Once `+"`"+`start-proxy`+"`"+` is listening, connect the real CLI, e.g. `+"`"+`codex --remote ws://127.0.0.1:1144`+"`"+`.
+
+Tested against `+"`"+`codex-cli `+codex.TestedVersion+"`"+`. Codex's WS/app-server transport is officially experimental and can change without notice — re-verify the protocol capture on every codex upgrade before trusting this against a newer CLI.
+
+The harness allows one connected device per session — a concurrent `+"`"+`doctl agents attach`+"`"+` on the same session conflicts with the proxy's own stream. Close one before opening the other.`,
+		Writer)
+	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to impersonate (v1: codex)")
+	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
+	AddIntFlag(cmdStartProxy, doctl.ArgAgentProxyPort, "", 1144, "Local port to listen on")
+	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect (not yet implemented)")
+	cmdStartProxy.Example = `doctl agents start-proxy --type codex --session my-session --port 1144`
+
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
 		"Attach to an agent session",
 		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. If the SSE connection drops, doctl shows Reconnecting... and retries automatically (5 attempts with backoff). If reconnection fails, it prints an error and stops the stream.
@@ -343,6 +362,53 @@ func RunAgentsStart(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}})
+}
+
+// RunAgentsStartProxy runs a local WebSocket facade that impersonates a
+// coding-agent's own app-server protocol, bridging an unmodified agent CLI to
+// a hosted session. M0: answers `initialize` and logs every other method as
+// unhandled; the harness bridge (SendInput/StreamSession) lands in M2.
+func RunAgentsStartProxy(c *CmdConfig) error {
+	proxyType, err := c.Doit.GetString(c.NS, doctl.ArgAgentProxyType)
+	if err != nil {
+		return err
+	}
+	if proxyType != "codex" {
+		return fmt.Errorf("unsupported --type %q; v1 supports only \"codex\"", proxyType)
+	}
+
+	sessionRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentProxySession)
+	if err != nil {
+		return err
+	}
+	port, err := c.Doit.GetInt(c.NS, doctl.ArgAgentProxyPort)
+	if err != nil {
+		return err
+	}
+	// --replay is accepted now so the CLI surface doesn't change again in M1,
+	// but session-history replay isn't implemented until the harness bridge
+	// lands; read it only so an explicit --replay=true doesn't silently no-op
+	// without the flag help already having said so.
+	if _, err := c.Doit.GetBool(c.NS, doctl.ArgAgentProxyReplay); err != nil {
+		return err
+	}
+
+	svc := c.HostedAgents()
+	sessionID, err := resolveSessionRef(svc, sessionRef)
+	if err != nil {
+		return err
+	}
+	if _, err := svc.GetSession(sessionID); err != nil {
+		return fmt.Errorf("session %q not found: %w", sessionRef, err)
+	}
+
+	fmt.Fprintf(c.Out, "Proxying session %s as a codex app-server on ws://127.0.0.1:%d\n", sessionID, port)
+	fmt.Fprintf(c.Out, "Connect with: codex --remote ws://127.0.0.1:%d\n", port)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	return agentproxy.Serve(ctx, port, &codex.Facade{SessionID: sessionID})
 }
 
 // readManifest returns the spec file as raw bytes. path "-" reads from stdin.
