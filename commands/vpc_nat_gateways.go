@@ -33,8 +33,10 @@ You can use vpc-nat-gateway to perform CRUD operations on a VPC NAT Gateway.`,
 		AddStringFlag(c, doctl.ArgVPCNATGatewayType, "", "PUBLIC", "Gateway type")
 		AddStringFlag(c, doctl.ArgVPCNATGatewayRegion, "", "", "Gateway region", requiredOpt())
 		AddIntFlag(c, doctl.ArgVPCNATGatewaySize, "", 1, "Gateway size")
-		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs, takes a kv-pair of Ingress VPC ID and optional 'default' to indicate the gateway to be set as default for the VPC"+
-			" (e.g. --vpcs 6df2c5f4-d2da-4bce-b8dc-e9d2b7bd5db6:default,abcd8994-7f1b-4512-bc2e-13d47ca68632)")
+		AddStringSliceFlag(c, doctl.ArgVPCNATGatewayVPCs, "", []string{}, "Ingress VPCs, takes a kv-pair of Ingress VPC ID and optional 'default' to indicate the gateway to be set as default for the VPC,"+
+			" and an optional subnet UUID to restrict the gateway to a specific subnet of the VPC"+
+			" (e.g. --vpcs 6df2c5f4-d2da-4bce-b8dc-e9d2b7bd5db6:default,abcd8994-7f1b-4512-bc2e-13d47ca68632:3d6f6fdc-8b7e-49fd-a3c2-0d73ec4e40b4)"+
+			" (NOTE: specifying a subnet UUID is in private preview, contact DigitalOcean support to review its public availability.)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayUDPTimeout, "", 30, "UDP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayICMPTimeout, "", 30, "ICMP connection timeout (seconds)")
 		AddIntFlag(c, doctl.ArgVPCNATGatewayTCPTimeout, "", 300, "TCP connection timeout (seconds)")
@@ -101,15 +103,24 @@ func buildVPCNATGatewayRequestFromArgs(c *CmdConfig, r *godo.VPCNATGatewayReques
 			}
 			for _, vpc := range vpcs {
 				if pieces := strings.Split(vpc, ":"); len(pieces) > 0 {
-					r.VPCs = append(r.VPCs, &godo.IngressVPC{
+					ingressVPC := &godo.IngressVPC{
 						VpcUUID: pieces[0],
-						DefaultGateway: func() bool {
-							if len(pieces) > 1 && strings.EqualFold(pieces[1], "default") {
-								return true
-							}
-							return false
-						}(),
-					})
+					}
+					// Remaining pieces may be provided in any order: the literal
+					// "default" marks the gateway as the VPC's default, and any other
+					// value is treated as the (private-preview) subnet UUID to restrict
+					// the gateway to.
+					for _, piece := range pieces[1:] {
+						if piece == "" {
+							continue
+						}
+						if strings.EqualFold(piece, "default") {
+							ingressVPC.DefaultGateway = true
+							continue
+						}
+						ingressVPC.SubnetUUID = piece
+					}
+					r.VPCs = append(r.VPCs, ingressVPC)
 				}
 			}
 			return nil
