@@ -159,6 +159,8 @@ const (
 	ArgClusterAutoscalerExpanders = "expanders"
 	// ArgEnableRoutingAgent enables the routing-agent cluster plugin.
 	ArgEnableRoutingAgent = "enable-routing-agent"
+	// ArgEnableP2pOciRegistryPlugin enables the Peer-to-peer OCI registry cluster plugin.
+	ArgEnableP2pOciRegistryPlugin = "enable-p2p-oci-registry-plugin"
 	// ArgEnableCorednsAutoscaler enables the CoreDNS Autoscaler cluster plugin.
 	ArgEnableCorednsAutoscaler = "enable-coredns-autoscaler"
 	// ArgEnableAmdGpuDevicePlugin enables automatic amd gpu device plugin installation.

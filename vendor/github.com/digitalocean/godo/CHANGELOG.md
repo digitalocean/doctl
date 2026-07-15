@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.199.0] - 2026-07-15
+
+- #1052 - @llDrLove - CON-13386 Add P2pOciRegistry plugin information to Kubernetes api calls (Create, Update, Get)
+
 ## [1.198.0] - 2026-07-07
 
 - #1043 - @johannaratliff - Support subnet_uuid in vpcnatgateway
