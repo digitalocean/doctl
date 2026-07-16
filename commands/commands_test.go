@@ -296,6 +296,8 @@ type tcMocks struct {
 	inference             *domocks.MockInferenceService
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
+	microDroplets         *domocks.MockMicroDropletsService
+	microDropletImages    *domocks.MockMicroDropletImagesService
 	security              *domocks.MockSecurityService
 	secrets               *domocks.MockSecretsService
 	vectorDBs             *domocks.MockVectorDBsService
@@ -358,6 +360,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		inference:             domocks.NewMockInferenceService(ctrl),
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
+		microDroplets:         domocks.NewMockMicroDropletsService(ctrl),
+		microDropletImages:    domocks.NewMockMicroDropletImagesService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
 		secrets:               domocks.NewMockSecretsService(ctrl),
 		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
@@ -428,6 +432,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Inference:           func() do.InferenceService { return tm.inference },
 		Nfs:                 func() do.NfsService { return tm.nfs },
 		NfsActions:          func() do.NfsActionsService { return tm.nfsActions },
+		MicroDroplets:       func() do.MicroDropletsService { return tm.microDroplets },
+		MicroDropletImages:  func() do.MicroDropletImagesService { return tm.microDropletImages },
 		Security:            func() do.SecurityService { return tm.security },
 		Secrets:             func() do.SecretsService { return tm.secrets },
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
