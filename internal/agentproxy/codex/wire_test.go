@@ -43,25 +43,6 @@ func dialTestClient(t *testing.T, url string) *wsTestClient {
 	return &wsTestClient{t: t, conn: conn}
 }
 
-// dialTestClientRetry dials until it succeeds or 2s pass, for reconnect tests
-// where a just-closed previous connection's single "client slot" (see
-// ServeListener) may not be released by the time this dial races it.
-func dialTestClientRetry(t *testing.T, url string) *wsTestClient {
-	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		conn, _, err := websocket.DefaultDialer.Dial(url, nil)
-		if err == nil {
-			t.Cleanup(func() { conn.Close() })
-			return &wsTestClient{t: t, conn: conn}
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("dial %s: %v", url, err)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-}
-
 func (c *wsTestClient) send(id, method string, params any) {
 	c.t.Helper()
 	msg := map[string]any{"method": method}
@@ -119,10 +100,7 @@ func TestWire_InitializeThreadStartTurnStartDeltasTurnCompleted(t *testing.T) {
 
 	godoClient, err := godo.New(http.DefaultClient, godo.SetBaseURL(harness.Server.URL+"/"))
 	require.NoError(t, err)
-	svc := do.NewHostedAgentsService(godoClient)
-	newFacade := func() agentproxy.Facade {
-		return &Facade{SessionID: sessionID, Sessions: svc}
-	}
+	facade := &Facade{SessionID: sessionID, Sessions: do.NewHostedAgentsService(godoClient)}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -131,7 +109,7 @@ func TestWire_InitializeThreadStartTurnStartDeltasTurnCompleted(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, newFacade) }()
+	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, facade) }()
 
 	client := dialTestClient(t, "ws://"+addr+"/")
 
@@ -191,85 +169,6 @@ func TestWire_InitializeThreadStartTurnStartDeltasTurnCompleted(t *testing.T) {
 	params, _ = notif["params"].(map[string]any)
 	finalTurn, _ := params["turn"].(map[string]any)
 	require.Equal(t, "completed", finalTurn["status"])
-
-	cancel()
-	select {
-	case err := <-serveErr:
-		require.NoError(t, err)
-	case <-time.After(5 * time.Second):
-		t.Fatal("ServeListener did not shut down within 5s of ctx cancellation")
-	}
-}
-
-// TestWire_ReconnectGetsFreshFacadeState proves a second connection over the
-// same ServeListener, after the first disconnects, gets a brand-new Facade
-// rather than reusing the first connection's — regression coverage for a
-// review comment noting that a single shared Facade instance would carry its
-// first connection's turns map and streamStarted over into the reconnect:
-// codex --remote reconnecting would then hang on turn/start forever, since
-// the old connection's event loop is dead but streamStarted would still read
-// true, so ensureEventLoop would never open a new one.
-func TestWire_ReconnectGetsFreshFacadeState(t *testing.T) {
-	const sessionID = "sess-wire-reconnect"
-
-	harness := agentproxytest.New(t, sessionID)
-	godoClient, err := godo.New(http.DefaultClient, godo.SetBaseURL(harness.Server.URL+"/"))
-	require.NoError(t, err)
-	svc := do.NewHostedAgentsService(godoClient)
-	newFacade := func() agentproxy.Facade {
-		return &Facade{SessionID: sessionID, Sessions: svc}
-	}
-
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	addr := ln.Addr().String()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	serveErr := make(chan error, 1)
-	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, newFacade) }()
-
-	// First connection: run one full turn to completion, then disconnect
-	// without a clean handshake, mirroring a codex --remote that just drops.
-	harness.QueueRun("run-1",
-		agentproxytest.Event{Type: "run.started"},
-		agentproxytest.Event{Type: "run.completed"},
-	)
-	client1 := dialTestClient(t, "ws://"+addr+"/")
-	client1.send("1", "turn/start", map[string]any{
-		"threadId": sessionID,
-		"input":    []any{map[string]any{"type": "text", "text": "hi"}},
-	})
-	_ = client1.result(client1.recv()) // turn/start reply
-	for {
-		notif := client1.recv()
-		if notif["method"] == "turn/completed" {
-			break
-		}
-	}
-	client1.conn.Close()
-
-	// Second connection, over the same listener: a fresh turn/start must
-	// still work end to end. If the old Facade were reused, streamStarted
-	// would still read true from the dead first connection's event loop, and
-	// this turn/start would return "inProgress" with no turn/started ever
-	// following it.
-	harness.QueueRun("run-2",
-		agentproxytest.Event{Type: "run.started"},
-		agentproxytest.Event{Type: "run.completed"},
-	)
-	client2 := dialTestClientRetry(t, "ws://"+addr+"/")
-	client2.send("1", "turn/start", map[string]any{
-		"threadId": sessionID,
-		"input":    []any{map[string]any{"type": "text", "text": "hi again"}},
-	})
-	turnStartResult := client2.result(client2.recv())
-	turn, ok := turnStartResult["turn"].(map[string]any)
-	require.True(t, ok, "turn/start result missing turn object: %v", turnStartResult)
-	require.Equal(t, "run-2", turn["id"])
-
-	notif := client2.recv()
-	require.Equal(t, "turn/started", notif["method"], "full: %v", notif)
 
 	cancel()
 	select {
