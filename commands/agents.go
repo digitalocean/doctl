@@ -366,8 +366,7 @@ func RunAgentsStart(c *CmdConfig) error {
 
 // RunAgentsStartProxy runs a local WebSocket facade that impersonates a
 // coding-agent's own app-server protocol, bridging an unmodified agent CLI to
-// a hosted session. M0: answers `initialize` and logs every other method as
-// unhandled; the harness bridge (SendInput/StreamSession) lands in M2.
+// a hosted session.
 func RunAgentsStartProxy(c *CmdConfig) error {
 	proxyType, err := c.Doit.GetString(c.NS, doctl.ArgAgentProxyType)
 	if err != nil {

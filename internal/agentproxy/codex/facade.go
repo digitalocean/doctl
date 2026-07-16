@@ -45,8 +45,8 @@ type Facade struct {
 
 	// Sessions is the harness bridge: turn/start calls SendInput on it, and
 	// the background streaming goroutine reads StreamSession's SSE events to
-	// translate into codex notifications. Required once turn/start is used;
-	// M0/M1 methods (initialize, thread/start, etc.) don't touch it.
+	// translate into codex notifications. The bootstrap methods (initialize,
+	// thread/start, etc.) don't touch it.
 	Sessions do.HostedAgentsService
 
 	// notifier is set once per connection by the bridge (see SetNotifier) and
@@ -93,9 +93,12 @@ func (f *Facade) SetNotifier(n agentproxy.Notifier) {
 // TUI over WebSocket: {"result":{"userAgent":...,"codexHome":...,
 // "platformFamily":...,"platformOs":...}}. codexHome/platformFamily/platformOs
 // describe codex's own local runtime environment in a real app-server; since
-// v1 proxies to a hosted sandbox rather than running codex locally, these are
-// synthetic placeholders until the harness exposes the sandbox's real values
-// (M1+), not a reflection of anything the sandbox actually reports today.
+// this facade proxies to a hosted sandbox rather than running codex locally,
+// these are synthetic placeholders, not a reflection of anything the sandbox
+// actually reports.
+//
+// TODO(M3-M5): replace with the sandbox's real values once the harness
+// exposes them.
 type initializeResult struct {
 	UserAgent      string `json:"userAgent"`
 	CodexHome      string `json:"codexHome"`
@@ -105,13 +108,13 @@ type initializeResult struct {
 
 // accountReadResult is the shape a real codex app-server returns for
 // `account/read`. Discovered to be load-bearing by testing against a real
-// `codex --remote`, not scoped in the original M0 plan: the TUI treats a
-// failed account/read as fatal during bootstrap ("Error: account/read failed
-// during TUI bootstrap") rather than tolerating it like other unhandled
-// methods, so it needs a real (if synthetic) success response to clear M0's
-// "renders UI without crashing" bar. requiresOpenaiAuth is false because auth
-// to the model happens server-side in the hosted sandbox, not via any local
-// OpenAI login flow the TUI would otherwise try to trigger.
+// `codex --remote`: the TUI treats a failed account/read as fatal during
+// bootstrap ("Error: account/read failed during TUI bootstrap") rather than
+// tolerating it like other unhandled methods, so it needs a real (if
+// synthetic) success response for the TUI to render at all.
+// requiresOpenaiAuth is false because auth to the model happens server-side
+// in the hosted sandbox, not via any local OpenAI login flow the TUI would
+// otherwise try to trigger.
 type accountReadResult struct {
 	Account struct {
 		Type     string `json:"type"`
@@ -124,8 +127,9 @@ type accountReadResult struct {
 // modelListResult is the shape a real codex app-server returns for
 // `model/list`. Discovered fatal-if-missing the same way as account/read: the
 // TUI bootstrap errors out on a failed model/list too. One entry matching
-// agent-spec.yaml's default model (gpt-5.5) is enough to clear bootstrap; a
-// real per-session model catalog is out of scope until the harness exposes
+// agent-spec.yaml's default model (gpt-5.5) is enough to clear bootstrap.
+//
+// TODO(M3-M5): a real per-session model catalog, once the harness exposes
 // one.
 type modelListResult struct {
 	Data       []modelInfo `json:"data"`
@@ -159,11 +163,12 @@ type reasoningEffortInfo struct {
 // threadStartResult is the shape a real codex app-server returns for
 // thread/start. Discovered fatal-if-missing the same way as account/read and
 // model/list: the TUI's bootstrap sequence calls all three synchronously and
-// errors out if any fails, so a real M1 can't be deferred past M0 the way the
-// milestone ladder originally assumed. This is a synthesized stub only —
-// SessionID as the thread id, static policy/sandbox defaults matching what
-// the real capture showed — not yet backed by the harness bridge: no real
-// turns, no SendInput/StreamSession wiring. That's M2.
+// errors out if any fails. This is a synthesized stub — SessionID as the
+// thread id, static policy/sandbox defaults matching what the real capture
+// showed.
+//
+// TODO(M3-M5): Turns always reports empty even once real turns run through
+// turn/start; feed real turn history back into this shape.
 type threadStartResult struct {
 	Thread                thread      `json:"thread"`
 	Model                 string      `json:"model"`
@@ -270,8 +275,7 @@ type threadUnsubscribeResult struct {
 //
 // Shapes confirmed against the codex source
 // (codex-rs/app-server-protocol/src/protocol/v2/turn.rs and thread_data.rs),
-// not guessed. One correction against the implementation plan's event
-// mapping table worth calling out: there is no `turn/failed` method anywhere
+// not guessed. Worth calling out: there is no `turn/failed` method anywhere
 // in the codex protocol. Failure is represented purely via `turn/completed`
 // with `turn.status == "failed"` and `turn.error` populated — finishTurn
 // below reflects that; there is no separate failed-turn notification to
@@ -368,16 +372,18 @@ type agentMessageDeltaNotification struct {
 }
 
 // turnInterruptResult is TurnInterruptResponse (v2/turn.rs) — genuinely
-// empty on the wire. Best-effort no-op in v1: the harness has no
-// cancel-input surface yet (see the implementation plan's Risks section).
+// empty on the wire. Best-effort no-op for now: the harness has no
+// cancel-input surface yet.
+//
+// TODO(M3-M5): wire this to a real cancel once the harness exposes one.
 type turnInterruptResult struct{}
 
 // synthesizedThread builds the one thread this facade ever knows about: a
 // stand-in for the hosted session, id equal to SessionID, with static
-// policy/sandbox defaults matching what the M0 protocol capture showed for a
+// policy/sandbox defaults matching what the protocol capture showed for a
 // real thread/start. Shared by thread/start and thread/resume so the two
-// can't drift apart — not backed by the harness bridge yet (no real turns,
-// no SendInput/StreamSession wiring; that's M2).
+// can't drift apart. Turns is always an empty placeholder — see the
+// threadStartResult TODO above.
 func (f *Facade) synthesizedThread() threadStartResult {
 	now := time.Now().Unix()
 	return threadStartResult{
@@ -419,8 +425,8 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		}, nil
 
 	case "initialized":
-		// Client notification (no id, no reply expected). Nothing to do until
-		// M1 wires thread/start against a real session.
+		// Client notification (no id, no reply expected); this facade has
+		// nothing to do in response.
 		return nil, nil
 
 	case "account/read":
@@ -474,15 +480,16 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		// src/protocol/v2/thread.rs) — same synthesized thread either way.
 		return threadResumeResult(f.synthesizedThread()), nil
 
-	// The remaining cases are the M0 unhandled-method burndown: real methods
-	// the TUI calls during/after bootstrap that don't crash it (unlike
-	// account/read, model/list, thread/start above) but were logged as
-	// unhandled and, for skills/list, surfaced a visible (non-fatal) error
-	// toast. Shapes confirmed against the codex source
+	// The remaining cases are real methods the TUI calls during/after
+	// bootstrap that don't crash it (unlike account/read, model/list,
+	// thread/start above) but, left unhandled, get logged and — for
+	// skills/list — surface a visible (non-fatal) error toast. Shapes
+	// confirmed against the codex source
 	// (codex-rs/app-server-protocol/src/protocol/v2/{plugin,apps,thread}.rs),
-	// not guessed — empty catalogs are valid, decode-safe responses; a real
-	// per-session hooks/skills/plugin/app catalog is out of scope until the
-	// harness exposes one.
+	// not guessed — empty catalogs are valid, decode-safe responses.
+	//
+	// TODO(M3-M5): a real per-session hooks/skills/plugin/app catalog, once
+	// the harness exposes one.
 	case "hooks/list":
 		return hooksListResult{Data: []any{}}, nil
 
@@ -540,9 +547,9 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		return turnInterruptResult{}, nil
 
 	default:
-		// M0: every other method is logged by the bridge as "unhandled: <method>"
+		// Every other method is logged by the bridge as "unhandled: <method>"
 		// and, if it was a request, answered with a JSON-RPC error so codex
-		// never hangs. This log is the M1-M3 backlog.
+		// never hangs.
 		return nil, agentproxy.ErrMethodNotFound
 	}
 }
@@ -585,11 +592,13 @@ func (f *Facade) trackTurn(ctx context.Context, runID string) {
 // trackTurn), and shared by every turn thereafter. It dispatches each event
 // to whichever tracked turn it belongs to (by run id) and translates into
 // the "one-way text" notification sequence: turn/started -> item/started ->
-// item/agentMessage/delta* -> item/completed -> turn/completed. Tool-call
-// and HITL events are read and ignored (M3/M4); everything else falls
-// through untouched. Runs until ctx is canceled (the connection closes) or
-// the stream ends/errors — NOT until one turn finishes, since later turns
-// depend on this same loop still running.
+// item/agentMessage/delta* -> item/completed -> turn/completed. Everything
+// else falls through untouched. Runs until ctx is canceled (the connection
+// closes) or the stream ends/errors — NOT until one turn finishes, since
+// later turns depend on this same loop still running.
+//
+// TODO(M3): translate tool-call events instead of dropping them.
+// TODO(M4): translate HITL events instead of dropping them.
 func (f *Facade) runEventLoop(ctx context.Context) {
 	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, nil)
 	if err != nil {

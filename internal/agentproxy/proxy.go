@@ -16,8 +16,8 @@ import (
 
 // rpcMessage is a JSON-RPC 2.0 envelope, minus the "jsonrpc" field itself —
 // the real codex app-server protocol omits "jsonrpc":"2.0" on the wire
-// (confirmed by the M0 protocol capture), and codex --remote doesn't require
-// it either, so the proxy matches what's actually sent instead of adding a
+// (confirmed by the protocol capture), and codex --remote doesn't require it
+// either, so the proxy matches what's actually sent instead of adding a
 // field nothing checks.
 type rpcMessage struct {
 	ID     json.RawMessage `json:"id,omitempty"`
