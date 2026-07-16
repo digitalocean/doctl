@@ -494,6 +494,13 @@ func isTerminalSessionStatus(s godo.HostedAgentSessionStatus) bool {
 	}
 }
 
+// humanSessionStatus renders a session status for display in plain-English
+// messages, e.g. SESSION_STATUS_DESTROYED -> "destroyed". Table output
+// (agents list/get) keeps the raw enum value; this is only for prose.
+func humanSessionStatus(s godo.HostedAgentSessionStatus) string {
+	return strings.ToLower(strings.TrimPrefix(string(s), "SESSION_STATUS_"))
+}
+
 // resolveSessionRef turns a user-supplied session reference into a session ID.
 // References that already look like an ID (a UUID) are returned unchanged with
 // no API call, so existing scripts keep working with no added latency.
@@ -860,6 +867,9 @@ func RunAgentsAttach(c *CmdConfig) error {
 			return errors.New(strings.TrimSpace(msg))
 		}
 		return err
+	}
+	if isTerminalSessionStatus(sess.Status) {
+		return fmt.Errorf("session %s cannot be attached (status: %s)", sessionID, humanSessionStatus(sess.Status))
 	}
 
 	pending := &pendingHITL{}
