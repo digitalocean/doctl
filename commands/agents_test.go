@@ -1488,6 +1488,47 @@ func TestRunAgentsAttachAuthFailure(t *testing.T) {
 	})
 }
 
+// TestRunAgentsAttachTerminalSession: attach must fail fast (no banner, no
+// interactive loop) when the session is already destroyed/destroying/failed,
+// instead of connecting and only failing once the user sends input.
+func TestRunAgentsAttachTerminalSession(t *testing.T) {
+	cases := []struct {
+		name   string
+		status godo.HostedAgentSessionStatus
+	}{
+		{"destroyed", godo.HostedAgentSessionStatusDestroyed},
+		{"destroying", godo.HostedAgentSessionStatusDestroying},
+		{"failed", godo.HostedAgentSessionStatusFailed},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().GetSession("sess_x").Return(&do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_x",
+						Status:    tc.status,
+					},
+				}, nil)
+
+				config.Args = []string{"sess_x"}
+				err := RunAgentsAttach(config)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "cannot be attached")
+				assert.Contains(t, err.Error(), humanSessionStatus(tc.status))
+			})
+		})
+	}
+}
+
+// TestHumanSessionStatus pins the SESSION_STATUS_ -> lowercase mapping used in
+// attach's terminal-session error message.
+func TestHumanSessionStatus(t *testing.T) {
+	assert.Equal(t, "destroyed", humanSessionStatus(godo.HostedAgentSessionStatusDestroyed))
+	assert.Equal(t, "failed", humanSessionStatus(godo.HostedAgentSessionStatusFailed))
+	assert.Equal(t, "ready", humanSessionStatus(godo.HostedAgentSessionStatusReady))
+}
+
 // TestClassifyStreamError pins the apierr contract: 401/403/404/409 are
 // terminal (409 == V0 single-connection rejection); 5xx/other are transient.
 func TestClassifyStreamError(t *testing.T) {
