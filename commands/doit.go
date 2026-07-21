@@ -202,6 +202,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Nfs())
 	DoitCmd.AddCommand(Security())
 	DoitCmd.AddCommand(Agents())
+	DoitCmd.AddCommand(Secrets())
 }
 
 func computeCmd() *Command {
