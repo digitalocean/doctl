@@ -22,6 +22,7 @@ func (e *VPCNATGateways) Cols() []string {
 		"State",
 		"Region",
 		"VPC",
+		"Subnet",
 		"GatewayIP",
 		"Default",
 		"Egresses",
@@ -37,6 +38,7 @@ func (e *VPCNATGateways) ColMap() map[string]string {
 		"State":     "State",
 		"Region":    "Region",
 		"VPC":       "VPC",
+		"Subnet":    "Subnet",
 		"GatewayIP": "GatewayIP",
 		"Default":   "Default",
 		"Egresses":  "Egresses",
@@ -61,6 +63,7 @@ func (e *VPCNATGateways) KV() []map[string]any {
 			rowMap["State"] = rowGw.State
 			rowMap["Region"] = rowGw.Region
 			rowMap["VPC"] = vpc.VpcUUID
+			rowMap["Subnet"] = vpc.SubnetUUID
 			rowMap["GatewayIP"] = vpc.GatewayIP
 			rowMap["Default"] = vpc.DefaultGateway
 			rowMap["Egresses"] = func() string {
