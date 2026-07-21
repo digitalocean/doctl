@@ -58,13 +58,16 @@ type Facade struct {
 	// mu guards turns and streamStarted. The harness allows exactly one
 	// connected SSE consumer per session (the same constraint that makes a
 	// concurrent `doctl agents attach` conflict with this proxy's own
-	// stream) — so this facade must open at most one StreamSession call for
-	// its whole connection lifetime, no matter how many turns run, one after
-	// another or overlapping. Opening a second one mid-turn silently
-	// displaces the first, cutting off that turn's remaining events: typing
-	// a second message before the first turn finishes made only the second
-	// message ever get a response, because the first turn's stream got
-	// evicted the moment the second one opened its own.
+	// stream) — so this facade must never have more than one StreamSession
+	// call open at a time, no matter how many turns run, one after another or
+	// overlapping. Opening a second one mid-turn silently displaces the
+	// first, cutting off that turn's remaining events: typing a second
+	// message before the first turn finishes made only the second message
+	// ever get a response, because the first turn's stream got evicted the
+	// moment the second one opened its own. streamStarted tracks whether a
+	// StreamSession call is currently outstanding, not merely whether one was
+	// ever made: stopEventLoop clears it on exit so a later turn/start can
+	// open a fresh one if the previous one died.
 	mu            sync.Mutex
 	turns         map[string]*turnState
 	streamStarted bool
@@ -522,6 +525,14 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 				Message: fmt.Sprintf("thread %q not found; this proxy only serves thread %q", p.ThreadID, f.SessionID),
 			}
 		}
+		// Open (or confirm) the event-loop stream before SendInput, not after:
+		// SendInput is what makes the harness start the run, so a reader
+		// attached only afterward can race a fast run to completion and miss
+		// every event it emits. See ensureEventLoop.
+		if err := f.ensureEventLoop(ctx); err != nil {
+			return nil, &agentproxy.RPCError{Code: -32000, Message: "opening event stream failed: " + err.Error()}
+		}
+
 		var text strings.Builder
 		for _, item := range p.Input {
 			if item.Type != "text" {
@@ -538,7 +549,7 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		}
 		// The harness's run id doubles as this facade's turn id — already a
 		// unique per-turn identifier, no separate id scheme needed.
-		f.trackTurn(ctx, resp.RunID)
+		f.trackTurn(resp.RunID)
 		return turnStartResult{
 			Turn: turnObj{ID: resp.RunID, Items: []any{}, Status: "inProgress"},
 		}, nil
@@ -567,52 +578,103 @@ func (f *Facade) notify(method string, params any) bool {
 	return true
 }
 
-// trackTurn registers a new in-flight turn and, on the very first turn for
-// this facade's connection lifetime, starts the one shared event-loop
-// goroutine that reads every subsequent turn's events too. See the Facade.mu
-// doc comment for why there must be exactly one StreamSession call, ever, no
-// matter how many turns run one after another or overlap.
-func (f *Facade) trackTurn(ctx context.Context, runID string) {
+// ensureEventLoop makes sure exactly one StreamSession read loop is running
+// for this facade's connection before returning, opening one synchronously
+// if none is active yet — either because this is the first turn for this
+// facade's connection, or because the previous loop died and stopEventLoop
+// cleared streamStarted. Callers (turn/start) must call this, and see it
+// succeed, BEFORE calling SendInput: SendInput is what makes the harness
+// start actually running and emitting events, so opening the stream only
+// afterward (e.g. lazily from inside a newly spawned goroutine) leaves a
+// window where a fast run can start, emit every event, and complete before
+// any reader is attached to see them — codex would then hang on a turn
+// that silently never got its notifications. See the Facade.mu doc comment
+// for why there must never be more than one StreamSession call open at a
+// time.
+func (f *Facade) ensureEventLoop(ctx context.Context) error {
+	f.mu.Lock()
+	if f.streamStarted {
+		f.mu.Unlock()
+		return nil
+	}
+	f.mu.Unlock()
+
+	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, nil)
+	if err != nil {
+		return err
+	}
+
+	f.mu.Lock()
+	f.streamStarted = true
+	f.mu.Unlock()
+
+	go f.runEventLoop(stream)
+	return nil
+}
+
+// trackTurn registers a new in-flight turn, keyed by run id, once
+// ensureEventLoop has confirmed the read loop is running to see its events.
+func (f *Facade) trackTurn(runID string) {
 	f.mu.Lock()
 	if f.turns == nil {
 		f.turns = make(map[string]*turnState)
 	}
 	f.turns[runID] = &turnState{itemID: runID + "-msg"}
-	startLoop := !f.streamStarted
-	f.streamStarted = true
 	f.mu.Unlock()
+}
 
-	if startLoop {
-		go f.runEventLoop(ctx)
+// eventClaimPoll/eventClaimWait bound how long lookupTurn retries an
+// unrecognized run id before giving up on it.
+const (
+	eventClaimPoll = 2 * time.Millisecond
+	eventClaimWait = 200 * time.Millisecond
+)
+
+// lookupTurn returns the tracked turnState for runID, retrying briefly if
+// it's not there yet. turn/start calls SendInput, which is what makes the
+// harness create the run and start emitting its events, and only registers
+// runID in f.turns once SendInput returns — so this goroutine can observe
+// that run's first event fractionally before trackTurn's map write becomes
+// visible to it. A caller that still gets ok == false after this returns
+// should treat the event as genuinely untracked (e.g. one that predates this
+// connection), not as this race.
+func (f *Facade) lookupTurn(runID string) (*turnState, bool) {
+	deadline := time.Now().Add(eventClaimWait)
+	for {
+		f.mu.Lock()
+		ts, ok := f.turns[runID]
+		f.mu.Unlock()
+		if ok || time.Now().After(deadline) {
+			return ts, ok
+		}
+		time.Sleep(eventClaimPoll)
 	}
 }
 
-// runEventLoop is the single, long-lived StreamSession reader for this
-// facade's connection lifetime — started once, by the first turn/start (see
-// trackTurn), and shared by every turn thereafter. It dispatches each event
-// to whichever tracked turn it belongs to (by run id) and translates into
-// the "one-way text" notification sequence: turn/started -> item/started ->
-// item/agentMessage/delta* -> item/completed -> turn/completed. Everything
-// else falls through untouched. Runs until ctx is canceled (the connection
-// closes) or the stream ends/errors — NOT until one turn finishes, since
-// later turns depend on this same loop still running.
+// runEventLoop is the single, long-lived reader of stream — opened by
+// ensureEventLoop before this goroutine was even spawned — for this facade's
+// connection lifetime. It dispatches each event to whichever tracked turn it
+// belongs to (by run id) and translates into the "one-way text" notification
+// sequence: turn/started -> item/started -> item/agentMessage/delta* ->
+// item/completed -> turn/completed. Everything else falls through untouched.
+// Runs until the ctx passed to ensureEventLoop's StreamSession call is
+// canceled (the connection closes) or the stream ends/errors — NOT until one
+// turn finishes, since later turns depend on this same loop still running.
+// The deferred stopEventLoop is what lets a later turn/start recover:
+// without it, streamStarted would stay true forever after any exit here and
+// every subsequent turn/start would return "inProgress" with no loop left
+// running to ever notify it.
 //
 // TODO(M3): translate tool-call events instead of dropping them.
 // TODO(M4): translate HITL events instead of dropping them.
-func (f *Facade) runEventLoop(ctx context.Context) {
-	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, nil)
-	if err != nil {
-		log.Printf("codex facade: StreamSession failed: %v", err)
-		return
-	}
+func (f *Facade) runEventLoop(stream *godo.HostedAgentSessionStream) {
+	defer f.stopEventLoop()
 	defer stream.Close()
 
 	for stream.Next() {
 		ev := stream.Current()
 
-		f.mu.Lock()
-		ts, ok := f.turns[ev.RunID]
-		f.mu.Unlock()
+		ts, ok := f.lookupTurn(ev.RunID)
 		if !ok {
 			continue // event for a run this facade isn't tracking (e.g. predates this connection)
 		}
@@ -663,6 +725,26 @@ func (f *Facade) runEventLoop(ctx context.Context) {
 	}
 	if err := stream.Err(); err != nil {
 		log.Printf("codex facade: stream error: %v", err)
+	}
+}
+
+// stopEventLoop runs when runEventLoop returns for any reason — the stream
+// ended, errored, or a notify failed (ensureEventLoop only spawns
+// runEventLoop after StreamSession has already succeeded, so a failure to
+// connect never reaches here; it fails turn/start directly instead). It
+// clears streamStarted so the next turn/start reopens the stream instead of
+// silently returning "inProgress" for a turn nothing will ever finish, and
+// fails out any turns still tracked at that point (mid-flight when the loop
+// died) so codex isn't left waiting forever on those either.
+func (f *Facade) stopEventLoop() {
+	f.mu.Lock()
+	f.streamStarted = false
+	stranded := f.turns
+	f.turns = nil
+	f.mu.Unlock()
+
+	for runID, ts := range stranded {
+		f.finishTurn(runID, ts, "failed", &turnError{Message: "lost connection to hosted session"})
 	}
 }
 

@@ -278,6 +278,68 @@ func TestFacade_TurnStart_StreamsToCompletion(t *testing.T) {
 	rec.expectNone(t)
 }
 
+// waitEventLoopStopped polls until the facade's event-loop goroutine has
+// exited and stopEventLoop has reset streamStarted. Observing a
+// turn/completed notification only means the loop finished that turn, not
+// that it has since hit EOF on the underlying stream and stopped — a test
+// that starts a second turn right after turn/completed would otherwise race
+// stopEventLoop rather than deterministically exercising life after it.
+func waitEventLoopStopped(t *testing.T, f *Facade) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		f.mu.Lock()
+		stopped := !f.streamStarted
+		f.mu.Unlock()
+		if stopped {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("timed out waiting for the event loop to stop")
+}
+
+// TestFacade_TurnStart_ReopensStreamAfterPreviousLoopEnded confirms a second
+// turn/start can still get notified after the harness's SSE stream for the
+// first turn ends (agentproxytest.Harness.handleStream closes the response
+// once its queued events run out) — regression coverage for streamStarted
+// getting stuck true forever, which left every later turn/start returning
+// "inProgress" with no event-loop goroutine left running to ever notify it.
+func TestFacade_TurnStart_ReopensStreamAfterPreviousLoopEnded(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+
+	h.QueueRun("run-1",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+	_ = rec.next(t) // item/completed
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	waitEventLoopStopped(t, f)
+
+	h.QueueRun("run-2",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+	_, err = dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "again"}},
+	})
+	require.NoError(t, err)
+
+	started := rec.next(t)
+	require.Equal(t, "turn/started", started.method)
+	assert.Equal(t, "run-2", started.params.(turnStartedNotification).Turn.ID)
+}
+
 // TestFacade_TurnStart_Failure confirms a canonical run.failed event maps to
 // turn/completed with status "failed" and the error populated — there is no
 // turn/failed method in the codex protocol (see the facade.go comment above

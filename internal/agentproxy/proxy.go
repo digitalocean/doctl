@@ -75,17 +75,17 @@ func mustRawMessage(v any) json.RawMessage {
 // Serve binds a WebSocket listener on 127.0.0.1:port — never "localhost"
 // (IPv6 ::1 resolution can fail to connect) or 0.0.0.0 (codex requires auth
 // for non-loopback listeners, and there's no reason to expose this beyond the
-// machine anyway) — and speaks facade's JSON-RPC protocol to exactly one
+// machine anyway) — and speaks newFacade's JSON-RPC protocol to exactly one
 // connected client at a time, until ctx is canceled.
-func Serve(ctx context.Context, port int, facade Facade) error {
+func Serve(ctx context.Context, port int, newFacade func() Facade) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return err
 	}
-	return ServeListener(ctx, ln, facade)
+	return ServeListener(ctx, ln, newFacade)
 }
 
-// ServeListener is Serve, except it speaks facade's protocol over an
+// ServeListener is Serve, except it speaks newFacade's protocol over an
 // already-bound listener instead of binding one from a port number itself.
 //
 // This exists for tests: picking a free ephemeral port ahead of time (e.g.
@@ -95,7 +95,17 @@ func Serve(ctx context.Context, port int, facade Facade) error {
 // straight to ServeListener closes that race window entirely: the listener
 // is accepting connections (into the kernel backlog, at least) from the
 // moment net.Listen returns, before this function is even called.
-func ServeListener(ctx context.Context, ln net.Listener, facade Facade) error {
+//
+// newFacade is called once per accepted connection, not once for the whole
+// listener: a facade like codex's carries per-connection state (in-flight
+// turns, whether its event loop is running), and only one client connects at
+// a time anyway (see the slot below), so reusing one Facade instance across
+// a disconnect/reconnect would leak that state into the new connection —
+// notifications from a still-unwinding previous connection's background
+// goroutine could even land on the new socket via a shared notifier. A fresh
+// Facade per connection starts clean and makes the previous one's goroutines
+// (if still winding down) entirely self-contained.
+func ServeListener(ctx context.Context, ln net.Listener, newFacade func() Facade) error {
 	// One slot: the first upgrade takes it, a second concurrent attempt is
 	// refused until the first disconnects and returns it.
 	slot := make(chan struct{}, 1)
@@ -126,6 +136,7 @@ func ServeListener(ctx context.Context, ln net.Listener, facade Facade) error {
 		connCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		facade := newFacade()
 		notifier := &wsNotifier{conn: conn}
 		if na, ok := facade.(NotifierAware); ok {
 			na.SetNotifier(notifier)
