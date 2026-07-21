@@ -43,8 +43,9 @@ type HostedAgentsService interface {
 	UploadWorkspace(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error)
 	// DownloadWorkspace streams a file (or tar archive) out of the session
 	// workspace. The caller MUST read the returned Body to EOF and then Close
-	// it; both verify the SHA-256 integrity trailer and surface a truncated or
-	// corrupted transfer as an error.
+	// it; godo strips the trailing DOWSSHA1 integrity footer, verifies the
+	// payload SHA-256, and surfaces a missing, invalid, or mismatched footer
+	// as an error. Body yields payload bytes only.
 	DownloadWorkspace(ctx context.Context, sessionID string, input *godo.HostedAgentWorkspaceDownloadRequest) (*godo.HostedAgentWorkspaceDownload, error)
 }
 
@@ -127,8 +128,9 @@ func (s *hostedAgentsService) UploadWorkspace(sessionID string, input *godo.Host
 }
 
 // DownloadWorkspace opens the streaming download and returns the godo result.
-// The caller MUST read Body to EOF and then Close it. ctx is passed straight
-// through so cancellation aborts the in-flight stream.
+// The caller MUST read Body to EOF and then Close it so footer verification
+// runs. ctx is passed straight through so cancellation aborts the in-flight
+// stream.
 func (s *hostedAgentsService) DownloadWorkspace(ctx context.Context, sessionID string, input *godo.HostedAgentWorkspaceDownloadRequest) (*godo.HostedAgentWorkspaceDownload, error) {
 	dl, _, err := s.client.HostedAgents.DownloadWorkspace(ctx, sessionID, input)
 	return dl, err

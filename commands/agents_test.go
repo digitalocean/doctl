@@ -606,8 +606,9 @@ func TestRunAgentsDownload(t *testing.T) {
 }
 
 // TestRunAgentsDownload_DiscardOnError pins the integrity contract: when the
-// body errors (e.g. godo reports an X-Content-Sha256 checksum mismatch), the
-// partial output must be discarded and no destination file left behind.
+// body errors (e.g. godo reports a missing/invalid DOWSSHA1 footer or checksum
+// mismatch), the partial output must be discarded and no destination file left
+// behind.
 func TestRunAgentsDownload_DiscardOnError(t *testing.T) {
 	dir := t.TempDir()
 	saveTo := filepath.Join(dir, "out.go")
@@ -616,7 +617,7 @@ func TestRunAgentsDownload_DiscardOnError(t *testing.T) {
 		dl := &godo.HostedAgentWorkspaceDownload{
 			Body: &flakyReadCloser{
 				data: []byte("partial payload"),
-				err:  errors.New("workspace download checksum mismatch"),
+				err:  errors.New("hosted agents: workspace download checksum mismatch"),
 			},
 		}
 		tm.hostedAgents.EXPECT().

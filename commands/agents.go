@@ -299,7 +299,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		"Download a file from a session workspace",
 		`Streams a file (or tar archive) out of the session's sandbox workspace and writes it to a local destination.
 
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download is chunked and an integrity SHA-256 may arrive as an HTTP trailer after the body; doctl hashes the bytes as it writes them and, when the trailer is present, verifies it once the stream completes. Integrity verification is best-effort: a checksum mismatch discards the partial output and fails the command, but a missing trailer is tolerated because some HTTP intermediaries (e.g. Cloudflare) strip response trailers. Files larger than 50 MiB are rejected by the server.`,
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download stream ends with a fixed integrity footer (`+"`"+`DOWSSHA1`+"`"+` + SHA-256 hex); godo strips that footer, verifies the payload checksum, and returns only the file bytes. A missing, invalid, or mismatched footer fails the command and discards any partial local output. Files larger than 50 MiB are rejected by the server.`,
 		Writer)
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
@@ -678,12 +678,12 @@ func hashFile(r io.Reader) (string, error) {
 }
 
 // RunAgentsDownload streams a file (or tar archive) out of a session workspace.
-// The godo download body hashes the stream and, when the server sends the
-// SHA-256 trailer, verifies it after the body is fully drained, so a checksum
-// mismatch surfaces at EOF (or on Close). A missing trailer is tolerated (some
-// intermediaries strip response trailers). The bytes are written to a temporary
-// file first and only moved into place once the transfer completes without a
-// verification error; a mismatched transfer is discarded.
+// The godo download body strips the trailing DOWSSHA1 integrity footer, hashes
+// the payload, and verifies the footer digest at EOF, so a missing, invalid, or
+// mismatched checksum surfaces while draining the body (or on Close). The
+// bytes are written to a temporary file first and only moved into place once
+// the transfer completes without a verification error; a failed transfer is
+// discarded.
 func RunAgentsDownload(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
@@ -725,9 +725,10 @@ func RunAgentsDownload(c *CmdConfig) error {
 
 // streamDownloadToFile copies the download body into saveTo. It writes to a
 // sibling temp file and renames it into place only after the body reads to EOF
-// and Close both succeed (which is where godo surfaces a checksum mismatch when
-// the integrity trailer is present). On any failure the temp file is removed so
-// no partial/corrupt output is left behind.
+// and Close both succeed (godo surfaces footer/checksum failures while the
+// body is drained). On any failure the temp file is removed so no
+// partial/corrupt output is left behind. Written bytes are payload only; the
+// integrity footer is never written to disk.
 func streamDownloadToFile(dl *godo.HostedAgentWorkspaceDownload, saveTo string) (int64, error) {
 	dir := filepath.Dir(saveTo)
 	tmp, err := os.CreateTemp(dir, ".doctl-download-*")
@@ -741,9 +742,8 @@ func streamDownloadToFile(dl *godo.HostedAgentWorkspaceDownload, saveTo string) 
 		os.Remove(tmpName)
 	}
 
-	// io.Copy drains the body to EOF, which triggers godo's trailer
-	// verification; a mismatched checksum is returned here (a missing trailer
-	// is tolerated by godo and does not error).
+	// io.Copy drains the body to EOF, which triggers godo's footer
+	// verification; a missing, invalid, or mismatched checksum is returned here.
 	written, copyErr := io.Copy(tmp, dl.Body)
 	closeBodyErr := dl.Body.Close()
 	if copyErr != nil {

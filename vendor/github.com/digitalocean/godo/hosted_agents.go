@@ -34,6 +34,12 @@ const (
 	workspaceContentSHA256Header = "X-Content-Sha256"
 	workspaceIsArchiveHeader     = "X-Workspace-Is-Archive"
 	workspaceSizeBytesHeader     = "X-Workspace-Size-Bytes"
+
+	// workspaceDownloadFooter is appended by OHS after a successful download
+	// payload so integrity survives intermediaries that strip HTTP trailers
+	// (e.g. Cloudflare). Format: DOWSSHA1 + 64 lowercase hex + '\n' = 73 bytes.
+	workspaceDownloadFooterPrefix = "DOWSSHA1"
+	workspaceDownloadFooterLen    = len(workspaceDownloadFooterPrefix) + 64 + 1
 )
 
 // HostedAgentsService exposes the DigitalOcean Hosted Agents session API
@@ -371,14 +377,16 @@ type HostedAgentWorkspaceDownloadRequest struct {
 }
 
 // HostedAgentWorkspaceDownload is the streaming result of DownloadWorkspace.
-// Body verifies the SHA-256 integrity trailer when present: read it to EOF
-// and then Close it. A checksum mismatch errors; a missing trailer is
-// tolerated (some intermediaries strip response trailers).
+// Body strips the trailing integrity footer and verifies SHA-256 of the
+// payload: read it to EOF and then Close it. A missing, invalid, or mismatched
+// footer is an error. An HTTP X-Content-Sha256 trailer may still be present
+// but is best-effort only; the body footer is the source of truth.
 type HostedAgentWorkspaceDownload struct {
 	Body io.ReadCloser
 	// IsArchive is true when the payload is a tar stream.
 	IsArchive bool
-	// SizeBytes is the X-Workspace-Size-Bytes hint (0 when unknown); not a Content-Length.
+	// SizeBytes is the X-Workspace-Size-Bytes hint (0 when unknown); payload
+	// size only (excludes the integrity footer). Not a Content-Length.
 	SizeBytes int64
 }
 
@@ -677,7 +685,8 @@ func (s *HostedAgentsServiceOp) UploadWorkspace(ctx context.Context, sessionID s
 
 // DownloadWorkspace streams a file (or tar archive) out of the session
 // workspace. Callers MUST read the returned Body to EOF and then Close it;
-// both verify the SHA-256 integrity trailer when present.
+// the body strips the trailing integrity footer and verifies SHA-256 of the
+// payload.
 func (s *HostedAgentsServiceOp) DownloadWorkspace(ctx context.Context, sessionID string, input *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
@@ -710,7 +719,6 @@ func (s *HostedAgentsServiceOp) DownloadWorkspace(ctx context.Context, sessionID
 
 	out := &HostedAgentWorkspaceDownload{
 		Body: &workspaceDownloadBody{
-			resp:   resp.Response,
 			body:   resp.Body,
 			hasher: sha256.New(),
 		},
@@ -726,47 +734,112 @@ func (s *HostedAgentsServiceOp) DownloadWorkspace(ctx context.Context, sessionID
 	return out, resp, nil
 }
 
-// workspaceDownloadBody hashes bytes as they are read and verifies the
-// X-Content-Sha256 trailer at EOF. A missing trailer is tolerated; only a
-// mismatch is a hard failure.
+// workspaceDownloadBody holds back the trailing integrity footer while
+// streaming, hashes the payload, and verifies the footer at EOF.
 type workspaceDownloadBody struct {
-	resp     *http.Response
 	body     io.ReadCloser
 	hasher   hash.Hash
+	pending  []byte
+	scratch  []byte
+	sawEOF   bool
 	verified bool
 	verr     error
 }
 
 func (b *workspaceDownloadBody) Read(p []byte) (int, error) {
-	n, err := b.body.Read(p)
-	if n > 0 {
-		b.hasher.Write(p[:n])
+	if len(p) == 0 {
+		return 0, nil
 	}
-	if errors.Is(err, io.EOF) {
-		if verr := b.verify(); verr != nil {
-			return n, verr
+	if b.verified {
+		if b.verr != nil {
+			return 0, b.verr
+		}
+		return 0, io.EOF
+	}
+
+	for {
+		if overflow := len(b.pending) - workspaceDownloadFooterLen; overflow > 0 {
+			n := overflow
+			if n > len(p) {
+				n = len(p)
+			}
+			copy(p, b.pending[:n])
+			b.hasher.Write(b.pending[:n])
+			b.pending = b.pending[n:]
+			return n, nil
+		}
+
+		if b.sawEOF {
+			if err := b.verifyFooter(); err != nil {
+				return 0, err
+			}
+			return 0, io.EOF
+		}
+
+		if b.scratch == nil {
+			b.scratch = make([]byte, 32*1024)
+		}
+		nr, err := b.body.Read(b.scratch)
+		if nr > 0 {
+			b.pending = append(b.pending, b.scratch[:nr]...)
+		}
+		if errors.Is(err, io.EOF) {
+			b.sawEOF = true
+			continue
+		}
+		if err != nil {
+			return 0, err
 		}
 	}
-	return n, err
 }
 
-func (b *workspaceDownloadBody) verify() error {
+func (b *workspaceDownloadBody) verifyFooter() error {
 	if b.verified {
 		return b.verr
 	}
 	b.verified = true
 
-	want := strings.TrimSpace(b.resp.Trailer.Get(workspaceContentSHA256Header))
-	if want == "" {
-		// Some intermediaries (e.g. Cloudflare) strip response trailers.
-		return nil
+	if len(b.pending) != workspaceDownloadFooterLen {
+		b.verr = errors.New("hosted agents: missing or truncated workspace download integrity footer")
+		return b.verr
+	}
+	want, ok := parseWorkspaceDownloadFooter(b.pending)
+	if !ok {
+		b.verr = errors.New("hosted agents: invalid workspace download integrity footer")
+		return b.verr
 	}
 	got := hex.EncodeToString(b.hasher.Sum(nil))
 	if !strings.EqualFold(want, got) {
 		b.verr = fmt.Errorf("hosted agents: workspace download checksum mismatch: want %q, got %q", want, got)
 		return b.verr
 	}
+	b.pending = nil
 	return nil
+}
+
+// parseWorkspaceDownloadFooter validates DOWSSHA1<64-hex>\n and returns the digest.
+func parseWorkspaceDownloadFooter(footer []byte) (string, bool) {
+	if len(footer) != workspaceDownloadFooterLen {
+		return "", false
+	}
+	if string(footer[:len(workspaceDownloadFooterPrefix)]) != workspaceDownloadFooterPrefix {
+		return "", false
+	}
+	if footer[workspaceDownloadFooterLen-1] != '\n' {
+		return "", false
+	}
+	digest := string(footer[len(workspaceDownloadFooterPrefix) : workspaceDownloadFooterLen-1])
+	for i := 0; i < len(digest); i++ {
+		c := digest[i]
+		switch {
+		case c >= '0' && c <= '9':
+		case c >= 'a' && c <= 'f':
+		case c >= 'A' && c <= 'F':
+		default:
+			return "", false
+		}
+	}
+	return digest, true
 }
 
 func (b *workspaceDownloadBody) Close() error {
