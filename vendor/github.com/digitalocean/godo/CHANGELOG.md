@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.200.0] - 2026-07-22
+
+- #1058 - @kwadhwa-source - MDROP-23:add godo support for microdroplets
+- #1061 - @gangasingh01 - added support for ADVANCED MySQL config patch and get operations
+- #1059 - @johannaratliff - Add VPCSubnetUUID support for LoadBalancer
+- #1053 - @rbhatia-code - support byoip for load balancer and nat-gateway
+
 ## [1.199.0] - 2026-07-15
 
 - #1052 - @llDrLove - CON-13386 Add P2pOciRegistry plugin information to Kubernetes api calls (Create, Update, Get)
