@@ -968,4 +968,16 @@ const (
 
 	// ArgAgentArchive treats the workspace payload as a tar archive.
 	ArgAgentArchive = "archive"
+
+	// ArgAgentProxyType selects which coding-agent protocol `start-proxy` impersonates.
+	ArgAgentProxyType = "type"
+
+	// ArgAgentProxySession is the session ID or name the proxy bridges to.
+	ArgAgentProxySession = "session"
+
+	// ArgAgentProxyPort is the local port `start-proxy` listens on.
+	ArgAgentProxyPort = "port"
+
+	// ArgAgentProxyReplay replays the session's event history into the first thread on connect.
+	ArgAgentProxyReplay = "replay"
 )
