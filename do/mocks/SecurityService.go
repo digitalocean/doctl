@@ -42,63 +42,63 @@ func (m *MockSecurityService) EXPECT() *MockSecurityServiceMockRecorder {
 }
 
 // CreateScan mocks base method.
-func (m *MockSecurityService) CreateScan(request *godo.CreateScanRequest) (*do.Scan, error) {
+func (m *MockSecurityService) CreateScan(arg0 *godo.CreateScanRequest) (*do.Scan, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateScan", request)
+	ret := m.ctrl.Call(m, "CreateScan", arg0)
 	ret0, _ := ret[0].(*do.Scan)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateScan indicates an expected call of CreateScan.
-func (mr *MockSecurityServiceMockRecorder) CreateScan(request any) *gomock.Call {
+func (mr *MockSecurityServiceMockRecorder) CreateScan(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScan", reflect.TypeOf((*MockSecurityService)(nil).CreateScan), request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScan", reflect.TypeOf((*MockSecurityService)(nil).CreateScan), arg0)
 }
 
 // GetLatestScan mocks base method.
-func (m *MockSecurityService) GetLatestScan(opts *godo.ScanFindingsOptions) (*do.Scan, error) {
+func (m *MockSecurityService) GetLatestScan(arg0 *godo.ScanFindingsOptions) (*do.Scan, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestScan", opts)
+	ret := m.ctrl.Call(m, "GetLatestScan", arg0)
 	ret0, _ := ret[0].(*do.Scan)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatestScan indicates an expected call of GetLatestScan.
-func (mr *MockSecurityServiceMockRecorder) GetLatestScan(opts any) *gomock.Call {
+func (mr *MockSecurityServiceMockRecorder) GetLatestScan(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestScan", reflect.TypeOf((*MockSecurityService)(nil).GetLatestScan), opts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestScan", reflect.TypeOf((*MockSecurityService)(nil).GetLatestScan), arg0)
 }
 
 // GetScan mocks base method.
-func (m *MockSecurityService) GetScan(scanUUID string, opts *godo.ScanFindingsOptions) (*do.Scan, error) {
+func (m *MockSecurityService) GetScan(arg0 string, arg1 *godo.ScanFindingsOptions) (*do.Scan, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetScan", scanUUID, opts)
+	ret := m.ctrl.Call(m, "GetScan", arg0, arg1)
 	ret0, _ := ret[0].(*do.Scan)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetScan indicates an expected call of GetScan.
-func (mr *MockSecurityServiceMockRecorder) GetScan(scanUUID, opts any) *gomock.Call {
+func (mr *MockSecurityServiceMockRecorder) GetScan(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScan", reflect.TypeOf((*MockSecurityService)(nil).GetScan), scanUUID, opts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScan", reflect.TypeOf((*MockSecurityService)(nil).GetScan), arg0, arg1)
 }
 
 // ListFindingAffectedResources mocks base method.
-func (m *MockSecurityService) ListFindingAffectedResources(scanUUID, findingUUID string) (do.AffectedResources, error) {
+func (m *MockSecurityService) ListFindingAffectedResources(arg0, arg1 string) (do.AffectedResources, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListFindingAffectedResources", scanUUID, findingUUID)
+	ret := m.ctrl.Call(m, "ListFindingAffectedResources", arg0, arg1)
 	ret0, _ := ret[0].(do.AffectedResources)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListFindingAffectedResources indicates an expected call of ListFindingAffectedResources.
-func (mr *MockSecurityServiceMockRecorder) ListFindingAffectedResources(scanUUID, findingUUID any) *gomock.Call {
+func (mr *MockSecurityServiceMockRecorder) ListFindingAffectedResources(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFindingAffectedResources", reflect.TypeOf((*MockSecurityService)(nil).ListFindingAffectedResources), scanUUID, findingUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFindingAffectedResources", reflect.TypeOf((*MockSecurityService)(nil).ListFindingAffectedResources), arg0, arg1)
 }
 
 // ListScans mocks base method.

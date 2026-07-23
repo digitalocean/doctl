@@ -171,6 +171,7 @@ type DatabasesService interface {
 	GetOpensearchConfig(context.Context, string) (*OpensearchConfig, *Response, error)
 	GetKafkaConfig(context.Context, string) (*KafkaConfig, *Response, error)
 	GetAdvancedPostgresSQLConfig(context.Context, string) (*AdvancedPostgresConfig, *Response, error)
+	GetAdvancedMySQLConfig(context.Context, string) (*AdvancedMySQLConfig, *Response, error)
 	UpdatePostgreSQLConfig(context.Context, string, *PostgreSQLConfig) (*Response, error)
 	UpdateRedisConfig(context.Context, string, *RedisConfig) (*Response, error)
 	UpdateValkeyConfig(context.Context, string, *ValkeyConfig) (*Response, error)
@@ -179,6 +180,7 @@ type DatabasesService interface {
 	UpdateOpensearchConfig(context.Context, string, *OpensearchConfig) (*Response, error)
 	UpdateKafkaConfig(context.Context, string, *KafkaConfig) (*Response, error)
 	UpdateAdvancedPostgresSQLConfig(context.Context, string, *AdvancedPostgresConfigUpdate) (*Response, error)
+	UpdateAdvancedMySQLConfig(context.Context, string, *AdvancedMySQLConfigUpdate) (*Response, error)
 	ListOptions(todo context.Context) (*DatabaseOptions, *Response, error)
 	UpgradeMajorVersion(context.Context, string, *UpgradeVersionRequest) (*Response, error)
 	ListTopics(context.Context, string, *ListOptions) ([]DatabaseTopic, *Response, error)
@@ -760,6 +762,25 @@ type AdvancedPostgresConfigUpdate struct {
 	PGParameters map[string]string `json:"pg_parameters,omitempty"`
 }
 
+// AdvancedMySQLParameter is one system variable returned by GET /config for advanced_mysql clusters.
+type AdvancedMySQLParameter struct {
+	Name            string `json:"name,omitempty"`
+	Value           string `json:"value,omitempty"`
+	Description     string `json:"description,omitempty"`
+	RequiresRestart bool   `json:"requires_restart,omitempty"`
+	DefaultValue    string `json:"default_value,omitempty"`
+}
+
+// AdvancedMySQLConfig holds advanced configurations for advanced_mysql database clusters.
+type AdvancedMySQLConfig struct {
+	MySQLParameters []AdvancedMySQLParameter `json:"mysql_parameters,omitempty"`
+}
+
+// AdvancedMySQLConfigUpdate is the PATCH payload for advanced_mysql database clusters.
+type AdvancedMySQLConfigUpdate struct {
+	MySQLParameters map[string]string `json:"mysql_parameters,omitempty"`
+}
+
 // PostgreSQLBouncerConfig configuration
 type PostgreSQLBouncerConfig struct {
 	ServerResetQueryAlways  *bool     `json:"server_reset_query_always,omitempty"`
@@ -982,6 +1003,14 @@ type databaseAdvancedPostgresConfigRoot struct {
 
 type databaseAdvancedPostgresConfigUpdateRoot struct {
 	Config *AdvancedPostgresConfigUpdate `json:"config"`
+}
+
+type databaseAdvancedMySQLConfigRoot struct {
+	Config *AdvancedMySQLConfig `json:"config"`
+}
+
+type databaseAdvancedMySQLConfigUpdateRoot struct {
+	Config *AdvancedMySQLConfigUpdate `json:"config"`
 }
 
 type databaseBackupsRoot struct {
@@ -2004,6 +2033,38 @@ func (svc *DatabasesServiceOp) GetAdvancedPostgresSQLConfig(ctx context.Context,
 func (svc *DatabasesServiceOp) UpdateAdvancedPostgresSQLConfig(ctx context.Context, databaseID string, config *AdvancedPostgresConfigUpdate) (*Response, error) {
 	path := fmt.Sprintf(databaseConfigPath, databaseID)
 	root := &databaseAdvancedPostgresConfigUpdateRoot{
+		Config: config,
+	}
+	req, err := svc.client.NewRequest(ctx, http.MethodPatch, path, root)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// GetAdvancedMySQLConfig retrieves the config for an advanced_mysql database cluster.
+func (svc *DatabasesServiceOp) GetAdvancedMySQLConfig(ctx context.Context, databaseID string) (*AdvancedMySQLConfig, *Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(databaseAdvancedMySQLConfigRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Config, resp, nil
+}
+
+// UpdateAdvancedMySQLConfig updates the config for an advanced_mysql database cluster.
+func (svc *DatabasesServiceOp) UpdateAdvancedMySQLConfig(ctx context.Context, databaseID string, config *AdvancedMySQLConfigUpdate) (*Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	root := &databaseAdvancedMySQLConfigUpdateRoot{
 		Config: config,
 	}
 	req, err := svc.client.NewRequest(ctx, http.MethodPatch, path, root)
