@@ -736,7 +736,10 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	if err != nil {
 		return err
 	}
-	r.IP = ip
+	// Create-only; omit empty so shared update path never sends ip.
+	if ip != "" {
+		r.IP = ip
+	}
 
 	return nil
 }
