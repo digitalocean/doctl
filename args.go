@@ -78,6 +78,8 @@ const (
 	ArgClusterVersionSlug = "version"
 	// ArgVPCUUID is a VPC UUID argument.
 	ArgVPCUUID = "vpc-uuid"
+	// ArgSubnetUUID is a VPC subnet UUID argument.
+	ArgSubnetUUID = "subnet-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
 	// ArgWorkerSubnetUUID is a cluster worker subnet UUID argument.
