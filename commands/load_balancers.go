@@ -66,8 +66,6 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerType, "", "", "The type of load balancer, e.g.: `REGIONAL` or `GLOBAL`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSubnetUUID, "", "", "The UUID of the subnet to create the load balancer in. Must be a valid subnet in the specified VPC."+
-		" (NOTE: specifying a subnet UUID is in private preview, contact DigitalOcean support to review its public availability.)")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "This field has been deprecated. You can no longer specify an algorithm for load balancers.")
 	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgRedirectHTTPToHTTPS, "", false,
@@ -118,8 +116,6 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddIntFlag(cmdRecordUpdate, doctl.ArgSizeUnit, "", 0,
 		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgSubnetUUID, "", "", "The UUID of the subnet to create the load balancer in. Must be a valid subnet in the specified VPC."+
-		" (NOTE: specifying a subnet UUID is in private preview, contact DigitalOcean support to review its public availability.)")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "This field has been deprecated. You can no longer specify an algorithm for load balancers.")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHTTPToHTTPS, "", false,
@@ -558,12 +554,6 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.VPCUUID = vpcUUID
-
-	subnetUUID, err := c.Doit.GetString(c.NS, doctl.ArgSubnetUUID)
-	if err != nil {
-		return err
-	}
-	r.VPCSubnetUUID = subnetUUID
 
 	redirectHTTPToHTTPS, err := c.Doit.GetBool(c.NS, doctl.ArgRedirectHTTPToHTTPS)
 	if err != nil {
