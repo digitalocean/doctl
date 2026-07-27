@@ -43,7 +43,7 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSession) Cols() []string {
-	return []string{"SessionID", "Name", "AgentKind", "Status", "RepoHint", "CreatedAt"}
+	return []string{"SessionID", "Name", "AgentKind", "Status", "Origin", "RepoHint", "CreatedAt"}
 }
 
 func (h *HostedAgentSession) ColMap() map[string]string {
@@ -52,6 +52,7 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"Name":      "Name",
 		"AgentKind": "Agent",
 		"Status":    "Status",
+		"Origin":    "Origin",
 		"RepoHint":  "Repo",
 		"CreatedAt": "Created",
 	}
@@ -71,11 +72,21 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			"Name":      s.Name,
 			"AgentKind": s.AgentKind,
 			"Status":    s.Status,
+			"Origin":    hostedAgentOriginLabel(s.Origin),
 			"RepoHint":  s.RepoHint,
 			"CreatedAt": s.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		})
 	}
 	return out
+}
+
+// hostedAgentOriginLabel renders session.origin.product for table output.
+// Empty when the server omitted origin (older sessions).
+func hostedAgentOriginLabel(o *godo.HostedAgentSessionOrigin) string {
+	if o == nil {
+		return ""
+	}
+	return string(o.Product)
 }
 
 // HostedAgentWorkspaceUpload renders the result of `doctl agents upload`.

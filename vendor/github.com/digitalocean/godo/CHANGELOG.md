@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.202.0] - 2026-07-27
+
+- #1066 - Add Hosted Agents session client (HostedAgents) with Session.origin product provenance (direct|simulation|evaluation)
+
+## [1.201.0] - 2026-07-24
+
+- #1060 - @DO-rrao - Add GPU partition mode support to Droplets and Sizes
+
 ## [1.200.0] - 2026-07-22
 
 - #1058 - @kwadhwa-source - MDROP-23:add godo support for microdroplets

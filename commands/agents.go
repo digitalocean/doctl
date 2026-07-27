@@ -260,7 +260,9 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
 		"List agent sessions",
-		`Lists agent sessions visible to the caller. Supports pagination and filtering via `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, `+"`"+`--status`+"`"+`, and `+"`"+`--name`+"`"+`. When more pages exist, the next page token is printed after the table.`,
+		`Lists agent sessions visible to the caller. Supports pagination and filtering via `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, `+"`"+`--status`+"`"+`, and `+"`"+`--name`+"`"+`. When more pages exist, the next page token is printed after the table.
+
+Simulation and evaluation sessions are omitted by the API so customer lists stay free of product-owned internal runs; there is no client-side origin filter. The Origin column shows session.origin.product (`+"`"+`direct`+"`"+` when present). Use `+"`"+`doctl agents show`+"`"+` with a session id to inspect a session the list omits.`,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
@@ -271,7 +273,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show a single agent session",
-		"Prints details of one agent session.",
+		`Prints details of one agent session, including Origin (session.origin.product) when the API returns it. Get by session id still returns simulation/evaluation sessions that List omits.`,
 		Writer, aliasOpt("get"),
 		displayerType(&displayers.HostedAgentSession{}))
 
