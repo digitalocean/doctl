@@ -39,14 +39,12 @@ type HostedAgentsService interface {
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
-	// UploadWorkspace streams a file (or tar archive) into the session workspace.
-	UploadWorkspace(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error)
-	// DownloadWorkspace streams a file (or tar archive) out of the session
-	// workspace. The caller MUST read the returned Body to EOF and then Close
-	// it; godo strips the trailing DOWSSHA1 integrity footer, verifies the
-	// payload SHA-256, and surfaces a missing, invalid, or mismatched footer
-	// as an error. Body yields payload bytes only.
-	DownloadWorkspace(ctx context.Context, sessionID string, input *godo.HostedAgentWorkspaceDownloadRequest) (*godo.HostedAgentWorkspaceDownload, error)
+	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
+	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
+	CreateWorkspaceTransferPartUploadURLs(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferPartUploadURLsRequest) (*godo.HostedAgentWorkspaceTransferPartUploadURLs, error)
+	CommitWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCommitRequest) (*godo.HostedAgentWorkspaceTransfer, error)
+	GetWorkspaceTransfer(sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error)
+	CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error)
 }
 
 type hostedAgentsService struct {
@@ -122,16 +120,27 @@ func (s *hostedAgentsService) StreamSession(ctx context.Context, sessionID strin
 	return stream, err
 }
 
-func (s *hostedAgentsService) UploadWorkspace(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error) {
-	resp, _, err := s.client.HostedAgents.UploadWorkspace(context.TODO(), sessionID, input)
-	return resp, err
+func (s *hostedAgentsService) CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+	xfer, _, err := s.client.HostedAgents.CreateWorkspaceTransfer(context.TODO(), sessionID, create)
+	return xfer, err
 }
 
-// DownloadWorkspace opens the streaming download and returns the godo result.
-// The caller MUST read Body to EOF and then Close it so footer verification
-// runs. ctx is passed straight through so cancellation aborts the in-flight
-// stream.
-func (s *hostedAgentsService) DownloadWorkspace(ctx context.Context, sessionID string, input *godo.HostedAgentWorkspaceDownloadRequest) (*godo.HostedAgentWorkspaceDownload, error) {
-	dl, _, err := s.client.HostedAgents.DownloadWorkspace(ctx, sessionID, input)
-	return dl, err
+func (s *hostedAgentsService) CreateWorkspaceTransferPartUploadURLs(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferPartUploadURLsRequest) (*godo.HostedAgentWorkspaceTransferPartUploadURLs, error) {
+	part, _, err := s.client.HostedAgents.CreateWorkspaceTransferPartUploadURLs(context.TODO(), sessionID, transferID, input)
+	return part, err
+}
+
+func (s *hostedAgentsService) CommitWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCommitRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+	xfer, _, err := s.client.HostedAgents.CommitWorkspaceTransfer(context.TODO(), sessionID, transferID, input)
+	return xfer, err
+}
+
+func (s *hostedAgentsService) GetWorkspaceTransfer(sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error) {
+	xfer, _, err := s.client.HostedAgents.GetWorkspaceTransfer(context.TODO(), sessionID, transferID)
+	return xfer, err
+}
+
+func (s *hostedAgentsService) CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error) {
+	resp, _, err := s.client.HostedAgents.CancelWorkspaceTransfer(context.TODO(), sessionID, transferID, input)
+	return resp, err
 }

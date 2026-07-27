@@ -36,6 +36,36 @@ func (m *MockHostedAgentsService) EXPECT() *MockHostedAgentsServiceMockRecorder 
 	return m.recorder
 }
 
+// CancelWorkspaceTransfer mocks base method.
+func (m *MockHostedAgentsService) CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelWorkspaceTransfer", sessionID, transferID, input)
+	ret0, _ := ret[0].(*godo.HostedAgentWorkspaceTransferCancelResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CancelWorkspaceTransfer indicates an expected call of CancelWorkspaceTransfer.
+func (mr *MockHostedAgentsServiceMockRecorder) CancelWorkspaceTransfer(sessionID, transferID, input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelWorkspaceTransfer", reflect.TypeOf((*MockHostedAgentsService)(nil).CancelWorkspaceTransfer), sessionID, transferID, input)
+}
+
+// CommitWorkspaceTransfer mocks base method.
+func (m *MockHostedAgentsService) CommitWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCommitRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommitWorkspaceTransfer", sessionID, transferID, input)
+	ret0, _ := ret[0].(*godo.HostedAgentWorkspaceTransfer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CommitWorkspaceTransfer indicates an expected call of CommitWorkspaceTransfer.
+func (mr *MockHostedAgentsServiceMockRecorder) CommitWorkspaceTransfer(sessionID, transferID, input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitWorkspaceTransfer", reflect.TypeOf((*MockHostedAgentsService)(nil).CommitWorkspaceTransfer), sessionID, transferID, input)
+}
+
 // CreateSessionFromManifest mocks base method.
 func (m *MockHostedAgentsService) CreateSessionFromManifest(manifest []byte) (*do.HostedAgentSession, error) {
 	m.ctrl.T.Helper()
@@ -46,9 +76,39 @@ func (m *MockHostedAgentsService) CreateSessionFromManifest(manifest []byte) (*d
 }
 
 // CreateSessionFromManifest indicates an expected call of CreateSessionFromManifest.
-func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifest(manifest any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifest(manifest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSessionFromManifest", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSessionFromManifest), manifest)
+}
+
+// CreateWorkspaceTransfer mocks base method.
+func (m *MockHostedAgentsService) CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWorkspaceTransfer", sessionID, create)
+	ret0, _ := ret[0].(*godo.HostedAgentWorkspaceTransfer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateWorkspaceTransfer indicates an expected call of CreateWorkspaceTransfer.
+func (mr *MockHostedAgentsServiceMockRecorder) CreateWorkspaceTransfer(sessionID, create interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkspaceTransfer", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateWorkspaceTransfer), sessionID, create)
+}
+
+// CreateWorkspaceTransferPartUploadURLs mocks base method.
+func (m *MockHostedAgentsService) CreateWorkspaceTransferPartUploadURLs(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferPartUploadURLsRequest) (*godo.HostedAgentWorkspaceTransferPartUploadURLs, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWorkspaceTransferPartUploadURLs", sessionID, transferID, input)
+	ret0, _ := ret[0].(*godo.HostedAgentWorkspaceTransferPartUploadURLs)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateWorkspaceTransferPartUploadURLs indicates an expected call of CreateWorkspaceTransferPartUploadURLs.
+func (mr *MockHostedAgentsServiceMockRecorder) CreateWorkspaceTransferPartUploadURLs(sessionID, transferID, input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkspaceTransferPartUploadURLs", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateWorkspaceTransferPartUploadURLs), sessionID, transferID, input)
 }
 
 // DestroySession mocks base method.
@@ -60,24 +120,9 @@ func (m *MockHostedAgentsService) DestroySession(sessionID string) error {
 }
 
 // DestroySession indicates an expected call of DestroySession.
-func (mr *MockHostedAgentsServiceMockRecorder) DestroySession(sessionID any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) DestroySession(sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DestroySession", reflect.TypeOf((*MockHostedAgentsService)(nil).DestroySession), sessionID)
-}
-
-// DownloadWorkspace mocks base method.
-func (m *MockHostedAgentsService) DownloadWorkspace(ctx context.Context, sessionID string, input *godo.HostedAgentWorkspaceDownloadRequest) (*godo.HostedAgentWorkspaceDownload, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DownloadWorkspace", ctx, sessionID, input)
-	ret0, _ := ret[0].(*godo.HostedAgentWorkspaceDownload)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DownloadWorkspace indicates an expected call of DownloadWorkspace.
-func (mr *MockHostedAgentsServiceMockRecorder) DownloadWorkspace(ctx, sessionID, input any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadWorkspace", reflect.TypeOf((*MockHostedAgentsService)(nil).DownloadWorkspace), ctx, sessionID, input)
 }
 
 // GetSession mocks base method.
@@ -90,9 +135,24 @@ func (m *MockHostedAgentsService) GetSession(sessionID string) (*do.HostedAgentS
 }
 
 // GetSession indicates an expected call of GetSession.
-func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSession", reflect.TypeOf((*MockHostedAgentsService)(nil).GetSession), sessionID)
+}
+
+// GetWorkspaceTransfer mocks base method.
+func (m *MockHostedAgentsService) GetWorkspaceTransfer(sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkspaceTransfer", sessionID, transferID)
+	ret0, _ := ret[0].(*godo.HostedAgentWorkspaceTransfer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkspaceTransfer indicates an expected call of GetWorkspaceTransfer.
+func (mr *MockHostedAgentsServiceMockRecorder) GetWorkspaceTransfer(sessionID, transferID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkspaceTransfer", reflect.TypeOf((*MockHostedAgentsService)(nil).GetWorkspaceTransfer), sessionID, transferID)
 }
 
 // ListSessions mocks base method.
@@ -106,7 +166,7 @@ func (m *MockHostedAgentsService) ListSessions(arg0 *godo.HostedAgentSessionList
 }
 
 // ListSessions indicates an expected call of ListSessions.
-func (mr *MockHostedAgentsServiceMockRecorder) ListSessions(arg0 any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) ListSessions(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSessions", reflect.TypeOf((*MockHostedAgentsService)(nil).ListSessions), arg0)
 }
@@ -120,7 +180,7 @@ func (m *MockHostedAgentsService) PauseSession(sessionID string) error {
 }
 
 // PauseSession indicates an expected call of PauseSession.
-func (mr *MockHostedAgentsServiceMockRecorder) PauseSession(sessionID any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) PauseSession(sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseSession", reflect.TypeOf((*MockHostedAgentsService)(nil).PauseSession), sessionID)
 }
@@ -134,7 +194,7 @@ func (m *MockHostedAgentsService) ResolveHITL(sessionID, requestID string, body 
 }
 
 // ResolveHITL indicates an expected call of ResolveHITL.
-func (mr *MockHostedAgentsServiceMockRecorder) ResolveHITL(sessionID, requestID, body any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) ResolveHITL(sessionID, requestID, body interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveHITL", reflect.TypeOf((*MockHostedAgentsService)(nil).ResolveHITL), sessionID, requestID, body)
 }
@@ -148,7 +208,7 @@ func (m *MockHostedAgentsService) ResumeSession(sessionID string) error {
 }
 
 // ResumeSession indicates an expected call of ResumeSession.
-func (mr *MockHostedAgentsServiceMockRecorder) ResumeSession(sessionID any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) ResumeSession(sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeSession", reflect.TypeOf((*MockHostedAgentsService)(nil).ResumeSession), sessionID)
 }
@@ -163,7 +223,7 @@ func (m *MockHostedAgentsService) SendInput(sessionID string, input *godo.Hosted
 }
 
 // SendInput indicates an expected call of SendInput.
-func (mr *MockHostedAgentsServiceMockRecorder) SendInput(sessionID, input any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) SendInput(sessionID, input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendInput", reflect.TypeOf((*MockHostedAgentsService)(nil).SendInput), sessionID, input)
 }
@@ -178,22 +238,7 @@ func (m *MockHostedAgentsService) StreamSession(ctx context.Context, sessionID s
 }
 
 // StreamSession indicates an expected call of StreamSession.
-func (mr *MockHostedAgentsServiceMockRecorder) StreamSession(ctx, sessionID, opt any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) StreamSession(ctx, sessionID, opt interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamSession", reflect.TypeOf((*MockHostedAgentsService)(nil).StreamSession), ctx, sessionID, opt)
-}
-
-// UploadWorkspace mocks base method.
-func (m *MockHostedAgentsService) UploadWorkspace(sessionID string, input *godo.HostedAgentWorkspaceUploadRequest) (*godo.HostedAgentWorkspaceUploadResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadWorkspace", sessionID, input)
-	ret0, _ := ret[0].(*godo.HostedAgentWorkspaceUploadResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadWorkspace indicates an expected call of UploadWorkspace.
-func (mr *MockHostedAgentsServiceMockRecorder) UploadWorkspace(sessionID, input any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadWorkspace", reflect.TypeOf((*MockHostedAgentsService)(nil).UploadWorkspace), sessionID, input)
 }

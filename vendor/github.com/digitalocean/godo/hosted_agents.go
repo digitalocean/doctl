@@ -20,16 +20,21 @@ const (
 	hostedAgentManifestMediaType  = "application/x-yaml"
 	hostedAgentWorkspaceMediaType = "application/octet-stream"
 
-	hostedAgentsSessionsBasePath            = "/v2/agents/sessions"
-	hostedAgentSessionByIDPath              = hostedAgentsSessionsBasePath + "/%s"
-	hostedAgentSessionStreamPath            = hostedAgentSessionByIDPath + "/stream"
-	hostedAgentSessionInputPath             = hostedAgentSessionByIDPath + "/input"
-	hostedAgentSessionHITLPath              = hostedAgentSessionByIDPath + "/hitl/%s"
-	hostedAgentSessionSandboxExecPath       = hostedAgentSessionByIDPath + "/sandbox/exec"
-	hostedAgentSessionPausePath             = hostedAgentSessionByIDPath + "/pause"
-	hostedAgentSessionResumePath            = hostedAgentSessionByIDPath + "/resume"
-	hostedAgentSessionWorkspaceUploadPath   = hostedAgentSessionByIDPath + "/workspace/upload"
-	hostedAgentSessionWorkspaceDownloadPath = hostedAgentSessionByIDPath + "/workspace/download"
+	hostedAgentsSessionsBasePath                    = "/v2/agents/sessions"
+	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
+	hostedAgentSessionStreamPath                    = hostedAgentSessionByIDPath + "/stream"
+	hostedAgentSessionInputPath                     = hostedAgentSessionByIDPath + "/input"
+	hostedAgentSessionHITLPath                      = hostedAgentSessionByIDPath + "/hitl/%s"
+	hostedAgentSessionSandboxExecPath               = hostedAgentSessionByIDPath + "/sandbox/exec"
+	hostedAgentSessionPausePath                     = hostedAgentSessionByIDPath + "/pause"
+	hostedAgentSessionResumePath                    = hostedAgentSessionByIDPath + "/resume"
+	hostedAgentSessionWorkspaceUploadPath           = hostedAgentSessionByIDPath + "/workspace/upload"
+	hostedAgentSessionWorkspaceDownloadPath         = hostedAgentSessionByIDPath + "/workspace/download"
+	hostedAgentSessionWorkspaceTransfersPath        = hostedAgentSessionByIDPath + "/workspace/transfers"
+	hostedAgentSessionWorkspaceTransferByIDPath     = hostedAgentSessionWorkspaceTransfersPath + "/%s"
+	hostedAgentSessionWorkspaceTransferPartURLsPath = hostedAgentSessionWorkspaceTransferByIDPath + "/part-upload-urls"
+	hostedAgentSessionWorkspaceTransferCommitPath   = hostedAgentSessionWorkspaceTransferByIDPath + "/commit"
+	hostedAgentSessionWorkspaceTransferCancelPath   = hostedAgentSessionWorkspaceTransferByIDPath + "/cancel"
 
 	workspaceContentSHA256Header = "X-Content-Sha256"
 	workspaceIsArchiveHeader     = "X-Workspace-Is-Archive"
@@ -63,6 +68,14 @@ type HostedAgentsService interface {
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
 	UploadWorkspace(context.Context, string, *HostedAgentWorkspaceUploadRequest) (*HostedAgentWorkspaceUploadResponse, *Response, error)
 	DownloadWorkspace(context.Context, string, *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error)
+
+	// Large-file (>~50 MiB) staged workspace transfer APIs. Streaming
+	// UploadWorkspace / DownloadWorkspace remain for smaller payloads.
+	CreateWorkspaceTransfer(context.Context, string, *HostedAgentWorkspaceTransferCreateRequest) (*HostedAgentWorkspaceTransfer, *Response, error)
+	CreateWorkspaceTransferPartUploadURL(context.Context, string, string, *HostedAgentWorkspaceTransferPartUploadURLRequest) (*HostedAgentWorkspaceTransferPartUploadURL, *Response, error)
+	CommitWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCommitRequest) (*HostedAgentWorkspaceTransfer, *Response, error)
+	GetWorkspaceTransfer(context.Context, string, string) (*HostedAgentWorkspaceTransfer, *Response, error)
+	CancelWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCancelRequest) (*HostedAgentWorkspaceTransferCancelResponse, *Response, error)
 }
 
 // HostedAgentsServiceOp handles communication with Hosted Agents session methods.
@@ -388,6 +401,82 @@ type HostedAgentWorkspaceDownload struct {
 	// SizeBytes is the X-Workspace-Size-Bytes hint (0 when unknown); payload
 	// size only (excludes the integrity footer). Not a Content-Length.
 	SizeBytes int64
+}
+
+// HostedAgentWorkspaceTransferDirection is the direction of a staged transfer.
+type HostedAgentWorkspaceTransferDirection string
+
+const (
+	HostedAgentWorkspaceTransferDirectionUpload   HostedAgentWorkspaceTransferDirection = "upload"
+	HostedAgentWorkspaceTransferDirectionDownload HostedAgentWorkspaceTransferDirection = "download"
+)
+
+// HostedAgentWorkspaceTransferStatus is the status of a staged transfer.
+type HostedAgentWorkspaceTransferStatus string
+
+const (
+	HostedAgentWorkspaceTransferStatusPending    HostedAgentWorkspaceTransferStatus = "pending"
+	HostedAgentWorkspaceTransferStatusInProgress HostedAgentWorkspaceTransferStatus = "in_progress"
+	HostedAgentWorkspaceTransferStatusCompleted  HostedAgentWorkspaceTransferStatus = "completed"
+	HostedAgentWorkspaceTransferStatusFailed     HostedAgentWorkspaceTransferStatus = "failed"
+)
+
+// HostedAgentWorkspaceTransferCreateRequest starts a large upload or download.
+// Upload uses IsArchive; download uses AsArchive (per OHS HTTP contract).
+type HostedAgentWorkspaceTransferCreateRequest struct {
+	Direction HostedAgentWorkspaceTransferDirection `json:"direction"`
+	Path      string                                `json:"path"`
+	IsArchive bool                                  `json:"is_archive,omitempty"`
+	AsArchive bool                                  `json:"as_archive,omitempty"`
+	SizeBytes int64                                 `json:"size_bytes,omitempty"`
+	SHA256    string                                `json:"sha256,omitempty"`
+}
+
+// HostedAgentWorkspaceTransfer is returned by create/commit/get transfer calls.
+type HostedAgentWorkspaceTransfer struct {
+	TransferID   string                                `json:"transfer_id"`
+	Direction    HostedAgentWorkspaceTransferDirection `json:"direction,omitempty"`
+	Status       HostedAgentWorkspaceTransferStatus    `json:"status"`
+	UploadID     string                                `json:"upload_id,omitempty"`
+	PartSize     int64                                 `json:"part_size,omitempty"`
+	ExpiresAt    *Timestamp                            `json:"expires_at,omitempty"`
+	SizeBytes    int64                                 `json:"size_bytes,omitempty"`
+	BytesWritten int64                                 `json:"bytes_written,omitempty"`
+	SHA256       string                                `json:"sha256,omitempty"`
+	DownloadURL  string                                `json:"download_url,omitempty"`
+	ErrorMessage string                                `json:"error_message,omitempty"`
+}
+
+// HostedAgentWorkspaceTransferPartUploadURLRequest requests a presigned URL for one part.
+type HostedAgentWorkspaceTransferPartUploadURLRequest struct {
+	// PartNumber is required and starts at 1.
+	PartNumber int `json:"part_number"`
+}
+
+// HostedAgentWorkspaceTransferPartUploadURL is a presigned URL for one upload part.
+// PUT the part bytes directly to UploadURL (not through OHS).
+type HostedAgentWorkspaceTransferPartUploadURL struct {
+	TransferID string     `json:"transfer_id"`
+	PartNumber int        `json:"part_number"`
+	UploadURL  string     `json:"upload_url"`
+	ExpiresAt  *Timestamp `json:"expires_at,omitempty"`
+}
+
+// HostedAgentWorkspaceTransferCommitRequest finalizes an upload after all parts are PUT.
+type HostedAgentWorkspaceTransferCommitRequest struct {
+	SHA256 string `json:"sha256,omitempty"`
+}
+
+// HostedAgentWorkspaceTransferCancelRequest aborts an in-flight transfer.
+type HostedAgentWorkspaceTransferCancelRequest struct {
+	Reason string `json:"reason,omitempty"`
+}
+
+// HostedAgentWorkspaceTransferCancelResponse is returned by CancelWorkspaceTransfer.
+type HostedAgentWorkspaceTransferCancelResponse struct {
+	TransferID string                             `json:"transfer_id"`
+	Aborted    bool                               `json:"aborted"`
+	Status     HostedAgentWorkspaceTransferStatus `json:"status"`
 }
 
 type hostedAgentSessionRoot struct {
@@ -732,6 +821,140 @@ func (s *HostedAgentsServiceOp) DownloadWorkspace(ctx context.Context, sessionID
 		}
 	}
 	return out, resp, nil
+}
+
+// CreateWorkspaceTransfer starts a large-file staged upload or download.
+// For uploads, response includes part_size for client-side chunking.
+func (s *HostedAgentsServiceOp) CreateWorkspaceTransfer(ctx context.Context, sessionID string, input *HostedAgentWorkspaceTransferCreateRequest) (*HostedAgentWorkspaceTransfer, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if input == nil {
+		return nil, nil, errors.New("hosted agents: transfer create request is required")
+	}
+	if input.Direction == "" {
+		return nil, nil, errors.New("hosted agents: direction is required")
+	}
+	if input.Path == "" {
+		return nil, nil, errors.New("hosted agents: path is required")
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionWorkspaceTransfersPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, input)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentWorkspaceTransfer)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// CreateWorkspaceTransferPartUploadURL returns a presigned URL to PUT one upload part.
+// Upload only. Call once per part_number (starts at 1). If the URL expires, call again
+// for the same part_number.
+func (s *HostedAgentsServiceOp) CreateWorkspaceTransferPartUploadURL(ctx context.Context, sessionID, transferID string, input *HostedAgentWorkspaceTransferPartUploadURLRequest) (*HostedAgentWorkspaceTransferPartUploadURL, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if transferID == "" {
+		return nil, nil, errors.New("hosted agents: transfer id is required")
+	}
+	if input == nil {
+		return nil, nil, errors.New("hosted agents: part upload URL request is required")
+	}
+	if input.PartNumber < 1 {
+		return nil, nil, errors.New("hosted agents: part_number must be >= 1")
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionWorkspaceTransferPartURLsPath, sessionID, transferID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, input)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentWorkspaceTransferPartUploadURL)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// CommitWorkspaceTransfer finalizes an upload after all parts have been PUT and
+// starts applying the file into the workspace. Poll GetWorkspaceTransfer afterward.
+func (s *HostedAgentsServiceOp) CommitWorkspaceTransfer(ctx context.Context, sessionID, transferID string, input *HostedAgentWorkspaceTransferCommitRequest) (*HostedAgentWorkspaceTransfer, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if transferID == "" {
+		return nil, nil, errors.New("hosted agents: transfer id is required")
+	}
+	if input == nil {
+		input = &HostedAgentWorkspaceTransferCommitRequest{}
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionWorkspaceTransferCommitPath, sessionID, transferID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, input)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentWorkspaceTransfer)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// GetWorkspaceTransfer polls transfer status. On a completed download, DownloadURL
+// and SHA256 are set; verify SHA256(file) == SHA256 after fetching DownloadURL.
+// This path has no DOWSSHA1 body footer.
+func (s *HostedAgentsServiceOp) GetWorkspaceTransfer(ctx context.Context, sessionID, transferID string) (*HostedAgentWorkspaceTransfer, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if transferID == "" {
+		return nil, nil, errors.New("hosted agents: transfer id is required")
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionWorkspaceTransferByIDPath, sessionID, transferID)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentWorkspaceTransfer)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// CancelWorkspaceTransfer aborts an in-flight transfer. Idempotent.
+func (s *HostedAgentsServiceOp) CancelWorkspaceTransfer(ctx context.Context, sessionID, transferID string, input *HostedAgentWorkspaceTransferCancelRequest) (*HostedAgentWorkspaceTransferCancelResponse, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if transferID == "" {
+		return nil, nil, errors.New("hosted agents: transfer id is required")
+	}
+	if input == nil {
+		input = &HostedAgentWorkspaceTransferCancelRequest{}
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionWorkspaceTransferCancelPath, sessionID, transferID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, input)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentWorkspaceTransferCancelResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
 }
 
 // workspaceDownloadBody holds back the trailing integrity footer while

@@ -304,9 +304,9 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
-		`Streams a local file (or tar archive) into the session's sandbox workspace.
+		`Uploads a local file (or tar archive) into the session's sandbox workspace.
 
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is a tar that the server should extract at the destination. doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. Files larger than 50 MiB are rejected.`,
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is a tar that the server should extract at the destination. doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. All file sizes use the workspace transfer API (multipart upload for large payloads). Maximum size is 50 GiB.`,
 		Writer,
 		displayerType(&displayers.HostedAgentWorkspaceUpload{}))
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
@@ -316,9 +316,9 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
-		`Streams a file (or tar archive) out of the session's sandbox workspace and writes it to a local destination.
+		`Downloads a file (or tar archive) from the session's sandbox workspace and writes it to a local destination.
 
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to tar-stream a directory. The download stream ends with a fixed integrity footer (`+"`"+`DOWSSHA1`+"`"+` + SHA-256 hex); godo strips that footer, verifies the payload checksum, and returns only the file bytes. A missing, invalid, or mismatched footer fails the command and discards any partial local output. Files larger than 50 MiB are rejected by the server.`,
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to download a directory as a tar archive. All file sizes use the workspace transfer API: doctl polls for a presigned download URL, fetches the object directly, and verifies SHA-256 from the transfer status. Maximum size is 50 GiB.`,
 		Writer)
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
@@ -669,14 +669,21 @@ func RunAgentsResume(c *CmdConfig) error {
 	return nil
 }
 
-// maxWorkspaceTransferBytes is the workspace upload/download size cap enforced by
-// harness-api (internal/sandbox/workspace.go MaxWorkspaceUploadBytes). Keep
-// upload/download help text in sync with this value.
-const maxWorkspaceTransferBytes = 50 << 20 // 50 MiB
+// maxWorkspaceTransferBytes is the hard cap for workspace transfers (OHS contract).
+const maxWorkspaceTransferBytes = 50 << 30 // 50 GiB
 
-// RunAgentsUpload streams a local file (or tar archive) into a session's
-// workspace sandbox. The SHA-256 of the payload is computed up front and
-// forwarded so the guest can verify what it received.
+// workspaceObjectHTTPClient performs direct PUT/GET against presigned object
+// URLs returned by the staged transfer APIs. No client timeout so large
+// transfers are not cut off by an arbitrary deadline.
+var workspaceObjectHTTPClient = &http.Client{}
+
+// workspaceTransferPollInterval is how often GetTransfer is polled after commit
+// (upload) or create (download). Tests may shorten this.
+var workspaceTransferPollInterval = time.Second
+
+// RunAgentsUpload sends a local file (or tar archive) into a session's
+// workspace sandbox via the workspace transfer API. The SHA-256 of the payload
+// is computed up front and forwarded so the guest can verify what it received.
 func RunAgentsUpload(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
@@ -704,7 +711,7 @@ func RunAgentsUpload(c *CmdConfig) error {
 		return fmt.Errorf("opening upload file: %w", err)
 	}
 	if info.Size() > maxWorkspaceTransferBytes {
-		return fmt.Errorf("upload file exceeds the workspace transfer limit of 50 MiB (%d bytes)", maxWorkspaceTransferBytes)
+		return fmt.Errorf("upload file exceeds the workspace transfer limit of 50 GiB (%d bytes)", maxWorkspaceTransferBytes)
 	}
 
 	f, err := os.Open(localFile)
@@ -713,8 +720,8 @@ func RunAgentsUpload(c *CmdConfig) error {
 	}
 	defer f.Close()
 
-	// Hash the payload before sending so the X-Content-Sha256 header is set on
-	// the request; rewind afterward so the same bytes stream as the body.
+	// Hash the payload before sending so integrity can be verified end-to-end;
+	// rewind afterward so the same bytes stream as the body / parts.
 	sum, err := hashFile(f)
 	if err != nil {
 		return fmt.Errorf("hashing upload file: %w", err)
@@ -723,16 +730,7 @@ func RunAgentsUpload(c *CmdConfig) error {
 		return fmt.Errorf("rewinding upload file: %w", err)
 	}
 
-	resp, err := c.HostedAgents().UploadWorkspace(sessionID, &godo.HostedAgentWorkspaceUploadRequest{
-		Path:          workspacePath,
-		IsArchive:     isArchive,
-		ContentSHA256: sum,
-		Body:          f,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Display(&displayers.HostedAgentWorkspaceUpload{Uploads: []*godo.HostedAgentWorkspaceUploadResponse{resp}})
+	return workspaceTransferUpload(c, sessionID, workspacePath, f, info.Size(), isArchive, sum)
 }
 
 // hashFile returns the hex-encoded SHA-256 of r, reading it to EOF.
@@ -744,13 +742,147 @@ func hashFile(r io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// RunAgentsDownload streams a file (or tar archive) out of a session workspace.
-// The godo download body strips the trailing DOWSSHA1 integrity footer, hashes
-// the payload, and verifies the footer digest at EOF, so a missing, invalid, or
-// mismatched checksum surfaces while draining the body (or on Close). The
-// bytes are written to a temporary file first and only moved into place once
-// the transfer completes without a verification error; a failed transfer is
-// discarded.
+// workspaceTransferUpload implements upload via /workspace/transfers:
+// CreateTransfer → per-part CreatePartUploadURL + PUT → CommitTransfer → poll GetTransfer.
+func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *os.File, size int64, isArchive bool, sha256hex string) error {
+	svc := c.HostedAgents()
+	create, err := svc.CreateWorkspaceTransfer(sessionID, &godo.HostedAgentWorkspaceTransferCreateRequest{
+		Direction: godo.HostedAgentWorkspaceTransferDirectionUpload,
+		Path:      workspacePath,
+		IsArchive: isArchive,
+		SizeBytes: size,
+		SHA256:    sha256hex,
+	})
+	if err != nil {
+		return err
+	}
+	if create.PartSize <= 0 {
+		return fmt.Errorf("workspace transfer returned invalid part_size %d", create.PartSize)
+	}
+
+	transferID := create.TransferID
+	cancel := func(reason string) {
+		_, _ = svc.CancelWorkspaceTransfer(sessionID, transferID, &godo.HostedAgentWorkspaceTransferCancelRequest{Reason: reason})
+	}
+
+	var offset int64
+	for partNumber := 1; offset < size; partNumber++ {
+		partLen := create.PartSize
+		if remaining := size - offset; remaining < partLen {
+			partLen = remaining
+		}
+		section := io.NewSectionReader(f, offset, partLen)
+
+		uploadURL, err := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
+		if err != nil {
+			cancel("failed to obtain part upload URL")
+			return fmt.Errorf("obtaining upload URL for part %d: %w", partNumber, err)
+		}
+		if err := putWorkspaceObject(uploadURL, section, partLen); err != nil {
+			// URL may have expired; refresh once and retry the same part.
+			uploadURL, retryErr := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
+			if retryErr != nil {
+				cancel("part upload failed")
+				return fmt.Errorf("uploading part %d: %w (refresh URL: %v)", partNumber, err, retryErr)
+			}
+			if _, seekErr := section.Seek(0, io.SeekStart); seekErr != nil {
+				cancel("part upload failed")
+				return fmt.Errorf("rewinding part %d: %w", partNumber, seekErr)
+			}
+			if retryPut := putWorkspaceObject(uploadURL, section, partLen); retryPut != nil {
+				cancel("part upload failed")
+				return fmt.Errorf("uploading part %d: %w", partNumber, retryPut)
+			}
+		}
+		offset += partLen
+	}
+
+	if _, err := svc.CommitWorkspaceTransfer(sessionID, transferID, &godo.HostedAgentWorkspaceTransferCommitRequest{
+		SHA256: sha256hex,
+	}); err != nil {
+		cancel("commit failed")
+		return fmt.Errorf("committing workspace upload: %w", err)
+	}
+
+	xfer, err := pollWorkspaceTransfer(svc, sessionID, transferID)
+	if err != nil {
+		return err
+	}
+
+	written := xfer.BytesWritten
+	if written == 0 {
+		written = size
+	}
+	return c.Display(&displayers.HostedAgentWorkspaceUpload{Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
+		Path:         workspacePath,
+		BytesWritten: written,
+	}}})
+}
+
+// workspacePartUploadURL mints a presigned PUT URL for a single 1-based part.
+func workspacePartUploadURL(svc do.HostedAgentsService, sessionID, transferID string, partNumber int) (string, error) {
+	out, err := svc.CreateWorkspaceTransferPartUploadURLs(sessionID, transferID, &godo.HostedAgentWorkspaceTransferPartUploadURLsRequest{
+		PartNumbers: []int{partNumber},
+	})
+	if err != nil {
+		return "", err
+	}
+	for _, part := range out.PartURLs {
+		if part.PartNumber == partNumber && part.UploadURL != "" {
+			return part.UploadURL, nil
+		}
+	}
+	return "", fmt.Errorf("part upload URLs response missing part %d", partNumber)
+}
+
+// putWorkspaceObject PUTs part bytes to a presigned object URL.
+func putWorkspaceObject(uploadURL string, body io.Reader, contentLength int64) error {
+	req, err := http.NewRequest(http.MethodPut, uploadURL, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.ContentLength = contentLength
+
+	resp, err := workspaceObjectHTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("presigned upload returned HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// pollWorkspaceTransfer waits until a staged transfer reaches a terminal status.
+func pollWorkspaceTransfer(svc do.HostedAgentsService, sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error) {
+	for {
+		xfer, err := svc.GetWorkspaceTransfer(sessionID, transferID)
+		if err != nil {
+			return nil, err
+		}
+		switch xfer.Status {
+		case godo.HostedAgentWorkspaceTransferStatusCompleted:
+			return xfer, nil
+		case godo.HostedAgentWorkspaceTransferStatusFailed:
+			msg := xfer.ErrorMessage
+			if msg == "" {
+				msg = "unknown error"
+			}
+			return nil, fmt.Errorf("workspace transfer failed: %s", msg)
+		default:
+			time.Sleep(workspaceTransferPollInterval)
+		}
+	}
+}
+
+// RunAgentsDownload fetches a file (or tar archive) from a session workspace via
+// the workspace transfer API: CreateTransfer → poll GetTransfer for download_url
+// + sha256 → GET the presigned URL → verify digest. Bytes are written to a
+// temporary file first and only moved into place once verification succeeds; a
+// failed transfer is discarded.
 func RunAgentsDownload(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
@@ -770,18 +902,7 @@ func RunAgentsDownload(c *CmdConfig) error {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	dl, err := c.HostedAgents().DownloadWorkspace(ctx, sessionID, &godo.HostedAgentWorkspaceDownloadRequest{
-		Path:      workspacePath,
-		AsArchive: asArchive,
-	})
-	if err != nil {
-		return err
-	}
-
-	written, err := streamDownloadToFile(dl, saveTo)
+	written, err := workspaceTransferDownload(c.HostedAgents(), sessionID, workspacePath, saveTo, asArchive)
 	if err != nil {
 		return err
 	}
@@ -790,42 +911,76 @@ func RunAgentsDownload(c *CmdConfig) error {
 	return nil
 }
 
-// streamDownloadToFile copies the download body into saveTo. It writes to a
-// sibling temp file and renames it into place only after the body reads to EOF
-// and Close both succeed (godo surfaces footer/checksum failures while the
-// body is drained). On any failure the temp file is removed so no
-// partial/corrupt output is left behind. Written bytes are payload only; the
-// integrity footer is never written to disk.
-func streamDownloadToFile(dl *godo.HostedAgentWorkspaceDownload, saveTo string) (int64, error) {
+// workspaceTransferDownload implements download via /workspace/transfers:
+// CreateTransfer → poll GetTransfer → GET download_url → verify sha256.
+func workspaceTransferDownload(svc do.HostedAgentsService, sessionID, workspacePath, saveTo string, asArchive bool) (int64, error) {
+	create, err := svc.CreateWorkspaceTransfer(sessionID, &godo.HostedAgentWorkspaceTransferCreateRequest{
+		Direction: godo.HostedAgentWorkspaceTransferDirectionDownload,
+		Path:      workspacePath,
+		AsArchive: asArchive,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	xfer, err := pollWorkspaceTransfer(svc, sessionID, create.TransferID)
+	if err != nil {
+		return 0, err
+	}
+	if xfer.DownloadURL == "" {
+		return 0, fmt.Errorf("workspace transfer completed without a download_url")
+	}
+
+	return downloadWorkspaceObject(xfer.DownloadURL, saveTo, xfer.SHA256)
+}
+
+// downloadWorkspaceObject GETs a presigned URL into saveTo and optionally
+// verifies the SHA-256 digest from GetTransfer (no DOWSSHA1 body footer).
+func downloadWorkspaceObject(downloadURL, saveTo, wantSHA256 string) (int64, error) {
+	req, err := http.NewRequest(http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := workspaceObjectHTTPClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		io.Copy(io.Discard, resp.Body)
+		return 0, fmt.Errorf("presigned download returned HTTP %d", resp.StatusCode)
+	}
+
 	dir := filepath.Dir(saveTo)
 	tmp, err := os.CreateTemp(dir, ".doctl-download-*")
 	if err != nil {
 		return 0, fmt.Errorf("creating temp file: %w", err)
 	}
 	tmpName := tmp.Name()
-
 	cleanup := func() {
 		tmp.Close()
 		os.Remove(tmpName)
 	}
 
-	// io.Copy drains the body to EOF, which triggers godo's footer
-	// verification; a missing, invalid, or mismatched checksum is returned here.
-	written, copyErr := io.Copy(tmp, dl.Body)
-	closeBodyErr := dl.Body.Close()
+	h := sha256.New()
+	written, copyErr := io.Copy(tmp, io.TeeReader(resp.Body, h))
 	if copyErr != nil {
 		cleanup()
 		return 0, fmt.Errorf("downloading workspace file: %w", copyErr)
 	}
-	if closeBodyErr != nil {
-		cleanup()
-		return 0, fmt.Errorf("downloading workspace file: %w", closeBodyErr)
-	}
-
 	if err := tmp.Close(); err != nil {
 		os.Remove(tmpName)
 		return 0, fmt.Errorf("flushing download: %w", err)
 	}
+
+	if wantSHA256 != "" {
+		got := hex.EncodeToString(h.Sum(nil))
+		if !strings.EqualFold(got, wantSHA256) {
+			os.Remove(tmpName)
+			return 0, fmt.Errorf("workspace download checksum mismatch: got %s, want %s", got, wantSHA256)
+		}
+	}
+
 	if err := os.Rename(tmpName, saveTo); err != nil {
 		os.Remove(tmpName)
 		return 0, fmt.Errorf("saving download to %s: %w", saveTo, err)
