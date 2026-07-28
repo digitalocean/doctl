@@ -72,7 +72,7 @@ type HostedAgentsService interface {
 	// Large-file (>~50 MiB) staged workspace transfer APIs. Streaming
 	// UploadWorkspace / DownloadWorkspace remain for smaller payloads.
 	CreateWorkspaceTransfer(context.Context, string, *HostedAgentWorkspaceTransferCreateRequest) (*HostedAgentWorkspaceTransfer, *Response, error)
-	CreateWorkspaceTransferPartUploadURL(context.Context, string, string, *HostedAgentWorkspaceTransferPartUploadURLRequest) (*HostedAgentWorkspaceTransferPartUploadURL, *Response, error)
+	CreateWorkspaceTransferPartUploadURLs(context.Context, string, string, *HostedAgentWorkspaceTransferPartUploadURLsRequest) (*HostedAgentWorkspaceTransferPartUploadURLs, *Response, error)
 	CommitWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCommitRequest) (*HostedAgentWorkspaceTransfer, *Response, error)
 	GetWorkspaceTransfer(context.Context, string, string) (*HostedAgentWorkspaceTransfer, *Response, error)
 	CancelWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCancelRequest) (*HostedAgentWorkspaceTransferCancelResponse, *Response, error)
@@ -447,19 +447,22 @@ type HostedAgentWorkspaceTransfer struct {
 	ErrorMessage string                                `json:"error_message,omitempty"`
 }
 
-// HostedAgentWorkspaceTransferPartUploadURLRequest requests a presigned URL for one part.
-type HostedAgentWorkspaceTransferPartUploadURLRequest struct {
-	// PartNumber is required and starts at 1.
-	PartNumber int `json:"part_number"`
+// HostedAgentWorkspaceTransferPartUploadURLsRequest requests presigned URLs for
+// one or more upload parts. PartNumbers are 1-based.
+type HostedAgentWorkspaceTransferPartUploadURLsRequest struct {
+	PartNumbers []int `json:"part_numbers"`
 }
 
-// HostedAgentWorkspaceTransferPartUploadURL is a presigned URL for one upload part.
+// HostedAgentWorkspaceTransferPartUploadURL is one entry in a part-upload-urls response.
 // PUT the part bytes directly to UploadURL (not through OHS).
 type HostedAgentWorkspaceTransferPartUploadURL struct {
-	TransferID string     `json:"transfer_id"`
-	PartNumber int        `json:"part_number"`
-	UploadURL  string     `json:"upload_url"`
-	ExpiresAt  *Timestamp `json:"expires_at,omitempty"`
+	PartNumber int    `json:"part_number"`
+	UploadURL  string `json:"upload_url"`
+}
+
+// HostedAgentWorkspaceTransferPartUploadURLs is returned by CreateWorkspaceTransferPartUploadURLs.
+type HostedAgentWorkspaceTransferPartUploadURLs struct {
+	PartURLs []HostedAgentWorkspaceTransferPartUploadURL `json:"part_urls"`
 }
 
 // HostedAgentWorkspaceTransferCommitRequest finalizes an upload after all parts are PUT.
@@ -852,10 +855,10 @@ func (s *HostedAgentsServiceOp) CreateWorkspaceTransfer(ctx context.Context, ses
 	return root, resp, nil
 }
 
-// CreateWorkspaceTransferPartUploadURL returns a presigned URL to PUT one upload part.
-// Upload only. Call once per part_number (starts at 1). If the URL expires, call again
-// for the same part_number.
-func (s *HostedAgentsServiceOp) CreateWorkspaceTransferPartUploadURL(ctx context.Context, sessionID, transferID string, input *HostedAgentWorkspaceTransferPartUploadURLRequest) (*HostedAgentWorkspaceTransferPartUploadURL, *Response, error) {
+// CreateWorkspaceTransferPartUploadURLs returns presigned URLs to PUT one or more
+// upload parts. Upload only. Part numbers start at 1. If a URL expires, request
+// that part_number again.
+func (s *HostedAgentsServiceOp) CreateWorkspaceTransferPartUploadURLs(ctx context.Context, sessionID, transferID string, input *HostedAgentWorkspaceTransferPartUploadURLsRequest) (*HostedAgentWorkspaceTransferPartUploadURLs, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
 	}
@@ -863,10 +866,15 @@ func (s *HostedAgentsServiceOp) CreateWorkspaceTransferPartUploadURL(ctx context
 		return nil, nil, errors.New("hosted agents: transfer id is required")
 	}
 	if input == nil {
-		return nil, nil, errors.New("hosted agents: part upload URL request is required")
+		return nil, nil, errors.New("hosted agents: part upload URLs request is required")
 	}
-	if input.PartNumber < 1 {
-		return nil, nil, errors.New("hosted agents: part_number must be >= 1")
+	if len(input.PartNumbers) == 0 {
+		return nil, nil, errors.New("hosted agents: part_numbers must not be empty")
+	}
+	for _, n := range input.PartNumbers {
+		if n < 1 {
+			return nil, nil, errors.New("hosted agents: part_numbers must all be >= 1")
+		}
 	}
 
 	path := fmt.Sprintf(hostedAgentSessionWorkspaceTransferPartURLsPath, sessionID, transferID)
@@ -874,7 +882,7 @@ func (s *HostedAgentsServiceOp) CreateWorkspaceTransferPartUploadURL(ctx context
 	if err != nil {
 		return nil, nil, err
 	}
-	root := new(HostedAgentWorkspaceTransferPartUploadURL)
+	root := new(HostedAgentWorkspaceTransferPartUploadURLs)
 	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
