@@ -34,6 +34,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/charmbracelet/glamour"
@@ -247,7 +248,7 @@ The harness allows one connected device per session — a concurrent `+"`"+`doct
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to impersonate (v1: codex)")
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
 	AddIntFlag(cmdStartProxy, doctl.ArgAgentProxyPort, "", 1144, "Local port to listen on")
-	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect (not yet implemented)")
+	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect")
 	cmdStartProxy.Example = `doctl agents start-proxy --type codex --session my-session --port 1144`
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
@@ -384,11 +385,8 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	// --replay is accepted now so the CLI surface doesn't change again in M1,
-	// but session-history replay isn't implemented until the harness bridge
-	// lands; read it only so an explicit --replay=true doesn't silently no-op
-	// without the flag help already having said so.
-	if _, err := c.Doit.GetBool(c.NS, doctl.ArgAgentProxyReplay); err != nil {
+	replay, err := c.Doit.GetBool(c.NS, doctl.ArgAgentProxyReplay)
+	if err != nil {
 		return err
 	}
 
@@ -404,10 +402,13 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	fmt.Fprintf(c.Out, "Proxying session %s as a codex app-server on ws://127.0.0.1:%d\n", sessionID, port)
 	fmt.Fprintf(c.Out, "Connect with: codex --remote ws://127.0.0.1:%d\n", port)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	// SIGTERM alongside SIGINT: under a process manager or plain `kill` (not
+	// `-9`), only handling os.Interrupt meant the graceful-shutdown path in
+	// ServeListener never triggered — the process just died abruptly instead.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	return agentproxy.Serve(ctx, port, &codex.Facade{SessionID: sessionID, Sessions: svc})
+	return agentproxy.Serve(ctx, port, &codex.Facade{SessionID: sessionID, Sessions: svc, Replay: replay})
 }
 
 // readManifest returns the spec file as raw bytes. path "-" reads from stdin.

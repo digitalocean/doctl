@@ -39,9 +39,16 @@ var upgrader = websocket.Upgrader{
 // aren't safe for concurrent writers; once a facade can push notifications on
 // its own timeline (Notifier), there are always at least two potential
 // writers, so this is required, not defensive.
+//
+// pending tracks this connection's own in-flight server-initiated requests
+// (see Request), keyed by the JSON encoding of the id this facade minted for
+// each one — handleConn's read loop checks incoming frames against this map
+// (see deliverReply) before ever reaching facade.Dispatch.
 type wsNotifier struct {
-	mu   sync.Mutex
-	conn *websocket.Conn
+	mu      sync.Mutex
+	conn    *websocket.Conn
+	nextID  uint64
+	pending map[string]chan rpcMessage
 }
 
 func (w *wsNotifier) writeMessage(msg rpcMessage) error {
@@ -57,6 +64,74 @@ func (w *wsNotifier) writeMessage(msg rpcMessage) error {
 // Notify implements agentproxy.Notifier.
 func (w *wsNotifier) Notify(method string, params any) error {
 	return w.writeMessage(rpcMessage{Method: method, Params: mustRawMessage(params)})
+}
+
+// Request implements agentproxy.Notifier: mint an id this connection hasn't
+// used before, send it as a request, and block until deliverReply routes a
+// matching reply back (or ctx is done).
+//
+// Ids are prefixed "srv-" to keep this side's ids out of the client's own id
+// namespace. Nothing on the wire requires the two spaces to be disjoint —
+// each id is just an opaque correlation token — but a distinct prefix makes
+// a collision with a client-minted id (e.g. "1", "2", ...) impossible rather
+// than merely unlikely.
+func (w *wsNotifier) Request(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	w.mu.Lock()
+	w.nextID++
+	idJSON, err := json.Marshal(fmt.Sprintf("srv-%d", w.nextID))
+	if err != nil {
+		w.mu.Unlock()
+		return nil, err
+	}
+	key := string(idJSON)
+	if w.pending == nil {
+		w.pending = make(map[string]chan rpcMessage)
+	}
+	replyCh := make(chan rpcMessage, 1)
+	w.pending[key] = replyCh
+	w.mu.Unlock()
+
+	defer func() {
+		w.mu.Lock()
+		delete(w.pending, key)
+		w.mu.Unlock()
+	}()
+
+	if err := w.writeMessage(rpcMessage{ID: idJSON, Method: method, Params: mustRawMessage(params)}); err != nil {
+		return nil, err
+	}
+
+	select {
+	case reply := <-replyCh:
+		if reply.Error != nil {
+			return nil, reply.Error
+		}
+		raw, err := json.Marshal(reply.Result)
+		if err != nil {
+			return nil, fmt.Errorf("agentproxy: reply result did not remarshal: %w", err)
+		}
+		return raw, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// deliverReply routes an incoming frame that matches one of this
+// connection's own pending server-initiated requests (see Request) to
+// whoever's waiting on it. Returns false if the id doesn't match anything
+// pending — e.g. the reply arrived after Request already gave up on ctx
+// cancellation — so handleConn can log an orphaned reply instead of silently
+// dropping it.
+func (w *wsNotifier) deliverReply(msg rpcMessage) bool {
+	key := string(msg.ID)
+	w.mu.Lock()
+	ch, ok := w.pending[key]
+	w.mu.Unlock()
+	if !ok {
+		return false
+	}
+	ch <- msg
+	return true
 }
 
 func mustRawMessage(v any) json.RawMessage {
@@ -118,12 +193,19 @@ func ServeListener(ctx context.Context, ln net.Listener, facade Facade) error {
 		}
 		defer conn.Close()
 
-		// Own context for this connection's lifetime, not r.Context(): after
-		// Upgrade hijacks the connection, the request context's cancellation
-		// semantics on disconnect are no longer guaranteed. This is what a
-		// facade's background goroutines (e.g. streaming a turn's tokens)
-		// watch to know when to stop.
-		connCtx, cancel := context.WithCancel(context.Background())
+		// Derived from ServeListener's ctx, not r.Context() and not
+		// context.Background(): after Upgrade hijacks the connection, the
+		// request context's cancellation semantics on disconnect are no
+		// longer guaranteed, so this can't be r.Context(). It also can't be
+		// rooted in Background() — that was a real bug (found live): on
+		// shutdown, http.Server.Shutdown returns quickly since it doesn't
+		// track hijacked connections, but nothing ever cancels a
+		// Background()-rooted connCtx, so a facade's background goroutines
+		// (e.g. runEventLoop) never get a stop signal from server shutdown at
+		// all, only from the connection's own handler returning normally.
+		// Deriving from ctx here means canceling the server's ctx
+		// deterministically stops every live connection's goroutines too.
+		connCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
 		notifier := &wsNotifier{conn: conn}
@@ -174,6 +256,20 @@ func handleConn(ctx context.Context, conn *websocket.Conn, facade Facade, notifi
 		var msg rpcMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
 			log.Printf("agentproxy: malformed JSON-RPC frame, dropping: %v", err)
+			continue
+		}
+
+		// A frame with an id but no method is a reply to one of this
+		// connection's own server-initiated requests (see wsNotifier.Request),
+		// not a new client request/notification — route it there instead of
+		// through facade.Dispatch, which has no method to switch on for an
+		// empty string and would otherwise answer it with a bogus
+		// "unhandled: " error reply, corrupting the exchange it's actually a
+		// reply to.
+		if msg.Method == "" && len(msg.ID) > 0 {
+			if !notifier.deliverReply(msg) {
+				log.Printf("agentproxy: reply with unrecognized id %s, dropping", msg.ID)
+			}
 			continue
 		}
 

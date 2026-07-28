@@ -5,10 +5,13 @@ package codex
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/digitalocean/doctl/do"
@@ -58,16 +61,57 @@ type Facade struct {
 	// mu guards turns and streamStarted. The harness allows exactly one
 	// connected SSE consumer per session (the same constraint that makes a
 	// concurrent `doctl agents attach` conflict with this proxy's own
-	// stream) — so this facade must open at most one StreamSession call for
-	// its whole connection lifetime, no matter how many turns run, one after
-	// another or overlapping. Opening a second one mid-turn silently
-	// displaces the first, cutting off that turn's remaining events: typing
-	// a second message before the first turn finishes made only the second
-	// message ever get a response, because the first turn's stream got
-	// evicted the moment the second one opened its own.
+	// stream) — so this facade must open at most one StreamSession call at a
+	// time, no matter how many turns run, one after another or overlapping.
+	// Opening a second one mid-turn silently displaces the first, cutting
+	// off that turn's remaining events: typing a second message before the
+	// first turn finishes made only the second message ever get a response,
+	// because the first turn's stream got evicted the moment the second one
+	// opened its own.
+	//
+	// streamStarted tracks "is a runEventLoop currently running," not "has
+	// one ever run": runEventLoop resets it (and clears turns) on every exit
+	// path, since one Facade instance can outlive a single connection
+	// (start-proxy binds one for its whole process lifetime — see
+	// ServeListener's "one slot" accept loop) and a later, separate
+	// connection must be able to start its own fresh loop.
 	mu            sync.Mutex
 	turns         map[string]*turnState
 	streamStarted bool
+
+	// totalUsage accumulates every run.usage_recorded event seen across this
+	// connection's whole lifetime (not per-turn — see
+	// threadTokenUsageUpdatedNotification's "total" field, which is
+	// thread-scoped, unlike "last" which is one turn's own delta). Reset
+	// alongside turns/streamStarted on every runEventLoop exit, same
+	// reasoning as those two: there's no way to fetch historical usage from
+	// before a reconnect, so a fresh loop starts the count over rather than
+	// pretend to know what came before it.
+	totalUsage tokenUsageBreakdown
+
+	// Replay, when true, feeds this session's full durable event history
+	// into the first thread this facade bootstraps before that thread would
+	// otherwise appear to start with no prior conversation — see
+	// replaySessionHistory. Set once at construction from the --replay CLI
+	// flag; never toggled per-connection.
+	Replay bool
+
+	// replayMu guards replaying/replayDone. Not sync.Once: that can only
+	// express "ran once, ever," with no way to distinguish a genuinely
+	// completed replay from one that was aborted early (the initial
+	// StreamSession call failing, or the client disconnecting mid-fetch) —
+	// which matters here, since an aborted attempt must be retryable on a
+	// later thread/start or thread/resume (e.g. a fresh reconnect), while a
+	// completed one must not repeat and re-show history a second time to a
+	// client that already saw it.
+	replayMu sync.Mutex
+	// replaying is true while a replaySessionHistory attempt is actually in
+	// flight, so a reconnect racing the tail end of a still-running (but
+	// about-to-abort) previous attempt can't start a second one concurrently.
+	replaying bool
+	// replayDone is set only once replaySessionHistory reaches the natural
+	// end of the replay-only stream — never on an aborted attempt.
+	replayDone bool
 }
 
 // turnState is the in-flight accumulation state for one turn, keyed by run
@@ -78,6 +122,39 @@ type turnState struct {
 	text        strings.Builder
 	startedAt   int64
 	itemStarted bool
+
+	// commands tracks in-flight tool calls within this turn, keyed by the
+	// canonical event's own tool_call_id (confirmed real and stable via a
+	// live capture — no id-minting needed, unlike the message item above).
+	// Needed because run.tool_call_completed's payload does NOT repeat
+	// command/cwd — only { tool_call_id, ok, duration_ms, summary } — so
+	// those two fields must be remembered from the started event.
+	commands map[string]*commandState
+
+	// fileChanges tracks in-flight file_change tool calls, keyed the same
+	// way as commands. See fileChangeState for why this needs to exist at
+	// all despite having (almost) nothing to remember.
+	fileChanges map[string]*fileChangeState
+}
+
+// commandState is the remembered-from-started half of one tool call's
+// CommandExecution item; see the turnState.commands doc comment above.
+type commandState struct {
+	command string
+	cwd     string
+}
+
+// fileChangeState is the remembered-from-approval half of one file_change
+// tool call's FileChange item. Unlike commandState, run.tool_call_started
+// carries nothing worth remembering for file_change (its input is always
+// `{}` — confirmed via a live capture, see fileChangeItem) — what this
+// tracks instead is declined, set if this facade resolved the file's HITL
+// as Reject. run.tool_call_completed only ever carries a success boolean,
+// which is ambiguous between codex's PatchApplyStatus::Failed (the patch
+// didn't apply) and ::Declined (the user said no) — declined disambiguates
+// which one to report.
+type fileChangeState struct {
+	declined bool
 }
 
 var _ agentproxy.Facade = (*Facade)(nil)
@@ -337,20 +414,24 @@ type turnCompletedNotification struct {
 }
 
 // itemStartedNotification is ItemStartedNotification, method "item/started".
+// Item is `any`, not a concrete struct: the real protocol's `item` field is
+// itself a tagged union (ThreadItem, item.rs) — agentMessageItem and
+// commandExecutionItem are two of its variants — so this mirrors that shape
+// rather than forcing every item kind through one Go type.
 type itemStartedNotification struct {
-	Item        agentMessageItem `json:"item"`
-	ThreadID    string           `json:"threadId"`
-	TurnID      string           `json:"turnId"`
-	StartedAtMs int64            `json:"startedAtMs"`
+	Item        any    `json:"item"`
+	ThreadID    string `json:"threadId"`
+	TurnID      string `json:"turnId"`
+	StartedAtMs int64  `json:"startedAtMs"`
 }
 
 // itemCompletedNotification is ItemCompletedNotification, method
-// "item/completed".
+// "item/completed". Item is `any` for the same reason as above.
 type itemCompletedNotification struct {
-	Item          agentMessageItem `json:"item"`
-	ThreadID      string           `json:"threadId"`
-	TurnID        string           `json:"turnId"`
-	CompletedAtMs int64            `json:"completedAtMs"`
+	Item          any    `json:"item"`
+	ThreadID      string `json:"threadId"`
+	TurnID        string `json:"turnId"`
+	CompletedAtMs int64  `json:"completedAtMs"`
 }
 
 // agentMessageItem is the ThreadItem::AgentMessage variant, internally
@@ -362,6 +443,64 @@ type agentMessageItem struct {
 	Text string `json:"text"`
 }
 
+// commandExecutionItem is the ThreadItem::CommandExecution variant,
+// internally tagged "type": "commandExecution" (item.rs:269), confirmed
+// against a live capture of a real tool-using turn, not guessed:
+//   - run.tool_call_started's payload is {tool_call_id, name, input:
+//     {command, cwd}} — command/cwd come from here.
+//   - run.tool_call_completed's payload is {tool_call_id, ok, duration_ms,
+//     summary} — no command/cwd (see turnState.commands), no real exit code
+//     (only a success boolean — exitCode below is synthesized: 0 if ok,
+//     1 otherwise, not a genuine process exit code), and no raw output text
+//     (aggregatedOutput is populated from `summary` when non-empty, which in
+//     the one capture taken was always empty — a real, currently-unresolved
+//     fidelity gap, not something this facade can improve on today; see the
+//     RFC's passthrough evidence).
+//
+// processId is omitted (nullable, not available canonically). source is
+// always "agent": every tool call this facade ever sees was agent-initiated
+// (CommandExecutionSource's own #[default] variant). commandActions is sent
+// as an empty array, not omitted — the field has no #[serde(default)] on the
+// codex side, the same class of bug that broke thread/start's `source` field
+// in M1 (missing required key -> decode error) if this were ever left nil.
+type commandExecutionItem struct {
+	Type             string  `json:"type"`
+	ID               string  `json:"id"`
+	Command          string  `json:"command"`
+	Cwd              string  `json:"cwd"`
+	ProcessID        *string `json:"processId"`
+	Source           string  `json:"source"`
+	Status           string  `json:"status"`
+	CommandActions   []any   `json:"commandActions"`
+	AggregatedOutput *string `json:"aggregatedOutput"`
+	ExitCode         *int    `json:"exitCode"`
+	DurationMs       *int64  `json:"durationMs"`
+}
+
+// fileChangeItem is the ThreadItem::FileChange variant, internally tagged
+// "type": "fileChange" (item.rs:294). Much simpler than commandExecutionItem
+// — id, changes, status, nothing else (no duration/exit-code equivalent).
+//
+// changes is always sent as an empty array, not populated: confirmed via a
+// live capture that run.tool_call_started's payload for a file_change call
+// is {tool_call_id, name, input: {}} — input carries no file path or diff
+// content at all, unlike command_execution's {command, cwd}. Canonical has
+// nothing to reconstruct FileUpdateChange entries from, so the codex TUI
+// will show "a file changed" with no diff preview — a real fidelity gap,
+// not a bug, same class as commandExecutionItem's empty commandActions.
+//
+// status is PatchApplyStatus (item.rs): "inProgress" | "completed" |
+// "failed" | "declined" — one more value than CommandExecutionStatus, since
+// codex distinguishes "the patch didn't apply" from "the user declined it"
+// where CommandExecution doesn't. See fileChangeState for how this facade
+// tells them apart despite canonical only carrying one success boolean.
+type fileChangeItem struct {
+	Type    string `json:"type"`
+	ID      string `json:"id"`
+	Changes []any  `json:"changes"`
+	Status  string `json:"status"`
+}
+
 // agentMessageDeltaNotification is AgentMessageDeltaNotification, method
 // "item/agentMessage/delta" — maps from canonical run.token_delta.
 type agentMessageDeltaNotification struct {
@@ -370,6 +509,204 @@ type agentMessageDeltaNotification struct {
 	ItemID   string `json:"itemId"`
 	Delta    string `json:"delta"`
 }
+
+// threadTokenUsageUpdatedNotification is ThreadTokenUsageUpdatedNotification
+// (v2/thread.rs), method "thread/tokenUsage/updated" — maps from canonical
+// run.usage_recorded, confirmed against harness-api's own event schema
+// (harness-api/public/events.proto: RunUsageRecorded{step_id, model_id,
+// usage: {input_tokens, output_tokens, cached_input_tokens,
+// reasoning_tokens, tool_seconds}}) — a per-turn delta, not a running total
+// (the proto's own doc comment says so directly).
+//
+// run.cost_accrued (the plan's original table lumped this in with
+// usage_recorded) does NOT map here, and is intentionally left unhandled:
+// its payload is {running_total_micros, delta_micros} — a running dollar
+// total from the billing layer, not token counts — and codex's
+// ThreadTokenUsageUpdatedNotification has no cost/dollar field at all to
+// put it in. There's nothing in the codex protocol to translate it to.
+type threadTokenUsageUpdatedNotification struct {
+	ThreadID   string           `json:"threadId"`
+	TurnID     string           `json:"turnId"`
+	TokenUsage threadTokenUsage `json:"tokenUsage"`
+}
+
+// threadTokenUsage is ThreadTokenUsage (v2/thread.rs). ModelContextWindow is
+// always omitted (sent null): no source data for this exists anywhere in
+// canonical (confirmed — no context-window field anywhere in
+// harness-api's event schema), and codex's own struct already has a
+// "TODO: make this not optional" on the same field, implying it's commonly
+// absent in real usage too.
+type threadTokenUsage struct {
+	Total              tokenUsageBreakdown `json:"total"`
+	Last               tokenUsageBreakdown `json:"last"`
+	ModelContextWindow *int64              `json:"modelContextWindow"`
+}
+
+// tokenUsageBreakdown is TokenUsageBreakdown (v2/thread.rs). TotalTokens is
+// synthesized as InputTokens+OutputTokens: canonical's run.usage_recorded
+// payload has no total_tokens field of its own (confirmed against
+// harness-api's events.proto), so this is a best-effort sum, not a value
+// the harness actually reports — same "synthesized, not real" caveat as
+// commandExecutionItem's ExitCode.
+type tokenUsageBreakdown struct {
+	TotalTokens           int64 `json:"totalTokens"`
+	InputTokens           int64 `json:"inputTokens"`
+	CachedInputTokens     int64 `json:"cachedInputTokens"`
+	OutputTokens          int64 `json:"outputTokens"`
+	ReasoningOutputTokens int64 `json:"reasoningOutputTokens"`
+}
+
+// --- M4: approval round-trip ---
+//
+// item/commandExecution/requestApproval is the first server->client REQUEST
+// this facade sends (everything above only ever sends notifications, which
+// expect no reply) — maps from canonical run.human_input_requested. Shapes
+// confirmed against the codex source (codex-rs/app-server-protocol/src/
+// protocol/v2/item.rs, permissions.rs) and a real captured
+// run.human_input_requested payload (see the implementation plan's
+// Corrections section), not guessed.
+
+// hitlRequestedPayload is canonical run.human_input_requested's data shape.
+// Two kinds confirmed so far, both against live captures:
+//   - "command_execution": {"hitl_id":..., "payload":{"kind":
+//     "command_execution", "itemId":..., "turnId":..., "startedAtMs":...,
+//     "environmentId":..., "command":..., "cwd":..., "commandActions":[...],
+//     "proposedExecpolicyAmendment":[...]}}
+//   - "file_change": {"hitl_id":..., "payload":{"category":"permission",
+//     "grantRoot":null, "itemId":..., "kind":"file_change", "reason":null,
+//     "startedAtMs":..., "turnId":...}} — notably no environmentId/command/
+//     cwd/commandActions at all; grantRoot is omitted here too (always null
+//     in the one capture taken, and marked [UNSTABLE] on the codex side).
+//
+// kind is read to route to the right approval request (see
+// HostedAgentEventKindHITLRequested in runEventLoop); any kind besides those
+// two is logged and skipped rather than guessed at — item/permissions/
+// requestApproval is a real third method (confirmed in the codex source) but
+// its canonical trigger has never been observed.
+type hitlRequestedPayload struct {
+	HitlID  string `json:"hitl_id"`
+	Payload struct {
+		Kind           string `json:"kind"`
+		ItemID         string `json:"itemId"`
+		StartedAtMs    int64  `json:"startedAtMs"`
+		Environment    string `json:"environmentId"`
+		Command        string `json:"command"`
+		Cwd            string `json:"cwd"`
+		CommandActions []any  `json:"commandActions"`
+
+		// ProposedExecpolicyAmendment is parsed but deliberately never
+		// forwarded to the client — see commandExecutionRequestApprovalParams'
+		// doc comment for why sending it is actively harmful, not just
+		// unhelpful.
+		ProposedExecpolicyAmendment []string `json:"proposedExecpolicyAmendment"`
+
+		// Reason is file_change-specific (always null in the one capture
+		// taken so far); command_execution has no equivalent field.
+		Reason *string `json:"reason"`
+
+		// TurnID is deliberately unused below: in the one live capture taken,
+		// this canonical field's value differed from the event envelope's own
+		// run_id (which the rest of this facade already uses as the codex
+		// turnId for every other notification about the same turn — see
+		// requestCommandExecutionApproval). Using this field instead would
+		// send a turnId that doesn't match what item/started and
+		// turn/started already told the client about this same turn.
+		// Unresolved discrepancy, flagged for live verification rather than
+		// guessed at.
+		TurnID string `json:"turnId"`
+	} `json:"payload"`
+}
+
+// commandExecutionRequestApprovalParams is CommandExecutionRequestApprovalParams
+// (item.rs). approvalId is deliberately omitted: per the codex source's own
+// doc comment, it's null for "regular shell/unified_exec approvals" (it only
+// disambiguates multiple zsh-exec-bridge callbacks sharing one itemId, which
+// doesn't apply here) — correlating the eventual reply to this specific
+// approval is the JSON-RPC request id's job (agentproxy.Notifier.Request),
+// not a field inside params.
+//
+// availableDecisions and proposedExecpolicyAmendment are both deliberately
+// omitted — and omitting availableDecisions alone is NOT enough, a real bug
+// found live-testing this exact facade: the codex TUI's fallback decision set
+// (used whenever availableDecisions is absent — see
+// default_exec_approval_decisions, codex-rs/tui/src/app.rs) is NOT just
+// [Accept, Cancel]. It's [Accept, Cancel], PLUS AcceptWithExecpolicyAmendment
+// whenever the request itself carries a non-nil proposedExecpolicyAmendment.
+// This facade used to forward that field straight from canonical, which
+// silently re-introduced the exact "remembered approval the harness can't
+// honor" problem availableDecisions was omitted to avoid in the first place
+// — confirmed live: a user saw "yes, allow this command and don't ask
+// again," picked it, and the harness asked again next time anyway, because
+// AcceptWithExecpolicyAmendment collapses to a one-shot Approve just like
+// AcceptForSession does (see decodeCommandExecutionApprovalDecision). Leaving
+// this field out entirely is what actually restricts the TUI to
+// [Accept, Cancel] — both of which this facade can honor correctly.
+type commandExecutionRequestApprovalParams struct {
+	ThreadID       string `json:"threadId"`
+	TurnID         string `json:"turnId"`
+	ItemID         string `json:"itemId"`
+	StartedAtMs    int64  `json:"startedAtMs"`
+	EnvironmentID  string `json:"environmentId"`
+	Command        string `json:"command"`
+	Cwd            string `json:"cwd"`
+	CommandActions []any  `json:"commandActions"`
+}
+
+// commandExecutionRequestApprovalResponse is
+// CommandExecutionRequestApprovalResponse (item.rs). Decision is left as
+// json.RawMessage rather than a concrete type: CommandExecutionApprovalDecision
+// (item.rs) is externally tagged with #[serde(rename_all = "camelCase")] —
+// unit variants ("accept", "acceptForSession", "decline", "cancel") serialize
+// as bare strings, struct variants (AcceptWithExecpolicyAmendment,
+// ApplyNetworkPolicyAmendment) as {"<camelCaseVariant>": {...}} — see
+// decodeCommandExecutionApprovalDecision.
+type commandExecutionRequestApprovalResponse struct {
+	Decision json.RawMessage `json:"decision"`
+}
+
+// decodeCommandExecutionApprovalDecision maps a codex CommandExecutionApprovalDecision
+// (item.rs) onto the harness's 3-value HostedAgentHITLOutcome.
+//
+// acceptForSession/acceptWithExecpolicyAmendment/applyNetworkPolicyAmendment
+// all collapse to a one-shot Approve: the harness has no concept of a
+// persisted approval, so the user's "always allow" choice won't suppress the
+// next identical request (see the implementation plan's Corrections
+// section) — a known, accepted limitation, not a bug to fix here.
+//
+// decline/cancel both collapse to Reject too: cancel's "also interrupt the
+// turn immediately" semantic (vs. decline's "agent continues the turn") has
+// no HostedAgentHITLOutcome equivalent either — a second, smaller known gap.
+func decodeCommandExecutionApprovalDecision(raw json.RawMessage) (godo.HostedAgentHITLOutcome, error) {
+	var kind string
+	if err := json.Unmarshal(raw, &kind); err == nil {
+		switch kind {
+		case "accept", "acceptForSession":
+			return godo.HostedAgentHITLOutcomeApprove, nil
+		case "decline", "cancel":
+			return godo.HostedAgentHITLOutcomeReject, nil
+		default:
+			return "", fmt.Errorf("unrecognized decision %q", kind)
+		}
+	}
+
+	var variant map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &variant); err != nil {
+		return "", fmt.Errorf("decision is neither a string nor an object: %s", raw)
+	}
+	for key := range variant {
+		switch key {
+		case "acceptWithExecpolicyAmendment", "applyNetworkPolicyAmendment":
+			return godo.HostedAgentHITLOutcomeApprove, nil
+		}
+	}
+	return "", fmt.Errorf("unrecognized decision object: %s", raw)
+}
+
+// Note: this facade never sends a real item/fileChange/requestApproval to
+// the client — see autoRejectFileChangeApproval for why. There is
+// deliberately no FileChangeRequestApprovalParams/Response or
+// FileChangeApprovalDecision decoder here, unlike the command_execution
+// equivalents just above: nothing ever constructs or parses that shape.
 
 // turnInterruptResult is TurnInterruptResponse (v2/turn.rs) — genuinely
 // empty on the wire. Best-effort no-op for now: the harness has no
@@ -455,6 +792,7 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		}, nil
 
 	case "thread/start":
+		f.maybeReplay(ctx)
 		return f.synthesizedThread(), nil
 
 	case "thread/resume":
@@ -475,6 +813,7 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 				Message: fmt.Sprintf("thread %q not found; this proxy only serves thread %q", p.ThreadID, f.SessionID),
 			}
 		}
+		f.maybeReplay(ctx)
 		// ThreadResumeResponse is identical in shape to ThreadStartResponse
 		// (verified against the codex source, codex-rs/app-server-protocol/
 		// src/protocol/v2/thread.rs) — same synthesized thread either way.
@@ -587,28 +926,284 @@ func (f *Facade) trackTurn(ctx context.Context, runID string) {
 	}
 }
 
+// Reconnect schedule for runEventLoop's StreamSession loop. Mirrors
+// commands/agents.go's doctl agents attach reconnect constants
+// (maxAutoReconnectAttempts, initialReconnectBackoff, maxReconnectBackoff,
+// healthyStreamDuration) — duplicated rather than shared, since extracting a
+// common package would mean refactoring attach's already-working, tested
+// code for this proxy's benefit alone. Worth revisiting if the two drift or
+// a third caller appears.
+const (
+	maxAutoReconnectAttempts = 5
+	initialReconnectBackoff  = 1 * time.Second
+	maxReconnectBackoff      = 30 * time.Second
+)
+
+// healthyStreamDuration is how long a stream must stay connected before a
+// drop is treated as a normal idle timeout (which resets the reconnect
+// budget) rather than a failing connection — see runEventLoop. Var, not
+// const, so tests can shrink it.
+var healthyStreamDuration = 30 * time.Second
+
+// nextReconnectBackoff doubles cur, capped at maxReconnectBackoff.
+func nextReconnectBackoff(cur time.Duration) time.Duration {
+	next := cur * 2
+	if next > maxReconnectBackoff {
+		return maxReconnectBackoff
+	}
+	return next
+}
+
+// sleepCtx waits for d or returns false immediately if ctx is done.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
+}
+
+// reconnectSleep is the backoff wait runEventLoop uses between reconnect
+// attempts, stored behind an atomic.Pointer rather than a plain var (unlike
+// commands/agents.go's identical hook for doctl agents attach, which has no
+// equivalent concern): a facade's runEventLoop goroutine can legitimately
+// outlive the test that started it — some tests intentionally never finish
+// their turn (e.g. ones only testing an approval hand-off) — and keep
+// calling this hook concurrently with a *different*, later test reassigning
+// it via setReconnectSleepForTest. A plain var raced under -race in
+// practice, confirmed live across the test suite, not hypothetical.
+var reconnectSleep atomic.Pointer[func(context.Context, time.Duration) bool]
+
+func init() {
+	fn := sleepCtx
+	reconnectSleep.Store(&fn)
+}
+
+// sleepBeforeReconnect calls whatever reconnectSleep currently holds.
+func sleepBeforeReconnect(ctx context.Context, d time.Duration) bool {
+	fn := reconnectSleep.Load()
+	return (*fn)(ctx, d)
+}
+
+// setReconnectSleepForTest replaces the reconnect backoff wait for the
+// duration of a test, returning a restore func for t.Cleanup — see
+// reconnectSleep's doc comment for why tests must go through this instead of
+// assigning to a plain package var.
+func setReconnectSleepForTest(fn func(context.Context, time.Duration) bool) (restore func()) {
+	old := reconnectSleep.Load()
+	reconnectSleep.Store(&fn)
+	return func() { reconnectSleep.Store(old) }
+}
+
+// isTerminalStreamError reports whether err means reconnecting is pointless
+// — auth failure, the session/run is gone, or a conflicting single-connection
+// consumer (the same harness constraint that makes a concurrent `doctl
+// agents attach` conflict with this proxy's own stream). Mirrors
+// commands/agents.go's classifyStreamError — duplicated for the same reason
+// as the reconnect constants above.
+func isTerminalStreamError(err error) bool {
+	var er *godo.ErrorResponse
+	if !errors.As(err, &er) || er.Response == nil {
+		return false
+	}
+	switch er.Response.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict:
+		return true
+	}
+	return false
+}
+
 // runEventLoop is the single, long-lived StreamSession reader for this
 // facade's connection lifetime — started once, by the first turn/start (see
 // trackTurn), and shared by every turn thereafter. It dispatches each event
 // to whichever tracked turn it belongs to (by run id) and translates into
-// the "one-way text" notification sequence: turn/started -> item/started ->
-// item/agentMessage/delta* -> item/completed -> turn/completed. Everything
-// else falls through untouched. Runs until ctx is canceled (the connection
-// closes) or the stream ends/errors — NOT until one turn finishes, since
-// later turns depend on this same loop still running.
+// notifications: turn/started -> item/started -> item/agentMessage/delta* ->
+// item/completed -> turn/completed for text, and item/started ->
+// item/completed (commandExecution) for tool calls, interleaved as they
+// occur. Everything else falls through untouched. Runs until ctx is canceled
+// (the connection closes), the client connection dies, or reconnecting gives
+// up for good — NOT until one turn finishes, since later turns depend on
+// this same loop still running.
 //
-// TODO(M3): translate tool-call events instead of dropping them.
-// TODO(M4): translate HITL events instead of dropping them.
+// Reconnects on a transient StreamSession failure or an unexpected stream
+// drop (including a clean EOF, which is how a server idle-timeout close
+// looks), with backoff — mirroring doctl agents attach's streamWithReconnect
+// pattern exactly: maxAutoReconnectAttempts consecutive failures before
+// giving up, reset by any connection that stayed healthy for
+// healthyStreamDuration, so a long-lived proxy connection survives an
+// unbounded number of idle drops while still giving up on a session that
+// keeps failing immediately. A terminal error (see isTerminalStreamError)
+// gives up immediately, no retries. Giving up for any reason fails every
+// still-tracked turn (see failAllTrackedTurns) rather than leaving them
+// silently hanging — codex has no "lost connection to backend" notification
+// of its own to translate.
+//
+// TODO(M3): item/commandExecution/outputDelta (live streaming command
+// output) is deliberately not sent — canonical run.tool_call_completed
+// carries no output text at all today (see commandExecutionItem), so there's
+// nothing to stream even if this were wired up.
 func (f *Facade) runEventLoop(ctx context.Context) {
-	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, nil)
-	if err != nil {
-		log.Printf("codex facade: StreamSession failed: %v", err)
-		return
-	}
-	defer stream.Close()
+	// Reset streamStarted (and drop any turns this loop was still tracking)
+	// on every exit path, not just the normal one — a Facade instance
+	// outlives any single connection (start-proxy binds one for its whole
+	// process lifetime; see ServeListener's "one slot" accept loop), so a
+	// second, later `codex --remote` reconnecting to an already-used proxy
+	// must be able to start its own fresh loop rather than silently
+	// inheriting a streamStarted=true left behind by a connection that
+	// already ended. Discovered live: a reconnect's turn/start returned an
+	// in-progress turn from SendInput, but no notifications ever followed,
+	// because nothing ever cleared streamStarted after the first
+	// connection's loop exited with that connection's own canceled context.
+	// This also fixes a narrower pre-existing gap: if StreamSession itself
+	// failed below, streamStarted was already true (trackTurn sets it before
+	// spawning this goroutine) and this function returned without ever
+	// resetting it — permanently wedging that Facade instance even within
+	// its own first connection.
+	defer func() {
+		f.mu.Lock()
+		f.streamStarted = false
+		f.turns = nil
+		f.totalUsage = tokenUsageBreakdown{}
+		f.mu.Unlock()
+	}()
 
+	var cursor string
+	backoff := initialReconnectBackoff
+	failures := 0
+
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		var opt *godo.HostedAgentSessionStreamOptions
+		if cursor != "" {
+			opt = &godo.HostedAgentSessionStreamOptions{ReplayFrom: cursor}
+		}
+		stream, err := f.Sessions.StreamSession(ctx, f.SessionID, opt)
+		if err != nil {
+			if isTerminalStreamError(err) {
+				log.Printf("codex facade: StreamSession failed (terminal), giving up: %v", err)
+				f.failAllTrackedTurns("hosted session stream unavailable: " + err.Error())
+				return
+			}
+			failures++
+			if failures >= maxAutoReconnectAttempts {
+				log.Printf("codex facade: StreamSession failed %d times in a row, giving up: %v", failures, err)
+				f.failAllTrackedTurns("lost connection to hosted session")
+				return
+			}
+			log.Printf("codex facade: StreamSession failed, reconnecting: %v", err)
+			if !sleepBeforeReconnect(ctx, backoff) {
+				return
+			}
+			backoff = nextReconnectBackoff(backoff)
+			continue
+		}
+
+		connectedAt := time.Now()
+		clientDead := f.drainStream(ctx, stream, &cursor)
+		streamErr := stream.Err()
+		stream.Close()
+
+		if clientDead || ctx.Err() != nil {
+			return
+		}
+
+		if streamErr != nil && isTerminalStreamError(streamErr) {
+			log.Printf("codex facade: stream error (terminal), giving up: %v", streamErr)
+			f.failAllTrackedTurns("hosted session stream unavailable: " + streamErr.Error())
+			return
+		}
+
+		// Nothing left to reconnect for: every tracked turn already finished
+		// (finishTurn deletes each one as it completes), so there's no
+		// in-flight turn waiting on more events. Unlike doctl agents attach
+		// (a long-lived interactive session that always expects more input),
+		// this loop doesn't need to stay connected on the chance a new turn
+		// starts later — trackTurn already lazily starts a fresh loop for
+		// that (see its own doc comment), so exiting here is free, not a
+		// missed opportunity. Also avoids an unbounded background retry loop
+		// outliving every turn it was ever started for.
+		f.mu.Lock()
+		noTurnsLeft := len(f.turns) == 0
+		f.mu.Unlock()
+		if noTurnsLeft {
+			return
+		}
+
+		// A drop after a healthy, long-lived connection is a normal idle
+		// timeout, not a failing session: reset the budget and backoff so
+		// this loop keeps recovering. Only rapid, back-to-back drops
+		// accumulate toward the give-up limit.
+		if time.Since(connectedAt) >= healthyStreamDuration {
+			failures = 0
+			backoff = initialReconnectBackoff
+		} else {
+			failures++
+		}
+		if failures >= maxAutoReconnectAttempts {
+			log.Printf("codex facade: reconnected %d times without staying healthy, giving up", failures)
+			f.failAllTrackedTurns("lost connection to hosted session")
+			return
+		}
+		log.Printf("codex facade: stream ended (err=%v), reconnecting", streamErr)
+		if !sleepBeforeReconnect(ctx, backoff) {
+			return
+		}
+		backoff = nextReconnectBackoff(backoff)
+	}
+}
+
+// failAllTrackedTurns synthesizes a failed turn/completed for every turn
+// this loop was still tracking when runEventLoop is about to give up
+// reconnecting for good. codex has no "lost connection to backend"
+// notification of its own — leaving these turns silently unanswered would
+// just recreate the exact "TUI hangs forever" failure mode this facade
+// exists to avoid, just triggered by a dead stream instead of an unhandled
+// HITL kind.
+func (f *Facade) failAllTrackedTurns(message string) {
+	f.mu.Lock()
+	turns := f.turns
+	f.mu.Unlock()
+
+	for runID, ts := range turns {
+		f.finishTurn(runID, ts, "failed", &turnError{Message: message})
+	}
+}
+
+// drainStream reads events from stream until it ends or errors, dispatching
+// each to whichever tracked turn it belongs to and translating into
+// notifications — runEventLoop's outer reconnect loop calls this once per
+// successful StreamSession connection. Returns true if a notify failure
+// indicates the client connection itself is dead, in which case the caller
+// must stop entirely rather than try to reconnect to the harness (the
+// problem isn't the harness stream).
+//
+// cursor is updated with every event's EventID as it's seen, before
+// processing — even an event this facade fails to fully handle (bad JSON,
+// e.g.) must never be re-requested via ReplayFrom on the next reconnect,
+// since re-receiving it wouldn't fix the bad JSON.
+//
+// Also guards against a real, confirmed reconnect-boundary behavior: replay
+// can re-deliver the last event(s) already processed before a drop (see
+// doctl agents attach's tokenDeduper, added for the identical problem on
+// run.token_delta specifically) — skipping any event whose id is <= cursor
+// covers every event kind, not just token deltas, relying on canonical event
+// ids being ULIDs (lexicographically ordered by time).
+func (f *Facade) drainStream(ctx context.Context, stream *godo.HostedAgentSessionStream, cursor *string) (clientDead bool) {
 	for stream.Next() {
 		ev := stream.Current()
+
+		if ev.EventID != "" {
+			if *cursor != "" && ev.EventID <= *cursor {
+				continue
+			}
+			*cursor = ev.EventID
+		}
 
 		f.mu.Lock()
 		ts, ok := f.turns[ev.RunID]
@@ -617,53 +1212,11 @@ func (f *Facade) runEventLoop(ctx context.Context) {
 			continue // event for a run this facade isn't tracking (e.g. predates this connection)
 		}
 
-		switch ev.Kind {
-		case godo.HostedAgentEventKindRunStarted:
-			ts.startedAt = time.Now().Unix()
-			if !f.notify("turn/started", turnStartedNotification{
-				ThreadID: f.SessionID,
-				Turn:     turnObj{ID: ev.RunID, Items: []any{}, Status: "inProgress", StartedAt: &ts.startedAt},
-			}) {
-				return
-			}
-			ts.itemStarted = f.notify("item/started", itemStartedNotification{
-				Item:        agentMessageItem{Type: "agentMessage", ID: ts.itemID, Text: ""},
-				ThreadID:    f.SessionID,
-				TurnID:      ev.RunID,
-				StartedAtMs: ts.startedAt * 1000,
-			})
-
-		case godo.HostedAgentEventKindTokenChunk:
-			var payload struct {
-				Text string `json:"text"`
-			}
-			if err := json.Unmarshal(ev.Payload, &payload); err != nil {
-				continue
-			}
-			ts.text.WriteString(payload.Text)
-			if !f.notify("item/agentMessage/delta", agentMessageDeltaNotification{
-				ThreadID: f.SessionID,
-				TurnID:   ev.RunID,
-				ItemID:   ts.itemID,
-				Delta:    payload.Text,
-			}) {
-				return
-			}
-
-		case godo.HostedAgentEventKindRunCompleted:
-			f.finishTurn(ev.RunID, ts, "completed", nil)
-
-		case godo.HostedAgentEventKindRunFailed:
-			var payload struct {
-				Message string `json:"message"`
-			}
-			_ = json.Unmarshal(ev.Payload, &payload)
-			f.finishTurn(ev.RunID, ts, "failed", &turnError{Message: payload.Message})
+		if f.translateEvent(ctx, ev, ts) {
+			return true
 		}
 	}
-	if err := stream.Err(); err != nil {
-		log.Printf("codex facade: stream error: %v", err)
-	}
+	return false
 }
 
 // finishTurn sends the closing item/completed (if item/started ever landed)
@@ -702,4 +1255,154 @@ func (f *Facade) finishTurn(runID string, ts *turnState, status string, turnErr 
 	f.mu.Lock()
 	delete(f.turns, runID)
 	f.mu.Unlock()
+}
+
+// requestCommandExecutionApproval sends the server->client
+// item/commandExecution/requestApproval request for one HITL and, once the
+// client replies, resolves the harness's HITL request accordingly. See the
+// HostedAgentEventKindHITLRequested case in runEventLoop for why this runs
+// in its own goroutine rather than inline.
+func (f *Facade) requestCommandExecutionApproval(ctx context.Context, turnID string, hitl hitlRequestedPayload) {
+	raw, err := f.notifier.Request(ctx, "item/commandExecution/requestApproval", commandExecutionRequestApprovalParams{
+		ThreadID:       f.SessionID,
+		TurnID:         turnID,
+		ItemID:         hitl.Payload.ItemID,
+		StartedAtMs:    hitl.Payload.StartedAtMs,
+		EnvironmentID:  hitl.Payload.Environment,
+		Command:        hitl.Payload.Command,
+		Cwd:            hitl.Payload.Cwd,
+		CommandActions: hitl.Payload.CommandActions,
+	})
+	if err != nil {
+		f.rejectHITLAfterRequestFailure(hitl.HitlID, "command_execution", err)
+		return
+	}
+
+	var resp commandExecutionRequestApprovalResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		log.Printf("codex facade: approval response %s: invalid shape: %v", hitl.HitlID, err)
+		return
+	}
+	outcome, err := decodeCommandExecutionApprovalDecision(resp.Decision)
+	if err != nil {
+		log.Printf("codex facade: approval response %s: %v", hitl.HitlID, err)
+		return
+	}
+	if err := f.Sessions.ResolveHITL(f.SessionID, hitl.HitlID, &godo.HostedAgentResolveHITLRequest{
+		Outcome: outcome,
+		Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+	}); err != nil {
+		log.Printf("codex facade: ResolveHITL %s failed: %v", hitl.HitlID, err)
+	}
+}
+
+// autoRejectFileChangeApproval immediately rejects every file_change HITL
+// server-side — no item/fileChange/requestApproval is ever sent to the
+// client. This is a deliberate default, not a stub for a gap: apply_patch's
+// registration as a model-facing tool is a per-model, server-side catalog
+// decision inside codex itself (ModelInfo.apply_patch_tool_type, gated in
+// codex-rs/core/src/tools/spec_plan.rs), with no config lever this proxy —
+// or even hosted-agents' own sandbox config — can reach to disable it
+// outright (confirmed via source; hosted-agents' codex sidecar config is a
+// small curated allowlist, not a passthrough, and the actual per-run
+// config.toml is rendered in a separate "plano" repo this proxy has no
+// access to). Instantly rejecting every attempt is the only lever available
+// here to steer codex away from apply_patch and toward shell commands for
+// file edits.
+//
+// This also sidesteps a real interactive-approval race that was found and
+// reverted: a fixed timeout on the client-facing request was tried, but the
+// codex protocol has no way to withdraw a request already sent, so timing
+// out server-side left the client's own prompt dangling, and a human's real
+// (late) answer got silently dropped by wsNotifier.Request/deliverReply
+// (proxy.go). Never sending the request at all has no such race.
+//
+// Marks fc.declined so the later run.tool_call_completed reports
+// PatchApplyStatus::Declined, not ::Failed — same disambiguation
+// fileChangeState exists for (see its doc comment).
+//
+// Takes ts directly — the caller's own turnState — rather than a turn id to
+// re-look-up via f.turns: this runs in its own goroutine (see
+// translateEvent's HITLRequested case) concurrently with the goroutine that
+// owns ts (the live event loop, or replaySessionHistory), so f.mu still
+// guards the actual ts.fileChanges map access, but no longer depends on ts
+// being registered in the shared f.turns map at all — which
+// replaySessionHistory's synthesized turnStates never are (see replay.go).
+func (f *Facade) autoRejectFileChangeApproval(ts *turnState, hitl hitlRequestedPayload) {
+	log.Printf("codex facade: auto-rejecting file_change HITL %s (pushing codex toward shell commands for file edits)", hitl.HitlID)
+
+	f.mu.Lock()
+	if fc, ok := ts.fileChanges[hitl.Payload.ItemID]; ok {
+		fc.declined = true
+	}
+	f.mu.Unlock()
+
+	if err := f.Sessions.ResolveHITL(f.SessionID, hitl.HitlID, &godo.HostedAgentResolveHITLRequest{
+		Outcome: godo.HostedAgentHITLOutcomeReject,
+		Source:  godo.HostedAgentResolutionSourceOutOfBand,
+	}); err != nil {
+		log.Printf("codex facade: auto-reject ResolveHITL %s failed: %v", hitl.HitlID, err)
+	}
+}
+
+// autoRejectUnknownHITL resolves a HITL request of a kind this facade
+// doesn't implement as Reject, rather than leaving it unanswered forever.
+// Left unhandled, the harness would wait on a decision that never comes
+// until its own idle timeout kills the whole session — the exact failure
+// mode the approval mechanism exists to prevent, just for a kind this facade
+// hasn't been taught yet instead of one it never learns about.
+//
+// This happens entirely server-side: unlike
+// requestCommandExecutionApproval, there's no client-facing request here at
+// all, since an unrecognized kind's item/<kind>/requestApproval shape isn't
+// known well enough to construct — the codex TUI never sees that anything
+// was asked. Source is OutOfBand (not InlineKeystroke): no human made this
+// decision — same as autoRejectFileChangeApproval, for the same reason.
+//
+// Whether the agent gracefully continues after a reject for a kind this
+// facade has never implemented, the way it's confirmed to for
+// command_execution/file_change's Decline, is inferred from that pattern,
+// not verified — flagged here rather than assumed silently.
+func (f *Facade) autoRejectUnknownHITL(hitlID, kind string) {
+	log.Printf("codex facade: auto-rejecting unknown HITL kind %q (hitl_id=%s) to avoid stalling the run", kind, hitlID)
+	if err := f.Sessions.ResolveHITL(f.SessionID, hitlID, &godo.HostedAgentResolveHITLRequest{
+		Outcome: godo.HostedAgentHITLOutcomeReject,
+		Source:  godo.HostedAgentResolutionSourceOutOfBand,
+	}); err != nil {
+		log.Printf("codex facade: auto-reject ResolveHITL %s failed: %v", hitlID, err)
+	}
+}
+
+// rejectHITLAfterRequestFailure resolves hitlID as Reject when this facade's
+// server->client approval Request itself failed — this only happens when the
+// client disconnects (or this connection's own ctx is otherwise canceled)
+// while the approval was still outstanding, unblocking Request with
+// ctx.Err() before any reply ever arrived. Only requestCommandExecutionApproval
+// calls this now — file_change never sends a client-facing request at all
+// (see autoRejectFileChangeApproval), so it can't hit this path.
+//
+// Deliberately NOT reached on a fixed timeout: that was tried for file_change
+// and reverted (see autoRejectFileChangeApproval's doc comment) because the
+// codex protocol has no way to tell the client to withdraw a request it
+// already sent to the human, so timing out server-side just abandons the
+// request while the client's own prompt keeps dangling — and if the human
+// then does answer it, that reply arrives with nothing left in
+// wsNotifier.pending to receive it (proxy.go's deliverReply logs it as an
+// unrecognized id and drops it). Without this function, a genuinely dead
+// connection would leave the harness waiting on a decision nothing will
+// ever send, until its own idle timeout kills the run — same failure class
+// autoRejectUnknownHITL exists to prevent, just triggered by a dead
+// connection instead of an unimplemented kind.
+//
+// Safe to call after the connection is already gone: f.Sessions.ResolveHITL
+// makes its own outbound call with context.TODO() (see do.agents.go), not
+// this connection's (already-canceled) ctx, so it still reaches the harness.
+func (f *Facade) rejectHITLAfterRequestFailure(hitlID, kind string, cause error) {
+	log.Printf("codex facade: %s approval request %s never got a client reply (%v); auto-rejecting so the run doesn't stall", kind, hitlID, cause)
+	if err := f.Sessions.ResolveHITL(f.SessionID, hitlID, &godo.HostedAgentResolveHITLRequest{
+		Outcome: godo.HostedAgentHITLOutcomeReject,
+		Source:  godo.HostedAgentResolutionSourceOutOfBand,
+	}); err != nil {
+		log.Printf("codex facade: auto-reject ResolveHITL %s failed: %v", hitlID, err)
+	}
 }

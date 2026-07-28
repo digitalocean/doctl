@@ -17,6 +17,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 )
 
 // Event is one canned SSE event the harness streams back from
@@ -29,6 +30,22 @@ type Event struct {
 	Type string
 	// Data is the event-specific payload. A nil Data marshals as "{}".
 	Data json.RawMessage
+	// WaitForHITL, if set, blocks this event (and every one after it) from
+	// being sent until handleHITL records a resolution for this hitl_id.
+	// Needed for any test where a queued event (e.g. run.tool_call_completed
+	// for a gated call) must not be observed to happen before the HITL that
+	// gates it is actually resolved: naively pre-queuing every event with no
+	// gating, the way QueueRun otherwise works, races a Facade's
+	// asynchronous approval-handling goroutine instead of modeling the real
+	// harness's behavior of only continuing a gated run after the decision
+	// arrives.
+	WaitForHITL string
+	// RunID overrides the run id this event is tagged with, for
+	// QueueReplayHistory only: replayed history can span several distinct
+	// past runs, unlike QueueRun's single live run sharing one runID for its
+	// whole queue. Empty means "use the harness's current runID," which is
+	// all QueueRun ever needs.
+	RunID string
 }
 
 // eventWire is the on-the-wire SPI canonical event envelope this harness
@@ -54,10 +71,39 @@ type eventWire struct {
 type Harness struct {
 	Server *httptest.Server
 
-	mu        sync.Mutex
-	sessionID string
-	runID     string  // returned by the next POST .../input call
-	events    []Event // streamed, in order, by the next GET .../stream call
+	mu                   sync.Mutex
+	hangAfterEvents      bool
+	sessionID            string
+	runID                string  // returned by the next POST .../input call
+	events               []Event // streamed, in order, by the next GET .../stream call
+	replayEvents         []Event // streamed instead of events when GET .../stream carries replay_only=true
+	streamErrorStatus    int     // 0 = serve normally; nonzero = return this HTTP status instead
+	streamErrorRemaining int     // >0: decrement per hit, clearing streamErrorStatus at 0; <0: permanent
+	dropAfterEvents      int     // >0: end the very next stream connection after this many events (one-shot)
+
+	// hitlCh delivers every POST .../hitl/{requestID} call this harness
+	// receives, in order. A channel (rather than a "last resolution" field)
+	// because ResolveHITL is typically called from a Facade's own background
+	// goroutine on its own timeline — a test needs to block for it the same
+	// way notifierRecorder.next blocks for a notification, not poll a field
+	// that could race with that goroutine.
+	hitlCh chan HITLResolution
+
+	// hitlResolved holds one channel per hitl_id, closed by handleHITL the
+	// moment a resolution for that id is received — see Event.WaitForHITL.
+	// Lazily created (by hitlResolvedChan) so an event can reference a
+	// hitl_id that hasn't been requested yet at QueueRun time.
+	hitlResolved map[string]chan struct{}
+}
+
+// HITLResolution is one POST .../hitl/{requestID} call the harness received,
+// recorded so a test can assert not just that ResolveHITL was called, but
+// that it resolved the right request with the right outcome.
+type HITLResolution struct {
+	RequestID string
+	Outcome   string
+	Reason    string
+	Source    string
 }
 
 // New starts the fake harness and registers its shutdown via t.Cleanup.
@@ -65,7 +111,7 @@ type Harness struct {
 // Facade.SessionID should match it.
 func New(t *testing.T, sessionID string) *Harness {
 	t.Helper()
-	h := &Harness{sessionID: sessionID}
+	h := &Harness{sessionID: sessionID, hitlCh: make(chan HITLResolution, 8)}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v2/agents/sessions/{id}", h.handleGetSession)
@@ -91,6 +137,65 @@ func (h *Harness) QueueRun(runID string, events ...Event) {
 	defer h.mu.Unlock()
 	h.runID = runID
 	h.events = events
+}
+
+// QueueReplayHistory arranges for a GET .../stream call carrying
+// replay_only=true to return these events instead of whatever QueueRun set
+// up, then end — mirrors harness-api's own handleStreamSession, which never
+// continues a replay_only request into a live tail (see
+// streamsvc.Service.SubscribeEvents). Each event's own RunID is used as-is
+// (unlike QueueRun's events, which all share one runID), since replayed
+// history can span several distinct past runs.
+func (h *Harness) QueueReplayHistory(events ...Event) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.replayEvents = events
+}
+
+// SetStreamErrorStatus makes GET .../stream return status immediately
+// (instead of opening an SSE stream) for the next `times` calls, then
+// resume normal behavior (serving whatever's queued via QueueRun) —
+// simulating a StreamSession failure rather than a mid-stream drop. times
+// <= 0 means permanent: every call fails until this is changed again — for
+// a test verifying a terminal error (401/403/404/409) makes the caller give
+// up immediately, with no retries. times > 0 fails exactly that many calls
+// before clearing automatically — for a test verifying reconnect-with-backoff
+// actually recovers after N transient failures.
+func (h *Harness) SetStreamErrorStatus(status, times int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.streamErrorStatus = status
+	h.streamErrorRemaining = times
+}
+
+// DropConnectionAfterEvents makes the very next GET .../stream call return
+// after sending only the first n queued events (a clean end, no error —
+// exactly how a genuine mid-stream drop/idle-timeout looks from the
+// client's side) instead of the whole list, then resets to 0 so any later
+// connection serves normally. One-shot: simulates a real drop-and-resume for
+// a test verifying a reconnect actually resumes (via replay_from) and dedups
+// whatever prefix gets redelivered, rather than only ever seeing a stream
+// that's already run to completion.
+func (h *Harness) DropConnectionAfterEvents(n int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.dropAfterEvents = n
+}
+
+// hitlResolvedChan returns (lazily creating) the channel that handleHITL
+// closes once a resolution for hitlID is received — see Event.WaitForHITL.
+func (h *Harness) hitlResolvedChan(hitlID string) chan struct{} {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.hitlResolved == nil {
+		h.hitlResolved = make(map[string]chan struct{})
+	}
+	ch, ok := h.hitlResolved[hitlID]
+	if !ok {
+		ch = make(chan struct{})
+		h.hitlResolved[hitlID] = ch
+	}
+	return ch
 }
 
 func (h *Harness) handleGetSession(w http.ResponseWriter, _ *http.Request) {
@@ -126,12 +231,32 @@ func (h *Harness) handleInput(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"run_id": runID})
 }
 
-func (h *Harness) handleStream(w http.ResponseWriter, _ *http.Request) {
+func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
+	replayOnly := r.URL.Query().Get("replay_only") == "true"
+
 	h.mu.Lock()
 	runID := h.runID
 	events := h.events
+	if replayOnly {
+		events = h.replayEvents
+	}
 	sessionID := h.sessionID
+	hang := h.hangAfterEvents
+	errStatus := h.streamErrorStatus
+	if errStatus != 0 && h.streamErrorRemaining > 0 {
+		h.streamErrorRemaining--
+		if h.streamErrorRemaining == 0 {
+			h.streamErrorStatus = 0
+		}
+	}
+	dropAfter := h.dropAfterEvents
+	h.dropAfterEvents = 0
 	h.mu.Unlock()
+
+	if errStatus != 0 {
+		http.Error(w, "agentproxytest: simulated stream error", errStatus)
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -139,13 +264,25 @@ func (h *Harness) handleStream(w http.ResponseWriter, _ *http.Request) {
 	flusher, canFlush := w.(http.Flusher)
 
 	for i, ev := range events {
+		if dropAfter > 0 && i >= dropAfter {
+			return // simulate a clean mid-stream drop
+		}
+
+		if ev.WaitForHITL != "" {
+			<-h.hitlResolvedChan(ev.WaitForHITL)
+		}
+
 		data := ev.Data
 		if data == nil {
 			data = json.RawMessage("{}")
 		}
+		evRunID := runID
+		if ev.RunID != "" {
+			evRunID = ev.RunID
+		}
 		wire := eventWire{
 			EventID:   fmt.Sprintf("evt-%d", i),
-			RunID:     runID,
+			RunID:     evRunID,
 			TenantID:  "15726539",
 			SessionID: sessionID,
 			Timestamp: "2026-01-01T00:00:00Z",
@@ -165,8 +302,76 @@ func (h *Harness) handleStream(w http.ResponseWriter, _ *http.Request) {
 			flusher.Flush()
 		}
 	}
+
+	if replayOnly {
+		return // matches harness-api: replay_only never continues to a live tail
+	}
+
+	if hang {
+		// Block on the request's own context instead of returning — lets a
+		// test prove that canceling a Facade's connection context actually
+		// aborts the in-flight StreamSession call, rather than the fake
+		// stream just naturally running out of queued events regardless of
+		// whether anything was ever canceled (see HangStreamAfterEvents).
+		<-r.Context().Done()
+	}
 }
 
-func (h *Harness) handleHITL(w http.ResponseWriter, _ *http.Request) {
+// HangStreamAfterEvents controls whether handleStream blocks on the
+// request's context after sending all queued events instead of returning
+// immediately once they're exhausted (the default). Needed for tests that
+// must distinguish "the stream ended because ctx was canceled" from "the
+// stream ended because it ran out of pre-queued events" — the latter would
+// happen regardless of whether a connection-lifecycle fix actually works.
+func (h *Harness) HangStreamAfterEvents(hang bool) {
+	h.mu.Lock()
+	h.hangAfterEvents = hang
+	h.mu.Unlock()
+}
+
+func (h *Harness) handleHITL(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Outcome string `json:"outcome"`
+		Reason  string `json:"reason"`
+		Source  string `json:"source"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+
+	requestID := r.PathValue("requestID")
+
+	select {
+	case h.hitlCh <- HITLResolution{
+		RequestID: requestID,
+		Outcome:   body.Outcome,
+		Reason:    body.Reason,
+		Source:    body.Source,
+	}:
+	default:
+		// Buffer full: a test that cares should be draining via
+		// NextHITLResolution already. Don't block the HTTP handler on a test
+		// that forgot to.
+	}
+
+	// Release any queued event(s) waiting on this specific resolution (see
+	// Event.WaitForHITL) — safe to close even if nothing is currently
+	// waiting; hitlResolvedChan lazily creates it either way, and a channel
+	// close is a no-op wait for anyone who checks it later.
+	close(h.hitlResolvedChan(requestID))
+
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// NextHITLResolution blocks (up to timeout) for the next POST .../hitl call
+// the harness received, failing the test rather than hanging the suite if
+// none arrives — same discipline as notifierRecorder.next in the codex
+// package's tests.
+func (h *Harness) NextHITLResolution(t *testing.T, timeout time.Duration) HITLResolution {
+	t.Helper()
+	select {
+	case res := <-h.hitlCh:
+		return res
+	case <-time.After(timeout):
+		t.Fatal("agentproxytest: timed out waiting for a HITL resolution")
+		return HITLResolution{}
+	}
 }
