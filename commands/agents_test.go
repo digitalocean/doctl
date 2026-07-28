@@ -567,12 +567,13 @@ func TestRunAgentsUpload_MissingFile(t *testing.T) {
 }
 
 func TestRunAgentsUpload_FileTooLarge(t *testing.T) {
+	prevMax := maxWorkspaceTransferBytes
+	maxWorkspaceTransferBytes = 10
+	defer func() { maxWorkspaceTransferBytes = prevMax }()
+
 	dir := t.TempDir()
 	localPath := filepath.Join(dir, "big.bin")
-	f, err := os.Create(localPath)
-	assert.NoError(t, err)
-	assert.NoError(t, f.Truncate(maxWorkspaceTransferBytes+1))
-	assert.NoError(t, f.Close())
+	assert.NoError(t, os.WriteFile(localPath, make([]byte, maxWorkspaceTransferBytes+1), 0o644))
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = []string{"sess_test"}

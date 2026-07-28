@@ -670,7 +670,8 @@ func RunAgentsResume(c *CmdConfig) error {
 }
 
 // maxWorkspaceTransferBytes is the hard cap for workspace transfers (OHS contract).
-const maxWorkspaceTransferBytes = 50 << 30 // 50 GiB
+// Tests may lower this to avoid allocating a 50 GiB file on disk.
+var maxWorkspaceTransferBytes int64 = 50 << 30 // 50 GiB
 
 // workspaceObjectHTTPClient performs direct PUT/GET against presigned object
 // URLs returned by the staged transfer APIs. No client timeout so large
