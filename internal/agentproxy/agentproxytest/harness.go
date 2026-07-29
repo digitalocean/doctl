@@ -18,6 +18,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+
 	"github.com/digitalocean/godo"
 )
 
@@ -116,11 +117,12 @@ func New(t *testing.T, sessionID string) *Harness {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v2/agents/sessions/{id}", h.handleGetSession)
-	// Live streaming is served by the data plane at .../events. The control
-	// plane's .../stream is deliberately not registered: it serves only
-	// replay-only reads, which no agentproxy caller makes, so a request landing
-	// there is a bug worth failing on.
+	// Two SSE surfaces, matching godo's StreamSession: live reads go to the
+	// data plane at .../events, replay-only reads to the control plane at
+	// .../stream?replay_only=true (see QueueReplayHistory). handleStream
+	// serves both, branching on the replay_only query parameter.
 	mux.HandleFunc("GET /v2/agents/sessions/{id}/events", h.handleStream)
+	mux.HandleFunc("GET /v2/agents/sessions/{id}/stream", h.handleStream)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/input", h.handleInput)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/hitl/{requestID}", h.handleHITL)
 

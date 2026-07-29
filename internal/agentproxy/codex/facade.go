@@ -1165,9 +1165,17 @@ func (f *Facade) runEventLoop(ctx context.Context) {
 // just recreate the exact "TUI hangs forever" failure mode this facade
 // exists to avoid, just triggered by a dead stream instead of an unhandled
 // HITL kind.
+// The map is copied under f.mu rather than aliased: finishTurn below deletes
+// from f.turns (and a concurrent turn/start inserts into it, and a replay
+// goroutine's own finishTurn deletes from it) while this loop is ranging, so
+// ranging the live map is a "concurrent map iteration and map write" crash,
+// not merely a benign stale read.
 func (f *Facade) failAllTrackedTurns(message string) {
 	f.mu.Lock()
-	turns := f.turns
+	turns := make(map[string]*turnState, len(f.turns))
+	for runID, ts := range f.turns {
+		turns[runID] = ts
+	}
 	f.mu.Unlock()
 
 	for runID, ts := range turns {

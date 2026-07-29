@@ -3,6 +3,8 @@ package codex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -1007,6 +1009,55 @@ func TestFacade_RunEventLoop_TerminalStreamErrorFailsTurnImmediately(t *testing.
 	require.NotNil(t, params.Turn.Error)
 
 	assert.Equal(t, int32(0), atomic.LoadInt32(sleepCalls), "a terminal error must give up immediately, never retry")
+}
+
+// TestFacade_FailAllTrackedTurns_ConcurrentTurnsWrite is a regression test:
+// failAllTrackedTurns used to alias f.turns rather than copy it under f.mu,
+// then range the live map while finishTurn deleted from it — so anything else
+// touching f.mu-guarded f.turns meanwhile (a turn/start registering a new
+// turn, or a --replay goroutine's own finishTurn) raced the open iterator.
+// That's a "concurrent map iteration and map write" fatal error, which no
+// amount of locking on only the writer's side prevents. Run under -race.
+func TestFacade_FailAllTrackedTurns_ConcurrentTurnsWrite(t *testing.T) {
+	f, _, rec := newTestFacade(t)
+
+	// failAllTrackedTurns emits two notifications per turn, well past
+	// notifierRecorder's buffer, so drain rather than assert on the sequence
+	// — the ordering isn't what's under test here.
+	drained := make(chan struct{})
+	go func() {
+		defer close(drained)
+		for range rec.ch {
+		}
+	}()
+
+	f.mu.Lock()
+	f.turns = make(map[string]*turnState)
+	for i := 0; i < 32; i++ {
+		runID := fmt.Sprintf("run-%d", i)
+		f.turns[runID] = &turnState{itemID: runID + "-msg"}
+	}
+	f.mu.Unlock()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 500; i++ {
+			f.mu.Lock()
+			if f.turns != nil {
+				f.turns["concurrent"] = &turnState{}
+				delete(f.turns, "concurrent")
+			}
+			f.mu.Unlock()
+		}
+	}()
+
+	f.failAllTrackedTurns("lost connection to hosted session")
+	wg.Wait()
+
+	close(rec.ch)
+	<-drained
 }
 
 // TestFacade_RunEventLoop_ReconnectsAfterTransientStreamError confirms a
