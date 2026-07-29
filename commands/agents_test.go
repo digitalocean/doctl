@@ -1909,6 +1909,65 @@ func TestStreamWithReconnect_cleanEOFReconnectsUntilTerminal(t *testing.T) {
 	assert.NotContains(t, out, msgReconnectFailed)
 }
 
+// TestStreamWithReconnect_supersededStopsWithoutReconnect pins the one stream end
+// that must NOT reconnect. The data-plane stream reports a same-device takeover
+// as stream.state: superseded and then closes; reconnecting would supersede the
+// connection that just superseded us, and the two windows would evict each other
+// forever. Only one StreamSession call is expected, so a reconnect fails the test.
+func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
+	stubReconnectSleep(t)
+
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+			return openHostedAgentStream(t, client, opt), nil
+		}).
+		Times(1)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+
+	out := buf.String()
+	assert.Contains(t, out, "session updated", "events before the takeover still render")
+	assert.Contains(t, out, msgSuperseded)
+	assert.NotContains(t, out, msgReconnecting)
+	assert.NotContains(t, out, msgReconnectFailed)
+}
+
+// TestDrainStream_skipsStreamStateControlFrames pins that a live stream.state
+// frame is transport bookkeeping: it renders nothing and must not become the
+// reconnect cursor, or a reconnect would resume from a position no event holds.
+func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
+	body := sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
+		sseFrame("evt-7", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	cursor := &eventCursor{}
+	superseded := drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), &tokenDeduper{})
+
+	assert.False(t, superseded)
+	assert.Equal(t, 1, strings.Count(buf.String(), "session updated"))
+	assert.NotContains(t, buf.String(), "stream.state")
+	assert.Equal(t, "evt-7", cursor.get(), "the cursor must track the last real event, not a control frame")
+}
+
 func TestStreamWithReconnect_successOnSecondAttempt(t *testing.T) {
 	stubReconnectSleep(t)
 
@@ -2005,7 +2064,9 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 		mu.Lock()
 		calls++
 		n := calls
-		replayFrom := r.URL.Query().Get("replay_from")
+		// The live stream carries the resume cursor in the standard SSE
+		// Last-Event-ID header, not a replay_from query parameter.
+		replayFrom := r.Header.Get("Last-Event-ID")
 		mu.Unlock()
 
 		w.Header().Set("Content-Type", "text/event-stream")
