@@ -242,7 +242,7 @@ Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`me
 
 Tested against `+"`"+`codex-cli `+codex.TestedVersion+"`"+`. Codex's WS/app-server transport is officially experimental and can change without notice — re-verify the protocol capture on every codex upgrade before trusting this against a newer CLI.
 
-The harness allows one connected device per session — a concurrent `+"`"+`doctl agents attach`+"`"+` on the same session conflicts with the proxy's own stream. Close one before opening the other.`,
+Run only one of the proxy and `+"`"+`doctl agents attach`+"`"+` per session from the same machine: both stream as this device, so the newer one takes the session over and the older stops. Close one before opening the other.`,
 		Writer)
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to impersonate (v1: codex)")
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
@@ -1054,6 +1054,10 @@ func RunAgentsLogs(c *CmdConfig) error {
 	acc := &msgAccumulator{}
 	for stream.Next() {
 		ev := stream.Current()
+		// Connection health, not session activity — never part of the history.
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			continue
+		}
 		if ev.Kind == godo.HostedAgentEventKindTokenChunk {
 			var p tokenChunkPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
@@ -1159,6 +1163,7 @@ const (
 	maxReconnectBackoff      = 30 * time.Second
 	msgReconnecting          = "Reconnecting..."
 	msgReconnectFailed       = "Failed to reconnect to agent activity stream."
+	msgSuperseded            = "This session was attached from another window on this device. Stopping the stream here."
 )
 
 // healthyStreamDuration is how long a stream must stay connected before a
@@ -1310,7 +1315,7 @@ func streamWithReconnect(
 		}
 
 		connectedAt := streamClock()
-		drainStream(stream, out, pending, cursor, thinking, dedup)
+		superseded := drainStream(stream, out, pending, cursor, thinking, dedup)
 		streamErr := stream.Err()
 		stream.Close()
 
@@ -1319,6 +1324,12 @@ func streamWithReconnect(
 		}
 
 		thinking.stop()
+
+		// Another connection from this device owns the session now. Reconnecting
+		// would take it back and start an eviction loop between the two.
+		if superseded {
+			return
+		}
 
 		// An interactive attach ends only when the user detaches (ctx cancel,
 		// handled above) or the session is gone (a terminal error). Any other
@@ -1416,7 +1427,12 @@ func sessionLimitErr(err error) bool {
 
 // drainStream consumes events until the iterator stops, rendering each one
 // and updating the HITL pending map, the reconnect cursor, and the spinner.
-func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, dedup *tokenDeduper) {
+//
+// It returns superseded when the server reported that another connection from
+// this device took over the session. That is the one stream end the caller must
+// not reconnect from: re-attaching would supersede the connection that just
+// superseded us, and the two would evict each other indefinitely.
+func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, dedup *tokenDeduper) (superseded bool) {
 	// acc buffers the current assistant turn's tokens; the thinking spinner
 	// stays up for the whole turn and the buffered text is rendered as markdown
 	// when the run finishes or a discrete event interrupts it.
@@ -1432,6 +1448,21 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 	var awaiting []awaitingApproval
 	for stream.Next() {
 		ev := stream.Current()
+
+		// stream.state reports the health of the connection, not session
+		// activity, so it never renders and never moves the cursor.
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			var st godo.HostedAgentStreamState
+			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
+				thinking.stop()
+				acc.flush(out)
+				flushAwaitingApproval(out, &awaiting)
+				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
+				return true
+			}
+			continue
+		}
+
 		switch ev.Kind {
 		case godo.HostedAgentEventKindHITLRequested:
 			var p hitlRequestedPayload
@@ -1509,6 +1540,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 	thinking.stop()
 	acc.flush(out)
 	flushAwaitingApproval(out, &awaiting)
+	return false
 }
 
 // awaitingApproval is a HITL approval whose line is deferred until a paired

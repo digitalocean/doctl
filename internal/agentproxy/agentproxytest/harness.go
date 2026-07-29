@@ -17,10 +17,12 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"github.com/digitalocean/godo"
 )
 
 // Event is one canned SSE event the harness streams back from
-// GET /v2/agents/sessions/{id}/stream, matching the event-specific part of
+// GET /v2/agents/sessions/{id}/events, matching the event-specific part of
 // godo.HostedAgentEvent's wire shape (see HostedAgentEventKind's doc comment
 // for the canonical type strings).
 type Event struct {
@@ -57,7 +59,7 @@ type Harness struct {
 	mu        sync.Mutex
 	sessionID string
 	runID     string  // returned by the next POST .../input call
-	events    []Event // streamed, in order, by the next GET .../stream call
+	events    []Event // streamed, in order, by the next GET .../events call
 }
 
 // New starts the fake harness and registers its shutdown via t.Cleanup.
@@ -69,7 +71,11 @@ func New(t *testing.T, sessionID string) *Harness {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v2/agents/sessions/{id}", h.handleGetSession)
-	mux.HandleFunc("GET /v2/agents/sessions/{id}/stream", h.handleStream)
+	// Live streaming is served by the data plane at .../events. The control
+	// plane's .../stream is deliberately not registered: it serves only
+	// replay-only reads, which no agentproxy caller makes, so a request landing
+	// there is a bug worth failing on.
+	mux.HandleFunc("GET /v2/agents/sessions/{id}/events", h.handleStream)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/input", h.handleInput)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/hitl/{requestID}", h.handleHITL)
 
@@ -79,7 +85,7 @@ func New(t *testing.T, sessionID string) *Harness {
 }
 
 // QueueRun arranges for the next POST .../input call to return runID, and
-// for GET .../stream to then emit events (in order, tagged with runID),
+// for GET .../events to then emit events (in order, tagged with runID),
 // flushing after each one so a concurrent reader observes them incrementally
 // rather than all at once at EOF.
 //
@@ -137,6 +143,24 @@ func (h *Harness) handleStream(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(http.StatusOK)
 	flusher, canFlush := w.(http.Flusher)
+
+	// The data plane opens every stream with a stream.state control frame. It
+	// belongs to no run, so consumers must skip it rather than mistake it for
+	// session activity — emit it here so tests exercise that.
+	streamState, err := json.Marshal(eventWire{
+		TenantID:  "15726539",
+		SessionID: sessionID,
+		Timestamp: "2026-01-01T00:00:00Z",
+		Type:      string(godo.HostedAgentEventKindStreamState),
+		Data:      json.RawMessage(`{"state":"live","cursor":""}`),
+	})
+	if err != nil {
+		panic(fmt.Sprintf("agentproxytest: stream.state does not marshal to JSON: %v", err))
+	}
+	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", godo.HostedAgentEventKindStreamState, streamState)
+	if canFlush {
+		flusher.Flush()
+	}
 
 	for i, ev := range events {
 		data := ev.Data
