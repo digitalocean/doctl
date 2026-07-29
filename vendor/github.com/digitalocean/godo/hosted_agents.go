@@ -22,6 +22,7 @@ const (
 
 	hostedAgentsSessionsBasePath                    = "/v2/agents/sessions"
 	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
+	hostedAgentSessionEventsPath                    = hostedAgentSessionByIDPath + "/events"
 	hostedAgentSessionStreamPath                    = hostedAgentSessionByIDPath + "/stream"
 	hostedAgentSessionInputPath                     = hostedAgentSessionByIDPath + "/input"
 	hostedAgentSessionHITLPath                      = hostedAgentSessionByIDPath + "/hitl/%s"
@@ -39,6 +40,10 @@ const (
 	workspaceContentSHA256Header = "X-Content-Sha256"
 	workspaceIsArchiveHeader     = "X-Workspace-Is-Archive"
 	workspaceSizeBytesHeader     = "X-Workspace-Size-Bytes"
+
+	// sseLastEventIDHeader is the standard SSE resume cursor. The data-plane
+	// events endpoint takes the cursor here rather than as a query parameter.
+	sseLastEventIDHeader = "Last-Event-ID"
 
 	// workspaceDownloadFooter is appended by OHS after a successful download
 	// payload so integrity survives intermediaries that strip HTTP trailers
@@ -206,7 +211,68 @@ const (
 	HostedAgentEventKindRunSandboxReleased   HostedAgentEventKind = "run.sandbox_released"
 	HostedAgentEventKindRunCostAccrued       HostedAgentEventKind = "run.cost_accrued"
 	HostedAgentEventKindRunLog               HostedAgentEventKind = "run.log"
+
+	// HostedAgentEventKindStreamState is a transport control frame, not an agent
+	// event: it reports the health of the SSE connection itself. Only the
+	// data-plane events endpoint emits it. It arrives in the same envelope as an
+	// event, but only SessionID, At and Payload are meaningful — decode Payload
+	// with HostedAgentStreamState. Renderers should skip it rather than display
+	// it as session activity.
+	HostedAgentEventKindStreamState HostedAgentEventKind = "stream.state"
 )
+
+// HostedAgentStreamState is the payload of a HostedAgentEventKindStreamState
+// frame: the current health of the SSE connection.
+type HostedAgentStreamState struct {
+	State  HostedAgentStreamStateValue `json:"state"`
+	Cursor string                      `json:"cursor,omitempty"`
+}
+
+// HostedAgentStreamStateValue enumerates the stream health states.
+type HostedAgentStreamStateValue string
+
+const (
+	// HostedAgentStreamStateLive means events are being delivered contiguously.
+	HostedAgentStreamStateLive HostedAgentStreamStateValue = "live"
+	// HostedAgentStreamStateCatchingUp means the connection is replaying recent
+	// history before it joins the live tail.
+	HostedAgentStreamStateCatchingUp HostedAgentStreamStateValue = "catching_up"
+	// HostedAgentStreamStateDegraded means delivery continues with reduced
+	// guarantees (the server fell back to polling).
+	HostedAgentStreamStateDegraded HostedAgentStreamStateValue = "degraded"
+	// HostedAgentStreamStateSuperseded means a newer connection from the same
+	// device took over. The server closes this stream; the client should stop
+	// rather than reconnect, or the two connections will evict each other.
+	HostedAgentStreamStateSuperseded HostedAgentStreamStateValue = "superseded"
+)
+
+// HostedAgentSessionOriginProduct identifies the product workflow that created
+// a session. Wire values match harness SessionOrigin.product.
+type HostedAgentSessionOriginProduct string
+
+const (
+	HostedAgentSessionOriginProductDirect     HostedAgentSessionOriginProduct = "direct"
+	HostedAgentSessionOriginProductSimulation HostedAgentSessionOriginProduct = "simulation"
+	HostedAgentSessionOriginProductEvaluation HostedAgentSessionOriginProduct = "evaluation"
+)
+
+// HostedAgentSessionOriginRequest is the product-provenance claim on create.
+// Omission creates a verified direct session. Simulation and evaluation require
+// resource_id; direct forbids it. verified is server-assigned and must not be
+// sent on create (see HostedAgentSessionOrigin).
+type HostedAgentSessionOriginRequest struct {
+	Product    HostedAgentSessionOriginProduct `json:"product"`
+	ResourceID string                          `json:"resource_id,omitempty"`
+}
+
+// HostedAgentSessionOrigin is server-returned product-workflow provenance.
+// Verified is true for direct sessions and for product claims established
+// through a trusted adapter.
+type HostedAgentSessionOrigin struct {
+	Product    HostedAgentSessionOriginProduct `json:"product"`
+	ResourceID string                          `json:"resource_id,omitempty"`
+	Verified   bool                            `json:"verified"`
+}
 
 // HostedAgentSession is a provisioned hosted-agent sandbox session.
 type HostedAgentSession struct {
@@ -219,6 +285,9 @@ type HostedAgentSession struct {
 	LastEventAt  Timestamp                               `json:"last_event_at"`
 	RepoHint     string                                  `json:"repo_hint,omitempty"`
 	ProviderAuth map[string]HostedAgentProviderAuthState `json:"provider_auth,omitempty"`
+	// Origin is present for newly created sessions (including direct). Older
+	// sessions may omit it.
+	Origin *HostedAgentSessionOrigin `json:"origin,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -251,7 +320,7 @@ type HostedAgentHITLDecision struct {
 	Reason    string                 `json:"reason,omitempty"`
 }
 
-// HostedAgentEvent is one SSE payload from GET /v2/agents/sessions/{id}/stream.
+// HostedAgentEvent is one SSE payload from a session stream (see StreamSession).
 //
 // The server serializes the SPI canonical event envelope, whose JSON shape
 // differs from this struct's field names: the discriminator is `type` (not
@@ -310,6 +379,9 @@ type HostedAgentSessionCreateRequest struct {
 	AgentKind          HostedAgentKind `json:"agent_kind"`
 	RepoHint           string          `json:"repo_hint,omitempty"`
 	IdleTimeoutSeconds int64           `json:"idle_timeout_seconds,omitempty"`
+	// Origin claims product-workflow provenance. Omit for a verified direct
+	// session. Simulation/evaluation require resource_id.
+	Origin *HostedAgentSessionOriginRequest `json:"origin,omitempty"`
 }
 
 // HostedAgentSessionListOptions specifies optional list filters.
@@ -327,8 +399,16 @@ type HostedAgentSessionsListResponse struct {
 }
 
 // HostedAgentSessionStreamOptions configures the session SSE stream.
+//
+// The two fields select between the two SSE surfaces StreamSession can open;
+// see StreamSession for why they are served by different endpoints.
 type HostedAgentSessionStreamOptions struct {
+	// ReplayFrom is the resume cursor: the id of the last event the caller
+	// already rendered. On the live stream it is sent as Last-Event-ID; on a
+	// ReplayOnly read it is sent as the replay_from query parameter.
 	ReplayFrom string
+	// ReplayOnly reads the stored event history and ends the stream at the last
+	// stored event instead of holding the connection open for live events.
 	ReplayOnly bool
 }
 
@@ -548,6 +628,10 @@ func (s *HostedAgentsServiceOp) newCreateSessionPostRequest(ctx context.Context,
 }
 
 // ListSessions returns sessions visible to the caller's team.
+//
+// The server omits simulation and evaluation sessions from the list so customer
+// surfaces stay free of product-owned internal runs. GetSession by session_id
+// still returns those sessions for the owning product workflow.
 func (s *HostedAgentsServiceOp) ListSessions(ctx context.Context, opt *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error) {
 	path, err := addOptions(hostedAgentsSessionsBasePath, opt)
 	if err != nil {
@@ -624,23 +708,41 @@ func (s *HostedAgentsServiceOp) ResumeSession(ctx context.Context, sessionID str
 }
 
 // StreamSession opens the SSE stream for a session. Callers MUST Close the stream.
+//
+// Live and replay-only reads are served by two different endpoints, because
+// streaming moved out of the control plane onto the data plane:
+//
+//   - Live (the default) reads GET .../sessions/{id}/events, served by the data
+//     plane. Delivery is forward-only from the moment of attach, so a live
+//     stream never carries events that predate it. ReplayFrom is sent as the
+//     standard Last-Event-ID header.
+//   - ReplayOnly reads GET .../sessions/{id}/stream?replay_only=true, served by
+//     the control plane, which owns the stored event history. The stream ends
+//     after the last stored event.
+//
+// The live stream also carries HostedAgentEventKindStreamState control frames
+// (see HostedAgentStreamState); replay-only reads do not.
 func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID string, opt *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
 	}
-	path := fmt.Sprintf(hostedAgentSessionStreamPath, sessionID)
+	replayOnly := opt != nil && opt.ReplayOnly
+	cursor := ""
 	if opt != nil {
-		q := url.Values{}
-		if opt.ReplayFrom != "" {
-			q.Set("replay_from", opt.ReplayFrom)
-		}
-		if opt.ReplayOnly {
-			q.Set("replay_only", "true")
-		}
-		if encoded := q.Encode(); encoded != "" {
-			path += "?" + encoded
-		}
+		cursor = opt.ReplayFrom
 	}
+
+	path := fmt.Sprintf(hostedAgentSessionEventsPath, sessionID)
+	if replayOnly {
+		path = fmt.Sprintf(hostedAgentSessionStreamPath, sessionID)
+		q := url.Values{}
+		q.Set("replay_only", "true")
+		if cursor != "" {
+			q.Set("replay_from", cursor)
+		}
+		path += "?" + q.Encode()
+	}
+
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
@@ -648,6 +750,9 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Connection", "keep-alive")
+	if !replayOnly && cursor != "" {
+		req.Header.Set(sseLastEventIDHeader, cursor)
+	}
 
 	resp, err := s.client.DoStream(ctx, req)
 	if err != nil {
