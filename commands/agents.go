@@ -238,12 +238,12 @@ Commands that act on a single session accept either the session ID or its name. 
 		"Start a new agent session",
 		`Creates a new agent session from an agent manifest file and prints its session id and status.
 
-The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. The manifest is sent to the server, which owns parsing and validation.
+The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. `+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
 
 Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin.`, requiredOpt())
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's metadata.name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session`
 
@@ -427,9 +427,11 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	})
 }
 
-// readManifest returns the spec file as raw bytes. path "-" reads from stdin.
-// The only client-side validation is "non-empty after trim" so a stray
-// `--spec /dev/null` fails fast instead of hitting the server.
+// readManifest returns the spec file as raw bytes with ${VAR} references
+// resolved from the local environment (see expandManifestEnv). path "-" reads
+// from stdin. Beyond env expansion, the only client-side validation is
+// "non-empty after trim" so a stray `--spec /dev/null` fails fast instead of
+// hitting the server.
 func readManifest(stdin io.Reader, path string) ([]byte, error) {
 	var src io.Reader
 	if path == "-" && stdin != nil {
@@ -453,7 +455,41 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 	if len(bytes.TrimSpace(raw)) == 0 {
 		return nil, fmt.Errorf("manifest is empty")
 	}
-	return raw, nil
+	return expandManifestEnv(raw)
+}
+
+// manifestEnvRef matches ${VAR} env references and their $${VAR} escape form.
+// Only the strict braced form expands: bare $VAR is left alone so shell
+// snippets embedded in manifests (skills instructions, prompts) survive.
+var manifestEnvRef = regexp.MustCompile(`\$?\$\{[A-Za-z_][A-Za-z0-9_]*\}`)
+
+// expandManifestEnv resolves ${VAR} references in the manifest against the
+// local environment before the manifest is sent to the server. $${VAR}
+// escapes to a literal ${VAR}. Referencing a variable that is not set locally
+// is an error rather than a silent empty substitution, so a missing key fails
+// here instead of inside the sandbox.
+func expandManifestEnv(manifest []byte) ([]byte, error) {
+	var missing []string
+	seen := map[string]bool{}
+	out := manifestEnvRef.ReplaceAllFunc(manifest, func(m []byte) []byte {
+		if bytes.HasPrefix(m, []byte("$$")) {
+			return m[1:] // $${VAR} -> literal ${VAR}
+		}
+		name := string(m[2 : len(m)-1])
+		val, ok := os.LookupEnv(name)
+		if !ok {
+			if !seen[name] {
+				seen[name] = true
+				missing = append(missing, name)
+			}
+			return m
+		}
+		return []byte(val)
+	})
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("manifest references environment variable(s) not set locally: %s (escape a literal with $${...})", strings.Join(missing, ", "))
+	}
+	return out, nil
 }
 
 // injectManifestName sets metadata.name on the manifest to name. An empty name
