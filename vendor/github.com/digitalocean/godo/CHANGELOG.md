@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.202.0] - 2026-07-29
+
+- #1069 - @varshavaradarajan - doks: add isolated workers to kubernetes create call
+- #1067 - @nveerdixit - MARSOHS-551: Session.origin on HostedAgents (stack on OHS_endpoints)
+
+## [1.201.0] - 2026-07-24
+
+- #1060 - @DO-rrao - Add GPU partition mode support to Droplets and Sizes
+
 ## [1.200.0] - 2026-07-22
 
 - #1058 - @kwadhwa-source - MDROP-23:add godo support for microdroplets

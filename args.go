@@ -149,6 +149,8 @@ const (
 
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgIsolatedWorkers is a cluster's isolated workers argument.
+	ArgIsolatedWorkers = "isolated-workers"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
