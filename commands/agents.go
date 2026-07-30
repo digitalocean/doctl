@@ -408,7 +408,17 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	return agentproxy.Serve(ctx, port, &codex.Facade{SessionID: sessionID, Sessions: svc, Replay: replay})
+	// Fresh Facade per connection (see ServeListener): per-connection state
+	// (notifier, in-flight turns, event loop, --replay gate) must not leak
+	// across a disconnect/reconnect. A reconnecting client is a new TUI with
+	// empty scrollback — --replay must run again for that connection.
+	return agentproxy.Serve(ctx, port, func() agentproxy.Facade {
+		return &codex.Facade{
+			SessionID: sessionID,
+			Sessions:  svc,
+			Replay:    replay,
+		}
+	})
 }
 
 // readManifest returns the spec file as raw bytes. path "-" reads from stdin.

@@ -3,6 +3,8 @@ package codex
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -101,6 +103,18 @@ func (r *notifierRecorder) nextRequest(t *testing.T) *recordedRequest {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for a request")
 		return nil
+	}
+}
+
+// expectNoRequest asserts no server-initiated request arrives within a short
+// window — used by --replay tests to confirm historical HITLs are not
+// re-prompted as live approvals.
+func (r *notifierRecorder) expectNoRequest(t *testing.T) {
+	t.Helper()
+	select {
+	case req := <-r.reqCh:
+		t.Fatalf("expected no server-initiated request, got %q", req.method)
+	case <-time.After(50 * time.Millisecond):
 	}
 }
 
@@ -975,50 +989,100 @@ func stubReconnectSleep(t *testing.T) *int32 {
 	return &calls
 }
 
-// TestFacade_RunEventLoop_TerminalStreamErrorFailsTurnImmediately confirms a
-// terminal StreamSession error (401/403/404/409 — auth, gone, or a
-// conflicting single-connection consumer) makes runEventLoop give up right
-// away, synthesizing a failed turn/completed for the in-flight turn (see
-// failAllTrackedTurns) instead of leaving it hanging — and, critically,
-// without ever retrying: sleepCalls must stay 0, proving isTerminalStreamError
-// short-circuits the reconnect loop rather than merely exhausting its retry
-// budget on repeated identical failures.
-func TestFacade_RunEventLoop_TerminalStreamErrorFailsTurnImmediately(t *testing.T) {
+// TestFacade_RunEventLoop_TerminalStreamErrorFailsTurnStartImmediately
+// confirms a terminal StreamSession error (401/403/404/409 — auth, gone, or
+// a conflicting single-connection consumer) fails turn/start itself via
+// ensureEventLoop, rather than returning an in-progress turn nothing will
+// ever finish — and, critically, without ever retrying: sleepCalls must stay
+// 0, proving the open failure short-circuits before the reconnect loop runs.
+func TestFacade_RunEventLoop_TerminalStreamErrorFailsTurnStartImmediately(t *testing.T) {
 	sleepCalls := stubReconnectSleep(t)
 
-	f, h, rec := newTestFacade(t)
-	h.SetStreamErrorStatus(404, -1)  // permanent — must be set before turn/start races the goroutine's first StreamSession call
+	f, h, _ := newTestFacade(t)
+	h.SetStreamErrorStatus(404, -1)  // permanent
 	h.QueueRun("run-terminal-error") // never actually served
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer stopEventLoop(t, f, cancel)
+	defer cancel()
 
 	_, err := dispatchCtx(t, ctx, f, "turn/start", turnStartParams{
 		ThreadID: testSessionID,
 		Input:    []userInputItem{{Type: "text", Text: "hi"}},
 	})
-	require.NoError(t, err)
+	require.Error(t, err)
 
-	turnCompleted := rec.next(t)
-	require.Equal(t, "turn/completed", turnCompleted.method, "expected the turn to fail immediately, not hang")
-	params, ok := turnCompleted.params.(turnCompletedNotification)
-	require.True(t, ok)
-	assert.Equal(t, "failed", params.Turn.Status)
-	require.NotNil(t, params.Turn.Error)
+	var rpcErr *agentproxy.RPCError
+	require.ErrorAs(t, err, &rpcErr)
+	assert.Equal(t, -32000, rpcErr.Code)
+	assert.Contains(t, rpcErr.Message, "opening event stream failed")
 
-	assert.Equal(t, int32(0), atomic.LoadInt32(sleepCalls), "a terminal error must give up immediately, never retry")
+	assert.Equal(t, int32(0), atomic.LoadInt32(sleepCalls), "a terminal open error must fail turn/start immediately, never retry")
+}
+
+// TestFacade_FailAllTrackedTurns_ConcurrentTurnsWrite is a regression test:
+// failAllTrackedTurns used to alias f.turns rather than copy it under f.mu,
+// then range the live map while finishTurn deleted from it — so anything else
+// touching f.mu-guarded f.turns meanwhile (a turn/start registering a new
+// turn, or a --replay goroutine's own finishTurn) raced the open iterator.
+// That's a "concurrent map iteration and map write" fatal error, which no
+// amount of locking on only the writer's side prevents. Run under -race.
+func TestFacade_FailAllTrackedTurns_ConcurrentTurnsWrite(t *testing.T) {
+	f, _, rec := newTestFacade(t)
+
+	// failAllTrackedTurns emits two notifications per turn, well past
+	// notifierRecorder's buffer, so drain rather than assert on the sequence
+	// — the ordering isn't what's under test here.
+	drained := make(chan struct{})
+	go func() {
+		defer close(drained)
+		for range rec.ch {
+		}
+	}()
+
+	f.mu.Lock()
+	f.turns = make(map[string]*turnState)
+	for i := 0; i < 32; i++ {
+		runID := fmt.Sprintf("run-%d", i)
+		f.turns[runID] = &turnState{itemID: runID + "-msg"}
+	}
+	f.mu.Unlock()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 500; i++ {
+			f.mu.Lock()
+			if f.turns != nil {
+				f.turns["concurrent"] = &turnState{}
+				delete(f.turns, "concurrent")
+			}
+			f.mu.Unlock()
+		}
+	}()
+
+	f.failAllTrackedTurns("lost connection to hosted session")
+	wg.Wait()
+
+	close(rec.ch)
+	<-drained
 }
 
 // TestFacade_RunEventLoop_ReconnectsAfterTransientStreamError confirms a
-// non-terminal StreamSession error (500, here) is retried rather than
-// immediately failing the turn — and that once the harness recovers (the
-// fake harness clears its injected error after N hits, see
-// SetStreamErrorStatus), the turn proceeds completely normally.
+// non-terminal StreamSession error (500, here) on the reconnect path is
+// retried rather than immediately failing the turn — and that once the
+// harness recovers, the turn proceeds completely normally.
+//
+// ensureEventLoop opens the first stream synchronously before SendInput, so
+// the injected failures start only after that first attach (and a deliberate
+// mid-stream drop) — otherwise turn/start itself would fail before any
+// reconnect loop ran.
 func TestFacade_RunEventLoop_ReconnectsAfterTransientStreamError(t *testing.T) {
 	stubReconnectSleep(t)
 
 	f, h, rec := newTestFacade(t)
-	h.SetStreamErrorStatus(500, 2) // fails the first 2 StreamSession calls, then serves normally
+	h.DropConnectionAfterEvents(1)         // first connection: RunStarted, then clean drop
+	h.SetStreamErrorStatusAfter(1, 500, 2) // skip ensureEventLoop's open; fail the next 2 reconnect opens
 	h.QueueRun("run-transient-error",
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"hi"}`)},
@@ -1039,7 +1103,7 @@ func TestFacade_RunEventLoop_ReconnectsAfterTransientStreamError(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_ = rec.next(t) // turn/started — only arrives once the 3rd (successful) attempt connects
+	_ = rec.next(t) // turn/started — from the first connection, before the drop
 	_ = rec.next(t) // item/started
 
 	delta := rec.next(t)
@@ -1179,7 +1243,10 @@ func TestFacade_Replay_ThreadResume(t *testing.T) {
 
 // TestFacade_Replay_Disabled confirms Replay: false (the default) never
 // touches replay-only history, even when a session has some queued — the
-// flag must actually gate the behavior, not just always run it.
+// flag must actually gate the behavior, not just always run it. Asserts
+// both "no notifications" and "replay never started": a silent fetch
+// failure (e.g. the harness 404ing .../stream) would satisfy expectNone
+// alone and hide a broken gate.
 func TestFacade_Replay_Disabled(t *testing.T) {
 	f, h, rec := newTestFacade(t)
 
@@ -1191,6 +1258,14 @@ func TestFacade_Replay_Disabled(t *testing.T) {
 	_, err := dispatch(t, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
 	require.NoError(t, err)
 
+	// Give a wrongly-started replay goroutine a moment to either emit or
+	// mark itself in flight — then confirm neither happened.
+	time.Sleep(50 * time.Millisecond)
+	f.replayMu.Lock()
+	replaying, done := f.replaying, f.replayDone
+	f.replayMu.Unlock()
+	assert.False(t, replaying, "Replay:false must not start replaySessionHistory")
+	assert.False(t, done, "Replay:false must not mark replayDone")
 	rec.expectNone(t)
 }
 
@@ -1270,6 +1345,11 @@ func TestFacade_Replay_UnaffectedByConcurrentLiveTurnsReset(t *testing.T) {
 // permanently foreclose --replay for the rest of this Facade's lifetime: a
 // later thread/resume (e.g. after a reconnect) must retry, not silently
 // no-op forever the way a plain sync.Once would have.
+//
+// The first attempt must fail for a reason that only hits once the
+// control-plane .../stream route is actually registered (injected 500) —
+// a missing-route 404 would also unwind without marking replayDone and
+// make this half of the test pass for the wrong reason.
 func TestFacade_Replay_RetriesAfterAbortedAttempt(t *testing.T) {
 	f, h, rec := newTestFacade(t)
 	f.Replay = true
@@ -1310,4 +1390,133 @@ func TestFacade_Replay_RetriesAfterAbortedAttempt(t *testing.T) {
 		defer f.replayMu.Unlock()
 		return f.replayDone
 	}, 2*time.Second, 10*time.Millisecond, "a successfully completed replay should mark replayDone")
+}
+
+// TestFacade_Replay_HistoricalHITLsNotReDriven confirms --replay does not
+// re-prompt the client or re-POST ResolveHITL for approvals already settled
+// in durable history. translateEvent used to treat historical
+// human_input_requested like a live one: command_execution opened a modal
+// for a command that already ran, and file_change/unknown kinds POSTed
+// ResolveHITL against hitl_ids the harness closed long ago.
+func TestFacade_Replay_HistoricalHITLsNotReDriven(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.Replay = true
+
+	h.QueueReplayHistory(
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "hist-hitl"},
+		// command_execution that was already approved historically
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindToolCallStarted),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"tool_call_id":"call_cmd","name":"command_execution","input":{"command":"rm -rf /tmp/x","cwd":"/workspace"}}`),
+		},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindHITLRequested),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"hitl_id":"hitl-old-cmd","payload":{"kind":"command_execution","itemId":"call_cmd","turnId":"harness-internal","startedAtMs":1000,"environmentId":"local","command":"rm -rf /tmp/x","cwd":"/workspace","commandActions":[]}}`),
+		},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindHITLResolved),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"hitl_id":"hitl-old-cmd","outcome":1}`), // APPROVE
+		},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindToolCallCompleted),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"tool_call_id":"call_cmd","ok":true,"duration_ms":5,"summary":"removed"}`),
+		},
+		// file_change that was already rejected historically
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindToolCallStarted),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"tool_call_id":"call_fc","name":"file_change","input":{}}`),
+		},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindHITLRequested),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"hitl_id":"hitl-old-1","payload":{"category":"permission","grantRoot":null,"itemId":"call_fc","kind":"file_change","reason":null,"startedAtMs":1000,"turnId":"harness-internal"}}`),
+		},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindHITLResolved),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"hitl_id":"hitl-old-1","outcome":2}`), // REJECT
+		},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindToolCallCompleted),
+			RunID: "hist-hitl",
+			Data:  json.RawMessage(`{"tool_call_id":"call_fc","ok":false,"duration_ms":1,"summary":""}`),
+		},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted), RunID: "hist-hitl"},
+	)
+
+	_, err := dispatch(t, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
+	require.NoError(t, err)
+
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started (agentMessage)
+
+	cmdStarted := rec.next(t)
+	require.Equal(t, "item/started", cmdStarted.method)
+	assert.Equal(t, "commandExecution", cmdStarted.params.(itemStartedNotification).Item.(commandExecutionItem).Type)
+
+	cmdCompleted := rec.next(t)
+	require.Equal(t, "item/completed", cmdCompleted.method)
+	assert.Equal(t, "completed", cmdCompleted.params.(itemCompletedNotification).Item.(commandExecutionItem).Status)
+
+	fcStarted := rec.next(t)
+	require.Equal(t, "item/started", fcStarted.method)
+	assert.Equal(t, "fileChange", fcStarted.params.(itemStartedNotification).Item.(fileChangeItem).Type)
+
+	fcCompleted := rec.next(t)
+	require.Equal(t, "item/completed", fcCompleted.method)
+	assert.Equal(t, "declined", fcCompleted.params.(itemCompletedNotification).Item.(fileChangeItem).Status,
+		"historical file_change reject must still render as declined, not failed")
+
+	_ = rec.next(t) // item/completed agentMessage
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+
+	rec.expectNone(t)
+	rec.expectNoRequest(t)
+	h.ExpectNoHITLResolution(t, 50*time.Millisecond)
+
+	require.Eventually(t, func() bool {
+		f.replayMu.Lock()
+		defer f.replayMu.Unlock()
+		return f.replayDone
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+// TestFacade_Replay_UsageDoesNotInflateLiveTotal confirms historical
+// run.usage_recorded events from --replay do not emit
+// thread/tokenUsage/updated or accumulate into f.totalUsage — otherwise a
+// reconnecting client's live total would include (and re-include) history.
+func TestFacade_Replay_UsageDoesNotInflateLiveTotal(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.Replay = true
+
+	h.QueueReplayHistory(
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "hist-usage"},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindRunUsageRecorded),
+			RunID: "hist-usage",
+			Data:  json.RawMessage(`{"usage":{"input_tokens":100,"output_tokens":20,"cached_input_tokens":0,"reasoning_tokens":0}}`),
+		},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted), RunID: "hist-usage"},
+	)
+
+	_, err := dispatch(t, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
+	require.NoError(t, err)
+
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+	_ = rec.next(t) // item/completed
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	rec.expectNone(t)
+
+	f.mu.Lock()
+	total := f.totalUsage
+	f.mu.Unlock()
+	assert.Equal(t, tokenUsageBreakdown{}, total, "replayed usage must not inflate the live thread total")
 }

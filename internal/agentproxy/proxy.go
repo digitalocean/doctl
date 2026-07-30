@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -28,9 +29,29 @@ type rpcMessage struct {
 }
 
 var upgrader = websocket.Upgrader{
-	// Loopback-only listener (see Serve); no browser reaches this, so origin
-	// checking buys nothing and would only get in websocat's way.
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		return allowedProxyOrigin(r.Header.Get("Origin"))
+	},
+}
+
+// allowedProxyOrigin reports whether a WebSocket Origin is acceptable for
+// this loopback-only proxy. Empty Origin (websocat, codex --remote) and
+// loopback Origins are allowed; any other present Origin is rejected so a
+// browser tab on an unrelated site cannot drive the session.
+func allowedProxyOrigin(origin string) bool {
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	switch u.Hostname() {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	default:
+		return false
+	}
 }
 
 // wsNotifier serializes every write to a WebSocket connection — replies from
@@ -122,6 +143,13 @@ func (w *wsNotifier) Request(ctx context.Context, method string, params any) (js
 // pending — e.g. the reply arrived after Request already gave up on ctx
 // cancellation — so handleConn can log an orphaned reply instead of silently
 // dropping it.
+//
+// The send into the reply channel is non-blocking: the channel is buffer-1
+// and Request is the only consumer. A second frame with the same id before
+// Request wakes and deletes the pending entry would otherwise block forever
+// inside handleConn's read loop and stop the connection from being read at
+// all. Logging the duplicate and moving on keeps a misbehaving client from
+// wedging the pump.
 func (w *wsNotifier) deliverReply(msg rpcMessage) bool {
 	key := string(msg.ID)
 	w.mu.Lock()
@@ -130,7 +158,11 @@ func (w *wsNotifier) deliverReply(msg rpcMessage) bool {
 	if !ok {
 		return false
 	}
-	ch <- msg
+	select {
+	case ch <- msg:
+	default:
+		log.Printf("agentproxy: duplicate reply for id %s, ignoring", key)
+	}
 	return true
 }
 
@@ -150,17 +182,17 @@ func mustRawMessage(v any) json.RawMessage {
 // Serve binds a WebSocket listener on 127.0.0.1:port — never "localhost"
 // (IPv6 ::1 resolution can fail to connect) or 0.0.0.0 (codex requires auth
 // for non-loopback listeners, and there's no reason to expose this beyond the
-// machine anyway) — and speaks facade's JSON-RPC protocol to exactly one
+// machine anyway) — and speaks newFacade's JSON-RPC protocol to exactly one
 // connected client at a time, until ctx is canceled.
-func Serve(ctx context.Context, port int, facade Facade) error {
+func Serve(ctx context.Context, port int, newFacade func() Facade) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return err
 	}
-	return ServeListener(ctx, ln, facade)
+	return ServeListener(ctx, ln, newFacade)
 }
 
-// ServeListener is Serve, except it speaks facade's protocol over an
+// ServeListener is Serve, except it speaks newFacade's protocol over an
 // already-bound listener instead of binding one from a port number itself.
 //
 // This exists for tests: picking a free ephemeral port ahead of time (e.g.
@@ -170,7 +202,17 @@ func Serve(ctx context.Context, port int, facade Facade) error {
 // straight to ServeListener closes that race window entirely: the listener
 // is accepting connections (into the kernel backlog, at least) from the
 // moment net.Listen returns, before this function is even called.
-func ServeListener(ctx context.Context, ln net.Listener, facade Facade) error {
+//
+// newFacade is called once per accepted connection, not once for the whole
+// listener: a facade like codex's carries per-connection state (in-flight
+// turns, whether its event loop is running, the connection's Notifier), and
+// only one client connects at a time anyway (see the slot below), so reusing
+// one Facade instance across a disconnect/reconnect would leak that state
+// into the new connection — notifications from a still-unwinding previous
+// connection's background goroutine could even land on the new socket via a
+// shared notifier. A fresh Facade per connection starts clean and makes the
+// previous one's goroutines (if still winding down) entirely self-contained.
+func ServeListener(ctx context.Context, ln net.Listener, newFacade func() Facade) error {
 	// One slot: the first upgrade takes it, a second concurrent attempt is
 	// refused until the first disconnects and returns it.
 	slot := make(chan struct{}, 1)
@@ -208,6 +250,7 @@ func ServeListener(ctx context.Context, ln net.Listener, facade Facade) error {
 		connCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
+		facade := newFacade()
 		notifier := &wsNotifier{conn: conn}
 		if na, ok := facade.(NotifierAware); ok {
 			na.SetNotifier(notifier)

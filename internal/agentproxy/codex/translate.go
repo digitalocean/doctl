@@ -27,14 +27,23 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// translateEvent is runEventLoop's per-event translation step (see
-// drainStream, facade.go): given one canonical event and the turnState it
-// belongs to, decide what (if anything) to tell the codex client, mutating
-// ts and pushing notifications via f.notify along the way. Returns true if
-// a notify failure indicates the client connection itself is dead, in which
-// case drainStream's caller (runEventLoop) must stop entirely rather than
-// try to reconnect to the harness — the problem isn't the harness stream.
-func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, ts *turnState) (clientDead bool) {
+// translateEvent is runEventLoop's / replaySessionHistory's per-event
+// translation step (see drainStream, facade.go / replay.go): given one
+// canonical event and the turnState it belongs to, decide what (if anything)
+// to tell the codex client, mutating ts and pushing notifications via
+// f.notify along the way. Returns true if a notify failure indicates the
+// client connection itself is dead, in which case the caller must stop
+// entirely rather than try to reconnect to the harness — the problem isn't
+// the harness stream.
+//
+// replay is true when this event is being fed from durable session history
+// (--replay) rather than the live SSE tail. Historical hitl.requested
+// records are already settled (a matching hitl.resolved follows in the same
+// history); re-driving them would re-prompt the user for command_execution
+// and POST ResolveHITL against hitl_ids the harness closed long ago. When
+// replay is set, those side effects are skipped — tool_call_started /
+// tool_call_completed in the same history already render the items.
+func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, ts *turnState, replay bool) (clientDead bool) {
 	switch ev.Kind {
 	case godo.HostedAgentEventKindRunStarted:
 		ts.startedAt = time.Now().Unix()
@@ -44,12 +53,15 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		}) {
 			return true
 		}
-		ts.itemStarted = f.notify("item/started", itemStartedNotification{
+		if !f.notify("item/started", itemStartedNotification{
 			Item:        agentMessageItem{Type: "agentMessage", ID: ts.itemID, Text: ""},
 			ThreadID:    f.SessionID,
 			TurnID:      ev.RunID,
 			StartedAtMs: ts.startedAt * 1000,
-		})
+		}) {
+			return true
+		}
+		ts.itemStarted = true
 
 	case godo.HostedAgentEventKindTokenChunk:
 		var payload struct {
@@ -264,6 +276,23 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		if err := json.Unmarshal(ev.Payload, &hitl); err != nil {
 			return false
 		}
+		if replay {
+			// Already settled in history — see translateEvent's doc comment.
+			// For file_change, still record declined when the historical
+			// resolution was a reject so the later tool_call_completed
+			// reports PatchApplyStatus::Declined rather than ::Failed; the
+			// outcome itself arrives as HITLResolved below. Remember the
+			// hitl→item mapping here so that event can find the fileChangeState.
+			if hitl.Payload.Kind == "file_change" {
+				f.mu.Lock()
+				if ts.replayHITLs == nil {
+					ts.replayHITLs = make(map[string]string)
+				}
+				ts.replayHITLs[hitl.HitlID] = hitl.Payload.ItemID
+				f.mu.Unlock()
+			}
+			return false
+		}
 		// Spawned, not called inline: requestCommandExecutionApproval
 		// blocks on real human interaction time in the TUI, and this loop
 		// must keep reading the one shared stream for every other
@@ -298,19 +327,53 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		}
 
 	case godo.HostedAgentEventKindHITLResolved:
-		// The harness's own ack that a resolution from
+		// Live: the harness's own ack that a resolution from
 		// requestCommandExecutionApproval/autoRejectFileChangeApproval/
 		// autoRejectUnknownHITL landed. codex has no client-facing
 		// "approval acknowledged" notification — for command_execution the
 		// client already got its answer accepted the moment its
 		// requestApproval reply was read, and file_change/unknown kinds
 		// never had a client-facing request to acknowledge in the first
-		// place — so there's nothing to forward here. Cased explicitly
-		// (rather than left to fall through the switch) so this is a
-		// documented no-op, not an
-		// overlooked one.
+		// place — so there's nothing to forward here.
+		//
+		// Replay: apply a historical reject onto fileChangeState.declined
+		// so tool_call_completed can distinguish Declined from Failed —
+		// the live path set that flag inside autoRejectFileChangeApproval,
+		// which replay deliberately does not call.
+		if !replay {
+			return false
+		}
+		var resolved struct {
+			HitlID  string `json:"hitl_id"`
+			Outcome int32  `json:"outcome"`
+		}
+		if err := json.Unmarshal(ev.Payload, &resolved); err != nil {
+			return false
+		}
+		// Proto enum on the wire: 1=APPROVE, 2=REJECT, 3=DEFER (same as
+		// doctl agents attach's hitlResolvedPayload).
+		if resolved.Outcome != 2 {
+			return false
+		}
+		f.mu.Lock()
+		itemID, ok := ts.replayHITLs[resolved.HitlID]
+		if ok {
+			delete(ts.replayHITLs, resolved.HitlID)
+			if fc, fcOK := ts.fileChanges[itemID]; fcOK {
+				fc.declined = true
+			}
+		}
+		f.mu.Unlock()
 
 	case godo.HostedAgentEventKindRunUsageRecorded:
+		if replay {
+			// Historical usage must not inflate this connection's live
+			// thread total — the TUI's "total" is for traffic on this
+			// thread/connection, and --replay already reconstructs past
+			// turns as ordinary notifications without needing their
+			// token counts folded into the running sum.
+			return false
+		}
 		var payload struct {
 			Usage struct {
 				InputTokens       int64 `json:"input_tokens"`

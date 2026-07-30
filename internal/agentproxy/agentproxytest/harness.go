@@ -18,6 +18,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+
 	"github.com/digitalocean/godo"
 )
 
@@ -79,7 +80,8 @@ type Harness struct {
 	events               []Event // streamed, in order, by the next GET .../stream call
 	replayEvents         []Event // streamed instead of events when GET .../stream carries replay_only=true
 	streamErrorStatus    int     // 0 = serve normally; nonzero = return this HTTP status instead
-	streamErrorRemaining int     // >0: decrement per hit, clearing streamErrorStatus at 0; <0: permanent
+	streamErrorRemaining int     // >0: decrement per hit, clearing streamErrorStatus at 0; <=0 with status set: permanent
+	streamErrorSkip      int     // succeed this many opens before applying streamErrorStatus (reconnect-path tests)
 	dropAfterEvents      int     // >0: end the very next stream connection after this many events (one-shot)
 
 	// hitlCh delivers every POST .../hitl/{requestID} call this harness
@@ -116,11 +118,12 @@ func New(t *testing.T, sessionID string) *Harness {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v2/agents/sessions/{id}", h.handleGetSession)
-	// Live streaming is served by the data plane at .../events. The control
-	// plane's .../stream is deliberately not registered: it serves only
-	// replay-only reads, which no agentproxy caller makes, so a request landing
-	// there is a bug worth failing on.
+	// Two SSE surfaces, matching godo's StreamSession: live reads go to the
+	// data plane at .../events, replay-only reads to the control plane at
+	// .../stream?replay_only=true (see QueueReplayHistory). handleStream
+	// serves both, branching on the replay_only query parameter.
 	mux.HandleFunc("GET /v2/agents/sessions/{id}/events", h.handleStream)
+	mux.HandleFunc("GET /v2/agents/sessions/{id}/stream", h.handleStream)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/input", h.handleInput)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/hitl/{requestID}", h.handleHITL)
 
@@ -167,8 +170,18 @@ func (h *Harness) QueueReplayHistory(events ...Event) {
 // before clearing automatically — for a test verifying reconnect-with-backoff
 // actually recovers after N transient failures.
 func (h *Harness) SetStreamErrorStatus(status, times int) {
+	h.SetStreamErrorStatusAfter(0, status, times)
+}
+
+// SetStreamErrorStatusAfter is SetStreamErrorStatus, but the first `skip`
+// stream opens succeed normally before the injected failures begin. Needed
+// once turn/start opens the stream synchronously before SendInput
+// (ensureEventLoop): a reconnect-path test must let that first attach
+// succeed, then fail subsequent opens, rather than failing turn/start itself.
+func (h *Harness) SetStreamErrorStatusAfter(skip, status, times int) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	h.streamErrorSkip = skip
 	h.streamErrorStatus = status
 	h.streamErrorRemaining = times
 }
@@ -248,7 +261,10 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 	sessionID := h.sessionID
 	hang := h.hangAfterEvents
 	errStatus := h.streamErrorStatus
-	if errStatus != 0 && h.streamErrorRemaining > 0 {
+	if h.streamErrorSkip > 0 {
+		h.streamErrorSkip--
+		errStatus = 0 // this open is exempt; failures start on a later call
+	} else if errStatus != 0 && h.streamErrorRemaining > 0 {
 		h.streamErrorRemaining--
 		if h.streamErrorRemaining == 0 {
 			h.streamErrorStatus = 0
@@ -396,5 +412,16 @@ func (h *Harness) NextHITLResolution(t *testing.T, timeout time.Duration) HITLRe
 	case <-time.After(timeout):
 		t.Fatal("agentproxytest: timed out waiting for a HITL resolution")
 		return HITLResolution{}
+	}
+}
+
+// ExpectNoHITLResolution asserts no POST .../hitl call arrives within wait —
+// used by --replay tests to confirm historical HITLs are not re-resolved.
+func (h *Harness) ExpectNoHITLResolution(t *testing.T, wait time.Duration) {
+	t.Helper()
+	select {
+	case res := <-h.hitlCh:
+		t.Fatalf("agentproxytest: expected no HITL resolution, got %+v", res)
+	case <-time.After(wait):
 	}
 }

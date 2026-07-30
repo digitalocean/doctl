@@ -110,7 +110,10 @@ func TestWire_InitializeThreadStartTurnStartDeltasTurnCompleted(t *testing.T) {
 
 	godoClient, err := godo.New(http.DefaultClient, godo.SetBaseURL(harness.Server.URL+"/"))
 	require.NoError(t, err)
-	facade := &Facade{SessionID: sessionID, Sessions: do.NewHostedAgentsService(godoClient)}
+	svc := do.NewHostedAgentsService(godoClient)
+	newFacade := func() agentproxy.Facade {
+		return &Facade{SessionID: sessionID, Sessions: svc}
+	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -119,7 +122,7 @@ func TestWire_InitializeThreadStartTurnStartDeltasTurnCompleted(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, facade) }()
+	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, newFacade) }()
 
 	client := dialTestClient(t, "ws://"+addr+"/")
 
@@ -218,7 +221,10 @@ func TestWire_ApprovalRoundTrip(t *testing.T) {
 
 	godoClient, err := godo.New(http.DefaultClient, godo.SetBaseURL(harness.Server.URL+"/"))
 	require.NoError(t, err)
-	facade := &Facade{SessionID: sessionID, Sessions: do.NewHostedAgentsService(godoClient)}
+	svc := do.NewHostedAgentsService(godoClient)
+	newFacade := func() agentproxy.Facade {
+		return &Facade{SessionID: sessionID, Sessions: svc}
+	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -227,7 +233,7 @@ func TestWire_ApprovalRoundTrip(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, facade) }()
+	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, newFacade) }()
 
 	client := dialTestClient(t, "ws://"+addr+"/")
 
@@ -308,24 +314,24 @@ func dialTestClientRetry(t *testing.T, url string, timeout time.Duration) *wsTes
 	}
 }
 
-// TestWire_Reconnect_StartsFreshEventLoop is the regression test for a real
-// bug found live-verifying M4: start-proxy binds one Facade for its whole
-// process lifetime (RunAgentsStartProxy calls agentproxy.Serve once), so a
-// second, separate `codex --remote` connection reconnecting to an
-// already-used proxy is a real scenario. Before the fix (runEventLoop
-// resetting streamStarted/turns on every exit path, not just leaving them
-// set forever), a second connection's turn/start returned an in-progress
-// turn from SendInput but no notification ever followed, because
-// trackTurn's "has a loop already started" check stayed true even after the
-// first connection's loop had already exited with that connection's own
-// canceled context.
+// TestWire_Reconnect_StartsFreshEventLoop confirms a second, separate
+// `codex --remote` connection to an already-used proxy gets a working
+// turn/start. ServeListener's per-connection factory (newFacade) is what
+// makes this safe: each connection gets a fresh Facade with its own
+// notifier and event-loop state, so a still-unwinding previous connection's
+// goroutines cannot leak notifications onto the new socket or leave
+// streamStarted stuck true. Before that factory existed, reusing one Facade
+// across disconnect/reconnect was a real live bug.
 func TestWire_Reconnect_StartsFreshEventLoop(t *testing.T) {
 	const sessionID = "sess-wire-reconnect"
 
 	harness := agentproxytest.New(t, sessionID)
 	godoClient, err := godo.New(http.DefaultClient, godo.SetBaseURL(harness.Server.URL+"/"))
 	require.NoError(t, err)
-	facade := &Facade{SessionID: sessionID, Sessions: do.NewHostedAgentsService(godoClient)}
+	svc := do.NewHostedAgentsService(godoClient)
+	newFacade := func() agentproxy.Facade {
+		return &Facade{SessionID: sessionID, Sessions: svc}
+	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -334,7 +340,7 @@ func TestWire_Reconnect_StartsFreshEventLoop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, facade) }()
+	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, newFacade) }()
 
 	// First connection: a full turn, then disconnect without ever finishing
 	// the second turn — mirrors a user quitting codex mid-session.
@@ -368,12 +374,9 @@ func TestWire_Reconnect_StartsFreshEventLoop(t *testing.T) {
 
 	require.NoError(t, client1.conn.Close())
 
-	// Second, separate connection to the SAME already-used Facade/proxy —
-	// the actual scenario the bug lived in. Queue a fresh run and confirm
-	// this connection's own turn/start gets its own turn/started, not
-	// silence (which is exactly what happened before the fix: the harness
-	// really did accept SendInput and start a run, but nothing was left
-	// listening for its events).
+	// Second, separate connection — factory must hand it a fresh Facade.
+	// Queue a fresh run and confirm this connection's own turn/start gets
+	// its own turn/started, not silence.
 	harness.QueueRun("run-2",
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"second"}`)},
@@ -439,7 +442,10 @@ func TestWire_FileChangeAlwaysAutoRejected(t *testing.T) {
 
 	godoClient, err := godo.New(http.DefaultClient, godo.SetBaseURL(harness.Server.URL+"/"))
 	require.NoError(t, err)
-	facade := &Facade{SessionID: sessionID, Sessions: do.NewHostedAgentsService(godoClient)}
+	svc := do.NewHostedAgentsService(godoClient)
+	newFacade := func() agentproxy.Facade {
+		return &Facade{SessionID: sessionID, Sessions: svc}
+	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -448,7 +454,7 @@ func TestWire_FileChangeAlwaysAutoRejected(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, facade) }()
+	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, newFacade) }()
 
 	client := dialTestClient(t, "ws://"+addr+"/")
 
@@ -518,7 +524,12 @@ func TestWire_ShutdownCancelsConnectionGoroutines(t *testing.T) {
 
 	godoClient, err := godo.New(http.DefaultClient, godo.SetBaseURL(harness.Server.URL+"/"))
 	require.NoError(t, err)
-	facade := &Facade{SessionID: sessionID, Sessions: do.NewHostedAgentsService(godoClient)}
+	svc := do.NewHostedAgentsService(godoClient)
+	var facade *Facade
+	newFacade := func() agentproxy.Facade {
+		facade = &Facade{SessionID: sessionID, Sessions: svc}
+		return facade
+	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -527,7 +538,7 @@ func TestWire_ShutdownCancelsConnectionGoroutines(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, facade) }()
+	go func() { serveErr <- agentproxy.ServeListener(ctx, ln, newFacade) }()
 
 	client := dialTestClient(t, "ws://"+addr+"/")
 	client.send("1", "initialize", map[string]any{
@@ -549,6 +560,7 @@ func TestWire_ShutdownCancelsConnectionGoroutines(t *testing.T) {
 	// Confirm the precondition: runEventLoop is actually active (and, with
 	// the stream hung open, would stay that way forever without the fix)
 	// before testing that shutdown stops it.
+	require.NotNil(t, facade, "factory should have produced a Facade for the live connection")
 	facade.mu.Lock()
 	started := facade.streamStarted
 	facade.mu.Unlock()

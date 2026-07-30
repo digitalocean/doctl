@@ -10,15 +10,15 @@ import (
 )
 
 // maybeReplay starts replaySessionHistory the first time either thread/start
-// or thread/resume is dispatched — see Dispatch. A no-op when Replay is
-// false, when a completed replay has already run (replayDone), or when one
-// is already in flight (replaying) — the latter guards a narrow reconnect
-// race: proxy.go's "one slot" accept loop only frees up once the old
-// connection's handleConn returns, but that old connection's own
-// replaySessionHistory goroutine can still be blocked reading the
-// replay-only stream after the WS itself is gone, so a fresh connection's
-// thread/resume can call this again before the old attempt has finished
-// unwinding.
+// or thread/resume is dispatched on this connection — see Dispatch. A no-op
+// when Replay is false, when a completed replay has already run for this
+// Facade (replayDone), or when one is already in flight (replaying).
+//
+// The gate is per-Facade / per-connection, not process-wide: ServeListener
+// builds a fresh Facade for every accepted WebSocket, and a reconnecting
+// client is a new TUI with empty scrollback that needs history again under
+// --replay. Within one connection, thread/start then thread/resume must not
+// re-deliver the same history a second time.
 func (f *Facade) maybeReplay(ctx context.Context) {
 	if !f.Replay {
 		return
@@ -69,8 +69,8 @@ func (f *Facade) maybeReplay(ctx context.Context) {
 // Marks replayDone only on reaching the natural end of the stream — not on
 // any early-abort path (StreamSession failing to open, or a dead client
 // mid-fetch) — so an aborted attempt is retried on the next thread/start or
-// thread/resume (e.g. after a reconnect) instead of permanently foreclosing
-// --replay for the rest of this process's lifetime on one flaky connection.
+// thread/resume on this same connection instead of permanently foreclosing
+// --replay for the rest of the connection on one flaky fetch.
 func (f *Facade) replaySessionHistory(ctx context.Context) {
 	completed := false
 	defer func() {
@@ -99,7 +99,7 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 			turns[ev.RunID] = ts
 		}
 
-		if f.translateEvent(ctx, ev, ts) {
+		if f.translateEvent(ctx, ev, ts, true) {
 			log.Printf("codex facade: replay stopped early (client disconnected), will retry on next connect")
 			return
 		}
