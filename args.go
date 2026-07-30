@@ -146,6 +146,8 @@ const (
 	ArgVPCNATGatewayICMPTimeout = "icmp-timeout"
 	// ArgVPCNATGatewayTCPTimeout is a vpc nat gateway tcp-timeout argument.
 	ArgVPCNATGatewayTCPTimeout = "tcp-timeout"
+	// ArgVPCNATGatewayIP is an optional BYOIP address for VPC NAT Gateway create.
+	ArgVPCNATGatewayIP = "ip"
 
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
@@ -455,6 +457,8 @@ const (
 	ArgLoadBalancerNetworkStack = "network-stack"
 	// ArgLoadBalancerTLSCipherPolicy is the tls cipher policy to be used for the load balancer
 	ArgLoadBalancerTLSCipherPolicy = "tls-cipher-policy"
+	// ArgLoadBalancerIP is an optional BYOIP address to assign on load balancer create.
+	ArgLoadBalancerIP = "ip"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
