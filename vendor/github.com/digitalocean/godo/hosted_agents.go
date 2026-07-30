@@ -97,7 +97,9 @@ const (
 	HostedAgentKindClaudeCode  HostedAgentKind = "AGENT_KIND_CLAUDE_CODE"
 	HostedAgentKindOpenCode    HostedAgentKind = "AGENT_KIND_OPENCODE"
 	HostedAgentKindCodexCLI    HostedAgentKind = "AGENT_KIND_CODEX_CLI"
+	HostedAgentKindCursorCLI   HostedAgentKind = "AGENT_KIND_CURSOR_CLI"
 	HostedAgentKindNone        HostedAgentKind = "AGENT_KIND_NONE"
+	HostedAgentKindCustom      HostedAgentKind = "AGENT_KIND_CUSTOM"
 )
 
 // HostedAgentSessionStatus is the lifecycle status of a hosted agent session.

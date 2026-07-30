@@ -93,6 +93,7 @@ type CmdConfig struct {
 	NfsActions          func() do.NfsActionsService
 	Security            func() do.SecurityService
 	HostedAgents        func() do.HostedAgentsService
+	HostedAgentTriggers func() do.HostedAgentTriggersService
 	Secrets             func() do.SecretsService
 }
 
@@ -173,6 +174,9 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.Security = func() do.SecurityService { return do.NewSecurityService(godoClient) }
 			c.HostedAgents = func() do.HostedAgentsService { return do.NewHostedAgentsService(godoClient) }
+			c.HostedAgentTriggers = func() do.HostedAgentTriggersService {
+				return do.NewHostedAgentTriggersService(godoClient)
+			}
 			c.Secrets = func() do.SecretsService { return do.NewSecretsService(godoClient) }
 			return nil
 		},

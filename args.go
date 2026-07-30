@@ -986,4 +986,34 @@ const (
 
 	// ArgAgentProxyReplay replays the session's event history into the first thread on connect.
 	ArgAgentProxyReplay = "replay"
+
+	// ArgAgentTriggerKind filters or sets trigger kind (webhook|cron).
+	ArgAgentTriggerKind = "kind"
+
+	// ArgAgentTriggerSessionMode is fresh|reuse for create.
+	ArgAgentTriggerSessionMode = "session-mode"
+
+	// ArgAgentTriggerPrompt is the prompt template sent on each firing.
+	ArgAgentTriggerPrompt = "prompt"
+
+	// ArgAgentTriggerOutputMode is none|email|slack.
+	ArgAgentTriggerOutputMode = "output-mode"
+
+	// ArgAgentTriggerOutputEmail is the destination when output-mode=email.
+	ArgAgentTriggerOutputEmail = "output-email"
+
+	// ArgAgentTriggerOutputSlackWebhook is the Slack incoming webhook URL when output-mode=slack.
+	ArgAgentTriggerOutputSlackWebhook = "output-slack-webhook"
+
+	// ArgAgentTriggerBoundSessionID is the PAUSED session UUID for session-mode=reuse.
+	ArgAgentTriggerBoundSessionID = "bound-session-id"
+
+	// ArgAgentTriggerProvider is the webhook provider (github|gitlab|custom).
+	ArgAgentTriggerProvider = "provider"
+
+	// ArgAgentTriggerCronExpr is the cron expression for kind=cron.
+	ArgAgentTriggerCronExpr = "cron-expr"
+
+	// ArgAgentTriggerTimezone is the IANA timezone for kind=cron.
+	ArgAgentTriggerTimezone = "timezone"
 )

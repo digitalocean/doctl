@@ -105,6 +105,7 @@ type Client struct {
 	PartnerAttachment   PartnerAttachmentService
 	GradientAI          GradientAIService
 	HostedAgents        HostedAgentsService
+	HostedAgentTriggers HostedAgentTriggersService
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
 	BYOIPPrefixes       BYOIPPrefixesService
@@ -362,6 +363,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.PartnerAttachment = &PartnerAttachmentServiceOp{client: c}
 	c.GradientAI = &GradientAIServiceOp{client: c}
 	c.HostedAgents = &HostedAgentsServiceOp{client: c}
+	c.HostedAgentTriggers = &HostedAgentTriggersServiceOp{client: c}
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}

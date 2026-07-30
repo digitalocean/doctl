@@ -300,6 +300,7 @@ type tcMocks struct {
 	microDropletImages    *domocks.MockMicroDropletImagesService
 	security              *domocks.MockSecurityService
 	hostedAgents          *domocks.MockHostedAgentsService
+	hostedAgentTriggers   *domocks.MockHostedAgentTriggersService
 	secrets               *domocks.MockSecretsService
 	vectorDBs             *domocks.MockVectorDBsService
 }
@@ -365,6 +366,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		microDropletImages:    domocks.NewMockMicroDropletImagesService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
 		hostedAgents:          domocks.NewMockHostedAgentsService(ctrl),
+		hostedAgentTriggers:   domocks.NewMockHostedAgentTriggersService(ctrl),
 		secrets:               domocks.NewMockSecretsService(ctrl),
 		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
 	}
@@ -438,6 +440,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		MicroDropletImages:  func() do.MicroDropletImagesService { return tm.microDropletImages },
 		Security:            func() do.SecurityService { return tm.security },
 		HostedAgents:        func() do.HostedAgentsService { return tm.hostedAgents },
+		HostedAgentTriggers: func() do.HostedAgentTriggersService { return tm.hostedAgentTriggers },
 		Secrets:             func() do.SecretsService { return tm.secrets },
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
 	}

@@ -59,3 +59,4 @@ mockgen -source security.go -package=mocks SecurityService > mocks/SecurityServi
 mockgen -source secrets.go -package=mocks SecretsService > mocks/SecretsService.go
 mockgen -source vector_databases.go -package=mocks VectorDBsService > mocks/VectorDBsService.go
 mockgen -source agents.go -package=mocks HostedAgentsService > mocks/HostedAgentsService.go
+mockgen -source agent_triggers.go -package=mocks HostedAgentTriggersService > mocks/HostedAgentTriggersService.go
