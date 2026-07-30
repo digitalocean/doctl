@@ -23,7 +23,6 @@ const (
 	hostedAgentsSessionsBasePath                    = "/v2/agents/sessions"
 	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
 	hostedAgentSessionEventsPath                    = hostedAgentSessionByIDPath + "/events"
-	hostedAgentSessionStreamPath                    = hostedAgentSessionByIDPath + "/stream"
 	hostedAgentSessionInputPath                     = hostedAgentSessionByIDPath + "/input"
 	hostedAgentSessionHITLPath                      = hostedAgentSessionByIDPath + "/hitl/%s"
 	hostedAgentSessionSandboxExecPath               = hostedAgentSessionByIDPath + "/sandbox/exec"
@@ -400,8 +399,8 @@ type HostedAgentSessionsListResponse struct {
 
 // HostedAgentSessionStreamOptions configures the session SSE stream.
 //
-// The two fields select between the two SSE surfaces StreamSession can open;
-// see StreamSession for why they are served by different endpoints.
+// The two fields select between the two modes StreamSession can open on the
+// events endpoint; see StreamSession.
 type HostedAgentSessionStreamOptions struct {
 	// ReplayFrom is the resume cursor: the id of the last event the caller
 	// already rendered. On the live stream it is sent as Last-Event-ID; on a
@@ -709,19 +708,21 @@ func (s *HostedAgentsServiceOp) ResumeSession(ctx context.Context, sessionID str
 
 // StreamSession opens the SSE stream for a session. Callers MUST Close the stream.
 //
-// Live and replay-only reads are served by two different endpoints, because
-// streaming moved out of the control plane onto the data plane:
+// Both reads are served by the data plane at GET .../sessions/{id}/events; the
+// two modes differ in where the stream starts and whether it ends:
 //
-//   - Live (the default) reads GET .../sessions/{id}/events, served by the data
-//     plane. Delivery is forward-only from the moment of attach, so a live
-//     stream never carries events that predate it. ReplayFrom is sent as the
-//     standard Last-Event-ID header.
-//   - ReplayOnly reads GET .../sessions/{id}/stream?replay_only=true, served by
-//     the control plane, which owns the stored event history. The stream ends
-//     after the last stored event.
+//   - Live (the default) delivers forward-only from the moment of attach,
+//     preceded by whatever recent history the server decides to replay, and
+//     holds the connection open. ReplayFrom is sent as the standard
+//     Last-Event-ID header.
+//   - ReplayOnly adds ?replay_only=true: the server writes the session's stored
+//     event history and then ends the stream, so the read terminates on its own.
+//     ReplayFrom is sent as the replay_from query parameter, since it is an
+//     explicit pagination cursor here rather than a resume hint.
 //
-// The live stream also carries HostedAgentEventKindStreamState control frames
-// (see HostedAgentStreamState); replay-only reads do not.
+// Both carry HostedAgentEventKindStreamState control frames (see
+// HostedAgentStreamState). A replay-only read reports catching_up and then
+// simply ends; it never reaches live.
 func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID string, opt *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
@@ -734,7 +735,6 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 
 	path := fmt.Sprintf(hostedAgentSessionEventsPath, sessionID)
 	if replayOnly {
-		path = fmt.Sprintf(hostedAgentSessionStreamPath, sessionID)
 		q := url.Values{}
 		q.Set("replay_only", "true")
 		if cursor != "" {

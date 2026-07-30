@@ -276,8 +276,8 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		displayerType(&displayers.HostedAgentSession{}))
 
 	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
-		"Replay the full event history for a session",
-		"Replays the full server-side event history for a session, then exits.",
+		"Replay the event history for a session",
+		"Replays the server-side event history for a session, then exits. History is retained for a bounded window, so a session that has been idle for a long time, or one with an unusually long transcript, may replay only its more recent activity.",
 		Writer)
 
 	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
@@ -1069,7 +1069,9 @@ func hitlOutcomeFor(s string) (godo.HostedAgentHITLOutcome, error) {
 	}
 }
 
-// RunAgentsLogs replays the full event history for a session, then exits.
+// RunAgentsLogs replays the session's stored event history, then exits. The
+// stream is finite: the server ends it after the last stored event, which is
+// what terminates the loop below.
 func RunAgentsLogs(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
