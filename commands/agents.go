@@ -743,8 +743,13 @@ func hashFile(r io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// workspacePartUploadURLBatchSize is how many part numbers doctl requests per
+// CreatePartUploadURLs call. OHS supports batching; requesting one-by-one adds
+// unnecessary round-trips for multi-GiB uploads.
+const workspacePartUploadURLBatchSize = 32
+
 // workspaceTransferUpload implements upload via /workspace/transfers:
-// CreateTransfer → per-part CreatePartUploadURL + PUT → CommitTransfer → poll GetTransfer.
+// CreateTransfer → batched CreatePartUploadURLs + PUT → CommitTransfer → poll GetTransfer.
 func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *os.File, size int64, isArchive bool, sha256hex string) error {
 	svc := c.HostedAgents()
 	create, err := svc.CreateWorkspaceTransfer(sessionID, &godo.HostedAgentWorkspaceTransferCreateRequest{
@@ -766,36 +771,53 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 		_, _ = svc.CancelWorkspaceTransfer(sessionID, transferID, &godo.HostedAgentWorkspaceTransferCancelRequest{Reason: reason})
 	}
 
-	var offset int64
-	for partNumber := 1; offset < size; partNumber++ {
-		partLen := create.PartSize
-		if remaining := size - offset; remaining < partLen {
-			partLen = remaining
+	totalParts := int((size + create.PartSize - 1) / create.PartSize)
+	for startPart := 1; startPart <= totalParts; startPart += workspacePartUploadURLBatchSize {
+		endPart := startPart + workspacePartUploadURLBatchSize - 1
+		if endPart > totalParts {
+			endPart = totalParts
 		}
-		section := io.NewSectionReader(f, offset, partLen)
+		partNumbers := make([]int, 0, endPart-startPart+1)
+		for n := startPart; n <= endPart; n++ {
+			partNumbers = append(partNumbers, n)
+		}
 
-		uploadURL, err := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
+		urlsByPart, err := workspacePartUploadURLs(svc, sessionID, transferID, partNumbers)
 		if err != nil {
-			cancel("failed to obtain part upload URL")
-			return fmt.Errorf("obtaining upload URL for part %d: %w", partNumber, err)
+			cancel("failed to obtain part upload URLs")
+			return fmt.Errorf("obtaining upload URLs for parts %d-%d: %w", startPart, endPart, err)
 		}
-		if err := putWorkspaceObject(uploadURL, section, partLen); err != nil {
-			// URL may have expired; refresh once and retry the same part.
-			uploadURL, retryErr := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
-			if retryErr != nil {
-				cancel("part upload failed")
-				return fmt.Errorf("uploading part %d: %w (refresh URL: %v)", partNumber, err, retryErr)
+
+		for partNumber := startPart; partNumber <= endPart; partNumber++ {
+			offset := int64(partNumber-1) * create.PartSize
+			partLen := create.PartSize
+			if remaining := size - offset; remaining < partLen {
+				partLen = remaining
 			}
-			if _, seekErr := section.Seek(0, io.SeekStart); seekErr != nil {
-				cancel("part upload failed")
-				return fmt.Errorf("rewinding part %d: %w", partNumber, seekErr)
+			section := io.NewSectionReader(f, offset, partLen)
+
+			uploadURL := urlsByPart[partNumber]
+			if uploadURL == "" {
+				cancel("failed to obtain part upload URL")
+				return fmt.Errorf("part upload URLs response missing part %d", partNumber)
 			}
-			if retryPut := putWorkspaceObject(uploadURL, section, partLen); retryPut != nil {
-				cancel("part upload failed")
-				return fmt.Errorf("uploading part %d: %w", partNumber, retryPut)
+			if err := putWorkspaceObject(uploadURL, section, partLen); err != nil {
+				// URL may have expired; refresh once and retry the same part.
+				uploadURL, retryErr := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
+				if retryErr != nil {
+					cancel("part upload failed")
+					return fmt.Errorf("uploading part %d: %w (refresh URL: %v)", partNumber, err, retryErr)
+				}
+				if _, seekErr := section.Seek(0, io.SeekStart); seekErr != nil {
+					cancel("part upload failed")
+					return fmt.Errorf("rewinding part %d: %w", partNumber, seekErr)
+				}
+				if retryPut := putWorkspaceObject(uploadURL, section, partLen); retryPut != nil {
+					cancel("part upload failed")
+					return fmt.Errorf("uploading part %d: %w", partNumber, retryPut)
+				}
 			}
 		}
-		offset += partLen
 	}
 
 	if _, err := svc.CommitWorkspaceTransfer(sessionID, transferID, &godo.HostedAgentWorkspaceTransferCommitRequest{
@@ -820,20 +842,38 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 	}}})
 }
 
+// workspacePartUploadURLs mints presigned PUT URLs for one or more 1-based parts.
+func workspacePartUploadURLs(svc do.HostedAgentsService, sessionID, transferID string, partNumbers []int) (map[int]string, error) {
+	if len(partNumbers) == 0 {
+		return nil, fmt.Errorf("part_numbers must not be empty")
+	}
+	out, err := svc.CreateWorkspaceTransferPartUploadURLs(sessionID, transferID, &godo.HostedAgentWorkspaceTransferPartUploadURLsRequest{
+		PartNumbers: partNumbers,
+	})
+	if err != nil {
+		return nil, err
+	}
+	urlsByPart := make(map[int]string, len(partNumbers))
+	for _, part := range out.PartURLs {
+		if part.PartNumber > 0 && part.UploadURL != "" {
+			urlsByPart[part.PartNumber] = part.UploadURL
+		}
+	}
+	for _, n := range partNumbers {
+		if urlsByPart[n] == "" {
+			return nil, fmt.Errorf("part upload URLs response missing part %d", n)
+		}
+	}
+	return urlsByPart, nil
+}
+
 // workspacePartUploadURL mints a presigned PUT URL for a single 1-based part.
 func workspacePartUploadURL(svc do.HostedAgentsService, sessionID, transferID string, partNumber int) (string, error) {
-	out, err := svc.CreateWorkspaceTransferPartUploadURLs(sessionID, transferID, &godo.HostedAgentWorkspaceTransferPartUploadURLsRequest{
-		PartNumbers: []int{partNumber},
-	})
+	urls, err := workspacePartUploadURLs(svc, sessionID, transferID, []int{partNumber})
 	if err != nil {
 		return "", err
 	}
-	for _, part := range out.PartURLs {
-		if part.PartNumber == partNumber && part.UploadURL != "" {
-			return part.UploadURL, nil
-		}
-	}
-	return "", fmt.Errorf("part upload URLs response missing part %d", partNumber)
+	return urls[partNumber], nil
 }
 
 // putWorkspaceObject PUTs part bytes to a presigned object URL.

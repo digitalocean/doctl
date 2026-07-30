@@ -612,6 +612,67 @@ func TestRunAgentsUpload_LargeFile(t *testing.T) {
 	})
 }
 
+func TestRunAgentsUpload_BatchedPartURLs(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "multi.bin")
+	contents := []byte{0x01, 0x02, 0x03}
+	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
+	sha := sha256Hex(contents)
+	partSize := int64(1)
+
+	partServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer partServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransfer("sess_test", gomock.Any()).
+			DoAndReturn(func(_ string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+				assert.Equal(t, int64(len(contents)), create.SizeBytes)
+				return &godo.HostedAgentWorkspaceTransfer{
+					TransferID: "xfer_batch",
+					Status:     godo.HostedAgentWorkspaceTransferStatusPending,
+					PartSize:   partSize,
+				}, nil
+			})
+		// One batched request for all three parts (batch size 32 > 3).
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransferPartUploadURLs("sess_test", "xfer_batch", &godo.HostedAgentWorkspaceTransferPartUploadURLsRequest{
+				PartNumbers: []int{1, 2, 3},
+			}).
+			Return(&godo.HostedAgentWorkspaceTransferPartUploadURLs{
+				PartURLs: []godo.HostedAgentWorkspaceTransferPartUploadURL{
+					{PartNumber: 1, UploadURL: partServer.URL},
+					{PartNumber: 2, UploadURL: partServer.URL},
+					{PartNumber: 3, UploadURL: partServer.URL},
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			CommitWorkspaceTransfer("sess_test", "xfer_batch", &godo.HostedAgentWorkspaceTransferCommitRequest{SHA256: sha}).
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID: "xfer_batch",
+				Status:     godo.HostedAgentWorkspaceTransferStatusInProgress,
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetWorkspaceTransfer("sess_test", "xfer_batch").
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID:   "xfer_batch",
+				Status:       godo.HostedAgentWorkspaceTransferStatusCompleted,
+				BytesWritten: int64(len(contents)),
+			}, nil)
+
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "multi.bin")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		assert.NoError(t, RunAgentsUpload(config))
+	})
+}
+
 func TestRunAgentsDownload(t *testing.T) {
 	prevPoll := workspaceTransferPollInterval
 	workspaceTransferPollInterval = 0
