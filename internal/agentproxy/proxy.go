@@ -344,5 +344,8 @@ func handleConn(ctx context.Context, conn *websocket.Conn, facade Facade, notifi
 			log.Printf("agentproxy: write error: %v", err)
 			return
 		}
+		if ar, ok := facade.(AfterReply); ok {
+			ar.AfterReply(ctx, msg.Method)
+		}
 	}
 }

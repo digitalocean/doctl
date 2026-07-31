@@ -6,13 +6,19 @@ import (
 	"context"
 	"log"
 
+	"github.com/digitalocean/doctl/internal/agentproxy"
 	"github.com/digitalocean/godo"
 )
 
-// maybeReplay starts replaySessionHistory the first time either thread/start
-// or thread/resume is dispatched on this connection — see Dispatch. A no-op
-// when Replay is false, when a completed replay has already run for this
-// Facade (replayDone), or when one is already in flight (replaying).
+var _ agentproxy.AfterReply = (*Facade)(nil)
+
+// maybeReplay marks that this connection wants session history fed into the
+// thread once thread/start or thread/resume has been acknowledged. The actual
+// fetch is started from AfterReply (not here) so a replayed turn/started
+// cannot race onto the wire before the thread/start|resume reply that creates
+// the thread it refers to. A no-op when Replay is false, when a completed
+// replay has already run for this Facade (replayDone), when one is already
+// in flight (replaying), or when one is already pending AfterReply.
 //
 // The gate is per-Facade / per-connection, not process-wide: ServeListener
 // builds a fresh Facade for every accepted WebSocket, and a reconnecting
@@ -24,10 +30,26 @@ func (f *Facade) maybeReplay(ctx context.Context) {
 		return
 	}
 	f.replayMu.Lock()
-	if f.replayDone || f.replaying {
+	defer f.replayMu.Unlock()
+	if f.replayDone || f.replaying || f.replayPending {
+		return
+	}
+	f.replayPending = true
+}
+
+// AfterReply implements agentproxy.AfterReply: once handleConn has written
+// the thread/start or thread/resume reply, start the deferred
+// replaySessionHistory goroutine if maybeReplay armed one.
+func (f *Facade) AfterReply(ctx context.Context, method string) {
+	if method != "thread/start" && method != "thread/resume" {
+		return
+	}
+	f.replayMu.Lock()
+	if !f.replayPending || f.replayDone || f.replaying {
 		f.replayMu.Unlock()
 		return
 	}
+	f.replayPending = false
 	f.replaying = true
 	f.replayMu.Unlock()
 
@@ -92,6 +114,13 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 	turns := make(map[string]*turnState)
 	for stream.Next() {
 		ev := stream.Current()
+
+		// Same guard as drainStream: control frames (stream.state) and other
+		// run-less events belong to no turn — don't synthesize a phantom
+		// turnState keyed "" with itemID "-msg".
+		if ev.RunID == "" {
+			continue
+		}
 
 		ts, ok := turns[ev.RunID]
 		if !ok {

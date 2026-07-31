@@ -184,7 +184,14 @@ func dispatchCtx(t *testing.T, ctx context.Context, f *Facade, method string, pa
 		require.NoError(t, err)
 		raw = b
 	}
-	return f.Dispatch(ctx, method, raw)
+	result, err := f.Dispatch(ctx, method, raw)
+	// Mirror handleConn: AfterReply runs only after a successful request
+	// reply would have been written. Unit tests call Dispatch directly, so
+	// kick it here — otherwise --replay stays armed forever and never starts.
+	if err == nil {
+		f.AfterReply(ctx, method)
+	}
+	return result, err
 }
 
 // stopEventLoop cancels cancel and blocks until f's runEventLoop goroutine

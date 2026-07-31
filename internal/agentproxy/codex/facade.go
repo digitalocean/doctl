@@ -79,6 +79,11 @@ type Facade struct {
 	mu            sync.Mutex
 	turns         map[string]*turnState
 	streamStarted bool
+	// expectTurnUntil is the deadline through which lookupTurn will retry a
+	// miss. Set just before SendInput and cleared once trackTurn registers
+	// the run — covers the turn-2+ race without charging eventClaimWait on
+	// every permanently-untracked event (finished runs, predating events).
+	expectTurnUntil time.Time
 
 	// streamCursor is this connection's Last-Event-ID resume point for the
 	// live SSE stream. Held on the Facade (not a local in runEventLoop) so a
@@ -93,8 +98,9 @@ type Facade struct {
 	// threadTokenUsageUpdatedNotification's "total" field, which is
 	// thread-scoped, unlike "last" which is one turn's own delta). Historical
 	// usage from --replay is deliberately not folded in (see translateEvent's
-	// replay path) so the TUI's running total reflects this connection's live
-	// traffic. Reset alongside turns/streamStarted on every runEventLoop exit.
+	// replay path). Unlike turns/streamStarted, this is not cleared when
+	// runEventLoop exits: an idle stream drop between messages is normal, and
+	// resetting here would make the TUI's running total jump backwards.
 	totalUsage tokenUsageBreakdown
 
 	// Replay, when true, feeds this session's full durable event history
@@ -119,6 +125,11 @@ type Facade struct {
 	// this Facade — guards thread/start and thread/resume from starting two
 	// fetches concurrently.
 	replaying bool
+	// replayPending is set by maybeReplay when Dispatch wants history, and
+	// cleared by AfterReply once the thread/start|resume reply is on the
+	// wire — so replayed turn/started cannot race ahead of the thread it
+	// refers to.
+	replayPending bool
 	// replayDone is set only once replaySessionHistory reaches the natural
 	// end of the replay-only stream — never on an aborted attempt.
 	replayDone bool
@@ -895,8 +906,17 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 			}
 			text.WriteString(item.Text)
 		}
+		// Open the claim window before SendInput: the shared loop can see
+		// this run's first event as soon as the harness accepts it, which
+		// is before trackTurn writes the map entry below.
+		f.mu.Lock()
+		f.expectTurnUntil = time.Now().Add(eventClaimWait)
+		f.mu.Unlock()
 		resp, err := f.Sessions.SendInput(f.SessionID, &godo.HostedAgentSendInputRequest{Text: text.String()})
 		if err != nil {
+			f.mu.Lock()
+			f.expectTurnUntil = time.Time{}
+			f.mu.Unlock()
 			return nil, &agentproxy.RPCError{Code: -32000, Message: "SendInput failed: " + err.Error()}
 		}
 		// The harness's run id doubles as this facade's turn id — already a
@@ -979,37 +999,38 @@ func (f *Facade) ensureEventLoop(ctx context.Context) error {
 
 // trackTurn registers a new in-flight turn, keyed by run id, once
 // ensureEventLoop has confirmed the read loop is running to see its events.
+// Clears the expectTurnUntil claim window opened before SendInput.
 func (f *Facade) trackTurn(runID string) {
 	f.mu.Lock()
 	if f.turns == nil {
 		f.turns = make(map[string]*turnState)
 	}
 	f.turns[runID] = &turnState{itemID: runID + "-msg"}
+	f.expectTurnUntil = time.Time{}
 	f.mu.Unlock()
 }
 
 // eventClaimPoll/eventClaimWait bound how long lookupTurn retries an
-// unrecognized run id before giving up on it.
+// unrecognized run id while a SendInput→trackTurn handoff is in flight.
 const (
 	eventClaimPoll = 2 * time.Millisecond
 	eventClaimWait = 200 * time.Millisecond
 )
 
-// lookupTurn returns the tracked turnState for runID, retrying briefly if
-// it's not there yet. turn/start calls SendInput, which is what makes the
-// harness create the run and start emitting its events, and only registers
-// runID in f.turns once SendInput returns — so the already-running shared
-// loop (turn 2+) can observe that run's first event fractionally before
-// trackTurn's map write becomes visible to it. A caller that still gets
-// ok == false after this returns should treat the event as genuinely
-// untracked (e.g. one that predates this connection), not as this race.
+// lookupTurn returns the tracked turnState for runID. When a turn/start has
+// just opened the expectTurnUntil claim window (see turn/start), it retries
+// briefly so the shared loop can claim a run's first event that arrives
+// fractionally before trackTurn's map write. Outside that window a miss is
+// returned immediately — permanently-untracked events (already-finished
+// runs, history that predates this connection) must not stall the drain
+// loop for eventClaimWait each.
 func (f *Facade) lookupTurn(runID string) (*turnState, bool) {
-	deadline := time.Now().Add(eventClaimWait)
 	for {
 		f.mu.Lock()
 		ts, ok := f.turns[runID]
+		expecting := !f.expectTurnUntil.IsZero() && time.Now().Before(f.expectTurnUntil)
 		f.mu.Unlock()
-		if ok || time.Now().After(deadline) {
+		if ok || !expecting {
 			return ts, ok
 		}
 		time.Sleep(eventClaimPoll)
@@ -1146,7 +1167,10 @@ func (f *Facade) runEventLoop(ctx context.Context, initial *godo.HostedAgentSess
 		f.mu.Lock()
 		f.streamStarted = false
 		f.turns = nil
-		f.totalUsage = tokenUsageBreakdown{}
+		// totalUsage is deliberately not reset: it is connection-scoped
+		// (thread-scoped on the wire), and a normal idle noTurnsLeft exit
+		// between user messages must not make the TUI's running total jump
+		// backwards.
 		f.mu.Unlock()
 	}()
 
@@ -1266,7 +1290,10 @@ func (f *Facade) failAllTrackedTurns(message string) {
 	f.mu.Unlock()
 
 	for runID, ts := range turns {
-		f.finishTurn(runID, ts, "failed", &turnError{Message: message})
+		// Still delete every tracked turn even after the first notify
+		// failure — the client is gone, but leaving entries in f.turns
+		// would only confuse a later ensureEventLoop on this Facade.
+		_ = f.finishTurn(runID, ts, "failed", &turnError{Message: message}, time.Now())
 	}
 }
 
@@ -1323,23 +1350,30 @@ func (f *Facade) drainStream(ctx context.Context, stream *godo.HostedAgentSessio
 // and turn/completed pair, then stops tracking runID. status is "completed"
 // or "failed" — there is no turn/failed method in the codex protocol
 // (confirmed against the source); failure is turn/completed with status
-// "failed" and turnErr populated.
-func (f *Facade) finishTurn(runID string, ts *turnState, status string, turnErr *turnError) {
-	completedAt := time.Now().Unix()
+// "failed" and turnErr populated. at is the completion timestamp (event.At
+// on the live/replay path, time.Now for synthesized failures). Returns true
+// when a notify fails (client connection dead) so callers can stop draining.
+func (f *Facade) finishTurn(runID string, ts *turnState, status string, turnErr *turnError, at time.Time) (clientDead bool) {
+	if at.IsZero() {
+		at = time.Now()
+	}
+	completedAt := at.Unix()
 	if ts.itemStarted {
-		f.notify("item/completed", itemCompletedNotification{
+		if !f.notify("item/completed", itemCompletedNotification{
 			Item:          agentMessageItem{Type: "agentMessage", ID: ts.itemID, Text: ts.text.String()},
 			ThreadID:      f.SessionID,
 			TurnID:        runID,
-			CompletedAtMs: completedAt * 1000,
-		})
+			CompletedAtMs: at.UnixMilli(),
+		}) {
+			clientDead = true
+		}
 	}
 	var durationMs *int64
 	if ts.startedAt > 0 {
 		d := (completedAt - ts.startedAt) * 1000
 		durationMs = &d
 	}
-	f.notify("turn/completed", turnCompletedNotification{
+	if !f.notify("turn/completed", turnCompletedNotification{
 		ThreadID: f.SessionID,
 		Turn: turnObj{
 			ID:          runID,
@@ -1350,11 +1384,14 @@ func (f *Facade) finishTurn(runID string, ts *turnState, status string, turnErr 
 			CompletedAt: &completedAt,
 			DurationMs:  durationMs,
 		},
-	})
+	}) {
+		clientDead = true
+	}
 
 	f.mu.Lock()
 	delete(f.turns, runID)
 	f.mu.Unlock()
+	return clientDead
 }
 
 // requestCommandExecutionApproval sends the server->client

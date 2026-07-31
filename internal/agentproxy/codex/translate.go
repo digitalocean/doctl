@@ -44,9 +44,10 @@ import (
 // replay is set, those side effects are skipped — tool_call_started /
 // tool_call_completed in the same history already render the items.
 func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, ts *turnState, replay bool) (clientDead bool) {
+	at := eventTime(ev)
 	switch ev.Kind {
 	case godo.HostedAgentEventKindRunStarted:
-		ts.startedAt = time.Now().Unix()
+		ts.startedAt = at.Unix()
 		if !f.notify("turn/started", turnStartedNotification{
 			ThreadID: f.SessionID,
 			Turn:     turnObj{ID: ev.RunID, Items: []any{}, Status: "inProgress", StartedAt: &ts.startedAt},
@@ -57,7 +58,7 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 			Item:        agentMessageItem{Type: "agentMessage", ID: ts.itemID, Text: ""},
 			ThreadID:    f.SessionID,
 			TurnID:      ev.RunID,
-			StartedAtMs: ts.startedAt * 1000,
+			StartedAtMs: at.UnixMilli(),
 		}) {
 			return true
 		}
@@ -81,14 +82,14 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		}
 
 	case godo.HostedAgentEventKindRunCompleted:
-		f.finishTurn(ev.RunID, ts, "completed", nil)
+		return f.finishTurn(ev.RunID, ts, "completed", nil, at)
 
 	case godo.HostedAgentEventKindRunFailed:
 		var payload struct {
 			Message string `json:"message"`
 		}
 		_ = json.Unmarshal(ev.Payload, &payload)
-		f.finishTurn(ev.RunID, ts, "failed", &turnError{Message: payload.Message})
+		return f.finishTurn(ev.RunID, ts, "failed", &turnError{Message: payload.Message}, at)
 
 	case godo.HostedAgentEventKindToolCallStarted:
 		var payload struct {
@@ -117,7 +118,7 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 			}
 			ts.commands[payload.ToolCallID] = &commandState{command: payload.Input.Command, cwd: payload.Input.Cwd}
 			f.mu.Unlock()
-			f.notify("item/started", itemStartedNotification{
+			if !f.notify("item/started", itemStartedNotification{
 				Item: commandExecutionItem{
 					Type:           "commandExecution",
 					ID:             payload.ToolCallID,
@@ -129,8 +130,10 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 				},
 				ThreadID:    f.SessionID,
 				TurnID:      ev.RunID,
-				StartedAtMs: time.Now().UnixMilli(),
-			})
+				StartedAtMs: at.UnixMilli(),
+			}) {
+				return true
+			}
 
 		case "file_change":
 			// input is always {} for file_change (confirmed via a live
@@ -154,7 +157,7 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 			}
 			ts.fileChanges[payload.ToolCallID] = &fileChangeState{}
 			f.mu.Unlock()
-			f.notify("item/started", itemStartedNotification{
+			if !f.notify("item/started", itemStartedNotification{
 				Item: fileChangeItem{
 					Type:    "fileChange",
 					ID:      payload.ToolCallID,
@@ -163,8 +166,10 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 				},
 				ThreadID:    f.SessionID,
 				TurnID:      ev.RunID,
-				StartedAtMs: time.Now().UnixMilli(),
-			})
+				StartedAtMs: at.UnixMilli(),
+			}) {
+				return true
+			}
 
 		default:
 			// Only "command_execution" and "file_change" have been
@@ -208,7 +213,7 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 				output = &payload.Summary
 			}
 			durationMs := payload.DurationMs
-			f.notify("item/completed", itemCompletedNotification{
+			if !f.notify("item/completed", itemCompletedNotification{
 				Item: commandExecutionItem{
 					Type:             "commandExecution",
 					ID:               payload.ToolCallID,
@@ -223,8 +228,10 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 				},
 				ThreadID:      f.SessionID,
 				TurnID:        ev.RunID,
-				CompletedAtMs: time.Now().UnixMilli(),
-			})
+				CompletedAtMs: at.UnixMilli(),
+			}) {
+				return true
+			}
 			return false
 		}
 
@@ -253,7 +260,7 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 					status = "failed"
 				}
 			}
-			f.notify("item/completed", itemCompletedNotification{
+			if !f.notify("item/completed", itemCompletedNotification{
 				Item: fileChangeItem{
 					Type:    "fileChange",
 					ID:      payload.ToolCallID,
@@ -262,8 +269,10 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 				},
 				ThreadID:      f.SessionID,
 				TurnID:        ev.RunID,
-				CompletedAtMs: time.Now().UnixMilli(),
-			})
+				CompletedAtMs: at.UnixMilli(),
+			}) {
+				return true
+			}
 			return false
 		}
 
@@ -400,14 +409,16 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		f.totalUsage.ReasoningOutputTokens += last.ReasoningOutputTokens
 		total := f.totalUsage
 		f.mu.Unlock()
-		f.notify("thread/tokenUsage/updated", threadTokenUsageUpdatedNotification{
+		if !f.notify("thread/tokenUsage/updated", threadTokenUsageUpdatedNotification{
 			ThreadID: f.SessionID,
 			TurnID:   ev.RunID,
 			TokenUsage: threadTokenUsage{
 				Total: total,
 				Last:  last,
 			},
-		})
+		}) {
+			return true
+		}
 
 	case godo.HostedAgentEventKindRunCostAccrued:
 		// No codex-facing equivalent: this canonical event carries a
@@ -418,4 +429,15 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		// HITLResolved above — a documented no-op, not an oversight.
 	}
 	return false
+}
+
+// eventTime returns the canonical event's own timestamp when present, else
+// time.Now. Using At (especially on the --replay path) keeps historical
+// turns stamped with when they actually happened rather than when they were
+// re-fed into the TUI.
+func eventTime(ev godo.HostedAgentEvent) time.Time {
+	if !ev.At.IsZero() {
+		return ev.At.Time
+	}
+	return time.Now()
 }
