@@ -38,7 +38,7 @@ func (f *Facade) maybeReplay(ctx context.Context) {
 }
 
 // AfterReply implements agentproxy.AfterReply: once handleConn has written
-// the thread/start or thread/resume reply, start the deferred
+// a successful thread/start or thread/resume result, start the deferred
 // replaySessionHistory goroutine if maybeReplay armed one.
 func (f *Facade) AfterReply(ctx context.Context, method string) {
 	if method != "thread/start" && method != "thread/resume" {

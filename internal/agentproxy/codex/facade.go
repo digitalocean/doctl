@@ -79,11 +79,15 @@ type Facade struct {
 	mu            sync.Mutex
 	turns         map[string]*turnState
 	streamStarted bool
-	// expectTurnUntil is the deadline through which lookupTurn will retry a
-	// miss. Set just before SendInput and cleared once trackTurn registers
-	// the run — covers the turn-2+ race without charging eventClaimWait on
-	// every permanently-untracked event (finished runs, predating events).
-	expectTurnUntil time.Time
+	// expectingTurn is set just before SendInput and cleared once trackTurn
+	// registers the run (or SendInput fails). While true, lookupTurn retries
+	// a miss so the shared loop can claim events that arrive before the map
+	// write — without charging a wait on every permanently-untracked event.
+	// expectTurnDeadline is only a safety cap for a hung SendInput; the
+	// handoff itself is not bounded by a short wall-clock window that can
+	// expire during a slow SendInput RPC.
+	expectingTurn      bool
+	expectTurnDeadline time.Time
 
 	// streamCursor is this connection's Last-Event-ID resume point for the
 	// live SSE stream. Held on the Facade (not a local in runEventLoop) so a
@@ -906,16 +910,20 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 			}
 			text.WriteString(item.Text)
 		}
-		// Open the claim window before SendInput: the shared loop can see
+		// Arm the claim window before SendInput: the shared loop can see
 		// this run's first event as soon as the harness accepts it, which
-		// is before trackTurn writes the map entry below.
+		// is before trackTurn writes the map entry below. Cleared by
+		// trackTurn (or on SendInput error) — not by a short deadline that
+		// could expire while SendInput itself is still in flight.
 		f.mu.Lock()
-		f.expectTurnUntil = time.Now().Add(eventClaimWait)
+		f.expectingTurn = true
+		f.expectTurnDeadline = time.Now().Add(eventClaimSafety)
 		f.mu.Unlock()
 		resp, err := f.Sessions.SendInput(f.SessionID, &godo.HostedAgentSendInputRequest{Text: text.String()})
 		if err != nil {
 			f.mu.Lock()
-			f.expectTurnUntil = time.Time{}
+			f.expectingTurn = false
+			f.expectTurnDeadline = time.Time{}
 			f.mu.Unlock()
 			return nil, &agentproxy.RPCError{Code: -32000, Message: "SendInput failed: " + err.Error()}
 		}
@@ -999,36 +1007,39 @@ func (f *Facade) ensureEventLoop(ctx context.Context) error {
 
 // trackTurn registers a new in-flight turn, keyed by run id, once
 // ensureEventLoop has confirmed the read loop is running to see its events.
-// Clears the expectTurnUntil claim window opened before SendInput.
+// Clears the expectingTurn claim window opened before SendInput.
 func (f *Facade) trackTurn(runID string) {
 	f.mu.Lock()
 	if f.turns == nil {
 		f.turns = make(map[string]*turnState)
 	}
 	f.turns[runID] = &turnState{itemID: runID + "-msg"}
-	f.expectTurnUntil = time.Time{}
+	f.expectingTurn = false
+	f.expectTurnDeadline = time.Time{}
 	f.mu.Unlock()
 }
 
-// eventClaimPoll/eventClaimWait bound how long lookupTurn retries an
-// unrecognized run id while a SendInput→trackTurn handoff is in flight.
+// eventClaimPoll is how often lookupTurn rechecks the map while a
+// SendInput→trackTurn handoff is in flight. eventClaimSafety caps how long
+// that retry may last if SendInput hangs — the handoff itself is gated by
+// expectingTurn, not by this duration.
 const (
-	eventClaimPoll = 2 * time.Millisecond
-	eventClaimWait = 200 * time.Millisecond
+	eventClaimPoll   = 2 * time.Millisecond
+	eventClaimSafety = 30 * time.Second
 )
 
-// lookupTurn returns the tracked turnState for runID. When a turn/start has
-// just opened the expectTurnUntil claim window (see turn/start), it retries
-// briefly so the shared loop can claim a run's first event that arrives
-// fractionally before trackTurn's map write. Outside that window a miss is
-// returned immediately — permanently-untracked events (already-finished
-// runs, history that predates this connection) must not stall the drain
-// loop for eventClaimWait each.
+// lookupTurn returns the tracked turnState for runID. While turn/start has
+// expectingTurn armed (see turn/start), it retries so the shared loop can
+// claim a run's first event that arrives before trackTurn's map write —
+// including events that land during a slow SendInput. Outside that handoff
+// a miss is returned immediately so permanently-untracked events
+// (already-finished runs, history that predates this connection) do not
+// stall the drain loop.
 func (f *Facade) lookupTurn(runID string) (*turnState, bool) {
 	for {
 		f.mu.Lock()
 		ts, ok := f.turns[runID]
-		expecting := !f.expectTurnUntil.IsZero() && time.Now().Before(f.expectTurnUntil)
+		expecting := f.expectingTurn && (f.expectTurnDeadline.IsZero() || time.Now().Before(f.expectTurnDeadline))
 		f.mu.Unlock()
 		if ok || !expecting {
 			return ts, ok
@@ -1328,8 +1339,8 @@ func (f *Facade) drainStream(ctx context.Context, stream *godo.HostedAgentSessio
 		}
 
 		// Control frames (stream.state) and anything else without a run id
-		// belong to no turn — don't burn eventClaimWait retrying a miss
-		// that can never resolve.
+		// belong to no turn — skip before lookupTurn rather than synthesizing
+		// a phantom miss.
 		if ev.RunID == "" {
 			continue
 		}
@@ -1353,6 +1364,8 @@ func (f *Facade) drainStream(ctx context.Context, stream *godo.HostedAgentSessio
 // "failed" and turnErr populated. at is the completion timestamp (event.At
 // on the live/replay path, time.Now for synthesized failures). Returns true
 // when a notify fails (client connection dead) so callers can stop draining.
+// On the first notify failure the remaining notify is skipped (dead socket)
+// but runID is still deleted so f.turns does not retain a zombie entry.
 func (f *Facade) finishTurn(runID string, ts *turnState, status string, turnErr *turnError, at time.Time) (clientDead bool) {
 	if at.IsZero() {
 		at = time.Now()
@@ -1365,7 +1378,10 @@ func (f *Facade) finishTurn(runID string, ts *turnState, status string, turnErr 
 			TurnID:        runID,
 			CompletedAtMs: at.UnixMilli(),
 		}) {
-			clientDead = true
+			f.mu.Lock()
+			delete(f.turns, runID)
+			f.mu.Unlock()
+			return true
 		}
 	}
 	var durationMs *int64
