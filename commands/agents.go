@@ -1890,8 +1890,9 @@ func attachPrompt(pending *pendingHITL) string {
 type attachState struct {
 	pending *pendingHITL
 	display *promptDisplay
-	mu      sync.Mutex // guards lineBuf and hitlSel
+	mu      sync.Mutex // guards lineBuf, cursor, and hitlSel
 	lineBuf []byte
+	cursor  int // byte index into lineBuf (ASCII-only input today)
 	hitlSel int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
 	esc     int // arrow-key escape-sequence parse state (0 none, 1 ESC, 2 ESC[)
 }
@@ -1905,6 +1906,11 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 			s.mu.Lock()
 			defer s.mu.Unlock()
 			return string(s.lineBuf)
+		},
+		cursorPos: func() int {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return s.cursor
 		},
 	}
 	return s
@@ -1943,17 +1949,37 @@ func (s *attachState) resetHITLSelection() {
 	s.mu.Unlock()
 }
 
+// moveLineCursor shifts the text-input caret by delta bytes, clamped to the
+// line buffer. Returns whether the caret actually moved.
+func (s *attachState) moveLineCursor(delta int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := s.cursor + delta
+	if next < 0 {
+		next = 0
+	}
+	if next > len(s.lineBuf) {
+		next = len(s.lineBuf)
+	}
+	if next == s.cursor {
+		return false
+	}
+	s.cursor = next
+	return true
+}
+
 // promptDisplay serializes terminal writes between the input loop and the
 // SSE goroutine. In raw mode it tracks whether the cursor sits on the prompt
 // line or mid-stream so that streaming tokens don't get wiped, events drop
 // to a fresh line, and HITL prompt flips render instantly. Pass-through
 // otherwise.
 type promptDisplay struct {
-	mu      sync.Mutex
-	out     io.Writer
-	prompt  func() string
-	lineBuf func() string
-	raw     bool
+	mu        sync.Mutex
+	out       io.Writer
+	prompt    func() string
+	lineBuf   func() string
+	cursorPos func() int // caret within lineBuf; nil / at-end leaves cursor at EOL
+	raw       bool
 	// midLine: cursor is at the end of a previous tokenless write. Next
 	// Write must not clear-line, next echo must not paint to that line.
 	midLine bool
@@ -1993,12 +2019,40 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 	}
 
 	if endsWithNL {
-		fmt.Fprintf(p.out, "%s%s", p.prompt(), p.lineBuf())
+		p.paintPromptLocked(false)
 		p.midLine = false
 	} else {
 		p.midLine = true
 	}
 	return len(b), nil
+}
+
+// paintPromptLocked draws prompt + lineBuf and restores the caret. When clear
+// is true it first erases the current line (redraw / replace-in-place); when
+// false it paints on the current (fresh) line after a newline-terminated write.
+func (p *promptDisplay) paintPromptLocked(clear bool) {
+	line := ""
+	if p.lineBuf != nil {
+		line = p.lineBuf()
+	}
+	if clear {
+		fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), line)
+	} else {
+		fmt.Fprintf(p.out, "%s%s", p.prompt(), line)
+	}
+	if p.cursorPos == nil {
+		return
+	}
+	cur := p.cursorPos()
+	if cur < 0 {
+		cur = 0
+	}
+	if cur > len(line) {
+		cur = len(line)
+	}
+	if back := len(line) - cur; back > 0 {
+		fmt.Fprintf(p.out, "\x1b[%dD", back)
+	}
 }
 
 // echo writes a single keystroke for user feedback. Silent mid-stream so
@@ -2013,8 +2067,8 @@ func (p *promptDisplay) echo(b []byte) {
 	p.out.Write(b)
 }
 
-// redraw re-renders prompt + lineBuf. Flips "> " <-> "[y/n/d] > " the moment
-// HITL state changes, no Enter needed.
+// redraw re-renders prompt + lineBuf with the caret restored. Flips "> " <->
+// HITL menu the moment HITL state changes, no Enter needed.
 func (p *promptDisplay) redraw() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -2025,7 +2079,7 @@ func (p *promptDisplay) redraw() {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
 	}
-	fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), p.lineBuf())
+	p.paintPromptLocked(true)
 }
 
 // spinnerInit reserves the spinner's own line above the prompt and draws the
@@ -2043,7 +2097,8 @@ func (p *promptDisplay) spinnerInit(frame string) {
 	} else {
 		fmt.Fprint(p.out, "\r\x1b[K")
 	}
-	fmt.Fprintf(p.out, "%s thinking...\r\n%s%s", frame, p.prompt(), p.lineBuf())
+	fmt.Fprintf(p.out, "%s thinking...\r\n", frame)
+	p.paintPromptLocked(false)
 }
 
 // spinnerFrame redraws the spinner line one row above the prompt.
@@ -2135,10 +2190,12 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 // (Ctrl-C, Ctrl-D on empty line).
 func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState) (stop bool, err error) {
 	// Arrow-key escape sequences arrive as three bytes: ESC, '[' (or 'O'), then
-	// A/B/C/D. Consume them here and use them only to move the HITL selection.
+	// A/B/C/D. With a pending HITL they move the approve/reject/defer highlight;
+	// otherwise left/right move the text-input caret.
 	if state.esc == 2 {
 		state.esc = 0
-		if state.pending.get() != "" {
+		switch {
+		case state.pending.get() != "":
 			switch b {
 			case 'A', 'D': // up / left
 				state.moveHITLSelection(-1)
@@ -2147,6 +2204,15 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 				state.moveHITLSelection(1)
 				state.display.redraw()
 			}
+		case b == 'D': // left
+			if state.moveLineCursor(-1) {
+				state.display.redraw()
+			}
+		case b == 'C': // right
+			if state.moveLineCursor(1) {
+				state.display.redraw()
+			}
+			// up/down ignored for text input (no history yet)
 		}
 		return false, nil
 	}
@@ -2206,6 +2272,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.mu.Lock()
 		line := strings.TrimSpace(string(state.lineBuf))
 		state.lineBuf = state.lineBuf[:0]
+		state.cursor = 0
 		state.mu.Unlock()
 		state.display.echo([]byte("\r\n"))
 		if line != "" {
@@ -2217,10 +2284,17 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		return false, nil
 	case 0x7f, 0x08: // Backspace / DEL
 		state.mu.Lock()
-		if len(state.lineBuf) > 0 {
-			state.lineBuf = state.lineBuf[:len(state.lineBuf)-1]
+		atEnd := state.cursor == len(state.lineBuf)
+		if state.cursor > 0 {
+			i := state.cursor - 1
+			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
+			state.cursor = i
 			state.mu.Unlock()
-			state.display.echo([]byte("\b \b"))
+			if atEnd {
+				state.display.echo([]byte("\b \b"))
+			} else {
+				state.display.redraw()
+			}
 		} else {
 			state.mu.Unlock()
 		}
@@ -2238,13 +2312,22 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		}
 		return false, nil
 	default:
-		// Printable ASCII only; escape sequences, UTF-8 multibyte, and arrow
-		// keys are dropped (no history / cursor movement in V0).
+		// Printable ASCII only; UTF-8 multibyte is still dropped in V0.
 		if b >= 0x20 && b < 0x7f {
 			state.mu.Lock()
-			state.lineBuf = append(state.lineBuf, b)
+			atEnd := state.cursor == len(state.lineBuf)
+			if atEnd {
+				state.lineBuf = append(state.lineBuf, b)
+			} else {
+				state.lineBuf = append(state.lineBuf[:state.cursor], append([]byte{b}, state.lineBuf[state.cursor:]...)...)
+			}
+			state.cursor++
 			state.mu.Unlock()
-			state.display.echo([]byte{b})
+			if atEnd {
+				state.display.echo([]byte{b})
+			} else {
+				state.display.redraw()
+			}
 		}
 		return false, nil
 	}

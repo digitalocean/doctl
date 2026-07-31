@@ -1022,6 +1022,89 @@ func TestHITLMenuPromptPlain(t *testing.T) {
 	assert.Contains(t, hitlMenuPrompt(0, 3), "3 pending")
 }
 
+// TestHandleAttachByteCursorMovement covers left/right caret motion and
+// in-place insert/backspace on the text prompt (non-HITL path).
+func TestHandleAttachByteCursorMovement(t *testing.T) {
+	typewrite := func(t *testing.T, state *attachState, s string) {
+		t.Helper()
+		for i := 0; i < len(s); i++ {
+			stop, err := handleAttachByte(nil, nil, "sess", s[i], state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
+	arrow := func(t *testing.T, state *attachState, dir byte) {
+		t.Helper()
+		for _, b := range []byte{0x1b, '[', dir} {
+			stop, err := handleAttachByte(nil, nil, "sess", b, state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
+
+	t.Run("left/right move the caret and insert mid-line", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "hello")
+		assert.Equal(t, 5, state.cursor)
+
+		arrow(t, state, 'D') // left
+		arrow(t, state, 'D')
+		assert.Equal(t, 3, state.cursor)
+
+		typewrite(t, state, "X")
+		assert.Equal(t, "helXlo", string(state.lineBuf))
+		assert.Equal(t, 4, state.cursor)
+
+		arrow(t, state, 'C') // right
+		assert.Equal(t, 5, state.cursor)
+	})
+
+	t.Run("left clamps at start; right clamps at end", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "ab")
+		for i := 0; i < 5; i++ {
+			arrow(t, state, 'D')
+		}
+		assert.Equal(t, 0, state.cursor)
+		for i := 0; i < 5; i++ {
+			arrow(t, state, 'C')
+		}
+		assert.Equal(t, 2, state.cursor)
+	})
+
+	t.Run("backspace deletes before the caret", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "abcd")
+		arrow(t, state, 'D')
+		arrow(t, state, 'D') // caret before 'c'
+		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "acd", string(state.lineBuf))
+		assert.Equal(t, 1, state.cursor)
+	})
+
+	t.Run("enter clears the caret", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "hi"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			typewrite(t, state, "hi")
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Equal(t, "", string(state.lineBuf))
+			assert.Equal(t, 0, state.cursor)
+		})
+	})
+}
+
 // TestAttachStateHITLSelection covers the arrow-key selection wrap-around and
 // that the prompt reflects the current selection.
 func TestAttachStateHITLSelection(t *testing.T) {
@@ -1510,12 +1593,27 @@ func TestPromptDisplay(t *testing.T) {
 		s := newAttachState(&buf, pending)
 		s.mu.Lock()
 		s.lineBuf = []byte("partial input")
+		s.cursor = len(s.lineBuf)
 		s.mu.Unlock()
 		s.display.setRaw(true)
 
 		_, err := s.display.Write([]byte("event\n"))
 		assert.NoError(t, err)
 		assert.Equal(t, "\r\x1b[Kevent\r\n> partial input", buf.String())
+	})
+
+	t.Run("raw + redraw places caret mid-line when cursor is not at EOL", func(t *testing.T) {
+		var buf bytes.Buffer
+		pending := &pendingHITL{}
+		s := newAttachState(&buf, pending)
+		s.mu.Lock()
+		s.lineBuf = []byte("abcdef")
+		s.cursor = 3 // caret before 'd'
+		s.mu.Unlock()
+		s.display.setRaw(true)
+
+		s.display.redraw()
+		assert.Equal(t, "\r\x1b[K> abcdef\x1b[3D", buf.String())
 	})
 
 	t.Run("raw + streaming tokens preserve previous content (no clear, no redraw)", func(t *testing.T) {
