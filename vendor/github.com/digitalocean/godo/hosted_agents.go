@@ -22,7 +22,7 @@ const (
 
 	hostedAgentsSessionsBasePath                    = "/v2/agents/sessions"
 	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
-	hostedAgentSessionEventsPath                    = hostedAgentSessionByIDPath + "/events"
+	hostedAgentSessionStreamPath                    = hostedAgentSessionByIDPath + "/stream"
 	hostedAgentSessionInputPath                     = hostedAgentSessionByIDPath + "/input"
 	hostedAgentSessionHITLPath                      = hostedAgentSessionByIDPath + "/hitl/%s"
 	hostedAgentSessionSandboxExecPath               = hostedAgentSessionByIDPath + "/sandbox/exec"
@@ -39,10 +39,6 @@ const (
 	workspaceContentSHA256Header = "X-Content-Sha256"
 	workspaceIsArchiveHeader     = "X-Workspace-Is-Archive"
 	workspaceSizeBytesHeader     = "X-Workspace-Size-Bytes"
-
-	// sseLastEventIDHeader is the standard SSE resume cursor. The data-plane
-	// events endpoint takes the cursor here rather than as a query parameter.
-	sseLastEventIDHeader = "Last-Event-ID"
 
 	// workspaceDownloadFooter is appended by OHS after a successful download
 	// payload so integrity survives intermediaries that strip HTTP trailers
@@ -212,39 +208,6 @@ const (
 	HostedAgentEventKindRunSandboxReleased   HostedAgentEventKind = "run.sandbox_released"
 	HostedAgentEventKindRunCostAccrued       HostedAgentEventKind = "run.cost_accrued"
 	HostedAgentEventKindRunLog               HostedAgentEventKind = "run.log"
-
-	// HostedAgentEventKindStreamState is a transport control frame, not an agent
-	// event: it reports the health of the SSE connection itself. Only the
-	// data-plane events endpoint emits it. It arrives in the same envelope as an
-	// event, but only SessionID, At and Payload are meaningful — decode Payload
-	// with HostedAgentStreamState. Renderers should skip it rather than display
-	// it as session activity.
-	HostedAgentEventKindStreamState HostedAgentEventKind = "stream.state"
-)
-
-// HostedAgentStreamState is the payload of a HostedAgentEventKindStreamState
-// frame: the current health of the SSE connection.
-type HostedAgentStreamState struct {
-	State  HostedAgentStreamStateValue `json:"state"`
-	Cursor string                      `json:"cursor,omitempty"`
-}
-
-// HostedAgentStreamStateValue enumerates the stream health states.
-type HostedAgentStreamStateValue string
-
-const (
-	// HostedAgentStreamStateLive means events are being delivered contiguously.
-	HostedAgentStreamStateLive HostedAgentStreamStateValue = "live"
-	// HostedAgentStreamStateCatchingUp means the connection is replaying recent
-	// history before it joins the live tail.
-	HostedAgentStreamStateCatchingUp HostedAgentStreamStateValue = "catching_up"
-	// HostedAgentStreamStateDegraded means delivery continues with reduced
-	// guarantees (the server fell back to polling).
-	HostedAgentStreamStateDegraded HostedAgentStreamStateValue = "degraded"
-	// HostedAgentStreamStateSuperseded means a newer connection from the same
-	// device took over. The server closes this stream; the client should stop
-	// rather than reconnect, or the two connections will evict each other.
-	HostedAgentStreamStateSuperseded HostedAgentStreamStateValue = "superseded"
 )
 
 // HostedAgentSessionOriginProduct identifies the product workflow that created
@@ -321,7 +284,7 @@ type HostedAgentHITLDecision struct {
 	Reason    string                 `json:"reason,omitempty"`
 }
 
-// HostedAgentEvent is one SSE payload from a session stream (see StreamSession).
+// HostedAgentEvent is one SSE payload from GET /v2/agents/sessions/{id}/stream.
 //
 // The server serializes the SPI canonical event envelope, whose JSON shape
 // differs from this struct's field names: the discriminator is `type` (not
@@ -400,16 +363,8 @@ type HostedAgentSessionsListResponse struct {
 }
 
 // HostedAgentSessionStreamOptions configures the session SSE stream.
-//
-// The two fields select between the two modes StreamSession can open on the
-// events endpoint; see StreamSession.
 type HostedAgentSessionStreamOptions struct {
-	// ReplayFrom is the resume cursor: the id of the last event the caller
-	// already rendered. On the live stream it is sent as Last-Event-ID; on a
-	// ReplayOnly read it is sent as the replay_from query parameter.
 	ReplayFrom string
-	// ReplayOnly reads the stored event history and ends the stream at the last
-	// stored event instead of holding the connection open for live events.
 	ReplayOnly bool
 }
 
@@ -709,42 +664,23 @@ func (s *HostedAgentsServiceOp) ResumeSession(ctx context.Context, sessionID str
 }
 
 // StreamSession opens the SSE stream for a session. Callers MUST Close the stream.
-//
-// Both reads are served by the data plane at GET .../sessions/{id}/events; the
-// two modes differ in where the stream starts and whether it ends:
-//
-//   - Live (the default) delivers forward-only from the moment of attach,
-//     preceded by whatever recent history the server decides to replay, and
-//     holds the connection open. ReplayFrom is sent as the standard
-//     Last-Event-ID header.
-//   - ReplayOnly adds ?replay_only=true: the server writes the session's stored
-//     event history and then ends the stream, so the read terminates on its own.
-//     ReplayFrom is sent as the replay_from query parameter, since it is an
-//     explicit pagination cursor here rather than a resume hint.
-//
-// Both carry HostedAgentEventKindStreamState control frames (see
-// HostedAgentStreamState). A replay-only read reports catching_up and then
-// simply ends; it never reaches live.
 func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID string, opt *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
 	}
-	replayOnly := opt != nil && opt.ReplayOnly
-	cursor := ""
+	path := fmt.Sprintf(hostedAgentSessionStreamPath, sessionID)
 	if opt != nil {
-		cursor = opt.ReplayFrom
-	}
-
-	path := fmt.Sprintf(hostedAgentSessionEventsPath, sessionID)
-	if replayOnly {
 		q := url.Values{}
-		q.Set("replay_only", "true")
-		if cursor != "" {
-			q.Set("replay_from", cursor)
+		if opt.ReplayFrom != "" {
+			q.Set("replay_from", opt.ReplayFrom)
 		}
-		path += "?" + q.Encode()
+		if opt.ReplayOnly {
+			q.Set("replay_only", "true")
+		}
+		if encoded := q.Encode(); encoded != "" {
+			path += "?" + encoded
+		}
 	}
-
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
@@ -752,9 +688,6 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Connection", "keep-alive")
-	if !replayOnly && cursor != "" {
-		req.Header.Set(sseLastEventIDHeader, cursor)
-	}
 
 	resp, err := s.client.DoStream(ctx, req)
 	if err != nil {
