@@ -118,6 +118,57 @@ func TestReadManifest(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "empty")
 	})
+
+	t.Run("expands env references", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_API_KEY", "sk-test-123")
+		raw, err := readManifest(strings.NewReader("env:\n  OPENAI_API_KEY: ${DOCTL_TEST_API_KEY}\n"), "-")
+		assert.NoError(t, err)
+		assert.Equal(t, "env:\n  OPENAI_API_KEY: sk-test-123\n", string(raw))
+	})
+}
+
+func TestExpandManifestEnv(t *testing.T) {
+	t.Run("expands set variables", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_KEY", "value-1")
+		t.Setenv("DOCTL_TEST_OTHER", "value-2")
+		out, err := expandManifestEnv([]byte("a: ${DOCTL_TEST_KEY}\nb: ${DOCTL_TEST_OTHER}\n"))
+		assert.NoError(t, err)
+		assert.Equal(t, "a: value-1\nb: value-2\n", string(out))
+	})
+
+	t.Run("expands empty-but-set variables", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_EMPTY", "")
+		out, err := expandManifestEnv([]byte("a: '${DOCTL_TEST_EMPTY}'\n"))
+		assert.NoError(t, err)
+		assert.Equal(t, "a: ''\n", string(out))
+	})
+
+	t.Run("unset variable errors with its name", func(t *testing.T) {
+		_, err := expandManifestEnv([]byte("a: ${DOCTL_TEST_DEFINITELY_UNSET}\n"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "DOCTL_TEST_DEFINITELY_UNSET")
+	})
+
+	t.Run("reports all missing variables once", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_KEY", "v")
+		_, err := expandManifestEnv([]byte("a: ${DOCTL_TEST_MISSING_A}\nb: ${DOCTL_TEST_KEY}\nc: ${DOCTL_TEST_MISSING_B}\nd: ${DOCTL_TEST_MISSING_A}\n"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "DOCTL_TEST_MISSING_A, DOCTL_TEST_MISSING_B")
+		assert.Equal(t, 1, strings.Count(err.Error(), "DOCTL_TEST_MISSING_A"))
+	})
+
+	t.Run("escape produces a literal reference", func(t *testing.T) {
+		out, err := expandManifestEnv([]byte("a: $${DOCTL_TEST_DEFINITELY_UNSET}\n"))
+		assert.NoError(t, err)
+		assert.Equal(t, "a: ${DOCTL_TEST_DEFINITELY_UNSET}\n", string(out))
+	})
+
+	t.Run("bare dollar forms are untouched", func(t *testing.T) {
+		in := "script: |\n  echo $HOME $1 $(pwd) ${!indirect} ${no spaces allowed}\n"
+		out, err := expandManifestEnv([]byte(in))
+		assert.NoError(t, err)
+		assert.Equal(t, in, string(out))
+	})
 }
 
 func TestRunAgentsStart(t *testing.T) {
