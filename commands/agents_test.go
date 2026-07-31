@@ -1099,7 +1099,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 	t.Run("left/right move the caret and insert mid-line", func(t *testing.T) {
 		state := newAttachState(io.Discard, &pendingHITL{})
 		state.display.setRaw(true)
-		typewrite(t, state, "hello")
+		typewrite(t, state, "abcde")
 		assert.Equal(t, 5, state.cursor)
 
 		arrow(t, state, 'D') // left
@@ -1107,7 +1107,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 		assert.Equal(t, 3, state.cursor)
 
 		typewrite(t, state, "X")
-		assert.Equal(t, "helXlo", string(state.lineBuf))
+		assert.Equal(t, "abcXde", string(state.lineBuf))
 		assert.Equal(t, 4, state.cursor)
 
 		arrow(t, state, 'C') // right
