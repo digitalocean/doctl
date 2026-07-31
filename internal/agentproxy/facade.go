@@ -61,10 +61,11 @@ type NotifierAware interface {
 }
 
 // AfterReply is optionally implemented by a Facade that wants a hook after
-// handleConn has successfully written a request's JSON-RPC reply. codex uses
-// this to start --replay only once thread/start|resume has been acknowledged,
-// so a replayed turn/started cannot race onto the wire before the thread it
-// refers to.
+// handleConn has written a successful request result (Dispatch returned nil
+// and the JSON-RPC reply was written). Not invoked for JSON-RPC error
+// replies. codex uses this to start --replay only once thread/start|resume
+// has been acknowledged, so a replayed turn/started cannot race onto the
+// wire before the thread it refers to.
 type AfterReply interface {
 	AfterReply(ctx context.Context, method string)
 }
