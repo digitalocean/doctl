@@ -59,7 +59,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy")
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "triggers")
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -117,6 +117,57 @@ func TestReadManifest(t *testing.T) {
 		_, err := readManifest(nil, path)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "empty")
+	})
+
+	t.Run("expands env references", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_API_KEY", "sk-test-123")
+		raw, err := readManifest(strings.NewReader("env:\n  OPENAI_API_KEY: ${DOCTL_TEST_API_KEY}\n"), "-")
+		assert.NoError(t, err)
+		assert.Equal(t, "env:\n  OPENAI_API_KEY: sk-test-123\n", string(raw))
+	})
+}
+
+func TestExpandManifestEnv(t *testing.T) {
+	t.Run("expands set variables", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_KEY", "value-1")
+		t.Setenv("DOCTL_TEST_OTHER", "value-2")
+		out, err := expandManifestEnv([]byte("a: ${DOCTL_TEST_KEY}\nb: ${DOCTL_TEST_OTHER}\n"))
+		assert.NoError(t, err)
+		assert.Equal(t, "a: value-1\nb: value-2\n", string(out))
+	})
+
+	t.Run("expands empty-but-set variables", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_EMPTY", "")
+		out, err := expandManifestEnv([]byte("a: '${DOCTL_TEST_EMPTY}'\n"))
+		assert.NoError(t, err)
+		assert.Equal(t, "a: ''\n", string(out))
+	})
+
+	t.Run("unset variable errors with its name", func(t *testing.T) {
+		_, err := expandManifestEnv([]byte("a: ${DOCTL_TEST_DEFINITELY_UNSET}\n"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "DOCTL_TEST_DEFINITELY_UNSET")
+	})
+
+	t.Run("reports all missing variables once", func(t *testing.T) {
+		t.Setenv("DOCTL_TEST_KEY", "v")
+		_, err := expandManifestEnv([]byte("a: ${DOCTL_TEST_MISSING_A}\nb: ${DOCTL_TEST_KEY}\nc: ${DOCTL_TEST_MISSING_B}\nd: ${DOCTL_TEST_MISSING_A}\n"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "DOCTL_TEST_MISSING_A, DOCTL_TEST_MISSING_B")
+		assert.Equal(t, 1, strings.Count(err.Error(), "DOCTL_TEST_MISSING_A"))
+	})
+
+	t.Run("escape produces a literal reference", func(t *testing.T) {
+		out, err := expandManifestEnv([]byte("a: $${DOCTL_TEST_DEFINITELY_UNSET}\n"))
+		assert.NoError(t, err)
+		assert.Equal(t, "a: ${DOCTL_TEST_DEFINITELY_UNSET}\n", string(out))
+	})
+
+	t.Run("bare dollar forms are untouched", func(t *testing.T) {
+		in := "script: |\n  echo $HOME $1 $(pwd) ${!indirect} ${no spaces allowed}\n"
+		out, err := expandManifestEnv([]byte(in))
+		assert.NoError(t, err)
+		assert.Equal(t, in, string(out))
 	})
 }
 
@@ -612,6 +663,67 @@ func TestRunAgentsUpload_LargeFile(t *testing.T) {
 	})
 }
 
+func TestRunAgentsUpload_BatchedPartURLs(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "multi.bin")
+	contents := []byte{0x01, 0x02, 0x03}
+	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
+	sha := sha256Hex(contents)
+	partSize := int64(1)
+
+	partServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer partServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransfer("sess_test", gomock.Any()).
+			DoAndReturn(func(_ string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+				assert.Equal(t, int64(len(contents)), create.SizeBytes)
+				return &godo.HostedAgentWorkspaceTransfer{
+					TransferID: "xfer_batch",
+					Status:     godo.HostedAgentWorkspaceTransferStatusPending,
+					PartSize:   partSize,
+				}, nil
+			})
+		// One batched request for all three parts (batch size 32 > 3).
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransferPartUploadURLs("sess_test", "xfer_batch", &godo.HostedAgentWorkspaceTransferPartUploadURLsRequest{
+				PartNumbers: []int{1, 2, 3},
+			}).
+			Return(&godo.HostedAgentWorkspaceTransferPartUploadURLs{
+				PartURLs: []godo.HostedAgentWorkspaceTransferPartUploadURL{
+					{PartNumber: 1, UploadURL: partServer.URL},
+					{PartNumber: 2, UploadURL: partServer.URL},
+					{PartNumber: 3, UploadURL: partServer.URL},
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			CommitWorkspaceTransfer("sess_test", "xfer_batch", &godo.HostedAgentWorkspaceTransferCommitRequest{SHA256: sha}).
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID: "xfer_batch",
+				Status:     godo.HostedAgentWorkspaceTransferStatusInProgress,
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetWorkspaceTransfer("sess_test", "xfer_batch").
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID:   "xfer_batch",
+				Status:       godo.HostedAgentWorkspaceTransferStatusCompleted,
+				BytesWritten: int64(len(contents)),
+			}, nil)
+
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "multi.bin")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		assert.NoError(t, RunAgentsUpload(config))
+	})
+}
+
 func TestRunAgentsDownload(t *testing.T) {
 	prevPoll := workspaceTransferPollInterval
 	workspaceTransferPollInterval = 0
@@ -784,6 +896,60 @@ func TestRenderEventHITLRequested(t *testing.T) {
 	assert.NotContains(t, out, "Action requires approval")
 }
 
+// TestRenderEventHITLRequestedTopLevelDetails covers the harness-api wire
+// shape: HITLRequest.action + details.command at the top level of the event
+// data (no nested "payload"). This is what reattach re-injects.
+func TestRenderEventHITLRequestedTopLevelDetails(t *testing.T) {
+	const fullID = "019f1dfc-f017-70e2-9eac-2ea470a55ac2"
+	var buf bytes.Buffer
+	renderEvent(&buf, godo.HostedAgentEvent{
+		Kind: godo.HostedAgentEventKindHITLRequested,
+		Payload: json.RawMessage(`{
+			"hitl_id":"` + fullID + `",
+			"action":"HITL_ACTION_BASH",
+			"details":{"command":"mkdir /tmp/hitl-test && echo done"}
+		}`),
+	})
+	out := buf.String()
+	assert.Contains(t, out, "Approval required")
+	assert.Contains(t, out, "mkdir /tmp/hitl-test && echo done")
+	assert.Contains(t, out, fullID)
+	assert.NotContains(t, out, "action pending")
+}
+
+func TestHITLRequestedPayloadFields(t *testing.T) {
+	t.Run("top-level details.command", func(t *testing.T) {
+		var p hitlRequestedPayload
+		assert.NoError(t, json.Unmarshal([]byte(`{
+			"request_id":"req-1",
+			"action":"HITL_ACTION_BASH",
+			"details":{"command":"echo hi"}
+		}`), &p))
+		assert.Equal(t, "req-1", p.id())
+		assert.Equal(t, "echo hi", p.commandSummary())
+		assert.Equal(t, "HITL_ACTION_BASH", p.actionLabel())
+	})
+	t.Run("nested payload still preferred for command", func(t *testing.T) {
+		var p hitlRequestedPayload
+		assert.NoError(t, json.Unmarshal([]byte(`{
+			"hitl_id":"h1",
+			"details":{"command":"from-details"},
+			"payload":{"command":"from-payload"}
+		}`), &p))
+		assert.Equal(t, "h1", p.id())
+		assert.Equal(t, "from-payload", p.commandSummary())
+	})
+	t.Run("github action falls back to friendly label", func(t *testing.T) {
+		var p hitlRequestedPayload
+		assert.NoError(t, json.Unmarshal([]byte(`{
+			"hitl_id":"h2",
+			"action":"HITL_ACTION_GITHUB_CREATE_PR",
+			"details":{"repo":"digitalocean/doctl","title":"fix stuff","base":"main","branch":"fix"}
+		}`), &p))
+		assert.Equal(t, "create a pull request", p.commandSummary())
+	})
+}
+
 // TestHITLCommandSummaryNested covers the recursive command search used to pull
 // a command out of adapter-specific nested payload shapes.
 func TestHITLCommandSummaryNested(t *testing.T) {
@@ -908,6 +1074,89 @@ func TestHITLMenuPromptPlain(t *testing.T) {
 	// Unselected options still advertise their shortcut key.
 	assert.Contains(t, hitlMenuPrompt(0, 1), "Reject (n)")
 	assert.Contains(t, hitlMenuPrompt(0, 3), "3 pending")
+}
+
+// TestHandleAttachByteCursorMovement covers left/right caret motion and
+// in-place insert/backspace on the text prompt (non-HITL path).
+func TestHandleAttachByteCursorMovement(t *testing.T) {
+	typewrite := func(t *testing.T, state *attachState, s string) {
+		t.Helper()
+		for i := 0; i < len(s); i++ {
+			stop, err := handleAttachByte(nil, nil, "sess", s[i], state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
+	arrow := func(t *testing.T, state *attachState, dir byte) {
+		t.Helper()
+		for _, b := range []byte{0x1b, '[', dir} {
+			stop, err := handleAttachByte(nil, nil, "sess", b, state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
+
+	t.Run("left/right move the caret and insert mid-line", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "abcde")
+		assert.Equal(t, 5, state.cursor)
+
+		arrow(t, state, 'D') // left
+		arrow(t, state, 'D')
+		assert.Equal(t, 3, state.cursor)
+
+		typewrite(t, state, "X")
+		assert.Equal(t, "abcXde", string(state.lineBuf))
+		assert.Equal(t, 4, state.cursor)
+
+		arrow(t, state, 'C') // right
+		assert.Equal(t, 5, state.cursor)
+	})
+
+	t.Run("left clamps at start; right clamps at end", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "ab")
+		for i := 0; i < 5; i++ {
+			arrow(t, state, 'D')
+		}
+		assert.Equal(t, 0, state.cursor)
+		for i := 0; i < 5; i++ {
+			arrow(t, state, 'C')
+		}
+		assert.Equal(t, 2, state.cursor)
+	})
+
+	t.Run("backspace deletes before the caret", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "abcd")
+		arrow(t, state, 'D')
+		arrow(t, state, 'D') // caret before 'c'
+		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "acd", string(state.lineBuf))
+		assert.Equal(t, 1, state.cursor)
+	})
+
+	t.Run("enter clears the caret", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "hi"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			typewrite(t, state, "hi")
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Equal(t, "", string(state.lineBuf))
+			assert.Equal(t, 0, state.cursor)
+		})
+	})
 }
 
 // TestAttachStateHITLSelection covers the arrow-key selection wrap-around and
@@ -1398,12 +1647,27 @@ func TestPromptDisplay(t *testing.T) {
 		s := newAttachState(&buf, pending)
 		s.mu.Lock()
 		s.lineBuf = []byte("partial input")
+		s.cursor = len(s.lineBuf)
 		s.mu.Unlock()
 		s.display.setRaw(true)
 
 		_, err := s.display.Write([]byte("event\n"))
 		assert.NoError(t, err)
 		assert.Equal(t, "\r\x1b[Kevent\r\n> partial input", buf.String())
+	})
+
+	t.Run("raw + redraw places caret mid-line when cursor is not at EOL", func(t *testing.T) {
+		var buf bytes.Buffer
+		pending := &pendingHITL{}
+		s := newAttachState(&buf, pending)
+		s.mu.Lock()
+		s.lineBuf = []byte("abcdef")
+		s.cursor = 3 // caret before 'd'
+		s.mu.Unlock()
+		s.display.setRaw(true)
+
+		s.display.redraw()
+		assert.Equal(t, "\r\x1b[K> abcdef\x1b[3D", buf.String())
 	})
 
 	t.Run("raw + streaming tokens preserve previous content (no clear, no redraw)", func(t *testing.T) {
@@ -1918,7 +2182,7 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	stubReconnectSleep(t)
 
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
+		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -1943,13 +2207,43 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	assert.NotContains(t, out, msgReconnectFailed)
 }
 
+// TestDrainStream_HITLReattachShowsCommand reproduces MARSOHS-648: on reattach
+// the server re-injects only run.human_input_requested (no tool_call_started).
+// The approval line must still show details.command, not "action pending".
+func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
+	const hitlID = "019f1dfc-f017-70e2-9eac-2ea470a55ac2"
+	const cmd = "mkdir /tmp/hitl-test && echo done"
+	body := sseFrame("evt-hitl", string(godo.HostedAgentEventKindHITLRequested),
+		fmt.Sprintf(`{"hitl_id":%q,"action":"HITL_ACTION_BASH","details":{"command":%q}}`, hitlID, cmd))
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	pending := &pendingHITL{}
+	superseded := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), &tokenDeduper{})
+
+	assert.False(t, superseded)
+	out := buf.String()
+	assert.Contains(t, out, "Approval required")
+	assert.Contains(t, out, cmd)
+	assert.Contains(t, out, hitlID)
+	assert.NotContains(t, out, "action pending")
+	assert.Equal(t, 1, pending.len())
+	assert.Equal(t, hitlID, pending.get())
+}
+
 // TestDrainStream_skipsStreamStateControlFrames pins that a live stream.state
 // frame is transport bookkeeping: it renders nothing and must not become the
 // reconnect cursor, or a reconnect would resume from a position no event holds.
 func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
-	body := sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
+	body := sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
 		sseFrame("evt-7", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
+		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -2064,9 +2358,8 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 		mu.Lock()
 		calls++
 		n := calls
-		// The live stream carries the resume cursor in the standard SSE
-		// Last-Event-ID header, not a replay_from query parameter.
-		replayFrom := r.Header.Get("Last-Event-ID")
+		// Resume cursor rides as replay_from on control-plane /stream.
+		replayFrom := r.URL.Query().Get("replay_from")
 		mu.Unlock()
 
 		w.Header().Set("Content-Type", "text/event-stream")

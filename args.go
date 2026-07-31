@@ -146,9 +146,13 @@ const (
 	ArgVPCNATGatewayICMPTimeout = "icmp-timeout"
 	// ArgVPCNATGatewayTCPTimeout is a vpc nat gateway tcp-timeout argument.
 	ArgVPCNATGatewayTCPTimeout = "tcp-timeout"
+	// ArgVPCNATGatewayIP is an optional BYOIP address for VPC NAT Gateway create.
+	ArgVPCNATGatewayIP = "ip"
 
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgIsolatedWorkers is a cluster's isolated workers argument.
+	ArgIsolatedWorkers = "isolated-workers"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
@@ -455,6 +459,8 @@ const (
 	ArgLoadBalancerNetworkStack = "network-stack"
 	// ArgLoadBalancerTLSCipherPolicy is the tls cipher policy to be used for the load balancer
 	ArgLoadBalancerTLSCipherPolicy = "tls-cipher-policy"
+	// ArgLoadBalancerIP is an optional BYOIP address to assign on load balancer create.
+	ArgLoadBalancerIP = "ip"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
@@ -982,4 +988,34 @@ const (
 
 	// ArgAgentProxyReplay replays the session's event history into the first thread on connect.
 	ArgAgentProxyReplay = "replay"
+
+	// ArgAgentTriggerKind filters or sets trigger kind (webhook|cron).
+	ArgAgentTriggerKind = "kind"
+
+	// ArgAgentTriggerSessionMode is fresh|reuse for create.
+	ArgAgentTriggerSessionMode = "session-mode"
+
+	// ArgAgentTriggerPrompt is the prompt template sent on each firing.
+	ArgAgentTriggerPrompt = "prompt"
+
+	// ArgAgentTriggerOutputMode is none|email|slack.
+	ArgAgentTriggerOutputMode = "output-mode"
+
+	// ArgAgentTriggerOutputEmail is the destination when output-mode=email.
+	ArgAgentTriggerOutputEmail = "output-email"
+
+	// ArgAgentTriggerOutputSlackWebhook is the Slack incoming webhook URL when output-mode=slack.
+	ArgAgentTriggerOutputSlackWebhook = "output-slack-webhook"
+
+	// ArgAgentTriggerBoundSessionID is the PAUSED session UUID for session-mode=reuse.
+	ArgAgentTriggerBoundSessionID = "bound-session-id"
+
+	// ArgAgentTriggerProvider is the webhook provider (github|gitlab|custom).
+	ArgAgentTriggerProvider = "provider"
+
+	// ArgAgentTriggerCronExpr is the cron expression for kind=cron.
+	ArgAgentTriggerCronExpr = "cron-expr"
+
+	// ArgAgentTriggerTimezone is the IANA timezone for kind=cron.
+	ArgAgentTriggerTimezone = "timezone"
 )

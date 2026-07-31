@@ -106,6 +106,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetworkStack, "", "", "The network stack type determines the allocation of ipv4/ipv6 addresses to the load balancer, e.g.: `IPV4` or `DUALSTACK`"+
 		" (NOTE: this feature is in private preview, contact DigitalOcean support to review its public availability.)")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerTLSCipherPolicy, "", "", "The tls cipher policy to be used for the load balancer, e.g.: `DEFAULT` or `STRONG`")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerIP, "", "",
+		"An optional BYOIP address to assign to the load balancer. Must be an unassigned BYOIP on your account in the same region. Not supported for GLOBAL or INTERNAL load balancers.")
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <load-balancer-id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
@@ -728,6 +730,15 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 	if tlsCipherPolicy != "" {
 		r.TLSCipherPolicy = strings.ToUpper(tlsCipherPolicy)
+	}
+
+	ip, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerIP)
+	if err != nil {
+		return err
+	}
+	// Create-only; omit empty so shared update path never sends ip.
+	if ip != "" {
+		r.IP = ip
 	}
 
 	return nil

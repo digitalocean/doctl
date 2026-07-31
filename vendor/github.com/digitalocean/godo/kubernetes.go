@@ -92,10 +92,16 @@ type KubernetesClusterCreateRequest struct {
 	AmdGpuDevicePlugin                *KubernetesAmdGpuDevicePlugin                `json:"amd_gpu_device_plugin,omitempty"`
 	AmdGpuDeviceMetricsExporterPlugin *KubernetesAmdGpuDeviceMetricsExporterPlugin `json:"amd_gpu_device_metrics_exporter_plugin,omitempty"`
 	NvidiaGpuDevicePlugin             *KubernetesNvidiaGpuDevicePlugin             `json:"nvidia_gpu_device_plugin,omitempty"`
+	NvidiaGpuDraDriver                *KubernetesNvidiaGpuDraDriver                `json:"nvidia_gpu_dra_driver,omitempty"`
+	AmdGpuDraDriver                   *KubernetesAmdGpuDraDriver                   `json:"amd_gpu_dra_driver,omitempty"`
 	RdmaSharedDevicePlugin            *KubernetesRdmaSharedDevicePlugin            `json:"rdma_shared_dev_plugin,omitempty"`
 	CorednsAutoscaler                 *KubernetesCorednsAutoscaler                 `json:"coredns_autoscaler,omitempty"`
 	SSO                               *KubernetesClusterSSO                        `json:"sso,omitempty"`
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
+	// IsolatedWorkers enables isolated worker nodes. When true, the cluster's VPC
+	// must already have a NAT gateway attached, or the create request fails with a
+	// 422. This can only be set at creation time.
+	IsolatedWorkers bool `json:"isolated_workers,omitempty"`
 }
 
 // KubernetesClusterUpdateRequest represents a request to update a Kubernetes cluster.
@@ -111,6 +117,8 @@ type KubernetesClusterUpdateRequest struct {
 	AmdGpuDevicePlugin                *KubernetesAmdGpuDevicePlugin                `json:"amd_gpu_device_plugin,omitempty"`
 	AmdGpuDeviceMetricsExporterPlugin *KubernetesAmdGpuDeviceMetricsExporterPlugin `json:"amd_gpu_device_metrics_exporter_plugin,omitempty"`
 	NvidiaGpuDevicePlugin             *KubernetesNvidiaGpuDevicePlugin             `json:"nvidia_gpu_device_plugin,omitempty"`
+	NvidiaGpuDraDriver                *KubernetesNvidiaGpuDraDriver                `json:"nvidia_gpu_dra_driver,omitempty"`
+	AmdGpuDraDriver                   *KubernetesAmdGpuDraDriver                   `json:"amd_gpu_dra_driver,omitempty"`
 	RdmaSharedDevicePlugin            *KubernetesRdmaSharedDevicePlugin            `json:"rdma_shared_dev_plugin,omitempty"`
 	CorednsAutoscaler                 *KubernetesCorednsAutoscaler                 `json:"coredns_autoscaler,omitempty"`
 	SSO                               *KubernetesClusterSSO                        `json:"sso,omitempty"`
@@ -147,18 +155,26 @@ func (t Taint) String() string {
 	return fmt.Sprintf("%s=%s:%s", t.Key, t.Value, t.Effect)
 }
 
+// Kubernetes GPU partition modes for AMD GPU node pools. Omitting the value
+// (or sending an empty string) leaves the pool unpartitioned.
+const (
+	KubernetesAMDPartitionModeSPXNPS1 = "AMD_PARTITION_MODE_SPX_NPS1"
+	KubernetesAMDPartitionModeDPXNPS2 = "AMD_PARTITION_MODE_DPX_NPS2"
+)
+
 // KubernetesNodePoolCreateRequest represents a request to create a node pool for a
 // Kubernetes cluster.
 type KubernetesNodePoolCreateRequest struct {
-	Name      string            `json:"name,omitempty"`
-	Size      string            `json:"size,omitempty"`
-	Count     int               `json:"count,omitempty"`
-	Tags      []string          `json:"tags,omitempty"`
-	Labels    map[string]string `json:"labels,omitempty"`
-	Taints    []Taint           `json:"taints,omitempty"`
-	AutoScale bool              `json:"auto_scale,omitempty"`
-	MinNodes  int               `json:"min_nodes,omitempty"`
-	MaxNodes  int               `json:"max_nodes,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	Size             string            `json:"size,omitempty"`
+	Count            int               `json:"count,omitempty"`
+	Tags             []string          `json:"tags,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
+	Taints           []Taint           `json:"taints,omitempty"`
+	AutoScale        bool              `json:"auto_scale,omitempty"`
+	MinNodes         int               `json:"min_nodes,omitempty"`
+	MaxNodes         int               `json:"max_nodes,omitempty"`
+	GPUPartitionMode string            `json:"gpu_partition_mode,omitempty"`
 }
 
 // KubernetesNodePoolUpdateRequest represents a request to update a node pool in a
@@ -257,10 +273,13 @@ type KubernetesCluster struct {
 	AmdGpuDevicePlugin                *KubernetesAmdGpuDevicePlugin                `json:"amd_gpu_device_plugin,omitempty"`
 	AmdGpuDeviceMetricsExporterPlugin *KubernetesAmdGpuDeviceMetricsExporterPlugin `json:"amd_gpu_device_metrics_exporter_plugin,omitempty"`
 	NvidiaGpuDevicePlugin             *KubernetesNvidiaGpuDevicePlugin             `json:"nvidia_gpu_device_plugin,omitempty"`
+	NvidiaGpuDraDriver                *KubernetesNvidiaGpuDraDriver                `json:"nvidia_gpu_dra_driver,omitempty"`
+	AmdGpuDraDriver                   *KubernetesAmdGpuDraDriver                   `json:"amd_gpu_dra_driver,omitempty"`
 	RdmaSharedDevicePlugin            *KubernetesRdmaSharedDevicePlugin            `json:"rdma_shared_dev_plugin,omitempty"`
 	CorednsAutoscaler                 *KubernetesCorednsAutoscaler                 `json:"coredns_autoscaler,omitempty"`
 	SSO                               *KubernetesClusterSSO                        `json:"sso,omitempty"`
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
+	IsolatedWorkers                   bool                                         `json:"isolated_workers,omitempty"`
 
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
 	CreatedAt time.Time                `json:"created_at,omitempty"`
@@ -329,6 +348,18 @@ type KubernetesAmdGpuDeviceMetricsExporterPlugin struct {
 // KubernetesNvidiaGpuDevicePlugin represents information about the NVIDIA GPU Device Plugin cluster plugin.
 // If a cluster has a node pool with an NVIDIA GPU it will be enabled by default.
 type KubernetesNvidiaGpuDevicePlugin struct {
+	Enabled *bool `json:"enabled"`
+}
+
+// KubernetesNvidiaGpuDraDriver represents information about the NVIDIA GPU DRA Driver cluster plugin.
+// Mutually exclusive with the NVIDIA GPU Device Plugin.
+type KubernetesNvidiaGpuDraDriver struct {
+	Enabled *bool `json:"enabled"`
+}
+
+// KubernetesAmdGpuDraDriver represents information about the AMD GPU DRA Driver cluster plugin.
+// Mutually exclusive with the AMD GPU Device Plugin.
+type KubernetesAmdGpuDraDriver struct {
 	Enabled *bool `json:"enabled"`
 }
 
@@ -507,16 +538,17 @@ type KubernetesClusterStatus struct {
 
 // KubernetesNodePool represents a node pool in a Kubernetes cluster.
 type KubernetesNodePool struct {
-	ID        string            `json:"id,omitempty"`
-	Name      string            `json:"name,omitempty"`
-	Size      string            `json:"size,omitempty"`
-	Count     int               `json:"count,omitempty"`
-	Tags      []string          `json:"tags,omitempty"`
-	Labels    map[string]string `json:"labels,omitempty"`
-	Taints    []Taint           `json:"taints,omitempty"`
-	AutoScale bool              `json:"auto_scale,omitempty"`
-	MinNodes  int               `json:"min_nodes,omitempty"`
-	MaxNodes  int               `json:"max_nodes,omitempty"`
+	ID               string            `json:"id,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	Size             string            `json:"size,omitempty"`
+	Count            int               `json:"count,omitempty"`
+	Tags             []string          `json:"tags,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
+	Taints           []Taint           `json:"taints,omitempty"`
+	AutoScale        bool              `json:"auto_scale,omitempty"`
+	MinNodes         int               `json:"min_nodes,omitempty"`
+	MaxNodes         int               `json:"max_nodes,omitempty"`
+	GPUPartitionMode string            `json:"gpu_partition_mode,omitempty"`
 
 	Nodes []*KubernetesNode `json:"nodes,omitempty"`
 }

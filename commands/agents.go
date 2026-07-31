@@ -67,6 +67,19 @@ var (
 	colMuted     = charm.Colors.Muted
 )
 
+// Stream-state transport frames (SSE kind "stream.state"). Defined locally so
+// doctl builds against godo pins that have not yet exported HostedAgentEventKindStreamState
+// / HostedAgentStreamState*. Wire values match the published godo API.
+const (
+	hostedAgentEventKindStreamState  godo.HostedAgentEventKind = "stream.state"
+	hostedAgentStreamStateSuperseded                           = "superseded"
+)
+
+type hostedAgentStreamState struct {
+	State  string `json:"state"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
 // detectStyling reports whether ANSI styling should be emitted for the current
 // process: stdout is a terminal and NO_COLOR is unset.
 func detectStyling() bool {
@@ -226,12 +239,12 @@ Commands that act on a single session accept either the session ID or its name. 
 		"Start a new agent session",
 		`Creates a new agent session from an agent manifest file and prints its session id and status.
 
-The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. The manifest is sent to the server, which owns parsing and validation.
+The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. `+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
 
 Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin.`, requiredOpt())
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's metadata.name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session`
 
@@ -277,8 +290,8 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		displayerType(&displayers.HostedAgentSession{}))
 
 	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
-		"Replay the full event history for a session",
-		"Replays the full server-side event history for a session, then exits.",
+		"Replay the event history for a session",
+		"Replays the server-side event history for a session, then exits. History is retained for a bounded window, so a session that has been idle for a long time, or one with an unusually long transcript, may replay only its more recent activity.",
 		Writer)
 
 	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
@@ -325,6 +338,8 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
 	cmdDownload.Example = `doctl agents download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+
+	cmd.AddCommand(AgentTriggers())
 
 	return cmd
 }
@@ -421,9 +436,11 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	})
 }
 
-// readManifest returns the spec file as raw bytes. path "-" reads from stdin.
-// The only client-side validation is "non-empty after trim" so a stray
-// `--spec /dev/null` fails fast instead of hitting the server.
+// readManifest returns the spec file as raw bytes with ${VAR} references
+// resolved from the local environment (see expandManifestEnv). path "-" reads
+// from stdin. Beyond env expansion, the only client-side validation is
+// "non-empty after trim" so a stray `--spec /dev/null` fails fast instead of
+// hitting the server.
 func readManifest(stdin io.Reader, path string) ([]byte, error) {
 	var src io.Reader
 	if path == "-" && stdin != nil {
@@ -447,7 +464,41 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 	if len(bytes.TrimSpace(raw)) == 0 {
 		return nil, fmt.Errorf("manifest is empty")
 	}
-	return raw, nil
+	return expandManifestEnv(raw)
+}
+
+// manifestEnvRef matches ${VAR} env references and their $${VAR} escape form.
+// Only the strict braced form expands: bare $VAR is left alone so shell
+// snippets embedded in manifests (skills instructions, prompts) survive.
+var manifestEnvRef = regexp.MustCompile(`\$?\$\{[A-Za-z_][A-Za-z0-9_]*\}`)
+
+// expandManifestEnv resolves ${VAR} references in the manifest against the
+// local environment before the manifest is sent to the server. $${VAR}
+// escapes to a literal ${VAR}. Referencing a variable that is not set locally
+// is an error rather than a silent empty substitution, so a missing key fails
+// here instead of inside the sandbox.
+func expandManifestEnv(manifest []byte) ([]byte, error) {
+	var missing []string
+	seen := map[string]bool{}
+	out := manifestEnvRef.ReplaceAllFunc(manifest, func(m []byte) []byte {
+		if bytes.HasPrefix(m, []byte("$$")) {
+			return m[1:] // $${VAR} -> literal ${VAR}
+		}
+		name := string(m[2 : len(m)-1])
+		val, ok := os.LookupEnv(name)
+		if !ok {
+			if !seen[name] {
+				seen[name] = true
+				missing = append(missing, name)
+			}
+			return m
+		}
+		return []byte(val)
+	})
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("manifest references environment variable(s) not set locally: %s (escape a literal with $${...})", strings.Join(missing, ", "))
+	}
+	return out, nil
 }
 
 // injectManifestName sets metadata.name on the manifest to name. An empty name
@@ -752,8 +803,13 @@ func hashFile(r io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// workspacePartUploadURLBatchSize is how many part numbers doctl requests per
+// CreatePartUploadURLs call. OHS supports batching; requesting one-by-one adds
+// unnecessary round-trips for multi-GiB uploads.
+const workspacePartUploadURLBatchSize = 32
+
 // workspaceTransferUpload implements upload via /workspace/transfers:
-// CreateTransfer → per-part CreatePartUploadURL + PUT → CommitTransfer → poll GetTransfer.
+// CreateTransfer → batched CreatePartUploadURLs + PUT → CommitTransfer → poll GetTransfer.
 func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *os.File, size int64, isArchive bool, sha256hex string) error {
 	svc := c.HostedAgents()
 	create, err := svc.CreateWorkspaceTransfer(sessionID, &godo.HostedAgentWorkspaceTransferCreateRequest{
@@ -775,36 +831,53 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 		_, _ = svc.CancelWorkspaceTransfer(sessionID, transferID, &godo.HostedAgentWorkspaceTransferCancelRequest{Reason: reason})
 	}
 
-	var offset int64
-	for partNumber := 1; offset < size; partNumber++ {
-		partLen := create.PartSize
-		if remaining := size - offset; remaining < partLen {
-			partLen = remaining
+	totalParts := int((size + create.PartSize - 1) / create.PartSize)
+	for startPart := 1; startPart <= totalParts; startPart += workspacePartUploadURLBatchSize {
+		endPart := startPart + workspacePartUploadURLBatchSize - 1
+		if endPart > totalParts {
+			endPart = totalParts
 		}
-		section := io.NewSectionReader(f, offset, partLen)
+		partNumbers := make([]int, 0, endPart-startPart+1)
+		for n := startPart; n <= endPart; n++ {
+			partNumbers = append(partNumbers, n)
+		}
 
-		uploadURL, err := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
+		urlsByPart, err := workspacePartUploadURLs(svc, sessionID, transferID, partNumbers)
 		if err != nil {
-			cancel("failed to obtain part upload URL")
-			return fmt.Errorf("obtaining upload URL for part %d: %w", partNumber, err)
+			cancel("failed to obtain part upload URLs")
+			return fmt.Errorf("obtaining upload URLs for parts %d-%d: %w", startPart, endPart, err)
 		}
-		if err := putWorkspaceObject(uploadURL, section, partLen); err != nil {
-			// URL may have expired; refresh once and retry the same part.
-			uploadURL, retryErr := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
-			if retryErr != nil {
-				cancel("part upload failed")
-				return fmt.Errorf("uploading part %d: %w (refresh URL: %v)", partNumber, err, retryErr)
+
+		for partNumber := startPart; partNumber <= endPart; partNumber++ {
+			offset := int64(partNumber-1) * create.PartSize
+			partLen := create.PartSize
+			if remaining := size - offset; remaining < partLen {
+				partLen = remaining
 			}
-			if _, seekErr := section.Seek(0, io.SeekStart); seekErr != nil {
-				cancel("part upload failed")
-				return fmt.Errorf("rewinding part %d: %w", partNumber, seekErr)
+			section := io.NewSectionReader(f, offset, partLen)
+
+			uploadURL := urlsByPart[partNumber]
+			if uploadURL == "" {
+				cancel("failed to obtain part upload URL")
+				return fmt.Errorf("part upload URLs response missing part %d", partNumber)
 			}
-			if retryPut := putWorkspaceObject(uploadURL, section, partLen); retryPut != nil {
-				cancel("part upload failed")
-				return fmt.Errorf("uploading part %d: %w", partNumber, retryPut)
+			if err := putWorkspaceObject(uploadURL, section, partLen); err != nil {
+				// URL may have expired; refresh once and retry the same part.
+				uploadURL, retryErr := workspacePartUploadURL(svc, sessionID, transferID, partNumber)
+				if retryErr != nil {
+					cancel("part upload failed")
+					return fmt.Errorf("uploading part %d: %w (refresh URL: %v)", partNumber, err, retryErr)
+				}
+				if _, seekErr := section.Seek(0, io.SeekStart); seekErr != nil {
+					cancel("part upload failed")
+					return fmt.Errorf("rewinding part %d: %w", partNumber, seekErr)
+				}
+				if retryPut := putWorkspaceObject(uploadURL, section, partLen); retryPut != nil {
+					cancel("part upload failed")
+					return fmt.Errorf("uploading part %d: %w", partNumber, retryPut)
+				}
 			}
 		}
-		offset += partLen
 	}
 
 	if _, err := svc.CommitWorkspaceTransfer(sessionID, transferID, &godo.HostedAgentWorkspaceTransferCommitRequest{
@@ -829,20 +902,38 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 	}}})
 }
 
+// workspacePartUploadURLs mints presigned PUT URLs for one or more 1-based parts.
+func workspacePartUploadURLs(svc do.HostedAgentsService, sessionID, transferID string, partNumbers []int) (map[int]string, error) {
+	if len(partNumbers) == 0 {
+		return nil, fmt.Errorf("part_numbers must not be empty")
+	}
+	out, err := svc.CreateWorkspaceTransferPartUploadURLs(sessionID, transferID, &godo.HostedAgentWorkspaceTransferPartUploadURLsRequest{
+		PartNumbers: partNumbers,
+	})
+	if err != nil {
+		return nil, err
+	}
+	urlsByPart := make(map[int]string, len(partNumbers))
+	for _, part := range out.PartURLs {
+		if part.PartNumber > 0 && part.UploadURL != "" {
+			urlsByPart[part.PartNumber] = part.UploadURL
+		}
+	}
+	for _, n := range partNumbers {
+		if urlsByPart[n] == "" {
+			return nil, fmt.Errorf("part upload URLs response missing part %d", n)
+		}
+	}
+	return urlsByPart, nil
+}
+
 // workspacePartUploadURL mints a presigned PUT URL for a single 1-based part.
 func workspacePartUploadURL(svc do.HostedAgentsService, sessionID, transferID string, partNumber int) (string, error) {
-	out, err := svc.CreateWorkspaceTransferPartUploadURLs(sessionID, transferID, &godo.HostedAgentWorkspaceTransferPartUploadURLsRequest{
-		PartNumbers: []int{partNumber},
-	})
+	urls, err := workspacePartUploadURLs(svc, sessionID, transferID, []int{partNumber})
 	if err != nil {
 		return "", err
 	}
-	for _, part := range out.PartURLs {
-		if part.PartNumber == partNumber && part.UploadURL != "" {
-			return part.UploadURL, nil
-		}
-	}
-	return "", fmt.Errorf("part upload URLs response missing part %d", partNumber)
+	return urls[partNumber], nil
 }
 
 // putWorkspaceObject PUTs part bytes to a presigned object URL.
@@ -1038,7 +1129,9 @@ func hitlOutcomeFor(s string) (godo.HostedAgentHITLOutcome, error) {
 	}
 }
 
-// RunAgentsLogs replays the full event history for a session, then exits.
+// RunAgentsLogs replays the session's stored event history, then exits. The
+// stream is finite: the server ends it after the last stored event, which is
+// what terminates the loop below.
 func RunAgentsLogs(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
@@ -1064,7 +1157,7 @@ func RunAgentsLogs(c *CmdConfig) error {
 	for stream.Next() {
 		ev := stream.Current()
 		// Connection health, not session activity — never part of the history.
-		if ev.Kind == godo.HostedAgentEventKindStreamState {
+		if ev.Kind == hostedAgentEventKindStreamState {
 			continue
 		}
 		if ev.Kind == godo.HostedAgentEventKindTokenChunk {
@@ -1460,9 +1553,9 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 
 		// stream.state reports the health of the connection, not session
 		// activity, so it never renders and never moves the cursor.
-		if ev.Kind == godo.HostedAgentEventKindStreamState {
-			var st godo.HostedAgentStreamState
-			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
+		if ev.Kind == hostedAgentEventKindStreamState {
+			var st hostedAgentStreamState
+			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == hostedAgentStreamStateSuperseded {
 				thinking.stop()
 				acc.flush(out)
 				flushAwaitingApproval(out, &awaiting)
@@ -1476,7 +1569,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		case godo.HostedAgentEventKindHITLRequested:
 			var p hitlRequestedPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
-				pending.set(p.HitlID, hitlActionLabel(p.Payload))
+				pending.set(p.id(), p.actionLabel())
 			}
 		case godo.HostedAgentEventKindHITLResolved:
 			var p hitlResolvedPayload
@@ -1504,7 +1597,10 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			dedup.reset()
 			var p hitlRequestedPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
-				awaiting = append(awaiting, awaitingApproval{id: p.HitlID, summary: hitlCommandSummary(p.Payload)})
+				// Queue until a paired tool_call_started names the command; on
+				// reattach the server re-injects only this frame, so summary
+				// must come from the HITL payload itself (details.command).
+				awaiting = append(awaiting, awaitingApproval{id: p.id(), summary: p.commandSummary()})
 			}
 		case godo.HostedAgentEventKindToolCallStarted:
 			thinking.stop()
@@ -1806,8 +1902,9 @@ func attachPrompt(pending *pendingHITL) string {
 type attachState struct {
 	pending *pendingHITL
 	display *promptDisplay
-	mu      sync.Mutex // guards lineBuf and hitlSel
+	mu      sync.Mutex // guards lineBuf, cursor, and hitlSel
 	lineBuf []byte
+	cursor  int // byte index into lineBuf (ASCII-only input today)
 	hitlSel int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
 	esc     int // arrow-key escape-sequence parse state (0 none, 1 ESC, 2 ESC[)
 }
@@ -1821,6 +1918,11 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 			s.mu.Lock()
 			defer s.mu.Unlock()
 			return string(s.lineBuf)
+		},
+		cursorPos: func() int {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return s.cursor
 		},
 	}
 	return s
@@ -1859,17 +1961,37 @@ func (s *attachState) resetHITLSelection() {
 	s.mu.Unlock()
 }
 
+// moveLineCursor shifts the text-input caret by delta bytes, clamped to the
+// line buffer. Returns whether the caret actually moved.
+func (s *attachState) moveLineCursor(delta int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := s.cursor + delta
+	if next < 0 {
+		next = 0
+	}
+	if next > len(s.lineBuf) {
+		next = len(s.lineBuf)
+	}
+	if next == s.cursor {
+		return false
+	}
+	s.cursor = next
+	return true
+}
+
 // promptDisplay serializes terminal writes between the input loop and the
 // SSE goroutine. In raw mode it tracks whether the cursor sits on the prompt
 // line or mid-stream so that streaming tokens don't get wiped, events drop
 // to a fresh line, and HITL prompt flips render instantly. Pass-through
 // otherwise.
 type promptDisplay struct {
-	mu      sync.Mutex
-	out     io.Writer
-	prompt  func() string
-	lineBuf func() string
-	raw     bool
+	mu        sync.Mutex
+	out       io.Writer
+	prompt    func() string
+	lineBuf   func() string
+	cursorPos func() int // caret within lineBuf; nil / at-end leaves cursor at EOL
+	raw       bool
 	// midLine: cursor is at the end of a previous tokenless write. Next
 	// Write must not clear-line, next echo must not paint to that line.
 	midLine bool
@@ -1909,12 +2031,40 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 	}
 
 	if endsWithNL {
-		fmt.Fprintf(p.out, "%s%s", p.prompt(), p.lineBuf())
+		p.paintPromptLocked(false)
 		p.midLine = false
 	} else {
 		p.midLine = true
 	}
 	return len(b), nil
+}
+
+// paintPromptLocked draws prompt + lineBuf and restores the caret. When clear
+// is true it first erases the current line (redraw / replace-in-place); when
+// false it paints on the current (fresh) line after a newline-terminated write.
+func (p *promptDisplay) paintPromptLocked(clear bool) {
+	line := ""
+	if p.lineBuf != nil {
+		line = p.lineBuf()
+	}
+	if clear {
+		fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), line)
+	} else {
+		fmt.Fprintf(p.out, "%s%s", p.prompt(), line)
+	}
+	if p.cursorPos == nil {
+		return
+	}
+	cur := p.cursorPos()
+	if cur < 0 {
+		cur = 0
+	}
+	if cur > len(line) {
+		cur = len(line)
+	}
+	if back := len(line) - cur; back > 0 {
+		fmt.Fprintf(p.out, "\x1b[%dD", back)
+	}
 }
 
 // echo writes a single keystroke for user feedback. Silent mid-stream so
@@ -1929,8 +2079,8 @@ func (p *promptDisplay) echo(b []byte) {
 	p.out.Write(b)
 }
 
-// redraw re-renders prompt + lineBuf. Flips "> " <-> "[y/n/d] > " the moment
-// HITL state changes, no Enter needed.
+// redraw re-renders prompt + lineBuf with the caret restored. Flips "> " <->
+// HITL menu the moment HITL state changes, no Enter needed.
 func (p *promptDisplay) redraw() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -1941,7 +2091,7 @@ func (p *promptDisplay) redraw() {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
 	}
-	fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), p.lineBuf())
+	p.paintPromptLocked(true)
 }
 
 // spinnerInit reserves the spinner's own line above the prompt and draws the
@@ -1959,7 +2109,8 @@ func (p *promptDisplay) spinnerInit(frame string) {
 	} else {
 		fmt.Fprint(p.out, "\r\x1b[K")
 	}
-	fmt.Fprintf(p.out, "%s thinking...\r\n%s%s", frame, p.prompt(), p.lineBuf())
+	fmt.Fprintf(p.out, "%s thinking...\r\n", frame)
+	p.paintPromptLocked(false)
 }
 
 // spinnerFrame redraws the spinner line one row above the prompt.
@@ -2051,10 +2202,12 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 // (Ctrl-C, Ctrl-D on empty line).
 func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState) (stop bool, err error) {
 	// Arrow-key escape sequences arrive as three bytes: ESC, '[' (or 'O'), then
-	// A/B/C/D. Consume them here and use them only to move the HITL selection.
+	// A/B/C/D. With a pending HITL they move the approve/reject/defer highlight;
+	// otherwise left/right move the text-input caret.
 	if state.esc == 2 {
 		state.esc = 0
-		if state.pending.get() != "" {
+		switch {
+		case state.pending.get() != "":
 			switch b {
 			case 'A', 'D': // up / left
 				state.moveHITLSelection(-1)
@@ -2063,6 +2216,15 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 				state.moveHITLSelection(1)
 				state.display.redraw()
 			}
+		case b == 'D': // left
+			if state.moveLineCursor(-1) {
+				state.display.redraw()
+			}
+		case b == 'C': // right
+			if state.moveLineCursor(1) {
+				state.display.redraw()
+			}
+			// up/down ignored for text input (no history yet)
 		}
 		return false, nil
 	}
@@ -2122,6 +2284,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.mu.Lock()
 		line := strings.TrimSpace(string(state.lineBuf))
 		state.lineBuf = state.lineBuf[:0]
+		state.cursor = 0
 		state.mu.Unlock()
 		state.display.echo([]byte("\r\n"))
 		if line != "" {
@@ -2133,10 +2296,17 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		return false, nil
 	case 0x7f, 0x08: // Backspace / DEL
 		state.mu.Lock()
-		if len(state.lineBuf) > 0 {
-			state.lineBuf = state.lineBuf[:len(state.lineBuf)-1]
+		atEnd := state.cursor == len(state.lineBuf)
+		if state.cursor > 0 {
+			i := state.cursor - 1
+			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
+			state.cursor = i
 			state.mu.Unlock()
-			state.display.echo([]byte("\b \b"))
+			if atEnd {
+				state.display.echo([]byte("\b \b"))
+			} else {
+				state.display.redraw()
+			}
 		} else {
 			state.mu.Unlock()
 		}
@@ -2154,13 +2324,22 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		}
 		return false, nil
 	default:
-		// Printable ASCII only; escape sequences, UTF-8 multibyte, and arrow
-		// keys are dropped (no history / cursor movement in V0).
+		// Printable ASCII only; UTF-8 multibyte is still dropped in V0.
 		if b >= 0x20 && b < 0x7f {
 			state.mu.Lock()
-			state.lineBuf = append(state.lineBuf, b)
+			atEnd := state.cursor == len(state.lineBuf)
+			if atEnd {
+				state.lineBuf = append(state.lineBuf, b)
+			} else {
+				state.lineBuf = append(state.lineBuf[:state.cursor], append([]byte{b}, state.lineBuf[state.cursor:]...)...)
+			}
+			state.cursor++
 			state.mu.Unlock()
-			state.display.echo([]byte{b})
+			if atEnd {
+				state.display.echo([]byte{b})
+			} else {
+				state.display.redraw()
+			}
 		}
 		return false, nil
 	}
@@ -2387,9 +2566,64 @@ type toolCallCompletedPayload struct {
 	Summary    string `json:"summary,omitempty"`
 }
 
+// hitlRequestedPayload is the data body of a run.human_input_requested event.
+// Harness-api forwards the HITLRequest shape (action + details) at the top
+// level; older / nested adapters also wrap fields under "payload". Both are
+// accepted so reattach (which re-injects only this frame, not tool_call_started)
+// can still surface the command being approved.
 type hitlRequestedPayload struct {
-	HitlID  string         `json:"hitl_id"`
-	Payload map[string]any `json:"payload"`
+	HitlID    string         `json:"hitl_id"`
+	RequestID string         `json:"request_id"`
+	Action    string         `json:"action"`
+	Details   map[string]any `json:"details"`
+	Payload   map[string]any `json:"payload"`
+}
+
+func (p hitlRequestedPayload) id() string {
+	if p.HitlID != "" {
+		return p.HitlID
+	}
+	return p.RequestID
+}
+
+// fields returns the map hitlCommandSummary / hitlActionLabel should search.
+// Merges nested "payload" (legacy adapters) with top-level action+details
+// (HITLRequest as forwarded by harness-api) so reattach can read details.command
+// even when no tool_call_started event is replayed.
+func (p hitlRequestedPayload) fields() map[string]any {
+	m := map[string]any{}
+	for k, v := range p.Payload {
+		m[k] = v
+	}
+	if p.Action != "" {
+		if _, exists := m["action"]; !exists {
+			m["action"] = p.Action
+		}
+	}
+	if len(p.Details) > 0 {
+		if _, exists := m["details"]; !exists {
+			m["details"] = p.Details
+		}
+		// Flatten details so command/cmd/argv are found without relying on
+		// recursion depth (matches harness-trigger runrender).
+		for k, v := range p.Details {
+			if _, exists := m[k]; !exists {
+				m[k] = v
+			}
+		}
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return m
+}
+
+func (p hitlRequestedPayload) commandSummary() string {
+	return hitlCommandSummary(p.fields())
+}
+
+func (p hitlRequestedPayload) actionLabel() string {
+	return hitlActionLabel(p.fields())
 }
 
 type hitlResolvedPayload struct {
@@ -2442,7 +2676,7 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindHITLRequested:
 		var p hitlRequestedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			renderHITLRequest(w, p.HitlID, p.Payload)
+			renderApprovalLine(w, p.id(), p.commandSummary())
 		}
 	case godo.HostedAgentEventKindHITLResolved:
 		var p hitlResolvedPayload
@@ -2535,14 +2769,6 @@ func prettyAgentKind(k godo.HostedAgentKind) string {
 		return "agent"
 	}
 	return s
-}
-
-// renderHITLRequest prints a single compact, color-coded approval line: the
-// command (or a human-readable action label) plus the full hitl_id so it can be
-// copied for out-of-band approve. Outcomes are omitted here since the
-// interactive menu prompt already shows them.
-func renderHITLRequest(w io.Writer, hitlID string, payload map[string]any) {
-	renderApprovalLine(w, hitlID, hitlCommandSummary(payload))
 }
 
 // renderApprovalLine prints the one-line approval prompt with an optional

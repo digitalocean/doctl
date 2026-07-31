@@ -309,6 +309,7 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to `false`. To enable automatic upgrade, supply `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgIsolatedWorkers, "", false, "Enables isolated workers for the cluster. Defaults to `false`, To enable isolated workers for the cluster, supply `--isolated-workers=true`. NAT GW must be available in the vpc when this option is enabled.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --ha to enable, --ha=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
@@ -1832,6 +1833,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		return err
 	}
 	r.SurgeUpgrade = surgeUpgrade
+
+	isolatedWorkers, err := c.Doit.GetBool(c.NS, doctl.ArgIsolatedWorkers)
+	if err != nil {
+		return err
+	}
+	r.IsolatedWorkers = isolatedWorkers
 
 	ha, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgHA)
 	if err != nil {
