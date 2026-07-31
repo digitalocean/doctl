@@ -1560,7 +1560,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		case godo.HostedAgentEventKindHITLRequested:
 			var p hitlRequestedPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
-				pending.set(p.HitlID, hitlActionLabel(p.Payload))
+				pending.set(p.id(), p.actionLabel())
 			}
 		case godo.HostedAgentEventKindHITLResolved:
 			var p hitlResolvedPayload
@@ -1588,7 +1588,10 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			dedup.reset()
 			var p hitlRequestedPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
-				awaiting = append(awaiting, awaitingApproval{id: p.HitlID, summary: hitlCommandSummary(p.Payload)})
+				// Queue until a paired tool_call_started names the command; on
+				// reattach the server re-injects only this frame, so summary
+				// must come from the HITL payload itself (details.command).
+				awaiting = append(awaiting, awaitingApproval{id: p.id(), summary: p.commandSummary()})
 			}
 		case godo.HostedAgentEventKindToolCallStarted:
 			thinking.stop()
@@ -2554,9 +2557,64 @@ type toolCallCompletedPayload struct {
 	Summary    string `json:"summary,omitempty"`
 }
 
+// hitlRequestedPayload is the data body of a run.human_input_requested event.
+// Harness-api forwards the HITLRequest shape (action + details) at the top
+// level; older / nested adapters also wrap fields under "payload". Both are
+// accepted so reattach (which re-injects only this frame, not tool_call_started)
+// can still surface the command being approved.
 type hitlRequestedPayload struct {
-	HitlID  string         `json:"hitl_id"`
-	Payload map[string]any `json:"payload"`
+	HitlID    string         `json:"hitl_id"`
+	RequestID string         `json:"request_id"`
+	Action    string         `json:"action"`
+	Details   map[string]any `json:"details"`
+	Payload   map[string]any `json:"payload"`
+}
+
+func (p hitlRequestedPayload) id() string {
+	if p.HitlID != "" {
+		return p.HitlID
+	}
+	return p.RequestID
+}
+
+// fields returns the map hitlCommandSummary / hitlActionLabel should search.
+// Merges nested "payload" (legacy adapters) with top-level action+details
+// (HITLRequest as forwarded by harness-api) so reattach can read details.command
+// even when no tool_call_started event is replayed.
+func (p hitlRequestedPayload) fields() map[string]any {
+	m := map[string]any{}
+	for k, v := range p.Payload {
+		m[k] = v
+	}
+	if p.Action != "" {
+		if _, exists := m["action"]; !exists {
+			m["action"] = p.Action
+		}
+	}
+	if len(p.Details) > 0 {
+		if _, exists := m["details"]; !exists {
+			m["details"] = p.Details
+		}
+		// Flatten details so command/cmd/argv are found without relying on
+		// recursion depth (matches harness-trigger runrender).
+		for k, v := range p.Details {
+			if _, exists := m[k]; !exists {
+				m[k] = v
+			}
+		}
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return m
+}
+
+func (p hitlRequestedPayload) commandSummary() string {
+	return hitlCommandSummary(p.fields())
+}
+
+func (p hitlRequestedPayload) actionLabel() string {
+	return hitlActionLabel(p.fields())
 }
 
 type hitlResolvedPayload struct {
@@ -2609,7 +2667,7 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindHITLRequested:
 		var p hitlRequestedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			renderHITLRequest(w, p.HitlID, p.Payload)
+			renderApprovalLine(w, p.id(), p.commandSummary())
 		}
 	case godo.HostedAgentEventKindHITLResolved:
 		var p hitlResolvedPayload
@@ -2702,14 +2760,6 @@ func prettyAgentKind(k godo.HostedAgentKind) string {
 		return "agent"
 	}
 	return s
-}
-
-// renderHITLRequest prints a single compact, color-coded approval line: the
-// command (or a human-readable action label) plus the full hitl_id so it can be
-// copied for out-of-band approve. Outcomes are omitted here since the
-// interactive menu prompt already shows them.
-func renderHITLRequest(w io.Writer, hitlID string, payload map[string]any) {
-	renderApprovalLine(w, hitlID, hitlCommandSummary(payload))
 }
 
 // renderApprovalLine prints the one-line approval prompt with an optional

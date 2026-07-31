@@ -896,6 +896,60 @@ func TestRenderEventHITLRequested(t *testing.T) {
 	assert.NotContains(t, out, "Action requires approval")
 }
 
+// TestRenderEventHITLRequestedTopLevelDetails covers the harness-api wire
+// shape: HITLRequest.action + details.command at the top level of the event
+// data (no nested "payload"). This is what reattach re-injects.
+func TestRenderEventHITLRequestedTopLevelDetails(t *testing.T) {
+	const fullID = "019f1dfc-f017-70e2-9eac-2ea470a55ac2"
+	var buf bytes.Buffer
+	renderEvent(&buf, godo.HostedAgentEvent{
+		Kind: godo.HostedAgentEventKindHITLRequested,
+		Payload: json.RawMessage(`{
+			"hitl_id":"` + fullID + `",
+			"action":"HITL_ACTION_BASH",
+			"details":{"command":"mkdir /tmp/hitl-test && echo done"}
+		}`),
+	})
+	out := buf.String()
+	assert.Contains(t, out, "Approval required")
+	assert.Contains(t, out, "mkdir /tmp/hitl-test && echo done")
+	assert.Contains(t, out, fullID)
+	assert.NotContains(t, out, "action pending")
+}
+
+func TestHITLRequestedPayloadFields(t *testing.T) {
+	t.Run("top-level details.command", func(t *testing.T) {
+		var p hitlRequestedPayload
+		assert.NoError(t, json.Unmarshal([]byte(`{
+			"request_id":"req-1",
+			"action":"HITL_ACTION_BASH",
+			"details":{"command":"echo hi"}
+		}`), &p))
+		assert.Equal(t, "req-1", p.id())
+		assert.Equal(t, "echo hi", p.commandSummary())
+		assert.Equal(t, "HITL_ACTION_BASH", p.actionLabel())
+	})
+	t.Run("nested payload still preferred for command", func(t *testing.T) {
+		var p hitlRequestedPayload
+		assert.NoError(t, json.Unmarshal([]byte(`{
+			"hitl_id":"h1",
+			"details":{"command":"from-details"},
+			"payload":{"command":"from-payload"}
+		}`), &p))
+		assert.Equal(t, "h1", p.id())
+		assert.Equal(t, "from-payload", p.commandSummary())
+	})
+	t.Run("github action falls back to friendly label", func(t *testing.T) {
+		var p hitlRequestedPayload
+		assert.NoError(t, json.Unmarshal([]byte(`{
+			"hitl_id":"h2",
+			"action":"HITL_ACTION_GITHUB_CREATE_PR",
+			"details":{"repo":"digitalocean/doctl","title":"fix stuff","base":"main","branch":"fix"}
+		}`), &p))
+		assert.Equal(t, "create a pull request", p.commandSummary())
+	})
+}
+
 // TestHITLCommandSummaryNested covers the recursive command search used to pull
 // a command out of adapter-specific nested payload shapes.
 func TestHITLCommandSummaryNested(t *testing.T) {
@@ -2153,6 +2207,36 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	assert.NotContains(t, out, msgReconnectFailed)
 }
 
+// TestDrainStream_HITLReattachShowsCommand reproduces MARSOHS-648: on reattach
+// the server re-injects only run.human_input_requested (no tool_call_started).
+// The approval line must still show details.command, not "action pending".
+func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
+	const hitlID = "019f1dfc-f017-70e2-9eac-2ea470a55ac2"
+	const cmd = "mkdir /tmp/hitl-test && echo done"
+	body := sseFrame("evt-hitl", string(godo.HostedAgentEventKindHITLRequested),
+		fmt.Sprintf(`{"hitl_id":%q,"action":"HITL_ACTION_BASH","details":{"command":%q}}`, hitlID, cmd))
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	pending := &pendingHITL{}
+	superseded := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), &tokenDeduper{})
+
+	assert.False(t, superseded)
+	out := buf.String()
+	assert.Contains(t, out, "Approval required")
+	assert.Contains(t, out, cmd)
+	assert.Contains(t, out, hitlID)
+	assert.NotContains(t, out, "action pending")
+	assert.Equal(t, 1, pending.len())
+	assert.Equal(t, hitlID, pending.get())
+}
+
 // TestDrainStream_skipsStreamStateControlFrames pins that a live stream.state
 // frame is transport bookkeeping: it renders nothing and must not become the
 // reconnect cursor, or a reconnect would resume from a position no event holds.
@@ -2274,9 +2358,8 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 		mu.Lock()
 		calls++
 		n := calls
-		// The live stream carries the resume cursor in the standard SSE
-		// Last-Event-ID header, not a replay_from query parameter.
-		replayFrom := r.Header.Get("Last-Event-ID")
+		// Resume cursor rides as replay_from on control-plane /stream.
+		replayFrom := r.URL.Query().Get("replay_from")
 		mu.Unlock()
 
 		w.Header().Set("Content-Type", "text/event-stream")
