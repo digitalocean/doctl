@@ -76,6 +76,11 @@ var (
 			CorednsAutoscaler: &godo.KubernetesCorednsAutoscaler{
 				Enabled: boolPtr(true),
 			},
+			SSO: &godo.KubernetesClusterSSO{
+				Enabled:  true,
+				Required: false,
+			},
+			IsolatedWorkers: true,
 		},
 	}
 
@@ -751,6 +756,7 @@ func TestKubernetesCreate(t *testing.T) {
 				Enabled:  true,
 				Required: false,
 			},
+			IsolatedWorkers: true,
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -784,6 +790,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgIsolatedWorkers, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesRequireSSO, false)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
