@@ -244,6 +244,21 @@ func (mr *MockDatabasesServiceMockRecorder) Get(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDatabasesService)(nil).Get), arg0)
 }
 
+// GetAdvancedMySQLConfiguration mocks base method.
+func (m *MockDatabasesService) GetAdvancedMySQLConfiguration(databaseID string) (*do.AdvancedMySQLConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdvancedMySQLConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.AdvancedMySQLConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAdvancedMySQLConfiguration indicates an expected call of GetAdvancedMySQLConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetAdvancedMySQLConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvancedMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetAdvancedMySQLConfiguration), databaseID)
+}
+
 // GetAdvancedPostgresConfiguration mocks base method.
 func (m *MockDatabasesService) GetAdvancedPostgresConfiguration(databaseID string) (*do.AdvancedPostgresConfig, error) {
 	m.ctrl.T.Helper()
@@ -782,6 +797,20 @@ func (mr *MockDatabasesServiceMockRecorder) SetSQLMode(arg0 any, arg1 ...any) *g
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSQLMode", reflect.TypeOf((*MockDatabasesService)(nil).SetSQLMode), varargs...)
+}
+
+// UpdateAdvancedMySQLConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateAdvancedMySQLConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAdvancedMySQLConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAdvancedMySQLConfiguration indicates an expected call of UpdateAdvancedMySQLConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateAdvancedMySQLConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAdvancedMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateAdvancedMySQLConfiguration), databaseID, confString)
 }
 
 // UpdateAdvancedPostgresConfiguration mocks base method.

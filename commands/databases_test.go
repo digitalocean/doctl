@@ -232,6 +232,19 @@ var (
 		},
 	}
 
+	testAdvancedMySQLConfiguration = do.AdvancedMySQLConfig{
+		AdvancedMySQLConfig: &godo.AdvancedMySQLConfig{
+			MySQLParameters: []godo.AdvancedMySQLParameter{
+				{
+					Name:            "max_connections",
+					Value:           "151",
+					DefaultValue:    "151",
+					RequiresRestart: false,
+				},
+			},
+		},
+	}
+
 	testRedisConfiguration = do.RedisConfig{
 		RedisConfig: &godo.RedisConfig{},
 	}
@@ -1797,6 +1810,16 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetAdvancedMySQLConfiguration(testDBCluster.ID).Return(&testAdvancedMySQLConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "advanced_mysql")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().GetRedisConfiguration(testDBCluster.ID).Return(&testRedisConfiguration, nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "redis")
@@ -1884,6 +1907,16 @@ func TestDatabaseConfigurationUpdate(t *testing.T) {
 		tm.databases.EXPECT().UpdateAdvancedPostgresConfiguration(testDBCluster.ID, "").Return(nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "advanced_pg")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateAdvancedMySQLConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "advanced_mysql")
 
 		err := RunDatabaseConfigurationUpdate(config)
 
