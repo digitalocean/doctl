@@ -181,7 +181,7 @@ func Repository() *Command {
 		cmd,
 		RunListRepositoriesV2, "list-v2",
 		"List repositories for a container registry", listRepositoriesV2Desc,
-		Writer, aliasOpt("ls2"), displayerType(&displayers.Repository{}),
+		Writer, aliasOpt("ls2"), displayerType(&displayers.RepositoryV2{}),
 	)
 	cmdListRepositoriesV2.overrideNS = overrideNS
 	addRegistryFlag(cmdListRepositoriesV2)
@@ -1581,7 +1581,7 @@ func RegistriesRepository() *Command {
 		cmd,
 		RunRegistriesListRepositoriesV2, "list-v2 <registry-name>",
 		"List repositories for a container registry", listRepositoriesV2Desc,
-		Writer, aliasOpt("ls2"), displayerType(&displayers.Repository{}),
+		Writer, aliasOpt("ls2"), displayerType(&displayers.RepositoryV2{}),
 	)
 	cmdListRepositoriesV2.overrideNS = overrideNS
 	cmdListRepositoriesV2.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the name and update time of each repository: doctl registries repository list-v2 example-registry --format Name,UpdatedAt`
