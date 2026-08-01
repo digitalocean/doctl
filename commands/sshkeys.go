@@ -53,9 +53,12 @@ Note that creating a key will not add it to any Droplets.`, Writer,
 
 	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "Import an SSH key from your computer to your account", `Use this command to add a new SSH key to your account, using a local public key file.
 
-Note that importing a key to your account will not add it to any Droplets`, Writer,
+Specify a `+"`"+`<key-name>`+"`"+` for the key, and set the `+"`"+`--public-key-file`+"`"+` flag to the path of a local public key file, such as `+"`"+`~/.ssh/id_ed25519.pub`+"`"+`.
+
+Note that importing a key to your account will not add it to any Droplets.`, Writer,
 		aliasOpt("i"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
+	cmdSSHKeysImport.Example = `doctl compute ssh-key import example-key --public-key-file ~/.ssh/id_ed25519.pub`
 
 	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "Permanently delete an SSH key from your account", `Use this command to permanently delete an SSH key from your account.
 
