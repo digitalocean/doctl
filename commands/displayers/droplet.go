@@ -34,7 +34,7 @@ func (d *Droplet) JSON(out io.Writer) error {
 
 func (d *Droplet) Cols() []string {
 	cols := []string{
-		"ID", "Name", "PublicIPv4", "PrivateIPv4", "PublicIPv6", "Memory", "VCPUs", "Disk", "Region", "Image", "VPCUUID", "Status", "Tags", "Features", "Volumes",
+		"ID", "Name", "SizeSlug", "PublicIPv4", "PrivateIPv4", "PublicIPv6", "Memory", "VCPUs", "Disk", "Region", "Image", "VPCUUID", "Status", "Tags", "Features", "Volumes",
 	}
 	return cols
 }
