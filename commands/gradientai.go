@@ -37,6 +37,8 @@ func GradientAI() *Command {
 	cmd.AddCommand(ListRegionsCmd())
 	// Add the OpenAI keys command as a subcommand to Gradient AI
 	cmd.AddCommand(OpenAIKeyCmd())
+	// Add the Anthropic keys command as a subcommand to Gradient AI
+	cmd.AddCommand(AnthropicKeyCmd())
 
 	return cmd
 }
