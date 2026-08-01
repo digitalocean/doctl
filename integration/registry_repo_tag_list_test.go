@@ -77,6 +77,42 @@ var _ = suite("registry/repository/list-tags", func(t *testing.T, when spec.G, i
 
 		expect.Equal(strings.TrimSpace(repositoryTagListOutput), strings.TrimSpace(string(output)))
 	})
+
+	it("returns list of repositories in registry with format flag", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"registry",
+			"repository",
+			"list-tags",
+			"my-repo",
+			"--format", "Tag",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := "Tag\nmy-tag\n"
+		expect.Equal(expectedOutput, string(output))
+	})
+
+	it("returns list of repositories in registry with no-header flag", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"registry",
+			"repository",
+			"list-tags",
+			"my-repo",
+			"--no-header",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := "my-tag    1.00 kB    2020-04-01 00:00:00 +0000 UTC    sha256:e692418e4cbaf90ca69d05a66403747baa33ee08806650b51fab815ad7fc331f\n"
+		expect.Equal(expectedOutput, string(output))
+	})
 })
 
 var (
