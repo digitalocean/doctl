@@ -26,7 +26,7 @@ func (v *Agent) JSON(out io.Writer) error {
 
 func (a *Agent) Cols() []string {
 	return []string{
-		"Id",
+		"ID",
 		"Name",
 		"Region",
 		"Project-id",
@@ -38,7 +38,7 @@ func (a *Agent) Cols() []string {
 
 func (a *Agent) ColMap() map[string]string {
 	return map[string]string{
-		"Id":         "ID",
+		"ID":         "ID",
 		"Name":       "Name",
 		"Region":     "Region",
 		"Project-id": "Project ID",
@@ -59,7 +59,7 @@ func (a *Agent) KV() []map[string]any {
 			modelID = agent.Model.Uuid
 		}
 		out = append(out, map[string]any{
-			"Id":         agent.Uuid,
+			"ID":         agent.Uuid,
 			"Name":       agent.Name,
 			"Region":     agent.Region,
 			"Project-id": agent.ProjectId,
@@ -372,7 +372,7 @@ func (f *FunctionRoute) JSON(out io.Writer) error {
 
 func (f *FunctionRoute) Cols() []string {
 	return []string{
-		"Uuid",
+		"UUID",
 		"Name",
 		"Description",
 		"FaasName",
@@ -384,7 +384,7 @@ func (f *FunctionRoute) Cols() []string {
 
 func (f *FunctionRoute) ColMap() map[string]string {
 	return map[string]string{
-		"Uuid":          "UUID",
+		"UUID":          "UUID",
 		"Name":          "Name",
 		"Description":   "Description",
 		"FaasName":      "FaaS Name",
@@ -402,7 +402,7 @@ func (f *FunctionRoute) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(f.Agent.Functions))
 	for _, fn := range f.Agent.Functions {
 		out = append(out, map[string]any{
-			"Uuid":          fn.Uuid,
+			"UUID":          fn.Uuid,
 			"Name":          fn.Name,
 			"Description":   fn.Description,
 			"FaasName":      fn.FaasName,
@@ -426,7 +426,7 @@ func (a *AgentRoute) JSON(out io.Writer) error {
 
 func (a *AgentRoute) Cols() []string {
 	return []string{
-		"Id",
+		"ID",
 		"ParentAgentId",
 		"ChildAgentId",
 		"Rollback",
@@ -435,9 +435,9 @@ func (a *AgentRoute) Cols() []string {
 
 func (a *AgentRoute) ColMap() map[string]string {
 	return map[string]string{
-		"Id":            "Id",
-		"ParentAgentId": "Parent Agent Id",
-		"ChildAgentId":  "Child Agent Id",
+		"ID":            "ID",
+		"ParentAgentId": "Parent Agent ID",
+		"ChildAgentId":  "Child Agent ID",
 		"Rollback":      "Rollback",
 	}
 }
@@ -450,7 +450,7 @@ func (a *AgentRoute) KV() []map[string]any {
 
 	for _, response := range a.AgentRouteResponses {
 		o := map[string]any{
-			"Id":            response.UUID,
+			"ID":            response.UUID,
 			"ParentAgentId": response.ParentAgentUuid,
 			"ChildAgentId":  response.ChildAgentUuid,
 			"Rollback":      response.Rollback,
@@ -469,7 +469,7 @@ func (v *ApiKeyInfo) JSON(out io.Writer) error {
 
 func (a *ApiKeyInfo) Cols() []string {
 	return []string{
-		"Id",
+		"ID",
 		"Name",
 		"CreatedBy",
 		"SecretKey",
@@ -480,7 +480,7 @@ func (a *ApiKeyInfo) Cols() []string {
 
 func (a *ApiKeyInfo) ColMap() map[string]string {
 	return map[string]string{
-		"Id":        "ID",
+		"ID":        "ID",
 		"Name":      "Name",
 		"SecretKey": "Secret Key",
 		"CreatedBy": "Created By",
@@ -497,7 +497,7 @@ func (a *ApiKeyInfo) KV() []map[string]any {
 	for _, apikey := range a.ApiKeyInfo {
 
 		out = append(out, map[string]any{
-			"Id":        apikey.Uuid,
+			"ID":        apikey.Uuid,
 			"Name":      apikey.Name,
 			"SecretKey": apikey.SecretKey,
 			"CreatedBy": apikey.CreatedBy,
@@ -625,7 +625,7 @@ func (m *Model) JSON(out io.Writer) error {
 }
 func (m *Model) Cols() []string {
 	return []string{
-		"Id",
+		"ID",
 		"Name",
 		"Agreement",
 		"CreatedAt",
@@ -640,7 +640,7 @@ func (m *Model) Cols() []string {
 
 func (m *Model) ColMap() map[string]string {
 	return map[string]string{
-		"Id":             "ID",
+		"ID":             "ID",
 		"Name":           "Name",
 		"Agreement":      "Agreement",
 		"CreatedAt":      "Created At",
@@ -672,7 +672,7 @@ func (m *Model) KV() []map[string]any {
 		}
 
 		out = append(out, map[string]any{
-			"Id":             model.Uuid,
+			"ID":             model.Uuid,
 			"Name":           model.Name,
 			"Agreement":      agreementName,
 			"CreatedAt":      model.CreatedAt,

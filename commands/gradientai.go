@@ -32,9 +32,9 @@ func GradientAI() *Command {
 	// Add the knowledgebase command as a subcommand to Gradient AI
 	cmd.AddCommand(KnowledgeBaseCmd())
 	// Add the model command as a subcommand to Gradient AI
-	cmd.AddCommand(ListModelsCmd())
+	cmd.AddCommand(ListModelsCmd(cmd))
 	// Add the region command as a subcommand to Gradient AI
-	cmd.AddCommand(ListRegionsCmd())
+	cmd.AddCommand(ListRegionsCmd(cmd))
 	// Add the OpenAI keys command as a subcommand to Gradient AI
 	cmd.AddCommand(OpenAIKeyCmd())
 

@@ -14,11 +14,14 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -78,7 +81,8 @@ var (
 )
 
 func TestListModelsCommand(t *testing.T) {
-	cmd := ListModelsCmd()
+	parent := &Command{Command: &cobra.Command{Use: "gradient"}}
+	cmd := ListModelsCmd(parent)
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "list-models", cmd.Use)
 	assert.Contains(t, cmd.Aliases, "models")
@@ -102,5 +106,21 @@ func TestRunGradientAIListModelsError(t *testing.T) {
 
 		err := RunGradientAIListModels(config)
 		assert.Error(t, err)
+	})
+}
+
+func TestRunGradientAIListModelsFormatNoHeader(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.gradientAI.EXPECT().ListAvailableModels().Return(testModels, nil)
+
+		var buf bytes.Buffer
+		config.NS = "gradient.list-models"
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgFormat, "ID,Name")
+		config.Doit.Set(config.NS, doctl.ArgNoHeader, true)
+
+		err := RunGradientAIListModels(config)
+		assert.NoError(t, err)
+		assert.Equal(t, "model-1    GPT-4 Turbo\nmodel-2    Claude 3.5 Sonnet\n", buf.String())
 	})
 }

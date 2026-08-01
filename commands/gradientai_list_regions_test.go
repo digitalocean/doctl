@@ -14,8 +14,10 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"testing"
 
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -62,7 +64,8 @@ var (
 )
 
 func TestListRegionsCommand(t *testing.T) {
-	cmd := ListRegionsCmd()
+	parent := &Command{Command: &cobra.Command{Use: "gradient"}}
+	cmd := ListRegionsCmd(parent)
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "list-regions", cmd.Use)
 	assert.Equal(t, "List Gradient AI regions", cmd.Short)
@@ -88,5 +91,26 @@ func TestRunGradientAIListRegionsError(t *testing.T) {
 
 		err := RunGradientAIListRegions(config)
 		assert.Error(t, err)
+	})
+}
+
+func TestRunGradientAIListRegionsFormatNoHeader(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.gradientAI.EXPECT().ListDatacenterRegions(nil, nil).Return(testDatacenterRegions, nil)
+
+		var buf bytes.Buffer
+		config.NS = "gradient.list-regions"
+		config.Out = &buf
+		config.Command = &cobra.Command{}
+		config.Doit.Set(config.NS, doctl.ArgFormat, "Region,InferenceURL")
+		config.Doit.Set(config.NS, doctl.ArgNoHeader, true)
+
+		err := RunGradientAIListRegions(config)
+		assert.NoError(t, err)
+		expected := "" +
+			"nyc1    https://inference.nyc1.digitalocean.com\n" +
+			"sfo3    https://inference.sfo3.digitalocean.com\n" +
+			"tor1    https://inference.tor1.digitalocean.com\n"
+		assert.Equal(t, expected, buf.String())
 	})
 }
