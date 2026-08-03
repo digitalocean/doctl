@@ -42,6 +42,14 @@ type Facade interface {
 // request that kicked off the turn has already been answered.
 type Notifier interface {
 	Notify(method string, params any) error
+
+	// Request sends a server-initiated JSON-RPC request and blocks until the
+	// client replies or ctx is done. This is the reverse of Notify: some
+	// codex methods (the item/*/requestApproval family) need an answer from
+	// the client, not just to inform it of something. The bridge correlates
+	// the reply by a synthesized request id — a Facade never sees or manages
+	// that id itself.
+	Request(ctx context.Context, method string, params any) (result json.RawMessage, err error)
 }
 
 // NotifierAware is implemented by facades that need to push asynchronous
@@ -50,4 +58,14 @@ type Notifier interface {
 // Dispatch can stash it and use it later from a background goroutine.
 type NotifierAware interface {
 	SetNotifier(Notifier)
+}
+
+// AfterReply is optionally implemented by a Facade that wants a hook after
+// handleConn has written a successful request result (Dispatch returned nil
+// and the JSON-RPC reply was written). Not invoked for JSON-RPC error
+// replies. codex uses this to start --replay only once thread/start|resume
+// has been acknowledged, so a replayed turn/started cannot race onto the
+// wire before the thread it refers to.
+type AfterReply interface {
+	AfterReply(ctx context.Context, method string)
 }
