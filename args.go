@@ -965,6 +965,13 @@ const (
 	// ArgAgentStatus filters sessions by lifecycle status.
 	ArgAgentStatus = "status"
 
+	// ArgAgentLogsTail caps `agents logs` to the newest N events.
+	ArgAgentLogsTail = "tail"
+
+	// ArgAgentLogsBefore reads the single page of `agents logs` history older
+	// than the given event ID.
+	ArgAgentLogsBefore = "before"
+
 	// ArgAgentWorkspacePath is the path inside the session workspace root (/workspace).
 	ArgAgentWorkspacePath = "workspace-path"
 

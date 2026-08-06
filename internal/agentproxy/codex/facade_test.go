@@ -1248,6 +1248,67 @@ func TestFacade_Replay_ThreadResume(t *testing.T) {
 	rec.expectNone(t)
 }
 
+// TestFacade_Replay_SpansMultiplePages is TestFacade_Replay_ThreadResume with
+// a history longer than one replay window (SetReplayBudget), so the older run
+// is only reachable by paging backwards. Paging must be invisible to the
+// client: the same two historical turns arrive, oldest first, in the same
+// order — not just the newest window, and not the pages in the order they were
+// fetched.
+func TestFacade_Replay_SpansMultiplePages(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.Replay = true
+
+	// Only hist-2's three events fit in a cursorless replay; hist-1 has to be
+	// paged in.
+	h.SetReplayBudget(3)
+	h.QueueReplayHistory(
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "hist-1"},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), RunID: "hist-1", Data: json.RawMessage(`{"text":"Hi"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted), RunID: "hist-1"},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "hist-2"},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), RunID: "hist-2", Data: json.RawMessage(`{"text":"Bye"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted), RunID: "hist-2"},
+	)
+
+	_, err := dispatch(t, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
+	require.NoError(t, err)
+
+	// The paged-in run comes first, exactly as if it had been in the window.
+	started1 := rec.next(t)
+	require.Equal(t, "turn/started", started1.method)
+	assert.Equal(t, "hist-1", started1.params.(turnStartedNotification).Turn.ID)
+
+	_ = rec.next(t) // item/started
+
+	delta1 := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", delta1.method)
+	assert.Equal(t, "Hi", delta1.params.(agentMessageDeltaNotification).Delta)
+
+	_ = rec.next(t) // item/completed
+
+	turnCompleted1 := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted1.method)
+	assert.Equal(t, "hist-1", turnCompleted1.params.(turnCompletedNotification).Turn.ID)
+
+	started2 := rec.next(t)
+	require.Equal(t, "turn/started", started2.method)
+	assert.Equal(t, "hist-2", started2.params.(turnStartedNotification).Turn.ID)
+
+	_ = rec.next(t) // item/started
+
+	delta2 := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", delta2.method)
+	assert.Equal(t, "Bye", delta2.params.(agentMessageDeltaNotification).Delta)
+
+	_ = rec.next(t) // item/completed
+
+	turnCompleted2 := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted2.method)
+	assert.Equal(t, "hist-2", turnCompleted2.params.(turnCompletedNotification).Turn.ID)
+
+	rec.expectNone(t)
+}
+
 // TestFacade_Replay_Disabled confirms Replay: false (the default) never
 // touches replay-only history, even when a session has some queued — the
 // flag must actually gate the behavior, not just always run it. Asserts

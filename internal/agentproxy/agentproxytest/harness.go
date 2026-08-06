@@ -15,12 +15,33 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/digitalocean/godo"
 )
+
+// defaultHistoryPageSize mirrors harness-api's own page size for a history
+// request that passes no limit.
+const defaultHistoryPageSize = 200
+
+// eventIDPrefix prefixes the synthetic event ids this harness assigns, which
+// double as history paging cursors: "evt-<position in the queued history>".
+const eventIDPrefix = "evt-"
+
+// parseEventIndex recovers the queued-history position an event id refers to.
+func parseEventIndex(eventID string) (int, bool) {
+	raw, ok := strings.CutPrefix(eventID, eventIDPrefix)
+	if !ok {
+		return 0, false
+	}
+	i, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, false
+	}
+	return i, true
+}
 
 // Event is one canned SSE event the harness streams back from
 // GET /v2/agents/sessions/{id}/stream, matching the event-specific part of
@@ -83,6 +104,7 @@ type Harness struct {
 	streamErrorRemaining int     // >0: decrement per hit, clearing streamErrorStatus at 0; <=0 with status set: permanent
 	streamErrorSkip      int     // succeed this many opens before applying streamErrorStatus (reconnect-path tests)
 	dropAfterEvents      int     // >0: end the very next stream connection after this many events (one-shot)
+	replayBudget         int     // >0: a cursorless replay serves only the newest this-many replayEvents
 
 	// hitlCh delivers every POST .../hitl/{requestID} call this harness
 	// receives, in order. A channel (rather than a "last resolution" field)
@@ -159,6 +181,16 @@ func (h *Harness) QueueReplayHistory(events ...Event) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.replayEvents = events
+}
+
+// SetReplayBudget bounds a cursorless replay to the newest n queued history
+// events, mirroring harness-api's replay budget. Anything older is only
+// reachable by paging backwards with `before`, so this is what makes a test
+// history span more than one request. n <= 0 (the default) serves all of it.
+func (h *Harness) SetReplayBudget(n int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.replayBudget = n
 }
 
 // SetStreamErrorStatus makes GET .../stream return status immediately
@@ -251,7 +283,9 @@ func (h *Harness) handleInput(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
-	replayOnly := r.URL.Query().Get("replay_only") == "true"
+	q := r.URL.Query()
+	replayOnly := q.Get("replay_only") == "true"
+	before := q.Get("before")
 
 	h.mu.Lock()
 	runID := h.runID
@@ -261,6 +295,7 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionID := h.sessionID
 	hang := h.hangAfterEvents
+	budget := h.replayBudget
 	errStatus := h.streamErrorStatus
 	if h.streamErrorSkip > 0 {
 		h.streamErrorSkip--
@@ -280,33 +315,80 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Matches harness-api: a live attach cannot start in the past, so a
+	// cursor without replay_only is rejected outright.
+	if before != "" && !replayOnly {
+		http.Error(w, "agentproxytest: before requires replay_only=true", http.StatusBadRequest)
+		return
+	}
+
+	limit := defaultHistoryPageSize
+	if raw := q.Get("limit"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			http.Error(w, "agentproxytest: limit must be a positive integer", http.StatusBadRequest)
+			return
+		}
+		limit = n
+	}
+
+	// Which slice of the queued history this request serves. A cursorless
+	// replay is bounded to the newest budget events, and `before` walks
+	// backwards from a cursor one page at a time — the same bounded-replay
+	// contract harness-api has, so a client that needs full history has to
+	// page for it.
+	start, end := 0, len(events)
+	hasMore := false
+	if replayOnly && before != "" {
+		idx, ok := parseEventIndex(before)
+		if !ok || idx < 0 || idx > len(events) {
+			http.Error(w, "agentproxytest: unknown before cursor", http.StatusBadRequest)
+			return
+		}
+		end = idx
+		start = max(end-limit, 0)
+		hasMore = start > 0
+	} else if replayOnly && budget > 0 && len(events) > budget {
+		start = len(events) - budget
+	}
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(http.StatusOK)
 	flusher, canFlush := w.(http.Flusher)
 
-	// Optional stream.state control frame (same wire value as the data-plane
-	// transport). Consumers must skip it — emit it so tests exercise that.
-	const streamStateKind = "stream.state"
-	streamState, err := json.Marshal(eventWire{
-		TenantID:  "15726539",
-		SessionID: sessionID,
-		Timestamp: "2026-01-01T00:00:00Z",
-		Type:      streamStateKind,
-		Data:      json.RawMessage(`{"state":"live","cursor":""}`),
-	})
-	if err != nil {
-		panic(fmt.Sprintf("agentproxytest: stream.state does not marshal to JSON: %v", err))
+	if before != "" {
+		// A history page opens with a comment rather than a control frame:
+		// it never joins the live bus, so it has no transport state to report.
+		fmt.Fprintf(w, ": connected to %s\n\n", sessionID)
+	} else {
+		// Optional stream.state control frame (same wire value as the data-plane
+		// transport). Consumers must skip it — emit it so tests exercise that.
+		const streamStateKind = "stream.state"
+		streamState, err := json.Marshal(eventWire{
+			TenantID:  "15726539",
+			SessionID: sessionID,
+			Timestamp: "2026-01-01T00:00:00Z",
+			Type:      streamStateKind,
+			Data:      json.RawMessage(`{"state":"live","cursor":""}`),
+		})
+		if err != nil {
+			panic(fmt.Sprintf("agentproxytest: stream.state does not marshal to JSON: %v", err))
+		}
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", streamStateKind, streamState)
 	}
-	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", streamStateKind, streamState)
 	if canFlush {
 		flusher.Flush()
 	}
 
-	for i, ev := range events {
-		if dropAfter > 0 && i >= dropAfter {
+	for sent, ev := range events[start:end] {
+		if dropAfter > 0 && sent >= dropAfter {
 			return // simulate a clean mid-stream drop
 		}
+		// Event ids and seqs are absolute positions in the queued history, not
+		// positions in this window, so a cursor taken from one page still
+		// identifies the same event on the next request.
+		pos := start + sent
 
 		if ev.WaitForHITL != "" {
 			<-h.hitlResolvedChan(ev.WaitForHITL)
@@ -321,12 +403,12 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 			evRunID = ev.RunID
 		}
 		wire := eventWire{
-			EventID:   fmt.Sprintf("evt-%d", i),
+			EventID:   eventIDPrefix + strconv.Itoa(pos),
 			RunID:     evRunID,
 			TenantID:  "15726539",
 			SessionID: sessionID,
 			Timestamp: "2026-01-01T00:00:00Z",
-			Seq:       i,
+			Seq:       pos,
 			Type:      ev.Type,
 			Data:      data,
 		}
@@ -341,6 +423,16 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 		if canFlush {
 			flusher.Flush()
 		}
+	}
+
+	if before != "" {
+		// SSE comment trailer, exactly as harness-api ends a history page:
+		// spec-compliant clients that don't understand it ignore comments.
+		fmt.Fprintf(w, ": has_more=%t\n\n", hasMore)
+		if canFlush {
+			flusher.Flush()
+		}
+		return
 	}
 
 	if replayOnly {

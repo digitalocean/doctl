@@ -289,10 +289,20 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		Writer, aliasOpt("get"),
 		displayerType(&displayers.HostedAgentSession{}))
 
-	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
+	cmdLogs := CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the event history for a session",
-		"Replays the server-side event history for a session, then exits. History is retained for a bounded window, so a session that has been idle for a long time, or one with an unusually long transcript, may replay only its more recent activity.",
+		`Replays the server-side event history for a session, then exits.
+
+The server serves only the most recent stretch of a long transcript per request, so doctl reads the rest a page at a time, walking backwards until the session's history is exhausted. That paging is automatic; use `+"`"+`--tail`+"`"+` to stop early and print only the newest events, or `+"`"+`--page-size`+"`"+` to change how many events each request asks for.
+
+History is also retained for a bounded window, which paging cannot recover: events that have aged out of a long-idle session are gone from the server, not merely unread.
+
+`+"`"+`--before`+"`"+` reads a single page of the events older than one you already have, instead of walking the whole history, and reports the id to pass as the next `+"`"+`--before`+"`"+`.`,
 		Writer)
+	AddIntFlag(cmdLogs, doctl.ArgAgentLogsTail, "", 0, "Print only the newest N events (0 replays all retained history)")
+	AddIntFlag(cmdLogs, doctl.ArgAgentPageSize, "", do.DefaultHistoryPageSize, "Maximum number of events to request per page while walking history backwards")
+	AddStringFlag(cmdLogs, doctl.ArgAgentLogsBefore, "", "", "Print one page of the events older than this event ID, then exit")
+	cmdLogs.Example = `doctl agents logs sess_abc123 --tail 100; doctl agents logs my-session --before evt_01hz... --page-size 50`
 
 	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
@@ -1129,11 +1139,33 @@ func hitlOutcomeFor(s string) (godo.HostedAgentHITLOutcome, error) {
 	}
 }
 
-// RunAgentsLogs replays the session's stored event history, then exits. The
-// stream is finite: the server ends it after the last stored event, which is
-// what terminates the loop below.
+// RunAgentsLogs replays the session's stored event history, then exits.
+//
+// One replay request only covers the newest stretch of a long transcript, so
+// the rest is read by walking backwards a page at a time (see
+// do.LoadSessionHistory). History is therefore buffered before anything is
+// printed: the oldest events arrive last and have to be put back in order
+// first.
 func RunAgentsLogs(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
+	if err != nil {
+		return err
+	}
+	tail, err := c.Doit.GetInt(c.NS, doctl.ArgAgentLogsTail)
+	if err != nil {
+		return err
+	}
+	if tail < 0 {
+		return fmt.Errorf("--%s must not be negative", doctl.ArgAgentLogsTail)
+	}
+	pageSize, err := c.Doit.GetInt(c.NS, doctl.ArgAgentPageSize)
+	if err != nil {
+		return err
+	}
+	if pageSize < 0 {
+		return fmt.Errorf("--%s must not be negative", doctl.ArgAgentPageSize)
+	}
+	before, err := c.Doit.GetString(c.NS, doctl.ArgAgentLogsBefore)
 	if err != nil {
 		return err
 	}
@@ -1142,24 +1174,48 @@ func RunAgentsLogs(c *CmdConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	stream, err := c.HostedAgents().StreamSession(ctx, sessionID, &godo.HostedAgentSessionStreamOptions{
-		ReplayOnly: true,
+	if before != "" {
+		return runAgentsLogsPage(ctx, c, sessionID, before, pageSize)
+	}
+
+	history, err := do.LoadSessionHistory(ctx, c.HostedAgents(), sessionID, do.SessionHistoryOptions{
+		PageSize:  pageSize,
+		MaxEvents: tail,
 	})
 	if err != nil {
 		return err
 	}
-	defer stream.Close()
+	renderEventHistory(c.Out, history)
+	return nil
+}
 
+// runAgentsLogsPage serves `agents logs --before`: one page of the events
+// older than that id, no backward walk. The cursor for the page before it goes
+// to stderr, so a caller stepping through history keeps a clean stdout.
+func runAgentsLogsPage(ctx context.Context, c *CmdConfig, sessionID, before string, pageSize int) error {
+	page, hasMore, err := do.LoadSessionHistoryPage(ctx, c.HostedAgents(), sessionID, before, pageSize)
+	if err != nil {
+		return err
+	}
+	renderEventHistory(c.Out, page)
+
+	if !hasMore {
+		fmt.Fprintln(os.Stderr, "Reached the beginning of this session's history.")
+		return nil
+	}
+	if len(page) > 0 && page[0].EventID != "" {
+		fmt.Fprintf(os.Stderr, "Older events remain. Next page: --before %s\n", page[0].EventID)
+	}
+	return nil
+}
+
+// renderEventHistory prints already-collected history events in order.
+func renderEventHistory(out io.Writer, events []godo.HostedAgentEvent) {
 	// TOKEN_CHUNK events stream token-by-token; buffer them so the whole
 	// assistant message renders as markdown at once. Other event kinds are
 	// discrete: flush any buffered message first, then print with a header.
 	acc := &msgAccumulator{}
-	for stream.Next() {
-		ev := stream.Current()
-		// Connection health, not session activity — never part of the history.
-		if ev.Kind == hostedAgentEventKindStreamState {
-			continue
-		}
+	for _, ev := range events {
 		if ev.Kind == godo.HostedAgentEventKindTokenChunk {
 			var p tokenChunkPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
@@ -1167,13 +1223,12 @@ func RunAgentsLogs(c *CmdConfig) error {
 			}
 			continue
 		}
-		acc.flush(c.Out)
-		fmt.Fprintf(c.Out, "[%s] %s\n", ev.At.Time.UTC().Format("2006-01-02T15:04:05Z"), ev.Kind)
+		acc.flush(out)
+		fmt.Fprintf(out, "[%s] %s\n", ev.At.Time.UTC().Format("2006-01-02T15:04:05Z"), ev.Kind)
 		// Show the full hitl_id so request ids are copyable for out-of-band approve.
-		renderEvent(c.Out, ev)
+		renderEvent(out, ev)
 	}
-	acc.flush(c.Out)
-	return stream.Err()
+	acc.flush(out)
 }
 
 // RunAgentsAttach opens the interactive TUI: one goroutine drains the SSE
