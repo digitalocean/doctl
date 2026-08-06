@@ -70,6 +70,12 @@ var (
 			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			NvidiaGpuDraDriver: &godo.KubernetesNvidiaGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDraDriver: &godo.KubernetesAmdGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
@@ -746,6 +752,12 @@ func TestKubernetesCreate(t *testing.T) {
 			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			NvidiaGpuDraDriver: &godo.KubernetesNvidiaGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDraDriver: &godo.KubernetesAmdGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
@@ -788,6 +800,8 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDraDriver, testCluster.NvidiaGpuDraDriver.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDraDriver, testCluster.AmdGpuDraDriver.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgIsolatedWorkers, true)
@@ -915,6 +929,12 @@ func TestKubernetesUpdate(t *testing.T) {
 			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			NvidiaGpuDraDriver: &godo.KubernetesNvidiaGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDraDriver: &godo.KubernetesAmdGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
@@ -944,6 +964,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDraDriver, testCluster.NvidiaGpuDraDriver.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDraDriver, testCluster.AmdGpuDraDriver.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
@@ -991,6 +1013,12 @@ func TestKubernetesUpdate(t *testing.T) {
 			NvidiaGpuDevicePlugin: &godo.KubernetesNvidiaGpuDevicePlugin{
 				Enabled: boolPtr(true),
 			},
+			NvidiaGpuDraDriver: &godo.KubernetesNvidiaGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
+			AmdGpuDraDriver: &godo.KubernetesAmdGpuDraDriver{
+				Enabled: boolPtr(true),
+			},
 			RdmaSharedDevicePlugin: &godo.KubernetesRdmaSharedDevicePlugin{
 				Enabled: boolPtr(true),
 			},
@@ -1021,6 +1049,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDraDriver, testCluster.NvidiaGpuDraDriver.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDraDriver, testCluster.AmdGpuDraDriver.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
