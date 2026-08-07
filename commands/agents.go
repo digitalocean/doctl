@@ -241,6 +241,8 @@ Commands that act on a single session accept either the session ID or its name. 
 
 The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. `+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
 
+For `+"`"+`adapter: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using `+"`"+`spec.runtime.config`+"`"+` (or legacy `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
+
 Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
@@ -267,6 +269,8 @@ Run only one of the proxy and `+"`"+`doctl agents attach`+"`"+` per session from
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
 		"Attach to an agent session",
 		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. If the SSE connection drops, doctl shows Reconnecting... and retries automatically (5 attempts with backoff). If reconnection fails, it prints an error and stops the stream.
+
+For OpenAI sandbox-provider sessions (`+"`"+`AGENT_KIND_OPENAI_CODEX`+"`"+`), attach bridges to the OpenAI Agents session (using `+"`"+`$OPENAI_API_KEY`+"`"+`) instead of DigitalOcean's event stream.
 
 When a HITL approval is pending, the prompt switches to a compact approve/reject/defer menu showing the command awaiting approval. In an interactive terminal you can move the highlight with the arrow keys and press Enter, or resolve directly with a single keystroke -- no Enter required: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
 		Writer, aliasOpt("chat"))
@@ -347,7 +351,9 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 // --- runners ----------------------------------------------------------------
 
 // RunAgentsStart creates a new hosted agent session by uploading an agent
-// manifest verbatim.
+// manifest verbatim. For adapter codex-agentapi it first creates an OpenAI
+// Agents session, resolves ${ENV_ID} from the returned environment id, and
+// passes openai_session_id to harness-api as a query parameter.
 func RunAgentsStart(c *CmdConfig) error {
 	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
@@ -358,18 +364,40 @@ func RunAgentsStart(c *CmdConfig) error {
 		return err
 	}
 
-	manifest, err := readManifest(os.Stdin, specPath)
+	raw, err := readManifestBytes(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
 	// --name is a convenience that sets the manifest's metadata.name. When it's
 	// omitted the manifest is sent verbatim and the server auto-generates a name.
-	manifest, err = injectManifestName(manifest, name)
+	raw, err = injectManifestName(raw, name)
 	if err != nil {
 		return err
 	}
 
-	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest)
+	openaiSessionID, envOverlay, err := prepareOpenAISandboxStart(context.Background(), raw)
+	if err != nil {
+		return err
+	}
+	if openaiSessionID != "" {
+		// Legacy spec.openai is client-side only. Prefer spec.runtime.config
+		// (kept for DO). Strip openai if present so agentspec validation passes.
+		raw, err = stripSpecOpenAI(raw)
+		if err != nil {
+			return err
+		}
+	}
+	manifest, err := expandManifestEnvLookup(raw, envLookupWithOverlay(envOverlay))
+	if err != nil {
+		return err
+	}
+
+	var createOpt *godo.HostedAgentManifestCreateOptions
+	if openaiSessionID != "" {
+		createOpt = &godo.HostedAgentManifestCreateOptions{OpenAISessionID: openaiSessionID}
+	}
+
+	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
@@ -442,6 +470,16 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 // "non-empty after trim" so a stray `--spec /dev/null` fails fast instead of
 // hitting the server.
 func readManifest(stdin io.Reader, path string) ([]byte, error) {
+	raw, err := readManifestBytes(stdin, path)
+	if err != nil {
+		return nil, err
+	}
+	return expandManifestEnv(raw)
+}
+
+// readManifestBytes loads the spec file without env expansion. Used by start
+// so OpenAI orchestration can mint ENV_ID before ${...} resolution.
+func readManifestBytes(stdin io.Reader, path string) ([]byte, error) {
 	var src io.Reader
 	if path == "-" && stdin != nil {
 		src = stdin
@@ -464,7 +502,7 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 	if len(bytes.TrimSpace(raw)) == 0 {
 		return nil, fmt.Errorf("manifest is empty")
 	}
-	return expandManifestEnv(raw)
+	return raw, nil
 }
 
 // manifestEnvRef matches ${VAR} env references and their $${VAR} escape form.
@@ -478,6 +516,21 @@ var manifestEnvRef = regexp.MustCompile(`\$?\$\{[A-Za-z_][A-Za-z0-9_]*\}`)
 // is an error rather than a silent empty substitution, so a missing key fails
 // here instead of inside the sandbox.
 func expandManifestEnv(manifest []byte) ([]byte, error) {
+	return expandManifestEnvLookup(manifest, os.LookupEnv)
+}
+
+func envLookupWithOverlay(overlay map[string]string) func(string) (string, bool) {
+	return func(name string) (string, bool) {
+		if overlay != nil {
+			if v, ok := overlay[name]; ok {
+				return v, true
+			}
+		}
+		return os.LookupEnv(name)
+	}
+}
+
+func expandManifestEnvLookup(manifest []byte, lookup func(string) (string, bool)) ([]byte, error) {
 	var missing []string
 	seen := map[string]bool{}
 	out := manifestEnvRef.ReplaceAllFunc(manifest, func(m []byte) []byte {
@@ -485,7 +538,7 @@ func expandManifestEnv(manifest []byte) ([]byte, error) {
 			return m[1:] // $${VAR} -> literal ${VAR}
 		}
 		name := string(m[2 : len(m)-1])
-		val, ok := os.LookupEnv(name)
+		val, ok := lookup(name)
 		if !ok {
 			if !seen[name] {
 				seen[name] = true
@@ -1178,6 +1231,8 @@ func RunAgentsLogs(c *CmdConfig) error {
 
 // RunAgentsAttach opens the interactive TUI: one goroutine drains the SSE
 // stream (with auto-reconnect), the main goroutine reads stdin.
+// For AGENT_KIND_OPENAI_CODEX sessions it bridges to the OpenAI Agents session
+// instead of DO's event stream.
 func RunAgentsAttach(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
@@ -1201,6 +1256,10 @@ func RunAgentsAttach(c *CmdConfig) error {
 		return fmt.Errorf("session %s cannot be attached (status: %s)", sessionID, humanSessionStatus(sess.Status))
 	}
 
+	if isOpenAISandboxSession(sess) {
+		return runOpenAIAgentsAttach(c, sess)
+	}
+
 	pending := &pendingHITL{}
 	cursor := &eventCursor{}
 	state := newAttachState(c.Out, pending)
@@ -1222,6 +1281,443 @@ func RunAgentsAttach(c *CmdConfig) error {
 	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking)
 
 	return runAttach(c, svc, sessionID, os.Stdin, state)
+}
+
+func isOpenAISandboxSession(sess *do.HostedAgentSession) bool {
+	if sess == nil || sess.HostedAgentSession == nil {
+		return false
+	}
+	return sess.AgentKind == godo.HostedAgentKindOpenAICodex || strings.TrimSpace(sess.OpenAISessionID) != ""
+}
+
+func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
+	apiKey := strings.TrimSpace(os.Getenv(openAIAPIKeyEnv))
+	if apiKey == "" {
+		return fmt.Errorf("%s is required to attach to an OpenAI Agents sandbox session", openAIAPIKeyEnv)
+	}
+	openaiSessionID := strings.TrimSpace(sess.OpenAISessionID)
+	if openaiSessionID == "" {
+		return fmt.Errorf("session %s is missing openai_session_id; cannot bridge to OpenAI", sess.SessionID)
+	}
+
+	pending := &pendingHITL{}
+	state := newAttachState(c.Out, pending)
+	originalOut := c.Out
+	c.Out = state.display
+	defer func() { c.Out = originalOut }()
+
+	printAttachBanner(c.Out, sess.SessionID, sess.AgentKind)
+	fmt.Fprintf(c.Out, "  %s\n\n", colorize(fmt.Sprintf("bridged to OpenAI · %s", openaiSessionID), colMuted))
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	thinking := newThinkingState(c.Out)
+	defer thinking.stop()
+
+	client := newOpenAIAgentsAttachClient()
+	renderer := &openAIAttachRenderer{out: c.Out, thinking: thinking}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- client.Stream(ctx, apiKey, openaiSessionID, renderer.handle)
+	}()
+
+	var inputErr error
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		inputErr = openaiAttachLoopTTY(c, ctx, client, apiKey, openaiSessionID, os.Stdin, state, thinking)
+	} else {
+		inputErr = openaiAttachLoop(c, ctx, client, apiKey, openaiSessionID, os.Stdin, state, thinking)
+	}
+	cancel()
+
+	streamErr := <-errCh
+	if inputErr != nil {
+		return inputErr
+	}
+	if streamErr != nil && !errors.Is(streamErr, context.Canceled) && ctx.Err() == nil {
+		return streamErr
+	}
+	return nil
+}
+
+// openAIAttachRenderer maps OpenAI Agents SSE events onto the same attach UX
+// primitives used by the DO stream (spinner, tool lines, markdown replies).
+type openAIAttachRenderer struct {
+	out      io.Writer
+	thinking *thinkingState
+	acc      msgAccumulator
+	// sawOutputDelta tracks whether we already buffered streamed assistant text
+	// so output_text.done does not duplicate it.
+	sawOutputDelta bool
+	// activeToolCmd is the in-flight command_execution command line.
+	activeToolCmd string
+}
+
+func (r *openAIAttachRenderer) handle(evt map[string]any) {
+	t, _ := evt["type"].(string)
+	switch t {
+	case "session.in_progress", "session.turn.in_progress", "session.turn.created":
+		if r.thinking != nil {
+			r.thinking.start()
+		}
+	case "session.environment.connected":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		fmt.Fprintf(r.out, "\n%s\n", colorize("● environment connected", colSuccess))
+	case "session.environment.failed":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		msg := "environment failed — sandbox executor did not connect to OpenAI (check guest codex exec-server / egress)"
+		if errObj, ok := evt["error"].(map[string]any); ok {
+			if m, ok := errObj["message"].(string); ok && m != "" {
+				msg = m
+			}
+		}
+		if env, ok := evt["environment"].(map[string]any); ok {
+			if m, ok := env["error"].(string); ok && m != "" {
+				msg = m
+			}
+		}
+		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
+		fmt.Fprintln(r.out, colorize("Tip: destroy and start a fresh session; wait for ● environment connected before sending work.", colMuted))
+	case "session.turn.output_text.delta":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		if d, ok := evt["delta"].(string); ok && d != "" {
+			r.acc.add(d)
+			r.sawOutputDelta = true
+		}
+	case "session.turn.output_text.done":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		if !r.sawOutputDelta {
+			if text, ok := evt["text"].(string); ok && text != "" {
+				r.acc.add(text)
+			}
+		}
+	case "session.turn.item.added":
+		r.handleItemAdded(evt)
+	case "session.turn.item.done":
+		r.handleItemDone(evt)
+	case "session.turn.completed":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		r.acc.flush(r.out)
+		r.sawOutputDelta = false
+		r.activeToolCmd = ""
+		summary := "run complete"
+		if usage, ok := evt["usage"].(map[string]any); ok {
+			inTok, _ := usage["input_tokens"].(float64)
+			outTok, _ := usage["output_tokens"].(float64)
+			if inTok > 0 || outTok > 0 {
+				summary = fmt.Sprintf("run complete · %d in / %d out tokens", int(inTok), int(outTok))
+			}
+		}
+		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✓", colSuccess), colorize(summary, colMuted))
+		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
+	case "session.turn.failed":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		r.acc.flush(r.out)
+		r.sawOutputDelta = false
+		r.activeToolCmd = ""
+		msg := "run failed"
+		if errObj, ok := evt["error"].(map[string]any); ok {
+			if m, ok := errObj["message"].(string); ok && m != "" {
+				msg = m
+			}
+		}
+		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
+		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
+	case "session.idle":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		r.acc.flush(r.out)
+		r.sawOutputDelta = false
+		r.activeToolCmd = ""
+	case "session.failed":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		r.acc.flush(r.out)
+		r.activeToolCmd = ""
+		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize("session failed", colError))
+	default:
+		// Suppress noisy protocol events (reasoning dumps, item echoes, etc.).
+	}
+}
+
+func (r *openAIAttachRenderer) handleItemAdded(evt map[string]any) {
+	item, _ := evt["item"].(map[string]any)
+	if item == nil {
+		return
+	}
+	switch item["type"] {
+	case "command_execution":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		r.acc.flush(r.out)
+		r.sawOutputDelta = false
+		cmd, _ := item["command"].(string)
+		r.activeToolCmd = cmd
+		renderToolStart(r.out, cmd)
+		if r.thinking != nil {
+			r.thinking.start()
+		}
+	}
+}
+
+func (r *openAIAttachRenderer) handleItemDone(evt map[string]any) {
+	item, _ := evt["item"].(map[string]any)
+	if item == nil {
+		return
+	}
+	switch item["type"] {
+	case "command_execution":
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		status, _ := item["status"].(string)
+		mark := colorize("✓", colSuccess)
+		summary := "done"
+		if status != "" && status != "completed" {
+			mark = colorize("✗", colError)
+			summary = status
+		}
+		if out, ok := item["output"].(string); ok {
+			out = strings.TrimSpace(out)
+			if out != "" {
+				// Keep the tool completion line short; full output stays in the sandbox.
+				if lines := strings.Split(out, "\n"); len(lines) > 0 && lines[0] != "" {
+					summary = truncateRunes(lines[0], 80)
+				}
+			}
+		}
+		fmt.Fprintf(r.out, "  %s %s\n", mark, colorize(summary, colMuted))
+		r.activeToolCmd = ""
+		if r.thinking != nil {
+			r.thinking.start()
+		}
+	case "message":
+		// Final assistant message content is preferred via output_text deltas.
+		if role, _ := item["role"].(string); role == "assistant" && !r.sawOutputDelta {
+			if content, ok := item["content"].([]any); ok {
+				for _, c := range content {
+					part, _ := c.(map[string]any)
+					if part == nil {
+						continue
+					}
+					if typ, _ := part["type"].(string); typ == "output_text" {
+						if text, ok := part["text"].(string); ok && text != "" {
+							r.acc.add(text)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func truncateRunes(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max-1]) + "…"
+}
+
+func openaiAttachLoop(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, in io.Reader, state *attachState, thinking *thinkingState) error {
+	reader := bufio.NewReader(in)
+	for {
+		fmt.Fprint(c.Out, "\n", attachPrompt(state.pending))
+		line, err := reader.ReadString('\n')
+		if errors.Is(err, io.EOF) {
+			fmt.Fprintln(c.Out)
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "/") {
+			fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
+			continue
+		}
+		if thinking != nil {
+			thinking.start()
+		}
+		if err := client.SendInput(ctx, apiKey, openaiSessionID, line); err != nil {
+			if thinking != nil {
+				thinking.stop()
+			}
+			fmt.Fprintf(c.Out, "send failed: %v\n", err)
+			continue
+		}
+	}
+}
+
+func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, f *os.File, state *attachState, thinking *thinkingState) error {
+	fd := int(f.Fd())
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return openaiAttachLoop(c, ctx, client, apiKey, openaiSessionID, f, state, thinking)
+	}
+	defer term.Restore(fd, oldState)
+
+	state.display.setRaw(true)
+	defer state.display.setRaw(false)
+	state.display.redraw()
+
+	bytesCh := make(chan byte, 64)
+	readErrCh := make(chan error, 1)
+	go func() {
+		var buf [1]byte
+		for {
+			n, err := f.Read(buf[:])
+			if err != nil {
+				readErrCh <- err
+				return
+			}
+			if n == 1 {
+				bytesCh <- buf[0]
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case b := <-bytesCh:
+			stop, err := handleOpenAIAttachByte(c, ctx, client, apiKey, openaiSessionID, b, state, thinking)
+			if err != nil {
+				return err
+			}
+			if stop {
+				return nil
+			}
+		case err := <-readErrCh:
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState) (stop bool, err error) {
+	if state.esc == 2 {
+		state.esc = 0
+		switch b {
+		case 'D':
+			if state.moveLineCursor(-1) {
+				state.display.redraw()
+			}
+		case 'C':
+			if state.moveLineCursor(1) {
+				state.display.redraw()
+			}
+		}
+		return false, nil
+	}
+	if state.esc == 1 {
+		state.esc = 0
+		if b == '[' || b == 'O' {
+			state.esc = 2
+			return false, nil
+		}
+	}
+	if b == 0x1b {
+		state.esc = 1
+		return false, nil
+	}
+
+	switch b {
+	case 0x0d, 0x0a:
+		state.mu.Lock()
+		line := strings.TrimSpace(string(state.lineBuf))
+		state.lineBuf = state.lineBuf[:0]
+		state.cursor = 0
+		state.mu.Unlock()
+		state.display.echo([]byte("\r\n"))
+		if line != "" {
+			if strings.HasPrefix(line, "/") {
+				fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
+			} else {
+				// Single spinner on send (idempotent if stream also starts it).
+				if thinking != nil {
+					thinking.start()
+				}
+				if err := client.SendInput(ctx, apiKey, openaiSessionID, line); err != nil {
+					if thinking != nil {
+						thinking.stop()
+					}
+					fmt.Fprintf(c.Out, "send failed: %v\n", err)
+				}
+			}
+		}
+		state.display.redraw()
+		return false, nil
+	case 0x7f, 0x08:
+		state.mu.Lock()
+		atEnd := state.cursor == len(state.lineBuf)
+		if state.cursor > 0 {
+			i := state.cursor - 1
+			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
+			state.cursor = i
+			state.mu.Unlock()
+			if atEnd {
+				state.display.echo([]byte("\b \b"))
+			} else {
+				state.display.redraw()
+			}
+		} else {
+			state.mu.Unlock()
+		}
+		return false, nil
+	case 0x03:
+		state.display.echo([]byte("\r\n"))
+		return true, nil
+	case 0x04:
+		state.mu.Lock()
+		empty := len(state.lineBuf) == 0
+		state.mu.Unlock()
+		if empty {
+			state.display.echo([]byte("\r\n"))
+			return true, nil
+		}
+		return false, nil
+	default:
+		if b >= 0x20 && b < 0x7f {
+			state.mu.Lock()
+			atEnd := state.cursor == len(state.lineBuf)
+			if atEnd {
+				state.lineBuf = append(state.lineBuf, b)
+			} else {
+				state.lineBuf = append(state.lineBuf[:state.cursor], append([]byte{b}, state.lineBuf[state.cursor:]...)...)
+			}
+			state.cursor++
+			state.mu.Unlock()
+			if atEnd {
+				state.display.echo([]byte{b})
+			} else {
+				state.display.redraw()
+			}
+		}
+		return false, nil
+	}
 }
 
 // runAttach dispatches to the raw-mode TTY loop or the legacy bufio line-mode

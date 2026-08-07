@@ -178,7 +178,7 @@ func TestRunAgentsStart(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest([]byte(sampleManifest)).
+			CreateSessionFromManifest([]byte(sampleManifest), nil).
 			Return(&do.HostedAgentSession{
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_test",
@@ -200,8 +200,8 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		// The manifest sent to the server must carry metadata.name = the flag.
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any()).
-			DoAndReturn(func(manifest []byte) (*do.HostedAgentSession, error) {
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				meta, ok := doc["metadata"].(map[any]any)

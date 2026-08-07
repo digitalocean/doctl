@@ -51,12 +51,16 @@ const (
 // (HarnessAPI from harness.proto). Routes live under /v2/agents/sessions.
 type HostedAgentsService interface {
 	// CreateSession provisions a session using the legacy JSON body (agent_kind,
-	// repo_hint, idle_timeout_seconds). Prefer CreateSessionFromManifest for the
-	// agents.digitalocean.com/v1alpha1 Agent manifest.
+	// repo_hint, idle_timeout_seconds). Prefer CreateSessionFromManifest for
+	// agents.digitalocean.com/v1alpha1 Agent manifests.
 	CreateSession(context.Context, *HostedAgentSessionCreateRequest) (*HostedAgentSession, *Response, error)
-	// CreateSessionFromManifest uploads a customer Agent manifest YAML document.
-	// The request uses Content-Type: application/x-yaml.
-	CreateSessionFromManifest(context.Context, []byte) (*HostedAgentSession, *Response, error)
+	// CreateSessionFromManifest uploads a customer Agent manifest YAML document
+	// (Content-Type: application/x-yaml). For OpenAI sandbox-provider sessions
+	// (adapter codex-agentapi), pass OpenAISessionID in opt so harness-api can
+	// persist openai_session_id for attach correlation (?openai_session_id=).
+	// doctl resolves ${...} placeholders client-side before calling this API;
+	// there is no server-side variables map.
+	CreateSessionFromManifest(context.Context, []byte, *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error)
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
@@ -94,6 +98,9 @@ const (
 	HostedAgentKindOpenCode    HostedAgentKind = "AGENT_KIND_OPENCODE"
 	HostedAgentKindCodexCLI    HostedAgentKind = "AGENT_KIND_CODEX_CLI"
 	HostedAgentKindCursorCLI   HostedAgentKind = "AGENT_KIND_CURSOR_CLI"
+	// HostedAgentKindOpenAICodex is the OpenAI Agents API sandbox-provider kind
+	// (adapter codex-agentapi). Attach bridges to OpenAI, not DO's SSE stream.
+	HostedAgentKindOpenAICodex HostedAgentKind = "AGENT_KIND_OPENAI_CODEX"
 	HostedAgentKindNone        HostedAgentKind = "AGENT_KIND_NONE"
 	HostedAgentKindCustom      HostedAgentKind = "AGENT_KIND_CUSTOM"
 )
@@ -252,6 +259,13 @@ type HostedAgentSession struct {
 	// Origin is present for newly created sessions (including direct). Older
 	// sessions may omit it.
 	Origin *HostedAgentSessionOrigin `json:"origin,omitempty"`
+	// OpenAISessionID is the OpenAI Agents session id (sess_…) linked to this DO
+	// sandbox for AGENT_KIND_OPENAI_CODEX. Used by attach to bridge to OpenAI;
+	// omitempty for other agent kinds.
+	OpenAISessionID string `json:"openai_session_id,omitempty"`
+	// OpenAIEnvironmentID is captured from the resolved CODEX_ENVIRONMENT_ID
+	// guest env value at create. Non-secret correlation metadata.
+	OpenAIEnvironmentID string `json:"openai_environment_id,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -346,6 +360,14 @@ type HostedAgentSessionCreateRequest struct {
 	// Origin claims product-workflow provenance. Omit for a verified direct
 	// session. Simulation/evaluation require resource_id.
 	Origin *HostedAgentSessionOriginRequest `json:"origin,omitempty"`
+}
+
+// HostedAgentManifestCreateOptions configures CreateSessionFromManifest.
+// OpenAISessionID is sent as the openai_session_id query parameter (not in the
+// YAML body). harness-api persists it for AGENT_KIND_OPENAI_CODEX attach
+// correlation. See docs/design/openai-sandbox-provider.md.
+type HostedAgentManifestCreateOptions struct {
+	OpenAISessionID string `url:"openai_session_id,omitempty"`
 }
 
 // HostedAgentSessionListOptions specifies optional list filters.
@@ -545,11 +567,15 @@ func (s *HostedAgentsServiceOp) CreateSession(ctx context.Context, create *Hoste
 	return root.Session, resp, nil
 }
 
-func (s *HostedAgentsServiceOp) CreateSessionFromManifest(ctx context.Context, manifest []byte) (*HostedAgentSession, *Response, error) {
+func (s *HostedAgentsServiceOp) CreateSessionFromManifest(ctx context.Context, manifest []byte, opt *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error) {
 	if len(bytes.TrimSpace(manifest)) == 0 {
 		return nil, nil, errors.New("hosted agents: manifest is required")
 	}
-	req, err := s.newCreateSessionPostRequest(ctx, bytes.NewReader(manifest), hostedAgentManifestMediaType)
+	path, err := addOptions(hostedAgentsSessionsBasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.newCreateSessionPostRequest(ctx, path, bytes.NewReader(manifest), hostedAgentManifestMediaType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -568,8 +594,8 @@ func (s *HostedAgentsServiceOp) doCreateSession(ctx context.Context, req *http.R
 	return root.Session, resp, nil
 }
 
-func (s *HostedAgentsServiceOp) newCreateSessionPostRequest(ctx context.Context, body io.Reader, contentType string) (*http.Request, error) {
-	u, err := s.client.BaseURL.Parse(hostedAgentsSessionsBasePath)
+func (s *HostedAgentsServiceOp) newCreateSessionPostRequest(ctx context.Context, path string, body io.Reader, contentType string) (*http.Request, error) {
+	u, err := s.client.BaseURL.Parse(path)
 	if err != nil {
 		return nil, err
 	}

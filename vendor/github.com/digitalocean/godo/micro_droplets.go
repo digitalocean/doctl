@@ -40,7 +40,6 @@ type MicroDropletHTTPProtocol string
 // Possible HTTP protocol values for a MicroDroplet.
 const (
 	MicroDropletHTTPProtocolHTTP  = MicroDropletHTTPProtocol("http")
-	MicroDropletHTTPProtocolHTTPS = MicroDropletHTTPProtocol("https")
 	MicroDropletHTTPProtocolHTTP2 = MicroDropletHTTPProtocol("http2")
 )
 
