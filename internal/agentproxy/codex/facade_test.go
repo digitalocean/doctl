@@ -349,8 +349,8 @@ func TestFacade_TurnStart_StreamsToCompletion(t *testing.T) {
 
 	h.QueueRun("run-1",
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
-		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"Hel"}`)},
-		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"lo"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"He"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"llo"}`)},
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
 	)
 
@@ -374,11 +374,11 @@ func TestFacade_TurnStart_StreamsToCompletion(t *testing.T) {
 
 	delta1 := rec.next(t)
 	require.Equal(t, "item/agentMessage/delta", delta1.method)
-	assert.Equal(t, "Hel", delta1.params.(agentMessageDeltaNotification).Delta)
+	assert.Equal(t, "He", delta1.params.(agentMessageDeltaNotification).Delta)
 
 	delta2 := rec.next(t)
 	require.Equal(t, "item/agentMessage/delta", delta2.method)
-	assert.Equal(t, "lo", delta2.params.(agentMessageDeltaNotification).Delta)
+	assert.Equal(t, "llo", delta2.params.(agentMessageDeltaNotification).Delta)
 
 	itemCompleted := rec.next(t)
 	require.Equal(t, "item/completed", itemCompleted.method)

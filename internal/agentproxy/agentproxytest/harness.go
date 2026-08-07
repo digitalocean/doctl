@@ -18,8 +18,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/digitalocean/godo"
 )
 
 // Event is one canned SSE event the harness streams back from
