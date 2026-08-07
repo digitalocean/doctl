@@ -175,6 +175,10 @@ const (
 	ArgEnableAmdGpuDeviceMetricsExporterPlugin = "enable-amd-gpu-device-metrics-exporter-plugin"
 	// ArgEnableNvidiaGpuDevicePlugin enables automatic NVIDIA gpu device plugin installation.
 	ArgEnableNvidiaGpuDevicePlugin = "enable-nvidia-gpu-device-plugin"
+	// ArgEnableNvidiaGpuDraDriver enables the NVIDIA GPU DRA Driver cluster plugin.
+	ArgEnableNvidiaGpuDraDriver = "enable-nvidia-gpu-dra-driver"
+	// ArgEnableAmdGpuDraDriver enables the AMD GPU DRA Driver cluster plugin.
+	ArgEnableAmdGpuDraDriver = "enable-amd-gpu-dra-driver"
 	// ArgEnableRDMASharedDevicePlugin enables automatic NVIDIA gpu device plugin installation.
 	ArgEnableRDMASharedDevicePlugin = "enable-rdma-shared-device-plugin"
 	// ArgKubernetesEnableSSO enables SSO as a method of authentication for the DOKS cluster.
