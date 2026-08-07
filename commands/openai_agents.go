@@ -38,9 +38,9 @@ const (
 	openAIAPIKeyEnv          = "OPENAI_API_KEY"
 	// Prefer AGENT_API_BASE_URL (SDK). OPENAI_BASE_URL is accepted but normalized
 	// so values like https://api.openai.com/v1 do not produce /v1/v1/... 404s.
-	openAIAPIBaseURLEnv  = "OPENAI_BASE_URL"
-	agentAPIBaseURLEnv   = "AGENT_API_BASE_URL"
-	envIDPlaceholder     = "ENV_ID"
+	openAIAPIBaseURLEnv = "OPENAI_BASE_URL"
+	agentAPIBaseURLEnv  = "AGENT_API_BASE_URL"
+	envIDPlaceholder    = "ENV_ID"
 )
 
 // openAIAgentsClient talks to OpenAI's Agents API for the sandbox-provider POC.
