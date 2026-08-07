@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.202.0"
+	libraryVersion = "1.203.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -104,6 +104,8 @@ type Client struct {
 	VPCs                VPCsService
 	PartnerAttachment   PartnerAttachmentService
 	GradientAI          GradientAIService
+	HostedAgents        HostedAgentsService
+	HostedAgentTriggers HostedAgentTriggersService
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
 	BYOIPPrefixes       BYOIPPrefixesService
@@ -221,6 +223,16 @@ type ErrorResponse struct {
 
 	// Attempts is the number of times the request was attempted when retries are enabled.
 	Attempts int
+
+	// NestedError captures the alternate {"error":{"code":...,"message":...}}
+	// envelope returned by some DigitalOcean services (e.g. the hosted-agents
+	// harness-api) instead of the top-level {"message":...} shape. When the
+	// top-level Message is empty, Error() falls back to this message so callers
+	// see the server's reason rather than a bare status code.
+	NestedError *struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
 }
 
 // Rate contains the rate limit for the current client.
@@ -350,6 +362,8 @@ func NewClient(httpClient *http.Client) *Client {
 	c.VPCs = &VPCsServiceOp{client: c}
 	c.PartnerAttachment = &PartnerAttachmentServiceOp{client: c}
 	c.GradientAI = &GradientAIServiceOp{client: c}
+	c.HostedAgents = &HostedAgentsServiceOp{client: c}
+	c.HostedAgentTriggers = &HostedAgentTriggersServiceOp{client: c}
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
@@ -684,12 +698,17 @@ func (r *ErrorResponse) Error() string {
 		attempted = fmt.Sprintf("; giving up after %d attempt(s)", r.Attempts)
 	}
 
+	message := r.Message
+	if message == "" && r.NestedError != nil {
+		message = r.NestedError.Message
+	}
+
 	if r.RequestID != "" {
 		return fmt.Sprintf("%v %v: %d (request %q) %v%s",
-			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message, attempted)
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, message, attempted)
 	}
 	return fmt.Sprintf("%v %v: %d %v%s",
-		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message, attempted)
+		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, message, attempted)
 }
 
 // CheckResponse checks the API response for errors, and returns them if present. A response is considered an

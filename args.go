@@ -954,4 +954,72 @@ const (
 	ArgInferenceText = "text"
 	// ArgInferenceSecondsTotal is the audio duration in seconds for async audio generation.
 	ArgInferenceSecondsTotal = "seconds-total"
+
+	// Hosted Agents Args
+
+	// ArgAgentSpec is the path to an agent spec file.
+	ArgAgentSpec = "spec"
+
+	// ArgAgentPageSize is the maximum number of sessions to return per page.
+	ArgAgentPageSize = "page-size"
+
+	// ArgAgentPageToken is the pagination cursor from a previous list response.
+	ArgAgentPageToken = "page-token"
+
+	// ArgAgentStatus filters sessions by lifecycle status.
+	ArgAgentStatus = "status"
+
+	// ArgAgentWorkspacePath is the path inside the session workspace root (/workspace).
+	ArgAgentWorkspacePath = "workspace-path"
+
+	// ArgAgentLocalFile is the local file streamed up during a workspace upload.
+	ArgAgentLocalFile = "local-file"
+
+	// ArgAgentSaveTo is the local destination for a workspace download.
+	ArgAgentSaveTo = "save-to"
+
+	// ArgAgentArchive treats the workspace payload as a tar archive.
+	ArgAgentArchive = "archive"
+
+	// ArgAgentProxyType selects which coding-agent protocol `start-proxy` impersonates.
+	ArgAgentProxyType = "type"
+
+	// ArgAgentProxySession is the session ID or name the proxy bridges to.
+	ArgAgentProxySession = "session"
+
+	// ArgAgentProxyPort is the local port `start-proxy` listens on.
+	ArgAgentProxyPort = "port"
+
+	// ArgAgentProxyReplay replays the session's event history into the first thread on connect.
+	ArgAgentProxyReplay = "replay"
+
+	// ArgAgentTriggerKind filters or sets trigger kind (webhook|cron).
+	ArgAgentTriggerKind = "kind"
+
+	// ArgAgentTriggerSessionMode is fresh|reuse for create.
+	ArgAgentTriggerSessionMode = "session-mode"
+
+	// ArgAgentTriggerPrompt is the prompt template sent on each firing.
+	ArgAgentTriggerPrompt = "prompt"
+
+	// ArgAgentTriggerOutputMode is none|email|slack.
+	ArgAgentTriggerOutputMode = "output-mode"
+
+	// ArgAgentTriggerOutputEmail is the destination when output-mode=email.
+	ArgAgentTriggerOutputEmail = "output-email"
+
+	// ArgAgentTriggerOutputSlackWebhook is the Slack incoming webhook URL when output-mode=slack.
+	ArgAgentTriggerOutputSlackWebhook = "output-slack-webhook"
+
+	// ArgAgentTriggerBoundSessionID is the PAUSED session UUID for session-mode=reuse.
+	ArgAgentTriggerBoundSessionID = "bound-session-id"
+
+	// ArgAgentTriggerProvider is the webhook provider (github|gitlab|custom).
+	ArgAgentTriggerProvider = "provider"
+
+	// ArgAgentTriggerCronExpr is the cron expression for kind=cron.
+	ArgAgentTriggerCronExpr = "cron-expr"
+
+	// ArgAgentTriggerTimezone is the IANA timezone for kind=cron.
+	ArgAgentTriggerTimezone = "timezone"
 )

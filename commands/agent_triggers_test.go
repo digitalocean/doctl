@@ -1,0 +1,267 @@
+/*
+Copyright 2026 The Doctl Authors All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package commands
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+)
+
+func TestAgentTriggersCommand(t *testing.T) {
+	cmd := AgentTriggers()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd,
+		"list", "create", "get", "update", "delete", "pause", "resume",
+		"rotate-secret", "list-executions", "get-execution", "get-by-session",
+		"list-reusable-sessions", "list-providers",
+	)
+}
+
+func TestAgentTriggersList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			List(&godo.HostedAgentTriggerListOptions{
+				Kind:   godo.HostedAgentTriggerKindWebhook,
+				Status: godo.HostedAgentTriggerStatusActive,
+			}).
+			Return([]do.HostedAgentTrigger{{
+				HostedAgentTrigger: &godo.HostedAgentTrigger{
+					TriggerID: "tr_1",
+					Name:      "gh-ci",
+					Kind:      godo.HostedAgentTriggerKindWebhook,
+					Status:    godo.HostedAgentTriggerStatusActive,
+				},
+			}}, "", nil)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "webhook")
+		config.Doit.Set(config.NS, doctl.ArgAgentStatus, "active")
+		require.NoError(t, RunAgentTriggersList(config))
+	})
+}
+
+func TestAgentTriggersCreateWebhook(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\n"), 0o600))
+
+		tm.hostedAgentTriggers.EXPECT().
+			Create(gomock.Any()).
+			DoAndReturn(func(req *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
+				assert.Equal(t, godo.HostedAgentTriggerKindWebhook, req.Kind)
+				assert.Equal(t, "gh-ci", req.Name)
+				assert.Equal(t, godo.HostedAgentTriggerSessionModeFresh, req.SessionMode)
+				assert.Equal(t, "run it", req.PromptTemplate)
+				assert.Equal(t, godo.HostedAgentTriggerOutputModeNone, req.Output.Mode)
+				assert.Contains(t, req.SessionTemplate, "kind: Agent")
+				require.NotNil(t, req.Webhook)
+				assert.Equal(t, godo.HostedAgentWebhookProviderGitHub, req.Webhook.Provider)
+				return &do.HostedAgentTriggerCreateResult{
+					WebhookSecret: "sec_once",
+					Trigger: &do.HostedAgentTrigger{
+						HostedAgentTrigger: &godo.HostedAgentTrigger{
+							TriggerID: "tr_new",
+							Name:      "gh-ci",
+							Kind:      godo.HostedAgentTriggerKindWebhook,
+							Webhook: &godo.HostedAgentWebhookConfig{
+								Provider:   godo.HostedAgentWebhookProviderGitHub,
+								WebhookURL: "https://api.digitalocean.com/v2/agents/triggers/tr_new/webhook",
+							},
+						},
+					},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "webhook")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "gh-ci")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "run it")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerProvider, "github")
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, RunAgentTriggersCreate(config))
+		assert.Contains(t, buf.String(), "sec_once")
+		assert.Contains(t, buf.String(), "Webhook URL:")
+	})
+}
+
+func TestAgentTriggersCreateCronSlack(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Create(&godo.HostedAgentTriggerCreateRequest{
+				Kind:           godo.HostedAgentTriggerKindCron,
+				Name:           "daily",
+				SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
+				PromptTemplate: "summarize",
+				Output: godo.HostedAgentTriggerOutputWrite{
+					Mode: godo.HostedAgentTriggerOutputModeSlack,
+					Slack: &godo.HostedAgentTriggerSlackOutputWrite{
+						WebhookURL: "https://hooks.slack.com/services/T/B/xxx",
+					},
+				},
+				BoundSessionID: "sess_paused",
+				Cron: &godo.HostedAgentCreateCronConfig{
+					CronExpr: "0 9 * * *",
+					Timezone: "UTC",
+				},
+			}).
+			Return(&do.HostedAgentTriggerCreateResult{
+				Trigger: &do.HostedAgentTrigger{
+					HostedAgentTrigger: &godo.HostedAgentTrigger{
+						TriggerID: "tr_cron",
+						Name:      "daily",
+						Kind:      godo.HostedAgentTriggerKindCron,
+					},
+				},
+			}, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "daily")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "reuse")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "summarize")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "slack")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputSlackWebhook, "https://hooks.slack.com/services/T/B/xxx")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerBoundSessionID, "sess_paused")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerTimezone, "UTC")
+		require.NoError(t, RunAgentTriggersCreate(config))
+	})
+}
+
+func TestAgentTriggersGetUpdatePauseDelete(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		trig := &do.HostedAgentTrigger{
+			HostedAgentTrigger: &godo.HostedAgentTrigger{
+				TriggerID: "tr_1",
+				Name:      "gh-ci",
+				Status:    godo.HostedAgentTriggerStatusActive,
+			},
+		}
+
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(trig, nil)
+		config.Args = []string{"tr_1"}
+		require.NoError(t, RunAgentTriggersGet(config))
+
+		tm.hostedAgentTriggers.EXPECT().
+			Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{
+				Status: godo.HostedAgentTriggerStatusPaused,
+			}).
+			Return(&do.HostedAgentTrigger{
+				HostedAgentTrigger: &godo.HostedAgentTrigger{
+					TriggerID: "tr_1",
+					Status:    godo.HostedAgentTriggerStatusPaused,
+				},
+			}, nil)
+		config.Doit.Set(config.NS, doctl.ArgAgentStatus, "paused")
+		require.NoError(t, RunAgentTriggersUpdate(config))
+
+		tm.hostedAgentTriggers.EXPECT().
+			Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{
+				Status: godo.HostedAgentTriggerStatusActive,
+			}).
+			Return(trig, nil)
+		require.NoError(t, RunAgentTriggersResume(config))
+
+		tm.hostedAgentTriggers.EXPECT().Delete("tr_1").Return(nil)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		require.NoError(t, RunAgentTriggersDelete(config))
+	})
+}
+
+func TestAgentTriggersRotateSecretAndExecutions(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
+		config.Args = []string{"tr_1"}
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, RunAgentTriggersRotateSecret(config))
+		assert.Contains(t, buf.String(), "new_sec")
+
+		tm.hostedAgentTriggers.EXPECT().
+			ListExecutions("tr_1", &godo.HostedAgentTriggerExecutionListOptions{
+				Status: godo.HostedAgentTriggerExecutionStatusFailed,
+			}).
+			Return([]do.HostedAgentTriggerExecution{{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID: "ex_1",
+					TriggerID:   "tr_1",
+					Status:      godo.HostedAgentTriggerExecutionStatusFailed,
+				},
+			}}, "", nil)
+		config.Doit.Set(config.NS, doctl.ArgAgentStatus, "failed")
+		require.NoError(t, RunAgentTriggersListExecutions(config))
+
+		tm.hostedAgentTriggers.EXPECT().
+			GetExecution("tr_1", "ex_1").
+			Return(&do.HostedAgentTriggerExecution{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID:     "ex_1",
+					Payload:         `{"ok":true}`,
+					OutputText:      "hello from run",
+					OutputTruncated: true,
+				},
+			}, nil)
+		config.Args = []string{"tr_1", "ex_1"}
+		buf.Reset()
+		config.Out = &buf
+		require.NoError(t, RunAgentTriggersGetExecution(config))
+		assert.Contains(t, buf.String(), "hello from run")
+		assert.Contains(t, buf.String(), "output truncated")
+	})
+}
+
+func TestAgentTriggersProvidersReusableBySession(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			ListWebhookProviders().
+			Return([]do.HostedAgentWebhookProvider{{
+				HostedAgentWebhookProvider: &godo.HostedAgentWebhookProvider{
+					Key:         godo.HostedAgentWebhookProviderGitHub,
+					DisplayName: "GitHub",
+				},
+			}}, nil)
+		require.NoError(t, RunAgentTriggersListProviders(config))
+
+		tm.hostedAgentTriggers.EXPECT().
+			ListReusableSessions(nil).
+			Return([]do.HostedAgentReusableSession{{
+				HostedAgentReusableSession: &godo.HostedAgentReusableSession{
+					SessionID: "sess_1",
+					Name:      "paused-agent",
+					Status:    godo.HostedAgentSessionStatusPaused,
+				},
+			}}, "", nil)
+		require.NoError(t, RunAgentTriggersListReusableSessions(config))
+
+		tm.hostedAgentTriggers.EXPECT().
+			GetBySession("sess_1").
+			Return(&do.HostedAgentTrigger{
+				HostedAgentTrigger: &godo.HostedAgentTrigger{TriggerID: "tr_1", BoundSessionID: "sess_1"},
+			}, nil)
+		config.Args = []string{"sess_1"}
+		require.NoError(t, RunAgentTriggersGetBySession(config))
+	})
+}

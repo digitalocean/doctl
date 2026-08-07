@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.203.0] - 2026-08-05
+
+- #1076 - @rak16 - microdroplets: add image region, fix image URN, drop https protocol
+
 ## [1.202.0] - 2026-07-29
 
 - #1069 - @varshavaradarajan - doks: add isolated workers to kubernetes create call

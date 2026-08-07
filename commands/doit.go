@@ -35,6 +35,7 @@ const (
 	configureDoctlGroup      = "configureDoctl"
 	viewBillingGroup         = "viewBilling"
 	serverlessInferenceGroup = "serverlessInference"
+	hostedAgentsGroup        = "hostedAgents"
 )
 
 var (
@@ -171,6 +172,7 @@ func addCommands() {
 
 	DoitCmd.AddGroup(&cobra.Group{ID: manageResourcesGroup, Title: "Manage DigitalOcean Resources:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: serverlessInferenceGroup, Title: "Inference:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: hostedAgentsGroup, Title: "Hosted Agents:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: configureDoctlGroup, Title: "Configure doctl:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: viewBillingGroup, Title: "View Billing:"})
 
@@ -199,6 +201,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Inference())
 	DoitCmd.AddCommand(Nfs())
 	DoitCmd.AddCommand(Security())
+	DoitCmd.AddCommand(Agents())
 	DoitCmd.AddCommand(Secrets())
 }
 
