@@ -309,6 +309,7 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to `false`. To enable automatic upgrade, supply `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgIsolatedWorkers, "", false, "Enables isolated workers for the cluster. Defaults to `false`, To enable isolated workers for the cluster, supply `--isolated-workers=true`. NAT GW must be available in the vpc when this option is enabled.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --ha to enable, --ha=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
@@ -333,6 +334,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Creates the cluster with amd gpu device metrics exporter plugin installed. Defaults to false. To enable it, supply --enable-amd-gpu-device-metrics-exporter-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableNvidiaGpuDevicePlugin, "", false,
 		"Creates the cluster with nvidia gpu device plugin installed. Defaults to true for clusters with NVIDIA GPUs and otherwise false. To always enable it, supply --enable-nvidia-gpu-device-plugin=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableNvidiaGpuDraDriver, "", false,
+		"Creates the cluster with the NVIDIA GPU DRA Driver installed. Mutually exclusive with --enable-nvidia-gpu-device-plugin. Defaults to false. To enable it, supply --enable-nvidia-gpu-dra-driver=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDraDriver, "", false,
+		"Creates the cluster with the AMD GPU DRA Driver installed. Mutually exclusive with --enable-amd-gpu-device-plugin. Defaults to false. To enable it, supply --enable-amd-gpu-dra-driver=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableRDMASharedDevicePlugin, "", false,
 		"Creates the cluster with k8s-rdma-shared-dev-plugin device plugin installed. Defaults to true for clusters with GPU nodes connected to a dedicated high-speed networking fabric. To always enable it, supply --enable-rdma-shared-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgKubernetesEnableSSO, "", false,
@@ -403,6 +408,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with amd gpu device metrics exporter plugin installed. Defaults to false. To enable it, supply --enable-amd-gpu-device-metrics-exporter-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableNvidiaGpuDevicePlugin, "", false,
 		"Creates the cluster with nvidia gpu device plugin installed. Defaults to true for clusters with NVIDIA GPUs and otherwise false. To always enable it, supply --enable-nvidia-gpu-device-plugin=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableNvidiaGpuDraDriver, "", false,
+		"Updates the cluster with the NVIDIA GPU DRA driver installed. Mutually exclusive with --enable-nvidia-gpu-device-plugin. Defaults to false. To enable it, supply --enable-nvidia-gpu-dra-driver=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDraDriver, "", false,
+		"Updates the cluster with the AMD GPU DRA driver installed. Mutually exclusive with --enable-amd-gpu-device-plugin. Defaults to false. To enable it, supply --enable-amd-gpu-dra-driver=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableRDMASharedDevicePlugin, "", false,
 		"Creates the cluster with k8s-rdma-shared-dev-plugin device plugin installed. Defaults to true for clusters with GPU nodes connected to a dedicated high-speed networking fabric. To always enable it, supply --enable-rdma-shared-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgKubernetesEnableSSO, "", false,
@@ -1833,6 +1842,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.SurgeUpgrade = surgeUpgrade
 
+	isolatedWorkers, err := c.Doit.GetBool(c.NS, doctl.ArgIsolatedWorkers)
+	if err != nil {
+		return err
+	}
+	r.IsolatedWorkers = isolatedWorkers
+
 	ha, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgHA)
 	if err != nil {
 		return err
@@ -1920,6 +1935,26 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 			r.NvidiaGpuDevicePlugin = &godo.KubernetesNvidiaGpuDevicePlugin{
 				Enabled: enableNvidiaGpuDevicePlugin,
 			}
+		}
+	}
+
+	enableNvidiaGpuDraDriver, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableNvidiaGpuDraDriver)
+	if err != nil {
+		return err
+	}
+	if enableNvidiaGpuDraDriver != nil {
+		r.NvidiaGpuDraDriver = &godo.KubernetesNvidiaGpuDraDriver{
+			Enabled: enableNvidiaGpuDraDriver,
+		}
+	}
+
+	enableAmdGpuDraDriver, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableAmdGpuDraDriver)
+	if err != nil {
+		return err
+	}
+	if enableAmdGpuDraDriver != nil {
+		r.AmdGpuDraDriver = &godo.KubernetesAmdGpuDraDriver{
+			Enabled: enableAmdGpuDraDriver,
 		}
 	}
 
@@ -2162,6 +2197,26 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 			r.NvidiaGpuDevicePlugin = &godo.KubernetesNvidiaGpuDevicePlugin{
 				Enabled: enableNvidiaGpuDevicePlugin,
 			}
+		}
+	}
+
+	enableNvidiaGpuDraDriver, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableNvidiaGpuDraDriver)
+	if err != nil {
+		return err
+	}
+	if enableNvidiaGpuDraDriver != nil {
+		r.NvidiaGpuDraDriver = &godo.KubernetesNvidiaGpuDraDriver{
+			Enabled: enableNvidiaGpuDraDriver,
+		}
+	}
+
+	enableAmdGpuDraDriver, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableAmdGpuDraDriver)
+	if err != nil {
+		return err
+	}
+	if enableAmdGpuDraDriver != nil {
+		r.AmdGpuDraDriver = &godo.KubernetesAmdGpuDraDriver{
+			Enabled: enableAmdGpuDraDriver,
 		}
 	}
 

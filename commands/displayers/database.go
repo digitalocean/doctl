@@ -2382,6 +2382,50 @@ func (dc *AdvancedPostgresConfiguration) KV() []map[string]any {
 	return o
 }
 
+type AdvancedMySQLConfiguration struct {
+	AdvancedMySQLConfig do.AdvancedMySQLConfig
+}
+
+var _ Displayable = &AdvancedMySQLConfiguration{}
+
+func (dc *AdvancedMySQLConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.AdvancedMySQLConfig, out)
+}
+
+func (dc *AdvancedMySQLConfiguration) Cols() []string {
+	return []string{
+		"Name",
+		"Value",
+		"Default Value",
+		"Requires Restart",
+		"Description",
+	}
+}
+
+func (dc *AdvancedMySQLConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"Name":             "Name",
+		"Value":            "Value",
+		"Default Value":    "Default Value",
+		"Requires Restart": "Requires Restart",
+		"Description":      "Description",
+	}
+}
+
+func (dc *AdvancedMySQLConfiguration) KV() []map[string]any {
+	o := []map[string]any{}
+	for _, p := range dc.AdvancedMySQLConfig.MySQLParameters {
+		o = append(o, map[string]any{
+			"Name":             p.Name,
+			"Value":            p.Value,
+			"Default Value":    p.DefaultValue,
+			"Requires Restart": p.RequiresRestart,
+			"Description":      p.Description,
+		})
+	}
+	return o
+}
+
 type DatabaseEvents struct {
 	DatabaseEvents do.DatabaseEvents
 }
