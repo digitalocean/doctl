@@ -104,7 +104,14 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 		f.replayMu.Unlock()
 	}()
 
-	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, &godo.HostedAgentSessionStreamOptions{ReplayOnly: true})
+	// IncludeRaw on replay too: a raw-eligible session's history renders with
+	// the same fidelity as its live tail (the server may or may not retain
+	// raw bytes durably — absent bytes just mean canonical fallback per
+	// event, same as live).
+	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, &godo.HostedAgentSessionStreamOptions{
+		ReplayOnly: true,
+		IncludeRaw: f.rawEligible(),
+	})
 	if err != nil {
 		log.Printf("codex facade: replay history fetch failed, will retry on next connect: %v", err)
 		return

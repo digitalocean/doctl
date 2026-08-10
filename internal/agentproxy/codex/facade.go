@@ -52,6 +52,16 @@ type Facade struct {
 	// thread/start, etc.) don't touch it.
 	Sessions do.HostedAgentsService
 
+	// AgentKind is the hosted session's agent runtime, from GetSession at
+	// proxy startup. Raw passthrough (v1.5) is gated on it: an event's
+	// native SourceRaw bytes are only forwarded when the session's agent
+	// speaks this facade's protocol (AGENT_KIND_CODEX_CLI) — cross-agent
+	// sessions (e.g. codex TUI driving an OpenCode session) always take the
+	// canonical-reconstruction path, where raw bytes would be the wrong
+	// protocol entirely. Empty (older CLI paths, tests that don't care)
+	// disables raw passthrough.
+	AgentKind godo.HostedAgentKind
+
 	// notifier is set once per connection by the bridge (see SetNotifier) and
 	// used by the background turn-streaming goroutine to push notifications
 	// (turn/started, item/agentMessage/delta, turn/completed, ...) on the
@@ -919,7 +929,18 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		f.expectingTurn = true
 		f.expectTurnDeadline = time.Now().Add(eventClaimSafety)
 		f.mu.Unlock()
-		resp, err := f.Sessions.SendInput(f.SessionID, &godo.HostedAgentSendInputRequest{Text: text.String()})
+		req := &godo.HostedAgentSendInputRequest{Text: text.String()}
+		if f.rawEligible() {
+			// v2 inbound raw passthrough: ship the TUI's exact turn/start
+			// params alongside the text. The in-sandbox codex adapter uses
+			// them as the template for the turn it drives, so input items
+			// beyond text and params like model/effort/approvalPolicy —
+			// all invisible to the text reduction above — survive. Gated
+			// like the outbound path: only a codex TUI speaks frames the
+			// session's codex app-server understands (see raw.go).
+			req.SourceRaw = rawTurnStartFrame(params)
+		}
+		resp, err := f.Sessions.SendInput(f.SessionID, req)
 		if err != nil {
 			f.mu.Lock()
 			f.expectingTurn = false
@@ -980,11 +1001,7 @@ func (f *Facade) ensureEventLoop(ctx context.Context) error {
 	cursor := f.streamCursor
 	f.mu.Unlock()
 
-	var opt *godo.HostedAgentSessionStreamOptions
-	if cursor != "" {
-		opt = &godo.HostedAgentSessionStreamOptions{ReplayFrom: cursor}
-	}
-	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, opt)
+	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, f.streamOptions(cursor))
 	if err != nil {
 		return err
 	}
@@ -1003,6 +1020,31 @@ func (f *Facade) ensureEventLoop(ctx context.Context) error {
 
 	go f.runEventLoop(ctx, stream)
 	return nil
+}
+
+// rawEligible reports whether raw passthrough applies to this session: only
+// when the session's agent runtime is codex are an event's SourceRaw bytes
+// app-server frames this facade's client natively speaks. See the AgentKind
+// field doc for why cross-agent sessions must stay on canonical
+// reconstruction.
+func (f *Facade) rawEligible() bool {
+	return f.AgentKind == godo.HostedAgentKindCodexCLI
+}
+
+// streamOptions builds the StreamSession options for a live attach at the
+// given resume cursor. IncludeRaw is requested whenever this session is
+// raw-eligible — on every open, including reconnects, so a mid-session
+// reconnect doesn't silently downgrade the stream back to canonical-only.
+// Returns nil when every option would be zero, preserving the "no options"
+// request shape older harnesses expect.
+func (f *Facade) streamOptions(cursor string) *godo.HostedAgentSessionStreamOptions {
+	if cursor == "" && !f.rawEligible() {
+		return nil
+	}
+	return &godo.HostedAgentSessionStreamOptions{
+		ReplayFrom: cursor,
+		IncludeRaw: f.rawEligible(),
+	}
 }
 
 // trackTurn registers a new in-flight turn, keyed by run id, once
@@ -1195,12 +1237,8 @@ func (f *Facade) runEventLoop(ctx context.Context, initial *godo.HostedAgentSess
 				return
 			}
 
-			var opt *godo.HostedAgentSessionStreamOptions
-			if f.streamCursor != "" {
-				opt = &godo.HostedAgentSessionStreamOptions{ReplayFrom: f.streamCursor}
-			}
 			var err error
-			stream, err = f.Sessions.StreamSession(ctx, f.SessionID, opt)
+			stream, err = f.Sessions.StreamSession(ctx, f.SessionID, f.streamOptions(f.streamCursor))
 			if err != nil {
 				if isTerminalStreamError(err) {
 					log.Printf("codex facade: StreamSession failed (terminal), giving up: %v", err)
@@ -1321,20 +1359,21 @@ func (f *Facade) failAllTrackedTurns(message string) {
 // e.g.) must never be re-requested via ReplayFrom on the next reconnect,
 // since re-receiving it wouldn't fix the bad JSON.
 //
-// Also guards against a real, confirmed reconnect-boundary behavior: replay
-// can re-deliver the last event(s) already processed before a drop (see
-// doctl agents attach's tokenDeduper, added for the identical problem on
-// run.token_delta specifically) — skipping any event whose id is <= cursor
-// covers every event kind, not just token deltas, relying on canonical event
-// ids being ULIDs (lexicographically ordered by time).
+// The cursor is set unconditionally, never compared: event ids are NOT
+// ordered (the guest mints random UUIDv4s, and harness-api's ULIDs use
+// fresh randomness per id, not ulid.Monotonic — two ids minted in the same
+// millisecond sort randomly, and token deltas arrive many per millisecond).
+// An ordinal `<= cursor` skip here converges on the max id seen and drops
+// most of the stream; its only job is to be the Last-Event-ID resume point.
+// Redelivery is not a concern while stream positions are 0-0 (reconnects
+// are forward-only until D1/History land); if it becomes one, dedup must be
+// an explicit set of seen ids or content-based (attach's tokenDeduper), not
+// id ordering.
 func (f *Facade) drainStream(ctx context.Context, stream *godo.HostedAgentSessionStream, cursor *string) (clientDead bool) {
 	for stream.Next() {
 		ev := stream.Current()
 
 		if ev.EventID != "" {
-			if *cursor != "" && ev.EventID <= *cursor {
-				continue
-			}
 			*cursor = ev.EventID
 		}
 
@@ -1347,6 +1386,25 @@ func (f *Facade) drainStream(ctx context.Context, stream *godo.HostedAgentSessio
 
 		ts, ok := f.lookupTurn(ev.RunID)
 		if !ok {
+			// A run.failed attributed to the session's parent run means the
+			// session-level transport/adapter died, dooming every in-flight
+			// turn (OHR establishes the multi-turn run with the session id
+			// as its run id, and attributes transport-level failures to it —
+			// seen live: a rejected turn/start fails the parent run, not the
+			// per-turn run). Without this, the failure matches no tracked
+			// turn and the TUI spins forever on a turn nobody will finish.
+			// A failed run id that is neither tracked nor the parent run is
+			// someone else's turn (another client on this session) — skip.
+			if ev.Kind == godo.HostedAgentEventKindRunFailed && ev.RunID == f.SessionID {
+				var payload struct {
+					Message string `json:"message"`
+				}
+				_ = json.Unmarshal(ev.Payload, &payload)
+				if payload.Message == "" {
+					payload.Message = "hosted session run failed"
+				}
+				f.failAllTrackedTurns(payload.Message)
+			}
 			continue // event for a run this facade isn't tracking (e.g. predates this connection)
 		}
 

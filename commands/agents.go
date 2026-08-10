@@ -410,7 +410,8 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if _, err := svc.GetSession(sessionID); err != nil {
+	sess, err := svc.GetSession(sessionID)
+	if err != nil {
 		return fmt.Errorf("session %q not found: %w", sessionRef, err)
 	}
 
@@ -427,11 +428,17 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	// (notifier, in-flight turns, event loop, --replay gate) must not leak
 	// across a disconnect/reconnect. A reconnecting client is a new TUI with
 	// empty scrollback — --replay must run again for that connection.
+	//
+	// AgentKind gates raw passthrough: the facade forwards an event's native
+	// source bytes only when the session's agent actually speaks this
+	// facade's protocol — a codex TUI must never be handed raw OpenCode
+	// frames just because they exist.
 	return agentproxy.Serve(ctx, port, func() agentproxy.Facade {
 		return &codex.Facade{
 			SessionID: sessionID,
 			Sessions:  svc,
 			Replay:    replay,
+			AgentKind: sess.AgentKind,
 		}
 	})
 }

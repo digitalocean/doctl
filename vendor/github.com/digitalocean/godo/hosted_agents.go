@@ -301,18 +301,35 @@ type HostedAgentEvent struct {
 	At        Timestamp
 	Kind      HostedAgentEventKind
 	Payload   json.RawMessage
+
+	// SourceEventID is the native event id from the agent runtime before
+	// canonical mapping (Event.source_event_id). Empty when the runtime does
+	// not supply stable ids or the server does not forward it.
+	SourceEventID string
+	// SourceEventType is the native event type label from the agent runtime
+	// (e.g. codex's "item/agentMessage/delta"). Empty when not forwarded.
+	SourceEventType string
+	// SourceRaw is the exact native event bytes the in-sandbox adapter
+	// captured before canonical mapping (Event.source_raw) — for codex, one
+	// JSON-RPC frame as read off the app-server transport. Only present when
+	// the stream was opened with HostedAgentSessionStreamOptions.IncludeRaw
+	// and the server retained the bytes; base64 on the wire (JSON []byte).
+	SourceRaw []byte
 }
 
 // hostedAgentEventWire is the on-the-wire SPI canonical event envelope.
 type hostedAgentEventWire struct {
-	EventID   string               `json:"event_id"`
-	RunID     string               `json:"run_id"`
-	TenantID  string               `json:"tenant_id"`
-	SessionID string               `json:"session_id"`
-	Timestamp Timestamp            `json:"timestamp"`
-	Seq       uint64               `json:"seq"`
-	Type      HostedAgentEventKind `json:"type"`
-	Data      json.RawMessage      `json:"data"`
+	EventID         string               `json:"event_id"`
+	RunID           string               `json:"run_id"`
+	TenantID        string               `json:"tenant_id"`
+	SessionID       string               `json:"session_id"`
+	Timestamp       Timestamp            `json:"timestamp"`
+	Seq             uint64               `json:"seq"`
+	SourceEventID   string               `json:"source_event_id,omitempty"`
+	SourceEventType string               `json:"source_event_type,omitempty"`
+	SourceRaw       []byte               `json:"source_raw,omitempty"`
+	Type            HostedAgentEventKind `json:"type"`
+	Data            json.RawMessage      `json:"data"`
 }
 
 // UnmarshalJSON decodes the SPI canonical event wire shape.
@@ -328,6 +345,9 @@ func (e *HostedAgentEvent) UnmarshalJSON(b []byte) error {
 	e.At = w.Timestamp
 	e.Kind = w.Type
 	e.Payload = w.Data
+	e.SourceEventID = w.SourceEventID
+	e.SourceEventType = w.SourceEventType
+	e.SourceRaw = w.SourceRaw
 	if w.TenantID != "" {
 		id, err := strconv.ParseUint(w.TenantID, 10, 64)
 		if err != nil {
@@ -366,11 +386,27 @@ type HostedAgentSessionsListResponse struct {
 type HostedAgentSessionStreamOptions struct {
 	ReplayFrom string
 	ReplayOnly bool
+	// IncludeRaw asks the server to include each event's native source bytes
+	// (HostedAgentEvent.SourceRaw) alongside the canonical payload. Raw
+	// payloads meaningfully fatten every event, so this is opt-in; consumers
+	// that don't translate native protocols should leave it off.
+	IncludeRaw bool
 }
 
 // HostedAgentSendInputRequest is the body for POST .../input.
 type HostedAgentSendInputRequest struct {
 	Text string `json:"text"`
+
+	// SourceRaw optionally carries the client's exact native protocol frame
+	// this input was extracted from — for codex, the TUI's turn/start
+	// JSON-RPC message with its full params. The in-sandbox adapter uses it
+	// as the template for the turn it drives, so client intent beyond plain
+	// text (input items, model, effort, approval policy, ...) survives the
+	// text reduction. Only meaningful when the caller speaks the session's
+	// own agent protocol; Text stays required either way. Inbound
+	// counterpart of HostedAgentEvent.SourceRaw. Base64 on the wire per the
+	// proto bytes JSON mapping — encoding/json does that for []byte.
+	SourceRaw []byte `json:"source_raw,omitempty"`
 }
 
 // HostedAgentSendInputResponse is returned by POST .../input.
@@ -676,6 +712,9 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 		}
 		if opt.ReplayOnly {
 			q.Set("replay_only", "true")
+		}
+		if opt.IncludeRaw {
+			q.Set("include_raw", "true")
 		}
 		if encoded := q.Encode(); encoded != "" {
 			path += "?" + encoded

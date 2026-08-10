@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -491,6 +492,101 @@ func TestFacade_TurnStart_Failure(t *testing.T) {
 	assert.Equal(t, "failed", tc.Turn.Status)
 	require.NotNil(t, tc.Turn.Error)
 	assert.Equal(t, "boom", tc.Turn.Error.Message)
+}
+
+// TestFacade_TurnStart_ManyDeltasAllDelivered is the regression test for the
+// drainStream cursor bug: event ids are random (UUIDv4 from the guest, ULIDs
+// with per-id randomness from harness-api — the fixture mints random UUIDs
+// to match), so any "skip events whose id sorts <= the cursor" logic
+// converges on the max id seen and silently drops most of a turn. Sixteen
+// deltas make a random-order id collision with an ordinal skip a
+// statistical certainty; every one must be delivered, in order, and the
+// turn must still complete.
+func TestFacade_TurnStart_ManyDeltasAllDelivered(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+
+	const deltas = 16
+	events := []agentproxytest.Event{{Type: string(godo.HostedAgentEventKindRunStarted)}}
+	for i := 0; i < deltas; i++ {
+		events = append(events, agentproxytest.Event{
+			Type: string(godo.HostedAgentEventKindTokenChunk),
+			Data: json.RawMessage(fmt.Sprintf(`{"text":"d%d "}`, i)),
+		})
+	}
+	events = append(events, agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)})
+	h.QueueRun("run-many", events...)
+
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+
+	var got strings.Builder
+	for i := 0; i < deltas; i++ {
+		n := rec.next(t)
+		require.Equal(t, "item/agentMessage/delta", n.method, "delta %d of %d missing — events are being dropped", i+1, deltas)
+		got.WriteString(n.params.(agentMessageDeltaNotification).Delta)
+	}
+
+	var want strings.Builder
+	for i := 0; i < deltas; i++ {
+		fmt.Fprintf(&want, "d%d ", i)
+	}
+	assert.Equal(t, want.String(), got.String(), "deltas must arrive complete and in order")
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+	assert.Equal(t, want.String(), itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem).Text)
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	assert.Equal(t, "completed", turnCompleted.params.(turnCompletedNotification).Turn.Status)
+	rec.expectNone(t)
+}
+
+// TestFacade_SessionRunFailedClosesTrackedTurns covers the fail-safe close:
+// OHR establishes the session's multi-turn parent run with the session id as
+// its run id and attributes transport-level failures to it (seen live: a
+// rejected turn/start fails the parent run, not the per-turn run the facade
+// tracks). Such a run.failed matches no tracked turn — without the
+// fail-safe it would be skipped and the TUI would spin forever on a turn
+// nobody will ever finish. It must close every tracked turn as failed, with
+// the parent run's message.
+func TestFacade_SessionRunFailedClosesTrackedTurns(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+
+	h.QueueRun("run-orphaned",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindRunFailed),
+			RunID: testSessionID, // the parent run, not the tracked turn
+			Data:  json.RawMessage(`{"message":"transport: turn/start: rpc error: -32600: nope"}`),
+		},
+	)
+
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	tc := turnCompleted.params.(turnCompletedNotification)
+	assert.Equal(t, "run-orphaned", tc.Turn.ID, "the tracked turn must be the one closed")
+	assert.Equal(t, "failed", tc.Turn.Status)
+	require.NotNil(t, tc.Turn.Error)
+	assert.Equal(t, "transport: turn/start: rpc error: -32600: nope", tc.Turn.Error.Message)
 }
 
 // TestFacade_TurnStart_ToolCall drives one turn with a tool call followed by
@@ -1126,15 +1222,15 @@ func TestFacade_RunEventLoop_ReconnectsAfterTransientStreamError(t *testing.T) {
 	stopEventLoop(t, f, cancel)
 }
 
-// TestFacade_RunEventLoop_ReconnectDedupesRedeliveredPrefix confirms a real,
-// confirmed reconnect-boundary behavior doesn't corrupt what the client
-// sees: after a genuine mid-stream drop (see DropConnectionAfterEvents), the
-// reconnected stream re-delivers the harness's full event list from the
-// start (this fake harness doesn't implement replay_from filtering — a
-// worst-case stress test for dedup, redelivering more than just the
-// boundary event). Only the events after the cursor should produce new
-// notifications; the already-processed prefix must not repeat turn/started,
-// item/started, or the first delta a second time.
+// TestFacade_RunEventLoop_ReconnectDedupesRedeliveredPrefix confirms a
+// reconnect after a genuine mid-stream drop (see DropConnectionAfterEvents)
+// resumes cleanly from the cursor: the facade reconnects with
+// replay_from=<last processed event id> and the harness (like the real one)
+// serves only what comes after it. The already-processed prefix must not
+// repeat turn/started, item/started, or the first delta a second time.
+// Dedup is the replay_from contract, NOT id comparison — event ids are
+// random and unordered (see drainStream's cursor comment), so the facade
+// must never try to detect redelivery by sorting ids.
 func TestFacade_RunEventLoop_ReconnectDedupesRedeliveredPrefix(t *testing.T) {
 	stubReconnectSleep(t)
 
