@@ -202,14 +202,32 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if result.WebhookSecret != "" {
-		noticeOut := c.Out
-		if Output == "json" {
-			noticeOut = os.Stderr
+	if Output == "json" {
+		// In JSON mode the one-time secret must be in the machine-readable output,
+		// not only in a human-readable banner that gets routed to stderr.
+		// Embed it alongside all trigger fields in a single flat JSON object so
+		// consumers can always parse the secret without screen-scraping.
+		if result.WebhookSecret != "" {
+			fmt.Fprint(os.Stderr, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
 		}
-		fmt.Fprint(noticeOut, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
+		type jsonCreateResult struct {
+			*godo.HostedAgentTrigger
+			WebhookSecret string `json:"webhook_secret,omitempty"`
+		}
+		var trigger *godo.HostedAgentTrigger
+		if result.Trigger != nil {
+			trigger = result.Trigger.HostedAgentTrigger
+		}
+		return json.NewEncoder(c.Out).Encode(jsonCreateResult{
+			HostedAgentTrigger: trigger,
+			WebhookSecret:      result.WebhookSecret,
+		})
+	}
+	// Text mode: banner to stdout, then the trigger table.
+	if result.WebhookSecret != "" {
+		fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
 		if result.Trigger != nil && result.Trigger.Webhook != nil && result.Trigger.Webhook.WebhookURL != "" {
-			fmt.Fprintf(noticeOut, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
+			fmt.Fprintf(c.Out, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
 		}
 	}
 	if result.Trigger == nil {
