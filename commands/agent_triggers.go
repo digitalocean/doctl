@@ -215,7 +215,7 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 	if result.Trigger == nil {
 		return nil
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}, Single: true})
 }
 
 // RunAgentTriggersGet fetches one trigger.
@@ -227,7 +227,7 @@ func RunAgentTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersUpdate partially updates a trigger.
@@ -243,7 +243,7 @@ func RunAgentTriggersUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersDelete soft-deletes a trigger.
@@ -279,7 +279,7 @@ func agentTriggersSetStatus(c *CmdConfig, status godo.HostedAgentTriggerStatus) 
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersRotateSecret rotates a webhook secret.
@@ -337,7 +337,7 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 		}
 		fmt.Fprintln(c.Out)
 	}
-	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}})
+	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
 }
 
 // RunAgentTriggersGetBySession reverse-looks-up a trigger by session ID.
@@ -349,7 +349,7 @@ func RunAgentTriggersGetBySession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersListReusableSessions lists PAUSED sessions for reuse binding.
