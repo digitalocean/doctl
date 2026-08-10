@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -202,9 +203,13 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 		return err
 	}
 	if result.WebhookSecret != "" {
-		fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
+		noticeOut := c.Out
+		if Output == "json" {
+			noticeOut = os.Stderr
+		}
+		fmt.Fprint(noticeOut, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
 		if result.Trigger != nil && result.Trigger.Webhook != nil && result.Trigger.Webhook.WebhookURL != "" {
-			fmt.Fprintf(c.Out, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
+			fmt.Fprintf(noticeOut, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
 		}
 	}
 	if result.Trigger == nil {
@@ -286,6 +291,10 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if Output == "json" {
+		fmt.Fprint(os.Stderr, displayers.FormatWebhookSecretNotice(secret))
+		return json.NewEncoder(c.Out).Encode(map[string]string{"webhook_secret": secret})
+	}
 	fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(secret))
 	return nil
 }
@@ -321,7 +330,7 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if e.OutputText != "" {
+	if e.OutputText != "" && Output != "json" {
 		fmt.Fprintln(c.Out, e.OutputText)
 		if e.OutputTruncated {
 			fmt.Fprintln(c.Out, "(output truncated)")

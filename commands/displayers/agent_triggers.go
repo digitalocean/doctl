@@ -33,9 +33,6 @@ func (h *HostedAgentTrigger) JSON(out io.Writer) error {
 	for _, t := range h.Triggers {
 		raw = append(raw, t.HostedAgentTrigger)
 	}
-	if len(raw) == 1 {
-		return writeJSON(raw[0], out)
-	}
 	return writeJSON(raw, out)
 }
 
@@ -105,9 +102,6 @@ func (h *HostedAgentTriggerExecution) JSON(out io.Writer) error {
 	for _, e := range h.Executions {
 		raw = append(raw, e.HostedAgentTriggerExecution)
 	}
-	if len(raw) == 1 {
-		return writeJSON(raw[0], out)
-	}
 	return writeJSON(raw, out)
 }
 
@@ -160,9 +154,6 @@ func (h *HostedAgentWebhookProvider) JSON(out io.Writer) error {
 	raw := make([]any, 0, len(h.Providers))
 	for _, p := range h.Providers {
 		raw = append(raw, p.HostedAgentWebhookProvider)
-	}
-	if len(raw) == 1 {
-		return writeJSON(raw[0], out)
 	}
 	return writeJSON(raw, out)
 }
@@ -217,9 +208,6 @@ func (h *HostedAgentReusableSession) JSON(out io.Writer) error {
 	raw := make([]any, 0, len(h.Sessions))
 	for _, s := range h.Sessions {
 		raw = append(raw, s.HostedAgentReusableSession)
-	}
-	if len(raw) == 1 {
-		return writeJSON(raw[0], out)
 	}
 	return writeJSON(raw, out)
 }
