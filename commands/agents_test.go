@@ -1734,7 +1734,7 @@ func TestPromptDisplay(t *testing.T) {
 		s := newAttachState(&buf, pending)
 		s.display.setRaw(true)
 
-		s.display.spinnerFrame("⠋")
+		s.display.spinnerFrame("⠋", "thinking...")
 		assert.Equal(t, "\x1b7\x1b[A\r\x1b[K⠋ thinking...\x1b8", buf.String())
 	})
 
@@ -1746,7 +1746,7 @@ func TestPromptDisplay(t *testing.T) {
 
 		s.display.Write([]byte("tokens streaming"))
 		buf.Reset()
-		s.display.spinnerFrame("⠋")
+		s.display.spinnerFrame("⠋", "thinking...")
 		assert.Equal(t, "", buf.String(), "spinner must not animate while tokens stream")
 	})
 
@@ -1756,7 +1756,7 @@ func TestPromptDisplay(t *testing.T) {
 		s := newAttachState(&buf, pending)
 		s.display.setRaw(true)
 
-		s.display.spinnerInit("⠋")
+		s.display.spinnerInit("⠋", "thinking...")
 		// Spinner on its own line, then the prompt one row below it.
 		assert.Equal(t, "\r\x1b[K⠋ thinking...\r\n> ", buf.String())
 		assert.False(t, s.display.midLine)
@@ -2165,7 +2165,7 @@ func TestStreamWithReconnect_cleanEOFReconnectsUntilTerminal(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, "session updated")
@@ -2198,7 +2198,7 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 		Times(1)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, "session updated", "events before the takeover still render")
@@ -2225,7 +2225,7 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 
 	var buf bytes.Buffer
 	pending := &pendingHITL{}
-	superseded := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), &tokenDeduper{})
+	superseded := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
 
 	assert.False(t, superseded)
 	out := buf.String()
@@ -2254,7 +2254,7 @@ func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
 
 	var buf bytes.Buffer
 	cursor := &eventCursor{}
-	superseded := drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), &tokenDeduper{})
+	superseded := drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil, &tokenDeduper{})
 
 	assert.False(t, superseded)
 	assert.Equal(t, 1, strings.Count(buf.String(), "session updated"))
@@ -2291,7 +2291,7 @@ func TestStreamWithReconnect_successOnSecondAttempt(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, msgReconnecting)
@@ -2310,7 +2310,7 @@ func TestStreamWithReconnect_exhaustedRetries(t *testing.T) {
 		Times(maxAutoReconnectAttempts)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Equal(t, maxAutoReconnectAttempts-1, strings.Count(out, msgReconnecting))
@@ -2336,7 +2336,7 @@ func TestStreamWithReconnect_terminalErrorNoRetry(t *testing.T) {
 		Times(1)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, "Authentication failed")
@@ -2405,7 +2405,7 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Equal(t, 2, strings.Count(out, "session updated"), "both events should render after replay reconnect")
@@ -2467,7 +2467,7 @@ func TestStreamWithReconnect_healthyDropsDoNotExhaustBudget(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.NotContains(t, out, msgReconnectFailed, "healthy idle drops must not exhaust the reconnect budget")
@@ -2511,9 +2511,134 @@ func TestStreamWithReconnect_rapidDropsExhaustBudget(t *testing.T) {
 		Times(maxAutoReconnectAttempts)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Equal(t, maxAutoReconnectAttempts-1, strings.Count(out, msgReconnecting))
 	assert.Contains(t, out, msgReconnectFailed)
+}
+
+func TestWarmupState_skipsOldSessions(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now.Add(-3*time.Minute))
+	w.start()
+	assert.Empty(t, buf.String(), "sessions older than warmupEligibleAge must not show a notice")
+	assert.False(t, w.eligible)
+}
+
+func TestWarmupState_showsForYoungSessions(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now.Add(-30*time.Second))
+	w.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+	assert.True(t, w.active)
+
+	w.clear()
+	assert.False(t, w.active)
+	assert.True(t, w.dismissed)
+	assert.NotContains(t, buf.String(), "You can type anytime")
+}
+
+func TestWarmupState_clearsOnTimeout(t *testing.T) {
+	oldClock := warmupClock
+	oldDur := warmupDuration
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	warmupDuration = 20 * time.Millisecond
+	t.Cleanup(func() {
+		warmupClock = oldClock
+		warmupDuration = oldDur
+	})
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now)
+	w.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		w.mu.Lock()
+		done := !w.active && w.dismissed
+		w.mu.Unlock()
+		if done {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	w.mu.Lock()
+	active, dismissed := w.active, w.dismissed
+	w.mu.Unlock()
+	assert.False(t, active)
+	assert.True(t, dismissed)
+	assert.NotContains(t, buf.String(), "You can type anytime")
+}
+
+func TestWarmupState_startAfterClearIsNoop(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now)
+	w.clear()
+	w.start()
+	assert.Empty(t, buf.String())
+}
+
+func TestDrainStream_clearsWarmupOnRunStarted(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindRunStarted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+	assert.True(t, warmup.dismissed)
+	assert.False(t, warmup.active)
+}
+
+func TestDrainStream_sessionUpdatedDoesNotClearWarmup(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+	assert.True(t, warmup.active, "session.updated must not dismiss the warm-up notice")
+	warmup.clear()
 }

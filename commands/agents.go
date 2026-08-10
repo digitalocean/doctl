@@ -1272,15 +1272,18 @@ func RunAgentsAttach(c *CmdConfig) error {
 
 	printAttachBanner(c.Out, sessionID, sess.AgentKind)
 
+	warmup := newWarmupState(c.Out, sess.CreatedAt.Time)
+	defer warmup.clear()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	thinking := newThinkingState(c.Out)
 	defer thinking.stop()
 
-	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking)
+	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking, warmup)
 
-	return runAttach(c, svc, sessionID, os.Stdin, state)
+	return runAttach(c, svc, sessionID, os.Stdin, state, warmup)
 }
 
 func isOpenAISandboxSession(sess *do.HostedAgentSession) bool {
@@ -1309,6 +1312,9 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 	printAttachBanner(c.Out, sess.SessionID, sess.AgentKind)
 	fmt.Fprintf(c.Out, "  %s\n\n", colorize(fmt.Sprintf("bridged to OpenAI · %s", openaiSessionID), colMuted))
 
+	warmup := newWarmupState(c.Out, sess.CreatedAt.Time)
+	defer warmup.clear()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
@@ -1316,7 +1322,7 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 	defer thinking.stop()
 
 	client := newOpenAIAgentsAttachClient()
-	renderer := &openAIAttachRenderer{out: c.Out, thinking: thinking}
+	renderer := &openAIAttachRenderer{out: c.Out, thinking: thinking, warmup: warmup}
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -1325,8 +1331,9 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 
 	var inputErr error
 	if term.IsTerminal(int(os.Stdin.Fd())) {
-		inputErr = openaiAttachLoopTTY(c, ctx, client, apiKey, openaiSessionID, os.Stdin, state, thinking)
+		inputErr = openaiAttachLoopTTY(c, ctx, client, apiKey, openaiSessionID, os.Stdin, state, thinking, warmup)
 	} else {
+		warmup.start()
 		inputErr = openaiAttachLoop(c, ctx, client, apiKey, openaiSessionID, os.Stdin, state, thinking)
 	}
 	cancel()
@@ -1346,6 +1353,7 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 type openAIAttachRenderer struct {
 	out      io.Writer
 	thinking *thinkingState
+	warmup   *warmupState
 	acc      msgAccumulator
 	// sawOutputDelta tracks whether we already buffered streamed assistant text
 	// so output_text.done does not duplicate it.
@@ -1354,19 +1362,28 @@ type openAIAttachRenderer struct {
 	activeToolCmd string
 }
 
+func (r *openAIAttachRenderer) clearWarmup() {
+	if r.warmup != nil {
+		r.warmup.clear()
+	}
+}
+
 func (r *openAIAttachRenderer) handle(evt map[string]any) {
 	t, _ := evt["type"].(string)
 	switch t {
 	case "session.in_progress", "session.turn.in_progress", "session.turn.created":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.start()
 		}
 	case "session.environment.connected":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
 		fmt.Fprintf(r.out, "\n%s\n", colorize("● environment connected", colSuccess))
 	case "session.environment.failed":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1384,6 +1401,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
 		fmt.Fprintln(r.out, colorize("Tip: destroy and start a fresh session; wait for ● environment connected before sending work.", colMuted))
 	case "session.turn.output_text.delta":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1392,6 +1410,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 			r.sawOutputDelta = true
 		}
 	case "session.turn.output_text.done":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1401,10 +1420,13 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 			}
 		}
 	case "session.turn.item.added":
+		r.clearWarmup()
 		r.handleItemAdded(evt)
 	case "session.turn.item.done":
+		r.clearWarmup()
 		r.handleItemDone(evt)
 	case "session.turn.completed":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1422,6 +1444,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✓", colSuccess), colorize(summary, colMuted))
 		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
 	case "session.turn.failed":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1444,6 +1467,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		r.sawOutputDelta = false
 		r.activeToolCmd = ""
 	case "session.failed":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1568,10 +1592,13 @@ func openaiAttachLoop(c *CmdConfig, ctx context.Context, client openAIAgentsClie
 	}
 }
 
-func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, f *os.File, state *attachState, thinking *thinkingState) error {
+func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, f *os.File, state *attachState, thinking *thinkingState, warmup *warmupState) error {
 	fd := int(f.Fd())
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
+		if warmup != nil {
+			warmup.start()
+		}
 		return openaiAttachLoop(c, ctx, client, apiKey, openaiSessionID, f, state, thinking)
 	}
 	defer term.Restore(fd, oldState)
@@ -1579,6 +1606,9 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 	state.display.setRaw(true)
 	defer state.display.setRaw(false)
 	state.display.redraw()
+	if warmup != nil {
+		warmup.start()
+	}
 
 	bytesCh := make(chan byte, 64)
 	readErrCh := make(chan error, 1)
@@ -1722,9 +1752,12 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 
 // runAttach dispatches to the raw-mode TTY loop or the legacy bufio line-mode
 // loop based on whether stdin is an interactive terminal.
-func runAttach(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState) error {
+func runAttach(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState, warmup *warmupState) error {
 	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
-		return attachLoopTTY(c, svc, sessionID, f, state)
+		return attachLoopTTY(c, svc, sessionID, f, state, warmup)
+	}
+	if warmup != nil {
+		warmup.start()
 	}
 	return attachLoop(c, svc, sessionID, in, state)
 }
@@ -1774,6 +1807,18 @@ var healthyStreamDuration = 30 * time.Second
 // streamClock returns the current time; overridable in tests.
 var streamClock = time.Now
 
+// Warm-up notice (MARSOHS-796): freshly provisioned sessions can take up to
+// ~90s before the in-guest agent is actually listening. Show a friendly
+// status for young sessions so the CLI doesn't look frozen/silent while the
+// backend retries. Overridable in tests.
+const msgAgentWarmup = "Agent is warming up… please wait"
+
+var (
+	warmupDuration    = 60 * time.Second
+	warmupEligibleAge = 2 * time.Minute
+	warmupClock       = time.Now
+)
+
 // thinkingState shows a spinner between RunStarted and the first real
 // output. Animates above the prompt when out is a *promptDisplay; falls back
 // to a one-shot "(thinking...)" print otherwise (pipes, line-mode).
@@ -1808,7 +1853,7 @@ func (s *thinkingState) start() {
 	// Reserve the spinner line and draw its first frame atomically so no
 	// redraw or token can slip in between and shift the line the animator
 	// (and stop) expect one row above the prompt.
-	display.spinnerInit(spinnerFrames[0])
+	display.spinnerInit(spinnerFrames[0], "thinking...")
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	s.cancel = cancel
@@ -1852,8 +1897,122 @@ func (s *thinkingState) animate(ctx context.Context, d *promptDisplay, done chan
 			return
 		case <-t.C:
 			ix = (ix + 1) % len(spinnerFrames)
-			d.spinnerFrame(spinnerFrames[ix])
+			d.spinnerFrame(spinnerFrames[ix], "thinking...")
 		}
+	}
+}
+
+// warmupState shows "Agent is warming up…" on attach for sessions still in
+// their initial boot window. Clears on the first meaningful agent event or
+// after warmupDuration, whichever comes first. No-ops for older sessions.
+type warmupState struct {
+	mu            sync.Mutex
+	out           io.Writer
+	eligible      bool
+	active        bool
+	dismissed     bool
+	timeoutCancel context.CancelFunc
+	animCancel    context.CancelFunc
+	animDone      chan struct{}
+}
+
+func newWarmupState(out io.Writer, createdAt time.Time) *warmupState {
+	w := &warmupState{out: out}
+	if !createdAt.IsZero() && warmupClock().Sub(createdAt) <= warmupEligibleAge {
+		w.eligible = true
+	}
+	return w
+}
+
+// start shows the warm-up notice immediately. Prefer the erasable prompt
+// spinner when raw mode is on so clear() can remove it; fall back to a plain
+// line for pipes/tests. Safe to call more than once; no-ops when the session
+// is outside the warm-up window or already cleared.
+func (w *warmupState) start() {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	if !w.eligible || w.active || w.dismissed {
+		w.mu.Unlock()
+		return
+	}
+	w.active = true
+	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), warmupDuration)
+	w.timeoutCancel = timeoutCancel
+
+	display, ok := w.out.(*promptDisplay)
+	if ok {
+		display.spinnerInit(spinnerFrames[0], msgAgentWarmup)
+		animCtx, animCancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		w.animCancel = animCancel
+		w.animDone = done
+		w.mu.Unlock()
+		go w.animate(animCtx, display, done)
+	} else {
+		w.mu.Unlock()
+		fmt.Fprintf(w.out, "%s\n", colorize("⟳ "+msgAgentWarmup, colMuted))
+	}
+	go w.waitTimeout(timeoutCtx)
+}
+
+func (w *warmupState) animate(ctx context.Context, d *promptDisplay, done chan struct{}) {
+	defer close(done)
+	t := time.NewTicker(80 * time.Millisecond)
+	defer t.Stop()
+	ix := 0
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			ix = (ix + 1) % len(spinnerFrames)
+			d.spinnerFrame(spinnerFrames[ix], msgAgentWarmup)
+		}
+	}
+}
+
+func (w *warmupState) waitTimeout(ctx context.Context) {
+	<-ctx.Done()
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		w.clear()
+	}
+}
+
+// clear dismisses the warm-up notice. Idempotent. When shown via the prompt
+// spinner, the line is erased so it truly goes away; no follow-up message is
+// printed (MARSOHS-796 only asks to clear the notice).
+func (w *warmupState) clear() {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	w.dismissed = true
+	if !w.active {
+		w.mu.Unlock()
+		return
+	}
+	w.active = false
+	timeoutCancel := w.timeoutCancel
+	animCancel := w.animCancel
+	animDone := w.animDone
+	w.timeoutCancel = nil
+	w.animCancel = nil
+	w.animDone = nil
+	w.mu.Unlock()
+
+	if timeoutCancel != nil {
+		timeoutCancel()
+	}
+	if animCancel != nil {
+		animCancel()
+	}
+	if animDone != nil {
+		<-animDone
+	}
+	if display, ok := w.out.(*promptDisplay); ok {
+		display.spinnerStop()
 	}
 }
 
@@ -1871,6 +2030,7 @@ func streamWithReconnect(
 	pending *pendingHITL,
 	cursor *eventCursor,
 	thinking *thinkingState,
+	warmup *warmupState,
 ) {
 	dedup := &tokenDeduper{}
 	backoff := initialReconnectBackoff
@@ -1913,7 +2073,7 @@ func streamWithReconnect(
 		}
 
 		connectedAt := streamClock()
-		superseded := drainStream(stream, out, pending, cursor, thinking, dedup)
+		superseded := drainStream(stream, out, pending, cursor, thinking, warmup, dedup)
 		streamErr := stream.Err()
 		stream.Close()
 
@@ -2030,7 +2190,7 @@ func sessionLimitErr(err error) bool {
 // this device took over the session. That is the one stream end the caller must
 // not reconnect from: re-attaching would supersede the connection that just
 // superseded us, and the two would evict each other indefinitely.
-func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, dedup *tokenDeduper) (superseded bool) {
+func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, warmup *warmupState, dedup *tokenDeduper) (superseded bool) {
 	// acc buffers the current assistant turn's tokens; the thinking spinner
 	// stays up for the whole turn and the buffered text is rendered as markdown
 	// when the run finishes or a discrete event interrupts it.
@@ -2076,6 +2236,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 
 		switch ev.Kind {
 		case godo.HostedAgentEventKindRunStarted:
+			warmup.clear()
 			thinking.stop()
 			acc.flush(out)
 			flushAwaitingApproval(out, &awaiting)
@@ -2083,11 +2244,13 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			renderEvent(out, ev)
 			thinking.start()
 		case godo.HostedAgentEventKindTokenChunk:
+			warmup.clear()
 			var p tokenChunkPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil && dedup.allow(p.Text) {
 				acc.add(p.Text)
 			}
 		case godo.HostedAgentEventKindHITLRequested:
+			warmup.clear()
 			thinking.stop()
 			acc.flush(out)
 			dedup.reset()
@@ -2099,6 +2262,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				awaiting = append(awaiting, awaitingApproval{id: p.id(), summary: p.commandSummary()})
 			}
 		case godo.HostedAgentEventKindToolCallStarted:
+			warmup.clear()
 			thinking.stop()
 			acc.flush(out)
 			dedup.reset()
@@ -2118,7 +2282,15 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			} else {
 				renderToolStart(out, cmd)
 			}
+		case godo.HostedAgentEventKindSessionUpdated:
+			// Lifecycle noise during boot — do not clear the warm-up notice.
+			thinking.stop()
+			acc.flush(out)
+			flushAwaitingApproval(out, &awaiting)
+			dedup.reset()
+			renderEvent(out, ev)
 		default:
+			warmup.clear()
 			thinking.stop()
 			acc.flush(out)
 			flushAwaitingApproval(out, &awaiting)
@@ -2593,7 +2765,7 @@ func (p *promptDisplay) redraw() {
 // spinnerInit reserves the spinner's own line above the prompt and draws the
 // first frame, then redraws the prompt below it — all in one locked write so
 // the spinner row and the prompt row stay adjacent for spinnerFrame/spinnerStop.
-func (p *promptDisplay) spinnerInit(frame string) {
+func (p *promptDisplay) spinnerInit(frame, label string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw {
@@ -2605,24 +2777,24 @@ func (p *promptDisplay) spinnerInit(frame string) {
 	} else {
 		fmt.Fprint(p.out, "\r\x1b[K")
 	}
-	fmt.Fprintf(p.out, "%s thinking...\r\n", frame)
+	fmt.Fprintf(p.out, "%s %s\r\n", frame, label)
 	p.paintPromptLocked(false)
 }
 
 // spinnerFrame redraws the spinner line one row above the prompt.
 // DECSC/DECRC (\x1b7 / \x1b8) save+restore the cursor so the prompt row
 // below is preserved. No-op in non-raw or mid-stream state.
-func (p *promptDisplay) spinnerFrame(frame string) {
+func (p *promptDisplay) spinnerFrame(frame, label string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw || p.midLine {
 		return
 	}
-	fmt.Fprintf(p.out, "\x1b7\x1b[A\r\x1b[K%s thinking...\x1b8", frame)
+	fmt.Fprintf(p.out, "\x1b7\x1b[A\r\x1b[K%s %s\x1b8", frame, label)
 }
 
-// spinnerStop erases the spinner line entirely so no "(thinking...)" text or
-// frozen braille glyph is left behind in scrollback once the run produces output.
+// spinnerStop erases the spinner line entirely so no status text or frozen
+// braille glyph is left behind in scrollback once the run produces output.
 func (p *promptDisplay) spinnerStop() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -2635,11 +2807,14 @@ func (p *promptDisplay) spinnerStop() {
 // attachLoopTTY runs the raw-mode byte-by-byte input state machine. A 50ms
 // ticker polls pending-HITL so a HITL event flips the prompt instantly,
 // without needing the user to press Enter to "wake up" the loop.
-func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f *os.File, state *attachState) error {
+func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f *os.File, state *attachState, warmup *warmupState) error {
 	fd := int(f.Fd())
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
 		// Raw mode unavailable; fall back to bufio line mode.
+		if warmup != nil {
+			warmup.start()
+		}
 		return attachLoop(c, svc, sessionID, f, state)
 	}
 	defer term.Restore(fd, oldState)
@@ -2648,6 +2823,9 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 	defer state.display.setRaw(false)
 
 	state.display.redraw()
+	if warmup != nil {
+		warmup.start()
+	}
 
 	bytesCh := make(chan byte, 64)
 	readErrCh := make(chan error, 1)
