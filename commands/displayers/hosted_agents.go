@@ -23,8 +23,11 @@ import (
 // HostedAgentSession wraps one or more hosted-agent sessions for display. The
 // same struct backs `doctl agents start`, `... show`, and `... list` — a slice
 // of len 1 vs len N is the only difference between them.
+// Set Single=true for get/create verbs so JSON output is a bare object;
+// leave false (default) for list so JSON output is always an array.
 type HostedAgentSession struct {
 	Sessions []do.HostedAgentSession
+	Single   bool
 }
 
 var _ Displayable = &HostedAgentSession{}
@@ -36,7 +39,7 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 	for _, s := range h.Sessions {
 		raw = append(raw, s.HostedAgentSession)
 	}
-	if len(raw) == 1 {
+	if h.Single && len(raw) == 1 {
 		return writeJSON(raw[0], out)
 	}
 	return writeJSON(raw, out)

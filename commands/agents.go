@@ -405,7 +405,7 @@ func RunAgentsStart(c *CmdConfig) error {
 		}
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}})
+	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 }
 
 // RunAgentsStartProxy runs a local WebSocket facade that impersonates a
@@ -740,7 +740,7 @@ func RunAgentsShow(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}})
+	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 }
 
 // RunAgentsDestroy tears down a session.

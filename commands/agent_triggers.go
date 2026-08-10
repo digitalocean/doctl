@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -202,15 +203,19 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 		return err
 	}
 	if result.WebhookSecret != "" {
-		fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
+		noticeOut := c.Out
+		if Output == "json" {
+			noticeOut = os.Stderr
+		}
+		fmt.Fprint(noticeOut, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
 		if result.Trigger != nil && result.Trigger.Webhook != nil && result.Trigger.Webhook.WebhookURL != "" {
-			fmt.Fprintf(c.Out, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
+			fmt.Fprintf(noticeOut, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
 		}
 	}
 	if result.Trigger == nil {
 		return nil
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}, Single: true})
 }
 
 // RunAgentTriggersGet fetches one trigger.
@@ -222,7 +227,7 @@ func RunAgentTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersUpdate partially updates a trigger.
@@ -238,7 +243,7 @@ func RunAgentTriggersUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersDelete soft-deletes a trigger.
@@ -274,7 +279,7 @@ func agentTriggersSetStatus(c *CmdConfig, status godo.HostedAgentTriggerStatus) 
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersRotateSecret rotates a webhook secret.
@@ -285,6 +290,10 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	secret, err := c.HostedAgentTriggers().RotateSecret(c.Args[0])
 	if err != nil {
 		return err
+	}
+	if Output == "json" {
+		fmt.Fprint(os.Stderr, displayers.FormatWebhookSecretNotice(secret))
+		return json.NewEncoder(c.Out).Encode(map[string]string{"webhook_secret": secret})
 	}
 	fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(secret))
 	return nil
@@ -321,14 +330,14 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if e.OutputText != "" {
+	if e.OutputText != "" && Output != "json" {
 		fmt.Fprintln(c.Out, e.OutputText)
 		if e.OutputTruncated {
 			fmt.Fprintln(c.Out, "(output truncated)")
 		}
 		fmt.Fprintln(c.Out)
 	}
-	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}})
+	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
 }
 
 // RunAgentTriggersGetBySession reverse-looks-up a trigger by session ID.
@@ -340,7 +349,7 @@ func RunAgentTriggersGetBySession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersListReusableSessions lists PAUSED sessions for reuse binding.
