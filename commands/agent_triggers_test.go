@@ -270,8 +270,10 @@ func TestAgentTriggersProvidersReusableBySession(t *testing.T) {
 // --- JSON output contract tests (MARSOHS-867, MARSOHS-868) ------------------
 
 // TestAgentTriggersCreateWebhook_JSONMode verifies that in -o json mode:
-//   - stdout contains only valid JSON (no banner text)
-//   - the banner (secret + URL) is NOT on stdout
+//   - stdout is a single valid JSON object
+//   - webhook_secret IS in the JSON payload (it's a one-time value; consumers must be able to parse it)
+//   - trigger fields (trigger_id, name) are also in the JSON payload
+//   - the human-readable banner does NOT appear on stdout
 func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
@@ -312,13 +314,21 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 		require.NoError(t, RunAgentTriggersCreate(config))
 
 		raw := stdout.String()
-		// stdout must be valid JSON
+		// stdout must be a single valid JSON object from the first byte.
 		var parsed map[string]any
 		require.NoError(t, json.Unmarshal([]byte(raw), &parsed), "stdout must be valid JSON in -o json mode, got: %q", raw)
-		// banner text must NOT appear on stdout
-		assert.NotContains(t, raw, "sec_once", "webhook secret banner must not appear on stdout in JSON mode")
-		assert.NotContains(t, raw, "Webhook URL", "webhook URL banner must not appear on stdout in JSON mode")
+
+		// The one-time secret MUST be in the JSON payload — it cannot only live
+		// in a human-readable banner routed to stderr (Joe's concern).
+		assert.Equal(t, "sec_once", parsed["webhook_secret"], "webhook_secret must be in the JSON payload")
+
+		// Trigger fields must also be present (flat, not nested under "trigger").
+		assert.Equal(t, "tr_new", parsed["trigger_id"], "trigger_id must be in the JSON payload")
+		assert.Equal(t, "gh-ci", parsed["name"], "name must be in the JSON payload")
+
+		// Human-readable banner text must NOT appear on stdout.
 		assert.NotContains(t, raw, "store it now", "banner must not appear on stdout in JSON mode")
+		assert.NotContains(t, raw, "Webhook URL:", "webhook URL banner must not appear on stdout in JSON mode")
 	})
 }
 
