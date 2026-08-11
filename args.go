@@ -904,6 +904,12 @@ const (
 	// ArgOpenAIKeyAPIKey is the API key for the OpenAI API Key
 	ArgOpenAIKeyAPIKey = "api-key"
 
+	// ArgAnthropicKeyName is the name of the Anthropic API Key
+	ArgAnthropicKeyName = "name"
+
+	// ArgAnthropicKeyAPIKey is the API key for the Anthropic API Key
+	ArgAnthropicKeyAPIKey = "api-key"
+
 	// Dedicated Inference Args
 
 	// ArgDedicatedInferenceSpec is the path to a dedicated inference spec file.

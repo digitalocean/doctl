@@ -56,6 +56,13 @@ type OpenAiApiKey struct {
 // OpenAiApiKeys is a slice of OpenAiApiKey.
 type OpenAiApiKeys []OpenAiApiKey
 
+type AnthropicApiKey struct {
+	*godo.AnthropicApiKeyInfo
+}
+
+// AnthropicApiKeys is a slice of AnthropicApiKey.
+type AnthropicApiKeys []AnthropicApiKey
+
 // ApiKeys is a slice of ApiKey.
 type ApiKeys []ApiKeyInfo
 
@@ -138,6 +145,12 @@ type GradientAIService interface {
 	UpdateOpenAIAPIKey(openaiApiKeyId string, openaiAPIKeyUpdate *godo.OpenAIAPIKeyUpdateRequest) (*OpenAiApiKey, error)
 	DeleteOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKey, error)
 	ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (Agents, error)
+	ListAnthropicAPIKeys() (AnthropicApiKeys, error)
+	CreateAnthropicAPIKey(anthropicAPIKeyCreate *godo.AnthropicAPIKeyCreateRequest) (*AnthropicApiKey, error)
+	GetAnthropicAPIKey(anthropicApiKeyId string) (*AnthropicApiKey, error)
+	UpdateAnthropicAPIKey(anthropicApiKeyId string, anthropicAPIKeyUpdate *godo.AnthropicAPIKeyUpdateRequest) (*AnthropicApiKey, error)
+	DeleteAnthropicAPIKey(anthropicApiKeyId string) (*AnthropicApiKey, error)
+	ListAgentsByAnthropicAPIKey(anthropicApiKeyId string) (Agents, error)
 	ListDatacenterRegions(servesInference, servesBatch *bool) (DatacenterRegions, error)
 	ListAvailableModels() (Models, error)
 	ListIndexingJobs() (IndexingJobs, error)
@@ -560,6 +573,102 @@ func (a *gradientAIService) DeleteOpenAIAPIKey(openaiApiKeyId string) (*OpenAiAp
 func (a *gradientAIService) ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (Agents, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		agents, resp, err := a.client.GradientAI.ListAgentsByOpenAIAPIKey(context.TODO(), openaiApiKeyId, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		list := make([]any, len(agents))
+		for i := range agents {
+			list[i] = agents[i]
+		}
+		return list, resp, nil
+	}
+
+	// Checking if there are no API keys we don't need to paginate
+	opt := &godo.ListOptions{Page: 1, PerPage: perPage}
+	res, _, err := f(opt)
+	if err != nil {
+		return nil, err
+	}
+	if len(res) == 0 {
+		return Agents{}, nil
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]Agent, len(si))
+	for i := range si {
+		a := si[i].(*godo.Agent)
+		list[i] = Agent{Agent: a}
+	}
+
+	return list, nil
+}
+
+func (a *gradientAIService) ListAnthropicAPIKeys() (AnthropicApiKeys, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := a.client.GradientAI.ListAnthropicAPIKeys(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]AnthropicApiKey, len(si))
+	for i := range si {
+		ak := si[i].(*godo.AnthropicApiKeyInfo)
+		list[i] = AnthropicApiKey{AnthropicApiKeyInfo: ak}
+	}
+
+	return list, nil
+}
+
+func (a *gradientAIService) CreateAnthropicAPIKey(anthropicAPIKeyCreate *godo.AnthropicAPIKeyCreateRequest) (*AnthropicApiKey, error) {
+	anthropicApiKey, _, err := a.client.GradientAI.CreateAnthropicAPIKey(context.TODO(), anthropicAPIKeyCreate)
+	if err != nil {
+		return nil, err
+	}
+	return &AnthropicApiKey{AnthropicApiKeyInfo: anthropicApiKey}, nil
+}
+
+func (a *gradientAIService) GetAnthropicAPIKey(anthropicApiKeyId string) (*AnthropicApiKey, error) {
+	anthropicApiKey, _, err := a.client.GradientAI.GetAnthropicAPIKey(context.TODO(), anthropicApiKeyId)
+	if err != nil {
+		return nil, err
+	}
+	return &AnthropicApiKey{AnthropicApiKeyInfo: anthropicApiKey}, nil
+}
+
+func (a *gradientAIService) UpdateAnthropicAPIKey(anthropicApiKeyId string, anthropicAPIKeyUpdate *godo.AnthropicAPIKeyUpdateRequest) (*AnthropicApiKey, error) {
+	anthropicApiKey, _, err := a.client.GradientAI.UpdateAnthropicAPIKey(context.TODO(), anthropicApiKeyId, anthropicAPIKeyUpdate)
+	if err != nil {
+		return nil, err
+	}
+	return &AnthropicApiKey{AnthropicApiKeyInfo: anthropicApiKey}, nil
+}
+
+func (a *gradientAIService) DeleteAnthropicAPIKey(anthropicApiKeyId string) (*AnthropicApiKey, error) {
+	anthropicApiKey, _, err := a.client.GradientAI.DeleteAnthropicAPIKey(context.TODO(), anthropicApiKeyId)
+	if err != nil {
+		return nil, err
+	}
+	return &AnthropicApiKey{AnthropicApiKeyInfo: anthropicApiKey}, nil
+}
+
+func (a *gradientAIService) ListAgentsByAnthropicAPIKey(anthropicApiKeyId string) (Agents, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		agents, resp, err := a.client.GradientAI.ListAgentsByAnthropicAPIKey(context.TODO(), anthropicApiKeyId, opt)
 		if err != nil {
 			return nil, nil, err
 		}
