@@ -388,6 +388,23 @@ type HostedAgentSessionsListResponse struct {
 type HostedAgentSessionStreamOptions struct {
 	ReplayFrom string
 	ReplayOnly bool
+
+	// Before turns the request into a single backward page of durable
+	// history: the events strictly older than this event id, oldest-first,
+	// after which the stream closes without live events. Set it to the
+	// oldest event id already held. Requires ReplayOnly, since a live
+	// attach cannot start in the past.
+	//
+	// A cursorless replay only covers the newest window of a session's
+	// history (the server's replay budget), so walking backwards from its
+	// oldest event is how older history is read. HasMore reports whether
+	// the walk can continue.
+	Before string
+
+	// Limit caps the events in one history page. Only meaningful with
+	// Before. Zero leaves the server's default (200); the server also caps
+	// any request at its replay budget.
+	Limit int
 }
 
 // HostedAgentSendInputRequest is the body for POST .../input.
@@ -696,12 +713,23 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 	}
 	path := fmt.Sprintf(hostedAgentSessionStreamPath, sessionID)
 	if opt != nil {
+		// The server answers this combination with a 400; rejecting it here
+		// spends no round trip to learn the same thing.
+		if opt.Before != "" && !opt.ReplayOnly {
+			return nil, nil, errors.New("hosted agents: before requires replay only")
+		}
 		q := url.Values{}
 		if opt.ReplayFrom != "" {
 			q.Set("replay_from", opt.ReplayFrom)
 		}
 		if opt.ReplayOnly {
 			q.Set("replay_only", "true")
+		}
+		if opt.Before != "" {
+			q.Set("before", opt.Before)
+		}
+		if opt.Limit > 0 {
+			q.Set("limit", strconv.Itoa(opt.Limit))
 		}
 		if encoded := q.Encode(); encoded != "" {
 			path += "?" + encoded
@@ -719,10 +747,12 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 	if err != nil {
 		return nil, resp, err
 	}
-	return &HostedAgentSessionStream{
+	stream := &HostedAgentSessionStream{
 		raw:  NewSSEReader(resp.Body),
 		body: resp.Body,
-	}, resp, nil
+	}
+	stream.raw.OnComment = stream.observeComment
+	return stream, resp, nil
 }
 
 // SendInput enqueues user text for the in-sandbox agent runtime.
@@ -1156,7 +1186,29 @@ type HostedAgentSessionStream struct {
 	current HostedAgentEvent
 	err     error
 	done    bool
+	hasMore bool
 }
+
+// hasMoreComment is the SSE comment a history page (see
+// HostedAgentSessionStreamOptions.Before) ends with, reporting whether events
+// older than the page remain.
+const hasMoreComment = "has_more="
+
+// observeComment records the has_more trailer of a history page. Wired as the
+// reader's OnComment hook, so it runs while Next drains the stream.
+func (s *HostedAgentSessionStream) observeComment(comment []byte) {
+	value, ok := strings.CutPrefix(string(comment), hasMoreComment)
+	if !ok {
+		return
+	}
+	s.hasMore = value == "true"
+}
+
+// HasMore reports whether the history page just read has older events behind
+// it. Only meaningful once a stream opened with
+// HostedAgentSessionStreamOptions.Before has been drained to its end: the
+// trailer arrives after the last event.
+func (s *HostedAgentSessionStream) HasMore() bool { return s.hasMore }
 
 // Next advances to the next event. Returns false on EOF or error.
 func (s *HostedAgentSessionStream) Next() bool {

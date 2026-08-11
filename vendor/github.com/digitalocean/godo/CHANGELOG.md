@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.204.0] - 2026-08-10
+
+- #1080 - @nayanjd-do - Add constant to string match against volume capacity errors
+
 ## [1.203.0] - 2026-08-05
 
 - #1076 - @rak16 - microdroplets: add image region, fix image URN, drop https protocol
