@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -36,6 +37,7 @@ import (
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -586,7 +588,7 @@ func TestRunAgentsUpload_Archive(t *testing.T) {
 
 	dir := t.TempDir()
 	localPath := filepath.Join(dir, "bundle.tar")
-	contents := []byte("not really a tar, but bytes are bytes")
+	contents := mustTarBytes(t, "hello.txt", []byte("hello"))
 	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
 	sha := sha256Hex(contents)
 
@@ -604,6 +606,77 @@ func TestRunAgentsUpload_Archive(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentArchive, true)
 		assert.NoError(t, RunAgentsUpload(config))
 	})
+}
+
+func TestRunAgentsUpload_ArchiveRejectsGzip(t *testing.T) {
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "bundle.tgz")
+	// gzip magic 1f 8b — enough for validateArchiveUpload to reject before
+	// attempting a full gzip/tar parse.
+	assert.NoError(t, os.WriteFile(localPath, []byte{0x1f, 0x8b, 0x08, 0x00}, 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentArchive, true)
+		err := RunAgentsUpload(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "gzip-compressed")
+		assert.Contains(t, err.Error(), "tar -cf")
+	})
+}
+
+func TestRunAgentsUpload_ArchiveRejectsNonTar(t *testing.T) {
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "bundle.tar")
+	assert.NoError(t, os.WriteFile(localPath, []byte("not really a tar, but bytes are bytes"), 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentArchive, true)
+		err := RunAgentsUpload(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "uncompressed .tar")
+	})
+}
+
+func TestValidateArchiveUpload(t *testing.T) {
+	t.Run("accepts uncompressed tar", func(t *testing.T) {
+		assert.NoError(t, validateArchiveUpload(bytes.NewReader(mustTarBytes(t, "a.txt", []byte("a")))))
+	})
+	t.Run("rejects gzip", func(t *testing.T) {
+		err := validateArchiveUpload(bytes.NewReader([]byte{0x1f, 0x8b, 0x08}))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "gzip-compressed")
+	})
+	t.Run("rejects zip", func(t *testing.T) {
+		err := validateArchiveUpload(bytes.NewReader([]byte{'P', 'K', 0x03, 0x04}))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "zip archive")
+	})
+	t.Run("rejects empty", func(t *testing.T) {
+		err := validateArchiveUpload(bytes.NewReader(nil))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "empty")
+	})
+}
+
+func mustTarBytes(t *testing.T, name string, body []byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: name,
+		Mode: 0o644,
+		Size: int64(len(body)),
+	}))
+	_, err := tw.Write(body)
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	return buf.Bytes()
 }
 
 func TestRunAgentsUpload_MissingFile(t *testing.T) {

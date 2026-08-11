@@ -18,6 +18,7 @@ limitations under the License.
 package commands
 
 import (
+	"archive/tar"
 	"bufio"
 	"bytes"
 	"context"
@@ -324,12 +325,12 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		"Upload a file into a session workspace",
 		`Uploads a local file (or tar archive) into the session's sandbox workspace.
 
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is a tar that the server should extract at the destination. doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. All file sizes use the workspace transfer API (multipart upload for large payloads). Maximum size is 50 GiB.`,
+`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is an uncompressed tar that the server should extract at the destination (gzip-compressed `+"`"+`.tgz`+"`"+` / `+"`"+`.tar.gz`+"`"+` are rejected). doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. All file sizes use the workspace transfer API (multipart upload for large payloads). Maximum size is 50 GiB.`,
 		Writer,
 		displayerType(&displayers.HostedAgentWorkspaceUpload{}))
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdUpload, doctl.ArgAgentLocalFile, "", "", "Path to the local file to upload", requiredOpt())
-	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as a tar archive to extract at the destination")
+	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as an uncompressed tar archive to extract at the destination (not .tgz / .tar.gz)")
 	cmdUpload.Example = `doctl agents upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
@@ -834,6 +835,15 @@ func RunAgentsUpload(c *CmdConfig) error {
 	}
 	defer f.Close()
 
+	if isArchive {
+		if err := validateArchiveUpload(f); err != nil {
+			return err
+		}
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			return fmt.Errorf("rewinding upload file: %w", err)
+		}
+	}
+
 	// Hash the payload before sending so integrity can be verified end-to-end;
 	// rewind afterward so the same bytes stream as the body / parts.
 	sum, err := hashFile(f)
@@ -845,6 +855,37 @@ func RunAgentsUpload(c *CmdConfig) error {
 	}
 
 	return workspaceTransferUpload(c, sessionID, workspacePath, f, info.Size(), isArchive, sum)
+}
+
+// validateArchiveUpload checks that --archive payloads are an uncompressed tar
+// the guest can extract. Gzip-wrapped archives (.tgz / .tar.gz) and other
+// formats are rejected up front so users get a clear error instead of a late
+// transfer failure.
+func validateArchiveUpload(r io.Reader) error {
+	br := bufio.NewReader(r)
+	magic, err := br.Peek(2)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("reading archive: %w", err)
+	}
+	if len(magic) == 0 {
+		return fmt.Errorf("--archive expects an uncompressed .tar file; file is empty")
+	}
+	if len(magic) >= 2 && magic[0] == 0x1f && magic[1] == 0x8b {
+		return fmt.Errorf("--archive expects an uncompressed .tar file; got a gzip-compressed archive (.tgz / .tar.gz). Re-pack with `tar -cf archive.tar ...` (no -z) and retry")
+	}
+	if len(magic) >= 2 && magic[0] == 'P' && magic[1] == 'K' {
+		return fmt.Errorf("--archive expects an uncompressed .tar file; got a zip archive. Re-pack with `tar -cf archive.tar ...` and retry")
+	}
+
+	tr := tar.NewReader(br)
+	if _, err := tr.Next(); err != nil {
+		if errors.Is(err, io.EOF) {
+			// Two 512-byte zero blocks is a valid empty tar.
+			return nil
+		}
+		return fmt.Errorf("--archive expects an uncompressed .tar file: %w", err)
+	}
+	return nil
 }
 
 // hashFile returns the hex-encoded SHA-256 of r, reading it to EOF.
