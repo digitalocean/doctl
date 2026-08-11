@@ -4,8 +4,8 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 )
 
-func ListRegionsCmd() *Command {
-	cmd := CmdBuilder(nil, RunGradientAIListRegions, "list-regions", "List Gradient AI regions", `The `+"`doctl gradient list-regions`"+` command lists all available Gradient AI regions.
+func ListRegionsCmd(parent *Command) *Command {
+	cmd := CmdBuilder(parent, RunGradientAIListRegions, "list-regions", "List Gradient AI regions", `The `+"`doctl gradient list-regions`"+` command lists all available Gradient AI regions.
 
 The command returns the following details for each region:
 	- Inference URL: The URL for the inference server
