@@ -158,20 +158,23 @@ To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer
 // XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
 func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig) error {
 	return func(c *CmdConfig) error {
-		token := c.getContextAccessToken()
 		context := strings.ToLower(Context)
 		if context == "" {
 			context = strings.ToLower(viper.GetString("context"))
 		}
 
-		if token == "" {
+		var token string
+		if Token != "" {
+			// Use the token provided via --access-token flag.
+			token = Token
+		} else {
+			// Always prompt for a new token, even if one exists in the config.
+			// This ensures the user can replace an expired or revoked token.
 			in, err := retrieveUserTokenFunc()
 			if err != nil {
 				return fmt.Errorf("Unable to read DigitalOcean access token: %s", err)
 			}
 			token = strings.TrimSpace(in)
-		} else {
-			template.Render(c.Out, `Using token for context {{highlight .}}{{nl}}`, context)
 		}
 
 		c.setContextAccessToken(token)
