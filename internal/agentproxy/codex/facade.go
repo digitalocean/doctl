@@ -749,10 +749,10 @@ func decodeCommandExecutionApprovalDecision(raw json.RawMessage) (godo.HostedAge
 // equivalents just above: nothing ever constructs or parses that shape.
 
 // turnInterruptResult is TurnInterruptResponse (v2/turn.rs) — genuinely
-// empty on the wire. Best-effort no-op for now: the harness has no
-// cancel-input surface yet.
-//
-// TODO(M3-M5): wire this to a real cancel once the harness exposes one.
+// empty on the wire. Only used as the fallback for sessions that can't relay
+// the interrupt to a real agent (see the turn/interrupt case in Dispatch);
+// there it is a best-effort no-op, as it was for every session before the
+// relay existed.
 type turnInterruptResult struct{}
 
 // synthesizedThread builds the one thread this facade ever knows about: a
@@ -956,12 +956,28 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		}, nil
 
 	case "turn/interrupt":
+		// Relayed rather than stubbed: the stub returned success while the
+		// turn kept running, so Esc appeared to do nothing. If the session
+		// can't relay (non-codex agent, older harness), fall back to the old
+		// empty reply — the TUI needs *an* answer either way.
+		if result, handled, err := f.relayRequest(ctx, method, params); handled {
+			return result, err
+		}
 		return turnInterruptResult{}, nil
 
 	default:
-		// Every other method is logged by the bridge as "unhandled: <method>"
-		// and, if it was a request, answered with a JSON-RPC error so codex
-		// never hangs.
+		// Anything this facade has no synthesized answer for goes to the real
+		// agent. That is what makes methods added to codex after this proxy
+		// shipped — new slash commands especially — work without a doctl
+		// release, and it is the inbound mirror of the outbound raw
+		// passthrough's denylist: the in-sandbox adapter, not this switch,
+		// decides what is safe to forward.
+		if result, handled, err := f.relayRequest(ctx, method, params); handled {
+			return result, err
+		}
+		// Not relayable. The bridge logs it as "unhandled: <method>" and, if
+		// it was a request, answers with a JSON-RPC error so codex never
+		// hangs.
 		return nil, agentproxy.ErrMethodNotFound
 	}
 }

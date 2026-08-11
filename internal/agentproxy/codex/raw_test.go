@@ -4,8 +4,10 @@ package codex
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 
+	"github.com/digitalocean/doctl/internal/agentproxy"
 	"github.com/digitalocean/doctl/internal/agentproxy/agentproxytest"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -413,4 +415,121 @@ func TestRawTurnStartFrame(t *testing.T) {
 
 	assert.Nil(t, rawTurnStartFrame(nil))
 	assert.Nil(t, rawTurnStartFrame(json.RawMessage{}))
+}
+
+// TestFacade_TurnInterrupt_Relayed is the M1 acceptance case: Esc mid-turn.
+// The old stub answered success while the turn kept running, so the frame
+// reaching the harness — and the agent's answer reaching the client — is what
+// makes the difference between an interrupt and a lie.
+func TestFacade_TurnInterrupt_Relayed(t *testing.T) {
+	f, h, _ := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+	h.QueueRelayReply([]byte(`{"id":1,"result":{"aborted":true}}`))
+
+	result, err := dispatch(t, f, "turn/interrupt", map[string]any{"turnId": "run-1"})
+	require.NoError(t, err)
+
+	var sent struct {
+		ID     int             `json:"id"`
+		Method string          `json:"method"`
+		Params json.RawMessage `json:"params"`
+	}
+	require.NoError(t, json.Unmarshal(h.LastRelay(), &sent))
+	assert.Equal(t, "turn/interrupt", sent.Method)
+	assert.NotZero(t, sent.ID, "a relayed request needs an id; a frame without one is a notification the adapter declines")
+	assert.JSONEq(t, `{"turnId":"run-1"}`, string(sent.Params))
+
+	assert.JSONEq(t, `{"aborted":true}`, string(result.(json.RawMessage)))
+}
+
+// TestFacade_UnknownRequest_Relayed: a method this facade has never heard of
+// reaches the agent instead of being refused. This is what lets codex gain
+// slash commands without a doctl release.
+func TestFacade_UnknownRequest_Relayed(t *testing.T) {
+	f, h, _ := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+	h.QueueRelayReply([]byte(`{"id":1,"result":{"data":["a"]}}`))
+
+	result, err := dispatch(t, f, "some/futureMethod", map[string]any{"q": 1})
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"data":["a"]}`, string(result.(json.RawMessage)))
+	assert.Contains(t, string(h.LastRelay()), `"some/futureMethod"`)
+}
+
+// TestFacade_Relay_AgentErrorReachesClient: an agent-side JSON-RPC error is
+// the agent's verdict on the client's request, so it must arrive as that
+// request's error with the agent's own code — not be swallowed into a
+// success, and not be relabelled as a proxy failure.
+func TestFacade_Relay_AgentErrorReachesClient(t *testing.T) {
+	f, h, _ := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+	h.QueueRelayReply([]byte(`{"id":1,"error":{"code":-32601,"message":"Method not found"}}`))
+
+	_, err := dispatch(t, f, "some/unsupported", nil)
+	var rpcErr *agentproxy.RPCError
+	require.ErrorAs(t, err, &rpcErr)
+	assert.Equal(t, -32601, rpcErr.Code)
+	assert.Equal(t, "Method not found", rpcErr.Message)
+}
+
+// TestFacade_Relay_DeclinedFallsBackToStub: when the adapter declines, the
+// facade must still answer. turn/interrupt falls back to its empty reply and
+// an unknown method to method-not-found; either way the client is never left
+// waiting on a request that will never be answered.
+func TestFacade_Relay_DeclinedFallsBackToStub(t *testing.T) {
+	f, h, _ := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+	h.QueueRelayReply(nil)
+
+	result, err := dispatch(t, f, "turn/interrupt", nil)
+	require.NoError(t, err)
+	assert.Equal(t, turnInterruptResult{}, result)
+
+	_, err = dispatch(t, f, "some/unknown", nil)
+	assert.ErrorIs(t, err, agentproxy.ErrMethodNotFound)
+}
+
+// TestFacade_Relay_TransportFailureIsReported: a relay that never reached the
+// agent must not be reported to the client as a successful interrupt. The
+// client gets an error it can show, which is the honest answer.
+func TestFacade_Relay_TransportFailureIsReported(t *testing.T) {
+	f, h, _ := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+	h.QueueRelayError(http.StatusServiceUnavailable)
+
+	_, err := dispatch(t, f, "turn/interrupt", nil)
+	var rpcErr *agentproxy.RPCError
+	require.ErrorAs(t, err, &rpcErr)
+	assert.Contains(t, rpcErr.Message, "turn/interrupt")
+}
+
+// TestFacade_Relay_NotAttemptedForNonCodexKind: relaying codex frames to a
+// session running some other agent would be sending it a protocol it does not
+// speak, so the pre-relay behaviour stands.
+func TestFacade_Relay_NotAttemptedForNonCodexKind(t *testing.T) {
+	f, h, _ := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindOpenCode
+
+	result, err := dispatch(t, f, "turn/interrupt", nil)
+	require.NoError(t, err)
+	assert.Equal(t, turnInterruptResult{}, result)
+	assert.Nil(t, h.LastRelay(), "a non-codex session must not relay codex frames")
+}
+
+// TestUnwrapRelayReply covers the shapes the agent can answer with, including
+// the empty one: a reply carrying neither result nor error still has to
+// resolve the client's request rather than becoming a second failure mode.
+func TestUnwrapRelayReply(t *testing.T) {
+	result, handled, err := unwrapRelayReply([]byte(`{"id":1,"result":{"ok":true}}`), "m")
+	require.True(t, handled)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"ok":true}`, string(result.(json.RawMessage)))
+
+	_, handled, err = unwrapRelayReply([]byte(`{"id":1}`), "m")
+	assert.True(t, handled)
+	assert.NoError(t, err)
+
+	_, handled, err = unwrapRelayReply([]byte(`not json`), "m")
+	assert.True(t, handled)
+	assert.Error(t, err, "an unreadable reply must fail the client's request, not pass as success")
 }

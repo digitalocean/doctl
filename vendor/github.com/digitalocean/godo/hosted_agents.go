@@ -24,6 +24,7 @@ const (
 	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
 	hostedAgentSessionStreamPath                    = hostedAgentSessionByIDPath + "/stream"
 	hostedAgentSessionInputPath                     = hostedAgentSessionByIDPath + "/input"
+	hostedAgentSessionRequestPath                   = hostedAgentSessionByIDPath + "/request"
 	hostedAgentSessionHITLPath                      = hostedAgentSessionByIDPath + "/hitl/%s"
 	hostedAgentSessionSandboxExecPath               = hostedAgentSessionByIDPath + "/sandbox/exec"
 	hostedAgentSessionPausePath                     = hostedAgentSessionByIDPath + "/pause"
@@ -64,6 +65,7 @@ type HostedAgentsService interface {
 	ResumeSession(context.Context, string) (*Response, error)
 	StreamSession(context.Context, string, *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error)
 	SendInput(context.Context, string, *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error)
+	RelayRequest(context.Context, string, *HostedAgentRelayRequest) (*HostedAgentRelayResponse, *Response, error)
 	ResolveHITL(context.Context, string, string, *HostedAgentResolveHITLRequest) (*Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
 	UploadWorkspace(context.Context, string, *HostedAgentWorkspaceUploadRequest) (*HostedAgentWorkspaceUploadResponse, *Response, error)
@@ -414,6 +416,36 @@ type HostedAgentSendInputResponse struct {
 	RunID string `json:"run_id"`
 }
 
+// HostedAgentRelayRequest is the body for POST .../request: one native
+// agent-protocol request frame, forwarded to the session's agent verbatim.
+//
+// Where SendInput carries the one message with a canonical meaning ("the user
+// said something"), this carries everything else a client that speaks the
+// session's own protocol needs to ask — for codex, the requests behind
+// interrupts, slash commands, and model pickers. The control plane never
+// parses the frame; only the in-sandbox adapter decides what is safe to
+// forward.
+type HostedAgentRelayRequest struct {
+	// SourceRaw is the caller's native protocol request frame — for codex, a
+	// single JSON-RPC request object carrying the caller's own id. Named to
+	// match SendInput's field: both mean "my own frame, verbatim". Base64 on
+	// the wire per the proto bytes JSON mapping.
+	SourceRaw []byte `json:"source_raw"`
+}
+
+// HostedAgentRelayResponse is the reply to POST .../request.
+type HostedAgentRelayResponse struct {
+	// SourceRaw is the agent's reply frame, addressed to the caller's own
+	// request id but otherwise verbatim. A protocol-level failure (a JSON-RPC
+	// error object) is a normal reply and arrives here rather than as an HTTP
+	// error.
+	//
+	// Empty means the in-sandbox adapter declined to forward the method.
+	// Callers must answer their own caller on that case rather than waiting
+	// for something that will not come.
+	SourceRaw []byte `json:"source_raw,omitempty"`
+}
+
 // HostedAgentResolveHITLRequest is the body for POST .../hitl/{requestID}.
 type HostedAgentResolveHITLRequest struct {
 	Outcome HostedAgentHITLOutcome      `json:"outcome"`
@@ -755,6 +787,30 @@ func (s *HostedAgentsServiceOp) SendInput(ctx context.Context, sessionID string,
 		return nil, nil, err
 	}
 	root := new(HostedAgentSendInputResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// RelayRequest forwards one native agent-protocol request frame to the
+// session's agent and returns its reply verbatim. Blocks on the agent, so it
+// is slower than the other session calls; an empty reply means the in-sandbox
+// adapter declined the method.
+func (s *HostedAgentsServiceOp) RelayRequest(ctx context.Context, sessionID string, body *HostedAgentRelayRequest) (*HostedAgentRelayResponse, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if body == nil || len(body.SourceRaw) == 0 {
+		return nil, nil, errors.New("hosted agents: source_raw is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionRequestPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentRelayResponse)
 	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err

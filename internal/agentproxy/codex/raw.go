@@ -31,20 +31,37 @@
 // synthesized agentMessage item/completed — the only canonical notification
 // that could duplicate a raw item — stays suppressed for that turn.
 //
-// This file also holds the v2 inbound half: rawTurnStartFrame packages the
-// TUI's turn/start params as SendInput's source_raw, so the in-sandbox
-// adapter drives the turn from the client's actual params (input items,
-// model, effort, approval policy) instead of a synthesized single-text turn.
-// The direction is inverted but the id discipline is symmetric: outbound
-// rewrites VM ids to proxy ids; inbound ships the proxy-side threadId as-is
-// and the adapter rewrites it to the VM's own, minting its own JSON-RPC
-// request id (the frame is a template, never an injected request).
+// This file also holds the inbound halves, which come in two shapes because
+// the client sends two kinds of message.
+//
+// Notifications and turns (v2): rawTurnStartFrame packages the TUI's
+// turn/start params as SendInput's source_raw, so the in-sandbox adapter
+// drives the turn from the client's actual params (input items, model,
+// effort, approval policy) instead of a synthesized single-text turn.
+//
+// Requests (M1): relayRequest forwards a client *request* — one that blocks
+// waiting for an answer — to the agent and returns its reply. turn/start is
+// deliberately not one of these: it already has a canonical meaning
+// (SendInput) and a run to attribute events to, so relaying it around that
+// would start a turn no one is tracking. Everything else this facade can't
+// answer itself goes through, which is what makes turn/interrupt real and
+// lets new codex methods work without a doctl release.
+//
+// The direction is inverted but the id discipline is symmetric. Outbound
+// rewrites VM ids to proxy ids. Inbound ships the proxy-side ids as-is and
+// the adapter rewrites them to the VM's own — it is the only component that
+// knows those. JSON-RPC request ids never cross a hop at all: each side mints
+// its own and answers on the id it was given.
 package codex
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 
+	"github.com/digitalocean/doctl/internal/agentproxy"
 	"github.com/digitalocean/godo"
 )
 
@@ -172,6 +189,104 @@ func rawTurnStartFrame(params json.RawMessage) []byte {
 	frame = append(frame, params...)
 	frame = append(frame, '}')
 	return frame
+}
+
+// relayRequest forwards one client request this facade has no synthesized
+// answer for to the session's real agent, and returns the agent's reply as
+// Dispatch's result.
+//
+// The synthesized replies elsewhere in Dispatch exist because the harness had
+// no way to ask the agent anything; this is that way. A method left to a
+// stub answers plausibly but falsely (turn/interrupt returning success while
+// the turn keeps running), and a method with no stub at all is answered with
+// "method not found" — visible in the TUI as a broken slash command. Relaying
+// puts the real agent behind both cases.
+//
+// The client's JSON-RPC id never travels: each hop owns its own id space.
+// This facade mints one for the relayed frame, and the bridge addresses the
+// reply to whatever the client sent. What comes back is unwrapped to result
+// or RPCError, so an agent-side failure reaches the client as a failure of
+// its own request rather than a proxy error.
+//
+// Returns handled=false when relaying is not available for this session or
+// the agent declined the method — the caller then falls back to whatever it
+// would have done before.
+func (f *Facade) relayRequest(ctx context.Context, method string, params json.RawMessage) (result any, handled bool, err error) {
+	if !f.rawEligible() {
+		return nil, false, nil
+	}
+	frame, ok := rawRequestFrame(method, params)
+	if !ok {
+		return nil, false, nil
+	}
+	resp, relayErr := f.Sessions.RelayRequest(ctx, f.SessionID, &godo.HostedAgentRelayRequest{SourceRaw: frame})
+	if relayErr != nil {
+		// The agent is reachable in principle but this request did not get
+		// through. Report it as a failure of the client's request rather than
+		// silently falling back to a stub that would claim success.
+		log.Printf("codex facade: relay %s failed: %v", method, relayErr)
+		return nil, true, &agentproxy.RPCError{
+			Code:    -32000,
+			Message: fmt.Sprintf("relaying %s to the hosted agent failed: %v", method, relayErr),
+		}
+	}
+	if resp == nil || len(resp.SourceRaw) == 0 {
+		// Declined by the in-sandbox adapter (harness-owned or unknown
+		// method). Not an error: the caller answers it.
+		return nil, false, nil
+	}
+	return unwrapRelayReply(resp.SourceRaw, method)
+}
+
+// rawRequestFrame builds the JSON-RPC request frame to relay. The id is a
+// fixed placeholder rather than the client's: the adapter mints its own id
+// for the request it drives and echoes this one straight back, so it only has
+// to be present and non-null (a frame without an id is a notification, which
+// the adapter declines).
+func rawRequestFrame(method string, params json.RawMessage) ([]byte, bool) {
+	if method == "" {
+		return nil, false
+	}
+	envelope := struct {
+		ID     int             `json:"id"`
+		Method string          `json:"method"`
+		Params json.RawMessage `json:"params,omitempty"`
+	}{ID: 1, Method: method, Params: params}
+	frame, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, false
+	}
+	return frame, true
+}
+
+// unwrapRelayReply turns the agent's JSON-RPC reply frame into Dispatch's
+// (result, error) pair. An error object becomes an RPCError carrying the
+// agent's own code and message, so the client sees the agent's verdict rather
+// than a proxy-flavoured translation of it.
+func unwrapRelayReply(frame []byte, method string) (any, bool, error) {
+	var reply struct {
+		Result json.RawMessage `json:"result"`
+		Error  *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(frame), &reply); err != nil {
+		return nil, true, &agentproxy.RPCError{
+			Code:    -32000,
+			Message: fmt.Sprintf("hosted agent returned an unreadable reply to %s: %v", method, err),
+		}
+	}
+	if reply.Error != nil {
+		return nil, true, &agentproxy.RPCError{Code: reply.Error.Code, Message: reply.Error.Message}
+	}
+	if len(reply.Result) == 0 {
+		// A reply with neither result nor error still resolves the client's
+		// request; an empty object is the honest rendering of "done, nothing
+		// to report".
+		return struct{}{}, true, nil
+	}
+	return json.RawMessage(reply.Result), true, nil
 }
 
 // rewriteRawParams decodes a native frame's params object and rewrites the

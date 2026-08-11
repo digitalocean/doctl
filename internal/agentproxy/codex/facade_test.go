@@ -293,6 +293,9 @@ func TestFacade_ThreadResume(t *testing.T) {
 	})
 }
 
+// Sessions that can't relay (newTestFacade leaves AgentKind unset) keep the
+// pre-relay answers for these two: method-not-found, and an empty interrupt
+// reply. The relayed behaviour is covered in raw_test.go.
 func TestFacade_UnhandledMethod(t *testing.T) {
 	f, _, _ := newTestFacade(t)
 
@@ -300,7 +303,7 @@ func TestFacade_UnhandledMethod(t *testing.T) {
 	assert.ErrorIs(t, err, agentproxy.ErrMethodNotFound)
 }
 
-func TestFacade_TurnInterrupt_NoOp(t *testing.T) {
+func TestFacade_TurnInterrupt_NoOpWithoutRelay(t *testing.T) {
 	f, _, _ := newTestFacade(t)
 
 	result, err := dispatch(t, f, "turn/interrupt", nil)

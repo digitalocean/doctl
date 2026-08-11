@@ -37,6 +37,12 @@ type HostedAgentsService interface {
 	PauseSession(sessionID string) error
 	ResumeSession(sessionID string) error
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
+	// RelayRequest forwards one native agent-protocol request frame to the
+	// session's agent and returns its reply verbatim. Blocks on the agent, so
+	// it takes a context of its own rather than the package-wide
+	// context.TODO(): the caller is a proxy answering a client that is itself
+	// blocked, and it needs to be able to give up.
+	RelayRequest(ctx context.Context, sessionID string, body *godo.HostedAgentRelayRequest) (*godo.HostedAgentRelayResponse, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
@@ -104,6 +110,11 @@ func (s *hostedAgentsService) ResumeSession(sessionID string) error {
 
 func (s *hostedAgentsService) SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error) {
 	resp, _, err := s.client.HostedAgents.SendInput(context.TODO(), sessionID, input)
+	return resp, err
+}
+
+func (s *hostedAgentsService) RelayRequest(ctx context.Context, sessionID string, body *godo.HostedAgentRelayRequest) (*godo.HostedAgentRelayResponse, error) {
+	resp, _, err := s.client.HostedAgents.RelayRequest(ctx, sessionID, body)
 	return resp, err
 }
 

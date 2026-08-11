@@ -97,6 +97,9 @@ type Harness struct {
 	sessionID            string
 	runID                string        // returned by the next POST .../input call
 	lastInput            *InputRequest // most recent POST .../input body, for test assertions (LastInput)
+	lastRelay            []byte        // most recent POST .../request frame, for test assertions (LastRelay)
+	relayReply           []byte        // answered by the next POST .../request call; empty = adapter declined
+	relayStatus          int           // 0 = answer normally; nonzero = fail POST .../request with this status
 	events               []Event       // streamed, in order, by the next GET .../stream call
 	replayEvents         []Event       // streamed instead of events when GET .../stream carries replay_only=true
 	streamErrorStatus    int           // 0 = serve normally; nonzero = return this HTTP status instead
@@ -146,6 +149,7 @@ func New(t *testing.T, sessionID string) *Harness {
 	// Temporarily on control-plane .../stream until OHP /events is on stage2.
 	mux.HandleFunc("GET /v2/agents/sessions/{id}/stream", h.handleStream)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/input", h.handleInput)
+	mux.HandleFunc("POST /v2/agents/sessions/{id}/request", h.handleRelay)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/hitl/{requestID}", h.handleHITL)
 
 	h.Server = httptest.NewServer(mux)
@@ -302,6 +306,58 @@ func (h *Harness) LastInput() *InputRequest {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.lastInput
+}
+
+// QueueRelayReply arranges for the next POST .../request call to answer with
+// replyFrame — the agent's native reply, as the in-sandbox adapter would have
+// produced it. An empty frame reproduces the adapter *declining* the method,
+// which is a successful call with nothing in it, not an error.
+func (h *Harness) QueueRelayReply(replyFrame []byte) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.relayReply = replyFrame
+	h.relayStatus = 0
+}
+
+// QueueRelayError arranges for the next POST .../request call to fail with an
+// HTTP status, covering the transport-failure half of the relay contract
+// (session gone, agent unreachable) as opposed to a protocol-level error,
+// which arrives as a normal reply frame via QueueRelayReply.
+func (h *Harness) QueueRelayError(status int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.relayStatus = status
+}
+
+// LastRelay returns the most recent POST .../request frame this harness
+// received, or nil if none arrived yet.
+func (h *Harness) LastRelay() []byte {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.lastRelay
+}
+
+func (h *Harness) handleRelay(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		SourceRaw []byte `json:"source_raw"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+
+	h.mu.Lock()
+	h.lastRelay = body.SourceRaw
+	status, reply := h.relayStatus, h.relayReply
+	h.mu.Unlock()
+
+	if status != 0 {
+		http.Error(w, "agentproxytest: queued relay error", status)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	// source_raw is omitempty on the wire, so a declined relay is a 200 with
+	// no frame at all — exactly what the real API sends.
+	_ = json.NewEncoder(w).Encode(struct {
+		SourceRaw []byte `json:"source_raw,omitempty"`
+	}{SourceRaw: reply})
 }
 
 func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
