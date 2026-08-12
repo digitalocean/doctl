@@ -990,10 +990,13 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 	if written == 0 {
 		written = size
 	}
-	return c.Display(&displayers.HostedAgentWorkspaceUpload{Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
-		Path:         workspacePath,
-		BytesWritten: written,
-	}}})
+	return c.Display(&displayers.HostedAgentWorkspaceUpload{
+		Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
+			Path:         workspacePath,
+			BytesWritten: written,
+		}},
+		Single: true,
+	})
 }
 
 // workspacePartUploadURLs mints presigned PUT URLs for one or more 1-based parts.
