@@ -753,8 +753,7 @@ func RunAgentsDestroy(c *CmdConfig) error {
 	if err := c.HostedAgents().DestroySession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s destroyed", sessionID)
-	return nil
+	return sessionStatusNotice(c, sessionID, "destroyed")
 }
 
 // RunAgentsPause pauses a session.
@@ -766,8 +765,7 @@ func RunAgentsPause(c *CmdConfig) error {
 	if err := c.HostedAgents().PauseSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s paused", sessionID)
-	return nil
+	return sessionStatusNotice(c, sessionID, "paused")
 }
 
 // RunAgentsResume resumes a paused session.
@@ -779,7 +777,21 @@ func RunAgentsResume(c *CmdConfig) error {
 	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s resumed", sessionID)
+	return sessionStatusNotice(c, sessionID, "resumed")
+}
+
+// sessionStatusNotice reports the outcome of a no-body mutation (destroy/
+// pause/resume) that the API acknowledges with an empty response. In JSON
+// mode it emits a minimal machine-readable ack instead of the human notice()
+// sentence, so `-o json` never mixes prose onto stdout (MARSOHS-915).
+func sessionStatusNotice(c *CmdConfig, sessionID, status string) error {
+	if Output == "json" {
+		return json.NewEncoder(c.Out).Encode(map[string]string{
+			"session_id": sessionID,
+			"status":     status,
+		})
+	}
+	notice("Session %s %s", sessionID, status)
 	return nil
 }
 
@@ -1102,6 +1114,13 @@ func RunAgentsDownload(c *CmdConfig) error {
 		return err
 	}
 
+	if Output == "json" {
+		return json.NewEncoder(c.Out).Encode(map[string]any{
+			"session_id":    sessionID,
+			"path":          saveTo,
+			"bytes_written": written,
+		})
+	}
 	notice("Downloaded %d bytes to %s", written, saveTo)
 	return nil
 }
@@ -1205,6 +1224,13 @@ func RunAgentsApprove(c *CmdConfig) error {
 		Source:  godo.HostedAgentResolutionSourceOutOfBand,
 	}); err != nil {
 		return err
+	}
+	if Output == "json" {
+		return json.NewEncoder(c.Out).Encode(map[string]string{
+			"session_id": sessionID,
+			"request_id": requestID,
+			"outcome":    string(outcome),
+		})
 	}
 	notice("HITL request %s resolved as %s", requestID, outcome)
 	return nil
