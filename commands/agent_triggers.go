@@ -203,13 +203,9 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 		return err
 	}
 	if Output == "json" {
-		// In JSON mode the one-time secret must be in the machine-readable output,
-		// not only in a human-readable banner that gets routed to stderr.
-		// Embed it alongside all trigger fields in a single flat JSON object so
-		// consumers can always parse the secret without screen-scraping.
-		if result.WebhookSecret != "" {
-			fmt.Fprint(os.Stderr, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
-		}
+		// JSON mode emits nothing but the document: the one-time secret travels
+		// in the payload, so re-printing it as a human banner would only
+		// duplicate a secret onto a second stream that callers may capture.
 		type jsonCreateResult struct {
 			*godo.HostedAgentTrigger
 			WebhookSecret string `json:"webhook_secret,omitempty"`
@@ -310,7 +306,6 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 		return err
 	}
 	if Output == "json" {
-		fmt.Fprint(os.Stderr, displayers.FormatWebhookSecretNotice(secret))
 		return json.NewEncoder(c.Out).Encode(map[string]string{"webhook_secret": secret})
 	}
 	fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(secret))
