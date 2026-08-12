@@ -151,6 +151,25 @@ func (f *Facade) tryRawPassthrough(ev godo.HostedAgentEvent, ts *turnState, repl
 		// synthesized notification reports f.totalUsage — an accurate
 		// fallback beats one that silently restarts from zero.
 		f.accumulateUsage(ev.Payload)
+	case godo.HostedAgentEventKindRunCompleted, godo.HostedAgentEventKindRunFailed:
+		// A raw turn end on a turn whose synthesized "-msg" agentMessage
+		// item was opened by the canonical path (a canonical run.started,
+		// or a canonical delta after a reconnect fell this turn back per
+		// event) must not leave that item dangling open: the forwarded
+		// frame replaces finishTurn's turn/completed but knows nothing of
+		// the item this facade announced. Close it first, mirroring
+		// finishTurn's item/completed-before-turn/completed ordering.
+		if ts.itemStarted {
+			if !f.notify("item/completed", itemCompletedNotification{
+				Item:          agentMessageItem{Type: "agentMessage", ID: ts.itemID, Text: ts.text.String()},
+				ThreadID:      f.SessionID,
+				TurnID:        ev.RunID,
+				CompletedAtMs: eventTime(ev).UnixMilli(),
+			}) {
+				return true, true
+			}
+			ts.itemStarted = false
+		}
 	}
 
 	if !f.notify(frame.Method, params) {

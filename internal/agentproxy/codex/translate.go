@@ -76,6 +76,28 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
 			return false
 		}
+		// A canonical delta on a turn whose run.started went raw (or was
+		// never seen at all) has no announced item to attach to: the raw
+		// path deliberately never opens the synthesized "-msg" item (see
+		// raw.go's package doc), and this is exactly what a mid-turn
+		// reconnect produces — the server does not retain source_raw
+		// durably, so events redelivered via replay_from arrive raw-less
+		// and fall back here even though the turn's earlier frames were
+		// forwarded raw. Open the item now so the delta below (and every
+		// later one) references an item the client has actually been told
+		// about, and so finishTurn closes it instead of suppressing the
+		// close for an item whose deltas were delivered.
+		if !ts.itemStarted {
+			if !f.notify("item/started", itemStartedNotification{
+				Item:        agentMessageItem{Type: "agentMessage", ID: ts.itemID, Text: ""},
+				ThreadID:    f.SessionID,
+				TurnID:      ev.RunID,
+				StartedAtMs: at.UnixMilli(),
+			}) {
+				return true
+			}
+			ts.itemStarted = true
+		}
 		ts.text.WriteString(payload.Text)
 		if !f.notify("item/agentMessage/delta", agentMessageDeltaNotification{
 			ThreadID: f.SessionID,

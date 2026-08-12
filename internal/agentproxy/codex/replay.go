@@ -81,12 +81,12 @@ func (f *Facade) AfterReply(ctx context.Context, method string) {
 // autoRejectFileChangeApproval).
 //
 // A run still in progress at the moment history was fetched (no
-// run.completed/run.failed among its events yet) is left in this local map
-// reporting "inProgress" and never gets completed: this facade has no way to
-// attach to an already-running turn's future events, since the live loop
-// only ever starts from this connection's own turn/start (see trackTurn). A
-// known, narrow gap — not a bug to fix here — the harness has no "attach to
-// an existing in-flight run" concept for this proxy to use.
+// run.completed/run.failed among its events yet) is adopted into the live
+// path once the replay completes — see adoptInFlightReplayTurns. This is
+// what makes a proxy killed and restarted mid-turn (with --replay)
+// reconstruct the TUI without desync: history rebuilds the turn up to the
+// fetch point, and the live loop — attached at the replay's own cursor, so
+// nothing is lost in between and nothing is double-delivered — finishes it.
 //
 // Marks replayDone only on reaching the natural end of the stream — not on
 // any early-abort path (StreamSession failing to open, or a dead client
@@ -119,8 +119,17 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 	defer stream.Close()
 
 	turns := make(map[string]*turnState)
+	finished := make(map[string]bool)
+	// lastEventID tracks the replay's own resume cursor: the id of the last
+	// event the stream delivered, run-less control frames included — cursor
+	// position is a property of the stream, not of any one turn.
+	var lastEventID string
 	for stream.Next() {
 		ev := stream.Current()
+
+		if ev.EventID != "" {
+			lastEventID = ev.EventID
+		}
 
 		// Same guard as drainStream: control frames (stream.state) and other
 		// run-less events belong to no turn — don't synthesize a phantom
@@ -135,6 +144,11 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 			turns[ev.RunID] = ts
 		}
 
+		switch ev.Kind {
+		case godo.HostedAgentEventKindRunCompleted, godo.HostedAgentEventKindRunFailed:
+			finished[ev.RunID] = true
+		}
+
 		if f.translateEvent(ctx, ev, ts, true) {
 			log.Printf("codex facade: replay stopped early (client disconnected), will retry on next connect")
 			return
@@ -145,4 +159,62 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 		return
 	}
 	completed = true
+
+	f.adoptInFlightReplayTurns(ctx, turns, finished, lastEventID)
+}
+
+// adoptInFlightReplayTurns hands any run the replay saw start but never saw
+// end over to the live event loop, so a turn that was mid-flight when this
+// proxy (re)started keeps streaming instead of sitting "inProgress" forever.
+// The replayed turnState is registered as-is — accumulated message text,
+// itemStarted, in-flight tool calls — so the continuation appends to exactly
+// the state the client was just shown, and the live stream is opened at the
+// replay's own last event id so the continuation starts strictly after what
+// history already delivered (no gap, no double delivery). Only the durable
+// suffix arrives raw-less (the server doesn't retain source_raw); the
+// canonical fallback plus translateEvent's late item/started keep the
+// client-visible item lifecycle consistent either way.
+//
+// The session's parent run (run id == SessionID) is never adopted: OHR
+// establishes it as the session-wide multi-turn run, so it has no terminal
+// event while the session lives — adopting it would hold the live loop open
+// (and reconnecting) forever on a "turn" that can never complete.
+//
+// The cursor is only seeded when no live loop is running and none has left a
+// cursor behind (the normal bootstrap order: thread/start's replay finishes
+// before the first turn/start). If a live turn already raced ahead of the
+// replay, its own loop owns the cursor; the adopted runs are still
+// registered so that loop claims their future events.
+func (f *Facade) adoptInFlightReplayTurns(ctx context.Context, turns map[string]*turnState, finished map[string]bool, lastEventID string) {
+	adopt := make(map[string]*turnState)
+	for runID, ts := range turns {
+		if finished[runID] || runID == f.SessionID {
+			continue
+		}
+		adopt[runID] = ts
+	}
+	if len(adopt) == 0 {
+		return
+	}
+
+	f.mu.Lock()
+	if f.turns == nil {
+		f.turns = make(map[string]*turnState)
+	}
+	for runID, ts := range adopt {
+		if _, exists := f.turns[runID]; !exists {
+			f.turns[runID] = ts
+		}
+	}
+	if !f.streamStarted && f.streamCursor == "" && lastEventID != "" {
+		f.streamCursor = lastEventID
+	}
+	f.mu.Unlock()
+
+	log.Printf("codex facade: adopted %d in-flight turn(s) from replayed history; attaching live", len(adopt))
+	if err := f.ensureEventLoop(ctx); err != nil {
+		// The turn stays tracked: a later turn/start's own ensureEventLoop
+		// still picks it up from the same cursor.
+		log.Printf("codex facade: attaching live for adopted turn(s) failed: %v", err)
+	}
 }

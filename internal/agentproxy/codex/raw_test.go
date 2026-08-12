@@ -3,6 +3,7 @@
 package codex
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -167,6 +168,174 @@ func TestFacade_TurnStart_RawFallsBackPerEvent(t *testing.T) {
 	assert.Equal(t, "boom", tc.Turn.Error.Message)
 
 	rec.expectNone(t)
+}
+
+// TestFacade_TurnStart_RawThenCanonicalKeepsItemLifecycleConsistent drives
+// the interleaving a mid-turn reconnect actually produces (the server does
+// not retain source_raw durably, so events redelivered after a reconnect
+// arrive raw-less and take the canonical fallback on a turn that started
+// raw): raw run.started, raw delta, then a canonical-only delta, then a raw
+// turn end. The canonical delta must be preceded by a synthesized
+// item/started for the "-msg" item (the raw path never opened one), and the
+// raw turn/completed must be preceded by that item's item/completed — no
+// deltas for an unannounced item, no item left dangling open.
+func TestFacade_TurnStart_RawThenCanonicalKeepsItemLifecycleConsistent(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+
+	h.QueueRun("run-interleave",
+		agentproxytest.Event{
+			Type:            string(godo.HostedAgentEventKindRunStarted),
+			SourceEventType: "turn/started",
+			SourceRaw:       []byte(`{"method":"turn/started","params":{"threadId":"thread-vm","turn":{"id":"turn-vm","items":[],"status":"inProgress"}}}`),
+		},
+		agentproxytest.Event{
+			Type:            string(godo.HostedAgentEventKindTokenChunk),
+			Data:            json.RawMessage(`{"text":"Hel"}`),
+			SourceEventType: "item/agentMessage/delta",
+			SourceRaw:       []byte(`{"method":"item/agentMessage/delta","params":{"threadId":"thread-vm","turnId":"turn-vm","itemId":"item_0","delta":"Hel"}}`),
+		},
+		// No SourceRaw: what a durably-redelivered event looks like after a
+		// reconnect (source_raw is not persisted server-side).
+		agentproxytest.Event{
+			Type: string(godo.HostedAgentEventKindTokenChunk),
+			Data: json.RawMessage(`{"text":"lo"}`),
+		},
+		agentproxytest.Event{
+			Type:            string(godo.HostedAgentEventKindRunCompleted),
+			SourceEventType: "turn/completed",
+			SourceRaw:       []byte(`{"method":"turn/completed","params":{"threadId":"thread-vm","turn":{"id":"turn-vm","items":[],"status":"completed"}}}`),
+		},
+	)
+
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, "turn/started", rec.next(t).method)
+
+	rawDelta := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", rawDelta.method)
+	assert.Equal(t, "item_0", rawParams(t, rawDelta)["itemId"])
+
+	// Fix under test (canonical half): the raw-less delta must not reference
+	// an item the client was never told about.
+	synthStarted := rec.next(t)
+	require.Equal(t, "item/started", synthStarted.method,
+		"a canonical delta on a raw-started turn must open the synthesized item first")
+	sn, ok := synthStarted.params.(itemStartedNotification)
+	require.True(t, ok, "the synthesized item/started must come from the canonical path, got %T", synthStarted.params)
+	assert.Equal(t, "run-interleave-msg", sn.Item.(agentMessageItem).ID)
+
+	synthDelta := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", synthDelta.method)
+	dn, ok := synthDelta.params.(agentMessageDeltaNotification)
+	require.True(t, ok, "the raw-less delta must be synthesized, got %T", synthDelta.params)
+	assert.Equal(t, "lo", dn.Delta)
+	assert.Equal(t, "run-interleave-msg", dn.ItemID)
+
+	// Fix under test (raw half): the raw turn end must close the canonically
+	// opened item before announcing the turn's end.
+	synthCompleted := rec.next(t)
+	require.Equal(t, "item/completed", synthCompleted.method,
+		"the raw turn/completed must not leave the canonically-started item dangling open")
+	cn, ok := synthCompleted.params.(itemCompletedNotification)
+	require.True(t, ok)
+	assert.Equal(t, "lo", cn.Item.(agentMessageItem).Text)
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	assert.Equal(t, "run-interleave", rawParams(t, turnCompleted)["turn"].(map[string]any)["id"],
+		"the turn end itself must still be the forwarded raw frame")
+
+	rec.expectNone(t)
+
+	f.mu.Lock()
+	_, stillTracked := f.turns["run-interleave"]
+	f.mu.Unlock()
+	assert.False(t, stillTracked, "the raw turn end must still untrack the run")
+}
+
+// TestFacade_RunEventLoop_RawReconnectResumesCanonicalWithoutDuplicates is
+// the raw-passthrough version of ReconnectDedupesRedeliveredPrefix: a turn
+// whose pre-drop events were forwarded raw reconnects via replay_from, and
+// the resumed suffix — served raw-less, as durable redelivery really is —
+// must continue the same turn canonically with no duplicate turn/started or
+// re-sent raw deltas, and a self-consistent item lifecycle.
+func TestFacade_RunEventLoop_RawReconnectResumesCanonicalWithoutDuplicates(t *testing.T) {
+	stubReconnectSleep(t)
+
+	f, h, rec := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+	h.DropConnectionAfterEvents(2) // first connection: raw run.started + raw "A" delta, then a clean drop
+	h.QueueRun("run-raw-dedup",
+		agentproxytest.Event{
+			Type:            string(godo.HostedAgentEventKindRunStarted),
+			SourceEventType: "turn/started",
+			SourceRaw:       []byte(`{"method":"turn/started","params":{"threadId":"thread-vm","turn":{"id":"turn-vm","items":[],"status":"inProgress"}}}`),
+		},
+		agentproxytest.Event{
+			Type:            string(godo.HostedAgentEventKindTokenChunk),
+			Data:            json.RawMessage(`{"text":"A"}`),
+			SourceEventType: "item/agentMessage/delta",
+			SourceRaw:       []byte(`{"method":"item/agentMessage/delta","params":{"threadId":"thread-vm","turnId":"turn-vm","itemId":"item_0","delta":"A"}}`),
+		},
+		// The post-reconnect suffix arrives raw-less: durable history does
+		// not retain source_raw, so replay_from redelivery falls back to
+		// canonical reconstruction mid-turn.
+		agentproxytest.Event{
+			Type: string(godo.HostedAgentEventKindTokenChunk),
+			Data: json.RawMessage(`{"text":"B"}`),
+		},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	_, err := dispatchCtx(t, ctx, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	started := rec.next(t)
+	require.Equal(t, "turn/started", started.method)
+	_ = rawParams(t, started) // pre-drop events must be the forwarded raw frames
+
+	deltaA := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaA.method)
+	assert.Equal(t, "A", rawParams(t, deltaA)["delta"])
+
+	// The reconnect happens here. replay_from must resume strictly after the
+	// "A" delta: no second turn/started, no duplicate raw "A".
+	synthStarted := rec.next(t)
+	require.Equal(t, "item/started", synthStarted.method,
+		"the canonical continuation must open its item — and nothing before it may be a duplicate of the raw prefix")
+	_, ok := synthStarted.params.(itemStartedNotification)
+	require.True(t, ok)
+
+	deltaB := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaB.method)
+	dn, ok := deltaB.params.(agentMessageDeltaNotification)
+	require.True(t, ok, "the resumed suffix is raw-less and must be synthesized, got %T", deltaB.params)
+	assert.Equal(t, "B", dn.Delta)
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+	assert.Equal(t, "B", itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem).Text,
+		"only the canonically-delivered text belongs to the synthesized item; the raw prefix went to the native item")
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	tc, ok := turnCompleted.params.(turnCompletedNotification)
+	require.True(t, ok)
+	assert.Equal(t, "completed", tc.Turn.Status)
+	assert.Equal(t, "run-raw-dedup", tc.Turn.ID)
+
+	rec.expectNone(t)
+	stopEventLoop(t, f, cancel)
 }
 
 // TestFacade_TurnStart_AgentKindMismatchStaysCanonical runs a session whose

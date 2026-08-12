@@ -1498,6 +1498,117 @@ func TestFacade_Replay_RetriesAfterAbortedAttempt(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond, "a successfully completed replay should mark replayDone")
 }
 
+// TestFacade_Replay_AdoptsInProgressRunAndStreamsContinuation is the
+// "proxy killed and restarted mid-turn" regression test: a run that history
+// shows started but never finished must be adopted by the live event loop
+// once the replay completes — attached at the replay's own cursor — so the
+// turn's continuation streams into the same item the replay just rendered,
+// and the turn completes for real instead of sitting "inProgress" forever.
+func TestFacade_Replay_AdoptsInProgressRunAndStreamsContinuation(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.Replay = true
+
+	h.QueueReplayHistory(
+		// A finished historical run: must NOT be adopted.
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "hist-done"},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted), RunID: "hist-done"},
+		// The run that was mid-flight when the previous proxy died: started,
+		// partial text, no terminal event.
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "run-live"},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), RunID: "run-live", Data: json.RawMessage(`{"text":"Hel"}`)},
+	)
+	// The continuation the live stream serves after adoption.
+	h.QueueRun("run-live",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"lo"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	_, err := dispatchCtx(t, ctx, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
+	require.NoError(t, err)
+
+	// Replayed history: the finished run in full…
+	require.Equal(t, "turn/started", rec.next(t).method)
+	_ = rec.next(t) // item/started (hist-done)
+	_ = rec.next(t) // item/completed (hist-done)
+	require.Equal(t, "turn/completed", rec.next(t).method)
+
+	// …then the in-flight run's prefix.
+	started := rec.next(t)
+	require.Equal(t, "turn/started", started.method)
+	assert.Equal(t, "run-live", started.params.(turnStartedNotification).Turn.ID)
+	_ = rec.next(t) // item/started (run-live)
+	deltaHel := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaHel.method)
+	assert.Equal(t, "Hel", deltaHel.params.(agentMessageDeltaNotification).Delta)
+
+	// Adoption: the live loop attaches and the SAME turn continues — no
+	// second turn/started, no second item/started, text accumulated across
+	// the restart boundary.
+	deltaLo := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaLo.method,
+		"the adopted turn's continuation must not re-announce the turn or item")
+	dn := deltaLo.params.(agentMessageDeltaNotification)
+	assert.Equal(t, "lo", dn.Delta)
+	assert.Equal(t, "run-live-msg", dn.ItemID, "the continuation must append to the item the replay rendered")
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+	assert.Equal(t, "Hello", itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem).Text,
+		"the item's final text must span the restart boundary")
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	tc := turnCompleted.params.(turnCompletedNotification)
+	assert.Equal(t, "run-live", tc.Turn.ID)
+	assert.Equal(t, "completed", tc.Turn.Status)
+
+	rec.expectNone(t)
+
+	f.mu.Lock()
+	cursor := f.streamCursor
+	f.mu.Unlock()
+	assert.NotEmpty(t, cursor, "adoption must seed the live cursor from the replay so the continuation resumes without a gap")
+
+	stopEventLoop(t, f, cancel)
+}
+
+// TestFacade_Replay_DoesNotAdoptSessionParentRun: OHR establishes the
+// session-wide multi-turn run with the session id as its run id, and that
+// run has no terminal event while the session lives — so it always looks
+// "in progress" in history. Adopting it would hold the live event loop open
+// (and reconnecting) forever on a turn that can never complete.
+func TestFacade_Replay_DoesNotAdoptSessionParentRun(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.Replay = true
+
+	h.QueueReplayHistory(
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: testSessionID},
+	)
+
+	_, err := dispatch(t, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
+	require.NoError(t, err)
+
+	// The parent run's replayed events still render (pre-existing behavior);
+	// what must NOT happen is adoption.
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+
+	require.Eventually(t, func() bool {
+		f.replayMu.Lock()
+		defer f.replayMu.Unlock()
+		return f.replayDone
+	}, 2*time.Second, 10*time.Millisecond)
+
+	f.mu.Lock()
+	streamStarted := f.streamStarted
+	tracked := len(f.turns)
+	f.mu.Unlock()
+	assert.False(t, streamStarted, "the parent run must not start a live event loop")
+	assert.Zero(t, tracked, "the parent run must not be adopted into f.turns")
+}
+
 // TestFacade_Replay_HistoricalHITLsNotReDriven confirms --replay does not
 // re-prompt the client or re-POST ResolveHITL for approvals already settled
 // in durable history. translateEvent used to treat historical
