@@ -30,7 +30,10 @@ type HostedAgentSession struct {
 type HostedAgentsService interface {
 	// CreateSessionFromManifest POSTs the manifest bytes verbatim with
 	// Content-Type: application/x-yaml. Server owns schema validation.
-	CreateSessionFromManifest(manifest []byte) (*HostedAgentSession, error)
+	// For OpenAI sandbox-provider sessions (adapter codex-agentapi), pass
+	// OpenAISessionID in opt so harness-api persists openai_session_id
+	// (?openai_session_id=). opt may be nil.
+	CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
 	DestroySession(sessionID string) error
@@ -64,8 +67,8 @@ func NewHostedAgentsService(client *godo.Client) HostedAgentsService {
 	return &hostedAgentsService{client: client}
 }
 
-func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte) (*HostedAgentSession, error) {
-	sess, _, err := s.client.HostedAgents.CreateSessionFromManifest(context.TODO(), manifest)
+func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.CreateSessionFromManifest(context.TODO(), manifest, opt)
 	if err != nil {
 		return nil, err
 	}

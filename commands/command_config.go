@@ -41,18 +41,16 @@ type CmdConfig struct {
 	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
-	Keys               func() do.KeysService
-	Sizes              func() do.SizesService
-	Regions            func() do.RegionsService
-	Images             func() do.ImagesService
-	ImageActions       func() do.ImageActionsService
-	LoadBalancers      func() do.LoadBalancersService
-	MicroDroplets      func() do.MicroDropletsService
-	MicroDropletImages func() do.MicroDropletImagesService
-	ReservedIPs        func() do.ReservedIPsService
-	ReservedIPActions  func() do.ReservedIPActionsService
-	ReservedIPv6s      func() do.ReservedIPv6sService
-	BYOIPPrefixes      func() do.BYOIPPrefixsService
+	Keys              func() do.KeysService
+	Sizes             func() do.SizesService
+	Regions           func() do.RegionsService
+	Images            func() do.ImagesService
+	ImageActions      func() do.ImageActionsService
+	LoadBalancers     func() do.LoadBalancersService
+	ReservedIPs       func() do.ReservedIPsService
+	ReservedIPActions func() do.ReservedIPActionsService
+	ReservedIPv6s     func() do.ReservedIPv6sService
+	BYOIPPrefixes     func() do.BYOIPPrefixsService
 
 	Droplets            func() do.DropletsService
 	DropletActions      func() do.DropletActionsService
@@ -168,10 +166,6 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
 			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
-			c.MicroDroplets = func() do.MicroDropletsService { return do.NewMicroDropletsService(godoClient) }
-			c.MicroDropletImages = func() do.MicroDropletImagesService {
-				return do.NewMicroDropletImagesService(godoClient)
-			}
 			c.Security = func() do.SecurityService { return do.NewSecurityService(godoClient) }
 			c.HostedAgents = func() do.HostedAgentsService { return do.NewHostedAgentsService(godoClient) }
 			c.HostedAgentTriggers = func() do.HostedAgentTriggersService {

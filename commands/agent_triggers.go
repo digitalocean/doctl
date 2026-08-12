@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -201,6 +202,28 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if Output == "json" {
+		// In JSON mode the one-time secret must be in the machine-readable output,
+		// not only in a human-readable banner that gets routed to stderr.
+		// Embed it alongside all trigger fields in a single flat JSON object so
+		// consumers can always parse the secret without screen-scraping.
+		if result.WebhookSecret != "" {
+			fmt.Fprint(os.Stderr, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
+		}
+		type jsonCreateResult struct {
+			*godo.HostedAgentTrigger
+			WebhookSecret string `json:"webhook_secret,omitempty"`
+		}
+		var trigger *godo.HostedAgentTrigger
+		if result.Trigger != nil {
+			trigger = result.Trigger.HostedAgentTrigger
+		}
+		return json.NewEncoder(c.Out).Encode(jsonCreateResult{
+			HostedAgentTrigger: trigger,
+			WebhookSecret:      result.WebhookSecret,
+		})
+	}
+	// Text mode: banner to stdout, then the trigger table.
 	if result.WebhookSecret != "" {
 		fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
 		if result.Trigger != nil && result.Trigger.Webhook != nil && result.Trigger.Webhook.WebhookURL != "" {
@@ -210,7 +233,7 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 	if result.Trigger == nil {
 		return nil
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}, Single: true})
 }
 
 // RunAgentTriggersGet fetches one trigger.
@@ -222,7 +245,7 @@ func RunAgentTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersUpdate partially updates a trigger.
@@ -238,7 +261,7 @@ func RunAgentTriggersUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersDelete soft-deletes a trigger.
@@ -274,7 +297,7 @@ func agentTriggersSetStatus(c *CmdConfig, status godo.HostedAgentTriggerStatus) 
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersRotateSecret rotates a webhook secret.
@@ -285,6 +308,10 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	secret, err := c.HostedAgentTriggers().RotateSecret(c.Args[0])
 	if err != nil {
 		return err
+	}
+	if Output == "json" {
+		fmt.Fprint(os.Stderr, displayers.FormatWebhookSecretNotice(secret))
+		return json.NewEncoder(c.Out).Encode(map[string]string{"webhook_secret": secret})
 	}
 	fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(secret))
 	return nil
@@ -321,14 +348,14 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if e.OutputText != "" {
+	if e.OutputText != "" && Output != "json" {
 		fmt.Fprintln(c.Out, e.OutputText)
 		if e.OutputTruncated {
 			fmt.Fprintln(c.Out, "(output truncated)")
 		}
 		fmt.Fprintln(c.Out)
 	}
-	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}})
+	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
 }
 
 // RunAgentTriggersGetBySession reverse-looks-up a trigger by session ID.
@@ -340,7 +367,7 @@ func RunAgentTriggersGetBySession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}})
+	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 }
 
 // RunAgentTriggersListReusableSessions lists PAUSED sessions for reuse binding.

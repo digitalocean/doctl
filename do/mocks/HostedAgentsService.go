@@ -73,18 +73,18 @@ func (mr *MockHostedAgentsServiceMockRecorder) CommitWorkspaceTransfer(sessionID
 }
 
 // CreateSessionFromManifest mocks base method.
-func (m *MockHostedAgentsService) CreateSessionFromManifest(manifest []byte) (*do.HostedAgentSession, error) {
+func (m *MockHostedAgentsService) CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSessionFromManifest", manifest)
+	ret := m.ctrl.Call(m, "CreateSessionFromManifest", manifest, opt)
 	ret0, _ := ret[0].(*do.HostedAgentSession)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateSessionFromManifest indicates an expected call of CreateSessionFromManifest.
-func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifest(manifest any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifest(manifest, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSessionFromManifest", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSessionFromManifest), manifest)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSessionFromManifest", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSessionFromManifest), manifest, opt)
 }
 
 // CreateWorkspaceTransfer mocks base method.
