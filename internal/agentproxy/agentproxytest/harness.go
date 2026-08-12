@@ -130,6 +130,10 @@ type HITLResolution struct {
 	Outcome   string
 	Reason    string
 	Source    string
+	// SourceRaw is the client's native reply frame, when the resolver
+	// answered in the agent's own protocol rather than with an outcome
+	// alone. Empty for every non-native resolution.
+	SourceRaw []byte
 }
 
 // New starts the fake harness and registers its shutdown via t.Cleanup.
@@ -512,9 +516,10 @@ func (h *Harness) HangStreamAfterEvents(hang bool) {
 
 func (h *Harness) handleHITL(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Outcome string `json:"outcome"`
-		Reason  string `json:"reason"`
-		Source  string `json:"source"`
+		Outcome   string `json:"outcome"`
+		Reason    string `json:"reason"`
+		Source    string `json:"source"`
+		SourceRaw []byte `json:"source_raw"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&body)
 
@@ -526,6 +531,7 @@ func (h *Harness) handleHITL(w http.ResponseWriter, r *http.Request) {
 		Outcome:   body.Outcome,
 		Reason:    body.Reason,
 		Source:    body.Source,
+		SourceRaw: body.SourceRaw,
 	}:
 	default:
 		// Buffer full: a test that cares should be draining via

@@ -289,6 +289,101 @@ func unwrapRelayReply(frame []byte, method string) (any, bool, error) {
 	return json.RawMessage(reply.Result), true, nil
 }
 
+// tryNativeApproval takes ownership of a gated request when the native frame
+// the agent sent is available and the client speaks its protocol, returning
+// true once it has (the round-trip itself runs in its own goroutine, for the
+// reason given on translateEvent's HITLRequested case).
+//
+// This is the server→client direction of the passthrough that tryRawPassthrough
+// does for notifications, and it exists because the canonical HITL payload is
+// a lossy rendering of the request: it reduces the agent's question to a kind
+// and a redacted detail map, which is enough to render an approve/decline
+// prompt and not enough for anything else. An MCP elicitation wants content
+// back; a tool asking for user input wants answers. Forwarding the agent's own
+// frame and returning the client's own reply keeps both intact, and means a
+// gated request this proxy has never heard of still reaches the user.
+//
+// false means "not this path's event": no request was sent, and the caller
+// must fall back to synthesizing one from the canonical payload.
+func (f *Facade) tryNativeApproval(ctx context.Context, ev godo.HostedAgentEvent, hitl hitlRequestedPayload) bool {
+	if !f.rawEligible() || len(ev.SourceRaw) == 0 {
+		return false
+	}
+	var frame rawFrame
+	if err := json.Unmarshal(bytes.TrimSpace(ev.SourceRaw), &frame); err != nil {
+		return false
+	}
+	// The mirror of tryRawPassthrough's test: there a frame with an id is
+	// rejected because it is not a notification, here one without an id is,
+	// because only a request has a reply to carry back.
+	if frame.ID == nil || frame.Method == "" {
+		return false
+	}
+	params, ok := rewriteRawParams(frame.Params, f.SessionID, ev.RunID)
+	if !ok {
+		return false
+	}
+	go f.answerNativeApproval(ctx, hitl.HitlID, frame, params)
+	return true
+}
+
+// answerNativeApproval asks the client the agent's own question and sends the
+// client's own answer back, resolving the harness's HITL request with both the
+// raw reply and the coarse verdict the audit trail records.
+func (f *Facade) answerNativeApproval(ctx context.Context, hitlID string, frame rawFrame, params map[string]any) {
+	result, err := f.notifier.Request(ctx, frame.Method, params)
+	if err != nil {
+		f.rejectHITLAfterRequestFailure(hitlID, frame.Method, err)
+		return
+	}
+	reply, err := json.Marshal(struct {
+		ID     json.RawMessage `json:"id"`
+		Result json.RawMessage `json:"result"`
+	}{ID: frame.ID, Result: result})
+	if err != nil {
+		// Nothing sensible left to forward, but the agent is still blocked, so
+		// resolve on the verdict alone rather than abandoning the request.
+		log.Printf("codex facade: native reply %s: re-encode failed: %v", hitlID, err)
+		reply = nil
+	}
+	if err := f.Sessions.ResolveHITL(f.SessionID, hitlID, &godo.HostedAgentResolveHITLRequest{
+		Outcome:   nativeApprovalOutcome(result),
+		Source:    godo.HostedAgentResolutionSourceInlineKeystroke,
+		SourceRaw: reply,
+	}); err != nil {
+		log.Printf("codex facade: ResolveHITL %s failed: %v", hitlID, err)
+	}
+}
+
+// nativeApprovalOutcome reduces a native reply to the three-way verdict the
+// control plane persists.
+//
+// Only the audit trail and the agent's own fallback depend on this: the reply
+// the agent acts on is the raw frame, which is forwarded verbatim. Codex
+// spells a refusal in one of two fields depending on which surface asked, so
+// both are checked. Anything else is an answer the user chose to give, which
+// is an approval — including reply shapes with no verdict field at all, like
+// a tool's `answers`.
+func nativeApprovalOutcome(result json.RawMessage) godo.HostedAgentHITLOutcome {
+	var body struct {
+		Decision json.RawMessage `json:"decision"`
+		Action   string          `json:"action"`
+	}
+	if err := json.Unmarshal(result, &body); err != nil {
+		return godo.HostedAgentHITLOutcomeApprove
+	}
+	if len(body.Decision) > 0 {
+		if outcome, err := decodeCommandExecutionApprovalDecision(body.Decision); err == nil {
+			return outcome
+		}
+	}
+	switch body.Action {
+	case "decline", "cancel", "reject":
+		return godo.HostedAgentHITLOutcomeReject
+	}
+	return godo.HostedAgentHITLOutcomeApprove
+}
+
 // rewriteRawParams decodes a native frame's params object and rewrites the
 // VM-scoped identifiers to the ones this proxy's client knows (see the
 // package doc comment): threadId → sessionID, and turnId / turn.id → runID.

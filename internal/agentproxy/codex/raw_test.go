@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl/internal/agentproxy"
 	"github.com/digitalocean/doctl/internal/agentproxy/agentproxytest"
@@ -532,4 +533,153 @@ func TestUnwrapRelayReply(t *testing.T) {
 	_, handled, err = unwrapRelayReply([]byte(`not json`), "m")
 	assert.True(t, handled)
 	assert.Error(t, err, "an unreadable reply must fail the client's request, not pass as success")
+}
+
+// queueGatedRun queues a turn that reaches a gated request of the given kind,
+// carrying nativeFrame as the agent's own frame for it.
+func queueGatedRun(h *agentproxytest.Harness, kind, hitlID, nativeFrame string) {
+	h.QueueRun("run-native-1",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{
+			Type:            string(godo.HostedAgentEventKindHITLRequested),
+			Data:            json.RawMessage(`{"hitl_id":"` + hitlID + `","payload":{"kind":"` + kind + `","itemId":"call_1"}}`),
+			SourceEventType: "mcpServer/elicitation/request",
+			SourceRaw:       []byte(nativeFrame),
+		},
+	)
+}
+
+// startGatedTurn drives the turn far enough that the gated request has been
+// dispatched, returning the recorder positioned at it.
+func startGatedTurn(t *testing.T, f *Facade) {
+	t.Helper()
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "do the thing"}},
+	})
+	require.NoError(t, err)
+}
+
+// TestFacade_NativeApproval_RoundTripsAnUnmappedKind is the M2 "done when":
+// a gated request of a kind this proxy has no translation for reaches the
+// client as the agent's own request, and the client's own reply — content and
+// all — reaches the harness. Before this path such a kind was auto-declined
+// without the user ever seeing it.
+func TestFacade_NativeApproval_RoundTripsAnUnmappedKind(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+
+	queueGatedRun(h, "mcp_elicitation", "hitl-native-1",
+		`{"id":41,"method":"mcpServer/elicitation/request","params":{"threadId":"vm-thread","turnId":"vm-turn","message":"pick a port"}}`)
+	startGatedTurn(t, f)
+	_ = rec.next(t) // turn/started
+
+	req := rec.nextRequest(t)
+	assert.Equal(t, "mcpServer/elicitation/request", req.method,
+		"the client must be asked the agent's own question, not a synthesized approval")
+	params, ok := req.params.(map[string]any)
+	require.True(t, ok, "native params should be the forwarded raw map, got %T", req.params)
+	assert.Equal(t, "pick a port", params["message"])
+	// Same rewriting the notification path does: the client only ever knows
+	// the proxy's ids, so the VM's would be meaningless to it.
+	assert.Equal(t, testSessionID, params["threadId"])
+	assert.Equal(t, "run-native-1", params["turnId"])
+
+	req.respond(map[string]any{"action": "accept", "content": map[string]any{"port": 8080}})
+
+	res := h.NextHITLResolution(t, 2*time.Second)
+	assert.Equal(t, "hitl-native-1", res.RequestID)
+	assert.Equal(t, string(godo.HostedAgentHITLOutcomeApprove), res.Outcome)
+	require.NotEmpty(t, res.SourceRaw, "the client's native reply must reach the harness")
+	assert.JSONEq(t,
+		`{"id":41,"result":{"action":"accept","content":{"port":8080}}}`,
+		string(res.SourceRaw),
+		"the reply must be addressed to the agent's own request id and carry the content verbatim")
+}
+
+// TestFacade_NativeApproval_RefusalIsReportedAsReject: the raw reply is what
+// the agent acts on, but the harness still records a verdict, and a decline
+// must not be audited as an approval.
+func TestFacade_NativeApproval_RefusalIsReportedAsReject(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+
+	queueGatedRun(h, "mcp_elicitation", "hitl-native-2",
+		`{"id":42,"method":"mcpServer/elicitation/request","params":{"threadId":"vm-thread","message":"pick a port"}}`)
+	startGatedTurn(t, f)
+	_ = rec.next(t)
+
+	rec.nextRequest(t).respond(map[string]any{"action": "decline"})
+
+	res := h.NextHITLResolution(t, 2*time.Second)
+	assert.Equal(t, string(godo.HostedAgentHITLOutcomeReject), res.Outcome)
+}
+
+// TestFacade_NativeApproval_FileChangeStaysAutoRejected: being able to forward
+// the request faithfully is not a reason to start forwarding it. The
+// apply_patch auto-reject is a deliberate policy (see
+// autoRejectFileChangeApproval), so it must survive this path existing.
+func TestFacade_NativeApproval_FileChangeStaysAutoRejected(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+
+	queueGatedRun(h, "file_change", "hitl-fc-1",
+		`{"id":43,"method":"item/fileChange/requestApproval","params":{"threadId":"vm-thread","itemId":"call_1"}}`)
+	startGatedTurn(t, f)
+	_ = rec.next(t)
+
+	res := h.NextHITLResolution(t, 2*time.Second)
+	assert.Equal(t, "hitl-fc-1", res.RequestID)
+	assert.Equal(t, string(godo.HostedAgentHITLOutcomeReject), res.Outcome)
+	assert.Empty(t, res.SourceRaw, "an auto-reject answers on the user's behalf; it has no native reply")
+	rec.expectNoRequest(t)
+}
+
+// TestFacade_NativeApproval_NotAttemptedWithoutTheNativeFrame: with no frame
+// to forward there is nothing to ask, so the pre-M2 behaviour stands rather
+// than the request being left unanswered.
+func TestFacade_NativeApproval_NotAttemptedWithoutTheNativeFrame(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.AgentKind = godo.HostedAgentKindCodexCLI
+
+	h.QueueRun("run-native-2",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{
+			Type: string(godo.HostedAgentEventKindHITLRequested),
+			Data: json.RawMessage(`{"hitl_id":"hitl-bare","payload":{"kind":"mcp_elicitation"}}`),
+		},
+	)
+	startGatedTurn(t, f)
+	_ = rec.next(t)
+
+	res := h.NextHITLResolution(t, 2*time.Second)
+	assert.Equal(t, "hitl-bare", res.RequestID)
+	assert.Equal(t, string(godo.HostedAgentHITLOutcomeReject), res.Outcome)
+	rec.expectNoRequest(t)
+}
+
+// TestNativeApprovalOutcome covers the verdict the audit trail records for
+// each reply shape codex can answer with. Only the classification is under
+// test — the reply itself always reaches the agent verbatim.
+func TestNativeApprovalOutcome(t *testing.T) {
+	tests := []struct {
+		name   string
+		result string
+		want   godo.HostedAgentHITLOutcome
+	}{
+		{name: "command decision accept", result: `{"decision":"accept"}`, want: godo.HostedAgentHITLOutcomeApprove},
+		{name: "command decision decline", result: `{"decision":"decline"}`, want: godo.HostedAgentHITLOutcomeReject},
+		{name: "elicitation accept", result: `{"action":"accept","content":{}}`, want: godo.HostedAgentHITLOutcomeApprove},
+		{name: "elicitation decline", result: `{"action":"decline"}`, want: godo.HostedAgentHITLOutcomeReject},
+		{name: "elicitation cancel", result: `{"action":"cancel"}`, want: godo.HostedAgentHITLOutcomeReject},
+		// No verdict field at all: the user answered, so it is an approval.
+		{name: "tool answers", result: `{"answers":["yes"]}`, want: godo.HostedAgentHITLOutcomeApprove},
+		{name: "empty object", result: `{}`, want: godo.HostedAgentHITLOutcomeApprove},
+		{name: "not an object", result: `"whatever"`, want: godo.HostedAgentHITLOutcomeApprove},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, nativeApprovalOutcome(json.RawMessage(tt.result)))
+		})
+	}
 }

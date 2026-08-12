@@ -451,6 +451,13 @@ type HostedAgentResolveHITLRequest struct {
 	Outcome HostedAgentHITLOutcome      `json:"outcome"`
 	Reason  string                      `json:"reason,omitempty"`
 	Source  HostedAgentResolutionSource `json:"source,omitempty"`
+
+	// SourceRaw is the client's reply in the agent's own protocol, forwarded
+	// to the in-sandbox agent untouched. It carries what Outcome cannot: an
+	// elicitation's content, a tool's requested input, a scope beyond this one
+	// call. Outcome stays required alongside it — it is what the audit trail
+	// records, and what the agent falls back to when this is absent.
+	SourceRaw []byte `json:"source_raw,omitempty"`
 }
 
 // HostedAgentSandboxExecRequest is the body for POST .../sandbox/exec.

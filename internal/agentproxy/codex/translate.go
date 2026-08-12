@@ -323,20 +323,34 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		// turnStates in the shared f.turns map at all (see replay.go) — a
 		// lookup-by-id would simply fail to find them during replay.
 		switch hitl.Payload.Kind {
-		case "command_execution":
-			go f.requestCommandExecutionApproval(ctx, ev.RunID, hitl)
 		case "file_change":
+			// Checked before the native path on purpose: the auto-reject
+			// below is a deliberate policy about apply_patch, not a gap in
+			// this proxy's protocol coverage, so being able to forward the
+			// request faithfully is not a reason to start forwarding it.
 			go f.autoRejectFileChangeApproval(ts, hitl)
+		case "command_execution":
+			// Native first: same question either way, but the agent's own
+			// frame carries the fields codex sent rather than the subset
+			// commandExecutionRequestApprovalParams reconstructs.
+			if !f.tryNativeApproval(ctx, ev, hitl) {
+				go f.requestCommandExecutionApproval(ctx, ev.RunID, hitl)
+			}
 		default:
-			// item/permissions/requestApproval exists in the codex
-			// protocol too, but its canonical trigger has never been
-			// observed, and its requestApproval shape isn't known well
-			// enough to forward to the client (see
-			// PermissionsRequestApprovalParams/Response — a grant
-			// profile, not a simple decision enum, unlike the other two
-			// kinds). Auto-reject rather than leave the harness waiting
-			// on a decision that will never come — see
-			// autoRejectUnknownHITL.
+			// Every other kind — an MCP elicitation, a tool asking for input,
+			// or a gated request newer than this proxy — is answerable only
+			// in the agent's own protocol, so the native path is the only one
+			// that can do anything but refuse on the user's behalf.
+			if f.tryNativeApproval(ctx, ev, hitl) {
+				break
+			}
+			// No native frame to forward, and no way to synthesize the
+			// request from the canonical payload: these kinds do not answer
+			// with a simple decision enum (item/permissions/requestApproval
+			// wants a grant profile — see PermissionsRequestApprovalParams),
+			// so there is nothing to ask the client that it could answer.
+			// Auto-reject rather than leave the harness waiting on a
+			// decision that will never come — see autoRejectUnknownHITL.
 			go f.autoRejectUnknownHITL(hitl.HitlID, hitl.Payload.Kind)
 		}
 
