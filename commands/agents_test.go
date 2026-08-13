@@ -61,7 +61,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "triggers")
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "triggers")
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -378,6 +378,71 @@ func TestRunAgentsResume(t *testing.T) {
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
+	})
+}
+
+func TestRunAgentsAuth(t *testing.T) {
+	// Keep the wait loop from sleeping through the poll interval in tests.
+	orig := agentsAuthPollInterval
+	agentsAuthPollInterval = time.Millisecond
+	defer func() { agentsAuthPollInterval = orig }()
+
+	t.Run("already connected exits without polling", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&do.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+			config.Args = []string{"github"}
+			assert.NoError(t, RunAgentsAuth(config))
+		})
+	})
+
+	t.Run("no-wait prints URL and returns", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&do.HostedAgentProviderAuthStart{
+					Provider:   "github",
+					Status:     "pending",
+					ConnectURL: "https://example.com/connect",
+					PollURL:    "https://example.com/poll",
+				}, nil)
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoWait, true)
+			assert.NoError(t, RunAgentsAuth(config))
+		})
+	})
+
+	t.Run("polls until authorized", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&do.HostedAgentProviderAuthStart{
+					Provider:   "github",
+					Status:     "pending",
+					ConnectURL: "https://example.com/connect",
+					PollURL:    "https://example.com/poll",
+				}, nil)
+			gomock.InOrder(
+				tm.hostedAgents.EXPECT().
+					PollProviderAuth("github", "https://example.com/poll").
+					Return(&do.HostedAgentProviderAuthPoll{Provider: "github", Status: "pending"}, nil),
+				tm.hostedAgents.EXPECT().
+					PollProviderAuth("github", "https://example.com/poll").
+					Return(&do.HostedAgentProviderAuthPoll{Provider: "github", Status: "success"}, nil),
+			)
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			assert.NoError(t, RunAgentsAuth(config))
+		})
+	})
+
+	t.Run("requires a provider argument", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = []string{}
+			assert.Error(t, RunAgentsAuth(config))
+		})
 	})
 }
 

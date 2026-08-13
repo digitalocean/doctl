@@ -993,6 +993,12 @@ const (
 	// ArgAgentProxyReplay replays the session's event history into the first thread on connect.
 	ArgAgentProxyReplay = "replay"
 
+	// ArgAgentAuthNoBrowser prints the provider authorization URL instead of opening a browser.
+	ArgAgentAuthNoBrowser = "no-browser"
+
+	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
+	ArgAgentAuthNoWait = "no-wait"
+
 	// ArgAgentTriggerKind filters or sets trigger kind (webhook|cron).
 	ArgAgentTriggerKind = "kind"
 
