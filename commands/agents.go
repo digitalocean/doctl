@@ -244,7 +244,18 @@ The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching t
 
 For `+"`"+`adapter: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using `+"`"+`spec.runtime.config`+"`"+` (or legacy `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
 
-Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).`,
+Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).
+
+Add inline Agent Skills via `+"`"+`spec.skills`+"`"+`, a list of skill objects with `+"`"+`name`+"`"+`, `+"`"+`description`+"`"+`, and `+"`"+`instructions`+"`"+` (plus optional `+"`"+`license`+"`"+`, `+"`"+`metadata`+"`"+`, `+"`"+`allowedTools`+"`"+`). `+"`"+`instructions`+"`"+` is advisory context for the agent, not a security boundary -- use `+"`"+`spec.permissions`+"`"+` for enforcement. Example:
+
+  spec:
+    adapter: opencode
+    skills:
+      - name: pr-style-guide
+        description: Our team's pull request description conventions
+        instructions: |
+          Summarize the change in 1-2 sentences before the details.
+          Link related issues with "Fixes #123" syntax.`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
