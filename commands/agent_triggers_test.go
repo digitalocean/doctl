@@ -16,6 +16,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -269,11 +270,34 @@ func TestAgentTriggersProvidersReusableBySession(t *testing.T) {
 
 // --- JSON output contract tests (MARSOHS-867, MARSOHS-868) ------------------
 
+// captureProcessStderr swaps os.Stderr for a pipe while fn runs and returns
+// everything fn wrote to it. Needed because the JSON-output contract is about
+// the real process streams, not the injectable CmdConfig.Out.
+func captureProcessStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	orig := os.Stderr
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+
+	done := make(chan string, 1)
+	go func() {
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		done <- buf.String()
+	}()
+
+	fn()
+	require.NoError(t, w.Close())
+	return <-done
+}
+
 // TestAgentTriggersCreateWebhook_JSONMode verifies that in -o json mode:
 //   - stdout is a single valid JSON object
 //   - webhook_secret IS in the JSON payload (it's a one-time value; consumers must be able to parse it)
 //   - trigger fields (trigger_id, name) are also in the JSON payload
-//   - the human-readable banner does NOT appear on stdout
+//   - the human-readable banner appears on neither stdout nor stderr
 func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
@@ -311,15 +335,17 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 		Output = "json"
 		defer func() { Output = prev }()
 
-		require.NoError(t, RunAgentTriggersCreate(config))
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentTriggersCreate(config))
+		})
 
 		raw := stdout.String()
 		// stdout must be a single valid JSON object from the first byte.
 		var parsed map[string]any
 		require.NoError(t, json.Unmarshal([]byte(raw), &parsed), "stdout must be valid JSON in -o json mode, got: %q", raw)
 
-		// The one-time secret MUST be in the JSON payload — it cannot only live
-		// in a human-readable banner routed to stderr (Joe's concern).
+		// The one-time secret MUST be in the JSON payload — it is shown once and
+		// is unrecoverable afterwards, so it cannot live only in a human banner.
 		assert.Equal(t, "sec_once", parsed["webhook_secret"], "webhook_secret must be in the JSON payload")
 
 		// Trigger fields must also be present (flat, not nested under "trigger").
@@ -329,12 +355,16 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 		// Human-readable banner text must NOT appear on stdout.
 		assert.NotContains(t, raw, "store it now", "banner must not appear on stdout in JSON mode")
 		assert.NotContains(t, raw, "Webhook URL:", "webhook URL banner must not appear on stdout in JSON mode")
+
+		// Nor on stderr: the secret is already in the payload, so echoing it to a
+		// second stream would just duplicate a secret into callers' logs.
+		assert.Empty(t, stderr, "nothing may be written to stderr in -o json mode")
 	})
 }
 
 // TestAgentTriggersRotateSecret_JSONMode verifies that in -o json mode:
 //   - stdout is a valid JSON object containing the secret key
-//   - the banner is NOT on stdout
+//   - the banner is on neither stdout nor stderr
 func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
@@ -347,13 +377,16 @@ func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 		Output = "json"
 		defer func() { Output = prev }()
 
-		require.NoError(t, RunAgentTriggersRotateSecret(config))
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentTriggersRotateSecret(config))
+		})
 
 		raw := stdout.String()
 		var parsed map[string]any
 		require.NoError(t, json.Unmarshal([]byte(raw), &parsed), "stdout must be valid JSON in -o json mode, got: %q", raw)
 		assert.Equal(t, "new_sec", parsed["webhook_secret"], "JSON must contain webhook_secret field")
 		assert.NotContains(t, raw, "store it now", "banner must not appear on stdout in JSON mode")
+		assert.Empty(t, stderr, "nothing may be written to stderr in -o json mode")
 	})
 }
 
