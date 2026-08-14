@@ -391,7 +391,7 @@ func TestRunAgentsAuth(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			tm.hostedAgents.EXPECT().
 				StartProviderAuth("github").
-				Return(&do.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+				Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
 			config.Args = []string{"github"}
 			assert.NoError(t, RunAgentsAuth(config))
 		})
@@ -401,7 +401,7 @@ func TestRunAgentsAuth(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			tm.hostedAgents.EXPECT().
 				StartProviderAuth("github").
-				Return(&do.HostedAgentProviderAuthStart{
+				Return(&godo.HostedAgentProviderAuthStart{
 					Provider:   "github",
 					Status:     "pending",
 					ConnectURL: "https://example.com/connect",
@@ -418,7 +418,7 @@ func TestRunAgentsAuth(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			tm.hostedAgents.EXPECT().
 				StartProviderAuth("github").
-				Return(&do.HostedAgentProviderAuthStart{
+				Return(&godo.HostedAgentProviderAuthStart{
 					Provider:   "github",
 					Status:     "pending",
 					ConnectURL: "https://example.com/connect",
@@ -427,10 +427,10 @@ func TestRunAgentsAuth(t *testing.T) {
 			gomock.InOrder(
 				tm.hostedAgents.EXPECT().
 					PollProviderAuth("github", "https://example.com/poll").
-					Return(&do.HostedAgentProviderAuthPoll{Provider: "github", Status: "pending"}, nil),
+					Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "pending"}, nil),
 				tm.hostedAgents.EXPECT().
 					PollProviderAuth("github", "https://example.com/poll").
-					Return(&do.HostedAgentProviderAuthPoll{Provider: "github", Status: "success"}, nil),
+					Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "success"}, nil),
 			)
 			config.Args = []string{"github"}
 			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)

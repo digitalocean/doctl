@@ -349,7 +349,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 		"Connect an external provider (e.g. github) for agent git operations",
 		`Connects an external provider so hosted agent sessions can perform authenticated operations against it (e.g. `+"`"+`git clone`+"`"+`/`+"`"+`push`+"`"+` against private GitHub repositories).
 
-The credential is team-scoped: one connection is shared by everyone on your team, and the OAuth authorization handle is stored server-side by DigitalOcean. doctl never sees the token — sessions exchange the handle for a short-lived token at run time.
+The credential is team-scoped: one connection is shared by everyone on your team, and the OAuth authorization handle is stored server-side by DigitalOcean. doctl never sees the token — sessions exchange the handle for an access token at run time.
 
 Running the command starts a browser-based authorization flow. doctl prints (and, unless `+"`"+`--no-browser`+"`"+` is set, opens) an authorization URL, then waits for you to approve access before reporting success. If the team is already connected, it reports that and exits. Pass `+"`"+`--no-wait`+"`"+` to print the URL and return immediately without polling; re-run the command later to confirm the connection.`,
 		Writer)

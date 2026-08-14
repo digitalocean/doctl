@@ -15,9 +15,6 @@ package do
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"net/url"
 
 	"github.com/digitalocean/godo"
 )
@@ -25,39 +22,6 @@ import (
 // HostedAgentSession wraps godo.HostedAgentSession.
 type HostedAgentSession struct {
 	*godo.HostedAgentSession
-}
-
-// hostedAgentProviderAuthBasePath is the harness-api team-scoped provider
-// connect surface (Barbican connectlinks). Routes:
-//
-//	POST /v2/agents/auth/{provider}        -> start (or resume) the connect flow
-//	GET  /v2/agents/auth/{provider}/poll   -> poll a pending connect link
-//
-// The godo HostedAgents service does not expose these yet, so the calls are
-// issued directly against the shared godo client here.
-const hostedAgentProviderAuthBasePath = "/v2/agents/auth/%s"
-
-// HostedAgentProviderAuthStart is the response to POST /v2/agents/auth/{provider}.
-// Status is "pending" when the user must still authorize in a browser, or
-// "success" when the team is already connected (ConnectURL/PollURL empty). The
-// authorization handle is never exposed: tokens are exchanged server-side at
-// session time.
-type HostedAgentProviderAuthStart struct {
-	Provider         string `json:"provider"`
-	Status           string `json:"status"`
-	ConnectURL       string `json:"connect_url,omitempty"`
-	PollURL          string `json:"poll_url,omitempty"`
-	VerificationCode string `json:"verification_code,omitempty"`
-	ExpiresAt        string `json:"expires_at,omitempty"`
-}
-
-// HostedAgentProviderAuthPoll is the response to GET
-// /v2/agents/auth/{provider}/poll. It reports only whether authorization has
-// completed; no secret is returned.
-type HostedAgentProviderAuthPoll struct {
-	Provider  string `json:"provider"`
-	Status    string `json:"status"`
-	ExpiresAt string `json:"expires_at,omitempty"`
 }
 
 // HostedAgentsService is the doctl-facing wrapper around godo.HostedAgentsService.
@@ -80,10 +44,10 @@ type HostedAgentsService interface {
 	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
 	// external provider (e.g. "github"). The team is taken from the
 	// authenticated principal server-side; there is no request body.
-	StartProviderAuth(provider string) (*HostedAgentProviderAuthStart, error)
+	StartProviderAuth(provider string) (*godo.HostedAgentProviderAuthStart, error)
 	// PollProviderAuth checks whether a pending connect link has been authorized.
 	// pollURL is the poll_url returned by StartProviderAuth.
-	PollProviderAuth(provider, pollURL string) (*HostedAgentProviderAuthPoll, error)
+	PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error)
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
 	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
@@ -158,35 +122,14 @@ func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *god
 	return err
 }
 
-func (s *hostedAgentsService) StartProviderAuth(provider string) (*HostedAgentProviderAuthStart, error) {
-	path := fmt.Sprintf(hostedAgentProviderAuthBasePath, provider)
-	// The server derives the team from the authenticated principal; an empty
-	// JSON object keeps a well-formed body on the POST.
-	req, err := s.client.NewRequest(context.TODO(), http.MethodPost, path, struct{}{})
-	if err != nil {
-		return nil, err
-	}
-	root := new(HostedAgentProviderAuthStart)
-	if _, err := s.client.Do(context.TODO(), req, root); err != nil {
-		return nil, err
-	}
-	return root, nil
+func (s *hostedAgentsService) StartProviderAuth(provider string) (*godo.HostedAgentProviderAuthStart, error) {
+	start, _, err := s.client.HostedAgents.StartProviderAuth(context.TODO(), provider)
+	return start, err
 }
 
-func (s *hostedAgentsService) PollProviderAuth(provider, pollURL string) (*HostedAgentProviderAuthPoll, error) {
-	path := fmt.Sprintf(hostedAgentProviderAuthBasePath+"/poll", provider)
-	q := url.Values{}
-	q.Set("poll_url", pollURL)
-	path += "?" + q.Encode()
-	req, err := s.client.NewRequest(context.TODO(), http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	root := new(HostedAgentProviderAuthPoll)
-	if _, err := s.client.Do(context.TODO(), req, root); err != nil {
-		return nil, err
-	}
-	return root, nil
+func (s *hostedAgentsService) PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error) {
+	poll, _, err := s.client.HostedAgents.PollProviderAuth(context.TODO(), provider, pollURL)
+	return poll, err
 }
 
 // StreamSession opens the SSE stream and returns the typed godo iterator. The
