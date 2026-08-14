@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -36,6 +37,7 @@ import (
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -178,7 +180,7 @@ func TestRunAgentsStart(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest([]byte(sampleManifest)).
+			CreateSessionFromManifest([]byte(sampleManifest), nil).
 			Return(&do.HostedAgentSession{
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_test",
@@ -200,8 +202,8 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		// The manifest sent to the server must carry metadata.name = the flag.
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any()).
-			DoAndReturn(func(manifest []byte) (*do.HostedAgentSession, error) {
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				meta, ok := doc["metadata"].(map[any]any)
@@ -257,6 +259,36 @@ spec:
 	t.Run("invalid yaml errors", func(t *testing.T) {
 		_, err := injectManifestName([]byte("::: not yaml :::"), "x")
 		assert.Error(t, err)
+	})
+
+	t.Run("preserves multi-line spec.skills instructions", func(t *testing.T) {
+		const withSkills = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  adapter: opencode
+  skills:
+    - name: example-skill
+      description: A test skill with multi-line instructions
+      instructions: |
+        Step one: do the first thing.
+        Step two: do the second thing.
+
+        Step three: finish up.
+`
+		const wantInstructions = "Step one: do the first thing.\nStep two: do the second thing.\n\nStep three: finish up.\n"
+
+		out, err := injectManifestName([]byte(withSkills), "my-session")
+		assert.NoError(t, err)
+
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		spec := doc["spec"].(map[any]any)
+		skills, ok := spec["skills"].([]any)
+		assert.True(t, ok)
+		assert.Len(t, skills, 1)
+		skill := skills[0].(map[any]any)
+		assert.Equal(t, "example-skill", skill["name"])
+		assert.Equal(t, wantInstructions, skill["instructions"])
 	})
 }
 
@@ -586,7 +618,7 @@ func TestRunAgentsUpload_Archive(t *testing.T) {
 
 	dir := t.TempDir()
 	localPath := filepath.Join(dir, "bundle.tar")
-	contents := []byte("not really a tar, but bytes are bytes")
+	contents := mustTarBytes(t, "hello.txt", []byte("hello"))
 	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
 	sha := sha256Hex(contents)
 
@@ -604,6 +636,77 @@ func TestRunAgentsUpload_Archive(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentArchive, true)
 		assert.NoError(t, RunAgentsUpload(config))
 	})
+}
+
+func TestRunAgentsUpload_ArchiveRejectsGzip(t *testing.T) {
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "bundle.tgz")
+	// gzip magic 1f 8b — enough for validateArchiveUpload to reject before
+	// attempting a full gzip/tar parse.
+	assert.NoError(t, os.WriteFile(localPath, []byte{0x1f, 0x8b, 0x08, 0x00}, 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentArchive, true)
+		err := RunAgentsUpload(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "gzip-compressed")
+		assert.Contains(t, err.Error(), "tar -cf")
+	})
+}
+
+func TestRunAgentsUpload_ArchiveRejectsNonTar(t *testing.T) {
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "bundle.tar")
+	assert.NoError(t, os.WriteFile(localPath, []byte("not really a tar, but bytes are bytes"), 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src")
+		config.Doit.Set(config.NS, doctl.ArgAgentLocalFile, localPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentArchive, true)
+		err := RunAgentsUpload(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "uncompressed .tar")
+	})
+}
+
+func TestValidateArchiveUpload(t *testing.T) {
+	t.Run("accepts uncompressed tar", func(t *testing.T) {
+		assert.NoError(t, validateArchiveUpload(bytes.NewReader(mustTarBytes(t, "a.txt", []byte("a")))))
+	})
+	t.Run("rejects gzip", func(t *testing.T) {
+		err := validateArchiveUpload(bytes.NewReader([]byte{0x1f, 0x8b, 0x08}))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "gzip-compressed")
+	})
+	t.Run("rejects zip", func(t *testing.T) {
+		err := validateArchiveUpload(bytes.NewReader([]byte{'P', 'K', 0x03, 0x04}))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "zip archive")
+	})
+	t.Run("rejects empty", func(t *testing.T) {
+		err := validateArchiveUpload(bytes.NewReader(nil))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "empty")
+	})
+}
+
+func mustTarBytes(t *testing.T, name string, body []byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: name,
+		Mode: 0o644,
+		Size: int64(len(body)),
+	}))
+	_, err := tw.Write(body)
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	return buf.Bytes()
 }
 
 func TestRunAgentsUpload_MissingFile(t *testing.T) {
@@ -878,6 +981,40 @@ func TestErrorResponseSurfacesNestedMessage(t *testing.T) {
 	}
 	assert.NoError(t, json.Unmarshal([]byte(body), er))
 	assert.Contains(t, er.Error(), "forward input to OHR: ohr attach: connection error")
+}
+
+// TestRunAgentsStart_SkillsEnvSizeCapError pins that harness-api's
+// HARNESS_SKILLS env-size-cap rejection (agentspec.validateSkillsEnvSize,
+// returned as a 400 with the nested {"error":{"code":...,"message":...}}
+// envelope) surfaces to the CLI user as the server's own readable message,
+// not a raw JSON/HTTP dump.
+func TestRunAgentsStart_SkillsEnvSizeCapError(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
+
+	const wantMessage = `agentspec: spec.skills would encode to 65537 bytes as the HARNESS_SKILLS guest env value, exceeding the sandbox's 65536-byte limit; trim instructions/descriptions or reduce the number of skills (temporary limit while skill delivery rides an env var)`
+	const body = `{"error":{"code":400,"message":"` + wantMessage + `"}}`
+	er := &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Request:    httptest.NewRequest(http.MethodPost, "http://harness/v2/agents/sessions", nil),
+		},
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), er))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			Return(nil, er)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		err := RunAgentsStart(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), wantMessage)
+		assert.NotContains(t, err.Error(), `{"error"`)
+		assert.NotContains(t, err.Error(), `{"message"`)
+	})
 }
 
 func TestRenderEventHITLRequested(t *testing.T) {
@@ -1734,7 +1871,7 @@ func TestPromptDisplay(t *testing.T) {
 		s := newAttachState(&buf, pending)
 		s.display.setRaw(true)
 
-		s.display.spinnerFrame("⠋")
+		s.display.spinnerFrame("⠋", "thinking...")
 		assert.Equal(t, "\x1b7\x1b[A\r\x1b[K⠋ thinking...\x1b8", buf.String())
 	})
 
@@ -1746,7 +1883,7 @@ func TestPromptDisplay(t *testing.T) {
 
 		s.display.Write([]byte("tokens streaming"))
 		buf.Reset()
-		s.display.spinnerFrame("⠋")
+		s.display.spinnerFrame("⠋", "thinking...")
 		assert.Equal(t, "", buf.String(), "spinner must not animate while tokens stream")
 	})
 
@@ -1756,7 +1893,7 @@ func TestPromptDisplay(t *testing.T) {
 		s := newAttachState(&buf, pending)
 		s.display.setRaw(true)
 
-		s.display.spinnerInit("⠋")
+		s.display.spinnerInit("⠋", "thinking...")
 		// Spinner on its own line, then the prompt one row below it.
 		assert.Equal(t, "\r\x1b[K⠋ thinking...\r\n> ", buf.String())
 		assert.False(t, s.display.midLine)
@@ -2165,7 +2302,7 @@ func TestStreamWithReconnect_cleanEOFReconnectsUntilTerminal(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, "session updated")
@@ -2198,7 +2335,7 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 		Times(1)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, "session updated", "events before the takeover still render")
@@ -2225,7 +2362,7 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 
 	var buf bytes.Buffer
 	pending := &pendingHITL{}
-	superseded := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), &tokenDeduper{})
+	superseded := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
 
 	assert.False(t, superseded)
 	out := buf.String()
@@ -2254,7 +2391,7 @@ func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
 
 	var buf bytes.Buffer
 	cursor := &eventCursor{}
-	superseded := drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), &tokenDeduper{})
+	superseded := drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil, &tokenDeduper{})
 
 	assert.False(t, superseded)
 	assert.Equal(t, 1, strings.Count(buf.String(), "session updated"))
@@ -2291,7 +2428,7 @@ func TestStreamWithReconnect_successOnSecondAttempt(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, msgReconnecting)
@@ -2310,7 +2447,7 @@ func TestStreamWithReconnect_exhaustedRetries(t *testing.T) {
 		Times(maxAutoReconnectAttempts)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Equal(t, maxAutoReconnectAttempts-1, strings.Count(out, msgReconnecting))
@@ -2336,7 +2473,7 @@ func TestStreamWithReconnect_terminalErrorNoRetry(t *testing.T) {
 		Times(1)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Contains(t, out, "Authentication failed")
@@ -2406,7 +2543,7 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Equal(t, 2, strings.Count(out, "session updated"), "both events should render after replay reconnect")
@@ -2468,7 +2605,7 @@ func TestStreamWithReconnect_healthyDropsDoNotExhaustBudget(t *testing.T) {
 	)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.NotContains(t, out, msgReconnectFailed, "healthy idle drops must not exhaust the reconnect budget")
@@ -2512,9 +2649,134 @@ func TestStreamWithReconnect_rapidDropsExhaustBudget(t *testing.T) {
 		Times(maxAutoReconnectAttempts)
 
 	var buf bytes.Buffer
-	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf))
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
 	assert.Equal(t, maxAutoReconnectAttempts-1, strings.Count(out, msgReconnecting))
 	assert.Contains(t, out, msgReconnectFailed)
+}
+
+func TestWarmupState_skipsOldSessions(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now.Add(-3*time.Minute))
+	w.start()
+	assert.Empty(t, buf.String(), "sessions older than warmupEligibleAge must not show a notice")
+	assert.False(t, w.eligible)
+}
+
+func TestWarmupState_showsForYoungSessions(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now.Add(-30*time.Second))
+	w.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+	assert.True(t, w.active)
+
+	w.clear()
+	assert.False(t, w.active)
+	assert.True(t, w.dismissed)
+	assert.NotContains(t, buf.String(), "You can type anytime")
+}
+
+func TestWarmupState_clearsOnTimeout(t *testing.T) {
+	oldClock := warmupClock
+	oldDur := warmupDuration
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	warmupDuration = 20 * time.Millisecond
+	t.Cleanup(func() {
+		warmupClock = oldClock
+		warmupDuration = oldDur
+	})
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now)
+	w.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		w.mu.Lock()
+		done := !w.active && w.dismissed
+		w.mu.Unlock()
+		if done {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	w.mu.Lock()
+	active, dismissed := w.active, w.dismissed
+	w.mu.Unlock()
+	assert.False(t, active)
+	assert.True(t, dismissed)
+	assert.NotContains(t, buf.String(), "You can type anytime")
+}
+
+func TestWarmupState_startAfterClearIsNoop(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	w := newWarmupState(&buf, now)
+	w.clear()
+	w.start()
+	assert.Empty(t, buf.String())
+}
+
+func TestDrainStream_clearsWarmupOnRunStarted(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindRunStarted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+	assert.True(t, warmup.dismissed)
+	assert.False(t, warmup.active)
+}
+
+func TestDrainStream_sessionUpdatedDoesNotClearWarmup(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+	assert.True(t, warmup.active, "session.updated must not dismiss the warm-up notice")
+	warmup.clear()
 }

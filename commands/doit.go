@@ -77,7 +77,7 @@ func init() {
 
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
-		filepath.Join(defaultConfigHome(), defaultConfigName), "Specify a custom config file")
+		"", "Specify a custom config file")
 	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API endpoint")
@@ -128,6 +128,10 @@ func initConfig() {
 	viper.SetConfigType("yaml")
 
 	cfgFile := viper.GetString("config")
+	if cfgFile == "" {
+		cfgFile = filepath.Join(defaultConfigHome(), defaultConfigName)
+		viper.Set("config", cfgFile)
+	}
 	viper.SetConfigFile(cfgFile)
 
 	viper.SetDefault("output", "text")
@@ -222,7 +226,6 @@ func computeCmd() *Command {
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(DropletAutoscale())
 	cmd.AddCommand(Domain())
-	cmd.AddCommand(MicroDroplet())
 	cmd.AddCommand(VPCNATGateway())
 	cmd.AddCommand(Firewall())
 	cmd.AddCommand(ReservedIP())

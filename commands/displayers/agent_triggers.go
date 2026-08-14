@@ -22,8 +22,12 @@ import (
 )
 
 // HostedAgentTrigger wraps one or more hosted-agent triggers for display.
+// Set Single=true for get/create/update/status verbs so JSON output is a bare
+// object; leave it false (default) for list verbs so JSON output is always an
+// array regardless of row count.
 type HostedAgentTrigger struct {
 	Triggers []do.HostedAgentTrigger
+	Single   bool
 }
 
 var _ Displayable = &HostedAgentTrigger{}
@@ -33,7 +37,7 @@ func (h *HostedAgentTrigger) JSON(out io.Writer) error {
 	for _, t := range h.Triggers {
 		raw = append(raw, t.HostedAgentTrigger)
 	}
-	if len(raw) == 1 {
+	if h.Single && len(raw) == 1 {
 		return writeJSON(raw[0], out)
 	}
 	return writeJSON(raw, out)
@@ -94,8 +98,11 @@ func (h *HostedAgentTrigger) KV() []map[string]any {
 }
 
 // HostedAgentTriggerExecution wraps trigger execution rows for display.
+// Set Single=true for get-execution so JSON output is a bare object; leave
+// false (default) for list-executions so JSON output is always an array.
 type HostedAgentTriggerExecution struct {
 	Executions []do.HostedAgentTriggerExecution
+	Single     bool
 }
 
 var _ Displayable = &HostedAgentTriggerExecution{}
@@ -105,7 +112,7 @@ func (h *HostedAgentTriggerExecution) JSON(out io.Writer) error {
 	for _, e := range h.Executions {
 		raw = append(raw, e.HostedAgentTriggerExecution)
 	}
-	if len(raw) == 1 {
+	if h.Single && len(raw) == 1 {
 		return writeJSON(raw[0], out)
 	}
 	return writeJSON(raw, out)
@@ -161,9 +168,6 @@ func (h *HostedAgentWebhookProvider) JSON(out io.Writer) error {
 	for _, p := range h.Providers {
 		raw = append(raw, p.HostedAgentWebhookProvider)
 	}
-	if len(raw) == 1 {
-		return writeJSON(raw[0], out)
-	}
 	return writeJSON(raw, out)
 }
 
@@ -217,9 +221,6 @@ func (h *HostedAgentReusableSession) JSON(out io.Writer) error {
 	raw := make([]any, 0, len(h.Sessions))
 	for _, s := range h.Sessions {
 		raw = append(raw, s.HostedAgentReusableSession)
-	}
-	if len(raw) == 1 {
-		return writeJSON(raw[0], out)
 	}
 	return writeJSON(raw, out)
 }

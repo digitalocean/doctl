@@ -23,8 +23,11 @@ import (
 // HostedAgentSession wraps one or more hosted-agent sessions for display. The
 // same struct backs `doctl agents start`, `... show`, and `... list` — a slice
 // of len 1 vs len N is the only difference between them.
+// Set Single=true for get/create verbs so JSON output is a bare object;
+// leave false (default) for list so JSON output is always an array.
 type HostedAgentSession struct {
 	Sessions []do.HostedAgentSession
+	Single   bool
 }
 
 var _ Displayable = &HostedAgentSession{}
@@ -36,7 +39,7 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 	for _, s := range h.Sessions {
 		raw = append(raw, s.HostedAgentSession)
 	}
-	if len(raw) == 1 {
+	if h.Single && len(raw) == 1 {
 		return writeJSON(raw[0], out)
 	}
 	return writeJSON(raw, out)
@@ -79,14 +82,20 @@ func (h *HostedAgentSession) KV() []map[string]any {
 }
 
 // HostedAgentWorkspaceUpload renders the result of `doctl agents upload`.
+// Upload is single-file-only today (Uploads always has exactly one element),
+// so JSON() defaults to list semantics (always an array) like every other
+// list-shaped displayer; set Single=true if a future bare-object verb needs it
+// (see MARSOHS-869/887 — a bare len==1 unwrap silently changes the container
+// type based on row count, breaking callers that range or count the result).
 type HostedAgentWorkspaceUpload struct {
 	Uploads []*godo.HostedAgentWorkspaceUploadResponse
+	Single  bool
 }
 
 var _ Displayable = &HostedAgentWorkspaceUpload{}
 
 func (h *HostedAgentWorkspaceUpload) JSON(out io.Writer) error {
-	if len(h.Uploads) == 1 {
+	if h.Single && len(h.Uploads) == 1 {
 		return writeJSON(h.Uploads[0], out)
 	}
 	return writeJSON(h.Uploads, out)

@@ -55,12 +55,16 @@ const (
 // (HarnessAPI from harness.proto). Routes live under /v2/agents/sessions.
 type HostedAgentsService interface {
 	// CreateSession provisions a session using the legacy JSON body (agent_kind,
-	// repo_hint, idle_timeout_seconds). Prefer CreateSessionFromManifest for the
-	// agents.digitalocean.com/v1alpha1 Agent manifest.
+	// repo_hint, idle_timeout_seconds). Prefer CreateSessionFromManifest for
+	// agents.digitalocean.com/v1alpha1 Agent manifests.
 	CreateSession(context.Context, *HostedAgentSessionCreateRequest) (*HostedAgentSession, *Response, error)
-	// CreateSessionFromManifest uploads a customer Agent manifest YAML document.
-	// The request uses Content-Type: application/x-yaml.
-	CreateSessionFromManifest(context.Context, []byte) (*HostedAgentSession, *Response, error)
+	// CreateSessionFromManifest uploads a customer Agent manifest YAML document
+	// (Content-Type: application/x-yaml). For OpenAI sandbox-provider sessions
+	// (adapter codex-agentapi), pass OpenAISessionID in opt so harness-api can
+	// persist openai_session_id for attach correlation (?openai_session_id=).
+	// doctl resolves ${...} placeholders client-side before calling this API;
+	// there is no server-side variables map.
+	CreateSessionFromManifest(context.Context, []byte, *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error)
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
@@ -98,6 +102,9 @@ const (
 	HostedAgentKindOpenCode    HostedAgentKind = "AGENT_KIND_OPENCODE"
 	HostedAgentKindCodexCLI    HostedAgentKind = "AGENT_KIND_CODEX_CLI"
 	HostedAgentKindCursorCLI   HostedAgentKind = "AGENT_KIND_CURSOR_CLI"
+	// HostedAgentKindOpenAICodex is the OpenAI Agents API sandbox-provider kind
+	// (adapter codex-agentapi). Attach bridges to OpenAI, not DO's SSE stream.
+	HostedAgentKindOpenAICodex HostedAgentKind = "AGENT_KIND_OPENAI_CODEX"
 	HostedAgentKindNone        HostedAgentKind = "AGENT_KIND_NONE"
 	HostedAgentKindCustom      HostedAgentKind = "AGENT_KIND_CUSTOM"
 )
@@ -289,6 +296,13 @@ type HostedAgentSession struct {
 	// Origin is present for newly created sessions (including direct). Older
 	// sessions may omit it.
 	Origin *HostedAgentSessionOrigin `json:"origin,omitempty"`
+	// OpenAISessionID is the OpenAI Agents session id (sess_…) linked to this DO
+	// sandbox for AGENT_KIND_OPENAI_CODEX. Used by attach to bridge to OpenAI;
+	// omitempty for other agent kinds.
+	OpenAISessionID string `json:"openai_session_id,omitempty"`
+	// OpenAIEnvironmentID is captured from the resolved CODEX_ENVIRONMENT_ID
+	// guest env value at create. Non-secret correlation metadata.
+	OpenAIEnvironmentID string `json:"openai_environment_id,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -385,6 +399,14 @@ type HostedAgentSessionCreateRequest struct {
 	Origin *HostedAgentSessionOriginRequest `json:"origin,omitempty"`
 }
 
+// HostedAgentManifestCreateOptions configures CreateSessionFromManifest.
+// OpenAISessionID is sent as the openai_session_id query parameter (not in the
+// YAML body). harness-api persists it for AGENT_KIND_OPENAI_CODEX attach
+// correlation. See docs/design/openai-sandbox-provider.md.
+type HostedAgentManifestCreateOptions struct {
+	OpenAISessionID string `url:"openai_session_id,omitempty"`
+}
+
 // HostedAgentSessionListOptions specifies optional list filters.
 type HostedAgentSessionListOptions struct {
 	PageToken string                   `url:"page_token,omitempty"`
@@ -401,8 +423,9 @@ type HostedAgentSessionsListResponse struct {
 
 // HostedAgentSessionStreamOptions configures the session SSE stream.
 //
-// The two fields select between the two modes StreamSession can open on the
-// events endpoint; see StreamSession.
+// ReplayOnly selects between the two modes StreamSession can open on the events
+// endpoint (see StreamSession); Before and Limit page backwards through history
+// within the replay-only mode.
 type HostedAgentSessionStreamOptions struct {
 	// ReplayFrom is the resume cursor: the id of the last event the caller
 	// already rendered. On the live stream it is sent as Last-Event-ID; on a
@@ -411,6 +434,23 @@ type HostedAgentSessionStreamOptions struct {
 	// ReplayOnly reads the stored event history and ends the stream at the last
 	// stored event instead of holding the connection open for live events.
 	ReplayOnly bool
+
+	// Before turns the request into a single backward page of durable
+	// history: the events strictly older than this event id, oldest-first,
+	// after which the stream closes without live events. Set it to the
+	// oldest event id already held. Requires ReplayOnly, since a live
+	// attach cannot start in the past.
+	//
+	// A cursorless replay only covers the newest window of a session's
+	// history (the server's replay budget), so walking backwards from its
+	// oldest event is how older history is read. HasMore reports whether
+	// the walk can continue.
+	Before string
+
+	// Limit caps the events in one history page. Only meaningful with
+	// Before. Zero leaves the server's default (200); the server also caps
+	// any request at its replay budget.
+	Limit int
 }
 
 // HostedAgentSendInputRequest is the body for POST .../input.
@@ -590,11 +630,15 @@ func (s *HostedAgentsServiceOp) CreateSession(ctx context.Context, create *Hoste
 	return root.Session, resp, nil
 }
 
-func (s *HostedAgentsServiceOp) CreateSessionFromManifest(ctx context.Context, manifest []byte) (*HostedAgentSession, *Response, error) {
+func (s *HostedAgentsServiceOp) CreateSessionFromManifest(ctx context.Context, manifest []byte, opt *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error) {
 	if len(bytes.TrimSpace(manifest)) == 0 {
 		return nil, nil, errors.New("hosted agents: manifest is required")
 	}
-	req, err := s.newCreateSessionPostRequest(ctx, bytes.NewReader(manifest), hostedAgentManifestMediaType)
+	path, err := addOptions(hostedAgentsSessionsBasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.newCreateSessionPostRequest(ctx, path, bytes.NewReader(manifest), hostedAgentManifestMediaType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -613,8 +657,8 @@ func (s *HostedAgentsServiceOp) doCreateSession(ctx context.Context, req *http.R
 	return root.Session, resp, nil
 }
 
-func (s *HostedAgentsServiceOp) newCreateSessionPostRequest(ctx context.Context, body io.Reader, contentType string) (*http.Request, error) {
-	u, err := s.client.BaseURL.Parse(hostedAgentsSessionsBasePath)
+func (s *HostedAgentsServiceOp) newCreateSessionPostRequest(ctx context.Context, path string, body io.Reader, contentType string) (*http.Request, error) {
+	u, err := s.client.BaseURL.Parse(path)
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +764,9 @@ func (s *HostedAgentsServiceOp) ResumeSession(ctx context.Context, sessionID str
 //   - ReplayOnly adds ?replay_only=true: the server writes the session's stored
 //     event history and then ends the stream, so the read terminates on its own.
 //     ReplayFrom is sent as the replay_from query parameter, since it is an
-//     explicit pagination cursor here rather than a resume hint.
+//     explicit pagination cursor here rather than a resume hint. Before and
+//     Limit page backwards from an event id within this mode; see
+//     HostedAgentSessionStreamOptions.Before and HasMore.
 //
 // Both carry HostedAgentEventKindStreamState control frames (see
 // HostedAgentStreamState). A replay-only read reports catching_up and then
@@ -731,8 +777,17 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 	}
 	replayOnly := opt != nil && opt.ReplayOnly
 	cursor := ""
+	before := ""
+	limit := 0
 	if opt != nil {
+		// The server answers this combination with a 400; rejecting it here
+		// spends no round trip to learn the same thing.
+		if opt.Before != "" && !opt.ReplayOnly {
+			return nil, nil, errors.New("hosted agents: before requires replay only")
+		}
 		cursor = opt.ReplayFrom
+		before = opt.Before
+		limit = opt.Limit
 	}
 
 	path := fmt.Sprintf(hostedAgentSessionEventsPath, sessionID)
@@ -741,6 +796,12 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 		q.Set("replay_only", "true")
 		if cursor != "" {
 			q.Set("replay_from", cursor)
+		}
+		if before != "" {
+			q.Set("before", before)
+		}
+		if limit > 0 {
+			q.Set("limit", strconv.Itoa(limit))
 		}
 		path += "?" + q.Encode()
 	}
@@ -760,10 +821,12 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 	if err != nil {
 		return nil, resp, err
 	}
-	return &HostedAgentSessionStream{
+	stream := &HostedAgentSessionStream{
 		raw:  NewSSEReader(resp.Body),
 		body: resp.Body,
-	}, resp, nil
+	}
+	stream.raw.OnComment = stream.observeComment
+	return stream, resp, nil
 }
 
 // SendInput enqueues user text for the in-sandbox agent runtime.
@@ -1197,7 +1260,29 @@ type HostedAgentSessionStream struct {
 	current HostedAgentEvent
 	err     error
 	done    bool
+	hasMore bool
 }
+
+// hasMoreComment is the SSE comment a history page (see
+// HostedAgentSessionStreamOptions.Before) ends with, reporting whether events
+// older than the page remain.
+const hasMoreComment = "has_more="
+
+// observeComment records the has_more trailer of a history page. Wired as the
+// reader's OnComment hook, so it runs while Next drains the stream.
+func (s *HostedAgentSessionStream) observeComment(comment []byte) {
+	value, ok := strings.CutPrefix(string(comment), hasMoreComment)
+	if !ok {
+		return
+	}
+	s.hasMore = value == "true"
+}
+
+// HasMore reports whether the history page just read has older events behind
+// it. Only meaningful once a stream opened with
+// HostedAgentSessionStreamOptions.Before has been drained to its end: the
+// trailer arrives after the last event.
+func (s *HostedAgentSessionStream) HasMore() bool { return s.hasMore }
 
 // Next advances to the next event. Returns false on EOF or error.
 func (s *HostedAgentSessionStream) Next() bool {
