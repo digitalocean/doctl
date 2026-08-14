@@ -358,7 +358,9 @@ func defaultConfigFileWriter() (io.WriteCloser, error) {
 	cfgFile := viper.GetString("config")
 
 	defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
-	if cfgFile == defaultCfgFile {
+	if cfgFile == "" || cfgFile == defaultCfgFile {
+		cfgFile = defaultCfgFile
+		viper.Set("config", cfgFile)
 		configHome()
 	}
 

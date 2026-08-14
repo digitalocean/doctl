@@ -245,7 +245,18 @@ The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching t
 
 For `+"`"+`adapter: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using `+"`"+`spec.runtime.config`+"`"+` (or legacy `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
 
-Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).`,
+Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).
+
+Add inline Agent Skills via `+"`"+`spec.skills`+"`"+`, a list of skill objects with `+"`"+`name`+"`"+`, `+"`"+`description`+"`"+`, and `+"`"+`instructions`+"`"+` (plus optional `+"`"+`license`+"`"+`, `+"`"+`metadata`+"`"+`, `+"`"+`allowedTools`+"`"+`). `+"`"+`instructions`+"`"+` is advisory context for the agent, not a security boundary -- use `+"`"+`spec.permissions`+"`"+` for enforcement. Example:
+
+  spec:
+    adapter: opencode
+    skills:
+      - name: pr-style-guide
+        description: Our team's pull request description conventions
+        instructions: |
+          Summarize the change in 1-2 sentences before the details.
+          Link related issues with "Fixes #123" syntax.`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
@@ -287,7 +298,8 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
-	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent`
+	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
+	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent; doctl agents list --parent-session-id sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show a single agent session",
@@ -357,6 +369,24 @@ Running the command starts a browser-based authorization flow. doctl prints (and
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
 	cmdAuth.Example = `doctl agents auth github`
 
+	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
+		"Fork a session into independent child sessions",
+		`Creates one or more independent child sessions from a checkpoint (or from "now" if `+"`"+`--from-checkpoint`+"`"+` is omitted).
+
+Each child is a first-class session you can attach to normally. Fork fan-out is capped at 4 children per call and is all-or-nothing.`,
+		Writer,
+		displayerType(&displayers.HostedAgentSession{}))
+	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
+	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
+	cmdFork.Example = `doctl agents fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+
+	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
+		"Roll a session back to a checkpoint in place",
+		`Rewinds the same session to a prior checkpoint. The session ID is unchanged; the underlying sandbox is replaced.`,
+		Writer,
+		displayerType(&displayers.HostedAgentSession{}))
+
+	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
 
 	return cmd
@@ -640,7 +670,18 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	if err != nil {
 		return nil, err
 	}
-	if pageSize == 0 && pageToken == "" && status == "" && name == "" {
+	parentRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentParentSessionID)
+	if err != nil {
+		return nil, err
+	}
+	var parentSessionID string
+	if parentRef != "" {
+		parentSessionID, err = resolveSessionRef(c.HostedAgents(), parentRef)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if pageSize == 0 && pageToken == "" && status == "" && name == "" && parentSessionID == "" {
 		return nil, nil
 	}
 	opt := &godo.HostedAgentSessionListOptions{}
@@ -655,6 +696,9 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	}
 	if name != "" {
 		opt.Name = name
+	}
+	if parentSessionID != "" {
+		opt.ParentSessionID = parentSessionID
 	}
 	return opt, nil
 }

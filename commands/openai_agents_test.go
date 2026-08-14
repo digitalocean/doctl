@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const sampleOpenAIManifest = `apiVersion: agents.digitalocean.com/v1alpha1
@@ -276,6 +277,41 @@ func TestStripSpecOpenAI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(out), "gpt-5.6-sol")
 	assert.Contains(t, string(out), "config:")
+}
+
+func TestStripSpecOpenAI_PreservesMultiLineSkillsInstructions(t *testing.T) {
+	const withSkills = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  runtime:
+    adapter: codex-agentapi
+  skills:
+    - name: example-skill
+      description: A test skill with multi-line instructions
+      instructions: |
+        Step one: do the first thing.
+        Step two: do the second thing.
+
+        Step three: finish up.
+  openai:
+    agent:
+      model: gpt-5.6-sol
+`
+	const wantInstructions = "Step one: do the first thing.\nStep two: do the second thing.\n\nStep three: finish up.\n"
+
+	out, err := stripSpecOpenAI([]byte(withSkills))
+	require.NoError(t, err)
+	assert.NotContains(t, string(out), "openai:")
+
+	var doc map[string]any
+	require.NoError(t, yaml.Unmarshal(out, &doc))
+	spec := doc["spec"].(map[any]any)
+	skills, ok := spec["skills"].([]any)
+	require.True(t, ok)
+	require.Len(t, skills, 1)
+	skill := skills[0].(map[any]any)
+	assert.Equal(t, "example-skill", skill["name"])
+	assert.Equal(t, wantInstructions, skill["instructions"])
 }
 
 func TestIsOpenAISandboxSession(t *testing.T) {

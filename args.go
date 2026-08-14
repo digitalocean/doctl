@@ -999,6 +999,18 @@ const (
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 
+	// ArgAgentCheckpointLabel is an optional user label for an explicit checkpoint.
+	ArgAgentCheckpointLabel = "label"
+
+	// ArgAgentFromCheckpoint is the checkpoint ID to fork or roll back from.
+	ArgAgentFromCheckpoint = "from-checkpoint"
+
+	// ArgAgentForkCount is how many child sessions a fork creates (1–4).
+	ArgAgentForkCount = "count"
+
+	// ArgAgentParentSessionID filters list to forked children of a parent session.
+	ArgAgentParentSessionID = "parent-session-id"
+
 	// ArgAgentTriggerKind filters or sets trigger kind (webhook|cron).
 	ArgAgentTriggerKind = "kind"
 

@@ -46,17 +46,19 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSession) Cols() []string {
-	return []string{"SessionID", "Name", "AgentKind", "Status", "RepoHint", "CreatedAt"}
+	return []string{"SessionID", "Name", "AgentKind", "Status", "ParentSessionID", "ForkID", "RepoHint", "CreatedAt"}
 }
 
 func (h *HostedAgentSession) ColMap() map[string]string {
 	return map[string]string{
-		"SessionID": "Session",
-		"Name":      "Name",
-		"AgentKind": "Agent",
-		"Status":    "Status",
-		"RepoHint":  "Repo",
-		"CreatedAt": "Created",
+		"SessionID":       "Session",
+		"Name":            "Name",
+		"AgentKind":       "Agent",
+		"Status":          "Status",
+		"ParentSessionID": "Parent",
+		"ForkID":          "Fork",
+		"RepoHint":        "Repo",
+		"CreatedAt":       "Created",
 	}
 }
 
@@ -70,12 +72,64 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			continue
 		}
 		out = append(out, map[string]any{
-			"SessionID": s.SessionID,
-			"Name":      s.Name,
-			"AgentKind": s.AgentKind,
-			"Status":    s.Status,
-			"RepoHint":  s.RepoHint,
-			"CreatedAt": s.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+			"SessionID":       s.SessionID,
+			"Name":            s.Name,
+			"AgentKind":       s.AgentKind,
+			"Status":          s.Status,
+			"ParentSessionID": s.ParentSessionID,
+			"ForkID":          s.ForkID,
+			"RepoHint":        s.RepoHint,
+			"CreatedAt":       s.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		})
+	}
+	return out
+}
+
+// HostedAgentCheckpoint wraps one or more session checkpoints for display.
+type HostedAgentCheckpoint struct {
+	Checkpoints []godo.HostedAgentCheckpoint
+	Single      bool
+}
+
+var _ Displayable = &HostedAgentCheckpoint{}
+
+func (h *HostedAgentCheckpoint) JSON(out io.Writer) error {
+	if h.Single && len(h.Checkpoints) == 1 {
+		return writeJSON(h.Checkpoints[0], out)
+	}
+	return writeJSON(h.Checkpoints, out)
+}
+
+func (h *HostedAgentCheckpoint) Cols() []string {
+	return []string{"CheckpointID", "SessionID", "Status", "Kind", "Label", "SizeBytes", "CreatedAt"}
+}
+
+func (h *HostedAgentCheckpoint) ColMap() map[string]string {
+	return map[string]string{
+		"CheckpointID": "Checkpoint",
+		"SessionID":    "Session",
+		"Status":       "Status",
+		"Kind":         "Kind",
+		"Label":        "Label",
+		"SizeBytes":    "SizeBytes",
+		"CreatedAt":    "Created",
+	}
+}
+
+func (h *HostedAgentCheckpoint) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Checkpoints))
+	for _, cp := range h.Checkpoints {
+		out = append(out, map[string]any{
+			"CheckpointID": cp.CheckpointID,
+			"SessionID":    cp.SessionID,
+			"Status":       cp.Status,
+			"Kind":         cp.Kind,
+			"Label":        cp.Label,
+			"SizeBytes":    cp.SizeBytes,
+			"CreatedAt":    cp.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		})
 	}
 	return out

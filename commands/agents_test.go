@@ -61,7 +61,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "triggers")
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers")
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -259,6 +259,36 @@ spec:
 	t.Run("invalid yaml errors", func(t *testing.T) {
 		_, err := injectManifestName([]byte("::: not yaml :::"), "x")
 		assert.Error(t, err)
+	})
+
+	t.Run("preserves multi-line spec.skills instructions", func(t *testing.T) {
+		const withSkills = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  adapter: opencode
+  skills:
+    - name: example-skill
+      description: A test skill with multi-line instructions
+      instructions: |
+        Step one: do the first thing.
+        Step two: do the second thing.
+
+        Step three: finish up.
+`
+		const wantInstructions = "Step one: do the first thing.\nStep two: do the second thing.\n\nStep three: finish up.\n"
+
+		out, err := injectManifestName([]byte(withSkills), "my-session")
+		assert.NoError(t, err)
+
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		spec := doc["spec"].(map[any]any)
+		skills, ok := spec["skills"].([]any)
+		assert.True(t, ok)
+		assert.Len(t, skills, 1)
+		skill := skills[0].(map[any]any)
+		assert.Equal(t, "example-skill", skill["name"])
+		assert.Equal(t, wantInstructions, skill["instructions"])
 	})
 }
 
@@ -1016,6 +1046,40 @@ func TestErrorResponseSurfacesNestedMessage(t *testing.T) {
 	}
 	assert.NoError(t, json.Unmarshal([]byte(body), er))
 	assert.Contains(t, er.Error(), "forward input to OHR: ohr attach: connection error")
+}
+
+// TestRunAgentsStart_SkillsEnvSizeCapError pins that harness-api's
+// HARNESS_SKILLS env-size-cap rejection (agentspec.validateSkillsEnvSize,
+// returned as a 400 with the nested {"error":{"code":...,"message":...}}
+// envelope) surfaces to the CLI user as the server's own readable message,
+// not a raw JSON/HTTP dump.
+func TestRunAgentsStart_SkillsEnvSizeCapError(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
+
+	const wantMessage = `agentspec: spec.skills would encode to 65537 bytes as the HARNESS_SKILLS guest env value, exceeding the sandbox's 65536-byte limit; trim instructions/descriptions or reduce the number of skills (temporary limit while skill delivery rides an env var)`
+	const body = `{"error":{"code":400,"message":"` + wantMessage + `"}}`
+	er := &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Request:    httptest.NewRequest(http.MethodPost, "http://harness/v2/agents/sessions", nil),
+		},
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), er))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			Return(nil, er)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		err := RunAgentsStart(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), wantMessage)
+		assert.NotContains(t, err.Error(), `{"error"`)
+		assert.NotContains(t, err.Error(), `{"message"`)
+	})
 }
 
 func TestRenderEventHITLRequested(t *testing.T) {
