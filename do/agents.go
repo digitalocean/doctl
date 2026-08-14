@@ -48,6 +48,14 @@ type HostedAgentsService interface {
 	CommitWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCommitRequest) (*godo.HostedAgentWorkspaceTransfer, error)
 	GetWorkspaceTransfer(sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error)
 	CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error)
+
+	// Checkpoint / fork / rollback.
+	CreateCheckpoint(sessionID string, create *godo.HostedAgentCheckpointCreateRequest) (*godo.HostedAgentCheckpoint, error)
+	ListCheckpoints(sessionID string, opt *godo.HostedAgentCheckpointListOptions) ([]godo.HostedAgentCheckpoint, string, error)
+	GetCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpoint, error)
+	DeleteCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpointDeleteResponse, error)
+	ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]HostedAgentSession, error)
+	RollbackToCheckpoint(sessionID, checkpointID string) (*HostedAgentSession, error)
 }
 
 type hostedAgentsService struct {
@@ -146,4 +154,48 @@ func (s *hostedAgentsService) GetWorkspaceTransfer(sessionID, transferID string)
 func (s *hostedAgentsService) CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error) {
 	resp, _, err := s.client.HostedAgents.CancelWorkspaceTransfer(context.TODO(), sessionID, transferID, input)
 	return resp, err
+}
+
+func (s *hostedAgentsService) CreateCheckpoint(sessionID string, create *godo.HostedAgentCheckpointCreateRequest) (*godo.HostedAgentCheckpoint, error) {
+	cp, _, err := s.client.HostedAgents.CreateCheckpoint(context.TODO(), sessionID, create)
+	return cp, err
+}
+
+func (s *hostedAgentsService) ListCheckpoints(sessionID string, opt *godo.HostedAgentCheckpointListOptions) ([]godo.HostedAgentCheckpoint, string, error) {
+	resp, _, err := s.client.HostedAgents.ListCheckpoints(context.TODO(), sessionID, opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Checkpoints, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpoint, error) {
+	cp, _, err := s.client.HostedAgents.GetCheckpoint(context.TODO(), sessionID, checkpointID)
+	return cp, err
+}
+
+func (s *hostedAgentsService) DeleteCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpointDeleteResponse, error) {
+	resp, _, err := s.client.HostedAgents.DeleteCheckpoint(context.TODO(), sessionID, checkpointID)
+	return resp, err
+}
+
+func (s *hostedAgentsService) ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]HostedAgentSession, error) {
+	resp, _, err := s.client.HostedAgents.ForkSession(context.TODO(), sessionID, fork)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]HostedAgentSession, len(resp.Sessions))
+	for i := range resp.Sessions {
+		sess := resp.Sessions[i]
+		out[i] = HostedAgentSession{HostedAgentSession: &sess}
+	}
+	return out, nil
+}
+
+func (s *hostedAgentsService) RollbackToCheckpoint(sessionID, checkpointID string) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.RollbackToCheckpoint(context.TODO(), sessionID, checkpointID)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentSession{HostedAgentSession: sess}, nil
 }

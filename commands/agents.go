@@ -297,7 +297,8 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
-	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent`
+	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
+	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent; doctl agents list --parent-session-id sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show a single agent session",
@@ -355,6 +356,24 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
 	cmdDownload.Example = `doctl agents download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
+	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
+		"Fork a session into independent child sessions",
+		`Creates one or more independent child sessions from a checkpoint (or from "now" if `+"`"+`--from-checkpoint`+"`"+` is omitted).
+
+Each child is a first-class session you can attach to normally. Fork fan-out is capped at 4 children per call and is all-or-nothing.`,
+		Writer,
+		displayerType(&displayers.HostedAgentSession{}))
+	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
+	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
+	cmdFork.Example = `doctl agents fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+
+	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
+		"Roll a session back to a checkpoint in place",
+		`Rewinds the same session to a prior checkpoint. The session ID is unchanged; the underlying sandbox is replaced.`,
+		Writer,
+		displayerType(&displayers.HostedAgentSession{}))
+
+	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
 
 	return cmd
@@ -638,7 +657,18 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	if err != nil {
 		return nil, err
 	}
-	if pageSize == 0 && pageToken == "" && status == "" && name == "" {
+	parentRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentParentSessionID)
+	if err != nil {
+		return nil, err
+	}
+	var parentSessionID string
+	if parentRef != "" {
+		parentSessionID, err = resolveSessionRef(c.HostedAgents(), parentRef)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if pageSize == 0 && pageToken == "" && status == "" && name == "" && parentSessionID == "" {
 		return nil, nil
 	}
 	opt := &godo.HostedAgentSessionListOptions{}
@@ -653,6 +683,9 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	}
 	if name != "" {
 		opt.Name = name
+	}
+	if parentSessionID != "" {
+		opt.ParentSessionID = parentSessionID
 	}
 	return opt, nil
 }
