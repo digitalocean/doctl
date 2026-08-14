@@ -47,6 +47,16 @@ import (
 const (
 	// LatestReleaseURL is the latest release URL endpoint.
 	LatestReleaseURL = "https://api.github.com/repos/digitalocean/doctl/releases/latest"
+
+	// HostedAgentsAPIURL is the API endpoint the `doctl agents` commands use.
+	// Hosted agents are fronted by their own host, which serves both the
+	// session control plane (/v2/agents/...) and the data-plane event stream
+	// (.../events), rather than by api.digitalocean.com.
+	//
+	// An explicit --api-url (DIGITALOCEAN_API_URL) still wins, which is how a
+	// non-production environment is reached — the preview host, for instance,
+	// is https://ohr-agent.do-ai-test.run.
+	HostedAgentsAPIURL = "https://ohr-agent.do-ai.run/"
 )
 
 // Version is the version info for doit.
@@ -209,7 +219,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 
 // Config is an interface that represent doit's config.
 type Config interface {
-	GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error)
+	GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error)
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
@@ -235,8 +245,10 @@ type LiveConfig struct {
 
 var _ Config = &LiveConfig{}
 
-// GetGodoClient returns a GodoClient.
-func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error) {
+// GetGodoClient returns a GodoClient. opts are applied before the --api-url
+// override, so a caller-supplied default base URL (see HostedAgentsAPIURL)
+// yields to an endpoint the user asked for explicitly.
+func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error) {
 	if accessToken == "" {
 		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")
 	}
@@ -272,6 +284,8 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string)
 
 		args = append(args, godo.WithRetryAndBackoffs(retryConfig))
 	}
+
+	args = append(args, opts...)
 
 	apiURL := viper.GetString("api-url")
 	if apiURL != "" {
@@ -535,7 +549,7 @@ func NewTestConfig() *TestConfig {
 
 // GetGodoClient mocks a GetGodoClient call. The returned godo client will
 // be nil.
-func (c *TestConfig) GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error) {
+func (c *TestConfig) GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error) {
 	return &godo.Client{}, nil
 }
 

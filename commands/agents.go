@@ -218,7 +218,9 @@ func Agents() *Command {
 
 A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.
 
-Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.`,
+Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.
+
+These commands talk to the hosted-agents endpoint (` + "`" + `https://ohr-agent.do-ai.run` + "`" + `) rather than ` + "`" + `https://api.digitalocean.com` + "`" + `. Pass ` + "`" + `--api-url` + "`" + ` (or set ` + "`" + `DIGITALOCEAN_API_URL` + "`" + `) to point them somewhere else.`,
 			GroupID: hostedAgentsGroup,
 		},
 	}
