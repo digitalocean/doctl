@@ -36,6 +36,18 @@ const (
 	hostedAgentSessionWorkspaceTransferCommitPath   = hostedAgentSessionWorkspaceTransferByIDPath + "/commit"
 	hostedAgentSessionWorkspaceTransferCancelPath   = hostedAgentSessionWorkspaceTransferByIDPath + "/cancel"
 
+	// Team-scoped external-provider (e.g. GitHub) OAuth connect flow.
+	hostedAgentProviderAuthPath     = "/v2/agents/auth/%s"
+	hostedAgentProviderAuthPollPath = hostedAgentProviderAuthPath + "/poll"
+
+	hostedAgentSessionCheckpointsPath        = hostedAgentSessionByIDPath + "/checkpoints"
+	hostedAgentSessionCheckpointByIDPath     = hostedAgentSessionCheckpointsPath + "/%s"
+	hostedAgentSessionCheckpointRollbackPath = hostedAgentSessionCheckpointByIDPath + "/rollback"
+	hostedAgentSessionForkPath               = hostedAgentSessionByIDPath + "/fork"
+
+	// HostedAgentForkMaxCount is the v1 cap on children created by one fork call.
+	HostedAgentForkMaxCount = 4
+
 	workspaceContentSHA256Header = "X-Content-Sha256"
 	workspaceIsArchiveHeader     = "X-Workspace-Is-Archive"
 	workspaceSizeBytesHeader     = "X-Workspace-Size-Bytes"
@@ -73,6 +85,14 @@ type HostedAgentsService interface {
 	StreamSession(context.Context, string, *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error)
 	SendInput(context.Context, string, *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error)
 	ResolveHITL(context.Context, string, string, *HostedAgentResolveHITLRequest) (*Response, error)
+
+	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
+	// external provider (e.g. "github"). The team is derived from the
+	// authenticated principal; there is no request body.
+	StartProviderAuth(context.Context, string) (*HostedAgentProviderAuthStart, *Response, error)
+	// PollProviderAuth reports whether a pending connect link has been
+	// authorized. pollURL is the PollURL returned by StartProviderAuth.
+	PollProviderAuth(context.Context, string, string) (*HostedAgentProviderAuthPoll, *Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
 	UploadWorkspace(context.Context, string, *HostedAgentWorkspaceUploadRequest) (*HostedAgentWorkspaceUploadResponse, *Response, error)
 	DownloadWorkspace(context.Context, string, *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error)
@@ -84,6 +104,14 @@ type HostedAgentsService interface {
 	CommitWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCommitRequest) (*HostedAgentWorkspaceTransfer, *Response, error)
 	GetWorkspaceTransfer(context.Context, string, string) (*HostedAgentWorkspaceTransfer, *Response, error)
 	CancelWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCancelRequest) (*HostedAgentWorkspaceTransferCancelResponse, *Response, error)
+
+	// Checkpoint / fork / rollback (session save points).
+	CreateCheckpoint(context.Context, string, *HostedAgentCheckpointCreateRequest) (*HostedAgentCheckpoint, *Response, error)
+	ListCheckpoints(context.Context, string, *HostedAgentCheckpointListOptions) (*HostedAgentCheckpointsListResponse, *Response, error)
+	GetCheckpoint(context.Context, string, string) (*HostedAgentCheckpoint, *Response, error)
+	DeleteCheckpoint(context.Context, string, string) (*HostedAgentCheckpointDeleteResponse, *Response, error)
+	ForkSession(context.Context, string, *HostedAgentForkSessionRequest) (*HostedAgentForkSessionResponse, *Response, error)
+	RollbackToCheckpoint(context.Context, string, string) (*HostedAgentSession, *Response, error)
 }
 
 // HostedAgentsServiceOp handles communication with Hosted Agents session methods.
@@ -303,6 +331,10 @@ type HostedAgentSession struct {
 	// OpenAIEnvironmentID is captured from the resolved CODEX_ENVIRONMENT_ID
 	// guest env value at create. Non-secret correlation metadata.
 	OpenAIEnvironmentID string `json:"openai_environment_id,omitempty"`
+	// ParentSessionID is set on forked child sessions; empty/omitted for roots.
+	ParentSessionID string `json:"parent_session_id,omitempty"`
+	// ForkID is a branch label on forked sessions; empty/omitted for roots.
+	ForkID string `json:"fork_id,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -413,6 +445,8 @@ type HostedAgentSessionListOptions struct {
 	PageSize  int                      `url:"page_size,omitempty"`
 	Status    HostedAgentSessionStatus `url:"status,omitempty"`
 	Name      string                   `url:"name,omitempty"`
+	// ParentSessionID lists child (forked) sessions of the given parent.
+	ParentSessionID string `url:"parent_session_id,omitempty"`
 }
 
 // HostedAgentSessionsListResponse is returned by GET /v2/agents/sessions.
@@ -468,6 +502,31 @@ type HostedAgentResolveHITLRequest struct {
 	Outcome HostedAgentHITLOutcome      `json:"outcome"`
 	Reason  string                      `json:"reason,omitempty"`
 	Source  HostedAgentResolutionSource `json:"source,omitempty"`
+}
+
+// HostedAgentProviderAuthStart is returned by POST /v2/agents/auth/{provider}.
+// Status is "pending" when the user must still authorize in a browser
+// (ConnectURL/PollURL/VerificationCode are set), or "success" when the team is
+// already connected (those fields are empty). It is a free-form connect-flow
+// status, distinct from the HostedAgentProviderAuthState session field. The
+// authorization handle is never exposed: tokens are exchanged server-side at
+// session time.
+type HostedAgentProviderAuthStart struct {
+	Provider         string     `json:"provider"`
+	Status           string     `json:"status"`
+	ConnectURL       string     `json:"connect_url,omitempty"`
+	PollURL          string     `json:"poll_url,omitempty"`
+	VerificationCode string     `json:"verification_code,omitempty"`
+	ExpiresAt        *Timestamp `json:"expires_at,omitempty"`
+}
+
+// HostedAgentProviderAuthPoll is returned by GET
+// /v2/agents/auth/{provider}/poll. It reports only whether authorization has
+// completed ("pending" or "success"); no secret is returned.
+type HostedAgentProviderAuthPoll struct {
+	Provider  string     `json:"provider"`
+	Status    string     `json:"status"`
+	ExpiresAt *Timestamp `json:"expires_at,omitempty"`
 }
 
 // HostedAgentSandboxExecRequest is the body for POST .../sandbox/exec.
@@ -873,6 +932,52 @@ func (s *HostedAgentsServiceOp) ResolveHITL(ctx context.Context, sessionID, requ
 		return nil, err
 	}
 	return s.client.Do(ctx, req, nil)
+}
+
+// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
+// external provider. The server derives the team from the authenticated
+// principal, so the POST carries an empty JSON object body.
+func (s *HostedAgentsServiceOp) StartProviderAuth(ctx context.Context, provider string) (*HostedAgentProviderAuthStart, *Response, error) {
+	if provider == "" {
+		return nil, nil, errors.New("hosted agents: provider is required")
+	}
+	path := fmt.Sprintf(hostedAgentProviderAuthPath, provider)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentProviderAuthStart)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// PollProviderAuth checks whether a pending connect link has been authorized.
+// pollURL is the PollURL returned by StartProviderAuth; it is forwarded to the
+// server as the poll_url query parameter.
+func (s *HostedAgentsServiceOp) PollProviderAuth(ctx context.Context, provider, pollURL string) (*HostedAgentProviderAuthPoll, *Response, error) {
+	if provider == "" {
+		return nil, nil, errors.New("hosted agents: provider is required")
+	}
+	if pollURL == "" {
+		return nil, nil, errors.New("hosted agents: poll url is required")
+	}
+	path := fmt.Sprintf(hostedAgentProviderAuthPollPath, provider)
+	q := url.Values{}
+	q.Set("poll_url", pollURL)
+	path += "?" + q.Encode()
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentProviderAuthPoll)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
 }
 
 // ExecInSandbox runs a command inside the session sandbox.
