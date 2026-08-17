@@ -6,8 +6,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/agentproxy"
-	"github.com/digitalocean/godo"
 )
 
 var _ agentproxy.AfterReply = (*Facade)(nil)
@@ -56,16 +56,29 @@ func (f *Facade) AfterReply(ctx context.Context, method string) {
 	go f.replaySessionHistory(ctx)
 }
 
-// replaySessionHistory fetches this session's full durable event history via
-// a one-shot replay-only StreamSession call — distinct from, and unrelated
-// to, the single live StreamSession call runEventLoop owns for the whole
-// connection (see the Facade.mu doc comment for why there's only ever one of
-// those; a replay-only stream reads to completion and closes on its own, per
+// maxReplayEvents caps how much history one --replay fetch reconstructs. A
+// single replay request only covers the newest window of a long transcript, so
+// do.LoadSessionHistory walks backwards for the rest; this bounds that walk, so
+// a session with a very long transcript can't hold up the thread bootstrap
+// waiting on history no scrollback will show anyway. The newest
+// maxReplayEvents events are the ones kept.
+const maxReplayEvents = 5000
+
+// replaySessionHistory fetches this session's durable event history via
+// replay-only StreamSession calls — distinct from, and unrelated to, the
+// single live StreamSession call runEventLoop owns for the whole connection
+// (see the Facade.mu doc comment for why there's only ever one of those; a
+// replay-only stream reads to completion and closes on its own, per
 // harness-api's handleStreamSession, so it never overlaps with or displaces
 // the live one). Each historical event is fed through the same translateEvent
 // used for live events, so past turns arrive as an ordinary sequence of
 // turn/item notifications — the codex protocol has no separate "history"
 // shape to send instead.
+//
+// History is collected in full before any of it is translated: the server
+// bounds one replay to its newest window, so the older events arrive from
+// later backward pages and have to be reordered before they can be replayed
+// as a chronological sequence of turns.
 //
 // turns is local to this call, not f.turns: replay's synthesized turnStates
 // are never registered in the shared map at all. Two reasons. First,
@@ -88,11 +101,11 @@ func (f *Facade) AfterReply(ctx context.Context, method string) {
 // known, narrow gap — not a bug to fix here — the harness has no "attach to
 // an existing in-flight run" concept for this proxy to use.
 //
-// Marks replayDone only on reaching the natural end of the stream — not on
-// any early-abort path (StreamSession failing to open, or a dead client
-// mid-fetch) — so an aborted attempt is retried on the next thread/start or
-// thread/resume on this same connection instead of permanently foreclosing
-// --replay for the rest of the connection on one flaky fetch.
+// Marks replayDone only on reaching the natural end of history — not on any
+// early-abort path (the history fetch failing, or a dead client mid-replay) —
+// so an aborted attempt is retried on the next thread/start or thread/resume
+// on this same connection instead of permanently foreclosing --replay for the
+// rest of the connection on one flaky fetch.
 func (f *Facade) replaySessionHistory(ctx context.Context) {
 	completed := false
 	defer func() {
@@ -104,17 +117,16 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 		f.replayMu.Unlock()
 	}()
 
-	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, &godo.HostedAgentSessionStreamOptions{ReplayOnly: true})
+	history, err := do.LoadSessionHistory(ctx, f.Sessions, f.SessionID, do.SessionHistoryOptions{
+		MaxEvents: maxReplayEvents,
+	})
 	if err != nil {
 		log.Printf("codex facade: replay history fetch failed, will retry on next connect: %v", err)
 		return
 	}
-	defer stream.Close()
 
 	turns := make(map[string]*turnState)
-	for stream.Next() {
-		ev := stream.Current()
-
+	for _, ev := range history {
 		// Same guard as drainStream: control frames (stream.state) and other
 		// run-less events belong to no turn — don't synthesize a phantom
 		// turnState keyed "" with itemID "-msg".
@@ -132,10 +144,6 @@ func (f *Facade) replaySessionHistory(ctx context.Context) {
 			log.Printf("codex facade: replay stopped early (client disconnected), will retry on next connect")
 			return
 		}
-	}
-	if err := stream.Err(); err != nil {
-		log.Printf("codex facade: replay history stream ended with error, will retry on next connect: %v", err)
-		return
 	}
 	completed = true
 }
