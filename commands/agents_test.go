@@ -411,6 +411,69 @@ func TestRunAgentsResume(t *testing.T) {
 	})
 }
 
+// TestRunAgentsDestroy_JSONMode, TestRunAgentsPause_JSONMode, and
+// TestRunAgentsResume_JSONMode pin the fix for MARSOHS-915: destroy/pause/
+// resume have no resource body to render through the Displayable interface,
+// so they used to fall back to the human notice() sentence unconditionally,
+// even under -o json. They must instead emit a minimal JSON ack on stdout and
+// skip the sentence.
+func TestRunAgentsDestroy_JSONMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().DestroySession("sess_test").Return(nil)
+
+		Output = "json"
+		defer func() { Output = "text" }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsDestroy(config))
+
+		stdout := buf.String()
+		assert.True(t, json.Valid([]byte(stdout)), "stdout must be valid JSON, got: %q", stdout)
+		assert.NotContains(t, stdout, "Notice")
+		assert.JSONEq(t, `{"session_id":"sess_test","status":"destroyed"}`, stdout)
+	})
+}
+
+func TestRunAgentsPause_JSONMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().PauseSession("sess_test").Return(nil)
+
+		Output = "json"
+		defer func() { Output = "text" }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsPause(config))
+
+		stdout := buf.String()
+		assert.True(t, json.Valid([]byte(stdout)), "stdout must be valid JSON, got: %q", stdout)
+		assert.NotContains(t, stdout, "Notice")
+		assert.JSONEq(t, `{"session_id":"sess_test","status":"paused"}`, stdout)
+	})
+}
+
+func TestRunAgentsResume_JSONMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+
+		Output = "json"
+		defer func() { Output = "text" }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsResume(config))
+
+		stdout := buf.String()
+		assert.True(t, json.Valid([]byte(stdout)), "stdout must be valid JSON, got: %q", stdout)
+		assert.NotContains(t, stdout, "Notice")
+		assert.JSONEq(t, `{"session_id":"sess_test","status":"resumed"}`, stdout)
+	})
+}
+
 func TestResolveSessionRef(t *testing.T) {
 	t.Run("uuid id passes through without a lookup", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -579,6 +642,31 @@ func TestRunAgentsApprove(t *testing.T) {
 		tm.hostedAgents.EXPECT().ResolveHITL("sess_test", "req_1", want).Return(nil)
 		config.Args = []string{"sess_test", "req_1", "approve"}
 		assert.NoError(t, RunAgentsApprove(config))
+	})
+}
+
+// TestRunAgentsApprove_JSONMode pins the fix for MARSOHS-915: same no-body
+// notice() gap as destroy/pause/resume, on the approve verb.
+func TestRunAgentsApprove_JSONMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentResolveHITLRequest{
+			Outcome: godo.HostedAgentHITLOutcomeApprove,
+			Source:  godo.HostedAgentResolutionSourceOutOfBand,
+		}
+		tm.hostedAgents.EXPECT().ResolveHITL("sess_test", "req_1", want).Return(nil)
+
+		Output = "json"
+		defer func() { Output = "text" }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_test", "req_1", "approve"}
+		assert.NoError(t, RunAgentsApprove(config))
+
+		stdout := buf.String()
+		assert.True(t, json.Valid([]byte(stdout)), "stdout must be valid JSON, got: %q", stdout)
+		assert.NotContains(t, stdout, "Notice")
+		assert.JSONEq(t, `{"session_id":"sess_test","request_id":"req_1","outcome":"HITL_OUTCOME_APPROVE"}`, stdout)
 	})
 }
 
@@ -870,6 +958,58 @@ func TestRunAgentsDownload(t *testing.T) {
 		got, err := os.ReadFile(saveTo)
 		assert.NoError(t, err)
 		assert.Equal(t, contents, got)
+	})
+}
+
+// TestRunAgentsDownload_JSONMode pins the fix for MARSOHS-915: same no-body
+// notice() gap as destroy/pause/resume/approve, on the download verb.
+func TestRunAgentsDownload_JSONMode(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	saveTo := filepath.Join(dir, "out.go")
+	contents := []byte("package main\n\nfunc main() {}\n")
+	wantSum := sha256.Sum256(contents)
+
+	objServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(contents)
+	}))
+	defer objServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransfer("sess_test", gomock.Any()).
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID: "xfer_dl",
+				Status:     godo.HostedAgentWorkspaceTransferStatusPending,
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetWorkspaceTransfer("sess_test", "xfer_dl").
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID:  "xfer_dl",
+				Status:      godo.HostedAgentWorkspaceTransferStatusCompleted,
+				SHA256:      hex.EncodeToString(wantSum[:]),
+				DownloadURL: objServer.URL,
+			}, nil)
+
+		Output = "json"
+		defer func() { Output = "text" }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_test"}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspacePath, "src/main.go")
+		config.Doit.Set(config.NS, doctl.ArgAgentSaveTo, saveTo)
+		assert.NoError(t, RunAgentsDownload(config))
+
+		stdout := buf.String()
+		assert.True(t, json.Valid([]byte(stdout)), "stdout must be valid JSON, got: %q", stdout)
+		assert.NotContains(t, stdout, "Notice")
+		assert.JSONEq(t,
+			fmt.Sprintf(`{"session_id":"sess_test","path":%q,"bytes_written":%d}`, saveTo, len(contents)),
+			stdout)
 	})
 }
 
