@@ -1040,4 +1040,7 @@ const (
 
 	// ArgAgentTriggerTimezone is the IANA timezone for kind=cron.
 	ArgAgentTriggerTimezone = "timezone"
+
+	// ArgAgentConfigID is the Agent Config ID a session is created from.
+	ArgAgentConfigID = "config-id"
 )

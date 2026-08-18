@@ -228,9 +228,11 @@ These commands talk to the hosted-agents endpoint (` + "`" + `https://ohr-agent.
 
 	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start",
 		"Start a new agent session",
-		`Creates a new agent session from an agent manifest file and prints its session id and status.
+		`Creates a new agent session and prints its session id and status. Provide exactly one of `+"`"+`--spec`+"`"+` (a manifest file) or `+"`"+`--config-id`+"`"+` (an existing Agent Config).
 
-The `+"`"+`--spec`+"`"+` flag is required and accepts a flat agents.yaml manifest: no envelope, a top-level `+"`"+`agent:`+"`"+` key naming the coding agent, snake_case keys, and duration strings (`+"`"+`idle_timeout: 10m`+"`"+`). The minimal manifest is a single line:
+With `+"`"+`--config-id`+"`"+`, the session is started from a previously created Agent Config (see `+"`"+`doctl agents config`+"`"+`) without re-supplying the manifest; `+"`"+`--name`+"`"+` is required in that mode.
+
+The `+"`"+`--spec`+"`"+` flag accepts a flat agents.yaml manifest: no envelope, a top-level `+"`"+`agent:`+"`"+` key naming the coding agent, snake_case keys, and duration strings (`+"`"+`idle_timeout: 10m`+"`"+`). The minimal manifest is a single line:
 
   agent: opencode
 
@@ -253,9 +255,11 @@ Add inline Agent Skills via `+"`"+`skills`+"`"+`, a list of skill objects with `
         Link related issues with "Fixes #123" syntax.`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
-	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
-	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session`
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --config-id; exactly one is required.`)
+	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from, instead of --spec. Requires --name. Mutually exclusive with --spec.")
+	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
+	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session; doctl agents start --config-id cfg_abc123 --name my-session`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Run a local facade that lets a coding-agent CLI drive a hosted session",
@@ -382,6 +386,7 @@ Each child is a first-class session you can attach to normally. Fork fan-out is 
 
 	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
+	cmd.AddCommand(AgentConfigs())
 
 	return cmd
 }
@@ -393,13 +398,30 @@ Each child is a first-class session you can attach to normally. Fork fan-out is 
 // Agents session, resolves ${ENV_ID} from the returned environment id, and
 // passes openai_session_id to harness-api as a query parameter.
 func RunAgentsStart(c *CmdConfig) error {
+	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
+	if err != nil {
+		return err
+	}
+	configID, err := c.Doit.GetString(c.NS, doctl.ArgAgentConfigID)
+	if err != nil {
+		return err
+	}
+
+	// Don't GetString(--spec) on this path: LiveConfig treats a viper
+	// required.agents.start.spec mark as fatal even when --config-id is set.
+	if configID != "" {
+		if c.Doit.IsSet(doctl.ArgAgentSpec) {
+			return errors.New("--spec and --config-id are mutually exclusive; provide only one")
+		}
+		return runAgentsStartFromConfig(c, configID, name)
+	}
+
 	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
 		return err
 	}
-	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
-	if err != nil {
-		return err
+	if specPath == "" {
+		return errors.New("one of --spec or --config-id is required")
 	}
 
 	raw, err := readManifestBytes(os.Stdin, specPath)
@@ -441,6 +463,27 @@ func RunAgentsStart(c *CmdConfig) error {
 	}
 
 	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
+	if err != nil {
+		if sessionLimitErr(err) {
+			msg, _, _ := agentAPIError(err)
+			return fmt.Errorf("%s. Free a slot by destroying one: run `doctl agents list` to find a session ID, then `doctl agents destroy SESSION_ID`", strings.TrimRight(msg, "."))
+		}
+		return err
+	}
+	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+}
+
+// runAgentsStartFromConfig starts a session from an existing Agent Config ID.
+// The server loads the config's pinned manifest and credentials, so no spec is
+// uploaded; --name is required because the config-backed create API mandates it.
+func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
+	if name == "" {
+		return errors.New("--name is required when starting from --config-id")
+	}
+	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
+		Name:     name,
+		ConfigID: configID,
+	})
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)

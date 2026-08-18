@@ -46,7 +46,7 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSession) Cols() []string {
-	return []string{"SessionID", "Name", "AgentKind", "Status", "ParentSessionID", "ForkID", "RepoHint", "CreatedAt"}
+	return []string{"SessionID", "Name", "AgentKind", "Status", "ConfigID", "ParentSessionID", "ForkID", "RepoHint", "CreatedAt"}
 }
 
 func (h *HostedAgentSession) ColMap() map[string]string {
@@ -55,6 +55,7 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"Name":            "Name",
 		"AgentKind":       "Agent",
 		"Status":          "Status",
+		"ConfigID":        "Config",
 		"ParentSessionID": "Parent",
 		"ForkID":          "Fork",
 		"RepoHint":        "Repo",
@@ -76,6 +77,7 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			"Name":            s.Name,
 			"AgentKind":       s.AgentKind,
 			"Status":          s.Status,
+			"ConfigID":        s.ConfigID,
 			"ParentSessionID": s.ParentSessionID,
 			"ForkID":          s.ForkID,
 			"RepoHint":        s.RepoHint,
@@ -178,6 +180,101 @@ func (h *HostedAgentWorkspaceUpload) KV() []map[string]any {
 		out = append(out, map[string]any{
 			"Path":         u.Path,
 			"BytesWritten": u.BytesWritten,
+		})
+	}
+	return out
+}
+
+// HostedAgentConfig renders full Agent Configs, backing `doctl agents config
+// get` and `... create`. Set Single=true so those verbs emit a bare JSON
+// object; the list verb uses HostedAgentConfigSummary instead.
+type HostedAgentConfig struct {
+	Configs []godo.HostedAgentConfig
+	Single  bool
+}
+
+var _ Displayable = &HostedAgentConfig{}
+
+func (h *HostedAgentConfig) JSON(out io.Writer) error {
+	if h.Single && len(h.Configs) == 1 {
+		return writeJSON(h.Configs[0], out)
+	}
+	return writeJSON(h.Configs, out)
+}
+
+func (h *HostedAgentConfig) Cols() []string {
+	return []string{"ID", "Name", "SchemaVersion", "ContentHash", "CreatedBy", "CreatedAt"}
+}
+
+func (h *HostedAgentConfig) ColMap() map[string]string {
+	return map[string]string{
+		"ID":            "ID",
+		"Name":          "Name",
+		"SchemaVersion": "SchemaVersion",
+		"ContentHash":   "ContentHash",
+		"CreatedBy":     "CreatedBy",
+		"CreatedAt":     "Created",
+	}
+}
+
+func (h *HostedAgentConfig) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Configs))
+	for _, c := range h.Configs {
+		out = append(out, map[string]any{
+			"ID":            c.ID,
+			"Name":          c.Name,
+			"SchemaVersion": c.AgentSpecSchemaVersion,
+			"ContentHash":   c.ContentHash,
+			"CreatedBy":     c.CreatedBy,
+			"CreatedAt":     c.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		})
+	}
+	return out
+}
+
+// HostedAgentConfigSummary renders the list view of Agent Configs (no manifest
+// or credential slots), backing `doctl agents config list`.
+type HostedAgentConfigSummary struct {
+	Configs []godo.HostedAgentConfigSummary
+}
+
+var _ Displayable = &HostedAgentConfigSummary{}
+
+func (h *HostedAgentConfigSummary) JSON(out io.Writer) error {
+	return writeJSON(h.Configs, out)
+}
+
+func (h *HostedAgentConfigSummary) Cols() []string {
+	return []string{"ID", "Name", "SchemaVersion", "ContentHash", "CreatedBy", "CreatedAt"}
+}
+
+func (h *HostedAgentConfigSummary) ColMap() map[string]string {
+	return map[string]string{
+		"ID":            "ID",
+		"Name":          "Name",
+		"SchemaVersion": "SchemaVersion",
+		"ContentHash":   "ContentHash",
+		"CreatedBy":     "CreatedBy",
+		"CreatedAt":     "Created",
+	}
+}
+
+func (h *HostedAgentConfigSummary) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Configs))
+	for _, c := range h.Configs {
+		out = append(out, map[string]any{
+			"ID":            c.ID,
+			"Name":          c.Name,
+			"SchemaVersion": c.AgentSpecSchemaVersion,
+			"ContentHash":   c.ContentHash,
+			"CreatedBy":     c.CreatedBy,
+			"CreatedAt":     c.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		})
 	}
 	return out

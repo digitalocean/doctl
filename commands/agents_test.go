@@ -36,6 +36,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -67,7 +68,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers")
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -223,6 +224,67 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
 		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
+func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
+	cmd, _, err := DoitCmd.Find([]string{"agents", "start"})
+	require.NoError(t, err)
+	require.NotNil(t, cmd.Flags().Lookup(doctl.ArgAgentConfigID))
+
+	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
+	// required-flag check, so the FromConfigID runner tests cannot catch this.
+	require.False(t, viper.GetBool("required.agents.start.spec"),
+		"spec is still marked required; `doctl agents start --config-id` fails with (agents.start.spec) command is missing required arguments")
+	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
+	require.NoError(t, err)
+}
+
+func TestRunAgentsStart_FromConfigID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
+				Name:     "my-session",
+				ConfigID: "cfg_abc123",
+			}).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					ConfigID:  "cfg_abc123",
+				},
+			}, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
+func TestRunAgentsStart_FromConfigID_RequiresName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		err := RunAgentsStart(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "--name is required")
+	})
+}
+
+func TestRunAgentsStart_SpecAndConfigIDMutuallyExclusive(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, "agent.yaml")
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		err := RunAgentsStart(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "mutually exclusive")
+	})
+}
+
+func TestRunAgentsStart_RequiresSpecOrConfigID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunAgentsStart(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "one of --spec or --config-id is required")
 	})
 }
 
