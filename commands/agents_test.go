@@ -36,6 +36,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -224,6 +225,19 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
 		assert.NoError(t, RunAgentsStart(config))
 	})
+}
+
+func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
+	cmd, _, err := DoitCmd.Find([]string{"agents", "start"})
+	require.NoError(t, err)
+	require.NotNil(t, cmd.Flags().Lookup(doctl.ArgAgentConfigID))
+
+	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
+	// required-flag check, so the FromConfigID runner tests cannot catch this.
+	require.False(t, viper.GetBool("required.agents.start.spec"),
+		"spec is still marked required; `doctl agents start --config-id` fails with (agents.start.spec) command is missing required arguments")
+	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
+	require.NoError(t, err)
 }
 
 func TestRunAgentsStart_FromConfigID(t *testing.T) {

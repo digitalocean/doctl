@@ -258,6 +258,7 @@ Add inline Agent Skills via `+"`"+`skills`+"`"+`, a list of skill objects with `
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --config-id; exactly one is required.`)
 	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from, instead of --spec. Requires --name. Mutually exclusive with --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
+	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session; doctl agents start --config-id cfg_abc123 --name my-session`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
@@ -397,10 +398,6 @@ Each child is a first-class session you can attach to normally. Fork fan-out is 
 // Agents session, resolves ${ENV_ID} from the returned environment id, and
 // passes openai_session_id to harness-api as a query parameter.
 func RunAgentsStart(c *CmdConfig) error {
-	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
-	if err != nil {
-		return err
-	}
 	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
 	if err != nil {
 		return err
@@ -410,15 +407,21 @@ func RunAgentsStart(c *CmdConfig) error {
 		return err
 	}
 
-	// --spec and --config-id are two mutually exclusive ways to start a
-	// session; exactly one must be provided.
-	switch {
-	case specPath != "" && configID != "":
-		return errors.New("--spec and --config-id are mutually exclusive; provide only one")
-	case specPath == "" && configID == "":
-		return errors.New("one of --spec or --config-id is required")
-	case configID != "":
+	// Don't GetString(--spec) on this path: LiveConfig treats a viper
+	// required.agents.start.spec mark as fatal even when --config-id is set.
+	if configID != "" {
+		if c.Doit.IsSet(doctl.ArgAgentSpec) {
+			return errors.New("--spec and --config-id are mutually exclusive; provide only one")
+		}
 		return runAgentsStartFromConfig(c, configID, name)
+	}
+
+	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	if err != nil {
+		return err
+	}
+	if specPath == "" {
+		return errors.New("one of --spec or --config-id is required")
 	}
 
 	raw, err := readManifestBytes(os.Stdin, specPath)
