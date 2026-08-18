@@ -48,6 +48,7 @@ import (
 	"github.com/digitalocean/doctl/internal/agentproxy/codex"
 	"github.com/digitalocean/godo"
 	"github.com/muesli/termenv"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	yaml "gopkg.in/yaml.v2"
@@ -349,6 +350,18 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
 	cmdDownload.Example = `doctl agents download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+
+	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
+		"Connect an external provider (e.g. github) for agent git operations",
+		`Connects an external provider so hosted agent sessions can perform authenticated operations against it (e.g. `+"`"+`git clone`+"`"+`/`+"`"+`push`+"`"+` against private GitHub repositories).
+
+The credential is team-scoped: one connection is shared by everyone on your team, and the OAuth authorization handle is stored server-side by DigitalOcean. doctl never sees the token — sessions exchange the handle for an access token at run time.
+
+Running the command starts a browser-based authorization flow. doctl prints (and, unless `+"`"+`--no-browser`+"`"+` is set, opens) an authorization URL, then waits for you to approve access before reporting success. If the team is already connected, it reports that and exits. Pass `+"`"+`--no-wait`+"`"+` to print the URL and return immediately without polling; re-run the command later to confirm the connection.`,
+		Writer)
+	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
+	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
+	cmdAuth.Example = `doctl agents auth github`
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
@@ -843,6 +856,87 @@ func RunAgentsResume(c *CmdConfig) error {
 	}
 	notice("Session %s resumed", sessionID)
 	return nil
+}
+
+// agentProviderAuthStatusSuccess is the connect-flow status harness-api returns
+// once the team's authorization handle is persisted (matches oauth_connect.go).
+const agentProviderAuthStatusSuccess = "success"
+
+// agentsAuthPollInterval is how often the connect poll endpoint is checked while
+// waiting for the browser authorization to complete. A package var so tests can
+// shorten it.
+var agentsAuthPollInterval = 2 * time.Second
+
+// RunAgentsAuth connects an external provider (e.g. github) for the caller's
+// team via the harness-api connect flow. It starts (or resumes) the flow, opens
+// the browser authorization URL, then polls until the handle is authorized.
+func RunAgentsAuth(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	provider := strings.ToLower(strings.TrimSpace(c.Args[0]))
+	if provider == "" {
+		return errors.New("a provider is required, e.g. `doctl agents auth github`")
+	}
+	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
+	if err != nil {
+		return err
+	}
+	noWait, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoWait)
+	if err != nil {
+		return err
+	}
+
+	svc := c.HostedAgents()
+	start, err := svc.StartProviderAuth(provider)
+	if err != nil {
+		return err
+	}
+	if strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
+		notice("%s is already connected for your team", provider)
+		return nil
+	}
+	if start.ConnectURL == "" {
+		return fmt.Errorf("harness-api returned status %q with no authorization URL", start.Status)
+	}
+
+	fmt.Fprintf(c.Out, "To connect %s, open this URL and authorize access:\n\n  %s\n\n", provider, start.ConnectURL)
+	if start.VerificationCode != "" {
+		fmt.Fprintf(c.Out, "Verification code: %s\n\n", start.VerificationCode)
+	}
+	if !noBrowser {
+		if berr := browser.OpenURL(start.ConnectURL); berr != nil {
+			warn("could not open a browser automatically; open the URL above manually: %v", berr)
+		}
+	}
+
+	if noWait || start.PollURL == "" {
+		notice("Re-run `doctl agents auth %s` after authorizing to confirm the connection", provider)
+		return nil
+	}
+
+	// SIGTERM alongside SIGINT so the wait loop exits cleanly under a process
+	// manager or plain `kill`, not only on Ctrl-C.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	fmt.Fprintln(c.Out, "Waiting for authorization to complete... (Ctrl-C to stop)")
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("stopped waiting; re-run `doctl agents auth %s` to check the connection later", provider)
+		case <-time.After(agentsAuthPollInterval):
+		}
+
+		poll, err := svc.PollProviderAuth(provider, start.PollURL)
+		if err != nil {
+			return err
+		}
+		if strings.EqualFold(poll.Status, agentProviderAuthStatusSuccess) {
+			notice("%s connected successfully", provider)
+			return nil
+		}
+	}
 }
 
 // maxWorkspaceTransferBytes is the hard cap for workspace transfers (OHS contract).

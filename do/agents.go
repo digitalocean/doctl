@@ -41,6 +41,13 @@ type HostedAgentsService interface {
 	ResumeSession(sessionID string) error
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
+	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
+	// external provider (e.g. "github"). The team is taken from the
+	// authenticated principal server-side; there is no request body.
+	StartProviderAuth(provider string) (*godo.HostedAgentProviderAuthStart, error)
+	// PollProviderAuth checks whether a pending connect link has been authorized.
+	// pollURL is the poll_url returned by StartProviderAuth.
+	PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error)
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
 	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
@@ -121,6 +128,16 @@ func (s *hostedAgentsService) SendInput(sessionID string, input *godo.HostedAgen
 func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
 	_, err := s.client.HostedAgents.ResolveHITL(context.TODO(), sessionID, requestID, body)
 	return err
+}
+
+func (s *hostedAgentsService) StartProviderAuth(provider string) (*godo.HostedAgentProviderAuthStart, error) {
+	start, _, err := s.client.HostedAgents.StartProviderAuth(context.TODO(), provider)
+	return start, err
+}
+
+func (s *hostedAgentsService) PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error) {
+	poll, _, err := s.client.HostedAgents.PollProviderAuth(context.TODO(), provider, pollURL)
+	return poll, err
 }
 
 // StreamSession opens the SSE stream and returns the typed godo iterator. The

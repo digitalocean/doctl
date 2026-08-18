@@ -267,6 +267,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) PauseSession(sessionID any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseSession", reflect.TypeOf((*MockHostedAgentsService)(nil).PauseSession), sessionID)
 }
 
+// PollProviderAuth mocks base method.
+func (m *MockHostedAgentsService) PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PollProviderAuth", provider, pollURL)
+	ret0, _ := ret[0].(*godo.HostedAgentProviderAuthPoll)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PollProviderAuth indicates an expected call of PollProviderAuth.
+func (mr *MockHostedAgentsServiceMockRecorder) PollProviderAuth(provider, pollURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollProviderAuth", reflect.TypeOf((*MockHostedAgentsService)(nil).PollProviderAuth), provider, pollURL)
+}
+
 // ResolveHITL mocks base method.
 func (m *MockHostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
 	m.ctrl.T.Helper()
@@ -323,6 +338,21 @@ func (m *MockHostedAgentsService) SendInput(sessionID string, input *godo.Hosted
 func (mr *MockHostedAgentsServiceMockRecorder) SendInput(sessionID, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendInput", reflect.TypeOf((*MockHostedAgentsService)(nil).SendInput), sessionID, input)
+}
+
+// StartProviderAuth mocks base method.
+func (m *MockHostedAgentsService) StartProviderAuth(provider string) (*godo.HostedAgentProviderAuthStart, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartProviderAuth", provider)
+	ret0, _ := ret[0].(*godo.HostedAgentProviderAuthStart)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartProviderAuth indicates an expected call of StartProviderAuth.
+func (mr *MockHostedAgentsServiceMockRecorder) StartProviderAuth(provider any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartProviderAuth", reflect.TypeOf((*MockHostedAgentsService)(nil).StartProviderAuth), provider)
 }
 
 // StreamSession mocks base method.
