@@ -1515,11 +1515,11 @@ func TestFacade_Replay_AdoptsInProgressRunAndStreamsContinuation(t *testing.T) {
 		// The run that was mid-flight when the previous proxy died: started,
 		// partial text, no terminal event.
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "run-live"},
-		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), RunID: "run-live", Data: json.RawMessage(`{"text":"Hel"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), RunID: "run-live", Data: json.RawMessage(`{"text":"Hello"}`)},
 	)
 	// The continuation the live stream serves after adoption.
 	h.QueueRun("run-live",
-		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"lo"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"!"}`)},
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
 	)
 
@@ -1539,23 +1539,23 @@ func TestFacade_Replay_AdoptsInProgressRunAndStreamsContinuation(t *testing.T) {
 	require.Equal(t, "turn/started", started.method)
 	assert.Equal(t, "run-live", started.params.(turnStartedNotification).Turn.ID)
 	_ = rec.next(t) // item/started (run-live)
-	deltaHel := rec.next(t)
-	require.Equal(t, "item/agentMessage/delta", deltaHel.method)
-	assert.Equal(t, "Hel", deltaHel.params.(agentMessageDeltaNotification).Delta)
+	deltaHello := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaHello.method)
+	assert.Equal(t, "Hello", deltaHello.params.(agentMessageDeltaNotification).Delta)
 
 	// Adoption: the live loop attaches and the SAME turn continues — no
 	// second turn/started, no second item/started, text accumulated across
 	// the restart boundary.
-	deltaLo := rec.next(t)
-	require.Equal(t, "item/agentMessage/delta", deltaLo.method,
+	deltaBang := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaBang.method,
 		"the adopted turn's continuation must not re-announce the turn or item")
-	dn := deltaLo.params.(agentMessageDeltaNotification)
-	assert.Equal(t, "lo", dn.Delta)
+	dn := deltaBang.params.(agentMessageDeltaNotification)
+	assert.Equal(t, "!", dn.Delta)
 	assert.Equal(t, "run-live-msg", dn.ItemID, "the continuation must append to the item the replay rendered")
 
 	itemCompleted := rec.next(t)
 	require.Equal(t, "item/completed", itemCompleted.method)
-	assert.Equal(t, "Hello", itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem).Text,
+	assert.Equal(t, "Hello!", itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem).Text,
 		"the item's final text must span the restart boundary")
 
 	turnCompleted := rec.next(t)

@@ -45,9 +45,9 @@ func TestFacade_TurnStart_RawPassthrough(t *testing.T) {
 		},
 		agentproxytest.Event{
 			Type:            string(godo.HostedAgentEventKindTokenChunk),
-			Data:            json.RawMessage(`{"text":"Hel"}`),
+			Data:            json.RawMessage(`{"text":"Hi"}`),
 			SourceEventType: "item/agentMessage/delta",
-			SourceRaw:       []byte(`{"method":"item/agentMessage/delta","params":{"threadId":"thread-vm","turnId":"turn-vm","itemId":"item_0","delta":"Hel"}}`),
+			SourceRaw:       []byte(`{"method":"item/agentMessage/delta","params":{"threadId":"thread-vm","turnId":"turn-vm","itemId":"item_0","delta":"Hi"}}`),
 		},
 		// run.log has no canonical→codex mapping at all (dropped in v1);
 		// with raw bytes the native command output delta reaches the TUI.
@@ -93,7 +93,7 @@ func TestFacade_TurnStart_RawPassthrough(t *testing.T) {
 	assert.Equal(t, testSessionID, dp["threadId"])
 	assert.Equal(t, "run-raw", dp["turnId"])
 	assert.Equal(t, "item_0", dp["itemId"], "native item ids are kept, not re-minted")
-	assert.Equal(t, "Hel", dp["delta"])
+	assert.Equal(t, "Hi", dp["delta"])
 
 	outputDelta := rec.next(t)
 	require.Equal(t, "item/commandExecution/outputDelta", outputDelta.method, "raw-only detail (dropped by canonical translation) must be forwarded")
@@ -191,9 +191,9 @@ func TestFacade_TurnStart_RawThenCanonicalKeepsItemLifecycleConsistent(t *testin
 		},
 		agentproxytest.Event{
 			Type:            string(godo.HostedAgentEventKindTokenChunk),
-			Data:            json.RawMessage(`{"text":"Hel"}`),
+			Data:            json.RawMessage(`{"text":"Hi"}`),
 			SourceEventType: "item/agentMessage/delta",
-			SourceRaw:       []byte(`{"method":"item/agentMessage/delta","params":{"threadId":"thread-vm","turnId":"turn-vm","itemId":"item_0","delta":"Hel"}}`),
+			SourceRaw:       []byte(`{"method":"item/agentMessage/delta","params":{"threadId":"thread-vm","turnId":"turn-vm","itemId":"item_0","delta":"Hi"}}`),
 		},
 		// No SourceRaw: what a durably-redelivered event looks like after a
 		// reconnect (source_raw is not persisted server-side).
