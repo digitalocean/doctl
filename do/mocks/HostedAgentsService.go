@@ -373,6 +373,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) PollProviderAuth(provider, pollUR
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollProviderAuth", reflect.TypeOf((*MockHostedAgentsService)(nil).PollProviderAuth), provider, pollURL)
 }
 
+// RelayRequest mocks base method.
+func (m *MockHostedAgentsService) RelayRequest(ctx context.Context, sessionID string, body *godo.HostedAgentRelayRequest) (*godo.HostedAgentRelayResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelayRequest", ctx, sessionID, body)
+	ret0, _ := ret[0].(*godo.HostedAgentRelayResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelayRequest indicates an expected call of RelayRequest.
+func (mr *MockHostedAgentsServiceMockRecorder) RelayRequest(ctx, sessionID, body any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelayRequest", reflect.TypeOf((*MockHostedAgentsService)(nil).RelayRequest), ctx, sessionID, body)
+}
+
 // ResolveHITL mocks base method.
 func (m *MockHostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
 	m.ctrl.T.Helper()

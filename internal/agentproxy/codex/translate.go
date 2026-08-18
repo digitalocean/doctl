@@ -3,19 +3,17 @@
 // This file is the "translator-strategy seam" the original implementation
 // plan called for: the logic that decides what a canonical event means in
 // codex terms lives here, not scattered inline in runEventLoop/drainStream's
-// own dispatch loop (facade.go). A future raw-passthrough strategy —
-// preferring an event's native codex bytes when the harness exposes them,
-// falling back to this reconstruction otherwise — would extend or replace
-// translateEvent, not runEventLoop's own retry/reconnect machinery.
+// own dispatch loop (facade.go). As of v1.5 the seam carries two strategies:
+// translateEvent first offers each event to tryRawPassthrough (raw.go),
+// which forwards the event's native codex frame when one is available, and
+// only reconstructs from canonical — everything below — when it isn't.
 //
 // This is deliberately not a Go interface with multiple implementations:
-// there is exactly one strategy today (canonical reconstruction), and
-// godo.HostedAgentEvent doesn't even have a source_raw field yet (see the
-// RFC's own gap analysis — the harness doesn't expose it on the client
-// stream yet either). Building a pluggable-strategy interface with nothing
-// real to plug in would be speculative abstraction; the seam that matters
-// right now is that this logic is self-contained in its own file, ready to
-// grow a conditional (prefer source_raw when present) once the data exists.
+// the raw strategy is one conditional at the top of translateEvent plus its
+// own self-contained file, exactly the shape the v1 comment here reserved.
+// The canonical reconstruction is not legacy — it is the permanent fallback
+// (adapter-synthesized events carry no raw bytes; non-codex sessions never
+// forward raw at all) and the only path that can ever serve cross-agent use.
 package codex
 
 import (
@@ -44,6 +42,13 @@ import (
 // replay is set, those side effects are skipped — tool_call_started /
 // tool_call_completed in the same history already render the items.
 func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, ts *turnState, replay bool) (clientDead bool) {
+	// Prefer the event's native codex frame when one rode along
+	// (SourceRaw) — see raw.go. handled=false falls through to the
+	// canonical reconstruction below, per event.
+	if handled, dead := f.tryRawPassthrough(ev, ts, replay); handled {
+		return dead
+	}
+
 	at := eventTime(ev)
 	switch ev.Kind {
 	case godo.HostedAgentEventKindRunStarted:
@@ -70,6 +75,28 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		}
 		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
 			return false
+		}
+		// A canonical delta on a turn whose run.started went raw (or was
+		// never seen at all) has no announced item to attach to: the raw
+		// path deliberately never opens the synthesized "-msg" item (see
+		// raw.go's package doc), and this is exactly what a mid-turn
+		// reconnect produces — the server does not retain source_raw
+		// durably, so events redelivered via replay_from arrive raw-less
+		// and fall back here even though the turn's earlier frames were
+		// forwarded raw. Open the item now so the delta below (and every
+		// later one) references an item the client has actually been told
+		// about, and so finishTurn closes it instead of suppressing the
+		// close for an item whose deltas were delivered.
+		if !ts.itemStarted {
+			if !f.notify("item/started", itemStartedNotification{
+				Item:        agentMessageItem{Type: "agentMessage", ID: ts.itemID, Text: ""},
+				ThreadID:    f.SessionID,
+				TurnID:      ev.RunID,
+				StartedAtMs: at.UnixMilli(),
+			}) {
+				return true
+			}
+			ts.itemStarted = true
 		}
 		ts.text.WriteString(payload.Text)
 		if !f.notify("item/agentMessage/delta", agentMessageDeltaNotification{
@@ -318,20 +345,34 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		// turnStates in the shared f.turns map at all (see replay.go) — a
 		// lookup-by-id would simply fail to find them during replay.
 		switch hitl.Payload.Kind {
-		case "command_execution":
-			go f.requestCommandExecutionApproval(ctx, ev.RunID, hitl)
 		case "file_change":
+			// Checked before the native path on purpose: the auto-reject
+			// below is a deliberate policy about apply_patch, not a gap in
+			// this proxy's protocol coverage, so being able to forward the
+			// request faithfully is not a reason to start forwarding it.
 			go f.autoRejectFileChangeApproval(ts, hitl)
+		case "command_execution":
+			// Native first: same question either way, but the agent's own
+			// frame carries the fields codex sent rather than the subset
+			// commandExecutionRequestApprovalParams reconstructs.
+			if !f.tryNativeApproval(ctx, ev, hitl) {
+				go f.requestCommandExecutionApproval(ctx, ev.RunID, hitl)
+			}
 		default:
-			// item/permissions/requestApproval exists in the codex
-			// protocol too, but its canonical trigger has never been
-			// observed, and its requestApproval shape isn't known well
-			// enough to forward to the client (see
-			// PermissionsRequestApprovalParams/Response — a grant
-			// profile, not a simple decision enum, unlike the other two
-			// kinds). Auto-reject rather than leave the harness waiting
-			// on a decision that will never come — see
-			// autoRejectUnknownHITL.
+			// Every other kind — an MCP elicitation, a tool asking for input,
+			// or a gated request newer than this proxy — is answerable only
+			// in the agent's own protocol, so the native path is the only one
+			// that can do anything but refuse on the user's behalf.
+			if f.tryNativeApproval(ctx, ev, hitl) {
+				break
+			}
+			// No native frame to forward, and no way to synthesize the
+			// request from the canonical payload: these kinds do not answer
+			// with a simple decision enum (item/permissions/requestApproval
+			// wants a grant profile — see PermissionsRequestApprovalParams),
+			// so there is nothing to ask the client that it could answer.
+			// Auto-reject rather than leave the harness waiting on a
+			// decision that will never come — see autoRejectUnknownHITL.
 			go f.autoRejectUnknownHITL(hitl.HitlID, hitl.Payload.Kind)
 		}
 
@@ -383,32 +424,10 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 			// token counts folded into the running sum.
 			return false
 		}
-		var payload struct {
-			Usage struct {
-				InputTokens       int64 `json:"input_tokens"`
-				OutputTokens      int64 `json:"output_tokens"`
-				CachedInputTokens int64 `json:"cached_input_tokens"`
-				ReasoningTokens   int64 `json:"reasoning_tokens"`
-			} `json:"usage"`
-		}
-		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+		last, total, ok := f.accumulateUsage(ev.Payload)
+		if !ok {
 			return false
 		}
-		last := tokenUsageBreakdown{
-			TotalTokens:           payload.Usage.InputTokens + payload.Usage.OutputTokens,
-			InputTokens:           payload.Usage.InputTokens,
-			CachedInputTokens:     payload.Usage.CachedInputTokens,
-			OutputTokens:          payload.Usage.OutputTokens,
-			ReasoningOutputTokens: payload.Usage.ReasoningTokens,
-		}
-		f.mu.Lock()
-		f.totalUsage.TotalTokens += last.TotalTokens
-		f.totalUsage.InputTokens += last.InputTokens
-		f.totalUsage.CachedInputTokens += last.CachedInputTokens
-		f.totalUsage.OutputTokens += last.OutputTokens
-		f.totalUsage.ReasoningOutputTokens += last.ReasoningOutputTokens
-		total := f.totalUsage
-		f.mu.Unlock()
 		if !f.notify("thread/tokenUsage/updated", threadTokenUsageUpdatedNotification{
 			ThreadID: f.SessionID,
 			TurnID:   ev.RunID,
@@ -429,6 +448,44 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 		// HITLResolved above — a documented no-op, not an oversight.
 	}
 	return false
+}
+
+// accumulateUsage decodes one run.usage_recorded payload and folds it into
+// this connection's running total under f.mu, returning the event's own
+// breakdown (last) and the updated running sum (total). Shared by the
+// canonical reconstruction (which reports both in its synthesized
+// thread/tokenUsage/updated) and the raw passthrough (which forwards the
+// VM's own notification but still keeps this total warm for any later
+// canonical fallback — see tryRawPassthrough). ok=false means the payload
+// didn't decode and nothing was accumulated.
+func (f *Facade) accumulateUsage(payload json.RawMessage) (last, total tokenUsageBreakdown, ok bool) {
+	var p struct {
+		Usage struct {
+			InputTokens       int64 `json:"input_tokens"`
+			OutputTokens      int64 `json:"output_tokens"`
+			CachedInputTokens int64 `json:"cached_input_tokens"`
+			ReasoningTokens   int64 `json:"reasoning_tokens"`
+		} `json:"usage"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return tokenUsageBreakdown{}, tokenUsageBreakdown{}, false
+	}
+	last = tokenUsageBreakdown{
+		TotalTokens:           p.Usage.InputTokens + p.Usage.OutputTokens,
+		InputTokens:           p.Usage.InputTokens,
+		CachedInputTokens:     p.Usage.CachedInputTokens,
+		OutputTokens:          p.Usage.OutputTokens,
+		ReasoningOutputTokens: p.Usage.ReasoningTokens,
+	}
+	f.mu.Lock()
+	f.totalUsage.TotalTokens += last.TotalTokens
+	f.totalUsage.InputTokens += last.InputTokens
+	f.totalUsage.CachedInputTokens += last.CachedInputTokens
+	f.totalUsage.OutputTokens += last.OutputTokens
+	f.totalUsage.ReasoningOutputTokens += last.ReasoningOutputTokens
+	total = f.totalUsage
+	f.mu.Unlock()
+	return last, total, true
 }
 
 // eventTime returns the canonical event's own timestamp when present, else

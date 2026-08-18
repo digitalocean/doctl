@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 )
 
 // Event is one canned SSE event the harness streams back from
@@ -48,6 +49,23 @@ type Event struct {
 	// whole queue. Empty means "use the harness's current runID," which is
 	// all QueueRun ever needs.
 	RunID string
+	// SourceEventType is the native event type label the in-sandbox adapter
+	// recorded before canonical mapping (e.g. codex's
+	// "item/agentMessage/delta"). Emitted whenever set, mirroring the real
+	// SSE surface, which carries it unconditionally.
+	SourceEventType string
+	// SourceRaw is the exact native event bytes the adapter captured before
+	// canonical mapping — for codex, one JSON-RPC frame. Only emitted when
+	// the stream was opened with include_raw=true, mirroring the real
+	// surface's opt-in gate ([]byte rides base64 in the JSON, matching
+	// godo's wire decode).
+	SourceRaw []byte
+
+	// eventID is assigned by QueueRun/QueueReplayHistory (a random UUID,
+	// like the real producers mint — see the comment at the serve loop) and
+	// is stable across reconnects of the same queue, so replay_from can
+	// resume mid-list the way harness-api does.
+	eventID string
 }
 
 // eventWire is the on-the-wire SPI canonical event envelope this harness
@@ -55,14 +73,16 @@ type Event struct {
 // (confirmed against vendor/github.com/digitalocean/godo/hosted_agents.go)
 // rather than importing it, since that type isn't exported.
 type eventWire struct {
-	EventID   string          `json:"event_id"`
-	RunID     string          `json:"run_id"`
-	TenantID  string          `json:"tenant_id"`
-	SessionID string          `json:"session_id"`
-	Timestamp string          `json:"timestamp"`
-	Seq       int             `json:"seq"`
-	Type      string          `json:"type"`
-	Data      json.RawMessage `json:"data"`
+	EventID         string          `json:"event_id"`
+	RunID           string          `json:"run_id"`
+	TenantID        string          `json:"tenant_id"`
+	SessionID       string          `json:"session_id"`
+	Timestamp       string          `json:"timestamp"`
+	Seq             int             `json:"seq"`
+	SourceEventType string          `json:"source_event_type,omitempty"`
+	SourceRaw       []byte          `json:"source_raw,omitempty"`
+	Type            string          `json:"type"`
+	Data            json.RawMessage `json:"data"`
 }
 
 // Harness fakes the four Hosted Agents session routes an agentproxy test
@@ -76,13 +96,17 @@ type Harness struct {
 	mu                   sync.Mutex
 	hangAfterEvents      bool
 	sessionID            string
-	runID                string  // returned by the next POST .../input call
-	events               []Event // streamed, in order, by the next GET .../events call
-	replayEvents         []Event // streamed instead of events when GET .../events carries replay_only=true
-	streamErrorStatus    int     // 0 = serve normally; nonzero = return this HTTP status instead
-	streamErrorRemaining int     // >0: decrement per hit, clearing streamErrorStatus at 0; <=0 with status set: permanent
-	streamErrorSkip      int     // succeed this many opens before applying streamErrorStatus (reconnect-path tests)
-	dropAfterEvents      int     // >0: end the very next stream connection after this many events (one-shot)
+	runID                string        // returned by the next POST .../input call
+	lastInput            *InputRequest // most recent POST .../input body, for test assertions (LastInput)
+	lastRelay            []byte        // most recent POST .../request frame, for test assertions (LastRelay)
+	relayReply           []byte        // answered by the next POST .../request call; empty = adapter declined
+	relayStatus          int           // 0 = answer normally; nonzero = fail POST .../request with this status
+	events               []Event       // streamed, in order, by the next GET .../events call
+	replayEvents         []Event       // streamed instead of events when GET .../events carries replay_only=true
+	streamErrorStatus    int           // 0 = serve normally; nonzero = return this HTTP status instead
+	streamErrorRemaining int           // >0: decrement per hit, clearing streamErrorStatus at 0; <=0 with status set: permanent
+	streamErrorSkip      int           // succeed this many opens before applying streamErrorStatus (reconnect-path tests)
+	dropAfterEvents      int           // >0: end the very next stream connection after this many events (one-shot)
 
 	// hitlCh delivers every POST .../hitl/{requestID} call this harness
 	// receives, in order. A channel (rather than a "last resolution" field)
@@ -107,6 +131,10 @@ type HITLResolution struct {
 	Outcome   string
 	Reason    string
 	Source    string
+	// SourceRaw is the client's native reply frame, when the resolver
+	// answered in the agent's own protocol rather than with an outcome
+	// alone. Empty for every non-native resolution.
+	SourceRaw []byte
 }
 
 // New starts the fake harness and registers its shutdown via t.Cleanup.
@@ -126,6 +154,7 @@ func New(t *testing.T, sessionID string) *Harness {
 	// instead of quietly passing against a route the client no longer uses.
 	mux.HandleFunc("GET /v2/agents/sessions/{id}/events", h.handleStream)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/input", h.handleInput)
+	mux.HandleFunc("POST /v2/agents/sessions/{id}/request", h.handleRelay)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/hitl/{requestID}", h.handleHITL)
 
 	h.Server = httptest.NewServer(mux)
@@ -145,7 +174,21 @@ func (h *Harness) QueueRun(runID string, events ...Event) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.runID = runID
-	h.events = events
+	h.events = assignEventIDs(events)
+}
+
+// assignEventIDs gives every queued event a stable random-UUID event id (in
+// place; the slice is returned for convenience). Stability across
+// connections is what lets handleStream honor replay_from on a reconnect;
+// randomness (rather than a monotonic scheme) is what keeps facade logic
+// honest about id ordering — see the serve loop's comment.
+func assignEventIDs(events []Event) []Event {
+	for i := range events {
+		if events[i].eventID == "" {
+			events[i].eventID = uuid.NewString()
+		}
+	}
+	return events
 }
 
 // QueueReplayHistory arranges for a GET .../events call carrying
@@ -158,7 +201,7 @@ func (h *Harness) QueueRun(runID string, events ...Event) {
 func (h *Harness) QueueReplayHistory(events ...Event) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.replayEvents = events
+	h.replayEvents = assignEventIDs(events)
 }
 
 // SetStreamErrorStatus makes GET .../events return status immediately
@@ -239,19 +282,105 @@ func (h *Harness) handleInput(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Best-effort decode only — the harness doesn't assert on the input
-	// text; callers that care can inspect the request in a custom handler.
-	var body struct {
-		Text string `json:"text"`
-	}
+	// Best-effort decode — the harness never fails a test on a bad body,
+	// but it records what it saw so tests can assert on the input request
+	// (LastInput), e.g. that the v2 raw turn/start frame rode along.
+	var body InputRequest
 	_ = json.NewDecoder(r.Body).Decode(&body)
+	h.mu.Lock()
+	h.lastInput = &body
+	h.mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"run_id": runID})
 }
 
+// InputRequest is the POST .../input body as this harness decoded it —
+// the same wire shape godo.HostedAgentSendInputRequest marshals to.
+type InputRequest struct {
+	Text string `json:"text"`
+	// SourceRaw is the client's native protocol frame, when the caller
+	// attached one (v2 inbound raw passthrough). encoding/json handles the
+	// wire base64 for []byte, so this holds the decoded frame bytes.
+	SourceRaw []byte `json:"source_raw"`
+}
+
+// LastInput returns the most recent POST .../input body this harness
+// received, or nil if none arrived yet.
+func (h *Harness) LastInput() *InputRequest {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.lastInput
+}
+
+// QueueRelayReply arranges for the next POST .../request call to answer with
+// replyFrame — the agent's native reply, as the in-sandbox adapter would have
+// produced it. An empty frame reproduces the adapter *declining* the method,
+// which is a successful call with nothing in it, not an error.
+func (h *Harness) QueueRelayReply(replyFrame []byte) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.relayReply = replyFrame
+	h.relayStatus = 0
+}
+
+// QueueRelayError arranges for the next POST .../request call to fail with an
+// HTTP status, covering the transport-failure half of the relay contract
+// (session gone, agent unreachable) as opposed to a protocol-level error,
+// which arrives as a normal reply frame via QueueRelayReply.
+func (h *Harness) QueueRelayError(status int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.relayStatus = status
+}
+
+// LastRelay returns the most recent POST .../request frame this harness
+// received, or nil if none arrived yet.
+func (h *Harness) LastRelay() []byte {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.lastRelay
+}
+
+func (h *Harness) handleRelay(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		SourceRaw []byte `json:"source_raw"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+
+	h.mu.Lock()
+	h.lastRelay = body.SourceRaw
+	status, reply := h.relayStatus, h.relayReply
+	h.mu.Unlock()
+
+	if status != 0 {
+		http.Error(w, "agentproxytest: queued relay error", status)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	// source_raw is omitempty on the wire, so a declined relay is a 200 with
+	// no frame at all — exactly what the real API sends.
+	_ = json.NewEncoder(w).Encode(struct {
+		SourceRaw []byte `json:"source_raw,omitempty"`
+	}{SourceRaw: reply})
+}
+
 func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 	replayOnly := r.URL.Query().Get("replay_only") == "true"
+	// Resume delivery strictly after the named event, matching godo's
+	// StreamSession: live reconnects send Last-Event-ID, replay-only reads
+	// send replay_from as a query parameter. An unknown id serves the whole
+	// queue — matching a real stream whose retention no longer covers the
+	// cursor.
+	replayFrom := r.URL.Query().Get("replay_from")
+	if replayFrom == "" {
+		replayFrom = r.Header.Get("Last-Event-ID")
+	}
+	// Raw source bytes are opt-in per connection (they fatten every event);
+	// without the flag a queued Event's SourceRaw is withheld, exactly like
+	// the real surface — so a test can prove the canonical fallback engages
+	// when the server has raw bytes but the client didn't ask.
+	includeRaw := r.URL.Query().Get("include_raw") == "true"
 
 	h.mu.Lock()
 	runID := h.runID
@@ -274,6 +403,15 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 	dropAfter := h.dropAfterEvents
 	h.dropAfterEvents = 0
 	h.mu.Unlock()
+
+	if replayFrom != "" {
+		for i, ev := range events {
+			if ev.eventID == replayFrom {
+				events = events[i+1:]
+				break
+			}
+		}
+	}
 
 	if errStatus != 0 {
 		http.Error(w, "agentproxytest: simulated stream error", errStatus)
@@ -320,15 +458,26 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 		if ev.RunID != "" {
 			evRunID = ev.RunID
 		}
+		// Random UUIDs (assigned at queue time — see assignEventIDs), like
+		// the real producers: the guest harness mints UUIDv4s, and
+		// harness-api's ULIDs use fresh randomness per id, not
+		// ulid.Monotonic — so ids do NOT sort in emission order. Any facade
+		// logic that assumes ordinal event ids (a past, shipped bug:
+		// drainStream's `<= cursor` skip) fails loudly under this fixture
+		// instead of passing on synthetic monotonic ids.
 		wire := eventWire{
-			EventID:   fmt.Sprintf("evt-%d", i),
-			RunID:     evRunID,
-			TenantID:  "15726539",
-			SessionID: sessionID,
-			Timestamp: "2026-01-01T00:00:00Z",
-			Seq:       i,
-			Type:      ev.Type,
-			Data:      data,
+			EventID:         ev.eventID,
+			RunID:           evRunID,
+			TenantID:        "15726539",
+			SessionID:       sessionID,
+			Timestamp:       "2026-01-01T00:00:00Z",
+			Seq:             i,
+			SourceEventType: ev.SourceEventType,
+			Type:            ev.Type,
+			Data:            data,
+		}
+		if includeRaw {
+			wire.SourceRaw = ev.SourceRaw
 		}
 		encoded, err := json.Marshal(wire)
 		if err != nil {
@@ -371,9 +520,10 @@ func (h *Harness) HangStreamAfterEvents(hang bool) {
 
 func (h *Harness) handleHITL(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Outcome string `json:"outcome"`
-		Reason  string `json:"reason"`
-		Source  string `json:"source"`
+		Outcome   string `json:"outcome"`
+		Reason    string `json:"reason"`
+		Source    string `json:"source"`
+		SourceRaw []byte `json:"source_raw"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&body)
 
@@ -385,6 +535,7 @@ func (h *Harness) handleHITL(w http.ResponseWriter, r *http.Request) {
 		Outcome:   body.Outcome,
 		Reason:    body.Reason,
 		Source:    body.Source,
+		SourceRaw: body.SourceRaw,
 	}:
 	default:
 		// Buffer full: a test that cares should be draining via

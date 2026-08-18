@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -292,6 +293,9 @@ func TestFacade_ThreadResume(t *testing.T) {
 	})
 }
 
+// Sessions that can't relay (newTestFacade leaves AgentKind unset) keep the
+// pre-relay answers for these two: method-not-found, and an empty interrupt
+// reply. The relayed behaviour is covered in raw_test.go.
 func TestFacade_UnhandledMethod(t *testing.T) {
 	f, _, _ := newTestFacade(t)
 
@@ -299,7 +303,7 @@ func TestFacade_UnhandledMethod(t *testing.T) {
 	assert.ErrorIs(t, err, agentproxy.ErrMethodNotFound)
 }
 
-func TestFacade_TurnInterrupt_NoOp(t *testing.T) {
+func TestFacade_TurnInterrupt_NoOpWithoutRelay(t *testing.T) {
 	f, _, _ := newTestFacade(t)
 
 	result, err := dispatch(t, f, "turn/interrupt", nil)
@@ -491,6 +495,101 @@ func TestFacade_TurnStart_Failure(t *testing.T) {
 	assert.Equal(t, "failed", tc.Turn.Status)
 	require.NotNil(t, tc.Turn.Error)
 	assert.Equal(t, "boom", tc.Turn.Error.Message)
+}
+
+// TestFacade_TurnStart_ManyDeltasAllDelivered is the regression test for the
+// drainStream cursor bug: event ids are random (UUIDv4 from the guest, ULIDs
+// with per-id randomness from harness-api — the fixture mints random UUIDs
+// to match), so any "skip events whose id sorts <= the cursor" logic
+// converges on the max id seen and silently drops most of a turn. Sixteen
+// deltas make a random-order id collision with an ordinal skip a
+// statistical certainty; every one must be delivered, in order, and the
+// turn must still complete.
+func TestFacade_TurnStart_ManyDeltasAllDelivered(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+
+	const deltas = 16
+	events := []agentproxytest.Event{{Type: string(godo.HostedAgentEventKindRunStarted)}}
+	for i := 0; i < deltas; i++ {
+		events = append(events, agentproxytest.Event{
+			Type: string(godo.HostedAgentEventKindTokenChunk),
+			Data: json.RawMessage(fmt.Sprintf(`{"text":"d%d "}`, i)),
+		})
+	}
+	events = append(events, agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)})
+	h.QueueRun("run-many", events...)
+
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+
+	var got strings.Builder
+	for i := 0; i < deltas; i++ {
+		n := rec.next(t)
+		require.Equal(t, "item/agentMessage/delta", n.method, "delta %d of %d missing — events are being dropped", i+1, deltas)
+		got.WriteString(n.params.(agentMessageDeltaNotification).Delta)
+	}
+
+	var want strings.Builder
+	for i := 0; i < deltas; i++ {
+		fmt.Fprintf(&want, "d%d ", i)
+	}
+	assert.Equal(t, want.String(), got.String(), "deltas must arrive complete and in order")
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+	assert.Equal(t, want.String(), itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem).Text)
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	assert.Equal(t, "completed", turnCompleted.params.(turnCompletedNotification).Turn.Status)
+	rec.expectNone(t)
+}
+
+// TestFacade_SessionRunFailedClosesTrackedTurns covers the fail-safe close:
+// OHR establishes the session's multi-turn parent run with the session id as
+// its run id and attributes transport-level failures to it (seen live: a
+// rejected turn/start fails the parent run, not the per-turn run the facade
+// tracks). Such a run.failed matches no tracked turn — without the
+// fail-safe it would be skipped and the TUI would spin forever on a turn
+// nobody will ever finish. It must close every tracked turn as failed, with
+// the parent run's message.
+func TestFacade_SessionRunFailedClosesTrackedTurns(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+
+	h.QueueRun("run-orphaned",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{
+			Type:  string(godo.HostedAgentEventKindRunFailed),
+			RunID: testSessionID, // the parent run, not the tracked turn
+			Data:  json.RawMessage(`{"message":"transport: turn/start: rpc error: -32600: nope"}`),
+		},
+	)
+
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	tc := turnCompleted.params.(turnCompletedNotification)
+	assert.Equal(t, "run-orphaned", tc.Turn.ID, "the tracked turn must be the one closed")
+	assert.Equal(t, "failed", tc.Turn.Status)
+	require.NotNil(t, tc.Turn.Error)
+	assert.Equal(t, "transport: turn/start: rpc error: -32600: nope", tc.Turn.Error.Message)
 }
 
 // TestFacade_TurnStart_ToolCall drives one turn with a tool call followed by
@@ -1126,15 +1225,15 @@ func TestFacade_RunEventLoop_ReconnectsAfterTransientStreamError(t *testing.T) {
 	stopEventLoop(t, f, cancel)
 }
 
-// TestFacade_RunEventLoop_ReconnectDedupesRedeliveredPrefix confirms a real,
-// confirmed reconnect-boundary behavior doesn't corrupt what the client
-// sees: after a genuine mid-stream drop (see DropConnectionAfterEvents), the
-// reconnected stream re-delivers the harness's full event list from the
-// start (this fake harness doesn't implement replay_from filtering — a
-// worst-case stress test for dedup, redelivering more than just the
-// boundary event). Only the events after the cursor should produce new
-// notifications; the already-processed prefix must not repeat turn/started,
-// item/started, or the first delta a second time.
+// TestFacade_RunEventLoop_ReconnectDedupesRedeliveredPrefix confirms a
+// reconnect after a genuine mid-stream drop (see DropConnectionAfterEvents)
+// resumes cleanly from the cursor: the facade reconnects with
+// replay_from=<last processed event id> and the harness (like the real one)
+// serves only what comes after it. The already-processed prefix must not
+// repeat turn/started, item/started, or the first delta a second time.
+// Dedup is the replay_from contract, NOT id comparison — event ids are
+// random and unordered (see drainStream's cursor comment), so the facade
+// must never try to detect redelivery by sorting ids.
 func TestFacade_RunEventLoop_ReconnectDedupesRedeliveredPrefix(t *testing.T) {
 	stubReconnectSleep(t)
 
@@ -1397,6 +1496,117 @@ func TestFacade_Replay_RetriesAfterAbortedAttempt(t *testing.T) {
 		defer f.replayMu.Unlock()
 		return f.replayDone
 	}, 2*time.Second, 10*time.Millisecond, "a successfully completed replay should mark replayDone")
+}
+
+// TestFacade_Replay_AdoptsInProgressRunAndStreamsContinuation is the
+// "proxy killed and restarted mid-turn" regression test: a run that history
+// shows started but never finished must be adopted by the live event loop
+// once the replay completes — attached at the replay's own cursor — so the
+// turn's continuation streams into the same item the replay just rendered,
+// and the turn completes for real instead of sitting "inProgress" forever.
+func TestFacade_Replay_AdoptsInProgressRunAndStreamsContinuation(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.Replay = true
+
+	h.QueueReplayHistory(
+		// A finished historical run: must NOT be adopted.
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "hist-done"},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted), RunID: "hist-done"},
+		// The run that was mid-flight when the previous proxy died: started,
+		// partial text, no terminal event.
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: "run-live"},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), RunID: "run-live", Data: json.RawMessage(`{"text":"Hel"}`)},
+	)
+	// The continuation the live stream serves after adoption.
+	h.QueueRun("run-live",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"lo"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	_, err := dispatchCtx(t, ctx, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
+	require.NoError(t, err)
+
+	// Replayed history: the finished run in full…
+	require.Equal(t, "turn/started", rec.next(t).method)
+	_ = rec.next(t) // item/started (hist-done)
+	_ = rec.next(t) // item/completed (hist-done)
+	require.Equal(t, "turn/completed", rec.next(t).method)
+
+	// …then the in-flight run's prefix.
+	started := rec.next(t)
+	require.Equal(t, "turn/started", started.method)
+	assert.Equal(t, "run-live", started.params.(turnStartedNotification).Turn.ID)
+	_ = rec.next(t) // item/started (run-live)
+	deltaHel := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaHel.method)
+	assert.Equal(t, "Hel", deltaHel.params.(agentMessageDeltaNotification).Delta)
+
+	// Adoption: the live loop attaches and the SAME turn continues — no
+	// second turn/started, no second item/started, text accumulated across
+	// the restart boundary.
+	deltaLo := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", deltaLo.method,
+		"the adopted turn's continuation must not re-announce the turn or item")
+	dn := deltaLo.params.(agentMessageDeltaNotification)
+	assert.Equal(t, "lo", dn.Delta)
+	assert.Equal(t, "run-live-msg", dn.ItemID, "the continuation must append to the item the replay rendered")
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+	assert.Equal(t, "Hello", itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem).Text,
+		"the item's final text must span the restart boundary")
+
+	turnCompleted := rec.next(t)
+	require.Equal(t, "turn/completed", turnCompleted.method)
+	tc := turnCompleted.params.(turnCompletedNotification)
+	assert.Equal(t, "run-live", tc.Turn.ID)
+	assert.Equal(t, "completed", tc.Turn.Status)
+
+	rec.expectNone(t)
+
+	f.mu.Lock()
+	cursor := f.streamCursor
+	f.mu.Unlock()
+	assert.NotEmpty(t, cursor, "adoption must seed the live cursor from the replay so the continuation resumes without a gap")
+
+	stopEventLoop(t, f, cancel)
+}
+
+// TestFacade_Replay_DoesNotAdoptSessionParentRun: OHR establishes the
+// session-wide multi-turn run with the session id as its run id, and that
+// run has no terminal event while the session lives — so it always looks
+// "in progress" in history. Adopting it would hold the live event loop open
+// (and reconnecting) forever on a turn that can never complete.
+func TestFacade_Replay_DoesNotAdoptSessionParentRun(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+	f.Replay = true
+
+	h.QueueReplayHistory(
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted), RunID: testSessionID},
+	)
+
+	_, err := dispatch(t, f, "thread/resume", threadResumeParams{ThreadID: testSessionID})
+	require.NoError(t, err)
+
+	// The parent run's replayed events still render (pre-existing behavior);
+	// what must NOT happen is adoption.
+	_ = rec.next(t) // turn/started
+	_ = rec.next(t) // item/started
+
+	require.Eventually(t, func() bool {
+		f.replayMu.Lock()
+		defer f.replayMu.Unlock()
+		return f.replayDone
+	}, 2*time.Second, 10*time.Millisecond)
+
+	f.mu.Lock()
+	streamStarted := f.streamStarted
+	tracked := len(f.turns)
+	f.mu.Unlock()
+	assert.False(t, streamStarted, "the parent run must not start a live event loop")
+	assert.Zero(t, tracked, "the parent run must not be adopted into f.turns")
 }
 
 // TestFacade_Replay_HistoricalHITLsNotReDriven confirms --replay does not
