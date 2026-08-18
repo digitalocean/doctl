@@ -240,26 +240,31 @@ Commands that act on a single session accept either the session ID or its name. 
 		"Start a new agent session",
 		`Creates a new agent session from an agent manifest file and prints its session id and status.
 
-The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. `+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
+The `+"`"+`--spec`+"`"+` flag is required and accepts a flat agents.yaml manifest: no envelope, a top-level `+"`"+`agent:`+"`"+` key naming the coding agent, snake_case keys, and duration strings (`+"`"+`idle_timeout: 10m`+"`"+`). The minimal manifest is a single line:
 
-For `+"`"+`adapter: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using `+"`"+`spec.runtime.config`+"`"+` (or legacy `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
+  agent: opencode
 
-Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).
+`+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
 
-Add inline Agent Skills via `+"`"+`spec.skills`+"`"+`, a list of skill objects with `+"`"+`name`+"`"+`, `+"`"+`description`+"`"+`, and `+"`"+`instructions`+"`"+` (plus optional `+"`"+`license`+"`"+`, `+"`"+`metadata`+"`"+`, `+"`"+`allowedTools`+"`"+`). `+"`"+`instructions`+"`"+` is advisory context for the agent, not a security boundary -- use `+"`"+`spec.permissions`+"`"+` for enforcement. Example:
+The legacy `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` envelope format (`+"`"+`apiVersion`+"`"+`/`+"`"+`kind`+"`"+`/`+"`"+`metadata`+"`"+`/`+"`"+`spec`+"`"+`) is deprecated: it is still accepted, but doctl prints a deprecation notice and the server appends a warning to the session; it will be rejected after the transition window.
 
-  spec:
-    adapter: opencode
-    skills:
-      - name: pr-style-guide
-        description: Our team's pull request description conventions
-        instructions: |
-          Summarize the change in 1-2 sentences before the details.
-          Link related issues with "Fixes #123" syntax.`,
+For `+"`"+`agent: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using the manifest's `+"`"+`config`+"`"+` block (legacy: `+"`"+`spec.runtime.config`+"`"+` or `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
+
+Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`name`+"`"+`; `+"`"+`metadata.name`+"`"+` in the legacy envelope). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).
+
+Add inline Agent Skills via `+"`"+`skills`+"`"+`, a list of skill objects with `+"`"+`name`+"`"+`, `+"`"+`description`+"`"+`, and `+"`"+`instructions`+"`"+` (plus optional `+"`"+`license`+"`"+`, `+"`"+`metadata`+"`"+`, `+"`"+`allowed_tools`+"`"+`). `+"`"+`instructions`+"`"+` is advisory context for the agent, not a security boundary -- use `+"`"+`permissions`+"`"+` for enforcement. Example:
+
+  agent: opencode
+  skills:
+    - name: pr-style-guide
+      description: Our team's pull request description conventions
+      instructions: |
+        Summarize the change in 1-2 sentences before the details.
+        Link related issues with "Fixes #123" syntax.`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
-	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's metadata.name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
+	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
@@ -399,7 +404,12 @@ func RunAgentsStart(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	// --name is a convenience that sets the manifest's metadata.name. When it's
+	if manifestUsesLegacyEnvelope(raw) {
+		warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
+			"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agents start --help`). " +
+			"The envelope is still accepted for now but will be rejected after the transition window")
+	}
+	// --name is a convenience that sets the manifest's session name. When it's
 	// omitted the manifest is sent verbatim and the server auto-generates a name.
 	raw, err = injectManifestName(raw, name)
 	if err != nil {
@@ -585,7 +595,22 @@ func expandManifestEnvLookup(manifest []byte, lookup func(string) (string, bool)
 	return out, nil
 }
 
-// injectManifestName sets metadata.name on the manifest to name. An empty name
+// manifestUsesLegacyEnvelope reports whether the manifest is written in the
+// deprecated `agents.digitalocean.com/v1alpha1` envelope format. Detection
+// matches the server's routing rule: a top-level `apiVersion` key selects the
+// legacy parser; its absence selects the flat format. Unparseable YAML returns
+// false — the server will produce the authoritative error.
+func manifestUsesLegacyEnvelope(manifest []byte) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil {
+		return false
+	}
+	_, ok := doc["apiVersion"]
+	return ok
+}
+
+// injectManifestName sets the session name on the manifest: top-level `name`
+// for flat manifests, `metadata.name` for legacy envelope ones. An empty name
 // returns the manifest unchanged so the server can auto-generate one. The
 // server still owns full manifest validation (including name syntax); this only
 // wires the --name convenience flag into the YAML the server parses.
@@ -602,13 +627,17 @@ func injectManifestName(manifest []byte, name string) ([]byte, error) {
 		doc = map[string]any{}
 	}
 
-	// yaml.v2 decodes nested mappings as map[any]any.
-	meta, ok := doc["metadata"].(map[any]any)
-	if !ok {
-		meta = map[any]any{}
+	if _, legacy := doc["apiVersion"]; legacy {
+		// yaml.v2 decodes nested mappings as map[any]any.
+		meta, ok := doc["metadata"].(map[any]any)
+		if !ok {
+			meta = map[any]any{}
+		}
+		meta["name"] = name
+		doc["metadata"] = meta
+	} else {
+		doc["name"] = name
 	}
-	meta["name"] = name
-	doc["metadata"] = meta
 
 	out, err := yaml.Marshal(doc)
 	if err != nil {

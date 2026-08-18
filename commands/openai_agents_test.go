@@ -84,6 +84,27 @@ spec:
       workspace_directory: /workspace
 `
 
+// sampleFlatOpenAIManifest is the flat-format equivalent of
+// sampleOpenAIManifest: top-level agent + config, no envelope.
+const sampleFlatOpenAIManifest = `name: codex-agentapi-session
+agent: codex-agentapi
+config:
+  agent:
+    model: gpt-5.6-sol
+    instructions: "Answer clearly."
+  environment:
+    type: self_hosted
+    workspace_directory: /workspace
+  input:
+    - role: user
+      content:
+        - type: input_text
+          text: "hello"
+env:
+  CODEX_ENVIRONMENT_ID: ${ENV_ID}
+  CODEX_API_KEY: ${OPENAI_API_KEY}
+`
+
 func TestParseOpenAIAgentsSession(t *testing.T) {
 	sess, err := parseOpenAIAgentsSession([]byte(`{
 		"id": "sess_a91f3",
@@ -147,11 +168,61 @@ spec:
 	assert.Equal(t, "from-config", agent["model"])
 }
 
+func TestExtractOpenAICreateBody_Flat(t *testing.T) {
+	body, err := extractOpenAICreateBody([]byte(sampleFlatOpenAIManifest))
+	require.NoError(t, err)
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(body, &payload))
+	agent, ok := payload["agent"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "gpt-5.6-sol", agent["model"])
+	env, ok := payload["environment"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "self_hosted", env["type"])
+}
+
 func TestPrepareOpenAISandboxStart_NonOpenAI(t *testing.T) {
 	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte(sampleManifest))
 	require.NoError(t, err)
 	assert.Empty(t, id)
 	assert.Nil(t, overlay)
+}
+
+func TestPrepareOpenAISandboxStart_FlatNonOpenAI(t *testing.T) {
+	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte("agent: opencode\n"))
+	require.NoError(t, err)
+	assert.Empty(t, id)
+	assert.Nil(t, overlay)
+}
+
+func TestPrepareOpenAISandboxStart_FlatConfigRequiresCodexAgent(t *testing.T) {
+	const manifest = `agent: opencode
+config:
+  agent:
+    model: gpt-5.6-sol
+`
+	_, _, err := prepareOpenAISandboxStart(context.Background(), []byte(manifest))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "codex-agentapi")
+	assert.Contains(t, err.Error(), `"opencode"`)
+}
+
+func TestPrepareOpenAISandboxStart_FlatCreatesSession(t *testing.T) {
+	t.Setenv(openAIAPIKeyEnv, "sk-test")
+	orig := createOpenAIAgentsSession
+	t.Cleanup(func() { createOpenAIAgentsSession = orig })
+	createOpenAIAgentsSession = func(ctx context.Context, apiKey string, body json.RawMessage) (*openAIAgentsSession, error) {
+		assert.Equal(t, "sk-test", apiKey)
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Contains(t, payload, "agent")
+		return &openAIAgentsSession{ID: "sess_flat1", EnvironmentID: "env_flat1"}, nil
+	}
+
+	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte(sampleFlatOpenAIManifest))
+	require.NoError(t, err)
+	assert.Equal(t, "sess_flat1", id)
+	assert.Equal(t, map[string]string{"ENV_ID": "env_flat1"}, overlay)
 }
 
 func TestPrepareOpenAISandboxStart_CreatesSession(t *testing.T) {
@@ -256,6 +327,49 @@ func TestRunAgentsStart_OpenAI(t *testing.T) {
 						Status:              godo.HostedAgentSessionStatusReady,
 						OpenAISessionID:     "sess_a91f3",
 						OpenAIEnvironmentID: "env_abc123",
+					},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
+func TestRunAgentsStart_OpenAIFlat(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(sampleFlatOpenAIManifest), 0o644))
+	t.Setenv(openAIAPIKeyEnv, "sk-test-key")
+
+	orig := createOpenAIAgentsSession
+	t.Cleanup(func() { createOpenAIAgentsSession = orig })
+	createOpenAIAgentsSession = func(ctx context.Context, apiKey string, body json.RawMessage) (*openAIAgentsSession, error) {
+		return &openAIAgentsSession{ID: "sess_flat1", EnvironmentID: "env_flat1"}, nil
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				require.NotNil(t, opt)
+				assert.Equal(t, "sess_flat1", opt.OpenAISessionID)
+				assert.Contains(t, string(manifest), "CODEX_ENVIRONMENT_ID: env_flat1")
+				assert.Contains(t, string(manifest), "CODEX_API_KEY: sk-test-key")
+				assert.NotContains(t, string(manifest), "${")
+				// The flat manifest carries no envelope and keeps its config
+				// block for DO.
+				assert.NotContains(t, string(manifest), "apiVersion")
+				assert.Contains(t, string(manifest), "gpt-5.6-sol")
+				assert.Contains(t, string(manifest), "config:")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID:           "sess_do_2",
+						Name:                "codex-agentapi-session",
+						AgentKind:           godo.HostedAgentKindOpenAICodex,
+						Status:              godo.HostedAgentSessionStatusReady,
+						OpenAISessionID:     "sess_flat1",
+						OpenAIEnvironmentID: "env_flat1",
 					},
 				}, nil
 			})

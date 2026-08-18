@@ -311,19 +311,36 @@ func truncateForErr(b []byte) string {
 	return s[:max] + "…"
 }
 
-// agentManifestDoc is the subset of agents.yaml we need for OpenAI orchestration.
+// agentManifestDoc is the subset of agents.yaml we need for OpenAI
+// orchestration, covering both manifest formats: the flat format reads
+// top-level `agent` and `config`; the deprecated v1alpha1 envelope reads
+// `spec.runtime.adapter`, `spec.runtime.config`, and legacy `spec.openai`.
 type agentManifestDoc struct {
+	// Agent is the flat format's adapter selector.
+	Agent string `yaml:"agent"`
+	// Config holds the flat format's OpenAI create-session body
+	// (agent/environment/input).
+	Config any `yaml:"config"`
+
 	Spec struct {
 		Runtime struct {
 			Adapter string `yaml:"adapter"`
 			// Config holds the OpenAI create-session body (agent/environment/input)
-			// under the DO agentspec. Preferred over legacy spec.openai.
+			// under the legacy envelope. Preferred over legacy spec.openai.
 			Config any `yaml:"config"`
 		} `yaml:"runtime"`
 		// OpenAI is the legacy client-only location for the create body. Still
 		// accepted for extraction, but stripped before the DO create call.
 		OpenAI any `yaml:"openai"`
 	} `yaml:"spec"`
+}
+
+// adapter returns the manifest's agent selector regardless of format.
+func (d *agentManifestDoc) adapter() string {
+	if a := strings.TrimSpace(d.Agent); a != "" {
+		return a
+	}
+	return strings.TrimSpace(d.Spec.Runtime.Adapter)
 }
 
 func parseAgentManifest(manifest []byte) (*agentManifestDoc, error) {
@@ -347,7 +364,7 @@ func hasOpenAICreateBody(doc *agentManifestDoc) bool {
 	if doc == nil {
 		return false
 	}
-	return doc.Spec.Runtime.Config != nil || doc.Spec.OpenAI != nil
+	return doc.Config != nil || doc.Spec.Runtime.Config != nil || doc.Spec.OpenAI != nil
 }
 
 func extractOpenAICreateBody(manifest []byte) (json.RawMessage, error) {
@@ -355,16 +372,20 @@ func extractOpenAICreateBody(manifest []byte) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Prefer spec.runtime.config (current DO agentspec). Fall back to legacy
-	// spec.openai for older manifests.
-	source := doc.Spec.Runtime.Config
-	sourceName := "spec.runtime.config"
+	// Prefer the flat format's top-level config, then the legacy envelope's
+	// spec.runtime.config, then legacy client-only spec.openai.
+	source := doc.Config
+	sourceName := "config"
+	if source == nil {
+		source = doc.Spec.Runtime.Config
+		sourceName = "spec.runtime.config"
+	}
 	if source == nil {
 		source = doc.Spec.OpenAI
 		sourceName = "spec.openai"
 	}
 	if source == nil {
-		return nil, fmt.Errorf("manifest adapter %q requires a non-empty %s (or legacy spec.openai) block", openAIAgentsAdapter, "spec.runtime.config")
+		return nil, fmt.Errorf("manifest agent %q requires a non-empty config block (legacy envelope: spec.runtime.config or spec.openai)", openAIAgentsAdapter)
 	}
 	// yaml.v2 decodes nested maps as map[interface{}]interface{}; normalize
 	// before JSON encoding so Marshal succeeds.
@@ -452,11 +473,11 @@ func prepareOpenAISandboxStart(ctx context.Context, manifest []byte) (openaiSess
 	if err != nil {
 		return "", nil, err
 	}
-	if !isOpenAISandboxAdapter(doc.Spec.Runtime.Adapter) && !hasOpenAICreateBody(doc) {
+	if !isOpenAISandboxAdapter(doc.adapter()) && !hasOpenAICreateBody(doc) {
 		return "", nil, nil
 	}
-	if !isOpenAISandboxAdapter(doc.Spec.Runtime.Adapter) {
-		return "", nil, fmt.Errorf("spec.runtime.config (or legacy spec.openai) is only valid with adapter %q (got %q)", openAIAgentsAdapter, doc.Spec.Runtime.Adapter)
+	if !isOpenAISandboxAdapter(doc.adapter()) {
+		return "", nil, fmt.Errorf("an OpenAI create-session config block is only valid with agent %q (got %q)", openAIAgentsAdapter, doc.adapter())
 	}
 
 	apiKey := strings.TrimSpace(os.Getenv(openAIAPIKeyEnv))
