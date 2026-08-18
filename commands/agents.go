@@ -48,6 +48,7 @@ import (
 	"github.com/digitalocean/doctl/internal/agentproxy/codex"
 	"github.com/digitalocean/godo"
 	"github.com/muesli/termenv"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	yaml "gopkg.in/yaml.v2"
@@ -67,19 +68,6 @@ var (
 	colHighlight = charm.Colors.Highlight
 	colMuted     = charm.Colors.Muted
 )
-
-// Stream-state transport frames (SSE kind "stream.state"). Defined locally so
-// doctl builds against godo pins that have not yet exported HostedAgentEventKindStreamState
-// / HostedAgentStreamState*. Wire values match the published godo API.
-const (
-	hostedAgentEventKindStreamState  godo.HostedAgentEventKind = "stream.state"
-	hostedAgentStreamStateSuperseded                           = "superseded"
-)
-
-type hostedAgentStreamState struct {
-	State  string `json:"state"`
-	Cursor string `json:"cursor,omitempty"`
-}
 
 // detectStyling reports whether ANSI styling should be emitted for the current
 // process: stdout is a terminal and NO_COLOR is unset.
@@ -231,7 +219,9 @@ func Agents() *Command {
 
 A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.
 
-Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.`,
+Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.
+
+These commands talk to the hosted-agents endpoint (` + "`" + `https://ohr-agent.do-ai.run` + "`" + `) rather than ` + "`" + `https://api.digitalocean.com` + "`" + `. Pass ` + "`" + `--api-url` + "`" + ` (or set ` + "`" + `DIGITALOCEAN_API_URL` + "`" + `) to point them somewhere else.`,
 			GroupID: hostedAgentsGroup,
 		},
 	}
@@ -240,15 +230,31 @@ Commands that act on a single session accept either the session ID or its name. 
 		"Start a new agent session",
 		`Creates a new agent session from an agent manifest file and prints its session id and status.
 
-The `+"`"+`--spec`+"`"+` flag is required and accepts a YAML manifest matching the `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` schema. `+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
+The `+"`"+`--spec`+"`"+` flag is required and accepts a flat agents.yaml manifest: no envelope, a top-level `+"`"+`agent:`+"`"+` key naming the coding agent, snake_case keys, and duration strings (`+"`"+`idle_timeout: 10m`+"`"+`). The minimal manifest is a single line:
 
-For `+"`"+`adapter: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using `+"`"+`spec.runtime.config`+"`"+` (or legacy `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
+  agent: opencode
 
-Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`metadata.name`+"`"+`). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).`,
+`+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
+
+The legacy `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` envelope format (`+"`"+`apiVersion`+"`"+`/`+"`"+`kind`+"`"+`/`+"`"+`metadata`+"`"+`/`+"`"+`spec`+"`"+`) is deprecated: it is still accepted, but doctl prints a deprecation notice and the server appends a warning to the session; it will be rejected after the transition window.
+
+For `+"`"+`agent: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using the manifest's `+"`"+`config`+"`"+` block (legacy: `+"`"+`spec.runtime.config`+"`"+` or `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
+
+Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`name`+"`"+`; `+"`"+`metadata.name`+"`"+` in the legacy envelope). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).
+
+Add inline Agent Skills via `+"`"+`skills`+"`"+`, a list of skill objects with `+"`"+`name`+"`"+`, `+"`"+`description`+"`"+`, and `+"`"+`instructions`+"`"+` (plus optional `+"`"+`license`+"`"+`, `+"`"+`metadata`+"`"+`, `+"`"+`allowed_tools`+"`"+`). `+"`"+`instructions`+"`"+` is advisory context for the agent, not a security boundary -- use `+"`"+`permissions`+"`"+` for enforcement. Example:
+
+  agent: opencode
+  skills:
+    - name: pr-style-guide
+      description: Our team's pull request description conventions
+      instructions: |
+        Summarize the change in 1-2 sentences before the details.
+        Link related issues with "Fixes #123" syntax.`,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
-	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's metadata.name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
+	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions.")
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
@@ -286,7 +292,8 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
-	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent`
+	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
+	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent; doctl agents list --parent-session-id sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show a single agent session",
@@ -344,6 +351,36 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
 	cmdDownload.Example = `doctl agents download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
+	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
+		"Connect an external provider (e.g. github) for agent git operations",
+		`Connects an external provider so hosted agent sessions can perform authenticated operations against it (e.g. `+"`"+`git clone`+"`"+`/`+"`"+`push`+"`"+` against private GitHub repositories).
+
+The credential is team-scoped: one connection is shared by everyone on your team, and the OAuth authorization handle is stored server-side by DigitalOcean. doctl never sees the token — sessions exchange the handle for an access token at run time.
+
+Running the command starts a browser-based authorization flow. doctl prints (and, unless `+"`"+`--no-browser`+"`"+` is set, opens) an authorization URL, then waits for you to approve access before reporting success. If the team is already connected, it reports that and exits. Pass `+"`"+`--no-wait`+"`"+` to print the URL and return immediately without polling; re-run the command later to confirm the connection.`,
+		Writer)
+	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
+	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
+	cmdAuth.Example = `doctl agents auth github`
+
+	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
+		"Fork a session into independent child sessions",
+		`Creates one or more independent child sessions from a checkpoint (or from "now" if `+"`"+`--from-checkpoint`+"`"+` is omitted).
+
+Each child is a first-class session you can attach to normally. Fork fan-out is capped at 4 children per call and is all-or-nothing.`,
+		Writer,
+		displayerType(&displayers.HostedAgentSession{}))
+	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
+	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
+	cmdFork.Example = `doctl agents fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+
+	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
+		"Roll a session back to a checkpoint in place",
+		`Rewinds the same session to a prior checkpoint. The session ID is unchanged; the underlying sandbox is replaced.`,
+		Writer,
+		displayerType(&displayers.HostedAgentSession{}))
+
+	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
 
 	return cmd
@@ -369,7 +406,12 @@ func RunAgentsStart(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	// --name is a convenience that sets the manifest's metadata.name. When it's
+	if manifestUsesLegacyEnvelope(raw) {
+		warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
+			"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agents start --help`). " +
+			"The envelope is still accepted for now but will be rejected after the transition window")
+	}
+	// --name is a convenience that sets the manifest's session name. When it's
 	// omitted the manifest is sent verbatim and the server auto-generates a name.
 	raw, err = injectManifestName(raw, name)
 	if err != nil {
@@ -562,7 +604,22 @@ func expandManifestEnvLookup(manifest []byte, lookup func(string) (string, bool)
 	return out, nil
 }
 
-// injectManifestName sets metadata.name on the manifest to name. An empty name
+// manifestUsesLegacyEnvelope reports whether the manifest is written in the
+// deprecated `agents.digitalocean.com/v1alpha1` envelope format. Detection
+// matches the server's routing rule: a top-level `apiVersion` key selects the
+// legacy parser; its absence selects the flat format. Unparseable YAML returns
+// false — the server will produce the authoritative error.
+func manifestUsesLegacyEnvelope(manifest []byte) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil {
+		return false
+	}
+	_, ok := doc["apiVersion"]
+	return ok
+}
+
+// injectManifestName sets the session name on the manifest: top-level `name`
+// for flat manifests, `metadata.name` for legacy envelope ones. An empty name
 // returns the manifest unchanged so the server can auto-generate one. The
 // server still owns full manifest validation (including name syntax); this only
 // wires the --name convenience flag into the YAML the server parses.
@@ -579,13 +636,17 @@ func injectManifestName(manifest []byte, name string) ([]byte, error) {
 		doc = map[string]any{}
 	}
 
-	// yaml.v2 decodes nested mappings as map[any]any.
-	meta, ok := doc["metadata"].(map[any]any)
-	if !ok {
-		meta = map[any]any{}
+	if _, legacy := doc["apiVersion"]; legacy {
+		// yaml.v2 decodes nested mappings as map[any]any.
+		meta, ok := doc["metadata"].(map[any]any)
+		if !ok {
+			meta = map[any]any{}
+		}
+		meta["name"] = name
+		doc["metadata"] = meta
+	} else {
+		doc["name"] = name
 	}
-	meta["name"] = name
-	doc["metadata"] = meta
 
 	out, err := yaml.Marshal(doc)
 	if err != nil {
@@ -634,7 +695,18 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	if err != nil {
 		return nil, err
 	}
-	if pageSize == 0 && pageToken == "" && status == "" && name == "" {
+	parentRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentParentSessionID)
+	if err != nil {
+		return nil, err
+	}
+	var parentSessionID string
+	if parentRef != "" {
+		parentSessionID, err = resolveSessionRef(c.HostedAgents(), parentRef)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if pageSize == 0 && pageToken == "" && status == "" && name == "" && parentSessionID == "" {
 		return nil, nil
 	}
 	opt := &godo.HostedAgentSessionListOptions{}
@@ -649,6 +721,9 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	}
 	if name != "" {
 		opt.Name = name
+	}
+	if parentSessionID != "" {
+		opt.ParentSessionID = parentSessionID
 	}
 	return opt, nil
 }
@@ -788,6 +863,87 @@ func RunAgentsResume(c *CmdConfig) error {
 	}
 	notice("Session %s resumed", sessionID)
 	return nil
+}
+
+// agentProviderAuthStatusSuccess is the connect-flow status harness-api returns
+// once the team's authorization handle is persisted (matches oauth_connect.go).
+const agentProviderAuthStatusSuccess = "success"
+
+// agentsAuthPollInterval is how often the connect poll endpoint is checked while
+// waiting for the browser authorization to complete. A package var so tests can
+// shorten it.
+var agentsAuthPollInterval = 2 * time.Second
+
+// RunAgentsAuth connects an external provider (e.g. github) for the caller's
+// team via the harness-api connect flow. It starts (or resumes) the flow, opens
+// the browser authorization URL, then polls until the handle is authorized.
+func RunAgentsAuth(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	provider := strings.ToLower(strings.TrimSpace(c.Args[0]))
+	if provider == "" {
+		return errors.New("a provider is required, e.g. `doctl agents auth github`")
+	}
+	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
+	if err != nil {
+		return err
+	}
+	noWait, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoWait)
+	if err != nil {
+		return err
+	}
+
+	svc := c.HostedAgents()
+	start, err := svc.StartProviderAuth(provider)
+	if err != nil {
+		return err
+	}
+	if strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
+		notice("%s is already connected for your team", provider)
+		return nil
+	}
+	if start.ConnectURL == "" {
+		return fmt.Errorf("harness-api returned status %q with no authorization URL", start.Status)
+	}
+
+	fmt.Fprintf(c.Out, "To connect %s, open this URL and authorize access:\n\n  %s\n\n", provider, start.ConnectURL)
+	if start.VerificationCode != "" {
+		fmt.Fprintf(c.Out, "Verification code: %s\n\n", start.VerificationCode)
+	}
+	if !noBrowser {
+		if berr := browser.OpenURL(start.ConnectURL); berr != nil {
+			warn("could not open a browser automatically; open the URL above manually: %v", berr)
+		}
+	}
+
+	if noWait || start.PollURL == "" {
+		notice("Re-run `doctl agents auth %s` after authorizing to confirm the connection", provider)
+		return nil
+	}
+
+	// SIGTERM alongside SIGINT so the wait loop exits cleanly under a process
+	// manager or plain `kill`, not only on Ctrl-C.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	fmt.Fprintln(c.Out, "Waiting for authorization to complete... (Ctrl-C to stop)")
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("stopped waiting; re-run `doctl agents auth %s` to check the connection later", provider)
+		case <-time.After(agentsAuthPollInterval):
+		}
+
+		poll, err := svc.PollProviderAuth(provider, start.PollURL)
+		if err != nil {
+			return err
+		}
+		if strings.EqualFold(poll.Status, agentProviderAuthStatusSuccess) {
+			notice("%s connected successfully", provider)
+			return nil
+		}
+	}
 }
 
 // maxWorkspaceTransferBytes is the hard cap for workspace transfers (OHS contract).
@@ -997,10 +1153,13 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 	if written == 0 {
 		written = size
 	}
-	return c.Display(&displayers.HostedAgentWorkspaceUpload{Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
-		Path:         workspacePath,
-		BytesWritten: written,
-	}}})
+	return c.Display(&displayers.HostedAgentWorkspaceUpload{
+		Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
+			Path:         workspacePath,
+			BytesWritten: written,
+		}},
+		Single: true,
+	})
 }
 
 // workspacePartUploadURLs mints presigned PUT URLs for one or more 1-based parts.
@@ -1258,7 +1417,7 @@ func RunAgentsLogs(c *CmdConfig) error {
 	for stream.Next() {
 		ev := stream.Current()
 		// Connection health, not session activity — never part of the history.
-		if ev.Kind == hostedAgentEventKindStreamState {
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
 			continue
 		}
 		if ev.Kind == godo.HostedAgentEventKindTokenChunk {
@@ -2257,9 +2416,9 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 
 		// stream.state reports the health of the connection, not session
 		// activity, so it never renders and never moves the cursor.
-		if ev.Kind == hostedAgentEventKindStreamState {
-			var st hostedAgentStreamState
-			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == hostedAgentStreamStateSuperseded {
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			var st godo.HostedAgentStreamState
+			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
 				thinking.stop()
 				acc.flush(out)
 				flushAwaitingApproval(out, &awaiting)

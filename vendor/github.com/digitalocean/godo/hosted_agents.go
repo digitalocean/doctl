@@ -22,7 +22,7 @@ const (
 
 	hostedAgentsSessionsBasePath                    = "/v2/agents/sessions"
 	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
-	hostedAgentSessionStreamPath                    = hostedAgentSessionByIDPath + "/stream"
+	hostedAgentSessionEventsPath                    = hostedAgentSessionByIDPath + "/events"
 	hostedAgentSessionInputPath                     = hostedAgentSessionByIDPath + "/input"
 	hostedAgentSessionRequestPath                   = hostedAgentSessionByIDPath + "/request"
 	hostedAgentSessionHITLPath                      = hostedAgentSessionByIDPath + "/hitl/%s"
@@ -37,9 +37,25 @@ const (
 	hostedAgentSessionWorkspaceTransferCommitPath   = hostedAgentSessionWorkspaceTransferByIDPath + "/commit"
 	hostedAgentSessionWorkspaceTransferCancelPath   = hostedAgentSessionWorkspaceTransferByIDPath + "/cancel"
 
+	// Team-scoped external-provider (e.g. GitHub) OAuth connect flow.
+	hostedAgentProviderAuthPath     = "/v2/agents/auth/%s"
+	hostedAgentProviderAuthPollPath = hostedAgentProviderAuthPath + "/poll"
+
+	hostedAgentSessionCheckpointsPath        = hostedAgentSessionByIDPath + "/checkpoints"
+	hostedAgentSessionCheckpointByIDPath     = hostedAgentSessionCheckpointsPath + "/%s"
+	hostedAgentSessionCheckpointRollbackPath = hostedAgentSessionCheckpointByIDPath + "/rollback"
+	hostedAgentSessionForkPath               = hostedAgentSessionByIDPath + "/fork"
+
+	// HostedAgentForkMaxCount is the v1 cap on children created by one fork call.
+	HostedAgentForkMaxCount = 4
+
 	workspaceContentSHA256Header = "X-Content-Sha256"
 	workspaceIsArchiveHeader     = "X-Workspace-Is-Archive"
 	workspaceSizeBytesHeader     = "X-Workspace-Size-Bytes"
+
+	// sseLastEventIDHeader is the standard SSE resume cursor. The data-plane
+	// events endpoint takes the cursor here rather than as a query parameter.
+	sseLastEventIDHeader = "Last-Event-ID"
 
 	// workspaceDownloadFooter is appended by OHS after a successful download
 	// payload so integrity survives intermediaries that strip HTTP trailers
@@ -71,6 +87,14 @@ type HostedAgentsService interface {
 	SendInput(context.Context, string, *HostedAgentSendInputRequest) (*HostedAgentSendInputResponse, *Response, error)
 	RelayRequest(context.Context, string, *HostedAgentRelayRequest) (*HostedAgentRelayResponse, *Response, error)
 	ResolveHITL(context.Context, string, string, *HostedAgentResolveHITLRequest) (*Response, error)
+
+	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
+	// external provider (e.g. "github"). The team is derived from the
+	// authenticated principal; there is no request body.
+	StartProviderAuth(context.Context, string) (*HostedAgentProviderAuthStart, *Response, error)
+	// PollProviderAuth reports whether a pending connect link has been
+	// authorized. pollURL is the PollURL returned by StartProviderAuth.
+	PollProviderAuth(context.Context, string, string) (*HostedAgentProviderAuthPoll, *Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
 	UploadWorkspace(context.Context, string, *HostedAgentWorkspaceUploadRequest) (*HostedAgentWorkspaceUploadResponse, *Response, error)
 	DownloadWorkspace(context.Context, string, *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error)
@@ -82,6 +106,14 @@ type HostedAgentsService interface {
 	CommitWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCommitRequest) (*HostedAgentWorkspaceTransfer, *Response, error)
 	GetWorkspaceTransfer(context.Context, string, string) (*HostedAgentWorkspaceTransfer, *Response, error)
 	CancelWorkspaceTransfer(context.Context, string, string, *HostedAgentWorkspaceTransferCancelRequest) (*HostedAgentWorkspaceTransferCancelResponse, *Response, error)
+
+	// Checkpoint / fork / rollback (session save points).
+	CreateCheckpoint(context.Context, string, *HostedAgentCheckpointCreateRequest) (*HostedAgentCheckpoint, *Response, error)
+	ListCheckpoints(context.Context, string, *HostedAgentCheckpointListOptions) (*HostedAgentCheckpointsListResponse, *Response, error)
+	GetCheckpoint(context.Context, string, string) (*HostedAgentCheckpoint, *Response, error)
+	DeleteCheckpoint(context.Context, string, string) (*HostedAgentCheckpointDeleteResponse, *Response, error)
+	ForkSession(context.Context, string, *HostedAgentForkSessionRequest) (*HostedAgentForkSessionResponse, *Response, error)
+	RollbackToCheckpoint(context.Context, string, string) (*HostedAgentSession, *Response, error)
 }
 
 // HostedAgentsServiceOp handles communication with Hosted Agents session methods.
@@ -217,6 +249,39 @@ const (
 	HostedAgentEventKindRunSandboxReleased   HostedAgentEventKind = "run.sandbox_released"
 	HostedAgentEventKindRunCostAccrued       HostedAgentEventKind = "run.cost_accrued"
 	HostedAgentEventKindRunLog               HostedAgentEventKind = "run.log"
+
+	// HostedAgentEventKindStreamState is a transport control frame, not an agent
+	// event: it reports the health of the SSE connection itself. Only the
+	// data-plane events endpoint emits it. It arrives in the same envelope as an
+	// event, but only SessionID, At and Payload are meaningful — decode Payload
+	// with HostedAgentStreamState. Renderers should skip it rather than display
+	// it as session activity.
+	HostedAgentEventKindStreamState HostedAgentEventKind = "stream.state"
+)
+
+// HostedAgentStreamState is the payload of a HostedAgentEventKindStreamState
+// frame: the current health of the SSE connection.
+type HostedAgentStreamState struct {
+	State  HostedAgentStreamStateValue `json:"state"`
+	Cursor string                      `json:"cursor,omitempty"`
+}
+
+// HostedAgentStreamStateValue enumerates the stream health states.
+type HostedAgentStreamStateValue string
+
+const (
+	// HostedAgentStreamStateLive means events are being delivered contiguously.
+	HostedAgentStreamStateLive HostedAgentStreamStateValue = "live"
+	// HostedAgentStreamStateCatchingUp means the connection is replaying recent
+	// history before it joins the live tail.
+	HostedAgentStreamStateCatchingUp HostedAgentStreamStateValue = "catching_up"
+	// HostedAgentStreamStateDegraded means delivery continues with reduced
+	// guarantees (the server fell back to polling).
+	HostedAgentStreamStateDegraded HostedAgentStreamStateValue = "degraded"
+	// HostedAgentStreamStateSuperseded means a newer connection from the same
+	// device took over. The server closes this stream; the client should stop
+	// rather than reconnect, or the two connections will evict each other.
+	HostedAgentStreamStateSuperseded HostedAgentStreamStateValue = "superseded"
 )
 
 // HostedAgentSessionOriginProduct identifies the product workflow that created
@@ -268,6 +333,10 @@ type HostedAgentSession struct {
 	// OpenAIEnvironmentID is captured from the resolved CODEX_ENVIRONMENT_ID
 	// guest env value at create. Non-secret correlation metadata.
 	OpenAIEnvironmentID string `json:"openai_environment_id,omitempty"`
+	// ParentSessionID is set on forked child sessions; empty/omitted for roots.
+	ParentSessionID string `json:"parent_session_id,omitempty"`
+	// ForkID is a branch label on forked sessions; empty/omitted for roots.
+	ForkID string `json:"fork_id,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -300,7 +369,7 @@ type HostedAgentHITLDecision struct {
 	Reason    string                 `json:"reason,omitempty"`
 }
 
-// HostedAgentEvent is one SSE payload from GET /v2/agents/sessions/{id}/stream.
+// HostedAgentEvent is one SSE payload from a session stream (see StreamSession).
 //
 // The server serializes the SPI canonical event envelope, whose JSON shape
 // differs from this struct's field names: the discriminator is `type` (not
@@ -398,6 +467,8 @@ type HostedAgentSessionListOptions struct {
 	PageSize  int                      `url:"page_size,omitempty"`
 	Status    HostedAgentSessionStatus `url:"status,omitempty"`
 	Name      string                   `url:"name,omitempty"`
+	// ParentSessionID lists child (forked) sessions of the given parent.
+	ParentSessionID string `url:"parent_session_id,omitempty"`
 }
 
 // HostedAgentSessionsListResponse is returned by GET /v2/agents/sessions.
@@ -407,8 +478,17 @@ type HostedAgentSessionsListResponse struct {
 }
 
 // HostedAgentSessionStreamOptions configures the session SSE stream.
+//
+// ReplayOnly selects between the two modes StreamSession can open on the events
+// endpoint (see StreamSession); Before and Limit page backwards through history
+// within the replay-only mode.
 type HostedAgentSessionStreamOptions struct {
+	// ReplayFrom is the resume cursor: the id of the last event the caller
+	// already rendered. On the live stream it is sent as Last-Event-ID; on a
+	// ReplayOnly read it is sent as the replay_from query parameter.
 	ReplayFrom string
+	// ReplayOnly reads the stored event history and ends the stream at the last
+	// stored event instead of holding the connection open for live events.
 	ReplayOnly bool
 
 	// Before turns the request into a single backward page of durable
@@ -498,6 +578,31 @@ type HostedAgentResolveHITLRequest struct {
 	// call. Outcome stays required alongside it — it is what the audit trail
 	// records, and what the agent falls back to when this is absent.
 	SourceRaw []byte `json:"source_raw,omitempty"`
+}
+
+// HostedAgentProviderAuthStart is returned by POST /v2/agents/auth/{provider}.
+// Status is "pending" when the user must still authorize in a browser
+// (ConnectURL/PollURL/VerificationCode are set), or "success" when the team is
+// already connected (those fields are empty). It is a free-form connect-flow
+// status, distinct from the HostedAgentProviderAuthState session field. The
+// authorization handle is never exposed: tokens are exchanged server-side at
+// session time.
+type HostedAgentProviderAuthStart struct {
+	Provider         string     `json:"provider"`
+	Status           string     `json:"status"`
+	ConnectURL       string     `json:"connect_url,omitempty"`
+	PollURL          string     `json:"poll_url,omitempty"`
+	VerificationCode string     `json:"verification_code,omitempty"`
+	ExpiresAt        *Timestamp `json:"expires_at,omitempty"`
+}
+
+// HostedAgentProviderAuthPoll is returned by GET
+// /v2/agents/auth/{provider}/poll. It reports only whether authorization has
+// completed ("pending" or "success"); no secret is returned.
+type HostedAgentProviderAuthPoll struct {
+	Provider  string     `json:"provider"`
+	Status    string     `json:"status"`
+	ExpiresAt *Timestamp `json:"expires_at,omitempty"`
 }
 
 // HostedAgentSandboxExecRequest is the body for POST .../sandbox/exec.
@@ -783,37 +888,66 @@ func (s *HostedAgentsServiceOp) ResumeSession(ctx context.Context, sessionID str
 }
 
 // StreamSession opens the SSE stream for a session. Callers MUST Close the stream.
+//
+// Both reads are served by the data plane at GET .../sessions/{id}/events; the
+// two modes differ in where the stream starts and whether it ends:
+//
+//   - Live (the default) delivers forward-only from the moment of attach,
+//     preceded by whatever recent history the server decides to replay, and
+//     holds the connection open. ReplayFrom is sent as the standard
+//     Last-Event-ID header.
+//   - ReplayOnly adds ?replay_only=true: the server writes the session's stored
+//     event history and then ends the stream, so the read terminates on its own.
+//     ReplayFrom is sent as the replay_from query parameter, since it is an
+//     explicit pagination cursor here rather than a resume hint. Before and
+//     Limit page backwards from an event id within this mode; see
+//     HostedAgentSessionStreamOptions.Before and HasMore.
+//
+// Both carry HostedAgentEventKindStreamState control frames (see
+// HostedAgentStreamState). A replay-only read reports catching_up and then
+// simply ends; it never reaches live.
 func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID string, opt *HostedAgentSessionStreamOptions) (*HostedAgentSessionStream, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
 	}
-	path := fmt.Sprintf(hostedAgentSessionStreamPath, sessionID)
+	replayOnly := opt != nil && opt.ReplayOnly
+	cursor := ""
+	before := ""
+	limit := 0
+	includeRaw := false
 	if opt != nil {
 		// The server answers this combination with a 400; rejecting it here
 		// spends no round trip to learn the same thing.
 		if opt.Before != "" && !opt.ReplayOnly {
 			return nil, nil, errors.New("hosted agents: before requires replay only")
 		}
-		q := url.Values{}
-		if opt.ReplayFrom != "" {
-			q.Set("replay_from", opt.ReplayFrom)
+		cursor = opt.ReplayFrom
+		before = opt.Before
+		limit = opt.Limit
+		includeRaw = opt.IncludeRaw
+	}
+
+	path := fmt.Sprintf(hostedAgentSessionEventsPath, sessionID)
+	q := url.Values{}
+	if replayOnly {
+		q.Set("replay_only", "true")
+		if cursor != "" {
+			q.Set("replay_from", cursor)
 		}
-		if opt.ReplayOnly {
-			q.Set("replay_only", "true")
+		if before != "" {
+			q.Set("before", before)
 		}
-		if opt.Before != "" {
-			q.Set("before", opt.Before)
-		}
-		if opt.Limit > 0 {
-			q.Set("limit", strconv.Itoa(opt.Limit))
-		}
-		if opt.IncludeRaw {
-			q.Set("include_raw", "true")
-		}
-		if encoded := q.Encode(); encoded != "" {
-			path += "?" + encoded
+		if limit > 0 {
+			q.Set("limit", strconv.Itoa(limit))
 		}
 	}
+	if includeRaw {
+		q.Set("include_raw", "true")
+	}
+	if encoded := q.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
@@ -821,6 +955,9 @@ func (s *HostedAgentsServiceOp) StreamSession(ctx context.Context, sessionID str
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Connection", "keep-alive")
+	if !replayOnly && cursor != "" {
+		req.Header.Set(sseLastEventIDHeader, cursor)
+	}
 
 	resp, err := s.client.DoStream(ctx, req)
 	if err != nil {
@@ -902,6 +1039,52 @@ func (s *HostedAgentsServiceOp) ResolveHITL(ctx context.Context, sessionID, requ
 		return nil, err
 	}
 	return s.client.Do(ctx, req, nil)
+}
+
+// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
+// external provider. The server derives the team from the authenticated
+// principal, so the POST carries an empty JSON object body.
+func (s *HostedAgentsServiceOp) StartProviderAuth(ctx context.Context, provider string) (*HostedAgentProviderAuthStart, *Response, error) {
+	if provider == "" {
+		return nil, nil, errors.New("hosted agents: provider is required")
+	}
+	path := fmt.Sprintf(hostedAgentProviderAuthPath, provider)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentProviderAuthStart)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// PollProviderAuth checks whether a pending connect link has been authorized.
+// pollURL is the PollURL returned by StartProviderAuth; it is forwarded to the
+// server as the poll_url query parameter.
+func (s *HostedAgentsServiceOp) PollProviderAuth(ctx context.Context, provider, pollURL string) (*HostedAgentProviderAuthPoll, *Response, error) {
+	if provider == "" {
+		return nil, nil, errors.New("hosted agents: provider is required")
+	}
+	if pollURL == "" {
+		return nil, nil, errors.New("hosted agents: poll url is required")
+	}
+	path := fmt.Sprintf(hostedAgentProviderAuthPollPath, provider)
+	q := url.Values{}
+	q.Set("poll_url", pollURL)
+	path += "?" + q.Encode()
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentProviderAuthPoll)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
 }
 
 // ExecInSandbox runs a command inside the session sandbox.

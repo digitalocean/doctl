@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const sampleOpenAIManifest = `apiVersion: agents.digitalocean.com/v1alpha1
@@ -81,6 +82,27 @@ spec:
     environment:
       type: self_hosted
       workspace_directory: /workspace
+`
+
+// sampleFlatOpenAIManifest is the flat-format equivalent of
+// sampleOpenAIManifest: top-level agent + config, no envelope.
+const sampleFlatOpenAIManifest = `name: codex-agentapi-session
+agent: codex-agentapi
+config:
+  agent:
+    model: gpt-5.6-sol
+    instructions: "Answer clearly."
+  environment:
+    type: self_hosted
+    workspace_directory: /workspace
+  input:
+    - role: user
+      content:
+        - type: input_text
+          text: "hello"
+env:
+  CODEX_ENVIRONMENT_ID: ${ENV_ID}
+  CODEX_API_KEY: ${OPENAI_API_KEY}
 `
 
 func TestParseOpenAIAgentsSession(t *testing.T) {
@@ -146,11 +168,61 @@ spec:
 	assert.Equal(t, "from-config", agent["model"])
 }
 
+func TestExtractOpenAICreateBody_Flat(t *testing.T) {
+	body, err := extractOpenAICreateBody([]byte(sampleFlatOpenAIManifest))
+	require.NoError(t, err)
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(body, &payload))
+	agent, ok := payload["agent"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "gpt-5.6-sol", agent["model"])
+	env, ok := payload["environment"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "self_hosted", env["type"])
+}
+
 func TestPrepareOpenAISandboxStart_NonOpenAI(t *testing.T) {
 	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte(sampleManifest))
 	require.NoError(t, err)
 	assert.Empty(t, id)
 	assert.Nil(t, overlay)
+}
+
+func TestPrepareOpenAISandboxStart_FlatNonOpenAI(t *testing.T) {
+	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte("agent: opencode\n"))
+	require.NoError(t, err)
+	assert.Empty(t, id)
+	assert.Nil(t, overlay)
+}
+
+func TestPrepareOpenAISandboxStart_FlatConfigRequiresCodexAgent(t *testing.T) {
+	const manifest = `agent: opencode
+config:
+  agent:
+    model: gpt-5.6-sol
+`
+	_, _, err := prepareOpenAISandboxStart(context.Background(), []byte(manifest))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "codex-agentapi")
+	assert.Contains(t, err.Error(), `"opencode"`)
+}
+
+func TestPrepareOpenAISandboxStart_FlatCreatesSession(t *testing.T) {
+	t.Setenv(openAIAPIKeyEnv, "sk-test")
+	orig := createOpenAIAgentsSession
+	t.Cleanup(func() { createOpenAIAgentsSession = orig })
+	createOpenAIAgentsSession = func(ctx context.Context, apiKey string, body json.RawMessage) (*openAIAgentsSession, error) {
+		assert.Equal(t, "sk-test", apiKey)
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Contains(t, payload, "agent")
+		return &openAIAgentsSession{ID: "sess_flat1", EnvironmentID: "env_flat1"}, nil
+	}
+
+	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte(sampleFlatOpenAIManifest))
+	require.NoError(t, err)
+	assert.Equal(t, "sess_flat1", id)
+	assert.Equal(t, map[string]string{"ENV_ID": "env_flat1"}, overlay)
 }
 
 func TestPrepareOpenAISandboxStart_CreatesSession(t *testing.T) {
@@ -264,6 +336,49 @@ func TestRunAgentsStart_OpenAI(t *testing.T) {
 	})
 }
 
+func TestRunAgentsStart_OpenAIFlat(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(sampleFlatOpenAIManifest), 0o644))
+	t.Setenv(openAIAPIKeyEnv, "sk-test-key")
+
+	orig := createOpenAIAgentsSession
+	t.Cleanup(func() { createOpenAIAgentsSession = orig })
+	createOpenAIAgentsSession = func(ctx context.Context, apiKey string, body json.RawMessage) (*openAIAgentsSession, error) {
+		return &openAIAgentsSession{ID: "sess_flat1", EnvironmentID: "env_flat1"}, nil
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				require.NotNil(t, opt)
+				assert.Equal(t, "sess_flat1", opt.OpenAISessionID)
+				assert.Contains(t, string(manifest), "CODEX_ENVIRONMENT_ID: env_flat1")
+				assert.Contains(t, string(manifest), "CODEX_API_KEY: sk-test-key")
+				assert.NotContains(t, string(manifest), "${")
+				// The flat manifest carries no envelope and keeps its config
+				// block for DO.
+				assert.NotContains(t, string(manifest), "apiVersion")
+				assert.Contains(t, string(manifest), "gpt-5.6-sol")
+				assert.Contains(t, string(manifest), "config:")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID:           "sess_do_2",
+						Name:                "codex-agentapi-session",
+						AgentKind:           godo.HostedAgentKindOpenAICodex,
+						Status:              godo.HostedAgentSessionStatusReady,
+						OpenAISessionID:     "sess_flat1",
+						OpenAIEnvironmentID: "env_flat1",
+					},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
 func TestStripSpecOpenAI(t *testing.T) {
 	out, err := stripSpecOpenAI([]byte(sampleOpenAIManifestLegacy))
 	require.NoError(t, err)
@@ -276,6 +391,41 @@ func TestStripSpecOpenAI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(out), "gpt-5.6-sol")
 	assert.Contains(t, string(out), "config:")
+}
+
+func TestStripSpecOpenAI_PreservesMultiLineSkillsInstructions(t *testing.T) {
+	const withSkills = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  runtime:
+    adapter: codex-agentapi
+  skills:
+    - name: example-skill
+      description: A test skill with multi-line instructions
+      instructions: |
+        Step one: do the first thing.
+        Step two: do the second thing.
+
+        Step three: finish up.
+  openai:
+    agent:
+      model: gpt-5.6-sol
+`
+	const wantInstructions = "Step one: do the first thing.\nStep two: do the second thing.\n\nStep three: finish up.\n"
+
+	out, err := stripSpecOpenAI([]byte(withSkills))
+	require.NoError(t, err)
+	assert.NotContains(t, string(out), "openai:")
+
+	var doc map[string]any
+	require.NoError(t, yaml.Unmarshal(out, &doc))
+	spec := doc["spec"].(map[any]any)
+	skills, ok := spec["skills"].([]any)
+	require.True(t, ok)
+	require.Len(t, skills, 1)
+	skill := skills[0].(map[any]any)
+	assert.Equal(t, "example-skill", skill["name"])
+	assert.Equal(t, wantInstructions, skill["instructions"])
 }
 
 func TestIsOpenAISandboxSession(t *testing.T) {

@@ -50,6 +50,12 @@ spec:
   adapter: opencode
 `
 
+// sampleFlatManifest is the flat-format equivalent of sampleManifest: no
+// envelope, top-level agent key.
+const sampleFlatManifest = `name: test-agent
+agent: opencode
+`
+
 func testAttachStateFromPending(pending *pendingHITL) *attachState {
 	if pending == nil {
 		pending = &pendingHITL{}
@@ -61,7 +67,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "triggers")
+	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers")
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -260,6 +266,89 @@ spec:
 		_, err := injectManifestName([]byte("::: not yaml :::"), "x")
 		assert.Error(t, err)
 	})
+
+	t.Run("flat manifest gets a top-level name", func(t *testing.T) {
+		out, err := injectManifestName([]byte("agent: opencode\n"), "my-session")
+		assert.NoError(t, err)
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		assert.Equal(t, "my-session", doc["name"])
+		assert.NotContains(t, doc, "metadata")
+	})
+
+	t.Run("overrides an existing flat name", func(t *testing.T) {
+		out, err := injectManifestName([]byte(sampleFlatManifest), "override")
+		assert.NoError(t, err)
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		assert.Equal(t, "override", doc["name"])
+		assert.Equal(t, "opencode", doc["agent"])
+		assert.NotContains(t, doc, "metadata")
+	})
+
+	t.Run("preserves multi-line spec.skills instructions", func(t *testing.T) {
+		const withSkills = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  adapter: opencode
+  skills:
+    - name: example-skill
+      description: A test skill with multi-line instructions
+      instructions: |
+        Step one: do the first thing.
+        Step two: do the second thing.
+
+        Step three: finish up.
+`
+		const wantInstructions = "Step one: do the first thing.\nStep two: do the second thing.\n\nStep three: finish up.\n"
+
+		out, err := injectManifestName([]byte(withSkills), "my-session")
+		assert.NoError(t, err)
+
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		spec := doc["spec"].(map[any]any)
+		skills, ok := spec["skills"].([]any)
+		assert.True(t, ok)
+		assert.Len(t, skills, 1)
+		skill := skills[0].(map[any]any)
+		assert.Equal(t, "example-skill", skill["name"])
+		assert.Equal(t, wantInstructions, skill["instructions"])
+	})
+}
+
+func TestManifestUsesLegacyEnvelope(t *testing.T) {
+	assert.True(t, manifestUsesLegacyEnvelope([]byte(sampleManifest)))
+	assert.False(t, manifestUsesLegacyEnvelope([]byte(sampleFlatManifest)))
+	assert.False(t, manifestUsesLegacyEnvelope([]byte("agent: opencode\n")))
+	// Unparseable YAML defers to the server for the authoritative error.
+	assert.False(t, manifestUsesLegacyEnvelope([]byte("::: not yaml :::")))
+}
+
+func TestRunAgentsStart_FlatWithName(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	assert.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// The manifest sent to the server must carry a top-level name (flat
+		// format), not the legacy metadata.name.
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				var doc map[string]any
+				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
+				assert.Equal(t, "my-session", doc["name"])
+				assert.NotContains(t, doc, "metadata")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
+		assert.NoError(t, RunAgentsStart(config))
+	})
 }
 
 func TestRunAgentsList(t *testing.T) {
@@ -378,6 +467,71 @@ func TestRunAgentsResume(t *testing.T) {
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
+	})
+}
+
+func TestRunAgentsAuth(t *testing.T) {
+	// Keep the wait loop from sleeping through the poll interval in tests.
+	orig := agentsAuthPollInterval
+	agentsAuthPollInterval = time.Millisecond
+	defer func() { agentsAuthPollInterval = orig }()
+
+	t.Run("already connected exits without polling", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+			config.Args = []string{"github"}
+			assert.NoError(t, RunAgentsAuth(config))
+		})
+	})
+
+	t.Run("no-wait prints URL and returns", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&godo.HostedAgentProviderAuthStart{
+					Provider:   "github",
+					Status:     "pending",
+					ConnectURL: "https://example.com/connect",
+					PollURL:    "https://example.com/poll",
+				}, nil)
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoWait, true)
+			assert.NoError(t, RunAgentsAuth(config))
+		})
+	})
+
+	t.Run("polls until authorized", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&godo.HostedAgentProviderAuthStart{
+					Provider:   "github",
+					Status:     "pending",
+					ConnectURL: "https://example.com/connect",
+					PollURL:    "https://example.com/poll",
+				}, nil)
+			gomock.InOrder(
+				tm.hostedAgents.EXPECT().
+					PollProviderAuth("github", "https://example.com/poll").
+					Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "pending"}, nil),
+				tm.hostedAgents.EXPECT().
+					PollProviderAuth("github", "https://example.com/poll").
+					Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "success"}, nil),
+			)
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			assert.NoError(t, RunAgentsAuth(config))
+		})
+	})
+
+	t.Run("requires a provider argument", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = []string{}
+			assert.Error(t, RunAgentsAuth(config))
+		})
 	})
 }
 
@@ -951,6 +1105,40 @@ func TestErrorResponseSurfacesNestedMessage(t *testing.T) {
 	}
 	assert.NoError(t, json.Unmarshal([]byte(body), er))
 	assert.Contains(t, er.Error(), "forward input to OHR: ohr attach: connection error")
+}
+
+// TestRunAgentsStart_SkillsEnvSizeCapError pins that harness-api's
+// HARNESS_SKILLS env-size-cap rejection (agentspec.validateSkillsEnvSize,
+// returned as a 400 with the nested {"error":{"code":...,"message":...}}
+// envelope) surfaces to the CLI user as the server's own readable message,
+// not a raw JSON/HTTP dump.
+func TestRunAgentsStart_SkillsEnvSizeCapError(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
+
+	const wantMessage = `agentspec: spec.skills would encode to 65537 bytes as the HARNESS_SKILLS guest env value, exceeding the sandbox's 65536-byte limit; trim instructions/descriptions or reduce the number of skills (temporary limit while skill delivery rides an env var)`
+	const body = `{"error":{"code":400,"message":"` + wantMessage + `"}}`
+	er := &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Request:    httptest.NewRequest(http.MethodPost, "http://harness/v2/agents/sessions", nil),
+		},
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), er))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			Return(nil, er)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		err := RunAgentsStart(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), wantMessage)
+		assert.NotContains(t, err.Error(), `{"error"`)
+		assert.NotContains(t, err.Error(), `{"message"`)
+	})
 }
 
 func TestRenderEventHITLRequested(t *testing.T) {
@@ -2255,7 +2443,7 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	stubReconnectSleep(t)
 
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -2314,9 +2502,9 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 // frame is transport bookkeeping: it renders nothing and must not become the
 // reconnect cursor, or a reconnect would resume from a position no event holds.
 func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
-	body := sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
+	body := sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
 		sseFrame("evt-7", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -2431,8 +2619,9 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 		mu.Lock()
 		calls++
 		n := calls
-		// Resume cursor rides as replay_from on control-plane /stream.
-		replayFrom := r.URL.Query().Get("replay_from")
+		// The live stream carries the resume cursor in the standard SSE
+		// Last-Event-ID header, not a replay_from query parameter.
+		replayFrom := r.Header.Get("Last-Event-ID")
 		mu.Unlock()
 
 		w.Header().Set("Content-Type", "text/event-stream")
