@@ -321,7 +321,7 @@ func TestManifestUsesLegacyEnvelope(t *testing.T) {
 	assert.True(t, manifestUsesLegacyEnvelope([]byte(sampleManifest)))
 	assert.False(t, manifestUsesLegacyEnvelope([]byte(sampleFlatManifest)))
 	assert.False(t, manifestUsesLegacyEnvelope([]byte("agent: opencode\n")))
-	// Unparseable YAML defers to the server for the authoritative error.
+	// Unparsable YAML defers to the server for the authoritative error.
 	assert.False(t, manifestUsesLegacyEnvelope([]byte("::: not yaml :::")))
 }
 

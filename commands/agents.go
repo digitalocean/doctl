@@ -607,7 +607,7 @@ func expandManifestEnvLookup(manifest []byte, lookup func(string) (string, bool)
 // manifestUsesLegacyEnvelope reports whether the manifest is written in the
 // deprecated `agents.digitalocean.com/v1alpha1` envelope format. Detection
 // matches the server's routing rule: a top-level `apiVersion` key selects the
-// legacy parser; its absence selects the flat format. Unparseable YAML returns
+// legacy parser; its absence selects the flat format. Unparsable YAML returns
 // false — the server will produce the authoritative error.
 func manifestUsesLegacyEnvelope(manifest []byte) bool {
 	var doc map[string]any
