@@ -1102,9 +1102,9 @@ func TestRunAgentsDownload_DiscardOnChecksumMismatch(t *testing.T) {
 }
 
 // TestHostedAgentEventDecodesSPIWire regression-guards the SPI envelope
-// (type/data/timestamp/tenant_id) -> godo HostedAgentEvent mapping.
+// (type/data/timestamp) -> godo HostedAgentEvent mapping.
 func TestHostedAgentEventDecodesSPIWire(t *testing.T) {
-	const frame = `{"event_id":"01KTBXPBY60VYC5YKF6AKDX0ZS","run_id":"run-7f16719a-da1c-449d-a4ca-18e524bb63e3","tenant_id":"120","session_id":"sess_5a1ff33e","timestamp":"2026-06-05T12:56:24.774753219Z","seq":0,"type":"run.token_delta","data":{"text":"Paris"}}`
+	const frame = `{"event_id":"01KTBXPBY60VYC5YKF6AKDX0ZS","run_id":"run-7f16719a-da1c-449d-a4ca-18e524bb63e3","session_id":"sess_5a1ff33e","timestamp":"2026-06-05T12:56:24.774753219Z","seq":0,"type":"run.token_delta","data":{"text":"Paris"}}`
 
 	var ev godo.HostedAgentEvent
 	assert.NoError(t, json.Unmarshal([]byte(frame), &ev))
@@ -1112,7 +1112,6 @@ func TestHostedAgentEventDecodesSPIWire(t *testing.T) {
 	assert.Equal(t, "01KTBXPBY60VYC5YKF6AKDX0ZS", ev.EventID)
 	assert.Equal(t, "run-7f16719a-da1c-449d-a4ca-18e524bb63e3", ev.RunID)
 	assert.Equal(t, "sess_5a1ff33e", ev.SessionID)
-	assert.Equal(t, uint64(120), ev.TeamID)
 	assert.Equal(t, godo.HostedAgentEventKindTokenChunk, ev.Kind)
 	assert.False(t, ev.At.IsZero(), "timestamp should be parsed from the wire `timestamp` field")
 	assert.JSONEq(t, `{"text":"Paris"}`, string(ev.Payload))

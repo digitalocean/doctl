@@ -329,7 +329,6 @@ type HostedAgentSessionOrigin struct {
 type HostedAgentSession struct {
 	SessionID    string                                  `json:"session_id"`
 	Name         string                                  `json:"name,omitempty"`
-	TeamID       uint64                                  `json:"team_id"`
 	AgentKind    HostedAgentKind                         `json:"agent_kind"`
 	Status       HostedAgentSessionStatus                `json:"status"`
 	CreatedAt    Timestamp                               `json:"created_at"`
@@ -391,15 +390,13 @@ type HostedAgentHITLDecision struct {
 //
 // The server serializes the SPI canonical event envelope, whose JSON shape
 // differs from this struct's field names: the discriminator is `type` (not
-// `kind`), the per-kind body is `data` (not `payload`), the timestamp is
-// `timestamp` (not `at`), and the team id rides as a decimal string in
-// `tenant_id`. UnmarshalJSON maps that wire shape onto these fields, so callers
-// read Kind/Payload/At/TeamID directly.
+// `kind`), the per-kind body is `data` (not `payload`), and the timestamp is
+// `timestamp` (not `at`). UnmarshalJSON maps that wire shape onto these fields,
+// so callers read Kind/Payload/At directly.
 type HostedAgentEvent struct {
 	EventID   string
 	SessionID string
 	RunID     string
-	TeamID    uint64
 	Seq       uint64
 	At        Timestamp
 	Kind      HostedAgentEventKind
@@ -424,7 +421,6 @@ type HostedAgentEvent struct {
 type hostedAgentEventWire struct {
 	EventID         string               `json:"event_id"`
 	RunID           string               `json:"run_id"`
-	TenantID        string               `json:"tenant_id"`
 	SessionID       string               `json:"session_id"`
 	Timestamp       Timestamp            `json:"timestamp"`
 	Seq             uint64               `json:"seq"`
@@ -451,13 +447,6 @@ func (e *HostedAgentEvent) UnmarshalJSON(b []byte) error {
 	e.SourceEventID = w.SourceEventID
 	e.SourceEventType = w.SourceEventType
 	e.SourceRaw = w.SourceRaw
-	if w.TenantID != "" {
-		id, err := strconv.ParseUint(w.TenantID, 10, 64)
-		if err != nil {
-			return fmt.Errorf("hosted agents: tenant_id %q: %w", w.TenantID, err)
-		}
-		e.TeamID = id
-	}
 	return nil
 }
 
