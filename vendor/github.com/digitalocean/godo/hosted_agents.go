@@ -78,6 +78,11 @@ type HostedAgentsService interface {
 	// doctl resolves ${...} placeholders client-side before calling this API;
 	// there is no server-side variables map.
 	CreateSessionFromManifest(context.Context, []byte, *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error)
+	// CreateSessionFromConfig provisions a session from an existing immutable
+	// Agent Config, referenced by config_id. The request uses Content-Type:
+	// application/json with a {name, config_id} body; the config's stored
+	// manifest and declared credentials seed the session at create time.
+	CreateSessionFromConfig(context.Context, *HostedAgentSessionFromConfigRequest) (*HostedAgentSession, *Response, error)
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
@@ -114,6 +119,14 @@ type HostedAgentsService interface {
 	DeleteCheckpoint(context.Context, string, string) (*HostedAgentCheckpointDeleteResponse, *Response, error)
 	ForkSession(context.Context, string, *HostedAgentForkSessionRequest) (*HostedAgentForkSessionResponse, *Response, error)
 	RollbackToCheckpoint(context.Context, string, string) (*HostedAgentSession, *Response, error)
+
+	// Agent Configs (immutable team-scoped agent definitions). Routes live
+	// under /v2/agents/configs.
+	ListAgentConfigs(context.Context, *HostedAgentConfigListOptions) (*HostedAgentConfigsListResponse, *Response, error)
+	GetAgentConfig(context.Context, string) (*HostedAgentConfig, *Response, error)
+	CreateAgentConfig(context.Context, *HostedAgentConfigCreateRequest) (*HostedAgentConfig, *Response, error)
+	DeleteAgentConfig(context.Context, string) (*Response, error)
+	ListAgentConfigSessions(context.Context, string, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 }
 
 // HostedAgentsServiceOp handles communication with Hosted Agents session methods.
@@ -337,6 +350,11 @@ type HostedAgentSession struct {
 	ParentSessionID string `json:"parent_session_id,omitempty"`
 	// ForkID is a branch label on forked sessions; empty/omitted for roots.
 	ForkID string `json:"fork_id,omitempty"`
+	// ConfigID is the durable Agent Config UUID the session was created from
+	// (inline manifests persist a config too, named after the session).
+	// Returned on create/get/list; omitted for sessions created before config
+	// references were stored.
+	ConfigID string `json:"config_id,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -451,6 +469,15 @@ type HostedAgentSessionCreateRequest struct {
 	// Origin claims product-workflow provenance. Omit for a verified direct
 	// session. Simulation/evaluation require resource_id.
 	Origin *HostedAgentSessionOriginRequest `json:"origin,omitempty"`
+}
+
+// HostedAgentSessionFromConfigRequest creates a session from an existing
+// immutable Agent Config (POST /v2/agents/sessions with a JSON body). Name is
+// required and becomes the new session name; ConfigID must be the UUID of a
+// config owned by the caller's team.
+type HostedAgentSessionFromConfigRequest struct {
+	Name     string `json:"name"`
+	ConfigID string `json:"config_id"`
 }
 
 // HostedAgentManifestCreateOptions configures CreateSessionFromManifest.
@@ -774,6 +801,27 @@ func (s *HostedAgentsServiceOp) CreateSessionFromManifest(ctx context.Context, m
 		return nil, nil, err
 	}
 	req, err := s.newCreateSessionPostRequest(ctx, path, bytes.NewReader(manifest), hostedAgentManifestMediaType)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.doCreateSession(ctx, req)
+}
+
+// CreateSessionFromConfig provisions a session from a durable Agent Config.
+// The JSON {name, config_id} body selects the config-backed create path on the
+// server, which reloads the config's stored manifest and resolves its declared
+// credentials into the new session.
+func (s *HostedAgentsServiceOp) CreateSessionFromConfig(ctx context.Context, create *HostedAgentSessionFromConfigRequest) (*HostedAgentSession, *Response, error) {
+	if create == nil {
+		return nil, nil, errors.New("hosted agents: create request is required")
+	}
+	if create.Name == "" {
+		return nil, nil, errors.New("hosted agents: name is required")
+	}
+	if create.ConfigID == "" {
+		return nil, nil, errors.New("hosted agents: config_id is required")
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodPost, hostedAgentsSessionsBasePath, create)
 	if err != nil {
 		return nil, nil, err
 	}

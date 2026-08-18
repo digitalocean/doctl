@@ -63,6 +63,15 @@ type HostedAgentsService interface {
 	DeleteCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpointDeleteResponse, error)
 	ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]HostedAgentSession, error)
 	RollbackToCheckpoint(sessionID, checkpointID string) (*HostedAgentSession, error)
+
+	// Agent Configs: immutable, team-scoped agent manifests plus config-backed
+	// session creation.
+	CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error)
+	ListAgentConfigs(opt *godo.HostedAgentConfigListOptions) ([]godo.HostedAgentConfigSummary, string, error)
+	GetAgentConfig(configID string) (*godo.HostedAgentConfig, error)
+	CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error)
+	DeleteAgentConfig(configID string) error
+	ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 }
 
 type hostedAgentsService struct {
@@ -215,4 +224,48 @@ func (s *hostedAgentsService) RollbackToCheckpoint(sessionID, checkpointID strin
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.CreateSessionFromConfig(context.TODO(), create)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) ListAgentConfigs(opt *godo.HostedAgentConfigListOptions) ([]godo.HostedAgentConfigSummary, string, error) {
+	resp, _, err := s.client.HostedAgents.ListAgentConfigs(context.TODO(), opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Configs, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetAgentConfig(configID string) (*godo.HostedAgentConfig, error) {
+	cfg, _, err := s.client.HostedAgents.GetAgentConfig(context.TODO(), configID)
+	return cfg, err
+}
+
+func (s *hostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+	cfg, _, err := s.client.HostedAgents.CreateAgentConfig(context.TODO(), create)
+	return cfg, err
+}
+
+func (s *hostedAgentsService) DeleteAgentConfig(configID string) error {
+	_, err := s.client.HostedAgents.DeleteAgentConfig(context.TODO(), configID)
+	return err
+}
+
+func (s *hostedAgentsService) ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error) {
+	resp, _, err := s.client.HostedAgents.ListAgentConfigSessions(context.TODO(), configID, opt)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]HostedAgentSession, len(resp.Sessions))
+	for i := range resp.Sessions {
+		sess := resp.Sessions[i]
+		out[i] = HostedAgentSession{HostedAgentSession: &sess}
+	}
+	return out, resp.NextPageToken, nil
 }
