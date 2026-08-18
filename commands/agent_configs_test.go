@@ -14,6 +14,8 @@ limitations under the License.
 package commands
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,12 +82,34 @@ func TestAgentConfigGet_MissingArg(t *testing.T) {
 	})
 }
 
+func godoStatusErr(status int, message string) error {
+	return &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: status,
+			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/configs/cfg_1", nil),
+		},
+		Message: message,
+	}
+}
+
 func TestAgentConfigDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().DeleteAgentConfig("cfg_1").Return(nil)
 
 		config.Args = append(config.Args, "cfg_1")
 		require.NoError(t, RunAgentsConfigDelete(config))
+	})
+}
+
+func TestAgentConfigDelete_ActiveSessions(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().DeleteAgentConfig("cfg_1").Return(godoStatusErr(http.StatusConflict, "agent config has active sessions"))
+
+		config.Args = append(config.Args, "cfg_1")
+		err := RunAgentsConfigDelete(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "active sessions")
+		assert.Contains(t, err.Error(), "doctl agents destroy")
 	})
 }
 
@@ -102,6 +126,37 @@ func TestAgentConfigListSessions(t *testing.T) {
 		config.Args = append(config.Args, "cfg_1")
 		config.Doit.Set(config.NS, doctl.ArgAgentStatus, "SESSION_STATUS_READY")
 		require.NoError(t, RunAgentsConfigListSessions(config))
+	})
+}
+
+func TestAgentConfigListSessions_FallsBackWhenRouteMissing(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		opt := &godo.HostedAgentSessionListOptions{}
+		tm.hostedAgents.EXPECT().
+			ListAgentConfigSessions("cfg_1", opt).
+			Return(nil, "", godoStatusErr(http.StatusNotFound, "404 page not found"))
+		tm.hostedAgents.EXPECT().
+			ListSessions(opt).
+			Return([]do.HostedAgentSession{
+				{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_keep", ConfigID: "cfg_1"}},
+				{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_other", ConfigID: "cfg_other"}},
+			}, "", nil)
+
+		config.Args = append(config.Args, "cfg_1")
+		require.NoError(t, RunAgentsConfigListSessions(config))
+	})
+}
+
+func TestAgentConfigListSessions_ConfigNotFoundDoesNotFallback(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListAgentConfigSessions("cfg_missing", &godo.HostedAgentSessionListOptions{}).
+			Return(nil, "", godoStatusErr(http.StatusNotFound, "agent config not found"))
+
+		config.Args = append(config.Args, "cfg_missing")
+		err := RunAgentsConfigListSessions(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "agent config not found")
 	})
 }
 

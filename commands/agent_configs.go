@@ -15,7 +15,9 @@ package commands
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -37,7 +39,7 @@ func AgentConfigs() *Command {
 
 An Agent Config captures a validated agent manifest (and any secret slots it declares) under a stable ID. Anyone on your team can then start sessions from that ID without re-supplying the manifest, so a config is the reusable, auditable unit behind repeated agent runs.
 
-Configs are immutable: to change a manifest, create a new config. Deleting a config is a soft delete and does not tear down sessions already started from it.`,
+Configs are immutable: to change a manifest, create a new config. Deleting a config is a soft delete (the name is freed, the row is retained), but the API rejects the delete while any session created from the config is still active. Destroy those sessions first.`,
 		},
 	}
 
@@ -79,7 +81,7 @@ The `+"`"+`--name`+"`"+` is the team-unique handle for the config and is require
 
 	CmdBuilder(cmd, RunAgentsConfigDelete, "delete <config-id>",
 		"Delete an agent config",
-		"Soft-deletes an Agent Config. Sessions already started from it keep running.",
+		`Soft-deletes an Agent Config and frees its team-unique name. The API returns an error if any session created from the config is still active (provisioning, ready, detached, or paused). Destroy those sessions first (`+"`"+`doctl agents list`+"`"+`, then `+"`"+`doctl agents destroy <session>`+"`"+`) and retry.`,
 		Writer, ns, aliasOpt("rm"))
 
 	cmdSessions := CmdBuilder(cmd, RunAgentsConfigListSessions, "list-sessions <config-id>",
@@ -180,6 +182,10 @@ func RunAgentsConfigDelete(c *CmdConfig) error {
 	}
 	configID := c.Args[0]
 	if err := c.HostedAgents().DeleteAgentConfig(configID); err != nil {
+		if agentConfigHasActiveSessionsErr(err) {
+			msg, _, _ := agentAPIError(err)
+			return fmt.Errorf("%s. List them with `doctl agents config list-sessions %s`, destroy each with `doctl agents destroy`, then retry", strings.TrimRight(msg, "."), configID)
+		}
 		return err
 	}
 	fmt.Fprintf(c.Out, "Deleted agent config %s\n", configID)
@@ -217,7 +223,12 @@ func RunAgentsConfigListSessions(c *CmdConfig) error {
 
 	sessions, next, err := c.HostedAgents().ListAgentConfigSessions(c.Args[0], opt)
 	if err != nil {
-		return err
+		if agentConfigSessionsRouteMissing(err) {
+			sessions, next, err = listSessionsForConfig(c, c.Args[0], opt)
+		}
+		if err != nil {
+			return err
+		}
 	}
 	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
 		return err
@@ -245,4 +256,42 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+}
+
+// agentConfigHasActiveSessionsErr reports the DELETE /configs/{id} 409 returned
+// when any session created from the config is still active.
+func agentConfigHasActiveSessionsErr(err error) bool {
+	msg, status, ok := agentAPIError(err)
+	if !ok || status != http.StatusConflict {
+		return false
+	}
+	return strings.Contains(strings.ToLower(msg), "active sessions")
+}
+
+// agentConfigSessionsRouteMissing reports a 404 from GET /configs/{id}/sessions
+// that is a missing route (not "config not found"). Production may not have
+// shipped that nested path yet; list-sessions then falls back to listing
+// sessions and filtering by config id.
+func agentConfigSessionsRouteMissing(err error) bool {
+	msg, status, ok := agentAPIError(err)
+	if !ok || status != http.StatusNotFound {
+		return false
+	}
+	lower := strings.ToLower(msg)
+	return !strings.Contains(lower, "agent config not found") &&
+		!strings.Contains(lower, "config not found")
+}
+
+func listSessionsForConfig(c *CmdConfig, configID string, opt *godo.HostedAgentSessionListOptions) ([]do.HostedAgentSession, string, error) {
+	sessions, next, err := c.HostedAgents().ListSessions(opt)
+	if err != nil {
+		return nil, "", err
+	}
+	filtered := make([]do.HostedAgentSession, 0, len(sessions))
+	for _, sess := range sessions {
+		if sess.HostedAgentSession != nil && sess.ConfigID == configID {
+			filtered = append(filtered, sess)
+		}
+	}
+	return filtered, next, nil
 }
