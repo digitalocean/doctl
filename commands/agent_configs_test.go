@@ -129,25 +129,7 @@ func TestAgentConfigListSessions(t *testing.T) {
 	})
 }
 
-func TestAgentConfigListSessions_FallsBackWhenRouteMissing(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		opt := &godo.HostedAgentSessionListOptions{}
-		tm.hostedAgents.EXPECT().
-			ListAgentConfigSessions("cfg_1", opt).
-			Return(nil, "", godoStatusErr(http.StatusNotFound, "404 page not found"))
-		tm.hostedAgents.EXPECT().
-			ListSessions(opt).
-			Return([]do.HostedAgentSession{
-				{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_keep", ConfigID: "cfg_1"}},
-				{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_other", ConfigID: "cfg_other"}},
-			}, "", nil)
-
-		config.Args = append(config.Args, "cfg_1")
-		require.NoError(t, RunAgentsConfigListSessions(config))
-	})
-}
-
-func TestAgentConfigListSessions_ConfigNotFoundDoesNotFallback(t *testing.T) {
+func TestAgentConfigListSessions_NotFound(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ListAgentConfigSessions("cfg_missing", &godo.HostedAgentSessionListOptions{}).
