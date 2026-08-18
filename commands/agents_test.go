@@ -50,6 +50,12 @@ spec:
   adapter: opencode
 `
 
+// sampleFlatManifest is the flat-format equivalent of sampleManifest: no
+// envelope, top-level agent key.
+const sampleFlatManifest = `name: test-agent
+agent: opencode
+`
+
 func testAttachStateFromPending(pending *pendingHITL) *attachState {
 	if pending == nil {
 		pending = &pendingHITL{}
@@ -261,6 +267,25 @@ spec:
 		assert.Error(t, err)
 	})
 
+	t.Run("flat manifest gets a top-level name", func(t *testing.T) {
+		out, err := injectManifestName([]byte("agent: opencode\n"), "my-session")
+		assert.NoError(t, err)
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		assert.Equal(t, "my-session", doc["name"])
+		assert.NotContains(t, doc, "metadata")
+	})
+
+	t.Run("overrides an existing flat name", func(t *testing.T) {
+		out, err := injectManifestName([]byte(sampleFlatManifest), "override")
+		assert.NoError(t, err)
+		var doc map[string]any
+		assert.NoError(t, yaml.Unmarshal(out, &doc))
+		assert.Equal(t, "override", doc["name"])
+		assert.Equal(t, "opencode", doc["agent"])
+		assert.NotContains(t, doc, "metadata")
+	})
+
 	t.Run("preserves multi-line spec.skills instructions", func(t *testing.T) {
 		const withSkills = `apiVersion: agents.digitalocean.com/v1alpha1
 kind: Agent
@@ -289,6 +314,40 @@ spec:
 		skill := skills[0].(map[any]any)
 		assert.Equal(t, "example-skill", skill["name"])
 		assert.Equal(t, wantInstructions, skill["instructions"])
+	})
+}
+
+func TestManifestUsesLegacyEnvelope(t *testing.T) {
+	assert.True(t, manifestUsesLegacyEnvelope([]byte(sampleManifest)))
+	assert.False(t, manifestUsesLegacyEnvelope([]byte(sampleFlatManifest)))
+	assert.False(t, manifestUsesLegacyEnvelope([]byte("agent: opencode\n")))
+	// Unparseable YAML defers to the server for the authoritative error.
+	assert.False(t, manifestUsesLegacyEnvelope([]byte("::: not yaml :::")))
+}
+
+func TestRunAgentsStart_FlatWithName(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	assert.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// The manifest sent to the server must carry a top-level name (flat
+		// format), not the legacy metadata.name.
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				var doc map[string]any
+				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
+				assert.Equal(t, "my-session", doc["name"])
+				assert.NotContains(t, doc, "metadata")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
+		assert.NoError(t, RunAgentsStart(config))
 	})
 }
 
