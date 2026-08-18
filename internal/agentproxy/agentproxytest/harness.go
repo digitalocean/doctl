@@ -18,10 +18,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/digitalocean/godo"
 )
 
 // Event is one canned SSE event the harness streams back from
-// GET /v2/agents/sessions/{id}/stream, matching the event-specific part of
+// GET /v2/agents/sessions/{id}/events, matching the event-specific part of
 // godo.HostedAgentEvent's wire shape (see HostedAgentEventKind's doc comment
 // for the canonical type strings).
 type Event struct {
@@ -75,8 +77,8 @@ type Harness struct {
 	hangAfterEvents      bool
 	sessionID            string
 	runID                string  // returned by the next POST .../input call
-	events               []Event // streamed, in order, by the next GET .../stream call
-	replayEvents         []Event // streamed instead of events when GET .../stream carries replay_only=true
+	events               []Event // streamed, in order, by the next GET .../events call
+	replayEvents         []Event // streamed instead of events when GET .../events carries replay_only=true
 	streamErrorStatus    int     // 0 = serve normally; nonzero = return this HTTP status instead
 	streamErrorRemaining int     // >0: decrement per hit, clearing streamErrorStatus at 0; <=0 with status set: permanent
 	streamErrorSkip      int     // succeed this many opens before applying streamErrorStatus (reconnect-path tests)
@@ -116,13 +118,13 @@ func New(t *testing.T, sessionID string) *Harness {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v2/agents/sessions/{id}", h.handleGetSession)
-	// Two SSE surfaces, matching godo's StreamSession: live reads go to the
-	// data plane at .../events, replay-only reads to the control plane at
-	// .../stream?replay_only=true (see QueueReplayHistory). handleStream
-	// serves both, branching on the replay_only query parameter.
+	// One SSE surface, matching godo's StreamSession: both the live and the
+	// replay-only read go to the data plane at .../events, the latter carrying
+	// replay_only=true (see QueueReplayHistory). handleStream serves both,
+	// branching on that query parameter. The control plane's .../stream is
+	// deliberately not registered, so a request landing there fails the test
+	// instead of quietly passing against a route the client no longer uses.
 	mux.HandleFunc("GET /v2/agents/sessions/{id}/events", h.handleStream)
-	// Temporarily on control-plane .../stream until OHP /events is on stage2.
-	mux.HandleFunc("GET /v2/agents/sessions/{id}/stream", h.handleStream)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/input", h.handleInput)
 	mux.HandleFunc("POST /v2/agents/sessions/{id}/hitl/{requestID}", h.handleHITL)
 
@@ -132,7 +134,7 @@ func New(t *testing.T, sessionID string) *Harness {
 }
 
 // QueueRun arranges for the next POST .../input call to return runID, and
-// for GET .../stream to then emit events (in order, tagged with runID),
+// for GET .../events to then emit events (in order, tagged with runID),
 // flushing after each one so a concurrent reader observes them incrementally
 // rather than all at once at EOF.
 //
@@ -146,7 +148,7 @@ func (h *Harness) QueueRun(runID string, events ...Event) {
 	h.events = events
 }
 
-// QueueReplayHistory arranges for a GET .../stream call carrying
+// QueueReplayHistory arranges for a GET .../events call carrying
 // replay_only=true to return these events instead of whatever QueueRun set
 // up, then end — mirrors harness-api's own handleStreamSession, which never
 // continues a replay_only request into a live tail (see
@@ -159,7 +161,7 @@ func (h *Harness) QueueReplayHistory(events ...Event) {
 	h.replayEvents = events
 }
 
-// SetStreamErrorStatus makes GET .../stream return status immediately
+// SetStreamErrorStatus makes GET .../events return status immediately
 // (instead of opening an SSE stream) for the next `times` calls, then
 // resume normal behavior (serving whatever's queued via QueueRun) —
 // simulating a StreamSession failure rather than a mid-stream drop. times
@@ -185,12 +187,12 @@ func (h *Harness) SetStreamErrorStatusAfter(skip, status, times int) {
 	h.streamErrorRemaining = times
 }
 
-// DropConnectionAfterEvents makes the very next GET .../stream call return
+// DropConnectionAfterEvents makes the very next GET .../events call return
 // after sending only the first n queued events (a clean end, no error —
 // exactly how a genuine mid-stream drop/idle-timeout looks from the
 // client's side) instead of the whole list, then resets to 0 so any later
 // connection serves normally. One-shot: simulates a real drop-and-resume for
-// a test verifying a reconnect actually resumes (via replay_from) and dedups
+// a test verifying a reconnect actually resumes (via Last-Event-ID) and dedups
 // whatever prefix gets redelivered, rather than only ever seeing a stream
 // that's already run to completion.
 func (h *Harness) DropConnectionAfterEvents(n int) {
@@ -283,20 +285,20 @@ func (h *Harness) handleStream(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	flusher, canFlush := w.(http.Flusher)
 
-	// Optional stream.state control frame (same wire value as the data-plane
-	// transport). Consumers must skip it — emit it so tests exercise that.
-	const streamStateKind = "stream.state"
+	// The data plane opens every stream with a stream.state control frame. It
+	// belongs to no run, so consumers must skip it rather than mistake it for
+	// session activity — emit it here so tests exercise that.
 	streamState, err := json.Marshal(eventWire{
 		TenantID:  "15726539",
 		SessionID: sessionID,
 		Timestamp: "2026-01-01T00:00:00Z",
-		Type:      streamStateKind,
+		Type:      string(godo.HostedAgentEventKindStreamState),
 		Data:      json.RawMessage(`{"state":"live","cursor":""}`),
 	})
 	if err != nil {
 		panic(fmt.Sprintf("agentproxytest: stream.state does not marshal to JSON: %v", err))
 	}
-	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", streamStateKind, streamState)
+	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", godo.HostedAgentEventKindStreamState, streamState)
 	if canFlush {
 		flusher.Flush()
 	}

@@ -1252,7 +1252,7 @@ func TestFacade_Replay_ThreadResume(t *testing.T) {
 // touches replay-only history, even when a session has some queued — the
 // flag must actually gate the behavior, not just always run it. Asserts
 // both "no notifications" and "replay never started": a silent fetch
-// failure (e.g. the harness 404ing .../stream) would satisfy expectNone
+// failure (e.g. the harness 404ing .../events) would satisfy expectNone
 // alone and hide a broken gate.
 func TestFacade_Replay_Disabled(t *testing.T) {
 	f, h, rec := newTestFacade(t)
@@ -1354,7 +1354,7 @@ func TestFacade_Replay_UnaffectedByConcurrentLiveTurnsReset(t *testing.T) {
 // no-op forever the way a plain sync.Once would have.
 //
 // The first attempt must fail for a reason that only hits once the
-// control-plane .../stream route is actually registered (injected 500) —
+// data-plane .../events route is actually registered (injected 500) —
 // a missing-route 404 would also unwind without marking replayDone and
 // make this half of the test pass for the wrong reason.
 func TestFacade_Replay_RetriesAfterAbortedAttempt(t *testing.T) {

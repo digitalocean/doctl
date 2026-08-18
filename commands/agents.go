@@ -68,19 +68,6 @@ var (
 	colMuted     = charm.Colors.Muted
 )
 
-// Stream-state transport frames (SSE kind "stream.state"). Defined locally so
-// doctl builds against godo pins that have not yet exported HostedAgentEventKindStreamState
-// / HostedAgentStreamState*. Wire values match the published godo API.
-const (
-	hostedAgentEventKindStreamState  godo.HostedAgentEventKind = "stream.state"
-	hostedAgentStreamStateSuperseded                           = "superseded"
-)
-
-type hostedAgentStreamState struct {
-	State  string `json:"state"`
-	Cursor string `json:"cursor,omitempty"`
-}
-
 // detectStyling reports whether ANSI styling should be emitted for the current
 // process: stdout is a terminal and NO_COLOR is unset.
 func detectStyling() bool {
@@ -231,7 +218,9 @@ func Agents() *Command {
 
 A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.
 
-Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.`,
+Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.
+
+These commands talk to the hosted-agents endpoint (` + "`" + `https://ohr-agent.do-ai.run` + "`" + `) rather than ` + "`" + `https://api.digitalocean.com` + "`" + `. Pass ` + "`" + `--api-url` + "`" + ` (or set ` + "`" + `DIGITALOCEAN_API_URL` + "`" + `) to point them somewhere else.`,
 			GroupID: hostedAgentsGroup,
 		},
 	}
@@ -1298,7 +1287,7 @@ func RunAgentsLogs(c *CmdConfig) error {
 	for stream.Next() {
 		ev := stream.Current()
 		// Connection health, not session activity — never part of the history.
-		if ev.Kind == hostedAgentEventKindStreamState {
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
 			continue
 		}
 		if ev.Kind == godo.HostedAgentEventKindTokenChunk {
@@ -2297,9 +2286,9 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 
 		// stream.state reports the health of the connection, not session
 		// activity, so it never renders and never moves the cursor.
-		if ev.Kind == hostedAgentEventKindStreamState {
-			var st hostedAgentStreamState
-			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == hostedAgentStreamStateSuperseded {
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			var st godo.HostedAgentStreamState
+			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
 				thinking.stop()
 				acc.flush(out)
 				flushAwaitingApproval(out, &awaiting)
