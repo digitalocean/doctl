@@ -93,6 +93,13 @@ func TestAgents_helpers(t *testing.T) {
 			assert.Equal(t, tc.want, got, "input=%q", tc.in)
 		}
 	})
+
+	t.Run("setBracketedPasteMode", func(t *testing.T) {
+		var buf bytes.Buffer
+		setBracketedPasteMode(&buf, true)
+		setBracketedPasteMode(&buf, false)
+		assert.Equal(t, "\x1b[?2004h\x1b[?2004l", buf.String())
+	})
 }
 
 func TestReadManifest(t *testing.T) {
@@ -1479,6 +1486,84 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			assert.Equal(t, 0, state.cursor)
 		})
 	})
+
+	t.Run("bracketed paste buffers multiline input into one submit", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "first line\nsecond line"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			for _, b := range []byte("\x1b[200~first line\r\nsecond line\x1b[201~") {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+			assert.Equal(t, "first line\nsecond line", string(state.lineBuf))
+
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Equal(t, "", string(state.lineBuf))
+			assert.Equal(t, 0, state.cursor)
+		})
+	})
+
+	t.Run("large multiline paste requires confirmation", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			text := "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6"
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: text}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			require.NotNil(t, state.largePasteConfirmation())
+
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'y', state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Nil(t, state.largePasteConfirmation())
+		})
+	})
+
+	t.Run("large multiline paste can fall back to line by line", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			for i := 1; i <= 6; i++ {
+				tm.hostedAgents.EXPECT().
+					SendInput("sess", &godo.HostedAgentSendInputRequest{Text: fmt.Sprintf("Line %d", i)}).
+					Return(&godo.HostedAgentSendInputResponse{RunID: fmt.Sprintf("run_%d", i)}, nil)
+			}
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			require.NotNil(t, state.largePasteConfirmation())
+
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'n', state)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Nil(t, state.largePasteConfirmation())
+		})
+	})
 }
 
 // TestAttachStateHITLSelection covers the arrow-key selection wrap-around and
@@ -1542,6 +1627,49 @@ func TestAttachLoopAcknowledgesSend(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
+}
+
+func TestAttachLoopBatchesRapidMultilineInput(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		prev := attachLineBatchWindow
+		attachLineBatchWindow = 5 * time.Millisecond
+		defer func() { attachLineBatchWindow = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		tm.hostedAgents.EXPECT().
+			SendInput("sess_x", &godo.HostedAgentSendInputRequest{Text: "Line A\nLine B\nLine C"}).
+			Return(&godo.HostedAgentSendInputResponse{RunID: "run-abc"}, nil)
+
+		err := attachLoop(config, config.HostedAgents(), "sess_x",
+			strings.NewReader("Line A\nLine B\nLine C\n"), testAttachStateFromPending(nil))
+		assert.NoError(t, err)
+		assert.Contains(t, buf.String(), "Detected rapid multiline input")
+		assert.Contains(t, buf.String(), "waiting for the agent")
+	})
+}
+
+func TestConfirmLargePasteLineMode(t *testing.T) {
+	lines := make(chan attachLineRead, 1)
+	lines <- attachLineRead{line: "y\n"}
+	close(lines)
+	var pending *attachLineRead
+	var buf bytes.Buffer
+	decision, err := confirmLargePasteLineMode(&buf, 6, lines, &pending)
+	require.NoError(t, err)
+	assert.Equal(t, largePasteSendTogether, decision)
+	assert.Contains(t, buf.String(), "You pasted 6 lines. Send them together as one message?")
+}
+
+func TestConfirmLargePasteLineModeDefaultSeparate(t *testing.T) {
+	lines := make(chan attachLineRead, 1)
+	lines <- attachLineRead{line: "n\n"}
+	close(lines)
+	var pending *attachLineRead
+	var buf bytes.Buffer
+	decision, err := confirmLargePasteLineMode(&buf, 6, lines, &pending)
+	require.NoError(t, err)
+	assert.Equal(t, largePasteSendSeparately, decision)
 }
 
 // TestAttachLoopHITLLetterShortcut covers the line-mode HITL path. The

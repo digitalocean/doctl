@@ -1811,9 +1811,16 @@ func truncateRunes(s string, max int) string {
 
 func openaiAttachLoop(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, in io.Reader, state *attachState, thinking *thinkingState) error {
 	reader := bufio.NewReader(in)
+	lines := startAttachLineReader(reader)
+	var pendingLine *attachLineRead
+	interactiveLineMode := false
+	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		interactiveLineMode = true
+	}
 	for {
 		fmt.Fprint(c.Out, "\n", attachPrompt(state.pending))
-		line, err := reader.ReadString('\n')
+		read := nextAttachLine(lines, &pendingLine)
+		line, err := read.line, read.err
 		if errors.Is(err, io.EOF) {
 			fmt.Fprintln(c.Out)
 			return nil
@@ -1828,6 +1835,43 @@ func openaiAttachLoop(c *CmdConfig, ctx context.Context, client openAIAgentsClie
 		if strings.HasPrefix(line, "/") {
 			fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
 			continue
+		}
+		if batched := collectAttachLines(line, lines, &pendingLine, true); len(batched) > 1 {
+			line = strings.Join(batched, "\n")
+			fmt.Fprintln(c.Out, colorize("Detected rapid multiline input; sending it as one message.", colMuted))
+		}
+		if n, ok := needsLargePasteConfirmation(line); ok && interactiveLineMode {
+			decision, err := confirmLargePasteLineMode(c.Out, n, lines, &pendingLine)
+			if errors.Is(err, io.EOF) {
+				fmt.Fprintln(c.Out)
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			switch decision {
+			case largePasteSendTogether:
+			case largePasteSendSeparately:
+				for _, part := range splitSubmittedLines(line) {
+					if strings.HasPrefix(part, "/") {
+						fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
+						continue
+					}
+					if thinking != nil {
+						thinking.start()
+					}
+					if err := client.SendInput(ctx, apiKey, openaiSessionID, part); err != nil {
+						if thinking != nil {
+							thinking.stop()
+						}
+						fmt.Fprintf(c.Out, "send failed: %v\n", err)
+					}
+				}
+				continue
+			case largePasteDiscard:
+				fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+				continue
+			}
 		}
 		if thinking != nil {
 			thinking.start()
@@ -1852,6 +1896,8 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 		return openaiAttachLoop(c, ctx, client, apiKey, openaiSessionID, f, state, thinking)
 	}
 	defer term.Restore(fd, oldState)
+	setBracketedPasteMode(f, true)
+	defer setBracketedPasteMode(f, false)
 
 	state.display.setRaw(true)
 	defer state.display.setRaw(false)
@@ -1898,41 +1944,70 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 }
 
 func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState) (stop bool, err error) {
-	if state.esc == 2 {
-		state.esc = 0
+	if confirm := state.largePasteConfirmation(); confirm != nil {
 		switch b {
-		case 'D':
-			if state.moveLineCursor(-1) {
-				state.display.redraw()
+		case 'y', 'Y':
+			state.display.echo([]byte{b, '\r', '\n'})
+			state.takeLargePasteConfirmation()
+			if thinking != nil {
+				thinking.start()
 			}
-		case 'C':
-			if state.moveLineCursor(1) {
-				state.display.redraw()
+			if err := client.SendInput(ctx, apiKey, openaiSessionID, confirm.text); err != nil {
+				if thinking != nil {
+					thinking.stop()
+				}
+				fmt.Fprintf(c.Out, "send failed: %v\n", err)
 			}
-		}
-		return false, nil
-	}
-	if state.esc == 1 {
-		state.esc = 0
-		if b == '[' || b == 'O' {
-			state.esc = 2
+			state.display.redraw()
+			return false, nil
+		case 'n', 'N', 0x0d, 0x0a:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			for _, part := range splitSubmittedLines(confirm.text) {
+				if strings.HasPrefix(part, "/") {
+					fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
+					continue
+				}
+				if thinking != nil {
+					thinking.start()
+				}
+				if err := client.SendInput(ctx, apiKey, openaiSessionID, part); err != nil {
+					if thinking != nil {
+						thinking.stop()
+					}
+					fmt.Fprintf(c.Out, "send failed: %v\n", err)
+				}
+			}
+			state.display.redraw()
+			return false, nil
+		case 0x03, 0x04:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+			state.display.redraw()
+			return false, nil
+		default:
 			return false, nil
 		}
 	}
-	if b == 0x1b {
-		state.esc = 1
+	if state.pasting {
+		handlePastedByte(b, state)
+		return false, nil
+	}
+	if handleAttachEscapeSequence(b, state) {
 		return false, nil
 	}
 
 	switch b {
 	case 0x0d, 0x0a:
-		state.mu.Lock()
-		line := strings.TrimSpace(string(state.lineBuf))
-		state.lineBuf = state.lineBuf[:0]
-		state.cursor = 0
-		state.mu.Unlock()
+		line := readSubmittedInput(state)
 		state.display.echo([]byte("\r\n"))
 		if line != "" {
+			if n, ok := needsLargePasteConfirmation(line); ok {
+				state.setLargePasteConfirmation(line, n)
+				state.display.redraw()
+				return false, nil
+			}
 			if strings.HasPrefix(line, "/") {
 				fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
 			} else {
@@ -2717,6 +2792,12 @@ func (p *pendingHITL) reset() int {
 func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState) error {
 	pending := state.pending
 	reader := bufio.NewReader(in)
+	lines := startAttachLineReader(reader)
+	var pendingLine *attachLineRead
+	interactiveLineMode := false
+	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		interactiveLineMode = true
+	}
 	for {
 		fmt.Fprint(c.Out, "\n", attachPrompt(pending))
 
@@ -2752,7 +2833,8 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			}
 		}
 
-		line, err := reader.ReadString('\n')
+		read := nextAttachLine(lines, &pendingLine)
+		line, err := read.line, read.err
 		if errors.Is(err, io.EOF) {
 			fmt.Fprintln(c.Out)
 			return nil
@@ -2784,6 +2866,33 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			}
 			continue
 		}
+		if batched := collectAttachLines(line, lines, &pendingLine, false); len(batched) > 1 {
+			line = strings.Join(batched, "\n")
+			fmt.Fprintln(c.Out, colorize("Detected rapid multiline input; sending it as one message.", colMuted))
+		}
+		if n, ok := needsLargePasteConfirmation(line); ok && interactiveLineMode {
+			decision, err := confirmLargePasteLineMode(c.Out, n, lines, &pendingLine)
+			if errors.Is(err, io.EOF) {
+				fmt.Fprintln(c.Out)
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			switch decision {
+			case largePasteSendTogether:
+			case largePasteSendSeparately:
+				for _, part := range splitSubmittedLines(line) {
+					if detach := processAttachLine(c, svc, sessionID, part, state); detach {
+						return nil
+					}
+				}
+				continue
+			case largePasteDiscard:
+				fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+				continue
+			}
+		}
 		// Ack immediately; the first agent token can be tens of seconds away
 		// and without this users re-submit, spawning a duplicate run.
 		if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
@@ -2798,6 +2907,134 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 		}
 		fmt.Fprintln(c.Out, colorize("… waiting for the agent", colMuted))
 	}
+}
+
+type attachLineRead struct {
+	line string
+	err  error
+}
+
+var attachLineBatchWindow = 40 * time.Millisecond
+const largePasteConfirmMinLines = 6
+
+func startAttachLineReader(reader *bufio.Reader) <-chan attachLineRead {
+	ch := make(chan attachLineRead, 1)
+	go func() {
+		defer close(ch)
+		for {
+			line, err := reader.ReadString('\n')
+			ch <- attachLineRead{line: line, err: err}
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return ch
+}
+
+func nextAttachLine(lines <-chan attachLineRead, pending **attachLineRead) attachLineRead {
+	if *pending != nil {
+		read := **pending
+		*pending = nil
+		return read
+	}
+	read, ok := <-lines
+	if !ok {
+		return attachLineRead{err: io.EOF}
+	}
+	return read
+}
+
+func collectAttachLines(first string, lines <-chan attachLineRead, pending **attachLineRead, openAI bool) []string {
+	if strings.HasPrefix(first, "/") {
+		return []string{first}
+	}
+	collected := []string{first}
+	timer := time.NewTimer(attachLineBatchWindow)
+	defer timer.Stop()
+	for {
+		select {
+		case read, ok := <-lines:
+			if !ok {
+				return collected
+			}
+			if read.err != nil {
+				*pending = &read
+				return collected
+			}
+			line := strings.TrimSpace(read.line)
+			if line == "" {
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				timer.Reset(attachLineBatchWindow)
+				continue
+			}
+			if strings.HasPrefix(line, "/") || (!openAI && hitlShortcutOnly(line)) {
+				*pending = &attachLineRead{line: line}
+				return collected
+			}
+			collected = append(collected, line)
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(attachLineBatchWindow)
+		case <-timer.C:
+			return collected
+		}
+	}
+}
+
+func hitlShortcutOnly(line string) bool {
+	_, ok := hitlLetterShortcut(line)
+	return ok
+}
+
+func confirmLargePasteLineMode(out io.Writer, linesCount int, lines <-chan attachLineRead, pending **attachLineRead) (largePasteDecision, error) {
+	fmt.Fprintf(out, "You pasted %d lines. Send them together as one message? [y/N] ", linesCount)
+	read := nextAttachLine(lines, pending)
+	if read.err != nil {
+		return largePasteDiscard, read.err
+	}
+	answer := strings.ToLower(strings.TrimSpace(read.line))
+	switch answer {
+	case "y", "yes":
+		return largePasteSendTogether, nil
+	case "discard", "cancel":
+		return largePasteDiscard, nil
+	default:
+		return largePasteSendSeparately, nil
+	}
+}
+
+func largePasteLineCount(text string) int {
+	if strings.TrimSpace(text) == "" {
+		return 0
+	}
+	return strings.Count(text, "\n") + 1
+}
+
+func needsLargePasteConfirmation(text string) (int, bool) {
+	n := largePasteLineCount(text)
+	return n, n >= largePasteConfirmMinLines
+}
+
+func splitSubmittedLines(text string) []string {
+	parts := strings.Split(text, "\n")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 // attachPrompt reflects the HITL queue depth so the user knows when more than
@@ -2824,8 +3061,23 @@ type attachState struct {
 	lineBuf []byte
 	cursor  int // byte index into lineBuf (ASCII-only input today)
 	hitlSel int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
-	esc     int // arrow-key escape-sequence parse state (0 none, 1 ESC, 2 ESC[)
+	escSeq  []byte
+	pasting bool
+	confirm *largePasteConfirmation
 }
+
+type largePasteConfirmation struct {
+	text  string
+	lines int
+}
+
+type largePasteDecision int
+
+const (
+	largePasteSendTogether largePasteDecision = iota
+	largePasteSendSeparately
+	largePasteDiscard
+)
 
 func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 	s := &attachState{pending: pending}
@@ -2835,7 +3087,7 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 		lineBuf: func() string {
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			return string(s.lineBuf)
+			return displayInputBuffer(s.lineBuf)
 		},
 		cursorPos: func() int {
 			s.mu.Lock()
@@ -2850,13 +3102,17 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 // input prompt; while an approval is pending it becomes the arrow-navigable
 // approve/reject/defer menu.
 func (s *attachState) promptString() string {
+	s.mu.Lock()
+	confirm := s.confirm
+	sel := s.hitlSel
+	s.mu.Unlock()
+	if confirm != nil {
+		return fmt.Sprintf("You pasted %d lines. Send them together as one message? [y/N] ", confirm.lines)
+	}
 	n := s.pending.len()
 	if n == 0 {
 		return "> "
 	}
-	s.mu.Lock()
-	sel := s.hitlSel
-	s.mu.Unlock()
 	return hitlMenuPrompt(sel, n)
 }
 
@@ -2879,6 +3135,26 @@ func (s *attachState) resetHITLSelection() {
 	s.mu.Unlock()
 }
 
+func (s *attachState) setLargePasteConfirmation(text string, lines int) {
+	s.mu.Lock()
+	s.confirm = &largePasteConfirmation{text: text, lines: lines}
+	s.mu.Unlock()
+}
+
+func (s *attachState) takeLargePasteConfirmation() *largePasteConfirmation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	confirm := s.confirm
+	s.confirm = nil
+	return confirm
+}
+
+func (s *attachState) largePasteConfirmation() *largePasteConfirmation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.confirm
+}
+
 // moveLineCursor shifts the text-input caret by delta bytes, clamped to the
 // line buffer. Returns whether the caret actually moved.
 func (s *attachState) moveLineCursor(delta int) bool {
@@ -2896,6 +3172,195 @@ func (s *attachState) moveLineCursor(delta int) bool {
 	}
 	s.cursor = next
 	return true
+}
+
+func displayInputBuffer(buf []byte) string {
+	if len(buf) == 0 {
+		return ""
+	}
+	line := string(buf)
+	line = strings.ReplaceAll(line, "\r\n", " ")
+	line = strings.ReplaceAll(line, "\n", " ")
+	line = strings.ReplaceAll(line, "\r", " ")
+	return line
+}
+
+func submittedInput(buf []byte) string {
+	line := strings.ReplaceAll(string(buf), "\r\n", "\n")
+	line = strings.ReplaceAll(line, "\r", "\n")
+	return strings.TrimSpace(line)
+}
+
+var (
+	bracketedPasteStart = []byte{0x1b, '[', '2', '0', '0', '~'}
+	bracketedPasteEnd   = []byte{0x1b, '[', '2', '0', '1', '~'}
+)
+
+const (
+	enableBracketedPaste  = "\x1b[?2004h"
+	disableBracketedPaste = "\x1b[?2004l"
+)
+
+func setBracketedPasteMode(w io.Writer, enabled bool) {
+	if enabled {
+		_, _ = io.WriteString(w, enableBracketedPaste)
+		return
+	}
+	_, _ = io.WriteString(w, disableBracketedPaste)
+}
+
+func isPrefix(seq, candidate []byte) bool {
+	if len(seq) > len(candidate) {
+		return false
+	}
+	for i := range seq {
+		if seq[i] != candidate[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func isKnownEscPrefix(seq []byte) bool {
+	for _, candidate := range [][]byte{
+		{0x1b},
+		{0x1b, '['},
+		{0x1b, 'O'},
+		{0x1b, '[', 'A'},
+		{0x1b, '[', 'B'},
+		{0x1b, '[', 'C'},
+		{0x1b, '[', 'D'},
+		{0x1b, 'O', 'A'},
+		{0x1b, 'O', 'B'},
+		{0x1b, 'O', 'C'},
+		{0x1b, 'O', 'D'},
+		bracketedPasteStart,
+	} {
+		if isPrefix(seq, candidate) {
+			return true
+		}
+	}
+	return false
+}
+
+func appendBufferedInput(state *attachState, chunk []byte) bool {
+	if len(chunk) == 0 {
+		return false
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.cursor != len(state.lineBuf) {
+		return false
+	}
+	for _, b := range chunk {
+		switch b {
+		case 0x0d, 0x0a:
+			if n := len(state.lineBuf); n > 0 && state.lineBuf[n-1] == '\n' {
+				continue
+			}
+			state.lineBuf = append(state.lineBuf, '\n')
+			state.cursor++
+		default:
+			if b >= 0x20 && b < 0x7f {
+				state.lineBuf = append(state.lineBuf, b)
+				state.cursor++
+			}
+		}
+	}
+	return true
+}
+
+func readSubmittedInput(state *attachState) string {
+	state.mu.Lock()
+	line := submittedInput(state.lineBuf)
+	state.lineBuf = state.lineBuf[:0]
+	state.cursor = 0
+	state.mu.Unlock()
+	return line
+}
+
+func handleAttachEscapeSequence(b byte, state *attachState) bool {
+	if len(state.escSeq) == 0 {
+		if b != 0x1b {
+			return false
+		}
+		state.escSeq = []byte{b}
+		return true
+	}
+
+	state.escSeq = append(state.escSeq, b)
+	seq := state.escSeq
+	switch {
+	case bytes.Equal(seq, bracketedPasteStart):
+		state.escSeq = nil
+		state.pasting = true
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'A'}), bytes.Equal(seq, []byte{0x1b, 'O', 'A'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(-1)
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'D'}), bytes.Equal(seq, []byte{0x1b, 'O', 'D'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(-1)
+			state.display.redraw()
+		} else if state.moveLineCursor(-1) {
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'B'}), bytes.Equal(seq, []byte{0x1b, 'O', 'B'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(1)
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'C'}), bytes.Equal(seq, []byte{0x1b, 'O', 'C'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(1)
+			state.display.redraw()
+		} else if state.moveLineCursor(1) {
+			state.display.redraw()
+		}
+		return true
+	case isKnownEscPrefix(seq):
+		return true
+	default:
+		state.escSeq = nil
+		return false
+	}
+}
+
+func handlePastedByte(b byte, state *attachState) {
+	if len(state.escSeq) > 0 || b == 0x1b {
+		if len(state.escSeq) == 0 {
+			state.escSeq = []byte{b}
+			return
+		}
+		state.escSeq = append(state.escSeq, b)
+		seq := state.escSeq
+		if bytes.Equal(seq, bracketedPasteEnd) {
+			state.escSeq = nil
+			state.pasting = false
+			state.display.redraw()
+			return
+		}
+		if isPrefix(seq, bracketedPasteEnd) {
+			return
+		}
+		if appendBufferedInput(state, seq) {
+			state.display.redraw()
+		}
+		state.escSeq = nil
+		return
+	}
+	if appendBufferedInput(state, []byte{b}) {
+		state.display.redraw()
+	}
 }
 
 // promptDisplay serializes terminal writes between the input loop and the
@@ -3068,6 +3533,8 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		return attachLoop(c, svc, sessionID, f, state)
 	}
 	defer term.Restore(fd, oldState)
+	setBracketedPasteMode(f, true)
+	defer setBracketedPasteMode(f, false)
 
 	state.display.setRaw(true)
 	defer state.display.setRaw(false)
@@ -3125,43 +3592,41 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 // handleAttachByte is the per-byte state machine. stop=true exits the loop
 // (Ctrl-C, Ctrl-D on empty line).
 func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState) (stop bool, err error) {
-	// Arrow-key escape sequences arrive as three bytes: ESC, '[' (or 'O'), then
-	// A/B/C/D. With a pending HITL they move the approve/reject/defer highlight;
-	// otherwise left/right move the text-input caret.
-	if state.esc == 2 {
-		state.esc = 0
-		switch {
-		case state.pending.get() != "":
-			switch b {
-			case 'A', 'D': // up / left
-				state.moveHITLSelection(-1)
-				state.display.redraw()
-			case 'B', 'C': // down / right
-				state.moveHITLSelection(1)
-				state.display.redraw()
+	if confirm := state.largePasteConfirmation(); confirm != nil {
+		switch b {
+		case 'y', 'Y':
+			state.display.echo([]byte{b, '\r', '\n'})
+			state.takeLargePasteConfirmation()
+			if detach := processAttachLine(c, svc, sessionID, confirm.text, state); detach {
+				return true, nil
 			}
-		case b == 'D': // left
-			if state.moveLineCursor(-1) {
-				state.display.redraw()
+			state.display.redraw()
+			return false, nil
+		case 'n', 'N', 0x0d, 0x0a:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			for _, part := range splitSubmittedLines(confirm.text) {
+				if detach := processAttachLine(c, svc, sessionID, part, state); detach {
+					return true, nil
+				}
 			}
-		case b == 'C': // right
-			if state.moveLineCursor(1) {
-				state.display.redraw()
-			}
-			// up/down ignored for text input (no history yet)
-		}
-		return false, nil
-	}
-	if state.esc == 1 {
-		state.esc = 0
-		if b == '[' || b == 'O' {
-			state.esc = 2
+			state.display.redraw()
+			return false, nil
+		case 0x03, 0x04:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+			state.display.redraw()
+			return false, nil
+		default:
 			return false, nil
 		}
-		// Lone ESC or unrecognized sequence: fall through and handle b normally.
 	}
-	if b == 0x1b { // ESC — start of a possible arrow sequence
-		state.esc = 1
+	if state.pasting {
+		handlePastedByte(b, state)
+		return false, nil
+	}
+	if handleAttachEscapeSequence(b, state) {
 		return false, nil
 	}
 
@@ -3205,13 +3670,14 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 
 	switch b {
 	case 0x0d, 0x0a: // Enter
-		state.mu.Lock()
-		line := strings.TrimSpace(string(state.lineBuf))
-		state.lineBuf = state.lineBuf[:0]
-		state.cursor = 0
-		state.mu.Unlock()
+		line := readSubmittedInput(state)
 		state.display.echo([]byte("\r\n"))
 		if line != "" {
+			if n, ok := needsLargePasteConfirmation(line); ok {
+				state.setLargePasteConfirmation(line, n)
+				state.display.redraw()
+				return false, nil
+			}
 			if detach := processAttachLine(c, svc, sessionID, line, state); detach {
 				return true, nil
 			}
