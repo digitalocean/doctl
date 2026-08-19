@@ -1002,6 +1002,9 @@ const (
 	// ArgAgentCheckpointLabel is an optional user label for an explicit checkpoint.
 	ArgAgentCheckpointLabel = "label"
 
+	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
+	ArgAgentForwardAddress = "address"
+
 	// ArgAgentFromCheckpoint is the checkpoint ID to fork or roll back from.
 	ArgAgentFromCheckpoint = "from-checkpoint"
 
