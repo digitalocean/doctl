@@ -1048,6 +1048,55 @@ func latestVersionForUpgrade(clusterVersionSlug string, versions []do.Kubernetes
 	return bucket[i].Slug, true, nil
 }
 
+// warnAssociatedResources warns about the DigitalOcean resources associated
+// with a cluster, so that the user can see the cluster isn't empty before
+// confirming an irreversible delete.
+func warnAssociatedResources(kube do.KubernetesService, clusterID, clusterName string) {
+	if !Interactive {
+		// No confirmation prompt follows, so there is nobody to warn.
+		return
+	}
+	resources, err := kube.ListAssociatedResourcesForDeletion(clusterID)
+	if err != nil {
+		warn("Couldn't list the resources associated with cluster %q.", clusterName)
+		return
+	}
+	if msg := associatedResourcesWarning(clusterName, resources); msg != "" {
+		warn("%s", msg)
+	}
+}
+
+// associatedResourcesWarning summarizes a cluster's associated resources. It
+// returns an empty string when the cluster has none.
+func associatedResourcesWarning(clusterName string, resources *do.KubernetesAssociatedResources) string {
+	if resources == nil {
+		return ""
+	}
+	counts := []struct {
+		label string
+		count int
+	}{
+		{"Load balancers", len(resources.LoadBalancers)},
+		{"Volumes", len(resources.Volumes)},
+		{"Volume snapshots", len(resources.VolumeSnapshots)},
+	}
+
+	msg := fmt.Sprintf("Cluster %q has the following associated resources:\n", clusterName)
+	var found bool
+	for _, c := range counts {
+		if c.count == 0 {
+			continue
+		}
+		found = true
+		msg += fmt.Sprintf("  %s: %d\n", c.label, c.count)
+	}
+	if !found {
+		return ""
+	}
+
+	return msg + "Deleting the cluster is irreversible."
+}
+
 // RunKubernetesClusterDelete deletes a Kubernetes cluster
 func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) error {
 	if len(c.Args) < 1 {
@@ -1076,10 +1125,11 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 			return err
 		}
 
-		if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
-			// continue
-		} else {
-			return fmt.Errorf("Operation aborted")
+		if !force {
+			warnAssociatedResources(kube, clusterID, cluster)
+			if AskForConfirmDelete("Kubernetes cluster", 1) != nil {
+				return fmt.Errorf("Operation aborted")
+			}
 		}
 
 		var kubeconfig []byte
@@ -1149,13 +1199,14 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		return err
 	}
 
-	if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
-		// continue
-	} else {
-		return fmt.Errorf("Operation aborted")
-	}
-
 	kube := c.Kubernetes()
+
+	if !force {
+		warnAssociatedResources(kube, clusterID, clusterIDorName)
+		if AskForConfirmDelete("Kubernetes cluster", 1) != nil {
+			return fmt.Errorf("Operation aborted")
+		}
+	}
 
 	var kubeconfig []byte
 	if update {

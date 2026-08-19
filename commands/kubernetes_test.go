@@ -1236,6 +1236,20 @@ func TestKubernetesDeleteSelective(t *testing.T) {
 	})
 }
 
+func TestAssociatedResourcesWarning(t *testing.T) {
+	assert.Empty(t, associatedResourcesWarning("example-cluster", nil))
+	assert.Empty(t, associatedResourcesWarning("example-cluster", &do.KubernetesAssociatedResources{
+		KubernetesAssociatedResources: &godo.KubernetesAssociatedResources{},
+	}))
+
+	msg := associatedResourcesWarning("example-cluster", &testAssociatedResources)
+	assert.Contains(t, msg, `Cluster "example-cluster" has the following associated resources:`)
+	assert.Contains(t, msg, "Load balancers: 1")
+	assert.Contains(t, msg, "Volumes: 1")
+	assert.Contains(t, msg, "Volume snapshots: 1")
+	assert.Contains(t, msg, "irreversible")
+}
+
 func TestKubernetesListAssociatedResources(t *testing.T) {
 	// by ID
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
