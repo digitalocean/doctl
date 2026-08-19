@@ -1411,7 +1411,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 	typewrite := func(t *testing.T, state *attachState, s string) {
 		t.Helper()
 		for i := 0; i < len(s); i++ {
-			stop, err := handleAttachByte(nil, nil, "sess", s[i], state)
+			stop, err := handleAttachByte(nil, nil, "sess", s[i], state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 		}
@@ -1419,7 +1419,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 	arrow := func(t *testing.T, state *attachState, dir byte) {
 		t.Helper()
 		for _, b := range []byte{0x1b, '[', dir} {
-			stop, err := handleAttachByte(nil, nil, "sess", b, state)
+			stop, err := handleAttachByte(nil, nil, "sess", b, state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 		}
@@ -1463,7 +1463,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 		typewrite(t, state, "abcd")
 		arrow(t, state, 'D')
 		arrow(t, state, 'D') // caret before 'c'
-		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state)
+		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state, nil)
 		assert.NoError(t, err)
 		assert.False(t, stop)
 		assert.Equal(t, "acd", string(state.lineBuf))
@@ -1479,7 +1479,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			typewrite(t, state, "hi")
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Equal(t, "", string(state.lineBuf))
@@ -1496,13 +1496,13 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			for _, b := range []byte("\x1b[200~first line\r\nsecond line\x1b[201~") {
-				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state)
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
 				assert.NoError(t, err)
 				assert.False(t, stop)
 			}
 			assert.Equal(t, "first line\nsecond line", string(state.lineBuf))
 
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Equal(t, "", string(state.lineBuf))
@@ -1520,17 +1520,17 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
-				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state)
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
 				assert.NoError(t, err)
 				assert.False(t, stop)
 			}
 
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			require.NotNil(t, state.largePasteConfirmation())
 
-			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'y', state)
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'y', state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Nil(t, state.largePasteConfirmation())
@@ -1548,17 +1548,17 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
-				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state)
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
 				assert.NoError(t, err)
 				assert.False(t, stop)
 			}
 
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			require.NotNil(t, state.largePasteConfirmation())
 
-			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'n', state)
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'n', state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Nil(t, state.largePasteConfirmation())
@@ -2210,6 +2210,22 @@ func TestPromptDisplay(t *testing.T) {
 		// Spinner on its own line, then the prompt one row below it.
 		assert.Equal(t, "\r\x1b[K⠋ thinking...\r\n> ", buf.String())
 		assert.False(t, s.display.midLine)
+	})
+
+	t.Run("warmupInit reserves spinner and queued rows above the prompt", func(t *testing.T) {
+		var buf bytes.Buffer
+		pending := &pendingHITL{}
+		s := newAttachState(&buf, pending)
+		s.display.setRaw(true)
+
+		s.display.warmupInit("⠋", msgAgentWarmup)
+		assert.Contains(t, buf.String(), msgAgentWarmup)
+		assert.Contains(t, buf.String(), "> ")
+
+		buf.Reset()
+		s.display.warmupSetQueued(msgAgentWarmupQueued)
+		assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+		assert.Contains(t, buf.String(), "> ")
 	})
 }
 
@@ -3000,6 +3016,102 @@ func TestWarmupState_showsForYoungSessions(t *testing.T) {
 	assert.NotContains(t, buf.String(), "You can type anytime")
 }
 
+func TestWarmupState_noteQueuedUpdatesNotice(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+
+	w.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+	assert.NotContains(t, buf.String(), msgAgentWarmupQueued)
+
+	buf.Reset()
+	w.noteQueued()
+	assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+
+	// Further typing keeps the prompt in sync with the warm-up block.
+	buf.Reset()
+	stop, err := handleAttachByte(nil, nil, "sess", 'i', state, w)
+	assert.NoError(t, err)
+	assert.False(t, stop)
+	assert.Contains(t, buf.String(), "> i")
+}
+
+func TestWarmupState_blocksDuplicateSubmit(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "2+2"}).
+			Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		w := newWarmupState(state.display, now.Add(-30*time.Second))
+		w.start()
+
+		for _, b := range []byte("2+2") {
+			_, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, w)
+			assert.NoError(t, err)
+		}
+		stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.True(t, w.inputAlreadyQueued())
+
+		stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+	})
+}
+
+func TestHandleOpenAIAttachByte_warmupQueuedNotice(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+	w.start()
+
+	stop, err := handleOpenAIAttachByte(nil, context.Background(), nil, "", "sess_openai", '4', state, nil, w)
+	assert.NoError(t, err)
+	assert.False(t, stop)
+	assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+	assert.Contains(t, buf.String(), "> 4")
+}
+
+func TestWarmupState_markInputQueuedDismissesBanner(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+	w.start()
+	assert.True(t, w.isBannerVisible())
+
+	w.markInputQueued()
+	assert.True(t, w.inputAlreadyQueued())
+	assert.True(t, w.isBannerVisible())
+	assert.True(t, w.isActive())
+}
+
 func TestWarmupState_clearsOnTimeout(t *testing.T) {
 	oldClock := warmupClock
 	oldDur := warmupDuration
@@ -3042,7 +3154,9 @@ func TestWarmupState_startAfterClearIsNoop(t *testing.T) {
 
 	var buf bytes.Buffer
 	w := newWarmupState(&buf, now)
+	w.start()
 	w.clear()
+	buf.Reset()
 	w.start()
 	assert.Empty(t, buf.String())
 }

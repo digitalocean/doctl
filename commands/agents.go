@@ -1710,6 +1710,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
 		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
 	case "session.idle":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1927,7 +1928,7 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 		case <-ctx.Done():
 			return nil
 		case b := <-bytesCh:
-			stop, err := handleOpenAIAttachByte(c, ctx, client, apiKey, openaiSessionID, b, state, thinking)
+			stop, err := handleOpenAIAttachByte(c, ctx, client, apiKey, openaiSessionID, b, state, thinking, warmup)
 			if err != nil {
 				return err
 			}
@@ -1943,15 +1944,38 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 	}
 }
 
-func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState) (stop bool, err error) {
+func startThinkingIfReady(thinking *thinkingState, warmup *warmupState) {
+	if thinking != nil && (warmup == nil || !warmup.isActive()) {
+		thinking.start()
+	}
+}
+
+func printAttachSendAck(out io.Writer, warmup *warmupState) {
+	if warmup != nil && warmup.isActive() {
+		// The warm-up banner already shows the queued notice in-place.
+		if warmup.isBannerVisible() {
+			return
+		}
+		fmt.Fprintln(out, colorize("Message queued — will send when agent is ready", colMuted))
+		return
+	}
+	fmt.Fprintln(out, colorize("… waiting for the agent", colMuted))
+}
+
+func echoAttachSubmitNewline(display *promptDisplay, warmup *warmupState) {
+	if warmup != nil && warmup.isBannerVisible() {
+		return
+	}
+	display.echo([]byte("\r\n"))
+}
+
+func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState, warmup *warmupState) (stop bool, err error) {
 	if confirm := state.largePasteConfirmation(); confirm != nil {
 		switch b {
 		case 'y', 'Y':
 			state.display.echo([]byte{b, '\r', '\n'})
 			state.takeLargePasteConfirmation()
-			if thinking != nil {
-				thinking.start()
-			}
+			startThinkingIfReady(thinking, warmup)
 			if err := client.SendInput(ctx, apiKey, openaiSessionID, confirm.text); err != nil {
 				if thinking != nil {
 					thinking.stop()
@@ -1968,9 +1992,7 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 					fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
 					continue
 				}
-				if thinking != nil {
-					thinking.start()
-				}
+				startThinkingIfReady(thinking, warmup)
 				if err := client.SendInput(ctx, apiKey, openaiSessionID, part); err != nil {
 					if thinking != nil {
 						thinking.stop()
@@ -1992,6 +2014,10 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 	}
 	if state.pasting {
 		handlePastedByte(b, state)
+		warmup.noteQueued()
+		if warmup.isBannerVisible() {
+			state.display.redraw()
+		}
 		return false, nil
 	}
 	if handleAttachEscapeSequence(b, state) {
@@ -2001,7 +2027,12 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 	switch b {
 	case 0x0d, 0x0a:
 		line := readSubmittedInput(state)
-		state.display.echo([]byte("\r\n"))
+		if line != "" && warmup.inputAlreadyQueued() {
+			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
+			state.display.redraw()
+			return false, nil
+		}
+		echoAttachSubmitNewline(state.display, warmup)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
@@ -2011,15 +2042,15 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 			if strings.HasPrefix(line, "/") {
 				fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
 			} else {
-				// Single spinner on send (idempotent if stream also starts it).
-				if thinking != nil {
-					thinking.start()
-				}
+				startThinkingIfReady(thinking, warmup)
 				if err := client.SendInput(ctx, apiKey, openaiSessionID, line); err != nil {
 					if thinking != nil {
 						thinking.stop()
 					}
 					fmt.Fprintf(c.Out, "send failed: %v\n", err)
+				} else if warmup.isActive() {
+					warmup.markInputQueued()
+					printAttachSendAck(c.Out, warmup)
 				}
 			}
 		}
@@ -2033,7 +2064,9 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
 			state.mu.Unlock()
-			if atEnd {
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte("\b \b"))
 			} else {
 				state.display.redraw()
@@ -2065,7 +2098,10 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 			}
 			state.cursor++
 			state.mu.Unlock()
-			if atEnd {
+			warmup.noteQueued()
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte{b})
 			} else {
 				state.display.redraw()
@@ -2132,11 +2168,15 @@ var healthyStreamDuration = 30 * time.Second
 // streamClock returns the current time; overridable in tests.
 var streamClock = time.Now
 
-// Warm-up notice (MARSOHS-796): freshly provisioned sessions can take up to
-// ~90s before the in-guest agent is actually listening. Show a friendly
-// status for young sessions so the CLI doesn't look frozen/silent while the
-// backend retries. Overridable in tests.
-const msgAgentWarmup = "Agent is warming up… please wait"
+// Warm-up notice (MARSOHS-796 / MARSOHS-972): freshly provisioned sessions can
+// take up to ~90s before the in-guest agent is actually listening. Show a
+// friendly status for young sessions so the CLI doesn't look frozen/silent
+// while the backend retries, and make it explicit that typed input will be
+// queued once the user starts entering a prompt. Overridable in tests.
+const (
+	msgAgentWarmup       = "Agent is warming up… please wait"
+	msgAgentWarmupQueued = "Message is being queued"
+)
 
 var (
 	warmupDuration    = 60 * time.Second
@@ -2236,6 +2276,8 @@ type warmupState struct {
 	eligible      bool
 	active        bool
 	dismissed     bool
+	queued        bool
+	inputQueued   bool
 	timeoutCancel context.CancelFunc
 	animCancel    context.CancelFunc
 	animDone      chan struct{}
@@ -2247,6 +2289,44 @@ func newWarmupState(out io.Writer, createdAt time.Time) *warmupState {
 		w.eligible = true
 	}
 	return w
+}
+
+func (w *warmupState) isActive() bool {
+	if w == nil {
+		return false
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.active && !w.dismissed
+}
+
+func (w *warmupState) inputAlreadyQueued() bool {
+	if w == nil {
+		return false
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.inputQueued
+}
+
+func (w *warmupState) markInputQueued() {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	w.inputQueued = true
+	w.mu.Unlock()
+}
+
+func (w *warmupState) isBannerVisible() bool {
+	if w == nil || !w.isActive() {
+		return false
+	}
+	display, ok := w.out.(*promptDisplay)
+	if !ok {
+		return false
+	}
+	return display.warmupBannerActive()
 }
 
 // start shows the warm-up notice immediately. Prefer the erasable prompt
@@ -2268,7 +2348,7 @@ func (w *warmupState) start() {
 
 	display, ok := w.out.(*promptDisplay)
 	if ok {
-		display.spinnerInit(spinnerFrames[0], msgAgentWarmup)
+		display.warmupInit(spinnerFrames[0], msgAgentWarmup)
 		animCtx, animCancel := context.WithCancel(context.Background())
 		done := make(chan struct{})
 		w.animCancel = animCancel
@@ -2293,8 +2373,32 @@ func (w *warmupState) animate(ctx context.Context, d *promptDisplay, done chan s
 			return
 		case <-t.C:
 			ix = (ix + 1) % len(spinnerFrames)
-			d.spinnerFrame(spinnerFrames[ix], msgAgentWarmup)
+			d.warmupSetFrame(spinnerFrames[ix])
 		}
+	}
+}
+
+// noteQueued reveals the queued-input notice once the user starts typing so
+// attach makes it obvious their prompt is buffered until the agent is ready.
+func (w *warmupState) noteQueued() {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	if !w.active || w.dismissed {
+		w.mu.Unlock()
+		return
+	}
+	already := w.queued
+	w.queued = true
+	display, ok := w.out.(*promptDisplay)
+	w.mu.Unlock()
+	if ok {
+		display.warmupSetQueued(msgAgentWarmupQueued)
+		return
+	}
+	if !already {
+		fmt.Fprintf(w.out, "%s\n", colorize(msgAgentWarmupQueued, colMuted))
 	}
 }
 
@@ -2306,8 +2410,8 @@ func (w *warmupState) waitTimeout(ctx context.Context) {
 }
 
 // clear dismisses the warm-up notice. Idempotent. When shown via the prompt
-// spinner, the line is erased so it truly goes away; no follow-up message is
-// printed (MARSOHS-796 only asks to clear the notice).
+// banner, the spinner and queued rows are erased so they truly go away once
+// the session is ready.
 func (w *warmupState) clear() {
 	if w == nil {
 		return
@@ -2319,6 +2423,8 @@ func (w *warmupState) clear() {
 		return
 	}
 	w.active = false
+	w.inputQueued = false
+	w.queued = false
 	timeoutCancel := w.timeoutCancel
 	animCancel := w.animCancel
 	animDone := w.animDone
@@ -2337,7 +2443,7 @@ func (w *warmupState) clear() {
 		<-animDone
 	}
 	if display, ok := w.out.(*promptDisplay); ok {
-		display.spinnerStop()
+		display.warmupStop()
 	}
 }
 
@@ -2883,7 +2989,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			case largePasteSendTogether:
 			case largePasteSendSeparately:
 				for _, part := range splitSubmittedLines(line) {
-					if detach := processAttachLine(c, svc, sessionID, part, state); detach {
+					if detach := processAttachLine(c, svc, sessionID, part, state, nil); detach {
 						return nil
 					}
 				}
@@ -3379,6 +3485,12 @@ type promptDisplay struct {
 	// midLine: cursor is at the end of a previous tokenless write. Next
 	// Write must not clear-line, next echo must not paint to that line.
 	midLine bool
+	// warmupStatusLines reserves status rows above the prompt while the warm-up
+	// banner is active (spinner row + queued notice row).
+	warmupStatusLines  int
+	warmupSpinnerFrame string
+	warmupSpinnerLabel string
+	warmupQueuedLabel  string
 }
 
 func (p *promptDisplay) setRaw(on bool) {
@@ -3475,6 +3587,10 @@ func (p *promptDisplay) redraw() {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
 	}
+	if p.warmupStatusLines > 0 {
+		p.warmupPaintLocked()
+		return
+	}
 	p.paintPromptLocked(true)
 }
 
@@ -3518,6 +3634,134 @@ func (p *promptDisplay) spinnerStop() {
 		return
 	}
 	fmt.Fprint(p.out, "\x1b7\x1b[A\r\x1b[K\x1b8")
+}
+
+func (p *promptDisplay) warmupBannerActive() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.warmupStatusLines > 0
+}
+
+// warmupInit reserves a spinner row above the prompt. The queued-input row is
+// added later via warmupSetQueued once the user starts typing.
+func (p *promptDisplay) warmupInit(frame, label string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw {
+		return
+	}
+	if p.midLine {
+		fmt.Fprint(p.out, "\r\n")
+		p.midLine = false
+	} else {
+		fmt.Fprint(p.out, "\r\x1b[K")
+	}
+	p.warmupStatusLines = 1
+	p.warmupSpinnerFrame = frame
+	p.warmupSpinnerLabel = label
+	p.warmupQueuedLabel = ""
+	fmt.Fprintf(p.out, "%s %s\r\n", frame, label)
+	p.paintPromptLocked(false)
+}
+
+// warmupSetQueued shows the queued-input notice and redraws the whole block.
+func (p *promptDisplay) warmupSetQueued(text string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.warmupStatusLines == 0 {
+		return
+	}
+	if p.warmupStatusLines == 1 {
+		p.warmupStatusLines = 2
+	}
+	p.warmupQueuedLabel = text
+	p.warmupPaintLocked()
+}
+
+// warmupSetFrame updates the spinner frame and redraws the whole block.
+func (p *promptDisplay) warmupSetFrame(frame string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.midLine || p.warmupStatusLines == 0 {
+		return
+	}
+	p.warmupSpinnerFrame = frame
+	p.warmupPaintLocked()
+}
+
+// warmupPaintLocked redraws the warm-up spinner, optional queued notice, and
+// prompt+input atomically from the prompt row. Caller must hold p.mu.
+func (p *promptDisplay) warmupPaintLocked() {
+	frame := p.warmupSpinnerFrame
+	if frame == "" {
+		frame = spinnerFrames[0]
+	}
+	label := p.warmupSpinnerLabel
+	if label == "" {
+		label = msgAgentWarmup
+	}
+	line := ""
+	if p.lineBuf != nil {
+		line = p.lineBuf()
+	}
+	cur := len(line)
+	if p.cursorPos != nil {
+		cur = p.cursorPos()
+		if cur < 0 {
+			cur = 0
+		}
+		if cur > len(line) {
+			cur = len(line)
+		}
+	}
+
+	n := p.warmupStatusLines
+	var b strings.Builder
+	fmt.Fprintf(&b, "\x1b7\x1b[%dA\r\x1b[K", n)
+	fmt.Fprintf(&b, "%s %s", frame, label)
+	if n >= 2 {
+		b.WriteString("\r\n\r\x1b[K")
+		b.WriteString(p.warmupQueuedLabel)
+	}
+	b.WriteString("\r\n\r\x1b[K")
+	b.WriteString(p.prompt())
+	b.WriteString(line)
+	if back := len(line) - cur; back > 0 {
+		fmt.Fprintf(&b, "\x1b[%dD", back)
+	}
+	b.WriteString("\x1b8")
+	io.WriteString(p.out, b.String())
+}
+
+// warmupStopLocked erases the warm-up banner rows entirely. Caller must hold p.mu.
+func (p *promptDisplay) warmupStopLocked() {
+	if !p.raw || p.warmupStatusLines == 0 {
+		return
+	}
+	if p.midLine {
+		fmt.Fprint(p.out, "\r\n")
+		p.midLine = false
+	}
+	n := p.warmupStatusLines
+	var b strings.Builder
+	b.WriteString("\x1b7")
+	for i := 0; i < n; i++ {
+		b.WriteString("\x1b[A\r\x1b[K")
+	}
+	b.WriteString("\x1b8")
+	io.WriteString(p.out, b.String())
+	p.warmupStatusLines = 0
+	p.warmupSpinnerFrame = ""
+	p.warmupSpinnerLabel = ""
+	p.warmupQueuedLabel = ""
+	p.paintPromptLocked(true)
+}
+
+// warmupStop erases the warm-up banner rows entirely.
+func (p *promptDisplay) warmupStop() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.warmupStopLocked()
 }
 
 // attachLoopTTY runs the raw-mode byte-by-byte input state machine. A 50ms
@@ -3573,7 +3817,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		}
 		select {
 		case b := <-bytesCh:
-			stop, err := handleAttachByte(c, svc, sessionID, b, state)
+			stop, err := handleAttachByte(c, svc, sessionID, b, state, warmup)
 			if err != nil {
 				return err
 			}
@@ -3592,13 +3836,13 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 
 // handleAttachByte is the per-byte state machine. stop=true exits the loop
 // (Ctrl-C, Ctrl-D on empty line).
-func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState) (stop bool, err error) {
+func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState, warmup *warmupState) (stop bool, err error) {
 	if confirm := state.largePasteConfirmation(); confirm != nil {
 		switch b {
 		case 'y', 'Y':
 			state.display.echo([]byte{b, '\r', '\n'})
 			state.takeLargePasteConfirmation()
-			if detach := processAttachLine(c, svc, sessionID, confirm.text, state); detach {
+			if detach := processAttachLine(c, svc, sessionID, confirm.text, state, nil); detach {
 				return true, nil
 			}
 			state.display.redraw()
@@ -3607,7 +3851,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			state.display.echo([]byte("\r\n"))
 			state.takeLargePasteConfirmation()
 			for _, part := range splitSubmittedLines(confirm.text) {
-				if detach := processAttachLine(c, svc, sessionID, part, state); detach {
+				if detach := processAttachLine(c, svc, sessionID, part, state, nil); detach {
 					return true, nil
 				}
 			}
@@ -3625,6 +3869,10 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 	}
 	if state.pasting {
 		handlePastedByte(b, state)
+		warmup.noteQueued()
+		if warmup.isBannerVisible() {
+			state.display.redraw()
+		}
 		return false, nil
 	}
 	if handleAttachEscapeSequence(b, state) {
@@ -3672,14 +3920,19 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 	switch b {
 	case 0x0d, 0x0a: // Enter
 		line := readSubmittedInput(state)
-		state.display.echo([]byte("\r\n"))
+		if line != "" && warmup.inputAlreadyQueued() {
+			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
+			state.display.redraw()
+			return false, nil
+		}
+		echoAttachSubmitNewline(state.display, warmup)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
 				state.display.redraw()
 				return false, nil
 			}
-			if detach := processAttachLine(c, svc, sessionID, line, state); detach {
+			if detach := processAttachLine(c, svc, sessionID, line, state, warmup); detach {
 				return true, nil
 			}
 		}
@@ -3693,7 +3946,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
 			state.mu.Unlock()
-			if atEnd {
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte("\b \b"))
 			} else {
 				state.display.redraw()
@@ -3726,7 +3981,10 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			}
 			state.cursor++
 			state.mu.Unlock()
-			if atEnd {
+			warmup.noteQueued()
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte{b})
 			} else {
 				state.display.redraw()
@@ -3739,7 +3997,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 // processAttachLine dispatches an Enter-submitted line: HITL word shortcut,
 // slash command, or SendInput. Returns detach=true when the session can no
 // longer accept input (terminal run) and the loop should exit.
-func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState) (detach bool) {
+func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState, warmup *warmupState) (detach bool) {
 	if outcome, ok := hitlLetterShortcut(line); ok {
 		if id := state.pending.get(); id != "" {
 			if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
@@ -3769,7 +4027,10 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 		fmt.Fprintf(c.Out, "send failed: %v\n", err)
 		return false
 	}
-	fmt.Fprintln(c.Out, colorize("… waiting for the agent", colMuted))
+	if warmup != nil && warmup.isActive() {
+		warmup.markInputQueued()
+	}
+	printAttachSendAck(c.Out, warmup)
 	return false
 }
 
