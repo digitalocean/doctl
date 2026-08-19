@@ -2915,6 +2915,7 @@ type attachLineRead struct {
 }
 
 var attachLineBatchWindow = 40 * time.Millisecond
+
 const largePasteConfirmMinLines = 6
 
 func startAttachLineReader(reader *bufio.Reader) <-chan attachLineRead {
