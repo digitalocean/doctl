@@ -149,7 +149,7 @@ const agentsTriggersListReusableHelpMD = `List paused sessions available for reu
 const agentsTriggersListProvidersHelpMD = `List supported webhook providers and their signature schemes.`
 
 var (
-	agentsHelpCodeFence   = regexp.MustCompile("(?s)```(\\w*)\n(.*?)```")
+	agentsHelpCodeFence    = regexp.MustCompile("(?s)```(\\w*)\n(.*?)```")
 	agentsHelpExtraNewline = regexp.MustCompile(`\n{3,}`)
 )
 

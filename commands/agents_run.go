@@ -41,13 +41,13 @@ var (
 
 // harnessAgentNames maps friendly --harness values to flat-manifest agent keys.
 var harnessAgentNames = map[string]string{
-	"opencode":         "opencode",
-	"open-code":        "opencode",
-	"claude-code":      "claude-code",
-	"claude":           "claude-code",
-	"codex":            openAIAgentsAdapter,
-	"codex-agentapi":   openAIAgentsAdapter,
-	"openai-codex":     openAIAgentsAdapter,
+	"opencode":       "opencode",
+	"open-code":      "opencode",
+	"claude-code":    "claude-code",
+	"claude":         "claude-code",
+	"codex":          openAIAgentsAdapter,
+	"codex-agentapi": openAIAgentsAdapter,
+	"openai-codex":   openAIAgentsAdapter,
 }
 
 // RunAgentsRun creates a hosted agent session from --harness/--gh-repo/--prompt
@@ -279,7 +279,7 @@ func defaultCodexRunConfig(prompt string) map[string]any {
 			"model": defaultCodexRunModel,
 		},
 		"environment": map[string]any{
-			"type":                 "self_hosted",
+			"type":                "self_hosted",
 			"workspace_directory": "/workspace",
 		},
 	}
