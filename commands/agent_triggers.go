@@ -73,7 +73,7 @@ Output:
 		Writer,
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerKind, "", "", "Trigger kind (webhook|cron)", requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Unique trigger name for the team", requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Unique trigger name for the team (1–64 letters/digits/`-`/`.`/`_`, start and end alphanumeric, not a UUID)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerSessionMode, "", "", "Session mode (fresh|reuse)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerPrompt, "", "", "Prompt template sent on each fire", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerOutputMode, "", "none", "Output delivery mode (none|email|slack)")
@@ -99,7 +99,7 @@ Output:
 Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `+"`"+`pause`+"`"+` / `+"`"+`resume`+"`"+` commands.`,
 		Writer,
 		displayerType(&displayers.HostedAgentTrigger{}))
-	AddStringFlag(cmdUpdate, doctl.ArgAgentName, "", "", "New unique trigger name")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentName, "", "", "New unique trigger name (same identifier rules as create)")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentStatus, "", "", "Lifecycle status (active|paused)")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerPrompt, "", "", "Updated prompt template")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerOutputMode, "", "", "Output delivery mode (none|email|slack)")
@@ -500,6 +500,9 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 	if err != nil {
 		return nil, err
 	}
+	if err := validateHostedAgentIdentifier(name); err != nil {
+		return nil, err
+	}
 	sessionMode, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerSessionMode)
 	if err != nil {
 		return nil, err
@@ -588,6 +591,9 @@ func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequ
 	if name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName); err != nil {
 		return nil, err
 	} else if name != "" {
+		if err := validateHostedAgentIdentifier(name); err != nil {
+			return nil, err
+		}
 		update.Name = name
 		changed = true
 	}

@@ -435,6 +435,11 @@ func RunAgentsStart(c *CmdConfig) error {
 	}
 	// --name is a convenience that sets the manifest's session name. When it's
 	// omitted the manifest is sent verbatim and the server auto-generates a name.
+	if name != "" {
+		if err := validateHostedAgentIdentifier(name); err != nil {
+			return err
+		}
+	}
 	raw, err = injectManifestName(raw, name)
 	if err != nil {
 		return err
@@ -479,6 +484,9 @@ func RunAgentsStart(c *CmdConfig) error {
 func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
 	if name == "" {
 		return errors.New("--name is required when starting from --config-id")
+	}
+	if err := validateHostedAgentIdentifier(name); err != nil {
+		return err
 	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:     name,
