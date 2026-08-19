@@ -1043,4 +1043,16 @@ const (
 
 	// ArgAgentConfigID is the Agent Config ID a session is created from.
 	ArgAgentConfigID = "config-id"
+
+	// ArgAgentHarness selects a coding-agent runtime for `agents run`.
+	ArgAgentHarness = "harness"
+
+	// ArgAgentRepo is a Git repository URL cloned into the session workspace.
+	ArgAgentRepo = "gh-repo"
+
+	// ArgAgentNoAttach stops `agents run` after the session is ready instead of attaching.
+	ArgAgentNoAttach = "no-attach"
+
+	// ArgAgentWaitTimeout is how long `agents run` waits for readiness, in seconds.
+	ArgAgentWaitTimeout = "wait-timeout"
 )

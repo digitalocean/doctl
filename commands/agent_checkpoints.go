@@ -30,17 +30,13 @@ func AgentCheckpoints() *Command {
 			Use:     "checkpoint",
 			Aliases: []string{"checkpoints", "cp"},
 			Short:   "Manage session checkpoints (save points)",
-			Long: `The ` + "`" + `doctl agents checkpoint` + "`" + ` commands create and manage save points for a hosted agent session.
-
-A checkpoint captures the session's microVM (files and live process memory) between turns. Use forks to branch into independent sessions from a checkpoint, or rollback to rewind the same session in place.`,
+			Long:    agentsCheckpointRootHelpMD,
 		},
 	}
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsCheckpointCreate, "create <session>",
 		"Create a checkpoint for a session",
-		`Creates an explicit checkpoint for a session. The call blocks until the checkpoint is READY.
-
-Checkpoints can only be taken between turns (after run.completed). Optional `+"`"+`--label`+"`"+` stores a human-readable name.`,
+		agentsCheckpointCreateHelpMD,
 		Writer, aliasOpt("save"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentCheckpointLabel, "", "", "Optional label for the checkpoint")
@@ -48,7 +44,7 @@ Checkpoints can only be taken between turns (after run.completed). Optional `+"`
 
 	cmdList := CmdBuilder(cmd, RunAgentsCheckpointList, "list <session>",
 		"List checkpoints for a session",
-		`Lists checkpoints for a session, newest first. Supports `+"`"+`--page-size`+"`"+` and `+"`"+`--page-token`+"`"+`.`,
+		agentsCheckpointListHelpMD,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of checkpoints to return per page")
@@ -57,13 +53,13 @@ Checkpoints can only be taken between turns (after run.completed). Optional `+"`
 
 	CmdBuilder(cmd, RunAgentsCheckpointGet, "get <session> <checkpoint-id>",
 		"Get a checkpoint",
-		"Prints details for one checkpoint.",
+		agentsCheckpointGetHelpMD,
 		Writer, aliasOpt("show"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 
 	CmdBuilder(cmd, RunAgentsCheckpointDelete, "delete <session> <checkpoint-id>",
 		"Delete a checkpoint",
-		"Deletes a checkpoint (control-plane row and substrate capture). Idempotent.",
+		agentsCheckpointDeleteHelpMD,
 		Writer, aliasOpt("rm"))
 
 	return cmd

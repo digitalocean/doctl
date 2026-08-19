@@ -68,7 +68,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
+	assertCommandNames(t, cmd, "start", "run", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
 }
 
 func TestAgents_helpers(t *testing.T) {

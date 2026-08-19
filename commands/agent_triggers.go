@@ -33,17 +33,13 @@ func AgentTriggers() *Command {
 			Use:     "triggers",
 			Aliases: []string{"trigger"},
 			Short:   "Manage webhook and cron triggers for hosted agent runs",
-			Long: `The ` + "`" + `doctl agents triggers` + "`" + ` commands manage team-scoped webhook and cron triggers that start hosted agent runs.
-
-Webhook triggers expose a signed ingress URL (HMAC / provider token) for external systems. Cron triggers fire on a schedule. Each trigger either creates a fresh session per firing (` + "`" + `session-mode=fresh` + "`" + `) or resumes a bound paused session (` + "`" + `session-mode=reuse` + "`" + `).
-
-The public webhook ingress endpoint is authenticated by the per-trigger secret, not a DO bearer token — doctl does not call it; configure the secret in your external system.`,
+			Long:    agentsTriggersRootHelpMD,
 		},
 	}
 
 	cmdList := CmdBuilder(cmd, RunAgentTriggersList, "list",
 		"List triggers",
-		`Lists the team's triggers. Soft-deleted triggers are omitted. Supports `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, `+"`"+`--kind`+"`"+`, and `+"`"+`--status`+"`"+`.`,
+		agentsTriggersListHelpMD,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of triggers to return per page")
@@ -54,22 +50,7 @@ The public webhook ingress endpoint is authenticated by the per-trigger secret, 
 
 	cmdCreate := CmdBuilder(cmd, RunAgentTriggersCreate, "create",
 		"Create a webhook or cron trigger",
-		`Creates a webhook or cron trigger.
-
-Required: `+"`"+`--kind`+"`"+`, `+"`"+`--name`+"`"+`, `+"`"+`--session-mode`+"`"+`, `+"`"+`--prompt`+"`"+`, `+"`"+`--output-mode`+"`"+`.
-
-Session mode:
-  - fresh: pass `+"`"+`--spec`+"`"+` (agents.yaml Agent manifest); a new session is created on each fire
-  - reuse: pass `+"`"+`--bound-session-id`+"`"+` (a PAUSED session); use `+"`"+`list-reusable-sessions`+"`"+` to find candidates
-
-Kind:
-  - webhook: optional `+"`"+`--provider`+"`"+` (github|gitlab|custom; default custom). Response includes webhook_secret once.
-  - cron: `+"`"+`--cron-expr`+"`"+` and `+"`"+`--timezone`+"`"+` required; prompt must not use payload placeholders
-
-Output:
-  - none: no push delivery
-  - email: requires `+"`"+`--output-email`+"`"+`
-  - slack: requires `+"`"+`--output-slack-webhook`+"`"+`.`,
+		agentsTriggersCreateHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerKind, "", "", "Trigger kind (webhook|cron)", requiredOpt())
@@ -94,9 +75,7 @@ Output:
 
 	cmdUpdate := CmdBuilder(cmd, RunAgentTriggersUpdate, "update <trigger-id>",
 		"Update a trigger",
-		`Partially updates a trigger. Only supplied flags change. Kind and webhook provider are immutable.
-
-Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `+"`"+`pause`+"`"+` / `+"`"+`resume`+"`"+` commands.`,
+		agentsTriggersUpdateHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddStringFlag(cmdUpdate, doctl.ArgAgentName, "", "", "New unique trigger name (same identifier rules as create)")
@@ -113,31 +92,31 @@ Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `
 
 	cmdDelete := CmdBuilder(cmd, RunAgentTriggersDelete, "delete <trigger-id>",
 		"Delete a trigger",
-		"Soft-deletes a trigger, fails pending executions, and purges the webhook secret / cron schedule. A reuse trigger unbinds its session; it does not destroy the session.",
+		agentsTriggersDeleteHelpMD,
 		Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete without confirmation")
 	cmdDelete.Example = `doctl agents triggers delete TRIGGER_ID --force`
 
 	CmdBuilder(cmd, RunAgentTriggersPause, "pause <trigger-id>",
 		"Pause a trigger",
-		"Sets status to paused. New deliveries/ticks queue nothing; config and any bound session are untouched.",
+		agentsTriggersPauseHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	CmdBuilder(cmd, RunAgentTriggersResume, "resume <trigger-id>",
 		"Resume a paused trigger",
-		"Sets status to active. Resumes on the next event/tick with no catch-up run. For cron, next_run_at is recomputed to the next future tick.",
+		agentsTriggersResumeHelpMD,
 		Writer, aliasOpt("activate", "enable"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	CmdBuilder(cmd, RunAgentTriggersRotateSecret, "rotate-secret <trigger-id>",
 		"Rotate a webhook trigger's secret",
-		"Issues a new webhook secret (shown once). Webhook triggers only. The previous secret stays valid briefly so in-flight deliveries keep verifying.",
+		agentsTriggersRotateSecretHelpMD,
 		Writer)
 
 	cmdListExec := CmdBuilder(cmd, RunAgentTriggersListExecutions, "list-executions <trigger-id>",
 		"List a trigger's execution history",
-		`Lists firings for a trigger. Payload and run output are omitted from list items; use `+"`"+`get-execution`+"`"+` to read them.`,
+		agentsTriggersListExecutionsHelpMD,
 		Writer, aliasOpt("executions"),
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 	AddIntFlag(cmdListExec, doctl.ArgAgentPageSize, "", 0, "Maximum number of executions to return per page")
@@ -147,19 +126,19 @@ Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `
 
 	CmdBuilder(cmd, RunAgentTriggersGetExecution, "get-execution <trigger-id> <execution-id>",
 		"Get a single trigger execution",
-		"Returns one execution including payload and rendered output_text when available.",
+		agentsTriggersGetExecutionHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 
 	CmdBuilder(cmd, RunAgentTriggersGetBySession, "get-by-session <session-id>",
 		"Look up the trigger for a session",
-		"Reverse-looks-up the trigger that produced (fresh) or binds (reuse) a session.",
+		agentsTriggersGetBySessionHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	cmdReusable := CmdBuilder(cmd, RunAgentTriggersListReusableSessions, "list-reusable-sessions",
 		"List paused sessions for reuse binding",
-		"Lists the team's PAUSED sessions suitable for session-mode=reuse triggers.",
+		agentsTriggersListReusableHelpMD,
 		Writer, aliasOpt("reusable-sessions"),
 		displayerType(&displayers.HostedAgentReusableSession{}))
 	AddIntFlag(cmdReusable, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
@@ -167,7 +146,7 @@ Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `
 
 	CmdBuilder(cmd, RunAgentTriggersListProviders, "list-providers",
 		"List supported webhook providers",
-		"Lists the static webhook provider registry (display name, docs, signature scheme) used when creating webhook triggers.",
+		agentsTriggersListProvidersHelpMD,
 		Writer, aliasOpt("providers"),
 		displayerType(&displayers.HostedAgentWebhookProvider{}))
 

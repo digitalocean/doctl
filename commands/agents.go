@@ -215,44 +215,14 @@ func Agents() *Command {
 			Use:     "agents",
 			Aliases: []string{"agent"},
 			Short:   "Launch and manage hosted DigitalOcean agent sessions",
-			Long: `The ` + "`" + `doctl agents` + "`" + ` commands manage hosted coding-agent sessions running in DigitalOcean sandboxes.
-
-A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.
-
-Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.
-
-These commands talk to the hosted-agents endpoint (` + "`" + `https://ohr-agent.do-ai.run` + "`" + `) rather than ` + "`" + `https://api.digitalocean.com` + "`" + `. Pass ` + "`" + `--api-url` + "`" + ` (or set ` + "`" + `DIGITALOCEAN_API_URL` + "`" + `) to point them somewhere else.`,
+			Long:    agentsRootHelpMD,
 			GroupID: hostedAgentsGroup,
 		},
 	}
 
 	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start",
 		"Start a new agent session",
-		`Creates a new agent session and prints its session id and status. Provide exactly one of `+"`"+`--spec`+"`"+` (a manifest file) or `+"`"+`--config-id`+"`"+` (an existing Agent Config).
-
-With `+"`"+`--config-id`+"`"+`, the session is started from a previously created Agent Config (see `+"`"+`doctl agents config`+"`"+`) without re-supplying the manifest; `+"`"+`--name`+"`"+` is required in that mode.
-
-The `+"`"+`--spec`+"`"+` flag accepts a flat agents.yaml manifest: no envelope, a top-level `+"`"+`agent:`+"`"+` key naming the coding agent, snake_case keys, and duration strings (`+"`"+`idle_timeout: 10m`+"`"+`). The minimal manifest is a single line:
-
-  agent: opencode
-
-`+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
-
-The legacy `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` envelope format (`+"`"+`apiVersion`+"`"+`/`+"`"+`kind`+"`"+`/`+"`"+`metadata`+"`"+`/`+"`"+`spec`+"`"+`) is deprecated: it is still accepted, but doctl prints a deprecation notice and the server appends a warning to the session; it will be rejected after the transition window.
-
-For `+"`"+`agent: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using the manifest's `+"`"+`config`+"`"+` block (legacy: `+"`"+`spec.runtime.config`+"`"+` or `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
-
-Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`name`+"`"+`; `+"`"+`metadata.name`+"`"+` in the legacy envelope). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).
-
-Add inline Agent Skills via `+"`"+`skills`+"`"+`, a list of skill objects with `+"`"+`name`+"`"+`, `+"`"+`description`+"`"+`, and `+"`"+`instructions`+"`"+` (plus optional `+"`"+`license`+"`"+`, `+"`"+`metadata`+"`"+`, `+"`"+`allowed_tools`+"`"+`). `+"`"+`instructions`+"`"+` is advisory context for the agent, not a security boundary -- use `+"`"+`permissions`+"`"+` for enforcement. Example:
-
-  agent: opencode
-  skills:
-    - name: pr-style-guide
-      description: Our team's pull request description conventions
-      instructions: |
-        Summarize the change in 1-2 sentences before the details.
-        Link related issues with "Fixes #123" syntax.`,
+		agentsStartHelpMD,
 		Writer, aliasOpt("deploy"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --config-id; exactly one is required.`)
@@ -261,15 +231,23 @@ Add inline Agent Skills via `+"`"+`skills`+"`"+`, a list of skill objects with `
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session; doctl agents start --config-id cfg_abc123 --name my-session`
 
+	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run",
+		"Create a session and attach in one step",
+		agentsRunHelpMD,
+		Writer, aliasOpt("up"))
+	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec.")
+	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness. Same format as agents start --spec.`)
+	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo)")
+	AddStringFlag(cmdRun, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
+	AddStringFlag(cmdRun, doctl.ArgAgentName, "", "", "Session name (auto-generated when omitted). Must be unique among active sessions.")
+	AddBoolFlag(cmdRun, doctl.ArgAgentNoAttach, "", false, "Wait for readiness but do not attach")
+	AddIntFlag(cmdRun, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default)")
+	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
+	cmdRun.Example = `doctl agents run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; doctl agents run --harness codex --prompt "Create hello.txt"`
+
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Run a local facade that lets a coding-agent CLI drive a hosted session",
-		`Starts a local WebSocket server that impersonates a coding-agent's own app-server protocol, so the unmodified CLI can attach to a hosted session as if it were a local backend.
-
-`+"`"+`--type`+"`"+` selects which protocol to impersonate (v1: `+"`"+`codex`+"`"+` only; future agents get their own facade behind this same command, not a new command). Once `+"`"+`start-proxy`+"`"+` is listening, connect the real CLI, e.g. `+"`"+`codex --remote ws://127.0.0.1:1144`+"`"+`.
-
-Tested against `+"`"+`codex-cli `+codex.TestedVersion+"`"+`. Codex's WS/app-server transport is officially experimental and can change without notice — re-verify the protocol capture on every codex upgrade before trusting this against a newer CLI.
-
-Run only one of the proxy and `+"`"+`doctl agents attach`+"`"+` per session from the same machine: both stream as this device, so the newer one takes the session over and the older stops. Close one before opening the other.`,
+		agentsStartProxyHelpMD,
 		Writer)
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to impersonate (v1: codex)")
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
@@ -279,17 +257,13 @@ Run only one of the proxy and `+"`"+`doctl agents attach`+"`"+` per session from
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
 		"Attach to an agent session",
-		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. If the SSE connection drops, doctl shows Reconnecting... and retries automatically (5 attempts with backoff). If reconnection fails, it prints an error and stops the stream.
-
-For OpenAI sandbox-provider sessions (`+"`"+`AGENT_KIND_OPENAI_CODEX`+"`"+`), attach bridges to the OpenAI Agents session (using `+"`"+`$OPENAI_API_KEY`+"`"+`) instead of DigitalOcean's event stream.
-
-When a HITL approval is pending, the prompt switches to a compact approve/reject/defer menu showing the command awaiting approval. In an interactive terminal you can move the highlight with the arrow keys and press Enter, or resolve directly with a single keystroke -- no Enter required: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
+		agentsAttachHelpMD,
 		Writer, aliasOpt("chat"))
 	cmdAttach.Example = `doctl agents attach sess_abc123; doctl agents attach my-session-name`
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
 		"List agent sessions",
-		`Lists agent sessions visible to the caller. Supports pagination and filtering via `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, `+"`"+`--status`+"`"+`, and `+"`"+`--name`+"`"+`. When more pages exist, the next page token is printed after the table.`,
+		agentsListHelpMD,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
@@ -301,42 +275,40 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show a single agent session",
-		"Prints details of one agent session.",
+		agentsShowHelpMD,
 		Writer, aliasOpt("get"),
 		displayerType(&displayers.HostedAgentSession{}))
 
 	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the event history for a session",
-		"Replays the server-side event history for a session, then exits. History is retained for a bounded window, so a session that has been idle for a long time, or one with an unusually long transcript, may replay only its more recent activity.",
+		agentsLogsHelpMD,
 		Writer)
 
 	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
-		"Approves, rejects, or defers a pending HITL request without attaching the interactive TUI. The resolution source is recorded as `RESOLUTION_SOURCE_OUT_OF_BAND`. Inside an attached session, the same outcomes are available as `/a`, `/r`, `/d` slash commands.",
+		agentsApproveHelpMD,
 		Writer)
 
 	CmdBuilder(cmd, RunAgentsDestroy, "destroy <session>",
 		"Destroy an agent session",
-		"Tears down the workspace sandbox and removes the session.",
+		agentsDestroyHelpMD,
 		Writer, aliasOpt("rm"))
 
 	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
 		"Pause an agent session",
-		"Pauses a running agent session. The sandbox is preserved and the session can be resumed later with `doctl agents resume`.",
+		agentsPauseHelpMD,
 		Writer)
 	cmdPause.Example = `doctl agents pause sess_abc123`
 
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
 		"Resume a paused agent session",
-		"Resumes a previously paused agent session.",
+		agentsResumeHelpMD,
 		Writer)
 	cmdResume.Example = `doctl agents resume sess_abc123`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
-		`Uploads a local file (or tar archive) into the session's sandbox workspace.
-
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is an uncompressed tar that the server should extract at the destination (gzip-compressed `+"`"+`.tgz`+"`"+` / `+"`"+`.tar.gz`+"`"+` are rejected). doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. All file sizes use the workspace transfer API (multipart upload for large payloads). Maximum size is 50 GiB.`,
+		agentsUploadHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentWorkspaceUpload{}))
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
@@ -346,9 +318,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
-		`Downloads a file (or tar archive) from the session's sandbox workspace and writes it to a local destination.
-
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to download a directory as a tar archive. All file sizes use the workspace transfer API: doctl polls for a presigned download URL, fetches the object directly, and verifies SHA-256 from the transfer status. Maximum size is 50 GiB.`,
+		agentsDownloadHelpMD,
 		Writer)
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
@@ -357,11 +327,7 @@ When a HITL approval is pending, the prompt switches to a compact approve/reject
 
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",
-		`Connects an external provider so hosted agent sessions can perform authenticated operations against it (e.g. `+"`"+`git clone`+"`"+`/`+"`"+`push`+"`"+` against private GitHub repositories).
-
-The credential is team-scoped: one connection is shared by everyone on your team, and the OAuth authorization handle is stored server-side by DigitalOcean. doctl never sees the token — sessions exchange the handle for an access token at run time.
-
-Running the command starts a browser-based authorization flow. doctl prints (and, unless `+"`"+`--no-browser`+"`"+` is set, opens) an authorization URL, then waits for you to approve access before reporting success. If the team is already connected, it reports that and exits. Pass `+"`"+`--no-wait`+"`"+` to print the URL and return immediately without polling; re-run the command later to confirm the connection.`,
+		agentsAuthHelpMD,
 		Writer)
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
@@ -369,9 +335,7 @@ Running the command starts a browser-based authorization flow. doctl prints (and
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
-		`Creates one or more independent child sessions from a checkpoint (or from "now" if `+"`"+`--from-checkpoint`+"`"+` is omitted).
-
-Each child is a first-class session you can attach to normally. Fork fan-out is capped at 4 children per call and is all-or-nothing.`,
+		agentsForkHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentSession{}))
 	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
@@ -380,13 +344,15 @@ Each child is a first-class session you can attach to normally. Fork fan-out is 
 
 	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
 		"Roll a session back to a checkpoint in place",
-		`Rewinds the same session to a prior checkpoint. The session ID is unchanged; the underlying sandbox is replaced.`,
+		agentsRollbackHelpMD,
 		Writer,
 		displayerType(&displayers.HostedAgentSession{}))
 
 	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
 	cmd.AddCommand(AgentConfigs())
+
+	cmd.Command.SetHelpFunc(agentsStyledHelpFunc)
 
 	return cmd
 }
@@ -445,34 +411,8 @@ func RunAgentsStart(c *CmdConfig) error {
 		return err
 	}
 
-	openaiSessionID, envOverlay, err := prepareOpenAISandboxStart(context.Background(), raw)
+	sess, err := startSessionFromRawManifest(c, raw)
 	if err != nil {
-		return err
-	}
-	if openaiSessionID != "" {
-		// Legacy spec.openai is client-side only. Prefer spec.runtime.config
-		// (kept for DO). Strip openai if present so agentspec validation passes.
-		raw, err = stripSpecOpenAI(raw)
-		if err != nil {
-			return err
-		}
-	}
-	manifest, err := expandManifestEnvLookup(raw, envLookupWithOverlay(envOverlay))
-	if err != nil {
-		return err
-	}
-
-	var createOpt *godo.HostedAgentManifestCreateOptions
-	if openaiSessionID != "" {
-		createOpt = &godo.HostedAgentManifestCreateOptions{OpenAISessionID: openaiSessionID}
-	}
-
-	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
-	if err != nil {
-		if sessionLimitErr(err) {
-			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. Free a slot by destroying one: run `doctl agents list` to find a session ID, then `doctl agents destroy SESSION_ID`", strings.TrimRight(msg, "."))
-		}
 		return err
 	}
 	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
@@ -1495,11 +1435,15 @@ func RunAgentsAttach(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	svc := c.HostedAgents()
-	sessionID, err := resolveSessionRef(svc, c.Args[0])
+	sessionID, err := resolveSessionRef(c.HostedAgents(), c.Args[0])
 	if err != nil {
 		return err
 	}
+	return runAgentsAttachSession(c, sessionID)
+}
+
+func runAgentsAttachSession(c *CmdConfig, sessionID string) error {
+	svc := c.HostedAgents()
 
 	stylingEnabled = detectStyling()
 
@@ -1522,22 +1466,22 @@ func RunAgentsAttach(c *CmdConfig) error {
 	cursor := &eventCursor{}
 	state := newAttachState(c.Out, pending)
 
+	printAttachBanner(c.Out, sess, "")
+
 	// All writes flow through the display so events don't clobber the user's
 	// in-progress input once raw mode is on. Pass-through until raw=true.
 	originalOut := c.Out
 	c.Out = state.display
 	defer func() { c.Out = originalOut }()
 
-	printAttachBanner(c.Out, sessionID, sess.AgentKind)
+	thinking := newThinkingState(c.Out)
+	defer thinking.stop()
 
 	warmup := newWarmupState(c.Out, sess.CreatedAt.Time)
 	defer warmup.clear()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	thinking := newThinkingState(c.Out)
-	defer thinking.stop()
 
 	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking, warmup)
 
@@ -1563,21 +1507,21 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 
 	pending := &pendingHITL{}
 	state := newAttachState(c.Out, pending)
+
+	printAttachBanner(c.Out, sess, fmt.Sprintf("OpenAI · %s", openaiSessionID))
+
 	originalOut := c.Out
 	c.Out = state.display
 	defer func() { c.Out = originalOut }()
 
-	printAttachBanner(c.Out, sess.SessionID, sess.AgentKind)
-	fmt.Fprintf(c.Out, "  %s\n\n", colorize(fmt.Sprintf("bridged to OpenAI · %s", openaiSessionID), colMuted))
+	thinking := newThinkingState(c.Out)
+	defer thinking.stop()
 
 	warmup := newWarmupState(c.Out, sess.CreatedAt.Time)
 	defer warmup.clear()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-
-	thinking := newThinkingState(c.Out)
-	defer thinking.stop()
 
 	client := newOpenAIAgentsAttachClient()
 	renderer := &openAIAttachRenderer{out: c.Out, thinking: thinking, warmup: warmup}
@@ -4404,22 +4348,62 @@ func hitlOutcomeLabel(code int32) string {
 	}
 }
 
+// cardRow formats a label/value line for agent summary cards. Labels are padded
+// before color codes are applied so columns stay aligned in the terminal.
+func cardRow(label, value string) string {
+	padded := label
+	if len(padded) < 8 {
+		padded += strings.Repeat(" ", 8-len(padded))
+	}
+	return fmt.Sprintf("  %s %s\n", boldColor(padded, colHighlight), value)
+}
+
+// renderAgentCard wraps body text in a rounded success border when styling is on.
+func renderAgentCard(w io.Writer, body string) {
+	out := body
+	if stylingEnabled {
+		out = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colSuccess).
+			Padding(0, 2).
+			MarginTop(1).
+			Render(out)
+	} else {
+		out = "\n" + out
+	}
+	fmt.Fprintln(w, out)
+}
+
 // printAttachBanner renders the styled connection header and a compact help
 // key shown when an interactive session is attached.
-func printAttachBanner(w io.Writer, sessionID string, kind godo.HostedAgentKind) {
-	fmt.Fprintf(w, "\n%s  %s\n", boldColor("● Connected", colSuccess), colorize(sessionID, colHighlight))
-	fmt.Fprintf(w, "  %s\n\n", colorize(fmt.Sprintf("agent %s · Ctrl-D to detach", prettyAgentKind(kind)), colMuted))
+func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote string) {
+	ref := displaySessionRef(sess)
+	agent := prettyAgentKind(sess.AgentKind)
 
-	row := func(label, desc string) {
-		fmt.Fprintf(w, "  %s  %s\n", boldColor(fmt.Sprintf("%-8s", label), colHighlight), desc)
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Connected", colSuccess))
+
+	body.WriteString(cardRow("Session", ref))
+	if sess != nil && strings.TrimSpace(sess.SessionID) != "" && sess.SessionID != ref {
+		body.WriteString(cardRow("ID", colorize(sess.SessionID, colMuted)))
 	}
+	body.WriteString(cardRow("Agent", agent))
+	if note := strings.TrimSpace(bridgeNote); note != "" {
+		body.WriteString(cardRow("Bridge", colorize(note, colMuted)))
+	}
+
+	fmt.Fprintln(&body)
+	fmt.Fprintln(&body, colorize("Quick help", colMuted))
+
 	yn := colorize("y", colSuccess) + colorize("/a", colSuccess) + " approve · " +
 		colorize("n", colError) + colorize("/r", colError) + " reject · " +
 		colorize("d", colWarning) + " defer"
-	row("send", "type a message and press Enter")
-	row("approve", "↑/↓ then Enter, or "+yn)
-	row("help", "type "+boldColor("/help", colHighlight)+" for the full command list")
-	fmt.Fprintln(w)
+	body.WriteString(cardRow("send", "type a message and press Enter"))
+	body.WriteString(cardRow("approve", "↑/↓ then Enter, or "+yn))
+	body.WriteString(cardRow("detach", colorize("Ctrl-D", colMuted)))
+	body.WriteString(cardRow("help", "type "+boldColor("/help", colHighlight)+" for the full command list"))
+
+	renderAgentCard(w, body.String())
 }
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into a friendly "opencode" label.

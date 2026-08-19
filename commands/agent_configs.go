@@ -35,11 +35,7 @@ func AgentConfigs() *Command {
 			Use:     "config",
 			Aliases: []string{"configs", "cfg"},
 			Short:   "Manage reusable agent configs",
-			Long: `The ` + "`" + `doctl agents config` + "`" + ` commands manage Agent Configs: immutable, team-scoped agent manifests.
-
-An Agent Config captures a validated agent manifest (and any secret slots it declares) under a stable ID. Anyone on your team can then start sessions from that ID without re-supplying the manifest, so a config is the reusable, auditable unit behind repeated agent runs.
-
-Configs are immutable: to change a manifest, create a new config. Deleting a config is a soft delete (the name is freed, the row is retained), but the API rejects the delete while any session created from the config is still active. Destroy those sessions first.`,
+			Long:    agentsConfigRootHelpMD,
 		},
 	}
 
@@ -53,11 +49,7 @@ Configs are immutable: to change a manifest, create a new config. Deleting a con
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsConfigCreate, "create",
 		"Create an agent config from a manifest",
-		`Creates an immutable Agent Config from an agent manifest file.
-
-The `+"`"+`--spec`+"`"+` flag accepts the same flat agents.yaml manifest as `+"`"+`doctl agents start`+"`"+`. `+"`"+`${VAR}`+"`"+` references are resolved from your local environment before upload, so secret values declared under `+"`"+`spec.secrets[].value`+"`"+` can be injected from the environment; the server extracts them into Secrets Manager and never returns them.
-
-The `+"`"+`--name`+"`"+` is the team-unique handle for the config and is required.`,
+		agentsConfigCreateHelpMD,
 		Writer, ns, aliasOpt("c"),
 		displayerType(&displayers.HostedAgentConfig{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
@@ -66,7 +58,7 @@ The `+"`"+`--name`+"`"+` is the team-unique handle for the config and is require
 
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
-		`Lists Agent Configs visible to your team. Supports pagination via `+"`"+`--page-size`+"`"+` and `+"`"+`--page-token`+"`"+`. When more pages exist, the next page token is printed after the table.`,
+		agentsConfigListHelpMD,
 		Writer, ns, aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentConfigSummary{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of configs to return per page")
@@ -75,18 +67,18 @@ The `+"`"+`--name`+"`"+` is the team-unique handle for the config and is require
 
 	CmdBuilder(cmd, RunAgentsConfigGet, "get <config-id>",
 		"Get an agent config",
-		"Prints one Agent Config, including its manifest and redacted credential slots.",
+		agentsConfigGetHelpMD,
 		Writer, ns, aliasOpt("show"),
 		displayerType(&displayers.HostedAgentConfig{}))
 
 	CmdBuilder(cmd, RunAgentsConfigDelete, "delete <config-id>",
 		"Delete an agent config",
-		`Soft-deletes an Agent Config and frees its team-unique name. The API returns an error if any session created from the config is still active (provisioning, ready, detached, or paused). List those sessions with `+"`"+`doctl agents config list-sessions`+"`"+`, destroy them (`+"`"+`doctl agents destroy <session>`+"`"+`), then retry.`,
+		agentsConfigDeleteHelpMD,
 		Writer, ns, aliasOpt("rm"))
 
 	cmdSessions := CmdBuilder(cmd, RunAgentsConfigListSessions, "list-sessions <config-id>",
 		"List sessions started from a config",
-		`Lists sessions created from an Agent Config. Supports `+"`"+`--status`+"`"+`, `+"`"+`--name`+"`"+`, `+"`"+`--page-size`+"`"+`, and `+"`"+`--page-token`+"`"+`.`,
+		agentsConfigListSessionsHelpMD,
 		Writer, ns, aliasOpt("sessions"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddIntFlag(cmdSessions, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
@@ -97,7 +89,7 @@ The `+"`"+`--name`+"`"+` is the team-unique handle for the config and is require
 
 	cmdStartSession := CmdBuilder(cmd, RunAgentsConfigStartSession, "start-session <config-id>",
 		"Start a session from a config",
-		`Creates a new agent session from an existing Agent Config ID, without re-supplying the manifest. The `+"`"+`--name`+"`"+` for the new session is required and must be unique among your team's active sessions.`,
+		agentsConfigStartSessionHelpMD,
 		Writer, ns, aliasOpt("start"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddStringFlag(cmdStartSession, doctl.ArgAgentName, "", "", "Name for the new session", requiredOpt())
