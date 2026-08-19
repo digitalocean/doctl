@@ -2527,16 +2527,12 @@ func RunDatabaseFirewallRulesAppend(c *CmdConfig) error {
 		return err
 	}
 
-	// Add old rules to allRules slice.
+	// Add old rules to allRules slice. Copy each rule as a whole rather than
+	// field by field, so that attributes doctl does not manage, such as a
+	// rule's description, survive the update.
 	for _, rule := range oldRules {
-
-		firewallRule := new(godo.DatabaseFirewallRule)
-		firewallRule.Type = rule.Type
-		firewallRule.Value = rule.Value
-		firewallRule.ClusterUUID = rule.ClusterUUID
-		firewallRule.UUID = rule.UUID
-
-		allRules = append(allRules, firewallRule)
+		firewallRule := *rule.DatabaseFirewallRule
+		allRules = append(allRules, &firewallRule)
 	}
 
 	// Run update firewall rules with old rules + new rule
@@ -2573,15 +2569,14 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 	// Create a slice of database firewall rules containing only the new rule.
 	firewallRules := []*godo.DatabaseFirewallRule{}
 
-	// only append rules that do not match the firewall rule with uuid to be removed.
+	// only append rules that do not match the firewall rule with uuid to be
+	// removed. Copy each rule as a whole rather than field by field, so that
+	// attributes doctl does not manage, such as a rule's description, survive
+	// the update.
 	for _, rule := range rules {
 		if rule.UUID != firewallRuleUUIDArg {
-			firewallRules = append(firewallRules, &godo.DatabaseFirewallRule{
-				UUID:        rule.UUID,
-				ClusterUUID: rule.ClusterUUID,
-				Type:        rule.Type,
-				Value:       rule.Value,
-			})
+			firewallRule := *rule.DatabaseFirewallRule
+			firewallRules = append(firewallRules, &firewallRule)
 		}
 	}
 

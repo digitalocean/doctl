@@ -291,8 +291,67 @@ var (
 		testKafkaTopic,
 	}
 
+	testDBFirewallRule = do.DatabaseFirewallRule{
+		DatabaseFirewallRule: &godo.DatabaseFirewallRule{
+			UUID:        "cdb689c2-56e6-48e6-869d-306c85af178d",
+			ClusterUUID: testDBCluster.ID,
+			Type:        "ip_addr",
+			Value:       "192.168.1.1",
+			CreatedAt:   time.Date(2019, 1, 11, 18, 37, 36, 0, time.UTC),
+		},
+	}
+
 	errTest = errors.New("error")
 )
+
+func TestDatabasesFirewallRulesAppendPreservesExistingRules(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		newRule := &godo.DatabaseFirewallRule{
+			Type:        "tag",
+			Value:       "example-tag",
+			ClusterUUID: testDBCluster.ID,
+		}
+		// The existing rule must be sent back untouched, otherwise the update
+		// wipes attributes doctl does not manage, such as its description.
+		r := &godo.DatabaseUpdateFirewallRulesRequest{
+			Rules: []*godo.DatabaseFirewallRule{newRule, testDBFirewallRule.DatabaseFirewallRule},
+		}
+
+		tm.databases.EXPECT().GetFirewallRules(testDBCluster.ID).Return(do.DatabaseFirewallRules{testDBFirewallRule}, nil).Times(2)
+		tm.databases.EXPECT().UpdateFirewallRules(testDBCluster.ID, r).Return(nil)
+
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseFirewallRule, "tag:example-tag")
+
+		err := RunDatabaseFirewallRulesAppend(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDatabasesFirewallRulesRemovePreservesRemainingRules(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		removed := do.DatabaseFirewallRule{
+			DatabaseFirewallRule: &godo.DatabaseFirewallRule{
+				UUID:        "d168d635-1c88-4616-b9b4-793b7c573927",
+				ClusterUUID: testDBCluster.ID,
+				Type:        "tag",
+				Value:       "example-tag",
+			},
+		}
+		r := &godo.DatabaseUpdateFirewallRulesRequest{
+			Rules: []*godo.DatabaseFirewallRule{testDBFirewallRule.DatabaseFirewallRule},
+		}
+
+		tm.databases.EXPECT().GetFirewallRules(testDBCluster.ID).Return(do.DatabaseFirewallRules{testDBFirewallRule, removed}, nil).Times(2)
+		tm.databases.EXPECT().UpdateFirewallRules(testDBCluster.ID, r).Return(nil)
+
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseFirewallRuleUUID, removed.UUID)
+
+		err := RunDatabaseFirewallRulesRemove(config)
+		assert.NoError(t, err)
+	})
+}
 
 func TestDatabasesCommand(t *testing.T) {
 	cmd := Databases()
