@@ -22,40 +22,49 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const agentsRootHelpMD = `Manage a hosted coding-agent **session** — one agent (Claude Code, OpenCode, Codex, …) in a sandbox.
+// Primary cobra command name and user-facing CLI prefix for Managed Agents
+// Runtime Services (M.A.R.S). Viper keys stay under agents.* via agentsNS.
+const (
+	agentCmdName = "open-harness-runtime"
+	agentCLI     = "doctl " + agentCmdName
+)
 
-To start one session and attach, use ` + "`run`" + `:
-` + "```bash\n" + `doctl agent run \
-  --harness opencode \
+const agentsRootHelpMD = `**Managed Agents Runtime Services (M.A.R.S)** — run a coding agent (Claude Code, OpenCode, Codex, …) in a DigitalOcean sandbox.
+
+Create a session and attach in one step:
+` + "```bash\n" + agentCLI + ` run \
+  --harness claude-code \
   --gh-repo owner/repo \
   --prompt "Review the README"
-` + "```\n\n" + `For full control (custom manifests, config IDs, or attach later):
-` + "```bash\n" + `doctl agent start --spec agent.yaml --name my-session
-doctl agent attach my-session
-` + "```\n\n" + `Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.`
+` + "```\n\n" + `Create without attaching (ready summary only), then attach later:
+` + "```bash\n" + agentCLI + ` start \
+  --harness claude-code \
+  --gh-repo owner/repo \
+  --prompt "Review the README"
+` + agentCLI + ` attach my-session
+` + "```\n\n" + `Session commands accept a session ID or an exact unique name.`
 
-const agentsStartHelpMD = `Provide exactly one of ` + "`--spec`" + ` (manifest file) or ` + "`--config-id`" + ` (existing Agent Config).
+const agentsStartHelpMD = `Create a hosted session and wait until it is ready (does **not** open the chat TUI). Prefer ` + "`" + agentCLI + " run`" + ` when you want to attach immediately.
 
-Creates the session, prints step-by-step creation progress, waits until it is ready, and shows a styled ready summary with attach/remove next steps (same look as ` + "`doctl agent run --no-attach`" + `). Use ` + "`-o json`" + ` for machine-readable create output without waiting.
+Provide exactly one of:
 
-For a one-step create-and-attach flow without a manifest file, use ` + "`doctl agent run --harness <name>`" + ` instead.
+- ` + "`--harness`" + ` — opencode, claude-code, or codex (builds the manifest for you)
+- ` + "`--spec`" + ` — path to an agents.yaml / JSON manifest (` + "`-`" + ` reads stdin)
+- ` + "`--config-id`" + ` — start from an existing Agent Config (` + "`--name`" + ` required)
 
-With ` + "`--config-id`" + `, ` + "`--name`" + ` is required (see ` + "`doctl agent config`" + `). The ` + "`--spec`" + ` flag accepts a flat agents.yaml with a top-level ` + "`agent:`" + ` key:
+With ` + "`--harness`" + ` or ` + "`--spec`" + `, optionally pass ` + "`--gh-repo`" + ` and ` + "`--prompt`" + `. Example:
+` + "```bash\n" + agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"
+` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
-` + "```yaml\n" + `agent: opencode
-` + "```\n\n" + `${VAR} in the manifest is expanded from your environment. Missing variables are requested interactively in a terminal; in scripts/CI set them beforehand. ` + "`$${VAR}`" + ` is a literal. For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
+Use ` + "`-o json`" + ` for machine-readable create output without waiting.`
 
-` + "`--name`" + ` sets the session name (required with ` + "`--config-id`" + `). Names must be unique among active sessions; reference sessions by name in other commands.`
+const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI.
 
-const agentsRunHelpMD = `Provide exactly one of ` + "`--harness`" + ` (opencode, claude-code, codex), ` + "`--spec`" + ` (a manifest file), or ` + "`--config-id`" + ` (an existing Agent Config). With ` + "`--harness`" + `, doctl builds the manifest for you — no spec file needed.
+Provide exactly one of ` + "`--harness`" + `, ` + "`--spec`" + `, or ` + "`--config-id`" + `. With ` + "`--harness`" + ` / ` + "`--spec`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--no-attach`" + ` to stop at the ready summary.
 
-Use ` + "`--gh-repo`" + ` with ` + "`--harness`" + `/` + "`--spec`" + ` to clone a repository (` + "`owner/repo`" + ` or GitHub URL). With ` + "`--config-id`" + `, ` + "`--name`" + ` is required and the repo comes from the config. If GitHub is not connected for your team, doctl offers an optional connect step (needed for private repos). Use ` + "`--prompt`" + ` to send the first message. For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
+For the native Codex desktop/CLI UI instead of doctl chat, see ` + "`" + agentCLI + " start-proxy --help`" + `.`
 
-Pass ` + "`--no-attach`" + ` to wait for the session to become ready without opening the TUI. Use ` + "`--wait-timeout`" + ` to limit how long to wait (default 300 seconds).
-
-For the native Codex TUI (instead of doctl's chat), use ` + "`doctl agent start-proxy --type codex --session <name> --port 1144`" + ` after the session is ready, then ` + "`codex --remote ws://127.0.0.1:1144`" + `.`
-
-const agentsAttachHelpMD = `Open an interactive TUI on an existing session. Type messages and press Enter; Ctrl-D (or Ctrl-C) detaches without removing the session — reattach later, or run ` + "`doctl agent remove`" + ` to tear it down.
+const agentsAttachHelpMD = `Open an interactive chat on an existing session. Type messages and press Enter; Ctrl-D (or Ctrl-C) detaches without removing the session — reattach later, or run ` + "`" + agentCLI + " remove`" + ` to tear it down.
 
 If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 
@@ -71,7 +80,7 @@ const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "
 
 const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox. Aliases: ` + "`destroy`" + `, ` + "`rm`" + `.`
 
-const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`doctl agent resume`" + `.`
+const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`" + agentCLI + " resume`" + `.`
 
 const agentsResumeHelpMD = `Resume a previously paused session.`
 
@@ -83,7 +92,7 @@ const agentsDownloadHelpMD = `Copy a file from the session workspace to a local 
 
 Use ` + "`--archive`" + ` to download a directory as a tar archive. Maximum size 50 GiB.`
 
-const agentsAuthHelpMD = `Connect an external provider (e.g. GitHub) so agent sessions can clone and push to private repositories.
+const agentsAuthHelpMD = `Connect an external provider (e.g. GitHub) so sessions can clone and push to private repositories.
 
 Opens a browser to authorize unless ` + "`--no-browser`" + ` is set. The connection is shared by your team. Use ` + "`--no-wait`" + ` to print the URL and exit without waiting.`
 
@@ -91,22 +100,29 @@ const agentsForkHelpMD = `Create up to 4 independent child sessions from a check
 
 const agentsRollbackHelpMD = `Rewind a session to a prior checkpoint. The session ID stays the same.`
 
-const agentsStartProxyHelpMD = `Start a local WebSocket proxy so the Codex CLI can drive a hosted session:
+const agentsStartProxyHelpMD = `Bridge a local coding-agent CLI to a hosted M.A.R.S session.
 
-` + "```bash\n" + `codex --remote ws://127.0.0.1:1144
-` + "```\n\n" + `Run ` + "`doctl agent start-proxy`" + ` first, then connect with ` + "`--type codex`" + ` and ` + "`--session`" + `. Only one of attach and start-proxy can stream the same session from one machine at a time.`
+` + "`attach`" + ` is doctl's built-in chat. ` + "`start-proxy`" + ` is different: it runs a small local WebSocket server that speaks the agent CLI's own protocol (today: Codex), so you can keep using the native Codex UI while the sandbox lives on DigitalOcean.
 
-const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from its ID with ` + "`doctl agent run --config-id`" + `, ` + "`doctl agent config start-session`" + `, or ` + "`doctl agent start --config-id`" + `.
+Typical flow:
+` + "```bash\n" + `# terminal 1 — keep this running
+` + agentCLI + ` start-proxy --type codex --session my-session --port 1144
+
+# terminal 2 — connect Codex to the proxy
+codex --remote ws://127.0.0.1:1144
+` + "```\n\n" + `Only one of ` + "`attach`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.`
+
+const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from its ID with ` + "`" + agentCLI + " run --config-id`" + `, ` + "`" + agentCLI + " config start-session`" + `, or ` + "`" + agentCLI + " start --config-id`" + `.
 
 Configs are immutable — create a new config to change a manifest. Delete is blocked while sessions from the config are still active.`
 
-const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`doctl agent start --spec`" + `). ` + "`--name`" + ` must be unique within your team.`
+const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " start --spec`" + `). ` + "`--name`" + ` must be unique within your team.`
 
 const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
 
 const agentsConfigGetHelpMD = `Print one config, including its manifest. Secret values are redacted.`
 
-const agentsConfigDeleteHelpMD = `Delete a config and free its name. Remove active sessions started from the config first (` + "`doctl agent config list-sessions`" + `).`
+const agentsConfigDeleteHelpMD = `Delete a config and free its name. Remove active sessions started from the config first (` + "`" + agentCLI + " config list-sessions`" + `).`
 
 const agentsConfigListSessionsHelpMD = `List sessions started from a config. Filter with ` + "`--status`" + ` or ` + "`--name`" + `.`
 
@@ -187,16 +203,27 @@ func normalizeHelpProse(s string, styled bool) string {
 	}
 	if styled {
 		s = highlightInlineCode(s)
+		s = highlightHelpBold(s)
 	}
 	return s + "\n"
 }
 
-var agentsHelpInlineCode = regexp.MustCompile("`([^`]+)`")
+var (
+	agentsHelpInlineCode = regexp.MustCompile("`([^`]+)`")
+	agentsHelpBold       = regexp.MustCompile(`\*\*([^*]+)\*\*`)
+)
 
 func highlightInlineCode(s string) string {
 	return agentsHelpInlineCode.ReplaceAllStringFunc(s, func(match string) string {
 		inner := match[1 : len(match)-1]
 		return colorize(inner, colHighlight)
+	})
+}
+
+func highlightHelpBold(s string) string {
+	return agentsHelpBold.ReplaceAllStringFunc(s, func(match string) string {
+		inner := match[2 : len(match)-2]
+		return boldColor(inner, colHighlight)
 	})
 }
 

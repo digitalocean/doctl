@@ -61,7 +61,7 @@ func agentPrettyErrors() cmdOption {
 }
 
 // agentsNS keeps viper keys under agents.* after the primary command became
-// `doctl agent` (with `agents` as an alias). Spread into CmdBuilder options.
+// `doctl open-harness-runtime` (with agent/agents aliases). Spread into CmdBuilder options.
 func agentsNS(opts ...cmdOption) []cmdOption {
 	return append([]cmdOption{agentPrettyErrors(), overrideCmdNS("agents")}, opts...)
 }

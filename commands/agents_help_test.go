@@ -48,10 +48,20 @@ func TestRenderHelpCodeBlockPlain(t *testing.T) {
 }
 
 func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
-	assert.Contains(t, agentsRootHelpMD, "doctl agent run")
+	assert.Contains(t, agentsRootHelpMD, agentCLI+" run")
+	assert.Contains(t, agentsRootHelpMD, "Managed Agents Runtime Services (M.A.R.S)")
+	assert.NotContains(t, agentsRootHelpMD, "What's new")
+	assert.NotContains(t, agentsRootHelpMD, "whats new")
 	assert.NotContains(t, agentsRootHelpMD, "singular")
 	assert.NotContains(t, agentsRootHelpMD, "alias")
 	assert.NotContains(t, agentsRootHelpMD, "Launch and manage")
+}
+
+func TestAgentsStartProxyHelpExplainsBridge(t *testing.T) {
+	assert.Contains(t, agentsStartProxyHelpMD, "WebSocket")
+	assert.Contains(t, agentsStartProxyHelpMD, "codex --remote")
+	assert.Contains(t, agentsStartProxyHelpMD, "attach")
+	assert.NotContains(t, agentsStartProxyHelpMD, "What's new")
 }
 
 func TestHighlightInlineCode(t *testing.T) {

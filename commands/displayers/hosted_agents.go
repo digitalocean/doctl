@@ -21,7 +21,7 @@ import (
 )
 
 // HostedAgentSession wraps one or more hosted-agent sessions for display. The
-// same struct backs `doctl agents start`, `... show`, and `... list` — a slice
+// same struct backs `doctl open-harness-runtime start`, `... show`, and `... list` — a slice
 // of len 1 vs len N is the only difference between them.
 // Set Single=true for get/create verbs so JSON output is a bare object;
 // leave false (default) for list so JSON output is always an array.
@@ -137,7 +137,7 @@ func (h *HostedAgentCheckpoint) KV() []map[string]any {
 	return out
 }
 
-// HostedAgentWorkspaceUpload renders the result of `doctl agents upload`.
+// HostedAgentWorkspaceUpload renders the result of `doctl open-harness-runtime upload`.
 // Upload is single-file-only today (Uploads always has exactly one element),
 // so JSON() defaults to list semantics (always an array) like every other
 // list-shaped displayer; set Single=true if a future bare-object verb needs it
@@ -185,7 +185,7 @@ func (h *HostedAgentWorkspaceUpload) KV() []map[string]any {
 	return out
 }
 
-// HostedAgentConfig renders full Agent Configs, backing `doctl agents config
+// HostedAgentConfig renders full Agent Configs, backing `doctl open-harness-runtime config
 // get` and `... create`. Set Single=true so those verbs emit a bare JSON
 // object; the list verb uses HostedAgentConfigSummary instead.
 type HostedAgentConfig struct {
@@ -236,7 +236,7 @@ func (h *HostedAgentConfig) KV() []map[string]any {
 }
 
 // HostedAgentConfigSummary renders the list view of Agent Configs (no manifest
-// or credential slots), backing `doctl agents config list`.
+// or credential slots), backing `doctl open-harness-runtime config list`.
 type HostedAgentConfigSummary struct {
 	Configs []godo.HostedAgentConfigSummary
 }

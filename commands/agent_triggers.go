@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentTriggers generates the `doctl agent triggers` subtree.
+// AgentTriggers generates the `doctl open-harness-runtime triggers` subtree.
 func AgentTriggers() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -46,7 +46,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentTriggerKind, "", "", "Filter by kind (webhook|cron)")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by status (active|paused)")
-	cmdList.Example = `doctl agent triggers list --kind webhook --status active`
+	cmdList.Example = `doctl open-harness-runtime triggers list --kind webhook --status active`
 
 	cmdCreate := CmdBuilder(cmd, RunAgentTriggersCreate, "create",
 		"Create a webhook or cron trigger",
@@ -65,7 +65,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerProvider, "", "", "Webhook provider (github|gitlab|custom); default custom")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerCronExpr, "", "", "Cron expression when kind=cron")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerTimezone, "", "", "IANA timezone when kind=cron (e.g. America/New_York)")
-	cmdCreate.Example = `doctl agent triggers create --kind webhook --name gh-ci --session-mode fresh --prompt 'Review this PR: {{payload}}' --spec ./agent.yaml --provider github`
+	cmdCreate.Example = `doctl open-harness-runtime triggers create --kind webhook --name gh-ci --session-mode fresh --prompt 'Review this PR: {{payload}}' --spec ./agent.yaml --provider github`
 
 	CmdBuilder(cmd, RunAgentTriggersGet, "get <trigger-id>",
 		"Get a trigger",
@@ -88,14 +88,14 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Updated bound session ID for reuse triggers")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerCronExpr, "", "", "Updated cron expression")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerTimezone, "", "", "Updated IANA timezone")
-	cmdUpdate.Example = `doctl agent triggers update TRIGGER_ID --status paused; doctl agent triggers update TRIGGER_ID --prompt 'New prompt'`
+	cmdUpdate.Example = `doctl open-harness-runtime triggers update TRIGGER_ID --status paused; doctl open-harness-runtime triggers update TRIGGER_ID --prompt 'New prompt'`
 
 	cmdDelete := CmdBuilder(cmd, RunAgentTriggersDelete, "delete <trigger-id>",
 		"Delete a trigger",
 		agentsTriggersDeleteHelpMD,
 		Writer, agentPrettyErrors(), aliasOpt("rm"))
 	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete without confirmation")
-	cmdDelete.Example = `doctl agent triggers delete TRIGGER_ID --force`
+	cmdDelete.Example = `doctl open-harness-runtime triggers delete TRIGGER_ID --force`
 
 	CmdBuilder(cmd, RunAgentTriggersPause, "pause <trigger-id>",
 		"Pause a trigger",
@@ -122,7 +122,7 @@ func AgentTriggers() *Command {
 	AddIntFlag(cmdListExec, doctl.ArgAgentPageSize, "", 0, "Maximum number of executions to return per page")
 	AddStringFlag(cmdListExec, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdListExec, doctl.ArgAgentStatus, "", "", "Filter by execution status (pending|running|succeeded|failed)")
-	cmdListExec.Example = `doctl agent triggers list-executions TRIGGER_ID --status failed`
+	cmdListExec.Example = `doctl open-harness-runtime triggers list-executions TRIGGER_ID --status failed`
 
 	CmdBuilder(cmd, RunAgentTriggersGetExecution, "get-execution <trigger-id> <execution-id>",
 		"Get a single trigger execution",

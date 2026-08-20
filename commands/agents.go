@@ -11,9 +11,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The `doctl agent` subcommand wraps the godo HostedAgents service, which
-// in turn talks to the hosted-agents Harness API. All wire types and the SSE
-// iterator live in godo (hosted_agents.go); this file handles CLI plumbing,
+// The `doctl open-harness-runtime` command (aliases: agent, agents) wraps the
+// godo HostedAgents service for Managed Agents Runtime Services (M.A.R.S).
+// Wire types and the SSE iterator live in godo; this file handles CLI plumbing,
 // argument parsing, and human-readable rendering of streamed events.
 package commands
 
@@ -208,13 +208,13 @@ func (m *msgAccumulator) flush(out io.Writer) {
 	fmt.Fprint(out, rendered)
 }
 
-// Agents creates the `doctl agent` command tree (`agents` remains an alias).
+// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents).
 func Agents() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "agent",
-			Aliases: []string{"agents"},
-			Short:   "Manage a hosted coding-agent session",
+			Use:     agentCmdName,
+			Aliases: []string{"agent", "agents"},
+			Short:   "Managed Agents Runtime Services (M.A.R.S)",
 			Long:    agentsRootHelpMD,
 			GroupID: hostedAgentsGroup,
 		},
@@ -225,19 +225,24 @@ func Agents() *Command {
 		agentsStartHelpMD,
 		Writer, agentsNS(aliasOpt("deploy"),
 			displayerType(&displayers.HostedAgentSession{}))...)
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --config-id; exactly one is required.`)
-	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from, instead of --spec. Requires --name. Mutually exclusive with --spec.")
+	AddStringFlag(cmdStart, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Builds the manifest for you. Mutually exclusive with --spec and --config-id.")
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --config-id.`)
+	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from. Requires --name. Mutually exclusive with --harness and --spec.")
+	AddStringFlag(cmdStart, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
+	AddStringFlag(cmdStart, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
 	AddIntFlag(cmdStart, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json.")
+	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
+	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	cmdStart.Example = `doctl agent start --spec agent-spec.yaml --name my-session; doctl agent start --config-id cfg_abc123 --name my-session`
+	cmdStart.Example = agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --spec agent-spec.yaml --name my-session; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
 
 	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run",
 		"Start one session and attach",
 		agentsRunHelpMD,
 		Writer, agentsNS(aliasOpt("up"))...)
 	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec and --config-id.")
-	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness or --config-id. Same format as agents start --spec.`)
+	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness or --config-id. Same format as start --spec.`)
 	AddStringFlag(cmdRun, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to run from, instead of --harness/--spec. Requires --name.")
 	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdRun, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
@@ -247,23 +252,23 @@ func Agents() *Command {
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	cmdRun.Example = `doctl agent run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; doctl agent run --config-id cfg_abc123 --name my-session --prompt "Review the README"`
+	cmdRun.Example = agentCLI + ` run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; ` + agentCLI + ` run --config-id cfg_abc123 --name my-session --prompt "Review the README"`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
-		"Run a local facade that lets a coding-agent CLI drive a hosted session",
+		"Bridge the Codex CLI to a hosted session",
 		agentsStartProxyHelpMD,
 		Writer, agentsNS()...)
-	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to impersonate (v1: codex)")
+	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to bridge (v1: codex)")
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
 	AddIntFlag(cmdStartProxy, doctl.ArgAgentProxyPort, "", 1144, "Local port to listen on")
 	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect")
-	cmdStartProxy.Example = `doctl agent start-proxy --type codex --session my-session --port 1144`
+	cmdStartProxy.Example = agentCLI + ` start-proxy --type codex --session my-session --port 1144`
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
 		"Attach to a session",
 		agentsAttachHelpMD,
 		Writer, agentsNS(aliasOpt("chat"))...)
-	cmdAttach.Example = `doctl agent attach sess_abc123; doctl agent attach my-session-name`
+	cmdAttach.Example = agentCLI + ` attach sess_abc123; ` + agentCLI + ` attach my-session-name`
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
 		"List your sessions",
@@ -275,7 +280,7 @@ func Agents() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	cmdList.Example = `doctl agent list --page-size 10 --status SESSION_STATUS_READY; doctl agent list --name demo-agent; doctl agent list --parent-session-id sess_abc123`
+	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show one session",
@@ -297,19 +302,19 @@ func Agents() *Command {
 		"Remove a session",
 		agentsRemoveHelpMD,
 		Writer, agentsNS(aliasOpt("destroy", "rm"))...)
-	cmdRemove.Example = `doctl agent remove sess_abc123; doctl agent remove my-session; doctl agent destroy my-session`
+	cmdRemove.Example = `doctl open-harness-runtime remove sess_abc123; doctl open-harness-runtime remove my-session; doctl open-harness-runtime destroy my-session`
 
 	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
 		"Pause a session",
 		agentsPauseHelpMD,
 		Writer, agentsNS()...)
-	cmdPause.Example = `doctl agent pause sess_abc123`
+	cmdPause.Example = `doctl open-harness-runtime pause sess_abc123`
 
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
 		"Resume a paused session",
 		agentsResumeHelpMD,
 		Writer, agentsNS()...)
-	cmdResume.Example = `doctl agent resume sess_abc123`
+	cmdResume.Example = `doctl open-harness-runtime resume sess_abc123`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
@@ -319,7 +324,7 @@ func Agents() *Command {
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdUpload, doctl.ArgAgentLocalFile, "", "", "Path to the local file to upload", requiredOpt())
 	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as an uncompressed tar archive to extract at the destination (not .tgz / .tar.gz)")
-	cmdUpload.Example = `doctl agent upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
+	cmdUpload.Example = `doctl open-harness-runtime upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
@@ -328,7 +333,7 @@ func Agents() *Command {
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
-	cmdDownload.Example = `doctl agent download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+	cmdDownload.Example = `doctl open-harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",
@@ -336,7 +341,7 @@ func Agents() *Command {
 		Writer, agentsNS()...)
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
-	cmdAuth.Example = `doctl agent auth github`
+	cmdAuth.Example = `doctl open-harness-runtime auth github`
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
@@ -345,7 +350,7 @@ func Agents() *Command {
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
 	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
-	cmdFork.Example = `doctl agent fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+	cmdFork.Example = `doctl open-harness-runtime fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
 
 	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
 		"Roll a session back to a checkpoint in place",
@@ -364,15 +369,17 @@ func Agents() *Command {
 
 // --- runners ----------------------------------------------------------------
 
-// RunAgentsStart creates a new hosted agent session by uploading an agent
-// manifest verbatim. For adapter codex-agentapi it first creates an OpenAI
-// Agents session, resolves ${ENV_ID} from the returned environment id, and
-// passes openai_session_id to harness-api as a query parameter.
+// RunAgentsStart creates a hosted agent session from --harness / --spec /
+// --config-id, waits until ready (text mode), optionally sends --prompt, and
+// prints a ready summary. It does not attach; use `run` for create-and-attach.
 //
-// In text mode it waits for readiness and prints the same styled progress /
-// ready card as `agents run --no-attach`. JSON output returns the create
-// response immediately via the usual table/JSON displayer.
+// For adapter codex-agentapi it first creates an OpenAI Agents session, resolves
+// ${ENV_ID}, and passes openai_session_id to harness-api as a query parameter.
 func RunAgentsStart(c *CmdConfig) error {
+	harness, err := c.Doit.GetString(c.NS, doctl.ArgAgentHarness)
+	if err != nil {
+		return err
+	}
 	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
 	if err != nil {
 		return err
@@ -381,75 +388,128 @@ func RunAgentsStart(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	repo, err := c.Doit.GetString(c.NS, doctl.ArgAgentRepo)
+	if err != nil {
+		return err
+	}
+	prompt, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerPrompt)
+	if err != nil {
+		return err
+	}
 
-	// Don't GetString(--spec) on this path: LiveConfig treats a viper
-	// required.agents.start.spec mark as fatal even when --config-id is set.
-	if configID != "" {
-		if c.Doit.IsSet(doctl.ArgAgentSpec) {
-			return errors.New("--spec and --config-id are mutually exclusive; provide only one")
+	harness = strings.TrimSpace(harness)
+	configID = strings.TrimSpace(configID)
+	repo = strings.TrimSpace(repo)
+	prompt = strings.TrimSpace(prompt)
+
+	// Never call GetString(--spec) when another source is selected: a stale
+	// required.agents.start.spec viper mark (or LiveConfig required check)
+	// would fail --harness / --config-id even though --spec is optional.
+	specPath := ""
+	switch {
+	case configID != "":
+		if c.Doit.IsSet(doctl.ArgAgentSpec) || c.Doit.IsSet(doctl.ArgAgentHarness) {
+			return errors.New("--harness, --spec, and --config-id are mutually exclusive; provide only one")
 		}
-		return runAgentsStartFromConfig(c, configID, name)
+	case harness != "":
+		if c.Doit.IsSet(doctl.ArgAgentSpec) {
+			return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+		}
+	default:
+		var err error
+		specPath, err = c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+		if err != nil {
+			return err
+		}
+		specPath = strings.TrimSpace(specPath)
 	}
 
-	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
-	if err != nil {
-		return err
+	sources := 0
+	for _, s := range []string{harness, specPath, configID} {
+		if s != "" {
+			sources++
+		}
 	}
-	if specPath == "" {
-		return errors.New("one of --spec or --config-id is required")
+	if sources > 1 {
+		return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	}
-
-	raw, err := readManifestBytes(os.Stdin, specPath)
-	if err != nil {
-		return err
+	if sources == 0 {
+		return fmt.Errorf("one of --%s, --%s, or --%s is required", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	}
-	if manifestUsesLegacyEnvelope(raw) {
-		warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
-			"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agent start --help`). " +
-			"The envelope is still accepted for now but will be rejected after the transition window")
+	if configID != "" && repo != "" {
+		return fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentConfigID)
 	}
-	// --name is a convenience that sets the manifest's session name. When it's
-	// omitted the manifest is sent verbatim and the server auto-generates a name.
 	if name != "" {
 		if err := validateHostedAgentIdentifier(name); err != nil {
 			return err
 		}
 	}
-	raw, err = injectManifestName(raw, name)
-	if err != nil {
-		return err
+
+	if Output != "json" {
+		stylingEnabled = detectStyling()
+	}
+	if repo != "" {
+		if err := maybeOfferGitHubAuth(c); err != nil {
+			return err
+		}
 	}
 
 	prog := (*creationProgress)(nil)
 	if Output != "json" {
-		stylingEnabled = detectStyling()
 		prog = newCreationProgress(c.Out)
 		prog.header("Launching agent session")
 	}
 
-	sess, err := startSessionFromRawManifest(c, raw, prog)
-	if err != nil {
-		return err
+	var (
+		sess *do.HostedAgentSession
+		raw  []byte
+	)
+	switch {
+	case configID != "":
+		sess, err = createSessionFromConfig(c, configID, name, prog)
+		if err != nil {
+			return err
+		}
+	case harness != "":
+		raw, err = buildHarnessManifest(harness, repo, prompt, name)
+		if err != nil {
+			return err
+		}
+		raw, err = injectManifestName(raw, name)
+		if err != nil {
+			return err
+		}
+		sess, err = startSessionFromRawManifest(c, raw, prog)
+		if err != nil {
+			return err
+		}
+	default:
+		raw, err = readManifestBytes(os.Stdin, specPath)
+		if err != nil {
+			return err
+		}
+		if manifestUsesLegacyEnvelope(raw) {
+			warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
+				"switch to the flat format (top-level `agent:` key, no envelope — see `" + agentCLI + " start --help`). " +
+				"The envelope is still accepted for now but will be rejected after the transition window")
+		}
+		raw, err = injectManifestName(raw, name)
+		if err != nil {
+			return err
+		}
+		sess, err = startSessionFromRawManifest(c, raw, prog)
+		if err != nil {
+			return err
+		}
 	}
-	return finishAgentsStartSession(c, sess, prog)
-}
 
-// runAgentsStartFromConfig starts a session from an existing Agent Config ID.
-// The server loads the config's pinned manifest and credentials, so no spec is
-// uploaded; --name is required because the config-backed create API mandates it.
-func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
-	prog := (*creationProgress)(nil)
-	if Output != "json" {
-		stylingEnabled = detectStyling()
-		prog = newCreationProgress(c.Out)
-		prog.header("Launching agent session")
-	}
-
-	sess, err := createSessionFromConfig(c, configID, name, prog)
-	if err != nil {
-		return err
-	}
-	return finishAgentsStartSession(c, sess, prog)
+	repoRef, _ := normalizeHarnessRepoRef(repo)
+	return finishAgentsStartSession(c, sess, prog, runReadySummary{
+		Session: sess,
+		Harness: harness,
+		Repo:    repoRef,
+		Prompt:  prompt,
+	}, prompt, raw)
 }
 
 // createSessionFromConfig creates a session from an Agent Config ID. Shared by
@@ -471,7 +531,7 @@ func createSessionFromConfig(c *CmdConfig, configID, name string, prog *creation
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl agent list` to find a session ID, then `doctl agent remove SESSION_ID`", strings.TrimRight(msg, "."))
+			return nil, fmt.Errorf("%s. Free a slot by removing one: run `%s list` to find a session ID, then `%s remove SESSION_ID`", strings.TrimRight(msg, "."), agentCLI, agentCLI)
 		}
 		return nil, err
 	}
@@ -483,7 +543,7 @@ func createSessionFromConfig(c *CmdConfig, configID, name string, prog *creation
 
 // finishAgentsStartSession waits for readiness and prints a styled ready card
 // in text mode; JSON mode returns the create response without waiting.
-func finishAgentsStartSession(c *CmdConfig, sess *do.HostedAgentSession, prog *creationProgress) error {
+func finishAgentsStartSession(c *CmdConfig, sess *do.HostedAgentSession, prog *creationProgress, sum runReadySummary, prompt string, raw []byte) error {
 	if sess == nil {
 		return errors.New("session create returned no session")
 	}
@@ -510,8 +570,15 @@ func finishAgentsStartSession(c *CmdConfig, sess *do.HostedAgentSession, prog *c
 	if err != nil {
 		return err
 	}
+	sum.Session = sess
 
-	printRunReadySummary(c.Out, runReadySummary{Session: sess})
+	if prompt != "" && (raw == nil || !manifestIncludesPrompt(raw, prompt)) {
+		if _, err := c.HostedAgents().SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: prompt}); err != nil {
+			return fmt.Errorf("sending initial prompt: %w", err)
+		}
+	}
+
+	printRunReadySummary(c.Out, sum)
 	return nil
 }
 
@@ -865,7 +932,7 @@ func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 
 	switch len(live) {
 	case 0:
-		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl agent list` to see available sessions", ref)
+		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl open-harness-runtime list` to see available sessions", ref)
 	case 1:
 		return live[0].SessionID, nil
 	default:
@@ -904,7 +971,7 @@ func RunAgentsShow(c *CmdConfig) error {
 	return nil
 }
 
-// RunAgentsDestroy tears down a session (CLI: `doctl agent remove`,
+// RunAgentsDestroy tears down a session (CLI: `doctl open-harness-runtime remove`,
 // with aliases `destroy` and `rm`).
 func RunAgentsDestroy(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
@@ -965,7 +1032,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 	provider := strings.ToLower(strings.TrimSpace(c.Args[0]))
 	if provider == "" {
-		return errors.New("a provider is required, e.g. `doctl agent auth github`")
+		return errors.New("a provider is required, e.g. `doctl open-harness-runtime auth github`")
 	}
 	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
 	if err != nil {
@@ -1014,7 +1081,7 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	}
 
 	if noWait || start.PollURL == "" {
-		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl agent auth %s` after authorizing to confirm the connection", provider))
+		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl open-harness-runtime auth %s` after authorizing to confirm the connection", provider))
 		return nil
 	}
 
@@ -1027,7 +1094,7 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("stopped waiting; re-run `doctl agent auth %s` to check the connection later", provider)
+			return fmt.Errorf("stopped waiting; re-run `doctl open-harness-runtime auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
 
@@ -2830,7 +2897,7 @@ func classifyStreamError(err error) (string, bool) {
 			if status == http.StatusConflict && ape.title == "Conflict" {
 				// V0 single-connection rejection; prefer a clearer title.
 				ape.title = "Session already attached elsewhere"
-				ape.tips = []string{"Detach on the other device, then re-run doctl agent attach"}
+				ape.tips = []string{"Detach on the other device, then re-run doctl open-harness-runtime attach"}
 			}
 			if status == http.StatusNotFound {
 				ape.title = "Session not found"
@@ -4419,9 +4486,9 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	switch verb {
 	case "/help":
 		fmt.Fprintln(c.Out, "Detach (does NOT remove the session):")
-		fmt.Fprintln(c.Out, "  Ctrl-D           close the connection; reattach later with `doctl agent attach`")
+		fmt.Fprintln(c.Out, "  Ctrl-D           close the connection; reattach later with `doctl open-harness-runtime attach`")
 		fmt.Fprintln(c.Out, "  Ctrl-C           same as Ctrl-D")
-		fmt.Fprintln(c.Out, "Remove the session: `doctl agent remove <session>`")
+		fmt.Fprintln(c.Out, "Remove the session: `doctl open-harness-runtime remove <session>`")
 		fmt.Fprintln(c.Out, "When a HITL approval is pending (no Enter needed in a TTY):")
 		fmt.Fprintln(c.Out, "  ↑ / ↓ then Enter  move the highlight and confirm the selected outcome")
 		fmt.Fprintln(c.Out, "  y | a             approve the oldest pending request")
@@ -4771,7 +4838,7 @@ func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote stri
 	body.WriteString(cardRow("send", "type a message and press Enter"))
 	body.WriteString(cardRow("approve", "↑/↓ then Enter, or "+yn))
 	body.WriteString(cardRow("detach", colorize("Ctrl-D", colMuted)+" closes connection only — session keeps running"))
-	body.WriteString(cardRow("remove", colorize("doctl agent remove "+ref, colMuted)))
+	body.WriteString(cardRow("remove", colorize("doctl open-harness-runtime remove "+ref, colMuted)))
 	body.WriteString(cardRow("help", "type "+boldColor("/help", colHighlight)+" for the full command list"))
 
 	renderAgentCard(w, body.String())

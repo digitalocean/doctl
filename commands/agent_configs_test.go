@@ -138,7 +138,7 @@ func TestAgentConfigDelete_ActiveSessions(t *testing.T) {
 		err := RunAgentsConfigDelete(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "active sessions")
-		assert.Contains(t, err.Error(), "doctl agent remove")
+		assert.Contains(t, err.Error(), "doctl open-harness-runtime remove")
 	})
 }
 

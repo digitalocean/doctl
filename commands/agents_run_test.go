@@ -274,7 +274,7 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		assert.Contains(t, out, "Session created")
 		assert.Contains(t, out, "Agent is ready")
 		assert.NotContains(t, out, "SESSION_STATUS_")
-		assert.Contains(t, out, "doctl agent attach demo")
+		assert.Contains(t, out, "doctl open-harness-runtime attach demo")
 		assert.Contains(t, out, "katanemo/plano")
 	})
 }
@@ -295,7 +295,7 @@ func TestPrintAttachBanner(t *testing.T) {
 	assert.Contains(t, got, "Quick help")
 	assert.Contains(t, got, "Ctrl-D")
 	assert.Contains(t, got, "session keeps running")
-	assert.Contains(t, got, "doctl agent remove smoke-test")
+	assert.Contains(t, got, "doctl open-harness-runtime remove smoke-test")
 }
 
 func TestPrintDetachNotice(t *testing.T) {
@@ -308,8 +308,8 @@ func TestPrintDetachNotice(t *testing.T) {
 	out := buf.String()
 	assert.Contains(t, out, "Disconnected")
 	assert.Contains(t, out, "still running")
-	assert.Contains(t, out, "doctl agent attach my-session")
-	assert.Contains(t, out, "doctl agent remove my-session")
+	assert.Contains(t, out, "doctl open-harness-runtime attach my-session")
+	assert.Contains(t, out, "doctl open-harness-runtime remove my-session")
 }
 
 func TestMaybeOfferGitHubAuth_AlreadyConnected(t *testing.T) {
@@ -436,7 +436,7 @@ func TestRunAgentsRun_FromConfigID_NoAttach(t *testing.T) {
 		got := buf.String()
 		assert.Contains(t, got, "Creating hosted session from config")
 		assert.Contains(t, got, "Agent is ready")
-		assert.Contains(t, got, "doctl agent attach demo")
+		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
 	})
 }
 

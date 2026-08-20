@@ -71,9 +71,10 @@ func TestAgentsCommand(t *testing.T) {
 	assertCommandNames(t, cmd, "start", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
 }
 
-func TestAgentsPrimaryNameIsSingular(t *testing.T) {
+func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
 	cmd := Agents()
-	assert.Equal(t, "agent", cmd.Name())
+	assert.Equal(t, agentCmdName, cmd.Name())
+	assert.Contains(t, cmd.Aliases, "agent")
 	assert.Contains(t, cmd.Aliases, "agents")
 
 	found, _, err := cmd.Find([]string{"run"})
@@ -253,6 +254,42 @@ func TestRunAgentsStart(t *testing.T) {
 	})
 }
 
+func TestRunAgentsStart_FromHarness(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				var doc map[string]any
+				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
+				assert.Equal(t, "claude-code", doc["agent"])
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_harness",
+						Name:      "harness-demo",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_harness").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_harness",
+					Name:      "harness-demo",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "harness-demo")
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
 func TestRunAgentsStart_WithName(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
@@ -300,7 +337,7 @@ func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
 	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
 	// required-flag check, so the FromConfigID runner tests cannot catch this.
 	require.False(t, viper.GetBool("required.agents.start.spec"),
-		"spec is still marked required; `doctl agents start --config-id` fails with (agents.start.spec) command is missing required arguments")
+		"spec is still marked required; `doctl open-harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
 	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
 	require.NoError(t, err)
 }
@@ -359,11 +396,11 @@ func TestRunAgentsStart_SpecAndConfigIDMutuallyExclusive(t *testing.T) {
 	})
 }
 
-func TestRunAgentsStart_RequiresSpecOrConfigID(t *testing.T) {
+func TestRunAgentsStart_RequiresSource(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunAgentsStart(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "one of --spec or --config-id is required")
+		assert.Contains(t, err.Error(), "one of --harness, --spec, or --config-id is required")
 	})
 }
 
@@ -631,7 +668,7 @@ func TestRunAgentsShow(t *testing.T) {
 		got := buf.String()
 		assert.Contains(t, got, "demo")
 		assert.Contains(t, got, "ready")
-		assert.Contains(t, got, "doctl agent attach demo")
+		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
 		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }

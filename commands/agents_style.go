@@ -112,7 +112,7 @@ func printCheckpointCard(w io.Writer, cp *godo.HostedAgentCheckpoint, created bo
 	if sess := strings.TrimSpace(cp.SessionID); sess != "" {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		body.WriteString(cardRow("rollback", "doctl agent rollback "+sess+" "+cp.CheckpointID))
+		body.WriteString(cardRow("rollback", "doctl open-harness-runtime rollback "+sess+" "+cp.CheckpointID))
 	}
 	renderAgentCard(w, body.String())
 }
@@ -508,8 +508,8 @@ func printDetachNotice(w io.Writer, sessionRef string) {
 	if ref == "" {
 		ref = "<session>"
 	}
-	fmt.Fprintf(w, "  %s %s\n", colorize("reattach", colMuted), "doctl agent attach "+ref)
-	fmt.Fprintf(w, "  %s %s\n", colorize("remove  ", colMuted), "doctl agent remove "+ref)
+	fmt.Fprintf(w, "  %s %s\n", colorize("reattach", colMuted), "doctl open-harness-runtime attach "+ref)
+	fmt.Fprintf(w, "  %s %s\n", colorize("remove  ", colMuted), "doctl open-harness-runtime remove "+ref)
 }
 
 // printSessionEndedNotice is shown when the remote run can no longer accept input.
@@ -520,6 +520,6 @@ func printSessionEndedNotice(w io.Writer, sessionRef string) {
 	if ref == "" {
 		ref = "<session>"
 	}
-	fmt.Fprintf(w, "  %s %s\n", colorize("remove", colMuted), "doctl agent remove "+ref)
-	fmt.Fprintf(w, "  %s %s\n", colorize("start ", colMuted), "doctl agent run --harness opencode --name new-session")
+	fmt.Fprintf(w, "  %s %s\n", colorize("remove", colMuted), "doctl open-harness-runtime remove "+ref)
+	fmt.Fprintf(w, "  %s %s\n", colorize("start ", colMuted), "doctl open-harness-runtime run --harness opencode --name new-session")
 }

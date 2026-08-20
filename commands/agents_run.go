@@ -57,7 +57,7 @@ func maybeOfferGitHubAuth(c *CmdConfig) error {
 	svc := c.HostedAgents()
 	start, err := svc.StartProviderAuth(agentGitHubProvider)
 	if err != nil {
-		warn("could not check GitHub connection status: %v (continuing; use `doctl agent auth github` for private repos)", err)
+		warn("could not check GitHub connection status: %v (continuing; use `doctl open-harness-runtime auth github` for private repos)", err)
 		return nil
 	}
 	if start != nil && strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
@@ -72,7 +72,7 @@ func maybeOfferGitHubAuth(c *CmdConfig) error {
 	if !connect {
 		fmt.Fprintf(c.Out, "%s %s\n",
 			colorize("•", colMuted),
-			colorize("Skipping GitHub connect — fine for public repos. Use `doctl agent auth github` later for private ones.", colMuted))
+			colorize("Skipping GitHub connect — fine for public repos. Use `doctl open-harness-runtime auth github` later for private ones.", colMuted))
 		return nil
 	}
 
@@ -193,7 +193,7 @@ func RunAgentsRun(c *CmdConfig) error {
 		}
 		if manifestUsesLegacyEnvelope(raw) {
 			warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
-				"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agent start --help`). " +
+				"switch to the flat format (top-level `agent:` key, no envelope — see `doctl open-harness-runtime start --help`). " +
 				"The envelope is still accepted for now but will be rejected after the transition window")
 		}
 		raw, err = injectManifestName(raw, name)
@@ -257,7 +257,7 @@ func RunAgentsRun(c *CmdConfig) error {
 		ref := displaySessionRef(sess)
 		fmt.Fprintf(c.Out, "%s %s\n",
 			colorize("Tip:", colMuted),
-			colorize("For the native Codex TUI instead of doctl chat: doctl agent start-proxy --type codex --session "+ref+" --port 1144", colMuted))
+			colorize("For the native Codex TUI instead of doctl chat: doctl open-harness-runtime start-proxy --type codex --session "+ref+" --port 1144", colMuted))
 	}
 
 	return runAgentsAttachSession(c, sessionID)
@@ -449,7 +449,7 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl agent list` to find a session ID, then `doctl agent remove SESSION_ID`", strings.TrimRight(msg, "."))
+			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl open-harness-runtime list` to find a session ID, then `doctl open-harness-runtime remove SESSION_ID`", strings.TrimRight(msg, "."))
 		}
 		return nil, err
 	}
@@ -702,9 +702,9 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next step", colMuted))
-	body.WriteString(cardRow("attach", "doctl agent attach "+ref))
+	body.WriteString(cardRow("attach", "doctl open-harness-runtime attach "+ref))
 	if isCodexReadyAgent(sum) {
-		body.WriteString(cardRow("proxy", "doctl agent start-proxy --type codex --session "+ref+" --port 1144"))
+		body.WriteString(cardRow("proxy", "doctl open-harness-runtime start-proxy --type codex --session "+ref+" --port 1144"))
 	}
 
 	renderAgentCard(w, body.String())
@@ -793,7 +793,7 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached, godo.HostedAgentSessionStatusPaused:
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		body.WriteString(cardRow("attach", "doctl agent attach "+ref))
+		body.WriteString(cardRow("attach", "doctl open-harness-runtime attach "+ref))
 	}
 
 	renderAgentCard(w, body.String())

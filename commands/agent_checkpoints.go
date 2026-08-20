@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentCheckpoints generates the `doctl agent checkpoint` subtree.
+// AgentCheckpoints generates the `doctl open-harness-runtime checkpoint` subtree.
 func AgentCheckpoints() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -41,7 +41,7 @@ func AgentCheckpoints() *Command {
 		Writer, agentPrettyErrors(), aliasOpt("save"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentCheckpointLabel, "", "", "Optional label for the checkpoint")
-	cmdCreate.Example = `doctl agent checkpoint create sess_abc123 --label before-refactor`
+	cmdCreate.Example = `doctl open-harness-runtime checkpoint create sess_abc123 --label before-refactor`
 
 	cmdList := CmdBuilder(cmd, RunAgentsCheckpointList, "list <session>",
 		"List checkpoints for a session",
@@ -50,7 +50,7 @@ func AgentCheckpoints() *Command {
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of checkpoints to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
-	cmdList.Example = `doctl agent checkpoint list sess_abc123`
+	cmdList.Example = `doctl open-harness-runtime checkpoint list sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsCheckpointGet, "get <session> <checkpoint-id>",
 		"Get a checkpoint",
