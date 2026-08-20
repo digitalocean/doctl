@@ -40,7 +40,7 @@ func AgentTriggers() *Command {
 	cmdList := CmdBuilder(cmd, RunAgentTriggersList, "list",
 		"List triggers",
 		agentsTriggersListHelpMD,
-		Writer, aliasOpt("ls"),
+		Writer, agentPrettyErrors(), aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of triggers to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
@@ -51,7 +51,7 @@ func AgentTriggers() *Command {
 	cmdCreate := CmdBuilder(cmd, RunAgentTriggersCreate, "create",
 		"Create a webhook or cron trigger",
 		agentsTriggersCreateHelpMD,
-		Writer,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerKind, "", "", "Trigger kind (webhook|cron)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Unique trigger name for the team (1–64 letters/digits/`-`/`.`/`_`, start and end alphanumeric, not a UUID)", requiredOpt())
@@ -70,13 +70,13 @@ func AgentTriggers() *Command {
 	CmdBuilder(cmd, RunAgentTriggersGet, "get <trigger-id>",
 		"Get a trigger",
 		"Shows details for one trigger by ID.",
-		Writer, aliasOpt("show"),
+		Writer, agentPrettyErrors(), aliasOpt("show"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	cmdUpdate := CmdBuilder(cmd, RunAgentTriggersUpdate, "update <trigger-id>",
 		"Update a trigger",
 		agentsTriggersUpdateHelpMD,
-		Writer,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddStringFlag(cmdUpdate, doctl.ArgAgentName, "", "", "New unique trigger name (same identifier rules as create)")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentStatus, "", "", "Lifecycle status (active|paused)")
@@ -93,31 +93,31 @@ func AgentTriggers() *Command {
 	cmdDelete := CmdBuilder(cmd, RunAgentTriggersDelete, "delete <trigger-id>",
 		"Delete a trigger",
 		agentsTriggersDeleteHelpMD,
-		Writer, aliasOpt("rm"))
+		Writer, agentPrettyErrors(), aliasOpt("rm"))
 	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete without confirmation")
 	cmdDelete.Example = `doctl agent triggers delete TRIGGER_ID --force`
 
 	CmdBuilder(cmd, RunAgentTriggersPause, "pause <trigger-id>",
 		"Pause a trigger",
 		agentsTriggersPauseHelpMD,
-		Writer,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	CmdBuilder(cmd, RunAgentTriggersResume, "resume <trigger-id>",
 		"Resume a paused trigger",
 		agentsTriggersResumeHelpMD,
-		Writer, aliasOpt("activate", "enable"),
+		Writer, agentPrettyErrors(), aliasOpt("activate", "enable"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	CmdBuilder(cmd, RunAgentTriggersRotateSecret, "rotate-secret <trigger-id>",
 		"Rotate a webhook trigger's secret",
 		agentsTriggersRotateSecretHelpMD,
-		Writer)
+		Writer, agentPrettyErrors())
 
 	cmdListExec := CmdBuilder(cmd, RunAgentTriggersListExecutions, "list-executions <trigger-id>",
 		"List a trigger's execution history",
 		agentsTriggersListExecutionsHelpMD,
-		Writer, aliasOpt("executions"),
+		Writer, agentPrettyErrors(), aliasOpt("executions"),
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 	AddIntFlag(cmdListExec, doctl.ArgAgentPageSize, "", 0, "Maximum number of executions to return per page")
 	AddStringFlag(cmdListExec, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
@@ -127,19 +127,19 @@ func AgentTriggers() *Command {
 	CmdBuilder(cmd, RunAgentTriggersGetExecution, "get-execution <trigger-id> <execution-id>",
 		"Get a single trigger execution",
 		agentsTriggersGetExecutionHelpMD,
-		Writer,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 
 	CmdBuilder(cmd, RunAgentTriggersGetBySession, "get-by-session <session-id>",
 		"Look up the trigger for a session",
 		agentsTriggersGetBySessionHelpMD,
-		Writer,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	cmdReusable := CmdBuilder(cmd, RunAgentTriggersListReusableSessions, "list-reusable-sessions",
 		"List paused sessions for reuse binding",
 		agentsTriggersListReusableHelpMD,
-		Writer, aliasOpt("reusable-sessions"),
+		Writer, agentPrettyErrors(), aliasOpt("reusable-sessions"),
 		displayerType(&displayers.HostedAgentReusableSession{}))
 	AddIntFlag(cmdReusable, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
 	AddStringFlag(cmdReusable, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
@@ -147,7 +147,7 @@ func AgentTriggers() *Command {
 	CmdBuilder(cmd, RunAgentTriggersListProviders, "list-providers",
 		"List supported webhook providers",
 		agentsTriggersListProvidersHelpMD,
-		Writer, aliasOpt("providers"),
+		Writer, agentPrettyErrors(), aliasOpt("providers"),
 		displayerType(&displayers.HostedAgentWebhookProvider{}))
 
 	return cmd

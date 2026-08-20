@@ -46,13 +46,13 @@ func AgentConfigs() *Command {
 	// "agents.config" instead, mirroring how registry.repository does it. The
 	// override must be passed as a build option so it is in effect when the
 	// displayer's --format / --no-header flags are bound inside CmdBuilder.
-	ns := overrideCmdNS("agents.config")
+	ns := agentSubNS("agents.config")
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsConfigCreate, "create",
 		"Create an agent config from a manifest",
 		agentsConfigCreateHelpMD,
-		Writer, ns, aliasOpt("c"),
-		displayerType(&displayers.HostedAgentConfig{}))
+		Writer, append(ns, aliasOpt("c"),
+			displayerType(&displayers.HostedAgentConfig{}))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
 	cmdCreate.Example = `doctl agent config create --spec agent-spec.yaml --name my-config`
@@ -60,8 +60,8 @@ func AgentConfigs() *Command {
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
 		agentsConfigListHelpMD,
-		Writer, ns, aliasOpt("ls"),
-		displayerType(&displayers.HostedAgentConfigSummary{}))
+		Writer, append(ns, aliasOpt("ls"),
+			displayerType(&displayers.HostedAgentConfigSummary{}))...)
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of configs to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	cmdList.Example = `doctl agent config list --page-size 10`
@@ -69,19 +69,19 @@ func AgentConfigs() *Command {
 	CmdBuilder(cmd, RunAgentsConfigGet, "get <config-id>",
 		"Get an agent config",
 		agentsConfigGetHelpMD,
-		Writer, ns, aliasOpt("show"),
-		displayerType(&displayers.HostedAgentConfig{}))
+		Writer, append(ns, aliasOpt("show"),
+			displayerType(&displayers.HostedAgentConfig{}))...)
 
 	CmdBuilder(cmd, RunAgentsConfigDelete, "delete <config-id>",
 		"Delete an agent config",
 		agentsConfigDeleteHelpMD,
-		Writer, ns, aliasOpt("rm"))
+		Writer, append(ns, aliasOpt("rm"))...)
 
 	cmdSessions := CmdBuilder(cmd, RunAgentsConfigListSessions, "list-sessions <config-id>",
 		"List sessions started from a config",
 		agentsConfigListSessionsHelpMD,
-		Writer, ns, aliasOpt("sessions"),
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, append(ns, aliasOpt("sessions"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddIntFlag(cmdSessions, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
 	AddStringFlag(cmdSessions, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdSessions, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY)")
@@ -91,8 +91,8 @@ func AgentConfigs() *Command {
 	cmdStartSession := CmdBuilder(cmd, RunAgentsConfigStartSession, "start-session <config-id>",
 		"Start a session from a config",
 		agentsConfigStartSessionHelpMD,
-		Writer, ns, aliasOpt("start"),
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, append(ns, aliasOpt("start"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdStartSession, doctl.ArgAgentName, "", "", "Name for the new session", requiredOpt())
 	cmdStartSession.Example = `doctl agent config start-session cfg_abc123 --name my-session`
 

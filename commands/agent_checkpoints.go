@@ -38,7 +38,7 @@ func AgentCheckpoints() *Command {
 	cmdCreate := CmdBuilder(cmd, RunAgentsCheckpointCreate, "create <session>",
 		"Create a checkpoint for a session",
 		agentsCheckpointCreateHelpMD,
-		Writer, aliasOpt("save"),
+		Writer, agentPrettyErrors(), aliasOpt("save"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentCheckpointLabel, "", "", "Optional label for the checkpoint")
 	cmdCreate.Example = `doctl agent checkpoint create sess_abc123 --label before-refactor`
@@ -46,7 +46,7 @@ func AgentCheckpoints() *Command {
 	cmdList := CmdBuilder(cmd, RunAgentsCheckpointList, "list <session>",
 		"List checkpoints for a session",
 		agentsCheckpointListHelpMD,
-		Writer, aliasOpt("ls"),
+		Writer, agentPrettyErrors(), aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of checkpoints to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
@@ -55,13 +55,13 @@ func AgentCheckpoints() *Command {
 	CmdBuilder(cmd, RunAgentsCheckpointGet, "get <session> <checkpoint-id>",
 		"Get a checkpoint",
 		agentsCheckpointGetHelpMD,
-		Writer, aliasOpt("show"),
+		Writer, agentPrettyErrors(), aliasOpt("show"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 
 	CmdBuilder(cmd, RunAgentsCheckpointDelete, "delete <session> <checkpoint-id>",
 		"Delete a checkpoint",
 		agentsCheckpointDeleteHelpMD,
-		Writer, aliasOpt("rm"))
+		Writer, agentPrettyErrors(), aliasOpt("rm"))
 
 	return cmd
 }

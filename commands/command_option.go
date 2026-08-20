@@ -53,8 +53,21 @@ func overrideCmdNS(ns string) cmdOption {
 	}
 }
 
+// agentPrettyErrors enables styled error cards for agent subcommands.
+func agentPrettyErrors() cmdOption {
+	return func(c *Command) {
+		c.prettyAgentErrors = true
+	}
+}
+
 // agentsNS keeps viper keys under agents.* after the primary command became
 // `doctl agent` (with `agents` as an alias). Spread into CmdBuilder options.
 func agentsNS(opts ...cmdOption) []cmdOption {
-	return append([]cmdOption{overrideCmdNS("agents")}, opts...)
+	return append([]cmdOption{agentPrettyErrors(), overrideCmdNS("agents")}, opts...)
+}
+
+// agentSubNS is for nested agent groups (config / triggers / checkpoint) that
+// need both pretty errors and a custom viper namespace.
+func agentSubNS(ns string, opts ...cmdOption) []cmdOption {
+	return append([]cmdOption{agentPrettyErrors(), overrideCmdNS(ns)}, opts...)
 }

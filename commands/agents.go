@@ -1561,10 +1561,7 @@ func runAgentsAttachSession(c *CmdConfig, sessionID string) error {
 
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
-		if msg, terminal := classifyStreamError(err); terminal {
-			return errors.New(strings.TrimSpace(msg))
-		}
-		return err
+		return beautifyAgentError(err)
 	}
 	if isTerminalSessionStatus(sess.Status) {
 		return fmt.Errorf("session %s cannot be attached (status: %s)", sessionID, humanSessionStatus(sess.Status))
@@ -2821,20 +2818,29 @@ var reconnectSleepFn = sleepCtx
 // errors stop the reconnect loop (auth, missing session, V0 single-connection
 // rejection); status codes follow harness-api's apierr convention.
 func classifyStreamError(err error) (string, bool) {
-	var er *godo.ErrorResponse
-	if !errors.As(err, &er) || er.Response == nil {
+	msg, status, ok := agentAPIError(err)
+	if !ok {
 		return "", false
 	}
-	switch er.Response.StatusCode {
-	case http.StatusUnauthorized:
-		return fmt.Sprintf("\nAuthentication failed: %s\nRun `doctl auth init` and try again.", er.Message), true
-	case http.StatusForbidden:
-		return fmt.Sprintf("\nAccess denied: %s", er.Message), true
-	case http.StatusNotFound:
-		return fmt.Sprintf("\nSession not found: %s", er.Message), true
-	case http.StatusConflict:
-		// V0 single-connection rejection. er.Message carries device + when.
-		return fmt.Sprintf("\nSession already attached on another device: %s\nDetach there first, then re-run `doctl agent attach`.", er.Message), true
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict:
+		pretty := beautifyAgentError(err)
+		var ape *agentPrettyError
+		if errors.As(pretty, &ape) {
+			if status == http.StatusConflict && ape.title == "Conflict" {
+				// V0 single-connection rejection; prefer a clearer title.
+				ape.title = "Session already attached elsewhere"
+				ape.tips = []string{"Detach on the other device, then re-run doctl agent attach"}
+			}
+			if status == http.StatusNotFound {
+				ape.title = "Session not found"
+			}
+			if reason := strings.TrimSpace(msg); reason != "" {
+				ape.reason = reason
+			}
+			return "\n" + ape.DisplayError(), true
+		}
+		return "\n" + strings.TrimSpace(err.Error()), true
 	}
 	return "", false
 }

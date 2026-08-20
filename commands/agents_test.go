@@ -2372,7 +2372,7 @@ func TestEventCursor(t *testing.T) {
 }
 
 // TestRunAgentsAttachAuthFailure: a 401 from pre-attach GetSession surfaces
-// the friendly "Authentication failed" message, not the raw HTTP error.
+// a styled agentPrettyError, not the raw godo METHOD/URL dump.
 func TestRunAgentsAttachAuthFailure(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		authErr := &godo.ErrorResponse{
@@ -2387,8 +2387,13 @@ func TestRunAgentsAttachAuthFailure(t *testing.T) {
 		config.Args = []string{"sess_x"}
 		err := RunAgentsAttach(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Authentication failed")
-		assert.Contains(t, err.Error(), "doctl auth init")
+		var pretty *agentPrettyError
+		require.True(t, errors.As(err, &pretty))
+		assert.Equal(t, "Authentication failed", pretty.title)
+		assert.Contains(t, pretty.tips, "doctl auth init")
+		display := pretty.DisplayError()
+		assert.Contains(t, display, "Authentication failed")
+		assert.NotContains(t, display, "GET http://")
 	})
 }
 
@@ -2474,7 +2479,7 @@ func TestClassifyStreamError(t *testing.T) {
 			name:        "409 conflict is the V0 single-connection rejection",
 			err:         mkErr(http.StatusConflict, "already attached on device abc-123 since 2026-06-24T10:00:00Z"),
 			wantTermini: true,
-			wantSubstr:  "Session already attached on another device",
+			wantSubstr:  "Session already attached elsewhere",
 		},
 		{
 			name:        "500 is transient",
