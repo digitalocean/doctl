@@ -7,7 +7,7 @@ You may obtain a copy of the License at
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+    15|See the License for the specific language governing permissions and
 limitations under the License.
 */
 
@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -82,7 +83,12 @@ func RunAgentsCheckpointCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printCheckpointCard(c.Out, cp, true)
+	return nil
 }
 
 // RunAgentsCheckpointList lists checkpoints for a session.
@@ -110,12 +116,18 @@ func RunAgentsCheckpointList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: checkpoints}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: checkpoints}); err != nil {
+			return err
+		}
+		if next != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
+		}
+		return nil
 	}
-	if next != "" {
-		fmt.Fprintf(c.Out, "\nNext page token: %s\n", next)
-	}
+	stylingEnabled = detectStyling()
+	printCheckpointsList(c.Out, checkpoints)
+	printAgentNextPage(c.Out, next)
 	return nil
 }
 
@@ -132,7 +144,12 @@ func RunAgentsCheckpointGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printCheckpointCard(c.Out, cp, false)
+	return nil
 }
 
 // RunAgentsCheckpointDelete deletes a checkpoint.
@@ -148,7 +165,8 @@ func RunAgentsCheckpointDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(c.Out, "Deleted checkpoint %s (deleted=%v)\n", resp.CheckpointID, resp.Deleted)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Deleted checkpoint %s", resp.CheckpointID))
 	return nil
 }
 
@@ -179,7 +197,12 @@ func RunAgentsFork(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: sessions})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: sessions})
+	}
+	stylingEnabled = detectStyling()
+	printSessionsList(c.Out, sessions)
+	return nil
 }
 
 // RunAgentsRollback rolls a session back to a checkpoint in place.
@@ -195,5 +218,10 @@ func RunAgentsRollback(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printSessionShowCard(c.Out, sess)
+	return nil
 }

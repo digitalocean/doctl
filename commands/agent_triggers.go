@@ -165,10 +165,16 @@ func RunAgentTriggersList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentTrigger{Triggers: triggers}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentTrigger{Triggers: triggers}); err != nil {
+			return err
+		}
+		return printNextPageToken(c, next)
 	}
-	return printNextPageToken(c, next)
+	stylingEnabled = detectStyling()
+	printTriggersList(c.Out, triggers)
+	printAgentNextPage(c.Out, next)
+	return nil
 }
 
 // RunAgentTriggersCreate creates a webhook or cron trigger.
@@ -198,17 +204,17 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 			WebhookSecret:      result.WebhookSecret,
 		})
 	}
-	// Text mode: banner to stdout, then the trigger table.
-	if result.WebhookSecret != "" {
-		fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
-		if result.Trigger != nil && result.Trigger.Webhook != nil && result.Trigger.Webhook.WebhookURL != "" {
-			fmt.Fprintf(c.Out, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
-		}
+	stylingEnabled = detectStyling()
+	webhookURL := ""
+	if result.Trigger != nil && result.Trigger.Webhook != nil {
+		webhookURL = result.Trigger.Webhook.WebhookURL
 	}
+	printWebhookSecretCard(c.Out, result.WebhookSecret, webhookURL)
 	if result.Trigger == nil {
 		return nil
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}, Single: true})
+	printTriggerCard(c.Out, result.Trigger, true)
+	return nil
 }
 
 // RunAgentTriggersGet fetches one trigger.
@@ -220,7 +226,12 @@ func RunAgentTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersUpdate partially updates a trigger.
@@ -236,7 +247,12 @@ func RunAgentTriggersUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersDelete soft-deletes a trigger.
@@ -251,7 +267,12 @@ func RunAgentTriggersDelete(c *CmdConfig) error {
 	if !(force || AskForConfirmDelete("trigger", 1) == nil) {
 		return fmt.Errorf("operation aborted")
 	}
-	return c.HostedAgentTriggers().Delete(c.Args[0])
+	if err := c.HostedAgentTriggers().Delete(c.Args[0]); err != nil {
+		return err
+	}
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Deleted trigger %s", c.Args[0]))
+	return nil
 }
 
 // RunAgentTriggersPause sets status=paused.
@@ -272,7 +293,12 @@ func agentTriggersSetStatus(c *CmdConfig, status godo.HostedAgentTriggerStatus) 
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersRotateSecret rotates a webhook secret.
@@ -287,7 +313,8 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	if Output == "json" {
 		return json.NewEncoder(c.Out).Encode(map[string]string{"webhook_secret": secret})
 	}
-	fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(secret))
+	stylingEnabled = detectStyling()
+	printWebhookSecretCard(c.Out, secret, "")
 	return nil
 }
 
@@ -304,10 +331,16 @@ func RunAgentTriggersListExecutions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentTriggerExecution{Executions: execs}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentTriggerExecution{Executions: execs}); err != nil {
+			return err
+		}
+		return printNextPageToken(c, next)
 	}
-	return printNextPageToken(c, next)
+	stylingEnabled = detectStyling()
+	printTriggerExecutionsList(c.Out, execs)
+	printAgentNextPage(c.Out, next)
+	return nil
 }
 
 // RunAgentTriggersGetExecution fetches one execution including payload/output.
@@ -322,14 +355,12 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if e.OutputText != "" && Output != "json" {
-		fmt.Fprintln(c.Out, e.OutputText)
-		if e.OutputTruncated {
-			fmt.Fprintln(c.Out, "(output truncated)")
-		}
-		fmt.Fprintln(c.Out)
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
 	}
-	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
+	stylingEnabled = detectStyling()
+	printTriggerExecutionCard(c.Out, e)
+	return nil
 }
 
 // RunAgentTriggersGetBySession reverse-looks-up a trigger by session ID.
@@ -341,7 +372,12 @@ func RunAgentTriggersGetBySession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersListReusableSessions lists PAUSED sessions for reuse binding.
@@ -354,10 +390,16 @@ func RunAgentTriggersListReusableSessions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentReusableSession{Sessions: sessions}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentReusableSession{Sessions: sessions}); err != nil {
+			return err
+		}
+		return printNextPageToken(c, next)
 	}
-	return printNextPageToken(c, next)
+	stylingEnabled = detectStyling()
+	printReusableSessionsList(c.Out, sessions)
+	printAgentNextPage(c.Out, next)
+	return nil
 }
 
 // RunAgentTriggersListProviders lists the webhook provider registry.
@@ -366,7 +408,12 @@ func RunAgentTriggersListProviders(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentWebhookProvider{Providers: providers})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentWebhookProvider{Providers: providers})
+	}
+	stylingEnabled = detectStyling()
+	printWebhookProvidersList(c.Out, providers)
+	return nil
 }
 
 // --- helpers ----------------------------------------------------------------
@@ -378,7 +425,7 @@ func printNextPageToken(c *CmdConfig, next string) error {
 	if Output == "json" {
 		fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
 	} else {
-		fmt.Fprintf(c.Out, "Next page token: %s\n", next)
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), next)
 	}
 	return nil
 }

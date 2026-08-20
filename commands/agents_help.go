@@ -47,9 +47,9 @@ With ` + "`--config-id`" + `, ` + "`--name`" + ` is required (see ` + "`doctl ag
 
 ` + "`--name`" + ` sets the session name (required with ` + "`--config-id`" + `). Names must be unique among active sessions; reference sessions by name in other commands.`
 
-const agentsRunHelpMD = `Provide exactly one of ` + "`--harness`" + ` (opencode, claude-code, codex) or ` + "`--spec`" + ` (a manifest file). With ` + "`--harness`" + `, doctl builds the manifest for you — no spec file needed.
+const agentsRunHelpMD = `Provide exactly one of ` + "`--harness`" + ` (opencode, claude-code, codex), ` + "`--spec`" + ` (a manifest file), or ` + "`--config-id`" + ` (an existing Agent Config). With ` + "`--harness`" + `, doctl builds the manifest for you — no spec file needed.
 
-Use ` + "`--gh-repo`" + ` to clone a repository (` + "`owner/repo`" + ` or GitHub URL) and ` + "`--prompt`" + ` to send the first message. For ` + "`codex`" + `, set ` + "`$OPENAI_API_KEY`" + ` locally.
+Use ` + "`--gh-repo`" + ` with ` + "`--harness`" + `/` + "`--spec`" + ` to clone a repository (` + "`owner/repo`" + ` or GitHub URL). With ` + "`--config-id`" + `, ` + "`--name`" + ` is required and the repo comes from the config. Use ` + "`--prompt`" + ` to send the first message. For ` + "`codex`" + `, set ` + "`$OPENAI_API_KEY`" + ` locally.
 
 Pass ` + "`--no-attach`" + ` to wait for the session to become ready without opening the TUI. Use ` + "`--wait-timeout`" + ` to limit how long to wait (default 300 seconds).`
 
@@ -94,7 +94,7 @@ const agentsStartProxyHelpMD = `Start a local WebSocket proxy so the Codex CLI c
 ` + "```bash\n" + `codex --remote ws://127.0.0.1:1144
 ` + "```\n\n" + `Run ` + "`doctl agent start-proxy`" + ` first, then connect with ` + "`--type codex`" + ` and ` + "`--session`" + `. Only one of attach and start-proxy can stream the same session from one machine at a time.`
 
-const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from its ID with ` + "`doctl agent config start-session`" + ` or ` + "`doctl agent start --config-id`" + `.
+const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from its ID with ` + "`doctl agent run --config-id`" + `, ` + "`doctl agent config start-session`" + `, or ` + "`doctl agent start --config-id`" + `.
 
 Configs are immutable — create a new config to change a manifest. Delete is blocked while sessions from the config are still active.`
 

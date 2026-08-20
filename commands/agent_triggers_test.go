@@ -106,7 +106,8 @@ func TestAgentTriggersCreateWebhook(t *testing.T) {
 		config.Out = &buf
 		require.NoError(t, RunAgentTriggersCreate(config))
 		assert.Contains(t, buf.String(), "sec_once")
-		assert.Contains(t, buf.String(), "Webhook URL:")
+		assert.Contains(t, buf.String(), "https://api.digitalocean.com/v2/agents/triggers/tr_new/webhook")
+		assert.Contains(t, buf.String(), "Trigger created")
 	})
 }
 

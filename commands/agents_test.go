@@ -508,7 +508,31 @@ func TestRunAgentsStart_FlatWithName(t *testing.T) {
 func TestRunAgentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
 		assert.NoError(t, RunAgentsList(config))
+		assert.Contains(t, buf.String(), "No sessions")
+	})
+}
+
+func TestRunAgentsList_StyledText(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_1",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+			}},
+		}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
+		assert.NoError(t, RunAgentsList(config))
+		got := buf.String()
+		assert.Contains(t, got, "1 session")
+		assert.Contains(t, got, "demo")
+		assert.Contains(t, got, "ready")
+		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
 
@@ -593,10 +617,22 @@ func TestRunAgentsList_NameFilter(t *testing.T) {
 func TestRunAgentsShow(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(&do.HostedAgentSession{
-			HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test"},
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_test",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+			},
 		}, nil)
 		config.Args = []string{"sess_test"}
+		var buf bytes.Buffer
+		config.Out = &buf
 		assert.NoError(t, RunAgentsShow(config))
+		got := buf.String()
+		assert.Contains(t, got, "demo")
+		assert.Contains(t, got, "ready")
+		assert.Contains(t, got, "doctl agent attach demo")
+		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
 

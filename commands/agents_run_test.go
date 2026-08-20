@@ -295,7 +295,7 @@ func TestRunAgentsRun_RequiresHarnessOrSpec(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunAgentsRun(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "one of")
+		assert.Contains(t, err.Error(), "one of --harness, --spec, or --config-id is required")
 	})
 }
 
@@ -306,5 +306,70 @@ func TestRunAgentsRun_RejectsHarnessAndSpecTogether(t *testing.T) {
 		err := RunAgentsRun(config)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), "mutually exclusive"))
+	})
+}
+
+func TestRunAgentsRun_FromConfigID_NoAttach(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
+				Name:     "demo",
+				ConfigID: "cfg_abc123",
+			}).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_cfg_1",
+					Name:      "demo",
+					ConfigID:  "cfg_abc123",
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_cfg_1").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_cfg_1",
+					Name:      "demo",
+					ConfigID:  "cfg_abc123",
+					Status:    godo.HostedAgentSessionStatusReady,
+					AgentKind: godo.HostedAgentKindOpenCode,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
+		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
+
+		require.NoError(t, RunAgentsRun(config))
+		got := buf.String()
+		assert.Contains(t, got, "Creating hosted session from config")
+		assert.Contains(t, got, "Agent is ready")
+		assert.Contains(t, got, "doctl agent attach demo")
+	})
+}
+
+func TestRunAgentsRun_FromConfigID_RequiresName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		err := RunAgentsRun(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--name is required")
+	})
+}
+
+func TestRunAgentsRun_FromConfigID_RejectsRepo(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
+		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "org/repo")
+		err := RunAgentsRun(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--gh-repo cannot be used with --config-id")
 	})
 }

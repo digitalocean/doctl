@@ -236,15 +236,18 @@ func Agents() *Command {
 		"Start one session and attach",
 		agentsRunHelpMD,
 		Writer, agentsNS(aliasOpt("up"))...)
-	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec.")
-	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness. Same format as agents start --spec.`)
-	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo)")
+	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec and --config-id.")
+	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness or --config-id. Same format as agents start --spec.`)
+	AddStringFlag(cmdRun, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to run from, instead of --harness/--spec. Requires --name.")
+	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdRun, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
-	AddStringFlag(cmdRun, doctl.ArgAgentName, "", "", "Session name (auto-generated when omitted). Must be unique among active sessions.")
+	AddStringFlag(cmdRun, doctl.ArgAgentName, "", "", "Session name (required with --config-id; otherwise auto-generated when omitted). Must be unique among active sessions.")
 	AddBoolFlag(cmdRun, doctl.ArgAgentNoAttach, "", false, "Wait for readiness but do not attach")
 	AddIntFlag(cmdRun, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default)")
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
-	cmdRun.Example = `doctl agent run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; doctl agent run --harness codex --prompt "Create hello.txt"`
+	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
+	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+	cmdRun.Example = `doctl agent run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; doctl agent run --config-id cfg_abc123 --name my-session --prompt "Review the README"`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Run a local facade that lets a coding-agent CLI drive a hosted session",
@@ -435,21 +438,32 @@ func RunAgentsStart(c *CmdConfig) error {
 // The server loads the config's pinned manifest and credentials, so no spec is
 // uploaded; --name is required because the config-backed create API mandates it.
 func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
-	if name == "" {
-		return errors.New("--name is required when starting from --config-id")
-	}
-	if err := validateHostedAgentIdentifier(name); err != nil {
-		return err
-	}
-
 	prog := (*creationProgress)(nil)
 	if Output != "json" {
 		stylingEnabled = detectStyling()
 		prog = newCreationProgress(c.Out)
 		prog.header("Launching agent session")
-		prog.wait("Creating hosted session from config…")
 	}
 
+	sess, err := createSessionFromConfig(c, configID, name, prog)
+	if err != nil {
+		return err
+	}
+	return finishAgentsStartSession(c, sess, prog)
+}
+
+// createSessionFromConfig creates a session from an Agent Config ID. Shared by
+// `start --config-id` and `run --config-id`.
+func createSessionFromConfig(c *CmdConfig, configID, name string, prog *creationProgress) (*do.HostedAgentSession, error) {
+	if name == "" {
+		return nil, errors.New("--name is required when starting from --config-id")
+	}
+	if err := validateHostedAgentIdentifier(name); err != nil {
+		return nil, err
+	}
+	if prog != nil {
+		prog.wait("Creating hosted session from config…")
+	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:     name,
 		ConfigID: configID,
@@ -457,14 +471,14 @@ func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. Free a slot by removing one: run `doctl agent list` to find a session ID, then `doctl agent remove SESSION_ID`", strings.TrimRight(msg, "."))
+			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl agent list` to find a session ID, then `doctl agent remove SESSION_ID`", strings.TrimRight(msg, "."))
 		}
-		return err
+		return nil, err
 	}
 	if prog != nil {
 		prog.ok(fmt.Sprintf("Session created · %s", displaySessionRef(sess)))
 	}
-	return finishAgentsStartSession(c, sess, prog)
+	return sess, nil
 }
 
 // finishAgentsStartSession waits for readiness and prints a styled ready card
@@ -536,8 +550,13 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		return fmt.Errorf("session %q not found: %w", sessionRef, err)
 	}
 
-	fmt.Fprintf(c.Out, "Proxying session %s as a codex app-server on ws://127.0.0.1:%d\n", sessionID, port)
-	fmt.Fprintf(c.Out, "Connect with: codex --remote ws://127.0.0.1:%d\n", port)
+	stylingEnabled = detectStyling()
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
+	body.WriteString(cardRow("Session", displaySessionRef(sess)))
+	body.WriteString(cardRow("Listen", fmt.Sprintf("ws://127.0.0.1:%d", port)))
+	body.WriteString(cardRow("Connect", fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)))
+	renderAgentCard(c.Out, body.String())
 
 	// SIGTERM alongside SIGINT: under a process manager or plain `kill` (not
 	// `-9`), only handling os.Interrupt meant the graceful-shutdown path in
@@ -715,15 +734,20 @@ func RunAgentsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
-		return err
-	}
-	if nextPageToken != "" {
-		if Output == "json" {
-			fmt.Fprintf(os.Stderr, "Next page token: %s\n", nextPageToken)
-		} else {
-			fmt.Fprintf(c.Out, "Next page token: %s\n", nextPageToken)
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
+			return err
 		}
+		if nextPageToken != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", nextPageToken)
+		}
+		return nil
+	}
+
+	stylingEnabled = detectStyling()
+	printSessionsList(c.Out, sessions)
+	if nextPageToken != "" {
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), nextPageToken)
 	}
 	return nil
 }
@@ -873,7 +897,12 @@ func RunAgentsShow(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printSessionShowCard(c.Out, sess)
+	return nil
 }
 
 // RunAgentsDestroy tears down a session (CLI: `doctl agent remove`,
@@ -886,7 +915,8 @@ func RunAgentsDestroy(c *CmdConfig) error {
 	if err := c.HostedAgents().DestroySession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s removed", sessionID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Session %s removed", sessionID))
 	return nil
 }
 
@@ -899,7 +929,8 @@ func RunAgentsPause(c *CmdConfig) error {
 	if err := c.HostedAgents().PauseSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s paused", sessionID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Session %s paused", sessionID))
 	return nil
 }
 
@@ -912,7 +943,8 @@ func RunAgentsResume(c *CmdConfig) error {
 	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s resumed", sessionID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Session %s resumed", sessionID))
 	return nil
 }
 
@@ -951,17 +983,22 @@ func RunAgentsAuth(c *CmdConfig) error {
 		return err
 	}
 	if strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
-		notice("%s is already connected for your team", provider)
+		stylingEnabled = detectStyling()
+		printAgentSuccess(c.Out, fmt.Sprintf("%s is already connected for your team", provider))
 		return nil
 	}
 	if start.ConnectURL == "" {
 		return fmt.Errorf("harness-api returned status %q with no authorization URL", start.Status)
 	}
 
-	fmt.Fprintf(c.Out, "To connect %s, open this URL and authorize access:\n\n  %s\n\n", provider, start.ConnectURL)
+	stylingEnabled = detectStyling()
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Connect "+provider, colHighlight))
+	body.WriteString(cardRow("URL", start.ConnectURL))
 	if start.VerificationCode != "" {
-		fmt.Fprintf(c.Out, "Verification code: %s\n\n", start.VerificationCode)
+		body.WriteString(cardRow("Code", boldColor(start.VerificationCode, colHighlight)))
 	}
+	renderAgentCard(c.Out, body.String())
 	if !noBrowser {
 		if berr := browser.OpenURL(start.ConnectURL); berr != nil {
 			warn("could not open a browser automatically; open the URL above manually: %v", berr)
@@ -969,7 +1006,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 
 	if noWait || start.PollURL == "" {
-		notice("Re-run `doctl agent auth %s` after authorizing to confirm the connection", provider)
+		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl agent auth %s` after authorizing to confirm the connection", provider))
 		return nil
 	}
 
@@ -991,7 +1028,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 			return err
 		}
 		if strings.EqualFold(poll.Status, agentProviderAuthStatusSuccess) {
-			notice("%s connected successfully", provider)
+			printAgentSuccess(c.Out, fmt.Sprintf("%s connected successfully", provider))
 			return nil
 		}
 	}
@@ -1204,13 +1241,18 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 	if written == 0 {
 		written = size
 	}
-	return c.Display(&displayers.HostedAgentWorkspaceUpload{
-		Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
-			Path:         workspacePath,
-			BytesWritten: written,
-		}},
-		Single: true,
-	})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentWorkspaceUpload{
+			Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
+				Path:         workspacePath,
+				BytesWritten: written,
+			}},
+			Single: true,
+		})
+	}
+	stylingEnabled = detectStyling()
+	printWorkspaceUploadCard(c.Out, workspacePath, written)
+	return nil
 }
 
 // workspacePartUploadURLs mints presigned PUT URLs for one or more 1-based parts.
@@ -1319,7 +1361,8 @@ func RunAgentsDownload(c *CmdConfig) error {
 		return err
 	}
 
-	notice("Downloaded %d bytes to %s", written, saveTo)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Downloaded %d bytes to %s", written, saveTo))
 	return nil
 }
 
@@ -1423,7 +1466,8 @@ func RunAgentsApprove(c *CmdConfig) error {
 	}); err != nil {
 		return err
 	}
-	notice("HITL request %s resolved as %s", requestID, outcome)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("HITL request %s resolved as %s", requestID, outcome))
 	return nil
 }
 

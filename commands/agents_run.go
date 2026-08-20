@@ -53,14 +53,18 @@ var harnessAgentNames = map[string]string{
 }
 
 // RunAgentsRun creates a hosted agent session from --harness/--gh-repo/--prompt
-// (or an optional --spec), waits until the session is ready, optionally sends an
-// initial prompt, and attaches interactively.
+// (or --spec / --config-id), waits until the session is ready, optionally sends
+// an initial prompt, and attaches interactively.
 func RunAgentsRun(c *CmdConfig) error {
 	harness, err := c.Doit.GetString(c.NS, doctl.ArgAgentHarness)
 	if err != nil {
 		return err
 	}
 	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	if err != nil {
+		return err
+	}
+	configID, err := c.Doit.GetString(c.NS, doctl.ArgAgentConfigID)
 	if err != nil {
 		return err
 	}
@@ -87,11 +91,24 @@ func RunAgentsRun(c *CmdConfig) error {
 
 	harness = strings.TrimSpace(harness)
 	specPath = strings.TrimSpace(specPath)
-	if harness != "" && specPath != "" {
-		return fmt.Errorf("--%s and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec)
+	configID = strings.TrimSpace(configID)
+	repo = strings.TrimSpace(repo)
+	prompt = strings.TrimSpace(prompt)
+
+	sources := 0
+	for _, s := range []string{harness, specPath, configID} {
+		if s != "" {
+			sources++
+		}
 	}
-	if harness == "" && specPath == "" {
-		return fmt.Errorf("one of --%s or --%s is required", doctl.ArgAgentHarness, doctl.ArgAgentSpec)
+	if sources > 1 {
+		return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+	}
+	if sources == 0 {
+		return fmt.Errorf("one of --%s, --%s, or --%s is required", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+	}
+	if configID != "" && repo != "" {
+		return fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentConfigID)
 	}
 	if name != "" {
 		if err := validateHostedAgentIdentifier(name); err != nil {
@@ -99,8 +116,20 @@ func RunAgentsRun(c *CmdConfig) error {
 		}
 	}
 
-	var raw []byte
+	stylingEnabled = detectStyling()
+	prog := newCreationProgress(c.Out)
+	prog.header("Launching agent session")
+
+	var (
+		sess *do.HostedAgentSession
+		raw  []byte
+	)
 	switch {
+	case configID != "":
+		sess, err = createSessionFromConfig(c, configID, name, prog)
+		if err != nil {
+			return err
+		}
 	case specPath != "":
 		raw, err = readManifestBytes(os.Stdin, specPath)
 		if err != nil {
@@ -111,27 +140,29 @@ func RunAgentsRun(c *CmdConfig) error {
 				"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agent start --help`). " +
 				"The envelope is still accepted for now but will be rejected after the transition window")
 		}
+		raw, err = injectManifestName(raw, name)
+		if err != nil {
+			return err
+		}
+		sess, err = startSessionFromRawManifest(c, raw, prog)
+		if err != nil {
+			return err
+		}
 	default:
 		raw, err = buildHarnessManifest(harness, repo, prompt, name)
 		if err != nil {
 			return err
 		}
+		raw, err = injectManifestName(raw, name)
+		if err != nil {
+			return err
+		}
+		sess, err = startSessionFromRawManifest(c, raw, prog)
+		if err != nil {
+			return err
+		}
 	}
 
-	raw, err = injectManifestName(raw, name)
-	if err != nil {
-		return err
-	}
-
-	stylingEnabled = detectStyling()
-
-	prog := newCreationProgress(c.Out)
-	prog.header("Launching agent session")
-
-	sess, err := startSessionFromRawManifest(c, raw, prog)
-	if err != nil {
-		return err
-	}
 	sessionID := sess.SessionID
 	if sessionID == "" {
 		return errors.New("session create returned no session id")
@@ -160,7 +191,7 @@ func RunAgentsRun(c *CmdConfig) error {
 		return nil
 	}
 
-	if prompt != "" && !manifestIncludesPrompt(raw, prompt) {
+	if prompt != "" && (raw == nil || !manifestIncludesPrompt(raw, prompt)) {
 		if _, err := c.HostedAgents().SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: prompt}); err != nil {
 			return fmt.Errorf("sending initial prompt: %w", err)
 		}
@@ -610,4 +641,114 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	body.WriteString(cardRow("attach", "doctl agent attach "+ref))
 
 	renderAgentCard(w, body.String())
+}
+
+// printSessionsList renders a styled text list of sessions (not used for -o json).
+func printSessionsList(w io.Writer, sessions []do.HostedAgentSession) {
+	if len(sessions) == 0 {
+		fmt.Fprintln(w, colorize("No sessions", colMuted))
+		return
+	}
+
+	noun := "sessions"
+	if len(sessions) == 1 {
+		noun = "session"
+	}
+	fmt.Fprintln(w, boldColor(fmt.Sprintf("%d %s", len(sessions), noun), colHighlight))
+	fmt.Fprintln(w)
+
+	for i, sess := range sessions {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		printSessionListItem(w, &sess)
+	}
+}
+
+func printSessionListItem(w io.Writer, sess *do.HostedAgentSession) {
+	if sess == nil || sess.HostedAgentSession == nil {
+		return
+	}
+	ref := displaySessionRef(sess)
+	agent := prettyAgentKind(sess.AgentKind)
+
+	fmt.Fprintf(w, "%s %s\n", sessionStatusGlyph(sess.Status), boldColor(ref, colHighlight))
+	meta := []string{agent, colorizeSessionStatus(sess.Status)}
+	if !sess.CreatedAt.Time.IsZero() {
+		meta = append(meta, colorize(sess.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+	}
+	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+		fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
+	}
+	if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
+		fmt.Fprintf(w, "  %s %s\n", colorize("repo", colMuted), repo)
+	}
+}
+
+// printSessionShowCard renders a single-session detail card for `agent show`.
+func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
+	if sess == nil || sess.HostedAgentSession == nil {
+		fmt.Fprintln(w, colorize("No session", colMuted))
+		return
+	}
+	ref := displaySessionRef(sess)
+	agent := prettyAgentKind(sess.AgentKind)
+
+	var body strings.Builder
+	body.WriteString(cardRow("Session", ref))
+	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+	}
+	body.WriteString(cardRow("Agent", agent))
+	body.WriteString(cardRow("Status", sessionStatusGlyph(sess.Status)+" "+colorizeSessionStatus(sess.Status)))
+	if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
+		body.WriteString(cardRow("Repo", repo))
+	}
+	if parent := strings.TrimSpace(sess.ParentSessionID); parent != "" {
+		body.WriteString(cardRow("Parent", colorize(parent, colMuted)))
+	}
+	if !sess.CreatedAt.Time.IsZero() {
+		body.WriteString(cardRow("Created", colorize(sess.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+	}
+
+	switch sess.Status {
+	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached, godo.HostedAgentSessionStatusPaused:
+		fmt.Fprintln(&body)
+		fmt.Fprintln(&body, colorize("Next step", colMuted))
+		body.WriteString(cardRow("attach", "doctl agent attach "+ref))
+	}
+
+	renderAgentCard(w, body.String())
+}
+
+func sessionStatusGlyph(status godo.HostedAgentSessionStatus) string {
+	switch status {
+	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
+		return colorize("●", colSuccess)
+	case godo.HostedAgentSessionStatusProvisioning:
+		return colorize("…", colWarning)
+	case godo.HostedAgentSessionStatusPaused:
+		return colorize("○", colWarning)
+	case godo.HostedAgentSessionStatusFailed:
+		return colorize("✗", colError)
+	case godo.HostedAgentSessionStatusDestroying, godo.HostedAgentSessionStatusDestroyed:
+		return colorize("✗", colMuted)
+	default:
+		return colorize("·", colMuted)
+	}
+}
+
+func colorizeSessionStatus(status godo.HostedAgentSessionStatus) string {
+	label := humanSessionStatus(status)
+	switch status {
+	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
+		return colorize(label, colSuccess)
+	case godo.HostedAgentSessionStatusProvisioning, godo.HostedAgentSessionStatusPaused:
+		return colorize(label, colWarning)
+	case godo.HostedAgentSessionStatusFailed:
+		return colorize(label, colError)
+	default:
+		return colorize(label, colMuted)
+	}
 }

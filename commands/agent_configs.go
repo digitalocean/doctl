@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -119,11 +120,16 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true}); err != nil {
+			return err
+		}
+	} else {
+		stylingEnabled = detectStyling()
+		printAgentConfigCard(c.Out, cfg, true)
 	}
 	for _, w := range cfg.Warnings {
-		fmt.Fprintf(c.Out, "Warning: %s\n", w)
+		fmt.Fprintf(c.Out, "%s %s\n", colorize("Warning:", colWarning), w)
 	}
 	return nil
 }
@@ -146,11 +152,20 @@ func RunAgentsConfigList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentConfigSummary{Configs: configs}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentConfigSummary{Configs: configs}); err != nil {
+			return err
+		}
+		if next != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
+		}
+		return nil
 	}
+
+	stylingEnabled = detectStyling()
+	printAgentConfigsList(c.Out, configs)
 	if next != "" {
-		fmt.Fprintf(c.Out, "\nNext page token: %s\n", next)
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), next)
 	}
 	return nil
 }
@@ -164,7 +179,12 @@ func RunAgentsConfigGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printAgentConfigCard(c.Out, cfg, false)
+	return nil
 }
 
 // RunAgentsConfigDelete soft-deletes an Agent Config.
@@ -180,7 +200,8 @@ func RunAgentsConfigDelete(c *CmdConfig) error {
 		}
 		return err
 	}
-	fmt.Fprintf(c.Out, "Deleted agent config %s\n", configID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Deleted agent config %s", configID))
 	return nil
 }
 
@@ -217,11 +238,20 @@ func RunAgentsConfigListSessions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
+			return err
+		}
+		if next != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
+		}
+		return nil
 	}
+
+	stylingEnabled = detectStyling()
+	printSessionsList(c.Out, sessions)
 	if next != "" {
-		fmt.Fprintf(c.Out, "\nNext page token: %s\n", next)
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), next)
 	}
 	return nil
 }
@@ -242,7 +272,12 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printSessionShowCard(c.Out, sess)
+	return nil
 }
 
 // agentConfigHasActiveSessionsErr reports the DELETE /configs/{id} 409 returned
@@ -253,4 +288,100 @@ func agentConfigHasActiveSessionsErr(err error) bool {
 		return false
 	}
 	return strings.Contains(strings.ToLower(msg), "active sessions")
+}
+
+// printAgentConfigsList renders a compact styled list for `agent config list`.
+func printAgentConfigsList(w io.Writer, configs []godo.HostedAgentConfigSummary) {
+	if len(configs) == 0 {
+		fmt.Fprintln(w, colorize("No configs", colMuted))
+		return
+	}
+	noun := "configs"
+	if len(configs) == 1 {
+		noun = "config"
+	}
+	fmt.Fprintln(w, boldColor(fmt.Sprintf("%d %s", len(configs), noun), colHighlight))
+	fmt.Fprintln(w)
+
+	for i, cfg := range configs {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		name := strings.TrimSpace(cfg.Name)
+		if name == "" {
+			name = cfg.ID
+		}
+		fmt.Fprintf(w, "%s %s\n", colorize("●", colSuccess), boldColor(name, colHighlight))
+		meta := make([]string, 0, 2)
+		if id := strings.TrimSpace(cfg.ID); id != "" && id != name {
+			meta = append(meta, colorize(id, colMuted))
+		}
+		if !cfg.CreatedAt.Time.IsZero() {
+			meta = append(meta, colorize(cfg.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+		}
+		if len(meta) > 0 {
+			fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+		}
+	}
+}
+
+// printAgentConfigCard renders a single config detail card for get/create.
+func printAgentConfigCard(w io.Writer, cfg *godo.HostedAgentConfig, created bool) {
+	if cfg == nil {
+		fmt.Fprintln(w, colorize("No config", colMuted))
+		return
+	}
+	name := strings.TrimSpace(cfg.Name)
+	if name == "" {
+		name = cfg.ID
+	}
+
+	var body strings.Builder
+	if created {
+		fmt.Fprintf(&body, "%s\n\n", boldColor("Config created", colSuccess))
+	}
+	body.WriteString(cardRow("Name", name))
+	if id := strings.TrimSpace(cfg.ID); id != "" && id != name {
+		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+	}
+	if schema := shortAgentSchema(cfg.AgentSpecSchemaVersion); schema != "" {
+		body.WriteString(cardRow("Schema", colorize(schema, colMuted)))
+	}
+	if hash := truncateMiddle(cfg.ContentHash, 20); hash != "" {
+		body.WriteString(cardRow("Hash", colorize(hash, colMuted)))
+	}
+	if !cfg.CreatedAt.Time.IsZero() {
+		body.WriteString(cardRow("Created", colorize(cfg.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+	}
+
+	if id := strings.TrimSpace(cfg.ID); id != "" {
+		fmt.Fprintln(&body)
+		fmt.Fprintln(&body, colorize("Next step", colMuted))
+		body.WriteString(cardRow("run", "doctl agent run --config-id "+id+" --name my-session"))
+	}
+
+	renderAgentCard(w, body.String())
+}
+
+func shortAgentSchema(schema string) string {
+	schema = strings.TrimSpace(schema)
+	if schema == "" {
+		return ""
+	}
+	if i := strings.LastIndex(schema, "/"); i >= 0 && i+1 < len(schema) {
+		return schema[i+1:]
+	}
+	return schema
+}
+
+func truncateMiddle(s string, keep int) string {
+	s = strings.TrimSpace(s)
+	if keep < 8 || len(s) <= keep {
+		return s
+	}
+	half := keep/2 - 1
+	if half < 2 {
+		half = 2
+	}
+	return s[:half] + "…" + s[len(s)-half:]
 }
