@@ -422,13 +422,13 @@ func (p *creationProgress) elapsed() time.Duration {
 	return d.Truncate(time.Second)
 }
 
-// provisioningHints are shown while status stays on PROVISIONING so a 10s+ wait
-// still feels alive. Later hints call out the "bits ready / agent not ready" case.
+// provisioningHints keep a long PROVISIONING wait feeling alive. Later lines
+// call out that workspace bits may exist while the agent is still starting.
 var provisioningHints = []string{
-	"Provisioning sandbox…",
-	"Allocating workspace…",
+	"Allocating sandbox…",
+	"Starting workspace…",
 	"Starting agent runtime…",
-	"Sandbox bits may be ready; waiting for the agent…",
+	"Workspace may be up; waiting for agent…",
 }
 
 func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
@@ -436,14 +436,16 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 	defer ticker.Stop()
 
 	var (
-		lastStatus godo.HostedAgentSessionStatus
-		hintIdx    int
-		nextHint   time.Time
-		out        io.Writer
+		lastStatus   godo.HostedAgentSessionStatus
+		hintIdx      int
+		nextHint     time.Time
+		sawBitsReady bool
+		announced    bool
+		out          io.Writer
 	)
 	if prog != nil {
 		out = prog.out
-		nextHint = creationClock()
+		nextHint = creationClock().Add(creationHintInterval)
 	}
 
 	for {
@@ -452,23 +454,31 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 			return nil, err
 		}
 
+		if prog != nil && !sawBitsReady {
+			if note := bitsReadyNote(sess); note != "" {
+				sawBitsReady = true
+				prog.ok(note)
+			}
+		}
+
 		if sess.Status != lastStatus {
 			switch sess.Status {
 			case godo.HostedAgentSessionStatusProvisioning:
-				if prog != nil {
-					prog.wait(provisioningHints[0])
-					hintIdx = 1
+				if prog != nil && !announced {
+					prog.wait("Waiting for agent…")
+					announced = true
+					hintIdx = 0
 					nextHint = creationClock().Add(creationHintInterval)
-				} else if out != nil {
+				} else if out != nil && prog == nil {
 					fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
 				}
 			case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
 				if prog != nil {
 					elapsed := prog.elapsed()
 					if elapsed > 0 {
-						prog.ok(fmt.Sprintf("Agent session is ready (%s)", elapsed))
+						prog.ok(fmt.Sprintf("Agent is ready (%s)", elapsed))
 					} else {
-						prog.ok("Agent session is ready")
+						prog.ok("Agent is ready")
 					}
 				} else if out != nil {
 					fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
@@ -485,7 +495,11 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 			sess.Status == godo.HostedAgentSessionStatusProvisioning &&
 			hintIdx < len(provisioningHints) &&
 			!creationClock().Before(nextHint) {
-			prog.wait(fmt.Sprintf("%s (%s)", provisioningHints[hintIdx], prog.elapsed()))
+			hint := provisioningHints[hintIdx]
+			if sawBitsReady {
+				hint = "Waiting for agent…"
+			}
+			prog.wait(fmt.Sprintf("%s (%s)", hint, prog.elapsed()))
 			hintIdx++
 			nextHint = creationClock().Add(creationHintInterval)
 		}
@@ -510,6 +524,26 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 	}
 }
 
+// bitsReadyNote returns a one-shot message when the session payload shows
+// environment identifiers while status is still not READY.
+func bitsReadyNote(sess *do.HostedAgentSession) string {
+	if sess == nil || sess.HostedAgentSession == nil {
+		return ""
+	}
+	switch sess.Status {
+	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
+		return ""
+	}
+	switch {
+	case strings.TrimSpace(sess.OpenAIEnvironmentID) != "":
+		return "Environment ready · waiting for agent"
+	case strings.TrimSpace(sess.OpenAISessionID) != "":
+		return "Environment ready · waiting for agent"
+	default:
+		return ""
+	}
+}
+
 func runStatusGlyph(status godo.HostedAgentSessionStatus) string {
 	switch status {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
@@ -526,7 +560,7 @@ func runStatusGlyph(status godo.HostedAgentSessionStatus) string {
 func runStatusLabel(status godo.HostedAgentSessionStatus) string {
 	switch status {
 	case godo.HostedAgentSessionStatusProvisioning:
-		return "Provisioning sandbox…"
+		return "Waiting for agent…"
 	case godo.HostedAgentSessionStatusReady:
 		return "Agent ready"
 	case godo.HostedAgentSessionStatusDetached:
@@ -546,7 +580,7 @@ type runReadySummary struct {
 }
 
 // printRunReadySummary renders a compact session card after create/wait
-// succeeds. The lifecycle line already printed "✓ Agent session is ready", so
+// succeeds. The lifecycle line already printed "✓ Agent is ready", so
 // the card focuses on identity and next steps without repeating that headline.
 func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	ref := displaySessionRef(sum.Session)
@@ -572,9 +606,8 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	}
 
 	fmt.Fprintln(&body)
-	fmt.Fprintln(&body, colorize("Next steps", colMuted))
+	fmt.Fprintln(&body, colorize("Next step", colMuted))
 	body.WriteString(cardRow("attach", "doctl agent attach "+ref))
-	body.WriteString(cardRow("remove", "doctl agent remove "+ref))
 
 	renderAgentCard(w, body.String())
 }

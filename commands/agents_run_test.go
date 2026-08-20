@@ -122,7 +122,10 @@ func TestWaitForSessionReady(t *testing.T) {
 		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_1", prog)
 		require.NoError(t, err)
 		require.NotNil(t, sess)
-		assert.Contains(t, out.String(), "Agent session is ready")
+		got := out.String()
+		assert.Contains(t, got, "Agent is ready")
+		assert.NotContains(t, got, "SESSION_STATUS_")
+		assert.NotContains(t, got, "session_id=")
 	})
 }
 
@@ -165,8 +168,57 @@ func TestWaitForSessionReady_ProvisioningHints(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, sess)
 		got := out.String()
-		assert.Contains(t, got, "Provisioning sandbox")
-		assert.Contains(t, got, "Agent session is ready")
+		assert.Contains(t, got, "Waiting for agent")
+		assert.Contains(t, got, "Agent is ready")
+		assert.NotContains(t, got, "SESSION_STATUS_")
+	})
+}
+
+func TestWaitForSessionReady_BitsReadyWhileProvisioning(t *testing.T) {
+	prevPoll := sessionReadyPollInterval
+	prevHint := creationHintInterval
+	prevClock := creationClock
+	sessionReadyPollInterval = time.Millisecond
+	creationHintInterval = time.Millisecond
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	creationClock = func() time.Time { return now }
+	t.Cleanup(func() {
+		sessionReadyPollInterval = prevPoll
+		creationHintInterval = prevHint
+		creationClock = prevClock
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		calls := 0
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_bits").
+			DoAndReturn(func(id string) (*do.HostedAgentSession, error) {
+				calls++
+				now = now.Add(2 * time.Millisecond)
+				sess := &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_bits",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}
+				if calls >= 2 {
+					sess.OpenAIEnvironmentID = "env_abc"
+				}
+				if calls >= 4 {
+					sess.Status = godo.HostedAgentSessionStatusReady
+				}
+				return sess, nil
+			}).AnyTimes()
+
+		var out bytes.Buffer
+		prog := newCreationProgress(&out)
+		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_bits", prog)
+		require.NoError(t, err)
+		require.NotNil(t, sess)
+		got := out.String()
+		assert.Contains(t, got, "Environment ready · waiting for agent")
+		assert.Contains(t, got, "Agent is ready")
+		assert.NotContains(t, got, "openai_environment_id=")
 	})
 }
 
@@ -215,7 +267,8 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		assert.Contains(t, out, "Validating configuration")
 		assert.Contains(t, out, "Creating hosted session")
 		assert.Contains(t, out, "Session created")
-		assert.Contains(t, out, "Agent session is ready")
+		assert.Contains(t, out, "Agent is ready")
+		assert.NotContains(t, out, "SESSION_STATUS_")
 		assert.Contains(t, out, "doctl agent attach demo")
 		assert.Contains(t, out, "katanemo/plano")
 	})

@@ -2308,9 +2308,15 @@ func TestPromptDisplay(t *testing.T) {
 		assert.Contains(t, buf.String(), "> ")
 
 		buf.Reset()
+		s.display.warmupSetPhase("provisioning sandbox")
+		assert.Contains(t, buf.String(), "provisioning sandbox")
+		assert.Contains(t, buf.String(), "> ")
+
+		buf.Reset()
 		s.display.warmupSetQueued(msgAgentWarmupQueued)
 		assert.Contains(t, buf.String(), msgAgentWarmupQueued)
 		assert.Contains(t, buf.String(), "> ")
+		assert.Equal(t, 3, s.display.warmupStatusLines)
 	})
 }
 
@@ -3290,5 +3296,41 @@ func TestDrainStream_sessionUpdatedDoesNotClearWarmup(t *testing.T) {
 
 	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
 	assert.True(t, warmup.active, "session.updated must not dismiss the warm-up notice")
+	assert.Contains(t, buf.String(), "syncing session")
+	assert.NotContains(t, buf.String(), "• session updated")
 	warmup.clear()
+}
+
+func TestDrainStream_sandboxAllocatedUpdatesWarmup(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindRunSandboxAllocated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+	assert.True(t, warmup.active, "sandbox_allocated must not dismiss warm-up")
+	assert.Contains(t, buf.String(), "sandbox allocated")
+	warmup.clear()
+}
+
+func TestBackendPhaseFromStatus(t *testing.T) {
+	assert.Equal(t, "provisioning sandbox", backendPhaseFromStatus(godo.HostedAgentSessionStatusProvisioning))
+	assert.Equal(t, "sandbox ready · starting agent", backendPhaseFromStatus(godo.HostedAgentSessionStatusReady))
+}
+
+func TestSessionUpdatedPhase(t *testing.T) {
+	assert.Equal(t, "provisioning sandbox", sessionUpdatedPhase([]byte(`{"status":"SESSION_STATUS_PROVISIONING"}`)))
+	assert.Equal(t, "cloning repo", sessionUpdatedPhase([]byte(`{"message":"cloning repo"}`)))
 }

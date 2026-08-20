@@ -1538,6 +1538,9 @@ func runAgentsAttachSession(c *CmdConfig, sessionID string) error {
 	defer thinking.stop()
 
 	warmup := newWarmupState(c.Out, sess.CreatedAt.Time)
+	warmup.enableStatusPoll(func() (*do.HostedAgentSession, error) {
+		return svc.GetSession(sessionID)
+	})
 	defer warmup.clear()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -2187,13 +2190,14 @@ var streamClock = time.Now
 // queued once the user starts entering a prompt. Overridable in tests.
 const (
 	msgAgentWarmup       = "Agent is warming up… please wait"
-	msgAgentWarmupQueued = "Message is being queued"
+	msgAgentWarmupQueued = "Input queued until agent is ready"
 )
 
 var (
-	warmupDuration    = 60 * time.Second
-	warmupEligibleAge = 2 * time.Minute
-	warmupClock       = time.Now
+	warmupDuration       = 60 * time.Second
+	warmupEligibleAge    = 2 * time.Minute
+	warmupClock          = time.Now
+	warmupStatusInterval = 2 * time.Second
 )
 
 // thinkingState shows a spinner between RunStarted and the first real
@@ -2282,6 +2286,8 @@ func (s *thinkingState) animate(ctx context.Context, d *promptDisplay, done chan
 // warmupState shows "Agent is warming up…" on attach for sessions still in
 // their initial boot window. Clears on the first meaningful agent event or
 // after warmupDuration, whichever comes first. No-ops for older sessions.
+// While active it can surface backend progress (session status / boot events)
+// in the banner label so a long wait doesn't look frozen.
 type warmupState struct {
 	mu            sync.Mutex
 	out           io.Writer
@@ -2290,9 +2296,12 @@ type warmupState struct {
 	dismissed     bool
 	queued        bool
 	inputQueued   bool
+	phase         string
+	getSession    func() (*do.HostedAgentSession, error)
 	timeoutCancel context.CancelFunc
 	animCancel    context.CancelFunc
 	animDone      chan struct{}
+	pollCancel    context.CancelFunc
 }
 
 func newWarmupState(out io.Writer, createdAt time.Time) *warmupState {
@@ -2301,6 +2310,17 @@ func newWarmupState(out io.Writer, createdAt time.Time) *warmupState {
 		w.eligible = true
 	}
 	return w
+}
+
+// enableStatusPoll periodically refreshes the warm-up banner from GetSession
+// so developers see sandbox/agent state while waiting.
+func (w *warmupState) enableStatusPoll(getSession func() (*do.HostedAgentSession, error)) {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	w.getSession = getSession
+	w.mu.Unlock()
 }
 
 func (w *warmupState) isActive() bool {
@@ -2357,6 +2377,7 @@ func (w *warmupState) start() {
 	w.active = true
 	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), warmupDuration)
 	w.timeoutCancel = timeoutCancel
+	getSession := w.getSession
 
 	display, ok := w.out.(*promptDisplay)
 	if ok {
@@ -2372,6 +2393,170 @@ func (w *warmupState) start() {
 		fmt.Fprintf(w.out, "%s\n", colorize("⟳ "+msgAgentWarmup, colMuted))
 	}
 	go w.waitTimeout(timeoutCtx)
+	if getSession != nil {
+		pollCtx, pollCancel := context.WithCancel(context.Background())
+		w.mu.Lock()
+		w.pollCancel = pollCancel
+		w.mu.Unlock()
+		go w.pollStatus(pollCtx, getSession)
+	}
+}
+
+// setPhase updates the warm-up banner with a short backend progress hint
+// on its own grey line under the spinner.
+func (w *warmupState) setPhase(phase string) {
+	if w == nil {
+		return
+	}
+	phase = strings.TrimSpace(phase)
+	if phase == "" {
+		return
+	}
+	w.mu.Lock()
+	if !w.active || w.dismissed || w.phase == phase {
+		w.mu.Unlock()
+		return
+	}
+	w.phase = phase
+	display, ok := w.out.(*promptDisplay)
+	w.mu.Unlock()
+	if ok {
+		display.warmupSetPhase(phase)
+		return
+	}
+	fmt.Fprintf(w.out, "%s\n", colorize(phase, colMuted))
+}
+
+// noteBackendEvent surfaces boot/lifecycle stream events on the warm-up banner
+// instead of printing competing lines. Returns true when the event was
+// consumed as warm-up progress (caller should skip normal render).
+func (w *warmupState) noteBackendEvent(ev godo.HostedAgentEvent) bool {
+	if w == nil || !w.isActive() {
+		return false
+	}
+	phase := backendPhaseFromEvent(ev)
+	if phase == "" {
+		return false
+	}
+	w.setPhase(phase)
+	return true
+}
+
+func backendPhaseFromEvent(ev godo.HostedAgentEvent) string {
+	switch ev.Kind {
+	case godo.HostedAgentEventKindSessionUpdated:
+		if phase := sessionUpdatedPhase(ev.Payload); phase != "" {
+			return phase
+		}
+		return "syncing session"
+	case godo.HostedAgentEventKindRunSandboxAllocated:
+		return "sandbox allocated"
+	case godo.HostedAgentEventKindRunSandboxReleased:
+		return "releasing sandbox"
+	case godo.HostedAgentEventKindRunLog:
+		if msg := runLogPhase(ev.Payload); msg != "" {
+			return msg
+		}
+		return "runtime log"
+	case godo.HostedAgentEventKindStreamState:
+		var st godo.HostedAgentStreamState
+		if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateCatchingUp {
+			return "syncing event stream"
+		}
+	}
+	return ""
+}
+
+func sessionUpdatedPhase(payload json.RawMessage) string {
+	var p struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Phase   string `json:"phase"`
+		State   string `json:"state"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return ""
+	}
+	if msg := strings.TrimSpace(p.Message); msg != "" {
+		return truncateWarmupPhase(msg)
+	}
+	if phase := strings.TrimSpace(p.Phase); phase != "" {
+		return truncateWarmupPhase(phase)
+	}
+	if state := strings.TrimSpace(p.State); state != "" {
+		return truncateWarmupPhase(state)
+	}
+	if status := strings.TrimSpace(p.Status); status != "" {
+		return backendPhaseFromStatus(godo.HostedAgentSessionStatus(status))
+	}
+	return ""
+}
+
+func runLogPhase(payload json.RawMessage) string {
+	var p struct {
+		Message string `json:"message"`
+		Text    string `json:"text"`
+		Line    string `json:"line"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return ""
+	}
+	for _, s := range []string{p.Message, p.Text, p.Line} {
+		if msg := strings.TrimSpace(s); msg != "" {
+			return truncateWarmupPhase(msg)
+		}
+	}
+	return ""
+}
+
+func backendPhaseFromStatus(status godo.HostedAgentSessionStatus) string {
+	switch status {
+	case godo.HostedAgentSessionStatusProvisioning:
+		return "provisioning sandbox"
+	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
+		return "sandbox ready · starting agent"
+	case godo.HostedAgentSessionStatusPaused:
+		return "session paused"
+	case godo.HostedAgentSessionStatusFailed:
+		return "session failed"
+	case godo.HostedAgentSessionStatusDestroying, godo.HostedAgentSessionStatusDestroyed:
+		return "session tearing down"
+	default:
+		if s := humanSessionStatus(status); s != "" && s != "unspecified" {
+			return s
+		}
+		return ""
+	}
+}
+
+func truncateWarmupPhase(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) > 56 {
+		return s[:53] + "…"
+	}
+	return s
+}
+
+func (w *warmupState) pollStatus(ctx context.Context, getSession func() (*do.HostedAgentSession, error)) {
+	ticker := time.NewTicker(warmupStatusInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if !w.isActive() {
+				return
+			}
+			sess, err := getSession()
+			if err != nil || sess == nil {
+				continue
+			}
+			if phase := backendPhaseFromStatus(sess.Status); phase != "" {
+				w.setPhase(phase)
+			}
+		}
+	}
 }
 
 func (w *warmupState) animate(ctx context.Context, d *promptDisplay, done chan struct{}) {
@@ -2440,13 +2625,18 @@ func (w *warmupState) clear() {
 	timeoutCancel := w.timeoutCancel
 	animCancel := w.animCancel
 	animDone := w.animDone
+	pollCancel := w.pollCancel
 	w.timeoutCancel = nil
 	w.animCancel = nil
 	w.animDone = nil
+	w.pollCancel = nil
 	w.mu.Unlock()
 
 	if timeoutCancel != nil {
 		timeoutCancel()
+	}
+	if pollCancel != nil {
+		pollCancel()
 	}
 	if animCancel != nil {
 		animCancel()
@@ -2661,6 +2851,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
 				return true
 			}
+			_ = warmup.noteBackendEvent(ev)
 			continue
 		}
 
@@ -2725,8 +2916,15 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			} else {
 				renderToolStart(out, cmd)
 			}
-		case godo.HostedAgentEventKindSessionUpdated:
-			// Lifecycle noise during boot — do not clear the warm-up notice.
+		case godo.HostedAgentEventKindSessionUpdated,
+			godo.HostedAgentEventKindRunSandboxAllocated,
+			godo.HostedAgentEventKindRunSandboxReleased,
+			godo.HostedAgentEventKindRunLog:
+			// Boot/lifecycle noise during warm-up — fold into the banner instead
+			// of printing competing lines or dismissing the notice.
+			if warmup.noteBackendEvent(ev) {
+				continue
+			}
 			thinking.stop()
 			acc.flush(out)
 			flushAwaitingApproval(out, &awaiting)
@@ -3498,10 +3696,11 @@ type promptDisplay struct {
 	// Write must not clear-line, next echo must not paint to that line.
 	midLine bool
 	// warmupStatusLines reserves status rows above the prompt while the warm-up
-	// banner is active (spinner row + queued notice row).
+	// banner is active (spinner + optional grey phase + optional queued notice).
 	warmupStatusLines  int
 	warmupSpinnerFrame string
 	warmupSpinnerLabel string
+	warmupPhaseLabel   string
 	warmupQueuedLabel  string
 }
 
@@ -3671,23 +3870,54 @@ func (p *promptDisplay) warmupInit(frame, label string) {
 	p.warmupStatusLines = 1
 	p.warmupSpinnerFrame = frame
 	p.warmupSpinnerLabel = label
+	p.warmupPhaseLabel = ""
 	p.warmupQueuedLabel = ""
 	fmt.Fprintf(p.out, "%s %s\r\n", frame, label)
 	p.paintPromptLocked(false)
 }
 
-// warmupSetQueued shows the queued-input notice and redraws the whole block.
+// warmupSetPhase shows a grey backend-progress line under the spinner.
+func (p *promptDisplay) warmupSetPhase(phase string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.warmupStatusLines == 0 {
+		return
+	}
+	p.warmupPhaseLabel = phase
+	p.warmupEnsureRowsLocked()
+	p.warmupPaintLocked()
+}
+
+// warmupSetQueued shows the grey queued-input notice and redraws the whole block.
 func (p *promptDisplay) warmupSetQueued(text string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw || p.warmupStatusLines == 0 {
 		return
 	}
-	if p.warmupStatusLines == 1 {
-		p.warmupStatusLines = 2
-	}
 	p.warmupQueuedLabel = text
+	p.warmupEnsureRowsLocked()
 	p.warmupPaintLocked()
+}
+
+// warmupEnsureRowsLocked grows reserved status rows to fit spinner + phase + queued.
+func (p *promptDisplay) warmupEnsureRowsLocked() {
+	want := 1
+	if p.warmupPhaseLabel != "" {
+		want++
+	}
+	if p.warmupQueuedLabel != "" {
+		want++
+	}
+	for p.warmupStatusLines < want {
+		if p.midLine {
+			fmt.Fprint(p.out, "\r\n")
+			p.midLine = false
+		}
+		fmt.Fprint(p.out, "\r\n")
+		p.paintPromptLocked(false)
+		p.warmupStatusLines++
+	}
 }
 
 // warmupSetFrame updates the spinner frame and redraws the whole block.
@@ -3701,8 +3931,8 @@ func (p *promptDisplay) warmupSetFrame(frame string) {
 	p.warmupPaintLocked()
 }
 
-// warmupPaintLocked redraws the warm-up spinner, optional queued notice, and
-// prompt+input atomically from the prompt row. Caller must hold p.mu.
+// warmupPaintLocked redraws the warm-up spinner, optional grey phase / queued
+// lines, and prompt+input atomically from the prompt row. Caller must hold p.mu.
 func (p *promptDisplay) warmupPaintLocked() {
 	frame := p.warmupSpinnerFrame
 	if frame == "" {
@@ -3731,9 +3961,13 @@ func (p *promptDisplay) warmupPaintLocked() {
 	var b strings.Builder
 	fmt.Fprintf(&b, "\x1b7\x1b[%dA\r\x1b[K", n)
 	fmt.Fprintf(&b, "%s %s", frame, label)
-	if n >= 2 {
+	if p.warmupPhaseLabel != "" {
 		b.WriteString("\r\n\r\x1b[K")
-		b.WriteString(p.warmupQueuedLabel)
+		b.WriteString(colorize(p.warmupPhaseLabel, colMuted))
+	}
+	if p.warmupQueuedLabel != "" {
+		b.WriteString("\r\n\r\x1b[K")
+		b.WriteString(colorize(p.warmupQueuedLabel, colMuted))
 	}
 	b.WriteString("\r\n\r\x1b[K")
 	b.WriteString(p.prompt())
@@ -3765,6 +3999,7 @@ func (p *promptDisplay) warmupStopLocked() {
 	p.warmupStatusLines = 0
 	p.warmupSpinnerFrame = ""
 	p.warmupSpinnerLabel = ""
+	p.warmupPhaseLabel = ""
 	p.warmupQueuedLabel = ""
 	p.paintPromptLocked(true)
 }
@@ -4374,6 +4609,10 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		}
 	case godo.HostedAgentEventKindSessionUpdated:
 		fmt.Fprintf(w, "\n%s\n", colorize("• session updated", colMuted))
+	case godo.HostedAgentEventKindRunSandboxAllocated:
+		fmt.Fprintf(w, "\n%s\n", colorize("• sandbox allocated", colMuted))
+	case godo.HostedAgentEventKindRunSandboxReleased:
+		fmt.Fprintf(w, "\n%s\n", colorize("• sandbox released", colMuted))
 	}
 }
 
