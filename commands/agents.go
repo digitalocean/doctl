@@ -1577,6 +1577,7 @@ func runAgentsAttachSession(c *CmdConfig, sessionID string) error {
 	pending := &pendingHITL{}
 	cursor := &eventCursor{}
 	state := newAttachState(c.Out, pending)
+	state.sessionRef = displaySessionRef(sess)
 
 	printAttachBanner(c.Out, sess, "")
 
@@ -1622,6 +1623,7 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 
 	pending := &pendingHITL{}
 	state := newAttachState(c.Out, pending)
+	state.sessionRef = displaySessionRef(sess)
 
 	printAttachBanner(c.Out, sess, fmt.Sprintf("OpenAI · %s", openaiSessionID))
 
@@ -1993,6 +1995,7 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 	for {
 		select {
 		case <-ctx.Done():
+			printDetachNotice(c.Out, state.sessionRef)
 			return nil
 		case b := <-bytesCh:
 			stop, err := handleOpenAIAttachByte(c, ctx, client, apiKey, openaiSessionID, b, state, thinking, warmup)
@@ -2000,10 +2003,12 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 				return err
 			}
 			if stop {
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
 			return err
@@ -3192,9 +3197,10 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 				continue
 			case hitlKeyDetach:
 				fmt.Fprintln(c.Out)
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			case hitlKeyIgnore:
-				fmt.Fprintln(c.Out, "(press y, n, or d to resolve the pending approval, or Ctrl-D to detach)")
+				fmt.Fprintln(c.Out, "(press y, n, or d to resolve the pending approval, or Ctrl-D to detach — session keeps running)")
 				continue
 			case hitlKeyFallback:
 				// Non-TTY — fall through to line mode.
@@ -3205,6 +3211,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 		line, err := read.line, read.err
 		if errors.Is(err, io.EOF) {
 			fmt.Fprintln(c.Out)
+			printDetachNotice(c.Out, state.sessionRef)
 			return nil
 		}
 		if err != nil {
@@ -3242,6 +3249,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			decision, err := confirmLargePasteLineMode(c.Out, n, lines, &pendingLine)
 			if errors.Is(err, io.EOF) {
 				fmt.Fprintln(c.Out)
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
 			if err != nil {
@@ -3265,9 +3273,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 		// and without this users re-submit, spawning a duplicate run.
 		if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 			if isRunTerminalErr(err) {
-				fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
-				fmt.Fprintln(c.Out, "Start a new session:  doctl agent start --spec <your-spec>.yaml")
-				fmt.Fprintln(c.Out, "(detaching)")
+				printSessionEndedNotice(c.Out, state.sessionRef)
 				return nil
 			}
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
@@ -3424,15 +3430,16 @@ func attachPrompt(pending *pendingHITL) string {
 // attachState bundles the line buffer, pending HITL id, and the synchronized
 // display that the SSE goroutine writes through.
 type attachState struct {
-	pending *pendingHITL
-	display *promptDisplay
-	mu      sync.Mutex // guards lineBuf, cursor, and hitlSel
-	lineBuf []byte
-	cursor  int // byte index into lineBuf (ASCII-only input today)
-	hitlSel int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
-	escSeq  []byte
-	pasting bool
-	confirm *largePasteConfirmation
+	pending    *pendingHITL
+	display    *promptDisplay
+	sessionRef string // name or id for detach messaging
+	mu         sync.Mutex // guards lineBuf, cursor, and hitlSel
+	lineBuf    []byte
+	cursor     int // byte index into lineBuf (ASCII-only input today)
+	hitlSel    int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
+	escSeq     []byte
+	pasting    bool
+	confirm    *largePasteConfirmation
 }
 
 type largePasteConfirmation struct {
@@ -4126,6 +4133,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		case <-ticker.C:
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
 			return err
@@ -4192,6 +4200,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			outcome, matched = hitlOutcomeForSelection(state.hitlSelection()), true
 		case 0x03, 0x04: // Ctrl-C / Ctrl-D
 			state.display.echo([]byte("\r\n"))
+			printDetachNotice(c.Out, state.sessionRef)
 			return true, nil
 		}
 		if !matched {
@@ -4258,6 +4267,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		return false, nil
 	case 0x03: // Ctrl-C
 		state.display.echo([]byte("\r\n"))
+		printDetachNotice(c.Out, state.sessionRef)
 		return true, nil
 	case 0x04: // Ctrl-D
 		state.mu.Lock()
@@ -4265,6 +4275,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.mu.Unlock()
 		if empty {
 			state.display.echo([]byte("\r\n"))
+			printDetachNotice(c.Out, state.sessionRef)
 			return true, nil
 		}
 		return false, nil
@@ -4318,9 +4329,7 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 	}
 	if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 		if isRunTerminalErr(err) {
-			fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
-			fmt.Fprintln(c.Out, "Start a new session:  doctl agent start --spec <your-spec>.yaml")
-			fmt.Fprintln(c.Out, "(detaching)")
+			printSessionEndedNotice(c.Out, state.sessionRef)
 			return true
 		}
 		fmt.Fprintf(c.Out, "send failed: %v\n", err)
@@ -4403,6 +4412,10 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	verb := parts[0]
 	switch verb {
 	case "/help":
+		fmt.Fprintln(c.Out, "Detach (does NOT remove the session):")
+		fmt.Fprintln(c.Out, "  Ctrl-D           close the connection; reattach later with `doctl agent attach`")
+		fmt.Fprintln(c.Out, "  Ctrl-C           same as Ctrl-D")
+		fmt.Fprintln(c.Out, "Remove the session: `doctl agent remove <session>`")
 		fmt.Fprintln(c.Out, "When a HITL approval is pending (no Enter needed in a TTY):")
 		fmt.Fprintln(c.Out, "  ↑ / ↓ then Enter  move the highlight and confirm the selected outcome")
 		fmt.Fprintln(c.Out, "  y | a             approve the oldest pending request")
@@ -4751,7 +4764,8 @@ func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote stri
 		colorize("d", colWarning) + " defer"
 	body.WriteString(cardRow("send", "type a message and press Enter"))
 	body.WriteString(cardRow("approve", "↑/↓ then Enter, or "+yn))
-	body.WriteString(cardRow("detach", colorize("Ctrl-D", colMuted)))
+	body.WriteString(cardRow("detach", colorize("Ctrl-D", colMuted)+" closes connection only — session keeps running"))
+	body.WriteString(cardRow("remove", colorize("doctl agent remove "+ref, colMuted)))
 	body.WriteString(cardRow("help", "type "+boldColor("/help", colHighlight)+" for the full command list"))
 
 	renderAgentCard(w, body.String())

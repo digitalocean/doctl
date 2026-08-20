@@ -294,6 +294,22 @@ func TestPrintAttachBanner(t *testing.T) {
 	assert.Contains(t, got, "smoke-test")
 	assert.Contains(t, got, "Quick help")
 	assert.Contains(t, got, "Ctrl-D")
+	assert.Contains(t, got, "session keeps running")
+	assert.Contains(t, got, "doctl agent remove smoke-test")
+}
+
+func TestPrintDetachNotice(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	printDetachNotice(&buf, "my-session")
+	out := buf.String()
+	assert.Contains(t, out, "Disconnected")
+	assert.Contains(t, out, "still running")
+	assert.Contains(t, out, "doctl agent attach my-session")
+	assert.Contains(t, out, "doctl agent remove my-session")
 }
 
 func TestMaybeOfferGitHubAuth_AlreadyConnected(t *testing.T) {

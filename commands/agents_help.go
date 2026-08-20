@@ -51,9 +51,11 @@ const agentsRunHelpMD = `Provide exactly one of ` + "`--harness`" + ` (opencode,
 
 Use ` + "`--gh-repo`" + ` with ` + "`--harness`" + `/` + "`--spec`" + ` to clone a repository (` + "`owner/repo`" + ` or GitHub URL). With ` + "`--config-id`" + `, ` + "`--name`" + ` is required and the repo comes from the config. If GitHub is not connected for your team, doctl offers an optional connect step (needed for private repos). Use ` + "`--prompt`" + ` to send the first message. For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 
-Pass ` + "`--no-attach`" + ` to wait for the session to become ready without opening the TUI. Use ` + "`--wait-timeout`" + ` to limit how long to wait (default 300 seconds).`
+Pass ` + "`--no-attach`" + ` to wait for the session to become ready without opening the TUI. Use ` + "`--wait-timeout`" + ` to limit how long to wait (default 300 seconds).
 
-const agentsAttachHelpMD = `Open an interactive TUI on an existing session. Type messages and press Enter; Ctrl-D detaches without removing the session.
+For the native Codex TUI (instead of doctl's chat), use ` + "`doctl agent start-proxy --type codex --session <name> --port 1144`" + ` after the session is ready, then ` + "`codex --remote ws://127.0.0.1:1144`" + `.`
+
+const agentsAttachHelpMD = `Open an interactive TUI on an existing session. Type messages and press Enter; Ctrl-D (or Ctrl-C) detaches without removing the session — reattach later, or run ` + "`doctl agent remove`" + ` to tear it down.
 
 If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 

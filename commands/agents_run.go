@@ -253,6 +253,13 @@ func RunAgentsRun(c *CmdConfig) error {
 		}
 	}
 
+	if isOpenAISandboxSession(sess) || strings.EqualFold(strings.TrimSpace(harness), "codex") {
+		ref := displaySessionRef(sess)
+		fmt.Fprintf(c.Out, "%s %s\n",
+			colorize("Tip:", colMuted),
+			colorize("For the native Codex TUI instead of doctl chat: doctl agent start-proxy --type codex --session "+ref+" --port 1144", colMuted))
+	}
+
 	return runAgentsAttachSession(c, sessionID)
 }
 
@@ -696,8 +703,21 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next step", colMuted))
 	body.WriteString(cardRow("attach", "doctl agent attach "+ref))
+	if isCodexReadyAgent(sum) {
+		body.WriteString(cardRow("proxy", "doctl agent start-proxy --type codex --session "+ref+" --port 1144"))
+	}
 
 	renderAgentCard(w, body.String())
+}
+
+func isCodexReadyAgent(sum runReadySummary) bool {
+	if sum.Session != nil && sum.Session.HostedAgentSession != nil {
+		if sum.Session.AgentKind == godo.HostedAgentKindOpenAICodex {
+			return true
+		}
+	}
+	h := strings.ToLower(strings.TrimSpace(sum.Harness))
+	return h == "codex" || h == "codex-agentapi" || h == "openai-codex"
 }
 
 // printSessionsList renders a styled text list of sessions (not used for -o json).

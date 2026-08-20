@@ -497,3 +497,29 @@ func humanBytes(n uint64) string {
 		return fmt.Sprintf("%d B", n)
 	}
 }
+
+// printDetachNotice tells the user that Ctrl-C/Ctrl-D only closed the local
+// connection — the hosted session keeps running until explicitly removed.
+func printDetachNotice(w io.Writer, sessionRef string) {
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "%s %s\n", colorize("✓", colSuccess), boldColor("Disconnected", colHighlight))
+	fmt.Fprintln(w, colorize("Your session is still running — this only closed the local connection.", colMuted))
+	ref := strings.TrimSpace(sessionRef)
+	if ref == "" {
+		ref = "<session>"
+	}
+	fmt.Fprintf(w, "  %s %s\n", colorize("reattach", colMuted), "doctl agent attach "+ref)
+	fmt.Fprintf(w, "  %s %s\n", colorize("remove  ", colMuted), "doctl agent remove "+ref)
+}
+
+// printSessionEndedNotice is shown when the remote run can no longer accept input.
+func printSessionEndedNotice(w io.Writer, sessionRef string) {
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, colorize("This session's run has ended and can't accept new input.", colWarning))
+	ref := strings.TrimSpace(sessionRef)
+	if ref == "" {
+		ref = "<session>"
+	}
+	fmt.Fprintf(w, "  %s %s\n", colorize("remove", colMuted), "doctl agent remove "+ref)
+	fmt.Fprintf(w, "  %s %s\n", colorize("start ", colMuted), "doctl agent run --harness opencode --name new-session")
+}
