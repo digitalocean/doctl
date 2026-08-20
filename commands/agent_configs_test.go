@@ -109,7 +109,7 @@ func TestAgentConfigDelete_ActiveSessions(t *testing.T) {
 		err := RunAgentsConfigDelete(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "active sessions")
-		assert.Contains(t, err.Error(), "doctl agents destroy")
+		assert.Contains(t, err.Error(), "doctl agents remove")
 	})
 }
 

@@ -68,7 +68,19 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "run", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
+	assertCommandNames(t, cmd, "start", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
+}
+
+func TestAgentsRemoveAliases(t *testing.T) {
+	cmd := Agents()
+	require.NotNil(t, cmd)
+
+	for _, name := range []string{"remove", "destroy", "rm"} {
+		found, _, err := cmd.Find([]string{name})
+		require.NoError(t, err, "alias %q", name)
+		require.NotNil(t, found, "alias %q", name)
+		assert.Equal(t, "remove", found.Name(), "alias %q should resolve to remove", name)
+	}
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -199,9 +211,22 @@ func TestRunAgentsStart(t *testing.T) {
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_test",
 					AgentKind: godo.HostedAgentKindOpenCode,
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					AgentKind: godo.HostedAgentKindOpenCode,
 					Status:    godo.HostedAgentSessionStatusReady,
 				},
 			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		assert.NoError(t, RunAgentsStart(config))
@@ -227,6 +252,19 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -261,6 +299,20 @@ func TestRunAgentsStart_FromConfigID(t *testing.T) {
 					ConfigID:  "cfg_abc123",
 				},
 			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					ConfigID:  "cfg_abc123",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -413,6 +465,19 @@ func TestRunAgentsStart_FlatWithName(t *testing.T) {
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")

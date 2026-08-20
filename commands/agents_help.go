@@ -34,7 +34,9 @@ doctl agents attach my-session
 
 const agentsStartHelpMD = `Provide exactly one of ` + "`--spec`" + ` (manifest file) or ` + "`--config-id`" + ` (existing Agent Config).
 
-For a one-step flow without a manifest file, use ` + "`doctl agents run --harness <name>`" + ` instead.
+Creates the session, prints step-by-step creation progress, waits until it is ready, and shows a styled ready summary with attach/remove next steps (same look as ` + "`doctl agents run --no-attach`" + `). Use ` + "`-o json`" + ` for machine-readable create output without waiting.
+
+For a one-step create-and-attach flow without a manifest file, use ` + "`doctl agents run --harness <name>`" + ` instead.
 
 With ` + "`--config-id`" + `, ` + "`--name`" + ` is required (see ` + "`doctl agents config`" + `). The ` + "`--spec`" + ` flag accepts a flat agents.yaml with a top-level ` + "`agent:`" + ` key:
 
@@ -49,7 +51,7 @@ Use ` + "`--gh-repo`" + ` to clone a repository (` + "`owner/repo`" + ` or GitHu
 
 Pass ` + "`--no-attach`" + ` to wait for the session to become ready without opening the TUI. Use ` + "`--wait-timeout`" + ` to limit how long to wait (default 300 seconds).`
 
-const agentsAttachHelpMD = `Open an interactive TUI on an existing session. Type messages and press Enter; Ctrl-D detaches without destroying the session.
+const agentsAttachHelpMD = `Open an interactive TUI on an existing session. Type messages and press Enter; Ctrl-D detaches without removing the session.
 
 If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, set ` + "`$OPENAI_API_KEY`" + ` locally.
 
@@ -63,7 +65,7 @@ const agentsLogsHelpMD = `Replay the session's event history, then exit. Very ol
 
 const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "`approve`" + `, ` + "`reject`" + `, or ` + "`defer`" + `.`
 
-const agentsDestroyHelpMD = `Tear down a session and its workspace sandbox.`
+const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox. Aliases: ` + "`destroy`" + `, ` + "`rm`" + `.`
 
 const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`doctl agents resume`" + `.`
 
@@ -100,7 +102,7 @@ const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`
 
 const agentsConfigGetHelpMD = `Print one config, including its manifest. Secret values are redacted.`
 
-const agentsConfigDeleteHelpMD = `Delete a config and free its name. Destroy active sessions started from the config first (` + "`doctl agents config list-sessions`" + `).`
+const agentsConfigDeleteHelpMD = `Delete a config and free its name. Remove active sessions started from the config first (` + "`doctl agents config list-sessions`" + `).`
 
 const agentsConfigListSessionsHelpMD = `List sessions started from a config. Filter with ` + "`--status`" + ` or ` + "`--name`" + `.`
 
@@ -130,7 +132,7 @@ Webhook: optional ` + "`--provider`" + ` (github|gitlab|custom). Cron: requires 
 
 const agentsTriggersUpdateHelpMD = `Update a trigger. Only flags you pass are changed. Kind and webhook provider cannot be changed.`
 
-const agentsTriggersDeleteHelpMD = `Delete a trigger. Does not destroy a bound reuse session.`
+const agentsTriggersDeleteHelpMD = `Delete a trigger. Does not remove a bound reuse session.`
 
 const agentsTriggersPauseHelpMD = `Pause a trigger. New events or cron ticks are ignored until resumed.`
 

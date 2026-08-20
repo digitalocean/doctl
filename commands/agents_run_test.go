@@ -118,10 +118,55 @@ func TestWaitForSessionReady(t *testing.T) {
 			}, nil)
 
 		var out bytes.Buffer
-		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_1", &out)
+		prog := newCreationProgress(&out)
+		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_1", prog)
 		require.NoError(t, err)
 		require.NotNil(t, sess)
-		assert.Contains(t, out.String(), "Agent ready")
+		assert.Contains(t, out.String(), "Agent session is ready")
+	})
+}
+
+func TestWaitForSessionReady_ProvisioningHints(t *testing.T) {
+	prevPoll := sessionReadyPollInterval
+	prevHint := creationHintInterval
+	prevClock := creationClock
+	sessionReadyPollInterval = time.Millisecond
+	creationHintInterval = time.Millisecond
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	creationClock = func() time.Time { return now }
+	t.Cleanup(func() {
+		sessionReadyPollInterval = prevPoll
+		creationHintInterval = prevHint
+		creationClock = prevClock
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		calls := 0
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_hint").
+			DoAndReturn(func(id string) (*do.HostedAgentSession, error) {
+				calls++
+				now = now.Add(2 * time.Millisecond)
+				status := godo.HostedAgentSessionStatusProvisioning
+				if calls >= 3 {
+					status = godo.HostedAgentSessionStatusReady
+				}
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_hint",
+						Status:    status,
+					},
+				}, nil
+			}).AnyTimes()
+
+		var out bytes.Buffer
+		prog := newCreationProgress(&out)
+		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_hint", prog)
+		require.NoError(t, err)
+		require.NotNil(t, sess)
+		got := out.String()
+		assert.Contains(t, got, "Provisioning sandbox")
+		assert.Contains(t, got, "Agent session is ready")
 	})
 }
 
@@ -167,7 +212,10 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		require.NoError(t, RunAgentsRun(config))
 		out := buf.String()
 		assert.Contains(t, out, "Launching agent session")
-		assert.Contains(t, out, "Agent ready")
+		assert.Contains(t, out, "Validating configuration")
+		assert.Contains(t, out, "Creating hosted session")
+		assert.Contains(t, out, "Session created")
+		assert.Contains(t, out, "Agent session is ready")
 		assert.Contains(t, out, "doctl agents attach demo")
 		assert.Contains(t, out, "katanemo/plano")
 	})

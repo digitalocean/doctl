@@ -176,7 +176,7 @@ func RunAgentsConfigDelete(c *CmdConfig) error {
 	if err := c.HostedAgents().DeleteAgentConfig(configID); err != nil {
 		if agentConfigHasActiveSessionsErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. List them with `doctl agents config list-sessions %s`, destroy each with `doctl agents destroy`, then retry", strings.TrimRight(msg, "."), configID)
+			return fmt.Errorf("%s. List them with `doctl agents config list-sessions %s`, remove each with `doctl agents remove`, then retry", strings.TrimRight(msg, "."), configID)
 		}
 		return err
 	}

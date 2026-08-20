@@ -228,6 +228,7 @@ func Agents() *Command {
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --config-id; exactly one is required.`)
 	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from, instead of --spec. Requires --name. Mutually exclusive with --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
+	AddIntFlag(cmdStart, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json.")
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session; doctl agents start --config-id cfg_abc123 --name my-session`
 
@@ -289,10 +290,11 @@ func Agents() *Command {
 		agentsApproveHelpMD,
 		Writer)
 
-	CmdBuilder(cmd, RunAgentsDestroy, "destroy <session>",
-		"Destroy an agent session",
-		agentsDestroyHelpMD,
-		Writer, aliasOpt("rm"))
+	cmdRemove := CmdBuilder(cmd, RunAgentsDestroy, "remove <session>",
+		"Remove an agent session",
+		agentsRemoveHelpMD,
+		Writer, aliasOpt("destroy", "rm"))
+	cmdRemove.Example = `doctl agents remove sess_abc123; doctl agents remove my-session; doctl agents destroy my-session`
 
 	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
 		"Pause an agent session",
@@ -363,6 +365,10 @@ func Agents() *Command {
 // manifest verbatim. For adapter codex-agentapi it first creates an OpenAI
 // Agents session, resolves ${ENV_ID} from the returned environment id, and
 // passes openai_session_id to harness-api as a query parameter.
+//
+// In text mode it waits for readiness and prints the same styled progress /
+// ready card as `agents run --no-attach`. JSON output returns the create
+// response immediately via the usual table/JSON displayer.
 func RunAgentsStart(c *CmdConfig) error {
 	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
 	if err != nil {
@@ -411,11 +417,18 @@ func RunAgentsStart(c *CmdConfig) error {
 		return err
 	}
 
-	sess, err := startSessionFromRawManifest(c, raw)
+	prog := (*creationProgress)(nil)
+	if Output != "json" {
+		stylingEnabled = detectStyling()
+		prog = newCreationProgress(c.Out)
+		prog.header("Launching agent session")
+	}
+
+	sess, err := startSessionFromRawManifest(c, raw, prog)
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	return finishAgentsStartSession(c, sess, prog)
 }
 
 // runAgentsStartFromConfig starts a session from an existing Agent Config ID.
@@ -428,6 +441,15 @@ func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
 	if err := validateHostedAgentIdentifier(name); err != nil {
 		return err
 	}
+
+	prog := (*creationProgress)(nil)
+	if Output != "json" {
+		stylingEnabled = detectStyling()
+		prog = newCreationProgress(c.Out)
+		prog.header("Launching agent session")
+		prog.wait("Creating hosted session from config…")
+	}
+
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:     name,
 		ConfigID: configID,
@@ -435,11 +457,48 @@ func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. Free a slot by destroying one: run `doctl agents list` to find a session ID, then `doctl agents destroy SESSION_ID`", strings.TrimRight(msg, "."))
+			return fmt.Errorf("%s. Free a slot by removing one: run `doctl agents list` to find a session ID, then `doctl agents remove SESSION_ID`", strings.TrimRight(msg, "."))
 		}
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	if prog != nil {
+		prog.ok(fmt.Sprintf("Session created · %s", displaySessionRef(sess)))
+	}
+	return finishAgentsStartSession(c, sess, prog)
+}
+
+// finishAgentsStartSession waits for readiness and prints a styled ready card
+// in text mode; JSON mode returns the create response without waiting.
+func finishAgentsStartSession(c *CmdConfig, sess *do.HostedAgentSession, prog *creationProgress) error {
+	if sess == nil {
+		return errors.New("session create returned no session")
+	}
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+
+	sessionID := sess.SessionID
+	if sessionID == "" {
+		return errors.New("session create returned no session id")
+	}
+
+	wait := runWaitTimeout
+	if waitSec, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWaitTimeout); err == nil && waitSec > 0 {
+		wait = time.Duration(waitSec) * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+
+	if prog == nil {
+		prog = newCreationProgress(c.Out)
+	}
+	sess, err := waitForSessionReady(ctx, c.HostedAgents(), sessionID, prog)
+	if err != nil {
+		return err
+	}
+
+	printRunReadySummary(c.Out, runReadySummary{Session: sess})
+	return nil
 }
 
 // RunAgentsStartProxy runs a local WebSocket facade that impersonates a
@@ -817,7 +876,8 @@ func RunAgentsShow(c *CmdConfig) error {
 	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 }
 
-// RunAgentsDestroy tears down a session.
+// RunAgentsDestroy tears down a session (CLI: `doctl agents remove`,
+// with aliases `destroy` and `rm`).
 func RunAgentsDestroy(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
@@ -826,7 +886,7 @@ func RunAgentsDestroy(c *CmdConfig) error {
 	if err := c.HostedAgents().DestroySession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s destroyed", sessionID)
+	notice("Session %s removed", sessionID)
 	return nil
 }
 
@@ -1601,7 +1661,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 			}
 		}
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
-		fmt.Fprintln(r.out, colorize("Tip: destroy and start a fresh session; wait for ● environment connected before sending work.", colMuted))
+		fmt.Fprintln(r.out, colorize("Tip: remove and start a fresh session; wait for ● environment connected before sending work.", colMuted))
 	case "session.turn.output_text.delta":
 		r.clearWarmup()
 		if r.thinking != nil {

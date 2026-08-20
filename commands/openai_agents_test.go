@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -330,6 +331,22 @@ func TestRunAgentsStart_OpenAI(t *testing.T) {
 					},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_do_1").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:           "sess_do_1",
+					Name:                "codex-agentapi-session",
+					AgentKind:           godo.HostedAgentKindOpenAICodex,
+					Status:              godo.HostedAgentSessionStatusReady,
+					OpenAISessionID:     "sess_a91f3",
+					OpenAIEnvironmentID: "env_abc123",
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		assert.NoError(t, RunAgentsStart(config))
@@ -373,6 +390,22 @@ func TestRunAgentsStart_OpenAIFlat(t *testing.T) {
 					},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_do_2").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:           "sess_do_2",
+					Name:                "codex-agentapi-session",
+					AgentKind:           godo.HostedAgentKindOpenAICodex,
+					Status:              godo.HostedAgentSessionStatusReady,
+					OpenAISessionID:     "sess_flat1",
+					OpenAIEnvironmentID: "env_flat1",
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		assert.NoError(t, RunAgentsStart(config))

@@ -37,6 +37,8 @@ const (
 var (
 	sessionReadyPollInterval = time.Second
 	runWaitTimeout           = defaultRunWait
+	creationHintInterval     = 5 * time.Second
+	creationClock            = time.Now
 )
 
 // harnessAgentNames maps friendly --harness values to flat-manifest agent keys.
@@ -123,9 +125,10 @@ func RunAgentsRun(c *CmdConfig) error {
 
 	stylingEnabled = detectStyling()
 
-	fmt.Fprintln(c.Out, boldColor("Launching agent session", colHighlight))
+	prog := newCreationProgress(c.Out)
+	prog.header("Launching agent session")
 
-	sess, err := startSessionFromRawManifest(c, raw)
+	sess, err := startSessionFromRawManifest(c, raw, prog)
 	if err != nil {
 		return err
 	}
@@ -141,9 +144,7 @@ func RunAgentsRun(c *CmdConfig) error {
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 
-	fmt.Fprintln(c.Out, colorize("  waiting for readiness…", colMuted))
-
-	sess, err = waitForSessionReady(ctx, c.HostedAgents(), sessionID, c.Out)
+	sess, err = waitForSessionReady(ctx, c.HostedAgents(), sessionID, prog)
 	if err != nil {
 		return err
 	}
@@ -309,7 +310,20 @@ func manifestIncludesPrompt(manifest []byte, prompt string) bool {
 }
 
 // startSessionFromRawManifest uploads a manifest and creates a hosted session.
-func startSessionFromRawManifest(c *CmdConfig, raw []byte) (*do.HostedAgentSession, error) {
+// When prog is non-nil it prints Plano-style lifecycle steps around each phase.
+func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgress) (*do.HostedAgentSession, error) {
+	if prog != nil {
+		prog.step("Validating configuration…")
+	}
+
+	needsOpenAI, err := manifestNeedsOpenAIPrepare(raw)
+	if err != nil {
+		return nil, err
+	}
+	if needsOpenAI && prog != nil {
+		prog.wait("Creating OpenAI Agents environment…")
+	}
+
 	openaiSessionID, envOverlay, err := prepareOpenAISandboxStart(context.Background(), raw)
 	if err != nil {
 		return nil, err
@@ -318,6 +332,9 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte) (*do.HostedAgentSessi
 		raw, err = stripSpecOpenAI(raw)
 		if err != nil {
 			return nil, err
+		}
+		if prog != nil {
+			prog.ok("OpenAI Agents environment ready")
 		}
 	}
 	manifest, err := expandManifestEnvLookup(raw, envLookupWithOverlay(envOverlay))
@@ -330,22 +347,105 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte) (*do.HostedAgentSessi
 		createOpt = &godo.HostedAgentManifestCreateOptions{OpenAISessionID: openaiSessionID}
 	}
 
+	if prog != nil {
+		prog.wait("Creating hosted session…")
+	}
 	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return nil, fmt.Errorf("%s. Free a slot by destroying one: run `doctl agents list` to find a session ID, then `doctl agents destroy SESSION_ID`", strings.TrimRight(msg, "."))
+			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl agents list` to find a session ID, then `doctl agents remove SESSION_ID`", strings.TrimRight(msg, "."))
 		}
 		return nil, err
+	}
+	if prog != nil {
+		prog.ok(fmt.Sprintf("Session created · %s", displaySessionRef(sess)))
 	}
 	return sess, nil
 }
 
-func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessionID string, out io.Writer) (*do.HostedAgentSession, error) {
+func manifestNeedsOpenAIPrepare(raw []byte) (bool, error) {
+	doc, err := parseAgentManifest(raw)
+	if err != nil {
+		// Let prepareOpenAISandboxStart / expand own the parse error later.
+		return false, nil
+	}
+	return isOpenAISandboxAdapter(doc.adapter()) || hasOpenAICreateBody(doc), nil
+}
+
+// creationProgress prints Plano-style lifecycle lines during session create/wait.
+type creationProgress struct {
+	out   io.Writer
+	start time.Time
+}
+
+func newCreationProgress(out io.Writer) *creationProgress {
+	return &creationProgress{out: out, start: creationClock()}
+}
+
+func (p *creationProgress) header(msg string) {
+	if p == nil {
+		return
+	}
+	fmt.Fprintln(p.out, boldColor(msg, colHighlight))
+}
+
+func (p *creationProgress) step(msg string) {
+	if p == nil {
+		return
+	}
+	fmt.Fprintf(p.out, "%s %s\n", colorize("•", colHighlight), colorize(msg, colHighlight))
+}
+
+func (p *creationProgress) wait(msg string) {
+	if p == nil {
+		return
+	}
+	fmt.Fprintf(p.out, "%s %s\n", colorize("…", colWarning), colorize(msg, colWarning))
+}
+
+func (p *creationProgress) ok(msg string) {
+	if p == nil {
+		return
+	}
+	fmt.Fprintf(p.out, "%s %s\n", colorize("✓", colSuccess), boldColor(msg, colSuccess))
+}
+
+func (p *creationProgress) elapsed() time.Duration {
+	if p == nil {
+		return 0
+	}
+	d := creationClock().Sub(p.start)
+	if d < 0 {
+		return 0
+	}
+	return d.Truncate(time.Second)
+}
+
+// provisioningHints are shown while status stays on PROVISIONING so a 10s+ wait
+// still feels alive. Later hints call out the "bits ready / agent not ready" case.
+var provisioningHints = []string{
+	"Provisioning sandbox…",
+	"Allocating workspace…",
+	"Starting agent runtime…",
+	"Sandbox bits may be ready; waiting for the agent…",
+}
+
+func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	ticker := time.NewTicker(sessionReadyPollInterval)
 	defer ticker.Stop()
 
-	var lastStatus godo.HostedAgentSessionStatus
+	var (
+		lastStatus godo.HostedAgentSessionStatus
+		hintIdx    int
+		nextHint   time.Time
+		out        io.Writer
+	)
+	if prog != nil {
+		out = prog.out
+		nextHint = creationClock()
+	}
+
 	for {
 		sess, err := svc.GetSession(sessionID)
 		if err != nil {
@@ -353,8 +453,41 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 		}
 
 		if sess.Status != lastStatus {
-			fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
+			switch sess.Status {
+			case godo.HostedAgentSessionStatusProvisioning:
+				if prog != nil {
+					prog.wait(provisioningHints[0])
+					hintIdx = 1
+					nextHint = creationClock().Add(creationHintInterval)
+				} else if out != nil {
+					fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
+				}
+			case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
+				if prog != nil {
+					elapsed := prog.elapsed()
+					if elapsed > 0 {
+						prog.ok(fmt.Sprintf("Agent session is ready (%s)", elapsed))
+					} else {
+						prog.ok("Agent session is ready")
+					}
+				} else if out != nil {
+					fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
+				}
+			default:
+				if prog != nil {
+					prog.wait(runStatusLabel(sess.Status))
+				} else if out != nil {
+					fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
+				}
+			}
 			lastStatus = sess.Status
+		} else if prog != nil &&
+			sess.Status == godo.HostedAgentSessionStatusProvisioning &&
+			hintIdx < len(provisioningHints) &&
+			!creationClock().Before(nextHint) {
+			prog.wait(fmt.Sprintf("%s (%s)", provisioningHints[hintIdx], prog.elapsed()))
+			hintIdx++
+			nextHint = creationClock().Add(creationHintInterval)
 		}
 
 		switch sess.Status {
@@ -412,8 +545,9 @@ type runReadySummary struct {
 	Prompt  string
 }
 
-// printRunReadySummary renders a compact success card after `agents run
-// --no-attach` completes.
+// printRunReadySummary renders a compact session card after create/wait
+// succeeds. The lifecycle line already printed "✓ Agent session is ready", so
+// the card focuses on identity and next steps without repeating that headline.
 func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	ref := displaySessionRef(sum.Session)
 	agent := prettyAgentKind(sum.Session.AgentKind)
@@ -422,8 +556,6 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	}
 
 	var body strings.Builder
-	fmt.Fprintf(&body, "%s\n\n", boldColor("Agent ready", colSuccess))
-
 	body.WriteString(cardRow("Session", ref))
 	if sum.Session != nil && sum.Session.SessionID != "" && sum.Session.SessionID != ref {
 		body.WriteString(cardRow("ID", colorize(sum.Session.SessionID, colMuted)))
@@ -442,8 +574,7 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next steps", colMuted))
 	body.WriteString(cardRow("attach", "doctl agents attach "+ref))
-	body.WriteString(cardRow("remove", colorize("doctl agents destroy "+ref, colMuted)))
+	body.WriteString(cardRow("remove", "doctl agents remove "+ref))
 
-	out := body.String()
-	renderAgentCard(w, out)
+	renderAgentCard(w, body.String())
 }
