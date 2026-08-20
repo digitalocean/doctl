@@ -24,10 +24,60 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	yaml "gopkg.in/yaml.v2"
 )
+
+const agentGitHubProvider = "github"
+
+// askConnectGitHub asks whether to start the GitHub OAuth connect flow when
+// --gh-repo is set and the team is not connected. Tests replace this.
+var askConnectGitHub = defaultAskConnectGitHub
+
+func defaultAskConnectGitHub() (bool, error) {
+	if !canPromptForEnv() {
+		return false, nil
+	}
+	choice, err := confirm.New(
+		"GitHub is not connected for your team. Connect now? (optional — needed for private repos)",
+		confirm.WithDefaultChoice(confirm.No),
+	).Prompt()
+	if err != nil {
+		return false, err
+	}
+	return choice == confirm.Yes, nil
+}
+
+// maybeOfferGitHubAuth checks team GitHub connect status when --gh-repo is used.
+// Already connected → continue. Otherwise optionally run `agent auth github`.
+// Declining (or non-interactive) continues; public repos do not require auth.
+func maybeOfferGitHubAuth(c *CmdConfig) error {
+	svc := c.HostedAgents()
+	start, err := svc.StartProviderAuth(agentGitHubProvider)
+	if err != nil {
+		warn("could not check GitHub connection status: %v (continuing; use `doctl agent auth github` for private repos)", err)
+		return nil
+	}
+	if start != nil && strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
+		fmt.Fprintf(c.Out, "%s %s\n", colorize("✓", colSuccess), colorize("GitHub already connected", colMuted))
+		return nil
+	}
+
+	connect, err := askConnectGitHub()
+	if err != nil {
+		return err
+	}
+	if !connect {
+		fmt.Fprintf(c.Out, "%s %s\n",
+			colorize("•", colMuted),
+			colorize("Skipping GitHub connect — fine for public repos. Use `doctl agent auth github` later for private ones.", colMuted))
+		return nil
+	}
+
+	return completeProviderAuth(c, svc, agentGitHubProvider, start, false, false)
+}
 
 const (
 	defaultCodexRunModel = "gpt-5.6-sol"
@@ -117,6 +167,12 @@ func RunAgentsRun(c *CmdConfig) error {
 	}
 
 	stylingEnabled = detectStyling()
+	if repo != "" {
+		if err := maybeOfferGitHubAuth(c); err != nil {
+			return err
+		}
+	}
+
 	prog := newCreationProgress(c.Out)
 	prog.header("Launching agent session")
 
@@ -368,7 +424,8 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 			prog.ok("OpenAI Agents environment ready")
 		}
 	}
-	manifest, err := expandManifestEnvLookup(raw, envLookupWithOverlay(envOverlay))
+	lookup := envLookupWithOverlay(envOverlay)
+	manifest, err := expandManifestEnvCollect(raw, lookup)
 	if err != nil {
 		return nil, err
 	}

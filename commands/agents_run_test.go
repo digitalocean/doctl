@@ -261,9 +261,14 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
 		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
 
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+
 		require.NoError(t, RunAgentsRun(config))
 		out := buf.String()
 		assert.Contains(t, out, "Launching agent session")
+		assert.Contains(t, out, "GitHub already connected")
 		assert.Contains(t, out, "Validating configuration")
 		assert.Contains(t, out, "Creating hosted session")
 		assert.Contains(t, out, "Session created")
@@ -289,6 +294,71 @@ func TestPrintAttachBanner(t *testing.T) {
 	assert.Contains(t, got, "smoke-test")
 	assert.Contains(t, got, "Quick help")
 	assert.Contains(t, got, "Ctrl-D")
+}
+
+func TestMaybeOfferGitHubAuth_AlreadyConnected(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, maybeOfferGitHubAuth(config))
+		assert.Contains(t, buf.String(), "GitHub already connected")
+	})
+}
+
+func TestMaybeOfferGitHubAuth_SkipWhenDeclined(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{
+				Provider:   "github",
+				Status:     "pending",
+				ConnectURL: "https://example.com/connect",
+				PollURL:    "https://example.com/poll",
+			}, nil)
+
+		prevAsk := askConnectGitHub
+		t.Cleanup(func() { askConnectGitHub = prevAsk })
+		askConnectGitHub = func() (bool, error) { return false, nil }
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, maybeOfferGitHubAuth(config))
+		assert.Contains(t, buf.String(), "Skipping GitHub connect")
+	})
+}
+
+func TestMaybeOfferGitHubAuth_ConnectsWhenAccepted(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{
+				Provider:   "github",
+				Status:     "pending",
+				ConnectURL: "https://example.com/connect",
+				PollURL:    "https://example.com/poll",
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			PollProviderAuth("github", "https://example.com/poll").
+			Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "success"}, nil)
+
+		prevAsk := askConnectGitHub
+		prevInterval := agentsAuthPollInterval
+		t.Cleanup(func() {
+			askConnectGitHub = prevAsk
+			agentsAuthPollInterval = prevInterval
+		})
+		askConnectGitHub = func() (bool, error) { return true, nil }
+		agentsAuthPollInterval = time.Millisecond
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, maybeOfferGitHubAuth(config))
+		assert.Contains(t, buf.String(), "github connected successfully")
+	})
 }
 
 func TestRunAgentsRun_RequiresHarnessOrSpec(t *testing.T) {

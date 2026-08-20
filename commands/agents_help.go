@@ -43,19 +43,19 @@ For a one-step create-and-attach flow without a manifest file, use ` + "`doctl a
 With ` + "`--config-id`" + `, ` + "`--name`" + ` is required (see ` + "`doctl agent config`" + `). The ` + "`--spec`" + ` flag accepts a flat agents.yaml with a top-level ` + "`agent:`" + ` key:
 
 ` + "```yaml\n" + `agent: opencode
-` + "```\n\n" + `${VAR} in the manifest is expanded from your environment; ` + "`$${VAR}`" + ` is a literal. For ` + "`codex`" + `, set ` + "`$OPENAI_API_KEY`" + ` locally before starting.
+` + "```\n\n" + `${VAR} in the manifest is expanded from your environment. Missing variables are requested interactively in a terminal; in scripts/CI set them beforehand. ` + "`$${VAR}`" + ` is a literal. For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 
 ` + "`--name`" + ` sets the session name (required with ` + "`--config-id`" + `). Names must be unique among active sessions; reference sessions by name in other commands.`
 
 const agentsRunHelpMD = `Provide exactly one of ` + "`--harness`" + ` (opencode, claude-code, codex), ` + "`--spec`" + ` (a manifest file), or ` + "`--config-id`" + ` (an existing Agent Config). With ` + "`--harness`" + `, doctl builds the manifest for you — no spec file needed.
 
-Use ` + "`--gh-repo`" + ` with ` + "`--harness`" + `/` + "`--spec`" + ` to clone a repository (` + "`owner/repo`" + ` or GitHub URL). With ` + "`--config-id`" + `, ` + "`--name`" + ` is required and the repo comes from the config. Use ` + "`--prompt`" + ` to send the first message. For ` + "`codex`" + `, set ` + "`$OPENAI_API_KEY`" + ` locally.
+Use ` + "`--gh-repo`" + ` with ` + "`--harness`" + `/` + "`--spec`" + ` to clone a repository (` + "`owner/repo`" + ` or GitHub URL). With ` + "`--config-id`" + `, ` + "`--name`" + ` is required and the repo comes from the config. If GitHub is not connected for your team, doctl offers an optional connect step (needed for private repos). Use ` + "`--prompt`" + ` to send the first message. For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 
 Pass ` + "`--no-attach`" + ` to wait for the session to become ready without opening the TUI. Use ` + "`--wait-timeout`" + ` to limit how long to wait (default 300 seconds).`
 
 const agentsAttachHelpMD = `Open an interactive TUI on an existing session. Type messages and press Enter; Ctrl-D detaches without removing the session.
 
-If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, set ` + "`$OPENAI_API_KEY`" + ` locally.
+If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 
 When approval is required: ` + "`y`" + `/` + "`a`" + ` approve, ` + "`n`" + `/` + "`r`" + ` reject, ` + "`d`" + ` defer. Type ` + "`/help`" + ` for slash commands.`
 

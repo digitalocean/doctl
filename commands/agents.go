@@ -631,11 +631,10 @@ var manifestEnvRef = regexp.MustCompile(`\$?\$\{[A-Za-z_][A-Za-z0-9_]*\}`)
 
 // expandManifestEnv resolves ${VAR} references in the manifest against the
 // local environment before the manifest is sent to the server. $${VAR}
-// escapes to a literal ${VAR}. Referencing a variable that is not set locally
-// is an error rather than a silent empty substitution, so a missing key fails
-// here instead of inside the sandbox.
+// escapes to a literal ${VAR}. Missing variables are collected interactively
+// when stdin/stdout are a TTY; otherwise they error with a clear instruction.
 func expandManifestEnv(manifest []byte) ([]byte, error) {
-	return expandManifestEnvLookup(manifest, os.LookupEnv)
+	return expandManifestEnvCollect(manifest, os.LookupEnv)
 }
 
 func envLookupWithOverlay(overlay map[string]string) func(string) (string, bool) {
@@ -981,6 +980,15 @@ func RunAgentsAuth(c *CmdConfig) error {
 	start, err := svc.StartProviderAuth(provider)
 	if err != nil {
 		return err
+	}
+	return completeProviderAuth(c, svc, provider, start, noBrowser, noWait)
+}
+
+// completeProviderAuth finishes a StartProviderAuth response: success, browser
+// connect card, and optional poll until authorized.
+func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider string, start *godo.HostedAgentProviderAuthStart, noBrowser, noWait bool) error {
+	if start == nil {
+		return fmt.Errorf("empty provider auth response for %s", provider)
 	}
 	if strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
 		stylingEnabled = detectStyling()
@@ -1603,9 +1611,9 @@ func isOpenAISandboxSession(sess *do.HostedAgentSession) bool {
 }
 
 func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
-	apiKey := strings.TrimSpace(os.Getenv(openAIAPIKeyEnv))
-	if apiKey == "" {
-		return fmt.Errorf("%s is required to attach to an OpenAI Agents sandbox session", openAIAPIKeyEnv)
+	apiKey, err := ensureEnvVar(openAIAPIKeyEnv)
+	if err != nil {
+		return fmt.Errorf("%s is required to attach to an OpenAI Agents sandbox session: %w", openAIAPIKeyEnv, err)
 	}
 	openaiSessionID := strings.TrimSpace(sess.OpenAISessionID)
 	if openaiSessionID == "" {

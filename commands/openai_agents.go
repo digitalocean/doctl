@@ -480,9 +480,9 @@ func prepareOpenAISandboxStart(ctx context.Context, manifest []byte) (openaiSess
 		return "", nil, fmt.Errorf("an OpenAI create-session config block is only valid with agent %q (got %q)", openAIAgentsAdapter, doc.adapter())
 	}
 
-	apiKey := strings.TrimSpace(os.Getenv(openAIAPIKeyEnv))
-	if apiKey == "" {
-		return "", nil, fmt.Errorf("%s is required to start a %s session", openAIAPIKeyEnv, openAIAgentsAdapter)
+	apiKey, err := ensureEnvVar(openAIAPIKeyEnv)
+	if err != nil {
+		return "", nil, fmt.Errorf("%s is required to start a %s session: %w", openAIAPIKeyEnv, openAIAgentsAdapter, err)
 	}
 	body, err := extractOpenAICreateBody(manifest)
 	if err != nil {
