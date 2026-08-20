@@ -3438,7 +3438,7 @@ func attachPrompt(pending *pendingHITL) string {
 type attachState struct {
 	pending    *pendingHITL
 	display    *promptDisplay
-	sessionRef string // name or id for detach messaging
+	sessionRef string     // name or id for detach messaging
 	mu         sync.Mutex // guards lineBuf, cursor, and hitlSel
 	lineBuf    []byte
 	cursor     int // byte index into lineBuf (ASCII-only input today)

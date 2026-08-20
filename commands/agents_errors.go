@@ -25,8 +25,9 @@ import (
 )
 
 // godoErrorLine matches godo.ErrorResponse.Error() output:
-//   METHOD URL: 400 message
-//   METHOD URL: 400 (request "id") message
+//
+//	METHOD URL: 400 message
+//	METHOD URL: 400 (request "id") message
 var godoErrorLine = regexp.MustCompile(`(?i)^(?:GET|POST|PUT|PATCH|DELETE|HEAD)\s+\S+:\s+\d{3}(?:\s+\(request "[^"]*"\))?\s+(.+)$`)
 
 // agentPrettyError is a user-facing agent CLI error: human title + reason,

@@ -74,9 +74,9 @@ func TestPrintAgentConfigsList(t *testing.T) {
 
 	var buf bytes.Buffer
 	printAgentConfigsList(&buf, []godo.HostedAgentConfigSummary{{
-		ID:   "01a01e58-6209-7c75-8b31-6cb80f7301ff",
-		Name: "session-opencode-20260820-084503",
-		CreatedAt: godo.Timestamp{Time: time.Date(2026, 8, 20, 8, 45, 3, 0, time.UTC)},
+		ID:          "01a01e58-6209-7c75-8b31-6cb80f7301ff",
+		Name:        "session-opencode-20260820-084503",
+		CreatedAt:   godo.Timestamp{Time: time.Date(2026, 8, 20, 8, 45, 3, 0, time.UTC)},
 		ContentHash: "c0c95e3b975398c69bd0b235d32f21647171bf825aa08369de820ee240569b35",
 	}})
 
