@@ -108,7 +108,7 @@ func RunAgentsRun(c *CmdConfig) error {
 		}
 		if manifestUsesLegacyEnvelope(raw) {
 			warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
-				"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agents start --help`). " +
+				"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agent start --help`). " +
 				"The envelope is still accepted for now but will be rejected after the transition window")
 		}
 	default:
@@ -354,7 +354,7 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl agents list` to find a session ID, then `doctl agents remove SESSION_ID`", strings.TrimRight(msg, "."))
+			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl agent list` to find a session ID, then `doctl agent remove SESSION_ID`", strings.TrimRight(msg, "."))
 		}
 		return nil, err
 	}
@@ -573,8 +573,8 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next steps", colMuted))
-	body.WriteString(cardRow("attach", "doctl agents attach "+ref))
-	body.WriteString(cardRow("remove", "doctl agents remove "+ref))
+	body.WriteString(cardRow("attach", "doctl agent attach "+ref))
+	body.WriteString(cardRow("remove", "doctl agent remove "+ref))
 
 	renderAgentCard(w, body.String())
 }

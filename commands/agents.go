@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The `doctl agents` subcommand wraps the godo HostedAgents service, which
+// The `doctl agent` subcommand wraps the godo HostedAgents service, which
 // in turn talks to the hosted-agents Harness API. All wire types and the SSE
 // iterator live in godo (hosted_agents.go); this file handles CLI plumbing,
 // argument parsing, and human-readable rendering of streamed events.
@@ -208,34 +208,34 @@ func (m *msgAccumulator) flush(out io.Writer) {
 	fmt.Fprint(out, rendered)
 }
 
-// Agents creates the `doctl agents` command tree.
+// Agents creates the `doctl agent` command tree (`agents` remains an alias).
 func Agents() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "agents",
-			Aliases: []string{"agent"},
-			Short:   "Launch and manage hosted DigitalOcean agent sessions",
+			Use:     "agent",
+			Aliases: []string{"agents"},
+			Short:   "Manage a hosted coding-agent session",
 			Long:    agentsRootHelpMD,
 			GroupID: hostedAgentsGroup,
 		},
 	}
 
 	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start",
-		"Start a new agent session",
+		"Start a new session",
 		agentsStartHelpMD,
-		Writer, aliasOpt("deploy"),
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, agentsNS(aliasOpt("deploy"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --config-id; exactly one is required.`)
 	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from, instead of --spec. Requires --name. Mutually exclusive with --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
 	AddIntFlag(cmdStart, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json.")
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session; doctl agents start --config-id cfg_abc123 --name my-session`
+	cmdStart.Example = `doctl agent start --spec agent-spec.yaml --name my-session; doctl agent start --config-id cfg_abc123 --name my-session`
 
 	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run",
-		"Create a session and attach in one step",
+		"Start one session and attach",
 		agentsRunHelpMD,
-		Writer, aliasOpt("up"))
+		Writer, agentsNS(aliasOpt("up"))...)
 	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec.")
 	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness. Same format as agents start --spec.`)
 	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo)")
@@ -244,111 +244,111 @@ func Agents() *Command {
 	AddBoolFlag(cmdRun, doctl.ArgAgentNoAttach, "", false, "Wait for readiness but do not attach")
 	AddIntFlag(cmdRun, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default)")
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
-	cmdRun.Example = `doctl agents run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; doctl agents run --harness codex --prompt "Create hello.txt"`
+	cmdRun.Example = `doctl agent run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; doctl agent run --harness codex --prompt "Create hello.txt"`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Run a local facade that lets a coding-agent CLI drive a hosted session",
 		agentsStartProxyHelpMD,
-		Writer)
+		Writer, agentsNS()...)
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to impersonate (v1: codex)")
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
 	AddIntFlag(cmdStartProxy, doctl.ArgAgentProxyPort, "", 1144, "Local port to listen on")
 	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect")
-	cmdStartProxy.Example = `doctl agents start-proxy --type codex --session my-session --port 1144`
+	cmdStartProxy.Example = `doctl agent start-proxy --type codex --session my-session --port 1144`
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
-		"Attach to an agent session",
+		"Attach to a session",
 		agentsAttachHelpMD,
-		Writer, aliasOpt("chat"))
-	cmdAttach.Example = `doctl agents attach sess_abc123; doctl agents attach my-session-name`
+		Writer, agentsNS(aliasOpt("chat"))...)
+	cmdAttach.Example = `doctl agent attach sess_abc123; doctl agent attach my-session-name`
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
-		"List agent sessions",
+		"List your sessions",
 		agentsListHelpMD,
-		Writer, aliasOpt("ls"),
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, agentsNS(aliasOpt("ls"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent; doctl agents list --parent-session-id sess_abc123`
+	cmdList.Example = `doctl agent list --page-size 10 --status SESSION_STATUS_READY; doctl agent list --name demo-agent; doctl agent list --parent-session-id sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
-		"Show a single agent session",
+		"Show one session",
 		agentsShowHelpMD,
-		Writer, aliasOpt("get"),
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, agentsNS(aliasOpt("get"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 
 	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the event history for a session",
 		agentsLogsHelpMD,
-		Writer)
+		Writer, agentsNS()...)
 
 	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
 		agentsApproveHelpMD,
-		Writer)
+		Writer, agentsNS()...)
 
 	cmdRemove := CmdBuilder(cmd, RunAgentsDestroy, "remove <session>",
-		"Remove an agent session",
+		"Remove a session",
 		agentsRemoveHelpMD,
-		Writer, aliasOpt("destroy", "rm"))
-	cmdRemove.Example = `doctl agents remove sess_abc123; doctl agents remove my-session; doctl agents destroy my-session`
+		Writer, agentsNS(aliasOpt("destroy", "rm"))...)
+	cmdRemove.Example = `doctl agent remove sess_abc123; doctl agent remove my-session; doctl agent destroy my-session`
 
 	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
-		"Pause an agent session",
+		"Pause a session",
 		agentsPauseHelpMD,
-		Writer)
-	cmdPause.Example = `doctl agents pause sess_abc123`
+		Writer, agentsNS()...)
+	cmdPause.Example = `doctl agent pause sess_abc123`
 
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
-		"Resume a paused agent session",
+		"Resume a paused session",
 		agentsResumeHelpMD,
-		Writer)
-	cmdResume.Example = `doctl agents resume sess_abc123`
+		Writer, agentsNS()...)
+	cmdResume.Example = `doctl agent resume sess_abc123`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
 		agentsUploadHelpMD,
-		Writer,
-		displayerType(&displayers.HostedAgentWorkspaceUpload{}))
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentWorkspaceUpload{}))...)
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdUpload, doctl.ArgAgentLocalFile, "", "", "Path to the local file to upload", requiredOpt())
 	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as an uncompressed tar archive to extract at the destination (not .tgz / .tar.gz)")
-	cmdUpload.Example = `doctl agents upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
+	cmdUpload.Example = `doctl agent upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
 		agentsDownloadHelpMD,
-		Writer)
+		Writer, agentsNS()...)
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
-	cmdDownload.Example = `doctl agents download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+	cmdDownload.Example = `doctl agent download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",
 		agentsAuthHelpMD,
-		Writer)
+		Writer, agentsNS()...)
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
-	cmdAuth.Example = `doctl agents auth github`
+	cmdAuth.Example = `doctl agent auth github`
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
 		agentsForkHelpMD,
-		Writer,
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
 	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
-	cmdFork.Example = `doctl agents fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+	cmdFork.Example = `doctl agent fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
 
 	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
 		"Roll a session back to a checkpoint in place",
 		agentsRollbackHelpMD,
-		Writer,
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentSession{}))...)
 
 	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
@@ -402,7 +402,7 @@ func RunAgentsStart(c *CmdConfig) error {
 	}
 	if manifestUsesLegacyEnvelope(raw) {
 		warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
-			"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agents start --help`). " +
+			"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agent start --help`). " +
 			"The envelope is still accepted for now but will be rejected after the transition window")
 	}
 	// --name is a convenience that sets the manifest's session name. When it's
@@ -457,7 +457,7 @@ func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. Free a slot by removing one: run `doctl agents list` to find a session ID, then `doctl agents remove SESSION_ID`", strings.TrimRight(msg, "."))
+			return fmt.Errorf("%s. Free a slot by removing one: run `doctl agent list` to find a session ID, then `doctl agent remove SESSION_ID`", strings.TrimRight(msg, "."))
 		}
 		return err
 	}
@@ -842,7 +842,7 @@ func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 
 	switch len(live) {
 	case 0:
-		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl agents list` to see available sessions", ref)
+		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl agent list` to see available sessions", ref)
 	case 1:
 		return live[0].SessionID, nil
 	default:
@@ -876,7 +876,7 @@ func RunAgentsShow(c *CmdConfig) error {
 	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 }
 
-// RunAgentsDestroy tears down a session (CLI: `doctl agents remove`,
+// RunAgentsDestroy tears down a session (CLI: `doctl agent remove`,
 // with aliases `destroy` and `rm`).
 func RunAgentsDestroy(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
@@ -934,7 +934,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 	provider := strings.ToLower(strings.TrimSpace(c.Args[0]))
 	if provider == "" {
-		return errors.New("a provider is required, e.g. `doctl agents auth github`")
+		return errors.New("a provider is required, e.g. `doctl agent auth github`")
 	}
 	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
 	if err != nil {
@@ -969,7 +969,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 
 	if noWait || start.PollURL == "" {
-		notice("Re-run `doctl agents auth %s` after authorizing to confirm the connection", provider)
+		notice("Re-run `doctl agent auth %s` after authorizing to confirm the connection", provider)
 		return nil
 	}
 
@@ -982,7 +982,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("stopped waiting; re-run `doctl agents auth %s` to check the connection later", provider)
+			return fmt.Errorf("stopped waiting; re-run `doctl agent auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
 
@@ -2587,7 +2587,7 @@ func classifyStreamError(err error) (string, bool) {
 		return fmt.Sprintf("\nSession not found: %s", er.Message), true
 	case http.StatusConflict:
 		// V0 single-connection rejection. er.Message carries device + when.
-		return fmt.Sprintf("\nSession already attached on another device: %s\nDetach there first, then re-run `doctl agents attach`.", er.Message), true
+		return fmt.Sprintf("\nSession already attached on another device: %s\nDetach there first, then re-run `doctl agent attach`.", er.Message), true
 	}
 	return "", false
 }
@@ -3016,7 +3016,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 		if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 			if isRunTerminalErr(err) {
 				fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
-				fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
+				fmt.Fprintln(c.Out, "Start a new session:  doctl agent start --spec <your-spec>.yaml")
 				fmt.Fprintln(c.Out, "(detaching)")
 				return nil
 			}
@@ -4032,7 +4032,7 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 	if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 		if isRunTerminalErr(err) {
 			fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
-			fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
+			fmt.Fprintln(c.Out, "Start a new session:  doctl agent start --spec <your-spec>.yaml")
 			fmt.Fprintln(c.Out, "(detaching)")
 			return true
 		}

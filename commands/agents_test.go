@@ -71,6 +71,26 @@ func TestAgentsCommand(t *testing.T) {
 	assertCommandNames(t, cmd, "start", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
 }
 
+func TestAgentsPrimaryNameIsSingular(t *testing.T) {
+	cmd := Agents()
+	assert.Equal(t, "agent", cmd.Name())
+	assert.Contains(t, cmd.Aliases, "agents")
+
+	found, _, err := cmd.Find([]string{"run"})
+	require.NoError(t, err)
+	assert.Equal(t, "run", found.Name())
+
+	var start *Command
+	for _, child := range cmd.ChildCommands() {
+		if child.Name() == "start" {
+			start = child
+			break
+		}
+	}
+	require.NotNil(t, start)
+	assert.Equal(t, "agents.start", cmdNS(start), "viper keys must stay under agents.*")
+}
+
 func TestAgentsRemoveAliases(t *testing.T) {
 	cmd := Agents()
 	require.NotNil(t, cmd)

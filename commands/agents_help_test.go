@@ -48,9 +48,10 @@ func TestRenderHelpCodeBlockPlain(t *testing.T) {
 }
 
 func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
-	assert.NotContains(t, agentsRootHelpMD, "Terminal styling")
-	assert.NotContains(t, agentsRootHelpMD, "API endpoint")
-	assert.NotContains(t, agentsRootHelpMD, "lipgloss")
+	assert.Contains(t, agentsRootHelpMD, "doctl agent run")
+	assert.NotContains(t, agentsRootHelpMD, "singular")
+	assert.NotContains(t, agentsRootHelpMD, "alias")
+	assert.NotContains(t, agentsRootHelpMD, "Launch and manage")
 }
 
 func TestHighlightInlineCode(t *testing.T) {

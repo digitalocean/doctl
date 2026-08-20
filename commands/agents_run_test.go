@@ -216,7 +216,7 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		assert.Contains(t, out, "Creating hosted session")
 		assert.Contains(t, out, "Session created")
 		assert.Contains(t, out, "Agent session is ready")
-		assert.Contains(t, out, "doctl agents attach demo")
+		assert.Contains(t, out, "doctl agent attach demo")
 		assert.Contains(t, out, "katanemo/plano")
 	})
 }

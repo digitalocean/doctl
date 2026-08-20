@@ -52,3 +52,9 @@ func overrideCmdNS(ns string) cmdOption {
 		c.overrideNS = ns
 	}
 }
+
+// agentsNS keeps viper keys under agents.* after the primary command became
+// `doctl agent` (with `agents` as an alias). Spread into CmdBuilder options.
+func agentsNS(opts ...cmdOption) []cmdOption {
+	return append([]cmdOption{overrideCmdNS("agents")}, opts...)
+}

@@ -22,23 +22,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const agentsRootHelpMD = `Quick start — create, wait for readiness, and attach in one step:
-` + "```bash\n" + `doctl agents run \
+const agentsRootHelpMD = `Manage a hosted coding-agent **session** — one agent (Claude Code, OpenCode, Codex, …) in a sandbox.
+
+To start one session and attach, use ` + "`run`" + `:
+` + "```bash\n" + `doctl agent run \
   --harness opencode \
   --gh-repo owner/repo \
   --prompt "Review the README"
 ` + "```\n\n" + `For full control (custom manifests, config IDs, or attach later):
-` + "```bash\n" + `doctl agents start --spec agent.yaml --name my-session
-doctl agents attach my-session
+` + "```bash\n" + `doctl agent start --spec agent.yaml --name my-session
+doctl agent attach my-session
 ` + "```\n\n" + `Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.`
 
 const agentsStartHelpMD = `Provide exactly one of ` + "`--spec`" + ` (manifest file) or ` + "`--config-id`" + ` (existing Agent Config).
 
-Creates the session, prints step-by-step creation progress, waits until it is ready, and shows a styled ready summary with attach/remove next steps (same look as ` + "`doctl agents run --no-attach`" + `). Use ` + "`-o json`" + ` for machine-readable create output without waiting.
+Creates the session, prints step-by-step creation progress, waits until it is ready, and shows a styled ready summary with attach/remove next steps (same look as ` + "`doctl agent run --no-attach`" + `). Use ` + "`-o json`" + ` for machine-readable create output without waiting.
 
-For a one-step create-and-attach flow without a manifest file, use ` + "`doctl agents run --harness <name>`" + ` instead.
+For a one-step create-and-attach flow without a manifest file, use ` + "`doctl agent run --harness <name>`" + ` instead.
 
-With ` + "`--config-id`" + `, ` + "`--name`" + ` is required (see ` + "`doctl agents config`" + `). The ` + "`--spec`" + ` flag accepts a flat agents.yaml with a top-level ` + "`agent:`" + ` key:
+With ` + "`--config-id`" + `, ` + "`--name`" + ` is required (see ` + "`doctl agent config`" + `). The ` + "`--spec`" + ` flag accepts a flat agents.yaml with a top-level ` + "`agent:`" + ` key:
 
 ` + "```yaml\n" + `agent: opencode
 ` + "```\n\n" + `${VAR} in the manifest is expanded from your environment; ` + "`$${VAR}`" + ` is a literal. For ` + "`codex`" + `, set ` + "`$OPENAI_API_KEY`" + ` locally before starting.
@@ -67,7 +69,7 @@ const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "
 
 const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox. Aliases: ` + "`destroy`" + `, ` + "`rm`" + `.`
 
-const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`doctl agents resume`" + `.`
+const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`doctl agent resume`" + `.`
 
 const agentsResumeHelpMD = `Resume a previously paused session.`
 
@@ -90,19 +92,19 @@ const agentsRollbackHelpMD = `Rewind a session to a prior checkpoint. The sessio
 const agentsStartProxyHelpMD = `Start a local WebSocket proxy so the Codex CLI can drive a hosted session:
 
 ` + "```bash\n" + `codex --remote ws://127.0.0.1:1144
-` + "```\n\n" + `Run ` + "`doctl agents start-proxy`" + ` first, then connect with ` + "`--type codex`" + ` and ` + "`--session`" + `. Only one of attach and start-proxy can stream the same session from one machine at a time.`
+` + "```\n\n" + `Run ` + "`doctl agent start-proxy`" + ` first, then connect with ` + "`--type codex`" + ` and ` + "`--session`" + `. Only one of attach and start-proxy can stream the same session from one machine at a time.`
 
-const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from its ID with ` + "`doctl agents config start-session`" + ` or ` + "`doctl agents start --config-id`" + `.
+const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from its ID with ` + "`doctl agent config start-session`" + ` or ` + "`doctl agent start --config-id`" + `.
 
 Configs are immutable — create a new config to change a manifest. Delete is blocked while sessions from the config are still active.`
 
-const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`doctl agents start --spec`" + `). ` + "`--name`" + ` must be unique within your team.`
+const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`doctl agent start --spec`" + `). ` + "`--name`" + ` must be unique within your team.`
 
 const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
 
 const agentsConfigGetHelpMD = `Print one config, including its manifest. Secret values are redacted.`
 
-const agentsConfigDeleteHelpMD = `Delete a config and free its name. Remove active sessions started from the config first (` + "`doctl agents config list-sessions`" + `).`
+const agentsConfigDeleteHelpMD = `Delete a config and free its name. Remove active sessions started from the config first (` + "`doctl agent config list-sessions`" + `).`
 
 const agentsConfigListSessionsHelpMD = `List sessions started from a config. Filter with ` + "`--status`" + ` or ` + "`--name`" + `.`
 

@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentConfigs generates the `doctl agents config` subtree, which wraps the
+// AgentConfigs generates the `doctl agent config` subtree, which wraps the
 // godo Agent Configs API: immutable, team-scoped agent manifests that sessions
 // can be launched from by ID.
 func AgentConfigs() *Command {
@@ -54,7 +54,7 @@ func AgentConfigs() *Command {
 		displayerType(&displayers.HostedAgentConfig{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
-	cmdCreate.Example = `doctl agents config create --spec agent-spec.yaml --name my-config`
+	cmdCreate.Example = `doctl agent config create --spec agent-spec.yaml --name my-config`
 
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
@@ -63,7 +63,7 @@ func AgentConfigs() *Command {
 		displayerType(&displayers.HostedAgentConfigSummary{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of configs to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
-	cmdList.Example = `doctl agents config list --page-size 10`
+	cmdList.Example = `doctl agent config list --page-size 10`
 
 	CmdBuilder(cmd, RunAgentsConfigGet, "get <config-id>",
 		"Get an agent config",
@@ -85,7 +85,7 @@ func AgentConfigs() *Command {
 	AddStringFlag(cmdSessions, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdSessions, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY)")
 	AddStringFlag(cmdSessions, doctl.ArgAgentName, "", "", "Filter by session name")
-	cmdSessions.Example = `doctl agents config list-sessions cfg_abc123 --status SESSION_STATUS_READY`
+	cmdSessions.Example = `doctl agent config list-sessions cfg_abc123 --status SESSION_STATUS_READY`
 
 	cmdStartSession := CmdBuilder(cmd, RunAgentsConfigStartSession, "start-session <config-id>",
 		"Start a session from a config",
@@ -93,7 +93,7 @@ func AgentConfigs() *Command {
 		Writer, ns, aliasOpt("start"),
 		displayerType(&displayers.HostedAgentSession{}))
 	AddStringFlag(cmdStartSession, doctl.ArgAgentName, "", "", "Name for the new session", requiredOpt())
-	cmdStartSession.Example = `doctl agents config start-session cfg_abc123 --name my-session`
+	cmdStartSession.Example = `doctl agent config start-session cfg_abc123 --name my-session`
 
 	return cmd
 }
@@ -176,7 +176,7 @@ func RunAgentsConfigDelete(c *CmdConfig) error {
 	if err := c.HostedAgents().DeleteAgentConfig(configID); err != nil {
 		if agentConfigHasActiveSessionsErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. List them with `doctl agents config list-sessions %s`, remove each with `doctl agents remove`, then retry", strings.TrimRight(msg, "."), configID)
+			return fmt.Errorf("%s. List them with `doctl agent config list-sessions %s`, remove each with `doctl agent remove`, then retry", strings.TrimRight(msg, "."), configID)
 		}
 		return err
 	}
