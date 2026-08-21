@@ -38,6 +38,12 @@ const (
 	rejectionMessageMax = 300
 )
 
+// defaultAPIURL mirrors godo's default base URL, which godo does not export.
+// The tunnel has to resolve to the same host the rest of the agents commands
+// talk to: a session is region-scoped to the host that created it, so dialing
+// a tunnel at a different host 404s on every session.
+const defaultAPIURL = "https://api.digitalocean.com/"
+
 // forwardPair is one [<local>:]<remote> mapping. Local 0 lets the OS pick.
 type forwardPair struct {
 	local  int
@@ -76,7 +82,7 @@ func parseForwardPair(arg string) (forwardPair, error) {
 func hostedAgentsWSURL(sessionID string, remotePort int) (string, error) {
 	raw := viper.GetString("api-url")
 	if raw == "" {
-		raw = doctl.HostedAgentsAPIURL
+		raw = defaultAPIURL
 	}
 	u, err := url.Parse(raw)
 	if err != nil {

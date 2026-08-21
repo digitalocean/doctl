@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -26,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentConfigs generates the `doctl agents config` subtree, which wraps the
+// AgentConfigs generates the `doctl open-harness-runtime config` subtree, which wraps the
 // godo Agent Configs API: immutable, team-scoped agent manifests that sessions
 // can be launched from by ID.
 func AgentConfigs() *Command {
@@ -45,55 +46,55 @@ func AgentConfigs() *Command {
 	// "agents.config" instead, mirroring how registry.repository does it. The
 	// override must be passed as a build option so it is in effect when the
 	// displayer's --format / --no-header flags are bound inside CmdBuilder.
-	ns := overrideCmdNS("agents.config")
+	ns := agentSubNS("agents.config")
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsConfigCreate, "create",
 		"Create an agent config from a manifest",
 		agentsConfigCreateHelpMD,
-		Writer, ns, aliasOpt("c"),
-		displayerType(&displayers.HostedAgentConfig{}))
+		Writer, append(ns, aliasOpt("c"),
+			displayerType(&displayers.HostedAgentConfig{}))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
-	cmdCreate.Example = `doctl agents config create --spec agent-spec.yaml --name my-config`
+	cmdCreate.Example = `doctl open-harness-runtime config create --spec agent-spec.yaml --name my-config`
 
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
 		agentsConfigListHelpMD,
-		Writer, ns, aliasOpt("ls"),
-		displayerType(&displayers.HostedAgentConfigSummary{}))
+		Writer, append(ns, aliasOpt("ls"),
+			displayerType(&displayers.HostedAgentConfigSummary{}))...)
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of configs to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
-	cmdList.Example = `doctl agents config list --page-size 10`
+	cmdList.Example = `doctl open-harness-runtime config list --page-size 10`
 
 	CmdBuilder(cmd, RunAgentsConfigGet, "get <config-id>",
 		"Get an agent config",
 		agentsConfigGetHelpMD,
-		Writer, ns, aliasOpt("show"),
-		displayerType(&displayers.HostedAgentConfig{}))
+		Writer, append(ns, aliasOpt("show"),
+			displayerType(&displayers.HostedAgentConfig{}))...)
 
 	CmdBuilder(cmd, RunAgentsConfigDelete, "delete <config-id>",
 		"Delete an agent config",
 		agentsConfigDeleteHelpMD,
-		Writer, ns, aliasOpt("rm"))
+		Writer, append(ns, aliasOpt("rm"))...)
 
 	cmdSessions := CmdBuilder(cmd, RunAgentsConfigListSessions, "list-sessions <config-id>",
 		"List sessions started from a config",
 		agentsConfigListSessionsHelpMD,
-		Writer, ns, aliasOpt("sessions"),
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, append(ns, aliasOpt("sessions"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddIntFlag(cmdSessions, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
 	AddStringFlag(cmdSessions, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdSessions, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY)")
 	AddStringFlag(cmdSessions, doctl.ArgAgentName, "", "", "Filter by session name")
-	cmdSessions.Example = `doctl agents config list-sessions cfg_abc123 --status SESSION_STATUS_READY`
+	cmdSessions.Example = `doctl open-harness-runtime config list-sessions cfg_abc123 --status SESSION_STATUS_READY`
 
 	cmdStartSession := CmdBuilder(cmd, RunAgentsConfigStartSession, "start-session <config-id>",
 		"Start a session from a config",
 		agentsConfigStartSessionHelpMD,
-		Writer, ns, aliasOpt("start"),
-		displayerType(&displayers.HostedAgentSession{}))
+		Writer, append(ns, aliasOpt("start"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdStartSession, doctl.ArgAgentName, "", "", "Name for the new session", requiredOpt())
-	cmdStartSession.Example = `doctl agents config start-session cfg_abc123 --name my-session`
+	cmdStartSession.Example = `doctl open-harness-runtime config start-session cfg_abc123 --name my-session`
 
 	return cmd
 }
@@ -112,6 +113,9 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if err := reportDurableAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
+		return err
+	}
 	cfg, err := c.HostedAgents().CreateAgentConfig(&godo.HostedAgentConfigCreateRequest{
 		Name:         name,
 		ManifestYAML: string(manifest),
@@ -119,11 +123,16 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true}); err != nil {
+			return err
+		}
+	} else {
+		stylingEnabled = detectStyling()
+		printAgentConfigCard(c.Out, cfg, true)
 	}
 	for _, w := range cfg.Warnings {
-		fmt.Fprintf(c.Out, "Warning: %s\n", w)
+		fmt.Fprintf(c.Out, "%s %s\n", colorize("Warning:", colWarning), w)
 	}
 	return nil
 }
@@ -146,11 +155,20 @@ func RunAgentsConfigList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentConfigSummary{Configs: configs}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentConfigSummary{Configs: configs}); err != nil {
+			return err
+		}
+		if next != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
+		}
+		return nil
 	}
+
+	stylingEnabled = detectStyling()
+	printAgentConfigsList(c.Out, configs)
 	if next != "" {
-		fmt.Fprintf(c.Out, "\nNext page token: %s\n", next)
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), next)
 	}
 	return nil
 }
@@ -164,7 +182,12 @@ func RunAgentsConfigGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printAgentConfigCard(c.Out, cfg, false)
+	return nil
 }
 
 // RunAgentsConfigDelete soft-deletes an Agent Config.
@@ -176,11 +199,12 @@ func RunAgentsConfigDelete(c *CmdConfig) error {
 	if err := c.HostedAgents().DeleteAgentConfig(configID); err != nil {
 		if agentConfigHasActiveSessionsErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. List them with `doctl agents config list-sessions %s`, destroy each with `doctl agents destroy`, then retry", strings.TrimRight(msg, "."), configID)
+			return fmt.Errorf("%s. List them with `doctl open-harness-runtime config list-sessions %s`, remove each with `doctl open-harness-runtime remove`, then retry", strings.TrimRight(msg, "."), configID)
 		}
 		return err
 	}
-	fmt.Fprintf(c.Out, "Deleted agent config %s\n", configID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Deleted agent config %s", configID))
 	return nil
 }
 
@@ -217,11 +241,20 @@ func RunAgentsConfigListSessions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
+			return err
+		}
+		if next != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
+		}
+		return nil
 	}
+
+	stylingEnabled = detectStyling()
+	printSessionsList(c.Out, sessions)
 	if next != "" {
-		fmt.Fprintf(c.Out, "\nNext page token: %s\n", next)
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), next)
 	}
 	return nil
 }
@@ -242,7 +275,12 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printSessionShowCard(c.Out, sess)
+	return nil
 }
 
 // agentConfigHasActiveSessionsErr reports the DELETE /configs/{id} 409 returned
@@ -253,4 +291,100 @@ func agentConfigHasActiveSessionsErr(err error) bool {
 		return false
 	}
 	return strings.Contains(strings.ToLower(msg), "active sessions")
+}
+
+// printAgentConfigsList renders a compact styled list for `agent config list`.
+func printAgentConfigsList(w io.Writer, configs []godo.HostedAgentConfigSummary) {
+	if len(configs) == 0 {
+		fmt.Fprintln(w, colorize("No configs", colMuted))
+		return
+	}
+	noun := "configs"
+	if len(configs) == 1 {
+		noun = "config"
+	}
+	fmt.Fprintln(w, boldColor(fmt.Sprintf("%d %s", len(configs), noun), colHighlight))
+	fmt.Fprintln(w)
+
+	for i, cfg := range configs {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		name := strings.TrimSpace(cfg.Name)
+		if name == "" {
+			name = cfg.ID
+		}
+		fmt.Fprintf(w, "%s %s\n", colorize("●", colSuccess), boldColor(name, colHighlight))
+		meta := make([]string, 0, 2)
+		if id := strings.TrimSpace(cfg.ID); id != "" && id != name {
+			meta = append(meta, colorize(id, colMuted))
+		}
+		if !cfg.CreatedAt.Time.IsZero() {
+			meta = append(meta, colorize(cfg.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+		}
+		if len(meta) > 0 {
+			fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+		}
+	}
+}
+
+// printAgentConfigCard renders a single config detail card for get/create.
+func printAgentConfigCard(w io.Writer, cfg *godo.HostedAgentConfig, created bool) {
+	if cfg == nil {
+		fmt.Fprintln(w, colorize("No config", colMuted))
+		return
+	}
+	name := strings.TrimSpace(cfg.Name)
+	if name == "" {
+		name = cfg.ID
+	}
+
+	var body strings.Builder
+	if created {
+		fmt.Fprintf(&body, "%s\n\n", boldColor("Config created", colSuccess))
+	}
+	body.WriteString(cardRow("Name", name))
+	if id := strings.TrimSpace(cfg.ID); id != "" && id != name {
+		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+	}
+	if schema := shortAgentSchema(cfg.AgentSpecSchemaVersion); schema != "" {
+		body.WriteString(cardRow("Schema", colorize(schema, colMuted)))
+	}
+	if hash := truncateMiddle(cfg.ContentHash, 20); hash != "" {
+		body.WriteString(cardRow("Hash", colorize(hash, colMuted)))
+	}
+	if !cfg.CreatedAt.Time.IsZero() {
+		body.WriteString(cardRow("Created", colorize(cfg.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+	}
+
+	if id := strings.TrimSpace(cfg.ID); id != "" {
+		fmt.Fprintln(&body)
+		fmt.Fprintln(&body, colorize("Next step", colMuted))
+		body.WriteString(cardRow("run", "doctl open-harness-runtime run --config-id "+id+" --name my-session"))
+	}
+
+	renderAgentCard(w, body.String())
+}
+
+func shortAgentSchema(schema string) string {
+	schema = strings.TrimSpace(schema)
+	if schema == "" {
+		return ""
+	}
+	if i := strings.LastIndex(schema, "/"); i >= 0 && i+1 < len(schema) {
+		return schema[i+1:]
+	}
+	return schema
+}
+
+func truncateMiddle(s string, keep int) string {
+	s = strings.TrimSpace(s)
+	if keep < 8 || len(s) <= keep {
+		return s
+	}
+	half := keep/2 - 1
+	if half < 2 {
+		half = 2
+	}
+	return s[:half] + "…" + s[len(s)-half:]
 }

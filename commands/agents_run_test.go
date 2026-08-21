@@ -118,10 +118,107 @@ func TestWaitForSessionReady(t *testing.T) {
 			}, nil)
 
 		var out bytes.Buffer
-		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_1", &out)
+		prog := newCreationProgress(&out)
+		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_1", prog)
 		require.NoError(t, err)
 		require.NotNil(t, sess)
-		assert.Contains(t, out.String(), "Agent ready")
+		got := out.String()
+		assert.Contains(t, got, "Agent is ready")
+		assert.NotContains(t, got, "SESSION_STATUS_")
+		assert.NotContains(t, got, "session_id=")
+	})
+}
+
+func TestWaitForSessionReady_ProvisioningHints(t *testing.T) {
+	prevPoll := sessionReadyPollInterval
+	prevHint := creationHintInterval
+	prevClock := creationClock
+	sessionReadyPollInterval = time.Millisecond
+	creationHintInterval = time.Millisecond
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	creationClock = func() time.Time { return now }
+	t.Cleanup(func() {
+		sessionReadyPollInterval = prevPoll
+		creationHintInterval = prevHint
+		creationClock = prevClock
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		calls := 0
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_hint").
+			DoAndReturn(func(id string) (*do.HostedAgentSession, error) {
+				calls++
+				now = now.Add(2 * time.Millisecond)
+				status := godo.HostedAgentSessionStatusProvisioning
+				if calls >= 3 {
+					status = godo.HostedAgentSessionStatusReady
+				}
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_hint",
+						Status:    status,
+					},
+				}, nil
+			}).AnyTimes()
+
+		var out bytes.Buffer
+		prog := newCreationProgress(&out)
+		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_hint", prog)
+		require.NoError(t, err)
+		require.NotNil(t, sess)
+		got := out.String()
+		assert.Contains(t, got, "Waiting for agent")
+		assert.Contains(t, got, "Agent is ready")
+		assert.NotContains(t, got, "SESSION_STATUS_")
+	})
+}
+
+func TestWaitForSessionReady_BitsReadyWhileProvisioning(t *testing.T) {
+	prevPoll := sessionReadyPollInterval
+	prevHint := creationHintInterval
+	prevClock := creationClock
+	sessionReadyPollInterval = time.Millisecond
+	creationHintInterval = time.Millisecond
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	creationClock = func() time.Time { return now }
+	t.Cleanup(func() {
+		sessionReadyPollInterval = prevPoll
+		creationHintInterval = prevHint
+		creationClock = prevClock
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		calls := 0
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_bits").
+			DoAndReturn(func(id string) (*do.HostedAgentSession, error) {
+				calls++
+				now = now.Add(2 * time.Millisecond)
+				sess := &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_bits",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}
+				if calls >= 2 {
+					sess.OpenAIEnvironmentID = "env_abc"
+				}
+				if calls >= 4 {
+					sess.Status = godo.HostedAgentSessionStatusReady
+				}
+				return sess, nil
+			}).AnyTimes()
+
+		var out bytes.Buffer
+		prog := newCreationProgress(&out)
+		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_bits", prog)
+		require.NoError(t, err)
+		require.NotNil(t, sess)
+		got := out.String()
+		assert.Contains(t, got, "Environment ready · waiting for agent")
+		assert.Contains(t, got, "Agent is ready")
+		assert.NotContains(t, got, "openai_environment_id=")
 	})
 }
 
@@ -164,11 +261,20 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
 		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
 
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+
 		require.NoError(t, RunAgentsRun(config))
 		out := buf.String()
 		assert.Contains(t, out, "Launching agent session")
-		assert.Contains(t, out, "Agent ready")
-		assert.Contains(t, out, "doctl agents attach demo")
+		assert.Contains(t, out, "GitHub already connected")
+		assert.Contains(t, out, "Validating configuration")
+		assert.Contains(t, out, "Creating hosted session")
+		assert.Contains(t, out, "Session created")
+		assert.Contains(t, out, "Agent is ready")
+		assert.NotContains(t, out, "SESSION_STATUS_")
+		assert.Contains(t, out, "doctl open-harness-runtime attach demo")
 		assert.Contains(t, out, "katanemo/plano")
 	})
 }
@@ -188,13 +294,94 @@ func TestPrintAttachBanner(t *testing.T) {
 	assert.Contains(t, got, "smoke-test")
 	assert.Contains(t, got, "Quick help")
 	assert.Contains(t, got, "Ctrl-D")
+	assert.Contains(t, got, "session keeps running")
+	assert.Contains(t, got, "doctl open-harness-runtime remove smoke-test")
+}
+
+func TestPrintDetachNotice(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	printDetachNotice(&buf, "my-session")
+	out := buf.String()
+	assert.Contains(t, out, "Disconnected")
+	assert.Contains(t, out, "still running")
+	assert.Contains(t, out, "doctl open-harness-runtime attach my-session")
+	assert.Contains(t, out, "doctl open-harness-runtime remove my-session")
+}
+
+func TestMaybeOfferGitHubAuth_AlreadyConnected(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, maybeOfferGitHubAuth(config))
+		assert.Contains(t, buf.String(), "GitHub already connected")
+	})
+}
+
+func TestMaybeOfferGitHubAuth_SkipWhenDeclined(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{
+				Provider:   "github",
+				Status:     "pending",
+				ConnectURL: "https://example.com/connect",
+				PollURL:    "https://example.com/poll",
+			}, nil)
+
+		prevAsk := askConnectGitHub
+		t.Cleanup(func() { askConnectGitHub = prevAsk })
+		askConnectGitHub = func() (bool, error) { return false, nil }
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, maybeOfferGitHubAuth(config))
+		assert.Contains(t, buf.String(), "Skipping GitHub connect")
+	})
+}
+
+func TestMaybeOfferGitHubAuth_ConnectsWhenAccepted(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{
+				Provider:   "github",
+				Status:     "pending",
+				ConnectURL: "https://example.com/connect",
+				PollURL:    "https://example.com/poll",
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			PollProviderAuth("github", "https://example.com/poll").
+			Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "success"}, nil)
+
+		prevAsk := askConnectGitHub
+		prevInterval := agentsAuthPollInterval
+		t.Cleanup(func() {
+			askConnectGitHub = prevAsk
+			agentsAuthPollInterval = prevInterval
+		})
+		askConnectGitHub = func() (bool, error) { return true, nil }
+		agentsAuthPollInterval = time.Millisecond
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, maybeOfferGitHubAuth(config))
+		assert.Contains(t, buf.String(), "github connected successfully")
+	})
 }
 
 func TestRunAgentsRun_RequiresHarnessOrSpec(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunAgentsRun(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "one of")
+		assert.Contains(t, err.Error(), "one of --harness, --spec, or --config-id is required")
 	})
 }
 
@@ -205,5 +392,70 @@ func TestRunAgentsRun_RejectsHarnessAndSpecTogether(t *testing.T) {
 		err := RunAgentsRun(config)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), "mutually exclusive"))
+	})
+}
+
+func TestRunAgentsRun_FromConfigID_NoAttach(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
+				Name:     "demo",
+				ConfigID: "cfg_abc123",
+			}).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_cfg_1",
+					Name:      "demo",
+					ConfigID:  "cfg_abc123",
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_cfg_1").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_cfg_1",
+					Name:      "demo",
+					ConfigID:  "cfg_abc123",
+					Status:    godo.HostedAgentSessionStatusReady,
+					AgentKind: godo.HostedAgentKindOpenCode,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
+		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
+
+		require.NoError(t, RunAgentsRun(config))
+		got := buf.String()
+		assert.Contains(t, got, "Creating hosted session from config")
+		assert.Contains(t, got, "Agent is ready")
+		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
+	})
+}
+
+func TestRunAgentsRun_FromConfigID_RequiresName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		err := RunAgentsRun(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--name is required")
+	})
+}
+
+func TestRunAgentsRun_FromConfigID_RejectsRepo(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
+		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "org/repo")
+		err := RunAgentsRun(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--gh-repo cannot be used with --config-id")
 	})
 }

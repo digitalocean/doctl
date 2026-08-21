@@ -981,6 +981,12 @@ const (
 	// ArgAgentArchive treats the workspace payload as a tar archive.
 	ArgAgentArchive = "archive"
 
+	// ArgAgentExecWorkdir is the guest directory a sandbox exec runs in.
+	ArgAgentExecWorkdir = "workdir"
+
+	// ArgAgentExecTimeout bounds a sandbox exec, in seconds.
+	ArgAgentExecTimeout = "timeout"
+
 	// ArgAgentProxyType selects which coding-agent protocol `start-proxy` impersonates.
 	ArgAgentProxyType = "type"
 

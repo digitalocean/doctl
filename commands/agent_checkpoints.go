@@ -7,7 +7,7 @@ You may obtain a copy of the License at
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+    15|See the License for the specific language governing permissions and
 limitations under the License.
 */
 
@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -23,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentCheckpoints generates the `doctl agents checkpoint` subtree.
+// AgentCheckpoints generates the `doctl open-harness-runtime checkpoint` subtree.
 func AgentCheckpoints() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -37,30 +38,30 @@ func AgentCheckpoints() *Command {
 	cmdCreate := CmdBuilder(cmd, RunAgentsCheckpointCreate, "create <session>",
 		"Create a checkpoint for a session",
 		agentsCheckpointCreateHelpMD,
-		Writer, aliasOpt("save"),
+		Writer, agentPrettyErrors(), aliasOpt("save"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentCheckpointLabel, "", "", "Optional label for the checkpoint")
-	cmdCreate.Example = `doctl agents checkpoint create sess_abc123 --label before-refactor`
+	cmdCreate.Example = `doctl open-harness-runtime checkpoint create sess_abc123 --label before-refactor`
 
 	cmdList := CmdBuilder(cmd, RunAgentsCheckpointList, "list <session>",
 		"List checkpoints for a session",
 		agentsCheckpointListHelpMD,
-		Writer, aliasOpt("ls"),
+		Writer, agentPrettyErrors(), aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of checkpoints to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
-	cmdList.Example = `doctl agents checkpoint list sess_abc123`
+	cmdList.Example = `doctl open-harness-runtime checkpoint list sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsCheckpointGet, "get <session> <checkpoint-id>",
 		"Get a checkpoint",
 		agentsCheckpointGetHelpMD,
-		Writer, aliasOpt("show"),
+		Writer, agentPrettyErrors(), aliasOpt("show"),
 		displayerType(&displayers.HostedAgentCheckpoint{}))
 
 	CmdBuilder(cmd, RunAgentsCheckpointDelete, "delete <session> <checkpoint-id>",
 		"Delete a checkpoint",
 		agentsCheckpointDeleteHelpMD,
-		Writer, aliasOpt("rm"))
+		Writer, agentPrettyErrors(), aliasOpt("rm"))
 
 	return cmd
 }
@@ -82,7 +83,12 @@ func RunAgentsCheckpointCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printCheckpointCard(c.Out, cp, true)
+	return nil
 }
 
 // RunAgentsCheckpointList lists checkpoints for a session.
@@ -110,12 +116,18 @@ func RunAgentsCheckpointList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: checkpoints}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: checkpoints}); err != nil {
+			return err
+		}
+		if next != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
+		}
+		return nil
 	}
-	if next != "" {
-		fmt.Fprintf(c.Out, "\nNext page token: %s\n", next)
-	}
+	stylingEnabled = detectStyling()
+	printCheckpointsList(c.Out, checkpoints)
+	printAgentNextPage(c.Out, next)
 	return nil
 }
 
@@ -132,7 +144,12 @@ func RunAgentsCheckpointGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printCheckpointCard(c.Out, cp, false)
+	return nil
 }
 
 // RunAgentsCheckpointDelete deletes a checkpoint.
@@ -148,7 +165,8 @@ func RunAgentsCheckpointDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(c.Out, "Deleted checkpoint %s (deleted=%v)\n", resp.CheckpointID, resp.Deleted)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Deleted checkpoint %s", resp.CheckpointID))
 	return nil
 }
 
@@ -179,7 +197,12 @@ func RunAgentsFork(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: sessions})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: sessions})
+	}
+	stylingEnabled = detectStyling()
+	printSessionsList(c.Out, sessions)
+	return nil
 }
 
 // RunAgentsRollback rolls a session back to a checkpoint in place.
@@ -195,5 +218,10 @@ func RunAgentsRollback(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printSessionShowCard(c.Out, sess)
+	return nil
 }

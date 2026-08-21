@@ -95,11 +95,13 @@ func TestHostedAgentsWSURL(t *testing.T) {
 		want   string
 	}{
 		{
-			// Unset --api-url falls back to doctl.HostedAgentsAPIURL, whose
-			// trailing slash must not survive into the joined path.
-			name:   "default hosted-agents host",
+			// Unset --api-url falls back to the same default the rest of the
+			// agents commands use, so the tunnel and the session that created
+			// it stay on one host. The trailing slash must not survive into
+			// the joined path.
+			name:   "default api host",
 			apiURL: "",
-			want:   "wss://ohr-agent.do-ai.run/v2/agents/sessions/sess-1/port-forward/9119",
+			want:   "wss://api.digitalocean.com/v2/agents/sessions/sess-1/port-forward/9119",
 		},
 		{
 			name:   "preview host via --api-url",

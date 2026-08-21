@@ -48,7 +48,8 @@ kind: Agent
 metadata:
   name: test-agent
 spec:
-  adapter: opencode
+  runtime:
+    adapter: opencode
 `
 
 // sampleFlatManifest is the flat-format equivalent of sampleManifest: no
@@ -68,7 +69,41 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "run", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
+	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "exec")
+}
+
+func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
+	cmd := Agents()
+	assert.Equal(t, agentCmdName, cmd.Name())
+	assert.Contains(t, cmd.Aliases, "agent")
+	assert.Contains(t, cmd.Aliases, "agents")
+	assert.Contains(t, cmd.Aliases, "ohr")
+
+	found, _, err := cmd.Find([]string{"run"})
+	require.NoError(t, err)
+	assert.Equal(t, "run", found.Name())
+
+	var start *Command
+	for _, child := range cmd.ChildCommands() {
+		if child.Name() == "start" {
+			start = child
+			break
+		}
+	}
+	require.NotNil(t, start)
+	assert.Equal(t, "agents.start", cmdNS(start), "viper keys must stay under agents.*")
+}
+
+func TestAgentsRemoveAliases(t *testing.T) {
+	cmd := Agents()
+	require.NotNil(t, cmd)
+
+	for _, name := range []string{"remove", "destroy", "rm"} {
+		found, _, err := cmd.Find([]string{name})
+		require.NoError(t, err, "alias %q", name)
+		require.NotNil(t, found, "alias %q", name)
+		assert.Equal(t, "remove", found.Name(), "alias %q should resolve to remove", name)
+	}
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -199,11 +234,60 @@ func TestRunAgentsStart(t *testing.T) {
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_test",
 					AgentKind: godo.HostedAgentKindOpenCode,
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					AgentKind: godo.HostedAgentKindOpenCode,
 					Status:    godo.HostedAgentSessionStatusReady,
 				},
 			}, nil)
 
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
+func TestRunAgentsStart_FromHarness(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				var doc map[string]any
+				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
+				assert.Equal(t, "claude-code", doc["agent"])
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_harness",
+						Name:      "harness-demo",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_harness").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_harness",
+					Name:      "harness-demo",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "harness-demo")
 		assert.NoError(t, RunAgentsStart(config))
 	})
 }
@@ -227,6 +311,19 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -242,7 +339,7 @@ func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
 	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
 	// required-flag check, so the FromConfigID runner tests cannot catch this.
 	require.False(t, viper.GetBool("required.agents.start.spec"),
-		"spec is still marked required; `doctl agents start --config-id` fails with (agents.start.spec) command is missing required arguments")
+		"spec is still marked required; `doctl open-harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
 	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
 	require.NoError(t, err)
 }
@@ -261,6 +358,20 @@ func TestRunAgentsStart_FromConfigID(t *testing.T) {
 					ConfigID:  "cfg_abc123",
 				},
 			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					ConfigID:  "cfg_abc123",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -287,11 +398,11 @@ func TestRunAgentsStart_SpecAndConfigIDMutuallyExclusive(t *testing.T) {
 	})
 }
 
-func TestRunAgentsStart_RequiresSpecOrConfigID(t *testing.T) {
+func TestRunAgentsStart_RequiresSource(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunAgentsStart(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "one of --spec or --config-id is required")
+		assert.Contains(t, err.Error(), "one of --harness, --spec, or --config-id is required")
 	})
 }
 
@@ -413,6 +524,19 @@ func TestRunAgentsStart_FlatWithName(t *testing.T) {
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -423,7 +547,31 @@ func TestRunAgentsStart_FlatWithName(t *testing.T) {
 func TestRunAgentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
 		assert.NoError(t, RunAgentsList(config))
+		assert.Contains(t, buf.String(), "No sessions")
+	})
+}
+
+func TestRunAgentsList_StyledText(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_1",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+			}},
+		}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
+		assert.NoError(t, RunAgentsList(config))
+		got := buf.String()
+		assert.Contains(t, got, "1 session")
+		assert.Contains(t, got, "demo")
+		assert.Contains(t, got, "ready")
+		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
 
@@ -508,10 +656,22 @@ func TestRunAgentsList_NameFilter(t *testing.T) {
 func TestRunAgentsShow(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(&do.HostedAgentSession{
-			HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test"},
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_test",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+			},
 		}, nil)
 		config.Args = []string{"sess_test"}
+		var buf bytes.Buffer
+		config.Out = &buf
 		assert.NoError(t, RunAgentsShow(config))
+		got := buf.String()
+		assert.Contains(t, got, "demo")
+		assert.Contains(t, got, "ready")
+		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
+		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
 
@@ -2223,9 +2383,15 @@ func TestPromptDisplay(t *testing.T) {
 		assert.Contains(t, buf.String(), "> ")
 
 		buf.Reset()
+		s.display.warmupSetPhase("provisioning sandbox")
+		assert.Contains(t, buf.String(), "provisioning sandbox")
+		assert.Contains(t, buf.String(), "> ")
+
+		buf.Reset()
 		s.display.warmupSetQueued(msgAgentWarmupQueued)
 		assert.Contains(t, buf.String(), msgAgentWarmupQueued)
 		assert.Contains(t, buf.String(), "> ")
+		assert.Equal(t, 3, s.display.warmupStatusLines)
 	})
 }
 
@@ -2245,7 +2411,7 @@ func TestEventCursor(t *testing.T) {
 }
 
 // TestRunAgentsAttachAuthFailure: a 401 from pre-attach GetSession surfaces
-// the friendly "Authentication failed" message, not the raw HTTP error.
+// a styled agentPrettyError, not the raw godo METHOD/URL dump.
 func TestRunAgentsAttachAuthFailure(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		authErr := &godo.ErrorResponse{
@@ -2260,8 +2426,13 @@ func TestRunAgentsAttachAuthFailure(t *testing.T) {
 		config.Args = []string{"sess_x"}
 		err := RunAgentsAttach(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Authentication failed")
-		assert.Contains(t, err.Error(), "doctl auth init")
+		var pretty *agentPrettyError
+		require.True(t, errors.As(err, &pretty))
+		assert.Equal(t, "Authentication failed", pretty.title)
+		assert.Contains(t, pretty.tips, "doctl auth init")
+		display := pretty.DisplayError()
+		assert.Contains(t, display, "Authentication failed")
+		assert.NotContains(t, display, "GET http://")
 	})
 }
 
@@ -2347,7 +2518,7 @@ func TestClassifyStreamError(t *testing.T) {
 			name:        "409 conflict is the V0 single-connection rejection",
 			err:         mkErr(http.StatusConflict, "already attached on device abc-123 since 2026-06-24T10:00:00Z"),
 			wantTermini: true,
-			wantSubstr:  "Session already attached on another device",
+			wantSubstr:  "Session already attached elsewhere",
 		},
 		{
 			name:        "500 is transient",
@@ -2648,7 +2819,7 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	stubReconnectSleep(t)
 
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
+		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -2707,9 +2878,9 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 // frame is transport bookkeeping: it renders nothing and must not become the
 // reconnect cursor, or a reconnect would resume from a position no event holds.
 func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
-	body := sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
+	body := sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
 		sseFrame("evt-7", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
+		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -2824,9 +2995,8 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 		mu.Lock()
 		calls++
 		n := calls
-		// The live stream carries the resume cursor in the standard SSE
-		// Last-Event-ID header, not a replay_from query parameter.
-		replayFrom := r.Header.Get("Last-Event-ID")
+		// Resume cursor rides as replay_from on control-plane /stream.
+		replayFrom := r.URL.Query().Get("replay_from")
 		mu.Unlock()
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -3205,5 +3375,41 @@ func TestDrainStream_sessionUpdatedDoesNotClearWarmup(t *testing.T) {
 
 	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
 	assert.True(t, warmup.active, "session.updated must not dismiss the warm-up notice")
+	assert.Contains(t, buf.String(), "syncing session")
+	assert.NotContains(t, buf.String(), "• session updated")
 	warmup.clear()
+}
+
+func TestDrainStream_sandboxAllocatedUpdatesWarmup(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindRunSandboxAllocated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+	assert.True(t, warmup.active, "sandbox_allocated must not dismiss warm-up")
+	assert.Contains(t, buf.String(), "sandbox allocated")
+	warmup.clear()
+}
+
+func TestBackendPhaseFromStatus(t *testing.T) {
+	assert.Equal(t, "provisioning sandbox", backendPhaseFromStatus(godo.HostedAgentSessionStatusProvisioning))
+	assert.Equal(t, "sandbox ready · starting agent", backendPhaseFromStatus(godo.HostedAgentSessionStatusReady))
+}
+
+func TestSessionUpdatedPhase(t *testing.T) {
+	assert.Equal(t, "provisioning sandbox", sessionUpdatedPhase([]byte(`{"status":"SESSION_STATUS_PROVISIONING"}`)))
+	assert.Equal(t, "cloning repo", sessionUpdatedPhase([]byte(`{"message":"cloning repo"}`)))
 }

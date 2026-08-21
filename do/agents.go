@@ -46,6 +46,12 @@ type HostedAgentsService interface {
 	// context.TODO(): the caller is a proxy answering a client that is itself
 	// blocked, and it needs to be able to give up.
 	RelayRequest(ctx context.Context, sessionID string, body *godo.HostedAgentRelayRequest) (*godo.HostedAgentRelayResponse, error)
+	// ExecInSandbox runs one command inside the session's sandbox and returns
+	// the buffered result. Like RelayRequest it takes its own context rather
+	// than the package-wide context.TODO(): the call blocks for as long as the
+	// guest command runs, so the caller needs to be able to give up. A non-zero
+	// ExitCode is a successful call — only transport failure is an error.
+	ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
 	// external provider (e.g. "github"). The team is taken from the
@@ -142,6 +148,11 @@ func (s *hostedAgentsService) SendInput(sessionID string, input *godo.HostedAgen
 
 func (s *hostedAgentsService) RelayRequest(ctx context.Context, sessionID string, body *godo.HostedAgentRelayRequest) (*godo.HostedAgentRelayResponse, error) {
 	resp, _, err := s.client.HostedAgents.RelayRequest(ctx, sessionID, body)
+	return resp, err
+}
+
+func (s *hostedAgentsService) ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {
+	resp, _, err := s.client.HostedAgents.ExecInSandbox(ctx, sessionID, body)
 	return resp, err
 }
 

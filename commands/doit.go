@@ -176,7 +176,7 @@ func addCommands() {
 
 	DoitCmd.AddGroup(&cobra.Group{ID: manageResourcesGroup, Title: "Manage DigitalOcean Resources:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: serverlessInferenceGroup, Title: "Inference:"})
-	DoitCmd.AddGroup(&cobra.Group{ID: hostedAgentsGroup, Title: "Hosted Agents:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: hostedAgentsGroup, Title: "Managed Agents Runtime Services (M.A.R.S):"})
 	DoitCmd.AddGroup(&cobra.Group{ID: configureDoctlGroup, Title: "Configure doctl:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: viewBillingGroup, Title: "View Billing:"})
 
