@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -107,6 +108,16 @@ func boldColor(s string, c lipgloss.Color) string {
 		return s
 	}
 	return lipgloss.NewStyle().Foreground(c).Bold(true).Render(s)
+}
+
+// italicMuted renders text dim and italic when styling is enabled, used for
+// the model's reasoning/"thinking" content so it reads as distinct from its
+// final answer.
+func italicMuted(s string) string {
+	if !stylingEnabled {
+		return s
+	}
+	return lipgloss.NewStyle().Foreground(colMuted).Italic(true).Render(s)
 }
 
 // renderMarkdown turns a markdown document into styled terminal text. With
@@ -205,12 +216,30 @@ func mdWrapWidth() int {
 // raw tokens one at a time.
 type msgAccumulator struct {
 	buf strings.Builder
+	// tail mirrors the most recent previewTailMaxRunes runes written via add,
+	// kept independent of buf so a live "thinking" preview (see
+	// thinkingState.setLabel) stays O(1) per token instead of re-scanning the
+	// whole (potentially large) accumulated message on every delta.
+	tail string
 }
 
-func (m *msgAccumulator) add(s string) { m.buf.WriteString(s) }
+// previewTailMaxRunes caps how much recent text msgAccumulator keeps around
+// for the live spinner preview — comfortably more than thinkingPreviewLabel
+// ends up showing, so trimming there never runs out of material.
+const previewTailMaxRunes = 200
+
+func (m *msgAccumulator) add(s string) {
+	m.buf.WriteString(s)
+	m.tail = trimTailRunes(m.tail+s, previewTailMaxRunes)
+}
+
+// previewTail returns the most recently streamed text, for a live "thinking"
+// preview while the message is still being buffered.
+func (m *msgAccumulator) previewTail() string { return m.tail }
 
 // flush renders the buffered message as markdown and writes it, then resets.
 func (m *msgAccumulator) flush(out io.Writer) {
+	m.tail = ""
 	if m.buf.Len() == 0 {
 		return
 	}
@@ -221,6 +250,67 @@ func (m *msgAccumulator) flush(out io.Writer) {
 		rendered += "\n"
 	}
 	fmt.Fprint(out, rendered)
+}
+
+// trimTailRunes keeps only the last n runes of s, respecting UTF-8
+// boundaries (a plain byte slice would risk cutting a multi-byte rune).
+func trimTailRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[len(r)-n:])
+}
+
+// reasoningStreamer prints model reasoning/"thinking" content live, styled
+// distinctly (dim italic) from the final answer, as it arrives — unlike
+// msgAccumulator, it never buffers for a later markdown render. Reasoning is
+// plain prose and the point is to show it as it streams in, not after the
+// fact. Shared by the SPI drainStream loop (run.token_delta with
+// is_reasoning=true) and the OpenAI sandbox attach renderer (its own
+// reasoning delta/item events).
+type reasoningStreamer struct {
+	out      io.Writer
+	thinking *thinkingState
+	active   bool
+}
+
+// stream writes a reasoning chunk, printing a leading label the first time a
+// block starts and pausing the thinking spinner while the block is live.
+func (r *reasoningStreamer) stream(text string) {
+	if text == "" {
+		return
+	}
+	if !r.active {
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		fmt.Fprint(r.out, italicMuted("reasoning  "))
+		r.active = true
+	}
+	fmt.Fprint(r.out, italicMuted(text))
+}
+
+// end closes out a streamed reasoning block, if one is open, and resumes the
+// thinking spinner for whatever comes next in the turn.
+func (r *reasoningStreamer) end() {
+	r.endWithLabel("")
+}
+
+// endWithLabel is like end, but seeds the resumed spinner's label
+// immediately — see thinkingState.startWithLabel. Callers that already know
+// the next preview (the final answer's first chunk, right as a reasoning
+// block closes) should use this instead of end()+setLabel so the spinner
+// never visibly reverts to the generic caption in between.
+func (r *reasoningStreamer) endWithLabel(label string) {
+	if !r.active {
+		return
+	}
+	fmt.Fprintln(r.out)
+	r.active = false
+	if r.thinking != nil {
+		r.thinking.startWithLabel(label)
+	}
 }
 
 // Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents).
@@ -1696,7 +1786,7 @@ func runAgentsAttachSession(c *CmdConfig, sessionID string) error {
 
 	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking, warmup)
 
-	return runAttach(c, svc, sessionID, os.Stdin, state, warmup)
+	return runAttach(c, svc, sessionID, os.Stdin, state, warmup, thinking)
 }
 
 func isOpenAISandboxSession(sess *do.HostedAgentSession) bool {
@@ -1765,15 +1855,30 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 // openAIAttachRenderer maps OpenAI Agents SSE events onto the same attach UX
 // primitives used by the DO stream (spinner, tool lines, markdown replies).
 type openAIAttachRenderer struct {
-	out      io.Writer
-	thinking *thinkingState
-	warmup   *warmupState
-	acc      msgAccumulator
+	out       io.Writer
+	thinking  *thinkingState
+	warmup    *warmupState
+	acc       msgAccumulator
+	reasoning reasoningStreamer
 	// sawOutputDelta tracks whether we already buffered streamed assistant text
 	// so output_text.done does not duplicate it.
 	sawOutputDelta bool
 	// activeToolCmd is the in-flight command_execution command line.
 	activeToolCmd string
+	// sawReasoningDelta tracks whether this reasoning item already streamed
+	// via delta events, so the item.done fallback (full summary text) does
+	// not duplicate it — mirrors sawOutputDelta for output_text.
+	sawReasoningDelta bool
+}
+
+// ensureReasoning lazily wires the shared reasoningStreamer to this
+// renderer's out/thinking — needed because reasoning is a value field (so
+// zero-value openAIAttachRenderer{} literals in tests still work) but must
+// write to the same writer/spinner the rest of the renderer uses.
+func (r *openAIAttachRenderer) ensureReasoning() *reasoningStreamer {
+	r.reasoning.out = r.out
+	r.reasoning.thinking = r.thinking
+	return &r.reasoning
 }
 
 func (r *openAIAttachRenderer) clearWarmup() {
@@ -1788,6 +1893,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 	case "session.in_progress", "session.turn.in_progress", "session.turn.created":
 		r.clearWarmup()
 		if r.thinking != nil {
+			r.thinking.setTurnRunning(true)
 			r.thinking.start()
 		}
 	case "session.environment.connected":
@@ -1833,6 +1939,21 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 				r.acc.add(text)
 			}
 		}
+	case "session.turn.reasoning_summary_text.delta", "session.turn.reasoning_text.delta":
+		r.clearWarmup()
+		if d, ok := evt["delta"].(string); ok && d != "" {
+			r.ensureReasoning().stream(d)
+			r.sawReasoningDelta = true
+		}
+	case "session.turn.reasoning_summary_text.done", "session.turn.reasoning_text.done":
+		r.clearWarmup()
+		if !r.sawReasoningDelta {
+			if text, ok := evt["text"].(string); ok && text != "" {
+				r.ensureReasoning().stream(text)
+			}
+		}
+		r.ensureReasoning().end()
+		r.sawReasoningDelta = false
 	case "session.turn.item.added":
 		r.clearWarmup()
 		r.handleItemAdded(evt)
@@ -1841,7 +1962,9 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		r.handleItemDone(evt)
 	case "session.turn.completed":
 		r.clearWarmup()
+		r.ensureReasoning().end()
 		if r.thinking != nil {
+			r.thinking.setTurnRunning(false)
 			r.thinking.stop()
 		}
 		r.acc.flush(r.out)
@@ -1859,7 +1982,9 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
 	case "session.turn.failed":
 		r.clearWarmup()
+		r.ensureReasoning().end()
 		if r.thinking != nil {
+			r.thinking.setTurnRunning(false)
 			r.thinking.stop()
 		}
 		r.acc.flush(r.out)
@@ -1875,7 +2000,9 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
 	case "session.idle":
 		r.clearWarmup()
+		r.ensureReasoning().end()
 		if r.thinking != nil {
+			r.thinking.setTurnRunning(false)
 			r.thinking.stop()
 		}
 		r.acc.flush(r.out)
@@ -1883,14 +2010,17 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		r.activeToolCmd = ""
 	case "session.failed":
 		r.clearWarmup()
+		r.ensureReasoning().end()
 		if r.thinking != nil {
+			r.thinking.setTurnRunning(false)
 			r.thinking.stop()
 		}
 		r.acc.flush(r.out)
 		r.activeToolCmd = ""
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize("session failed", colError))
 	default:
-		// Suppress noisy protocol events (reasoning dumps, item echoes, etc.).
+		// Suppress noisy protocol events (item echoes, etc.). Reasoning
+		// deltas/items are handled explicitly above.
 	}
 }
 
@@ -1901,6 +2031,7 @@ func (r *openAIAttachRenderer) handleItemAdded(evt map[string]any) {
 	}
 	switch item["type"] {
 	case "command_execution":
+		r.ensureReasoning().end()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1912,6 +2043,10 @@ func (r *openAIAttachRenderer) handleItemAdded(evt map[string]any) {
 		if r.thinking != nil {
 			r.thinking.start()
 		}
+	case "reasoning":
+		// item.added for a reasoning item typically carries no content yet —
+		// the summary text lands on item.done (or via the delta events above).
+		r.sawReasoningDelta = false
 	}
 }
 
@@ -1963,6 +2098,26 @@ func (r *openAIAttachRenderer) handleItemDone(evt map[string]any) {
 				}
 			}
 		}
+	case "reasoning":
+		// Reasoning is preferred via the delta events; this is the fallback
+		// for reasoning that only ever arrives as a complete item, whose
+		// content lands in a "summary" array of {type: summary_text, text}
+		// parts (OpenAI's ResponseReasoningItem shape).
+		if !r.sawReasoningDelta {
+			if summary, ok := item["summary"].([]any); ok {
+				for _, s := range summary {
+					part, _ := s.(map[string]any)
+					if part == nil {
+						continue
+					}
+					if text, ok := part["text"].(string); ok && text != "" {
+						r.ensureReasoning().stream(text)
+					}
+				}
+			}
+		}
+		r.ensureReasoning().end()
+		r.sawReasoningDelta = false
 	}
 }
 
@@ -2117,13 +2272,22 @@ func startThinkingIfReady(thinking *thinkingState, warmup *warmupState) {
 	}
 }
 
-func printAttachSendAck(out io.Writer, warmup *warmupState) {
+// printAttachSendAck acknowledges a successfully sent message. There's no
+// server-side "queued" signal (a queued send returns the same 202 + run_id
+// shape as one that starts immediately — see the OHR queueing research), so
+// this infers it from local state: a still-warming-up session, or a prior
+// turn's run that hasn't emitted RunCompleted/RunFailed yet.
+func printAttachSendAck(out io.Writer, warmup *warmupState, thinking *thinkingState) {
 	if warmup != nil && warmup.isActive() {
 		// The warm-up banner already shows the queued notice in-place.
 		if warmup.isBannerVisible() {
 			return
 		}
 		fmt.Fprintln(out, colorize("Message queued — will send when agent is ready", colMuted))
+		return
+	}
+	if thinking != nil && thinking.isTurnRunning() {
+		fmt.Fprintln(out, colorize("Message queued — will send once the current run finishes", colMuted))
 		return
 	}
 	fmt.Fprintln(out, colorize("… waiting for the agent", colMuted))
@@ -2181,10 +2345,10 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 	}
 	if state.pasting {
 		handlePastedByte(b, state)
+		// noteQueued already repaints the warm-up banner's own queued-status
+		// row itself when relevant; no need for a second, redundant redraw of
+		// the whole prompt on every pasted byte.
 		warmup.noteQueued()
-		if warmup.isBannerVisible() {
-			state.display.redraw()
-		}
 		return false, nil
 	}
 	if handleAttachEscapeSequence(b, state) {
@@ -2217,7 +2381,9 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 					fmt.Fprintf(c.Out, "send failed: %v\n", err)
 				} else if warmup.isActive() {
 					warmup.markInputQueued()
-					printAttachSendAck(c.Out, warmup)
+					printAttachSendAck(c.Out, warmup, thinking)
+				} else if thinking != nil && thinking.isTurnRunning() {
+					printAttachSendAck(c.Out, warmup, thinking)
 				}
 			}
 		}
@@ -2280,14 +2446,14 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 
 // runAttach dispatches to the raw-mode TTY loop or the legacy bufio line-mode
 // loop based on whether stdin is an interactive terminal.
-func runAttach(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState, warmup *warmupState) error {
+func runAttach(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState, warmup *warmupState, thinking *thinkingState) error {
 	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
-		return attachLoopTTY(c, svc, sessionID, f, state, warmup)
+		return attachLoopTTY(c, svc, sessionID, f, state, warmup, thinking)
 	}
 	if warmup != nil {
 		warmup.start()
 	}
-	return attachLoop(c, svc, sessionID, in, state)
+	return attachLoop(c, svc, sessionID, in, state, thinking)
 }
 
 // eventCursor holds the EventID of the latest event rendered. The stream
@@ -2352,15 +2518,40 @@ var (
 	warmupStatusInterval = 2 * time.Second
 )
 
-// thinkingState shows a spinner between RunStarted and the first real
-// output. Animates above the prompt when out is a *promptDisplay; falls back
-// to a one-shot "(thinking...)" print otherwise (pipes, line-mode).
+// thinkingState shows a sticky "Run in progress" spinner one row above the
+// prompt, kept up for the entire run — not just the gap before the first
+// token — so a multi-second tool call or any other silent stretch never
+// reads as the agent having gone quiet. drainStream stops it only to print a
+// discrete line (so the two don't race for the same terminal row) and
+// restarts it right after, for as long as the run is still open and no HITL
+// approval is pending (that has its own visible prompt). Animates above the
+// prompt when out is a *promptDisplay; falls back to a one-shot
+// "(Run in progress)" print otherwise (pipes, line-mode).
+//
+// Reasoning content on the SPI protocol arrives as a plain run.token_delta
+// with data.is_reasoning=true — the same event kind as the final answer, just
+// flagged. drainStream streams flagged chunks live via a reasoningStreamer
+// (see below) instead of buffering them like the final answer. For anything
+// that streams unflagged (a harness/model that never reasons, or reasoning
+// that a future adapter doesn't flag), label still mirrors the buffered
+// preview so the spinner reads as a live typing indicator rather than a
+// static caption while the eventual markdown-rendered flush is assembled.
+//
+// turnRunning is a second, independent signal from active: active tracks
+// whether the *spinner* is currently showing (it toggles off around each
+// discrete line), while turnRunning tracks whether a run is open at all — set
+// on RunStarted, cleared on RunCompleted/RunFailed. It gates both the
+// sticky-restart behavior above and whether the input loop warns a user their
+// message will be queued behind the current run rather than started
+// immediately.
 type thinkingState struct {
-	mu     sync.Mutex
-	out    io.Writer
-	active bool
-	cancel context.CancelFunc
-	done   chan struct{}
+	mu          sync.Mutex
+	out         io.Writer
+	active      bool
+	turnRunning bool
+	cancel      context.CancelFunc
+	done        chan struct{}
+	label       string
 }
 
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
@@ -2369,24 +2560,60 @@ func newThinkingState(out io.Writer) *thinkingState {
 	return &thinkingState{out: out}
 }
 
+// setTurnRunning records whether a run is currently open for the session
+// (RunStarted seen, no RunCompleted/RunFailed yet).
+func (s *thinkingState) setTurnRunning(v bool) {
+	s.mu.Lock()
+	s.turnRunning = v
+	s.mu.Unlock()
+}
+
+// isTurnRunning reports whether a run is currently open — used by the input
+// loop to tell a user their message will be queued behind it rather than
+// started immediately.
+func (s *thinkingState) isTurnRunning() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.turnRunning
+}
+
+// start begins the spinner fresh, with no live preview yet — used for a
+// genuinely new turn (RunStarted), where defaultThinkingLabel ("Run in
+// progress") is the only honest thing to show.
 func (s *thinkingState) start() {
+	s.startWithLabel("")
+}
+
+// startWithLabel is like start, but seeds the label the very first frame
+// shows instead of leaving it blank (which falls back to
+// defaultThinkingLabel for at least one frame). Used to resume the spinner
+// mid-turn when the caller already has a preview ready — e.g. the final
+// answer's first chunk, arriving in the same instant a reasoning block
+// closes — so there's no visible flash back to the generic "Run in
+// progress" caption before the next setLabel + animator tick catches up.
+func (s *thinkingState) startWithLabel(label string) {
 	s.mu.Lock()
 	if s.active {
 		s.mu.Unlock()
 		return
 	}
 	s.active = true
+	s.label = label
+	frameLabel := label
+	if frameLabel == "" {
+		frameLabel = defaultThinkingLabel
+	}
 
 	display, ok := s.out.(*promptDisplay)
 	if !ok {
-		fmt.Fprintln(s.out, "(thinking...)")
+		fmt.Fprintf(s.out, "(%s)\n", frameLabel)
 		s.mu.Unlock()
 		return
 	}
 	// Reserve the spinner line and draw its first frame atomically so no
 	// redraw or token can slip in between and shift the line the animator
 	// (and stop) expect one row above the prompt.
-	display.spinnerInit(spinnerFrames[0], "thinking...")
+	display.spinnerInit(spinnerFrames[0], frameLabel)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	s.cancel = cancel
@@ -2430,9 +2657,65 @@ func (s *thinkingState) animate(ctx context.Context, d *promptDisplay, done chan
 			return
 		case <-t.C:
 			ix = (ix + 1) % len(spinnerFrames)
-			d.spinnerFrame(spinnerFrames[ix], "thinking...")
+			d.spinnerFrame(spinnerFrames[ix], s.currentLabel())
 		}
 	}
+}
+
+// isSticky reports whether this thinkingState can show a persistent,
+// redrawing indicator (out is a *promptDisplay) rather than only the
+// one-shot fallback print. Callers that restart the spinner after every
+// discrete event (to keep "Run in progress" sticky for the whole run) should
+// gate on this, or the non-interactive fallback would reprint its one-shot
+// line after every single event instead of just once.
+func (s *thinkingState) isSticky() bool {
+	_, ok := s.out.(*promptDisplay)
+	return ok
+}
+
+// setLabel updates the live preview shown next to the spinner. Safe to call
+// whether or not the spinner is currently active/animating — the next tick
+// (or the next start()) picks it up; there's nothing to redraw synchronously.
+func (s *thinkingState) setLabel(text string) {
+	s.mu.Lock()
+	s.label = text
+	s.mu.Unlock()
+}
+
+// defaultThinkingLabel is the spinner caption shown whenever no live preview
+// is available — before the first token, and for stretches of a run (tool
+// execution, lifecycle events) that produce no streamed text of their own.
+const defaultThinkingLabel = "Run in progress"
+
+// currentLabel returns the live preview, falling back to defaultThinkingLabel
+// before any content has streamed in yet.
+func (s *thinkingState) currentLabel() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.label == "" {
+		return defaultThinkingLabel
+	}
+	return s.label
+}
+
+// thinkingPreviewMaxRunes caps the live preview label so a long streamed
+// line can't wrap and corrupt the single reserved spinner row.
+const thinkingPreviewMaxRunes = 60
+
+// thinkingPreviewLabel turns raw streamed text into a single-line, length
+// capped label: whitespace (including embedded newlines) collapses to single
+// spaces, and only the tail — the most recently streamed content — is kept,
+// since that's what makes a "still working" indicator feel live.
+func thinkingPreviewLabel(text string) string {
+	text = strings.Join(strings.Fields(text), " ")
+	if text == "" {
+		return ""
+	}
+	r := []rune(text)
+	if len(r) > thinkingPreviewMaxRunes {
+		return "…" + string(r[len(r)-thinkingPreviewMaxRunes:])
+	}
+	return text
 }
 
 // warmupState shows "Agent is warming up…" on attach for sessions still in
@@ -2985,10 +3268,13 @@ func sessionLimitErr(err error) bool {
 // not reconnect from: re-attaching would supersede the connection that just
 // superseded us, and the two would evict each other indefinitely.
 func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, warmup *warmupState, dedup *tokenDeduper) (superseded bool) {
-	// acc buffers the current assistant turn's tokens; the thinking spinner
-	// stays up for the whole turn and the buffered text is rendered as markdown
-	// when the run finishes or a discrete event interrupts it.
+	// acc buffers the current assistant turn's final-answer tokens; the
+	// thinking spinner stays up for the whole turn and the buffered text is
+	// rendered as markdown when the run finishes or a discrete event
+	// interrupts it. reasoning streams the same turn's is_reasoning=true
+	// chunks live and separately — see reasoningStreamer.
 	acc := &msgAccumulator{}
+	reasoning := &reasoningStreamer{out: out, thinking: thinking}
 	// awaiting is a FIFO queue of HITL approvals whose lines haven't printed
 	// yet: we hold each until a paired tool-call reveals the command being
 	// approved, so the approval shows "● Approval required · <command>" on one
@@ -2998,6 +3284,12 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 	// The summary captured from the HITL payload is the fallback label when no
 	// paired tool call arrives to name the command.
 	var awaiting []awaitingApproval
+	// hitlLabels remembers the label each approval line was rendered with, so
+	// its resolution (run.human_input_received) can reprint the exact same
+	// "<status>  ·  <label>  ·  <id>" line instead of a disconnected receipt —
+	// entries are added wherever renderApprovalLine is called and removed once
+	// the matching resolution renders.
+	hitlLabels := map[string]string{}
 	for stream.Next() {
 		ev := stream.Current()
 
@@ -3006,9 +3298,10 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		if ev.Kind == hostedAgentEventKindStreamState {
 			var st hostedAgentStreamState
 			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == hostedAgentStreamStateSuperseded {
+				reasoning.end()
 				thinking.stop()
 				acc.flush(out)
-				flushAwaitingApproval(out, &awaiting)
+				flushAwaitingApproval(out, &awaiting, hitlLabels)
 				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
 				return true
 			}
@@ -3032,9 +3325,11 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		switch ev.Kind {
 		case godo.HostedAgentEventKindRunStarted:
 			warmup.clear()
+			thinking.setTurnRunning(true)
+			reasoning.end()
 			thinking.stop()
 			acc.flush(out)
-			flushAwaitingApproval(out, &awaiting)
+			flushAwaitingApproval(out, &awaiting, hitlLabels)
 			dedup.reset()
 			renderEvent(out, ev)
 			thinking.start()
@@ -3042,10 +3337,31 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			warmup.clear()
 			var p tokenChunkPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil && dedup.allow(p.Text) {
-				acc.add(p.Text)
+				if p.IsReasoning {
+					// SPI TokenChunk.is_reasoning: stream live and separately
+					// from the final answer, which starts at the first
+					// is_reasoning=false chunk.
+					reasoning.stream(p.Text)
+				} else {
+					acc.add(p.Text)
+					// Buffered (not streamed raw) because the whole point is a
+					// clean markdown render once the message is complete; the
+					// live preview keeps the spinner from looking dead in the
+					// meantime.
+					label := thinkingPreviewLabel(acc.previewTail())
+					// endWithLabel (not end()+setLabel): if this chunk is the
+					// one closing out a reasoning block, the spinner it
+					// resumes should show this preview on its very first
+					// frame, not flash the generic "Run in progress" caption
+					// first — that flash is what looked like the indicator
+					// showing twice per turn.
+					reasoning.endWithLabel(label)
+					thinking.setLabel(label)
+				}
 			}
 		case godo.HostedAgentEventKindHITLRequested:
 			warmup.clear()
+			reasoning.end()
 			thinking.stop()
 			acc.flush(out)
 			dedup.reset()
@@ -3058,6 +3374,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			}
 		case godo.HostedAgentEventKindToolCallStarted:
 			warmup.clear()
+			reasoning.end()
 			thinking.stop()
 			acc.flush(out)
 			dedup.reset()
@@ -3073,9 +3390,23 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				if cmd == "" {
 					cmd = a.summary
 				}
+				hitlLabels[a.id] = cmd
 				renderApprovalLine(out, a.id, cmd)
 			} else {
 				renderToolStart(out, cmd)
+			}
+		case godo.HostedAgentEventKindHITLResolved:
+			warmup.clear()
+			reasoning.end()
+			thinking.stop()
+			acc.flush(out)
+			flushAwaitingApproval(out, &awaiting, hitlLabels)
+			dedup.reset()
+			var p hitlResolvedPayload
+			if err := json.Unmarshal(ev.Payload, &p); err == nil {
+				label := hitlLabels[p.HitlID]
+				delete(hitlLabels, p.HitlID)
+				renderApprovalResolvedLine(out, p.HitlID, label, p.Outcome)
 			}
 		case godo.HostedAgentEventKindSessionUpdated,
 			godo.HostedAgentEventKindRunSandboxAllocated,
@@ -3086,16 +3417,18 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			if warmup.noteBackendEvent(ev) {
 				continue
 			}
+			reasoning.end()
 			thinking.stop()
 			acc.flush(out)
-			flushAwaitingApproval(out, &awaiting)
+			flushAwaitingApproval(out, &awaiting, hitlLabels)
 			dedup.reset()
 			renderEvent(out, ev)
 		default:
 			warmup.clear()
+			reasoning.end()
 			thinking.stop()
 			acc.flush(out)
-			flushAwaitingApproval(out, &awaiting)
+			flushAwaitingApproval(out, &awaiting, hitlLabels)
 			dedup.reset()
 			renderEvent(out, ev)
 		}
@@ -3103,18 +3436,39 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		// A finished run means the server has cancelled any still-pending tool
 		// calls, so flush the local queue rather than leave stale entries.
 		if ev.Kind == godo.HostedAgentEventKindRunCompleted || ev.Kind == godo.HostedAgentEventKindRunFailed {
+			thinking.setTurnRunning(false)
 			if n := pending.reset(); n > 0 {
 				fmt.Fprintf(out, "(%d pending approval(s) cancelled — run ended)\n", n)
 			}
+		}
+
+		// Every other case above stops the spinner before printing its own
+		// discrete line, so restart it here — once, after whatever just
+		// rendered — for as long as the run is still open. This is what makes
+		// "Run in progress" sticky across the whole run instead of just the
+		// gap before the first token: a tool call that takes 7 seconds
+		// otherwise looks identical to a hung session. Skip it while a HITL
+		// approval is pending (that already has its own visible y/n/d
+		// prompt); skip it for the non-interactive fallback (isSticky false)
+		// so a piped/line-mode consumer doesn't get the one-shot notice
+		// reprinted after every event; and skip it for TokenChunk, which
+		// manages the spinner itself (reasoningStreamer stops it for exactly
+		// one reasoning block and restarts it on end(), while the buffered
+		// final-answer path never stops it at all) — restarting here too
+		// would fight that pairing and reinit the spinner mid-line.
+		if ev.Kind != godo.HostedAgentEventKindTokenChunk &&
+			thinking.isTurnRunning() && pending.len() == 0 && thinking.isSticky() {
+			thinking.start()
 		}
 
 		cursor.set(ev.EventID)
 	}
 	// Stream ended without a terminal run event (e.g. transient disconnect):
 	// render whatever assistant text we have so it isn't lost.
+	reasoning.end()
 	thinking.stop()
 	acc.flush(out)
-	flushAwaitingApproval(out, &awaiting)
+	flushAwaitingApproval(out, &awaiting, hitlLabels)
 	return false
 }
 
@@ -3128,9 +3482,14 @@ type awaitingApproval struct {
 
 // flushAwaitingApproval prints any still-unpaired approval lines (oldest
 // first), using the label captured from each HITL payload when no tool call
-// named the command, then clears the queue.
-func flushAwaitingApproval(out io.Writer, awaiting *[]awaitingApproval) {
+// named the command, then clears the queue. Each printed label is recorded in
+// hitlLabels (may be nil) so the eventual resolution can reprint the same
+// label instead of a disconnected receipt.
+func flushAwaitingApproval(out io.Writer, awaiting *[]awaitingApproval, hitlLabels map[string]string) {
 	for _, a := range *awaiting {
+		if hitlLabels != nil {
+			hitlLabels[a.id] = a.summary
+		}
 		renderApprovalLine(out, a.id, a.summary)
 	}
 	*awaiting = nil
@@ -3266,7 +3625,7 @@ func (p *pendingHITL) reset() int {
 	return n
 }
 
-func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState) error {
+func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState, thinking *thinkingState) error {
 	pending := state.pending
 	reader := bufio.NewReader(in)
 	lines := startAttachLineReader(reader)
@@ -3367,7 +3726,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			case largePasteSendTogether:
 			case largePasteSendSeparately:
 				for _, part := range splitSubmittedLines(line) {
-					if detach := processAttachLine(c, svc, sessionID, part, state, nil); detach {
+					if detach := processAttachLine(c, svc, sessionID, part, state, nil, thinking); detach {
 						return nil
 					}
 				}
@@ -3387,7 +3746,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
 			continue
 		}
-		fmt.Fprintln(c.Out, colorize("… waiting for the agent", colMuted))
+		printAttachSendAck(c.Out, nil, thinking)
 	}
 }
 
@@ -3658,6 +4017,22 @@ func (s *attachState) moveLineCursor(delta int) bool {
 	return true
 }
 
+// insertNewlineAtCursor inserts a literal newline at the caret without
+// submitting — used by Option/Alt+Enter to compose a multi-line message. The
+// prompt still displays lineBuf flattened to one row (displayInputBuffer
+// swaps '\n' for a space) but the real newline is preserved and restored by
+// submittedInput when the message is finally sent.
+func (s *attachState) insertNewlineAtCursor() {
+	s.mu.Lock()
+	if s.cursor >= len(s.lineBuf) {
+		s.lineBuf = append(s.lineBuf, '\n')
+	} else {
+		s.lineBuf = append(s.lineBuf[:s.cursor], append([]byte{'\n'}, s.lineBuf[s.cursor:]...)...)
+	}
+	s.cursor++
+	s.mu.Unlock()
+}
+
 func displayInputBuffer(buf []byte) string {
 	if len(buf) == 0 {
 		return ""
@@ -3811,6 +4186,20 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 			state.display.redraw()
 		}
 		return true
+	case bytes.Equal(seq, []byte{0x1b, 0x0d}), bytes.Equal(seq, []byte{0x1b, 0x0a}):
+		// Option/Alt+Enter: most terminals (iTerm2 and Terminal.app's default
+		// "Option key: Esc+" setting, plus anything else that encodes Meta as
+		// a plain ESC prefix) send this as ESC followed by CR/LF. Treat it as
+		// "insert a newline" instead of submitting, so a message can span
+		// multiple lines — mirroring how a pasted multi-line block already
+		// lands in lineBuf (appendBufferedInput) and is restored to real
+		// newlines on submit (submittedInput).
+		state.escSeq = nil
+		if state.pending.get() == "" {
+			state.insertNewlineAtCursor()
+			state.display.redraw()
+		}
+		return true
 	case isKnownEscPrefix(seq):
 		return true
 	default:
@@ -3819,6 +4208,14 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 	}
 }
 
+// handlePastedByte buffers one byte of a bracketed paste into the line
+// buffer. It deliberately does *not* redraw on every byte: paintPromptLocked
+// only erases the terminal's current row (\x1b[K), so repainting a
+// still-growing, terminal-width-wrapping line hundreds of times in a row — a
+// large paste is exactly that — leaves every earlier, shorter wrapped block
+// behind as stale duplicate lines instead of a single clean one. Buffering
+// silently and painting once, when the paste actually ends, avoids that
+// entirely and is far cheaper besides.
 func handlePastedByte(b byte, state *attachState) {
 	if len(state.escSeq) > 0 || b == 0x1b {
 		if len(state.escSeq) == 0 {
@@ -3836,15 +4233,11 @@ func handlePastedByte(b byte, state *attachState) {
 		if isPrefix(seq, bracketedPasteEnd) {
 			return
 		}
-		if appendBufferedInput(state, seq) {
-			state.display.redraw()
-		}
+		appendBufferedInput(state, seq)
 		state.escSeq = nil
 		return
 	}
-	if appendBufferedInput(state, []byte{b}) {
-		state.display.redraw()
-	}
+	appendBufferedInput(state, []byte{b})
 }
 
 // promptDisplay serializes terminal writes between the input loop and the
@@ -4181,7 +4574,7 @@ func (p *promptDisplay) warmupStop() {
 // attachLoopTTY runs the raw-mode byte-by-byte input state machine. A 50ms
 // ticker polls pending-HITL so a HITL event flips the prompt instantly,
 // without needing the user to press Enter to "wake up" the loop.
-func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f *os.File, state *attachState, warmup *warmupState) error {
+func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f *os.File, state *attachState, warmup *warmupState, thinking *thinkingState) error {
 	fd := int(f.Fd())
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
@@ -4189,7 +4582,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		if warmup != nil {
 			warmup.start()
 		}
-		return attachLoop(c, svc, sessionID, f, state)
+		return attachLoop(c, svc, sessionID, f, state, thinking)
 	}
 	defer term.Restore(fd, oldState)
 	setBracketedPasteMode(f, true)
@@ -4231,7 +4624,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		}
 		select {
 		case b := <-bytesCh:
-			stop, err := handleAttachByte(c, svc, sessionID, b, state, warmup)
+			stop, err := handleAttachByte(c, svc, sessionID, b, state, warmup, thinking)
 			if err != nil {
 				return err
 			}
@@ -4251,13 +4644,13 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 
 // handleAttachByte is the per-byte state machine. stop=true exits the loop
 // (Ctrl-C, Ctrl-D on empty line).
-func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState, warmup *warmupState) (stop bool, err error) {
+func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState, warmup *warmupState, thinking *thinkingState) (stop bool, err error) {
 	if confirm := state.largePasteConfirmation(); confirm != nil {
 		switch b {
 		case 'y', 'Y':
 			state.display.echo([]byte{b, '\r', '\n'})
 			state.takeLargePasteConfirmation()
-			if detach := processAttachLine(c, svc, sessionID, confirm.text, state, nil); detach {
+			if detach := processAttachLine(c, svc, sessionID, confirm.text, state, nil, thinking); detach {
 				return true, nil
 			}
 			state.display.redraw()
@@ -4266,7 +4659,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			state.display.echo([]byte("\r\n"))
 			state.takeLargePasteConfirmation()
 			for _, part := range splitSubmittedLines(confirm.text) {
-				if detach := processAttachLine(c, svc, sessionID, part, state, nil); detach {
+				if detach := processAttachLine(c, svc, sessionID, part, state, nil, thinking); detach {
 					return true, nil
 				}
 			}
@@ -4284,10 +4677,10 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 	}
 	if state.pasting {
 		handlePastedByte(b, state)
+		// noteQueued already repaints the warm-up banner's own queued-status
+		// row itself when relevant; no need for a second, redundant redraw of
+		// the whole prompt on every pasted byte.
 		warmup.noteQueued()
-		if warmup.isBannerVisible() {
-			state.display.redraw()
-		}
 		return false, nil
 	}
 	if handleAttachEscapeSequence(b, state) {
@@ -4348,7 +4741,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 				state.display.redraw()
 				return false, nil
 			}
-			if detach := processAttachLine(c, svc, sessionID, line, state, warmup); detach {
+			if detach := processAttachLine(c, svc, sessionID, line, state, warmup, thinking); detach {
 				return true, nil
 			}
 		}
@@ -4478,7 +4871,7 @@ func completeAttachSlashCommand(c *CmdConfig, state *attachState) {
 // processAttachLine dispatches an Enter-submitted line: HITL word shortcut,
 // slash command, or SendInput. Returns detach=true when the session can no
 // longer accept input (terminal run) and the loop should exit.
-func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState, warmup *warmupState) (detach bool) {
+func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState, warmup *warmupState, thinking *thinkingState) (detach bool) {
 	if outcome, ok := hitlLetterShortcut(line); ok {
 		if id := state.pending.get(); id != "" {
 			if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
@@ -4513,7 +4906,7 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 	if warmup != nil && warmup.isActive() {
 		warmup.markInputQueued()
 	}
-	printAttachSendAck(c.Out, warmup)
+	printAttachSendAck(c.Out, warmup, thinking)
 	return false
 }
 
@@ -4636,23 +5029,51 @@ func splitAttachTransferArgs(args []string) (positional []string, archive bool) 
 }
 
 // attachUploadFromArgs implements the interactive `/upload` command, mirroring
-// `doctl agents upload` without requiring cobra flag parsing.
+// `doctl agents upload` without requiring cobra flag parsing. workspace-path is
+// optional — like `curl -O`, it defaults to the local file's basename at the
+// workspace root, since retyping an identical filename twice is just noise.
 func attachUploadFromArgs(c *CmdConfig, sessionID string, args []string) error {
 	positional, archive := splitAttachTransferArgs(args)
-	if len(positional) != 2 {
-		return fmt.Errorf("usage: /upload <local-file> <workspace-path> [--archive]")
+	if len(positional) < 1 || len(positional) > 2 {
+		return fmt.Errorf("usage: /upload <local-file> [workspace-path] [--archive]")
 	}
-	return runWorkspaceUpload(c, sessionID, positional[0], positional[1], archive)
+	localFile := positional[0]
+	workspacePath := ""
+	if len(positional) == 2 {
+		workspacePath = positional[1]
+	} else {
+		base := filepath.Base(localFile)
+		if base == "" || base == "." || base == string(filepath.Separator) {
+			return fmt.Errorf("usage: /upload <local-file> <workspace-path> [--archive]  (couldn't infer a workspace filename from %q)", localFile)
+		}
+		workspacePath = base
+	}
+	return runWorkspaceUpload(c, sessionID, localFile, workspacePath, archive)
 }
 
 // attachDownloadFromArgs implements the interactive `/download` command,
 // mirroring `doctl agents download` without requiring cobra flag parsing.
+// local-file is optional — like `curl -O`, it defaults to the workspace
+// path's basename in the current directory.
 func attachDownloadFromArgs(c *CmdConfig, svc do.HostedAgentsService, sessionID string, args []string) error {
 	positional, archive := splitAttachTransferArgs(args)
-	if len(positional) != 2 {
-		return fmt.Errorf("usage: /download <workspace-path> <local-file> [--archive]")
+	if len(positional) < 1 || len(positional) > 2 {
+		return fmt.Errorf("usage: /download <workspace-path> [local-file] [--archive]")
 	}
-	return runWorkspaceDownload(c, svc, sessionID, positional[0], positional[1], archive)
+	workspacePath := positional[0]
+	localFile := ""
+	if len(positional) == 2 {
+		localFile = positional[1]
+	} else {
+		// Workspace paths are POSIX (remote Linux sandbox) regardless of the
+		// host OS running doctl, so use path.Base rather than filepath.Base.
+		base := path.Base(strings.TrimSuffix(workspacePath, "/"))
+		if base == "" || base == "." || base == "/" {
+			return fmt.Errorf("usage: /download <workspace-path> <local-file> [--archive]  (couldn't infer a local filename from %q)", workspacePath)
+		}
+		localFile = base
+	}
+	return runWorkspaceDownload(c, svc, sessionID, workspacePath, localFile, archive)
 }
 
 // listPendingHITLs renders the current HITL queue. The head is marked with
@@ -4708,6 +5129,10 @@ const runSeparator = "───────────────────�
 
 type tokenChunkPayload struct {
 	Text string `json:"text"`
+	// IsReasoning is true when this chunk is model reasoning/"thinking"
+	// rather than the user-visible answer (SPI TokenChunk.is_reasoning). The
+	// final answer begins at the first chunk where this is false.
+	IsReasoning bool `json:"is_reasoning"`
 }
 
 type runStartedPayload struct {
@@ -4895,6 +5320,23 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	}
 }
 
+// hitlOutcomeStatus returns the bold "<icon> <Verb>" status matching
+// renderApprovalLine's "● Approval required" segment, so the resolved line
+// reads as the same entry, just updated — approve green, reject red, defer
+// yellow.
+func hitlOutcomeStatus(code int32) string {
+	switch code {
+	case 1:
+		return boldColor("✓ Approved", colSuccess)
+	case 2:
+		return boldColor("✗ Rejected", colError)
+	case 3:
+		return boldColor("⏸ Deferred", colWarning)
+	default:
+		return boldColor("• "+hitlOutcomeLabel(code), colMuted)
+	}
+}
+
 // hitlOutcomeStyled renders a HITL outcome verb with a matching color:
 // approve green, reject red, defer yellow.
 func hitlOutcomeStyled(code int32) string {
@@ -4975,7 +5417,7 @@ func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote stri
 	fmt.Fprintln(&body, colorize("Press Ctrl + D to detach locally", colMuted))
 
 	fmt.Fprintln(&body)
-	fmt.Fprintf(&body, "type a message and press %s\n", colorize("Enter", colHighlight))
+	fmt.Fprintf(&body, "type a message and press %s (%s for a new line)\n", colorize("Enter", colHighlight), colorize("Option/Alt + Enter", colHighlight))
 	yn := colorize("y", colSuccess) + colorize("/a", colSuccess) + " approve · " +
 		colorize("n", colError) + colorize("/r", colError) + " reject · " +
 		colorize("d", colWarning) + " defer"
@@ -5010,8 +5452,8 @@ func printAttachHelp(w io.Writer) {
 	writeHelpSection(&body, "Session controls", []helpRow{
 		{"/pause", "pause the session"},
 		{"/resume", "resume a paused session"},
-		{"/upload <file> <dest> [--archive]", "upload into the workspace"},
-		{"/download <src> <file> [--archive]", "download from the workspace"},
+		{"/upload <file> [dest] [--archive]", "upload into the workspace"},
+		{"/download <src> [file] [--archive]", "download from the workspace"},
 	})
 	fmt.Fprintln(&body)
 	writeHelpSection(&body, "Approvals pending (no Enter needed in a TTY)", []helpRow{
@@ -5025,6 +5467,7 @@ func printAttachHelp(w io.Writer) {
 	})
 	fmt.Fprintln(&body)
 	writeHelpSection(&body, "Other", []helpRow{
+		{"Option/Alt + Enter", "insert a newline (compose a multi-line message)"},
 		{"/ then Tab", "autocomplete a command"},
 		{agentCLI + " attach <session>", "reattach after detaching"},
 		{agentCLI + " remove <session>", "remove the session"},
@@ -5067,21 +5510,39 @@ func prettyAgentKind(k godo.HostedAgentKind) string {
 	return "agent"
 }
 
+// renderHITLStatusLine prints the shared "<status>  ·  <label>  ·  <id>"
+// structure behind both renderApprovalLine and renderApprovalResolvedLine, so
+// a resolution reads as an update to the request's line rather than an
+// unrelated one. fallback fills the label slot when label is empty; pass ""
+// to omit that segment entirely.
+func renderHITLStatusLine(w io.Writer, status, label, fallback, hitlID string) {
+	parts := []string{status}
+	switch {
+	case label != "":
+		parts = append(parts, boldColor(label, colHighlight))
+	case fallback != "":
+		parts = append(parts, colorize(fallback, colMuted))
+	}
+	parts = append(parts, colorize(hitlID, colMuted))
+	fmt.Fprintf(w, "\n%s\n", strings.Join(parts, colorize("  ·  ", colMuted)))
+}
+
 // renderApprovalLine prints the one-line approval prompt with an optional
 // command and the full HITL request id. The outcomes are shown by the
 // interactive menu.
 func renderApprovalLine(w io.Writer, hitlID, cmd string) {
-	parts := []string{boldColor("● Approval required", colWarning)}
-	if cmd != "" {
-		parts = append(parts, boldColor(cmd, colHighlight))
-	} else {
-		// The adapter didn't tell us what this approval is for (no command in
-		// the HITL payload and no paired tool call). Label it rather than
-		// leaving a bare id that reads as a glitch.
-		parts = append(parts, colorize("action pending", colMuted))
-	}
-	parts = append(parts, colorize(hitlID, colMuted))
-	fmt.Fprintf(w, "\n%s\n", strings.Join(parts, colorize("  ·  ", colMuted)))
+	// The adapter didn't tell us what this approval is for (no command in
+	// the HITL payload and no paired tool call). Label it rather than
+	// leaving a bare id that reads as a glitch.
+	renderHITLStatusLine(w, boldColor("● Approval required", colWarning), cmd, "action pending", hitlID)
+}
+
+// renderApprovalResolvedLine prints a HITL resolution using the exact same
+// layout as renderApprovalLine (status  ·  label  ·  id) with label carried
+// over from the original request, so it reads as that line updating in
+// place rather than a disconnected "<id> approve" receipt.
+func renderApprovalResolvedLine(w io.Writer, hitlID, label string, outcome int32) {
+	renderHITLStatusLine(w, hitlOutcomeStatus(outcome), label, "", hitlID)
 }
 
 // renderToolStart prints the "running a tool" line.
