@@ -21,12 +21,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"golang.org/x/term"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -82,6 +84,9 @@ func maybeOfferGitHubAuth(c *CmdConfig) error {
 const (
 	defaultCodexRunModel = "gpt-5.6-sol"
 	defaultRunWait       = 5 * time.Minute
+
+	claudeCodeAgentName = "claude-code"
+	anthropicAPIKeyEnv  = "ANTHROPIC_API_KEY"
 )
 
 var (
@@ -100,6 +105,33 @@ var harnessAgentNames = map[string]string{
 	"codex":          openAIAgentsAdapter,
 	"codex-agentapi": openAIAgentsAdapter,
 	"openai-codex":   openAIAgentsAdapter,
+}
+
+// harnessDisplayNames maps canonical flat-manifest agent keys (the values of
+// harnessAgentNames) to their proper display name, matching the casing used
+// by prettyAgentKind (e.g. "opencode" -> "OpenCode").
+var harnessDisplayNames = map[string]string{
+	"opencode":          "OpenCode",
+	"claude-code":       "Claude Code",
+	openAIAgentsAdapter: "Codex",
+}
+
+// prettyHarnessName returns the display name for a raw --harness value or
+// alias (case-insensitive), matching agentKindDisplayNames' casing. Falls
+// back to the trimmed input when the harness isn't recognized.
+func prettyHarnessName(h string) string {
+	h = strings.TrimSpace(h)
+	if h == "" {
+		return ""
+	}
+	canon, ok := harnessAgentNames[strings.ToLower(h)]
+	if !ok {
+		canon = strings.ToLower(h)
+	}
+	if name, ok := harnessDisplayNames[canon]; ok {
+		return name
+	}
+	return h
 }
 
 // RunAgentsRun creates a hosted agent session from --harness/--gh-repo/--prompt
@@ -174,6 +206,7 @@ func RunAgentsRun(c *CmdConfig) error {
 	}
 
 	prog := newCreationProgress(c.Out)
+	defer prog.stop()
 	prog.header("Launching agent session")
 
 	var (
@@ -310,12 +343,23 @@ func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
 		doc.Name = name
 	}
 
-	if isOpenAISandboxAdapter(agent) {
+	switch {
+	case isOpenAISandboxAdapter(agent):
 		doc.Env = map[string]string{
 			"CODEX_ENVIRONMENT_ID": "${ENV_ID}",
 			"CODEX_API_KEY":        "${OPENAI_API_KEY}",
 		}
 		doc.Config = defaultCodexRunConfig(prompt)
+	case agent == claudeCodeAgentName:
+		// Claude Code needs its own inference key just like Codex needs
+		// OPENAI_API_KEY. Referencing it here (rather than baking in a
+		// literal) routes through expandManifestEnvCollect/ensureEnvVar so a
+		// missing key is caught — and prompted for on a TTY — before doctl
+		// ever calls CreateSessionFromManifest, instead of failing deep into
+		// a hosted session that was never going to work.
+		doc.Env = map[string]string{
+			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
+		}
 	}
 
 	out, err := yaml.Marshal(doc)
@@ -468,20 +512,45 @@ func manifestNeedsOpenAIPrepare(raw []byte) (bool, error) {
 	return isOpenAISandboxAdapter(doc.adapter()) || hasOpenAICreateBody(doc), nil
 }
 
+// creationSpinnerInterval controls how often the live spinner frame advances
+// while creationProgress.wait animates a line on a real terminal.
+var creationSpinnerInterval = 120 * time.Millisecond
+
 // creationProgress prints Plano-style lifecycle lines during session create/wait.
+// On a real terminal, wait() animates a single overwritten line (spinner +
+// ticking elapsed time) instead of a static "…" line, so a slow blocking call
+// (e.g. the initial create-session round trip) still looks alive. Piped or
+// non-TTY output (including tests) keeps the old one-line-per-call behavior.
 type creationProgress struct {
 	out   io.Writer
 	start time.Time
+	spin  *lineSpinner
 }
 
 func newCreationProgress(out io.Writer) *creationProgress {
 	return &creationProgress{out: out, start: creationClock()}
 }
 
+func (p *creationProgress) stopSpin() {
+	if p == nil || p.spin == nil {
+		return
+	}
+	p.spin.stopAndClear()
+	p.spin = nil
+}
+
+// stop ends any in-flight spinner animation, leaving the cursor on a clean
+// line. Callers should defer this right after newCreationProgress so an
+// early return (error path) never leaves a half-drawn spinner line behind.
+func (p *creationProgress) stop() {
+	p.stopSpin()
+}
+
 func (p *creationProgress) header(msg string) {
 	if p == nil {
 		return
 	}
+	p.stopSpin()
 	fmt.Fprintln(p.out, boldColor(msg, colHighlight))
 }
 
@@ -489,20 +558,33 @@ func (p *creationProgress) step(msg string) {
 	if p == nil {
 		return
 	}
+	p.stopSpin()
 	fmt.Fprintf(p.out, "%s %s\n", colorize("•", colHighlight), colorize(msg, colHighlight))
 }
 
+// wait announces a step that involves waiting on a network call. On a TTY it
+// animates in place; repeated calls while already animating just relabel the
+// spinner (e.g. periodic provisioning hints) instead of printing new lines.
 func (p *creationProgress) wait(msg string) {
 	if p == nil {
 		return
 	}
-	fmt.Fprintf(p.out, "%s %s\n", colorize("…", colWarning), colorize(msg, colWarning))
+	if p.spin != nil {
+		p.spin.setLabel(msg)
+		return
+	}
+	if isTerminalWriter(p.out) {
+		p.spin = newLineSpinner(p.out, msg, p.start)
+		return
+	}
+	fmt.Fprintf(p.out, "%s %s %s\n", colorize("…", colWarning), colorize(msg, colWarning), colorize(fmt.Sprintf("(%s)", p.elapsed()), colMuted))
 }
 
 func (p *creationProgress) ok(msg string) {
 	if p == nil {
 		return
 	}
+	p.stopSpin()
 	fmt.Fprintf(p.out, "%s %s\n", colorize("✓", colSuccess), boldColor(msg, colSuccess))
 }
 
@@ -515,6 +597,90 @@ func (p *creationProgress) elapsed() time.Duration {
 		return 0
 	}
 	return d.Truncate(time.Second)
+}
+
+// isTerminalWriter reports whether w is a real terminal doctl can safely
+// animate a spinner on (as opposed to a pipe, file, or in-memory buffer).
+func isTerminalWriter(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+	return term.IsTerminal(int(f.Fd()))
+}
+
+// lineSpinner animates a single overwritten status line
+// ("\r<frame> <label> (<elapsed>)") while a blocking call is in flight.
+// Only meaningful when writing to a real terminal — isTerminalWriter gates
+// construction so piped/non-TTY output (including tests) never sees ANSI
+// cursor codes.
+type lineSpinner struct {
+	out   io.Writer
+	start time.Time
+
+	mu    sync.Mutex
+	label string
+
+	stop chan struct{}
+	done chan struct{}
+}
+
+func newLineSpinner(out io.Writer, label string, start time.Time) *lineSpinner {
+	s := &lineSpinner{
+		out:   out,
+		start: start,
+		label: label,
+		stop:  make(chan struct{}),
+		done:  make(chan struct{}),
+	}
+	go s.run()
+	return s
+}
+
+func (s *lineSpinner) setLabel(label string) {
+	s.mu.Lock()
+	s.label = label
+	s.mu.Unlock()
+}
+
+func (s *lineSpinner) currentLabel() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.label
+}
+
+func (s *lineSpinner) run() {
+	defer close(s.done)
+	ticker := time.NewTicker(creationSpinnerInterval)
+	defer ticker.Stop()
+
+	frame := 0
+	s.paint(frame)
+	for {
+		select {
+		case <-s.stop:
+			return
+		case <-ticker.C:
+			frame = (frame + 1) % len(spinnerFrames)
+			s.paint(frame)
+		}
+	}
+}
+
+func (s *lineSpinner) paint(frame int) {
+	elapsed := time.Since(s.start).Truncate(time.Second)
+	fmt.Fprintf(s.out, "\r\x1b[K%s %s %s",
+		colorize(spinnerFrames[frame], colWarning),
+		colorize(s.currentLabel(), colWarning),
+		colorize(fmt.Sprintf("(%s)", elapsed), colMuted))
+}
+
+// stopAndClear halts the animation goroutine and clears the spinner line so
+// the next print starts fresh at column 0.
+func (s *lineSpinner) stopAndClear() {
+	close(s.stop)
+	<-s.done
+	fmt.Fprint(s.out, "\r\x1b[K")
 }
 
 // provisioningHints keep a long PROVISIONING wait feeling alive. Later lines
@@ -594,7 +760,7 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 			if sawBitsReady {
 				hint = "Waiting for agent…"
 			}
-			prog.wait(fmt.Sprintf("%s (%s)", hint, prog.elapsed()))
+			prog.wait(hint)
 			hintIdx++
 			nextHint = creationClock().Add(creationHintInterval)
 		}
@@ -681,16 +847,16 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	ref := displaySessionRef(sum.Session)
 	agent := prettyAgentKind(sum.Session.AgentKind)
 	if agent == "agent" && strings.TrimSpace(sum.Harness) != "" {
-		agent = strings.TrimSpace(sum.Harness)
+		agent = prettyHarnessName(sum.Harness)
 	}
 
 	var body strings.Builder
 	body.WriteString(cardRow("Session", ref))
-	if sum.Session != nil && sum.Session.SessionID != "" && sum.Session.SessionID != ref {
+	if Verbose && sum.Session != nil && sum.Session.SessionID != "" && sum.Session.SessionID != ref {
 		body.WriteString(cardRow("ID", colorize(sum.Session.SessionID, colMuted)))
 	}
 	body.WriteString(cardRow("Agent", agent))
-	if sum.Repo != "" {
+	if Verbose && sum.Repo != "" {
 		body.WriteString(cardRow("Repo", sum.Repo))
 	}
 	if prompt := strings.TrimSpace(sum.Prompt); prompt != "" {
@@ -752,14 +918,16 @@ func printSessionListItem(w io.Writer, sess *do.HostedAgentSession) {
 	fmt.Fprintf(w, "%s %s\n", sessionStatusGlyph(sess.Status), boldColor(ref, colHighlight))
 	meta := []string{agent, colorizeSessionStatus(sess.Status)}
 	if !sess.CreatedAt.Time.IsZero() {
-		meta = append(meta, colorize(sess.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+		meta = append(meta, colorize(createdAgo(sess.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
-	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
-		fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
-	}
-	if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
-		fmt.Fprintf(w, "  %s %s\n", colorize("repo", colMuted), repo)
+	if Verbose {
+		if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+			fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
+		}
+		if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
+			fmt.Fprintf(w, "  %s %s\n", colorize("repo", colMuted), repo)
+		}
 	}
 }
 
@@ -774,19 +942,23 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 
 	var body strings.Builder
 	body.WriteString(cardRow("Session", ref))
-	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
-		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+	if Verbose {
+		if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+			body.WriteString(cardRow("ID", colorize(id, colMuted)))
+		}
 	}
 	body.WriteString(cardRow("Agent", agent))
 	body.WriteString(cardRow("Status", sessionStatusGlyph(sess.Status)+" "+colorizeSessionStatus(sess.Status)))
-	if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
-		body.WriteString(cardRow("Repo", repo))
+	if Verbose {
+		if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
+			body.WriteString(cardRow("Repo", repo))
+		}
 	}
 	if parent := strings.TrimSpace(sess.ParentSessionID); parent != "" {
 		body.WriteString(cardRow("Parent", colorize(parent, colMuted)))
 	}
 	if !sess.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(sess.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+		body.WriteString(cardRow("Created", colorize(formatCreatedAt(sess.CreatedAt.Time), colMuted)))
 	}
 
 	switch sess.Status {

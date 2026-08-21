@@ -36,6 +36,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/charmbracelet/glamour"
@@ -471,6 +472,7 @@ func RunAgentsStart(c *CmdConfig) error {
 	prog := (*creationProgress)(nil)
 	if Output != "json" {
 		prog = newCreationProgress(c.Out)
+		defer prog.stop()
 		prog.header("Launching agent session")
 	}
 
@@ -579,6 +581,7 @@ func finishAgentsStartSession(c *CmdConfig, sess *do.HostedAgentSession, prog *c
 
 	if prog == nil {
 		prog = newCreationProgress(c.Out)
+		defer prog.stop()
 	}
 	sess, err := waitForSessionReady(ctx, c.HostedAgents(), sessionID, prog)
 	if err != nil {
@@ -1158,6 +1161,13 @@ func RunAgentsUpload(c *CmdConfig) error {
 		return err
 	}
 
+	return runWorkspaceUpload(c, sessionID, localFile, workspacePath, isArchive)
+}
+
+// runWorkspaceUpload validates and streams a local file (or tar archive) into
+// a session's workspace sandbox. Shared by `doctl agents upload` and the
+// interactive attach `/upload` command.
+func runWorkspaceUpload(c *CmdConfig, sessionID, localFile, workspacePath string, isArchive bool) error {
 	info, err := os.Stat(localFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -1445,7 +1455,14 @@ func RunAgentsDownload(c *CmdConfig) error {
 		return err
 	}
 
-	written, err := workspaceTransferDownload(c.HostedAgents(), sessionID, workspacePath, saveTo, asArchive)
+	return runWorkspaceDownload(c, c.HostedAgents(), sessionID, workspacePath, saveTo, asArchive)
+}
+
+// runWorkspaceDownload fetches a file (or tar archive) from a session
+// workspace sandbox. Shared by `doctl agents download` and the interactive
+// attach `/download` command.
+func runWorkspaceDownload(c *CmdConfig, svc do.HostedAgentsService, sessionID, workspacePath, saveTo string, asArchive bool) error {
+	written, err := workspaceTransferDownload(svc, sessionID, workspacePath, saveTo, asArchive)
 	if err != nil {
 		return err
 	}
@@ -3323,6 +3340,10 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			}
 		}
 		if strings.HasPrefix(line, "/") {
+			if isAttachExitCommand(line) {
+				printDetachNotice(c.Out, state.sessionRef)
+				return nil
+			}
 			if err := handleAttachCommand(c, svc, sessionID, line, pending); err != nil {
 				fmt.Fprintf(c.Out, "error: %v\n", err)
 			}
@@ -4366,6 +4387,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			return true, nil
 		}
 		return false, nil
+	case 0x09: // Tab: autocomplete the "/" command verb (arguments aren't completed)
+		completeAttachSlashCommand(c, state)
+		return false, nil
 	default:
 		// Printable ASCII only; UTF-8 multibyte is still dropped in V0.
 		if b >= 0x20 && b < 0x7f {
@@ -4391,6 +4415,66 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 	}
 }
 
+// attachSlashCommands lists the first-word verbs the attach REPL recognizes,
+// used to drive Tab-completion when a line starts with "/".
+var attachSlashCommands = []string{
+	"/help", "/pending", "/exit",
+	"/a", "/approve", "/r", "/reject", "/d", "/defer",
+	"/pause", "/resume", "/upload", "/download",
+}
+
+// isAttachExitCommand reports whether line is the /exit command, which
+// detaches the same way Ctrl-D does — closing the local connection only;
+// the hosted session keeps running.
+func isAttachExitCommand(line string) bool {
+	parts := strings.Fields(line)
+	return len(parts) == 1 && parts[0] == "/exit"
+}
+
+// matchAttachSlashCommands returns every known verb that starts with prefix.
+func matchAttachSlashCommands(prefix string) []string {
+	var matches []string
+	for _, cmd := range attachSlashCommands {
+		if strings.HasPrefix(cmd, prefix) {
+			matches = append(matches, cmd)
+		}
+	}
+	return matches
+}
+
+// completeAttachSlashCommand handles Tab: only fires while the caret sits at
+// the end of a single, space-free "/word" (i.e. the user is still typing the
+// verb, not an argument). One match fills it in with a trailing space so the
+// user can keep typing an argument; multiple matches are listed so the user
+// can narrow it down, mirroring shell-style completion.
+func completeAttachSlashCommand(c *CmdConfig, state *attachState) {
+	state.mu.Lock()
+	buf := string(state.lineBuf)
+	atEnd := state.cursor == len(state.lineBuf)
+	state.mu.Unlock()
+	if !atEnd || !strings.HasPrefix(buf, "/") || strings.ContainsAny(buf, " \t") {
+		return
+	}
+
+	matches := matchAttachSlashCommands(buf)
+	switch len(matches) {
+	case 0:
+		return
+	case 1:
+		if matches[0] == buf {
+			return
+		}
+		state.mu.Lock()
+		state.lineBuf = []byte(matches[0] + " ")
+		state.cursor = len(state.lineBuf)
+		state.mu.Unlock()
+		state.display.redraw()
+	default:
+		fmt.Fprintln(c.Out, strings.Join(matches, "  "))
+		state.display.redraw()
+	}
+}
+
 // processAttachLine dispatches an Enter-submitted line: HITL word shortcut,
 // slash command, or SendInput. Returns detach=true when the session can no
 // longer accept input (terminal run) and the loop should exit.
@@ -4409,6 +4493,10 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 		}
 	}
 	if strings.HasPrefix(line, "/") {
+		if isAttachExitCommand(line) {
+			printDetachNotice(c.Out, state.sessionRef)
+			return true
+		}
 		if err := handleAttachCommand(c, svc, sessionID, line, state.pending); err != nil {
 			fmt.Fprintf(c.Out, "error: %v\n", err)
 		}
@@ -4499,21 +4587,7 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	verb := parts[0]
 	switch verb {
 	case "/help":
-		fmt.Fprintln(c.Out, "Detach (does NOT remove the session):")
-		fmt.Fprintln(c.Out, "  Ctrl-D           close the connection; reattach later with `doctl open-harness-runtime attach`")
-		fmt.Fprintln(c.Out, "  Ctrl-C           same as Ctrl-D")
-		fmt.Fprintln(c.Out, "Remove the session: `doctl open-harness-runtime remove <session>`")
-		fmt.Fprintln(c.Out, "When a HITL approval is pending (no Enter needed in a TTY):")
-		fmt.Fprintln(c.Out, "  ↑ / ↓ then Enter  move the highlight and confirm the selected outcome")
-		fmt.Fprintln(c.Out, "  y | a             approve the oldest pending request")
-		fmt.Fprintln(c.Out, "  n | r             reject  the oldest pending request")
-		fmt.Fprintln(c.Out, "  d                 defer   the oldest pending request")
-		fmt.Fprintln(c.Out, "  (piped input: send `yes` / `no` / `defer` followed by a newline)")
-		fmt.Fprintln(c.Out, "With an explicit request id (works on any queued request):")
-		fmt.Fprintln(c.Out, "  /a [request-id]   approve (defaults to the oldest pending)")
-		fmt.Fprintln(c.Out, "  /r [request-id]   reject")
-		fmt.Fprintln(c.Out, "  /d [request-id]   defer")
-		fmt.Fprintln(c.Out, "  /pending          list all HITL approvals waiting on you")
+		printAttachHelp(c.Out)
 		return nil
 	case "/pending":
 		return listPendingHITLs(c, pending)
@@ -4523,9 +4597,62 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 		return resolveFromAttach(svc, sessionID, parts, pending, godo.HostedAgentHITLOutcomeReject)
 	case "/d", "/defer":
 		return resolveFromAttach(svc, sessionID, parts, pending, godo.HostedAgentHITLOutcomeDefer)
+	case "/pause":
+		if err := svc.PauseSession(sessionID); err != nil {
+			return err
+		}
+		printAgentSuccess(c.Out, "Session paused")
+		return nil
+	case "/resume":
+		if err := svc.ResumeSession(sessionID); err != nil {
+			return err
+		}
+		printAgentSuccess(c.Out, "Session resumed")
+		return nil
+	case "/upload":
+		return attachUploadFromArgs(c, sessionID, parts[1:])
+	case "/download":
+		return attachDownloadFromArgs(c, svc, sessionID, parts[1:])
+	case "/exit":
+		// The caller (attachLoop / processAttachLine) intercepts /exit before
+		// reaching here, prints the detach notice, and stops the loop.
+		return nil
 	default:
 		return fmt.Errorf("unknown command %q (try /help)", verb)
 	}
+}
+
+// splitAttachTransferArgs pulls the "--archive" flag out of a /upload or
+// /download command's remaining tokens, leaving only positional arguments.
+func splitAttachTransferArgs(args []string) (positional []string, archive bool) {
+	for _, a := range args {
+		if a == "--archive" {
+			archive = true
+			continue
+		}
+		positional = append(positional, a)
+	}
+	return positional, archive
+}
+
+// attachUploadFromArgs implements the interactive `/upload` command, mirroring
+// `doctl agents upload` without requiring cobra flag parsing.
+func attachUploadFromArgs(c *CmdConfig, sessionID string, args []string) error {
+	positional, archive := splitAttachTransferArgs(args)
+	if len(positional) != 2 {
+		return fmt.Errorf("usage: /upload <local-file> <workspace-path> [--archive]")
+	}
+	return runWorkspaceUpload(c, sessionID, positional[0], positional[1], archive)
+}
+
+// attachDownloadFromArgs implements the interactive `/download` command,
+// mirroring `doctl agents download` without requiring cobra flag parsing.
+func attachDownloadFromArgs(c *CmdConfig, svc do.HostedAgentsService, sessionID string, args []string) error {
+	positional, archive := splitAttachTransferArgs(args)
+	if len(positional) != 2 {
+		return fmt.Errorf("usage: /download <workspace-path> <local-file> [--archive]")
+	}
+	return runWorkspaceDownload(c, svc, sessionID, positional[0], positional[1], archive)
 }
 
 // listPendingHITLs renders the current HITL queue. The head is marked with
@@ -4826,7 +4953,8 @@ func renderAgentCard(w io.Writer, body string) {
 }
 
 // printAttachBanner renders the styled connection header and a compact help
-// key shown when an interactive session is attached.
+// key shown when an interactive session is attached. Every line is
+// left-aligned (no column padding) to keep the card compact and scannable.
 func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote string) {
 	ref := displaySessionRef(sess)
 	agent := prettyAgentKind(sess.AgentKind)
@@ -4834,37 +4962,109 @@ func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote stri
 	var body strings.Builder
 	fmt.Fprintf(&body, "%s\n\n", boldColor("Connected", colSuccess))
 
-	body.WriteString(cardRow("Session", ref))
-	if sess != nil && strings.TrimSpace(sess.SessionID) != "" && sess.SessionID != ref {
-		body.WriteString(cardRow("ID", colorize(sess.SessionID, colMuted)))
+	fmt.Fprintf(&body, "%s %s\n", boldColor("Agent", colHighlight), agent)
+	fmt.Fprintf(&body, "%s %s\n", boldColor("Session", colHighlight), ref)
+	if Verbose && sess != nil && strings.TrimSpace(sess.SessionID) != "" && sess.SessionID != ref {
+		fmt.Fprintf(&body, "%s %s\n", boldColor("ID", colHighlight), colorize(sess.SessionID, colMuted))
 	}
-	body.WriteString(cardRow("Agent", agent))
 	if note := strings.TrimSpace(bridgeNote); note != "" {
-		body.WriteString(cardRow("Bridge", colorize(note, colMuted)))
+		fmt.Fprintf(&body, "%s %s\n", boldColor("Bridge", colHighlight), colorize(note, colMuted))
 	}
 
 	fmt.Fprintln(&body)
-	fmt.Fprintln(&body, colorize("Quick help", colMuted))
+	fmt.Fprintln(&body, colorize("Press Ctrl + D to detach locally", colMuted))
 
+	fmt.Fprintln(&body)
+	fmt.Fprintf(&body, "type a message and press %s\n", colorize("Enter", colHighlight))
 	yn := colorize("y", colSuccess) + colorize("/a", colSuccess) + " approve · " +
 		colorize("n", colError) + colorize("/r", colError) + " reject · " +
 		colorize("d", colWarning) + " defer"
-	body.WriteString(cardRow("send", "type a message and press Enter"))
-	body.WriteString(cardRow("approve", "↑/↓ then Enter, or "+yn))
-	body.WriteString(cardRow("detach", colorize("Ctrl-D", colMuted)+" closes connection only — session keeps running"))
-	body.WriteString(cardRow("remove", colorize("doctl open-harness-runtime remove "+ref, colMuted)))
-	body.WriteString(cardRow("help", "type "+boldColor("/help", colHighlight)+" for the full command list"))
+	fmt.Fprintf(&body, "%s then Enter, or %s\n", colorize("↑/↓", colHighlight), yn)
+
+	fmt.Fprintln(&body)
+	fmt.Fprintln(&body, colorize("use /help for full command list", colMuted))
 
 	renderAgentCard(w, body.String())
 }
 
-// prettyAgentKind turns AGENT_KIND_OPENCODE into a friendly "opencode" label.
-func prettyAgentKind(k godo.HostedAgentKind) string {
-	s := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(string(k), "AGENT_KIND_"), "_", " "))
-	if s == "" || s == "unspecified" {
-		return "agent"
+// helpRow is one entry in a printAttachHelp section: a command/key on the
+// left, its description on the right.
+type helpRow struct {
+	key  string
+	desc string
+}
+
+// printAttachHelp renders the /help output as plain, left-aligned text
+// grouped into sections (no card/border — this is a reference list, not a
+// status card). Each section's key column is aligned via tabwriter instead
+// of hand-counted spaces — those drift out of alignment across terminals,
+// fonts, and edits, which is what made the old /help output look broken.
+func printAttachHelp(w io.Writer) {
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Attach help", colHighlight))
+
+	writeHelpSection(&body, "Detach (session keeps running)", []helpRow{
+		{"Ctrl-D, Ctrl-C, /exit", "close the local connection"},
+	})
+	fmt.Fprintln(&body)
+	writeHelpSection(&body, "Session controls", []helpRow{
+		{"/pause", "pause the session"},
+		{"/resume", "resume a paused session"},
+		{"/upload <file> <dest> [--archive]", "upload into the workspace"},
+		{"/download <src> <file> [--archive]", "download from the workspace"},
+	})
+	fmt.Fprintln(&body)
+	writeHelpSection(&body, "Approvals pending (no Enter needed in a TTY)", []helpRow{
+		{"↑/↓ then Enter", "move highlight, confirm the selected outcome"},
+		{"y, a", "approve the oldest pending request"},
+		{"n, r", "reject the oldest pending request"},
+		{"d", "defer the oldest pending request"},
+		{"/a, /r, /d [request-id]", "resolve a specific request (defaults to oldest)"},
+		{"/pending", "list requests waiting on you"},
+		{"(piped input)", "send `yes` / `no` / `defer` followed by a newline"},
+	})
+	fmt.Fprintln(&body)
+	writeHelpSection(&body, "Other", []helpRow{
+		{"/ then Tab", "autocomplete a command"},
+		{agentCLI + " attach <session>", "reattach after detaching"},
+		{agentCLI + " remove <session>", "remove the session"},
+	})
+
+	fmt.Fprint(w, strings.TrimRight(body.String(), "\n")+"\n")
+}
+
+// writeHelpSection writes a muted section title followed by its rows, key
+// and description columns aligned with tabwriter.
+func writeHelpSection(b *strings.Builder, title string, rows []helpRow) {
+	fmt.Fprintln(b, colorize(title, colMuted))
+	tw := tabwriter.NewWriter(b, 0, 0, 3, ' ', 0)
+	for _, row := range rows {
+		fmt.Fprintf(tw, "  %s\t%s\n", boldColor(row.key, colHighlight), row.desc)
 	}
-	return s
+	tw.Flush()
+}
+
+// agentKindDisplayNames maps hosted-agent kinds to their canonical,
+// user-facing product names (e.g. AGENT_KIND_OPENCODE -> "OpenCode") so every
+// agent surface — session cards, lists, triggers — uses consistent casing.
+var agentKindDisplayNames = map[godo.HostedAgentKind]string{
+	godo.HostedAgentKindClaudeCode:  "Claude Code",
+	godo.HostedAgentKindOpenCode:    "OpenCode",
+	godo.HostedAgentKindCodexCLI:    "Codex CLI",
+	godo.HostedAgentKindCursorCLI:   "Cursor CLI",
+	godo.HostedAgentKindOpenAICodex: "Codex",
+	godo.HostedAgentKindCustom:      "Custom",
+	godo.HostedAgentKindNone:        "None",
+}
+
+// prettyAgentKind turns AGENT_KIND_OPENCODE into the friendly "OpenCode"
+// label. Falls back to the sentinel "agent" for unspecified or unrecognized
+// kinds; callers use that sentinel to fall back to a different display name.
+func prettyAgentKind(k godo.HostedAgentKind) string {
+	if name, ok := agentKindDisplayNames[k]; ok {
+		return name
+	}
+	return "agent"
 }
 
 // renderApprovalLine prints the one-line approval prompt with an optional

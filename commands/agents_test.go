@@ -27,10 +27,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -255,6 +257,7 @@ func TestRunAgentsStart(t *testing.T) {
 }
 
 func TestRunAgentsStart_FromHarness(t *testing.T) {
+	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -262,6 +265,9 @@ func TestRunAgentsStart_FromHarness(t *testing.T) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				assert.Equal(t, "claude-code", doc["agent"])
+				env, ok := doc["env"].(map[any]any)
+				assert.True(t, ok)
+				assert.Equal(t, "sk-ant-test", env["ANTHROPIC_API_KEY"])
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID: "sess_harness",
@@ -2094,6 +2100,81 @@ func TestSingleKeystrokeAdvancesQueue(t *testing.T) {
 	})
 }
 
+// TestHandleAttachByteTabCompletion covers Tab-completion of slash commands:
+// a unique prefix fills in the verb, an ambiguous one lists candidates, and
+// completion never fires once an argument has started.
+func TestHandleAttachByteTabCompletion(t *testing.T) {
+	typewrite := func(t *testing.T, state *attachState, s string) {
+		t.Helper()
+		for i := 0; i < len(s); i++ {
+			stop, err := handleAttachByte(nil, nil, "sess", s[i], state, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
+
+	t.Run("unique prefix completes with a trailing space", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/pa")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/pause ", string(state.lineBuf))
+		assert.Equal(t, len("/pause "), state.cursor)
+	})
+
+	t.Run("ambiguous prefix lists matches without altering the buffer", func(t *testing.T) {
+		var buf bytes.Buffer
+		state := newAttachState(&buf, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/")
+
+		config := &CmdConfig{Out: state.display}
+		stop, err := handleAttachByte(config, nil, "sess", 0x09, state, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/", string(state.lineBuf))
+		out := buf.String()
+		assert.Contains(t, out, "/help")
+		assert.Contains(t, out, "/download")
+	})
+
+	t.Run("/exit completes uniquely", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/e")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/exit ", string(state.lineBuf))
+	})
+
+	t.Run("no match leaves the buffer untouched", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/zz")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/zz", string(state.lineBuf))
+	})
+
+	t.Run("does not fire once an argument has started", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/a foo")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/a foo", string(state.lineBuf))
+	})
+}
+
 // TestListPendingHITLs covers the /pending command output for empty, single,
 // and multi-entry queues.
 func TestListPendingHITLs(t *testing.T) {
@@ -2125,6 +2206,118 @@ func TestListPendingHITLs(t *testing.T) {
 	})
 }
 
+// TestAttachLoopExitCommand: /exit in line mode (piped input) detaches like
+// Ctrl-D / EOF — it prints the disconnect notice and returns without error,
+// leaving the hosted session untouched.
+func TestAttachLoopExitCommand(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		state := testAttachStateFromPending(nil)
+		state.sessionRef = "my-session"
+
+		err := attachLoop(config, config.HostedAgents(), "sess_x",
+			strings.NewReader("/exit\n"), state)
+		assert.NoError(t, err)
+		out := buf.String()
+		assert.Contains(t, out, "Disconnected from session locally")
+		assert.Contains(t, out, "still active in the cloud")
+	})
+}
+
+// TestProcessAttachLineExitCommand covers the TTY-mode dispatch: /exit must
+// report detach=true so the raw-mode loop stops reading bytes.
+func TestProcessAttachLineExitCommand(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		var buf bytes.Buffer
+		state := newAttachState(&buf, &pendingHITL{})
+		state.sessionRef = "my-session"
+		config.Out = state.display
+
+		detach := processAttachLine(config, config.HostedAgents(), "sess_x", "/exit", state, nil)
+		assert.True(t, detach)
+		assert.Contains(t, buf.String(), "Disconnected from session locally")
+	})
+}
+
+// TestIsAttachExitCommand pins the exact-match contract: only a bare /exit
+// counts, not other slash commands or /exit with trailing arguments.
+func TestIsAttachExitCommand(t *testing.T) {
+	assert.True(t, isAttachExitCommand("/exit"))
+	assert.False(t, isAttachExitCommand("/exit now"))
+	assert.False(t, isAttachExitCommand("/exiting"))
+	assert.False(t, isAttachExitCommand("/help"))
+	assert.False(t, isAttachExitCommand(""))
+}
+
+// TestHandleAttachCommandHelp exercises the /help card, and pins the
+// tabwriter-aligned layout: every row's description column must start at the
+// same offset within its section (hand-counted spaces used to drift out of
+// alignment; tabwriter can't).
+func TestHandleAttachCommandHelp(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/help", &pendingHITL{}))
+		out := buf.String()
+
+		assert.Contains(t, out, "Attach help")
+		assert.Contains(t, out, "Detach (session keeps running)")
+		assert.Contains(t, out, "/exit")
+		assert.Contains(t, out, "Session controls")
+		assert.Contains(t, out, "/pause")
+		assert.Contains(t, out, "/upload")
+		assert.Contains(t, out, "/download")
+		assert.Contains(t, out, "Approvals pending")
+		assert.Contains(t, out, "/pending")
+		assert.Contains(t, out, "Tab")
+		assert.Contains(t, out, "attach <session>")
+		assert.Contains(t, out, "remove <session>")
+
+		sectionLines := func(header string) []string {
+			lines := strings.Split(out, "\n")
+			var section []string
+			started := false
+			for _, l := range lines {
+				if strings.Contains(l, header) {
+					started = true
+					continue
+				}
+				if !started {
+					continue
+				}
+				if strings.TrimSpace(l) == "" {
+					break
+				}
+				section = append(section, l)
+			}
+			return section
+		}
+
+		gapRE := regexp.MustCompile(`\S(\s{2,})\S`)
+		descColumn := func(line string) int {
+			// The first run of 2+ spaces between two non-space runs is the
+			// gap tabwriter inserted before the description column; report
+			// where the description text itself starts, in runes (tabwriter
+			// aligns by rune count, but FindStringSubmatchIndex is byte-based
+			// — some keys here contain multi-byte glyphs like "↑/↓").
+			loc := gapRE.FindStringSubmatchIndex(line)
+			require.NotNil(t, loc, "line %q has no column gap", line)
+			return utf8.RuneCountInString(line[:loc[3]])
+		}
+
+		for _, header := range []string{"Session controls", "Approvals pending"} {
+			lines := sectionLines(header)
+			require.NotEmpty(t, lines, "section %q not found", header)
+			want := descColumn(lines[0])
+			for _, l := range lines[1:] {
+				assert.Equal(t, want, descColumn(l), "misaligned row in %q section: %q", header, l)
+			}
+		}
+	})
+}
+
 // TestHandleAttachCommandPending exercises the /pending verb dispatch.
 func TestHandleAttachCommandPending(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
@@ -2136,6 +2329,110 @@ func TestHandleAttachCommandPending(t *testing.T) {
 		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/pending", p))
 		assert.Contains(t, buf.String(), "1 HITL approval(s) pending")
 		assert.Contains(t, buf.String(), "* h1  (HITL_ACTION_BASH)")
+	})
+}
+
+// TestHandleAttachCommandPauseResume exercises the /pause and /resume verbs.
+func TestHandleAttachCommandPauseResume(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+
+		tm.hostedAgents.EXPECT().PauseSession("sess_x").Return(nil)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/pause", &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Session paused")
+
+		buf.Reset()
+		tm.hostedAgents.EXPECT().ResumeSession("sess_x").Return(nil)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/resume", &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Session resumed")
+	})
+}
+
+// TestHandleAttachCommandUpload exercises the /upload verb, mirroring
+// `doctl agents upload` but driven from the interactive attach REPL.
+func TestHandleAttachCommandUpload(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "main.go")
+	contents := []byte("package main\n\nfunc main() {}\n")
+	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
+	sha := sha256Hex(contents)
+
+	partServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer partServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectWorkspaceTransferUpload(t, tm, "sess_x", "src/main.go", int64(len(contents)), sha, false, partServer.URL)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		line := fmt.Sprintf("/upload %s src/main.go", localPath)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", line, &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Upload complete")
+	})
+}
+
+// TestHandleAttachCommandUpload_UsageError requires exactly two positional args.
+func TestHandleAttachCommandUpload_UsageError(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		err := handleAttachCommand(config, config.HostedAgents(), "sess_x", "/upload only-one-arg", &pendingHITL{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "usage: /upload")
+	})
+}
+
+// TestHandleAttachCommandDownload exercises the /download verb, mirroring
+// `doctl agents download` but driven from the interactive attach REPL.
+func TestHandleAttachCommandDownload(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	saveTo := filepath.Join(dir, "out.go")
+	contents := []byte("package main\n\nfunc main() {}\n")
+	wantSum := sha256Hex(contents)
+
+	objServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(contents)
+	}))
+	defer objServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransfer("sess_x", gomock.Any()).
+			DoAndReturn(func(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+				assert.Equal(t, godo.HostedAgentWorkspaceTransferDirectionDownload, create.Direction)
+				assert.Equal(t, "src/main.go", create.Path)
+				return &godo.HostedAgentWorkspaceTransfer{
+					TransferID: "xfer_dl",
+					Status:     godo.HostedAgentWorkspaceTransferStatusPending,
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetWorkspaceTransfer("sess_x", "xfer_dl").
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID:  "xfer_dl",
+				Status:      godo.HostedAgentWorkspaceTransferStatusCompleted,
+				SHA256:      wantSum,
+				DownloadURL: objServer.URL,
+			}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		line := fmt.Sprintf("/download src/main.go %s", saveTo)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", line, &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Downloaded")
+
+		got, err := os.ReadFile(saveTo)
+		assert.NoError(t, err)
+		assert.Equal(t, contents, got)
 	})
 }
 
