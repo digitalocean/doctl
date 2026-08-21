@@ -436,6 +436,9 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 	if err != nil {
 		return nil, err
 	}
+	if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
+		return nil, err
+	}
 
 	var createOpt *godo.HostedAgentManifestCreateOptions
 	if openaiSessionID != "" {

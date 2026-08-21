@@ -251,6 +251,13 @@ func Agents() *Command {
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	cmdStart.Example = agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --spec agent-spec.yaml --name my-session; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
 
+	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate",
+		"Validate an agent manifest",
+		agentsValidateHelpMD,
+		Writer, agentsNS()...)
+	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope). Set to "-" to read from stdin.`, requiredOpt())
+	cmdValidate.Example = agentCLI + ` validate --spec agent.yaml`
+
 	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run",
 		"Start one session and attach",
 		agentsRunHelpMD,
