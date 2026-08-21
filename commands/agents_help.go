@@ -58,6 +58,14 @@ With ` + "`--harness`" + ` or ` + "`--spec`" + `, optionally pass ` + "`--gh-rep
 
 Use ` + "`-o json`" + ` for machine-readable create output without waiting.`
 
+const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
+
+Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, and conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `). The API remains the authoritative validator for the full contract.
+
+Example:
+` + "```bash\n" + agentCLI + ` validate --spec agent.yaml
+` + "```"
+
 const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI.
 
 Provide exactly one of ` + "`--harness`" + `, ` + "`--spec`" + `, or ` + "`--config-id`" + `. With ` + "`--harness`" + ` / ` + "`--spec`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--no-attach`" + ` to stop at the ready summary.
@@ -127,6 +135,16 @@ const agentsConfigDeleteHelpMD = `Delete a config and free its name. Remove acti
 const agentsConfigListSessionsHelpMD = `List sessions started from a config. Filter with ` + "`--status`" + ` or ` + "`--name`" + `.`
 
 const agentsConfigStartSessionHelpMD = `Start a new session from a config ID. ` + "`--name`" + ` is required and must be unique among active sessions.`
+
+const agentsExecHelpMD = `Run one command in a session's sandbox and print its output.
+
+Drives the sandbox directly rather than through its agent, so it works on a bare sandbox started with ` + "`--agent none`" + ` as well as on a managed-agent session.
+
+Separate the guest command from doctl's own flags with ` + "`--`" + `, or flags meant for the guest (` + "`ls -la`" + `) are parsed as doctl flags.
+
+Guest stdout and stderr pass through unchanged and the guest's exit code becomes doctl's, so this composes in pipelines and ` + "`&&`" + ` chains. Each call is independent: there is no shell session between calls, so ` + "`cd`" + ` does not carry over — use ` + "`--workdir`" + `, or run a shell explicitly (` + "`-- sh -c 'cd src && make'`" + `).
+
+Output is buffered until the command finishes, and capped at 1 MiB per stream. With ` + "`-o json`" + ` the full response is emitted instead of the raw streams.`
 
 const agentsCheckpointRootHelpMD = `Save points for a hosted agent session. Fork into new sessions or rollback the same session in place.`
 

@@ -563,6 +563,9 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 		if err != nil {
 			return nil, err
 		}
+		if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
+			return nil, err
+		}
 		req.SessionTemplate = string(manifest)
 	case godo.HostedAgentTriggerSessionModeReuse:
 		bound, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerBoundSessionID)
@@ -656,6 +659,9 @@ func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequ
 	if specPath != "" {
 		manifest, err := readManifest(os.Stdin, specPath)
 		if err != nil {
+			return nil, err
+		}
+		if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 			return nil, err
 		}
 		update.SessionTemplate = string(manifest)

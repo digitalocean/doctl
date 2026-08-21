@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The `doctl open-harness-runtime` command (aliases: agent, agents) wraps the
+// The `doctl open-harness-runtime` command (aliases: agent, agents, ohr) wraps the
 // godo HostedAgents service for Managed Agents Runtime Services (M.A.R.S).
 // Wire types and the SSE iterator live in godo; this file handles CLI plumbing,
 // argument parsing, and human-readable rendering of streamed events.
@@ -313,12 +313,12 @@ func (r *reasoningStreamer) endWithLabel(label string) {
 	}
 }
 
-// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents).
+// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents, ohr).
 func Agents() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     agentCmdName,
-			Aliases: []string{"agent", "agents"},
+			Aliases: []string{"agent", "agents", "ohr"},
 			Short:   "Managed Agents Runtime Services (M.A.R.S)",
 			Long:    agentsRootHelpMD,
 			GroupID: hostedAgentsGroup,
@@ -341,6 +341,13 @@ func Agents() *Command {
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	cmdStart.Example = agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --spec agent-spec.yaml --name my-session; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
+
+	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate",
+		"Validate an agent manifest",
+		agentsValidateHelpMD,
+		Writer, agentsNS()...)
+	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope). Set to "-" to read from stdin.`, requiredOpt())
+	cmdValidate.Example = agentCLI + ` validate --spec agent.yaml`
 
 	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run",
 		"Start one session and attach",
@@ -439,6 +446,15 @@ func Agents() *Command {
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
 	cmdDownload.Example = `doctl open-harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+
+	cmdExec := CmdBuilder(cmd, RunAgentsExec, "exec <session> -- <command> [args...]",
+		"Run a command in a session's sandbox",
+		agentsExecHelpMD,
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentSandboxExec{}))...)
+	AddStringFlag(cmdExec, doctl.ArgAgentExecWorkdir, "", "", "Absolute guest directory to run in (defaults to the workspace root)")
+	AddIntFlag(cmdExec, doctl.ArgAgentExecTimeout, "", 0, "Maximum seconds the command may run (0 uses the server default)")
+	cmdExec.Example = `doctl open-harness-runtime exec sess_abc123 -- ls -la; doctl open-harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
 
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",

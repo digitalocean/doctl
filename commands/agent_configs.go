@@ -113,6 +113,9 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if err := reportDurableAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
+		return err
+	}
 	cfg, err := c.HostedAgents().CreateAgentConfig(&godo.HostedAgentConfigCreateRequest{
 		Name:         name,
 		ManifestYAML: string(manifest),
