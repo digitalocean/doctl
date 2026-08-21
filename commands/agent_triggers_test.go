@@ -65,7 +65,7 @@ func TestAgentTriggersCreateWebhook(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
 		specPath := filepath.Join(dir, "agent.yaml")
-		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\n"), 0o600))
+		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n"), 0o600))
 
 		tm.hostedAgentTriggers.EXPECT().
 			Create(gomock.Any()).
@@ -303,7 +303,7 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
 		specPath := filepath.Join(dir, "agent.yaml")
-		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\n"), 0o600))
+		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n"), 0o600))
 
 		tm.hostedAgentTriggers.EXPECT().
 			Create(gomock.Any()).
@@ -421,7 +421,7 @@ func TestAgentTriggersCreateRejectsInvalidName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
 		specPath := filepath.Join(dir, "agent.yaml")
-		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\n"), 0o600))
+		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n"), 0o600))
 
 		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "webhook")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "<script>alert(1)</script>")

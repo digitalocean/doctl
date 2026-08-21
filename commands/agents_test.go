@@ -48,7 +48,8 @@ kind: Agent
 metadata:
   name: test-agent
 spec:
-  adapter: opencode
+  runtime:
+    adapter: opencode
 `
 
 // sampleFlatManifest is the flat-format equivalent of sampleManifest: no
@@ -68,7 +69,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "exec")
+	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "exec")
 }
 
 func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
@@ -76,6 +77,7 @@ func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
 	assert.Equal(t, agentCmdName, cmd.Name())
 	assert.Contains(t, cmd.Aliases, "agent")
 	assert.Contains(t, cmd.Aliases, "agents")
+	assert.Contains(t, cmd.Aliases, "ohr")
 
 	found, _, err := cmd.Find([]string{"run"})
 	require.NoError(t, err)

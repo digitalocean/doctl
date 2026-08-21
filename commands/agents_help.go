@@ -58,6 +58,14 @@ With ` + "`--harness`" + ` or ` + "`--spec`" + `, optionally pass ` + "`--gh-rep
 
 Use ` + "`-o json`" + ` for machine-readable create output without waiting.`
 
+const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
+
+Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, and conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `). The API remains the authoritative validator for the full contract.
+
+Example:
+` + "```bash\n" + agentCLI + ` validate --spec agent.yaml
+` + "```"
+
 const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI.
 
 Provide exactly one of ` + "`--harness`" + `, ` + "`--spec`" + `, or ` + "`--config-id`" + `. With ` + "`--harness`" + ` / ` + "`--spec`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--no-attach`" + ` to stop at the ready summary.
