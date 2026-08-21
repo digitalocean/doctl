@@ -14,6 +14,14 @@ limitations under the License.
 package commands
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -139,4 +147,142 @@ func TestHostedAgentsWSURLErrors(t *testing.T) {
 			assert.Error(t, err)
 		})
 	}
+}
+
+func TestRejectionMessage(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "api error json yields just the message",
+			body: `{"id": "bad_gateway", "message": "could not reach guest port"}`,
+			want: "could not reach guest port",
+		},
+		{
+			name: "proxy plain text passes through",
+			body: "upstream connect error or disconnect/reset before headers. reset reason: protocol error",
+			want: "upstream connect error or disconnect/reset before headers. reset reason: protocol error",
+		},
+		{
+			name: "multi-line body collapses to one line",
+			body: "<html>\n  <body>502 Bad Gateway</body>\n</html>",
+			want: "<html> <body>502 Bad Gateway</body> </html>",
+		},
+		{"empty body yields nothing", "", ""},
+		{"whitespace-only body yields nothing", "   \n\t ", ""},
+		{"json without a message falls back to raw", `{"id": "x"}`, `{"id": "x"}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, rejectionMessage(tt.body))
+		})
+	}
+}
+
+func TestRejectionMessageTruncatesLongBodies(t *testing.T) {
+	got := rejectionMessage(strings.Repeat("a", rejectionMessageMax+50))
+	assert.Equal(t, strings.Repeat("a", rejectionMessageMax)+"...", got)
+}
+
+func TestServerRejection(t *testing.T) {
+	dialErr := errors.New("websocket: bad handshake")
+
+	t.Run("no response reports the dial failure", func(t *testing.T) {
+		err := serverRejection(nil, "", dialErr)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "dialing tunnel")
+	})
+
+	t.Run("server message replaces the opaque handshake error", func(t *testing.T) {
+		resp := &http.Response{Status: "502 Bad Gateway", StatusCode: 502}
+		err := serverRejection(resp, `{"message": "could not reach guest port"}`, dialErr)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "502 Bad Gateway")
+		assert.Contains(t, err.Error(), "could not reach guest port")
+		// The gorilla error carries no diagnostic value once we have the
+		// server's own words; it should not crowd them out.
+		assert.NotContains(t, err.Error(), "bad handshake")
+	})
+
+	t.Run("empty body falls back to the handshake error", func(t *testing.T) {
+		resp := &http.Response{Status: "503 Service Unavailable", StatusCode: 503}
+		err := serverRejection(resp, "", dialErr)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "503 Service Unavailable")
+		assert.Contains(t, err.Error(), "bad handshake")
+	})
+}
+
+func TestHandshakeBody(t *testing.T) {
+	t.Run("nil response reads nothing", func(t *testing.T) {
+		assert.Equal(t, "", handshakeBody(nil))
+	})
+
+	t.Run("nil body reads nothing", func(t *testing.T) {
+		assert.Equal(t, "", handshakeBody(&http.Response{}))
+	})
+
+	t.Run("body is returned and closed", func(t *testing.T) {
+		body := &closeTrackingBody{Reader: strings.NewReader("could not reach guest port")}
+		resp := &http.Response{Body: body}
+		assert.Equal(t, "could not reach guest port", handshakeBody(resp))
+		assert.True(t, body.closed, "handshake body must be closed")
+	})
+
+	t.Run("oversized body is bounded", func(t *testing.T) {
+		resp := &http.Response{
+			Body: io.NopCloser(strings.NewReader(strings.Repeat("a", handshakeBodyLimit*2))),
+		}
+		assert.Len(t, handshakeBody(resp), handshakeBodyLimit)
+	})
+}
+
+func TestFormatHeaderRedactsAuthorization(t *testing.T) {
+	h := http.Header{}
+	h.Set("Authorization", "Bearer super-secret-token")
+	h.Set("User-Agent", "doctl/test")
+
+	got := formatHeader(h)
+
+	assert.NotContains(t, got, "super-secret-token")
+	assert.Contains(t, got, "Authorization: [redacted]")
+	assert.Contains(t, got, "User-Agent: doctl/test")
+}
+
+// TestBridgeLocalConnSurfacesServerMessage exercises the real gorilla dial:
+// the unit tests above cover the parsing, but only this proves the message
+// survives the handshake path instead of being replaced by "bad handshake".
+func TestBridgeLocalConnSurfacesServerMessage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		fmt.Fprint(w, `{"id":"bad_gateway","message":"could not reach guest port"}`)
+	}))
+	defer srv.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") +
+		"/v2/agents/sessions/sess-1/port-forward/9119"
+
+	local, remote := net.Pipe()
+	defer local.Close()
+	defer remote.Close()
+
+	err := bridgeLocalConn(context.Background(), remote, wsURL, http.Header{}, nil)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "502 Bad Gateway")
+	assert.Contains(t, err.Error(), "could not reach guest port")
+}
+
+// closeTrackingBody records whether the reader was closed.
+type closeTrackingBody struct {
+	io.Reader
+	closed bool
+}
+
+func (b *closeTrackingBody) Close() error {
+	b.closed = true
+	return nil
 }

@@ -2,12 +2,16 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,12 +23,20 @@ import (
 )
 
 // doctl agents port-forward — POC client for the port-forward WebSocket API
-// (docs/design/port-forward.md § User experience). One local TCP listener per
-// requested pair; each accepted connection dials its own WebSocket to
+// (docs/design/port-forward-rfc.md § User experience). One local TCP listener
+// per requested pair; each accepted connection dials its own WebSocket to
 // GET /v2/agents/sessions/{session_id}/port-forward/{port} and pumps binary
 // frames as an opaque byte stream.
 
 const portForwardCopyBuf = 32 << 10
+
+const (
+	// handshakeBodyLimit bounds what we read from a rejected upgrade. gorilla
+	// already caps its replayable copy at 1 KiB; this guards the rest.
+	handshakeBodyLimit = 4 << 10
+	// rejectionMessageMax keeps an HTML error page from flooding the terminal.
+	rejectionMessageMax = 300
+)
 
 // forwardPair is one [<local>:]<remote> mapping. Local 0 lets the OS pick.
 type forwardPair struct {
@@ -83,6 +95,116 @@ func hostedAgentsWSURL(sessionID string, remotePort int) (string, error) {
 	return u.String(), nil
 }
 
+// handshakeBody reads what the server said when it answered the upgrade.
+// gorilla preserves up to 1 KiB of a rejected handshake's body precisely so
+// callers can report it, and replaces the body with an empty reader on
+// success, so this is safe to call either way.
+func handshakeBody(resp *http.Response) string {
+	if resp == nil || resp.Body == nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(io.LimitReader(resp.Body, handshakeBodyLimit))
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// serverRejection explains a refused upgrade in the server's own words. The
+// status code alone cannot tell harness-api declining the guest dial apart
+// from a proxy in front of it failing to reach harness-api at all, and that
+// distinction is usually the entire diagnosis.
+func serverRejection(resp *http.Response, body string, err error) error {
+	if resp == nil {
+		return fmt.Errorf("dialing tunnel: %w", err)
+	}
+	if msg := rejectionMessage(body); msg != "" {
+		return fmt.Errorf("server rejected tunnel (%s): %s", resp.Status, msg)
+	}
+	return fmt.Errorf("server rejected tunnel (%s): %w", resp.Status, err)
+}
+
+// rejectionMessage extracts a human-readable reason from an error body: the
+// {"id","message"} shape the API returns, or the raw text collapsed to one
+// line for anything else (a proxy answering with plain text or HTML).
+func rejectionMessage(body string) string {
+	body = strings.TrimSpace(body)
+	if body == "" {
+		return ""
+	}
+	var apiErr struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal([]byte(body), &apiErr); err == nil && apiErr.Message != "" {
+		return apiErr.Message
+	}
+	return collapseToLine(body, rejectionMessageMax)
+}
+
+// collapseToLine squashes whitespace and caps length so an error page stays
+// readable on one terminal line.
+func collapseToLine(s string, max int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	r := []rune(s)
+	if len(r) > max {
+		return string(r[:max]) + "..."
+	}
+	return s
+}
+
+// wsTracer logs the tunnel handshake under --trace. doctl's recorder wraps
+// godo's RoundTripper, but gorilla dials its own connection and never goes
+// through it, so without this the one request worth tracing is the only one
+// --trace cannot see. A nil tracer is a no-op, which is the untraced case.
+type wsTracer struct {
+	logger *log.Logger
+}
+
+func newWSTracer() *wsTracer {
+	if !Trace {
+		return nil
+	}
+	return &wsTracer{logger: log.New(os.Stderr, "doctl: ", log.LstdFlags)}
+}
+
+// handshake logs the upgrade request and whatever came back, using the same
+// "->" / "<-" framing as the godo recorder. gorilla adds the Upgrade,
+// Connection and Sec-WebSocket-* headers itself, so they are absent here.
+func (t *wsTracer) handshake(wsURL string, header http.Header, resp *http.Response, body string) {
+	if t == nil {
+		return
+	}
+	t.logger.Println("->", strconv.Quote(fmt.Sprintf("GET %s %s", wsURL, formatHeader(header))))
+	if resp == nil {
+		return
+	}
+	line := fmt.Sprintf("%s %s %s", resp.Proto, resp.Status, formatHeader(resp.Header))
+	if trimmed := strings.TrimSpace(body); trimmed != "" {
+		line += " " + collapseToLine(trimmed, handshakeBodyLimit)
+	}
+	t.logger.Println("<-", strconv.Quote(line))
+}
+
+// formatHeader renders headers on one line with the bearer token masked;
+// trace output gets pasted into tickets.
+func formatHeader(h http.Header) string {
+	keys := make([]string, 0, len(h))
+	for k := range h {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		v := strings.Join(h[k], ",")
+		if strings.EqualFold(k, "Authorization") {
+			v = "[redacted]"
+		}
+		parts = append(parts, k+": "+v)
+	}
+	return strings.Join(parts, "; ")
+}
+
 // RunAgentsPortForward opens local TCP tunnels to ports inside the session's
 // sandbox and blocks until interrupted.
 func RunAgentsPortForward(c *CmdConfig) error {
@@ -117,6 +239,8 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	tracer := newWSTracer()
+
 	var wg sync.WaitGroup
 	listeners := make([]net.Listener, 0, len(pairs))
 	for _, pair := range pairs {
@@ -139,7 +263,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			acceptForwardLoop(ctx, c, ln, wsURL, header)
+			acceptForwardLoop(ctx, ln, wsURL, header, tracer)
 		}()
 	}
 	fmt.Fprintln(c.Out, "Ready. Press Ctrl-C to stop.")
@@ -154,7 +278,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 
 // acceptForwardLoop accepts local connections and bridges each over its own
 // WebSocket. A per-connection failure never kills the listener.
-func acceptForwardLoop(ctx context.Context, c *CmdConfig, ln net.Listener, wsURL string, header http.Header) {
+func acceptForwardLoop(ctx context.Context, ln net.Listener, wsURL string, header http.Header, tracer *wsTracer) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -162,7 +286,7 @@ func acceptForwardLoop(ctx context.Context, c *CmdConfig, ln net.Listener, wsURL
 		}
 		go func() {
 			defer conn.Close()
-			if err := bridgeLocalConn(ctx, conn, wsURL, header); err != nil && ctx.Err() == nil {
+			if err := bridgeLocalConn(ctx, conn, wsURL, header, tracer); err != nil && ctx.Err() == nil {
 				warn("connection closed: %v", err)
 			}
 		}()
@@ -171,13 +295,12 @@ func acceptForwardLoop(ctx context.Context, c *CmdConfig, ln net.Listener, wsURL
 
 // bridgeLocalConn dials the port-forward WebSocket for one accepted TCP
 // connection and pumps bytes both ways until either side closes.
-func bridgeLocalConn(ctx context.Context, local net.Conn, wsURL string, header http.Header) error {
+func bridgeLocalConn(ctx context.Context, local net.Conn, wsURL string, header http.Header, tracer *wsTracer) error {
 	ws, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
+	body := handshakeBody(resp)
+	tracer.handshake(wsURL, header, resp, body)
 	if err != nil {
-		if resp != nil {
-			return fmt.Errorf("server rejected tunnel (%s): %w", resp.Status, err)
-		}
-		return fmt.Errorf("dialing tunnel: %w", err)
+		return serverRejection(resp, body, err)
 	}
 	defer ws.Close()
 
