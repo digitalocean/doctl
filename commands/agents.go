@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The `doctl open-harness-runtime` command (aliases: agent, agents) wraps the
+// The `doctl open-harness-runtime` command (aliases: agent, agents, ohr) wraps the
 // godo HostedAgents service for Managed Agents Runtime Services (M.A.R.S).
 // Wire types and the SSE iterator live in godo; this file handles CLI plumbing,
 // argument parsing, and human-readable rendering of streamed events.
@@ -222,12 +222,12 @@ func (m *msgAccumulator) flush(out io.Writer) {
 	fmt.Fprint(out, rendered)
 }
 
-// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents).
+// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents, ohr).
 func Agents() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     agentCmdName,
-			Aliases: []string{"agent", "agents"},
+			Aliases: []string{"agent", "agents", "ohr"},
 			Short:   "Managed Agents Runtime Services (M.A.R.S)",
 			Long:    agentsRootHelpMD,
 			GroupID: hostedAgentsGroup,

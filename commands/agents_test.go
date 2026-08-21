@@ -77,6 +77,7 @@ func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
 	assert.Equal(t, agentCmdName, cmd.Name())
 	assert.Contains(t, cmd.Aliases, "agent")
 	assert.Contains(t, cmd.Aliases, "agents")
+	assert.Contains(t, cmd.Aliases, "ohr")
 
 	found, _, err := cmd.Find([]string{"run"})
 	require.NoError(t, err)
