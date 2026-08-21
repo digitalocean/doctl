@@ -185,6 +185,58 @@ func (h *HostedAgentWorkspaceUpload) KV() []map[string]any {
 	return out
 }
 
+// HostedAgentSandboxExec renders the result of `doctl open-harness-runtime exec`
+// under `-o json`. Text output never reaches this displayer: the command passes
+// the guest's stdout and stderr straight through instead, so it composes in a
+// pipeline.
+//
+// Single is always set by the exec verb (one command, one result), but the field
+// is kept explicit rather than unwrapping on len==1, so the JSON container type
+// never changes with the row count (MARSOHS-869/887).
+type HostedAgentSandboxExec struct {
+	Execs  []*godo.HostedAgentSandboxExecResponse
+	Single bool
+}
+
+var _ Displayable = &HostedAgentSandboxExec{}
+
+func (h *HostedAgentSandboxExec) JSON(out io.Writer) error {
+	if h.Single && len(h.Execs) == 1 {
+		return writeJSON(h.Execs[0], out)
+	}
+	return writeJSON(h.Execs, out)
+}
+
+func (h *HostedAgentSandboxExec) Cols() []string {
+	return []string{"ExitCode", "Stdout", "Stderr"}
+}
+
+func (h *HostedAgentSandboxExec) ColMap() map[string]string {
+	return map[string]string{
+		"ExitCode": "ExitCode",
+		"Stdout":   "Stdout",
+		"Stderr":   "Stderr",
+	}
+}
+
+func (h *HostedAgentSandboxExec) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Execs))
+	for _, e := range h.Execs {
+		if e == nil {
+			continue
+		}
+		out = append(out, map[string]any{
+			"ExitCode": e.ExitCode,
+			"Stdout":   e.Stdout,
+			"Stderr":   e.Stderr,
+		})
+	}
+	return out
+}
+
 // HostedAgentConfig renders full Agent Configs, backing `doctl open-harness-runtime config
 // get` and `... create`. Set Single=true so those verbs emit a bare JSON
 // object; the list verb uses HostedAgentConfigSummary instead.

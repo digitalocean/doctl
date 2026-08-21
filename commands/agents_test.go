@@ -69,7 +69,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
+	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "exec")
 }
 
 func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
