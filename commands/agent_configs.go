@@ -53,7 +53,7 @@ func AgentConfigs() *Command {
 		agentsConfigCreateHelpMD,
 		Writer, append(ns, aliasOpt("c"),
 			displayerType(&displayers.HostedAgentConfig{}))...)
-	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-config\nagent: opencode". Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
 	cmdCreate.Example = `doctl open-harness-runtime config create --spec agent-spec.yaml --name my-config`
 

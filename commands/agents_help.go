@@ -54,6 +54,9 @@ Provide exactly one of:
 
 With ` + "`--harness`" + ` or ` + "`--spec`" + `, optionally pass ` + "`--gh-repo`" + ` and ` + "`--prompt`" + `. Example:
 ` + "```bash\n" + agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"
+` + "```\n\n" + `Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
+` + "```yaml\n" + `name: my-session
+agent: opencode
 ` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
 Use ` + "`-o json`" + ` for machine-readable create output without waiting.`
