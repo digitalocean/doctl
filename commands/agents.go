@@ -3932,11 +3932,14 @@ type attachState struct {
 	hitlSel    int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
 	escSeq     []byte
 	pasting    bool
-	confirm    *largePasteConfirmation
+	confirm *largePasteConfirmation
 	// Input history for bash-style ↑/↓ recall within this attach session.
 	history   []string
 	histIndex int    // len(history) means draft/new line; 0..len-1 browses history
 	histDraft []byte // saved draft when ↑ is first pressed
+	// dispatch, when set, runs a blocking API request off the input loop; see
+	// call. attachLoopTTY installs it. Set once before the loop starts.
+	dispatch func(func() (detach bool))
 }
 
 type largePasteConfirmation struct {
@@ -3969,6 +3972,23 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 		},
 	}
 	return s
+}
+
+// call runs fn, which performs a blocking API request.
+//
+// In raw mode Ctrl-C is a byte the input loop has to read, not a signal, so a
+// request made from inside that loop makes the session uninterruptible for as
+// long as the server takes to answer — and these requests carry no deadline.
+// With a dispatcher installed, fn is handed to attachLoopTTY's worker and this
+// returns immediately; fn's detach verdict reaches the loop by its own route.
+// Without one (line mode, unit tests) fn runs inline and its result is passed
+// straight back, so nothing about the synchronous paths changes.
+func (s *attachState) call(fn func() (detach bool)) (detach bool) {
+	if s.dispatch == nil {
+		return fn()
+	}
+	s.dispatch(fn)
+	return false
 }
 
 // promptString is the raw-mode prompt. With no pending approval it's the plain
@@ -4986,6 +5006,25 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		}
 	}()
 
+	// API requests run here rather than inline in the loop below, so the loop
+	// keeps reading while one is in flight — raw mode turned Ctrl-C into a byte
+	// only this loop can act on, and the requests have no deadline. A single
+	// worker rather than a goroutine per call keeps sends in the order typed.
+	work := make(chan func() (detach bool), 64)
+	defer close(work)
+	detachCh := make(chan struct{}, 1)
+	go func() {
+		for fn := range work {
+			if fn() {
+				select {
+				case detachCh <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}()
+	state.dispatch = func(fn func() (detach bool)) { work <- fn }
+
 	// 50ms ticker so HITL arrival reflows the prompt even when the user idles.
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
@@ -5005,6 +5044,10 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 			if stop {
 				return nil
 			}
+		case <-detachCh:
+			// A queued request found the session unable to take more input;
+			// it has already printed why.
+			return nil
 		case <-ticker.C:
 			state.handlePendingEscTimeout()
 		case err := <-readErrCh:
@@ -5025,7 +5068,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		case 'y', 'Y':
 			state.display.echo([]byte{b, '\r', '\n'})
 			state.takeLargePasteConfirmation()
-			if detach := processAttachLine(c, svc, sessionID, confirm.text, state, nil, thinking); detach {
+			if detach := state.call(func() bool {
+				return processAttachLine(c, svc, sessionID, confirm.text, state, nil, thinking)
+			}); detach {
 				return true, nil
 			}
 			state.display.redraw()
@@ -5033,10 +5078,18 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		case 'n', 'N', 0x0d, 0x0a:
 			state.display.echo([]byte("\r\n"))
 			state.takeLargePasteConfirmation()
-			for _, part := range splitSubmittedLines(confirm.text) {
-				if detach := processAttachLine(c, svc, sessionID, part, state, nil, thinking); detach {
-					return true, nil
+			parts := splitSubmittedLines(confirm.text)
+			// One unit of work, not one per part: the parts are separate sends
+			// and have to reach the session in the pasted order.
+			if detach := state.call(func() bool {
+				for _, part := range parts {
+					if processAttachLine(c, svc, sessionID, part, state, nil, thinking) {
+						return true
+					}
 				}
+				return false
+			}); detach {
+				return true, nil
 			}
 			state.display.redraw()
 			return false, nil
@@ -5091,14 +5144,19 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		} else {
 			state.display.echo([]byte{b, '\r', '\n'})
 		}
-		if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
-			Outcome: outcome,
-			Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
-		}); err != nil {
-			fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
-		} else {
-			state.pending.clearIf(id)
-		}
+		// No redraw once the resolve lands: clearing the pending id is a change
+		// attachLoopTTY notices on its next tick and redraws for.
+		state.call(func() bool {
+			if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
+				Outcome: outcome,
+				Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+			}); err != nil {
+				fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+			} else {
+				state.pending.clearIf(id)
+			}
+			return false
+		})
 		state.resetHITLSelection()
 		state.display.redraw()
 		return false, nil
@@ -5123,7 +5181,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 				state.display.redraw()
 				return false, nil
 			}
-			if detach := processAttachLine(c, svc, sessionID, line, state, warmup, thinking); detach {
+			if detach := state.call(func() bool {
+				return processAttachLine(c, svc, sessionID, line, state, warmup, thinking)
+			}); detach {
 				return true, nil
 			}
 		}

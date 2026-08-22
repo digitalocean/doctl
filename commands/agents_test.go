@@ -2007,6 +2007,55 @@ func TestAttachStateHITLSelection(t *testing.T) {
 	assert.Equal(t, 0, s.hitlSelection())
 }
 
+// TestHandleAttachByteCtrlCDuringRequest pins the reason attachLoopTTY runs API
+// calls on a worker: raw mode makes Ctrl-C a byte the input loop has to read,
+// so a request in flight must not be holding that loop hostage.
+func TestHandleAttachByteCtrlCDuringRequest(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		inFlight := make(chan struct{})
+		release := make(chan struct{})
+		tm.hostedAgents.EXPECT().
+			SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "hi"}).
+			DoAndReturn(func(string, *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error) {
+				close(inFlight)
+				<-release
+				return &godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil
+			})
+
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+
+		// Stand-in for attachLoopTTY's worker.
+		work := make(chan func() (detach bool), 1)
+		state.dispatch = func(fn func() (detach bool)) { work <- fn }
+		workerDone := make(chan struct{})
+		go func() {
+			defer close(workerDone)
+			for fn := range work {
+				fn()
+			}
+		}()
+
+		for _, b := range []byte("hi") {
+			_, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil, nil)
+			require.NoError(t, err)
+		}
+		stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
+		require.NoError(t, err)
+		require.False(t, stop)
+
+		<-inFlight
+
+		stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x03, state, nil, nil)
+		require.NoError(t, err)
+		assert.True(t, stop, "Ctrl-C must detach while a request is still in flight")
+
+		close(release)
+		close(work)
+		<-workerDone
+	})
+}
+
 // TestMsgAccumulatorPlain confirms buffered tokens flush as-is when styling is
 // off (no markdown rewriting) and that flush resets the buffer.
 func TestMsgAccumulatorPlain(t *testing.T) {
