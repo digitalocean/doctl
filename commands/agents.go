@@ -465,6 +465,15 @@ func Agents() *Command {
 		Writer, agentsNS(
 			displayerType(&displayers.HostedAgentSession{}))...)
 
+	cmdPortForward := CmdBuilder(cmd, RunAgentsPortForward, "port-forward <session> [<local-port>:]<remote-port> [...]",
+		"Forward local TCP ports into the session's sandbox",
+		`Opens a local TCP tunnel to a port inside the session's sandbox, kubectl-style: connect to `+"`"+`localhost:<local-port>`+"`"+` and traffic flows over an authenticated connection to the sandbox port. Nothing inside the sandbox is exposed publicly.
+
+A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
+		Writer)
+	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
+	cmdPortForward.Example = `doctl agents port-forward sess_abc123 3000 8080:8000`
+
 	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
 	cmd.AddCommand(AgentConfigs())
