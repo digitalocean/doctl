@@ -114,13 +114,10 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 
-			expected := strings.TrimSpace(string(output))
-			actual := strings.TrimSpace(databasesRemoveFirewallRuleOutput)
+			expected := strings.TrimSpace(databasesRemoveFirewallRuleOutput)
+			actual := strings.TrimSpace(string(output))
 
 			expect.Equal(expected, actual)
-
-			fmt.Println(expected)
-			fmt.Println(actual)
 		})
 	})
 
@@ -128,6 +125,6 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	databasesRemoveFirewallRuleOutput = `
-UUID                                    ClusterUUID                             Type    Value
+UUID                                    ClusterUUID                             Type    Value               Description
 cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     new-firewall-tag`
 )
