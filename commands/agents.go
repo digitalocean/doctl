@@ -71,20 +71,6 @@ var (
 	colMuted     = charm.Colors.Muted
 )
 
-// Stream-state transport frames (SSE kind "stream.state"). Defined locally so
-// doctl builds against godo pins that have not yet exported HostedAgentEventKindStreamState
-// / HostedAgentStreamState*. Wire values match the published godo API.
-const (
-	hostedAgentEventKindStreamState  godo.HostedAgentEventKind = "stream.state"
-	hostedAgentStreamStateSuperseded                           = "superseded"
-	hostedAgentStreamStateCatchingUp                           = "catching_up"
-)
-
-type hostedAgentStreamState struct {
-	State  string `json:"state"`
-	Cursor string `json:"cursor,omitempty"`
-}
-
 // detectStyling reports whether ANSI styling should be emitted for the current
 // process: stdout is a terminal and NO_COLOR is unset.
 func detectStyling() bool {
@@ -331,11 +317,11 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("deploy"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdStart, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Builds the manifest for you. Mutually exclusive with --spec and --config-id.")
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --config-id.`)
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --config-id.`)
 	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from. Requires --name. Mutually exclusive with --harness and --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
-	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
+	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
 	AddIntFlag(cmdStart, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json.")
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
@@ -354,11 +340,11 @@ func Agents() *Command {
 		agentsRunHelpMD,
 		Writer, agentsNS(aliasOpt("up"))...)
 	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec and --config-id.")
-	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness or --config-id. Same format as start --spec.`)
+	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness or --config-id. Same format as start --spec (flat: top-level name + agent).`)
 	AddStringFlag(cmdRun, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to run from, instead of --harness/--spec. Requires --name.")
 	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdRun, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
-	AddStringFlag(cmdRun, doctl.ArgAgentName, "", "", "Session name (required with --config-id; otherwise auto-generated when omitted). Must be unique among active sessions.")
+	AddStringFlag(cmdRun, doctl.ArgAgentName, "", "", "Session name (required with --config-id; otherwise auto-generated when omitted). On flat manifests sets top-level name; on legacy envelopes sets metadata.name. Must be unique among active sessions.")
 	AddBoolFlag(cmdRun, doctl.ArgAgentNoAttach, "", false, "Wait for readiness but do not attach")
 	AddIntFlag(cmdRun, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default)")
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
@@ -1724,7 +1710,7 @@ func RunAgentsLogs(c *CmdConfig) error {
 	for stream.Next() {
 		ev := stream.Current()
 		// Connection health, not session activity — never part of the history.
-		if ev.Kind == hostedAgentEventKindStreamState {
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
 			continue
 		}
 		if ev.Kind == godo.HostedAgentEventKindTokenChunk {
@@ -2909,9 +2895,9 @@ func backendPhaseFromEvent(ev godo.HostedAgentEvent) string {
 			return msg
 		}
 		return "runtime log"
-	case hostedAgentEventKindStreamState:
-		var st hostedAgentStreamState
-		if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == hostedAgentStreamStateCatchingUp {
+	case godo.HostedAgentEventKindStreamState:
+		var st godo.HostedAgentStreamState
+		if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateCatchingUp {
 			return "syncing event stream"
 		}
 	}
@@ -3311,9 +3297,9 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 
 		// stream.state reports the health of the connection, not session
 		// activity, so it never renders and never moves the cursor.
-		if ev.Kind == hostedAgentEventKindStreamState {
-			var st hostedAgentStreamState
-			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == hostedAgentStreamStateSuperseded {
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			var st godo.HostedAgentStreamState
+			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
 				reasoning.end()
 				thinking.stop()
 				acc.flush(out)

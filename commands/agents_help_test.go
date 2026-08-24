@@ -57,6 +57,12 @@ func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
 	assert.NotContains(t, agentsRootHelpMD, "Launch and manage")
 }
 
+func TestAgentsStartHelpDocumentsFlatName(t *testing.T) {
+	assert.Contains(t, agentsStartHelpMD, "name: my-session")
+	assert.Contains(t, agentsStartHelpMD, "agent: opencode")
+	assert.Contains(t, agentsStartHelpMD, "--name")
+}
+
 func TestAgentsStartProxyHelpExplainsBridge(t *testing.T) {
 	assert.Contains(t, agentsStartProxyHelpMD, "WebSocket")
 	assert.Contains(t, agentsStartProxyHelpMD, "codex --remote")

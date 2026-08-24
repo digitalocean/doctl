@@ -3490,7 +3490,7 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	stubReconnectSleep(t)
 
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -3795,9 +3795,9 @@ func TestDrainStream_StickySpinnerDoesNotInterruptReasoningStream(t *testing.T) 
 // frame is transport bookkeeping: it renders nothing and must not become the
 // reconnect cursor, or a reconnect would resume from a position no event holds.
 func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
-	body := sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
+	body := sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
 		sseFrame("evt-7", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -3912,8 +3912,9 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 		mu.Lock()
 		calls++
 		n := calls
-		// Resume cursor rides as replay_from on control-plane /stream.
-		replayFrom := r.URL.Query().Get("replay_from")
+		// The live stream carries the resume cursor in the standard SSE
+		// Last-Event-ID header, not a replay_from query parameter.
+		replayFrom := r.Header.Get("Last-Event-ID")
 		mu.Unlock()
 
 		w.Header().Set("Content-Type", "text/event-stream")
