@@ -2535,6 +2535,7 @@ func RunDatabaseFirewallRulesAppend(c *CmdConfig) error {
 		firewallRule.Value = rule.Value
 		firewallRule.ClusterUUID = rule.ClusterUUID
 		firewallRule.UUID = rule.UUID
+		firewallRule.Description = rule.Description
 
 		allRules = append(allRules, firewallRule)
 	}
@@ -2581,6 +2582,7 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 				ClusterUUID: rule.ClusterUUID,
 				Type:        rule.Type,
 				Value:       rule.Value,
+				Description: rule.Description,
 			})
 		}
 	}
