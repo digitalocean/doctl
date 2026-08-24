@@ -127,6 +127,10 @@ const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a
 
 Configs are immutable — create a new config to change a manifest. Delete is blocked while sessions from the config are still active.`
 
+const agentsSizesRootHelpMD = `List sandbox (microVM) sizes you can set as ` + "`spec.sandbox.sizeSlug`" + ` when creating a session.`
+
+const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalog (slug, vCPUs, memory). Ordered smallest to largest. Every returned slug is accepted by CreateSession as ` + "`spec.sandbox.sizeSlug`" + `.`
+
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " start --spec`" + `). ` + "`--name`" + ` must be unique within your team.`
 
 const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
