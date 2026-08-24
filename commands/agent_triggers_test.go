@@ -195,7 +195,7 @@ func TestAgentTriggersGetUpdatePauseDelete(t *testing.T) {
 
 func TestAgentTriggersRotateSecretAndExecutions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return("new_sec", "", nil)
 		config.Args = []string{"tr_1"}
 		var buf bytes.Buffer
 		config.Out = &buf
@@ -367,7 +367,7 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 //   - the banner is on neither stdout nor stderr
 func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return("new_sec", "", nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer
@@ -394,7 +394,7 @@ func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 // secret banner still appears on stdout (existing behaviour preserved).
 func TestAgentTriggersRotateSecret_TextMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return("new_sec", "", nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer

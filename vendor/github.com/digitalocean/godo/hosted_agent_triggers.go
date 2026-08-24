@@ -27,7 +27,7 @@ type HostedAgentTriggersService interface {
 	Get(context.Context, string) (*HostedAgentTrigger, *Response, error)
 	Update(context.Context, string, *HostedAgentTriggerUpdateRequest) (*HostedAgentTrigger, *Response, error)
 	Delete(context.Context, string) (*Response, error)
-	RotateSecret(context.Context, string) (*HostedAgentTriggerRotateSecretResponse, *Response, error)
+	RotateSecret(context.Context, string, bool) (*HostedAgentTriggerRotateSecretResponse, *Response, error)
 	ListExecutions(context.Context, string, *HostedAgentTriggerExecutionListOptions) (*HostedAgentTriggerExecutionsListResponse, *Response, error)
 	GetExecution(context.Context, string, string) (*HostedAgentTriggerExecution, *Response, error)
 	GetBySession(context.Context, string) (*HostedAgentTrigger, *Response, error)
@@ -216,7 +216,8 @@ type HostedAgentTriggersListResponse struct {
 
 // HostedAgentTriggerRotateSecretResponse is returned by RotateSecret.
 type HostedAgentTriggerRotateSecretResponse struct {
-	WebhookSecret string `json:"webhook_secret,omitempty"`
+	WebhookSecret           string `json:"webhook_secret,omitempty"`
+	PreviousSecretExpiresAt string `json:"previous_secret_expires_at,omitempty"`
 }
 
 // HostedAgentTriggerExecution is one row per firing.
@@ -393,11 +394,18 @@ func (s *HostedAgentTriggersServiceOp) Delete(ctx context.Context, triggerID str
 }
 
 // RotateSecret issues a new webhook secret (webhook triggers only).
-func (s *HostedAgentTriggersServiceOp) RotateSecret(ctx context.Context, triggerID string) (*HostedAgentTriggerRotateSecretResponse, *Response, error) {
+// When allowGrace is true the outgoing secret stays valid for a short server-
+// configured window so in-flight deliveries keep verifying; PreviousSecretExpiresAt
+// in the response tells the caller when it dies. Use allowGrace=false (default)
+// when responding to a compromised secret.
+func (s *HostedAgentTriggersServiceOp) RotateSecret(ctx context.Context, triggerID string, allowGrace bool) (*HostedAgentTriggerRotateSecretResponse, *Response, error) {
 	if triggerID == "" {
 		return nil, nil, errors.New("hosted agent triggers: trigger id is required")
 	}
 	path := fmt.Sprintf(hostedAgentTriggerRotateSecretPath, triggerID)
+	if allowGrace {
+		path += "?allow_grace=true"
+	}
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
 	if err != nil {
 		return nil, nil, err

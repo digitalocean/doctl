@@ -130,10 +130,11 @@ Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `
 		Writer, aliasOpt("activate", "enable"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
-	CmdBuilder(cmd, RunAgentTriggersRotateSecret, "rotate-secret <trigger-id>",
+	cmdRotate := CmdBuilder(cmd, RunAgentTriggersRotateSecret, "rotate-secret <trigger-id>",
 		"Rotate a webhook trigger's secret",
-		"Issues a new webhook secret (shown once). Webhook triggers only. The previous secret stays valid briefly so in-flight deliveries keep verifying.",
+		"Issues a new webhook secret (shown once) and immediately revokes the old one. Webhook triggers only. Update your external system with the new secret. Use --allow-grace only for routine key-hygiene rotations, never after a secret is compromised.",
 		Writer)
+	AddBoolFlag(cmdRotate, doctl.ArgAgentAllowGrace, "", false, "Preserve the old secret for a short grace window so in-flight deliveries keep verifying. Never use after a secret is compromised.")
 
 	cmdListExec := CmdBuilder(cmd, RunAgentTriggersListExecutions, "list-executions <trigger-id>",
 		"List a trigger's execution history",
@@ -301,14 +302,25 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	secret, err := c.HostedAgentTriggers().RotateSecret(c.Args[0])
+	allowGrace, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAllowGrace)
+	if err != nil {
+		return err
+	}
+	secret, previousExpiresAt, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], allowGrace)
 	if err != nil {
 		return err
 	}
 	if Output == "json" {
-		return json.NewEncoder(c.Out).Encode(map[string]string{"webhook_secret": secret})
+		out := map[string]string{"webhook_secret": secret}
+		if previousExpiresAt != "" {
+			out["previous_secret_expires_at"] = previousExpiresAt
+		}
+		return json.NewEncoder(c.Out).Encode(out)
 	}
 	fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(secret))
+	if previousExpiresAt != "" {
+		fmt.Fprintf(c.Out, "Old secret stops working at: %s\n", previousExpiresAt)
+	}
 	return nil
 }
 

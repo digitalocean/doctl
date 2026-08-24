@@ -969,6 +969,10 @@ const (
 	// ArgAgentStatus filters sessions by lifecycle status.
 	ArgAgentStatus = "status"
 
+	// ArgAgentAllowGrace opts into a grace window on rotate-secret so in-flight
+	// deliveries keep verifying. Never use after a secret is compromised.
+	ArgAgentAllowGrace = "allow-grace"
+
 	// ArgAgentWorkspacePath is the path inside the session workspace root (/workspace).
 	ArgAgentWorkspacePath = "workspace-path"
 
