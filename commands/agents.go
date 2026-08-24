@@ -468,6 +468,7 @@ func Agents() *Command {
 	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
 	cmd.AddCommand(AgentConfigs())
+	cmd.AddCommand(AgentSizes())
 
 	cmd.Command.SetHelpFunc(agentsStyledHelpFunc)
 

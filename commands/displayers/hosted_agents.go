@@ -331,3 +331,42 @@ func (h *HostedAgentConfigSummary) KV() []map[string]any {
 	}
 	return out
 }
+
+// HostedAgentSandboxSize renders the sandbox size catalog for
+// `doctl open-harness-runtime sizes list`.
+type HostedAgentSandboxSize struct {
+	Sizes []godo.HostedAgentSandboxSize
+}
+
+var _ Displayable = &HostedAgentSandboxSize{}
+
+func (h *HostedAgentSandboxSize) JSON(out io.Writer) error {
+	return writeJSON(h.Sizes, out)
+}
+
+func (h *HostedAgentSandboxSize) Cols() []string {
+	return []string{"Slug", "VCPUs", "MemoryMB"}
+}
+
+func (h *HostedAgentSandboxSize) ColMap() map[string]string {
+	return map[string]string{
+		"Slug":     "Slug",
+		"VCPUs":    "VCPUs",
+		"MemoryMB": "Memory (MB)",
+	}
+}
+
+func (h *HostedAgentSandboxSize) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Sizes))
+	for _, s := range h.Sizes {
+		out = append(out, map[string]any{
+			"Slug":     s.Slug,
+			"VCPUs":    s.VCPUs,
+			"MemoryMB": s.MemoryMB,
+		})
+	}
+	return out
+}
