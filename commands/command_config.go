@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -112,14 +111,6 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return fmt.Errorf("Unable to initialize DigitalOcean API client: %s", err)
 			}
 
-			// The hosted-agents surface lives on its own host rather than
-			// api.digitalocean.com, so it gets its own client. --api-url still
-			// overrides both (see doctl.HostedAgentsAPIURL).
-			agentsClient, err := c.Doit.GetGodoClient(Trace, true, accessToken, godo.SetBaseURL(doctl.HostedAgentsAPIURL))
-			if err != nil {
-				return fmt.Errorf("Unable to initialize DigitalOcean Hosted Agents API client: %s", err)
-			}
-
 			c.Keys = func() do.KeysService { return do.NewKeysService(godoClient) }
 			c.Sizes = func() do.SizesService { return do.NewSizesService(godoClient) }
 			c.Regions = func() do.RegionsService { return do.NewRegionsService(godoClient) }
@@ -176,9 +167,9 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
 			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
 			c.Security = func() do.SecurityService { return do.NewSecurityService(godoClient) }
-			c.HostedAgents = func() do.HostedAgentsService { return do.NewHostedAgentsService(agentsClient) }
+			c.HostedAgents = func() do.HostedAgentsService { return do.NewHostedAgentsService(godoClient) }
 			c.HostedAgentTriggers = func() do.HostedAgentTriggersService {
-				return do.NewHostedAgentTriggersService(agentsClient)
+				return do.NewHostedAgentTriggersService(godoClient)
 			}
 			c.Secrets = func() do.SecretsService { return do.NewSecretsService(godoClient) }
 			return nil

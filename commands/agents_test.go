@@ -48,7 +48,8 @@ kind: Agent
 metadata:
   name: test-agent
 spec:
-  adapter: opencode
+  runtime:
+    adapter: opencode
 `
 
 // sampleFlatManifest is the flat-format equivalent of sampleManifest: no
@@ -68,7 +69,41 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "attach", "list", "show", "logs", "approve", "destroy", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config")
+	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "exec")
+}
+
+func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
+	cmd := Agents()
+	assert.Equal(t, agentCmdName, cmd.Name())
+	assert.Contains(t, cmd.Aliases, "agent")
+	assert.Contains(t, cmd.Aliases, "agents")
+	assert.Contains(t, cmd.Aliases, "ohr")
+
+	found, _, err := cmd.Find([]string{"run"})
+	require.NoError(t, err)
+	assert.Equal(t, "run", found.Name())
+
+	var start *Command
+	for _, child := range cmd.ChildCommands() {
+		if child.Name() == "start" {
+			start = child
+			break
+		}
+	}
+	require.NotNil(t, start)
+	assert.Equal(t, "agents.start", cmdNS(start), "viper keys must stay under agents.*")
+}
+
+func TestAgentsRemoveAliases(t *testing.T) {
+	cmd := Agents()
+	require.NotNil(t, cmd)
+
+	for _, name := range []string{"remove", "destroy", "rm"} {
+		found, _, err := cmd.Find([]string{name})
+		require.NoError(t, err, "alias %q", name)
+		require.NotNil(t, found, "alias %q", name)
+		assert.Equal(t, "remove", found.Name(), "alias %q should resolve to remove", name)
+	}
 }
 
 func TestAgents_helpers(t *testing.T) {
@@ -92,6 +127,13 @@ func TestAgents_helpers(t *testing.T) {
 			assert.NoError(t, err, "input=%q", tc.in)
 			assert.Equal(t, tc.want, got, "input=%q", tc.in)
 		}
+	})
+
+	t.Run("setBracketedPasteMode", func(t *testing.T) {
+		var buf bytes.Buffer
+		setBracketedPasteMode(&buf, true)
+		setBracketedPasteMode(&buf, false)
+		assert.Equal(t, "\x1b[?2004h\x1b[?2004l", buf.String())
 	})
 }
 
@@ -192,11 +234,60 @@ func TestRunAgentsStart(t *testing.T) {
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_test",
 					AgentKind: godo.HostedAgentKindOpenCode,
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					AgentKind: godo.HostedAgentKindOpenCode,
 					Status:    godo.HostedAgentSessionStatusReady,
 				},
 			}, nil)
 
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
+func TestRunAgentsStart_FromHarness(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				var doc map[string]any
+				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
+				assert.Equal(t, "claude-code", doc["agent"])
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_harness",
+						Name:      "harness-demo",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_harness").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_harness",
+					Name:      "harness-demo",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "harness-demo")
 		assert.NoError(t, RunAgentsStart(config))
 	})
 }
@@ -220,6 +311,19 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -235,7 +339,7 @@ func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
 	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
 	// required-flag check, so the FromConfigID runner tests cannot catch this.
 	require.False(t, viper.GetBool("required.agents.start.spec"),
-		"spec is still marked required; `doctl agents start --config-id` fails with (agents.start.spec) command is missing required arguments")
+		"spec is still marked required; `doctl open-harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
 	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
 	require.NoError(t, err)
 }
@@ -254,6 +358,20 @@ func TestRunAgentsStart_FromConfigID(t *testing.T) {
 					ConfigID:  "cfg_abc123",
 				},
 			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					ConfigID:  "cfg_abc123",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -280,11 +398,11 @@ func TestRunAgentsStart_SpecAndConfigIDMutuallyExclusive(t *testing.T) {
 	})
 }
 
-func TestRunAgentsStart_RequiresSpecOrConfigID(t *testing.T) {
+func TestRunAgentsStart_RequiresSource(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunAgentsStart(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "one of --spec or --config-id is required")
+		assert.Contains(t, err.Error(), "one of --harness, --spec, or --config-id is required")
 	})
 }
 
@@ -406,6 +524,19 @@ func TestRunAgentsStart_FlatWithName(t *testing.T) {
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
 			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_test").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_test",
+					Name:      "my-session",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
@@ -416,7 +547,31 @@ func TestRunAgentsStart_FlatWithName(t *testing.T) {
 func TestRunAgentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
 		assert.NoError(t, RunAgentsList(config))
+		assert.Contains(t, buf.String(), "No sessions")
+	})
+}
+
+func TestRunAgentsList_StyledText(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_1",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+			}},
+		}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
+		assert.NoError(t, RunAgentsList(config))
+		got := buf.String()
+		assert.Contains(t, got, "1 session")
+		assert.Contains(t, got, "demo")
+		assert.Contains(t, got, "ready")
+		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
 
@@ -501,10 +656,22 @@ func TestRunAgentsList_NameFilter(t *testing.T) {
 func TestRunAgentsShow(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(&do.HostedAgentSession{
-			HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test"},
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_test",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+			},
 		}, nil)
 		config.Args = []string{"sess_test"}
+		var buf bytes.Buffer
+		config.Out = &buf
 		assert.NoError(t, RunAgentsShow(config))
+		got := buf.String()
+		assert.Contains(t, got, "demo")
+		assert.Contains(t, got, "ready")
+		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
+		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
 
@@ -1404,7 +1571,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 	typewrite := func(t *testing.T, state *attachState, s string) {
 		t.Helper()
 		for i := 0; i < len(s); i++ {
-			stop, err := handleAttachByte(nil, nil, "sess", s[i], state)
+			stop, err := handleAttachByte(nil, nil, "sess", s[i], state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 		}
@@ -1412,7 +1579,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 	arrow := func(t *testing.T, state *attachState, dir byte) {
 		t.Helper()
 		for _, b := range []byte{0x1b, '[', dir} {
-			stop, err := handleAttachByte(nil, nil, "sess", b, state)
+			stop, err := handleAttachByte(nil, nil, "sess", b, state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 		}
@@ -1456,7 +1623,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 		typewrite(t, state, "abcd")
 		arrow(t, state, 'D')
 		arrow(t, state, 'D') // caret before 'c'
-		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state)
+		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state, nil)
 		assert.NoError(t, err)
 		assert.False(t, stop)
 		assert.Equal(t, "acd", string(state.lineBuf))
@@ -1472,11 +1639,89 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			typewrite(t, state, "hi")
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Equal(t, "", string(state.lineBuf))
 			assert.Equal(t, 0, state.cursor)
+		})
+	})
+
+	t.Run("bracketed paste buffers multiline input into one submit", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "first line\nsecond line"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			for _, b := range []byte("\x1b[200~first line\r\nsecond line\x1b[201~") {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+			assert.Equal(t, "first line\nsecond line", string(state.lineBuf))
+
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Equal(t, "", string(state.lineBuf))
+			assert.Equal(t, 0, state.cursor)
+		})
+	})
+
+	t.Run("large multiline paste requires confirmation", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			text := "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6"
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: text}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			require.NotNil(t, state.largePasteConfirmation())
+
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'y', state, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Nil(t, state.largePasteConfirmation())
+		})
+	})
+
+	t.Run("large multiline paste can fall back to line by line", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			for i := 1; i <= 6; i++ {
+				tm.hostedAgents.EXPECT().
+					SendInput("sess", &godo.HostedAgentSendInputRequest{Text: fmt.Sprintf("Line %d", i)}).
+					Return(&godo.HostedAgentSendInputResponse{RunID: fmt.Sprintf("run_%d", i)}, nil)
+			}
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			require.NotNil(t, state.largePasteConfirmation())
+
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'n', state, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+			assert.Nil(t, state.largePasteConfirmation())
 		})
 	})
 }
@@ -1542,6 +1787,49 @@ func TestAttachLoopAcknowledgesSend(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
+}
+
+func TestAttachLoopBatchesRapidMultilineInput(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		prev := attachLineBatchWindow
+		attachLineBatchWindow = 5 * time.Millisecond
+		defer func() { attachLineBatchWindow = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		tm.hostedAgents.EXPECT().
+			SendInput("sess_x", &godo.HostedAgentSendInputRequest{Text: "Line A\nLine B\nLine C"}).
+			Return(&godo.HostedAgentSendInputResponse{RunID: "run-abc"}, nil)
+
+		err := attachLoop(config, config.HostedAgents(), "sess_x",
+			strings.NewReader("Line A\nLine B\nLine C\n"), testAttachStateFromPending(nil))
+		assert.NoError(t, err)
+		assert.Contains(t, buf.String(), "Detected rapid multiline input")
+		assert.Contains(t, buf.String(), "waiting for the agent")
+	})
+}
+
+func TestConfirmLargePasteLineMode(t *testing.T) {
+	lines := make(chan attachLineRead, 1)
+	lines <- attachLineRead{line: "y\n"}
+	close(lines)
+	var pending *attachLineRead
+	var buf bytes.Buffer
+	decision, err := confirmLargePasteLineMode(&buf, 6, lines, &pending)
+	require.NoError(t, err)
+	assert.Equal(t, largePasteSendTogether, decision)
+	assert.Contains(t, buf.String(), "You pasted 6 lines. Send them together as one message?")
+}
+
+func TestConfirmLargePasteLineModeDefaultSeparate(t *testing.T) {
+	lines := make(chan attachLineRead, 1)
+	lines <- attachLineRead{line: "n\n"}
+	close(lines)
+	var pending *attachLineRead
+	var buf bytes.Buffer
+	decision, err := confirmLargePasteLineMode(&buf, 6, lines, &pending)
+	require.NoError(t, err)
+	assert.Equal(t, largePasteSendSeparately, decision)
 }
 
 // TestAttachLoopHITLLetterShortcut covers the line-mode HITL path. The
@@ -2083,6 +2371,28 @@ func TestPromptDisplay(t *testing.T) {
 		assert.Equal(t, "\r\x1b[K⠋ thinking...\r\n> ", buf.String())
 		assert.False(t, s.display.midLine)
 	})
+
+	t.Run("warmupInit reserves spinner and queued rows above the prompt", func(t *testing.T) {
+		var buf bytes.Buffer
+		pending := &pendingHITL{}
+		s := newAttachState(&buf, pending)
+		s.display.setRaw(true)
+
+		s.display.warmupInit("⠋", msgAgentWarmup)
+		assert.Contains(t, buf.String(), msgAgentWarmup)
+		assert.Contains(t, buf.String(), "> ")
+
+		buf.Reset()
+		s.display.warmupSetPhase("provisioning sandbox")
+		assert.Contains(t, buf.String(), "provisioning sandbox")
+		assert.Contains(t, buf.String(), "> ")
+
+		buf.Reset()
+		s.display.warmupSetQueued(msgAgentWarmupQueued)
+		assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+		assert.Contains(t, buf.String(), "> ")
+		assert.Equal(t, 3, s.display.warmupStatusLines)
+	})
 }
 
 func TestEventCursor(t *testing.T) {
@@ -2101,7 +2411,7 @@ func TestEventCursor(t *testing.T) {
 }
 
 // TestRunAgentsAttachAuthFailure: a 401 from pre-attach GetSession surfaces
-// the friendly "Authentication failed" message, not the raw HTTP error.
+// a styled agentPrettyError, not the raw godo METHOD/URL dump.
 func TestRunAgentsAttachAuthFailure(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		authErr := &godo.ErrorResponse{
@@ -2116,8 +2426,13 @@ func TestRunAgentsAttachAuthFailure(t *testing.T) {
 		config.Args = []string{"sess_x"}
 		err := RunAgentsAttach(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Authentication failed")
-		assert.Contains(t, err.Error(), "doctl auth init")
+		var pretty *agentPrettyError
+		require.True(t, errors.As(err, &pretty))
+		assert.Equal(t, "Authentication failed", pretty.title)
+		assert.Contains(t, pretty.tips, "doctl auth init")
+		display := pretty.DisplayError()
+		assert.Contains(t, display, "Authentication failed")
+		assert.NotContains(t, display, "GET http://")
 	})
 }
 
@@ -2203,7 +2518,7 @@ func TestClassifyStreamError(t *testing.T) {
 			name:        "409 conflict is the V0 single-connection rejection",
 			err:         mkErr(http.StatusConflict, "already attached on device abc-123 since 2026-06-24T10:00:00Z"),
 			wantTermini: true,
-			wantSubstr:  "Session already attached on another device",
+			wantSubstr:  "Session already attached elsewhere",
 		},
 		{
 			name:        "500 is transient",
@@ -2872,6 +3187,102 @@ func TestWarmupState_showsForYoungSessions(t *testing.T) {
 	assert.NotContains(t, buf.String(), "You can type anytime")
 }
 
+func TestWarmupState_noteQueuedUpdatesNotice(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+
+	w.start()
+	assert.Contains(t, buf.String(), msgAgentWarmup)
+	assert.NotContains(t, buf.String(), msgAgentWarmupQueued)
+
+	buf.Reset()
+	w.noteQueued()
+	assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+
+	// Further typing keeps the prompt in sync with the warm-up block.
+	buf.Reset()
+	stop, err := handleAttachByte(nil, nil, "sess", 'i', state, w)
+	assert.NoError(t, err)
+	assert.False(t, stop)
+	assert.Contains(t, buf.String(), "> i")
+}
+
+func TestWarmupState_blocksDuplicateSubmit(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "2+2"}).
+			Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		w := newWarmupState(state.display, now.Add(-30*time.Second))
+		w.start()
+
+		for _, b := range []byte("2+2") {
+			_, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, w)
+			assert.NoError(t, err)
+		}
+		stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.True(t, w.inputAlreadyQueued())
+
+		stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+	})
+}
+
+func TestHandleOpenAIAttachByte_warmupQueuedNotice(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+	w.start()
+
+	stop, err := handleOpenAIAttachByte(nil, context.Background(), nil, "", "sess_openai", '4', state, nil, w)
+	assert.NoError(t, err)
+	assert.False(t, stop)
+	assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+	assert.Contains(t, buf.String(), "> 4")
+}
+
+func TestWarmupState_markInputQueuedDismissesBanner(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+	w.start()
+	assert.True(t, w.isBannerVisible())
+
+	w.markInputQueued()
+	assert.True(t, w.inputAlreadyQueued())
+	assert.True(t, w.isBannerVisible())
+	assert.True(t, w.isActive())
+}
+
 func TestWarmupState_clearsOnTimeout(t *testing.T) {
 	oldClock := warmupClock
 	oldDur := warmupDuration
@@ -2914,7 +3325,9 @@ func TestWarmupState_startAfterClearIsNoop(t *testing.T) {
 
 	var buf bytes.Buffer
 	w := newWarmupState(&buf, now)
+	w.start()
 	w.clear()
+	buf.Reset()
 	w.start()
 	assert.Empty(t, buf.String())
 }
@@ -2963,5 +3376,41 @@ func TestDrainStream_sessionUpdatedDoesNotClearWarmup(t *testing.T) {
 
 	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
 	assert.True(t, warmup.active, "session.updated must not dismiss the warm-up notice")
+	assert.Contains(t, buf.String(), "syncing session")
+	assert.NotContains(t, buf.String(), "• session updated")
 	warmup.clear()
+}
+
+func TestDrainStream_sandboxAllocatedUpdatesWarmup(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindRunSandboxAllocated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+	assert.True(t, warmup.active, "sandbox_allocated must not dismiss warm-up")
+	assert.Contains(t, buf.String(), "sandbox allocated")
+	warmup.clear()
+}
+
+func TestBackendPhaseFromStatus(t *testing.T) {
+	assert.Equal(t, "provisioning sandbox", backendPhaseFromStatus(godo.HostedAgentSessionStatusProvisioning))
+	assert.Equal(t, "sandbox ready · starting agent", backendPhaseFromStatus(godo.HostedAgentSessionStatusReady))
+}
+
+func TestSessionUpdatedPhase(t *testing.T) {
+	assert.Equal(t, "provisioning sandbox", sessionUpdatedPhase([]byte(`{"status":"SESSION_STATUS_PROVISIONING"}`)))
+	assert.Equal(t, "cloning repo", sessionUpdatedPhase([]byte(`{"message":"cloning repo"}`)))
 }

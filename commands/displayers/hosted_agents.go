@@ -21,7 +21,7 @@ import (
 )
 
 // HostedAgentSession wraps one or more hosted-agent sessions for display. The
-// same struct backs `doctl agents start`, `... show`, and `... list` — a slice
+// same struct backs `doctl open-harness-runtime start`, `... show`, and `... list` — a slice
 // of len 1 vs len N is the only difference between them.
 // Set Single=true for get/create verbs so JSON output is a bare object;
 // leave false (default) for list so JSON output is always an array.
@@ -137,7 +137,7 @@ func (h *HostedAgentCheckpoint) KV() []map[string]any {
 	return out
 }
 
-// HostedAgentWorkspaceUpload renders the result of `doctl agents upload`.
+// HostedAgentWorkspaceUpload renders the result of `doctl open-harness-runtime upload`.
 // Upload is single-file-only today (Uploads always has exactly one element),
 // so JSON() defaults to list semantics (always an array) like every other
 // list-shaped displayer; set Single=true if a future bare-object verb needs it
@@ -185,7 +185,59 @@ func (h *HostedAgentWorkspaceUpload) KV() []map[string]any {
 	return out
 }
 
-// HostedAgentConfig renders full Agent Configs, backing `doctl agents config
+// HostedAgentSandboxExec renders the result of `doctl open-harness-runtime exec`
+// under `-o json`. Text output never reaches this displayer: the command passes
+// the guest's stdout and stderr straight through instead, so it composes in a
+// pipeline.
+//
+// Single is always set by the exec verb (one command, one result), but the field
+// is kept explicit rather than unwrapping on len==1, so the JSON container type
+// never changes with the row count (MARSOHS-869/887).
+type HostedAgentSandboxExec struct {
+	Execs  []*godo.HostedAgentSandboxExecResponse
+	Single bool
+}
+
+var _ Displayable = &HostedAgentSandboxExec{}
+
+func (h *HostedAgentSandboxExec) JSON(out io.Writer) error {
+	if h.Single && len(h.Execs) == 1 {
+		return writeJSON(h.Execs[0], out)
+	}
+	return writeJSON(h.Execs, out)
+}
+
+func (h *HostedAgentSandboxExec) Cols() []string {
+	return []string{"ExitCode", "Stdout", "Stderr"}
+}
+
+func (h *HostedAgentSandboxExec) ColMap() map[string]string {
+	return map[string]string{
+		"ExitCode": "ExitCode",
+		"Stdout":   "Stdout",
+		"Stderr":   "Stderr",
+	}
+}
+
+func (h *HostedAgentSandboxExec) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Execs))
+	for _, e := range h.Execs {
+		if e == nil {
+			continue
+		}
+		out = append(out, map[string]any{
+			"ExitCode": e.ExitCode,
+			"Stdout":   e.Stdout,
+			"Stderr":   e.Stderr,
+		})
+	}
+	return out
+}
+
+// HostedAgentConfig renders full Agent Configs, backing `doctl open-harness-runtime config
 // get` and `... create`. Set Single=true so those verbs emit a bare JSON
 // object; the list verb uses HostedAgentConfigSummary instead.
 type HostedAgentConfig struct {
@@ -236,7 +288,7 @@ func (h *HostedAgentConfig) KV() []map[string]any {
 }
 
 // HostedAgentConfigSummary renders the list view of Agent Configs (no manifest
-// or credential slots), backing `doctl agents config list`.
+// or credential slots), backing `doctl open-harness-runtime config list`.
 type HostedAgentConfigSummary struct {
 	Configs []godo.HostedAgentConfigSummary
 }
@@ -275,6 +327,45 @@ func (h *HostedAgentConfigSummary) KV() []map[string]any {
 			"ContentHash":   c.ContentHash,
 			"CreatedBy":     c.CreatedBy,
 			"CreatedAt":     c.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		})
+	}
+	return out
+}
+
+// HostedAgentSandboxSize renders the sandbox size catalog for
+// `doctl open-harness-runtime sizes list`.
+type HostedAgentSandboxSize struct {
+	Sizes []godo.HostedAgentSandboxSize
+}
+
+var _ Displayable = &HostedAgentSandboxSize{}
+
+func (h *HostedAgentSandboxSize) JSON(out io.Writer) error {
+	return writeJSON(h.Sizes, out)
+}
+
+func (h *HostedAgentSandboxSize) Cols() []string {
+	return []string{"Slug", "VCPUs", "MemoryMB"}
+}
+
+func (h *HostedAgentSandboxSize) ColMap() map[string]string {
+	return map[string]string{
+		"Slug":     "Slug",
+		"VCPUs":    "VCPUs",
+		"MemoryMB": "Memory (MB)",
+	}
+}
+
+func (h *HostedAgentSandboxSize) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Sizes))
+	for _, s := range h.Sizes {
+		out = append(out, map[string]any{
+			"Slug":     s.Slug,
+			"VCPUs":    s.VCPUs,
+			"MemoryMB": s.MemoryMB,
 		})
 	}
 	return out

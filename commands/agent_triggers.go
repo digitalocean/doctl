@@ -26,54 +26,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentTriggers generates the `doctl agents triggers` subtree.
+// AgentTriggers generates the `doctl open-harness-runtime triggers` subtree.
 func AgentTriggers() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "triggers",
 			Aliases: []string{"trigger"},
 			Short:   "Manage webhook and cron triggers for hosted agent runs",
-			Long: `The ` + "`" + `doctl agents triggers` + "`" + ` commands manage team-scoped webhook and cron triggers that start hosted agent runs.
-
-Webhook triggers expose a signed ingress URL (HMAC / provider token) for external systems. Cron triggers fire on a schedule. Each trigger either creates a fresh session per firing (` + "`" + `session-mode=fresh` + "`" + `) or resumes a bound paused session (` + "`" + `session-mode=reuse` + "`" + `).
-
-The public webhook ingress endpoint is authenticated by the per-trigger secret, not a DO bearer token — doctl does not call it; configure the secret in your external system.`,
+			Long:    agentsTriggersRootHelpMD,
 		},
 	}
 
 	cmdList := CmdBuilder(cmd, RunAgentTriggersList, "list",
 		"List triggers",
-		`Lists the team's triggers. Soft-deleted triggers are omitted. Supports `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, `+"`"+`--kind`+"`"+`, and `+"`"+`--status`+"`"+`.`,
-		Writer, aliasOpt("ls"),
+		agentsTriggersListHelpMD,
+		Writer, agentPrettyErrors(), aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of triggers to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentTriggerKind, "", "", "Filter by kind (webhook|cron)")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by status (active|paused)")
-	cmdList.Example = `doctl agents triggers list --kind webhook --status active`
+	cmdList.Example = `doctl open-harness-runtime triggers list --kind webhook --status active`
 
 	cmdCreate := CmdBuilder(cmd, RunAgentTriggersCreate, "create",
 		"Create a webhook or cron trigger",
-		`Creates a webhook or cron trigger.
-
-Required: `+"`"+`--kind`+"`"+`, `+"`"+`--name`+"`"+`, `+"`"+`--session-mode`+"`"+`, `+"`"+`--prompt`+"`"+`, `+"`"+`--output-mode`+"`"+`.
-
-Session mode:
-  - fresh: pass `+"`"+`--spec`+"`"+` (agents.yaml Agent manifest); a new session is created on each fire
-  - reuse: pass `+"`"+`--bound-session-id`+"`"+` (a PAUSED session); use `+"`"+`list-reusable-sessions`+"`"+` to find candidates
-
-Kind:
-  - webhook: optional `+"`"+`--provider`+"`"+` (github|gitlab|custom; default custom). Response includes webhook_secret once.
-  - cron: `+"`"+`--cron-expr`+"`"+` and `+"`"+`--timezone`+"`"+` required; prompt must not use payload placeholders
-
-Output:
-  - none: no push delivery
-  - email: requires `+"`"+`--output-email`+"`"+`
-  - slack: requires `+"`"+`--output-slack-webhook`+"`"+`.`,
-		Writer,
+		agentsTriggersCreateHelpMD,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerKind, "", "", "Trigger kind (webhook|cron)", requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Unique trigger name for the team", requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Unique trigger name for the team (1–64 letters/digits/`-`/`.`/`_`, start and end alphanumeric, not a UUID)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerSessionMode, "", "", "Session mode (fresh|reuse)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerPrompt, "", "", "Prompt template sent on each fire", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerOutputMode, "", "none", "Output delivery mode (none|email|slack)")
@@ -84,22 +65,20 @@ Output:
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerProvider, "", "", "Webhook provider (github|gitlab|custom); default custom")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerCronExpr, "", "", "Cron expression when kind=cron")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerTimezone, "", "", "IANA timezone when kind=cron (e.g. America/New_York)")
-	cmdCreate.Example = `doctl agents triggers create --kind webhook --name gh-ci --session-mode fresh --prompt 'Review this PR: {{payload}}' --spec ./agent.yaml --provider github`
+	cmdCreate.Example = `doctl open-harness-runtime triggers create --kind webhook --name gh-ci --session-mode fresh --prompt 'Review this PR: {{payload}}' --spec ./agent.yaml --provider github`
 
 	CmdBuilder(cmd, RunAgentTriggersGet, "get <trigger-id>",
 		"Get a trigger",
 		"Shows details for one trigger by ID.",
-		Writer, aliasOpt("show"),
+		Writer, agentPrettyErrors(), aliasOpt("show"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	cmdUpdate := CmdBuilder(cmd, RunAgentTriggersUpdate, "update <trigger-id>",
 		"Update a trigger",
-		`Partially updates a trigger. Only supplied flags change. Kind and webhook provider are immutable.
-
-Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `+"`"+`pause`+"`"+` / `+"`"+`resume`+"`"+` commands.`,
-		Writer,
+		agentsTriggersUpdateHelpMD,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
-	AddStringFlag(cmdUpdate, doctl.ArgAgentName, "", "", "New unique trigger name")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentName, "", "", "New unique trigger name (same identifier rules as create)")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentStatus, "", "", "Lifecycle status (active|paused)")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerPrompt, "", "", "Updated prompt template")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerOutputMode, "", "", "Output delivery mode (none|email|slack)")
@@ -109,67 +88,67 @@ Pause/re-enable via `+"`"+`--status paused|active`+"`"+`, or use the dedicated `
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Updated bound session ID for reuse triggers")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerCronExpr, "", "", "Updated cron expression")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerTimezone, "", "", "Updated IANA timezone")
-	cmdUpdate.Example = `doctl agents triggers update TRIGGER_ID --status paused; doctl agents triggers update TRIGGER_ID --prompt 'New prompt'`
+	cmdUpdate.Example = `doctl open-harness-runtime triggers update TRIGGER_ID --status paused; doctl open-harness-runtime triggers update TRIGGER_ID --prompt 'New prompt'`
 
 	cmdDelete := CmdBuilder(cmd, RunAgentTriggersDelete, "delete <trigger-id>",
 		"Delete a trigger",
-		"Soft-deletes a trigger, fails pending executions, and purges the webhook secret / cron schedule. A reuse trigger unbinds its session; it does not destroy the session.",
-		Writer, aliasOpt("rm"))
+		agentsTriggersDeleteHelpMD,
+		Writer, agentPrettyErrors(), aliasOpt("rm"))
 	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete without confirmation")
-	cmdDelete.Example = `doctl agents triggers delete TRIGGER_ID --force`
+	cmdDelete.Example = `doctl open-harness-runtime triggers delete TRIGGER_ID --force`
 
 	CmdBuilder(cmd, RunAgentTriggersPause, "pause <trigger-id>",
 		"Pause a trigger",
-		"Sets status to paused. New deliveries/ticks queue nothing; config and any bound session are untouched.",
-		Writer,
+		agentsTriggersPauseHelpMD,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	CmdBuilder(cmd, RunAgentTriggersResume, "resume <trigger-id>",
 		"Resume a paused trigger",
-		"Sets status to active. Resumes on the next event/tick with no catch-up run. For cron, next_run_at is recomputed to the next future tick.",
-		Writer, aliasOpt("activate", "enable"),
+		agentsTriggersResumeHelpMD,
+		Writer, agentPrettyErrors(), aliasOpt("activate", "enable"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	cmdRotate := CmdBuilder(cmd, RunAgentTriggersRotateSecret, "rotate-secret <trigger-id>",
 		"Rotate a webhook trigger's secret",
-		"Issues a new webhook secret (shown once) and immediately revokes the old one. Webhook triggers only. Update your external system with the new secret. Use --allow-grace only for routine key-hygiene rotations, never after a secret is compromised.",
-		Writer)
+		agentsTriggersRotateSecretHelpMD,
+		Writer, agentPrettyErrors())
 	AddBoolFlag(cmdRotate, doctl.ArgAgentAllowGrace, "", false, "Preserve the old secret for a short grace window so in-flight deliveries keep verifying. Never use after a secret is compromised.")
 
 	cmdListExec := CmdBuilder(cmd, RunAgentTriggersListExecutions, "list-executions <trigger-id>",
 		"List a trigger's execution history",
-		`Lists firings for a trigger. Payload and run output are omitted from list items; use `+"`"+`get-execution`+"`"+` to read them.`,
-		Writer, aliasOpt("executions"),
+		agentsTriggersListExecutionsHelpMD,
+		Writer, agentPrettyErrors(), aliasOpt("executions"),
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 	AddIntFlag(cmdListExec, doctl.ArgAgentPageSize, "", 0, "Maximum number of executions to return per page")
 	AddStringFlag(cmdListExec, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdListExec, doctl.ArgAgentStatus, "", "", "Filter by execution status (pending|running|succeeded|failed)")
-	cmdListExec.Example = `doctl agents triggers list-executions TRIGGER_ID --status failed`
+	cmdListExec.Example = `doctl open-harness-runtime triggers list-executions TRIGGER_ID --status failed`
 
 	CmdBuilder(cmd, RunAgentTriggersGetExecution, "get-execution <trigger-id> <execution-id>",
 		"Get a single trigger execution",
-		"Returns one execution including payload and rendered output_text when available.",
-		Writer,
+		agentsTriggersGetExecutionHelpMD,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 
 	CmdBuilder(cmd, RunAgentTriggersGetBySession, "get-by-session <session-id>",
 		"Look up the trigger for a session",
-		"Reverse-looks-up the trigger that produced (fresh) or binds (reuse) a session.",
-		Writer,
+		agentsTriggersGetBySessionHelpMD,
+		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
 	cmdReusable := CmdBuilder(cmd, RunAgentTriggersListReusableSessions, "list-reusable-sessions",
 		"List paused sessions for reuse binding",
-		"Lists the team's PAUSED sessions suitable for session-mode=reuse triggers.",
-		Writer, aliasOpt("reusable-sessions"),
+		agentsTriggersListReusableHelpMD,
+		Writer, agentPrettyErrors(), aliasOpt("reusable-sessions"),
 		displayerType(&displayers.HostedAgentReusableSession{}))
 	AddIntFlag(cmdReusable, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
 	AddStringFlag(cmdReusable, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 
 	CmdBuilder(cmd, RunAgentTriggersListProviders, "list-providers",
 		"List supported webhook providers",
-		"Lists the static webhook provider registry (display name, docs, signature scheme) used when creating webhook triggers.",
-		Writer, aliasOpt("providers"),
+		agentsTriggersListProvidersHelpMD,
+		Writer, agentPrettyErrors(), aliasOpt("providers"),
 		displayerType(&displayers.HostedAgentWebhookProvider{}))
 
 	return cmd
@@ -187,10 +166,16 @@ func RunAgentTriggersList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentTrigger{Triggers: triggers}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentTrigger{Triggers: triggers}); err != nil {
+			return err
+		}
+		return printNextPageToken(c, next)
 	}
-	return printNextPageToken(c, next)
+	stylingEnabled = detectStyling()
+	printTriggersList(c.Out, triggers)
+	printAgentNextPage(c.Out, next)
+	return nil
 }
 
 // RunAgentTriggersCreate creates a webhook or cron trigger.
@@ -220,17 +205,17 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 			WebhookSecret:      result.WebhookSecret,
 		})
 	}
-	// Text mode: banner to stdout, then the trigger table.
-	if result.WebhookSecret != "" {
-		fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(result.WebhookSecret))
-		if result.Trigger != nil && result.Trigger.Webhook != nil && result.Trigger.Webhook.WebhookURL != "" {
-			fmt.Fprintf(c.Out, "Webhook URL:\n%s\n\n", result.Trigger.Webhook.WebhookURL)
-		}
+	stylingEnabled = detectStyling()
+	webhookURL := ""
+	if result.Trigger != nil && result.Trigger.Webhook != nil {
+		webhookURL = result.Trigger.Webhook.WebhookURL
 	}
+	printWebhookSecretCard(c.Out, result.WebhookSecret, webhookURL)
 	if result.Trigger == nil {
 		return nil
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}, Single: true})
+	printTriggerCard(c.Out, result.Trigger, true)
+	return nil
 }
 
 // RunAgentTriggersGet fetches one trigger.
@@ -242,7 +227,12 @@ func RunAgentTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersUpdate partially updates a trigger.
@@ -258,7 +248,12 @@ func RunAgentTriggersUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersDelete soft-deletes a trigger.
@@ -273,7 +268,12 @@ func RunAgentTriggersDelete(c *CmdConfig) error {
 	if !(force || AskForConfirmDelete("trigger", 1) == nil) {
 		return fmt.Errorf("operation aborted")
 	}
-	return c.HostedAgentTriggers().Delete(c.Args[0])
+	if err := c.HostedAgentTriggers().Delete(c.Args[0]); err != nil {
+		return err
+	}
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Deleted trigger %s", c.Args[0]))
+	return nil
 }
 
 // RunAgentTriggersPause sets status=paused.
@@ -294,7 +294,12 @@ func agentTriggersSetStatus(c *CmdConfig, status godo.HostedAgentTriggerStatus) 
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersRotateSecret rotates a webhook secret.
@@ -317,7 +322,8 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 		}
 		return json.NewEncoder(c.Out).Encode(out)
 	}
-	fmt.Fprint(c.Out, displayers.FormatWebhookSecretNotice(secret))
+	stylingEnabled = detectStyling()
+	printWebhookSecretCard(c.Out, secret, "")
 	if previousExpiresAt != "" {
 		fmt.Fprintf(c.Out, "Old secret stops working at: %s\n", previousExpiresAt)
 	}
@@ -337,10 +343,16 @@ func RunAgentTriggersListExecutions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentTriggerExecution{Executions: execs}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentTriggerExecution{Executions: execs}); err != nil {
+			return err
+		}
+		return printNextPageToken(c, next)
 	}
-	return printNextPageToken(c, next)
+	stylingEnabled = detectStyling()
+	printTriggerExecutionsList(c.Out, execs)
+	printAgentNextPage(c.Out, next)
+	return nil
 }
 
 // RunAgentTriggersGetExecution fetches one execution including payload/output.
@@ -355,14 +367,12 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if e.OutputText != "" && Output != "json" {
-		fmt.Fprintln(c.Out, e.OutputText)
-		if e.OutputTruncated {
-			fmt.Fprintln(c.Out, "(output truncated)")
-		}
-		fmt.Fprintln(c.Out)
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
 	}
-	return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
+	stylingEnabled = detectStyling()
+	printTriggerExecutionCard(c.Out, e)
+	return nil
 }
 
 // RunAgentTriggersGetBySession reverse-looks-up a trigger by session ID.
@@ -374,7 +384,12 @@ func RunAgentTriggersGetBySession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerCard(c.Out, t, false)
+	return nil
 }
 
 // RunAgentTriggersListReusableSessions lists PAUSED sessions for reuse binding.
@@ -387,10 +402,16 @@ func RunAgentTriggersListReusableSessions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentReusableSession{Sessions: sessions}); err != nil {
-		return err
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentReusableSession{Sessions: sessions}); err != nil {
+			return err
+		}
+		return printNextPageToken(c, next)
 	}
-	return printNextPageToken(c, next)
+	stylingEnabled = detectStyling()
+	printReusableSessionsList(c.Out, sessions)
+	printAgentNextPage(c.Out, next)
+	return nil
 }
 
 // RunAgentTriggersListProviders lists the webhook provider registry.
@@ -399,7 +420,12 @@ func RunAgentTriggersListProviders(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentWebhookProvider{Providers: providers})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentWebhookProvider{Providers: providers})
+	}
+	stylingEnabled = detectStyling()
+	printWebhookProvidersList(c.Out, providers)
+	return nil
 }
 
 // --- helpers ----------------------------------------------------------------
@@ -411,7 +437,7 @@ func printNextPageToken(c *CmdConfig, next string) error {
 	if Output == "json" {
 		fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
 	} else {
-		fmt.Fprintf(c.Out, "Next page token: %s\n", next)
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), next)
 	}
 	return nil
 }
@@ -512,6 +538,9 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 	if err != nil {
 		return nil, err
 	}
+	if err := validateHostedAgentIdentifier(name); err != nil {
+		return nil, err
+	}
 	sessionMode, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerSessionMode)
 	if err != nil {
 		return nil, err
@@ -544,6 +573,9 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 		}
 		manifest, err := readManifest(os.Stdin, specPath)
 		if err != nil {
+			return nil, err
+		}
+		if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 			return nil, err
 		}
 		req.SessionTemplate = string(manifest)
@@ -600,6 +632,9 @@ func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequ
 	if name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName); err != nil {
 		return nil, err
 	} else if name != "" {
+		if err := validateHostedAgentIdentifier(name); err != nil {
+			return nil, err
+		}
 		update.Name = name
 		changed = true
 	}
@@ -636,6 +671,9 @@ func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequ
 	if specPath != "" {
 		manifest, err := readManifest(os.Stdin, specPath)
 		if err != nil {
+			return nil, err
+		}
+		if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 			return nil, err
 		}
 		update.SessionTemplate = string(manifest)

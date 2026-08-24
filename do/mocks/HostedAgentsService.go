@@ -205,6 +205,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) DestroySession(sessionID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DestroySession", reflect.TypeOf((*MockHostedAgentsService)(nil).DestroySession), sessionID)
 }
 
+// ExecInSandbox mocks base method.
+func (m *MockHostedAgentsService) ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecInSandbox", ctx, sessionID, body)
+	ret0, _ := ret[0].(*godo.HostedAgentSandboxExecResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecInSandbox indicates an expected call of ExecInSandbox.
+func (mr *MockHostedAgentsServiceMockRecorder) ExecInSandbox(ctx, sessionID, body any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecInSandbox", reflect.TypeOf((*MockHostedAgentsService)(nil).ExecInSandbox), ctx, sessionID, body)
+}
+
 // ForkSession mocks base method.
 func (m *MockHostedAgentsService) ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]do.HostedAgentSession, error) {
 	m.ctrl.T.Helper()
@@ -326,6 +341,21 @@ func (m *MockHostedAgentsService) ListCheckpoints(sessionID string, opt *godo.Ho
 func (mr *MockHostedAgentsServiceMockRecorder) ListCheckpoints(sessionID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCheckpoints", reflect.TypeOf((*MockHostedAgentsService)(nil).ListCheckpoints), sessionID, opt)
+}
+
+// ListSandboxSizes mocks base method.
+func (m *MockHostedAgentsService) ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSandboxSizes")
+	ret0, _ := ret[0].([]godo.HostedAgentSandboxSize)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSandboxSizes indicates an expected call of ListSandboxSizes.
+func (mr *MockHostedAgentsServiceMockRecorder) ListSandboxSizes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSandboxSizes", reflect.TypeOf((*MockHostedAgentsService)(nil).ListSandboxSizes))
 }
 
 // ListSessions mocks base method.

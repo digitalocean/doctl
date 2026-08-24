@@ -71,7 +71,12 @@ func checkErr(err error) {
 
 	switch output {
 	default:
-		fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
+		var de displayableError
+		if errors.As(err, &de) {
+			fmt.Fprintln(color.Output, de.DisplayError())
+		} else {
+			fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
+		}
 	case "json":
 		es := outputErrors{
 			Errors: []outputError{

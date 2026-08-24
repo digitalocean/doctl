@@ -27,6 +27,7 @@ const (
 	hostedAgentSessionRequestPath                   = hostedAgentSessionByIDPath + "/request"
 	hostedAgentSessionHITLPath                      = hostedAgentSessionByIDPath + "/hitl/%s"
 	hostedAgentSessionSandboxExecPath               = hostedAgentSessionByIDPath + "/sandbox/exec"
+	hostedAgentSandboxSizesPath                     = hostedAgentsSessionsBasePath + "/sandbox/sizes"
 	hostedAgentSessionPausePath                     = hostedAgentSessionByIDPath + "/pause"
 	hostedAgentSessionResumePath                    = hostedAgentSessionByIDPath + "/resume"
 	hostedAgentSessionWorkspaceUploadPath           = hostedAgentSessionByIDPath + "/workspace/upload"
@@ -101,6 +102,11 @@ type HostedAgentsService interface {
 	// authorized. pollURL is the PollURL returned by StartProviderAuth.
 	PollProviderAuth(context.Context, string, string) (*HostedAgentProviderAuthPoll, *Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
+	// ListSandboxSizes returns the customer-selectable sandbox (microVM) size
+	// catalog (GET /v2/agents/sessions/sandbox/sizes). Every slug is accepted by
+	// CreateSession as spec.sandbox.sizeSlug. Ordered smallest-to-largest; no
+	// pagination.
+	ListSandboxSizes(context.Context) (*HostedAgentSandboxSizesResponse, *Response, error)
 	UploadWorkspace(context.Context, string, *HostedAgentWorkspaceUploadRequest) (*HostedAgentWorkspaceUploadResponse, *Response, error)
 	DownloadWorkspace(context.Context, string, *HostedAgentWorkspaceDownloadRequest) (*HostedAgentWorkspaceDownload, *Response, error)
 
@@ -635,6 +641,21 @@ type HostedAgentSandboxExecResponse struct {
 	Stderr   string `json:"stderr,omitempty"`
 }
 
+// HostedAgentSandboxSize is a customer-selectable sandbox (microVM) size from
+// GET /v2/agents/sessions/sandbox/sizes. Submit Slug as spec.sandbox.sizeSlug
+// on CreateSession; VCPUs and MemoryMB are for display.
+type HostedAgentSandboxSize struct {
+	Slug     string `json:"slug,omitempty"`
+	VCPUs    int    `json:"vcpus,omitempty"`
+	MemoryMB int    `json:"memory_mb,omitempty"`
+}
+
+// HostedAgentSandboxSizesResponse is returned by ListSandboxSizes.
+type HostedAgentSandboxSizesResponse struct {
+	// Sizes is ordered smallest-to-largest.
+	Sizes []HostedAgentSandboxSize `json:"sizes"`
+}
+
 // HostedAgentWorkspaceUploadRequest is the input for UploadWorkspace.
 type HostedAgentWorkspaceUploadRequest struct {
 	// Path is the destination resolved inside the workspace root (/workspace). Required.
@@ -1141,6 +1162,24 @@ func (s *HostedAgentsServiceOp) ExecInSandbox(ctx context.Context, sessionID str
 		return nil, nil, err
 	}
 	root := new(HostedAgentSandboxExecResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// ListSandboxSizes returns the customer-selectable sandbox (microVM) size
+// catalog. The set is the single source of truth shared with create-time
+// validation; every returned slug is accepted as spec.sandbox.sizeSlug.
+// Sizes are ordered smallest-to-largest. The catalog is static and independent
+// of team/session; there is no pagination.
+func (s *HostedAgentsServiceOp) ListSandboxSizes(ctx context.Context) (*HostedAgentSandboxSizesResponse, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, hostedAgentSandboxSizesPath, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentSandboxSizesResponse)
 	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err

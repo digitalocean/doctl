@@ -11,9 +11,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The `doctl agents` subcommand wraps the godo HostedAgents service, which
-// in turn talks to the hosted-agents Harness API. All wire types and the SSE
-// iterator live in godo (hosted_agents.go); this file handles CLI plumbing,
+// The `doctl open-harness-runtime` command (aliases: agent, agents, ohr) wraps the
+// godo HostedAgents service for Managed Agents Runtime Services (M.A.R.S).
+// Wire types and the SSE iterator live in godo; this file handles CLI plumbing,
 // argument parsing, and human-readable rendering of streamed events.
 package commands
 
@@ -208,196 +208,195 @@ func (m *msgAccumulator) flush(out io.Writer) {
 	fmt.Fprint(out, rendered)
 }
 
-// Agents creates the `doctl agents` command tree.
+// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents, ohr).
 func Agents() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "agents",
-			Aliases: []string{"agent"},
-			Short:   "Launch and manage hosted DigitalOcean agent sessions",
-			Long: `The ` + "`" + `doctl agents` + "`" + ` commands manage hosted coding-agent sessions running in DigitalOcean sandboxes.
-
-A session is one long-lived agent process (Claude Code, OpenCode, ...) running inside a workspace sandbox. doctl drives it: starting it from an agent spec, attaching an interactive TUI, listing existing sessions, resolving HITL approvals out of band, and tearing it down.
-
-Commands that act on a single session accept either the session ID or its name. A name must match exactly one session; if it is ambiguous, pass the session ID instead.
-
-These commands talk to the hosted-agents endpoint (` + "`" + `https://ohr-agent.do-ai.run` + "`" + `) rather than ` + "`" + `https://api.digitalocean.com` + "`" + `. Pass ` + "`" + `--api-url` + "`" + ` (or set ` + "`" + `DIGITALOCEAN_API_URL` + "`" + `) to point them somewhere else.`,
+			Use:     agentCmdName,
+			Aliases: []string{"agent", "agents", "ohr"},
+			Short:   "Managed Agents Runtime Services (M.A.R.S)",
+			Long:    agentsRootHelpMD,
 			GroupID: hostedAgentsGroup,
 		},
 	}
 
 	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start",
-		"Start a new agent session",
-		`Creates a new agent session and prints its session id and status. Provide exactly one of `+"`"+`--spec`+"`"+` (a manifest file) or `+"`"+`--config-id`+"`"+` (an existing Agent Config).
-
-With `+"`"+`--config-id`+"`"+`, the session is started from a previously created Agent Config (see `+"`"+`doctl agents config`+"`"+`) without re-supplying the manifest; `+"`"+`--name`+"`"+` is required in that mode.
-
-The `+"`"+`--spec`+"`"+` flag accepts a flat agents.yaml manifest: no envelope, a top-level `+"`"+`agent:`+"`"+` key naming the coding agent, snake_case keys, and duration strings (`+"`"+`idle_timeout: 10m`+"`"+`). The minimal manifest is a single line:
-
-  agent: opencode
-
-`+"`"+`${VAR}`+"`"+` references in the manifest are resolved from your local environment before upload; referencing an unset variable is an error, and `+"`"+`$${VAR}`+"`"+` escapes to a literal `+"`"+`${VAR}`+"`"+`. The expanded manifest is then sent to the server, which owns parsing and validation.
-
-The legacy `+"`"+`agents.digitalocean.com/v1alpha1`+"`"+` envelope format (`+"`"+`apiVersion`+"`"+`/`+"`"+`kind`+"`"+`/`+"`"+`metadata`+"`"+`/`+"`"+`spec`+"`"+`) is deprecated: it is still accepted, but doctl prints a deprecation notice and the server appends a warning to the session; it will be rejected after the transition window.
-
-For `+"`"+`agent: codex-agentapi`+"`"+` (OpenAI sandbox provider), doctl first creates an OpenAI Agents session using the manifest's `+"`"+`config`+"`"+` block (legacy: `+"`"+`spec.runtime.config`+"`"+` or `+"`"+`spec.openai`+"`"+`) and `+"`"+`$OPENAI_API_KEY`+"`"+`, injects the returned environment id into `+"`"+`${ENV_ID}`+"`"+`, and passes the OpenAI session id to DigitalOcean as `+"`"+`?openai_session_id=`+"`"+`.
-
-Use `+"`"+`--name`+"`"+` to name the session (this sets the manifest's `+"`"+`name`+"`"+`; `+"`"+`metadata.name`+"`"+` in the legacy envelope). If omitted, the server auto-generates a name. The name must be unique among your team's active sessions, and once set you can reference the session by name in other commands (e.g. `+"`"+`doctl agents attach <name>`+"`"+`).
-
-Add inline Agent Skills via `+"`"+`skills`+"`"+`, a list of skill objects with `+"`"+`name`+"`"+`, `+"`"+`description`+"`"+`, and `+"`"+`instructions`+"`"+` (plus optional `+"`"+`license`+"`"+`, `+"`"+`metadata`+"`"+`, `+"`"+`allowed_tools`+"`"+`). `+"`"+`instructions`+"`"+` is advisory context for the agent, not a security boundary -- use `+"`"+`permissions`+"`"+` for enforcement. Example:
-
-  agent: opencode
-  skills:
-    - name: pr-style-guide
-      description: Our team's pull request description conventions
-      instructions: |
-        Summarize the change in 1-2 sentences before the details.
-        Link related issues with "Fixes #123" syntax.`,
-		Writer, aliasOpt("deploy"),
-		displayerType(&displayers.HostedAgentSession{}))
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --config-id; exactly one is required.`)
-	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from, instead of --spec. Requires --name. Mutually exclusive with --spec.")
-	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session (sets the manifest's name). If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
+		"Start a new session",
+		agentsStartHelpMD,
+		Writer, agentsNS(aliasOpt("deploy"),
+			displayerType(&displayers.HostedAgentSession{}))...)
+	AddStringFlag(cmdStart, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Builds the manifest for you. Mutually exclusive with --spec and --config-id.")
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --config-id.`)
+	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from. Requires --name. Mutually exclusive with --harness and --spec.")
+	AddStringFlag(cmdStart, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
+	AddStringFlag(cmdStart, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
+	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
+	AddIntFlag(cmdStart, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json.")
+	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
+	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	cmdStart.Example = `doctl agents start --spec agent-spec.yaml --name my-session; doctl agents start --config-id cfg_abc123 --name my-session`
+	cmdStart.Example = agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --spec agent-spec.yaml --name my-session; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
+
+	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate",
+		"Validate an agent manifest",
+		agentsValidateHelpMD,
+		Writer, agentsNS()...)
+	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope). Set to "-" to read from stdin.`, requiredOpt())
+	cmdValidate.Example = agentCLI + ` validate --spec agent.yaml`
+
+	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run",
+		"Start one session and attach",
+		agentsRunHelpMD,
+		Writer, agentsNS(aliasOpt("up"))...)
+	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec and --config-id.")
+	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness or --config-id. Same format as start --spec (flat: top-level name + agent).`)
+	AddStringFlag(cmdRun, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to run from, instead of --harness/--spec. Requires --name.")
+	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
+	AddStringFlag(cmdRun, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
+	AddStringFlag(cmdRun, doctl.ArgAgentName, "", "", "Session name (required with --config-id; otherwise auto-generated when omitted). On flat manifests sets top-level name; on legacy envelopes sets metadata.name. Must be unique among active sessions.")
+	AddBoolFlag(cmdRun, doctl.ArgAgentNoAttach, "", false, "Wait for readiness but do not attach")
+	AddIntFlag(cmdRun, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default)")
+	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
+	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
+	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+	cmdRun.Example = agentCLI + ` run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; ` + agentCLI + ` run --config-id cfg_abc123 --name my-session --prompt "Review the README"`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
-		"Run a local facade that lets a coding-agent CLI drive a hosted session",
-		`Starts a local WebSocket server that impersonates a coding-agent's own app-server protocol, so the unmodified CLI can attach to a hosted session as if it were a local backend.
-
-`+"`"+`--type`+"`"+` selects which protocol to impersonate (v1: `+"`"+`codex`+"`"+` only; future agents get their own facade behind this same command, not a new command). Once `+"`"+`start-proxy`+"`"+` is listening, connect the real CLI, e.g. `+"`"+`codex --remote ws://127.0.0.1:1144`+"`"+`.
-
-Tested against `+"`"+`codex-cli `+codex.TestedVersion+"`"+`. Codex's WS/app-server transport is officially experimental and can change without notice — re-verify the protocol capture on every codex upgrade before trusting this against a newer CLI.
-
-Run only one of the proxy and `+"`"+`doctl agents attach`+"`"+` per session from the same machine: both stream as this device, so the newer one takes the session over and the older stops. Close one before opening the other.`,
-		Writer)
-	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to impersonate (v1: codex)")
+		"Bridge the Codex CLI to a hosted session",
+		agentsStartProxyHelpMD,
+		Writer, agentsNS()...)
+	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to bridge (v1: codex)")
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
 	AddIntFlag(cmdStartProxy, doctl.ArgAgentProxyPort, "", 1144, "Local port to listen on")
 	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect")
-	cmdStartProxy.Example = `doctl agents start-proxy --type codex --session my-session --port 1144`
+	cmdStartProxy.Example = agentCLI + ` start-proxy --type codex --session my-session --port 1144`
 
 	cmdAttach := CmdBuilder(cmd, RunAgentsAttach, "attach <session>",
-		"Attach to an agent session",
-		`Opens an interactive line-mode TUI on an existing session. Streams events from the server and accepts typed input. If the SSE connection drops, doctl shows Reconnecting... and retries automatically (5 attempts with backoff). If reconnection fails, it prints an error and stops the stream.
-
-For OpenAI sandbox-provider sessions (`+"`"+`AGENT_KIND_OPENAI_CODEX`+"`"+`), attach bridges to the OpenAI Agents session (using `+"`"+`$OPENAI_API_KEY`+"`"+`) instead of DigitalOcean's event stream.
-
-When a HITL approval is pending, the prompt switches to a compact approve/reject/defer menu showing the command awaiting approval. In an interactive terminal you can move the highlight with the arrow keys and press Enter, or resolve directly with a single keystroke -- no Enter required: `+"`"+`y`+"`"+`/`+"`"+`a`+"`"+` approves, `+"`"+`n`+"`"+`/`+"`"+`r`+"`"+` rejects, `+"`"+`d`+"`"+` defers. Piped input (CI / scripts) must send the letter word (`+"`"+`yes`+"`"+`/`+"`"+`no`+"`"+`/`+"`"+`defer`+"`"+`) followed by a newline. The explicit `+"`"+`/a <request-id>`+"`"+`, `+"`"+`/r <request-id>`+"`"+`, `+"`"+`/d <request-id>`+"`"+` slash commands still work; type `+"`"+`/help`+"`"+` to see them. Ctrl-D detaches without destroying the session.`,
-		Writer, aliasOpt("chat"))
-	cmdAttach.Example = `doctl agents attach sess_abc123; doctl agents attach my-session-name`
+		"Attach to a session",
+		agentsAttachHelpMD,
+		Writer, agentsNS(aliasOpt("chat"))...)
+	cmdAttach.Example = agentCLI + ` attach sess_abc123; ` + agentCLI + ` attach my-session-name`
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
-		"List agent sessions",
-		`Lists agent sessions visible to the caller. Supports pagination and filtering via `+"`"+`--page-size`+"`"+`, `+"`"+`--page-token`+"`"+`, `+"`"+`--status`+"`"+`, and `+"`"+`--name`+"`"+`. When more pages exist, the next page token is printed after the table.`,
-		Writer, aliasOpt("ls"),
-		displayerType(&displayers.HostedAgentSession{}))
+		"List your sessions",
+		agentsListHelpMD,
+		Writer, agentsNS(aliasOpt("ls"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of sessions to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	cmdList.Example = `doctl agents list --page-size 10 --status SESSION_STATUS_READY; doctl agents list --name demo-agent; doctl agents list --parent-session-id sess_abc123`
+	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
-		"Show a single agent session",
-		"Prints details of one agent session.",
-		Writer, aliasOpt("get"),
-		displayerType(&displayers.HostedAgentSession{}))
+		"Show one session",
+		agentsShowHelpMD,
+		Writer, agentsNS(aliasOpt("get"),
+			displayerType(&displayers.HostedAgentSession{}))...)
 
 	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the event history for a session",
-		"Replays the server-side event history for a session, then exits. History is retained for a bounded window, so a session that has been idle for a long time, or one with an unusually long transcript, may replay only its more recent activity.",
-		Writer)
+		agentsLogsHelpMD,
+		Writer, agentsNS()...)
 
 	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
-		"Approves, rejects, or defers a pending HITL request without attaching the interactive TUI. The resolution source is recorded as `RESOLUTION_SOURCE_OUT_OF_BAND`. Inside an attached session, the same outcomes are available as `/a`, `/r`, `/d` slash commands.",
-		Writer)
+		agentsApproveHelpMD,
+		Writer, agentsNS()...)
 
-	CmdBuilder(cmd, RunAgentsDestroy, "destroy <session>",
-		"Destroy an agent session",
-		"Tears down the workspace sandbox and removes the session.",
-		Writer, aliasOpt("rm"))
+	cmdRemove := CmdBuilder(cmd, RunAgentsDestroy, "remove <session>",
+		"Remove a session",
+		agentsRemoveHelpMD,
+		Writer, agentsNS(aliasOpt("destroy", "rm"))...)
+	cmdRemove.Example = `doctl open-harness-runtime remove sess_abc123; doctl open-harness-runtime remove my-session; doctl open-harness-runtime destroy my-session`
 
 	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
-		"Pause an agent session",
-		"Pauses a running agent session. The sandbox is preserved and the session can be resumed later with `doctl agents resume`.",
-		Writer)
-	cmdPause.Example = `doctl agents pause sess_abc123`
+		"Pause a session",
+		agentsPauseHelpMD,
+		Writer, agentsNS()...)
+	cmdPause.Example = `doctl open-harness-runtime pause sess_abc123`
 
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
-		"Resume a paused agent session",
-		"Resumes a previously paused agent session.",
-		Writer)
-	cmdResume.Example = `doctl agents resume sess_abc123`
+		"Resume a paused session",
+		agentsResumeHelpMD,
+		Writer, agentsNS()...)
+	cmdResume.Example = `doctl open-harness-runtime resume sess_abc123`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
-		`Uploads a local file (or tar archive) into the session's sandbox workspace.
-
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`); a path that escapes the root is rejected by the server. Pass `+"`"+`--archive`+"`"+` when the local file is an uncompressed tar that the server should extract at the destination (gzip-compressed `+"`"+`.tgz`+"`"+` / `+"`"+`.tar.gz`+"`"+` are rejected). doctl computes the SHA-256 of the payload and forwards it so the guest can verify the upload. All file sizes use the workspace transfer API (multipart upload for large payloads). Maximum size is 50 GiB.`,
-		Writer,
-		displayerType(&displayers.HostedAgentWorkspaceUpload{}))
+		agentsUploadHelpMD,
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentWorkspaceUpload{}))...)
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdUpload, doctl.ArgAgentLocalFile, "", "", "Path to the local file to upload", requiredOpt())
 	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as an uncompressed tar archive to extract at the destination (not .tgz / .tar.gz)")
-	cmdUpload.Example = `doctl agents upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
+	cmdUpload.Example = `doctl open-harness-runtime upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
-		`Downloads a file (or tar archive) from the session's sandbox workspace and writes it to a local destination.
-
-`+"`"+`--workspace-path`+"`"+` is resolved inside the workspace root (`+"`"+`/workspace`+"`"+`). Pass `+"`"+`--archive`+"`"+` to download a directory as a tar archive. All file sizes use the workspace transfer API: doctl polls for a presigned download URL, fetches the object directly, and verifies SHA-256 from the transfer status. Maximum size is 50 GiB.`,
-		Writer)
+		agentsDownloadHelpMD,
+		Writer, agentsNS()...)
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
-	cmdDownload.Example = `doctl agents download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+	cmdDownload.Example = `doctl open-harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+
+	cmdExec := CmdBuilder(cmd, RunAgentsExec, "exec <session> -- <command> [args...]",
+		"Run a command in a session's sandbox",
+		agentsExecHelpMD,
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentSandboxExec{}))...)
+	AddStringFlag(cmdExec, doctl.ArgAgentExecWorkdir, "", "", "Absolute guest directory to run in (defaults to the workspace root)")
+	AddIntFlag(cmdExec, doctl.ArgAgentExecTimeout, "", 0, "Maximum seconds the command may run (0 uses the server default)")
+	cmdExec.Example = `doctl open-harness-runtime exec sess_abc123 -- ls -la; doctl open-harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
 
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",
-		`Connects an external provider so hosted agent sessions can perform authenticated operations against it (e.g. `+"`"+`git clone`+"`"+`/`+"`"+`push`+"`"+` against private GitHub repositories).
-
-The credential is team-scoped: one connection is shared by everyone on your team, and the OAuth authorization handle is stored server-side by DigitalOcean. doctl never sees the token — sessions exchange the handle for an access token at run time.
-
-Running the command starts a browser-based authorization flow. doctl prints (and, unless `+"`"+`--no-browser`+"`"+` is set, opens) an authorization URL, then waits for you to approve access before reporting success. If the team is already connected, it reports that and exits. Pass `+"`"+`--no-wait`+"`"+` to print the URL and return immediately without polling; re-run the command later to confirm the connection.`,
-		Writer)
+		agentsAuthHelpMD,
+		Writer, agentsNS()...)
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
-	cmdAuth.Example = `doctl agents auth github`
+	cmdAuth.Example = `doctl open-harness-runtime auth github`
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
-		`Creates one or more independent child sessions from a checkpoint (or from "now" if `+"`"+`--from-checkpoint`+"`"+` is omitted).
-
-Each child is a first-class session you can attach to normally. Fork fan-out is capped at 4 children per call and is all-or-nothing.`,
-		Writer,
-		displayerType(&displayers.HostedAgentSession{}))
+		agentsForkHelpMD,
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
 	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
-	cmdFork.Example = `doctl agents fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+	cmdFork.Example = `doctl open-harness-runtime fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
 
 	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
 		"Roll a session back to a checkpoint in place",
-		`Rewinds the same session to a prior checkpoint. The session ID is unchanged; the underlying sandbox is replaced.`,
-		Writer,
-		displayerType(&displayers.HostedAgentSession{}))
+		agentsRollbackHelpMD,
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentSession{}))...)
 
 	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
 	cmd.AddCommand(AgentConfigs())
+	cmd.AddCommand(AgentSizes())
+
+	cmd.Command.SetHelpFunc(agentsStyledHelpFunc)
 
 	return cmd
 }
 
 // --- runners ----------------------------------------------------------------
 
-// RunAgentsStart creates a new hosted agent session by uploading an agent
-// manifest verbatim. For adapter codex-agentapi it first creates an OpenAI
-// Agents session, resolves ${ENV_ID} from the returned environment id, and
-// passes openai_session_id to harness-api as a query parameter.
+// RunAgentsStart creates a hosted agent session from --harness / --spec /
+// --config-id, waits until ready (text mode), optionally sends --prompt, and
+// prints a ready summary. It does not attach; use `run` for create-and-attach.
+//
+// For adapter codex-agentapi it first creates an OpenAI Agents session, resolves
+// ${ENV_ID}, and passes openai_session_id to harness-api as a query parameter.
 func RunAgentsStart(c *CmdConfig) error {
+	harness, err := c.Doit.GetString(c.NS, doctl.ArgAgentHarness)
+	if err != nil {
+		return err
+	}
 	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
 	if err != nil {
 		return err
@@ -406,79 +405,141 @@ func RunAgentsStart(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	repo, err := c.Doit.GetString(c.NS, doctl.ArgAgentRepo)
+	if err != nil {
+		return err
+	}
+	prompt, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerPrompt)
+	if err != nil {
+		return err
+	}
 
-	// Don't GetString(--spec) on this path: LiveConfig treats a viper
-	// required.agents.start.spec mark as fatal even when --config-id is set.
-	if configID != "" {
-		if c.Doit.IsSet(doctl.ArgAgentSpec) {
-			return errors.New("--spec and --config-id are mutually exclusive; provide only one")
+	harness = strings.TrimSpace(harness)
+	configID = strings.TrimSpace(configID)
+	repo = strings.TrimSpace(repo)
+	prompt = strings.TrimSpace(prompt)
+
+	// Never call GetString(--spec) when another source is selected: a stale
+	// required.agents.start.spec viper mark (or LiveConfig required check)
+	// would fail --harness / --config-id even though --spec is optional.
+	specPath := ""
+	switch {
+	case configID != "":
+		if c.Doit.IsSet(doctl.ArgAgentSpec) || c.Doit.IsSet(doctl.ArgAgentHarness) {
+			return errors.New("--harness, --spec, and --config-id are mutually exclusive; provide only one")
 		}
-		return runAgentsStartFromConfig(c, configID, name)
+	case harness != "":
+		if c.Doit.IsSet(doctl.ArgAgentSpec) {
+			return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+		}
+	default:
+		var err error
+		specPath, err = c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+		if err != nil {
+			return err
+		}
+		specPath = strings.TrimSpace(specPath)
 	}
 
-	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
-	if err != nil {
-		return err
+	sources := 0
+	for _, s := range []string{harness, specPath, configID} {
+		if s != "" {
+			sources++
+		}
 	}
-	if specPath == "" {
-		return errors.New("one of --spec or --config-id is required")
+	if sources > 1 {
+		return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	}
-
-	raw, err := readManifestBytes(os.Stdin, specPath)
-	if err != nil {
-		return err
+	if sources == 0 {
+		return fmt.Errorf("one of --%s, --%s, or --%s is required", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	}
-	if manifestUsesLegacyEnvelope(raw) {
-		warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
-			"switch to the flat format (top-level `agent:` key, no envelope — see `doctl agents start --help`). " +
-			"The envelope is still accepted for now but will be rejected after the transition window")
+	if configID != "" && repo != "" {
+		return fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentConfigID)
 	}
-	// --name is a convenience that sets the manifest's session name. When it's
-	// omitted the manifest is sent verbatim and the server auto-generates a name.
-	raw, err = injectManifestName(raw, name)
-	if err != nil {
-		return err
+	if name != "" {
+		if err := validateHostedAgentIdentifier(name); err != nil {
+			return err
+		}
 	}
 
-	openaiSessionID, envOverlay, err := prepareOpenAISandboxStart(context.Background(), raw)
-	if err != nil {
-		return err
+	if Output != "json" {
+		stylingEnabled = detectStyling()
 	}
-	if openaiSessionID != "" {
-		// Legacy spec.openai is client-side only. Prefer spec.runtime.config
-		// (kept for DO). Strip openai if present so agentspec validation passes.
-		raw, err = stripSpecOpenAI(raw)
+	if repo != "" {
+		if err := maybeOfferGitHubAuth(c); err != nil {
+			return err
+		}
+	}
+
+	prog := (*creationProgress)(nil)
+	if Output != "json" {
+		prog = newCreationProgress(c.Out)
+		prog.header("Launching agent session")
+	}
+
+	var (
+		sess *do.HostedAgentSession
+		raw  []byte
+	)
+	switch {
+	case configID != "":
+		sess, err = createSessionFromConfig(c, configID, name, prog)
+		if err != nil {
+			return err
+		}
+	case harness != "":
+		raw, err = buildHarnessManifest(harness, repo, prompt, name)
+		if err != nil {
+			return err
+		}
+		raw, err = injectManifestName(raw, name)
+		if err != nil {
+			return err
+		}
+		sess, err = startSessionFromRawManifest(c, raw, prog)
+		if err != nil {
+			return err
+		}
+	default:
+		raw, err = readManifestBytes(os.Stdin, specPath)
+		if err != nil {
+			return err
+		}
+		if manifestUsesLegacyEnvelope(raw) {
+			warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
+				"switch to the flat format (top-level `agent:` key, no envelope — see `" + agentCLI + " start --help`). " +
+				"The envelope is still accepted for now but will be rejected after the transition window")
+		}
+		raw, err = injectManifestName(raw, name)
+		if err != nil {
+			return err
+		}
+		sess, err = startSessionFromRawManifest(c, raw, prog)
 		if err != nil {
 			return err
 		}
 	}
-	manifest, err := expandManifestEnvLookup(raw, envLookupWithOverlay(envOverlay))
-	if err != nil {
-		return err
-	}
 
-	var createOpt *godo.HostedAgentManifestCreateOptions
-	if openaiSessionID != "" {
-		createOpt = &godo.HostedAgentManifestCreateOptions{OpenAISessionID: openaiSessionID}
-	}
-
-	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
-	if err != nil {
-		if sessionLimitErr(err) {
-			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. Free a slot by destroying one: run `doctl agents list` to find a session ID, then `doctl agents destroy SESSION_ID`", strings.TrimRight(msg, "."))
-		}
-		return err
-	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	repoRef, _ := normalizeHarnessRepoRef(repo)
+	return finishAgentsStartSession(c, sess, prog, runReadySummary{
+		Session: sess,
+		Harness: harness,
+		Repo:    repoRef,
+		Prompt:  prompt,
+	}, prompt, raw)
 }
 
-// runAgentsStartFromConfig starts a session from an existing Agent Config ID.
-// The server loads the config's pinned manifest and credentials, so no spec is
-// uploaded; --name is required because the config-backed create API mandates it.
-func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
+// createSessionFromConfig creates a session from an Agent Config ID. Shared by
+// `start --config-id` and `run --config-id`.
+func createSessionFromConfig(c *CmdConfig, configID, name string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if name == "" {
-		return errors.New("--name is required when starting from --config-id")
+		return nil, errors.New("--name is required when starting from --config-id")
+	}
+	if err := validateHostedAgentIdentifier(name); err != nil {
+		return nil, err
+	}
+	if prog != nil {
+		prog.wait("Creating hosted session from config…")
 	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:     name,
@@ -487,11 +548,55 @@ func runAgentsStartFromConfig(c *CmdConfig, configID, name string) error {
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. Free a slot by destroying one: run `doctl agents list` to find a session ID, then `doctl agents destroy SESSION_ID`", strings.TrimRight(msg, "."))
+			return nil, fmt.Errorf("%s. Free a slot by removing one: run `%s list` to find a session ID, then `%s remove SESSION_ID`", strings.TrimRight(msg, "."), agentCLI, agentCLI)
 		}
+		return nil, err
+	}
+	if prog != nil {
+		prog.ok(fmt.Sprintf("Session created · %s", displaySessionRef(sess)))
+	}
+	return sess, nil
+}
+
+// finishAgentsStartSession waits for readiness and prints a styled ready card
+// in text mode; JSON mode returns the create response without waiting.
+func finishAgentsStartSession(c *CmdConfig, sess *do.HostedAgentSession, prog *creationProgress, sum runReadySummary, prompt string, raw []byte) error {
+	if sess == nil {
+		return errors.New("session create returned no session")
+	}
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+
+	sessionID := sess.SessionID
+	if sessionID == "" {
+		return errors.New("session create returned no session id")
+	}
+
+	wait := runWaitTimeout
+	if waitSec, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWaitTimeout); err == nil && waitSec > 0 {
+		wait = time.Duration(waitSec) * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+
+	if prog == nil {
+		prog = newCreationProgress(c.Out)
+	}
+	sess, err := waitForSessionReady(ctx, c.HostedAgents(), sessionID, prog)
+	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	sum.Session = sess
+
+	if prompt != "" && (raw == nil || !manifestIncludesPrompt(raw, prompt)) {
+		if _, err := c.HostedAgents().SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: prompt}); err != nil {
+			return fmt.Errorf("sending initial prompt: %w", err)
+		}
+	}
+
+	printRunReadySummary(c.Out, sum)
+	return nil
 }
 
 // RunAgentsStartProxy runs a local WebSocket facade that impersonates a
@@ -529,8 +634,13 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		return fmt.Errorf("session %q not found: %w", sessionRef, err)
 	}
 
-	fmt.Fprintf(c.Out, "Proxying session %s as a codex app-server on ws://127.0.0.1:%d\n", sessionID, port)
-	fmt.Fprintf(c.Out, "Connect with: codex --remote ws://127.0.0.1:%d\n", port)
+	stylingEnabled = detectStyling()
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
+	body.WriteString(cardRow("Session", displaySessionRef(sess)))
+	body.WriteString(cardRow("Listen", fmt.Sprintf("ws://127.0.0.1:%d", port)))
+	body.WriteString(cardRow("Connect", fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)))
+	renderAgentCard(c.Out, body.String())
 
 	// SIGTERM alongside SIGINT: under a process manager or plain `kill` (not
 	// `-9`), only handling os.Interrupt meant the graceful-shutdown path in
@@ -605,11 +715,10 @@ var manifestEnvRef = regexp.MustCompile(`\$?\$\{[A-Za-z_][A-Za-z0-9_]*\}`)
 
 // expandManifestEnv resolves ${VAR} references in the manifest against the
 // local environment before the manifest is sent to the server. $${VAR}
-// escapes to a literal ${VAR}. Referencing a variable that is not set locally
-// is an error rather than a silent empty substitution, so a missing key fails
-// here instead of inside the sandbox.
+// escapes to a literal ${VAR}. Missing variables are collected interactively
+// when stdin/stdout are a TTY; otherwise they error with a clear instruction.
 func expandManifestEnv(manifest []byte) ([]byte, error) {
-	return expandManifestEnvLookup(manifest, os.LookupEnv)
+	return expandManifestEnvCollect(manifest, os.LookupEnv)
 }
 
 func envLookupWithOverlay(overlay map[string]string) func(string) (string, bool) {
@@ -708,15 +817,20 @@ func RunAgentsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
-		return err
-	}
-	if nextPageToken != "" {
-		if Output == "json" {
-			fmt.Fprintf(os.Stderr, "Next page token: %s\n", nextPageToken)
-		} else {
-			fmt.Fprintf(c.Out, "Next page token: %s\n", nextPageToken)
+	if Output == "json" {
+		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
+			return err
 		}
+		if nextPageToken != "" {
+			fmt.Fprintf(os.Stderr, "Next page token: %s\n", nextPageToken)
+		}
+		return nil
+	}
+
+	stylingEnabled = detectStyling()
+	printSessionsList(c.Out, sessions)
+	if nextPageToken != "" {
+		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), nextPageToken)
 	}
 	return nil
 }
@@ -835,7 +949,7 @@ func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 
 	switch len(live) {
 	case 0:
-		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl agents list` to see available sessions", ref)
+		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl open-harness-runtime list` to see available sessions", ref)
 	case 1:
 		return live[0].SessionID, nil
 	default:
@@ -866,10 +980,16 @@ func RunAgentsShow(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printSessionShowCard(c.Out, sess)
+	return nil
 }
 
-// RunAgentsDestroy tears down a session.
+// RunAgentsDestroy tears down a session (CLI: `doctl open-harness-runtime remove`,
+// with aliases `destroy` and `rm`).
 func RunAgentsDestroy(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
@@ -878,7 +998,8 @@ func RunAgentsDestroy(c *CmdConfig) error {
 	if err := c.HostedAgents().DestroySession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s destroyed", sessionID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Session %s removed", sessionID))
 	return nil
 }
 
@@ -891,7 +1012,8 @@ func RunAgentsPause(c *CmdConfig) error {
 	if err := c.HostedAgents().PauseSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s paused", sessionID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Session %s paused", sessionID))
 	return nil
 }
 
@@ -904,7 +1026,8 @@ func RunAgentsResume(c *CmdConfig) error {
 	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
 		return err
 	}
-	notice("Session %s resumed", sessionID)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Session %s resumed", sessionID))
 	return nil
 }
 
@@ -926,7 +1049,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 	provider := strings.ToLower(strings.TrimSpace(c.Args[0]))
 	if provider == "" {
-		return errors.New("a provider is required, e.g. `doctl agents auth github`")
+		return errors.New("a provider is required, e.g. `doctl open-harness-runtime auth github`")
 	}
 	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
 	if err != nil {
@@ -942,18 +1065,32 @@ func RunAgentsAuth(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	return completeProviderAuth(c, svc, provider, start, noBrowser, noWait)
+}
+
+// completeProviderAuth finishes a StartProviderAuth response: success, browser
+// connect card, and optional poll until authorized.
+func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider string, start *godo.HostedAgentProviderAuthStart, noBrowser, noWait bool) error {
+	if start == nil {
+		return fmt.Errorf("empty provider auth response for %s", provider)
+	}
 	if strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
-		notice("%s is already connected for your team", provider)
+		stylingEnabled = detectStyling()
+		printAgentSuccess(c.Out, fmt.Sprintf("%s is already connected for your team", provider))
 		return nil
 	}
 	if start.ConnectURL == "" {
 		return fmt.Errorf("harness-api returned status %q with no authorization URL", start.Status)
 	}
 
-	fmt.Fprintf(c.Out, "To connect %s, open this URL and authorize access:\n\n  %s\n\n", provider, start.ConnectURL)
+	stylingEnabled = detectStyling()
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Connect "+provider, colHighlight))
+	body.WriteString(cardRow("URL", start.ConnectURL))
 	if start.VerificationCode != "" {
-		fmt.Fprintf(c.Out, "Verification code: %s\n\n", start.VerificationCode)
+		body.WriteString(cardRow("Code", boldColor(start.VerificationCode, colHighlight)))
 	}
+	renderAgentCard(c.Out, body.String())
 	if !noBrowser {
 		if berr := browser.OpenURL(start.ConnectURL); berr != nil {
 			warn("could not open a browser automatically; open the URL above manually: %v", berr)
@@ -961,7 +1098,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 
 	if noWait || start.PollURL == "" {
-		notice("Re-run `doctl agents auth %s` after authorizing to confirm the connection", provider)
+		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl open-harness-runtime auth %s` after authorizing to confirm the connection", provider))
 		return nil
 	}
 
@@ -974,7 +1111,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("stopped waiting; re-run `doctl agents auth %s` to check the connection later", provider)
+			return fmt.Errorf("stopped waiting; re-run `doctl open-harness-runtime auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
 
@@ -983,7 +1120,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 			return err
 		}
 		if strings.EqualFold(poll.Status, agentProviderAuthStatusSuccess) {
-			notice("%s connected successfully", provider)
+			printAgentSuccess(c.Out, fmt.Sprintf("%s connected successfully", provider))
 			return nil
 		}
 	}
@@ -1196,13 +1333,18 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 	if written == 0 {
 		written = size
 	}
-	return c.Display(&displayers.HostedAgentWorkspaceUpload{
-		Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
-			Path:         workspacePath,
-			BytesWritten: written,
-		}},
-		Single: true,
-	})
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentWorkspaceUpload{
+			Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
+				Path:         workspacePath,
+				BytesWritten: written,
+			}},
+			Single: true,
+		})
+	}
+	stylingEnabled = detectStyling()
+	printWorkspaceUploadCard(c.Out, workspacePath, written)
+	return nil
 }
 
 // workspacePartUploadURLs mints presigned PUT URLs for one or more 1-based parts.
@@ -1311,7 +1453,8 @@ func RunAgentsDownload(c *CmdConfig) error {
 		return err
 	}
 
-	notice("Downloaded %d bytes to %s", written, saveTo)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("Downloaded %d bytes to %s", written, saveTo))
 	return nil
 }
 
@@ -1415,7 +1558,8 @@ func RunAgentsApprove(c *CmdConfig) error {
 	}); err != nil {
 		return err
 	}
-	notice("HITL request %s resolved as %s", requestID, outcome)
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("HITL request %s resolved as %s", requestID, outcome))
 	return nil
 }
 
@@ -1487,20 +1631,21 @@ func RunAgentsAttach(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	svc := c.HostedAgents()
-	sessionID, err := resolveSessionRef(svc, c.Args[0])
+	sessionID, err := resolveSessionRef(c.HostedAgents(), c.Args[0])
 	if err != nil {
 		return err
 	}
+	return runAgentsAttachSession(c, sessionID)
+}
+
+func runAgentsAttachSession(c *CmdConfig, sessionID string) error {
+	svc := c.HostedAgents()
 
 	stylingEnabled = detectStyling()
 
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
-		if msg, terminal := classifyStreamError(err); terminal {
-			return errors.New(strings.TrimSpace(msg))
-		}
-		return err
+		return beautifyAgentError(err)
 	}
 	if isTerminalSessionStatus(sess.Status) {
 		return fmt.Errorf("session %s cannot be attached (status: %s)", sessionID, humanSessionStatus(sess.Status))
@@ -1513,6 +1658,9 @@ func RunAgentsAttach(c *CmdConfig) error {
 	pending := &pendingHITL{}
 	cursor := &eventCursor{}
 	state := newAttachState(c.Out, pending)
+	state.sessionRef = displaySessionRef(sess)
+
+	printAttachBanner(c.Out, sess, "")
 
 	// All writes flow through the display so events don't clobber the user's
 	// in-progress input once raw mode is on. Pass-through until raw=true.
@@ -1520,16 +1668,17 @@ func RunAgentsAttach(c *CmdConfig) error {
 	c.Out = state.display
 	defer func() { c.Out = originalOut }()
 
-	printAttachBanner(c.Out, sessionID, sess.AgentKind)
+	thinking := newThinkingState(c.Out)
+	defer thinking.stop()
 
 	warmup := newWarmupState(c.Out, sess.CreatedAt.Time)
+	warmup.enableStatusPoll(func() (*do.HostedAgentSession, error) {
+		return svc.GetSession(sessionID)
+	})
 	defer warmup.clear()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	thinking := newThinkingState(c.Out)
-	defer thinking.stop()
 
 	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking, warmup)
 
@@ -1544,9 +1693,9 @@ func isOpenAISandboxSession(sess *do.HostedAgentSession) bool {
 }
 
 func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
-	apiKey := strings.TrimSpace(os.Getenv(openAIAPIKeyEnv))
-	if apiKey == "" {
-		return fmt.Errorf("%s is required to attach to an OpenAI Agents sandbox session", openAIAPIKeyEnv)
+	apiKey, err := ensureEnvVar(openAIAPIKeyEnv)
+	if err != nil {
+		return fmt.Errorf("%s is required to attach to an OpenAI Agents sandbox session: %w", openAIAPIKeyEnv, err)
 	}
 	openaiSessionID := strings.TrimSpace(sess.OpenAISessionID)
 	if openaiSessionID == "" {
@@ -1555,21 +1704,22 @@ func runOpenAIAgentsAttach(c *CmdConfig, sess *do.HostedAgentSession) error {
 
 	pending := &pendingHITL{}
 	state := newAttachState(c.Out, pending)
+	state.sessionRef = displaySessionRef(sess)
+
+	printAttachBanner(c.Out, sess, fmt.Sprintf("OpenAI · %s", openaiSessionID))
+
 	originalOut := c.Out
 	c.Out = state.display
 	defer func() { c.Out = originalOut }()
 
-	printAttachBanner(c.Out, sess.SessionID, sess.AgentKind)
-	fmt.Fprintf(c.Out, "  %s\n\n", colorize(fmt.Sprintf("bridged to OpenAI · %s", openaiSessionID), colMuted))
+	thinking := newThinkingState(c.Out)
+	defer thinking.stop()
 
 	warmup := newWarmupState(c.Out, sess.CreatedAt.Time)
 	defer warmup.clear()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-
-	thinking := newThinkingState(c.Out)
-	defer thinking.stop()
 
 	client := newOpenAIAgentsAttachClient()
 	renderer := &openAIAttachRenderer{out: c.Out, thinking: thinking, warmup: warmup}
@@ -1649,7 +1799,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 			}
 		}
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
-		fmt.Fprintln(r.out, colorize("Tip: destroy and start a fresh session; wait for ● environment connected before sending work.", colMuted))
+		fmt.Fprintln(r.out, colorize("Tip: remove and start a fresh session; wait for ● environment connected before sending work.", colMuted))
 	case "session.turn.output_text.delta":
 		r.clearWarmup()
 		if r.thinking != nil {
@@ -1710,6 +1860,7 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
 		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
 	case "session.idle":
+		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
@@ -1811,9 +1962,16 @@ func truncateRunes(s string, max int) string {
 
 func openaiAttachLoop(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, in io.Reader, state *attachState, thinking *thinkingState) error {
 	reader := bufio.NewReader(in)
+	lines := startAttachLineReader(reader)
+	var pendingLine *attachLineRead
+	interactiveLineMode := false
+	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		interactiveLineMode = true
+	}
 	for {
 		fmt.Fprint(c.Out, "\n", attachPrompt(state.pending))
-		line, err := reader.ReadString('\n')
+		read := nextAttachLine(lines, &pendingLine)
+		line, err := read.line, read.err
 		if errors.Is(err, io.EOF) {
 			fmt.Fprintln(c.Out)
 			return nil
@@ -1828,6 +1986,43 @@ func openaiAttachLoop(c *CmdConfig, ctx context.Context, client openAIAgentsClie
 		if strings.HasPrefix(line, "/") {
 			fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
 			continue
+		}
+		if batched := collectAttachLines(line, lines, &pendingLine, true); len(batched) > 1 {
+			line = strings.Join(batched, "\n")
+			fmt.Fprintln(c.Out, colorize("Detected rapid multiline input; sending it as one message.", colMuted))
+		}
+		if n, ok := needsLargePasteConfirmation(line); ok && interactiveLineMode {
+			decision, err := confirmLargePasteLineMode(c.Out, n, lines, &pendingLine)
+			if errors.Is(err, io.EOF) {
+				fmt.Fprintln(c.Out)
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			switch decision {
+			case largePasteSendTogether:
+			case largePasteSendSeparately:
+				for _, part := range splitSubmittedLines(line) {
+					if strings.HasPrefix(part, "/") {
+						fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
+						continue
+					}
+					if thinking != nil {
+						thinking.start()
+					}
+					if err := client.SendInput(ctx, apiKey, openaiSessionID, part); err != nil {
+						if thinking != nil {
+							thinking.stop()
+						}
+						fmt.Fprintf(c.Out, "send failed: %v\n", err)
+					}
+				}
+				continue
+			case largePasteDiscard:
+				fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+				continue
+			}
 		}
 		if thinking != nil {
 			thinking.start()
@@ -1852,6 +2047,8 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 		return openaiAttachLoop(c, ctx, client, apiKey, openaiSessionID, f, state, thinking)
 	}
 	defer term.Restore(fd, oldState)
+	setBracketedPasteMode(f, true)
+	defer setBracketedPasteMode(f, false)
 
 	state.display.setRaw(true)
 	defer state.display.setRaw(false)
@@ -1879,17 +2076,20 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 	for {
 		select {
 		case <-ctx.Done():
+			printDetachNotice(c.Out, state.sessionRef)
 			return nil
 		case b := <-bytesCh:
-			stop, err := handleOpenAIAttachByte(c, ctx, client, apiKey, openaiSessionID, b, state, thinking)
+			stop, err := handleOpenAIAttachByte(c, ctx, client, apiKey, openaiSessionID, b, state, thinking, warmup)
 			if err != nil {
 				return err
 			}
 			if stop {
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
 			return err
@@ -1897,54 +2097,113 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 	}
 }
 
-func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState) (stop bool, err error) {
-	if state.esc == 2 {
-		state.esc = 0
-		switch b {
-		case 'D':
-			if state.moveLineCursor(-1) {
-				state.display.redraw()
-			}
-		case 'C':
-			if state.moveLineCursor(1) {
-				state.display.redraw()
-			}
-		}
-		return false, nil
+func startThinkingIfReady(thinking *thinkingState, warmup *warmupState) {
+	if thinking != nil && (warmup == nil || !warmup.isActive()) {
+		thinking.start()
 	}
-	if state.esc == 1 {
-		state.esc = 0
-		if b == '[' || b == 'O' {
-			state.esc = 2
+}
+
+func printAttachSendAck(out io.Writer, warmup *warmupState) {
+	if warmup != nil && warmup.isActive() {
+		// The warm-up banner already shows the queued notice in-place.
+		if warmup.isBannerVisible() {
+			return
+		}
+		fmt.Fprintln(out, colorize("Message queued — will send when agent is ready", colMuted))
+		return
+	}
+	fmt.Fprintln(out, colorize("… waiting for the agent", colMuted))
+}
+
+func echoAttachSubmitNewline(display *promptDisplay, warmup *warmupState) {
+	if warmup != nil && warmup.isBannerVisible() {
+		return
+	}
+	display.echo([]byte("\r\n"))
+}
+
+func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState, warmup *warmupState) (stop bool, err error) {
+	if confirm := state.largePasteConfirmation(); confirm != nil {
+		switch b {
+		case 'y', 'Y':
+			state.display.echo([]byte{b, '\r', '\n'})
+			state.takeLargePasteConfirmation()
+			startThinkingIfReady(thinking, warmup)
+			if err := client.SendInput(ctx, apiKey, openaiSessionID, confirm.text); err != nil {
+				if thinking != nil {
+					thinking.stop()
+				}
+				fmt.Fprintf(c.Out, "send failed: %v\n", err)
+			}
+			state.display.redraw()
+			return false, nil
+		case 'n', 'N', 0x0d, 0x0a:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			for _, part := range splitSubmittedLines(confirm.text) {
+				if strings.HasPrefix(part, "/") {
+					fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
+					continue
+				}
+				startThinkingIfReady(thinking, warmup)
+				if err := client.SendInput(ctx, apiKey, openaiSessionID, part); err != nil {
+					if thinking != nil {
+						thinking.stop()
+					}
+					fmt.Fprintf(c.Out, "send failed: %v\n", err)
+				}
+			}
+			state.display.redraw()
+			return false, nil
+		case 0x03, 0x04:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+			state.display.redraw()
+			return false, nil
+		default:
 			return false, nil
 		}
 	}
-	if b == 0x1b {
-		state.esc = 1
+	if state.pasting {
+		handlePastedByte(b, state)
+		warmup.noteQueued()
+		if warmup.isBannerVisible() {
+			state.display.redraw()
+		}
+		return false, nil
+	}
+	if handleAttachEscapeSequence(b, state) {
 		return false, nil
 	}
 
 	switch b {
 	case 0x0d, 0x0a:
-		state.mu.Lock()
-		line := strings.TrimSpace(string(state.lineBuf))
-		state.lineBuf = state.lineBuf[:0]
-		state.cursor = 0
-		state.mu.Unlock()
-		state.display.echo([]byte("\r\n"))
+		line := readSubmittedInput(state)
+		if line != "" && warmup.inputAlreadyQueued() {
+			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
+			state.display.redraw()
+			return false, nil
+		}
+		echoAttachSubmitNewline(state.display, warmup)
 		if line != "" {
+			if n, ok := needsLargePasteConfirmation(line); ok {
+				state.setLargePasteConfirmation(line, n)
+				state.display.redraw()
+				return false, nil
+			}
 			if strings.HasPrefix(line, "/") {
 				fmt.Fprintln(c.Out, colorize("slash commands are not available on OpenAI sandbox attach yet", colMuted))
 			} else {
-				// Single spinner on send (idempotent if stream also starts it).
-				if thinking != nil {
-					thinking.start()
-				}
+				startThinkingIfReady(thinking, warmup)
 				if err := client.SendInput(ctx, apiKey, openaiSessionID, line); err != nil {
 					if thinking != nil {
 						thinking.stop()
 					}
 					fmt.Fprintf(c.Out, "send failed: %v\n", err)
+				} else if warmup.isActive() {
+					warmup.markInputQueued()
+					printAttachSendAck(c.Out, warmup)
 				}
 			}
 		}
@@ -1958,7 +2217,9 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
 			state.mu.Unlock()
-			if atEnd {
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte("\b \b"))
 			} else {
 				state.display.redraw()
@@ -1990,7 +2251,10 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 			}
 			state.cursor++
 			state.mu.Unlock()
-			if atEnd {
+			warmup.noteQueued()
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte{b})
 			} else {
 				state.display.redraw()
@@ -2057,16 +2321,21 @@ var healthyStreamDuration = 30 * time.Second
 // streamClock returns the current time; overridable in tests.
 var streamClock = time.Now
 
-// Warm-up notice (MARSOHS-796): freshly provisioned sessions can take up to
-// ~90s before the in-guest agent is actually listening. Show a friendly
-// status for young sessions so the CLI doesn't look frozen/silent while the
-// backend retries. Overridable in tests.
-const msgAgentWarmup = "Agent is warming up… please wait"
+// Warm-up notice (MARSOHS-796 / MARSOHS-972): freshly provisioned sessions can
+// take up to ~90s before the in-guest agent is actually listening. Show a
+// friendly status for young sessions so the CLI doesn't look frozen/silent
+// while the backend retries, and make it explicit that typed input will be
+// queued once the user starts entering a prompt. Overridable in tests.
+const (
+	msgAgentWarmup       = "Agent is warming up… please wait"
+	msgAgentWarmupQueued = "Input queued until agent is ready"
+)
 
 var (
-	warmupDuration    = 60 * time.Second
-	warmupEligibleAge = 2 * time.Minute
-	warmupClock       = time.Now
+	warmupDuration       = 60 * time.Second
+	warmupEligibleAge    = 2 * time.Minute
+	warmupClock          = time.Now
+	warmupStatusInterval = 2 * time.Second
 )
 
 // thinkingState shows a spinner between RunStarted and the first real
@@ -2155,15 +2424,22 @@ func (s *thinkingState) animate(ctx context.Context, d *promptDisplay, done chan
 // warmupState shows "Agent is warming up…" on attach for sessions still in
 // their initial boot window. Clears on the first meaningful agent event or
 // after warmupDuration, whichever comes first. No-ops for older sessions.
+// While active it can surface backend progress (session status / boot events)
+// in the banner label so a long wait doesn't look frozen.
 type warmupState struct {
 	mu            sync.Mutex
 	out           io.Writer
 	eligible      bool
 	active        bool
 	dismissed     bool
+	queued        bool
+	inputQueued   bool
+	phase         string
+	getSession    func() (*do.HostedAgentSession, error)
 	timeoutCancel context.CancelFunc
 	animCancel    context.CancelFunc
 	animDone      chan struct{}
+	pollCancel    context.CancelFunc
 }
 
 func newWarmupState(out io.Writer, createdAt time.Time) *warmupState {
@@ -2172,6 +2448,55 @@ func newWarmupState(out io.Writer, createdAt time.Time) *warmupState {
 		w.eligible = true
 	}
 	return w
+}
+
+// enableStatusPoll periodically refreshes the warm-up banner from GetSession
+// so developers see sandbox/agent state while waiting.
+func (w *warmupState) enableStatusPoll(getSession func() (*do.HostedAgentSession, error)) {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	w.getSession = getSession
+	w.mu.Unlock()
+}
+
+func (w *warmupState) isActive() bool {
+	if w == nil {
+		return false
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.active && !w.dismissed
+}
+
+func (w *warmupState) inputAlreadyQueued() bool {
+	if w == nil {
+		return false
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.inputQueued
+}
+
+func (w *warmupState) markInputQueued() {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	w.inputQueued = true
+	w.mu.Unlock()
+}
+
+func (w *warmupState) isBannerVisible() bool {
+	if w == nil || !w.isActive() {
+		return false
+	}
+	display, ok := w.out.(*promptDisplay)
+	if !ok {
+		return false
+	}
+	return display.warmupBannerActive()
 }
 
 // start shows the warm-up notice immediately. Prefer the erasable prompt
@@ -2190,10 +2515,11 @@ func (w *warmupState) start() {
 	w.active = true
 	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), warmupDuration)
 	w.timeoutCancel = timeoutCancel
+	getSession := w.getSession
 
 	display, ok := w.out.(*promptDisplay)
 	if ok {
-		display.spinnerInit(spinnerFrames[0], msgAgentWarmup)
+		display.warmupInit(spinnerFrames[0], msgAgentWarmup)
 		animCtx, animCancel := context.WithCancel(context.Background())
 		done := make(chan struct{})
 		w.animCancel = animCancel
@@ -2205,6 +2531,170 @@ func (w *warmupState) start() {
 		fmt.Fprintf(w.out, "%s\n", colorize("⟳ "+msgAgentWarmup, colMuted))
 	}
 	go w.waitTimeout(timeoutCtx)
+	if getSession != nil {
+		pollCtx, pollCancel := context.WithCancel(context.Background())
+		w.mu.Lock()
+		w.pollCancel = pollCancel
+		w.mu.Unlock()
+		go w.pollStatus(pollCtx, getSession)
+	}
+}
+
+// setPhase updates the warm-up banner with a short backend progress hint
+// on its own grey line under the spinner.
+func (w *warmupState) setPhase(phase string) {
+	if w == nil {
+		return
+	}
+	phase = strings.TrimSpace(phase)
+	if phase == "" {
+		return
+	}
+	w.mu.Lock()
+	if !w.active || w.dismissed || w.phase == phase {
+		w.mu.Unlock()
+		return
+	}
+	w.phase = phase
+	display, ok := w.out.(*promptDisplay)
+	w.mu.Unlock()
+	if ok {
+		display.warmupSetPhase(phase)
+		return
+	}
+	fmt.Fprintf(w.out, "%s\n", colorize(phase, colMuted))
+}
+
+// noteBackendEvent surfaces boot/lifecycle stream events on the warm-up banner
+// instead of printing competing lines. Returns true when the event was
+// consumed as warm-up progress (caller should skip normal render).
+func (w *warmupState) noteBackendEvent(ev godo.HostedAgentEvent) bool {
+	if w == nil || !w.isActive() {
+		return false
+	}
+	phase := backendPhaseFromEvent(ev)
+	if phase == "" {
+		return false
+	}
+	w.setPhase(phase)
+	return true
+}
+
+func backendPhaseFromEvent(ev godo.HostedAgentEvent) string {
+	switch ev.Kind {
+	case godo.HostedAgentEventKindSessionUpdated:
+		if phase := sessionUpdatedPhase(ev.Payload); phase != "" {
+			return phase
+		}
+		return "syncing session"
+	case godo.HostedAgentEventKindRunSandboxAllocated:
+		return "sandbox allocated"
+	case godo.HostedAgentEventKindRunSandboxReleased:
+		return "releasing sandbox"
+	case godo.HostedAgentEventKindRunLog:
+		if msg := runLogPhase(ev.Payload); msg != "" {
+			return msg
+		}
+		return "runtime log"
+	case godo.HostedAgentEventKindStreamState:
+		var st godo.HostedAgentStreamState
+		if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateCatchingUp {
+			return "syncing event stream"
+		}
+	}
+	return ""
+}
+
+func sessionUpdatedPhase(payload json.RawMessage) string {
+	var p struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Phase   string `json:"phase"`
+		State   string `json:"state"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return ""
+	}
+	if msg := strings.TrimSpace(p.Message); msg != "" {
+		return truncateWarmupPhase(msg)
+	}
+	if phase := strings.TrimSpace(p.Phase); phase != "" {
+		return truncateWarmupPhase(phase)
+	}
+	if state := strings.TrimSpace(p.State); state != "" {
+		return truncateWarmupPhase(state)
+	}
+	if status := strings.TrimSpace(p.Status); status != "" {
+		return backendPhaseFromStatus(godo.HostedAgentSessionStatus(status))
+	}
+	return ""
+}
+
+func runLogPhase(payload json.RawMessage) string {
+	var p struct {
+		Message string `json:"message"`
+		Text    string `json:"text"`
+		Line    string `json:"line"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return ""
+	}
+	for _, s := range []string{p.Message, p.Text, p.Line} {
+		if msg := strings.TrimSpace(s); msg != "" {
+			return truncateWarmupPhase(msg)
+		}
+	}
+	return ""
+}
+
+func backendPhaseFromStatus(status godo.HostedAgentSessionStatus) string {
+	switch status {
+	case godo.HostedAgentSessionStatusProvisioning:
+		return "provisioning sandbox"
+	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
+		return "sandbox ready · starting agent"
+	case godo.HostedAgentSessionStatusPaused:
+		return "session paused"
+	case godo.HostedAgentSessionStatusFailed:
+		return "session failed"
+	case godo.HostedAgentSessionStatusDestroying, godo.HostedAgentSessionStatusDestroyed:
+		return "session tearing down"
+	default:
+		if s := humanSessionStatus(status); s != "" && s != "unspecified" {
+			return s
+		}
+		return ""
+	}
+}
+
+func truncateWarmupPhase(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) > 56 {
+		return s[:53] + "…"
+	}
+	return s
+}
+
+func (w *warmupState) pollStatus(ctx context.Context, getSession func() (*do.HostedAgentSession, error)) {
+	ticker := time.NewTicker(warmupStatusInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if !w.isActive() {
+				return
+			}
+			sess, err := getSession()
+			if err != nil || sess == nil {
+				continue
+			}
+			if phase := backendPhaseFromStatus(sess.Status); phase != "" {
+				w.setPhase(phase)
+			}
+		}
+	}
 }
 
 func (w *warmupState) animate(ctx context.Context, d *promptDisplay, done chan struct{}) {
@@ -2218,8 +2708,32 @@ func (w *warmupState) animate(ctx context.Context, d *promptDisplay, done chan s
 			return
 		case <-t.C:
 			ix = (ix + 1) % len(spinnerFrames)
-			d.spinnerFrame(spinnerFrames[ix], msgAgentWarmup)
+			d.warmupSetFrame(spinnerFrames[ix])
 		}
+	}
+}
+
+// noteQueued reveals the queued-input notice once the user starts typing so
+// attach makes it obvious their prompt is buffered until the agent is ready.
+func (w *warmupState) noteQueued() {
+	if w == nil {
+		return
+	}
+	w.mu.Lock()
+	if !w.active || w.dismissed {
+		w.mu.Unlock()
+		return
+	}
+	already := w.queued
+	w.queued = true
+	display, ok := w.out.(*promptDisplay)
+	w.mu.Unlock()
+	if ok {
+		display.warmupSetQueued(msgAgentWarmupQueued)
+		return
+	}
+	if !already {
+		fmt.Fprintf(w.out, "%s\n", colorize(msgAgentWarmupQueued, colMuted))
 	}
 }
 
@@ -2231,8 +2745,8 @@ func (w *warmupState) waitTimeout(ctx context.Context) {
 }
 
 // clear dismisses the warm-up notice. Idempotent. When shown via the prompt
-// spinner, the line is erased so it truly goes away; no follow-up message is
-// printed (MARSOHS-796 only asks to clear the notice).
+// banner, the spinner and queued rows are erased so they truly go away once
+// the session is ready.
 func (w *warmupState) clear() {
 	if w == nil {
 		return
@@ -2244,16 +2758,23 @@ func (w *warmupState) clear() {
 		return
 	}
 	w.active = false
+	w.inputQueued = false
+	w.queued = false
 	timeoutCancel := w.timeoutCancel
 	animCancel := w.animCancel
 	animDone := w.animDone
+	pollCancel := w.pollCancel
 	w.timeoutCancel = nil
 	w.animCancel = nil
 	w.animDone = nil
+	w.pollCancel = nil
 	w.mu.Unlock()
 
 	if timeoutCancel != nil {
 		timeoutCancel()
+	}
+	if pollCancel != nil {
+		pollCancel()
 	}
 	if animCancel != nil {
 		animCancel()
@@ -2262,7 +2783,7 @@ func (w *warmupState) clear() {
 		<-animDone
 	}
 	if display, ok := w.out.(*promptDisplay); ok {
-		display.spinnerStop()
+		display.warmupStop()
 	}
 }
 
@@ -2381,20 +2902,29 @@ var reconnectSleepFn = sleepCtx
 // errors stop the reconnect loop (auth, missing session, V0 single-connection
 // rejection); status codes follow harness-api's apierr convention.
 func classifyStreamError(err error) (string, bool) {
-	var er *godo.ErrorResponse
-	if !errors.As(err, &er) || er.Response == nil {
+	msg, status, ok := agentAPIError(err)
+	if !ok {
 		return "", false
 	}
-	switch er.Response.StatusCode {
-	case http.StatusUnauthorized:
-		return fmt.Sprintf("\nAuthentication failed: %s\nRun `doctl auth init` and try again.", er.Message), true
-	case http.StatusForbidden:
-		return fmt.Sprintf("\nAccess denied: %s", er.Message), true
-	case http.StatusNotFound:
-		return fmt.Sprintf("\nSession not found: %s", er.Message), true
-	case http.StatusConflict:
-		// V0 single-connection rejection. er.Message carries device + when.
-		return fmt.Sprintf("\nSession already attached on another device: %s\nDetach there first, then re-run `doctl agents attach`.", er.Message), true
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict:
+		pretty := beautifyAgentError(err)
+		var ape *agentPrettyError
+		if errors.As(pretty, &ape) {
+			if status == http.StatusConflict && ape.title == "Conflict" {
+				// V0 single-connection rejection; prefer a clearer title.
+				ape.title = "Session already attached elsewhere"
+				ape.tips = []string{"Detach on the other device, then re-run doctl open-harness-runtime attach"}
+			}
+			if status == http.StatusNotFound {
+				ape.title = "Session not found"
+			}
+			if reason := strings.TrimSpace(msg); reason != "" {
+				ape.reason = reason
+			}
+			return "\n" + ape.DisplayError(), true
+		}
+		return "\n" + strings.TrimSpace(err.Error()), true
 	}
 	return "", false
 }
@@ -2468,6 +2998,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
 				return true
 			}
+			_ = warmup.noteBackendEvent(ev)
 			continue
 		}
 
@@ -2532,8 +3063,15 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			} else {
 				renderToolStart(out, cmd)
 			}
-		case godo.HostedAgentEventKindSessionUpdated:
-			// Lifecycle noise during boot — do not clear the warm-up notice.
+		case godo.HostedAgentEventKindSessionUpdated,
+			godo.HostedAgentEventKindRunSandboxAllocated,
+			godo.HostedAgentEventKindRunSandboxReleased,
+			godo.HostedAgentEventKindRunLog:
+			// Boot/lifecycle noise during warm-up — fold into the banner instead
+			// of printing competing lines or dismissing the notice.
+			if warmup.noteBackendEvent(ev) {
+				continue
+			}
 			thinking.stop()
 			acc.flush(out)
 			flushAwaitingApproval(out, &awaiting)
@@ -2717,6 +3255,12 @@ func (p *pendingHITL) reset() int {
 func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in io.Reader, state *attachState) error {
 	pending := state.pending
 	reader := bufio.NewReader(in)
+	lines := startAttachLineReader(reader)
+	var pendingLine *attachLineRead
+	interactiveLineMode := false
+	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		interactiveLineMode = true
+	}
 	for {
 		fmt.Fprint(c.Out, "\n", attachPrompt(pending))
 
@@ -2743,18 +3287,21 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 				continue
 			case hitlKeyDetach:
 				fmt.Fprintln(c.Out)
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			case hitlKeyIgnore:
-				fmt.Fprintln(c.Out, "(press y, n, or d to resolve the pending approval, or Ctrl-D to detach)")
+				fmt.Fprintln(c.Out, "(press y, n, or d to resolve the pending approval, or Ctrl-D to detach — session keeps running)")
 				continue
 			case hitlKeyFallback:
 				// Non-TTY — fall through to line mode.
 			}
 		}
 
-		line, err := reader.ReadString('\n')
+		read := nextAttachLine(lines, &pendingLine)
+		line, err := read.line, read.err
 		if errors.Is(err, io.EOF) {
 			fmt.Fprintln(c.Out)
+			printDetachNotice(c.Out, state.sessionRef)
 			return nil
 		}
 		if err != nil {
@@ -2784,13 +3331,39 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 			}
 			continue
 		}
+		if batched := collectAttachLines(line, lines, &pendingLine, false); len(batched) > 1 {
+			line = strings.Join(batched, "\n")
+			fmt.Fprintln(c.Out, colorize("Detected rapid multiline input; sending it as one message.", colMuted))
+		}
+		if n, ok := needsLargePasteConfirmation(line); ok && interactiveLineMode {
+			decision, err := confirmLargePasteLineMode(c.Out, n, lines, &pendingLine)
+			if errors.Is(err, io.EOF) {
+				fmt.Fprintln(c.Out)
+				printDetachNotice(c.Out, state.sessionRef)
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			switch decision {
+			case largePasteSendTogether:
+			case largePasteSendSeparately:
+				for _, part := range splitSubmittedLines(line) {
+					if detach := processAttachLine(c, svc, sessionID, part, state, nil); detach {
+						return nil
+					}
+				}
+				continue
+			case largePasteDiscard:
+				fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+				continue
+			}
+		}
 		// Ack immediately; the first agent token can be tens of seconds away
 		// and without this users re-submit, spawning a duplicate run.
 		if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 			if isRunTerminalErr(err) {
-				fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
-				fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
-				fmt.Fprintln(c.Out, "(detaching)")
+				printSessionEndedNotice(c.Out, state.sessionRef)
 				return nil
 			}
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
@@ -2798,6 +3371,135 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 		}
 		fmt.Fprintln(c.Out, colorize("… waiting for the agent", colMuted))
 	}
+}
+
+type attachLineRead struct {
+	line string
+	err  error
+}
+
+var attachLineBatchWindow = 40 * time.Millisecond
+
+const largePasteConfirmMinLines = 6
+
+func startAttachLineReader(reader *bufio.Reader) <-chan attachLineRead {
+	ch := make(chan attachLineRead, 1)
+	go func() {
+		defer close(ch)
+		for {
+			line, err := reader.ReadString('\n')
+			ch <- attachLineRead{line: line, err: err}
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return ch
+}
+
+func nextAttachLine(lines <-chan attachLineRead, pending **attachLineRead) attachLineRead {
+	if *pending != nil {
+		read := **pending
+		*pending = nil
+		return read
+	}
+	read, ok := <-lines
+	if !ok {
+		return attachLineRead{err: io.EOF}
+	}
+	return read
+}
+
+func collectAttachLines(first string, lines <-chan attachLineRead, pending **attachLineRead, openAI bool) []string {
+	if strings.HasPrefix(first, "/") {
+		return []string{first}
+	}
+	collected := []string{first}
+	timer := time.NewTimer(attachLineBatchWindow)
+	defer timer.Stop()
+	for {
+		select {
+		case read, ok := <-lines:
+			if !ok {
+				return collected
+			}
+			if read.err != nil {
+				*pending = &read
+				return collected
+			}
+			line := strings.TrimSpace(read.line)
+			if line == "" {
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				timer.Reset(attachLineBatchWindow)
+				continue
+			}
+			if strings.HasPrefix(line, "/") || (!openAI && hitlShortcutOnly(line)) {
+				*pending = &attachLineRead{line: line}
+				return collected
+			}
+			collected = append(collected, line)
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(attachLineBatchWindow)
+		case <-timer.C:
+			return collected
+		}
+	}
+}
+
+func hitlShortcutOnly(line string) bool {
+	_, ok := hitlLetterShortcut(line)
+	return ok
+}
+
+func confirmLargePasteLineMode(out io.Writer, linesCount int, lines <-chan attachLineRead, pending **attachLineRead) (largePasteDecision, error) {
+	fmt.Fprintf(out, "You pasted %d lines. Send them together as one message? [y/N] ", linesCount)
+	read := nextAttachLine(lines, pending)
+	if read.err != nil {
+		return largePasteDiscard, read.err
+	}
+	answer := strings.ToLower(strings.TrimSpace(read.line))
+	switch answer {
+	case "y", "yes":
+		return largePasteSendTogether, nil
+	case "discard", "cancel":
+		return largePasteDiscard, nil
+	default:
+		return largePasteSendSeparately, nil
+	}
+}
+
+func largePasteLineCount(text string) int {
+	if strings.TrimSpace(text) == "" {
+		return 0
+	}
+	return strings.Count(text, "\n") + 1
+}
+
+func needsLargePasteConfirmation(text string) (int, bool) {
+	n := largePasteLineCount(text)
+	return n, n >= largePasteConfirmMinLines
+}
+
+func splitSubmittedLines(text string) []string {
+	parts := strings.Split(text, "\n")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 // attachPrompt reflects the HITL queue depth so the user knows when more than
@@ -2818,14 +3520,30 @@ func attachPrompt(pending *pendingHITL) string {
 // attachState bundles the line buffer, pending HITL id, and the synchronized
 // display that the SSE goroutine writes through.
 type attachState struct {
-	pending *pendingHITL
-	display *promptDisplay
-	mu      sync.Mutex // guards lineBuf, cursor, and hitlSel
-	lineBuf []byte
-	cursor  int // byte index into lineBuf (ASCII-only input today)
-	hitlSel int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
-	esc     int // arrow-key escape-sequence parse state (0 none, 1 ESC, 2 ESC[)
+	pending    *pendingHITL
+	display    *promptDisplay
+	sessionRef string     // name or id for detach messaging
+	mu         sync.Mutex // guards lineBuf, cursor, and hitlSel
+	lineBuf    []byte
+	cursor     int // byte index into lineBuf (ASCII-only input today)
+	hitlSel    int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
+	escSeq     []byte
+	pasting    bool
+	confirm    *largePasteConfirmation
 }
+
+type largePasteConfirmation struct {
+	text  string
+	lines int
+}
+
+type largePasteDecision int
+
+const (
+	largePasteSendTogether largePasteDecision = iota
+	largePasteSendSeparately
+	largePasteDiscard
+)
 
 func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 	s := &attachState{pending: pending}
@@ -2835,7 +3553,7 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 		lineBuf: func() string {
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			return string(s.lineBuf)
+			return displayInputBuffer(s.lineBuf)
 		},
 		cursorPos: func() int {
 			s.mu.Lock()
@@ -2850,13 +3568,17 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 // input prompt; while an approval is pending it becomes the arrow-navigable
 // approve/reject/defer menu.
 func (s *attachState) promptString() string {
+	s.mu.Lock()
+	confirm := s.confirm
+	sel := s.hitlSel
+	s.mu.Unlock()
+	if confirm != nil {
+		return fmt.Sprintf("You pasted %d lines. Send them together as one message? [y/N] ", confirm.lines)
+	}
 	n := s.pending.len()
 	if n == 0 {
 		return "> "
 	}
-	s.mu.Lock()
-	sel := s.hitlSel
-	s.mu.Unlock()
 	return hitlMenuPrompt(sel, n)
 }
 
@@ -2879,6 +3601,26 @@ func (s *attachState) resetHITLSelection() {
 	s.mu.Unlock()
 }
 
+func (s *attachState) setLargePasteConfirmation(text string, lines int) {
+	s.mu.Lock()
+	s.confirm = &largePasteConfirmation{text: text, lines: lines}
+	s.mu.Unlock()
+}
+
+func (s *attachState) takeLargePasteConfirmation() *largePasteConfirmation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	confirm := s.confirm
+	s.confirm = nil
+	return confirm
+}
+
+func (s *attachState) largePasteConfirmation() *largePasteConfirmation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.confirm
+}
+
 // moveLineCursor shifts the text-input caret by delta bytes, clamped to the
 // line buffer. Returns whether the caret actually moved.
 func (s *attachState) moveLineCursor(delta int) bool {
@@ -2898,6 +3640,195 @@ func (s *attachState) moveLineCursor(delta int) bool {
 	return true
 }
 
+func displayInputBuffer(buf []byte) string {
+	if len(buf) == 0 {
+		return ""
+	}
+	line := string(buf)
+	line = strings.ReplaceAll(line, "\r\n", " ")
+	line = strings.ReplaceAll(line, "\n", " ")
+	line = strings.ReplaceAll(line, "\r", " ")
+	return line
+}
+
+func submittedInput(buf []byte) string {
+	line := strings.ReplaceAll(string(buf), "\r\n", "\n")
+	line = strings.ReplaceAll(line, "\r", "\n")
+	return strings.TrimSpace(line)
+}
+
+var (
+	bracketedPasteStart = []byte{0x1b, '[', '2', '0', '0', '~'}
+	bracketedPasteEnd   = []byte{0x1b, '[', '2', '0', '1', '~'}
+)
+
+const (
+	enableBracketedPaste  = "\x1b[?2004h"
+	disableBracketedPaste = "\x1b[?2004l"
+)
+
+func setBracketedPasteMode(w io.Writer, enabled bool) {
+	if enabled {
+		_, _ = io.WriteString(w, enableBracketedPaste)
+		return
+	}
+	_, _ = io.WriteString(w, disableBracketedPaste)
+}
+
+func isPrefix(seq, candidate []byte) bool {
+	if len(seq) > len(candidate) {
+		return false
+	}
+	for i := range seq {
+		if seq[i] != candidate[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func isKnownEscPrefix(seq []byte) bool {
+	for _, candidate := range [][]byte{
+		{0x1b},
+		{0x1b, '['},
+		{0x1b, 'O'},
+		{0x1b, '[', 'A'},
+		{0x1b, '[', 'B'},
+		{0x1b, '[', 'C'},
+		{0x1b, '[', 'D'},
+		{0x1b, 'O', 'A'},
+		{0x1b, 'O', 'B'},
+		{0x1b, 'O', 'C'},
+		{0x1b, 'O', 'D'},
+		bracketedPasteStart,
+	} {
+		if isPrefix(seq, candidate) {
+			return true
+		}
+	}
+	return false
+}
+
+func appendBufferedInput(state *attachState, chunk []byte) bool {
+	if len(chunk) == 0 {
+		return false
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.cursor != len(state.lineBuf) {
+		return false
+	}
+	for _, b := range chunk {
+		switch b {
+		case 0x0d, 0x0a:
+			if n := len(state.lineBuf); n > 0 && state.lineBuf[n-1] == '\n' {
+				continue
+			}
+			state.lineBuf = append(state.lineBuf, '\n')
+			state.cursor++
+		default:
+			if b >= 0x20 && b < 0x7f {
+				state.lineBuf = append(state.lineBuf, b)
+				state.cursor++
+			}
+		}
+	}
+	return true
+}
+
+func readSubmittedInput(state *attachState) string {
+	state.mu.Lock()
+	line := submittedInput(state.lineBuf)
+	state.lineBuf = state.lineBuf[:0]
+	state.cursor = 0
+	state.mu.Unlock()
+	return line
+}
+
+func handleAttachEscapeSequence(b byte, state *attachState) bool {
+	if len(state.escSeq) == 0 {
+		if b != 0x1b {
+			return false
+		}
+		state.escSeq = []byte{b}
+		return true
+	}
+
+	state.escSeq = append(state.escSeq, b)
+	seq := state.escSeq
+	switch {
+	case bytes.Equal(seq, bracketedPasteStart):
+		state.escSeq = nil
+		state.pasting = true
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'A'}), bytes.Equal(seq, []byte{0x1b, 'O', 'A'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(-1)
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'D'}), bytes.Equal(seq, []byte{0x1b, 'O', 'D'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(-1)
+			state.display.redraw()
+		} else if state.moveLineCursor(-1) {
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'B'}), bytes.Equal(seq, []byte{0x1b, 'O', 'B'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(1)
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', 'C'}), bytes.Equal(seq, []byte{0x1b, 'O', 'C'}):
+		state.escSeq = nil
+		if state.pending.get() != "" {
+			state.moveHITLSelection(1)
+			state.display.redraw()
+		} else if state.moveLineCursor(1) {
+			state.display.redraw()
+		}
+		return true
+	case isKnownEscPrefix(seq):
+		return true
+	default:
+		state.escSeq = nil
+		return false
+	}
+}
+
+func handlePastedByte(b byte, state *attachState) {
+	if len(state.escSeq) > 0 || b == 0x1b {
+		if len(state.escSeq) == 0 {
+			state.escSeq = []byte{b}
+			return
+		}
+		state.escSeq = append(state.escSeq, b)
+		seq := state.escSeq
+		if bytes.Equal(seq, bracketedPasteEnd) {
+			state.escSeq = nil
+			state.pasting = false
+			state.display.redraw()
+			return
+		}
+		if isPrefix(seq, bracketedPasteEnd) {
+			return
+		}
+		if appendBufferedInput(state, seq) {
+			state.display.redraw()
+		}
+		state.escSeq = nil
+		return
+	}
+	if appendBufferedInput(state, []byte{b}) {
+		state.display.redraw()
+	}
+}
+
 // promptDisplay serializes terminal writes between the input loop and the
 // SSE goroutine. In raw mode it tracks whether the cursor sits on the prompt
 // line or mid-stream so that streaming tokens don't get wiped, events drop
@@ -2913,6 +3844,13 @@ type promptDisplay struct {
 	// midLine: cursor is at the end of a previous tokenless write. Next
 	// Write must not clear-line, next echo must not paint to that line.
 	midLine bool
+	// warmupStatusLines reserves status rows above the prompt while the warm-up
+	// banner is active (spinner + optional grey phase + optional queued notice).
+	warmupStatusLines  int
+	warmupSpinnerFrame string
+	warmupSpinnerLabel string
+	warmupPhaseLabel   string
+	warmupQueuedLabel  string
 }
 
 func (p *promptDisplay) setRaw(on bool) {
@@ -3009,6 +3947,10 @@ func (p *promptDisplay) redraw() {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
 	}
+	if p.warmupStatusLines > 0 {
+		p.warmupPaintLocked()
+		return
+	}
 	p.paintPromptLocked(true)
 }
 
@@ -3054,6 +3996,170 @@ func (p *promptDisplay) spinnerStop() {
 	fmt.Fprint(p.out, "\x1b7\x1b[A\r\x1b[K\x1b8")
 }
 
+func (p *promptDisplay) warmupBannerActive() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.warmupStatusLines > 0
+}
+
+// warmupInit reserves a spinner row above the prompt. The queued-input row is
+// added later via warmupSetQueued once the user starts typing.
+func (p *promptDisplay) warmupInit(frame, label string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw {
+		return
+	}
+	if p.midLine {
+		fmt.Fprint(p.out, "\r\n")
+		p.midLine = false
+	} else {
+		fmt.Fprint(p.out, "\r\x1b[K")
+	}
+	p.warmupStatusLines = 1
+	p.warmupSpinnerFrame = frame
+	p.warmupSpinnerLabel = label
+	p.warmupPhaseLabel = ""
+	p.warmupQueuedLabel = ""
+	fmt.Fprintf(p.out, "%s %s\r\n", frame, label)
+	p.paintPromptLocked(false)
+}
+
+// warmupSetPhase shows a grey backend-progress line under the spinner.
+func (p *promptDisplay) warmupSetPhase(phase string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.warmupStatusLines == 0 {
+		return
+	}
+	p.warmupPhaseLabel = phase
+	p.warmupEnsureRowsLocked()
+	p.warmupPaintLocked()
+}
+
+// warmupSetQueued shows the grey queued-input notice and redraws the whole block.
+func (p *promptDisplay) warmupSetQueued(text string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.warmupStatusLines == 0 {
+		return
+	}
+	p.warmupQueuedLabel = text
+	p.warmupEnsureRowsLocked()
+	p.warmupPaintLocked()
+}
+
+// warmupEnsureRowsLocked grows reserved status rows to fit spinner + phase + queued.
+func (p *promptDisplay) warmupEnsureRowsLocked() {
+	want := 1
+	if p.warmupPhaseLabel != "" {
+		want++
+	}
+	if p.warmupQueuedLabel != "" {
+		want++
+	}
+	for p.warmupStatusLines < want {
+		if p.midLine {
+			fmt.Fprint(p.out, "\r\n")
+			p.midLine = false
+		}
+		fmt.Fprint(p.out, "\r\n")
+		p.paintPromptLocked(false)
+		p.warmupStatusLines++
+	}
+}
+
+// warmupSetFrame updates the spinner frame and redraws the whole block.
+func (p *promptDisplay) warmupSetFrame(frame string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw || p.midLine || p.warmupStatusLines == 0 {
+		return
+	}
+	p.warmupSpinnerFrame = frame
+	p.warmupPaintLocked()
+}
+
+// warmupPaintLocked redraws the warm-up spinner, optional grey phase / queued
+// lines, and prompt+input atomically from the prompt row. Caller must hold p.mu.
+func (p *promptDisplay) warmupPaintLocked() {
+	frame := p.warmupSpinnerFrame
+	if frame == "" {
+		frame = spinnerFrames[0]
+	}
+	label := p.warmupSpinnerLabel
+	if label == "" {
+		label = msgAgentWarmup
+	}
+	line := ""
+	if p.lineBuf != nil {
+		line = p.lineBuf()
+	}
+	cur := len(line)
+	if p.cursorPos != nil {
+		cur = p.cursorPos()
+		if cur < 0 {
+			cur = 0
+		}
+		if cur > len(line) {
+			cur = len(line)
+		}
+	}
+
+	n := p.warmupStatusLines
+	var b strings.Builder
+	fmt.Fprintf(&b, "\x1b7\x1b[%dA\r\x1b[K", n)
+	fmt.Fprintf(&b, "%s %s", frame, label)
+	if p.warmupPhaseLabel != "" {
+		b.WriteString("\r\n\r\x1b[K")
+		b.WriteString(colorize(p.warmupPhaseLabel, colMuted))
+	}
+	if p.warmupQueuedLabel != "" {
+		b.WriteString("\r\n\r\x1b[K")
+		b.WriteString(colorize(p.warmupQueuedLabel, colMuted))
+	}
+	b.WriteString("\r\n\r\x1b[K")
+	b.WriteString(p.prompt())
+	b.WriteString(line)
+	if back := len(line) - cur; back > 0 {
+		fmt.Fprintf(&b, "\x1b[%dD", back)
+	}
+	b.WriteString("\x1b8")
+	io.WriteString(p.out, b.String())
+}
+
+// warmupStopLocked erases the warm-up banner rows entirely. Caller must hold p.mu.
+func (p *promptDisplay) warmupStopLocked() {
+	if !p.raw || p.warmupStatusLines == 0 {
+		return
+	}
+	if p.midLine {
+		fmt.Fprint(p.out, "\r\n")
+		p.midLine = false
+	}
+	n := p.warmupStatusLines
+	var b strings.Builder
+	b.WriteString("\x1b7")
+	for i := 0; i < n; i++ {
+		b.WriteString("\x1b[A\r\x1b[K")
+	}
+	b.WriteString("\x1b8")
+	io.WriteString(p.out, b.String())
+	p.warmupStatusLines = 0
+	p.warmupSpinnerFrame = ""
+	p.warmupSpinnerLabel = ""
+	p.warmupPhaseLabel = ""
+	p.warmupQueuedLabel = ""
+	p.paintPromptLocked(true)
+}
+
+// warmupStop erases the warm-up banner rows entirely.
+func (p *promptDisplay) warmupStop() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.warmupStopLocked()
+}
+
 // attachLoopTTY runs the raw-mode byte-by-byte input state machine. A 50ms
 // ticker polls pending-HITL so a HITL event flips the prompt instantly,
 // without needing the user to press Enter to "wake up" the loop.
@@ -3068,6 +4174,8 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		return attachLoop(c, svc, sessionID, f, state)
 	}
 	defer term.Restore(fd, oldState)
+	setBracketedPasteMode(f, true)
+	defer setBracketedPasteMode(f, false)
 
 	state.display.setRaw(true)
 	defer state.display.setRaw(false)
@@ -3105,7 +4213,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		}
 		select {
 		case b := <-bytesCh:
-			stop, err := handleAttachByte(c, svc, sessionID, b, state)
+			stop, err := handleAttachByte(c, svc, sessionID, b, state, warmup)
 			if err != nil {
 				return err
 			}
@@ -3115,6 +4223,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		case <-ticker.C:
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
+				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
 			return err
@@ -3124,44 +4233,46 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 
 // handleAttachByte is the per-byte state machine. stop=true exits the loop
 // (Ctrl-C, Ctrl-D on empty line).
-func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState) (stop bool, err error) {
-	// Arrow-key escape sequences arrive as three bytes: ESC, '[' (or 'O'), then
-	// A/B/C/D. With a pending HITL they move the approve/reject/defer highlight;
-	// otherwise left/right move the text-input caret.
-	if state.esc == 2 {
-		state.esc = 0
-		switch {
-		case state.pending.get() != "":
-			switch b {
-			case 'A', 'D': // up / left
-				state.moveHITLSelection(-1)
-				state.display.redraw()
-			case 'B', 'C': // down / right
-				state.moveHITLSelection(1)
-				state.display.redraw()
+func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string, b byte, state *attachState, warmup *warmupState) (stop bool, err error) {
+	if confirm := state.largePasteConfirmation(); confirm != nil {
+		switch b {
+		case 'y', 'Y':
+			state.display.echo([]byte{b, '\r', '\n'})
+			state.takeLargePasteConfirmation()
+			if detach := processAttachLine(c, svc, sessionID, confirm.text, state, nil); detach {
+				return true, nil
 			}
-		case b == 'D': // left
-			if state.moveLineCursor(-1) {
-				state.display.redraw()
+			state.display.redraw()
+			return false, nil
+		case 'n', 'N', 0x0d, 0x0a:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			for _, part := range splitSubmittedLines(confirm.text) {
+				if detach := processAttachLine(c, svc, sessionID, part, state, nil); detach {
+					return true, nil
+				}
 			}
-		case b == 'C': // right
-			if state.moveLineCursor(1) {
-				state.display.redraw()
-			}
-			// up/down ignored for text input (no history yet)
+			state.display.redraw()
+			return false, nil
+		case 0x03, 0x04:
+			state.display.echo([]byte("\r\n"))
+			state.takeLargePasteConfirmation()
+			fmt.Fprintln(c.Out, colorize("large paste discarded", colMuted))
+			state.display.redraw()
+			return false, nil
+		default:
+			return false, nil
+		}
+	}
+	if state.pasting {
+		handlePastedByte(b, state)
+		warmup.noteQueued()
+		if warmup.isBannerVisible() {
+			state.display.redraw()
 		}
 		return false, nil
 	}
-	if state.esc == 1 {
-		state.esc = 0
-		if b == '[' || b == 'O' {
-			state.esc = 2
-			return false, nil
-		}
-		// Lone ESC or unrecognized sequence: fall through and handle b normally.
-	}
-	if b == 0x1b { // ESC — start of a possible arrow sequence
-		state.esc = 1
+	if handleAttachEscapeSequence(b, state) {
 		return false, nil
 	}
 
@@ -3179,6 +4290,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			outcome, matched = hitlOutcomeForSelection(state.hitlSelection()), true
 		case 0x03, 0x04: // Ctrl-C / Ctrl-D
 			state.display.echo([]byte("\r\n"))
+			printDetachNotice(c.Out, state.sessionRef)
 			return true, nil
 		}
 		if !matched {
@@ -3205,14 +4317,20 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 
 	switch b {
 	case 0x0d, 0x0a: // Enter
-		state.mu.Lock()
-		line := strings.TrimSpace(string(state.lineBuf))
-		state.lineBuf = state.lineBuf[:0]
-		state.cursor = 0
-		state.mu.Unlock()
-		state.display.echo([]byte("\r\n"))
+		line := readSubmittedInput(state)
+		if line != "" && warmup.inputAlreadyQueued() {
+			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
+			state.display.redraw()
+			return false, nil
+		}
+		echoAttachSubmitNewline(state.display, warmup)
 		if line != "" {
-			if detach := processAttachLine(c, svc, sessionID, line, state); detach {
+			if n, ok := needsLargePasteConfirmation(line); ok {
+				state.setLargePasteConfirmation(line, n)
+				state.display.redraw()
+				return false, nil
+			}
+			if detach := processAttachLine(c, svc, sessionID, line, state, warmup); detach {
 				return true, nil
 			}
 		}
@@ -3226,7 +4344,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
 			state.mu.Unlock()
-			if atEnd {
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte("\b \b"))
 			} else {
 				state.display.redraw()
@@ -3237,6 +4357,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		return false, nil
 	case 0x03: // Ctrl-C
 		state.display.echo([]byte("\r\n"))
+		printDetachNotice(c.Out, state.sessionRef)
 		return true, nil
 	case 0x04: // Ctrl-D
 		state.mu.Lock()
@@ -3244,6 +4365,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.mu.Unlock()
 		if empty {
 			state.display.echo([]byte("\r\n"))
+			printDetachNotice(c.Out, state.sessionRef)
 			return true, nil
 		}
 		return false, nil
@@ -3259,7 +4381,10 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			}
 			state.cursor++
 			state.mu.Unlock()
-			if atEnd {
+			warmup.noteQueued()
+			if warmup.isBannerVisible() {
+				state.display.redraw()
+			} else if atEnd {
 				state.display.echo([]byte{b})
 			} else {
 				state.display.redraw()
@@ -3272,7 +4397,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 // processAttachLine dispatches an Enter-submitted line: HITL word shortcut,
 // slash command, or SendInput. Returns detach=true when the session can no
 // longer accept input (terminal run) and the loop should exit.
-func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState) (detach bool) {
+func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line string, state *attachState, warmup *warmupState) (detach bool) {
 	if outcome, ok := hitlLetterShortcut(line); ok {
 		if id := state.pending.get(); id != "" {
 			if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
@@ -3294,15 +4419,16 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 	}
 	if _, err := svc.SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: line}); err != nil {
 		if isRunTerminalErr(err) {
-			fmt.Fprintln(c.Out, "\nThis session's run has ended and can't accept new input.")
-			fmt.Fprintln(c.Out, "Start a new session:  doctl agents start --spec <your-spec>.yaml")
-			fmt.Fprintln(c.Out, "(detaching)")
+			printSessionEndedNotice(c.Out, state.sessionRef)
 			return true
 		}
 		fmt.Fprintf(c.Out, "send failed: %v\n", err)
 		return false
 	}
-	fmt.Fprintln(c.Out, colorize("… waiting for the agent", colMuted))
+	if warmup != nil && warmup.isActive() {
+		warmup.markInputQueued()
+	}
+	printAttachSendAck(c.Out, warmup)
 	return false
 }
 
@@ -3376,6 +4502,10 @@ func handleAttachCommand(c *CmdConfig, svc do.HostedAgentsService, sessionID, li
 	verb := parts[0]
 	switch verb {
 	case "/help":
+		fmt.Fprintln(c.Out, "Detach (does NOT remove the session):")
+		fmt.Fprintln(c.Out, "  Ctrl-D           close the connection; reattach later with `doctl open-harness-runtime attach`")
+		fmt.Fprintln(c.Out, "  Ctrl-C           same as Ctrl-D")
+		fmt.Fprintln(c.Out, "Remove the session: `doctl open-harness-runtime remove <session>`")
 		fmt.Fprintln(c.Out, "When a HITL approval is pending (no Enter needed in a TTY):")
 		fmt.Fprintln(c.Out, "  ↑ / ↓ then Enter  move the highlight and confirm the selected outcome")
 		fmt.Fprintln(c.Out, "  y | a             approve the oldest pending request")
@@ -3634,6 +4764,10 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		}
 	case godo.HostedAgentEventKindSessionUpdated:
 		fmt.Fprintf(w, "\n%s\n", colorize("• session updated", colMuted))
+	case godo.HostedAgentEventKindRunSandboxAllocated:
+		fmt.Fprintf(w, "\n%s\n", colorize("• sandbox allocated", colMuted))
+	case godo.HostedAgentEventKindRunSandboxReleased:
+		fmt.Fprintf(w, "\n%s\n", colorize("• sandbox released", colMuted))
 	}
 }
 
@@ -3668,22 +4802,63 @@ func hitlOutcomeLabel(code int32) string {
 	}
 }
 
+// cardRow formats a label/value line for agent summary cards. Labels are padded
+// before color codes are applied so columns stay aligned in the terminal.
+func cardRow(label, value string) string {
+	padded := label
+	if len(padded) < 8 {
+		padded += strings.Repeat(" ", 8-len(padded))
+	}
+	return fmt.Sprintf("  %s %s\n", boldColor(padded, colHighlight), value)
+}
+
+// renderAgentCard wraps body text in a rounded success border when styling is on.
+func renderAgentCard(w io.Writer, body string) {
+	out := body
+	if stylingEnabled {
+		out = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colSuccess).
+			Padding(0, 2).
+			MarginTop(1).
+			Render(out)
+	} else {
+		out = "\n" + out
+	}
+	fmt.Fprintln(w, out)
+}
+
 // printAttachBanner renders the styled connection header and a compact help
 // key shown when an interactive session is attached.
-func printAttachBanner(w io.Writer, sessionID string, kind godo.HostedAgentKind) {
-	fmt.Fprintf(w, "\n%s  %s\n", boldColor("● Connected", colSuccess), colorize(sessionID, colHighlight))
-	fmt.Fprintf(w, "  %s\n\n", colorize(fmt.Sprintf("agent %s · Ctrl-D to detach", prettyAgentKind(kind)), colMuted))
+func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote string) {
+	ref := displaySessionRef(sess)
+	agent := prettyAgentKind(sess.AgentKind)
 
-	row := func(label, desc string) {
-		fmt.Fprintf(w, "  %s  %s\n", boldColor(fmt.Sprintf("%-8s", label), colHighlight), desc)
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Connected", colSuccess))
+
+	body.WriteString(cardRow("Session", ref))
+	if sess != nil && strings.TrimSpace(sess.SessionID) != "" && sess.SessionID != ref {
+		body.WriteString(cardRow("ID", colorize(sess.SessionID, colMuted)))
 	}
+	body.WriteString(cardRow("Agent", agent))
+	if note := strings.TrimSpace(bridgeNote); note != "" {
+		body.WriteString(cardRow("Bridge", colorize(note, colMuted)))
+	}
+
+	fmt.Fprintln(&body)
+	fmt.Fprintln(&body, colorize("Quick help", colMuted))
+
 	yn := colorize("y", colSuccess) + colorize("/a", colSuccess) + " approve · " +
 		colorize("n", colError) + colorize("/r", colError) + " reject · " +
 		colorize("d", colWarning) + " defer"
-	row("send", "type a message and press Enter")
-	row("approve", "↑/↓ then Enter, or "+yn)
-	row("help", "type "+boldColor("/help", colHighlight)+" for the full command list")
-	fmt.Fprintln(w)
+	body.WriteString(cardRow("send", "type a message and press Enter"))
+	body.WriteString(cardRow("approve", "↑/↓ then Enter, or "+yn))
+	body.WriteString(cardRow("detach", colorize("Ctrl-D", colMuted)+" closes connection only — session keeps running"))
+	body.WriteString(cardRow("remove", colorize("doctl open-harness-runtime remove "+ref, colMuted)))
+	body.WriteString(cardRow("help", "type "+boldColor("/help", colHighlight)+" for the full command list"))
+
+	renderAgentCard(w, body.String())
 }
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into a friendly "opencode" label.

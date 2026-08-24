@@ -14,11 +14,13 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -65,6 +67,33 @@ func TestAgentConfigList(t *testing.T) {
 	})
 }
 
+func TestPrintAgentConfigsList(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	printAgentConfigsList(&buf, []godo.HostedAgentConfigSummary{{
+		ID:          "01a01e58-6209-7c75-8b31-6cb80f7301ff",
+		Name:        "session-opencode-20260820-084503",
+		CreatedAt:   godo.Timestamp{Time: time.Date(2026, 8, 20, 8, 45, 3, 0, time.UTC)},
+		ContentHash: "c0c95e3b975398c69bd0b235d32f21647171bf825aa08369de820ee240569b35",
+	}})
+
+	out := buf.String()
+	assert.Contains(t, out, "1 config")
+	assert.Contains(t, out, "session-opencode-20260820-084503")
+	assert.Contains(t, out, "01a01e58-6209-7c75-8b31-6cb80f7301ff")
+	assert.Contains(t, out, "2026-08-20 08:45")
+	assert.NotContains(t, out, "c0c95e3b975398c69bd0b235d32f21647171bf825aa08369de820ee240569b35")
+}
+
+func TestTruncateMiddle(t *testing.T) {
+	assert.Equal(t, "", truncateMiddle("", 20))
+	assert.Equal(t, "short", truncateMiddle("short", 20))
+	assert.Equal(t, "c0c95e3b9…240569b35", truncateMiddle("c0c95e3b975398c69bd0b235d32f21647171bf825aa08369de820ee240569b35", 20))
+}
+
 func TestAgentConfigGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
@@ -109,7 +138,7 @@ func TestAgentConfigDelete_ActiveSessions(t *testing.T) {
 		err := RunAgentsConfigDelete(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "active sessions")
-		assert.Contains(t, err.Error(), "doctl agents destroy")
+		assert.Contains(t, err.Error(), "doctl open-harness-runtime remove")
 	})
 }
 

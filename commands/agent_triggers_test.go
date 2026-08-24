@@ -65,7 +65,7 @@ func TestAgentTriggersCreateWebhook(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
 		specPath := filepath.Join(dir, "agent.yaml")
-		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\n"), 0o600))
+		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n"), 0o600))
 
 		tm.hostedAgentTriggers.EXPECT().
 			Create(gomock.Any()).
@@ -106,7 +106,8 @@ func TestAgentTriggersCreateWebhook(t *testing.T) {
 		config.Out = &buf
 		require.NoError(t, RunAgentTriggersCreate(config))
 		assert.Contains(t, buf.String(), "sec_once")
-		assert.Contains(t, buf.String(), "Webhook URL:")
+		assert.Contains(t, buf.String(), "https://api.digitalocean.com/v2/agents/triggers/tr_new/webhook")
+		assert.Contains(t, buf.String(), "Trigger created")
 	})
 }
 
@@ -302,7 +303,7 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
 		specPath := filepath.Join(dir, "agent.yaml")
-		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\n"), 0o600))
+		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n"), 0o600))
 
 		tm.hostedAgentTriggers.EXPECT().
 			Create(gomock.Any()).
@@ -416,6 +417,36 @@ func TestAgentTriggersRotateSecret_TextMode(t *testing.T) {
 // Note: output_text IS present as a field inside the JSON object — that is
 // correct and expected. What must be absent is a bare text block *before* the
 // opening '{'.
+func TestAgentTriggersCreateRejectsInvalidName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n"), 0o600))
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "webhook")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "<script>alert(1)</script>")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "run it")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+
+		err := RunAgentTriggersCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "name must be 1–64 characters")
+	})
+}
+
+func TestAgentTriggersUpdateRejectsInvalidName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"tr_1"}
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "../../etc/passwd")
+
+		err := RunAgentTriggersUpdate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "name must be 1–64 characters")
+	})
+}
+
 func TestAgentTriggersGetExecution_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().
