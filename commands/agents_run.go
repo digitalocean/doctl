@@ -353,10 +353,12 @@ func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
 	case agent == claudeCodeAgentName:
 		// Claude Code needs its own inference key just like Codex needs
 		// OPENAI_API_KEY. Referencing it here (rather than baking in a
-		// literal) routes through expandManifestEnvCollect/ensureEnvVar so a
-		// missing key is caught — and prompted for on a TTY — before doctl
-		// ever calls CreateSessionFromManifest, instead of failing deep into
-		// a hosted session that was never going to work.
+		// literal) still routes through expandManifestEnvCollect/ensureEnvVar
+		// so a missing key is prompted for on a TTY, but a present-but-bogus
+		// key is caught too: prepareClaudeCodeStart validates it against
+		// Anthropic's API before doctl ever calls CreateSessionFromManifest,
+		// instead of failing deep into a hosted session that was never going
+		// to work.
 		doc.Env = map[string]string{
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
@@ -475,6 +477,11 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 			prog.ok("OpenAI Agents environment ready")
 		}
 	}
+
+	if err := prepareClaudeCodeStart(context.Background(), raw, prog); err != nil {
+		return nil, err
+	}
+
 	lookup := envLookupWithOverlay(envOverlay)
 	manifest, err := expandManifestEnvCollect(raw, lookup)
 	if err != nil {
@@ -504,6 +511,38 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 		prog.ok(fmt.Sprintf("Session created · %s", displaySessionRef(sess)))
 	}
 	return sess, nil
+}
+
+// prepareClaudeCodeStart mirrors prepareOpenAISandboxStart for claude-code:
+// it resolves ANTHROPIC_API_KEY (prompting on a TTY if missing, exactly like
+// ensureEnvVar already did) and then confirms Anthropic actually accepts it
+// with a real, free API call — closing the gap where a bogus (but non-empty)
+// key used to sail through to CreateSessionFromManifest and only fail deep
+// inside the hosted sandbox. No-ops for every other harness.
+func prepareClaudeCodeStart(ctx context.Context, raw []byte, prog *creationProgress) error {
+	doc, err := parseAgentManifest(raw)
+	if err != nil {
+		return err
+	}
+	if doc.adapter() != claudeCodeAgentName {
+		return nil
+	}
+
+	apiKey, err := ensureEnvVar(anthropicAPIKeyEnv)
+	if err != nil {
+		return fmt.Errorf("%s is required to start a %s session: %w", anthropicAPIKeyEnv, claudeCodeAgentName, err)
+	}
+
+	if prog != nil {
+		prog.wait(anthropicKeyCheckLabel)
+	}
+	if err := validateAnthropicAPIKey(ctx, apiKey); err != nil {
+		return err
+	}
+	if prog != nil {
+		prog.ok("Anthropic API key OK")
+	}
+	return nil
 }
 
 func manifestNeedsOpenAIPrepare(raw []byte) (bool, error) {

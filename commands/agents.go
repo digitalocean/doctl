@@ -4049,14 +4049,20 @@ func (s *attachState) insertNewlineAtCursor() {
 	s.mu.Unlock()
 }
 
+// newlineMarker stands in for an embedded newline in the flattened
+// single-row prompt display. Collapsing to a plain space (the original
+// behavior) made Option/Alt+Enter look like it had done nothing until the
+// message was actually sent — this makes the line break visible in place.
+const newlineMarker = " ↵ "
+
 func displayInputBuffer(buf []byte) string {
 	if len(buf) == 0 {
 		return ""
 	}
 	line := string(buf)
-	line = strings.ReplaceAll(line, "\r\n", " ")
-	line = strings.ReplaceAll(line, "\n", " ")
-	line = strings.ReplaceAll(line, "\r", " ")
+	line = strings.ReplaceAll(line, "\r\n", newlineMarker)
+	line = strings.ReplaceAll(line, "\n", newlineMarker)
+	line = strings.ReplaceAll(line, "\r", newlineMarker)
 	return line
 }
 

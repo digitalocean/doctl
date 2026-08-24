@@ -16,6 +16,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -325,6 +326,60 @@ func TestRunAgentsRun_ClaudeCodeMissingAnthropicKey(t *testing.T) {
 		err := RunAgentsRun(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), anthropicAPIKeyEnv)
+	})
+}
+
+// TestPrepareClaudeCodeStart_ValidatesKey confirms the key resolved via
+// ensureEnvVar is the one handed to validateAnthropicAPIKey, and that
+// non-claude-code manifests skip validation entirely (no network call).
+func TestPrepareClaudeCodeStart_ValidatesKey(t *testing.T) {
+	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
+	orig := validateAnthropicAPIKey
+	t.Cleanup(func() { validateAnthropicAPIKey = orig })
+
+	var gotKey string
+	calls := 0
+	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
+		calls++
+		gotKey = apiKey
+		return nil
+	}
+
+	raw, err := buildHarnessManifest("claude-code", "", "", "")
+	require.NoError(t, err)
+	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, "sk-ant-test", gotKey)
+
+	// A non-claude-code manifest must not trigger validation.
+	raw, err = buildHarnessManifest("opencode", "", "", "")
+	require.NoError(t, err)
+	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
+	assert.Equal(t, 1, calls, "opencode manifest should not call validateAnthropicAPIKey")
+}
+
+// TestRunAgentsRun_ClaudeCodeBogusAnthropicKey ensures a present-but-invalid
+// ANTHROPIC_API_KEY is caught locally too — not just a missing one. No
+// CreateSessionFromManifest expectation is set below, so gomock fails the
+// test if the bogus key is not rejected before that call.
+func TestRunAgentsRun_ClaudeCodeBogusAnthropicKey(t *testing.T) {
+	t.Setenv(anthropicAPIKeyEnv, "sk-ant-bogus")
+	orig := validateAnthropicAPIKey
+	t.Cleanup(func() { validateAnthropicAPIKey = orig })
+	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
+		return fmt.Errorf("%s was rejected by Anthropic (HTTP 401): invalid x-api-key", anthropicAPIKeyEnv)
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
+		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
+
+		err := RunAgentsRun(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rejected by Anthropic")
 	})
 }
 

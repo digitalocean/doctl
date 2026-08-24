@@ -260,6 +260,10 @@ func TestRunAgentsStart(t *testing.T) {
 
 func TestRunAgentsStart_FromHarness(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
+	origValidate := validateAnthropicAPIKey
+	t.Cleanup(func() { validateAnthropicAPIKey = origValidate })
+	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error { return nil }
+
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -1745,6 +1749,16 @@ func TestInsertNewlineAtCursor(t *testing.T) {
 	s.insertNewlineAtCursor()
 	assert.Equal(t, "ab\ncd", string(s.lineBuf))
 	assert.Equal(t, 3, s.cursor)
+}
+
+// TestDisplayInputBufferShowsNewlineMarker is a regression test: the
+// flattened single-row prompt used to collapse an embedded newline to a
+// plain space, which made Option/Alt+Enter look like a no-op until the
+// message was actually submitted. It must render a visible marker instead.
+func TestDisplayInputBufferShowsNewlineMarker(t *testing.T) {
+	assert.Equal(t, "first line ↵ second line", displayInputBuffer([]byte("first line\nsecond line")))
+	assert.Equal(t, "first line ↵ second line", displayInputBuffer([]byte("first line\r\nsecond line")))
+	assert.Equal(t, "", displayInputBuffer(nil))
 }
 
 // TestHandleAttachEscapeSequenceOptionEnterInsertsNewline pins Option/Alt+
