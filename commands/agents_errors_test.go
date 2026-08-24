@@ -67,7 +67,7 @@ func TestBeautifyAgentError_APIResponse(t *testing.T) {
 	assert.Equal(t, "Session limit reached", pretty.title)
 	assert.Equal(t, "team is at the limit of 4 active sessions", pretty.reason)
 	assert.Equal(t, http.StatusConflict, pretty.status)
-	assert.Contains(t, pretty.tips, "doctl open-harness-runtime list")
+	assert.Contains(t, pretty.tips, "doctl harness-runtime list")
 
 	display := pretty.DisplayError()
 	assert.Contains(t, display, "Session limit reached")
