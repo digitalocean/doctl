@@ -548,6 +548,32 @@ func TestOpenAIAttachRenderer_ReasoningItemDoneFallback(t *testing.T) {
 	assert.Contains(t, out, "Here's the plan.")
 }
 
+func TestOpenAIAttachRenderer_ReasoningSummaryPartsKeepParagraphBreak(t *testing.T) {
+	var buf strings.Builder
+	r := &openAIAttachRenderer{out: &buf}
+
+	r.handle(map[string]any{"type": "session.turn.created"})
+	r.handle(map[string]any{
+		"type": "session.turn.item.added",
+		"item": map[string]any{"type": "reasoning"},
+	})
+	r.handle(map[string]any{
+		"type": "session.turn.item.done",
+		"item": map[string]any{
+			"type": "reasoning",
+			"summary": []any{
+				map[string]any{"type": "summary_text", "text": "so I'll use a local asset instead of blocking on that."},
+				map[string]any{"type": "summary_text", "text": "I'm making the site self-contained."},
+			},
+		},
+	})
+	r.handle(map[string]any{"type": "session.turn.completed"})
+
+	out := buf.String()
+	assert.NotContains(t, out, "that.I'm")
+	assert.Contains(t, out, "that.\n\nI'm")
+}
+
 func TestOpenAIAttachRenderer_ReasoningDoesNotLeakIntoFinalAnswer(t *testing.T) {
 	var buf strings.Builder
 	r := &openAIAttachRenderer{out: &buf}

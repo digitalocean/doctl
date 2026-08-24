@@ -1310,9 +1310,15 @@ func TestRenderEvent(t *testing.T) {
 		{"run started", godo.HostedAgentEventKindRunStarted, "run-1", `{"agent":"codex"}`, "\n▶ run started\n"},
 		{"run started no agent", godo.HostedAgentEventKindRunStarted, "run-2", `{}`, "\n▶ run started\n"},
 		{"tool call started", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"bash"}`, "\n▸ bash\n"},
+		{"tool call started file change", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"file_change","arguments":{"path":"index.html","operation":"add"}}`, "\n▸ file_change index.html (add)\n"},
+		{"tool call started file change no operation", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"file_change","arguments":{"path":"index.html"}}`, "\n▸ file_change index.html\n"},
 		{"tool call completed", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":true,"duration_ms":12,"summary":"ran ls"}`, "  ✓ ran ls (12ms)\n"},
 		{"tool call failed", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":false,"duration_ms":3,"summary":"boom"}`, "  ✗ boom (3ms)\n"},
+		{"tool call completed no duration", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":true,"duration_ms":0,"summary":"ran ls"}`, "  ✓ ran ls\n"},
+		{"tool call completed no summary", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":true,"duration_ms":12}`, "  ✓ done (12ms)\n"},
+		{"tool call completed multiline summary", godo.HostedAgentEventKindToolCallCompleted, "", `{"ok":true,"duration_ms":12,"summary":"HTTP/2 200\nserver: nginx"}`, "  ✓ HTTP/2 200 (12ms)\n"},
 		{"run completed", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":3,"total_tokens_out":5,"run_cost_micros":1234}`, "\n✓ run complete · 3 in / 5 out tokens · $0.0012\n" + runSeparator + "\n"},
+		{"run completed no cost", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":133328,"total_tokens_out":5414,"run_cost_micros":0}`, "\n✓ run complete · 133328 in / 5414 out tokens\n" + runSeparator + "\n"},
 		{"run completed no usage", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":0,"total_tokens_out":0,"run_cost_micros":0}`, "\n✓ run complete\n" + runSeparator + "\n"},
 		{"run failed", godo.HostedAgentEventKindRunFailed, "", `{"code":5,"message":"hitl rejected"}`, "\n✗ run failed: hitl rejected (code 5)\n" + runSeparator + "\n"},
 		{"hitl resolved", godo.HostedAgentEventKindHITLResolved, "", `{"hitl_id":"hitl_1","outcome":1}`, "\nhitl_1 approve\n"},
@@ -1486,6 +1492,55 @@ func TestRenderMarkdownColorizesCode(t *testing.T) {
 	out := renderMarkdown("```python\nprint('hello')\n```\n")
 	assert.Contains(t, out, "\x1b[", "code block should contain ANSI color escapes")
 	assert.NotContains(t, out, "```", "markdown fences should be consumed, not printed literally")
+}
+
+// visibleText drops SGR sequences so a test can assert on what a reader sees.
+func visibleText(s string) string {
+	return regexp.MustCompile(`\x1b\[[0-9;]*m`).ReplaceAllString(s, "")
+}
+
+// TestRenderMarkdownDropsInlineCodePadding pins the removal of glamour's
+// literal space on each side of an inline-code span, which read as a typo
+// ("in  /workspace , and") wherever the highlight color is unavailable.
+func TestRenderMarkdownDropsInlineCodePadding(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	out := visibleText(renderMarkdown("Set up in `/workspace`, archived as `site.tar.gz`.\n"))
+	assert.Contains(t, out, "Set up in /workspace, archived as site.tar.gz.")
+	assert.NotContains(t, out, " /workspace ,")
+	assert.NotContains(t, out, "  /workspace")
+}
+
+// TestRenderMarkdownTrimsPaddingAndBlankEdges covers the two invisible sources
+// of whitespace: glamour pads every wrapped line out to the wrap column, and
+// wraps the document in leading/trailing newlines that stack with the newlines
+// the surrounding event lines already print.
+func TestRenderMarkdownTrimsPaddingAndBlankEdges(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	out := renderMarkdown("This paragraph is deliberately long enough that it must wrap across more " +
+		"than one terminal line, which is when the padding shows up.\n")
+
+	assert.False(t, strings.HasPrefix(out, "\n"), "block should not open with a blank line")
+	assert.False(t, strings.HasSuffix(out, "\n"), "block should not close with a blank line")
+	for i, line := range strings.Split(visibleText(out), "\n") {
+		assert.Equal(t, strings.TrimRight(line, " "), line, "line %d keeps trailing padding", i)
+	}
+}
+
+func TestTrimLinePaddingKeepsBackgroundFill(t *testing.T) {
+	// A code-block line whose padding carries a background fill must survive
+	// intact, or the block renders with a ragged right edge.
+	filled := "\x1b[48;5;236m  print('hi')      \x1b[0m"
+	assert.Equal(t, filled, trimLinePadding(filled))
+
+	// Foreground-only padding is glamour's wrap filler and gets dropped.
+	padded := "  and the\x1b[38;5;252m \x1b[0m\x1b[38;5;252m \x1b[0m\x1b[0m"
+	assert.Equal(t, "  and the\x1b[38;5;252m\x1b[0m\x1b[38;5;252m\x1b[0m\x1b[0m", trimLinePadding(padded))
 }
 
 // TestNormalizeCodeFences covers the salvage path for the malformed Markdown
@@ -1749,6 +1804,174 @@ func TestInsertNewlineAtCursor(t *testing.T) {
 	s.insertNewlineAtCursor()
 	assert.Equal(t, "ab\ncd", string(s.lineBuf))
 	assert.Equal(t, 3, s.cursor)
+}
+
+func TestWordBoundaryScanners(t *testing.T) {
+	const line = "docs/agents.md is ready"
+	cases := []struct {
+		name string
+		fn   func([]byte, int) int
+		pos  int
+		want int
+	}{
+		{"word start skips separators then the word", wordStartBefore, len(line), 18},
+		{"word start from mid-word", wordStartBefore, 4, 0},
+		{"word start stops before punctuation run", wordStartBefore, 12, 5},
+		{"word start at line start", wordStartBefore, 0, 0},
+		{"word end from line start", wordEndAfter, 0, 4},
+		{"word end skips leading separator", wordEndAfter, 4, 11},
+		{"word end at line end", wordEndAfter, len(line), len(line)},
+		{"token start takes the whole path", tokenStartBefore, 14, 0},
+		{"token start from line end", tokenStartBefore, len(line), 18},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.fn([]byte(line), tc.pos))
+		})
+	}
+}
+
+// TestWordScannersAreRuneSafe covers pasted multibyte text: a boundary must
+// never land inside a rune, or the buffer is corrupted on the next edit.
+func TestWordScannersAreRuneSafe(t *testing.T) {
+	buf := []byte("héllo wörld")
+	assert.Equal(t, len("héllo "), wordStartBefore(buf, len(buf)))
+	assert.Equal(t, len("héllo"), wordEndAfter(buf, 0))
+	assert.True(t, utf8.Valid(buf[wordStartBefore(buf, len(buf)):]))
+}
+
+func feedEscape(t *testing.T, s *attachState, seq ...byte) {
+	t.Helper()
+	for i, b := range seq {
+		assert.True(t, handleAttachEscapeSequence(b, s),
+			"byte %d (%q) must be consumed by the escape parser, not leak to the text path", i, b)
+	}
+	assert.Empty(t, s.escSeq, "parser should not leave a partial sequence buffered")
+}
+
+func newTestAttachState(line string) *attachState {
+	s := newAttachState(io.Discard, &pendingHITL{})
+	s.lineBuf = []byte(line)
+	s.cursor = len(line)
+	return s
+}
+
+// TestMetaKeyWordMotion pins Meta+B / Meta+F / Meta+D / Meta+Backspace. Before
+// these bindings existed the ESC prefix was discarded and the trailing byte
+// reached the text path, so Meta+B typed a literal "b".
+func TestMetaKeyWordMotion(t *testing.T) {
+	s := newTestAttachState("hello world foo")
+	feedEscape(t, s, 0x1b, 'b')
+	assert.Equal(t, len("hello world "), s.cursor)
+	feedEscape(t, s, 0x1b, 'b')
+	assert.Equal(t, len("hello "), s.cursor)
+	feedEscape(t, s, 0x1b, 'f')
+	assert.Equal(t, len("hello world"), s.cursor)
+	assert.Equal(t, "hello world foo", string(s.lineBuf), "motion must not edit the buffer")
+
+	s = newTestAttachState("hello world")
+	feedEscape(t, s, 0x1b, 0x7f) // Meta+Backspace
+	assert.Equal(t, "hello ", string(s.lineBuf))
+	assert.Equal(t, len("hello "), s.cursor)
+
+	s = newTestAttachState("hello world")
+	s.cursor = len("hello ")
+	feedEscape(t, s, 0x1b, 'd') // Meta+D
+	assert.Equal(t, "hello ", string(s.lineBuf))
+}
+
+// TestCtrlWKillsWholeToken pins the deliberate difference from Meta+Backspace:
+// Ctrl-W takes the whitespace-delimited token, as it does in bash.
+func TestCtrlWKillsWholeToken(t *testing.T) {
+	s := newTestAttachState("edit docs/agents.md")
+	assert.True(t, handleAttachEditingKey(0x17, s))
+	assert.Equal(t, "edit ", string(s.lineBuf))
+
+	s = newTestAttachState("edit docs/agents.md")
+	feedEscape(t, s, 0x1b, 0x7f)
+	assert.Equal(t, "edit docs/agents.", string(s.lineBuf))
+}
+
+func TestAttachEditingControlKeys(t *testing.T) {
+	s := newTestAttachState("hello world")
+	assert.True(t, handleAttachEditingKey(0x01, s)) // Ctrl-A
+	assert.Equal(t, 0, s.cursor)
+	assert.True(t, handleAttachEditingKey(0x05, s)) // Ctrl-E
+	assert.Equal(t, len("hello world"), s.cursor)
+
+	s = newTestAttachState("hello world")
+	s.cursor = len("hello ")
+	assert.True(t, handleAttachEditingKey(0x0b, s)) // Ctrl-K
+	assert.Equal(t, "hello ", string(s.lineBuf))
+
+	s = newTestAttachState("hello world")
+	s.cursor = len("hello ")
+	assert.True(t, handleAttachEditingKey(0x15, s)) // Ctrl-U
+	assert.Equal(t, "world", string(s.lineBuf))
+	assert.Equal(t, 0, s.cursor)
+
+	assert.False(t, handleAttachEditingKey('x', newTestAttachState("")),
+		"printable bytes belong to the text path")
+	assert.False(t, handleAttachEditingKey(0x03, newTestAttachState("")),
+		"Ctrl-C must stay with the detach handler")
+}
+
+// TestCSIKeysDoNotLeak covers the CSI family: bound keys act, and unbound ones
+// are swallowed instead of typing their final byte (Home used to insert "H",
+// Delete used to insert "3~").
+func TestCSIKeysDoNotLeak(t *testing.T) {
+	s := newTestAttachState("hello")
+	feedEscape(t, s, 0x1b, '[', 'H')
+	assert.Equal(t, 0, s.cursor, "Home moves to the line start")
+	feedEscape(t, s, 0x1b, '[', 'F')
+	assert.Equal(t, len("hello"), s.cursor, "End moves to the line end")
+
+	s = newTestAttachState("hello")
+	s.cursor = 0
+	feedEscape(t, s, 0x1b, '[', '3', '~') // Delete
+	assert.Equal(t, "ello", string(s.lineBuf))
+
+	s = newTestAttachState("hello world")
+	feedEscape(t, s, 0x1b, '[', '1', ';', '5', 'D') // Ctrl+Left
+	assert.Equal(t, len("hello "), s.cursor)
+	feedEscape(t, s, 0x1b, '[', '1', ';', '3', 'C') // Alt+Right
+	assert.Equal(t, len("hello world"), s.cursor)
+
+	s = newTestAttachState("hello")
+	feedEscape(t, s, 0x1b, '[', '2', '0', ';', '4', 'R') // unbound report
+	assert.Equal(t, "hello", string(s.lineBuf), "an unbound CSI sequence must not type anything")
+	assert.Equal(t, len("hello"), s.cursor)
+}
+
+// TestEscapeSequenceRegressions keeps the behavior that predates the parser
+// rewrite: plain arrows, Alt+Enter composing a newline, and bracketed paste.
+func TestEscapeSequenceRegressions(t *testing.T) {
+	s := newTestAttachState("abc")
+	feedEscape(t, s, 0x1b, '[', 'D')
+	assert.Equal(t, 2, s.cursor, "Left moves one byte")
+	feedEscape(t, s, 0x1b, 'O', 'C')
+	assert.Equal(t, 3, s.cursor, "SS3 Right moves one byte")
+
+	s = newTestAttachState("abc")
+	feedEscape(t, s, 0x1b, 0x0d)
+	assert.Equal(t, "abc\n", string(s.lineBuf), "Alt+Enter composes a multi-line message")
+
+	s = newTestAttachState("")
+	feedEscape(t, s, bracketedPasteStart...)
+	assert.True(t, s.pasting)
+}
+
+func TestCSIModifierParsing(t *testing.T) {
+	assert.Equal(t, 3, csiParam("3", 0))
+	assert.Equal(t, 5, csiParam("1;5", 1))
+	assert.Equal(t, 0, csiParam("1", 1), "absent parameter reads as 0")
+	assert.Equal(t, 0, csiParam("", 0))
+
+	assert.True(t, csiJumpsWord("1;5"), "ctrl")
+	assert.True(t, csiJumpsWord("1;3"), "alt")
+	assert.True(t, csiJumpsWord("1;7"), "ctrl+alt")
+	assert.False(t, csiJumpsWord("1;2"), "shift alone is not word motion")
+	assert.False(t, csiJumpsWord(""), "unmodified")
 }
 
 // TestDisplayInputBufferShowsNewlineMarker is a regression test: the
@@ -3680,12 +3903,105 @@ func TestDrainStream_RunStaysStickyThroughToolCall(t *testing.T) {
 	drainStream(stream, state.display, pending, &eventCursor{}, thinking, nil, &tokenDeduper{})
 
 	out := buf.String()
-	assert.Contains(t, out, "▸ bash")
-	// One spinnerInit right after RunStarted, and a second one after the
-	// tool-call line — proving the spinner came back instead of staying
-	// dark for the rest of the run.
-	assert.GreaterOrEqual(t, strings.Count(out, defaultThinkingLabel), 2,
-		"spinner should restart after the tool-call line, not just once at RunStarted")
+	// The run ended with the call still in flight, so its line commits with no
+	// result rather than disappearing.
+	assert.Contains(t, out, "▸ ")
+	assert.Contains(t, out, "no result")
+	// The spinner came back after the tool call instead of staying dark for the
+	// rest of the run — captioned with the command, which is what an in-flight
+	// deferred call uses the spinner for.
+	assert.Contains(t, out, spinnerFrames[0]+" bash",
+		"spinner should restart carrying the in-flight command as its caption")
+}
+
+// TestDrainStream_ToolCallRendersAsOneLine pins the merged tool line: a start
+// paired with its completion commits exactly one "▸ cmd  ✓ …" row, with no
+// separate result line and no dead row between them.
+func TestDrainStream_ToolCallRendersAsOneLine(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"codex"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindToolCallStarted),
+			`{"tool_call_id":"t1","name":"bash","arguments":{"command":"/bin/bash -lc \"wc -l /workspace/styles.css\""}}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindToolCallCompleted),
+			`{"tool_call_id":"t1","ok":true,"duration_ms":12,"summary":"482 styles.css"}`) +
+		sseFrame("evt-4", string(godo.HostedAgentEventKindRunCompleted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	pending := &pendingHITL{}
+	state := newAttachState(&buf, pending)
+	state.display.setRaw(true)
+	thinking := newThinkingState(state.display)
+	require.True(t, thinking.isSticky())
+
+	drainStream(stream, state.display, pending, &eventCursor{}, thinking, nil, &tokenDeduper{})
+
+	out := buf.String()
+	assert.Contains(t, out, "▸ wc -l styles.css  ✓ 482 styles.css · 12ms")
+	assert.Equal(t, 1, strings.Count(out, "▸ "), "the pair must commit exactly one line")
+}
+
+// TestDrainStream_ToolCallCompletionWithoutStartStandsAlone pins the reattach
+// path: the server replays a completion whose start we never saw, so there's no
+// command to merge it into and it has to render on its own rather than vanish.
+func TestDrainStream_ToolCallCompletionWithoutStartStandsAlone(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindToolCallCompleted),
+		`{"tool_call_id":"t9","ok":true,"summary":"ran ls"}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.Contains(t, buf.String(), "  ✓ ran ls")
+}
+
+// TestDrainStream_ToolCallNotDeferredWithoutSpinner pins that piped output (no
+// sticky spinner to carry the command) keeps the two-line shape: the start has
+// to print when it happens, since nothing else would show what is running.
+func TestDrainStream_ToolCallNotDeferredWithoutSpinner(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindToolCallStarted),
+		`{"tool_call_id":"t1","name":"bash","arguments":{"command":"ls -la"}}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindToolCallCompleted),
+			`{"tool_call_id":"t1","ok":true,"summary":"4 files"}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	thinking := newThinkingState(&buf)
+	require.False(t, thinking.isSticky())
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, thinking, nil, &tokenDeduper{})
+
+	out := buf.String()
+	assert.Contains(t, out, "▸ ls -la")
+	assert.Contains(t, out, "  ✓ 4 files")
 }
 
 // TestDrainStream_ReasoningTokensStreamDistinctlyFromFinalAnswer pins that
@@ -4321,6 +4637,177 @@ func TestDrainStream_sandboxAllocatedUpdatesWarmup(t *testing.T) {
 	assert.True(t, warmup.active, "sandbox_allocated must not dismiss warm-up")
 	assert.Contains(t, buf.String(), "sandbox allocated")
 	warmup.clear()
+}
+
+// TestDrainStream_runLogDoesNotSplitStreamedMessage pins that a run.log
+// arriving between two token chunks leaves the buffered message intact. The
+// runtime interleaves run.log with token deltas and renderEvent prints nothing
+// for it, so flushing on it used to cut one sentence into two separately
+// rendered blocks with blank lines where the invisible event was.
+func TestDrainStream_runLogDoesNotSplitStreamedMessage(t *testing.T) {
+	body := sseFrame("e1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"codex"}`) +
+		sseFrame("e2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"The theme is now quieter"}`) +
+		sseFrame("e3", string(godo.HostedAgentEventKindRunLog), `{"level":"info","message":"patch applied"}`) +
+		sseFrame("e4", string(godo.HostedAgentEventKindTokenChunk), `{"text":" and the hero name is smaller."}`) +
+		sseFrame("e5", string(godo.HostedAgentEventKindRunCompleted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	cursor := &eventCursor{}
+	drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.Contains(t, buf.String(), "The theme is now quieter and the hero name is smaller.")
+	assert.Equal(t, "e5", cursor.get(), "run.log must still advance the resume cursor")
+}
+
+// TestMsgAccumulatorWhitespaceOnlyFlushIsSilent pins that flushing a buffer
+// holding only whitespace writes nothing. Mid-message flushes routinely catch
+// the buffer between paragraphs, and spending the block's leading and trailing
+// newlines on it piles up blank lines.
+func TestMsgAccumulatorWhitespaceOnlyFlushIsSilent(t *testing.T) {
+	old := stylingEnabled
+	stylingEnabled = true
+	t.Cleanup(func() { stylingEnabled = old })
+
+	var buf bytes.Buffer
+	acc := &msgAccumulator{}
+	acc.add("\n\n")
+	acc.flush(&buf)
+
+	assert.Empty(t, buf.String())
+}
+
+func TestPrettyCommandLabel(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"plain command untouched", "ls -la", "ls -la"},
+		{"strips bash -lc and single quotes", `/bin/bash -lc 'ls -la /workspace'`, "ls -la /workspace"},
+		{"strips double quotes", `/bin/bash -lc "wc -c index.html"`, "wc -c index.html"},
+		{"unescapes inner double quotes", `/bin/bash -lc "rg -n \"h1|clamp\" styles.css"`, `rg -n "h1|clamp" styles.css`},
+		{"keeps inner single quotes", `/bin/bash -lc "sed -n '1,260p' styles.css"`, `sed -n '1,260p' styles.css`},
+		{"handles sh -c", `sh -c 'echo hi'`, "echo hi"},
+		{"handles zsh -ic", `/usr/bin/zsh -ic 'echo hi'`, "echo hi"},
+		{"drops workspace prefix", `/bin/bash -lc "sed -n '1,9p' /workspace/.agents/skills/x/SKILL.md"`, `sed -n '1,9p' .agents/skills/x/SKILL.md`},
+		{"keeps bare workspace", `/bin/bash -lc 'ls -la /workspace'`, "ls -la /workspace"},
+		{"collapses newlines", "echo one\n\necho two", "echo one echo two"},
+		{"leaves several quoted words alone", `/bin/bash -lc 'a' 'b'`, `'a' 'b'`},
+		{"tolerates missing command after wrapper", "/bin/bash -lc", "/bin/bash -lc"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, prettyCommandLabel(tt.in))
+		})
+	}
+}
+
+// TestToolCallStartedCommandLineShowsSubject pins that a tool which runs
+// neither a command nor a file edit still says what it was asked to do. Plano
+// forwards an MCP call's arguments verbatim, so the query is all there is to go
+// on — a bare tool name leaves you unable to tell what the agent searched for.
+func TestToolCallStartedCommandLineShowsSubject(t *testing.T) {
+	tests := []struct {
+		name string
+		p    toolCallStartedPayload
+		want string
+	}{
+		{
+			"mcp query",
+			toolCallStartedPayload{Name: "web_search", Arguments: json.RawMessage(`{"query":"latest news this week"}`)},
+			"web_search latest news this week",
+		},
+		{
+			"url argument",
+			toolCallStartedPayload{Name: "fetch", Arguments: json.RawMessage(`{"url":"https://example.com/a"}`)},
+			"fetch https://example.com/a",
+		},
+		{
+			"nested arguments",
+			toolCallStartedPayload{Name: "search", Input: json.RawMessage(`{"params":{"pattern":"TODO"}}`)},
+			"search TODO",
+		},
+		{
+			"command still wins over subject",
+			toolCallStartedPayload{Name: "bash", Arguments: json.RawMessage(`{"command":"ls","query":"ignored"}`)},
+			"ls",
+		},
+		{
+			"bare name when nothing else is known",
+			toolCallStartedPayload{Name: "web_search", Arguments: json.RawMessage(`{"opaque":{"n":1}}`)},
+			"web_search",
+		},
+		{
+			"placeholder when even the name is missing",
+			toolCallStartedPayload{},
+			"tool call",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.p.commandLine())
+		})
+	}
+}
+
+func TestToolCallStartedCommandLineUnwrapsShell(t *testing.T) {
+	p := toolCallStartedPayload{
+		Name:      "bash",
+		Arguments: json.RawMessage(`{"command":"/bin/bash -lc \"wc -c /workspace/index.html\""}`),
+	}
+	assert.Equal(t, "wc -c index.html", p.commandLine())
+}
+
+// TestToolResultSuffix pins that the suffix reports only what the adapter
+// actually sent, and that its width excludes ANSI escapes so the command
+// budget in renderToolLine isn't computed against invisible bytes.
+func TestToolResultSuffix(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	tests := []struct {
+		name      string
+		payload   toolCallCompletedPayload
+		want      string
+		wantWidth int
+	}{
+		{"bare mark when nothing reported", toolCallCompletedPayload{OK: true}, "✓", 1},
+		{"failure mark", toolCallCompletedPayload{OK: false}, "✗", 1},
+		{"duration only", toolCallCompletedPayload{OK: true, DurationMS: 12}, "✓ 12ms", 6},
+		{"summary only", toolCallCompletedPayload{OK: true, Summary: "4 files"}, "✓ 4 files", 9},
+		{"both", toolCallCompletedPayload{OK: true, Summary: "4 files", DurationMS: 12}, "✓ 4 files · 12ms", 16},
+		{"first line only", toolCallCompletedPayload{OK: true, Summary: "HTTP/2 200\nserver: nginx"}, "✓ HTTP/2 200", 12},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, width := tt.payload.resultSuffix()
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantWidth, width)
+		})
+	}
+}
+
+// TestRenderToolLineTruncatesToWidth pins that a long command is cut to fit
+// rather than wrapping, which would break the ▸/✓ column.
+func TestRenderToolLineTruncatesToWidth(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	renderToolLine(&buf, strings.Repeat("x", 400), "✓ 12ms", 6)
+
+	line := strings.Trim(buf.String(), "\n")
+	assert.LessOrEqual(t, utf8.RuneCountInString(line), mdWrapWidth())
+	assert.True(t, strings.HasSuffix(line, "…  ✓ 12ms"), "got %q", line)
 }
 
 func TestBackendPhaseFromStatus(t *testing.T) {
