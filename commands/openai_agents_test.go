@@ -503,3 +503,65 @@ func TestOpenAIAttachRenderer_PolishedOutput(t *testing.T) {
 	assert.Contains(t, out, "run complete")
 	assert.NotContains(t, out, `"event_id"`)
 }
+
+func TestOpenAIAttachRenderer_ReasoningStreamedViaDelta(t *testing.T) {
+	var buf strings.Builder
+	r := &openAIAttachRenderer{out: &buf}
+
+	r.handle(map[string]any{"type": "session.turn.created"})
+	r.handle(map[string]any{"type": "session.turn.reasoning_summary_text.delta", "delta": "Let's check "})
+	r.handle(map[string]any{"type": "session.turn.reasoning_summary_text.delta", "delta": "the file first."})
+	r.handle(map[string]any{"type": "session.turn.reasoning_summary_text.done", "text": "Let's check the file first."})
+	r.handle(map[string]any{"type": "session.turn.output_text.delta", "delta": "Done."})
+	r.handle(map[string]any{"type": "session.turn.completed"})
+
+	out := buf.String()
+	assert.Contains(t, out, "Let's check the file first.")
+	assert.Contains(t, out, "Done.")
+	// The .done fallback must not duplicate text already streamed via deltas.
+	assert.Equal(t, 1, strings.Count(out, "Let's check the file first."))
+}
+
+func TestOpenAIAttachRenderer_ReasoningItemDoneFallback(t *testing.T) {
+	var buf strings.Builder
+	r := &openAIAttachRenderer{out: &buf}
+
+	r.handle(map[string]any{"type": "session.turn.created"})
+	r.handle(map[string]any{
+		"type": "session.turn.item.added",
+		"item": map[string]any{"type": "reasoning"},
+	})
+	r.handle(map[string]any{
+		"type": "session.turn.item.done",
+		"item": map[string]any{
+			"type": "reasoning",
+			"summary": []any{
+				map[string]any{"type": "summary_text", "text": "Considering the best approach."},
+			},
+		},
+	})
+	r.handle(map[string]any{"type": "session.turn.output_text.delta", "delta": "Here's the plan."})
+	r.handle(map[string]any{"type": "session.turn.completed"})
+
+	out := buf.String()
+	assert.Contains(t, out, "Considering the best approach.")
+	assert.Contains(t, out, "Here's the plan.")
+}
+
+func TestOpenAIAttachRenderer_ReasoningDoesNotLeakIntoFinalAnswer(t *testing.T) {
+	var buf strings.Builder
+	r := &openAIAttachRenderer{out: &buf}
+
+	r.handle(map[string]any{"type": "session.turn.created"})
+	r.handle(map[string]any{"type": "session.turn.reasoning_summary_text.delta", "delta": "internal thoughts"})
+	r.handle(map[string]any{"type": "session.turn.reasoning_summary_text.done", "text": "internal thoughts"})
+	r.handle(map[string]any{"type": "session.turn.output_text.delta", "delta": "the actual answer"})
+	r.handle(map[string]any{"type": "session.turn.completed"})
+
+	out := buf.String()
+	// Reasoning is streamed directly to r.out, never through r.acc, so it must
+	// not appear inside the markdown-rendered final-answer block.
+	completedIdx := strings.Index(out, "the actual answer")
+	require.NotEqual(t, -1, completedIdx)
+	assert.NotContains(t, out[completedIdx:], "internal thoughts")
+}

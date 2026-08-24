@@ -71,21 +71,33 @@ func TestPrintAgentConfigsList(t *testing.T) {
 	prev := stylingEnabled
 	stylingEnabled = false
 	t.Cleanup(func() { stylingEnabled = prev })
+	prevVerbose := Verbose
+	t.Cleanup(func() { Verbose = prevVerbose })
 
-	var buf bytes.Buffer
-	printAgentConfigsList(&buf, []godo.HostedAgentConfigSummary{{
+	created := time.Now().Add(-5 * time.Minute)
+	configs := []godo.HostedAgentConfigSummary{{
 		ID:          "01a01e58-6209-7c75-8b31-6cb80f7301ff",
 		Name:        "session-opencode-20260820-084503",
-		CreatedAt:   godo.Timestamp{Time: time.Date(2026, 8, 20, 8, 45, 3, 0, time.UTC)},
+		CreatedAt:   godo.Timestamp{Time: created},
 		ContentHash: "c0c95e3b975398c69bd0b235d32f21647171bf825aa08369de820ee240569b35",
-	}})
+	}}
 
+	Verbose = false
+	var buf bytes.Buffer
+	printAgentConfigsList(&buf, configs)
 	out := buf.String()
 	assert.Contains(t, out, "1 config")
 	assert.Contains(t, out, "session-opencode-20260820-084503")
 	assert.Contains(t, out, "01a01e58-6209-7c75-8b31-6cb80f7301ff")
-	assert.Contains(t, out, "2026-08-20 08:45")
+	assert.Contains(t, out, "5m ago")
 	assert.NotContains(t, out, "c0c95e3b975398c69bd0b235d32f21647171bf825aa08369de820ee240569b35")
+
+	Verbose = true
+	var verboseBuf bytes.Buffer
+	printAgentConfigsList(&verboseBuf, configs)
+	verboseOut := verboseBuf.String()
+	assert.Contains(t, verboseOut, created.UTC().Format("2006-01-02 15:04"))
+	assert.NotContains(t, verboseOut, "5m ago")
 }
 
 func TestTruncateMiddle(t *testing.T) {

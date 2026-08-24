@@ -82,7 +82,7 @@ func (e *agentPrettyError) DisplayError() string {
 		reason = strings.TrimSpace(e.cause.Error())
 	}
 	if reason != "" && !strings.EqualFold(reason, title) {
-		b.WriteString(cardRow("Reason", reason))
+		fmt.Fprintf(&b, "  %s\n", reason)
 	}
 	if e.status > 0 {
 		b.WriteString(cardRow("Status", colorize(httpStatusLabel(e.status), colMuted)))
@@ -95,7 +95,7 @@ func (e *agentPrettyError) DisplayError() string {
 			if tip == "" {
 				continue
 			}
-			b.WriteString(cardRow("•", tip))
+			fmt.Fprintf(&b, "  %s\n", tip)
 		}
 	}
 	return strings.TrimRight(b.String(), "\n")
