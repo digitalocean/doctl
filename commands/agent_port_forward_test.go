@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -251,6 +252,113 @@ func TestFormatHeaderRedactsAuthorization(t *testing.T) {
 	assert.NotContains(t, got, "super-secret-token")
 	assert.Contains(t, got, "Authorization: [redacted]")
 	assert.Contains(t, got, "User-Agent: doctl/test")
+}
+
+func TestTunnelHeader(t *testing.T) {
+	tests := []struct {
+		name     string
+		token    string
+		deviceID string
+		want     map[string]string
+	}{
+		{
+			name:     "token and device id",
+			token:    "tok",
+			deviceID: "DEV-UUID",
+			want: map[string]string{
+				"Authorization":     "Bearer tok",
+				deviceid.HeaderName: "DEV-UUID",
+			},
+		},
+		{
+			name:     "unauthenticated context still carries the device id",
+			deviceID: "DEV-UUID",
+			want:     map[string]string{deviceid.HeaderName: "DEV-UUID"},
+		},
+		{
+			// deviceid.Get returns "" when the lookup fails or the user opted
+			// out with DOCTL_DISABLE_DEVICE_ID; the header must be absent
+			// rather than empty.
+			name:  "device id unavailable",
+			token: "tok",
+			want:  map[string]string{"Authorization": "Bearer tok"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tunnelHeader(tt.token, tt.deviceID)
+
+			assert.Len(t, got, len(tt.want))
+			for k, v := range tt.want {
+				assert.Equal(t, v, got.Get(k))
+			}
+		})
+	}
+}
+
+func TestRedactDeviceID(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "empty stays empty", in: "", want: ""},
+		{name: "whitespace only", in: "   ", want: ""},
+		{name: "short values are fully masked", in: "12345678", want: "***"},
+		{
+			name: "long values keep a correlatable prefix and suffix",
+			in:   "564D8C1A-1234-5678-9ABC-DEF012345678",
+			want: "564D***5678",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, redactDeviceID(tt.in))
+		})
+	}
+}
+
+func TestFormatHeaderRedactsDeviceID(t *testing.T) {
+	h := http.Header{}
+	h.Set(deviceid.HeaderName, "564D8C1A-1234-5678-9ABC-DEF012345678")
+
+	got := formatHeader(h)
+
+	assert.NotContains(t, got, "564D8C1A-1234-5678-9ABC-DEF012345678")
+	// Header.Set canonicalizes the key to X-Device-Uuid, matching what the
+	// deviceid transport already puts on the wire for every other agents call.
+	assert.Contains(t, got, http.CanonicalHeaderKey(deviceid.HeaderName)+": 564D***5678")
+}
+
+// TestBridgeLocalConnSendsDeviceHeader proves the header survives the gorilla
+// dial rather than only being present in the map we hand it.
+func TestBridgeLocalConnSendsDeviceHeader(t *testing.T) {
+	got := make(chan http.Header, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got <- r.Header.Clone()
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer srv.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") +
+		"/v2/agents/sessions/sess-1/port-forward/9119"
+
+	local, remote := net.Pipe()
+	defer local.Close()
+	defer remote.Close()
+
+	header := tunnelHeader("tok", "DEV-UUID")
+	_ = bridgeLocalConn(context.Background(), remote, wsURL, header, nil)
+
+	select {
+	case h := <-got:
+		assert.Equal(t, "DEV-UUID", h.Get(deviceid.HeaderName))
+		assert.Equal(t, "Bearer tok", h.Get("Authorization"))
+	default:
+		t.Fatal("server never received the upgrade request")
+	}
 }
 
 // TestBridgeLocalConnSurfacesServerMessage exercises the real gorilla dial:

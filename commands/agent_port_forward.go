@@ -18,6 +18,7 @@ import (
 	"syscall"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
@@ -192,7 +193,7 @@ func (t *wsTracer) handshake(wsURL string, header http.Header, resp *http.Respon
 	t.logger.Println("<-", strconv.Quote(line))
 }
 
-// formatHeader renders headers on one line with the bearer token masked;
+// formatHeader renders headers on one line with sensitive values masked;
 // trace output gets pasted into tickets.
 func formatHeader(h http.Header) string {
 	keys := make([]string, 0, len(h))
@@ -203,12 +204,50 @@ func formatHeader(h http.Header) string {
 	parts := make([]string, 0, len(keys))
 	for _, k := range keys {
 		v := strings.Join(h[k], ",")
-		if strings.EqualFold(k, "Authorization") {
+		switch {
+		case strings.EqualFold(k, "Authorization"):
 			v = "[redacted]"
+		case strings.EqualFold(k, deviceid.HeaderName):
+			v = redactDeviceID(v)
 		}
 		parts = append(parts, k+": "+v)
 	}
 	return strings.Join(parts, "; ")
+}
+
+// redactDeviceID masks a hardware id the way harness-api's device.Redact does,
+// so a trace line and the server's log line for the same request stay
+// correlatable without either recording the full identifier.
+func redactDeviceID(id string) string {
+	s := strings.TrimSpace(id)
+	switch {
+	case s == "":
+		return ""
+	case len(s) <= 8:
+		return "***"
+	default:
+		return s[:4] + "***" + s[len(s)-4:]
+	}
+}
+
+// tunnelHeader builds the WebSocket upgrade headers. Both values are
+// injected rather than read here so this stays testable: deviceid.Get caches
+// its lookup in a sync.Once.
+//
+// The device id is what the deviceid transport stamps on every /v2/agents
+// request, but that transport wraps godo's RoundTripper and gorilla dials its
+// own connection. Without it the tunnel is the one agents call harness-api's
+// device middleware logs with an empty id, and it is also the one that opens
+// a raw TCP channel into the sandbox.
+func tunnelHeader(token, deviceID string) http.Header {
+	header := http.Header{}
+	if token != "" {
+		header.Set("Authorization", "Bearer "+token)
+	}
+	if deviceID != "" {
+		header.Set(deviceid.HeaderName, deviceID)
+	}
+	return header
 }
 
 // RunAgentsPortForward opens local TCP tunnels to ports inside the session's
@@ -237,10 +276,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 		warn("binding %s exposes the tunnel to anyone who can reach this address", address)
 	}
 
-	header := http.Header{}
-	if token := c.getContextAccessToken(); token != "" {
-		header.Set("Authorization", "Bearer "+token)
-	}
+	header := tunnelHeader(c.getContextAccessToken(), deviceid.Get())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
