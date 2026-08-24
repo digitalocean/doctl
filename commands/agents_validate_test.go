@@ -59,6 +59,17 @@ func TestValidateAgentManifest_UnknownAdapter(t *testing.T) {
 	assert.Contains(t, v.Errors[0], "not a known adapter")
 }
 
+func TestValidateAgentManifest_RemovedAdaptersRejected(t *testing.T) {
+	for _, adapter := range []string{"cursor", "hermes", "cursor-cli"} {
+		t.Run(adapter, func(t *testing.T) {
+			v := validateAgentManifest([]byte("agent: " + adapter + "\n"))
+			require.False(t, v.ok())
+			assert.Contains(t, v.Errors[0], "not a known adapter")
+			assert.Contains(t, v.Errors[0], adapter)
+		})
+	}
+}
+
 func TestValidateAgentManifest_CredentialPlaceholderNoWarn(t *testing.T) {
 	const manifest = `agent: opencode
 env:
