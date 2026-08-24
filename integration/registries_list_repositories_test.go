@@ -102,6 +102,25 @@ var _ = suite("registries/list-repositories", func(t *testing.T, when spec.G, it
 			expect.Contains(string(output), "test-repo-1")
 			expect.Contains(string(output), "test-repo-2")
 		})
+
+		it("lists repositories using registries command with custom V2 format fields", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"registries",
+				"repository",
+				"list-v2",
+				"test-registry",
+				"--format", "Name,ManifestCount,UpdatedAt",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Contains(string(output), "Name")
+			expect.Contains(string(output), "Manifest Count")
+			expect.Contains(string(output), "test-repo-1")
+			expect.Contains(string(output), "test-repo-2")
+		})
 	})
 
 	it.After(func() {
