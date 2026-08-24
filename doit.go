@@ -47,16 +47,6 @@ import (
 const (
 	// LatestReleaseURL is the latest release URL endpoint.
 	LatestReleaseURL = "https://api.github.com/repos/digitalocean/doctl/releases/latest"
-
-	// HostedAgentsAPIURL is the API endpoint the `doctl agents` commands use.
-	// Hosted agents are fronted by their own host, which serves both the
-	// session control plane (/v2/agents/...) and the data-plane event stream
-	// (.../events), rather than by api.digitalocean.com.
-	//
-	// An explicit --api-url (DIGITALOCEAN_API_URL) still wins, which is how a
-	// non-production environment is reached — the preview host, for instance,
-	// is https://ohr-agent.do-ai-test.run.
-	HostedAgentsAPIURL = "https://ohr-agent.do-ai.run/"
 )
 
 // Version is the version info for doit.
@@ -246,8 +236,8 @@ type LiveConfig struct {
 var _ Config = &LiveConfig{}
 
 // GetGodoClient returns a GodoClient. opts are applied before the --api-url
-// override, so a caller-supplied default base URL (see HostedAgentsAPIURL)
-// yields to an endpoint the user asked for explicitly.
+// override, so a caller-supplied default base URL yields to an endpoint the
+// user asked for explicitly (DIGITALOCEAN_API_URL / --api-url).
 func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error) {
 	if accessToken == "" {
 		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")

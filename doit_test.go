@@ -131,11 +131,10 @@ func (slr stubLatestRelease) LatestVersion() (string, error) {
 	return slr.version, nil
 }
 
-// TestGetGodoClientBaseURL pins the precedence that lets the `doctl agents`
-// commands default to their own host without taking the endpoint away from a
-// user who named one: caller-supplied options set a default, --api-url
-// overrides it.
+// TestGetGodoClientBaseURL pins the precedence that lets a caller-supplied
+// base URL act as a default while --api-url (DIGITALOCEAN_API_URL) still wins.
 func TestGetGodoClientBaseURL(t *testing.T) {
+	const customDefault = "https://agents.example.test/"
 	cases := []struct {
 		name   string
 		apiURL string
@@ -148,13 +147,13 @@ func TestGetGodoClientBaseURL(t *testing.T) {
 		},
 		{
 			name: "caller-supplied base URL applies",
-			opts: []godo.ClientOpt{godo.SetBaseURL(HostedAgentsAPIURL)},
-			want: HostedAgentsAPIURL,
+			opts: []godo.ClientOpt{godo.SetBaseURL(customDefault)},
+			want: customDefault,
 		},
 		{
 			name:   "api-url wins over a caller-supplied base URL",
 			apiURL: "https://ohr-agent.do-ai-test.run/",
-			opts:   []godo.ClientOpt{godo.SetBaseURL(HostedAgentsAPIURL)},
+			opts:   []godo.ClientOpt{godo.SetBaseURL(customDefault)},
 			want:   "https://ohr-agent.do-ai-test.run/",
 		},
 		{
