@@ -25,7 +25,7 @@ import (
 // Primary cobra command name and user-facing CLI prefix for Managed Agents
 // Runtime Services (M.A.R.S). Viper keys stay under agents.* via agentsNS.
 const (
-	agentCmdName = "open-harness-runtime"
+	agentCmdName = "harness-runtime"
 	agentCLI     = "doctl " + agentCmdName
 )
 

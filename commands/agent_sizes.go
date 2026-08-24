@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentSizes generates the `doctl open-harness-runtime sizes` subtree for the
+// AgentSizes generates the `doctl harness-runtime sizes` subtree for the
 // sandbox (microVM) size catalog returned by ListSandboxSizes.
 func AgentSizes() *Command {
 	cmd := &Command{
@@ -37,7 +37,7 @@ func AgentSizes() *Command {
 		agentsSizesListHelpMD,
 		Writer, append(ns, aliasOpt("ls"),
 			displayerType(&displayers.HostedAgentSandboxSize{}))...)
-	cmdList.Example = `doctl open-harness-runtime sizes list`
+	cmdList.Example = `doctl harness-runtime sizes list`
 
 	return cmd
 }

@@ -349,7 +349,7 @@ func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
 	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
 	// required-flag check, so the FromConfigID runner tests cannot catch this.
 	require.False(t, viper.GetBool("required.agents.start.spec"),
-		"spec is still marked required; `doctl open-harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
+		"spec is still marked required; `doctl harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
 	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
 	require.NoError(t, err)
 }
@@ -680,7 +680,7 @@ func TestRunAgentsShow(t *testing.T) {
 		got := buf.String()
 		assert.Contains(t, got, "demo")
 		assert.Contains(t, got, "ready")
-		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
+		assert.Contains(t, got, "doctl harness-runtime attach demo")
 		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }

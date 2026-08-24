@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AgentConfigs generates the `doctl open-harness-runtime config` subtree, which wraps the
+// AgentConfigs generates the `doctl harness-runtime config` subtree, which wraps the
 // godo Agent Configs API: immutable, team-scoped agent manifests that sessions
 // can be launched from by ID.
 func AgentConfigs() *Command {
@@ -55,7 +55,7 @@ func AgentConfigs() *Command {
 			displayerType(&displayers.HostedAgentConfig{}))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-config\nagent: opencode". Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
-	cmdCreate.Example = `doctl open-harness-runtime config create --spec agent-spec.yaml --name my-config`
+	cmdCreate.Example = `doctl harness-runtime config create --spec agent-spec.yaml --name my-config`
 
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
@@ -64,7 +64,7 @@ func AgentConfigs() *Command {
 			displayerType(&displayers.HostedAgentConfigSummary{}))...)
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of configs to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
-	cmdList.Example = `doctl open-harness-runtime config list --page-size 10`
+	cmdList.Example = `doctl harness-runtime config list --page-size 10`
 
 	CmdBuilder(cmd, RunAgentsConfigGet, "get <config-id>",
 		"Get an agent config",
@@ -86,7 +86,7 @@ func AgentConfigs() *Command {
 	AddStringFlag(cmdSessions, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	AddStringFlag(cmdSessions, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY)")
 	AddStringFlag(cmdSessions, doctl.ArgAgentName, "", "", "Filter by session name")
-	cmdSessions.Example = `doctl open-harness-runtime config list-sessions cfg_abc123 --status SESSION_STATUS_READY`
+	cmdSessions.Example = `doctl harness-runtime config list-sessions cfg_abc123 --status SESSION_STATUS_READY`
 
 	cmdStartSession := CmdBuilder(cmd, RunAgentsConfigStartSession, "start-session <config-id>",
 		"Start a session from a config",
@@ -94,7 +94,7 @@ func AgentConfigs() *Command {
 		Writer, append(ns, aliasOpt("start"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdStartSession, doctl.ArgAgentName, "", "", "Name for the new session", requiredOpt())
-	cmdStartSession.Example = `doctl open-harness-runtime config start-session cfg_abc123 --name my-session`
+	cmdStartSession.Example = `doctl harness-runtime config start-session cfg_abc123 --name my-session`
 
 	return cmd
 }
@@ -199,7 +199,7 @@ func RunAgentsConfigDelete(c *CmdConfig) error {
 	if err := c.HostedAgents().DeleteAgentConfig(configID); err != nil {
 		if agentConfigHasActiveSessionsErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. List them with `doctl open-harness-runtime config list-sessions %s`, remove each with `doctl open-harness-runtime remove`, then retry", strings.TrimRight(msg, "."), configID)
+			return fmt.Errorf("%s. List them with `doctl harness-runtime config list-sessions %s`, remove each with `doctl harness-runtime remove`, then retry", strings.TrimRight(msg, "."), configID)
 		}
 		return err
 	}
@@ -360,7 +360,7 @@ func printAgentConfigCard(w io.Writer, cfg *godo.HostedAgentConfig, created bool
 	if id := strings.TrimSpace(cfg.ID); id != "" {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		body.WriteString(cardRow("run", "doctl open-harness-runtime run --config-id "+id+" --name my-session"))
+		body.WriteString(cardRow("run", "doctl harness-runtime run --config-id "+id+" --name my-session"))
 	}
 
 	renderAgentCard(w, body.String())

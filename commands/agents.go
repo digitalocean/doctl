@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The `doctl open-harness-runtime` command (aliases: agent, agents, ohr) wraps the
+// The `doctl harness-runtime` command (aliases: agent, agents, ohr) wraps the
 // godo HostedAgents service for Managed Agents Runtime Services (M.A.R.S).
 // Wire types and the SSE iterator live in godo; this file handles CLI plumbing,
 // argument parsing, and human-readable rendering of streamed events.
@@ -299,7 +299,7 @@ func (r *reasoningStreamer) endWithLabel(label string) {
 	}
 }
 
-// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents, ohr).
+// Agents creates the `doctl harness-runtime` command tree (aliases: agent, agents, ohr).
 func Agents() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -400,19 +400,19 @@ func Agents() *Command {
 		"Remove a session",
 		agentsRemoveHelpMD,
 		Writer, agentsNS(aliasOpt("destroy", "rm"))...)
-	cmdRemove.Example = `doctl open-harness-runtime remove sess_abc123; doctl open-harness-runtime remove my-session; doctl open-harness-runtime destroy my-session`
+	cmdRemove.Example = `doctl harness-runtime remove sess_abc123; doctl harness-runtime remove my-session; doctl harness-runtime destroy my-session`
 
 	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
 		"Pause a session",
 		agentsPauseHelpMD,
 		Writer, agentsNS()...)
-	cmdPause.Example = `doctl open-harness-runtime pause sess_abc123`
+	cmdPause.Example = `doctl harness-runtime pause sess_abc123`
 
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
 		"Resume a paused session",
 		agentsResumeHelpMD,
 		Writer, agentsNS()...)
-	cmdResume.Example = `doctl open-harness-runtime resume sess_abc123`
+	cmdResume.Example = `doctl harness-runtime resume sess_abc123`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
@@ -422,7 +422,7 @@ func Agents() *Command {
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdUpload, doctl.ArgAgentLocalFile, "", "", "Path to the local file to upload", requiredOpt())
 	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as an uncompressed tar archive to extract at the destination (not .tgz / .tar.gz)")
-	cmdUpload.Example = `doctl open-harness-runtime upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
+	cmdUpload.Example = `doctl harness-runtime upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
@@ -431,7 +431,7 @@ func Agents() *Command {
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
-	cmdDownload.Example = `doctl open-harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+	cmdDownload.Example = `doctl harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
 	cmdExec := CmdBuilder(cmd, RunAgentsExec, "exec <session> -- <command> [args...]",
 		"Run a command in a session's sandbox",
@@ -440,7 +440,7 @@ func Agents() *Command {
 			displayerType(&displayers.HostedAgentSandboxExec{}))...)
 	AddStringFlag(cmdExec, doctl.ArgAgentExecWorkdir, "", "", "Absolute guest directory to run in (defaults to the workspace root)")
 	AddIntFlag(cmdExec, doctl.ArgAgentExecTimeout, "", 0, "Maximum seconds the command may run (0 uses the server default)")
-	cmdExec.Example = `doctl open-harness-runtime exec sess_abc123 -- ls -la; doctl open-harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
+	cmdExec.Example = `doctl harness-runtime exec sess_abc123 -- ls -la; doctl harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
 
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",
@@ -448,7 +448,7 @@ func Agents() *Command {
 		Writer, agentsNS()...)
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
-	cmdAuth.Example = `doctl open-harness-runtime auth github`
+	cmdAuth.Example = `doctl harness-runtime auth github`
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
@@ -457,7 +457,7 @@ func Agents() *Command {
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
 	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
-	cmdFork.Example = `doctl open-harness-runtime fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+	cmdFork.Example = `doctl harness-runtime fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
 
 	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
 		"Roll a session back to a checkpoint in place",
@@ -1051,7 +1051,7 @@ func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 
 	switch len(live) {
 	case 0:
-		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl open-harness-runtime list` to see available sessions", ref)
+		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl harness-runtime list` to see available sessions", ref)
 	case 1:
 		return live[0].SessionID, nil
 	default:
@@ -1090,7 +1090,7 @@ func RunAgentsShow(c *CmdConfig) error {
 	return nil
 }
 
-// RunAgentsDestroy tears down a session (CLI: `doctl open-harness-runtime remove`,
+// RunAgentsDestroy tears down a session (CLI: `doctl harness-runtime remove`,
 // with aliases `destroy` and `rm`).
 func RunAgentsDestroy(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
@@ -1151,7 +1151,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 	provider := strings.ToLower(strings.TrimSpace(c.Args[0]))
 	if provider == "" {
-		return errors.New("a provider is required, e.g. `doctl open-harness-runtime auth github`")
+		return errors.New("a provider is required, e.g. `doctl harness-runtime auth github`")
 	}
 	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
 	if err != nil {
@@ -1200,7 +1200,7 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	}
 
 	if noWait || start.PollURL == "" {
-		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl open-harness-runtime auth %s` after authorizing to confirm the connection", provider))
+		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl harness-runtime auth %s` after authorizing to confirm the connection", provider))
 		return nil
 	}
 
@@ -1213,7 +1213,7 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("stopped waiting; re-run `doctl open-harness-runtime auth %s` to check the connection later", provider)
+			return fmt.Errorf("stopped waiting; re-run `doctl harness-runtime auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
 
@@ -3228,7 +3228,7 @@ func classifyStreamError(err error) (string, bool) {
 			if status == http.StatusConflict && ape.title == "Conflict" {
 				// V0 single-connection rejection; prefer a clearer title.
 				ape.title = "Session already attached elsewhere"
-				ape.tips = []string{"Detach on the other device, then re-run doctl open-harness-runtime attach"}
+				ape.tips = []string{"Detach on the other device, then re-run doctl harness-runtime attach"}
 			}
 			if status == http.StatusNotFound {
 				ape.title = "Session not found"
