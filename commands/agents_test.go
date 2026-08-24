@@ -4216,35 +4216,22 @@ func TestWarmupState_markInputQueuedDismissesBanner(t *testing.T) {
 
 func TestWarmupState_clearsOnTimeout(t *testing.T) {
 	oldClock := warmupClock
-	oldDur := warmupDuration
 	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
 	warmupClock = func() time.Time { return now }
-	warmupDuration = 20 * time.Millisecond
-	t.Cleanup(func() {
-		warmupClock = oldClock
-		warmupDuration = oldDur
-	})
+	t.Cleanup(func() { warmupClock = oldClock })
 
 	var buf bytes.Buffer
 	w := newWarmupState(&buf, now)
+	w.timeout = 20 * time.Millisecond
 	w.start()
 	assert.Contains(t, buf.String(), msgAgentWarmup)
 
-	deadline := time.Now().Add(500 * time.Millisecond)
-	for time.Now().Before(deadline) {
+	require.Eventually(t, func() bool {
 		w.mu.Lock()
-		done := !w.active && w.dismissed
-		w.mu.Unlock()
-		if done {
-			break
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	w.mu.Lock()
-	active, dismissed := w.active, w.dismissed
-	w.mu.Unlock()
-	assert.False(t, active)
-	assert.True(t, dismissed)
+		defer w.mu.Unlock()
+		return !w.active && w.dismissed
+	}, time.Second, 5*time.Millisecond)
+
 	assert.NotContains(t, buf.String(), "You can type anytime")
 }
 

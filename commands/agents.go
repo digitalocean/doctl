@@ -2735,6 +2735,7 @@ type warmupState struct {
 	queued        bool
 	inputQueued   bool
 	phase         string
+	timeout       time.Duration // when > 0, overrides warmupDuration (tests)
 	getSession    func() (*do.HostedAgentSession, error)
 	timeoutCancel context.CancelFunc
 	animCancel    context.CancelFunc
@@ -2813,7 +2814,11 @@ func (w *warmupState) start() {
 		return
 	}
 	w.active = true
-	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), warmupDuration)
+	d := warmupDuration
+	if w.timeout > 0 {
+		d = w.timeout
+	}
+	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), d)
 	w.timeoutCancel = timeoutCancel
 	getSession := w.getSession
 
