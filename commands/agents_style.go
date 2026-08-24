@@ -25,7 +25,7 @@ import (
 
 // relativeTimeAgo renders t as a short relative duration ("just now", "5m
 // ago", "3h ago", "2d ago"). Falls back to a plain date once it's more than
-// 30 days old, where "Nd ago" stops being a useful measure.
+// 30 days old, where day-level relative times stop being a useful measure.
 func relativeTimeAgo(t time.Time) string {
 	d := time.Since(t)
 	if d < 0 {
