@@ -16,6 +16,8 @@ package commands
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -94,6 +96,28 @@ func TestBuildHarnessManifest(t *testing.T) {
 		input, ok := cfg["input"].([]any)
 		require.True(t, ok)
 		require.Len(t, input, 1)
+	})
+
+	t.Run("claude-code references ANTHROPIC_API_KEY", func(t *testing.T) {
+		raw, err := buildHarnessManifest("claude-code", "", "", "")
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "claude-code", doc["agent"])
+		env, ok := doc["env"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, "${ANTHROPIC_API_KEY}", env["ANTHROPIC_API_KEY"])
+		assert.NotContains(t, doc, "config")
+	})
+
+	t.Run("opencode has no injected key requirement", func(t *testing.T) {
+		raw, err := buildHarnessManifest("opencode", "", "", "")
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.NotContains(t, doc, "env")
 	})
 }
 
@@ -275,7 +299,136 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		assert.Contains(t, out, "Agent is ready")
 		assert.NotContains(t, out, "SESSION_STATUS_")
 		assert.Contains(t, out, "doctl open-harness-runtime attach demo")
+		assert.NotContains(t, out, "katanemo/plano", "repo is hidden by default; only shown with -v/--verbose")
+	})
+}
+
+// TestRunAgentsRun_ClaudeCodeMissingAnthropicKey ensures a missing inference
+// key is caught locally (no CreateSessionFromManifest/GetSession
+// expectations set below — gomock fails the test if either is called) rather
+// than letting the harness fail once it's already hosted.
+func TestRunAgentsRun_ClaudeCodeMissingAnthropicKey(t *testing.T) {
+	_ = os.Unsetenv(anthropicAPIKeyEnv)
+	prevInteractive := Interactive
+	Interactive = false
+	t.Cleanup(func() {
+		Interactive = prevInteractive
+		_ = os.Unsetenv(anthropicAPIKeyEnv)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
+		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
+
+		err := RunAgentsRun(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), anthropicAPIKeyEnv)
+	})
+}
+
+// TestPrepareClaudeCodeStart_ValidatesKey confirms the key resolved via
+// ensureEnvVar is the one handed to validateAnthropicAPIKey, and that
+// non-claude-code manifests skip validation entirely (no network call).
+func TestPrepareClaudeCodeStart_ValidatesKey(t *testing.T) {
+	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
+	orig := validateAnthropicAPIKey
+	t.Cleanup(func() { validateAnthropicAPIKey = orig })
+
+	var gotKey string
+	calls := 0
+	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
+		calls++
+		gotKey = apiKey
+		return nil
+	}
+
+	raw, err := buildHarnessManifest("claude-code", "", "", "")
+	require.NoError(t, err)
+	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, "sk-ant-test", gotKey)
+
+	// A non-claude-code manifest must not trigger validation.
+	raw, err = buildHarnessManifest("opencode", "", "", "")
+	require.NoError(t, err)
+	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
+	assert.Equal(t, 1, calls, "opencode manifest should not call validateAnthropicAPIKey")
+}
+
+// TestRunAgentsRun_ClaudeCodeBogusAnthropicKey ensures a present-but-invalid
+// ANTHROPIC_API_KEY is caught locally too — not just a missing one. No
+// CreateSessionFromManifest expectation is set below, so gomock fails the
+// test if the bogus key is not rejected before that call.
+func TestRunAgentsRun_ClaudeCodeBogusAnthropicKey(t *testing.T) {
+	t.Setenv(anthropicAPIKeyEnv, "sk-ant-bogus")
+	orig := validateAnthropicAPIKey
+	t.Cleanup(func() { validateAnthropicAPIKey = orig })
+	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
+		return fmt.Errorf("%s was rejected by Anthropic (HTTP 401): invalid x-api-key", anthropicAPIKeyEnv)
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
+		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
+
+		err := RunAgentsRun(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rejected by Anthropic")
+	})
+}
+
+func TestRunAgentsRun_NoAttachHarness_VerboseShowsRepoAndID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_run_2",
+						Name:      "demo-verbose",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_run_2").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_run_2",
+					Name:      "demo-verbose",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		prevVerbose := Verbose
+		Verbose = true
+		defer func() { Verbose = prevVerbose }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "https://github.com/katanemo/plano")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-verbose")
+		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
+
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+
+		require.NoError(t, RunAgentsRun(config))
+		out := buf.String()
 		assert.Contains(t, out, "katanemo/plano")
+		assert.Contains(t, out, "sess_run_2")
 	})
 }
 
@@ -291,11 +444,12 @@ func TestPrintAttachBanner(t *testing.T) {
 
 	got := out.String()
 	assert.Contains(t, got, "Connected")
-	assert.Contains(t, got, "smoke-test")
-	assert.Contains(t, got, "Quick help")
-	assert.Contains(t, got, "Ctrl-D")
-	assert.Contains(t, got, "session keeps running")
-	assert.Contains(t, got, "doctl open-harness-runtime remove smoke-test")
+	assert.Contains(t, got, "Agent OpenCode")
+	assert.Contains(t, got, "Session smoke-test")
+	assert.Contains(t, got, "Press Ctrl + D to detach locally")
+	assert.Contains(t, got, "type a message and press Enter")
+	assert.Contains(t, got, "use /help for full command list")
+	assert.NotContains(t, got, "Quick help")
 }
 
 func TestPrintDetachNotice(t *testing.T) {
@@ -306,10 +460,8 @@ func TestPrintDetachNotice(t *testing.T) {
 	var buf bytes.Buffer
 	printDetachNotice(&buf, "my-session")
 	out := buf.String()
-	assert.Contains(t, out, "Disconnected")
-	assert.Contains(t, out, "still running")
-	assert.Contains(t, out, "doctl open-harness-runtime attach my-session")
-	assert.Contains(t, out, "doctl open-harness-runtime remove my-session")
+	assert.Contains(t, out, "Disconnected from session locally")
+	assert.Contains(t, out, "still active in the cloud")
 }
 
 func TestMaybeOfferGitHubAuth_AlreadyConnected(t *testing.T) {

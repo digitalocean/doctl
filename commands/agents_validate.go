@@ -35,12 +35,9 @@ var knownAgentAdapters = map[string]struct{}{
 	"claude-code":      {},
 	"opencode":         {},
 	"codex":            {},
-	"cursor":           {},
-	"hermes":           {},
 	"codex-agentapi":   {},
 	"custom":           {},
 	"codex-cli":        {}, // deprecated alias
-	"cursor-cli":       {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
 	"claude-agent-sdk": {},
 	"crewai":           {},
@@ -243,14 +240,12 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, cursor, hermes, codex-agentapi, custom, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, …)", path, adapter))
 		return
 	}
 	switch adapter {
 	case "codex-cli":
 		out.Warnings = append(out.Warnings, fmt.Sprintf(`%s "codex-cli" is deprecated; use "codex"`, path))
-	case "cursor-cli":
-		out.Warnings = append(out.Warnings, fmt.Sprintf(`%s "cursor-cli" is deprecated; use "cursor"`, path))
 	case "openai-agents", "claude-agent-sdk", "crewai", "langgraph":
 		out.Warnings = append(out.Warnings, fmt.Sprintf("%s %q is declared but not yet supported for session create", path, adapter))
 	}

@@ -52,6 +52,10 @@ type HostedAgentsService interface {
 	// guest command runs, so the caller needs to be able to give up. A non-zero
 	// ExitCode is a successful call — only transport failure is an error.
 	ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error)
+	// ListSandboxSizes returns the customer-selectable sandbox size catalog.
+	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
+	// smallest-to-largest; no pagination.
+	ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
 	// external provider (e.g. "github"). The team is taken from the
@@ -154,6 +158,17 @@ func (s *hostedAgentsService) RelayRequest(ctx context.Context, sessionID string
 func (s *hostedAgentsService) ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {
 	resp, _, err := s.client.HostedAgents.ExecInSandbox(ctx, sessionID, body)
 	return resp, err
+}
+
+func (s *hostedAgentsService) ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error) {
+	resp, _, err := s.client.HostedAgents.ListSandboxSizes(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	return resp.Sizes, nil
 }
 
 func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {

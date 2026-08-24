@@ -53,7 +53,7 @@ func AgentConfigs() *Command {
 		agentsConfigCreateHelpMD,
 		Writer, append(ns, aliasOpt("c"),
 			displayerType(&displayers.HostedAgentConfig{}))...)
-	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat format; minimal: "agent: opencode"). Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-config\nagent: opencode". Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
 	cmdCreate.Example = `doctl open-harness-runtime config create --spec agent-spec.yaml --name my-config`
 
@@ -320,7 +320,7 @@ func printAgentConfigsList(w io.Writer, configs []godo.HostedAgentConfigSummary)
 			meta = append(meta, colorize(id, colMuted))
 		}
 		if !cfg.CreatedAt.Time.IsZero() {
-			meta = append(meta, colorize(cfg.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+			meta = append(meta, colorize(createdAgo(cfg.CreatedAt.Time), colMuted))
 		}
 		if len(meta) > 0 {
 			fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
@@ -354,7 +354,7 @@ func printAgentConfigCard(w io.Writer, cfg *godo.HostedAgentConfig, created bool
 		body.WriteString(cardRow("Hash", colorize(hash, colMuted)))
 	}
 	if !cfg.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(cfg.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+		body.WriteString(cardRow("Created", colorize(formatCreatedAt(cfg.CreatedAt.Time), colMuted)))
 	}
 
 	if id := strings.TrimSpace(cfg.ID); id != "" {

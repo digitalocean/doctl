@@ -17,10 +17,48 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 )
+
+// relativeTimeAgo renders t as a short relative duration ("just now", "5m
+// ago", "3h ago", "2d ago"). Falls back to a plain date once it's more than
+// 30 days old, where day-level relative times stop being a useful measure.
+func relativeTimeAgo(t time.Time) string {
+	d := time.Since(t)
+	if d < 0 {
+		d = 0
+	}
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d/time.Minute))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d/time.Hour))
+	case d < 30*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d/(24*time.Hour)))
+	default:
+		return t.UTC().Format("2006-01-02")
+	}
+}
+
+// formatCreatedAt renders a resource's creation time: a short relative
+// duration by default ("5m ago"), or the full UTC timestamp with -v/--verbose.
+func formatCreatedAt(t time.Time) string {
+	if Verbose {
+		return t.UTC().Format("2006-01-02 15:04")
+	}
+	return relativeTimeAgo(t)
+}
+
+// createdAgo renders "Created <formatCreatedAt(t)>" for inline meta lines
+// that don't have their own "Created" row label.
+func createdAgo(t time.Time) string {
+	return "Created " + formatCreatedAt(t)
+}
 
 // printAgentSuccess prints a compact success line used by side-effect verbs.
 func printAgentSuccess(w io.Writer, msg string) {
@@ -71,7 +109,7 @@ func printCheckpointListItem(w io.Writer, cp *godo.HostedAgentCheckpoint) {
 		meta = append(meta, colorize(humanBytes(cp.SizeBytes), colMuted))
 	}
 	if !cp.CreatedAt.Time.IsZero() {
-		meta = append(meta, colorize(cp.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+		meta = append(meta, colorize(createdAgo(cp.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
 	if id := strings.TrimSpace(cp.CheckpointID); id != "" && id != title {
@@ -104,7 +142,7 @@ func printCheckpointCard(w io.Writer, cp *godo.HostedAgentCheckpoint, created bo
 		body.WriteString(cardRow("Size", colorize(humanBytes(cp.SizeBytes), colMuted)))
 	}
 	if !cp.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(cp.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+		body.WriteString(cardRow("Created", colorize(formatCreatedAt(cp.CreatedAt.Time), colMuted)))
 	}
 	if errMsg := strings.TrimSpace(cp.ErrorMessage); errMsg != "" {
 		body.WriteString(cardRow("Error", colorize(errMsg, colError)))
@@ -184,7 +222,7 @@ func printTriggerListItem(w io.Writer, t *do.HostedAgentTrigger) {
 		meta = append(meta, colorize(agent, colMuted))
 	}
 	if !t.CreatedAt.Time.IsZero() {
-		meta = append(meta, colorize(t.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+		meta = append(meta, colorize(createdAgo(t.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
 	if id := strings.TrimSpace(t.TriggerID); id != "" && id != name {
@@ -245,7 +283,7 @@ func printTriggerCard(w io.Writer, t *do.HostedAgentTrigger, created bool) {
 		}
 	}
 	if !t.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(t.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+		body.WriteString(cardRow("Created", colorize(formatCreatedAt(t.CreatedAt.Time), colMuted)))
 	}
 	renderAgentCard(w, body.String())
 }
@@ -325,7 +363,7 @@ func printTriggerExecutionListItem(w io.Writer, e *do.HostedAgentTriggerExecutio
 		meta = append(meta, colorize(sess, colMuted))
 	}
 	if !e.CreatedAt.Time.IsZero() {
-		meta = append(meta, colorize(e.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+		meta = append(meta, colorize(createdAgo(e.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
 	if reason := strings.TrimSpace(e.FailureReason); reason != "" {
@@ -354,7 +392,7 @@ func printTriggerExecutionCard(w io.Writer, e *do.HostedAgentTriggerExecution) {
 		body.WriteString(cardRow("Failure", colorize(reason, colError)))
 	}
 	if !e.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(e.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"), colMuted)))
+		body.WriteString(cardRow("Created", colorize(formatCreatedAt(e.CreatedAt.Time), colMuted)))
 	}
 	renderAgentCard(w, body.String())
 
@@ -423,11 +461,13 @@ func printReusableSessionsList(w io.Writer, sessions []do.HostedAgentReusableSes
 		fmt.Fprintf(w, "%s %s\n", sessionStatusGlyph(s.Status), boldColor(ref, colHighlight))
 		meta := []string{prettyAgentKind(s.AgentKind), colorizeSessionStatus(s.Status)}
 		if !s.CreatedAt.Time.IsZero() {
-			meta = append(meta, colorize(s.CreatedAt.Time.UTC().Format("2006-01-02 15:04"), colMuted))
+			meta = append(meta, colorize(createdAgo(s.CreatedAt.Time), colMuted))
 		}
 		fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
-		if id := strings.TrimSpace(s.SessionID); id != "" && id != ref {
-			fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
+		if Verbose {
+			if id := strings.TrimSpace(s.SessionID); id != "" && id != ref {
+				fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
+			}
 		}
 	}
 }
@@ -502,14 +542,8 @@ func humanBytes(n uint64) string {
 // connection — the hosted session keeps running until explicitly removed.
 func printDetachNotice(w io.Writer, sessionRef string) {
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "%s %s\n", colorize("✓", colSuccess), boldColor("Disconnected", colHighlight))
-	fmt.Fprintln(w, colorize("Your session is still running — this only closed the local connection.", colMuted))
-	ref := strings.TrimSpace(sessionRef)
-	if ref == "" {
-		ref = "<session>"
-	}
-	fmt.Fprintf(w, "  %s %s\n", colorize("reattach", colMuted), "doctl open-harness-runtime attach "+ref)
-	fmt.Fprintf(w, "  %s %s\n", colorize("remove  ", colMuted), "doctl open-harness-runtime remove "+ref)
+	fmt.Fprintf(w, "%s\n", boldColor("✓ Disconnected from session locally", colSuccess))
+	fmt.Fprintln(w, colorize("Your session is still active in the cloud.", colMuted))
 }
 
 // printSessionEndedNotice is shown when the remote run can no longer accept input.

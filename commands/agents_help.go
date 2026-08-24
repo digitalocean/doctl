@@ -54,6 +54,9 @@ Provide exactly one of:
 
 With ` + "`--harness`" + ` or ` + "`--spec`" + `, optionally pass ` + "`--gh-repo`" + ` and ` + "`--prompt`" + `. Example:
 ` + "```bash\n" + agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"
+` + "```\n\n" + `Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
+` + "```yaml\n" + `name: my-session
+agent: opencode
 ` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
 Use ` + "`-o json`" + ` for machine-readable create output without waiting.`
@@ -123,6 +126,10 @@ codex --remote ws://127.0.0.1:1144
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from its ID with ` + "`" + agentCLI + " run --config-id`" + `, ` + "`" + agentCLI + " config start-session`" + `, or ` + "`" + agentCLI + " start --config-id`" + `.
 
 Configs are immutable — create a new config to change a manifest. Delete is blocked while sessions from the config are still active.`
+
+const agentsSizesRootHelpMD = `List sandbox (microVM) sizes you can set as ` + "`spec.sandbox.sizeSlug`" + ` when creating a session.`
+
+const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalog (slug, vCPUs, memory). Ordered smallest to largest. Every returned slug is accepted by CreateSession as ` + "`spec.sandbox.sizeSlug`" + `.`
 
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " start --spec`" + `). ` + "`--name`" + ` must be unique within your team.`
 

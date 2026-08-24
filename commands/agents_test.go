@@ -27,10 +27,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -69,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "exec")
+	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "exec")
 }
 
 func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
@@ -257,6 +259,11 @@ func TestRunAgentsStart(t *testing.T) {
 }
 
 func TestRunAgentsStart_FromHarness(t *testing.T) {
+	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
+	origValidate := validateAnthropicAPIKey
+	t.Cleanup(func() { validateAnthropicAPIKey = origValidate })
+	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error { return nil }
+
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -264,6 +271,9 @@ func TestRunAgentsStart_FromHarness(t *testing.T) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				assert.Equal(t, "claude-code", doc["agent"])
+				env, ok := doc["env"].(map[any]any)
+				assert.True(t, ok)
+				assert.Equal(t, "sk-ant-test", env["ANTHROPIC_API_KEY"])
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID: "sess_harness",
@@ -1571,7 +1581,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 	typewrite := func(t *testing.T, state *attachState, s string) {
 		t.Helper()
 		for i := 0; i < len(s); i++ {
-			stop, err := handleAttachByte(nil, nil, "sess", s[i], state, nil)
+			stop, err := handleAttachByte(nil, nil, "sess", s[i], state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 		}
@@ -1579,7 +1589,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 	arrow := func(t *testing.T, state *attachState, dir byte) {
 		t.Helper()
 		for _, b := range []byte{0x1b, '[', dir} {
-			stop, err := handleAttachByte(nil, nil, "sess", b, state, nil)
+			stop, err := handleAttachByte(nil, nil, "sess", b, state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 		}
@@ -1623,7 +1633,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 		typewrite(t, state, "abcd")
 		arrow(t, state, 'D')
 		arrow(t, state, 'D') // caret before 'c'
-		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state, nil)
+		stop, err := handleAttachByte(nil, nil, "sess", 0x7f, state, nil, nil)
 		assert.NoError(t, err)
 		assert.False(t, stop)
 		assert.Equal(t, "acd", string(state.lineBuf))
@@ -1639,7 +1649,7 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			typewrite(t, state, "hi")
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Equal(t, "", string(state.lineBuf))
@@ -1656,13 +1666,13 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			for _, b := range []byte("\x1b[200~first line\r\nsecond line\x1b[201~") {
-				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil, nil)
 				assert.NoError(t, err)
 				assert.False(t, stop)
 			}
 			assert.Equal(t, "first line\nsecond line", string(state.lineBuf))
 
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Equal(t, "", string(state.lineBuf))
@@ -1680,17 +1690,17 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
-				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil, nil)
 				assert.NoError(t, err)
 				assert.False(t, stop)
 			}
 
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			require.NotNil(t, state.largePasteConfirmation())
 
-			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'y', state, nil)
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'y', state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Nil(t, state.largePasteConfirmation())
@@ -1708,22 +1718,122 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			state := newAttachState(io.Discard, &pendingHITL{})
 			state.display.setRaw(true)
 			for _, b := range []byte("\x1b[200~Line 1\r\nLine 2\r\nLine 3\r\nLine 4\r\nLine 5\r\nLine 6\x1b[201~") {
-				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil)
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil, nil)
 				assert.NoError(t, err)
 				assert.False(t, stop)
 			}
 
-			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil)
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			require.NotNil(t, state.largePasteConfirmation())
 
-			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'n', state, nil)
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 'n', state, nil, nil)
 			assert.NoError(t, err)
 			assert.False(t, stop)
 			assert.Nil(t, state.largePasteConfirmation())
 		})
 	})
+}
+
+// TestInsertNewlineAtCursor covers appending at the end of the buffer and
+// splicing in the middle, mirroring the character-insert splice used
+// elsewhere for regular typed bytes.
+func TestInsertNewlineAtCursor(t *testing.T) {
+	s := &attachState{lineBuf: []byte("abcd"), cursor: 4}
+	s.insertNewlineAtCursor()
+	assert.Equal(t, "abcd\n", string(s.lineBuf))
+	assert.Equal(t, 5, s.cursor)
+
+	s = &attachState{lineBuf: []byte("abcd"), cursor: 2}
+	s.insertNewlineAtCursor()
+	assert.Equal(t, "ab\ncd", string(s.lineBuf))
+	assert.Equal(t, 3, s.cursor)
+}
+
+// TestDisplayInputBufferShowsNewlineMarker is a regression test: the
+// flattened single-row prompt used to collapse an embedded newline to a
+// plain space, which made Option/Alt+Enter look like a no-op until the
+// message was actually submitted. It must render a visible marker instead.
+func TestDisplayInputBufferShowsNewlineMarker(t *testing.T) {
+	assert.Equal(t, "first line ↵ second line", displayInputBuffer([]byte("first line\nsecond line")))
+	assert.Equal(t, "first line ↵ second line", displayInputBuffer([]byte("first line\r\nsecond line")))
+	assert.Equal(t, "", displayInputBuffer(nil))
+}
+
+// TestHandleAttachEscapeSequenceOptionEnterInsertsNewline pins Option/Alt+
+// Enter (ESC followed by CR, the standard meta-key encoding used by iTerm2
+// and Terminal.app's default settings) as "insert a newline, don't submit" —
+// so a multi-line message can be composed and sent as one input, the same
+// way a pasted multi-line block already works.
+func TestHandleAttachEscapeSequenceOptionEnterInsertsNewline(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "first line\nsecond line"}).
+			Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		send := func(bs ...byte) {
+			for _, b := range bs {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil, nil)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+		}
+		send([]byte("first line")...)
+		send(0x1b, 0x0d) // Option/Alt+Enter
+		send([]byte("second line")...)
+		assert.Equal(t, "first line\nsecond line", string(state.lineBuf))
+
+		// A real Enter submits the whole multi-line buffer as one message.
+		send(0x0d)
+		assert.Equal(t, "", string(state.lineBuf))
+	})
+}
+
+// TestHandleAttachEscapeSequenceOptionEnterIgnoredDuringHITL confirms
+// Option/Alt+Enter is swallowed (not left to fall through as stray bytes)
+// but does nothing while a HITL approval is pending — there's no text input
+// to insert a newline into at that point.
+func TestHandleAttachEscapeSequenceOptionEnterIgnoredDuringHITL(t *testing.T) {
+	state := newAttachState(io.Discard, &pendingHITL{})
+	state.display.setRaw(true)
+	state.pending.set("req-1", "approve something")
+
+	for _, b := range []byte{0x1b, 0x0d} {
+		stop, err := handleAttachByte(nil, nil, "sess", b, state, nil, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+	}
+	assert.Equal(t, "", string(state.lineBuf))
+}
+
+// TestHandlePastedByteOnlyRedrawsOnceAtEnd is a regression test for a bug
+// where every single pasted byte triggered its own full prompt repaint.
+// paintPromptLocked only erases the terminal's *current* row (\x1b[K); once
+// the growing pasted line got long enough to wrap, each of those hundreds of
+// incremental repaints left the previous, shorter wrapped block behind as a
+// stale duplicate instead of clearing it — turning one paste into dozens of
+// near-identical truncated lines in the scrollback. Buffering silently and
+// painting once when the paste ends fixes it.
+func TestHandlePastedByteOnlyRedrawsOnceAtEnd(t *testing.T) {
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+
+	pasted := strings.Repeat("x", 300)
+	input := "\x1b[200~" + pasted + "\x1b[201~"
+	for _, b := range []byte(input) {
+		stop, err := handleAttachByte(nil, nil, "sess", b, state, nil, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+	}
+
+	assert.Equal(t, pasted, string(state.lineBuf))
+	// The clear-and-repaint escape must appear exactly once — for the single
+	// redraw when the paste ends — not once per pasted byte.
+	assert.Equal(t, 1, strings.Count(buf.String(), "\x1b[K"))
 }
 
 // TestAttachStateHITLSelection covers the arrow-key selection wrap-around and
@@ -1771,6 +1881,188 @@ func TestMsgAccumulatorPlain(t *testing.T) {
 	assert.Equal(t, "", buf.String())
 }
 
+// TestReasoningStreamer confirms the shared reasoning-block printer: a
+// leading label appears once per block, stop/start bracket the thinking
+// spinner around the block, end() is a no-op if nothing is active, and empty
+// chunks never trigger the leading label on their own.
+func TestReasoningStreamer(t *testing.T) {
+	var buf bytes.Buffer
+	thinking := newThinkingState(&buf)
+	r := &reasoningStreamer{out: &buf, thinking: thinking}
+
+	r.end() // no-op: nothing streamed yet
+	assert.Equal(t, "", buf.String())
+
+	r.stream("")
+	assert.Equal(t, "", buf.String(), "empty chunks don't open a block")
+
+	r.stream("thinking about it")
+	r.stream(" some more")
+	out := buf.String()
+	assert.Contains(t, out, "reasoning")
+	assert.Contains(t, out, "thinking about it some more")
+
+	buf.Reset()
+	r.end()
+	// end() closes the block with a trailing newline, then resumes the
+	// thinking spinner — for a non-promptDisplay writer that's a one-shot
+	// "(Run in progress)" line.
+	assert.Equal(t, "\n(Run in progress)\n", buf.String())
+	thinking.stop()
+
+	// A second end() without an intervening stream() is a no-op.
+	buf.Reset()
+	r.end()
+	assert.Equal(t, "", buf.String())
+}
+
+// TestTokenChunkPayloadIsReasoning confirms the SPI TokenChunk.is_reasoning
+// field round-trips through doctl's local payload struct, including the
+// common case where a harness never sets it (defaults to false, i.e. final
+// answer).
+func TestTokenChunkPayloadIsReasoning(t *testing.T) {
+	var p tokenChunkPayload
+	require.NoError(t, json.Unmarshal([]byte(`{"text":"hmm","is_reasoning":true}`), &p))
+	assert.True(t, p.IsReasoning)
+	assert.Equal(t, "hmm", p.Text)
+
+	var q tokenChunkPayload
+	require.NoError(t, json.Unmarshal([]byte(`{"text":"answer"}`), &q))
+	assert.False(t, q.IsReasoning)
+}
+
+// TestMsgAccumulatorPreviewTail confirms the bounded tail used for the live
+// "thinking" preview tracks the most recent content and stays bounded
+// regardless of how many small chunks built up the message, and that flush
+// clears it for the next turn.
+func TestMsgAccumulatorPreviewTail(t *testing.T) {
+	acc := &msgAccumulator{}
+	assert.Equal(t, "", acc.previewTail())
+
+	acc.add("hello ")
+	acc.add("world")
+	assert.Equal(t, "hello world", acc.previewTail())
+
+	// Feed enough chunks to exceed previewTailMaxRunes; only the tail survives.
+	long := strings.Repeat("x", previewTailMaxRunes+50)
+	acc.add(long)
+	assert.Len(t, []rune(acc.previewTail()), previewTailMaxRunes)
+	assert.True(t, strings.HasSuffix(acc.previewTail(), "xxxx"))
+
+	var buf bytes.Buffer
+	acc.flush(&buf)
+	assert.Equal(t, "", acc.previewTail())
+}
+
+func TestTrimTailRunes(t *testing.T) {
+	assert.Equal(t, "abc", trimTailRunes("abc", 5))
+	assert.Equal(t, "abc", trimTailRunes("abc", 3))
+	assert.Equal(t, "bc", trimTailRunes("abc", 2))
+	assert.Equal(t, "", trimTailRunes("abc", 0))
+	// Multi-byte runes must not be split.
+	assert.Equal(t, "🎉b", trimTailRunes("a🎉b", 2))
+}
+
+func TestThinkingPreviewLabel(t *testing.T) {
+	assert.Equal(t, "", thinkingPreviewLabel(""))
+	assert.Equal(t, "", thinkingPreviewLabel("   \n\t "))
+	assert.Equal(t, "hello world", thinkingPreviewLabel("hello  world"))
+	// Embedded newlines collapse to single spaces so the label stays one line.
+	assert.Equal(t, "line one line two", thinkingPreviewLabel("line one\nline two"))
+
+	long := strings.Repeat("a", thinkingPreviewMaxRunes+20)
+	got := thinkingPreviewLabel(long)
+	assert.True(t, strings.HasPrefix(got, "…"))
+	assert.Equal(t, thinkingPreviewMaxRunes+1, len([]rune(got))) // +1 for the ellipsis
+}
+
+// TestThinkingStateLivePreview confirms setLabel changes what the animated
+// spinner shows (falling back to defaultThinkingLabel until the first
+// preview arrives), and that a fresh start() clears any label left over from
+// a previous turn.
+func TestThinkingStateLivePreview(t *testing.T) {
+	var buf bytes.Buffer
+	pending := &pendingHITL{}
+	s := newAttachState(&buf, pending)
+	s.display.setRaw(true)
+
+	thinking := newThinkingState(s.display)
+	assert.Equal(t, defaultThinkingLabel, thinking.currentLabel())
+
+	thinking.setLabel("some text stream")
+	assert.Equal(t, "some text stream", thinking.currentLabel())
+
+	thinking.start()
+	defer thinking.stop()
+	// start() resets any stale label from a prior turn.
+	assert.Equal(t, defaultThinkingLabel, thinking.currentLabel())
+
+	thinking.setLabel("…streaming preview")
+	assert.Equal(t, "…streaming preview", thinking.currentLabel())
+}
+
+// TestThinkingStateTurnRunning confirms turnRunning is a distinct signal from
+// active: it's what the input loop checks to warn a user their message will
+// be queued behind an already-running turn, and it must not be perturbed by
+// stop()/start() cycling for sub-turn events like tool calls.
+func TestThinkingStateTurnRunning(t *testing.T) {
+	var buf bytes.Buffer
+	thinking := newThinkingState(&buf)
+	assert.False(t, thinking.isTurnRunning())
+
+	thinking.setTurnRunning(true)
+	assert.True(t, thinking.isTurnRunning())
+
+	// A tool call mid-turn stops/starts the spinner but the turn is still running.
+	thinking.start()
+	thinking.stop()
+	assert.True(t, thinking.isTurnRunning())
+
+	thinking.setTurnRunning(false)
+	assert.False(t, thinking.isTurnRunning())
+}
+
+// TestPrintAttachSendAck pins the three messages a user can see after
+// sending: queued behind warm-up, queued behind an already-running turn, or
+// (the common case) just waiting for the first response. There's no
+// server-side "queued" signal (see OHR queueing research — a queued send
+// returns the same response as one that starts immediately), so the "queued
+// behind a running turn" case is inferred entirely from local state.
+func TestPrintAttachSendAck(t *testing.T) {
+	t.Run("no warmup, no run active: generic waiting message", func(t *testing.T) {
+		var buf bytes.Buffer
+		printAttachSendAck(&buf, nil, nil)
+		assert.Contains(t, buf.String(), "waiting for the agent")
+	})
+
+	t.Run("run already active: queued-behind-run message, not the generic one", func(t *testing.T) {
+		var buf bytes.Buffer
+		thinking := newThinkingState(&buf)
+		thinking.setTurnRunning(true)
+		printAttachSendAck(&buf, nil, thinking)
+		assert.Contains(t, buf.String(), "queued")
+		assert.NotContains(t, buf.String(), "waiting for the agent")
+	})
+
+	t.Run("run not active: generic waiting message even with thinking wired up", func(t *testing.T) {
+		var buf bytes.Buffer
+		thinking := newThinkingState(&buf)
+		printAttachSendAck(&buf, nil, thinking)
+		assert.Contains(t, buf.String(), "waiting for the agent")
+	})
+
+	t.Run("warm-up takes priority over run-active", func(t *testing.T) {
+		var buf bytes.Buffer
+		warmup := newWarmupState(&buf, time.Now())
+		warmup.start()
+		thinking := newThinkingState(&buf)
+		thinking.setTurnRunning(true)
+		printAttachSendAck(&buf, warmup, thinking)
+		assert.Contains(t, buf.String(), "will send when agent is ready")
+		assert.NotContains(t, buf.String(), "queued behind")
+	})
+}
+
 // TestAttachLoopAcknowledgesSend: a successful submit prints a "waiting"
 // acknowledgement immediately so the multi-second wait for the first token
 // doesn't read as a hang.
@@ -1783,7 +2075,7 @@ func TestAttachLoopAcknowledgesSend(t *testing.T) {
 			Return(&godo.HostedAgentSendInputResponse{RunID: "run-abc"}, nil)
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("What is the capital of France?\n"), testAttachStateFromPending(nil))
+			strings.NewReader("What is the capital of France?\n"), testAttachStateFromPending(nil), nil)
 		assert.NoError(t, err)
 		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
@@ -1802,7 +2094,7 @@ func TestAttachLoopBatchesRapidMultilineInput(t *testing.T) {
 			Return(&godo.HostedAgentSendInputResponse{RunID: "run-abc"}, nil)
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("Line A\nLine B\nLine C\n"), testAttachStateFromPending(nil))
+			strings.NewReader("Line A\nLine B\nLine C\n"), testAttachStateFromPending(nil), nil)
 		assert.NoError(t, err)
 		assert.Contains(t, buf.String(), "Detected rapid multiline input")
 		assert.Contains(t, buf.String(), "waiting for the agent")
@@ -1864,7 +2156,7 @@ func TestAttachLoopHITLLetterShortcut(t *testing.T) {
 					}).Return(nil)
 
 				err := attachLoop(config, config.HostedAgents(), "sess_x",
-					strings.NewReader(tc.input), testAttachStateFromPending(pending))
+					strings.NewReader(tc.input), testAttachStateFromPending(pending), nil)
 				assert.NoError(t, err)
 				assert.Contains(t, buf.String(), "[y/n/d] > ")
 			})
@@ -1892,7 +2184,7 @@ func TestAttachLoopClearsPendingAfterResolve(t *testing.T) {
 		// Line-mode `y\n` exercises the same resolve+clear path; the raw-mode
 		// branch shares the clearIf call.
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\n"), testAttachStateFromPending(pending))
+			strings.NewReader("y\n"), testAttachStateFromPending(pending), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "", pending.get(), "pending must be cleared after successful resolve")
 	})
@@ -1914,7 +2206,7 @@ func TestAttachLoopKeepsPendingOnResolveError(t *testing.T) {
 			}).Return(errors.New("boom"))
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\n"), testAttachStateFromPending(pending))
+			strings.NewReader("y\n"), testAttachStateFromPending(pending), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "hitl_42", pending.get(), "pending must survive a failed resolve")
 		assert.Contains(t, buf.String(), "resolve failed: boom")
@@ -1932,7 +2224,7 @@ func TestAttachLoopHITLShortcutIgnoredWithoutPending(t *testing.T) {
 			Return(&godo.HostedAgentSendInputResponse{RunID: "run-1"}, nil)
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\n"), testAttachStateFromPending(&pendingHITL{}))
+			strings.NewReader("y\n"), testAttachStateFromPending(&pendingHITL{}), nil)
 		assert.NoError(t, err)
 		assert.Contains(t, buf.String(), "waiting for the agent")
 	})
@@ -2086,13 +2378,88 @@ func TestSingleKeystrokeAdvancesQueue(t *testing.T) {
 		}).Return(nil)
 
 		err := attachLoop(config, config.HostedAgents(), "sess_x",
-			strings.NewReader("y\nn\n"), testAttachStateFromPending(pending))
+			strings.NewReader("y\nn\n"), testAttachStateFromPending(pending), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, pending.len(), "both HITLs must be drained after two keystrokes")
 
 		out := buf.String()
 		assert.Contains(t, out, "[y/n/d] (2 pending) > ", "first prompt shows the multi-pending count")
 		assert.Contains(t, out, "[y/n/d] > ", "after resolving one, prompt drops to plain HITL prompt")
+	})
+}
+
+// TestHandleAttachByteTabCompletion covers Tab-completion of slash commands:
+// a unique prefix fills in the verb, an ambiguous one lists candidates, and
+// completion never fires once an argument has started.
+func TestHandleAttachByteTabCompletion(t *testing.T) {
+	typewrite := func(t *testing.T, state *attachState, s string) {
+		t.Helper()
+		for i := 0; i < len(s); i++ {
+			stop, err := handleAttachByte(nil, nil, "sess", s[i], state, nil, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
+
+	t.Run("unique prefix completes with a trailing space", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/pa")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/pause ", string(state.lineBuf))
+		assert.Equal(t, len("/pause "), state.cursor)
+	})
+
+	t.Run("ambiguous prefix lists matches without altering the buffer", func(t *testing.T) {
+		var buf bytes.Buffer
+		state := newAttachState(&buf, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/")
+
+		config := &CmdConfig{Out: state.display}
+		stop, err := handleAttachByte(config, nil, "sess", 0x09, state, nil, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/", string(state.lineBuf))
+		out := buf.String()
+		assert.Contains(t, out, "/help")
+		assert.Contains(t, out, "/download")
+	})
+
+	t.Run("/exit completes uniquely", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/e")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/exit ", string(state.lineBuf))
+	})
+
+	t.Run("no match leaves the buffer untouched", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/zz")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/zz", string(state.lineBuf))
+	})
+
+	t.Run("does not fire once an argument has started", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/a foo")
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/a foo", string(state.lineBuf))
 	})
 }
 
@@ -2127,6 +2494,118 @@ func TestListPendingHITLs(t *testing.T) {
 	})
 }
 
+// TestAttachLoopExitCommand: /exit in line mode (piped input) detaches like
+// Ctrl-D / EOF — it prints the disconnect notice and returns without error,
+// leaving the hosted session untouched.
+func TestAttachLoopExitCommand(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		state := testAttachStateFromPending(nil)
+		state.sessionRef = "my-session"
+
+		err := attachLoop(config, config.HostedAgents(), "sess_x",
+			strings.NewReader("/exit\n"), state, nil)
+		assert.NoError(t, err)
+		out := buf.String()
+		assert.Contains(t, out, "Disconnected from session locally")
+		assert.Contains(t, out, "still active in the cloud")
+	})
+}
+
+// TestProcessAttachLineExitCommand covers the TTY-mode dispatch: /exit must
+// report detach=true so the raw-mode loop stops reading bytes.
+func TestProcessAttachLineExitCommand(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		var buf bytes.Buffer
+		state := newAttachState(&buf, &pendingHITL{})
+		state.sessionRef = "my-session"
+		config.Out = state.display
+
+		detach := processAttachLine(config, config.HostedAgents(), "sess_x", "/exit", state, nil, nil)
+		assert.True(t, detach)
+		assert.Contains(t, buf.String(), "Disconnected from session locally")
+	})
+}
+
+// TestIsAttachExitCommand pins the exact-match contract: only a bare /exit
+// counts, not other slash commands or /exit with trailing arguments.
+func TestIsAttachExitCommand(t *testing.T) {
+	assert.True(t, isAttachExitCommand("/exit"))
+	assert.False(t, isAttachExitCommand("/exit now"))
+	assert.False(t, isAttachExitCommand("/exiting"))
+	assert.False(t, isAttachExitCommand("/help"))
+	assert.False(t, isAttachExitCommand(""))
+}
+
+// TestHandleAttachCommandHelp exercises the /help card, and pins the
+// tabwriter-aligned layout: every row's description column must start at the
+// same offset within its section (hand-counted spaces used to drift out of
+// alignment; tabwriter can't).
+func TestHandleAttachCommandHelp(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/help", &pendingHITL{}))
+		out := buf.String()
+
+		assert.Contains(t, out, "Attach help")
+		assert.Contains(t, out, "Detach (session keeps running)")
+		assert.Contains(t, out, "/exit")
+		assert.Contains(t, out, "Session controls")
+		assert.Contains(t, out, "/pause")
+		assert.Contains(t, out, "/upload")
+		assert.Contains(t, out, "/download")
+		assert.Contains(t, out, "Approvals pending")
+		assert.Contains(t, out, "/pending")
+		assert.Contains(t, out, "Tab")
+		assert.Contains(t, out, "attach <session>")
+		assert.Contains(t, out, "remove <session>")
+
+		sectionLines := func(header string) []string {
+			lines := strings.Split(out, "\n")
+			var section []string
+			started := false
+			for _, l := range lines {
+				if strings.Contains(l, header) {
+					started = true
+					continue
+				}
+				if !started {
+					continue
+				}
+				if strings.TrimSpace(l) == "" {
+					break
+				}
+				section = append(section, l)
+			}
+			return section
+		}
+
+		gapRE := regexp.MustCompile(`\S(\s{2,})\S`)
+		descColumn := func(line string) int {
+			// The first run of 2+ spaces between two non-space runs is the
+			// gap tabwriter inserted before the description column; report
+			// where the description text itself starts, in runes (tabwriter
+			// aligns by rune count, but FindStringSubmatchIndex is byte-based
+			// — some keys here contain multi-byte glyphs like "↑/↓").
+			loc := gapRE.FindStringSubmatchIndex(line)
+			require.NotNil(t, loc, "line %q has no column gap", line)
+			return utf8.RuneCountInString(line[:loc[3]])
+		}
+
+		for _, header := range []string{"Session controls", "Approvals pending"} {
+			lines := sectionLines(header)
+			require.NotEmpty(t, lines, "section %q not found", header)
+			want := descColumn(lines[0])
+			for _, l := range lines[1:] {
+				assert.Equal(t, want, descColumn(l), "misaligned row in %q section: %q", header, l)
+			}
+		}
+	})
+}
+
 // TestHandleAttachCommandPending exercises the /pending verb dispatch.
 func TestHandleAttachCommandPending(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
@@ -2138,6 +2617,212 @@ func TestHandleAttachCommandPending(t *testing.T) {
 		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/pending", p))
 		assert.Contains(t, buf.String(), "1 HITL approval(s) pending")
 		assert.Contains(t, buf.String(), "* h1  (HITL_ACTION_BASH)")
+	})
+}
+
+// TestHandleAttachCommandPauseResume exercises the /pause and /resume verbs.
+func TestHandleAttachCommandPauseResume(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+
+		tm.hostedAgents.EXPECT().PauseSession("sess_x").Return(nil)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/pause", &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Session paused")
+
+		buf.Reset()
+		tm.hostedAgents.EXPECT().ResumeSession("sess_x").Return(nil)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", "/resume", &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Session resumed")
+	})
+}
+
+// TestHandleAttachCommandUpload exercises the /upload verb, mirroring
+// `doctl agents upload` but driven from the interactive attach REPL.
+func TestHandleAttachCommandUpload(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "main.go")
+	contents := []byte("package main\n\nfunc main() {}\n")
+	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
+	sha := sha256Hex(contents)
+
+	partServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer partServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectWorkspaceTransferUpload(t, tm, "sess_x", "src/main.go", int64(len(contents)), sha, false, partServer.URL)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		line := fmt.Sprintf("/upload %s src/main.go", localPath)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", line, &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Upload complete")
+	})
+}
+
+// TestHandleAttachCommandUpload_UsageError requires one or two positional args
+// (workspace-path is optional — see TestHandleAttachCommandUpload_DefaultsWorkspacePath).
+func TestHandleAttachCommandUpload_UsageError(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		err := handleAttachCommand(config, config.HostedAgents(), "sess_x", "/upload", &pendingHITL{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "usage: /upload")
+
+		err = handleAttachCommand(config, config.HostedAgents(), "sess_x", "/upload a b c", &pendingHITL{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "usage: /upload")
+	})
+}
+
+// TestHandleAttachCommandUpload_DefaultsWorkspacePath confirms omitting
+// workspace-path uploads to the local file's basename at the workspace root —
+// like `curl -O`, retyping an identical filename twice is just noise.
+func TestHandleAttachCommandUpload_DefaultsWorkspacePath(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	localPath := filepath.Join(dir, "main.go")
+	contents := []byte("package main\n\nfunc main() {}\n")
+	assert.NoError(t, os.WriteFile(localPath, contents, 0o644))
+	sha := sha256Hex(contents)
+
+	partServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer partServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// Only the basename ("main.go"), not the full local path, must be used
+		// as the workspace destination.
+		expectWorkspaceTransferUpload(t, tm, "sess_x", "main.go", int64(len(contents)), sha, false, partServer.URL)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		line := fmt.Sprintf("/upload %s", localPath)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", line, &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Upload complete")
+	})
+}
+
+// TestHandleAttachCommandDownload exercises the /download verb, mirroring
+// `doctl agents download` but driven from the interactive attach REPL.
+func TestHandleAttachCommandDownload(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	dir := t.TempDir()
+	saveTo := filepath.Join(dir, "out.go")
+	contents := []byte("package main\n\nfunc main() {}\n")
+	wantSum := sha256Hex(contents)
+
+	objServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(contents)
+	}))
+	defer objServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransfer("sess_x", gomock.Any()).
+			DoAndReturn(func(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+				assert.Equal(t, godo.HostedAgentWorkspaceTransferDirectionDownload, create.Direction)
+				assert.Equal(t, "src/main.go", create.Path)
+				return &godo.HostedAgentWorkspaceTransfer{
+					TransferID: "xfer_dl",
+					Status:     godo.HostedAgentWorkspaceTransferStatusPending,
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetWorkspaceTransfer("sess_x", "xfer_dl").
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID:  "xfer_dl",
+				Status:      godo.HostedAgentWorkspaceTransferStatusCompleted,
+				SHA256:      wantSum,
+				DownloadURL: objServer.URL,
+			}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		line := fmt.Sprintf("/download src/main.go %s", saveTo)
+		assert.NoError(t, handleAttachCommand(config, config.HostedAgents(), "sess_x", line, &pendingHITL{}))
+		assert.Contains(t, buf.String(), "Downloaded")
+
+		got, err := os.ReadFile(saveTo)
+		assert.NoError(t, err)
+		assert.Equal(t, contents, got)
+	})
+}
+
+// TestHandleAttachCommandDownload_UsageError requires one or two positional
+// args (local-file is optional — see TestHandleAttachCommandDownload_DefaultsLocalFile).
+func TestHandleAttachCommandDownload_UsageError(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		err := handleAttachCommand(config, config.HostedAgents(), "sess_x", "/download", &pendingHITL{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "usage: /download")
+
+		err = handleAttachCommand(config, config.HostedAgents(), "sess_x", "/download a b c", &pendingHITL{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "usage: /download")
+	})
+}
+
+// TestHandleAttachCommandDownload_DefaultsLocalFile reproduces the reported
+// devex bug: `/download /workspace/Plano-One-Pager.pdf` (one positional arg)
+// used to fail with a usage error even though the intent — save it under
+// that same name in the current directory — was unambiguous. Like `curl -O`,
+// omitting local-file now defaults to the workspace path's basename.
+func TestHandleAttachCommandDownload_DefaultsLocalFile(t *testing.T) {
+	prevPoll := workspaceTransferPollInterval
+	workspaceTransferPollInterval = 0
+	defer func() { workspaceTransferPollInterval = prevPoll }()
+
+	t.Chdir(t.TempDir())
+
+	contents := []byte("%PDF-1.4 fake one-pager\n")
+	wantSum := sha256Hex(contents)
+
+	objServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(contents)
+	}))
+	defer objServer.Close()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateWorkspaceTransfer("sess_x", gomock.Any()).
+			DoAndReturn(func(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+				assert.Equal(t, "/workspace/Plano-One-Pager.pdf", create.Path)
+				return &godo.HostedAgentWorkspaceTransfer{
+					TransferID: "xfer_dl2",
+					Status:     godo.HostedAgentWorkspaceTransferStatusPending,
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetWorkspaceTransfer("sess_x", "xfer_dl2").
+			Return(&godo.HostedAgentWorkspaceTransfer{
+				TransferID:  "xfer_dl2",
+				Status:      godo.HostedAgentWorkspaceTransferStatusCompleted,
+				SHA256:      wantSum,
+				DownloadURL: objServer.URL,
+			}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		err := handleAttachCommand(config, config.HostedAgents(), "sess_x", "/download /workspace/Plano-One-Pager.pdf", &pendingHITL{})
+		assert.NoError(t, err)
+		assert.Contains(t, buf.String(), "Downloaded")
+
+		got, err := os.ReadFile("Plano-One-Pager.pdf")
+		assert.NoError(t, err)
+		assert.Equal(t, contents, got)
 	})
 }
 
@@ -2819,7 +3504,7 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	stubReconnectSleep(t)
 
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"superseded","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -2874,13 +3559,259 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 	assert.Equal(t, hitlID, pending.get())
 }
 
+// TestRenderApprovalResolvedLine confirms the resolved line shares
+// renderApprovalLine's exact "status  ·  label  ·  id" structure (just with a
+// different status), for every outcome, and degrades to omitting the label
+// segment (rather than "action pending", which no longer applies once
+// resolved) when no label was ever captured.
+func TestRenderApprovalResolvedLine(t *testing.T) {
+	cases := []struct {
+		outcome int32
+		want    string
+	}{
+		{1, "Approved"},
+		{2, "Rejected"},
+		{3, "Deferred"},
+	}
+	for _, tc := range cases {
+		var buf bytes.Buffer
+		renderApprovalResolvedLine(&buf, "hitl-123", "tool_permission", tc.outcome)
+		out := buf.String()
+		assert.Contains(t, out, tc.want)
+		assert.Contains(t, out, "tool_permission")
+		assert.Contains(t, out, "hitl-123")
+	}
+
+	var buf bytes.Buffer
+	renderApprovalResolvedLine(&buf, "hitl-123", "", 1)
+	assert.NotContains(t, buf.String(), "action pending")
+	assert.Contains(t, buf.String(), "hitl-123")
+}
+
+// TestDrainStream_HITLResolvedReprintsRequestLabel reproduces a devex bug: the
+// resolution of a HITL approval used to print a disconnected "<id> approve"
+// line with no relation to the "● Approval required · <label> · <id>" line
+// above it, leaving that line looking stale. The resolution must now reuse
+// the same label and read as that line updating (status  ·  label  ·  id),
+// not a brand new unrelated entry.
+func TestDrainStream_HITLResolvedReprintsRequestLabel(t *testing.T) {
+	const hitlID = "01a025a0-e622-7153-a23d-d18b4dde462f"
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindHITLRequested), fmt.Sprintf(`{"hitl_id":%q,"action":"tool_permission"}`, hitlID)) +
+		// No paired tool_call_started arrives for this generic permission
+		// check; the next discrete event flushes the unpaired approval line.
+		sseFrame("evt-3", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
+		sseFrame("evt-4", string(godo.HostedAgentEventKindHITLResolved), fmt.Sprintf(`{"hitl_id":%q,"outcome":1}`, hitlID))
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	out := buf.String()
+	assert.Contains(t, out, "Approval required")
+	assert.Contains(t, out, "tool_permission")
+	assert.Contains(t, out, "Approved")
+	// The resolved line must carry the same label forward and use the id — but
+	// never as the old bare "<id> approve" pairing with no shared structure.
+	assert.NotContains(t, out, hitlID+" approve")
+	idx := strings.Index(out, "Approved")
+	require.GreaterOrEqual(t, idx, 0)
+	lineEnd := idx + strings.Index(out[idx:], "\n")
+	approvedLine := out[idx:lineEnd]
+	assert.Contains(t, approvedLine, "tool_permission")
+	assert.Contains(t, approvedLine, hitlID)
+}
+
+// TestDrainStream_TokenChunksUpdateThinkingPreview pins that drainStream feeds
+// each streamed final-answer token_delta chunk (is_reasoning omitted/false)
+// into the thinking spinner's live preview label, so the spinner reads as a
+// live typing indicator while the message is still buffering toward its
+// eventual markdown-rendered flush.
+func TestDrainStream_TokenChunksUpdateThinkingPreview(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"Let me look "}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindTokenChunk), `{"text":"at the file."}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	thinking := newThinkingState(&buf)
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, thinking, nil, &tokenDeduper{})
+
+	assert.Equal(t, "Let me look at the file.", thinking.currentLabel())
+}
+
+// TestDrainStream_RunStaysStickyThroughToolCall pins that the "Run in
+// progress" spinner restarts after a discrete line (like a tool-call start)
+// prints, instead of staying off for the remainder of the run — a tool call
+// can take many seconds with no other output, and without this the run would
+// look identical to a hung session. Uses a *promptDisplay-backed thinking so
+// isSticky() is true and the restart actually takes effect.
+func TestDrainStream_RunStaysStickyThroughToolCall(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindToolCallStarted), `{"tool_call_id":"t1","name":"bash"}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindRunCompleted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	pending := &pendingHITL{}
+	state := newAttachState(&buf, pending)
+	state.display.setRaw(true)
+	thinking := newThinkingState(state.display)
+	require.True(t, thinking.isSticky())
+
+	drainStream(stream, state.display, pending, &eventCursor{}, thinking, nil, &tokenDeduper{})
+
+	out := buf.String()
+	assert.Contains(t, out, "▸ bash")
+	// One spinnerInit right after RunStarted, and a second one after the
+	// tool-call line — proving the spinner came back instead of staying
+	// dark for the rest of the run.
+	assert.GreaterOrEqual(t, strings.Count(out, defaultThinkingLabel), 2,
+		"spinner should restart after the tool-call line, not just once at RunStarted")
+}
+
+// TestDrainStream_ReasoningTokensStreamDistinctlyFromFinalAnswer pins that
+// run.token_delta chunks flagged is_reasoning=true stream live and separately
+// (dim italic, via reasoningStreamer) from the buffered final answer, which
+// starts at the first is_reasoning=false chunk — mirroring the SPI
+// TokenChunk.is_reasoning contract.
+func TestDrainStream_ReasoningTokensStreamDistinctlyFromFinalAnswer(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"Let me think... ","is_reasoning":true}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindTokenChunk), `{"text":"this looks right.","is_reasoning":true}`) +
+		sseFrame("evt-4", string(godo.HostedAgentEventKindTokenChunk), `{"text":"The answer is 42.","is_reasoning":false}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	thinking := newThinkingState(&buf)
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, thinking, nil, &tokenDeduper{})
+
+	out := buf.String()
+	assert.Contains(t, out, "reasoning", "reasoning block gets a leading label")
+	assert.Contains(t, out, "Let me think... this looks right.", "reasoning text streams live")
+	// The final answer is buffered and rendered as markdown, not streamed
+	// into the reasoning block or lost.
+	assert.Contains(t, out, "42")
+	// The live preview label only ever reflects the buffered final answer,
+	// never raw reasoning text — reasoning already has its own display.
+	assert.Equal(t, "The answer is 42.", thinking.currentLabel())
+}
+
+// TestDrainStream_ReasoningToAnswerTransitionDoesNotFlashDefaultLabel is a
+// regression test for the sticky spinner visibly showing "Run in progress"
+// twice per turn: once at RunStarted, and again for one frame every time a
+// reasoning block closes and the final answer's first chunk arrives — because
+// resuming the spinner reset its label to blank (falling back to the default
+// caption) before the very next setLabel call caught up. The fix seeds the
+// resumed spinner's first frame with the already-known preview instead
+// (reasoningStreamer.endWithLabel / thinkingState.startWithLabel), so
+// defaultThinkingLabel should only ever appear once — from RunStarted — not
+// a second time at the reasoning/answer boundary. Uses a *promptDisplay so
+// isSticky() is true and the literal spinnerInit text is observable.
+func TestDrainStream_ReasoningToAnswerTransitionDoesNotFlashDefaultLabel(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"Let me think... ","is_reasoning":true}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindTokenChunk), `{"text":"The answer is 42.","is_reasoning":false}`) +
+		sseFrame("evt-4", string(godo.HostedAgentEventKindRunCompleted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	pending := &pendingHITL{}
+	state := newAttachState(&buf, pending)
+	state.display.setRaw(true)
+	thinking := newThinkingState(state.display)
+	require.True(t, thinking.isSticky())
+
+	drainStream(stream, state.display, pending, &eventCursor{}, thinking, nil, &tokenDeduper{})
+
+	out := buf.String()
+	assert.Equal(t, 1, strings.Count(out, defaultThinkingLabel),
+		"the generic caption should only show once (RunStarted), not again when reasoning hands off to the final answer")
+	// The spinner resumed right at the reasoning/answer boundary with the
+	// answer's own preview text, not a blank/default frame.
+	assert.Contains(t, out, "The answer is 42.")
+}
+
+// TestDrainStream_StickySpinnerDoesNotInterruptReasoningStream is a
+// regression test for a bug where the sticky "Run in progress" restart (see
+// TestDrainStream_RunStaysStickyThroughToolCall) fired after every single
+// TokenChunk event, including the reasoning deltas that reasoningStreamer
+// deliberately leaves the spinner stopped for across a whole block. That
+// reinit landed mid-line, injecting a stray "Run in progress" line (and a
+// spurious newline) into the middle of the streamed reasoning text. Uses a
+// *promptDisplay-backed thinking (isSticky() true) — the bug never reproduced
+// against a plain io.Writer because the sticky restart is skipped when
+// !isSticky().
+func TestDrainStream_StickySpinnerDoesNotInterruptReasoningStream(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"Let me think... ","is_reasoning":true}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindTokenChunk), `{"text":"this looks right.","is_reasoning":true}`) +
+		sseFrame("evt-4", string(godo.HostedAgentEventKindTokenChunk), `{"text":"The answer is 42.","is_reasoning":false}`) +
+		sseFrame("evt-5", string(godo.HostedAgentEventKindRunCompleted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	pending := &pendingHITL{}
+	state := newAttachState(&buf, pending)
+	state.display.setRaw(true)
+	thinking := newThinkingState(state.display)
+	require.True(t, thinking.isSticky())
+
+	drainStream(stream, state.display, pending, &eventCursor{}, thinking, nil, &tokenDeduper{})
+
+	out := buf.String()
+	// The reasoning text must stay contiguous across both chunks. The bug
+	// this pins: the sticky restart used to fire after the first reasoning
+	// chunk too (thinking.active goes false the moment reasoningStreamer
+	// pauses it for the block), reiniting the spinner — and forcing a
+	// newline to do it, since the write landed mid-line — right between
+	// "Let me think... " and "this looks right.".
+	assert.Contains(t, out, "Let me think... this looks right.")
+}
+
 // TestDrainStream_skipsStreamStateControlFrames pins that a live stream.state
 // frame is transport bookkeeping: it renders nothing and must not become the
 // reconnect cursor, or a reconnect would resume from a position no event holds.
 func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
-	body := sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
+	body := sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"live","cursor":""}`) +
 		sseFrame("evt-7", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
-		sseFrame("", string(hostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
+		sseFrame("", string(godo.HostedAgentEventKindStreamState), `{"state":"catching_up","cursor":""}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -2995,8 +3926,9 @@ func TestStreamWithReconnect_replayCursorAfterMidStreamDrop(t *testing.T) {
 		mu.Lock()
 		calls++
 		n := calls
-		// Resume cursor rides as replay_from on control-plane /stream.
-		replayFrom := r.URL.Query().Get("replay_from")
+		// The live stream carries the resume cursor in the standard SSE
+		// Last-Event-ID header, not a replay_from query parameter.
+		replayFrom := r.Header.Get("Last-Event-ID")
 		mu.Unlock()
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -3207,7 +4139,7 @@ func TestWarmupState_noteQueuedUpdatesNotice(t *testing.T) {
 
 	// Further typing keeps the prompt in sync with the warm-up block.
 	buf.Reset()
-	stop, err := handleAttachByte(nil, nil, "sess", 'i', state, w)
+	stop, err := handleAttachByte(nil, nil, "sess", 'i', state, w, nil)
 	assert.NoError(t, err)
 	assert.False(t, stop)
 	assert.Contains(t, buf.String(), "> i")
@@ -3230,15 +4162,15 @@ func TestWarmupState_blocksDuplicateSubmit(t *testing.T) {
 		w.start()
 
 		for _, b := range []byte("2+2") {
-			_, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, w)
+			_, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, w, nil)
 			assert.NoError(t, err)
 		}
-		stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w)
+		stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w, nil)
 		assert.NoError(t, err)
 		assert.False(t, stop)
 		assert.True(t, w.inputAlreadyQueued())
 
-		stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w)
+		stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w, nil)
 		assert.NoError(t, err)
 		assert.False(t, stop)
 	})
@@ -3284,35 +4216,22 @@ func TestWarmupState_markInputQueuedDismissesBanner(t *testing.T) {
 
 func TestWarmupState_clearsOnTimeout(t *testing.T) {
 	oldClock := warmupClock
-	oldDur := warmupDuration
 	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
 	warmupClock = func() time.Time { return now }
-	warmupDuration = 20 * time.Millisecond
-	t.Cleanup(func() {
-		warmupClock = oldClock
-		warmupDuration = oldDur
-	})
+	t.Cleanup(func() { warmupClock = oldClock })
 
 	var buf bytes.Buffer
 	w := newWarmupState(&buf, now)
+	w.timeout = 20 * time.Millisecond
 	w.start()
 	assert.Contains(t, buf.String(), msgAgentWarmup)
 
-	deadline := time.Now().Add(500 * time.Millisecond)
-	for time.Now().Before(deadline) {
+	require.Eventually(t, func() bool {
 		w.mu.Lock()
-		done := !w.active && w.dismissed
-		w.mu.Unlock()
-		if done {
-			break
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	w.mu.Lock()
-	active, dismissed := w.active, w.dismissed
-	w.mu.Unlock()
-	assert.False(t, active)
-	assert.True(t, dismissed)
+		defer w.mu.Unlock()
+		return !w.active && w.dismissed
+	}, time.Second, 5*time.Millisecond)
+
 	assert.NotContains(t, buf.String(), "You can type anytime")
 }
 
