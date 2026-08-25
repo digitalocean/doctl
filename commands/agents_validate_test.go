@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -173,6 +174,120 @@ spec:
 	joined := joinStrings(v.Warnings)
 	assert.Contains(t, joined, "ANTHROPIC_MODEL")
 	assert.Contains(t, joined, "MODEL")
+}
+
+func TestValidateAgentManifest_InvalidPermissionsDefault(t *testing.T) {
+	const manifest = `name: validate-bug-test
+agent: codex
+secrets:
+  OPENAI_API_KEY: "sk-placeholder"
+permissions:
+  default: banana
+`
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "permissions.default")
+	assert.Contains(t, v.Errors[0], "banana")
+	assert.Contains(t, v.Errors[0], "allow|ask|deny")
+}
+
+func TestValidateAgentManifest_PermissionsDefaultCaseSensitive(t *testing.T) {
+	for _, def := range []string{"ALLOW", "Allow", "ASK", "Deny"} {
+		t.Run(def, func(t *testing.T) {
+			manifest := fmt.Sprintf("agent: opencode\npermissions:\n  default: %s\n", def)
+			v := validateAgentManifest([]byte(manifest))
+			require.False(t, v.ok())
+			assert.Contains(t, v.Errors[0], "permissions.default")
+			assert.Contains(t, v.Errors[0], "allow|ask|deny")
+		})
+	}
+}
+
+func TestValidateAgentManifest_ValidPermissionsDefault(t *testing.T) {
+	for _, def := range []string{"allow", "ask", "deny"} {
+		t.Run(def, func(t *testing.T) {
+			manifest := fmt.Sprintf("agent: opencode\npermissions:\n  default: %s\n", def)
+			v := validateAgentManifest([]byte(manifest))
+			assert.True(t, v.ok(), "errors=%v", v.Errors)
+		})
+	}
+}
+
+func TestValidateAgentManifest_EnvelopeInvalidPermissionsDefault(t *testing.T) {
+	const manifest = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  runtime:
+    adapter: opencode
+  permissions:
+    default: banana
+`
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "spec.permissions.default")
+	assert.Contains(t, v.Errors[0], "banana")
+}
+
+func TestValidateAgentManifest_InvalidSkillName(t *testing.T) {
+	const manifest = `name: validate-bug-test2
+agent: codex
+secrets:
+  OPENAI_API_KEY: "sk-placeholder"
+skills:
+  - name: Release-Checklist
+    description: Uppercase name is invalid.
+    instructions: "Test"
+`
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "skills[0].name")
+	assert.Contains(t, v.Errors[0], "Release-Checklist")
+	assert.Contains(t, v.Errors[0], `^[a-z0-9]+(-[a-z0-9]+)*$`)
+}
+
+func TestValidateAgentManifest_InvalidSkillNameVariants(t *testing.T) {
+	cases := []string{
+		"foo--bar",
+		"-leading",
+		"trailing-",
+		"Has Spaces",
+		"under_score",
+	}
+	for _, name := range cases {
+		t.Run(name, func(t *testing.T) {
+			manifest := fmt.Sprintf("agent: opencode\nskills:\n  - name: %q\n    instructions: test\n", name)
+			v := validateAgentManifest([]byte(manifest))
+			require.False(t, v.ok(), "name %q should be rejected", name)
+			assert.Contains(t, v.Errors[0], "skills[0].name")
+		})
+	}
+}
+
+func TestValidateAgentManifest_ValidSkillName(t *testing.T) {
+	const manifest = `agent: opencode
+skills:
+  - name: release-checklist
+    description: ok
+    instructions: "Test"
+`
+	v := validateAgentManifest([]byte(manifest))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+}
+
+func TestValidateAgentManifest_EnvelopeInvalidSkillName(t *testing.T) {
+	const manifest = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  runtime:
+    adapter: opencode
+  skills:
+    - name: Bad_Name
+      instructions: test
+`
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "spec.skills[0].name")
+	assert.Contains(t, v.Errors[0], "Bad_Name")
 }
 
 func TestRunAgentsValidate_OK(t *testing.T) {
