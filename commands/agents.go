@@ -3932,7 +3932,7 @@ type attachState struct {
 	hitlSel    int // highlighted HITL menu option: 0 approve, 1 reject, 2 defer
 	escSeq     []byte
 	pasting    bool
-	confirm *largePasteConfirmation
+	confirm    *largePasteConfirmation
 	// Input history for bash-style ↑/↓ recall within this attach session.
 	history   []string
 	histIndex int    // len(history) means draft/new line; 0..len-1 browses history
