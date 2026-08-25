@@ -3309,7 +3309,7 @@ func TestPromptDisplay(t *testing.T) {
 		s.display.setRaw(true)
 
 		s.display.spinnerFrame("⠋", "thinking...")
-		assert.Equal(t, "\x1b7\x1b[A\r\x1b[K⠋ thinking...\x1b8", buf.String())
+		assert.Equal(t, "\x1b7\x1b[1A\r\x1b[K⠋ thinking...\x1b8", buf.String())
 	})
 
 	t.Run("spinnerFrame is a no-op mid-stream", func(t *testing.T) {
