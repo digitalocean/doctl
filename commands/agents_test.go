@@ -1689,20 +1689,20 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 		assert.False(t, stop)
 		assert.Equal(t, "", string(state.lineBuf))
 
-		typewrite(t, state, "abcd")
+		typewrite(t, state, "wxyz")
 		arrow(t, state, 'D')
-		arrow(t, state, 'D') // caret before 'c'
+		arrow(t, state, 'D')                                                  // caret before 'y'
 		stop, err = handleAttachByte(nil, nil, "sess", 0x04, state, nil, nil) // Ctrl-D
 		assert.NoError(t, err)
 		assert.False(t, stop)
-		assert.Equal(t, "abd", string(state.lineBuf))
+		assert.Equal(t, "wxz", string(state.lineBuf))
 
 		stop, err = handleAttachByte(nil, nil, "sess", 0x05, state, nil, nil) // Ctrl-E
 		assert.NoError(t, err)
-		typewrite(t, state, "z")
+		typewrite(t, state, "q")
 		escSeq(t, state, []byte{0x1b, '[', '1', '~'}) // Home
 		escSeq(t, state, []byte{0x1b, '[', '3', '~'}) // Delete
-		assert.Equal(t, "bdz", string(state.lineBuf))
+		assert.Equal(t, "xzq", string(state.lineBuf))
 	})
 
 	t.Run("home/end and tab completion", func(t *testing.T) {
