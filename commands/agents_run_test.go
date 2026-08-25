@@ -433,6 +433,10 @@ func TestRunAgentsRun_NoAttachHarness_VerboseShowsRepoAndID(t *testing.T) {
 }
 
 func TestPrintAttachBanner(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
 	var out bytes.Buffer
 	printAttachBanner(&out, &do.HostedAgentSession{
 		HostedAgentSession: &godo.HostedAgentSession{
@@ -442,14 +446,53 @@ func TestPrintAttachBanner(t *testing.T) {
 		},
 	}, "")
 
+	assert.Equal(t, "\n● Connected  OpenCode · smoke-test\n"+
+		"  Enter send · Option/Alt + Enter newline · Ctrl + D detach · /help for more\n",
+		out.String())
+}
+
+// TestPrintAttachBannerStaysTwoLines pins the banner's height. It used to be a
+// 15-line bordered card; the whole point of the compact header is that
+// attaching costs a couple of lines, so a regression that reintroduces a
+// multi-line block should fail here rather than in review.
+func TestPrintAttachBannerStaysTwoLines(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var out bytes.Buffer
+	printAttachBanner(&out, &do.HostedAgentSession{
+		HostedAgentSession: &godo.HostedAgentSession{
+			SessionID: "sess_attach_1",
+			Name:      "smoke-test",
+			AgentKind: godo.HostedAgentKindOpenCode,
+		},
+	}, "")
+
+	body := strings.TrimPrefix(out.String(), "\n")
+	assert.Len(t, strings.Split(strings.TrimRight(body, "\n"), "\n"), 2)
+	assert.NotContains(t, out.String(), "╭", "the attach banner must not be a bordered card")
+}
+
+// TestPrintAttachBannerBridgeNote pins that a bridge note earns its own
+// indented line instead of being dropped with the old card.
+func TestPrintAttachBannerBridgeNote(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var out bytes.Buffer
+	printAttachBanner(&out, &do.HostedAgentSession{
+		HostedAgentSession: &godo.HostedAgentSession{
+			SessionID: "sess_attach_1",
+			Name:      "smoke-test",
+			AgentKind: godo.HostedAgentKindOpenAICodex,
+		},
+	}, "OpenAI · conv_123")
+
 	got := out.String()
-	assert.Contains(t, got, "Connected")
-	assert.Contains(t, got, "Agent OpenCode")
-	assert.Contains(t, got, "Session smoke-test")
-	assert.Contains(t, got, "Press Ctrl + D to detach locally")
-	assert.Contains(t, got, "type a message and press Enter")
-	assert.Contains(t, got, "use /help for full command list")
-	assert.NotContains(t, got, "Quick help")
+	assert.Contains(t, got, "● Connected  Codex · smoke-test\n")
+	assert.Contains(t, got, "  Bridge OpenAI · conv_123\n")
 }
 
 func TestPrintDetachNotice(t *testing.T) {

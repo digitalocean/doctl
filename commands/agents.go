@@ -34,13 +34,18 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"text/tabwriter"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/ansi"
+	"github.com/charmbracelet/glamour/styles"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm"
@@ -106,9 +111,10 @@ func italicMuted(s string) string {
 	return lipgloss.NewStyle().Foreground(colMuted).Italic(true).Render(s)
 }
 
-// renderMarkdown turns a markdown document into styled terminal text. With
-// styling disabled (pipes, CI, unit tests) it returns the text unchanged so
-// scripts keep clean, greppable output.
+// renderMarkdown turns a markdown document into styled terminal text, with no
+// blank first/last line and no trailing line padding — callers own the spacing
+// around the block. With styling disabled (pipes, CI, unit tests) it returns
+// the text unchanged so scripts keep clean, greppable output.
 func renderMarkdown(text string) string {
 	if strings.TrimSpace(text) == "" {
 		return ""
@@ -117,7 +123,7 @@ func renderMarkdown(text string) string {
 		return text
 	}
 	r, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle("dark"),
+		glamour.WithStyles(agentMarkdownStyle()),
 		glamour.WithColorProfile(termenv.TrueColor),
 		glamour.WithWordWrap(mdWrapWidth()),
 		// Keep line breaks the agent emits. Without this, Markdown collapses
@@ -133,8 +139,118 @@ func renderMarkdown(text string) string {
 	if err != nil {
 		return text
 	}
-	return out
+	return trimLinePadding(strings.Trim(out, "\n"))
 }
+
+// agentMarkdownStyle is glamour's dark style with the inline-code padding
+// dropped. Stock "dark" gives `code` spans a literal leading and trailing
+// space so the highlighted chip has breathing room, but they are real
+// characters: with the color stripped — copy/paste, redirected output, a
+// screen reader — prose reads "set up in  /workspace , and".
+func agentMarkdownStyle() ansi.StyleConfig {
+	s := styles.DarkStyleConfig
+	s.Code.Prefix = ""
+	s.Code.Suffix = ""
+	return s
+}
+
+// trimLinePadding drops the spaces glamour pads each wrapped line out to the
+// wrap column with. They are invisible on screen but real in the byte stream —
+// glamour wraps each one in its own SGR pair, so a two-line answer carries
+// hundreds of bytes of blanks that resurface on copy/paste and in redirected
+// output. Escape sequences are preserved, so a line still ends in whatever
+// color state glamour intended.
+//
+// A padding run that turns on a background color is left alone: that fill is
+// what squares off a code block, and trimming it would leave a ragged edge.
+func trimLinePadding(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		loc := padTailRE.FindStringIndex(line)
+		if loc == nil || !strings.Contains(line[loc[0]:], " ") {
+			continue
+		}
+		var b strings.Builder
+		b.WriteString(line[:loc[0]])
+		// Glamour wraps each padding space in its own SGR pair, so the state
+		// governing a space run can change within the tail; fold the escapes
+		// as they are copied across.
+		bg := backgroundOpen(line[:loc[0]])
+		for rest := line[loc[0]:]; rest != ""; {
+			if m := sgrRE.FindStringIndex(rest); m != nil && m[0] == 0 {
+				bg = applySGR(bg, rest[:m[1]])
+				b.WriteString(rest[:m[1]])
+				rest = rest[m[1]:]
+				continue
+			}
+			spaces := 0
+			for spaces < len(rest) && rest[spaces] == ' ' {
+				spaces++
+			}
+			if bg {
+				b.WriteString(rest[:spaces])
+			}
+			rest = rest[spaces:]
+		}
+		lines[i] = b.String()
+	}
+	return strings.Join(lines, "\n")
+}
+
+// backgroundOpen folds every SGR sequence in s to report whether a background
+// color is still turned on at the end of it.
+func backgroundOpen(s string) bool {
+	open := false
+	for _, esc := range sgrRE.FindAllString(s, -1) {
+		open = applySGR(open, esc)
+	}
+	return open
+}
+
+// applySGR advances a "background color is on" flag across one SGR sequence.
+// 0 (reset), 49 (default background), and a bare ESC[m clear it; 40-47,
+// 100-107, and 48;… turn it on. The extended 38;… and 48;… payloads are
+// skipped so a color component can't be misread as its own attribute.
+func applySGR(open bool, esc string) bool {
+	m := sgrRE.FindStringSubmatch(esc)
+	if m == nil {
+		return open
+	}
+	if m[1] == "" {
+		return false
+	}
+	params := strings.Split(m[1], ";")
+	for i := 0; i < len(params); i++ {
+		n, err := strconv.Atoi(params[i])
+		if err != nil {
+			continue
+		}
+		switch {
+		case n == 0 || n == 49:
+			open = false
+		case n == 38 || n == 48:
+			open = open || n == 48
+			if i+1 < len(params) {
+				switch params[i+1] {
+				case "5":
+					i += 2
+				case "2":
+					i += 4
+				}
+			}
+		case (n >= 40 && n <= 47) || (n >= 100 && n <= 107):
+			open = true
+		}
+	}
+	return open
+}
+
+var (
+	sgrRE = regexp.MustCompile(`\x1b\[([0-9;]*)m`)
+	// padTailRE matches a line's trailing run of spaces and SGR sequences —
+	// the wrap padding plus whatever color state glamour closed the line with.
+	padTailRE = regexp.MustCompile(`(?:\x1b\[[0-9;]*m| )+$`)
+)
 
 // normalizeCodeFences rewrites the agent's Markdown so every ``` code-fence
 // marker starts on its own line, and any opening fence with an info string
@@ -232,8 +348,20 @@ func (m *msgAccumulator) flush(out io.Writer) {
 	text := m.buf.String()
 	m.buf.Reset()
 	rendered := renderMarkdown(text)
+	if rendered == "" {
+		// Whitespace-only buffer: there is nothing to show, and emitting the
+		// newlines below would spend blank lines on it.
+		return
+	}
 	if !strings.HasSuffix(rendered, "\n") {
 		rendered += "\n"
+	}
+	// renderMarkdown returns a styled block with no blank edges, so own the
+	// spacing here: one blank line separating the answer from the event line
+	// above it. Every event line prints its own leading newline, which supplies
+	// the blank line below. Plain mode stays byte-clean for pipes and scripts.
+	if stylingEnabled {
+		rendered = "\n" + rendered
 	}
 	fmt.Fprint(out, rendered)
 }
@@ -2117,14 +2245,21 @@ func (r *openAIAttachRenderer) handleItemDone(evt map[string]any) {
 		// parts (OpenAI's ResponseReasoningItem shape).
 		if !r.sawReasoningDelta {
 			if summary, ok := item["summary"].([]any); ok {
+				parts := make([]string, 0, len(summary))
 				for _, s := range summary {
 					part, _ := s.(map[string]any)
 					if part == nil {
 						continue
 					}
 					if text, ok := part["text"].(string); ok && text != "" {
-						r.ensureReasoning().stream(text)
+						parts = append(parts, text)
 					}
+				}
+				// Each summary_text part is its own paragraph and carries no
+				// trailing separator, so streaming them back to back glues the
+				// last word of one onto the first word of the next.
+				if len(parts) > 0 {
+					r.ensureReasoning().stream(strings.Join(parts, "\n\n"))
 				}
 			}
 		}
@@ -2373,8 +2508,7 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 	if handleAttachEscapeSequence(b, state) {
 		return false, nil
 	}
-
-	if handleAttachLineEditByte(b, state) {
+	if handleAttachEditingKey(b, state) {
 		return false, nil
 	}
 
@@ -3316,6 +3450,9 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 	// entries are added wherever renderApprovalLine is called and removed once
 	// the matching resolution renders.
 	hitlLabels := map[string]string{}
+	// tools holds each tool call between its start and its result so the pair
+	// renders as one line — see toolLineTracker.
+	tools := &toolLineTracker{}
 	for stream.Next() {
 		ev := stream.Current()
 
@@ -3328,6 +3465,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				thinking.stop()
 				acc.flush(out)
 				flushAwaitingApproval(out, &awaiting, hitlLabels)
+				tools.flush(out)
 				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
 				return true
 			}
@@ -3410,7 +3548,8 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			if len(awaiting) > 0 {
 				// Pair with the oldest waiting approval. Prefer the tool call's
 				// command; fall back to the label the HITL payload carried so
-				// the line is never blank.
+				// the line is never blank. An approval line is never deferred —
+				// you can't be asked to approve a command you can't see.
 				a := awaiting[0]
 				awaiting = awaiting[1:]
 				if cmd == "" {
@@ -3418,9 +3557,37 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				}
 				hitlLabels[a.id] = cmd
 				renderApprovalLine(out, a.id, cmd)
-			} else {
-				renderToolStart(out, cmd)
+			} else if label := tools.start(out, p.ToolCallID, cmd, thinking.isSticky()); label != "" {
+				// Deferred: the command becomes the spinner's caption for as
+				// long as the call runs, and the committed line prints once,
+				// with its result, on tool_call_completed. startWithLabel
+				// rather than start + setLabel because start() blanks the
+				// label, which would flash the generic caption first.
+				thinking.startWithLabel(toolSpinnerLabel(label))
 			}
+		case godo.HostedAgentEventKindToolCallCompleted:
+			warmup.clear()
+			reasoning.end()
+			thinking.stop()
+			acc.flush(out)
+			flushAwaitingApproval(out, &awaiting, hitlLabels)
+			dedup.reset()
+			var p toolCallCompletedPayload
+			if err := json.Unmarshal(ev.Payload, &p); err == nil {
+				tools.finish(out, p)
+			}
+		case godo.HostedAgentEventKindRunCompleted, godo.HostedAgentEventKindRunFailed:
+			warmup.clear()
+			reasoning.end()
+			thinking.stop()
+			acc.flush(out)
+			flushAwaitingApproval(out, &awaiting, hitlLabels)
+			dedup.reset()
+			// Before the run's own summary, so a call that never reported a
+			// result still reads as part of the run rather than trailing after
+			// its closing line.
+			tools.flush(out)
+			renderEvent(out, ev)
 		case godo.HostedAgentEventKindHITLResolved:
 			warmup.clear()
 			reasoning.end()
@@ -3434,10 +3601,18 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				delete(hitlLabels, p.HitlID)
 				renderApprovalResolvedLine(out, p.HitlID, label, p.Outcome)
 			}
+		case godo.HostedAgentEventKindRunLog:
+			// renderEvent prints nothing for run.log, and the runtime emits it
+			// interleaved with token chunks. Flushing the accumulator on it cut
+			// a streaming message into separately-rendered blocks — one sentence
+			// arriving as three, with blank lines where the invisible event was.
+			// Feed the warm-up banner, advance the cursor, disturb nothing else.
+			warmup.noteBackendEvent(ev)
+			cursor.set(ev.EventID)
+			continue
 		case godo.HostedAgentEventKindSessionUpdated,
 			godo.HostedAgentEventKindRunSandboxAllocated,
-			godo.HostedAgentEventKindRunSandboxReleased,
-			godo.HostedAgentEventKindRunLog:
+			godo.HostedAgentEventKindRunSandboxReleased:
 			// Boot/lifecycle noise during warm-up — fold into the banner instead
 			// of printing competing lines or dismissing the notice.
 			if warmup.noteBackendEvent(ev) {
@@ -3495,6 +3670,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 	thinking.stop()
 	acc.flush(out)
 	flushAwaitingApproval(out, &awaiting, hitlLabels)
+	tools.flush(out)
 	return false
 }
 
@@ -4069,6 +4245,167 @@ func (s *attachState) moveLineCursor(delta int) bool {
 	return true
 }
 
+// moveLineCursorToWord jumps the caret one word left (delta < 0) or right.
+// Returns whether the caret actually moved.
+func (s *attachState) moveLineCursorToWord(delta int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := wordEndAfter(s.lineBuf, s.cursor)
+	if delta < 0 {
+		next = wordStartBefore(s.lineBuf, s.cursor)
+	}
+	if next == s.cursor {
+		return false
+	}
+	s.cursor = next
+	return true
+}
+
+// moveLineCursorToEdge jumps the caret to the start (delta < 0) or the end of
+// the line. Returns whether the caret actually moved.
+func (s *attachState) moveLineCursorToEdge(delta int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := 0
+	if delta > 0 {
+		next = len(s.lineBuf)
+	}
+	if next == s.cursor {
+		return false
+	}
+	s.cursor = next
+	return true
+}
+
+// deleteWordBefore kills the word to the left of the caret. Ctrl-W passes
+// spaceDelimited so it takes the whole whitespace-delimited token, matching
+// bash; Meta+Backspace passes false for readline's alphanumeric word.
+func (s *attachState) deleteWordBefore(spaceDelimited bool) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	from := wordStartBefore(s.lineBuf, s.cursor)
+	if spaceDelimited {
+		from = tokenStartBefore(s.lineBuf, s.cursor)
+	}
+	return s.deleteLineRangeLocked(from, s.cursor)
+}
+
+// deleteWordAfter kills the word to the right of the caret (Meta+D).
+func (s *attachState) deleteWordAfter() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.deleteLineRangeLocked(s.cursor, wordEndAfter(s.lineBuf, s.cursor))
+}
+
+// deleteToLineEdge kills from the caret to the start (delta < 0, Ctrl-U) or to
+// the end of the line (delta > 0, Ctrl-K).
+func (s *attachState) deleteToLineEdge(delta int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if delta < 0 {
+		return s.deleteLineRangeLocked(0, s.cursor)
+	}
+	return s.deleteLineRangeLocked(s.cursor, len(s.lineBuf))
+}
+
+// deleteRuneAtCursor removes the rune under the caret, leaving the caret put —
+// the Delete key, as opposed to Backspace.
+func (s *attachState) deleteRuneAtCursor() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor >= len(s.lineBuf) {
+		return false
+	}
+	_, size := utf8.DecodeRune(s.lineBuf[s.cursor:])
+	return s.deleteLineRangeLocked(s.cursor, s.cursor+size)
+}
+
+// deleteLineRangeLocked removes [from,to) and leaves the caret at from. Offsets
+// come from the word scanners below, so they always land on a rune boundary.
+func (s *attachState) deleteLineRangeLocked(from, to int) bool {
+	if from < 0 {
+		from = 0
+	}
+	if to > len(s.lineBuf) {
+		to = len(s.lineBuf)
+	}
+	if from >= to {
+		return false
+	}
+	s.lineBuf = append(s.lineBuf[:from], s.lineBuf[to:]...)
+	s.cursor = from
+	s.exitHistoryBrowseOnEditLocked()
+	return true
+}
+
+// wordRune reports whether r counts as part of a word for Meta+B / Meta+F /
+// Meta+D / Meta+Backspace, which move over runs of alphanumerics.
+func wordRune(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// wordStartBefore returns the offset of the start of the word preceding pos:
+// skip any separators, then the word itself. Scans by rune so a pasted
+// multibyte character can't be split down the middle.
+func wordStartBefore(buf []byte, pos int) int {
+	for pos > 0 {
+		r, size := utf8.DecodeLastRune(buf[:pos])
+		if wordRune(r) {
+			break
+		}
+		pos -= size
+	}
+	for pos > 0 {
+		r, size := utf8.DecodeLastRune(buf[:pos])
+		if !wordRune(r) {
+			break
+		}
+		pos -= size
+	}
+	return pos
+}
+
+// wordEndAfter returns the offset just past the word following pos.
+func wordEndAfter(buf []byte, pos int) int {
+	for pos < len(buf) {
+		r, size := utf8.DecodeRune(buf[pos:])
+		if wordRune(r) {
+			break
+		}
+		pos += size
+	}
+	for pos < len(buf) {
+		r, size := utf8.DecodeRune(buf[pos:])
+		if !wordRune(r) {
+			break
+		}
+		pos += size
+	}
+	return pos
+}
+
+// tokenStartBefore returns the offset of the start of the whitespace-delimited
+// token preceding pos. This is Ctrl-W's unit, which is wider than a word: in
+// "docs/agents.md" Ctrl-W kills the whole path where Meta+Backspace kills only
+// "md".
+func tokenStartBefore(buf []byte, pos int) int {
+	for pos > 0 {
+		r, size := utf8.DecodeLastRune(buf[:pos])
+		if !unicode.IsSpace(r) {
+			break
+		}
+		pos -= size
+	}
+	for pos > 0 {
+		r, size := utf8.DecodeLastRune(buf[:pos])
+		if unicode.IsSpace(r) {
+			break
+		}
+		pos -= size
+	}
+	return pos
+}
+
 // insertNewlineAtCursor inserts a literal newline at the caret without
 // submitting — used by Option/Alt+Enter to compose a multi-line message. The
 // prompt still displays lineBuf flattened to one row (displayInputBuffer
@@ -4091,125 +4428,6 @@ func (s *attachState) insertNewlineAtCursor() {
 // behavior) made Option/Alt+Enter look like it had done nothing until the
 // message was actually sent — this makes the line break visible in place.
 const newlineMarker = " ↵ "
-
-func (s *attachState) setLineCursorStart() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.cursor == 0 {
-		return false
-	}
-	s.cursor = 0
-	return true
-}
-
-func (s *attachState) setLineCursorEnd() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	end := len(s.lineBuf)
-	if s.cursor == end {
-		return false
-	}
-	s.cursor = end
-	return true
-}
-
-// deleteWordBackward implements emacs unix-word-rubout (Ctrl-W): delete back to
-// the previous whitespace boundary.
-func (s *attachState) deleteWordBackward() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.cursor == 0 {
-		return false
-	}
-	pos := s.cursor
-	for pos > 0 && s.lineBuf[pos-1] == ' ' {
-		pos--
-	}
-	for pos > 0 && s.lineBuf[pos-1] != ' ' {
-		pos--
-	}
-	if pos == s.cursor {
-		return false
-	}
-	s.lineBuf = append(s.lineBuf[:pos], s.lineBuf[s.cursor:]...)
-	s.cursor = pos
-	s.exitHistoryBrowseOnEditLocked()
-	return true
-}
-
-func (s *attachState) killLineBackward() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.cursor == 0 {
-		return false
-	}
-	s.lineBuf = s.lineBuf[s.cursor:]
-	s.cursor = 0
-	s.exitHistoryBrowseOnEditLocked()
-	return true
-}
-
-func (s *attachState) killLineForward() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.cursor >= len(s.lineBuf) {
-		return false
-	}
-	s.lineBuf = s.lineBuf[:s.cursor]
-	s.exitHistoryBrowseOnEditLocked()
-	return true
-}
-
-func (s *attachState) deleteForward() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.cursor >= len(s.lineBuf) {
-		return false
-	}
-	s.lineBuf = append(s.lineBuf[:s.cursor], s.lineBuf[s.cursor+1:]...)
-	s.exitHistoryBrowseOnEditLocked()
-	return true
-}
-
-func (s *attachState) moveWordBackward() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.cursor == 0 {
-		return false
-	}
-	pos := s.cursor
-	for pos > 0 && s.lineBuf[pos-1] == ' ' {
-		pos--
-	}
-	for pos > 0 && s.lineBuf[pos-1] != ' ' {
-		pos--
-	}
-	if pos == s.cursor {
-		return false
-	}
-	s.cursor = pos
-	return true
-}
-
-func (s *attachState) moveWordForward() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.cursor >= len(s.lineBuf) {
-		return false
-	}
-	pos := s.cursor
-	for pos < len(s.lineBuf) && s.lineBuf[pos] != ' ' {
-		pos++
-	}
-	for pos < len(s.lineBuf) && s.lineBuf[pos] == ' ' {
-		pos++
-	}
-	if pos == s.cursor {
-		return false
-	}
-	s.cursor = pos
-	return true
-}
 
 func (s *attachState) cancelInputLine() bool {
 	s.mu.Lock()
@@ -4335,42 +4553,6 @@ func (s *attachState) exitHistoryBrowseOnEditLocked() {
 	}
 }
 
-// handleAttachLineEditByte handles emacs-style line editing keys shared by
-// both attach input loops. Returns true when b was consumed.
-func handleAttachLineEditByte(b byte, state *attachState) bool {
-	var changed bool
-	switch b {
-	case 0x01: // Ctrl-A
-		changed = state.setLineCursorStart()
-	case 0x02: // Ctrl-B
-		changed = state.moveLineCursor(-1)
-	case 0x04: // Ctrl-D: forward delete; empty line falls through to detach
-		state.mu.Lock()
-		empty := len(state.lineBuf) == 0
-		state.mu.Unlock()
-		if empty {
-			return false
-		}
-		changed = state.deleteForward()
-	case 0x05: // Ctrl-E
-		changed = state.setLineCursorEnd()
-	case 0x06: // Ctrl-F
-		changed = state.moveLineCursor(1)
-	case 0x0b: // Ctrl-K
-		changed = state.killLineForward()
-	case 0x15: // Ctrl-U
-		changed = state.killLineBackward()
-	case 0x17: // Ctrl-W
-		changed = state.deleteWordBackward()
-	default:
-		return false
-	}
-	if changed || b == 0x01 || b == 0x05 || b == 0x02 || b == 0x06 {
-		state.display.redraw()
-	}
-	return true
-}
-
 func displayInputBuffer(buf []byte) string {
 	if len(buf) == 0 {
 		return ""
@@ -4416,35 +4598,6 @@ func isPrefix(seq, candidate []byte) bool {
 		}
 	}
 	return true
-}
-
-func isKnownEscPrefix(seq []byte) bool {
-	for _, candidate := range [][]byte{
-		{0x1b},
-		{0x1b, '['},
-		{0x1b, 'O'},
-		{0x1b, '[', '1', '~'},
-		{0x1b, '[', '3', '~'},
-		{0x1b, '[', '4', '~'},
-		{0x1b, '[', 'A'},
-		{0x1b, '[', 'B'},
-		{0x1b, '[', 'C'},
-		{0x1b, '[', 'D'},
-		{0x1b, '[', 'F'},
-		{0x1b, '[', 'H'},
-		{0x1b, 'O', 'A'},
-		{0x1b, 'O', 'B'},
-		{0x1b, 'O', 'C'},
-		{0x1b, 'O', 'D'},
-		{0x1b, 'O', 'F'},
-		{0x1b, 'O', 'H'},
-		bracketedPasteStart,
-	} {
-		if isPrefix(seq, candidate) {
-			return true
-		}
-	}
-	return false
 }
 
 func appendBufferedInput(state *attachState, chunk []byte) bool {
@@ -4497,112 +4650,192 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 
 	state.escSeq = append(state.escSeq, b)
 	seq := state.escSeq
-	switch {
-	case bytes.Equal(seq, bracketedPasteStart):
+	if bytes.Equal(seq, bracketedPasteStart) {
 		state.escSeq = nil
 		state.pasting = true
 		state.display.setFreezeLine(true)
 		return true
-	case bytes.Equal(seq, []byte{0x1b, '[', 'A'}), bytes.Equal(seq, []byte{0x1b, 'O', 'A'}):
+	}
+	if len(seq) == 2 {
+		if b == '[' || b == 'O' {
+			// CSI / SS3 introducer; the key itself is still coming.
+			return true
+		}
 		state.escSeq = nil
-		if state.pending.get() != "" {
+		applyMetaKey(b, state)
+		return true
+	}
+	// Inside a CSI / SS3 sequence: parameter and intermediate bytes keep
+	// buffering, and the first final byte (0x40-0x7e) completes it.
+	if b < 0x40 || b > 0x7e {
+		return true
+	}
+	state.escSeq = nil
+	applyCSIKey(seq, state)
+	return true
+}
+
+// applyMetaKey handles an ESC-prefixed chord. Terminals that send Option/Alt as
+// "Esc+" — iTerm2 configured that way, Terminal.app's default — deliver these
+// as ESC followed by the bare key; one sending an accented character instead is
+// not producing a meta chord at all and never reaches this path.
+func applyMetaKey(b byte, state *attachState) {
+	if state.pending.get() != "" {
+		// A HITL menu owns the keyboard; line editing is inert until it clears.
+		return
+	}
+	changed := false
+	switch b {
+	case 'b', 'B':
+		changed = state.moveLineCursorToWord(-1)
+	case 'f', 'F':
+		changed = state.moveLineCursorToWord(1)
+	case 'd', 'D':
+		changed = state.deleteWordAfter()
+	case 0x7f, 0x08: // Meta+Backspace
+		changed = state.deleteWordBefore(false)
+	case 0x0d, 0x0a:
+		// Option/Alt+Enter inserts a newline instead of submitting, so a
+		// message can span multiple lines — mirroring how a pasted multi-line
+		// block lands in lineBuf and is restored on submit (submittedInput).
+		state.insertNewlineAtCursor()
+		changed = true
+	}
+	if changed {
+		state.display.redraw()
+	}
+}
+
+// applyCSIKey handles a complete CSI (ESC [ …) or SS3 (ESC O …) sequence.
+// Unbound sequences fall through as no-ops; the point is that they no longer
+// leak their final byte into the text buffer.
+//
+// Arrow up/down recall attach input history when no HITL menu is open (bash-
+// style ↑/↓). Word-wise motion uses the CSI modifier encoding (Ctrl/Alt+Left/
+// Right); Home/End/Delete cover the common terminal variants.
+func applyCSIKey(seq []byte, state *attachState) {
+	final := seq[len(seq)-1]
+	params := string(seq[2 : len(seq)-1])
+
+	// Arrow keys drive the approval menu whenever one is open.
+	if state.pending.get() != "" {
+		switch final {
+		case 'A', 'D':
 			state.moveHITLSelection(-1)
 			state.display.redraw()
-		} else if state.historyUp() {
-			state.display.redraw()
-		}
-		return true
-	case bytes.Equal(seq, []byte{0x1b, '[', '1', '~'}), bytes.Equal(seq, []byte{0x1b, '[', 'H'}), bytes.Equal(seq, []byte{0x1b, 'O', 'H'}):
-		state.escSeq = nil
-		if state.setLineCursorStart() {
-			state.display.redraw()
-		}
-		return true
-	case bytes.Equal(seq, []byte{0x1b, '[', 'D'}), bytes.Equal(seq, []byte{0x1b, 'O', 'D'}):
-		state.escSeq = nil
-		if state.pending.get() != "" {
-			state.moveHITLSelection(-1)
-			state.display.redraw()
-		} else if state.moveLineCursor(-1) {
-			state.display.redraw()
-		}
-		return true
-	case bytes.Equal(seq, []byte{0x1b, '[', 'B'}), bytes.Equal(seq, []byte{0x1b, 'O', 'B'}):
-		state.escSeq = nil
-		if state.pending.get() != "" {
+		case 'B', 'C':
 			state.moveHITLSelection(1)
 			state.display.redraw()
-		} else if state.historyDown() {
-			state.display.redraw()
 		}
-		return true
-	case bytes.Equal(seq, []byte{0x1b, '[', '4', '~'}), bytes.Equal(seq, []byte{0x1b, '[', 'F'}), bytes.Equal(seq, []byte{0x1b, 'O', 'F'}):
-		state.escSeq = nil
-		if state.setLineCursorEnd() {
-			state.display.redraw()
+		return
+	}
+
+	changed := false
+	switch final {
+	case 'A': // Up — input history
+		changed = state.historyUp()
+	case 'B': // Down — input history
+		changed = state.historyDown()
+	case 'D': // Left
+		if csiJumpsWord(params) {
+			changed = state.moveLineCursorToWord(-1)
+		} else {
+			changed = state.moveLineCursor(-1)
 		}
-		return true
-	case bytes.Equal(seq, []byte{0x1b, '[', 'C'}), bytes.Equal(seq, []byte{0x1b, 'O', 'C'}):
-		state.escSeq = nil
-		if state.pending.get() != "" {
-			state.moveHITLSelection(1)
-			state.display.redraw()
-		} else if state.moveLineCursor(1) {
-			state.display.redraw()
+	case 'C': // Right
+		if csiJumpsWord(params) {
+			changed = state.moveLineCursorToWord(1)
+		} else {
+			changed = state.moveLineCursor(1)
 		}
-		return true
-	case bytes.Equal(seq, []byte{0x1b, 0x0d}), bytes.Equal(seq, []byte{0x1b, 0x0a}):
-		// Option/Alt+Enter: most terminals (iTerm2 and Terminal.app's default
-		// "Option key: Esc+" setting, plus anything else that encodes Meta as
-		// a plain ESC prefix) send this as ESC followed by CR/LF. Treat it as
-		// "insert a newline" instead of submitting, so a message can span
-		// multiple lines — mirroring how a pasted multi-line block already
-		// lands in lineBuf (appendBufferedInput) and is restored to real
-		// newlines on submit (submittedInput).
-		state.escSeq = nil
-		if state.pending.get() == "" {
-			state.insertNewlineAtCursor()
-			state.display.redraw()
+	case 'H': // Home
+		changed = state.moveLineCursorToEdge(-1)
+	case 'F': // End
+		changed = state.moveLineCursorToEdge(1)
+	case '~':
+		switch csiParam(params, 0) {
+		case 1, 7: // Home
+			changed = state.moveLineCursorToEdge(-1)
+		case 4, 8: // End
+			changed = state.moveLineCursorToEdge(1)
+		case 3: // Delete
+			changed = state.deleteRuneAtCursor()
 		}
-		return true
-	case bytes.Equal(seq, []byte{0x1b, '[', '3', '~'}):
-		state.escSeq = nil
-		if state.deleteForward() {
-			state.display.redraw()
-		}
-		return true
-	case len(seq) == 2 && seq[0] == 0x1b:
-		switch seq[1] {
-		case 'b':
-			state.escSeq = nil
-			if state.moveWordBackward() {
-				state.display.redraw()
-			}
-			return true
-		case 'f':
-			state.escSeq = nil
-			if state.moveWordForward() {
-				state.display.redraw()
-			}
-			return true
-		case 0x7f:
-			state.escSeq = nil
-			if state.deleteWordBackward() {
-				state.display.redraw()
-			}
-			return true
-		case '[', 'O':
-			return true
-		default:
-			state.escSeq = nil
-			return false
-		}
-	case isKnownEscPrefix(seq):
-		return true
-	default:
-		state.escSeq = nil
+	}
+	if changed {
+		state.display.redraw()
+	}
+}
+
+// csiParam returns the nth semicolon-separated numeric parameter of a CSI
+// sequence, or 0 when absent or unparsable.
+func csiParam(params string, n int) int {
+	fields := strings.Split(params, ";")
+	if n >= len(fields) {
+		return 0
+	}
+	v, err := strconv.Atoi(fields[n])
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+// csiJumpsWord reports whether a cursor-key sequence carries the Alt or Ctrl
+// modifier, which every terminal binds to word-wise motion. xterm encodes the
+// modifier as 1 + a bitmask of shift=1, alt=2, ctrl=4, meta=8 in the second
+// parameter, so Ctrl+Right arrives as ESC [ 1 ; 5 C.
+func csiJumpsWord(params string) bool {
+	mod := csiParam(params, 1)
+	if mod < 1 {
 		return false
 	}
+	return (mod-1)&(2|4) != 0
+}
+
+// handleAttachEditingKey applies the readline / bash-style control chords,
+// reporting whether it consumed the byte. Both attach loops call it so their
+// key tables can't drift apart. Covers Ctrl-A/E/B/F/K/U/W and Ctrl-D as
+// forward-delete on a non-empty line (empty Ctrl-D detaches via
+// tryDetachAttachPrompt before this runs).
+func handleAttachEditingKey(b byte, state *attachState) bool {
+	var changed bool
+	switch b {
+	case 0x01: // Ctrl-A
+		changed = state.moveLineCursorToEdge(-1)
+	case 0x02: // Ctrl-B
+		changed = state.moveLineCursor(-1)
+	case 0x04: // Ctrl-D: forward delete; empty line already handled for detach
+		state.mu.Lock()
+		empty := len(state.lineBuf) == 0
+		state.mu.Unlock()
+		if empty {
+			return false
+		}
+		changed = state.deleteRuneAtCursor()
+	case 0x05: // Ctrl-E
+		changed = state.moveLineCursorToEdge(1)
+	case 0x06: // Ctrl-F
+		changed = state.moveLineCursor(1)
+	case 0x0b: // Ctrl-K
+		changed = state.deleteToLineEdge(1)
+	case 0x15: // Ctrl-U
+		changed = state.deleteToLineEdge(-1)
+	case 0x17: // Ctrl-W
+		changed = state.deleteWordBefore(true)
+	default:
+		return false
+	}
+	if changed || b == 0x01 || b == 0x05 || b == 0x02 || b == 0x06 {
+		state.display.redraw()
+	}
+	return true
+}
+
+// handleAttachLineEditByte is kept as an alias for older call sites / tests;
+// prefer handleAttachEditingKey.
+func handleAttachLineEditByte(b byte, state *attachState) bool {
+	return handleAttachEditingKey(b, state)
 }
 
 // handlePastedByte buffers one byte of a bracketed paste into the line
@@ -4874,19 +5107,23 @@ func (p *promptDisplay) spinnerFrame(frame, label string) {
 	fmt.Fprintf(p.out, "\x1b7\x1b[%dA\r\x1b[K%s %s\x1b8", up, frame, label)
 }
 
-// spinnerStop erases the spinner line entirely so no status text or frozen
-// braille glyph is left behind in scrollback once the run produces output.
+// spinnerStop removes the spinner line entirely so neither status text nor an
+// empty row is left behind in scrollback once the run produces output.
+//
+// Erasing the row's contents isn't enough: spinnerInit committed the row with a
+// \r\n, so blanking the text leaves an empty line for every start/stop cycle —
+// and the sticky spinner cycles once per event, which is what wedged dead rows
+// between tool calls and messages. DL (\x1b[M) deletes the row itself and
+// shifts the prompt row up into its place, then the prompt is repainted there
+// so the caret doesn't sit at column 0 over its own text.
 func (p *promptDisplay) spinnerStop() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw || p.midLine {
 		return
 	}
-	up := p.promptRows
-	if up < 1 {
-		up = 1
-	}
-	fmt.Fprintf(p.out, "\x1b7\x1b[%dA\r\x1b[K\x1b8", up)
+	fmt.Fprint(p.out, "\r\x1b[A\x1b[M")
+	p.paintPromptLocked(true)
 }
 
 func (p *promptDisplay) warmupBannerActive() bool {
@@ -5252,7 +5489,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		return false, nil
 	}
 
-	if handleAttachLineEditByte(b, state) {
+	if handleAttachEditingKey(b, state) {
 		return false, nil
 	}
 
@@ -5669,14 +5906,15 @@ type runStartedPayload struct {
 }
 
 type toolCallStartedPayload struct {
-	Name      string          `json:"name"`
-	Arguments json.RawMessage `json:"arguments"`
-	Input     json.RawMessage `json:"input"`
+	ToolCallID string          `json:"tool_call_id"`
+	Name       string          `json:"name"`
+	Arguments  json.RawMessage `json:"arguments"`
+	Input      json.RawMessage `json:"input"`
 }
 
 // commandLine returns the most descriptive one-liner for a tool call: the
-// actual command pulled from arguments/input when present, otherwise the tool
-// name (e.g. "bash").
+// actual command pulled from arguments/input when present, then the file the
+// call acts on, otherwise the tool name (e.g. "bash").
 func (p toolCallStartedPayload) commandLine() string {
 	for _, raw := range []json.RawMessage{p.Arguments, p.Input} {
 		if len(raw) == 0 {
@@ -5685,17 +5923,144 @@ func (p toolCallStartedPayload) commandLine() string {
 		var m map[string]any
 		if json.Unmarshal(raw, &m) == nil {
 			if cmd := searchCommand(m, 3); cmd != "" {
-				return cmd
+				return prettyCommandLabel(cmd)
+			}
+			if target := searchFileTarget(m, 3); target != "" {
+				return prettyCommandLabel(p.Name + " " + target)
+			}
+			if subject := searchToolSubject(m, 3); subject != "" {
+				return prettyCommandLabel(p.Name + " " + subject)
 			}
 		}
+	}
+	if p.Name == "" {
+		// An adapter that names neither the tool nor its arguments still has to
+		// leave a mark: a bare "▸" reads as a rendering fault, and silence would
+		// hide that the agent did something.
+		return "tool call"
 	}
 	return p.Name
 }
 
+var (
+	// shellWrapperRE matches the shell invocation agents wrap commands in
+	// ("/bin/bash -lc ", "sh -c ", "zsh -ic "). It's the same for every call,
+	// so displaying it spends the label's first ~15 columns saying nothing and
+	// pushes the part you're reading for off the right edge.
+	shellWrapperRE = regexp.MustCompile(`^(?:/usr/bin/|/bin/)?(?:ba|z|k|da)?sh\s+-[a-z]*c\s+`)
+	// whitespaceRunRE collapses newlines and runs of spaces. A heredoc or a
+	// multi-line script would otherwise break the one-line-per-call layout.
+	whitespaceRunRE = regexp.MustCompile(`\s+`)
+)
+
+// workspaceRootPrefix is the sandbox working directory. Commands run there, so
+// "/workspace/styles.css" and "styles.css" name the same file and the prefix is
+// pure width in a label — the shortened form is still correct to copy into
+// `doctl agents exec`, which also lands in /workspace.
+const workspaceRootPrefix = "/workspace/"
+
+// prettyCommandLabel reduces a raw tool command to what's worth reading: the
+// command itself rather than the shell that wrapped it, workspace-relative
+// paths, and a single line.
+func prettyCommandLabel(cmd string) string {
+	cmd = strings.TrimSpace(cmd)
+	if wrapper := shellWrapperRE.FindString(cmd); wrapper != "" {
+		if inner := strings.TrimSpace(cmd[len(wrapper):]); inner != "" {
+			cmd = unquoteShellWord(inner)
+		}
+	}
+	cmd = strings.ReplaceAll(cmd, workspaceRootPrefix, "")
+	return strings.TrimSpace(whitespaceRunRE.ReplaceAllString(cmd, " "))
+}
+
+// unquoteShellWord strips one layer of surrounding shell quoting and unescapes
+// the quote character inside it, so `"rg -n \"h1\" styles.css"` reads as
+// `rg -n "h1" styles.css`. Returns s unchanged unless it is a single fully
+// quoted word — several quoted words in a row ('a' 'b') are left alone, since
+// removing the outer pair there would change what the command says.
+func unquoteShellWord(s string) string {
+	if len(s) < 2 {
+		return s
+	}
+	quote := s[0]
+	if quote != '\'' && quote != '"' {
+		return s
+	}
+	if s[len(s)-1] != quote {
+		return s
+	}
+	inner := s[1 : len(s)-1]
+	for i := 0; i < len(inner); i++ {
+		if quote == '"' && inner[i] == '\\' {
+			i++
+			continue
+		}
+		if inner[i] == quote {
+			return s
+		}
+	}
+	if quote == '"' {
+		inner = strings.ReplaceAll(inner, `\"`, `"`)
+	}
+	return inner
+}
+
 type toolCallCompletedPayload struct {
+	ToolCallID string `json:"tool_call_id"`
 	OK         bool   `json:"ok"`
 	DurationMS int64  `json:"duration_ms"`
 	Summary    string `json:"summary,omitempty"`
+}
+
+// summaryLine renders Summary as a single line, falling back to "done" when the
+// adapter reported nothing. Used where the result is its own line and so can't
+// be left blank.
+func (p toolCallCompletedPayload) summaryLine() string {
+	if s := p.oneLineSummary(80); s != "" {
+		return s
+	}
+	return "done"
+}
+
+// oneLineSummary renders Summary as a single line of at most max runes, or ""
+// when the adapter reported nothing. Adapters put up to a few hundred
+// characters of tool output in it, and a multi-line value would smear across
+// the reserved spinner row. Mirrors the openAI attach renderer's treatment of
+// item.output.
+func (p toolCallCompletedPayload) oneLineSummary(max int) string {
+	s := strings.TrimSpace(p.Summary)
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		s = strings.TrimSpace(s[:i])
+	}
+	if s == "" {
+		return ""
+	}
+	return truncateRunes(s, max)
+}
+
+// resultSuffix renders the completion half of a merged tool line: the outcome
+// mark, then whatever the adapter actually reported. It also returns the
+// suffix's printable width, since the styled string carries ANSI escapes that
+// len() would count. Summary and duration are both optional — codex currently
+// sends neither, and a bare ✓ is honest where "done (0ms)" would dress an
+// absent result up as a measured one.
+func (p toolCallCompletedPayload) resultSuffix() (string, int) {
+	mark, markWidth := colorize("✓", colSuccess), 1
+	if !p.OK {
+		mark = colorize("✗", colError)
+	}
+	var parts []string
+	if s := p.oneLineSummary(60); s != "" {
+		parts = append(parts, s)
+	}
+	if p.DurationMS > 0 {
+		parts = append(parts, fmt.Sprintf("%dms", p.DurationMS))
+	}
+	if len(parts) == 0 {
+		return mark, markWidth
+	}
+	detail := strings.Join(parts, " · ")
+	return mark + " " + colorize(detail, colMuted), markWidth + 1 + utf8.RuneCountInString(detail)
 }
 
 // hitlRequestedPayload is the data body of a run.human_input_requested event.
@@ -5799,11 +6164,13 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 			if !p.OK {
 				mark = colorize("✗", colError)
 			}
-			summary := p.Summary
-			if summary == "" {
-				summary = "done"
+			line := fmt.Sprintf("  %s %s", mark, p.summaryLine())
+			// A zero duration means the adapter never reported one; "(0ms)"
+			// would read as a measured sub-millisecond command.
+			if p.DurationMS > 0 {
+				line += " " + colorize(fmt.Sprintf("(%dms)", p.DurationMS), colMuted)
 			}
-			fmt.Fprintf(w, "  %s %s %s\n", mark, summary, colorize(fmt.Sprintf("(%dms)", p.DurationMS), colMuted))
+			fmt.Fprintln(w, line)
 		}
 	case godo.HostedAgentEventKindHITLRequested:
 		var p hitlRequestedPayload
@@ -5819,13 +6186,17 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindRunCompleted:
 		var p runCompletedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
-			// Only show the usage/cost segment when the adapter actually
-			// reported it; some adapters (e.g. opencode) send all zeros,
-			// which looks broken rather than informative.
+			// Gate the usage and cost segments separately, each on the field
+			// it prints. Some adapters (e.g. opencode) send all zeros, and
+			// codex reports tokens but no cost — a shared guard turned that
+			// into a "$0.0000" price tag on a six-figure-token run.
 			summary := "run complete"
-			if p.TotalTokensIn > 0 || p.TotalTokensOut > 0 || p.RunCostMicros > 0 {
-				summary = fmt.Sprintf("run complete · %d in / %d out tokens · $%.4f",
-					p.TotalTokensIn, p.TotalTokensOut, float64(p.RunCostMicros)/1_000_000)
+			if p.TotalTokensIn > 0 || p.TotalTokensOut > 0 {
+				summary = fmt.Sprintf("run complete · %d in / %d out tokens",
+					p.TotalTokensIn, p.TotalTokensOut)
+			}
+			if p.RunCostMicros > 0 {
+				summary += fmt.Sprintf(" · $%.4f", float64(p.RunCostMicros)/1_000_000)
 			}
 			fmt.Fprintf(w, "\n%s %s\n", colorize("✓", colSuccess), colorize(summary, colMuted))
 			fmt.Fprintln(w, colorize(runSeparator, colMuted))
@@ -5923,39 +6294,45 @@ func renderAgentCard(w io.Writer, body string) {
 	fmt.Fprintln(w, out)
 }
 
-// printAttachBanner renders the styled connection header and a compact help
-// key shown when an interactive session is attached. Every line is
-// left-aligned (no column padding) to keep the card compact and scannable.
+// printAttachBanner renders the connection header shown when an interactive
+// session is attached: one line naming what you're connected to, one indented
+// hint line, and nothing else.
+//
+// This deliberately isn't a bordered card. A drawn box is sized to its content
+// once and then frozen in scrollback, so it can't reflow — resizing the
+// terminal (or attaching in a pane narrower than the box) staircases the
+// border, while prose just rewraps. The full key list lives in /help
+// (printAttachHelp), which is where anyone looking for a second key press
+// goes anyway, so repeating it on every attach only cost vertical space.
 func printAttachBanner(w io.Writer, sess *do.HostedAgentSession, bridgeNote string) {
 	ref := displaySessionRef(sess)
 	agent := prettyAgentKind(sess.AgentKind)
 
 	var body strings.Builder
-	fmt.Fprintf(&body, "%s\n\n", boldColor("Connected", colSuccess))
+	fmt.Fprintf(&body, "%s %s  %s %s\n",
+		colorize("●", colSuccess),
+		boldColor("Connected", colSuccess),
+		boldColor(agent, colHighlight),
+		colorize("· "+ref, colMuted))
 
-	fmt.Fprintf(&body, "%s %s\n", boldColor("Agent", colHighlight), agent)
-	fmt.Fprintf(&body, "%s %s\n", boldColor("Session", colHighlight), ref)
+	// Secondary identity lines only appear when they carry something the first
+	// line doesn't, so the common case stays two lines tall.
 	if Verbose && sess != nil && strings.TrimSpace(sess.SessionID) != "" && sess.SessionID != ref {
-		fmt.Fprintf(&body, "%s %s\n", boldColor("ID", colHighlight), colorize(sess.SessionID, colMuted))
+		fmt.Fprintf(&body, "  %s %s\n", boldColor("ID", colHighlight), colorize(sess.SessionID, colMuted))
 	}
 	if note := strings.TrimSpace(bridgeNote); note != "" {
-		fmt.Fprintf(&body, "%s %s\n", boldColor("Bridge", colHighlight), colorize(note, colMuted))
+		fmt.Fprintf(&body, "  %s %s\n", boldColor("Bridge", colHighlight), colorize(note, colMuted))
 	}
 
-	fmt.Fprintln(&body)
-	fmt.Fprintln(&body, colorize("Press Ctrl + D to detach locally", colMuted))
+	// Indented to sit in the same left gutter as streamed agent output, which
+	// leaves the ● as the only thing at column 0 for the eye to land on.
+	fmt.Fprintf(&body, "  %s send · %s newline · %s detach · %s for more\n",
+		colorize("Enter", colHighlight),
+		colorize("Option/Alt + Enter", colHighlight),
+		colorize("Ctrl + D", colHighlight),
+		colorize("/help", colHighlight))
 
-	fmt.Fprintln(&body)
-	fmt.Fprintf(&body, "type a message and press %s (%s for a new line)\n", colorize("Enter", colHighlight), colorize("Option/Alt + Enter", colHighlight))
-	yn := colorize("y", colSuccess) + colorize("/a", colSuccess) + " approve · " +
-		colorize("n", colError) + colorize("/r", colError) + " reject · " +
-		colorize("d", colWarning) + " defer"
-	fmt.Fprintf(&body, "%s then Enter, or %s\n", colorize("↑/↓", colHighlight), yn)
-
-	fmt.Fprintln(&body)
-	fmt.Fprintln(&body, colorize("use /help for full command list", colMuted))
-
-	renderAgentCard(w, body.String())
+	fmt.Fprintf(w, "\n%s", body.String())
 }
 
 // helpRow is one entry in a printAttachHelp section: a command/key on the
@@ -6085,9 +6462,120 @@ func renderApprovalResolvedLine(w io.Writer, hitlID, label string, outcome int32
 	renderHITLStatusLine(w, hitlOutcomeStatus(outcome), label, "", hitlID)
 }
 
-// renderToolStart prints the "running a tool" line.
+// renderToolStart prints the "running a tool" line on its own, for consumers
+// that see a start without a paired completion (the logs renderer, and piped
+// attach output where there's no spinner to carry the command).
 func renderToolStart(w io.Writer, cmd string) {
-	fmt.Fprintf(w, "\n%s %s\n", colorize("▸", colHighlight), boldColor(cmd, colHighlight))
+	renderToolLine(w, cmd, "", 0)
+}
+
+// renderToolLine prints one tool call as a single line: "▸ <cmd>" plus an
+// optional result suffix whose printable width is suffixWidth. The command is
+// truncated to fit the terminal, because a wrapped label breaks the ▸/✓ column
+// that makes a run's tool calls scannable.
+func renderToolLine(w io.Writer, cmd, suffix string, suffixWidth int) {
+	// "▸ " ahead of the label, two spaces before the suffix.
+	budget := mdWrapWidth() - 2 - suffixWidth
+	if suffixWidth > 0 {
+		budget -= 2
+	}
+	if budget < minToolLabelWidth {
+		budget = minToolLabelWidth
+	}
+	label := boldColor(truncateRunes(cmd, budget), colHighlight)
+	if suffix == "" {
+		fmt.Fprintf(w, "\n%s %s\n", colorize("▸", colHighlight), label)
+		return
+	}
+	fmt.Fprintf(w, "\n%s %s  %s\n", colorize("▸", colHighlight), label, suffix)
+}
+
+// minToolLabelWidth keeps a long result suffix from squeezing the command out
+// of its own line; better to let the line run slightly wide than to show three
+// characters of the command.
+const minToolLabelWidth = 24
+
+// toolSpinnerLabel is the caption an in-flight tool call gives the spinner.
+// Trimmed harder than a committed line: the spinner redraws in place one row
+// above the prompt, so it has to fit without wrapping.
+func toolSpinnerLabel(cmd string) string {
+	return truncateRunes(cmd, mdWrapWidth()-12)
+}
+
+// toolLineTracker pairs a tool_call_started with its tool_call_completed so the
+// two render as one committed line ("▸ cmd  ✓ 12ms") rather than a start line,
+// a result line, and — because the sticky spinner reinits between them — a dead
+// row in the middle. While a call is in flight its command rides the thinking
+// spinner's label: the spinner is already the run's live indicator, so an
+// unfinished call costs no committed rows at all.
+//
+// Deferring only makes sense when there IS a spinner. Without one (piped
+// output, the logs renderer) the start prints immediately as before, and the
+// completion falls back to its own line — losing the pairing but never the
+// record of what ran.
+type toolLineTracker struct {
+	// labels maps tool_call_id to the command label of a call whose result
+	// hasn't arrived. A map rather than one slot because an adapter may run
+	// several calls concurrently.
+	labels map[string]string
+	// order preserves arrival order so an interrupted run flushes its
+	// unfinished calls in the order they started.
+	order []string
+}
+
+// start records an in-flight call and reports the label to hand the spinner.
+// When deferrable is false it prints the start line immediately instead and
+// returns "".
+func (t *toolLineTracker) start(w io.Writer, id, cmd string, deferrable bool) string {
+	if !deferrable || id == "" {
+		renderToolStart(w, cmd)
+		return ""
+	}
+	if t.labels == nil {
+		t.labels = map[string]string{}
+	}
+	t.labels[id] = cmd
+	t.order = append(t.order, id)
+	return cmd
+}
+
+// finish prints the completed call as one line when its start was deferred,
+// otherwise as a standalone result line (a reattach replays the completion
+// without the start that named the command).
+func (t *toolLineTracker) finish(w io.Writer, p toolCallCompletedPayload) {
+	suffix, width := p.resultSuffix()
+	cmd, ok := t.labels[p.ToolCallID]
+	if !ok {
+		fmt.Fprintf(w, "  %s\n", suffix)
+		return
+	}
+	t.forget(p.ToolCallID)
+	renderToolLine(w, cmd, suffix, width)
+}
+
+// flush prints any call still in flight, for a run that ended (or a stream that
+// dropped) before its result arrived. Without this the command would vanish
+// entirely, which reads as the agent never having run it.
+func (t *toolLineTracker) flush(w io.Writer) {
+	for _, id := range t.order {
+		cmd, ok := t.labels[id]
+		if !ok {
+			continue
+		}
+		delete(t.labels, id)
+		renderToolLine(w, cmd, colorize("… no result", colMuted), 11)
+	}
+	t.order = nil
+}
+
+func (t *toolLineTracker) forget(id string) {
+	delete(t.labels, id)
+	for i, open := range t.order {
+		if open == id {
+			t.order = append(t.order[:i], t.order[i+1:]...)
+			break
+		}
+	}
 }
 
 // hitlCommandSummary extracts the best one-line command/action label from a
@@ -6129,6 +6617,64 @@ func searchCommand(m map[string]any, depth int) string {
 	for _, v := range m {
 		if sub, ok := v.(map[string]any); ok {
 			if s := searchCommand(sub, depth-1); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+// searchFileTarget returns a "<path> (<operation>)" label for tool calls that
+// act on a file instead of running a command — codex's file_change carries
+// path+operation, and MCP tools often take a path. Without it those calls
+// render as a bare tool name, so a transcript never names the file that changed.
+func searchFileTarget(m map[string]any, depth int) string {
+	if m == nil || depth < 0 {
+		return ""
+	}
+	path := ""
+	for _, key := range []string{"path", "file_path", "filepath", "file"} {
+		if v, ok := m[key].(string); ok && v != "" {
+			path = v
+			break
+		}
+	}
+	if path == "" {
+		for _, v := range m {
+			if sub, ok := v.(map[string]any); ok {
+				if s := searchFileTarget(sub, depth-1); s != "" {
+					return s
+				}
+			}
+		}
+		return ""
+	}
+	if op, ok := m["operation"].(string); ok && op != "" {
+		return path + " (" + op + ")"
+	}
+	return path
+}
+
+// searchToolSubject finds the argument worth showing for a tool that runs
+// neither a shell command nor a file edit — an MCP call's query, the URL it
+// fetches, the pattern it looks for. Without it such a call renders as its bare
+// name, which says something ran but not what it was asked to do.
+//
+// Deliberately separate from searchCommand: HITL approval lines use that one,
+// and labelling a search query as the command awaiting approval would misstate
+// what you're being asked to allow.
+func searchToolSubject(m map[string]any, depth int) string {
+	if m == nil || depth < 0 {
+		return ""
+	}
+	for _, key := range []string{"query", "search_query", "q", "url", "uri", "pattern", "prompt"} {
+		if v, ok := m[key].(string); ok && strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	for _, v := range m {
+		if sub, ok := v.(map[string]any); ok {
+			if s := searchToolSubject(sub, depth-1); s != "" {
 				return s
 			}
 		}
