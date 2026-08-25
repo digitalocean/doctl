@@ -60,7 +60,7 @@ func TestValidateAgentManifest_UnknownAdapter(t *testing.T) {
 }
 
 func TestValidateAgentManifest_RemovedAdaptersRejected(t *testing.T) {
-	for _, adapter := range []string{"cursor", "hermes", "cursor-cli"} {
+	for _, adapter := range []string{"cursor", "cursor-cli"} {
 		t.Run(adapter, func(t *testing.T) {
 			v := validateAgentManifest([]byte("agent: " + adapter + "\n"))
 			require.False(t, v.ok())
@@ -68,6 +68,24 @@ func TestValidateAgentManifest_RemovedAdaptersRejected(t *testing.T) {
 			assert.Contains(t, v.Errors[0], adapter)
 		})
 	}
+}
+
+func TestValidateAgentManifest_HermesAccepted(t *testing.T) {
+	const manifest = `name: hermes-smoke
+agent: hermes
+env:
+  OPENAI_MODEL: openai-gpt-4o
+`
+	v := validateAgentManifest([]byte(manifest))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+	assert.Empty(t, v.Warnings)
+}
+
+func TestValidateAgentManifest_HermesWithoutModelWarns(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: hermes\n"))
+	require.True(t, v.ok(), "errors=%v", v.Errors)
+	require.Len(t, v.Warnings, 1)
+	assert.Contains(t, v.Warnings[0], "OPENAI_MODEL")
 }
 
 func TestValidateAgentManifest_CredentialPlaceholderNoWarn(t *testing.T) {
