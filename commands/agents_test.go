@@ -1981,6 +1981,91 @@ func TestHandlePastedByteOnlyRedrawsOnceAtEnd(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(buf.String(), "\x1b[K"))
 }
 
+// TestHandlePastedByteDuringWarmupDoesNotRepaintEveryByte is MARSOHS-1095:
+// pasting while the attach warm-up banner is visible used to call noteQueued
+// (and thus warmupPaintLocked) on every pasted byte, leaving the same
+// truncated-duplicate scrollback corruption as a bare per-byte redraw.
+func TestHandlePastedByteDuringWarmupDoesNotRepaintEveryByte(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+	w.start()
+	buf.Reset()
+
+	pasted := strings.Repeat("x", 300)
+	input := "\x1b[200~" + pasted + "\x1b[201~"
+	for _, b := range []byte(input) {
+		stop, err := handleAttachByte(nil, nil, "sess", b, state, w, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+	}
+
+	assert.Equal(t, pasted, string(state.lineBuf))
+	assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+	// One paint to reveal the queued notice + one final paint when paste ends.
+	// Hundreds of clears means the warm-up path is still rewriting every byte.
+	clears := strings.Count(buf.String(), "\x1b[K")
+	assert.LessOrEqual(t, clears, 12, "paste during warm-up repainted too often (%d clears)", clears)
+	assert.Contains(t, buf.String(), pasted, "final prompt should include the full pasted line")
+}
+
+// TestPromptDisplayClearsAllWrappedRowsOnRedraw is the Enter/spinner half of
+// MARSOHS-1095: a long prompt that wraps across several terminal rows must be
+// fully erased before the next paint, otherwise only the last row is cleared
+// and truncated copies of the line pile up in scrollback.
+func TestPromptDisplayClearsAllWrappedRowsOnRedraw(t *testing.T) {
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	state.display.termCols = 40
+
+	state.mu.Lock()
+	state.lineBuf = []byte(strings.Repeat("x", 100))
+	state.cursor = len(state.lineBuf)
+	state.mu.Unlock()
+	state.display.redraw()
+	require.GreaterOrEqual(t, state.display.promptRows, 3)
+
+	buf.Reset()
+	state.mu.Lock()
+	state.lineBuf = nil
+	state.cursor = 0
+	state.mu.Unlock()
+	state.display.redraw()
+
+	ups := strings.Count(buf.String(), "\x1b[A")
+	assert.GreaterOrEqual(t, ups, 2, "expected cursor-up clears for wrapped rows, got %d in %q", ups, buf.String())
+	assert.Equal(t, 1, state.display.promptRows)
+}
+
+// TestSpinnerFrameMovesAboveWrappedPrompt ensures the run-in-progress spinner
+// climbs over every prompt row, not just one — otherwise each tick overwrites
+// the middle of a wrapped paste and leaves truncated "> …" ghosts.
+func TestSpinnerFrameMovesAboveWrappedPrompt(t *testing.T) {
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	state.display.termCols = 40
+
+	state.mu.Lock()
+	state.lineBuf = []byte(strings.Repeat("y", 90))
+	state.cursor = len(state.lineBuf)
+	state.mu.Unlock()
+	state.display.redraw()
+	rows := state.display.promptRows
+	require.GreaterOrEqual(t, rows, 2)
+
+	buf.Reset()
+	state.display.spinnerFrame("⠋", "Run in progress")
+	assert.Contains(t, buf.String(), fmt.Sprintf("\x1b[%dA", rows))
+}
+
 // TestAttachStateHITLSelection covers the arrow-key selection wrap-around and
 // that the prompt reflects the current selection.
 func TestAttachStateHITLSelection(t *testing.T) {

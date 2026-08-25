@@ -2310,11 +2310,11 @@ func printAttachSendAck(out io.Writer, warmup *warmupState, thinking *thinkingSt
 	fmt.Fprintln(out, colorize("… waiting for the agent", colMuted))
 }
 
-func echoAttachSubmitNewline(display *promptDisplay, warmup *warmupState) {
+func echoAttachSubmitNewline(display *promptDisplay, warmup *warmupState, visual string) {
 	if warmup != nil && warmup.isBannerVisible() {
 		return
 	}
-	display.echo([]byte("\r\n"))
+	display.finishInputLine(visual)
 }
 
 func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState, warmup *warmupState) (stop bool, err error) {
@@ -2361,11 +2361,10 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 		}
 	}
 	if state.pasting {
-		handlePastedByte(b, state)
-		// noteQueued already repaints the warm-up banner's own queued-status
-		// row itself when relevant; no need for a second, redundant redraw of
-		// the whole prompt on every pasted byte.
+		// Mark queued at most once for the whole paste; per-byte noteQueued
+		// used to repaint the warm-up block on every character (MARSOHS-1095).
 		warmup.noteQueued()
+		handlePastedByte(b, state)
 		return false, nil
 	}
 	if b == 0x04 && state.pending.get() == "" && tryDetachAttachPrompt(state) {
@@ -2381,13 +2380,16 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 
 	switch b {
 	case 0x0d, 0x0a:
+		state.mu.Lock()
+		visual := displayInputBuffer(state.lineBuf)
+		state.mu.Unlock()
 		line := readSubmittedInput(state)
 		if line != "" && warmup.inputAlreadyQueued() {
 			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
 			state.display.redraw()
 			return false, nil
 		}
-		echoAttachSubmitNewline(state.display, warmup)
+		echoAttachSubmitNewline(state.display, warmup, visual)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
@@ -3036,16 +3038,18 @@ func (w *warmupState) animate(ctx context.Context, d *promptDisplay, done chan s
 
 // noteQueued reveals the queued-input notice once the user starts typing so
 // attach makes it obvious their prompt is buffered until the agent is ready.
+// Idempotent: subsequent calls are no-ops so a bracketed paste (which delivers
+// hundreds of bytes) cannot force a full warm-up banner + prompt repaint on
+// every byte — that left wrapping duplicates in the scrollback (MARSOHS-1095).
 func (w *warmupState) noteQueued() {
 	if w == nil {
 		return
 	}
 	w.mu.Lock()
-	if !w.active || w.dismissed {
+	if !w.active || w.dismissed || w.queued {
 		w.mu.Unlock()
 		return
 	}
-	already := w.queued
 	w.queued = true
 	display, ok := w.out.(*promptDisplay)
 	w.mu.Unlock()
@@ -3053,9 +3057,7 @@ func (w *warmupState) noteQueued() {
 		display.warmupSetQueued(msgAgentWarmupQueued)
 		return
 	}
-	if !already {
-		fmt.Fprintf(w.out, "%s\n", colorize(msgAgentWarmupQueued, colMuted))
-	}
+	fmt.Fprintf(w.out, "%s\n", colorize(msgAgentWarmupQueued, colMuted))
 }
 
 func (w *warmupState) waitTimeout(ctx context.Context) {
@@ -4499,6 +4501,7 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 	case bytes.Equal(seq, bracketedPasteStart):
 		state.escSeq = nil
 		state.pasting = true
+		state.display.setFreezeLine(true)
 		return true
 	case bytes.Equal(seq, []byte{0x1b, '[', 'A'}), bytes.Equal(seq, []byte{0x1b, 'O', 'A'}):
 		state.escSeq = nil
@@ -4621,6 +4624,7 @@ func handlePastedByte(b byte, state *attachState) {
 		if bytes.Equal(seq, bracketedPasteEnd) {
 			state.escSeq = nil
 			state.pasting = false
+			state.display.setFreezeLine(false)
 			state.display.redraw()
 			return
 		}
@@ -4656,12 +4660,64 @@ type promptDisplay struct {
 	warmupSpinnerLabel string
 	warmupPhaseLabel   string
 	warmupQueuedLabel  string
+	// freezeLine suppresses painting lineBuf during a bracketed paste so the
+	// warm-up spinner (and any other in-place repaint) cannot rewrite a
+	// still-growing, wrapping prompt hundreds of times (MARSOHS-1095).
+	freezeLine bool
+	// promptRows is how many terminal rows the last paintPromptLocked occupied.
+	// \r\x1b[K only clears the cursor's current row, so a wrapping prompt must
+	// clear this many rows on the next replace — otherwise truncated copies of
+	// the previous line pile up in scrollback (MARSOHS-1095).
+	promptRows int
+	// termCols overrides autodetection; tests set it so wrap math is stable.
+	termCols int
 }
 
 func (p *promptDisplay) setRaw(on bool) {
 	p.mu.Lock()
 	p.raw = on
 	p.mu.Unlock()
+}
+
+func (p *promptDisplay) setFreezeLine(on bool) {
+	p.mu.Lock()
+	p.freezeLine = on
+	p.mu.Unlock()
+}
+
+func (p *promptDisplay) columnsLocked() int {
+	if p.termCols > 0 {
+		return p.termCols
+	}
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+		return w
+	}
+	return 80
+}
+
+func promptRowCount(prompt, line string, cols int) int {
+	if cols <= 0 {
+		cols = 80
+	}
+	width := lipgloss.Width(prompt) + lipgloss.Width(line)
+	if width <= 0 {
+		return 1
+	}
+	return (width + cols - 1) / cols
+}
+
+// clearPromptRowsLocked erases every terminal row occupied by the last painted
+// prompt, ending with the cursor on a blank row ready for a replacement paint.
+func (p *promptDisplay) clearPromptRowsLocked() {
+	rows := p.promptRows
+	if rows < 1 {
+		rows = 1
+	}
+	fmt.Fprint(p.out, "\r\x1b[K")
+	for i := 1; i < rows; i++ {
+		fmt.Fprint(p.out, "\x1b[A\r\x1b[K")
+	}
+	p.promptRows = 0
 }
 
 func (p *promptDisplay) Write(b []byte) (int, error) {
@@ -4684,7 +4740,8 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 			fmt.Fprint(p.out, "\r\n")
 		}
 	} else {
-		fmt.Fprint(p.out, "\r\x1b[K")
+		// Replace the in-progress prompt (possibly multi-row) before the event.
+		p.clearPromptRowsLocked()
 	}
 
 	if _, err := io.WriteString(p.out, strings.ReplaceAll(string(b), "\n", "\r\n")); err != nil {
@@ -4701,19 +4758,20 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 }
 
 // paintPromptLocked draws prompt + lineBuf and restores the caret. When clear
-// is true it first erases the current line (redraw / replace-in-place); when
-// false it paints on the current (fresh) line after a newline-terminated write.
+// is true it first erases every row the previous prompt occupied; when false
+// it paints on the current (fresh) line after a newline-terminated write.
 func (p *promptDisplay) paintPromptLocked(clear bool) {
 	line := ""
-	if p.lineBuf != nil {
+	if p.lineBuf != nil && !p.freezeLine {
 		line = p.lineBuf()
 	}
+	prompt := p.prompt()
 	if clear {
-		fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), line)
-	} else {
-		fmt.Fprintf(p.out, "%s%s", p.prompt(), line)
+		p.clearPromptRowsLocked()
 	}
-	if p.cursorPos == nil {
+	fmt.Fprintf(p.out, "%s%s", prompt, line)
+	p.promptRows = promptRowCount(prompt, line, p.columnsLocked())
+	if p.cursorPos == nil || p.freezeLine {
 		return
 	}
 	cur := p.cursorPos()
@@ -4738,6 +4796,27 @@ func (p *promptDisplay) echo(b []byte) {
 		return
 	}
 	p.out.Write(b)
+}
+
+// finishInputLine commits the in-progress (possibly multi-row) prompt to
+// scrollback as a single write, then leaves the cursor on a fresh line for the
+// next empty prompt paint. Clearing every wrapped row first prevents the
+// truncated-duplicate scrollback bug when Enter is pressed on a long paste.
+func (p *promptDisplay) finishInputLine(visual string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw {
+		fmt.Fprint(p.out, "\r\n")
+		return
+	}
+	p.clearPromptRowsLocked()
+	if visual != "" {
+		fmt.Fprintf(p.out, "%s%s\r\n", p.prompt(), visual)
+	} else {
+		fmt.Fprint(p.out, "\r\n")
+	}
+	p.promptRows = 0
+	p.midLine = false
 }
 
 // redraw re-renders prompt + lineBuf with the caret restored. Flips "> " <->
@@ -4771,23 +4850,28 @@ func (p *promptDisplay) spinnerInit(frame, label string) {
 	if p.midLine {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
+		p.promptRows = 0
 	} else {
-		fmt.Fprint(p.out, "\r\x1b[K")
+		p.clearPromptRowsLocked()
 	}
 	fmt.Fprintf(p.out, "%s %s\r\n", frame, label)
 	p.paintPromptLocked(false)
 }
 
-// spinnerFrame redraws the spinner line one row above the prompt.
-// DECSC/DECRC (\x1b7 / \x1b8) save+restore the cursor so the prompt row
-// below is preserved. No-op in non-raw or mid-stream state.
+// spinnerFrame redraws the spinner line above the (possibly multi-row) prompt.
+// DECSC/DECRC (\x1b7 / \x1b8) save+restore the cursor so the prompt below is
+// preserved. No-op in non-raw or mid-stream state.
 func (p *promptDisplay) spinnerFrame(frame, label string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw || p.midLine {
 		return
 	}
-	fmt.Fprintf(p.out, "\x1b7\x1b[A\r\x1b[K%s %s\x1b8", frame, label)
+	up := p.promptRows
+	if up < 1 {
+		up = 1
+	}
+	fmt.Fprintf(p.out, "\x1b7\x1b[%dA\r\x1b[K%s %s\x1b8", up, frame, label)
 }
 
 // spinnerStop erases the spinner line entirely so no status text or frozen
@@ -4798,7 +4882,11 @@ func (p *promptDisplay) spinnerStop() {
 	if !p.raw || p.midLine {
 		return
 	}
-	fmt.Fprint(p.out, "\x1b7\x1b[A\r\x1b[K\x1b8")
+	up := p.promptRows
+	if up < 1 {
+		up = 1
+	}
+	fmt.Fprintf(p.out, "\x1b7\x1b[%dA\r\x1b[K\x1b8", up)
 }
 
 func (p *promptDisplay) warmupBannerActive() bool {
@@ -4818,8 +4906,9 @@ func (p *promptDisplay) warmupInit(frame, label string) {
 	if p.midLine {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
+		p.promptRows = 0
 	} else {
-		fmt.Fprint(p.out, "\r\x1b[K")
+		p.clearPromptRowsLocked()
 	}
 	p.warmupStatusLines = 1
 	p.warmupSpinnerFrame = frame
@@ -4897,11 +4986,11 @@ func (p *promptDisplay) warmupPaintLocked() {
 		label = msgAgentWarmup
 	}
 	line := ""
-	if p.lineBuf != nil {
+	if p.lineBuf != nil && !p.freezeLine {
 		line = p.lineBuf()
 	}
 	cur := len(line)
-	if p.cursorPos != nil {
+	if p.cursorPos != nil && !p.freezeLine {
 		cur = p.cursorPos()
 		if cur < 0 {
 			cur = 0
@@ -4924,13 +5013,15 @@ func (p *promptDisplay) warmupPaintLocked() {
 		b.WriteString(colorize(p.warmupQueuedLabel, colMuted))
 	}
 	b.WriteString("\r\n\r\x1b[K")
-	b.WriteString(p.prompt())
+	prompt := p.prompt()
+	b.WriteString(prompt)
 	b.WriteString(line)
 	if back := len(line) - cur; back > 0 {
 		fmt.Fprintf(&b, "\x1b[%dD", back)
 	}
 	b.WriteString("\x1b8")
 	io.WriteString(p.out, b.String())
+	p.promptRows = promptRowCount(prompt, line, p.columnsLocked())
 }
 
 // warmupStopLocked erases the warm-up banner rows entirely. Caller must hold p.mu.
@@ -5104,11 +5195,10 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		}
 	}
 	if state.pasting {
-		handlePastedByte(b, state)
-		// noteQueued already repaints the warm-up banner's own queued-status
-		// row itself when relevant; no need for a second, redundant redraw of
-		// the whole prompt on every pasted byte.
+		// Mark queued at most once for the whole paste; per-byte noteQueued
+		// used to repaint the warm-up block on every character (MARSOHS-1095).
 		warmup.noteQueued()
+		handlePastedByte(b, state)
 		return false, nil
 	}
 	if b == 0x04 && state.pending.get() == "" && tryDetachAttachPrompt(state) {
@@ -5168,13 +5258,16 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 
 	switch b {
 	case 0x0d, 0x0a: // Enter
+		state.mu.Lock()
+		visual := displayInputBuffer(state.lineBuf)
+		state.mu.Unlock()
 		line := readSubmittedInput(state)
 		if line != "" && warmup.inputAlreadyQueued() {
 			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
 			state.display.redraw()
 			return false, nil
 		}
-		echoAttachSubmitNewline(state.display, warmup)
+		echoAttachSubmitNewline(state.display, warmup, visual)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
