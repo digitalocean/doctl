@@ -47,6 +47,17 @@ type HostedAgentReusableSession struct {
 	*godo.HostedAgentReusableSession
 }
 
+// HostedAgentTriggerRotateSecretResult is the outcome of a secret rotation.
+// PreviousExpiresAt and PreviousRevoked are read straight from the API rather
+// than derived from each other: the server sets exactly one, and inferring the
+// other from a missing field would turn any unrelated omission into a false
+// "the old secret is dead".
+type HostedAgentTriggerRotateSecretResult struct {
+	Secret            string
+	PreviousExpiresAt string
+	PreviousRevoked   bool
+}
+
 // HostedAgentTriggersService is the doctl-facing wrapper around
 // godo.HostedAgentTriggersService.
 type HostedAgentTriggersService interface {
@@ -55,7 +66,7 @@ type HostedAgentTriggersService interface {
 	Get(triggerID string) (*HostedAgentTrigger, error)
 	Update(triggerID string, update *godo.HostedAgentTriggerUpdateRequest) (*HostedAgentTrigger, error)
 	Delete(triggerID string) error
-	RotateSecret(triggerID string, revokePrevious bool) (secret, previousExpiresAt string, err error)
+	RotateSecret(triggerID string, revokePrevious bool) (*HostedAgentTriggerRotateSecretResult, error)
 	ListExecutions(triggerID string, opt *godo.HostedAgentTriggerExecutionListOptions) ([]HostedAgentTriggerExecution, string, error)
 	GetExecution(triggerID, executionID string) (*HostedAgentTriggerExecution, error)
 	GetBySession(sessionID string) (*HostedAgentTrigger, error)
@@ -120,9 +131,9 @@ func (s *hostedAgentTriggersService) Delete(triggerID string) error {
 	return err
 }
 
-// RotateSecret returns the new secret and, unless revokePrevious retired the old
-// one outright, the instant the old one stops verifying deliveries.
-func (s *hostedAgentTriggersService) RotateSecret(triggerID string, revokePrevious bool) (secret, previousExpiresAt string, err error) {
+// RotateSecret issues a new webhook secret and reports what became of the old
+// one.
+func (s *hostedAgentTriggersService) RotateSecret(triggerID string, revokePrevious bool) (*HostedAgentTriggerRotateSecretResult, error) {
 	// Left nil for the default rotation so no revoke_previous parameter goes on
 	// the wire at all, rather than an explicit =false.
 	var opt *godo.HostedAgentTriggerRotateSecretOptions
@@ -131,12 +142,21 @@ func (s *hostedAgentTriggersService) RotateSecret(triggerID string, revokePrevio
 	}
 	resp, _, err := s.svc.RotateSecret(context.TODO(), triggerID, opt)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
-	if resp.PreviousSecretExpiresAt == nil {
-		return resp.WebhookSecret, "", nil
+	out := &HostedAgentTriggerRotateSecretResult{
+		Secret: resp.WebhookSecret,
+		// Read, never inferred from a missing expiry. The API guarantees exactly
+		// one of the two fields, so an absent expiry means "revoked" only if the
+		// response really said so — any other cause of a missing field (an older
+		// server, a proxy dropping it) would otherwise be reported to the
+		// operator as a dead secret while it is still live.
+		PreviousRevoked: resp.PreviousSecretRevoked,
 	}
-	return resp.WebhookSecret, resp.PreviousSecretExpiresAt.UTC().Format(time.RFC3339), nil
+	if resp.PreviousSecretExpiresAt != nil {
+		out.PreviousExpiresAt = resp.PreviousSecretExpiresAt.UTC().Format(time.RFC3339)
+	}
+	return out, nil
 }
 
 func (s *hostedAgentTriggersService) ListExecutions(triggerID string, opt *godo.HostedAgentTriggerExecutionListOptions) ([]HostedAgentTriggerExecution, string, error) {

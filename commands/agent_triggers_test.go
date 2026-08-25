@@ -200,7 +200,7 @@ const rotateExpiry = "2026-08-12T12:05:00Z"
 
 func TestAgentTriggersRotateSecretAndExecutions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return("new_sec", rotateExpiry, nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 		var buf bytes.Buffer
 		config.Out = &buf
@@ -372,7 +372,7 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 //   - the banner is on neither stdout nor stderr
 func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return("new_sec", rotateExpiry, nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer
@@ -401,7 +401,7 @@ func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 // already dead rather than giving an expiry to wait out.
 func TestAgentTriggersRotateSecret_RevokePrevious(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", true).Return("new_sec", "", nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", true).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousRevoked: true}, nil)
 		config.Args = []string{"tr_1"}
 		config.Doit.Set(config.NS, doctl.ArgAgentRevokePrevious, true)
 
@@ -422,11 +422,32 @@ func TestAgentTriggersRotateSecret_RevokePrevious(t *testing.T) {
 	})
 }
 
+// The API sets exactly one of the two fields, so neither arriving means
+// something went wrong upstream. Reporting "revoked" on that would tell an
+// operator a possibly-live secret is dead, which is the one error here anybody
+// acts on.
+func TestAgentTriggersRotateSecret_NeitherOutcomeReported(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).
+			Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec"}, nil)
+		config.Args = []string{"tr_1"}
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		require.NoError(t, RunAgentTriggersRotateSecret(config))
+
+		out := stdout.String()
+		assert.Contains(t, out, "not reported")
+		assert.NotContains(t, out, "Old secret revoked", "an unreported outcome must never read as a dead secret")
+	})
+}
+
 // TestAgentTriggersRotateSecret_TextMode verifies that in text mode the
 // secret banner still appears on stdout (existing behaviour preserved).
 func TestAgentTriggersRotateSecret_TextMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return("new_sec", rotateExpiry, nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer

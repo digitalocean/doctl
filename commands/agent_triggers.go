@@ -311,27 +311,33 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	secret, previousExpiresAt, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], revokePrevious)
+	res, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], revokePrevious)
 	if err != nil {
 		return err
 	}
 	if Output == "json" {
-		out := map[string]any{"webhook_secret": secret}
-		if previousExpiresAt != "" {
-			out["previous_secret_expires_at"] = previousExpiresAt
-		} else {
+		out := map[string]any{"webhook_secret": res.Secret}
+		if res.PreviousExpiresAt != "" {
+			out["previous_secret_expires_at"] = res.PreviousExpiresAt
+		}
+		if res.PreviousRevoked {
 			out["previous_secret_revoked"] = true
 		}
 		return json.NewEncoder(c.Out).Encode(out)
 	}
 	stylingEnabled = detectStyling()
-	printWebhookSecretCard(c.Out, secret, "")
-	// State the old secret's fate either way: "rotated" alone leaves an operator
-	// unable to tell whether a leaked secret still works.
-	if previousExpiresAt != "" {
-		fmt.Fprintf(c.Out, "Old secret stops working at: %s\n", previousExpiresAt)
-	} else {
+	printWebhookSecretCard(c.Out, res.Secret, "")
+	// State the old secret's fate, and only what the API actually reported. The
+	// server sets exactly one of these; if neither arrives, say so rather than
+	// picking one, because guessing "revoked" on a live secret is the reading an
+	// operator would act on and the one that gets someone hurt.
+	switch {
+	case res.PreviousRevoked:
 		fmt.Fprintln(c.Out, "Old secret revoked: deliveries still signed with it will fail.")
+	case res.PreviousExpiresAt != "":
+		fmt.Fprintf(c.Out, "Old secret stops working at: %s\n", res.PreviousExpiresAt)
+	default:
+		fmt.Fprintln(c.Out, "Old secret status not reported by the API; assume it is still valid until you can confirm.")
 	}
 	return nil
 }
