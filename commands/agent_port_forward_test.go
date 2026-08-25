@@ -140,7 +140,7 @@ func TestHostedAgentsWSURLErrors(t *testing.T) {
 		name   string
 		apiURL string
 	}{
-		{"unparseable url", "://nope"},
+		{"unparsable url", "://nope"},
 		{"unsupported scheme", "ftp://api.example.com"},
 	}
 	for _, tt := range tests {

@@ -99,6 +99,18 @@ var credentialPrefixes = []string{
 	"AKIA",
 }
 
+// validPermissionDefaults mirrors harness-api agentspec: permissions.default
+// must be exactly one of these (case-sensitive).
+var validPermissionDefaults = map[string]struct{}{
+	"allow": {},
+	"ask":   {},
+	"deny":  {},
+}
+
+// skillNameRE mirrors harness-api agentspec skill name validation:
+// lowercase alphanumeric segments separated by single hyphens.
+var skillNameRE = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+
 // agentManifestValidation is the result of client-side agents.yaml checks.
 type agentManifestValidation struct {
 	Errors   []string
@@ -148,6 +160,7 @@ func validateAgentManifest(manifest []byte) *agentManifestValidation {
 	adapter := manifestAdapter(doc, legacy)
 	env, secretNames, envPath, secretsPath := extractManifestEnvAndSecrets(doc, legacy)
 	validateManifestEnvAndSecrets(adapter, env, secretNames, envPath, secretsPath, out)
+	validateManifestPermissionsAndSkills(doc, legacy, out)
 	return out
 }
 
@@ -334,6 +347,75 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 	}
 
 	validateAdapterModelEnv(adapter, env, envPath, out)
+}
+
+// validateManifestPermissionsAndSkills mirrors harness-api agentspec rules that
+// create/start reject with HTTP 400 but were previously missing from client-side
+// validate (MARSOHS-1088): permissions.default ∈ {allow,ask,deny} and skill
+// names matching ^[a-z0-9]+(-[a-z0-9]+)*$.
+func validateManifestPermissionsAndSkills(doc map[string]any, legacy bool, out *agentManifestValidation) {
+	var permissionsRaw, skillsRaw any
+	permPath, skillsPath := "permissions", "skills"
+	if legacy {
+		permPath, skillsPath = "spec.permissions", "spec.skills"
+		if spec, ok := yamlMap(doc["spec"]); ok {
+			permissionsRaw = spec["permissions"]
+			skillsRaw = spec["skills"]
+		}
+	} else {
+		permissionsRaw = doc["permissions"]
+		skillsRaw = doc["skills"]
+	}
+
+	if permissionsRaw != nil {
+		validateManifestPermissions(permissionsRaw, permPath, out)
+	}
+	if skillsRaw != nil {
+		validateManifestSkills(skillsRaw, skillsPath, out)
+	}
+}
+
+func validateManifestPermissions(raw any, path string, out *agentManifestValidation) {
+	perms, ok := yamlMap(raw)
+	if !ok {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s: must be a mapping", path))
+		return
+	}
+	if !hasYAMLKey(perms, "default") {
+		return
+	}
+	def, ok := yamlString(perms["default"])
+	if !ok {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.default: must be a string (allow|ask|deny)", path))
+		return
+	}
+	if _, ok := validPermissionDefaults[def]; !ok {
+		out.Errors = append(out.Errors, fmt.Sprintf(`%s.default: %q is not allow|ask|deny`, path, def))
+	}
+}
+
+func validateManifestSkills(raw any, path string, out *agentManifestValidation) {
+	list, ok := yamlList(raw)
+	if !ok {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s: must be a list", path))
+		return
+	}
+	for i, item := range list {
+		itemPath := fmt.Sprintf("%s[%d]", path, i)
+		m, ok := yamlMap(item)
+		if !ok {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s: must be a mapping", itemPath))
+			continue
+		}
+		name, ok := yamlString(m["name"])
+		if !ok || strings.TrimSpace(name) == "" {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.name: is required", itemPath))
+			continue
+		}
+		if !skillNameRE.MatchString(name) {
+			out.Errors = append(out.Errors, fmt.Sprintf(`%s.name: %q must match ^[a-z0-9]+(-[a-z0-9]+)*$`, itemPath, name))
+		}
+	}
 }
 
 // validateAdapterModelEnv warns on known silent-failure env key footguns from
@@ -605,6 +687,7 @@ func looksLikeFieldPath(s string) bool {
 	switch {
 	case strings.HasPrefix(s, "spec."), strings.HasPrefix(s, "metadata."),
 		strings.HasPrefix(s, "env."), strings.HasPrefix(s, "secrets."),
+		strings.HasPrefix(s, "permissions."), strings.HasPrefix(s, "skills["),
 		s == "agent", s == "name", s == "apiVersion", s == "kind", s == "spec.runtime",
 		strings.HasPrefix(s, "spec.runtime"):
 		return true

@@ -349,7 +349,7 @@ func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
 	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
 	// required-flag check, so the FromConfigID runner tests cannot catch this.
 	require.False(t, viper.GetBool("required.agents.start.spec"),
-		"spec is still marked required; `doctl open-harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
+		"spec is still marked required; `doctl harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
 	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
 	require.NoError(t, err)
 }
@@ -680,7 +680,7 @@ func TestRunAgentsShow(t *testing.T) {
 		got := buf.String()
 		assert.Contains(t, got, "demo")
 		assert.Contains(t, got, "ready")
-		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
+		assert.Contains(t, got, "doctl harness-runtime attach demo")
 		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
@@ -1649,6 +1649,14 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			assert.False(t, stop)
 		}
 	}
+	escSeq := func(t *testing.T, state *attachState, seq []byte) {
+		t.Helper()
+		for _, b := range seq {
+			stop, err := handleAttachByte(nil, nil, "sess", b, state, nil, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
 
 	t.Run("left/right move the caret and insert mid-line", func(t *testing.T) {
 		state := newAttachState(io.Discard, &pendingHITL{})
@@ -1693,6 +1701,143 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 		assert.False(t, stop)
 		assert.Equal(t, "acd", string(state.lineBuf))
 		assert.Equal(t, 1, state.cursor)
+	})
+
+	t.Run("emacs line editing shortcuts", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "hello world")
+		assert.Equal(t, 11, state.cursor)
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x01, state, nil, nil) // Ctrl-A
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, 0, state.cursor)
+
+		stop, err = handleAttachByte(nil, nil, "sess", 0x05, state, nil, nil) // Ctrl-E
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, 11, state.cursor)
+
+		stop, err = handleAttachByte(nil, nil, "sess", 0x17, state, nil, nil) // Ctrl-W at EOL
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "hello ", string(state.lineBuf))
+		assert.Equal(t, 6, state.cursor)
+	})
+
+	t.Run("kill line and forward delete shortcuts", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+
+		typewrite(t, state, "hello world")
+		stop, err := handleAttachByte(nil, nil, "sess", 0x15, state, nil, nil) // Ctrl-U at EOL
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "", string(state.lineBuf))
+
+		typewrite(t, state, "hello world")
+		stop, err = handleAttachByte(nil, nil, "sess", 0x01, state, nil, nil) // Ctrl-A
+		assert.NoError(t, err)
+		stop, err = handleAttachByte(nil, nil, "sess", 0x0b, state, nil, nil) // Ctrl-K
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "", string(state.lineBuf))
+
+		typewrite(t, state, "wxyz")
+		arrow(t, state, 'D')
+		arrow(t, state, 'D')                                                  // caret before 'y'
+		stop, err = handleAttachByte(nil, nil, "sess", 0x04, state, nil, nil) // Ctrl-D
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "wxz", string(state.lineBuf))
+
+		stop, err = handleAttachByte(nil, nil, "sess", 0x05, state, nil, nil) // Ctrl-E
+		assert.NoError(t, err)
+		typewrite(t, state, "q")
+		escSeq(t, state, []byte{0x1b, '[', '1', '~'}) // Home
+		escSeq(t, state, []byte{0x1b, '[', '3', '~'}) // Delete
+		assert.Equal(t, "xzq", string(state.lineBuf))
+	})
+
+	t.Run("home/end and tab completion", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/he")
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil, nil) // Tab
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/help ", string(state.lineBuf))
+
+		typewrite(t, state, "xyz")
+		escSeq(t, state, []byte{0x1b, '[', 'H'}) // Home
+		assert.Equal(t, 0, state.cursor)
+		escSeq(t, state, []byte{0x1b, '[', 'F'}) // End
+		assert.Equal(t, len(state.lineBuf), state.cursor)
+	})
+
+	t.Run("esc clears input and exits history browse", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		state.pushHistory("saved")
+		state.historyUp()
+		assert.Equal(t, "saved", string(state.lineBuf))
+
+		state.escSeq = []byte{0x1b}
+		assert.True(t, state.handlePendingEscTimeout())
+		assert.Equal(t, "", string(state.lineBuf))
+	})
+
+	t.Run("ctrl-D detaches on empty prompt even after pending esc", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		state.sessionRef = "demo"
+		state.escSeq = []byte{0x1b}
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x04, state, nil, nil)
+		assert.NoError(t, err)
+		assert.True(t, stop)
+	})
+
+	t.Run("slash exit closes attach loop", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.sessionRef = "demo"
+			assert.True(t, processAttachLine(config, nil, "sess", "/exit", state, nil, nil))
+		})
+	})
+
+	t.Run("up/down recalls submitted input history", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "first"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "second"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_2"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+
+			typewrite(t, state, "first")
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+
+			typewrite(t, state, "second")
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+
+			arrow(t, state, 'A') // up
+			assert.Equal(t, "second", string(state.lineBuf))
+			arrow(t, state, 'A') // up
+			assert.Equal(t, "first", string(state.lineBuf))
+			arrow(t, state, 'B') // down
+			assert.Equal(t, "second", string(state.lineBuf))
+			arrow(t, state, 'B') // down to draft
+			assert.Equal(t, "", string(state.lineBuf))
+		})
 	})
 
 	t.Run("enter clears the caret", func(t *testing.T) {
@@ -2059,6 +2204,91 @@ func TestHandlePastedByteOnlyRedrawsOnceAtEnd(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(buf.String(), "\x1b[K"))
 }
 
+// TestHandlePastedByteDuringWarmupDoesNotRepaintEveryByte is MARSOHS-1095:
+// pasting while the attach warm-up banner is visible used to call noteQueued
+// (and thus warmupPaintLocked) on every pasted byte, leaving the same
+// truncated-duplicate scrollback corruption as a bare per-byte redraw.
+func TestHandlePastedByteDuringWarmupDoesNotRepaintEveryByte(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	w := newWarmupState(state.display, now.Add(-30*time.Second))
+	w.start()
+	buf.Reset()
+
+	pasted := strings.Repeat("x", 300)
+	input := "\x1b[200~" + pasted + "\x1b[201~"
+	for _, b := range []byte(input) {
+		stop, err := handleAttachByte(nil, nil, "sess", b, state, w, nil)
+		assert.NoError(t, err)
+		assert.False(t, stop)
+	}
+
+	assert.Equal(t, pasted, string(state.lineBuf))
+	assert.Contains(t, buf.String(), msgAgentWarmupQueued)
+	// One paint to reveal the queued notice + one final paint when paste ends.
+	// Hundreds of clears means the warm-up path is still rewriting every byte.
+	clears := strings.Count(buf.String(), "\x1b[K")
+	assert.LessOrEqual(t, clears, 12, "paste during warm-up repainted too often (%d clears)", clears)
+	assert.Contains(t, buf.String(), pasted, "final prompt should include the full pasted line")
+}
+
+// TestPromptDisplayClearsAllWrappedRowsOnRedraw is the Enter/spinner half of
+// MARSOHS-1095: a long prompt that wraps across several terminal rows must be
+// fully erased before the next paint, otherwise only the last row is cleared
+// and truncated copies of the line pile up in scrollback.
+func TestPromptDisplayClearsAllWrappedRowsOnRedraw(t *testing.T) {
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	state.display.termCols = 40
+
+	state.mu.Lock()
+	state.lineBuf = []byte(strings.Repeat("x", 100))
+	state.cursor = len(state.lineBuf)
+	state.mu.Unlock()
+	state.display.redraw()
+	require.GreaterOrEqual(t, state.display.promptRows, 3)
+
+	buf.Reset()
+	state.mu.Lock()
+	state.lineBuf = nil
+	state.cursor = 0
+	state.mu.Unlock()
+	state.display.redraw()
+
+	ups := strings.Count(buf.String(), "\x1b[A")
+	assert.GreaterOrEqual(t, ups, 2, "expected cursor-up clears for wrapped rows, got %d in %q", ups, buf.String())
+	assert.Equal(t, 1, state.display.promptRows)
+}
+
+// TestSpinnerFrameMovesAboveWrappedPrompt ensures the run-in-progress spinner
+// climbs over every prompt row, not just one — otherwise each tick overwrites
+// the middle of a wrapped paste and leaves truncated "> …" ghosts.
+func TestSpinnerFrameMovesAboveWrappedPrompt(t *testing.T) {
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+	state.display.termCols = 40
+
+	state.mu.Lock()
+	state.lineBuf = []byte(strings.Repeat("y", 90))
+	state.cursor = len(state.lineBuf)
+	state.mu.Unlock()
+	state.display.redraw()
+	rows := state.display.promptRows
+	require.GreaterOrEqual(t, rows, 2)
+
+	buf.Reset()
+	state.display.spinnerFrame("⠋", "Run in progress")
+	assert.Contains(t, buf.String(), fmt.Sprintf("\x1b[%dA", rows))
+}
+
 // TestAttachStateHITLSelection covers the arrow-key selection wrap-around and
 // that the prompt reflects the current selection.
 func TestAttachStateHITLSelection(t *testing.T) {
@@ -2083,6 +2313,55 @@ func TestAttachStateHITLSelection(t *testing.T) {
 
 	s.resetHITLSelection()
 	assert.Equal(t, 0, s.hitlSelection())
+}
+
+// TestHandleAttachByteCtrlCDuringRequest pins the reason attachLoopTTY runs API
+// calls on a worker: raw mode makes Ctrl-C a byte the input loop has to read,
+// so a request in flight must not be holding that loop hostage.
+func TestHandleAttachByteCtrlCDuringRequest(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		inFlight := make(chan struct{})
+		release := make(chan struct{})
+		tm.hostedAgents.EXPECT().
+			SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "hi"}).
+			DoAndReturn(func(string, *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error) {
+				close(inFlight)
+				<-release
+				return &godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil
+			})
+
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+
+		// Stand-in for attachLoopTTY's worker.
+		work := make(chan func() (detach bool), 1)
+		state.dispatch = func(fn func() (detach bool)) { work <- fn }
+		workerDone := make(chan struct{})
+		go func() {
+			defer close(workerDone)
+			for fn := range work {
+				fn()
+			}
+		}()
+
+		for _, b := range []byte("hi") {
+			_, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, nil, nil)
+			require.NoError(t, err)
+		}
+		stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
+		require.NoError(t, err)
+		require.False(t, stop)
+
+		<-inFlight
+
+		stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x03, state, nil, nil)
+		require.NoError(t, err)
+		assert.True(t, stop, "Ctrl-C must detach while a request is still in flight")
+
+		close(release)
+		close(work)
+		<-workerDone
+	})
 }
 
 // TestMsgAccumulatorPlain confirms buffered tokens flush as-is when styling is
@@ -3253,7 +3532,7 @@ func TestPromptDisplay(t *testing.T) {
 		s.display.setRaw(true)
 
 		s.display.spinnerFrame("⠋", "thinking...")
-		assert.Equal(t, "\x1b7\x1b[A\r\x1b[K⠋ thinking...\x1b8", buf.String())
+		assert.Equal(t, "\x1b7\x1b[1A\r\x1b[K⠋ thinking...\x1b8", buf.String())
 	})
 
 	t.Run("spinnerFrame is a no-op mid-stream", func(t *testing.T) {

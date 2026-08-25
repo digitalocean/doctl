@@ -298,7 +298,7 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		assert.Contains(t, out, "Session created")
 		assert.Contains(t, out, "Agent is ready")
 		assert.NotContains(t, out, "SESSION_STATUS_")
-		assert.Contains(t, out, "doctl open-harness-runtime attach demo")
+		assert.Contains(t, out, "doctl harness-runtime attach demo")
 		assert.NotContains(t, out, "katanemo/plano", "repo is hidden by default; only shown with -v/--verbose")
 	})
 }
@@ -631,7 +631,7 @@ func TestRunAgentsRun_FromConfigID_NoAttach(t *testing.T) {
 		got := buf.String()
 		assert.Contains(t, got, "Creating hosted session from config")
 		assert.Contains(t, got, "Agent is ready")
-		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
+		assert.Contains(t, got, "doctl harness-runtime attach demo")
 	})
 }
 

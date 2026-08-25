@@ -154,10 +154,10 @@ func beautifyAgentError(err error) error {
 	switch {
 	case strings.Contains(lower, "limit of") && strings.Contains(lower, "active sessions"):
 		title = "Session limit reached"
-		tips = []string{"doctl open-harness-runtime list", "doctl open-harness-runtime remove <session>"}
+		tips = []string{"doctl harness-runtime list", "doctl harness-runtime remove <session>"}
 	case strings.Contains(lower, "active sessions"):
 		title = "Config still has active sessions"
-		tips = []string{"doctl open-harness-runtime config list-sessions <config-id>", "doctl open-harness-runtime remove <session>"}
+		tips = []string{"doctl harness-runtime config list-sessions <config-id>", "doctl harness-runtime remove <session>"}
 	case strings.Contains(lower, "mutually exclusive") || strings.Contains(lower, "is required") || strings.Contains(lower, "invalid --"):
 		title = "Invalid arguments"
 	case strings.Contains(lower, "not set locally") || strings.Contains(lower, "environment variable"):
@@ -168,13 +168,13 @@ func beautifyAgentError(err error) error {
 		tips = []string{"Check $OPENAI_API_KEY", "Retry in a moment"}
 	case strings.Contains(lower, "timed out"):
 		title = "Timed out"
-		tips = []string{"Retry with a longer --wait-timeout", "doctl open-harness-runtime show <session>"}
+		tips = []string{"Retry with a longer --wait-timeout", "doctl harness-runtime show <session>"}
 	case strings.Contains(lower, "no agent session goes by the name"):
 		title = "Session not found"
-		tips = []string{"doctl open-harness-runtime list"}
+		tips = []string{"doctl harness-runtime list"}
 	case strings.Contains(lower, "many agent sessions go by the name"):
 		title = "Ambiguous session name"
-		tips = []string{"Pass the session ID instead", "doctl open-harness-runtime list"}
+		tips = []string{"Pass the session ID instead", "doctl harness-runtime list"}
 	}
 
 	return &agentPrettyError{
@@ -193,17 +193,17 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 	case http.StatusForbidden:
 		return "Access denied", []string{"Check your token scopes or team permissions"}
 	case http.StatusNotFound:
-		return "Not found", []string{"doctl open-harness-runtime list", "Confirm the ID or name and try again"}
+		return "Not found", []string{"doctl harness-runtime list", "Confirm the ID or name and try again"}
 	case http.StatusConflict:
 		switch {
 		case strings.Contains(lower, "limit of") && strings.Contains(lower, "active sessions"):
-			return "Session limit reached", []string{"doctl open-harness-runtime list", "doctl open-harness-runtime remove <session>"}
+			return "Session limit reached", []string{"doctl harness-runtime list", "doctl harness-runtime remove <session>"}
 		case strings.Contains(lower, "active sessions"):
-			return "Config still has active sessions", []string{"doctl open-harness-runtime config list-sessions <config-id>", "doctl open-harness-runtime remove <session>"}
+			return "Config still has active sessions", []string{"doctl harness-runtime config list-sessions <config-id>", "doctl harness-runtime remove <session>"}
 		case strings.Contains(lower, "run is terminal"):
-			return "Session run has ended", []string{"doctl open-harness-runtime remove <session>", "doctl open-harness-runtime run --harness opencode --name new-session"}
+			return "Session run has ended", []string{"doctl harness-runtime remove <session>", "doctl harness-runtime run --harness opencode --name new-session"}
 		case strings.Contains(lower, "already attached") || strings.Contains(lower, "another device"):
-			return "Session already attached elsewhere", []string{"Detach on the other device, then re-run doctl open-harness-runtime attach"}
+			return "Session already attached elsewhere", []string{"Detach on the other device, then re-run doctl harness-runtime attach"}
 		default:
 			return "Conflict", nil
 		}

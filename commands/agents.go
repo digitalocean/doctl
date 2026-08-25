@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The `doctl open-harness-runtime` command (aliases: agent, agents, ohr) wraps the
+// The `doctl harness-runtime` command (aliases: agent, agents, ohr) wraps the
 // godo HostedAgents service for Managed Agents Runtime Services (M.A.R.S).
 // Wire types and the SSE iterator live in godo; this file handles CLI plumbing,
 // argument parsing, and human-readable rendering of streamed events.
@@ -427,7 +427,7 @@ func (r *reasoningStreamer) endWithLabel(label string) {
 	}
 }
 
-// Agents creates the `doctl open-harness-runtime` command tree (aliases: agent, agents, ohr).
+// Agents creates the `doctl harness-runtime` command tree (aliases: agent, agents, ohr).
 func Agents() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -528,19 +528,19 @@ func Agents() *Command {
 		"Remove a session",
 		agentsRemoveHelpMD,
 		Writer, agentsNS(aliasOpt("destroy", "rm"))...)
-	cmdRemove.Example = `doctl open-harness-runtime remove sess_abc123; doctl open-harness-runtime remove my-session; doctl open-harness-runtime destroy my-session`
+	cmdRemove.Example = `doctl harness-runtime remove sess_abc123; doctl harness-runtime remove my-session; doctl harness-runtime destroy my-session`
 
 	cmdPause := CmdBuilder(cmd, RunAgentsPause, "pause <session>",
 		"Pause a session",
 		agentsPauseHelpMD,
 		Writer, agentsNS()...)
-	cmdPause.Example = `doctl open-harness-runtime pause sess_abc123`
+	cmdPause.Example = `doctl harness-runtime pause sess_abc123`
 
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
 		"Resume a paused session",
 		agentsResumeHelpMD,
 		Writer, agentsNS()...)
-	cmdResume.Example = `doctl open-harness-runtime resume sess_abc123`
+	cmdResume.Example = `doctl harness-runtime resume sess_abc123`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
@@ -550,7 +550,7 @@ func Agents() *Command {
 	AddStringFlag(cmdUpload, doctl.ArgAgentWorkspacePath, "", "", "Destination path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdUpload, doctl.ArgAgentLocalFile, "", "", "Path to the local file to upload", requiredOpt())
 	AddBoolFlag(cmdUpload, doctl.ArgAgentArchive, "", false, "Treat the local file as an uncompressed tar archive to extract at the destination (not .tgz / .tar.gz)")
-	cmdUpload.Example = `doctl open-harness-runtime upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
+	cmdUpload.Example = `doctl harness-runtime upload sess_abc123 --local-file ./main.go --workspace-path src/main.go`
 
 	cmdDownload := CmdBuilder(cmd, RunAgentsDownload, "download <session>",
 		"Download a file from a session workspace",
@@ -559,7 +559,7 @@ func Agents() *Command {
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
-	cmdDownload.Example = `doctl open-harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
+	cmdDownload.Example = `doctl harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
 	cmdExec := CmdBuilder(cmd, RunAgentsExec, "exec <session> -- <command> [args...]",
 		"Run a command in a session's sandbox",
@@ -568,7 +568,7 @@ func Agents() *Command {
 			displayerType(&displayers.HostedAgentSandboxExec{}))...)
 	AddStringFlag(cmdExec, doctl.ArgAgentExecWorkdir, "", "", "Absolute guest directory to run in (defaults to the workspace root)")
 	AddIntFlag(cmdExec, doctl.ArgAgentExecTimeout, "", 0, "Maximum seconds the command may run (0 uses the server default)")
-	cmdExec.Example = `doctl open-harness-runtime exec sess_abc123 -- ls -la; doctl open-harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
+	cmdExec.Example = `doctl harness-runtime exec sess_abc123 -- ls -la; doctl harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
 
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",
@@ -576,7 +576,7 @@ func Agents() *Command {
 		Writer, agentsNS()...)
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
-	cmdAuth.Example = `doctl open-harness-runtime auth github`
+	cmdAuth.Example = `doctl harness-runtime auth github`
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
@@ -585,7 +585,7 @@ func Agents() *Command {
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdFork, doctl.ArgAgentFromCheckpoint, "", "", "Checkpoint ID to fork from (omit to checkpoint now first)")
 	AddIntFlag(cmdFork, doctl.ArgAgentForkCount, "", 1, "Number of child sessions to create (1–4)")
-	cmdFork.Example = `doctl open-harness-runtime fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
+	cmdFork.Example = `doctl harness-runtime fork sess_abc123 --from-checkpoint cp_9f2c1a4b --count 2`
 
 	CmdBuilder(cmd, RunAgentsRollback, "rollback <session> <checkpoint-id>",
 		"Roll a session back to a checkpoint in place",
@@ -1179,7 +1179,7 @@ func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 
 	switch len(live) {
 	case 0:
-		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl open-harness-runtime list` to see available sessions", ref)
+		return "", fmt.Errorf("no agent session goes by the name %q; pass a session ID or run `doctl harness-runtime list` to see available sessions", ref)
 	case 1:
 		return live[0].SessionID, nil
 	default:
@@ -1218,7 +1218,7 @@ func RunAgentsShow(c *CmdConfig) error {
 	return nil
 }
 
-// RunAgentsDestroy tears down a session (CLI: `doctl open-harness-runtime remove`,
+// RunAgentsDestroy tears down a session (CLI: `doctl harness-runtime remove`,
 // with aliases `destroy` and `rm`).
 func RunAgentsDestroy(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
@@ -1279,7 +1279,7 @@ func RunAgentsAuth(c *CmdConfig) error {
 	}
 	provider := strings.ToLower(strings.TrimSpace(c.Args[0]))
 	if provider == "" {
-		return errors.New("a provider is required, e.g. `doctl open-harness-runtime auth github`")
+		return errors.New("a provider is required, e.g. `doctl harness-runtime auth github`")
 	}
 	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
 	if err != nil {
@@ -1328,7 +1328,7 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	}
 
 	if noWait || start.PollURL == "" {
-		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl open-harness-runtime auth %s` after authorizing to confirm the connection", provider))
+		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl harness-runtime auth %s` after authorizing to confirm the connection", provider))
 		return nil
 	}
 
@@ -1341,7 +1341,7 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("stopped waiting; re-run `doctl open-harness-runtime auth %s` to check the connection later", provider)
+			return fmt.Errorf("stopped waiting; re-run `doctl harness-runtime auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
 
@@ -2389,6 +2389,9 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 		}
 	}()
 
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -2403,6 +2406,8 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
+		case <-ticker.C:
+			state.handlePendingEscTimeout()
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
 				printDetachNotice(c.Out, state.sessionRef)
@@ -2440,11 +2445,11 @@ func printAttachSendAck(out io.Writer, warmup *warmupState, thinking *thinkingSt
 	fmt.Fprintln(out, colorize("… waiting for the agent", colMuted))
 }
 
-func echoAttachSubmitNewline(display *promptDisplay, warmup *warmupState) {
+func echoAttachSubmitNewline(display *promptDisplay, warmup *warmupState, visual string) {
 	if warmup != nil && warmup.isBannerVisible() {
 		return
 	}
-	display.echo([]byte("\r\n"))
+	display.finishInputLine(visual)
 }
 
 func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgentsClient, apiKey, openaiSessionID string, b byte, state *attachState, thinking *thinkingState, warmup *warmupState) (stop bool, err error) {
@@ -2491,12 +2496,14 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 		}
 	}
 	if state.pasting {
-		handlePastedByte(b, state)
-		// noteQueued already repaints the warm-up banner's own queued-status
-		// row itself when relevant; no need for a second, redundant redraw of
-		// the whole prompt on every pasted byte.
+		// Mark queued at most once for the whole paste; per-byte noteQueued
+		// used to repaint the warm-up block on every character (MARSOHS-1095).
 		warmup.noteQueued()
+		handlePastedByte(b, state)
 		return false, nil
+	}
+	if b == 0x04 && state.pending.get() == "" && tryDetachAttachPrompt(state) {
+		return true, nil
 	}
 	if handleAttachEscapeSequence(b, state) {
 		return false, nil
@@ -2507,13 +2514,16 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 
 	switch b {
 	case 0x0d, 0x0a:
+		state.mu.Lock()
+		visual := displayInputBuffer(state.lineBuf)
+		state.mu.Unlock()
 		line := readSubmittedInput(state)
 		if line != "" && warmup.inputAlreadyQueued() {
 			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
 			state.display.redraw()
 			return false, nil
 		}
-		echoAttachSubmitNewline(state.display, warmup)
+		echoAttachSubmitNewline(state.display, warmup, visual)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
@@ -2543,6 +2553,7 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 		state.mu.Lock()
 		atEnd := state.cursor == len(state.lineBuf)
 		if state.cursor > 0 {
+			state.exitHistoryBrowseOnEditLocked()
 			i := state.cursor - 1
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
@@ -2561,18 +2572,12 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 	case 0x03:
 		state.display.echo([]byte("\r\n"))
 		return true, nil
-	case 0x04:
-		state.mu.Lock()
-		empty := len(state.lineBuf) == 0
-		state.mu.Unlock()
-		if empty {
-			state.display.echo([]byte("\r\n"))
-			return true, nil
-		}
+	case 0x04: // empty prompt handled before escape parsing
 		return false, nil
 	default:
 		if b >= 0x20 && b < 0x7f {
 			state.mu.Lock()
+			state.exitHistoryBrowseOnEditLocked()
 			atEnd := state.cursor == len(state.lineBuf)
 			if atEnd {
 				state.lineBuf = append(state.lineBuf, b)
@@ -3167,16 +3172,18 @@ func (w *warmupState) animate(ctx context.Context, d *promptDisplay, done chan s
 
 // noteQueued reveals the queued-input notice once the user starts typing so
 // attach makes it obvious their prompt is buffered until the agent is ready.
+// Idempotent: subsequent calls are no-ops so a bracketed paste (which delivers
+// hundreds of bytes) cannot force a full warm-up banner + prompt repaint on
+// every byte — that left wrapping duplicates in the scrollback (MARSOHS-1095).
 func (w *warmupState) noteQueued() {
 	if w == nil {
 		return
 	}
 	w.mu.Lock()
-	if !w.active || w.dismissed {
+	if !w.active || w.dismissed || w.queued {
 		w.mu.Unlock()
 		return
 	}
-	already := w.queued
 	w.queued = true
 	display, ok := w.out.(*promptDisplay)
 	w.mu.Unlock()
@@ -3184,9 +3191,7 @@ func (w *warmupState) noteQueued() {
 		display.warmupSetQueued(msgAgentWarmupQueued)
 		return
 	}
-	if !already {
-		fmt.Fprintf(w.out, "%s\n", colorize(msgAgentWarmupQueued, colMuted))
-	}
+	fmt.Fprintf(w.out, "%s\n", colorize(msgAgentWarmupQueued, colMuted))
 }
 
 func (w *warmupState) waitTimeout(ctx context.Context) {
@@ -3366,7 +3371,7 @@ func classifyStreamError(err error) (string, bool) {
 			if status == http.StatusConflict && ape.title == "Conflict" {
 				// V0 single-connection rejection; prefer a clearer title.
 				ape.title = "Session already attached elsewhere"
-				ape.tips = []string{"Detach on the other device, then re-run doctl open-harness-runtime attach"}
+				ape.tips = []string{"Detach on the other device, then re-run doctl harness-runtime attach"}
 			}
 			if status == http.StatusNotFound {
 				ape.title = "Session not found"
@@ -4091,6 +4096,8 @@ func attachPrompt(pending *pendingHITL) string {
 	}
 }
 
+const attachInputHistoryCap = 100
+
 // attachState bundles the line buffer, pending HITL id, and the synchronized
 // display that the SSE goroutine writes through.
 type attachState struct {
@@ -4104,6 +4111,13 @@ type attachState struct {
 	escSeq     []byte
 	pasting    bool
 	confirm    *largePasteConfirmation
+	// Input history for bash-style ↑/↓ recall within this attach session.
+	history   []string
+	histIndex int    // len(history) means draft/new line; 0..len-1 browses history
+	histDraft []byte // saved draft when ↑ is first pressed
+	// dispatch, when set, runs a blocking API request off the input loop; see
+	// call. attachLoopTTY installs it. Set once before the loop starts.
+	dispatch func(func() (detach bool))
 }
 
 type largePasteConfirmation struct {
@@ -4136,6 +4150,23 @@ func newAttachState(out io.Writer, pending *pendingHITL) *attachState {
 		},
 	}
 	return s
+}
+
+// call runs fn, which performs a blocking API request.
+//
+// In raw mode Ctrl-C is a byte the input loop has to read, not a signal, so a
+// request made from inside that loop makes the session uninterruptible for as
+// long as the server takes to answer — and these requests carry no deadline.
+// With a dispatcher installed, fn is handed to attachLoopTTY's worker and this
+// returns immediately; fn's detach verdict reaches the loop by its own route.
+// Without one (line mode, unit tests) fn runs inline and its result is passed
+// straight back, so nothing about the synchronous paths changes.
+func (s *attachState) call(fn func() (detach bool)) (detach bool) {
+	if s.dispatch == nil {
+		return fn()
+	}
+	s.dispatch(fn)
+	return false
 }
 
 // promptString is the raw-mode prompt. With no pending approval it's the plain
@@ -4303,6 +4334,7 @@ func (s *attachState) deleteLineRangeLocked(from, to int) bool {
 	}
 	s.lineBuf = append(s.lineBuf[:from], s.lineBuf[to:]...)
 	s.cursor = from
+	s.exitHistoryBrowseOnEditLocked()
 	return true
 }
 
@@ -4387,6 +4419,7 @@ func (s *attachState) insertNewlineAtCursor() {
 		s.lineBuf = append(s.lineBuf[:s.cursor], append([]byte{'\n'}, s.lineBuf[s.cursor:]...)...)
 	}
 	s.cursor++
+	s.exitHistoryBrowseOnEditLocked()
 	s.mu.Unlock()
 }
 
@@ -4395,6 +4428,130 @@ func (s *attachState) insertNewlineAtCursor() {
 // behavior) made Option/Alt+Enter look like it had done nothing until the
 // message was actually sent — this makes the line break visible in place.
 const newlineMarker = " ↵ "
+
+func (s *attachState) cancelInputLine() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.lineBuf) == 0 && s.histIndex >= len(s.history) {
+		return false
+	}
+	if s.histIndex < len(s.history) {
+		s.histIndex = len(s.history)
+		s.histDraft = nil
+	}
+	s.lineBuf = s.lineBuf[:0]
+	s.cursor = 0
+	return true
+}
+
+// handlePendingEscTimeout treats a lone ESC (no follow-up within ~50ms) as
+// cancel-input, matching common terminal/readline behavior.
+func (s *attachState) handlePendingEscTimeout() bool {
+	if len(s.escSeq) != 1 || s.escSeq[0] != 0x1b {
+		return false
+	}
+	s.escSeq = nil
+	if s.cancelInputLine() {
+		s.display.redraw()
+		return true
+	}
+	return false
+}
+
+// tryDetachAttachPrompt closes the local attach connection when the prompt is
+// empty. Called on Ctrl-D before escape-sequence parsing so a pending ESC
+// prefix cannot swallow the detach keystroke.
+func tryDetachAttachPrompt(state *attachState) bool {
+	if state.pasting || state.largePasteConfirmation() != nil {
+		return false
+	}
+	state.mu.Lock()
+	empty := len(state.lineBuf) == 0
+	state.mu.Unlock()
+	if !empty {
+		return false
+	}
+	state.escSeq = nil
+	state.display.echo([]byte("\r\n"))
+	out := io.Discard
+	if state.display != nil {
+		out = state.display.out
+	}
+	printDetachNotice(out, state.sessionRef)
+	return true
+}
+
+func (s *attachState) loadLineLocked(text string) {
+	s.lineBuf = []byte(text)
+	s.cursor = len(s.lineBuf)
+}
+
+func (s *attachState) resetHistoryBrowseLocked() {
+	s.histIndex = len(s.history)
+	s.histDraft = nil
+}
+
+func (s *attachState) pushHistory(line string) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if n := len(s.history); n > 0 && s.history[n-1] == line {
+		s.resetHistoryBrowseLocked()
+		return
+	}
+	s.history = append(s.history, line)
+	if len(s.history) > attachInputHistoryCap {
+		s.history = s.history[len(s.history)-attachInputHistoryCap:]
+	}
+	s.resetHistoryBrowseLocked()
+}
+
+func (s *attachState) historyUp() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.history) == 0 {
+		return false
+	}
+	if s.histIndex == len(s.history) {
+		s.histDraft = append([]byte(nil), s.lineBuf...)
+		s.histIndex = len(s.history) - 1
+		s.loadLineLocked(s.history[s.histIndex])
+		return true
+	}
+	if s.histIndex > 0 {
+		s.histIndex--
+		s.loadLineLocked(s.history[s.histIndex])
+		return true
+	}
+	return false
+}
+
+func (s *attachState) historyDown() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.history) == 0 || s.histIndex >= len(s.history) {
+		return false
+	}
+	if s.histIndex < len(s.history)-1 {
+		s.histIndex++
+		s.loadLineLocked(s.history[s.histIndex])
+		return true
+	}
+	s.histIndex = len(s.history)
+	s.loadLineLocked(string(s.histDraft))
+	s.histDraft = nil
+	return true
+}
+
+func (s *attachState) exitHistoryBrowseOnEditLocked() {
+	if s.histIndex < len(s.history) {
+		s.histIndex = len(s.history)
+		s.histDraft = nil
+	}
+}
 
 func displayInputBuffer(buf []byte) string {
 	if len(buf) == 0 {
@@ -4476,6 +4633,9 @@ func readSubmittedInput(state *attachState) string {
 	state.lineBuf = state.lineBuf[:0]
 	state.cursor = 0
 	state.mu.Unlock()
+	if line != "" {
+		state.pushHistory(line)
+	}
 	return line
 }
 
@@ -4493,6 +4653,7 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 	if bytes.Equal(seq, bracketedPasteStart) {
 		state.escSeq = nil
 		state.pasting = true
+		state.display.setFreezeLine(true)
 		return true
 	}
 	if len(seq) == 2 {
@@ -4548,6 +4709,10 @@ func applyMetaKey(b byte, state *attachState) {
 // applyCSIKey handles a complete CSI (ESC [ …) or SS3 (ESC O …) sequence.
 // Unbound sequences fall through as no-ops; the point is that they no longer
 // leak their final byte into the text buffer.
+//
+// Arrow up/down recall attach input history when no HITL menu is open (bash-
+// style ↑/↓). Word-wise motion uses the CSI modifier encoding (Ctrl/Alt+Left/
+// Right); Home/End/Delete cover the common terminal variants.
 func applyCSIKey(seq []byte, state *attachState) {
 	final := seq[len(seq)-1]
 	params := string(seq[2 : len(seq)-1])
@@ -4567,6 +4732,10 @@ func applyCSIKey(seq []byte, state *attachState) {
 
 	changed := false
 	switch final {
+	case 'A': // Up — input history
+		changed = state.historyUp()
+	case 'B': // Down — input history
+		changed = state.historyDown()
 	case 'D': // Left
 		if csiJumpsWord(params) {
 			changed = state.moveLineCursorToWord(-1)
@@ -4624,16 +4793,30 @@ func csiJumpsWord(params string) bool {
 	return (mod-1)&(2|4) != 0
 }
 
-// handleAttachEditingKey applies the readline control chords, reporting whether
-// it consumed the byte. Both attach loops call it so their key tables can't
-// drift apart.
+// handleAttachEditingKey applies the readline / bash-style control chords,
+// reporting whether it consumed the byte. Both attach loops call it so their
+// key tables can't drift apart. Covers Ctrl-A/E/B/F/K/U/W and Ctrl-D as
+// forward-delete on a non-empty line (empty Ctrl-D detaches via
+// tryDetachAttachPrompt before this runs).
 func handleAttachEditingKey(b byte, state *attachState) bool {
 	var changed bool
 	switch b {
 	case 0x01: // Ctrl-A
 		changed = state.moveLineCursorToEdge(-1)
+	case 0x02: // Ctrl-B
+		changed = state.moveLineCursor(-1)
+	case 0x04: // Ctrl-D: forward delete; empty line already handled for detach
+		state.mu.Lock()
+		empty := len(state.lineBuf) == 0
+		state.mu.Unlock()
+		if empty {
+			return false
+		}
+		changed = state.deleteRuneAtCursor()
 	case 0x05: // Ctrl-E
 		changed = state.moveLineCursorToEdge(1)
+	case 0x06: // Ctrl-F
+		changed = state.moveLineCursor(1)
 	case 0x0b: // Ctrl-K
 		changed = state.deleteToLineEdge(1)
 	case 0x15: // Ctrl-U
@@ -4643,10 +4826,16 @@ func handleAttachEditingKey(b byte, state *attachState) bool {
 	default:
 		return false
 	}
-	if changed {
+	if changed || b == 0x01 || b == 0x05 || b == 0x02 || b == 0x06 {
 		state.display.redraw()
 	}
 	return true
+}
+
+// handleAttachLineEditByte is kept as an alias for older call sites / tests;
+// prefer handleAttachEditingKey.
+func handleAttachLineEditByte(b byte, state *attachState) bool {
+	return handleAttachEditingKey(b, state)
 }
 
 // handlePastedByte buffers one byte of a bracketed paste into the line
@@ -4668,6 +4857,7 @@ func handlePastedByte(b byte, state *attachState) {
 		if bytes.Equal(seq, bracketedPasteEnd) {
 			state.escSeq = nil
 			state.pasting = false
+			state.display.setFreezeLine(false)
 			state.display.redraw()
 			return
 		}
@@ -4703,12 +4893,64 @@ type promptDisplay struct {
 	warmupSpinnerLabel string
 	warmupPhaseLabel   string
 	warmupQueuedLabel  string
+	// freezeLine suppresses painting lineBuf during a bracketed paste so the
+	// warm-up spinner (and any other in-place repaint) cannot rewrite a
+	// still-growing, wrapping prompt hundreds of times (MARSOHS-1095).
+	freezeLine bool
+	// promptRows is how many terminal rows the last paintPromptLocked occupied.
+	// \r\x1b[K only clears the cursor's current row, so a wrapping prompt must
+	// clear this many rows on the next replace — otherwise truncated copies of
+	// the previous line pile up in scrollback (MARSOHS-1095).
+	promptRows int
+	// termCols overrides autodetection; tests set it so wrap math is stable.
+	termCols int
 }
 
 func (p *promptDisplay) setRaw(on bool) {
 	p.mu.Lock()
 	p.raw = on
 	p.mu.Unlock()
+}
+
+func (p *promptDisplay) setFreezeLine(on bool) {
+	p.mu.Lock()
+	p.freezeLine = on
+	p.mu.Unlock()
+}
+
+func (p *promptDisplay) columnsLocked() int {
+	if p.termCols > 0 {
+		return p.termCols
+	}
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+		return w
+	}
+	return 80
+}
+
+func promptRowCount(prompt, line string, cols int) int {
+	if cols <= 0 {
+		cols = 80
+	}
+	width := lipgloss.Width(prompt) + lipgloss.Width(line)
+	if width <= 0 {
+		return 1
+	}
+	return (width + cols - 1) / cols
+}
+
+// clearPromptRowsLocked erases every terminal row occupied by the last painted
+// prompt, ending with the cursor on a blank row ready for a replacement paint.
+func (p *promptDisplay) clearPromptRowsLocked() {
+	rows := p.promptRows
+	if rows < 1 {
+		rows = 1
+	}
+	fmt.Fprint(p.out, "\r\x1b[K")
+	for i := 1; i < rows; i++ {
+		fmt.Fprint(p.out, "\x1b[A\r\x1b[K")
+	}
+	p.promptRows = 0
 }
 
 func (p *promptDisplay) Write(b []byte) (int, error) {
@@ -4731,7 +4973,8 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 			fmt.Fprint(p.out, "\r\n")
 		}
 	} else {
-		fmt.Fprint(p.out, "\r\x1b[K")
+		// Replace the in-progress prompt (possibly multi-row) before the event.
+		p.clearPromptRowsLocked()
 	}
 
 	if _, err := io.WriteString(p.out, strings.ReplaceAll(string(b), "\n", "\r\n")); err != nil {
@@ -4748,19 +4991,20 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 }
 
 // paintPromptLocked draws prompt + lineBuf and restores the caret. When clear
-// is true it first erases the current line (redraw / replace-in-place); when
-// false it paints on the current (fresh) line after a newline-terminated write.
+// is true it first erases every row the previous prompt occupied; when false
+// it paints on the current (fresh) line after a newline-terminated write.
 func (p *promptDisplay) paintPromptLocked(clear bool) {
 	line := ""
-	if p.lineBuf != nil {
+	if p.lineBuf != nil && !p.freezeLine {
 		line = p.lineBuf()
 	}
+	prompt := p.prompt()
 	if clear {
-		fmt.Fprintf(p.out, "\r\x1b[K%s%s", p.prompt(), line)
-	} else {
-		fmt.Fprintf(p.out, "%s%s", p.prompt(), line)
+		p.clearPromptRowsLocked()
 	}
-	if p.cursorPos == nil {
+	fmt.Fprintf(p.out, "%s%s", prompt, line)
+	p.promptRows = promptRowCount(prompt, line, p.columnsLocked())
+	if p.cursorPos == nil || p.freezeLine {
 		return
 	}
 	cur := p.cursorPos()
@@ -4785,6 +5029,27 @@ func (p *promptDisplay) echo(b []byte) {
 		return
 	}
 	p.out.Write(b)
+}
+
+// finishInputLine commits the in-progress (possibly multi-row) prompt to
+// scrollback as a single write, then leaves the cursor on a fresh line for the
+// next empty prompt paint. Clearing every wrapped row first prevents the
+// truncated-duplicate scrollback bug when Enter is pressed on a long paste.
+func (p *promptDisplay) finishInputLine(visual string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.raw {
+		fmt.Fprint(p.out, "\r\n")
+		return
+	}
+	p.clearPromptRowsLocked()
+	if visual != "" {
+		fmt.Fprintf(p.out, "%s%s\r\n", p.prompt(), visual)
+	} else {
+		fmt.Fprint(p.out, "\r\n")
+	}
+	p.promptRows = 0
+	p.midLine = false
 }
 
 // redraw re-renders prompt + lineBuf with the caret restored. Flips "> " <->
@@ -4818,23 +5083,28 @@ func (p *promptDisplay) spinnerInit(frame, label string) {
 	if p.midLine {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
+		p.promptRows = 0
 	} else {
-		fmt.Fprint(p.out, "\r\x1b[K")
+		p.clearPromptRowsLocked()
 	}
 	fmt.Fprintf(p.out, "%s %s\r\n", frame, label)
 	p.paintPromptLocked(false)
 }
 
-// spinnerFrame redraws the spinner line one row above the prompt.
-// DECSC/DECRC (\x1b7 / \x1b8) save+restore the cursor so the prompt row
-// below is preserved. No-op in non-raw or mid-stream state.
+// spinnerFrame redraws the spinner line above the (possibly multi-row) prompt.
+// DECSC/DECRC (\x1b7 / \x1b8) save+restore the cursor so the prompt below is
+// preserved. No-op in non-raw or mid-stream state.
 func (p *promptDisplay) spinnerFrame(frame, label string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.raw || p.midLine {
 		return
 	}
-	fmt.Fprintf(p.out, "\x1b7\x1b[A\r\x1b[K%s %s\x1b8", frame, label)
+	up := p.promptRows
+	if up < 1 {
+		up = 1
+	}
+	fmt.Fprintf(p.out, "\x1b7\x1b[%dA\r\x1b[K%s %s\x1b8", up, frame, label)
 }
 
 // spinnerStop removes the spinner line entirely so neither status text nor an
@@ -4873,8 +5143,9 @@ func (p *promptDisplay) warmupInit(frame, label string) {
 	if p.midLine {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
+		p.promptRows = 0
 	} else {
-		fmt.Fprint(p.out, "\r\x1b[K")
+		p.clearPromptRowsLocked()
 	}
 	p.warmupStatusLines = 1
 	p.warmupSpinnerFrame = frame
@@ -4952,11 +5223,11 @@ func (p *promptDisplay) warmupPaintLocked() {
 		label = msgAgentWarmup
 	}
 	line := ""
-	if p.lineBuf != nil {
+	if p.lineBuf != nil && !p.freezeLine {
 		line = p.lineBuf()
 	}
 	cur := len(line)
-	if p.cursorPos != nil {
+	if p.cursorPos != nil && !p.freezeLine {
 		cur = p.cursorPos()
 		if cur < 0 {
 			cur = 0
@@ -4979,13 +5250,15 @@ func (p *promptDisplay) warmupPaintLocked() {
 		b.WriteString(colorize(p.warmupQueuedLabel, colMuted))
 	}
 	b.WriteString("\r\n\r\x1b[K")
-	b.WriteString(p.prompt())
+	prompt := p.prompt()
+	b.WriteString(prompt)
 	b.WriteString(line)
 	if back := len(line) - cur; back > 0 {
 		fmt.Fprintf(&b, "\x1b[%dD", back)
 	}
 	b.WriteString("\x1b8")
 	io.WriteString(p.out, b.String())
+	p.promptRows = promptRowCount(prompt, line, p.columnsLocked())
 }
 
 // warmupStopLocked erases the warm-up banner rows entirely. Caller must hold p.mu.
@@ -5061,6 +5334,25 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		}
 	}()
 
+	// API requests run here rather than inline in the loop below, so the loop
+	// keeps reading while one is in flight — raw mode turned Ctrl-C into a byte
+	// only this loop can act on, and the requests have no deadline. A single
+	// worker rather than a goroutine per call keeps sends in the order typed.
+	work := make(chan func() (detach bool), 64)
+	defer close(work)
+	detachCh := make(chan struct{}, 1)
+	go func() {
+		for fn := range work {
+			if fn() {
+				select {
+				case detachCh <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}()
+	state.dispatch = func(fn func() (detach bool)) { work <- fn }
+
 	// 50ms ticker so HITL arrival reflows the prompt even when the user idles.
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
@@ -5080,7 +5372,12 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 			if stop {
 				return nil
 			}
+		case <-detachCh:
+			// A queued request found the session unable to take more input;
+			// it has already printed why.
+			return nil
 		case <-ticker.C:
+			state.handlePendingEscTimeout()
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
 				printDetachNotice(c.Out, state.sessionRef)
@@ -5099,7 +5396,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		case 'y', 'Y':
 			state.display.echo([]byte{b, '\r', '\n'})
 			state.takeLargePasteConfirmation()
-			if detach := processAttachLine(c, svc, sessionID, confirm.text, state, nil, thinking); detach {
+			if detach := state.call(func() bool {
+				return processAttachLine(c, svc, sessionID, confirm.text, state, nil, thinking)
+			}); detach {
 				return true, nil
 			}
 			state.display.redraw()
@@ -5107,10 +5406,18 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		case 'n', 'N', 0x0d, 0x0a:
 			state.display.echo([]byte("\r\n"))
 			state.takeLargePasteConfirmation()
-			for _, part := range splitSubmittedLines(confirm.text) {
-				if detach := processAttachLine(c, svc, sessionID, part, state, nil, thinking); detach {
-					return true, nil
+			parts := splitSubmittedLines(confirm.text)
+			// One unit of work, not one per part: the parts are separate sends
+			// and have to reach the session in the pasted order.
+			if detach := state.call(func() bool {
+				for _, part := range parts {
+					if processAttachLine(c, svc, sessionID, part, state, nil, thinking) {
+						return true
+					}
 				}
+				return false
+			}); detach {
+				return true, nil
 			}
 			state.display.redraw()
 			return false, nil
@@ -5125,12 +5432,14 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		}
 	}
 	if state.pasting {
-		handlePastedByte(b, state)
-		// noteQueued already repaints the warm-up banner's own queued-status
-		// row itself when relevant; no need for a second, redundant redraw of
-		// the whole prompt on every pasted byte.
+		// Mark queued at most once for the whole paste; per-byte noteQueued
+		// used to repaint the warm-up block on every character (MARSOHS-1095).
 		warmup.noteQueued()
+		handlePastedByte(b, state)
 		return false, nil
+	}
+	if b == 0x04 && state.pending.get() == "" && tryDetachAttachPrompt(state) {
+		return true, nil
 	}
 	if handleAttachEscapeSequence(b, state) {
 		return false, nil
@@ -5162,14 +5471,19 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		} else {
 			state.display.echo([]byte{b, '\r', '\n'})
 		}
-		if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
-			Outcome: outcome,
-			Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
-		}); err != nil {
-			fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
-		} else {
-			state.pending.clearIf(id)
-		}
+		// No redraw once the resolve lands: clearing the pending id is a change
+		// attachLoopTTY notices on its next tick and redraws for.
+		state.call(func() bool {
+			if err := svc.ResolveHITL(sessionID, id, &godo.HostedAgentResolveHITLRequest{
+				Outcome: outcome,
+				Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
+			}); err != nil {
+				fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+			} else {
+				state.pending.clearIf(id)
+			}
+			return false
+		})
 		state.resetHITLSelection()
 		state.display.redraw()
 		return false, nil
@@ -5181,20 +5495,25 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 
 	switch b {
 	case 0x0d, 0x0a: // Enter
+		state.mu.Lock()
+		visual := displayInputBuffer(state.lineBuf)
+		state.mu.Unlock()
 		line := readSubmittedInput(state)
 		if line != "" && warmup.inputAlreadyQueued() {
 			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
 			state.display.redraw()
 			return false, nil
 		}
-		echoAttachSubmitNewline(state.display, warmup)
+		echoAttachSubmitNewline(state.display, warmup, visual)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
 				state.display.redraw()
 				return false, nil
 			}
-			if detach := processAttachLine(c, svc, sessionID, line, state, warmup, thinking); detach {
+			if detach := state.call(func() bool {
+				return processAttachLine(c, svc, sessionID, line, state, warmup, thinking)
+			}); detach {
 				return true, nil
 			}
 		}
@@ -5204,6 +5523,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.mu.Lock()
 		atEnd := state.cursor == len(state.lineBuf)
 		if state.cursor > 0 {
+			state.exitHistoryBrowseOnEditLocked()
 			i := state.cursor - 1
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
@@ -5223,15 +5543,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.display.echo([]byte("\r\n"))
 		printDetachNotice(c.Out, state.sessionRef)
 		return true, nil
-	case 0x04: // Ctrl-D
-		state.mu.Lock()
-		empty := len(state.lineBuf) == 0
-		state.mu.Unlock()
-		if empty {
-			state.display.echo([]byte("\r\n"))
-			printDetachNotice(c.Out, state.sessionRef)
-			return true, nil
-		}
+	case 0x04: // Ctrl-D on non-empty line: forward delete handled above
 		return false, nil
 	case 0x09: // Tab: autocomplete the "/" command verb (arguments aren't completed)
 		completeAttachSlashCommand(c, state)
@@ -5240,6 +5552,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		// Printable ASCII only; UTF-8 multibyte is still dropped in V0.
 		if b >= 0x20 && b < 0x7f {
 			state.mu.Lock()
+			state.exitHistoryBrowseOnEditLocked()
 			atEnd := state.cursor == len(state.lineBuf)
 			if atEnd {
 				state.lineBuf = append(state.lineBuf, b)
@@ -6057,6 +6370,17 @@ func printAttachHelp(w io.Writer) {
 		{"/a, /r, /d [request-id]", "resolve a specific request (defaults to oldest)"},
 		{"/pending", "list requests waiting on you"},
 		{"(piped input)", "send `yes` / `no` / `defer` followed by a newline"},
+	})
+	fmt.Fprintln(&body)
+	writeHelpSection(&body, "Line editing (TTY attach prompt)", []helpRow{
+		{"Ctrl-A / Ctrl-E, Home / End", "beginning / end of line"},
+		{"Ctrl-B / Ctrl-F", "character left / right"},
+		{"Alt-B / Alt-F", "word left / right"},
+		{"Ctrl-W, Alt-Backspace", "delete word backward"},
+		{"Ctrl-U / Ctrl-K", "kill to start / end of line"},
+		{"Ctrl-D / Delete", "delete character forward"},
+		{"Esc", "clear current input"},
+		{"↑ / ↓", "recall previous messages sent this session"},
 	})
 	fmt.Fprintln(&body)
 	writeHelpSection(&body, "Other", []helpRow{
