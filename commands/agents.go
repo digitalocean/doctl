@@ -5947,7 +5947,7 @@ var (
 	// ("/bin/bash -lc ", "sh -c ", "zsh -ic "). It's the same for every call,
 	// so displaying it spends the label's first ~15 columns saying nothing and
 	// pushes the part you're reading for off the right edge.
-	shellWrapperRE = regexp.MustCompile(`^(?:/usr/bin/|/bin/)?(?:ba|z|k|da)?sh\s+-[a-z]*c\s+`)
+	shellWrapperRE = regexp.MustCompile(`^(?:/usr/bin/|/bin/)?(?:bash|zsh|ksh|dash|sh)\s+-[a-z]*c\s+`)
 	// whitespaceRunRE collapses newlines and runs of spaces. A heredoc or a
 	// multi-line script would otherwise break the one-line-per-call layout.
 	whitespaceRunRE = regexp.MustCompile(`\s+`)
