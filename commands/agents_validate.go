@@ -36,6 +36,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"opencode":         {},
 	"codex":            {},
 	"codex-agentapi":   {},
+	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
 	"custom":           {},
 	"codex-cli":        {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
@@ -428,6 +429,7 @@ func validateAdapterModelEnv(adapter string, env map[string]string, envPath stri
 	_, hasHarnessKey := env["HARNESS_INFERENCE_API_KEY"]
 	_, hasAnthropicModel := env["ANTHROPIC_MODEL"]
 	_, hasAnthropicKey := env["ANTHROPIC_API_KEY"]
+	_, hasOpenAIModel := env["OPENAI_MODEL"]
 
 	// Incident follow-up: MODEL vs HARNESS_INFERENCE_MODEL produce different
 	// session-create outcomes when harness inference env is partially set.
@@ -448,6 +450,14 @@ func validateAdapterModelEnv(adapter string, env map[string]string, envPath stri
 		if hasAnthropicKey && !hasAnthropicModel && (hasModel || hasHarnessModel) {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.ANTHROPIC_API_KEY: set without %s.ANTHROPIC_MODEL; set ANTHROPIC_MODEL explicitly for claude-code", envPath, envPath))
 		}
+	}
+
+	// hermes renders its gateway config from env at guest boot, resolving the
+	// model as OPENAI_MODEL -> HARNESS_INFERENCE_MODEL -> MODEL. With none of
+	// them set the session still creates and the gateway still starts; the
+	// first turn is what fails.
+	if adapter == "hermes" && !hasOpenAIModel && !hasHarnessModel && !hasModel {
+		out.Warnings = append(out.Warnings, fmt.Sprintf("%s: adapter hermes has no model env var (OPENAI_MODEL, HARNESS_INFERENCE_MODEL, or MODEL); the session will start but its first turn will fail", envPath))
 	}
 }
 
