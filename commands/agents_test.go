@@ -1594,6 +1594,14 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 			assert.False(t, stop)
 		}
 	}
+	escSeq := func(t *testing.T, state *attachState, seq []byte) {
+		t.Helper()
+		for _, b := range seq {
+			stop, err := handleAttachByte(nil, nil, "sess", b, state, nil, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+		}
+	}
 
 	t.Run("left/right move the caret and insert mid-line", func(t *testing.T) {
 		state := newAttachState(io.Discard, &pendingHITL{})
@@ -1638,6 +1646,143 @@ func TestHandleAttachByteCursorMovement(t *testing.T) {
 		assert.False(t, stop)
 		assert.Equal(t, "acd", string(state.lineBuf))
 		assert.Equal(t, 1, state.cursor)
+	})
+
+	t.Run("emacs line editing shortcuts", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "hello world")
+		assert.Equal(t, 11, state.cursor)
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x01, state, nil, nil) // Ctrl-A
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, 0, state.cursor)
+
+		stop, err = handleAttachByte(nil, nil, "sess", 0x05, state, nil, nil) // Ctrl-E
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, 11, state.cursor)
+
+		stop, err = handleAttachByte(nil, nil, "sess", 0x17, state, nil, nil) // Ctrl-W at EOL
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "hello ", string(state.lineBuf))
+		assert.Equal(t, 6, state.cursor)
+	})
+
+	t.Run("kill line and forward delete shortcuts", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+
+		typewrite(t, state, "hello world")
+		stop, err := handleAttachByte(nil, nil, "sess", 0x15, state, nil, nil) // Ctrl-U at EOL
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "", string(state.lineBuf))
+
+		typewrite(t, state, "hello world")
+		stop, err = handleAttachByte(nil, nil, "sess", 0x01, state, nil, nil) // Ctrl-A
+		assert.NoError(t, err)
+		stop, err = handleAttachByte(nil, nil, "sess", 0x0b, state, nil, nil) // Ctrl-K
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "", string(state.lineBuf))
+
+		typewrite(t, state, "abcd")
+		arrow(t, state, 'D')
+		arrow(t, state, 'D') // caret before 'c'
+		stop, err = handleAttachByte(nil, nil, "sess", 0x04, state, nil, nil) // Ctrl-D
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "abd", string(state.lineBuf))
+
+		stop, err = handleAttachByte(nil, nil, "sess", 0x05, state, nil, nil) // Ctrl-E
+		assert.NoError(t, err)
+		typewrite(t, state, "z")
+		escSeq(t, state, []byte{0x1b, '[', '1', '~'}) // Home
+		escSeq(t, state, []byte{0x1b, '[', '3', '~'}) // Delete
+		assert.Equal(t, "bdz", string(state.lineBuf))
+	})
+
+	t.Run("home/end and tab completion", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		typewrite(t, state, "/he")
+		stop, err := handleAttachByte(nil, nil, "sess", 0x09, state, nil, nil) // Tab
+		assert.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, "/help ", string(state.lineBuf))
+
+		typewrite(t, state, "xyz")
+		escSeq(t, state, []byte{0x1b, '[', 'H'}) // Home
+		assert.Equal(t, 0, state.cursor)
+		escSeq(t, state, []byte{0x1b, '[', 'F'}) // End
+		assert.Equal(t, len(state.lineBuf), state.cursor)
+	})
+
+	t.Run("esc clears input and exits history browse", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		state.pushHistory("saved")
+		state.historyUp()
+		assert.Equal(t, "saved", string(state.lineBuf))
+
+		state.escSeq = []byte{0x1b}
+		assert.True(t, state.handlePendingEscTimeout())
+		assert.Equal(t, "", string(state.lineBuf))
+	})
+
+	t.Run("ctrl-D detaches on empty prompt even after pending esc", func(t *testing.T) {
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		state.sessionRef = "demo"
+		state.escSeq = []byte{0x1b}
+
+		stop, err := handleAttachByte(nil, nil, "sess", 0x04, state, nil, nil)
+		assert.NoError(t, err)
+		assert.True(t, stop)
+	})
+
+	t.Run("slash exit closes attach loop", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.sessionRef = "demo"
+			assert.True(t, processAttachLine(config, nil, "sess", "/exit", state, nil, nil))
+		})
+	})
+
+	t.Run("up/down recalls submitted input history", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "first"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "second"}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_2"}, nil)
+
+			state := newAttachState(io.Discard, &pendingHITL{})
+			state.display.setRaw(true)
+
+			typewrite(t, state, "first")
+			stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+
+			typewrite(t, state, "second")
+			stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, nil, nil)
+			assert.NoError(t, err)
+			assert.False(t, stop)
+
+			arrow(t, state, 'A') // up
+			assert.Equal(t, "second", string(state.lineBuf))
+			arrow(t, state, 'A') // up
+			assert.Equal(t, "first", string(state.lineBuf))
+			arrow(t, state, 'B') // down
+			assert.Equal(t, "second", string(state.lineBuf))
+			arrow(t, state, 'B') // down to draft
+			assert.Equal(t, "", string(state.lineBuf))
+		})
 	})
 
 	t.Run("enter clears the caret", func(t *testing.T) {

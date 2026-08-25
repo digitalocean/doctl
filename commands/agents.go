@@ -2254,6 +2254,9 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 		}
 	}()
 
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -2268,6 +2271,8 @@ func openaiAttachLoopTTY(c *CmdConfig, ctx context.Context, client openAIAgentsC
 				printDetachNotice(c.Out, state.sessionRef)
 				return nil
 			}
+		case <-ticker.C:
+			state.handlePendingEscTimeout()
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
 				printDetachNotice(c.Out, state.sessionRef)
@@ -2363,7 +2368,14 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 		warmup.noteQueued()
 		return false, nil
 	}
+	if b == 0x04 && state.pending.get() == "" && tryDetachAttachPrompt(state) {
+		return true, nil
+	}
 	if handleAttachEscapeSequence(b, state) {
+		return false, nil
+	}
+
+	if handleAttachLineEditByte(b, state) {
 		return false, nil
 	}
 
@@ -2405,6 +2417,7 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 		state.mu.Lock()
 		atEnd := state.cursor == len(state.lineBuf)
 		if state.cursor > 0 {
+			state.exitHistoryBrowseOnEditLocked()
 			i := state.cursor - 1
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
@@ -2423,18 +2436,12 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 	case 0x03:
 		state.display.echo([]byte("\r\n"))
 		return true, nil
-	case 0x04:
-		state.mu.Lock()
-		empty := len(state.lineBuf) == 0
-		state.mu.Unlock()
-		if empty {
-			state.display.echo([]byte("\r\n"))
-			return true, nil
-		}
+	case 0x04: // empty prompt handled before escape parsing
 		return false, nil
 	default:
 		if b >= 0x20 && b < 0x7f {
 			state.mu.Lock()
+			state.exitHistoryBrowseOnEditLocked()
 			atEnd := state.cursor == len(state.lineBuf)
 			if atEnd {
 				state.lineBuf = append(state.lineBuf, b)
@@ -3911,6 +3918,8 @@ func attachPrompt(pending *pendingHITL) string {
 	}
 }
 
+const attachInputHistoryCap = 100
+
 // attachState bundles the line buffer, pending HITL id, and the synchronized
 // display that the SSE goroutine writes through.
 type attachState struct {
@@ -3924,6 +3933,10 @@ type attachState struct {
 	escSeq     []byte
 	pasting    bool
 	confirm    *largePasteConfirmation
+	// Input history for bash-style ↑/↓ recall within this attach session.
+	history   []string
+	histIndex int    // len(history) means draft/new line; 0..len-1 browses history
+	histDraft []byte // saved draft when ↑ is first pressed
 }
 
 type largePasteConfirmation struct {
@@ -4047,6 +4060,7 @@ func (s *attachState) insertNewlineAtCursor() {
 		s.lineBuf = append(s.lineBuf[:s.cursor], append([]byte{'\n'}, s.lineBuf[s.cursor:]...)...)
 	}
 	s.cursor++
+	s.exitHistoryBrowseOnEditLocked()
 	s.mu.Unlock()
 }
 
@@ -4055,6 +4069,285 @@ func (s *attachState) insertNewlineAtCursor() {
 // behavior) made Option/Alt+Enter look like it had done nothing until the
 // message was actually sent — this makes the line break visible in place.
 const newlineMarker = " ↵ "
+
+func (s *attachState) setLineCursorStart() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor == 0 {
+		return false
+	}
+	s.cursor = 0
+	return true
+}
+
+func (s *attachState) setLineCursorEnd() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	end := len(s.lineBuf)
+	if s.cursor == end {
+		return false
+	}
+	s.cursor = end
+	return true
+}
+
+// deleteWordBackward implements emacs unix-word-rubout (Ctrl-W): delete back to
+// the previous whitespace boundary.
+func (s *attachState) deleteWordBackward() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor == 0 {
+		return false
+	}
+	pos := s.cursor
+	for pos > 0 && s.lineBuf[pos-1] == ' ' {
+		pos--
+	}
+	for pos > 0 && s.lineBuf[pos-1] != ' ' {
+		pos--
+	}
+	if pos == s.cursor {
+		return false
+	}
+	s.lineBuf = append(s.lineBuf[:pos], s.lineBuf[s.cursor:]...)
+	s.cursor = pos
+	s.exitHistoryBrowseOnEditLocked()
+	return true
+}
+
+func (s *attachState) killLineBackward() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor == 0 {
+		return false
+	}
+	s.lineBuf = s.lineBuf[s.cursor:]
+	s.cursor = 0
+	s.exitHistoryBrowseOnEditLocked()
+	return true
+}
+
+func (s *attachState) killLineForward() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor >= len(s.lineBuf) {
+		return false
+	}
+	s.lineBuf = s.lineBuf[:s.cursor]
+	s.exitHistoryBrowseOnEditLocked()
+	return true
+}
+
+func (s *attachState) deleteForward() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor >= len(s.lineBuf) {
+		return false
+	}
+	s.lineBuf = append(s.lineBuf[:s.cursor], s.lineBuf[s.cursor+1:]...)
+	s.exitHistoryBrowseOnEditLocked()
+	return true
+}
+
+func (s *attachState) moveWordBackward() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor == 0 {
+		return false
+	}
+	pos := s.cursor
+	for pos > 0 && s.lineBuf[pos-1] == ' ' {
+		pos--
+	}
+	for pos > 0 && s.lineBuf[pos-1] != ' ' {
+		pos--
+	}
+	if pos == s.cursor {
+		return false
+	}
+	s.cursor = pos
+	return true
+}
+
+func (s *attachState) moveWordForward() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cursor >= len(s.lineBuf) {
+		return false
+	}
+	pos := s.cursor
+	for pos < len(s.lineBuf) && s.lineBuf[pos] != ' ' {
+		pos++
+	}
+	for pos < len(s.lineBuf) && s.lineBuf[pos] == ' ' {
+		pos++
+	}
+	if pos == s.cursor {
+		return false
+	}
+	s.cursor = pos
+	return true
+}
+
+func (s *attachState) cancelInputLine() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.lineBuf) == 0 && s.histIndex >= len(s.history) {
+		return false
+	}
+	if s.histIndex < len(s.history) {
+		s.histIndex = len(s.history)
+		s.histDraft = nil
+	}
+	s.lineBuf = s.lineBuf[:0]
+	s.cursor = 0
+	return true
+}
+
+// handlePendingEscTimeout treats a lone ESC (no follow-up within ~50ms) as
+// cancel-input, matching common terminal/readline behavior.
+func (s *attachState) handlePendingEscTimeout() bool {
+	if len(s.escSeq) != 1 || s.escSeq[0] != 0x1b {
+		return false
+	}
+	s.escSeq = nil
+	if s.cancelInputLine() {
+		s.display.redraw()
+		return true
+	}
+	return false
+}
+
+// tryDetachAttachPrompt closes the local attach connection when the prompt is
+// empty. Called on Ctrl-D before escape-sequence parsing so a pending ESC
+// prefix cannot swallow the detach keystroke.
+func tryDetachAttachPrompt(state *attachState) bool {
+	if state.pasting || state.largePasteConfirmation() != nil {
+		return false
+	}
+	state.mu.Lock()
+	empty := len(state.lineBuf) == 0
+	state.mu.Unlock()
+	if !empty {
+		return false
+	}
+	state.escSeq = nil
+	state.display.echo([]byte("\r\n"))
+	out := io.Discard
+	if state.display != nil {
+		out = state.display.out
+	}
+	printDetachNotice(out, state.sessionRef)
+	return true
+}
+
+func (s *attachState) loadLineLocked(text string) {
+	s.lineBuf = []byte(text)
+	s.cursor = len(s.lineBuf)
+}
+
+func (s *attachState) resetHistoryBrowseLocked() {
+	s.histIndex = len(s.history)
+	s.histDraft = nil
+}
+
+func (s *attachState) pushHistory(line string) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if n := len(s.history); n > 0 && s.history[n-1] == line {
+		s.resetHistoryBrowseLocked()
+		return
+	}
+	s.history = append(s.history, line)
+	if len(s.history) > attachInputHistoryCap {
+		s.history = s.history[len(s.history)-attachInputHistoryCap:]
+	}
+	s.resetHistoryBrowseLocked()
+}
+
+func (s *attachState) historyUp() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.history) == 0 {
+		return false
+	}
+	if s.histIndex == len(s.history) {
+		s.histDraft = append([]byte(nil), s.lineBuf...)
+		s.histIndex = len(s.history) - 1
+		s.loadLineLocked(s.history[s.histIndex])
+		return true
+	}
+	if s.histIndex > 0 {
+		s.histIndex--
+		s.loadLineLocked(s.history[s.histIndex])
+		return true
+	}
+	return false
+}
+
+func (s *attachState) historyDown() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.history) == 0 || s.histIndex >= len(s.history) {
+		return false
+	}
+	if s.histIndex < len(s.history)-1 {
+		s.histIndex++
+		s.loadLineLocked(s.history[s.histIndex])
+		return true
+	}
+	s.histIndex = len(s.history)
+	s.loadLineLocked(string(s.histDraft))
+	s.histDraft = nil
+	return true
+}
+
+func (s *attachState) exitHistoryBrowseOnEditLocked() {
+	if s.histIndex < len(s.history) {
+		s.histIndex = len(s.history)
+		s.histDraft = nil
+	}
+}
+
+// handleAttachLineEditByte handles emacs-style line editing keys shared by
+// both attach input loops. Returns true when b was consumed.
+func handleAttachLineEditByte(b byte, state *attachState) bool {
+	var changed bool
+	switch b {
+	case 0x01: // Ctrl-A
+		changed = state.setLineCursorStart()
+	case 0x02: // Ctrl-B
+		changed = state.moveLineCursor(-1)
+	case 0x04: // Ctrl-D: forward delete; empty line falls through to detach
+		state.mu.Lock()
+		empty := len(state.lineBuf) == 0
+		state.mu.Unlock()
+		if empty {
+			return false
+		}
+		changed = state.deleteForward()
+	case 0x05: // Ctrl-E
+		changed = state.setLineCursorEnd()
+	case 0x06: // Ctrl-F
+		changed = state.moveLineCursor(1)
+	case 0x0b: // Ctrl-K
+		changed = state.killLineForward()
+	case 0x15: // Ctrl-U
+		changed = state.killLineBackward()
+	case 0x17: // Ctrl-W
+		changed = state.deleteWordBackward()
+	default:
+		return false
+	}
+	if changed || b == 0x01 || b == 0x05 || b == 0x02 || b == 0x06 {
+		state.display.redraw()
+	}
+	return true
+}
 
 func displayInputBuffer(buf []byte) string {
 	if len(buf) == 0 {
@@ -4108,14 +4401,21 @@ func isKnownEscPrefix(seq []byte) bool {
 		{0x1b},
 		{0x1b, '['},
 		{0x1b, 'O'},
+		{0x1b, '[', '1', '~'},
+		{0x1b, '[', '3', '~'},
+		{0x1b, '[', '4', '~'},
 		{0x1b, '[', 'A'},
 		{0x1b, '[', 'B'},
 		{0x1b, '[', 'C'},
 		{0x1b, '[', 'D'},
+		{0x1b, '[', 'F'},
+		{0x1b, '[', 'H'},
 		{0x1b, 'O', 'A'},
 		{0x1b, 'O', 'B'},
 		{0x1b, 'O', 'C'},
 		{0x1b, 'O', 'D'},
+		{0x1b, 'O', 'F'},
+		{0x1b, 'O', 'H'},
 		bracketedPasteStart,
 	} {
 		if isPrefix(seq, candidate) {
@@ -4158,6 +4458,9 @@ func readSubmittedInput(state *attachState) string {
 	state.lineBuf = state.lineBuf[:0]
 	state.cursor = 0
 	state.mu.Unlock()
+	if line != "" {
+		state.pushHistory(line)
+	}
 	return line
 }
 
@@ -4182,6 +4485,14 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 		if state.pending.get() != "" {
 			state.moveHITLSelection(-1)
 			state.display.redraw()
+		} else if state.historyUp() {
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', '1', '~'}), bytes.Equal(seq, []byte{0x1b, '[', 'H'}), bytes.Equal(seq, []byte{0x1b, 'O', 'H'}):
+		state.escSeq = nil
+		if state.setLineCursorStart() {
+			state.display.redraw()
 		}
 		return true
 	case bytes.Equal(seq, []byte{0x1b, '[', 'D'}), bytes.Equal(seq, []byte{0x1b, 'O', 'D'}):
@@ -4197,6 +4508,14 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 		state.escSeq = nil
 		if state.pending.get() != "" {
 			state.moveHITLSelection(1)
+			state.display.redraw()
+		} else if state.historyDown() {
+			state.display.redraw()
+		}
+		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', '4', '~'}), bytes.Equal(seq, []byte{0x1b, '[', 'F'}), bytes.Equal(seq, []byte{0x1b, 'O', 'F'}):
+		state.escSeq = nil
+		if state.setLineCursorEnd() {
 			state.display.redraw()
 		}
 		return true
@@ -4223,6 +4542,38 @@ func handleAttachEscapeSequence(b byte, state *attachState) bool {
 			state.display.redraw()
 		}
 		return true
+	case bytes.Equal(seq, []byte{0x1b, '[', '3', '~'}):
+		state.escSeq = nil
+		if state.deleteForward() {
+			state.display.redraw()
+		}
+		return true
+	case len(seq) == 2 && seq[0] == 0x1b:
+		switch seq[1] {
+		case 'b':
+			state.escSeq = nil
+			if state.moveWordBackward() {
+				state.display.redraw()
+			}
+			return true
+		case 'f':
+			state.escSeq = nil
+			if state.moveWordForward() {
+				state.display.redraw()
+			}
+			return true
+		case 0x7f:
+			state.escSeq = nil
+			if state.deleteWordBackward() {
+				state.display.redraw()
+			}
+			return true
+		case '[', 'O':
+			return true
+		default:
+			state.escSeq = nil
+			return false
+		}
 	case isKnownEscPrefix(seq):
 		return true
 	default:
@@ -4655,6 +5006,7 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 				return nil
 			}
 		case <-ticker.C:
+			state.handlePendingEscTimeout()
 		case err := <-readErrCh:
 			if errors.Is(err, io.EOF) {
 				printDetachNotice(c.Out, state.sessionRef)
@@ -4706,6 +5058,9 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		warmup.noteQueued()
 		return false, nil
 	}
+	if b == 0x04 && state.pending.get() == "" && tryDetachAttachPrompt(state) {
+		return true, nil
+	}
 	if handleAttachEscapeSequence(b, state) {
 		return false, nil
 	}
@@ -4749,6 +5104,10 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		return false, nil
 	}
 
+	if handleAttachLineEditByte(b, state) {
+		return false, nil
+	}
+
 	switch b {
 	case 0x0d, 0x0a: // Enter
 		line := readSubmittedInput(state)
@@ -4774,6 +5133,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.mu.Lock()
 		atEnd := state.cursor == len(state.lineBuf)
 		if state.cursor > 0 {
+			state.exitHistoryBrowseOnEditLocked()
 			i := state.cursor - 1
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
@@ -4793,15 +5153,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		state.display.echo([]byte("\r\n"))
 		printDetachNotice(c.Out, state.sessionRef)
 		return true, nil
-	case 0x04: // Ctrl-D
-		state.mu.Lock()
-		empty := len(state.lineBuf) == 0
-		state.mu.Unlock()
-		if empty {
-			state.display.echo([]byte("\r\n"))
-			printDetachNotice(c.Out, state.sessionRef)
-			return true, nil
-		}
+	case 0x04: // Ctrl-D on non-empty line: forward delete handled above
 		return false, nil
 	case 0x09: // Tab: autocomplete the "/" command verb (arguments aren't completed)
 		completeAttachSlashCommand(c, state)
@@ -4810,6 +5162,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		// Printable ASCII only; UTF-8 multibyte is still dropped in V0.
 		if b >= 0x20 && b < 0x7f {
 			state.mu.Lock()
+			state.exitHistoryBrowseOnEditLocked()
 			atEnd := state.cursor == len(state.lineBuf)
 			if atEnd {
 				state.lineBuf = append(state.lineBuf, b)
@@ -5487,6 +5840,17 @@ func printAttachHelp(w io.Writer) {
 		{"/a, /r, /d [request-id]", "resolve a specific request (defaults to oldest)"},
 		{"/pending", "list requests waiting on you"},
 		{"(piped input)", "send `yes` / `no` / `defer` followed by a newline"},
+	})
+	fmt.Fprintln(&body)
+	writeHelpSection(&body, "Line editing (TTY attach prompt)", []helpRow{
+		{"Ctrl-A / Ctrl-E, Home / End", "beginning / end of line"},
+		{"Ctrl-B / Ctrl-F", "character left / right"},
+		{"Alt-B / Alt-F", "word left / right"},
+		{"Ctrl-W, Alt-Backspace", "delete word backward"},
+		{"Ctrl-U / Ctrl-K", "kill to start / end of line"},
+		{"Ctrl-D / Delete", "delete character forward"},
+		{"Esc", "clear current input"},
+		{"↑ / ↓", "recall previous messages sent this session"},
 	})
 	fmt.Fprintln(&body)
 	writeHelpSection(&body, "Other", []helpRow{
