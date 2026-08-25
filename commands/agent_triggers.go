@@ -113,7 +113,7 @@ func AgentTriggers() *Command {
 		"Rotate a webhook trigger's secret",
 		agentsTriggersRotateSecretHelpMD,
 		Writer, agentPrettyErrors())
-	AddBoolFlag(cmdRotate, doctl.ArgAgentAllowGrace, "", false, "Preserve the old secret for a short grace window so in-flight deliveries keep verifying. Never use after a secret is compromised.")
+	AddBoolFlag(cmdRotate, doctl.ArgAgentRevokePrevious, "", false, "Retire the old secret immediately instead of granting the grace window. Deliveries still signed with it start failing at once; use this when the old secret is compromised.")
 
 	cmdListExec := CmdBuilder(cmd, RunAgentTriggersListExecutions, "list-executions <trigger-id>",
 		"List a trigger's execution history",
@@ -307,25 +307,31 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	allowGrace, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAllowGrace)
+	revokePrevious, err := c.Doit.GetBool(c.NS, doctl.ArgAgentRevokePrevious)
 	if err != nil {
 		return err
 	}
-	secret, previousExpiresAt, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], allowGrace)
+	secret, previousExpiresAt, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], revokePrevious)
 	if err != nil {
 		return err
 	}
 	if Output == "json" {
-		out := map[string]string{"webhook_secret": secret}
+		out := map[string]any{"webhook_secret": secret}
 		if previousExpiresAt != "" {
 			out["previous_secret_expires_at"] = previousExpiresAt
+		} else {
+			out["previous_secret_revoked"] = true
 		}
 		return json.NewEncoder(c.Out).Encode(out)
 	}
 	stylingEnabled = detectStyling()
 	printWebhookSecretCard(c.Out, secret, "")
+	// State the old secret's fate either way: "rotated" alone leaves an operator
+	// unable to tell whether a leaked secret still works.
 	if previousExpiresAt != "" {
 		fmt.Fprintf(c.Out, "Old secret stops working at: %s\n", previousExpiresAt)
+	} else {
+		fmt.Fprintln(c.Out, "Old secret revoked: deliveries still signed with it will fail.")
 	}
 	return nil
 }

@@ -54,7 +54,7 @@ type HostedAgentTriggersService interface {
 	Get(triggerID string) (*HostedAgentTrigger, error)
 	Update(triggerID string, update *godo.HostedAgentTriggerUpdateRequest) (*HostedAgentTrigger, error)
 	Delete(triggerID string) error
-	RotateSecret(triggerID string, allowGrace bool) (secret, previousExpiresAt string, err error)
+	RotateSecret(triggerID string, revokePrevious bool) (secret, previousExpiresAt string, err error)
 	ListExecutions(triggerID string, opt *godo.HostedAgentTriggerExecutionListOptions) ([]HostedAgentTriggerExecution, string, error)
 	GetExecution(triggerID, executionID string) (*HostedAgentTriggerExecution, error)
 	GetBySession(sessionID string) (*HostedAgentTrigger, error)
@@ -119,8 +119,10 @@ func (s *hostedAgentTriggersService) Delete(triggerID string) error {
 	return err
 }
 
-func (s *hostedAgentTriggersService) RotateSecret(triggerID string, allowGrace bool) (secret, previousExpiresAt string, err error) {
-	resp, _, err := s.svc.RotateSecret(context.TODO(), triggerID, allowGrace)
+// RotateSecret returns the new secret and, unless revokePrevious retired the old
+// one outright, the instant the old one stops verifying deliveries.
+func (s *hostedAgentTriggersService) RotateSecret(triggerID string, revokePrevious bool) (secret, previousExpiresAt string, err error) {
+	resp, _, err := s.svc.RotateSecret(context.TODO(), triggerID, revokePrevious)
 	if err != nil {
 		return "", "", err
 	}
