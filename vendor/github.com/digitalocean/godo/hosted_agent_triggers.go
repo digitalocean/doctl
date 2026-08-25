@@ -27,7 +27,7 @@ type HostedAgentTriggersService interface {
 	Get(context.Context, string) (*HostedAgentTrigger, *Response, error)
 	Update(context.Context, string, *HostedAgentTriggerUpdateRequest) (*HostedAgentTrigger, *Response, error)
 	Delete(context.Context, string) (*Response, error)
-	RotateSecret(context.Context, string, bool) (*HostedAgentTriggerRotateSecretResponse, *Response, error)
+	RotateSecret(context.Context, string, *HostedAgentTriggerRotateSecretOptions) (*HostedAgentTriggerRotateSecretResponse, *Response, error)
 	ListExecutions(context.Context, string, *HostedAgentTriggerExecutionListOptions) (*HostedAgentTriggerExecutionsListResponse, *Response, error)
 	GetExecution(context.Context, string, string) (*HostedAgentTriggerExecution, *Response, error)
 	GetBySession(context.Context, string) (*HostedAgentTrigger, *Response, error)
@@ -214,14 +214,26 @@ type HostedAgentTriggersListResponse struct {
 	NextPageToken string               `json:"next_page_token,omitempty"`
 }
 
+// HostedAgentTriggerRotateSecretOptions specifies optional rotation behaviour.
+// The zero value (or a nil pointer) selects the server default, which keeps the
+// outgoing secret verifying for a short grace window.
+type HostedAgentTriggerRotateSecretOptions struct {
+	// RevokePrevious retires the outgoing secret on this call instead of at the
+	// end of the grace window. Intended for a compromised secret: deliveries
+	// still signed with the old value start failing immediately.
+	RevokePrevious bool `url:"revoke_previous,omitempty"`
+}
+
 // HostedAgentTriggerRotateSecretResponse is returned by RotateSecret.
+// Exactly one of PreviousSecretExpiresAt and PreviousSecretRevoked is set, so a
+// caller never has to infer the outcome from a missing field.
 type HostedAgentTriggerRotateSecretResponse struct {
 	WebhookSecret string `json:"webhook_secret,omitempty"`
 	// PreviousSecretExpiresAt is when the outgoing secret stops verifying
-	// deliveries. Empty when PreviousSecretRevoked is set: exactly one of the two
-	// is present, so a caller never has to infer the outcome from a missing field.
-	PreviousSecretExpiresAt string `json:"previous_secret_expires_at,omitempty"`
-	PreviousSecretRevoked   bool   `json:"previous_secret_revoked,omitempty"`
+	// deliveries. Nil when the secret was revoked on the rotate call.
+	PreviousSecretExpiresAt *Timestamp `json:"previous_secret_expires_at,omitempty"`
+	// PreviousSecretRevoked reports that the outgoing secret is already dead.
+	PreviousSecretRevoked bool `json:"previous_secret_revoked,omitempty"`
 }
 
 // HostedAgentTriggerExecution is one row per firing.
@@ -398,18 +410,17 @@ func (s *HostedAgentTriggersServiceOp) Delete(ctx context.Context, triggerID str
 }
 
 // RotateSecret issues a new webhook secret (webhook triggers only).
-// By default the outgoing secret stays valid for a short server-configured
-// window so in-flight deliveries keep verifying, and PreviousSecretExpiresAt in
-// the response tells the caller when it dies. Set revokePrevious to retire it on
-// this call instead — intended for a compromised secret, since deliveries still
-// signed with the old value start failing immediately.
-func (s *HostedAgentTriggersServiceOp) RotateSecret(ctx context.Context, triggerID string, revokePrevious bool) (*HostedAgentTriggerRotateSecretResponse, *Response, error) {
+// By default the outgoing secret keeps verifying deliveries for a short
+// server-configured window, and PreviousSecretExpiresAt reports when it dies;
+// set opt.RevokePrevious to retire it on this call instead.
+func (s *HostedAgentTriggersServiceOp) RotateSecret(ctx context.Context, triggerID string, opt *HostedAgentTriggerRotateSecretOptions) (*HostedAgentTriggerRotateSecretResponse, *Response, error) {
 	if triggerID == "" {
 		return nil, nil, errors.New("hosted agent triggers: trigger id is required")
 	}
 	path := fmt.Sprintf(hostedAgentTriggerRotateSecretPath, triggerID)
-	if revokePrevious {
-		path += "?revoke_previous=true"
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
 	}
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
 	if err != nil {

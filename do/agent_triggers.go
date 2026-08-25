@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"time"
 
 	"github.com/digitalocean/godo"
 )
@@ -122,11 +123,20 @@ func (s *hostedAgentTriggersService) Delete(triggerID string) error {
 // RotateSecret returns the new secret and, unless revokePrevious retired the old
 // one outright, the instant the old one stops verifying deliveries.
 func (s *hostedAgentTriggersService) RotateSecret(triggerID string, revokePrevious bool) (secret, previousExpiresAt string, err error) {
-	resp, _, err := s.svc.RotateSecret(context.TODO(), triggerID, revokePrevious)
+	// Left nil for the default rotation so no revoke_previous parameter goes on
+	// the wire at all, rather than an explicit =false.
+	var opt *godo.HostedAgentTriggerRotateSecretOptions
+	if revokePrevious {
+		opt = &godo.HostedAgentTriggerRotateSecretOptions{RevokePrevious: true}
+	}
+	resp, _, err := s.svc.RotateSecret(context.TODO(), triggerID, opt)
 	if err != nil {
 		return "", "", err
 	}
-	return resp.WebhookSecret, resp.PreviousSecretExpiresAt, nil
+	if resp.PreviousSecretExpiresAt == nil {
+		return resp.WebhookSecret, "", nil
+	}
+	return resp.WebhookSecret, resp.PreviousSecretExpiresAt.UTC().Format(time.RFC3339), nil
 }
 
 func (s *hostedAgentTriggersService) ListExecutions(triggerID string, opt *godo.HostedAgentTriggerExecutionListOptions) ([]HostedAgentTriggerExecution, string, error) {
