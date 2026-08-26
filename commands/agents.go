@@ -2445,10 +2445,11 @@ func printAttachSendAck(out io.Writer, warmup *warmupState, thinking *thinkingSt
 	fmt.Fprintln(out, colorize("… waiting for the agent", colMuted))
 }
 
-func echoAttachSubmitNewline(display *promptDisplay, warmup *warmupState, visual string) {
-	if warmup != nil && warmup.isBannerVisible() {
-		return
-	}
+// echoAttachSubmitNewline commits the submitted line to scrollback. During
+// warm-up it lands above the banner rather than being dropped: the buffer is
+// already cleared by then, so skipping it erased every record of what the user
+// queued while they waited.
+func echoAttachSubmitNewline(display *promptDisplay, visual string) {
 	display.finishInputLine(visual)
 }
 
@@ -2518,12 +2519,7 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 		visual := displayInputBuffer(state.lineBuf)
 		state.mu.Unlock()
 		line := readSubmittedInput(state)
-		if line != "" && warmup.inputAlreadyQueued() {
-			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
-			state.display.redraw()
-			return false, nil
-		}
-		echoAttachSubmitNewline(state.display, warmup, visual)
+		echoAttachSubmitNewline(state.display, visual)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
@@ -2539,6 +2535,7 @@ func handleOpenAIAttachByte(c *CmdConfig, ctx context.Context, client openAIAgen
 						thinking.stop()
 					}
 					fmt.Fprintf(c.Out, "send failed: %v\n", err)
+					restoreInput(state, line)
 				} else if warmup.isActive() {
 					warmup.markInputQueued()
 					printAttachSendAck(c.Out, warmup, thinking)
@@ -2665,6 +2662,20 @@ const (
 	msgAgentWarmup       = "Agent is warming up… please wait"
 	msgAgentWarmupQueued = "Input queued until agent is ready"
 )
+
+// warmupQueuedLabel replaces the generic queued notice once messages have
+// actually been accepted, so the banner reflects how many are waiting rather
+// than implying a single one.
+func warmupQueuedLabel(n int) string {
+	switch {
+	case n < 1:
+		return msgAgentWarmupQueued
+	case n == 1:
+		return "1 message queued until agent is ready"
+	default:
+		return fmt.Sprintf("%d messages queued until agent is ready", n)
+	}
+}
 
 var (
 	warmupDuration       = 60 * time.Second
@@ -2885,7 +2896,7 @@ type warmupState struct {
 	active        bool
 	dismissed     bool
 	queued        bool
-	inputQueued   bool
+	queuedCount   int
 	phase         string
 	timeout       time.Duration // when > 0, overrides warmupDuration (tests)
 	getSession    func() (*do.HostedAgentSession, error)
@@ -2923,22 +2934,37 @@ func (w *warmupState) isActive() bool {
 	return w.active && !w.dismissed
 }
 
-func (w *warmupState) inputAlreadyQueued() bool {
+// queuedMessages is how many messages the backend has accepted while the
+// session warms up.
+func (w *warmupState) queuedMessages() int {
 	if w == nil {
-		return false
+		return 0
 	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return w.inputQueued
+	return w.queuedCount
 }
 
+// markInputQueued records another accepted message and updates the banner to
+// show the running total.
+//
+// There is no cap here: a send only succeeds once the guest run accepts
+// messages, and from that point OHR queues turns in order (it answers a full
+// queue with a plain "agent is busy" error), so counting is honest and the
+// backend stays the single authority on capacity.
 func (w *warmupState) markInputQueued() {
 	if w == nil {
 		return
 	}
 	w.mu.Lock()
-	w.inputQueued = true
+	w.queuedCount++
+	w.queued = true
+	n := w.queuedCount
+	display, ok := w.out.(*promptDisplay)
 	w.mu.Unlock()
+	if ok {
+		display.warmupSetQueued(warmupQueuedLabel(n))
+	}
 }
 
 func (w *warmupState) isBannerVisible() bool {
@@ -3215,7 +3241,7 @@ func (w *warmupState) clear() {
 		return
 	}
 	w.active = false
-	w.inputQueued = false
+	w.queuedCount = 0
 	w.queued = false
 	timeoutCancel := w.timeoutCancel
 	animCancel := w.animCancel
@@ -4627,6 +4653,20 @@ func appendBufferedInput(state *attachState, chunk []byte) bool {
 	return true
 }
 
+// restoreInput puts a submitted line back on the input line after a failed
+// send, so the user can retry or edit it instead of losing what they typed.
+// Anything typed in the meantime is kept ahead of the restored text.
+func restoreInput(state *attachState, line string) {
+	if line == "" {
+		return
+	}
+	state.mu.Lock()
+	state.lineBuf = append([]byte(line), state.lineBuf...)
+	state.cursor = len(line)
+	state.mu.Unlock()
+	state.display.redraw()
+}
+
 func readSubmittedInput(state *attachState) string {
 	state.mu.Lock()
 	line := submittedInput(state.lineBuf)
@@ -4942,13 +4982,22 @@ func promptRowCount(prompt, line string, cols int) int {
 // clearPromptRowsLocked erases every terminal row occupied by the last painted
 // prompt, ending with the cursor on a blank row ready for a replacement paint.
 func (p *promptDisplay) clearPromptRowsLocked() {
+	var b strings.Builder
+	p.appendClearPromptRows(&b)
+	io.WriteString(p.out, b.String())
+}
+
+// appendClearPromptRows is clearPromptRowsLocked into a builder, so callers
+// that repaint a multi-row block can emit the whole escape burst as one write.
+// It leaves the cursor at column 0 of the topmost row the prompt occupied.
+func (p *promptDisplay) appendClearPromptRows(b *strings.Builder) {
 	rows := p.promptRows
 	if rows < 1 {
 		rows = 1
 	}
-	fmt.Fprint(p.out, "\r\x1b[K")
+	b.WriteString("\r\x1b[K")
 	for i := 1; i < rows; i++ {
-		fmt.Fprint(p.out, "\x1b[A\r\x1b[K")
+		b.WriteString("\x1b[A\r\x1b[K")
 	}
 	p.promptRows = 0
 }
@@ -4965,6 +5014,16 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 
 	startsWithNL := b[0] == '\n'
 	endsWithNL := b[len(b)-1] == '\n'
+
+	if p.warmupStatusLines > 0 {
+		if endsWithNL {
+			p.writeAboveWarmupLocked(string(b))
+			return len(b), nil
+		}
+		// A tokenless write means the agent is streaming: the wait is over, so
+		// retire the banner instead of interleaving frames with the tokens.
+		p.warmupStopLocked()
+	}
 
 	if p.midLine {
 		// Inject a separator only for discrete events that don't already
@@ -5040,6 +5099,12 @@ func (p *promptDisplay) finishInputLine(visual string) {
 	defer p.mu.Unlock()
 	if !p.raw {
 		fmt.Fprint(p.out, "\r\n")
+		return
+	}
+	if p.warmupStatusLines > 0 {
+		// Keep the banner pinned below the committed line so the user can still
+		// see what they queued while the agent boots.
+		p.writeAboveWarmupLocked(p.prompt() + visual + "\n")
 		return
 	}
 	p.clearPromptRowsLocked()
@@ -5181,21 +5246,17 @@ func (p *promptDisplay) warmupSetQueued(text string) {
 }
 
 // warmupEnsureRowsLocked grows reserved status rows to fit spinner + phase + queued.
+// Each new row is claimed by pushing the prompt down one line; the block itself
+// is painted afterwards by warmupPaintLocked, which clears every row it touches.
 func (p *promptDisplay) warmupEnsureRowsLocked() {
-	want := 1
-	if p.warmupPhaseLabel != "" {
-		want++
-	}
-	if p.warmupQueuedLabel != "" {
-		want++
-	}
-	for p.warmupStatusLines < want {
+	for p.warmupStatusLines < len(p.warmupBlockLinesLocked()) {
 		if p.midLine {
 			fmt.Fprint(p.out, "\r\n")
 			p.midLine = false
 		}
+		p.clearPromptRowsLocked()
 		fmt.Fprint(p.out, "\r\n")
-		p.paintPromptLocked(false)
+		p.promptRows = 1
 		p.warmupStatusLines++
 	}
 }
@@ -5211,9 +5272,11 @@ func (p *promptDisplay) warmupSetFrame(frame string) {
 	p.warmupPaintLocked()
 }
 
-// warmupPaintLocked redraws the warm-up spinner, optional grey phase / queued
-// lines, and prompt+input atomically from the prompt row. Caller must hold p.mu.
-func (p *promptDisplay) warmupPaintLocked() {
+// warmupBlockLinesLocked renders the banner's status rows top to bottom: the
+// spinner, then the optional grey backend-phase and queued-input notices. Its
+// length is the row count the block occupies above the prompt, so row
+// accounting and painting can never disagree.
+func (p *promptDisplay) warmupBlockLinesLocked() []string {
 	frame := p.warmupSpinnerFrame
 	if frame == "" {
 		frame = spinnerFrames[0]
@@ -5222,43 +5285,93 @@ func (p *promptDisplay) warmupPaintLocked() {
 	if label == "" {
 		label = msgAgentWarmup
 	}
+	lines := []string{fmt.Sprintf("%s %s", frame, label)}
+	if p.warmupPhaseLabel != "" {
+		lines = append(lines, colorize(p.warmupPhaseLabel, colMuted))
+	}
+	if p.warmupQueuedLabel != "" {
+		lines = append(lines, colorize(p.warmupQueuedLabel, colMuted))
+	}
+	return lines
+}
+
+// appendWarmupBlock paints the status rows and the prompt+input row downward
+// from the cursor's current row, clearing each row as it goes, and leaves the
+// cursor on the prompt row at the input caret.
+//
+// It deliberately does not save/restore the cursor: DECRC would override the
+// caret column computed here, which is the whole point of the repaint — during
+// warm-up nothing echoes keystrokes, so this is the only thing that advances
+// the caret as the user types.
+func (p *promptDisplay) appendWarmupBlock(b *strings.Builder) {
+	lines := p.warmupBlockLinesLocked()
+	for _, l := range lines {
+		b.WriteString("\r\x1b[K")
+		b.WriteString(l)
+		b.WriteString("\r\n")
+	}
+	b.WriteString("\r\x1b[K")
+
+	prompt := p.prompt()
 	line := ""
 	if p.lineBuf != nil && !p.freezeLine {
 		line = p.lineBuf()
 	}
-	cur := len(line)
-	if p.cursorPos != nil && !p.freezeLine {
-		cur = p.cursorPos()
-		if cur < 0 {
-			cur = 0
-		}
-		if cur > len(line) {
-			cur = len(line)
-		}
-	}
-
-	n := p.warmupStatusLines
-	var b strings.Builder
-	fmt.Fprintf(&b, "\x1b7\x1b[%dA\r\x1b[K", n)
-	fmt.Fprintf(&b, "%s %s", frame, label)
-	if p.warmupPhaseLabel != "" {
-		b.WriteString("\r\n\r\x1b[K")
-		b.WriteString(colorize(p.warmupPhaseLabel, colMuted))
-	}
-	if p.warmupQueuedLabel != "" {
-		b.WriteString("\r\n\r\x1b[K")
-		b.WriteString(colorize(p.warmupQueuedLabel, colMuted))
-	}
-	b.WriteString("\r\n\r\x1b[K")
-	prompt := p.prompt()
 	b.WriteString(prompt)
 	b.WriteString(line)
-	if back := len(line) - cur; back > 0 {
-		fmt.Fprintf(&b, "\x1b[%dD", back)
+	if back := len(line) - p.caretLocked(line); back > 0 {
+		fmt.Fprintf(b, "\x1b[%dD", back)
 	}
-	b.WriteString("\x1b8")
-	io.WriteString(p.out, b.String())
+
+	p.warmupStatusLines = len(lines)
 	p.promptRows = promptRowCount(prompt, line, p.columnsLocked())
+}
+
+// caretLocked clamps the input caret to line, defaulting to end-of-line.
+func (p *promptDisplay) caretLocked(line string) int {
+	if p.cursorPos == nil || p.freezeLine {
+		return len(line)
+	}
+	cur := p.cursorPos()
+	if cur < 0 {
+		return 0
+	}
+	if cur > len(line) {
+		return len(line)
+	}
+	return cur
+}
+
+// warmupPaintLocked redraws the warm-up spinner, optional grey phase / queued
+// lines, and prompt+input atomically. Caller must hold p.mu.
+func (p *promptDisplay) warmupPaintLocked() {
+	if p.warmupStatusLines < 1 {
+		return
+	}
+	var b strings.Builder
+	p.appendClearPromptRows(&b)
+	fmt.Fprintf(&b, "\x1b[%dA", p.warmupStatusLines)
+	p.appendWarmupBlock(&b)
+	io.WriteString(p.out, b.String())
+}
+
+// writeAboveWarmupLocked commits newline-terminated output to scrollback above
+// the pinned warm-up banner, then repaints the banner and prompt below it.
+//
+// Writing through the normal path instead would land the text on the prompt
+// row and push the prompt down without the block knowing, so every later frame
+// would repaint the spinner one row lower and leave a trail of stale spinner
+// rows. Caller must hold p.mu.
+func (p *promptDisplay) writeAboveWarmupLocked(text string) {
+	var b strings.Builder
+	p.appendClearPromptRows(&b)
+	for i := 0; i < p.warmupStatusLines; i++ {
+		b.WriteString("\x1b[A\r\x1b[K")
+	}
+	b.WriteString(strings.ReplaceAll(text, "\n", "\r\n"))
+	p.appendWarmupBlock(&b)
+	io.WriteString(p.out, b.String())
+	p.midLine = false
 }
 
 // warmupStopLocked erases the warm-up banner rows entirely. Caller must hold p.mu.
@@ -5270,20 +5383,20 @@ func (p *promptDisplay) warmupStopLocked() {
 		fmt.Fprint(p.out, "\r\n")
 		p.midLine = false
 	}
-	n := p.warmupStatusLines
+	// Blanking the status rows in place would leave one empty line per row
+	// wedged above the prompt, so delete the rows themselves (DL) and let the
+	// prompt row shift up into their place before repainting it there.
 	var b strings.Builder
-	b.WriteString("\x1b7")
-	for i := 0; i < n; i++ {
-		b.WriteString("\x1b[A\r\x1b[K")
-	}
-	b.WriteString("\x1b8")
+	p.appendClearPromptRows(&b)
+	fmt.Fprintf(&b, "\x1b[%dA\x1b[%dM", p.warmupStatusLines, p.warmupStatusLines)
 	io.WriteString(p.out, b.String())
+
 	p.warmupStatusLines = 0
 	p.warmupSpinnerFrame = ""
 	p.warmupSpinnerLabel = ""
 	p.warmupPhaseLabel = ""
 	p.warmupQueuedLabel = ""
-	p.paintPromptLocked(true)
+	p.paintPromptLocked(false)
 }
 
 // warmupStop erases the warm-up banner rows entirely.
@@ -5499,12 +5612,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		visual := displayInputBuffer(state.lineBuf)
 		state.mu.Unlock()
 		line := readSubmittedInput(state)
-		if line != "" && warmup.inputAlreadyQueued() {
-			fmt.Fprintln(c.Out, colorize("Message already queued — waiting for agent to start", colMuted))
-			state.display.redraw()
-			return false, nil
-		}
-		echoAttachSubmitNewline(state.display, warmup, visual)
+		echoAttachSubmitNewline(state.display, visual)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
 				state.setLargePasteConfirmation(line, n)
@@ -5667,6 +5775,7 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 			return true
 		}
 		fmt.Fprintf(c.Out, "send failed: %v\n", err)
+		restoreInput(state, line)
 		return false
 	}
 	if warmup != nil && warmup.isActive() {

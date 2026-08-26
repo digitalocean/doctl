@@ -4740,7 +4740,45 @@ func TestWarmupState_noteQueuedUpdatesNotice(t *testing.T) {
 	assert.Contains(t, buf.String(), "> i")
 }
 
-func TestWarmupState_blocksDuplicateSubmit(t *testing.T) {
+// Every message typed during warm-up is sent and counted: the guest queues
+// turns in order once it accepts input, so dropping later lines only lost the
+// user's typing.
+func TestWarmupState_queuesEverySubmittedMessage(t *testing.T) {
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		for _, text := range []string{"hello", "hello again"} {
+			tm.hostedAgents.EXPECT().
+				SendInput("sess", &godo.HostedAgentSendInputRequest{Text: text}).
+				Return(&godo.HostedAgentSendInputResponse{RunID: "run_" + text}, nil)
+		}
+
+		state := newAttachState(io.Discard, &pendingHITL{})
+		state.display.setRaw(true)
+		w := newWarmupState(state.display, now.Add(-30*time.Second))
+		w.start()
+
+		typeLine := func(text string) {
+			for _, b := range append([]byte(text), 0x0d) {
+				stop, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, w, nil)
+				assert.NoError(t, err)
+				assert.False(t, stop)
+			}
+		}
+
+		typeLine("hello")
+		assert.Equal(t, 1, w.queuedMessages())
+
+		typeLine("hello again")
+		assert.Equal(t, 2, w.queuedMessages())
+	})
+}
+
+// A failed send must hand the text back rather than swallowing it.
+func TestWarmupState_failedSendRestoresInput(t *testing.T) {
 	oldClock := warmupClock
 	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
 	warmupClock = func() time.Time { return now }
@@ -4748,27 +4786,31 @@ func TestWarmupState_blocksDuplicateSubmit(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "2+2"}).
-			Return(&godo.HostedAgentSendInputResponse{RunID: "run_1"}, nil)
+			SendInput("sess", &godo.HostedAgentSendInputRequest{Text: "hello"}).
+			Return(nil, errors.New("boom"))
 
 		state := newAttachState(io.Discard, &pendingHITL{})
 		state.display.setRaw(true)
 		w := newWarmupState(state.display, now.Add(-30*time.Second))
 		w.start()
 
-		for _, b := range []byte("2+2") {
+		for _, b := range append([]byte("hello"), 0x0d) {
 			_, err := handleAttachByte(config, tm.hostedAgents, "sess", b, state, w, nil)
 			assert.NoError(t, err)
 		}
-		stop, err := handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w, nil)
-		assert.NoError(t, err)
-		assert.False(t, stop)
-		assert.True(t, w.inputAlreadyQueued())
 
-		stop, err = handleAttachByte(config, tm.hostedAgents, "sess", 0x0d, state, w, nil)
-		assert.NoError(t, err)
-		assert.False(t, stop)
+		assert.Equal(t, 0, w.queuedMessages())
+		state.mu.Lock()
+		defer state.mu.Unlock()
+		assert.Equal(t, "hello", string(state.lineBuf), "failed send should restore the typed text")
+		assert.Equal(t, len("hello"), state.cursor)
 	})
+}
+
+func TestWarmupQueuedLabel(t *testing.T) {
+	assert.Equal(t, msgAgentWarmupQueued, warmupQueuedLabel(0))
+	assert.Equal(t, "1 message queued until agent is ready", warmupQueuedLabel(1))
+	assert.Equal(t, "3 messages queued until agent is ready", warmupQueuedLabel(3))
 }
 
 func TestHandleOpenAIAttachByte_warmupQueuedNotice(t *testing.T) {
@@ -4804,9 +4846,10 @@ func TestWarmupState_markInputQueuedDismissesBanner(t *testing.T) {
 	assert.True(t, w.isBannerVisible())
 
 	w.markInputQueued()
-	assert.True(t, w.inputAlreadyQueued())
+	assert.Equal(t, 1, w.queuedMessages())
 	assert.True(t, w.isBannerVisible())
 	assert.True(t, w.isActive())
+	assert.Contains(t, buf.String(), warmupQueuedLabel(1))
 }
 
 func TestWarmupState_clearsOnTimeout(t *testing.T) {
