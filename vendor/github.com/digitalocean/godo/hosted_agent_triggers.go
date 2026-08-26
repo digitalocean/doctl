@@ -215,13 +215,14 @@ type HostedAgentTriggersListResponse struct {
 }
 
 // HostedAgentTriggerRotateSecretOptions specifies optional rotation behaviour.
-// The zero value (or a nil pointer) selects the server default, which keeps the
-// outgoing secret verifying for a short grace window.
+// A nil options pointer, or GracePeriodSeconds left nil, selects the server
+// default (5 minutes). Pass a pointer to 0 to revoke the outgoing secret
+// immediately; any positive value is a custom handoff window in seconds
+// (server-enforced max, default 1 hour).
 type HostedAgentTriggerRotateSecretOptions struct {
-	// RevokePrevious retires the outgoing secret on this call instead of at the
-	// end of the grace window. Intended for a compromised secret: deliveries
-	// still signed with the old value start failing immediately.
-	RevokePrevious bool `url:"revoke_previous,omitempty"`
+	// GracePeriodSeconds is how long the outgoing secret keeps verifying.
+	// Nil omits the query parameter (server default). Non-nil 0 revokes now.
+	GracePeriodSeconds *int `url:"grace_period_seconds,omitempty"`
 }
 
 // HostedAgentTriggerRotateSecretResponse is returned by RotateSecret.
@@ -410,9 +411,10 @@ func (s *HostedAgentTriggersServiceOp) Delete(ctx context.Context, triggerID str
 }
 
 // RotateSecret issues a new webhook secret (webhook triggers only).
-// By default the outgoing secret keeps verifying deliveries for a short
-// server-configured window, and PreviousSecretExpiresAt reports when it dies;
-// set opt.RevokePrevious to retire it on this call instead.
+// By default (nil options, or GracePeriodSeconds left nil) the outgoing secret
+// keeps verifying for the server default window (5 minutes) and
+// PreviousSecretExpiresAt reports when it dies. Pass GracePeriodSeconds pointing
+// at 0 to revoke it on this call, or at a positive value for a custom window.
 func (s *HostedAgentTriggersServiceOp) RotateSecret(ctx context.Context, triggerID string, opt *HostedAgentTriggerRotateSecretOptions) (*HostedAgentTriggerRotateSecretResponse, *Response, error) {
 	if triggerID == "" {
 		return nil, nil, errors.New("hosted agent triggers: trigger id is required")

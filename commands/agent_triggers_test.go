@@ -200,7 +200,7 @@ const rotateExpiry = "2026-08-12T12:05:00Z"
 
 func TestAgentTriggersRotateSecretAndExecutions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", nil).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 		var buf bytes.Buffer
 		config.Out = &buf
@@ -372,7 +372,7 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 //   - the banner is on neither stdout nor stderr
 func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", nil).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer
@@ -397,13 +397,14 @@ func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 	})
 }
 
-// --revoke-previous is the breach path: the response reports the old secret as
+// --grace-period 0 is the breach path: the response reports the old secret as
 // already dead rather than giving an expiry to wait out.
-func TestAgentTriggersRotateSecret_RevokePrevious(t *testing.T) {
+func TestAgentTriggersRotateSecret_ZeroGrace(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", true).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousRevoked: true}, nil)
+		zero := 0
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", gomock.Eq(&zero)).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousRevoked: true}, nil)
 		config.Args = []string{"tr_1"}
-		config.Doit.Set(config.NS, doctl.ArgAgentRevokePrevious, true)
+		config.Doit.Set(config.NS, doctl.ArgAgentGracePeriod, 0)
 
 		var stdout bytes.Buffer
 		config.Out = &stdout
@@ -428,7 +429,7 @@ func TestAgentTriggersRotateSecret_RevokePrevious(t *testing.T) {
 // acts on.
 func TestAgentTriggersRotateSecret_NeitherOutcomeReported(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", nil).
 			Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec"}, nil)
 		config.Args = []string{"tr_1"}
 
@@ -447,7 +448,7 @@ func TestAgentTriggersRotateSecret_NeitherOutcomeReported(t *testing.T) {
 // secret banner still appears on stdout (existing behaviour preserved).
 func TestAgentTriggersRotateSecret_TextMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", nil).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer

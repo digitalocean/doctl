@@ -66,7 +66,7 @@ type HostedAgentTriggersService interface {
 	Get(triggerID string) (*HostedAgentTrigger, error)
 	Update(triggerID string, update *godo.HostedAgentTriggerUpdateRequest) (*HostedAgentTrigger, error)
 	Delete(triggerID string) error
-	RotateSecret(triggerID string, revokePrevious bool) (*HostedAgentTriggerRotateSecretResult, error)
+	RotateSecret(triggerID string, gracePeriodSeconds *int) (*HostedAgentTriggerRotateSecretResult, error)
 	ListExecutions(triggerID string, opt *godo.HostedAgentTriggerExecutionListOptions) ([]HostedAgentTriggerExecution, string, error)
 	GetExecution(triggerID, executionID string) (*HostedAgentTriggerExecution, error)
 	GetBySession(sessionID string) (*HostedAgentTrigger, error)
@@ -132,13 +132,13 @@ func (s *hostedAgentTriggersService) Delete(triggerID string) error {
 }
 
 // RotateSecret issues a new webhook secret and reports what became of the old
-// one.
-func (s *hostedAgentTriggersService) RotateSecret(triggerID string, revokePrevious bool) (*HostedAgentTriggerRotateSecretResult, error) {
-	// Left nil for the default rotation so no revoke_previous parameter goes on
-	// the wire at all, rather than an explicit =false.
+// one. gracePeriodSeconds nil selects the server default; 0 revokes now.
+func (s *hostedAgentTriggersService) RotateSecret(triggerID string, gracePeriodSeconds *int) (*HostedAgentTriggerRotateSecretResult, error) {
+	// Left nil for the default rotation so no grace_period_seconds parameter
+	// goes on the wire at all.
 	var opt *godo.HostedAgentTriggerRotateSecretOptions
-	if revokePrevious {
-		opt = &godo.HostedAgentTriggerRotateSecretOptions{RevokePrevious: true}
+	if gracePeriodSeconds != nil {
+		opt = &godo.HostedAgentTriggerRotateSecretOptions{GracePeriodSeconds: gracePeriodSeconds}
 	}
 	resp, _, err := s.svc.RotateSecret(context.TODO(), triggerID, opt)
 	if err != nil {

@@ -113,7 +113,7 @@ func AgentTriggers() *Command {
 		"Rotate a webhook trigger's secret",
 		agentsTriggersRotateSecretHelpMD,
 		Writer, agentPrettyErrors())
-	AddBoolFlag(cmdRotate, doctl.ArgAgentRevokePrevious, "", false, "Retire the old secret immediately instead of granting the grace window. Deliveries still signed with it start failing at once; use this when the old secret is compromised.")
+	AddIntFlag(cmdRotate, doctl.ArgAgentGracePeriod, "", 0, "Seconds the old secret keeps verifying (omit for 5m default; 0 revokes immediately; max 1h). Use 0 when the old secret is compromised.")
 
 	cmdListExec := CmdBuilder(cmd, RunAgentTriggersListExecutions, "list-executions <trigger-id>",
 		"List a trigger's execution history",
@@ -308,11 +308,20 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	revokePrevious, err := c.Doit.GetBool(c.NS, doctl.ArgAgentRevokePrevious)
-	if err != nil {
-		return err
+	// Unset flag → omit the query parameter (server 5m default). Explicit 0
+	// and positive values are sent as-is.
+	var gracePtr *int
+	if c.Doit.IsSet(doctl.ArgAgentGracePeriod) {
+		grace, err := c.Doit.GetInt(c.NS, doctl.ArgAgentGracePeriod)
+		if err != nil {
+			return err
+		}
+		if grace < 0 {
+			return fmt.Errorf("--%s must be a non-negative integer", doctl.ArgAgentGracePeriod)
+		}
+		gracePtr = &grace
 	}
-	res, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], revokePrevious)
+	res, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], gracePtr)
 	if err != nil {
 		return err
 	}
