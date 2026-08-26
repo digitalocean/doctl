@@ -109,22 +109,21 @@ func TestAgentsRemoveAliases(t *testing.T) {
 }
 
 // TestAgentsUnknownSubcommandFails is MARSOHS-1075: unknown nested subcommands must
-// exit non-zero, not print parent help and exit 0.
+// exit non-zero, not print parent help and exit 0. ValidateArgs checks the NoArgs
+// guard directly; avoid Execute() here because it runs cobra.OnInitialize
+// (initConfig) and pollutes viper for other tests in the package.
 func TestAgentsUnknownSubcommandFails(t *testing.T) {
-	root := DoitCmd
-	root.SetOut(io.Discard)
-	root.SetErr(io.Discard)
-	t.Cleanup(func() {
-		root.SetArgs(nil)
-	})
+	cmd := Agents()
+	require.NoError(t, cmd.ValidateArgs(nil))
 
-	root.SetArgs([]string{"agents", "frobnicate"})
-	err := root.Execute()
+	err := cmd.ValidateArgs([]string{"frobnicate"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `unknown command "frobnicate"`)
 
-	root.SetArgs([]string{"agents", "config", "frobnicate"})
-	err = root.Execute()
+	config := AgentConfigs()
+	require.NoError(t, config.ValidateArgs(nil))
+
+	err = config.ValidateArgs([]string{"frobnicate"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `unknown command "frobnicate"`)
 }
