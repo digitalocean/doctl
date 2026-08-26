@@ -450,11 +450,14 @@ func Agents() *Command {
 	AddStringFlag(cmdStart, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmdStart, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --config-id.")
+	AddBoolFlag(cmdStart, doctl.ArgAgentDetach, "d", false, "Stop at the ready summary instead of opening the chat. Implied by -o json and when stdin/stdout is not a terminal.")
+	AddBoolFlag(cmdStart, doctl.ArgAgentNoAttach, "", false, "Older spelling of --detach")
+	cmdStart.Flags().MarkHidden(doctl.ArgAgentNoAttach)
 	AddIntFlag(cmdStart, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json.")
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	cmdStart.Example = agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --spec agent-spec.yaml --name my-session; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
+	cmdStart.Example = agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --spec agent-spec.yaml --name my-session; ` + agentCLI + ` start --spec agent-spec.yaml --detach; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
 
 	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate",
 		"Validate an agent manifest",
@@ -473,7 +476,9 @@ func Agents() *Command {
 	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdRun, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmdRun, doctl.ArgAgentName, "", "", "Session name (required with --config-id; otherwise auto-generated when omitted). On flat manifests sets top-level name; on legacy envelopes sets metadata.name. Must be unique among active sessions.")
-	AddBoolFlag(cmdRun, doctl.ArgAgentNoAttach, "", false, "Wait for readiness but do not attach")
+	AddBoolFlag(cmdRun, doctl.ArgAgentDetach, "d", false, "Stop at the ready summary instead of opening the chat. Implied by -o json and when stdin/stdout is not a terminal.")
+	AddBoolFlag(cmdRun, doctl.ArgAgentNoAttach, "", false, "Older spelling of --detach")
+	cmdRun.Flags().MarkHidden(doctl.ArgAgentNoAttach)
 	AddIntFlag(cmdRun, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default)")
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
@@ -825,8 +830,29 @@ func finishAgentsStartSession(c *CmdConfig, sess *do.HostedAgentSession, prog *c
 		}
 	}
 
-	printRunReadySummary(c.Out, sum)
-	return nil
+	attach, err := attachAfterStart(c, isInteractiveTerminal())
+	if err != nil {
+		return err
+	}
+	if !attach {
+		printRunReadySummary(c.Out, sum)
+		return nil
+	}
+
+	printCodexProxyTip(c, sess, sum.Harness)
+	return runAgentsAttachSession(c, sessionID)
+}
+
+// printCodexProxyTip points Codex users at the native TUI, which doctl's chat
+// does not replace.
+func printCodexProxyTip(c *CmdConfig, sess *do.HostedAgentSession, harness string) {
+	if !isOpenAISandboxSession(sess) && !strings.EqualFold(strings.TrimSpace(harness), "codex") {
+		return
+	}
+	ref := displaySessionRef(sess)
+	fmt.Fprintf(c.Out, "%s %s\n",
+		colorize("Tip:", colMuted),
+		colorize("For the native Codex TUI instead of doctl chat: doctl harness-runtime start-proxy --type codex --session "+ref+" --port 1144", colMuted))
 }
 
 // RunAgentsStartProxy runs a local WebSocket facade that impersonates a
@@ -908,6 +934,34 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 		return nil, err
 	}
 	return expandManifestEnv(raw)
+}
+
+// attachAfterStart reports whether a freshly ready session should open the
+// chat TUI. Attaching is the default so starting an agent lands in the
+// conversation with it. It is skipped on an explicit --detach / --no-attach,
+// under -o json, and when interactive is false — a TUI nobody can type into
+// would hang a pipeline instead of returning.
+func attachAfterStart(c *CmdConfig, interactive bool) (bool, error) {
+	detach, err := c.Doit.GetBool(c.NS, doctl.ArgAgentDetach)
+	if err != nil {
+		return false, err
+	}
+	if !detach {
+		// Kept working for callers (and muscle memory) predating --detach.
+		if detach, err = c.Doit.GetBool(c.NS, doctl.ArgAgentNoAttach); err != nil {
+			return false, err
+		}
+	}
+	if detach || Output == "json" {
+		return false, nil
+	}
+	return interactive, nil
+}
+
+// isInteractiveTerminal reports whether both ends of the session TUI are wired
+// to a real terminal.
+func isInteractiveTerminal() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 // readManifestBytes loads the spec file without env expansion. Used by start

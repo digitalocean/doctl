@@ -44,7 +44,7 @@ Create a session and attach in one step:
 ` + agentCLI + ` attach my-session
 ` + "```\n\n" + `Session commands accept a session ID or an exact unique name.`
 
-const agentsStartHelpMD = `Create a hosted session and wait until it is ready (does **not** open the chat TUI). Prefer ` + "`" + agentCLI + " run`" + ` when you want to attach immediately.
+const agentsStartHelpMD = `Create a hosted session, wait until it is ready, and open the chat. Pass ` + "`--detach`" + ` (` + "`-d`" + `) to stop at the ready summary instead; ` + "`-o json`" + ` and a non-terminal stdin/stdout imply it, so scripts and pipelines never land in a TUI. Reattach a detached session any time with ` + "`" + agentCLI + " attach`" + `.
 
 Provide exactly one of:
 
@@ -69,9 +69,9 @@ Example:
 ` + "```bash\n" + agentCLI + ` validate --spec agent.yaml
 ` + "```"
 
-const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI.
+const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI. Equivalent to ` + "`" + agentCLI + " start`" + `, which also attaches by default.
 
-Provide exactly one of ` + "`--harness`" + `, ` + "`--spec`" + `, or ` + "`--config-id`" + `. With ` + "`--harness`" + ` / ` + "`--spec`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--no-attach`" + ` to stop at the ready summary.
+Provide exactly one of ` + "`--harness`" + `, ` + "`--spec`" + `, or ` + "`--config-id`" + `. With ` + "`--harness`" + ` / ` + "`--spec`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--detach`" + ` (` + "`-d`" + `) to stop at the ready summary.
 
 For the native Codex desktop/CLI UI instead of doctl chat, see ` + "`" + agentCLI + " start-proxy --help`" + `.`
 

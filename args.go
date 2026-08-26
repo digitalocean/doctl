@@ -1059,8 +1059,12 @@ const (
 	// ArgAgentRepo is a Git repository URL cloned into the session workspace.
 	ArgAgentRepo = "gh-repo"
 
-	// ArgAgentNoAttach stops `agents run` after the session is ready instead of attaching.
+	// ArgAgentNoAttach is the older spelling of ArgAgentDetach, still accepted.
 	ArgAgentNoAttach = "no-attach"
+
+	// ArgAgentDetach stops `agents start` / `agents run` at the ready summary
+	// instead of opening the chat TUI.
+	ArgAgentDetach = "detach"
 
 	// ArgAgentWaitTimeout is how long `agents run` waits for readiness, in seconds.
 	ArgAgentWaitTimeout = "wait-timeout"
