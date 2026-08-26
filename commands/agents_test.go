@@ -139,6 +139,124 @@ func TestAgents_helpers(t *testing.T) {
 	})
 }
 
+func TestNamedManifestPath(t *testing.T) {
+	t.Run("flag wins when it is the only source", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentSpec, "from-flag.yaml")
+			path, err := namedManifestPath(config)
+			assert.NoError(t, err)
+			assert.Equal(t, "from-flag.yaml", path)
+		})
+	})
+
+	t.Run("positional path is accepted", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = []string{"from-arg.yaml"}
+			path, err := namedManifestPath(config)
+			assert.NoError(t, err)
+			assert.Equal(t, "from-arg.yaml", path)
+		})
+	})
+
+	t.Run("flag and positional together are rejected", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentSpec, "from-flag.yaml")
+			config.Args = []string{"from-arg.yaml"}
+			_, err := namedManifestPath(config)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "given twice")
+		})
+	})
+
+	t.Run("more than one positional is rejected", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = []string{"a.yaml", "b.yaml"}
+			_, err := namedManifestPath(config)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "at most one manifest path")
+		})
+	})
+
+	t.Run("nothing named returns empty", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			path, err := namedManifestPath(config)
+			assert.NoError(t, err)
+			assert.Empty(t, path)
+		})
+	})
+}
+
+func TestDiscoverManifestFile(t *testing.T) {
+	t.Run("finds agents.yaml in the working directory", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "agents.yaml"), []byte(sampleFlatManifest), 0o644))
+		t.Chdir(dir)
+		assert.Equal(t, "agents.yaml", discoverManifestFile())
+	})
+
+	t.Run("falls back to the .yml spelling", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "agents.yml"), []byte(sampleFlatManifest), 0o644))
+		t.Chdir(dir)
+		assert.Equal(t, "agents.yml", discoverManifestFile())
+	})
+
+	t.Run("ignores a directory of that name", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.Mkdir(filepath.Join(dir, "agents.yaml"), 0o755))
+		t.Chdir(dir)
+		assert.Empty(t, discoverManifestFile())
+	})
+
+	t.Run("empty when there is nothing to find", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		assert.Empty(t, discoverManifestFile())
+	})
+}
+
+func TestRunAgentsStart_DiscoversAgentsYAML(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "agents.yaml"), []byte(sampleFlatManifest), 0o644))
+	t.Chdir(dir)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "agent: opencode")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess-discovered",
+						Name:      "test-agent",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess-discovered").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess-discovered",
+					Name:      "test-agent",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil).
+			AnyTimes()
+
+		assert.NoError(t, RunAgentsStart(config))
+	})
+}
+
+func TestRunAgentsStart_RejectsManifestArgWithHarness(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"agents.yaml"}
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		err := RunAgentsStart(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be combined with")
+	})
+}
+
 func TestReadManifest(t *testing.T) {
 	t.Run("from file", func(t *testing.T) {
 		dir := t.TempDir()
@@ -409,10 +527,11 @@ func TestRunAgentsStart_SpecAndConfigIDMutuallyExclusive(t *testing.T) {
 }
 
 func TestRunAgentsStart_RequiresSource(t *testing.T) {
+	t.Chdir(t.TempDir()) // no agents.yaml to discover
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunAgentsStart(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "one of --harness, --spec, or --config-id is required")
+		assert.Contains(t, err.Error(), "no manifest given")
 	})
 }
 

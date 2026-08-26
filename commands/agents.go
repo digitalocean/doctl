@@ -57,6 +57,7 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"golang.org/x/term"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -439,13 +440,14 @@ func Agents() *Command {
 		},
 	}
 
-	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start",
+	cmdStart := CmdBuilder(cmd, RunAgentsStart, "start [<manifest>]",
 		"Start a new session",
 		agentsStartHelpMD,
 		Writer, agentsNS(aliasOpt("deploy"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdStart, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Builds the manifest for you. Mutually exclusive with --spec and --config-id.")
-	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --config-id.`)
+	AddStringFlag(cmdStart, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --config-id.`)
+	acceptFileAliasFor(cmdStart)
 	AddStringFlag(cmdStart, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to start the session from. Requires --name. Mutually exclusive with --harness and --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdStart, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
@@ -454,21 +456,23 @@ func Agents() *Command {
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 	cmdStart.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	cmdStart.Example = agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --spec agent-spec.yaml --name my-session; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
+	cmdStart.Example = agentCLI + ` start; ` + agentCLI + ` start agent-spec.yaml --name my-session; ` + agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` start --config-id cfg_abc123 --name my-session`
 
-	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate",
+	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate [<manifest>]",
 		"Validate an agent manifest",
 		agentsValidateHelpMD,
 		Writer, agentsNS()...)
-	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope). Set to "-" to read from stdin.`, requiredOpt())
-	cmdValidate.Example = agentCLI + ` validate --spec agent.yaml`
+	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope), equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Set to "-" to read from stdin.`)
+	acceptFileAliasFor(cmdValidate)
+	cmdValidate.Example = agentCLI + ` validate; ` + agentCLI + ` validate agent.yaml`
 
-	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run",
+	cmdRun := CmdBuilder(cmd, RunAgentsRun, "run [<manifest>]",
 		"Start one session and attach",
 		agentsRunHelpMD,
 		Writer, agentsNS(aliasOpt("up"))...)
 	AddStringFlag(cmdRun, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Mutually exclusive with --spec and --config-id.")
-	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "", "", `Optional manifest file instead of --harness or --config-id. Same format as start --spec (flat: top-level name + agent).`)
+	AddStringFlag(cmdRun, doctl.ArgAgentSpec, "f", "", `Optional manifest file instead of --harness or --config-id, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Same format as start --spec (flat: top-level name + agent).`)
+	acceptFileAliasFor(cmdRun)
 	AddStringFlag(cmdRun, doctl.ArgAgentConfigID, "", "", "ID of an existing Agent Config to run from, instead of --harness/--spec. Requires --name.")
 	AddStringFlag(cmdRun, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
 	AddStringFlag(cmdRun, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
@@ -478,7 +482,7 @@ func Agents() *Command {
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 	cmdRun.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	cmdRun.Example = agentCLI + ` run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; ` + agentCLI + ` run --config-id cfg_abc123 --name my-session --prompt "Review the README"`
+	cmdRun.Example = agentCLI + ` run; ` + agentCLI + ` run agent-spec.yaml; ` + agentCLI + ` run --harness opencode --gh-repo https://github.com/katanemo/plano --prompt "Review the README"; ` + agentCLI + ` run --config-id cfg_abc123 --name my-session --prompt "Review the README"`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Bridge the Codex CLI to a hosted session",
@@ -647,10 +651,15 @@ func RunAgentsStart(c *CmdConfig) error {
 	repo = strings.TrimSpace(repo)
 	prompt = strings.TrimSpace(prompt)
 
+	if len(c.Args) > 0 && (harness != "" || configID != "") {
+		return fmt.Errorf("a manifest path cannot be combined with --%s or --%s", doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
+	}
+
 	// Never call GetString(--spec) when another source is selected: a stale
 	// required.agents.start.spec viper mark (or LiveConfig required check)
 	// would fail --harness / --config-id even though --spec is optional.
 	specPath := ""
+	discoveredSpec := false
 	switch {
 	case configID != "":
 		if c.Doit.IsSet(doctl.ArgAgentSpec) || c.Doit.IsSet(doctl.ArgAgentHarness) {
@@ -662,11 +671,10 @@ func RunAgentsStart(c *CmdConfig) error {
 		}
 	default:
 		var err error
-		specPath, err = c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+		specPath, err = namedManifestPath(c)
 		if err != nil {
 			return err
 		}
-		specPath = strings.TrimSpace(specPath)
 	}
 
 	sources := 0
@@ -679,7 +687,13 @@ func RunAgentsStart(c *CmdConfig) error {
 		return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	}
 	if sources == 0 {
-		return fmt.Errorf("one of --%s, --%s, or --%s is required", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+		// Nothing named and no other source selected, so an agents.yaml sitting
+		// in the working directory is unambiguously what the user meant.
+		if found := discoverManifestFile(); found != "" {
+			specPath, discoveredSpec = found, true
+		} else {
+			return missingManifestErr()
+		}
 	}
 	if configID != "" && repo != "" {
 		return fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentConfigID)
@@ -693,6 +707,7 @@ func RunAgentsStart(c *CmdConfig) error {
 	if Output != "json" {
 		stylingEnabled = detectStyling()
 	}
+	noticeDiscoveredManifest(specPath, discoveredSpec)
 	if repo != "" {
 		if err := maybeOfferGitHubAuth(c); err != nil {
 			return err
@@ -908,6 +923,81 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 		return nil, err
 	}
 	return expandManifestEnv(raw)
+}
+
+// acceptFileAliasFor makes --file a second spelling of --spec on cmd. --spec
+// stays canonical in help output because it is doctl's word for a declarative
+// file (apps, dedicated-inference); --file and -f exist because kubectl,
+// compose and planoai trained that muscle memory.
+func acceptFileAliasFor(cmd *Command) {
+	cmd.Flags().SetNormalizeFunc(func(_ *pflag.FlagSet, name string) pflag.NormalizedName {
+		if name == "file" {
+			name = doctl.ArgAgentSpec
+		}
+		return pflag.NormalizedName(name)
+	})
+}
+
+// manifestFileNames are the files start/run/validate look for in the working
+// directory when the manifest is not named explicitly. agents.yaml is the
+// conventional name used throughout the docs.
+var manifestFileNames = []string{"agents.yaml", "agents.yml"}
+
+// namedManifestPath returns the manifest the user named explicitly, either
+// with --spec (also spelled -f / --file) or as a positional path. An empty
+// result means they named none, which leaves the caller free to fall back to
+// discoverManifestFile — but only once it knows no other source (--harness,
+// --config-id) was selected.
+func namedManifestPath(c *CmdConfig) (string, error) {
+	spec, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	if err != nil {
+		return "", err
+	}
+	spec = strings.TrimSpace(spec)
+
+	if len(c.Args) > 1 {
+		return "", fmt.Errorf("expected at most one manifest path, got %d", len(c.Args))
+	}
+	arg := ""
+	if len(c.Args) == 1 {
+		arg = strings.TrimSpace(c.Args[0])
+	}
+
+	switch {
+	case spec != "" && arg != "":
+		return "", fmt.Errorf("manifest given twice, as --%s %s and as %s; pass it one way", doctl.ArgAgentSpec, spec, arg)
+	case spec != "":
+		return spec, nil
+	default:
+		return arg, nil
+	}
+}
+
+// discoverManifestFile returns the conventional manifest in the working
+// directory, or "" when there is none.
+func discoverManifestFile() string {
+	for _, name := range manifestFileNames {
+		if info, err := os.Stat(name); err == nil && info.Mode().IsRegular() {
+			return name
+		}
+	}
+	return ""
+}
+
+// noticeDiscoveredManifest names an implicitly chosen manifest, so a run never
+// reads a file the user did not mention. Suppressed under -o json, which must
+// stay parseable.
+func noticeDiscoveredManifest(path string, discovered bool) {
+	if discovered && Output != "json" {
+		notice("using %s", path)
+	}
+}
+
+// missingManifestErr is the "nothing to start from" message, listing every way
+// to name a manifest rather than only the flag.
+func missingManifestErr() error {
+	return fmt.Errorf("no manifest given: pass a path (or --%s), add %s to this directory, or use --%s / --%s",
+		doctl.ArgAgentSpec, manifestFileNames[0], doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
 }
 
 // readManifestBytes loads the spec file without env expansion. Used by start

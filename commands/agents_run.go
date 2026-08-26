@@ -142,7 +142,7 @@ func RunAgentsRun(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	specPath, err := namedManifestPath(c)
 	if err != nil {
 		return err
 	}
@@ -177,6 +177,10 @@ func RunAgentsRun(c *CmdConfig) error {
 	repo = strings.TrimSpace(repo)
 	prompt = strings.TrimSpace(prompt)
 
+	if len(c.Args) > 0 && (harness != "" || configID != "") {
+		return fmt.Errorf("a manifest path cannot be combined with --%s or --%s", doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
+	}
+
 	sources := 0
 	for _, s := range []string{harness, specPath, configID} {
 		if s != "" {
@@ -186,8 +190,15 @@ func RunAgentsRun(c *CmdConfig) error {
 	if sources > 1 {
 		return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
 	}
+	discoveredSpec := false
 	if sources == 0 {
-		return fmt.Errorf("one of --%s, --%s, or --%s is required", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
+		// Nothing named and no other source selected, so an agents.yaml sitting
+		// in the working directory is unambiguously what the user meant.
+		if found := discoverManifestFile(); found != "" {
+			specPath, discoveredSpec = found, true
+		} else {
+			return missingManifestErr()
+		}
 	}
 	if configID != "" && repo != "" {
 		return fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentConfigID)
@@ -199,6 +210,7 @@ func RunAgentsRun(c *CmdConfig) error {
 	}
 
 	stylingEnabled = detectStyling()
+	noticeDiscoveredManifest(specPath, discoveredSpec)
 	if repo != "" {
 		if err := maybeOfferGitHubAuth(c); err != nil {
 			return err

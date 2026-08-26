@@ -527,13 +527,19 @@ func RunAgentsValidate(c *CmdConfig) error {
 	if Output != "json" {
 		stylingEnabled = detectStyling()
 	}
-	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	specPath, err := namedManifestPath(c)
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(specPath) == "" {
-		return fmt.Errorf("--%s is required", doctl.ArgAgentSpec)
+	discovered := false
+	if specPath == "" {
+		if specPath = discoverManifestFile(); specPath == "" {
+			return fmt.Errorf("no manifest given: pass a path (or --%s), or add %s to this directory",
+				doctl.ArgAgentSpec, manifestFileNames[0])
+		}
+		discovered = true
 	}
+	noticeDiscoveredManifest(specPath, discovered)
 	raw, err := readManifest(os.Stdin, specPath)
 	if err != nil {
 		return err
