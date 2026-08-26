@@ -150,6 +150,7 @@ func AgentTriggers() *Command {
 		Writer, agentPrettyErrors(), aliasOpt("providers"),
 		displayerType(&displayers.HostedAgentWebhookProvider{}))
 
+	requireAgentSubcommand(cmd)
 	return cmd
 }
 

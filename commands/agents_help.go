@@ -275,6 +275,19 @@ func renderHelpCodeBlock(code string, styled bool) string {
 	return box + "\n"
 }
 
+// requireAgentSubcommand configures a parent-only agents cobra node so unknown
+// positional args (e.g. "frobnicate") fail with a non-zero exit instead of
+// silently printing help. Cobra validates unknown commands only at the root;
+// nested parents with Args unset accept arbitrary args and return flag.ErrHelp
+// (exit 0). See MARSOHS-1075.
+func requireAgentSubcommand(cmd *Command) {
+	cc := cmd.Command
+	cc.Args = cobra.NoArgs
+	cc.RunE = func(c *cobra.Command, args []string) error {
+		return c.Help()
+	}
+}
+
 // agentsStyledHelpFunc prints a compact colored header on TTYs, plain prose with
 // bordered code examples, then the standard cobra usage section (always plain).
 func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {

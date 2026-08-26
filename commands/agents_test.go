@@ -108,6 +108,27 @@ func TestAgentsRemoveAliases(t *testing.T) {
 	}
 }
 
+// TestAgentsUnknownSubcommandFails is MARSOHS-1075: unknown nested subcommands must
+// exit non-zero, not print parent help and exit 0.
+func TestAgentsUnknownSubcommandFails(t *testing.T) {
+	root := DoitCmd
+	root.SetOut(io.Discard)
+	root.SetErr(io.Discard)
+	t.Cleanup(func() {
+		root.SetArgs(nil)
+	})
+
+	root.SetArgs([]string{"agents", "frobnicate"})
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `unknown command "frobnicate"`)
+
+	root.SetArgs([]string{"agents", "config", "frobnicate"})
+	err = root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `unknown command "frobnicate"`)
+}
+
 func TestAgents_helpers(t *testing.T) {
 	t.Run("hitlOutcomeFor", func(t *testing.T) {
 		cases := []struct {

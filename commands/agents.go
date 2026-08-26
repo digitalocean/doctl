@@ -607,6 +607,7 @@ A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` l
 	cmd.AddCommand(AgentConfigs())
 	cmd.AddCommand(AgentSizes())
 
+	requireAgentSubcommand(cmd)
 	cmd.Command.SetHelpFunc(agentsStyledHelpFunc)
 
 	return cmd
