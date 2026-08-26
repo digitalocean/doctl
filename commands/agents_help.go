@@ -183,7 +183,7 @@ const agentsTriggersPauseHelpMD = `Pause a trigger. New events or cron ticks are
 
 const agentsTriggersResumeHelpMD = `Resume a paused trigger.`
 
-const agentsTriggersRotateSecretHelpMD = `Issue a new webhook secret (shown once). Webhook triggers only.`
+const agentsTriggersRotateSecretHelpMD = `Issue a new webhook secret (shown once). Webhook triggers only. The old secret keeps verifying deliveries for a short grace window, so deliveries already in flight still succeed while you paste the new secret into your external system. Pass ` + "`--revoke-previous`" + ` to retire the old secret immediately instead — deliveries still signed with it start failing at once, so use it when the old secret is compromised.`
 
 const agentsTriggersListExecutionsHelpMD = `List firings for a trigger. Use ` + "`get-execution`" + ` for full payload and output.`
 

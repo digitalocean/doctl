@@ -194,9 +194,13 @@ func TestAgentTriggersGetUpdatePauseDelete(t *testing.T) {
 	})
 }
 
+// rotateExpiry is the previous-secret expiry the API returns on a default
+// (grace-window) rotation.
+const rotateExpiry = "2026-08-12T12:05:00Z"
+
 func TestAgentTriggersRotateSecretAndExecutions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 		var buf bytes.Buffer
 		config.Out = &buf
@@ -368,7 +372,7 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 //   - the banner is on neither stdout nor stderr
 func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer
@@ -386,8 +390,56 @@ func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 		var parsed map[string]any
 		require.NoError(t, json.Unmarshal([]byte(raw), &parsed), "stdout must be valid JSON in -o json mode, got: %q", raw)
 		assert.Equal(t, "new_sec", parsed["webhook_secret"], "JSON must contain webhook_secret field")
+		assert.Equal(t, rotateExpiry, parsed["previous_secret_expires_at"], "scripts need the expiry to schedule the provider-side update")
+		assert.NotContains(t, parsed, "previous_secret_revoked", "the old secret is still live during the grace window")
 		assert.NotContains(t, raw, "store it now", "banner must not appear on stdout in JSON mode")
 		assert.Empty(t, stderr, "nothing may be written to stderr in -o json mode")
+	})
+}
+
+// --revoke-previous is the breach path: the response reports the old secret as
+// already dead rather than giving an expiry to wait out.
+func TestAgentTriggersRotateSecret_RevokePrevious(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", true).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousRevoked: true}, nil)
+		config.Args = []string{"tr_1"}
+		config.Doit.Set(config.NS, doctl.ArgAgentRevokePrevious, true)
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		prev := Output
+		Output = "json"
+		defer func() { Output = prev }()
+
+		require.NoError(t, RunAgentTriggersRotateSecret(config))
+
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal(stdout.Bytes(), &parsed))
+		assert.Equal(t, "new_sec", parsed["webhook_secret"])
+		assert.Equal(t, true, parsed["previous_secret_revoked"])
+		assert.NotContains(t, parsed, "previous_secret_expires_at", "there is no window left to report")
+	})
+}
+
+// The API sets exactly one of the two fields, so neither arriving means
+// something went wrong upstream. Reporting "revoked" on that would tell an
+// operator a possibly-live secret is dead, which is the one error here anybody
+// acts on.
+func TestAgentTriggersRotateSecret_NeitherOutcomeReported(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).
+			Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec"}, nil)
+		config.Args = []string{"tr_1"}
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		require.NoError(t, RunAgentTriggersRotateSecret(config))
+
+		out := stdout.String()
+		assert.Contains(t, out, "not reported")
+		assert.NotContains(t, out, "Old secret revoked", "an unreported outcome must never read as a dead secret")
 	})
 }
 
@@ -395,7 +447,7 @@ func TestAgentTriggersRotateSecret_JSONMode(t *testing.T) {
 // secret banner still appears on stdout (existing behaviour preserved).
 func TestAgentTriggersRotateSecret_TextMode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1").Return("new_sec", nil)
+		tm.hostedAgentTriggers.EXPECT().RotateSecret("tr_1", false).Return(&do.HostedAgentTriggerRotateSecretResult{Secret: "new_sec", PreviousExpiresAt: rotateExpiry}, nil)
 		config.Args = []string{"tr_1"}
 
 		var stdout bytes.Buffer
@@ -407,6 +459,7 @@ func TestAgentTriggersRotateSecret_TextMode(t *testing.T) {
 
 		require.NoError(t, RunAgentTriggersRotateSecret(config))
 		assert.Contains(t, stdout.String(), "new_sec", "secret must appear on stdout in text mode")
+		assert.Contains(t, stdout.String(), rotateExpiry, "an operator needs the exact instant the old secret dies")
 	})
 }
 

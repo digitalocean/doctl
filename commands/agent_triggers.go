@@ -109,10 +109,11 @@ func AgentTriggers() *Command {
 		Writer, agentPrettyErrors(), aliasOpt("activate", "enable"),
 		displayerType(&displayers.HostedAgentTrigger{}))
 
-	CmdBuilder(cmd, RunAgentTriggersRotateSecret, "rotate-secret <trigger-id>",
+	cmdRotate := CmdBuilder(cmd, RunAgentTriggersRotateSecret, "rotate-secret <trigger-id>",
 		"Rotate a webhook trigger's secret",
 		agentsTriggersRotateSecretHelpMD,
 		Writer, agentPrettyErrors())
+	AddBoolFlag(cmdRotate, doctl.ArgAgentRevokePrevious, "", false, "Retire the old secret immediately instead of granting the grace window. Deliveries still signed with it start failing at once; use this when the old secret is compromised.")
 
 	cmdListExec := CmdBuilder(cmd, RunAgentTriggersListExecutions, "list-executions <trigger-id>",
 		"List a trigger's execution history",
@@ -307,15 +308,38 @@ func RunAgentTriggersRotateSecret(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	secret, err := c.HostedAgentTriggers().RotateSecret(c.Args[0])
+	revokePrevious, err := c.Doit.GetBool(c.NS, doctl.ArgAgentRevokePrevious)
+	if err != nil {
+		return err
+	}
+	res, err := c.HostedAgentTriggers().RotateSecret(c.Args[0], revokePrevious)
 	if err != nil {
 		return err
 	}
 	if Output == "json" {
-		return json.NewEncoder(c.Out).Encode(map[string]string{"webhook_secret": secret})
+		out := map[string]any{"webhook_secret": res.Secret}
+		if res.PreviousExpiresAt != "" {
+			out["previous_secret_expires_at"] = res.PreviousExpiresAt
+		}
+		if res.PreviousRevoked {
+			out["previous_secret_revoked"] = true
+		}
+		return json.NewEncoder(c.Out).Encode(out)
 	}
 	stylingEnabled = detectStyling()
-	printWebhookSecretCard(c.Out, secret, "")
+	printWebhookSecretCard(c.Out, res.Secret, "")
+	// State the old secret's fate, and only what the API actually reported. The
+	// server sets exactly one of these; if neither arrives, say so rather than
+	// picking one, because guessing "revoked" on a live secret is the reading an
+	// operator would act on and the one that gets someone hurt.
+	switch {
+	case res.PreviousRevoked:
+		fmt.Fprintln(c.Out, "Old secret revoked: deliveries still signed with it will fail.")
+	case res.PreviousExpiresAt != "":
+		fmt.Fprintf(c.Out, "Old secret stops working at: %s\n", res.PreviousExpiresAt)
+	default:
+		fmt.Fprintln(c.Out, "Old secret status not reported by the API; assume it is still valid until you can confirm.")
+	}
 	return nil
 }
 
