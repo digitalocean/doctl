@@ -159,6 +159,53 @@ func TestAgents_helpers(t *testing.T) {
 	})
 }
 
+func TestAttachAfterStart(t *testing.T) {
+	t.Run("attaches by default on a terminal", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			attach, err := attachAfterStart(config, true)
+			assert.NoError(t, err)
+			assert.True(t, attach)
+		})
+	})
+
+	t.Run("detach flag opts out", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentDetach, true)
+			attach, err := attachAfterStart(config, true)
+			assert.NoError(t, err)
+			assert.False(t, attach)
+		})
+	})
+
+	t.Run("no-attach still opts out", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
+			attach, err := attachAfterStart(config, true)
+			assert.NoError(t, err)
+			assert.False(t, attach)
+		})
+	})
+
+	t.Run("json output opts out", func(t *testing.T) {
+		prev := Output
+		Output = "json"
+		t.Cleanup(func() { Output = prev })
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			attach, err := attachAfterStart(config, true)
+			assert.NoError(t, err)
+			assert.False(t, attach)
+		})
+	})
+
+	t.Run("a non-terminal opts out so pipelines do not hang", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			attach, err := attachAfterStart(config, false)
+			assert.NoError(t, err)
+			assert.False(t, attach)
+		})
+	})
+}
+
 func TestReadManifest(t *testing.T) {
 	t.Run("from file", func(t *testing.T) {
 		dir := t.TempDir()
