@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.205.0] - 2026-08-25
+
+- #1089 - @ddatta-do - feat : add routes endpoints
+
 ## [1.204.0] - 2026-08-10
 
 - #1080 - @nayanjd-do - Add constant to string match against volume capacity errors

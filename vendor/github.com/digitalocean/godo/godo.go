@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.204.0"
+	libraryVersion = "1.205.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -102,6 +102,7 @@ type Client struct {
 	UptimeChecks        UptimeChecksService
 	VectorDBs           VectorDBsService
 	VPCs                VPCsService
+	Routes              RoutesService
 	PartnerAttachment   PartnerAttachmentService
 	GradientAI          GradientAIService
 	HostedAgents        HostedAgentsService
@@ -360,6 +361,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.UptimeChecks = &UptimeChecksServiceOp{client: c}
 	c.VectorDBs = &VectorDBsServiceOp{client: c}
 	c.VPCs = &VPCsServiceOp{client: c}
+	c.Routes = &RoutesServiceOp{client: c}
 	c.PartnerAttachment = &PartnerAttachmentServiceOp{client: c}
 	c.GradientAI = &GradientAIServiceOp{client: c}
 	c.HostedAgents = &HostedAgentsServiceOp{client: c}
