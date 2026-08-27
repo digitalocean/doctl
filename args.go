@@ -969,9 +969,11 @@ const (
 	// ArgAgentStatus filters sessions by lifecycle status.
 	ArgAgentStatus = "status"
 
-	// ArgAgentRevokePrevious retires the old webhook secret on the rotate-secret
-	// call itself instead of granting the default grace window.
-	ArgAgentRevokePrevious = "revoke-previous"
+	// ArgAgentGracePeriod is the rotate-secret handoff window in seconds.
+	// Omit (or leave unset) for the server default of 5 minutes; 0 retires the
+	// old secret immediately; positive values set a custom window up to the
+	// server max (default 1 hour).
+	ArgAgentGracePeriod = "grace-period"
 
 	// ArgAgentWorkspacePath is the path inside the session workspace root (/workspace).
 	ArgAgentWorkspacePath = "workspace-path"
