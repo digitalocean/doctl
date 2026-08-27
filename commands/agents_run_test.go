@@ -573,10 +573,11 @@ func TestMaybeOfferGitHubAuth_ConnectsWhenAccepted(t *testing.T) {
 }
 
 func TestRunAgentsRun_RequiresHarnessOrSpec(t *testing.T) {
+	t.Chdir(t.TempDir()) // no agents.yaml to discover
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunAgentsRun(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "one of --harness, --spec, or --config-id is required")
+		assert.Contains(t, err.Error(), "no manifest given")
 	})
 }
 

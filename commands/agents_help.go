@@ -48,11 +48,16 @@ const agentsStartHelpMD = `Create a hosted session, wait until it is ready, and 
 
 Provide exactly one of:
 
+- a **manifest** — as a positional path, or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin). With none of these, ` + "`./agents.yaml`" + ` is used when it exists.
 - ` + "`--harness`" + ` — opencode, claude-code, or codex (builds the manifest for you)
-- ` + "`--spec`" + ` — path to an agents.yaml / JSON manifest (` + "`-`" + ` reads stdin)
 - ` + "`--config-id`" + ` — start from an existing Agent Config (` + "`--name`" + ` required)
 
-With ` + "`--harness`" + ` or ` + "`--spec`" + `, optionally pass ` + "`--gh-repo`" + ` and ` + "`--prompt`" + `. Example:
+These four are equivalent:
+` + "```bash\n" + agentCLI + ` start                       # uses ./agents.yaml
+` + agentCLI + ` start agents.yaml
+` + agentCLI + ` start -f agents.yaml
+` + agentCLI + ` start --spec agents.yaml
+` + "```\n\n" + `With a manifest or ` + "`--harness`" + `, optionally pass ` + "`--gh-repo`" + ` and ` + "`--prompt`" + `. Example:
 ` + "```bash\n" + agentCLI + ` start --harness claude-code --gh-repo owner/repo --prompt "Review the README"
 ` + "```\n\n" + `Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
 ` + "```yaml\n" + `name: my-session
@@ -65,13 +70,16 @@ const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side w
 
 Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, and conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `). The API remains the authoritative validator for the full contract.
 
+Name the manifest as a positional path or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin); with none of these, ` + "`./agents.yaml`" + ` is used when it exists.
+
 Example:
-` + "```bash\n" + agentCLI + ` validate --spec agent.yaml
+` + "```bash\n" + agentCLI + ` validate            # checks ./agents.yaml
+` + agentCLI + ` validate agent.yaml
 ` + "```"
 
 const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI. Equivalent to ` + "`" + agentCLI + " start`" + `, which also attaches by default.
 
-Provide exactly one of ` + "`--harness`" + `, ` + "`--spec`" + `, or ` + "`--config-id`" + `. With ` + "`--harness`" + ` / ` + "`--spec`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--detach`" + ` (` + "`-d`" + `) to stop at the ready summary.
+Provide exactly one of a manifest, ` + "`--harness`" + `, or ` + "`--config-id`" + `. The manifest is a positional path or ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + `, defaulting to ` + "`./agents.yaml`" + ` when present. With a manifest or ` + "`--harness`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--detach`" + ` (` + "`-d`" + `) to stop at the ready summary.
 
 For the native Codex desktop/CLI UI instead of doctl chat, see ` + "`" + agentCLI + " start-proxy --help`" + `.`
 
