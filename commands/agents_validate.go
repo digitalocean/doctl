@@ -597,6 +597,12 @@ func printAgentManifestValidation(w io.Writer, v *agentManifestValidation) {
 	}
 }
 
+// printSessionCreateWarnings prints server-returned create-time advisories
+// (manifest + policy) on stderr after a successful CreateSession call.
+func printSessionCreateWarnings(warnings []string) {
+	printAgentManifestWarnings(os.Stderr, warnings)
+}
+
 // printAgentManifestWarnings prints create-path warnings (stderr) with a yellow
 // Warning label so they stand out next to lifecycle progress lines.
 func printAgentManifestWarnings(w io.Writer, warnings []string) {

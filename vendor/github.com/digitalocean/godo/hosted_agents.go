@@ -360,6 +360,10 @@ type HostedAgentSession struct {
 	// Returned on create/get/list; omitted for sessions created before config
 	// references were stored.
 	ConfigID string `json:"config_id,omitempty"`
+	// Warnings carries non-fatal create-time advisories from the server
+	// (manifest parse + policy fidelity). Populated on the create response
+	// only; omitted on get/list.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.

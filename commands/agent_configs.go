@@ -281,6 +281,9 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	}
 	stylingEnabled = detectStyling()
 	printSessionShowCard(c.Out, sess)
+	if sess != nil && sess.HostedAgentSession != nil {
+		printSessionCreateWarnings(sess.Warnings)
+	}
 	return nil
 }
 
