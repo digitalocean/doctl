@@ -693,65 +693,14 @@ This replaces all key-value pairs in the secret. Enter the full set you want to 
 Submit an empty key name when you are done.`, name, region)
 }
 
+// parseSecretValues parses --value pairs. The key=value / @file / - grammar
+// lives in parseKeyValueInputs, shared with the agents --secret flag; only the
+// "a secret needs at least one pair" rule is specific to this command.
 func parseSecretValues(lines []string) (map[string]string, error) {
 	if len(lines) == 0 {
 		return nil, fmt.Errorf("at least one key-value pair is required")
 	}
-
-	values := make(map[string]string, len(lines))
-	for _, line := range lines {
-		key, value, err := parseSecretValueLine(line)
-		if err != nil {
-			return nil, err
-		}
-		if _, exists := values[key]; exists {
-			return nil, fmt.Errorf("duplicate key %q", key)
-		}
-
-		resolved, err := resolveSecretValueInput(value)
-		if err != nil {
-			return nil, err
-		}
-
-		values[key] = resolved
-	}
-
-	return values, nil
-}
-
-func parseSecretValueLine(line string) (string, string, error) {
-	parts := strings.SplitN(strings.TrimSpace(line), "=", 2)
-	if len(parts) != 2 || parts[0] == "" {
-		return "", "", fmt.Errorf("invalid key-value pair %q, expected key=value", line)
-	}
-
-	return parts[0], parts[1], nil
-}
-
-func resolveSecretValueInput(value string) (string, error) {
-	if value == "-" {
-		data, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return "", err
-		}
-		return strings.TrimRight(string(data), "\r\n"), nil
-	}
-
-	if strings.HasPrefix(value, "@") {
-		path := strings.TrimPrefix(value, "@")
-		if path == "" {
-			return "", fmt.Errorf("file path is required after @")
-		}
-
-		content, err := readInputFromFile(path)
-		if err != nil {
-			return "", err
-		}
-
-		return strings.TrimRight(content, "\r\n"), nil
-	}
-
-	return value, nil
+	return parseKeyValueInputs(lines)
 }
 
 func maskSecretValues(secret do.Secret) do.Secret {

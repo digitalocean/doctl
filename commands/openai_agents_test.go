@@ -295,7 +295,7 @@ func TestHTTPOpenAIAgentsClient_CreateSession(t *testing.T) {
 	assert.Equal(t, "env_http", sess.EnvironmentID)
 }
 
-func TestRunAgentsStart_OpenAI(t *testing.T) {
+func TestRunAgentsCreate_OpenAI(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	require.NoError(t, os.WriteFile(specPath, []byte(sampleOpenAIManifest), 0o644))
@@ -349,11 +349,11 @@ func TestRunAgentsStart_OpenAI(t *testing.T) {
 		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		assert.NoError(t, RunAgentsStart(config))
+		assert.NoError(t, RunAgentsCreate(config))
 	})
 }
 
-func TestRunAgentsStart_OpenAIFlat(t *testing.T) {
+func TestRunAgentsCreate_OpenAIFlat(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	require.NoError(t, os.WriteFile(specPath, []byte(sampleFlatOpenAIManifest), 0o644))
@@ -408,7 +408,7 @@ func TestRunAgentsStart_OpenAIFlat(t *testing.T) {
 		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		assert.NoError(t, RunAgentsStart(config))
+		assert.NoError(t, RunAgentsCreate(config))
 	})
 }
 

@@ -111,6 +111,140 @@ func TestAgentTriggersCreateWebhook(t *testing.T) {
 	})
 }
 
+// --from-config on a trigger is a copy, not a link: the config's manifest lands
+// in SessionTemplate exactly as --spec would have put it there.
+func TestAgentTriggersCreate_FromConfigCopiesManifest(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			GetAgentConfig("cfg_abc123").
+			Return(&godo.HostedAgentConfig{
+				ID:       "cfg_abc123",
+				Name:     "reviewer",
+				Manifest: json.RawMessage(`{"agent":"opencode","repos":["adamdev/orders-api"]}`),
+			}, nil)
+
+		tm.hostedAgentTriggers.EXPECT().
+			Create(gomock.Any()).
+			DoAndReturn(func(req *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
+				assert.Contains(t, req.SessionTemplate, "opencode")
+				assert.Contains(t, req.SessionTemplate, "adamdev/orders-api")
+				// The config's own server-held secrets never come back to a
+				// client, so --secret has to supply the value here as well.
+				assert.Contains(t, req.SessionTemplate, "sk-ant-from-ci")
+				assert.Contains(t, req.SessionTemplate, "tenantSecret")
+				return &do.HostedAgentTriggerCreateResult{
+					Trigger: &do.HostedAgentTrigger{
+						HostedAgentTrigger: &godo.HostedAgentTrigger{
+							TriggerID: "tr_cfg",
+							Name:      "nightly",
+							Kind:      godo.HostedAgentTriggerKindCron,
+						},
+					},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "nightly")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "review open PRs")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerTimezone, "UTC")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=sk-ant-from-ci"})
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, RunAgentTriggersCreate(config))
+		assert.Contains(t, buf.String(), "Trigger created")
+	})
+}
+
+// A config name resolves the same way it does on create/launch, so a trigger
+// can be written against the name a human actually remembers.
+func TestAgentTriggersCreate_FromConfigByName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListAgentConfigs(gomock.Any()).
+			Return([]godo.HostedAgentConfigSummary{{ID: "cfg_named", Name: "reviewer"}}, "", nil)
+		tm.hostedAgents.EXPECT().
+			GetAgentConfig("cfg_named").
+			Return(&godo.HostedAgentConfig{
+				ID:       "cfg_named",
+				Name:     "reviewer",
+				Manifest: json.RawMessage(`{"agent":"opencode"}`),
+			}, nil)
+		tm.hostedAgentTriggers.EXPECT().
+			Create(gomock.Any()).
+			Return(&do.HostedAgentTriggerCreateResult{
+				Trigger: &do.HostedAgentTrigger{
+					HostedAgentTrigger: &godo.HostedAgentTrigger{TriggerID: "tr_named", Name: "nightly", Kind: godo.HostedAgentTriggerKindCron},
+				},
+			}, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "nightly")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "review open PRs")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerTimezone, "UTC")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "reviewer")
+
+		config.Out = io.Discard
+		require.NoError(t, RunAgentTriggersCreate(config))
+	})
+}
+
+func TestAgentTriggersCreate_SpecAndFromConfigMutuallyExclusive(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "nightly")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, "agents.yaml")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
+
+		err := RunAgentTriggersCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "mutually exclusive")
+	})
+}
+
+// A fresh trigger needs a template from somewhere, and the error should name
+// both ways of supplying one rather than only the older --spec.
+func TestAgentTriggersCreate_FreshRequiresSpecOrConfig(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "nightly")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+
+		err := RunAgentTriggersCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), doctl.ArgAgentSpec)
+		assert.Contains(t, err.Error(), doctl.ArgAgentFromConfig)
+	})
+}
+
+// --secret with nothing to inject into is a silent no-op if unchecked, which
+// would drop a credential the caller believed it had passed.
+func TestAgentTriggersCreate_SecretWithoutTemplateIsRejected(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "nightly")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"TOKEN=abc"})
+
+		err := RunAgentTriggersCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), doctl.ArgAgentSecret)
+	})
+}
+
 func TestAgentTriggersCreateCronSlack(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().

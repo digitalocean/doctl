@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -55,7 +56,8 @@ func AgentConfigs() *Command {
 			displayerType(&displayers.HostedAgentConfig{}))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-config\nagent: opencode". Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
-	cmdCreate.Example = `doctl harness-runtime config create --spec agent-spec.yaml --name my-config`
+	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
+	cmdCreate.Example = agentCLI + ` config create --spec agent-spec.yaml --name my-config; ` + agentCLI + ` config create --spec agent-spec.yaml --name my-config --secret ANTHROPIC_API_KEY=@~/.secrets/anthropic.key`
 
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
@@ -110,8 +112,19 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	secrets, err := agentSecretFlags(c)
+	if err != nil {
+		return err
+	}
 	manifest, err := readManifest(os.Stdin, specPath)
 	if err != nil {
+		return err
+	}
+	manifest, err = injectManifestSecrets(manifest, secrets)
+	if err != nil {
+		return err
+	}
+	if err := rejectRedactedSecrets(manifest); err != nil {
 		return err
 	}
 	if err := reportDurableAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
@@ -176,10 +189,11 @@ func RunAgentsConfigList(c *CmdConfig) error {
 
 // RunAgentsConfigGet fetches one Agent Config.
 func RunAgentsConfigGet(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	configID, err := configIDArg(c)
+	if err != nil {
+		return err
 	}
-	cfg, err := c.HostedAgents().GetAgentConfig(c.Args[0])
+	cfg, err := c.HostedAgents().GetAgentConfig(configID)
 	if err != nil {
 		return err
 	}
@@ -193,14 +207,14 @@ func RunAgentsConfigGet(c *CmdConfig) error {
 
 // RunAgentsConfigDelete soft-deletes an Agent Config.
 func RunAgentsConfigDelete(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	configID, err := configIDArg(c)
+	if err != nil {
+		return err
 	}
-	configID := c.Args[0]
 	if err := c.HostedAgents().DeleteAgentConfig(configID); err != nil {
 		if agentConfigHasActiveSessionsErr(err) {
 			msg, _, _ := agentAPIError(err)
-			return fmt.Errorf("%s. List them with `doctl harness-runtime config list-sessions %s`, remove each with `doctl harness-runtime remove`, then retry", strings.TrimRight(msg, "."), configID)
+			return fmt.Errorf("%s. List them with `%s config list-sessions %s`, remove each with `%s remove`, then retry", strings.TrimRight(msg, "."), agentCLI, configID, agentCLI)
 		}
 		return err
 	}
@@ -211,8 +225,9 @@ func RunAgentsConfigDelete(c *CmdConfig) error {
 
 // RunAgentsConfigListSessions lists sessions started from an Agent Config.
 func RunAgentsConfigListSessions(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	configID, err := configIDArg(c)
+	if err != nil {
+		return err
 	}
 	opt := &godo.HostedAgentSessionListOptions{}
 	pageSize, err := c.Doit.GetInt(c.NS, doctl.ArgAgentPageSize)
@@ -238,7 +253,7 @@ func RunAgentsConfigListSessions(c *CmdConfig) error {
 	}
 	opt.Name = name
 
-	sessions, next, err := c.HostedAgents().ListAgentConfigSessions(c.Args[0], opt)
+	sessions, next, err := c.HostedAgents().ListAgentConfigSessions(configID, opt)
 	if err != nil {
 		return err
 	}
@@ -262,8 +277,9 @@ func RunAgentsConfigListSessions(c *CmdConfig) error {
 
 // RunAgentsConfigStartSession creates a session from an existing Agent Config.
 func RunAgentsConfigStartSession(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	configID, err := configIDArg(c)
+	if err != nil {
+		return err
 	}
 	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
 	if err != nil {
@@ -271,7 +287,7 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:     name,
-		ConfigID: c.Args[0],
+		ConfigID: configID,
 	})
 	if err != nil {
 		return err
@@ -282,6 +298,83 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	stylingEnabled = detectStyling()
 	printSessionShowCard(c.Out, sess)
 	return nil
+}
+
+// configIDPrefix is the Agent Config ID prefix used in API responses and docs.
+const configIDPrefix = "cfg_"
+
+// configRefPageSize pages the name scan below. Agent Configs are a small,
+// deliberately-created resource, but a team can still have more than one page
+// of them, and a name that exists must never resolve to "not found" because it
+// sat on page two.
+const configRefPageSize = 200
+
+// looksLikeConfigID reports whether ref is already a config ID rather than a
+// name, so it can be used directly with no lookup. Mirrors looksLikeSessionID.
+func looksLikeConfigID(ref string) bool {
+	return sessionUUIDRe.MatchString(ref) || strings.HasPrefix(ref, configIDPrefix)
+}
+
+// resolveConfigRef turns a user-supplied Agent Config reference into a config
+// ID, accepting either the ID or the config's team-unique name — the same
+// courtesy resolveSessionRef extends to sessions, so a name printed by
+// `config list` can be pasted straight back into any command.
+//
+// Unlike sessions, HostedAgentConfigListOptions has no server-side name
+// filter, so matching is a client-side scan. A server-side filter would make
+// this exact and cheap; until then the scan is bounded by how few configs a
+// team realistically has.
+func resolveConfigRef(svc do.HostedAgentsService, ref string) (string, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return "", errors.New("an agent config ID or name is required")
+	}
+	if looksLikeConfigID(ref) {
+		return ref, nil
+	}
+
+	var matches []godo.HostedAgentConfigSummary
+	pageToken := ""
+	for {
+		configs, next, err := svc.ListAgentConfigs(&godo.HostedAgentConfigListOptions{
+			PageSize:  configRefPageSize,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return "", fmt.Errorf("resolving agent config name %q: %w", ref, err)
+		}
+		for _, cfg := range configs {
+			if strings.EqualFold(strings.TrimSpace(cfg.Name), ref) {
+				matches = append(matches, cfg)
+			}
+		}
+		if next == "" || len(configs) == 0 {
+			break
+		}
+		pageToken = next
+	}
+
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("no agent config goes by the name %q; pass a config ID or run `%s config list` to see available configs", ref, agentCLI)
+	case 1:
+		return matches[0].ID, nil
+	default:
+		ids := make([]string, 0, len(matches))
+		for _, m := range matches {
+			ids = append(ids, m.ID)
+		}
+		return "", fmt.Errorf("many agent configs go by the name %q, they have the following IDs: %s", ref, strings.Join(ids, ", "))
+	}
+}
+
+// configIDArg resolves the positional <config-id> argument, which may be a
+// config name.
+func configIDArg(c *CmdConfig) (string, error) {
+	if len(c.Args) < 1 {
+		return "", doctl.NewMissingArgsErr(c.NS)
+	}
+	return resolveConfigRef(c.HostedAgents(), c.Args[0])
 }
 
 // agentConfigHasActiveSessionsErr reports the DELETE /configs/{id} 409 returned
@@ -358,10 +451,12 @@ func printAgentConfigCard(w io.Writer, cfg *godo.HostedAgentConfig, created bool
 		body.WriteString(cardRow("Created", colorize(formatCreatedAt(cfg.CreatedAt.Time), colMuted)))
 	}
 
-	if id := strings.TrimSpace(cfg.ID); id != "" {
+	// Prefer the name in the hint: --from-config resolves either, and a name is
+	// what the user just chose and will remember.
+	if ref := name; strings.TrimSpace(ref) != "" {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		body.WriteString(cardRow("run", "doctl harness-runtime run --config-id "+id+" --name my-session"))
+		body.WriteString(cardRow("launch", agentCLI+" launch --from-config "+ref+" --name my-session"))
 	}
 
 	renderAgentCard(w, body.String())

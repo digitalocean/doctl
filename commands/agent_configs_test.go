@@ -56,6 +56,51 @@ func TestAgentConfigCreate(t *testing.T) {
 	})
 }
 
+// The point of --secret on config create is that a checked-in manifest can
+// declare which credentials it needs while the value arrives from a secret
+// store at create time. The value is captured server-side once, which is why
+// --from-config later needs no --secret of its own.
+func TestAgentConfigCreate_SecretInjectedFromFlag(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte("agent: claude-code\nsecrets:\n  - name: ANTHROPIC_API_KEY\n    source: tenantSecret\n    value: placeholder\n"), 0o600))
+		keyFile := filepath.Join(dir, "anthropic.key")
+		require.NoError(t, os.WriteFile(keyFile, []byte("sk-ant-from-file\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any()).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+				assert.Contains(t, req.ManifestYAML, "sk-ant-from-file")
+				assert.NotContains(t, req.ManifestYAML, "placeholder", "the flag overrides a value already in the file")
+				return &godo.HostedAgentConfig{ID: "cfg_secret", Name: "reviewer"}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "reviewer")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=@" + keyFile})
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, RunAgentsConfigCreate(config))
+		assert.NotContains(t, buf.String(), "sk-ant-from-file", "the card must never echo a secret value")
+	})
+}
+
+// The card is the handoff point to the next command, so it should name the verb
+// that now exists rather than the retired run/attach spelling.
+func TestAgentConfigCreate_CardPointsAtLaunch(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	printAgentConfigCard(&buf, &godo.HostedAgentConfig{ID: "cfg_1", Name: "reviewer"}, true)
+	out := buf.String()
+	assert.Contains(t, out, agentCLI+" launch --"+doctl.ArgAgentFromConfig)
+	assert.NotContains(t, out, "--config-id")
+}
+
 func TestAgentConfigList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
