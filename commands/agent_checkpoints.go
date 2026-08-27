@@ -63,6 +63,7 @@ func AgentCheckpoints() *Command {
 		agentsCheckpointDeleteHelpMD,
 		Writer, agentPrettyErrors(), aliasOpt("rm"))
 
+	requireAgentSubcommand(cmd)
 	return cmd
 }
 

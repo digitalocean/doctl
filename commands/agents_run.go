@@ -162,10 +162,6 @@ func RunAgentsRun(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	noAttach, err := c.Doit.GetBool(c.NS, doctl.ArgAgentNoAttach)
-	if err != nil {
-		return err
-	}
 	waitSec, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWaitTimeout)
 	if err != nil {
 		return err
@@ -281,7 +277,11 @@ func RunAgentsRun(c *CmdConfig) error {
 		return err
 	}
 
-	if noAttach {
+	attach, err := attachAfterStart(c, isInteractiveTerminal())
+	if err != nil {
+		return err
+	}
+	if !attach {
 		repoRef, _ := normalizeHarnessRepoRef(repo)
 		printRunReadySummary(c.Out, runReadySummary{
 			Session: sess,
@@ -298,13 +298,7 @@ func RunAgentsRun(c *CmdConfig) error {
 		}
 	}
 
-	if isOpenAISandboxSession(sess) || strings.EqualFold(strings.TrimSpace(harness), "codex") {
-		ref := displaySessionRef(sess)
-		fmt.Fprintf(c.Out, "%s %s\n",
-			colorize("Tip:", colMuted),
-			colorize("For the native Codex TUI instead of doctl chat: doctl harness-runtime start-proxy --type codex --session "+ref+" --port 1144", colMuted))
-	}
-
+	printCodexProxyTip(c, sess, harness)
 	return runAgentsAttachSession(c, sessionID)
 }
 

@@ -44,7 +44,7 @@ Create a session and attach in one step:
 ` + agentCLI + ` attach my-session
 ` + "```\n\n" + `Session commands accept a session ID or an exact unique name.`
 
-const agentsStartHelpMD = `Create a hosted session and wait until it is ready (does **not** open the chat TUI). Prefer ` + "`" + agentCLI + " run`" + ` when you want to attach immediately.
+const agentsStartHelpMD = `Create a hosted session, wait until it is ready, and open the chat. Pass ` + "`--detach`" + ` (` + "`-d`" + `) to stop at the ready summary instead; ` + "`-o json`" + ` and a non-terminal stdin/stdout imply it, so scripts and pipelines never land in a TUI. Reattach a detached session any time with ` + "`" + agentCLI + " attach`" + `.
 
 Provide exactly one of:
 
@@ -77,9 +77,9 @@ Example:
 ` + agentCLI + ` validate agent.yaml
 ` + "```"
 
-const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI.
+const agentsRunHelpMD = `Create a session, wait until ready, optionally send ` + "`--prompt`" + `, then open the interactive TUI. Equivalent to ` + "`" + agentCLI + " start`" + `, which also attaches by default.
 
-Provide exactly one of a manifest, ` + "`--harness`" + `, or ` + "`--config-id`" + `. The manifest is a positional path or ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + `, defaulting to ` + "`./agents.yaml`" + ` when present. With a manifest or ` + "`--harness`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--no-attach`" + ` to stop at the ready summary.
+Provide exactly one of a manifest, ` + "`--harness`" + `, or ` + "`--config-id`" + `. The manifest is a positional path or ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + `, defaulting to ` + "`./agents.yaml`" + ` when present. With a manifest or ` + "`--harness`" + `, use ` + "`--gh-repo`" + ` to clone a repository. Pass ` + "`--detach`" + ` (` + "`-d`" + `) to stop at the ready summary.
 
 For the native Codex desktop/CLI UI instead of doctl chat, see ` + "`" + agentCLI + " start-proxy --help`" + `.`
 
@@ -191,7 +191,7 @@ const agentsTriggersPauseHelpMD = `Pause a trigger. New events or cron ticks are
 
 const agentsTriggersResumeHelpMD = `Resume a paused trigger.`
 
-const agentsTriggersRotateSecretHelpMD = `Issue a new webhook secret (shown once). Webhook triggers only.`
+const agentsTriggersRotateSecretHelpMD = `Issue a new webhook secret (shown once). Webhook triggers only. By default the old secret keeps verifying deliveries for 5 minutes, so deliveries already in flight still succeed while you paste the new secret into your external system. Pass ` + "`--grace-period 0`" + ` to retire the old secret immediately — deliveries still signed with it start failing at once, so use it when the old secret is compromised. Pass a positive value (seconds, up to the server max of 1 hour) for a custom handoff window.`
 
 const agentsTriggersListExecutionsHelpMD = `List firings for a trigger. Use ` + "`get-execution`" + ` for full payload and output.`
 
@@ -281,6 +281,19 @@ func renderHelpCodeBlock(code string, styled bool) string {
 		Padding(0, 1).
 		Render(body)
 	return box + "\n"
+}
+
+// requireAgentSubcommand configures a parent-only agents cobra node so unknown
+// positional args (e.g. "frobnicate") fail with a non-zero exit instead of
+// silently printing help. Cobra validates unknown commands only at the root;
+// nested parents with Args unset accept arbitrary args and return flag.ErrHelp
+// (exit 0). See MARSOHS-1075.
+func requireAgentSubcommand(cmd *Command) {
+	cc := cmd.Command
+	cc.Args = cobra.NoArgs
+	cc.RunE = func(c *cobra.Command, args []string) error {
+		return c.Help()
+	}
 }
 
 // agentsStyledHelpFunc prints a compact colored header on TTYs, plain prose with

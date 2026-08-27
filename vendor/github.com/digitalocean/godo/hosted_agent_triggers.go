@@ -27,7 +27,7 @@ type HostedAgentTriggersService interface {
 	Get(context.Context, string) (*HostedAgentTrigger, *Response, error)
 	Update(context.Context, string, *HostedAgentTriggerUpdateRequest) (*HostedAgentTrigger, *Response, error)
 	Delete(context.Context, string) (*Response, error)
-	RotateSecret(context.Context, string) (*HostedAgentTriggerRotateSecretResponse, *Response, error)
+	RotateSecret(context.Context, string, *HostedAgentTriggerRotateSecretOptions) (*HostedAgentTriggerRotateSecretResponse, *Response, error)
 	ListExecutions(context.Context, string, *HostedAgentTriggerExecutionListOptions) (*HostedAgentTriggerExecutionsListResponse, *Response, error)
 	GetExecution(context.Context, string, string) (*HostedAgentTriggerExecution, *Response, error)
 	GetBySession(context.Context, string) (*HostedAgentTrigger, *Response, error)
@@ -214,9 +214,27 @@ type HostedAgentTriggersListResponse struct {
 	NextPageToken string               `json:"next_page_token,omitempty"`
 }
 
+// HostedAgentTriggerRotateSecretOptions specifies optional rotation behaviour.
+// A nil options pointer, or GracePeriodSeconds left nil, selects the server
+// default (5 minutes). Pass a pointer to 0 to revoke the outgoing secret
+// immediately; any positive value is a custom handoff window in seconds
+// (server-enforced max, default 1 hour).
+type HostedAgentTriggerRotateSecretOptions struct {
+	// GracePeriodSeconds is how long the outgoing secret keeps verifying.
+	// Nil omits the query parameter (server default). Non-nil 0 revokes now.
+	GracePeriodSeconds *int `url:"grace_period_seconds,omitempty"`
+}
+
 // HostedAgentTriggerRotateSecretResponse is returned by RotateSecret.
+// Exactly one of PreviousSecretExpiresAt and PreviousSecretRevoked is set, so a
+// caller never has to infer the outcome from a missing field.
 type HostedAgentTriggerRotateSecretResponse struct {
 	WebhookSecret string `json:"webhook_secret,omitempty"`
+	// PreviousSecretExpiresAt is when the outgoing secret stops verifying
+	// deliveries. Nil when the secret was revoked on the rotate call.
+	PreviousSecretExpiresAt *Timestamp `json:"previous_secret_expires_at,omitempty"`
+	// PreviousSecretRevoked reports that the outgoing secret is already dead.
+	PreviousSecretRevoked bool `json:"previous_secret_revoked,omitempty"`
 }
 
 // HostedAgentTriggerExecution is one row per firing.
@@ -393,11 +411,19 @@ func (s *HostedAgentTriggersServiceOp) Delete(ctx context.Context, triggerID str
 }
 
 // RotateSecret issues a new webhook secret (webhook triggers only).
-func (s *HostedAgentTriggersServiceOp) RotateSecret(ctx context.Context, triggerID string) (*HostedAgentTriggerRotateSecretResponse, *Response, error) {
+// By default (nil options, or GracePeriodSeconds left nil) the outgoing secret
+// keeps verifying for the server default window (5 minutes) and
+// PreviousSecretExpiresAt reports when it dies. Pass GracePeriodSeconds pointing
+// at 0 to revoke it on this call, or at a positive value for a custom window.
+func (s *HostedAgentTriggersServiceOp) RotateSecret(ctx context.Context, triggerID string, opt *HostedAgentTriggerRotateSecretOptions) (*HostedAgentTriggerRotateSecretResponse, *Response, error) {
 	if triggerID == "" {
 		return nil, nil, errors.New("hosted agent triggers: trigger id is required")
 	}
 	path := fmt.Sprintf(hostedAgentTriggerRotateSecretPath, triggerID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
 	if err != nil {
 		return nil, nil, err

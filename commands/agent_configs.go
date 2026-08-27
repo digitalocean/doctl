@@ -96,6 +96,7 @@ func AgentConfigs() *Command {
 	AddStringFlag(cmdStartSession, doctl.ArgAgentName, "", "", "Name for the new session", requiredOpt())
 	cmdStartSession.Example = `doctl harness-runtime config start-session cfg_abc123 --name my-session`
 
+	requireAgentSubcommand(cmd)
 	return cmd
 }
 

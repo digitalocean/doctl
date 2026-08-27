@@ -179,18 +179,18 @@ func (mr *MockHostedAgentTriggersServiceMockRecorder) ListWebhookProviders() *go
 }
 
 // RotateSecret mocks base method.
-func (m *MockHostedAgentTriggersService) RotateSecret(triggerID string) (string, error) {
+func (m *MockHostedAgentTriggersService) RotateSecret(triggerID string, gracePeriodSeconds *int) (*do.HostedAgentTriggerRotateSecretResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RotateSecret", triggerID)
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "RotateSecret", triggerID, gracePeriodSeconds)
+	ret0, _ := ret[0].(*do.HostedAgentTriggerRotateSecretResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RotateSecret indicates an expected call of RotateSecret.
-func (mr *MockHostedAgentTriggersServiceMockRecorder) RotateSecret(triggerID any) *gomock.Call {
+func (mr *MockHostedAgentTriggersServiceMockRecorder) RotateSecret(triggerID, gracePeriodSeconds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RotateSecret", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).RotateSecret), triggerID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RotateSecret", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).RotateSecret), triggerID, gracePeriodSeconds)
 }
 
 // Update mocks base method.

@@ -969,6 +969,12 @@ const (
 	// ArgAgentStatus filters sessions by lifecycle status.
 	ArgAgentStatus = "status"
 
+	// ArgAgentGracePeriod is the rotate-secret handoff window in seconds.
+	// Omit (or leave unset) for the server default of 5 minutes; 0 retires the
+	// old secret immediately; positive values set a custom window up to the
+	// server max (default 1 hour).
+	ArgAgentGracePeriod = "grace-period"
+
 	// ArgAgentWorkspacePath is the path inside the session workspace root (/workspace).
 	ArgAgentWorkspacePath = "workspace-path"
 
@@ -1059,8 +1065,12 @@ const (
 	// ArgAgentRepo is a Git repository URL cloned into the session workspace.
 	ArgAgentRepo = "gh-repo"
 
-	// ArgAgentNoAttach stops `agents run` after the session is ready instead of attaching.
+	// ArgAgentNoAttach is the older spelling of ArgAgentDetach, still accepted.
 	ArgAgentNoAttach = "no-attach"
+
+	// ArgAgentDetach stops `agents start` / `agents run` at the ready summary
+	// instead of opening the chat TUI.
+	ArgAgentDetach = "detach"
 
 	// ArgAgentWaitTimeout is how long `agents run` waits for readiness, in seconds.
 	ArgAgentWaitTimeout = "wait-timeout"

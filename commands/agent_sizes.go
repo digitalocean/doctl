@@ -39,6 +39,7 @@ func AgentSizes() *Command {
 			displayerType(&displayers.HostedAgentSandboxSize{}))...)
 	cmdList.Example = `doctl harness-runtime sizes list`
 
+	requireAgentSubcommand(cmd)
 	return cmd
 }
 
