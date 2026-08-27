@@ -954,4 +954,87 @@ const (
 	ArgInferenceText = "text"
 	// ArgInferenceSecondsTotal is the audio duration in seconds for async audio generation.
 	ArgInferenceSecondsTotal = "seconds-total"
+
+	// Gradient AI simulation args
+
+	// ArgGenAISearch filters a Gradient AI list by a free-text search term.
+	ArgGenAISearch = "search"
+
+	// ArgGenAISortBy is the field used to sort a Gradient AI list.
+	ArgGenAISortBy = "sort-by"
+
+	// ArgGenAISortDirection is the direction used to sort a Gradient AI list.
+	ArgGenAISortDirection = "sort-direction"
+
+	// ArgGenAIStatuses filters a Gradient AI list by status.
+	ArgGenAIStatuses = "statuses"
+
+	// ArgGenAIName is the name of a Gradient AI scenario set or simulation run.
+	ArgGenAIName = "name"
+
+	// ArgScenarioSetFile is the path to a local scenario file to upload.
+	ArgScenarioSetFile = "file"
+
+	// ArgScenarioSetScenarios is a JSON array of scenario objects.
+	ArgScenarioSetScenarios = "scenarios"
+
+	// ArgScenarioSetGoalDescription is the goal used to generate scenarios.
+	ArgScenarioSetGoalDescription = "goal-description"
+
+	// ArgScenarioSetNumScenarios is the number of scenarios to generate.
+	ArgScenarioSetNumScenarios = "num-scenarios"
+
+	// ArgScenarioSetGeneratorModelUUID is the model used to generate scenarios.
+	ArgScenarioSetGeneratorModelUUID = "generator-model-uuid"
+
+	// ArgScenarioSetSourceKinds filters scenario sets by source kind.
+	ArgScenarioSetSourceKinds = "source-kinds"
+
+	// ArgScenarioLibraryCategory filters scenario library entries by category.
+	ArgScenarioLibraryCategory = "category"
+
+	// ArgSimulationScenarioSetUUID is the UUID of the scenario set the run executes.
+	ArgSimulationScenarioSetUUID = "scenario-set-uuid"
+
+	// ArgSimulationAgentUUID is the UUID of the candidate agent under test.
+	ArgSimulationAgentUUID = "agent-uuid"
+
+	// ArgSimulationAgentDeploymentUUID is the deployment UUID of the candidate agent.
+	ArgSimulationAgentDeploymentUUID = "agent-deployment-uuid"
+
+	// ArgSimulationAgentName is the display name of the candidate agent.
+	ArgSimulationAgentName = "agent-name"
+
+	// ArgSimulationUserSimulatorModelUUID is the model that simulates the user.
+	ArgSimulationUserSimulatorModelUUID = "user-simulator-model-uuid"
+
+	// ArgSimulationJudgeModelUUID is the model that judges each journey.
+	ArgSimulationJudgeModelUUID = "judge-model-uuid"
+
+	// ArgSimulationUserSimulatorConfig is a JSON object of user simulator settings.
+	ArgSimulationUserSimulatorConfig = "user-simulator-config"
+
+	// ArgSimulationExplorationBudget is the exploration budget for the run.
+	ArgSimulationExplorationBudget = "exploration-budget"
+
+	// ArgSimulationMaxTurns is the maximum number of turns per journey.
+	ArgSimulationMaxTurns = "max-turns"
+
+	// ArgSimulationMetricUUIDs are the evaluation metrics attached to the run.
+	ArgSimulationMetricUUIDs = "metric-uuids"
+
+	// ArgSimulationStarMetricUUID is the UUID of the run's star metric.
+	ArgSimulationStarMetricUUID = "star-metric-uuid"
+
+	// ArgSimulationStarMetricName is the name of the run's star metric.
+	ArgSimulationStarMetricName = "star-metric-name"
+
+	// ArgSimulationStarMetricSuccessThreshold is the success threshold of the star metric.
+	ArgSimulationStarMetricSuccessThreshold = "star-metric-success-threshold"
+
+	// ArgSimulationScenarioUUID filters simulation journeys by scenario UUID.
+	ArgSimulationScenarioUUID = "scenario-uuid"
+
+	// ArgSimulationJourneyVerdicts filters simulation journeys by verdict.
+	ArgSimulationJourneyVerdicts = "verdicts"
 )
