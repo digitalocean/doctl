@@ -538,12 +538,12 @@ func RunDatabaseResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("Database resizing is in progress, waiting for database to be online")
+		notice("Database resizing is in progress, waiting for resize to complete")
 
-		err := waitForDatabaseReady(dbs, id)
+		err := waitForDatabaseResize(dbs, id, r)
 		if err != nil {
 			return fmt.Errorf(
-				"database couldn't enter the `online` state after resizing: %v",
+				"database resize did not complete: %v",
 				err,
 			)
 		}
@@ -2626,6 +2626,67 @@ func waitForDatabaseReady(dbs do.DatabasesService, dbID string) error {
 
 	return fmt.Errorf(
 		"timeout waiting for database (%s) to enter `online` state",
+		dbID,
+	)
+}
+
+// engineSupportsStorageSize reports whether the database engine supports
+// --storage-size-mib on resize. Redis and Valkey do not.
+func engineSupportsStorageSize(engine string) bool {
+	switch strings.ToLower(engine) {
+	case "redis", "valkey":
+		return false
+	default:
+		return true
+	}
+}
+
+// isDatabaseResizeComplete reports whether the cluster reflects the requested
+// resize and is online. Storage is only checked when it was included in the
+// resize request (non-zero) and the engine supports storage sizing.
+func isDatabaseResizeComplete(db *do.Database, req *godo.DatabaseResizeRequest) bool {
+	if db.Status != "online" {
+		return false
+	}
+	if db.SizeSlug != req.SizeSlug || db.NumNodes != req.NumNodes {
+		return false
+	}
+	if req.StorageSizeMib > 0 && engineSupportsStorageSize(db.EngineSlug) &&
+		db.StorageSizeMib != req.StorageSizeMib {
+		return false
+	}
+	return true
+}
+
+func waitForDatabaseResize(dbs do.DatabasesService, dbID string, req *godo.DatabaseResizeRequest) error {
+	const maxAttempts = 180
+	attempts := 0
+	printNewLineSet := false
+
+	for i := 0; i < maxAttempts; i++ {
+		if attempts != 0 {
+			fmt.Fprint(os.Stderr, ".")
+			if !printNewLineSet {
+				printNewLineSet = true
+				defer fmt.Fprintln(os.Stderr)
+			}
+		}
+
+		db, err := dbs.Get(dbID)
+		if err != nil {
+			return err
+		}
+
+		if isDatabaseResizeComplete(db, req) {
+			return nil
+		}
+
+		attempts++
+		time.Sleep(10 * time.Second)
+	}
+
+	return fmt.Errorf(
+		"timeout waiting for database (%s) resize to complete",
 		dbID,
 	)
 }
