@@ -42,6 +42,7 @@ var _ MicroDropletImagesService = &MicroDropletImagesServiceOp{}
 type MicroDropletImage struct {
 	ID      string                  `json:"id,omitempty"`
 	Name    string                  `json:"name,omitempty"`
+	Region  string                  `json:"region,omitempty"`
 	Source  string                  `json:"source,omitempty"`
 	Status  MicroDropletImageStatus `json:"status,omitempty"`
 	Created string                  `json:"created_at,omitempty"`
@@ -51,6 +52,7 @@ type MicroDropletImage struct {
 // MicroDroplet image from a public OCI ref or a DOCR ref.
 type MicroDropletImageCreateRequest struct {
 	Name   string `json:"name"`
+	Region string `json:"region"`
 	Source string `json:"source"`
 }
 
@@ -61,7 +63,7 @@ func (i MicroDropletImage) String() string {
 
 // URN returns the MicroDropletImage ID in a valid DO API URN form.
 func (i MicroDropletImage) URN() string {
-	return ToURN("MicroDropletImage", i.ID)
+	return ToURN("microdroplet_image", i.ID)
 }
 
 // String returns a human-readable description of a MicroDropletImageCreateRequest.
