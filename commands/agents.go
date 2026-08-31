@@ -315,21 +315,14 @@ func mdWrapWidth() int {
 	return 80
 }
 
-// msgAccumulator buffers an assistant turn's streamed token deltas so the whole
-// message can be rendered as markdown once it's complete, rather than emitting
-// raw tokens one at a time.
+// msgAccumulator collects final-answer token deltas. Attach streams them live
+// via streamLive; logs replay buffers and markdown-renders on flush.
 type msgAccumulator struct {
-	buf strings.Builder
-	// tail mirrors the most recent previewTailMaxRunes runes written via add,
-	// kept independent of buf so a live "thinking" preview (see
-	// thinkingState.setLabel) stays O(1) per token instead of re-scanning the
-	// whole (potentially large) accumulated message on every delta.
-	tail string
+	buf      strings.Builder
+	tail     string // last previewTailMaxRunes for bounded previews
+	streamed bool   // true after streamLive; flush must not reprint
 }
 
-// previewTailMaxRunes caps how much recent text msgAccumulator keeps around
-// for the live spinner preview — comfortably more than thinkingPreviewLabel
-// ends up showing, so trimming there never runs out of material.
 const previewTailMaxRunes = 200
 
 func (m *msgAccumulator) add(s string) {
@@ -337,31 +330,42 @@ func (m *msgAccumulator) add(s string) {
 	m.tail = trimTailRunes(m.tail+s, previewTailMaxRunes)
 }
 
-// previewTail returns the most recently streamed text, for a live "thinking"
-// preview while the message is still being buffered.
+func (m *msgAccumulator) streamLive(out io.Writer, s string) {
+	if s == "" {
+		return
+	}
+	m.add(s)
+	fmt.Fprint(out, s)
+	m.streamed = true
+}
+
 func (m *msgAccumulator) previewTail() string { return m.tail }
 
-// flush renders the buffered message as markdown and writes it, then resets.
 func (m *msgAccumulator) flush(out io.Writer) {
 	m.tail = ""
 	if m.buf.Len() == 0 {
+		m.streamed = false
 		return
 	}
 	text := m.buf.String()
 	m.buf.Reset()
+	streamed := m.streamed
+	m.streamed = false
+
+	if streamed {
+		if !strings.HasSuffix(text, "\n") {
+			fmt.Fprintln(out)
+		}
+		return
+	}
+
 	rendered := renderMarkdown(text)
 	if rendered == "" {
-		// Whitespace-only buffer: there is nothing to show, and emitting the
-		// newlines below would spend blank lines on it.
 		return
 	}
 	if !strings.HasSuffix(rendered, "\n") {
 		rendered += "\n"
 	}
-	// renderMarkdown returns a styled block with no blank edges, so own the
-	// spacing here: one blank line separating the answer from the event line
-	// above it. Every event line prints its own leading newline, which supplies
-	// the blank line below. Plain mode stays byte-clean for pipes and scripts.
 	if stylingEnabled {
 		rendered = "\n" + rendered
 	}
@@ -378,21 +382,13 @@ func trimTailRunes(s string, n int) string {
 	return string(r[len(r)-n:])
 }
 
-// reasoningStreamer prints model reasoning/"thinking" content live, styled
-// distinctly (dim italic) from the final answer, as it arrives — unlike
-// msgAccumulator, it never buffers for a later markdown render. Reasoning is
-// plain prose and the point is to show it as it streams in, not after the
-// fact. Shared by the SPI drainStream loop (run.token_delta with
-// is_reasoning=true) and the OpenAI sandbox attach renderer (its own
-// reasoning delta/item events).
+// reasoningStreamer prints reasoning tokens live (dim italic).
 type reasoningStreamer struct {
 	out      io.Writer
 	thinking *thinkingState
 	active   bool
 }
 
-// stream writes a reasoning chunk, printing a leading label the first time a
-// block starts and pausing the thinking spinner while the block is live.
 func (r *reasoningStreamer) stream(text string) {
 	if text == "" {
 		return
@@ -407,17 +403,20 @@ func (r *reasoningStreamer) stream(text string) {
 	fmt.Fprint(r.out, italicMuted(text))
 }
 
-// end closes out a streamed reasoning block, if one is open, and resumes the
-// thinking spinner for whatever comes next in the turn.
 func (r *reasoningStreamer) end() {
 	r.endWithLabel("")
 }
 
-// endWithLabel is like end, but seeds the resumed spinner's label
-// immediately — see thinkingState.startWithLabel. Callers that already know
-// the next preview (the final answer's first chunk, right as a reasoning
-// block closes) should use this instead of end()+setLabel so the spinner
-// never visibly reverts to the generic caption in between.
+// endNoResume closes the reasoning block without restarting the spinner
+// (used when the final answer is about to stream live).
+func (r *reasoningStreamer) endNoResume() {
+	if !r.active {
+		return
+	}
+	fmt.Fprintln(r.out)
+	r.active = false
+}
+
 func (r *reasoningStreamer) endWithLabel(label string) {
 	if !r.active {
 		return
@@ -2169,8 +2168,8 @@ type openAIAttachRenderer struct {
 	warmup    *warmupState
 	acc       msgAccumulator
 	reasoning reasoningStreamer
-	// sawOutputDelta tracks whether we already buffered streamed assistant text
-	// so output_text.done does not duplicate it.
+	// sawOutputDelta tracks whether we already streamed assistant text live
+	// so output_text.done / item.done fallbacks do not duplicate it.
 	sawOutputDelta bool
 	// activeToolCmd is the in-flight command_execution command line.
 	activeToolCmd string
@@ -2231,11 +2230,12 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintln(r.out, colorize("Tip: remove and start a fresh session; wait for ● environment connected before sending work.", colMuted))
 	case "session.turn.output_text.delta":
 		r.clearWarmup()
+		r.ensureReasoning().endNoResume()
 		if r.thinking != nil {
 			r.thinking.stop()
 		}
 		if d, ok := evt["delta"].(string); ok && d != "" {
-			r.acc.add(d)
+			r.acc.streamLive(r.out, d)
 			r.sawOutputDelta = true
 		}
 	case "session.turn.output_text.done":
@@ -2853,32 +2853,9 @@ var (
 	warmupStatusInterval = 2 * time.Second
 )
 
-// thinkingState shows a sticky "Run in progress" spinner one row above the
-// prompt, kept up for the entire run — not just the gap before the first
-// token — so a multi-second tool call or any other silent stretch never
-// reads as the agent having gone quiet. drainStream stops it only to print a
-// discrete line (so the two don't race for the same terminal row) and
-// restarts it right after, for as long as the run is still open and no HITL
-// approval is pending (that has its own visible prompt). Animates above the
-// prompt when out is a *promptDisplay; falls back to a one-shot
-// "(Run in progress)" print otherwise (pipes, line-mode).
-//
-// Reasoning content on the SPI protocol arrives as a plain run.token_delta
-// with data.is_reasoning=true — the same event kind as the final answer, just
-// flagged. drainStream streams flagged chunks live via a reasoningStreamer
-// (see below) instead of buffering them like the final answer. For anything
-// that streams unflagged (a harness/model that never reasons, or reasoning
-// that a future adapter doesn't flag), label still mirrors the buffered
-// preview so the spinner reads as a live typing indicator rather than a
-// static caption while the eventual markdown-rendered flush is assembled.
-//
-// turnRunning is a second, independent signal from active: active tracks
-// whether the *spinner* is currently showing (it toggles off around each
-// discrete line), while turnRunning tracks whether a run is open at all — set
-// on RunStarted, cleared on RunCompleted/RunFailed. It gates both the
-// sticky-restart behavior above and whether the input loop warns a user their
-// message will be queued behind the current run rather than started
-// immediately.
+// thinkingState is the sticky "Run in progress" spinner above the prompt.
+// turnRunning tracks whether a run is open (independent of whether the
+// spinner is currently showing).
 type thinkingState struct {
 	mu          sync.Mutex
 	out         io.Writer
@@ -3623,11 +3600,6 @@ func sessionLimitErr(err error) bool {
 // not reconnect from: re-attaching would supersede the connection that just
 // superseded us, and the two would evict each other indefinitely.
 func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, warmup *warmupState, dedup *tokenDeduper) (superseded bool) {
-	// acc buffers the current assistant turn's final-answer tokens; the
-	// thinking spinner stays up for the whole turn and the buffered text is
-	// rendered as markdown when the run finishes or a discrete event
-	// interrupts it. reasoning streams the same turn's is_reasoning=true
-	// chunks live and separately — see reasoningStreamer.
 	acc := &msgAccumulator{}
 	reasoning := &reasoningStreamer{out: out, thinking: thinking}
 	// awaiting is a FIFO queue of HITL approvals whose lines haven't printed
@@ -3697,25 +3669,11 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			var p tokenChunkPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil && dedup.allow(p.Text) {
 				if p.IsReasoning {
-					// SPI TokenChunk.is_reasoning: stream live and separately
-					// from the final answer, which starts at the first
-					// is_reasoning=false chunk.
 					reasoning.stream(p.Text)
 				} else {
-					acc.add(p.Text)
-					// Buffered (not streamed raw) because the whole point is a
-					// clean markdown render once the message is complete; the
-					// live preview keeps the spinner from looking dead in the
-					// meantime.
-					label := thinkingPreviewLabel(acc.previewTail())
-					// endWithLabel (not end()+setLabel): if this chunk is the
-					// one closing out a reasoning block, the spinner it
-					// resumes should show this preview on its very first
-					// frame, not flash the generic "Run in progress" caption
-					// first — that flash is what looked like the indicator
-					// showing twice per turn.
-					reasoning.endWithLabel(label)
-					thinking.setLabel(label)
+					reasoning.endNoResume()
+					thinking.stop()
+					acc.streamLive(out, p.Text)
 				}
 			}
 		case godo.HostedAgentEventKindHITLRequested:
