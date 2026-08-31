@@ -37,6 +37,12 @@ func GradientAI() *Command {
 	cmd.AddCommand(ListRegionsCmd())
 	// Add the OpenAI keys command as a subcommand to Gradient AI
 	cmd.AddCommand(OpenAIKeyCmd())
+	// Add the scenario set command as a subcommand to Gradient AI
+	cmd.AddCommand(ScenarioSetCmd())
+	// Add the scenario library command as a subcommand to Gradient AI
+	cmd.AddCommand(ScenarioLibraryCmd())
+	// Add the simulation run command as a subcommand to Gradient AI
+	cmd.AddCommand(SimulationRunCmd())
 
 	return cmd
 }
