@@ -348,6 +348,45 @@ func TestFacade_TurnStart_SendInputError(t *testing.T) {
 // translated into the turn/started, item/started, item/agentMessage/delta*,
 // item/completed, turn/completed notification sequence the design doc's
 // event-mapping table calls for.
+// TestFacade_TurnStart_SkipsReasoning pins MARSOHS-1012: a token chunk marked
+// is_reasoning is the model's thinking trace, not the answer, and the facade
+// has no reasoning item to route it to — so it must not surface as
+// agentMessage text. The reasoning chunk here leads the turn, which also pins
+// that no item/started is announced on its behalf: the first notification
+// after turn/started belongs to the answer.
+func TestFacade_TurnStart_SkipsReasoning(t *testing.T) {
+	f, h, rec := newTestFacade(t)
+
+	h.QueueRun("run-1",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"let me think","is_reasoning":true}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"Paris","is_reasoning":false}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+
+	_, err := dispatch(t, f, "turn/start", turnStartParams{
+		ThreadID: testSessionID,
+		Input:    []userInputItem{{Type: "text", Text: "hi"}},
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, "turn/started", rec.next(t).method)
+	require.Equal(t, "item/started", rec.next(t).method)
+
+	delta := rec.next(t)
+	require.Equal(t, "item/agentMessage/delta", delta.method)
+	assert.Equal(t, "Paris", delta.params.(agentMessageDeltaNotification).Delta,
+		"reasoning must not be forwarded as an agentMessage delta")
+
+	itemCompleted := rec.next(t)
+	require.Equal(t, "item/completed", itemCompleted.method)
+	completedItem, ok := itemCompleted.params.(itemCompletedNotification).Item.(agentMessageItem)
+	require.True(t, ok, "item/completed's Item should be agentMessageItem, got %T", itemCompleted.params.(itemCompletedNotification).Item)
+	assert.Equal(t, "Paris", completedItem.Text, "reasoning must not accumulate into the completed item")
+
+	require.Equal(t, "turn/completed", rec.next(t).method)
+}
+
 func TestFacade_TurnStart_StreamsToCompletion(t *testing.T) {
 	f, h, rec := newTestFacade(t)
 

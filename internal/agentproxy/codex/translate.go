@@ -72,8 +72,27 @@ func (f *Facade) translateEvent(ctx context.Context, ev godo.HostedAgentEvent, t
 	case godo.HostedAgentEventKindTokenChunk:
 		var payload struct {
 			Text string `json:"text"`
+			// IsReasoning marks model reasoning rather than the user-visible
+			// answer (SPI TokenChunk.is_reasoning). The answer begins at the
+			// first chunk where this is false.
+			IsReasoning bool `json:"is_reasoning"`
 		}
 		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+			return false
+		}
+		// Reasoning is not the answer, and this protocol has nowhere to put
+		// it: item/agentMessage/delta is the only text channel the facade
+		// speaks, so forwarding a thought there makes the client render the
+		// thinking trace AS the reply (MARSOHS-1012). Codex sessions never
+		// reach this line for reasoning — raw.go forwards their native
+		// frames, which carry reasoning as its own item — so this path is
+		// what non-codex runtimes (cursor) fall back to, and dropping is the
+		// only faithful option until the protocol gains a reasoning item.
+		//
+		// Skipped ahead of the item/started below on purpose: opening an
+		// agentMessage item for a turn that leads with reasoning would
+		// announce an item whose only content we then refuse to send.
+		if payload.IsReasoning {
 			return false
 		}
 		// A canonical delta on a turn whose run.started went raw (or was

@@ -522,6 +522,9 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 	if prog != nil {
 		prog.ok(fmt.Sprintf("Session created · %s", displaySessionRef(sess)))
 	}
+	if sess != nil && sess.HostedAgentSession != nil {
+		printSessionCreateWarnings(sess.Warnings)
+	}
 	return sess, nil
 }
 

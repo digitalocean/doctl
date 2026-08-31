@@ -144,6 +144,28 @@ type GradientAIService interface {
 	GetIndexingJob(indexingJobID string) (*IndexingJob, error)
 	CancelIndexingJob(indexingJobID string) (*IndexingJob, error)
 	ListIndexingJobDataSources(indexingJobID string) (IndexingJobDataSources, error)
+	CreateScenarioSetUploadPresignedURLs(req *godo.CreateScenarioSetUploadPresignedURLsRequest) (*ScenarioSetFileUploads, error)
+	CreateScenarioSet(req *godo.CreateScenarioSetRequest) (*ScenarioSet, error)
+	GenerateScenarioSet(req *godo.GenerateScenarioSetRequest) (*ScenarioSet, error)
+	ListScenarioSets(opt *godo.ScenarioSetListOptions) (ScenarioSets, error)
+	GetScenarioSet(scenarioSetUUID string) (*ScenarioSet, error)
+	ListScenarios(scenarioSetUUID string, opt *godo.ScenarioListOptions) (Scenarios, error)
+	GetScenarioSetDownloadURL(scenarioSetUUID string) (*GenAIDownloadURL, error)
+	UpdateScenarioSet(scenarioSetUUID string, req *godo.UpdateScenarioSetRequest) (*ScenarioSet, error)
+	DeleteScenarioSet(scenarioSetUUID string) error
+	ListScenarioLibrary(opt *godo.ScenarioLibraryListOptions) (ScenarioLibraryEntries, error)
+	ListScenarioLibraryScenarios(libraryScenarioUUID string, opt *godo.ScenarioListOptions) (Scenarios, error)
+	CreateScenarioSetFromLibrary(libraryScenarioUUID string, req *godo.CreateScenarioSetFromLibraryRequest) (*ScenarioSet, error)
+	CreateSimulationRun(req *godo.CreateSimulationRunRequest) (*SimulationRun, error)
+	ListSimulationRuns(opt *godo.SimulationRunListOptions) (SimulationRuns, error)
+	GetSimulationRun(runUUID string) (*SimulationRunDetail, error)
+	UpdateSimulationRun(runUUID string, req *godo.UpdateSimulationRunRequest) (*SimulationRun, error)
+	CancelSimulationRun(runUUID string) (*SimulationRun, error)
+	DeleteSimulationRun(runUUID string) error
+	ListSimulationJourneys(runUUID string, opt *godo.SimulationJourneyListOptions) (SimulationJourneys, error)
+	GetSimulationJourney(runUUID string, journeyUUID string) (*SimulationJourney, error)
+	GetSimulationJourneyTrajectory(runUUID string, journeyUUID string) (*SimulationTrajectory, error)
+	GetSimulationJourneyTrajectoryURL(runUUID string, journeyUUID string) (*GenAIDownloadURL, error)
 }
 
 var _ GradientAIService = &gradientAIService{}
