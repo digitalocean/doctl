@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.206.0] - 2026-08-31
+
+- #1094 - @sshirolkar - add godo support for simulations rpcs
+
 ## [1.205.0] - 2026-08-25
 
 - #1089 - @ddatta-do - feat : add routes endpoints
