@@ -58,6 +58,8 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"AmdGpuDevicePlugin",
 		"AmdGpuDeviceMetricsExporterPlugin",
 		"NvidiaGpuDevicePlugin",
+		"NvidiaGpuDraDriver",
+		"AmdGpuDraDriver",
 		"RDMASharedDevicePlugin",
 	}
 }
@@ -99,6 +101,8 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		"AmdGpuDevicePlugin":                "AMD GPU Device Plugin",
 		"AmdGpuDeviceMetricsExporterPlugin": "AMD GPU Device Metrics Exporter Plugin",
 		"NvidiaGpuDevicePlugin":             "NVIDIA GPU Device Plugin",
+		"NvidiaGpuDraDriver":                "NVIDIA GPU DRA Driver",
+		"AmdGpuDraDriver":                   "AMD GPU DRA Driver",
 		"RDMASharedDevicePlugin":            "RDMA Shared Device Plugin",
 	}
 }
@@ -141,6 +145,8 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 			"AmdGpuDevicePlugin":                cluster.AmdGpuDevicePlugin != nil && *cluster.AmdGpuDevicePlugin.Enabled,
 			"AmdGpuDeviceMetricsExporterPlugin": cluster.AmdGpuDeviceMetricsExporterPlugin != nil && *cluster.AmdGpuDeviceMetricsExporterPlugin.Enabled,
 			"NvidiaGpuDevicePlugin":             cluster.NvidiaGpuDevicePlugin != nil && *cluster.NvidiaGpuDevicePlugin.Enabled,
+			"NvidiaGpuDraDriver":                cluster.NvidiaGpuDraDriver != nil && *cluster.NvidiaGpuDraDriver.Enabled,
+			"AmdGpuDraDriver":                   cluster.AmdGpuDraDriver != nil && *cluster.AmdGpuDraDriver.Enabled,
 			"RDMASharedDevicePlugin":            cluster.RdmaSharedDevicePlugin != nil && *cluster.RdmaSharedDevicePlugin.Enabled,
 		}
 

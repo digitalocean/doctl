@@ -78,6 +78,8 @@ const (
 	ArgClusterVersionSlug = "version"
 	// ArgVPCUUID is a VPC UUID argument.
 	ArgVPCUUID = "vpc-uuid"
+	// ArgSubnetUUID is a VPC subnet UUID argument.
+	ArgSubnetUUID = "subnet-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
 	// ArgWorkerSubnetUUID is a cluster worker subnet UUID argument.
@@ -144,9 +146,13 @@ const (
 	ArgVPCNATGatewayICMPTimeout = "icmp-timeout"
 	// ArgVPCNATGatewayTCPTimeout is a vpc nat gateway tcp-timeout argument.
 	ArgVPCNATGatewayTCPTimeout = "tcp-timeout"
+	// ArgVPCNATGatewayIP is an optional BYOIP address for VPC NAT Gateway create.
+	ArgVPCNATGatewayIP = "ip"
 
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgIsolatedWorkers is a cluster's isolated workers argument.
+	ArgIsolatedWorkers = "isolated-workers"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
@@ -169,6 +175,10 @@ const (
 	ArgEnableAmdGpuDeviceMetricsExporterPlugin = "enable-amd-gpu-device-metrics-exporter-plugin"
 	// ArgEnableNvidiaGpuDevicePlugin enables automatic NVIDIA gpu device plugin installation.
 	ArgEnableNvidiaGpuDevicePlugin = "enable-nvidia-gpu-device-plugin"
+	// ArgEnableNvidiaGpuDraDriver enables the NVIDIA GPU DRA Driver cluster plugin.
+	ArgEnableNvidiaGpuDraDriver = "enable-nvidia-gpu-dra-driver"
+	// ArgEnableAmdGpuDraDriver enables the AMD GPU DRA Driver cluster plugin.
+	ArgEnableAmdGpuDraDriver = "enable-amd-gpu-dra-driver"
 	// ArgEnableRDMASharedDevicePlugin enables automatic NVIDIA gpu device plugin installation.
 	ArgEnableRDMASharedDevicePlugin = "enable-rdma-shared-device-plugin"
 	// ArgKubernetesEnableSSO enables SSO as a method of authentication for the DOKS cluster.
@@ -453,6 +463,8 @@ const (
 	ArgLoadBalancerNetworkStack = "network-stack"
 	// ArgLoadBalancerTLSCipherPolicy is the tls cipher policy to be used for the load balancer
 	ArgLoadBalancerTLSCipherPolicy = "tls-cipher-policy"
+	// ArgLoadBalancerIP is an optional BYOIP address to assign on load balancer create.
+	ArgLoadBalancerIP = "ip"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
