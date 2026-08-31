@@ -159,10 +159,13 @@ func configHome() string {
 // Execute executes the current command using DoitCmd.
 func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
-		if !strings.Contains(err.Error(), "unknown command") {
-			fmt.Println(err)
+		// Unknown-command errors are already printed by Cobra/usage handling.
+		if strings.Contains(err.Error(), "unknown command") {
+			os.Exit(-1)
 		}
-		os.Exit(-1)
+		// Route through checkErr so flag validation and other errors honor
+		// --output json and a consistent Error:/JSON shape.
+		checkErr(err)
 	}
 }
 
@@ -247,10 +250,11 @@ type flagOpt func(c *Command, name, key string)
 
 func requiredOpt() flagOpt {
 	return func(c *Command, name, key string) {
-		c.MarkFlagRequired(key)
+		// MarkFlagRequired must use the pflag name (e.g. "size"), not the
+		// namespaced viper key (e.g. "droplet.create.size").
+		_ = c.MarkFlagRequired(name)
 
-		key = fmt.Sprintf("required.%s", key)
-		viper.Set(key, true)
+		viper.Set(fmt.Sprintf("required.%s", key), true)
 
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))

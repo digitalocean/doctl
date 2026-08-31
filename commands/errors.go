@@ -71,15 +71,26 @@ func checkErr(err error) {
 
 	switch output {
 	default:
+		if fv, ok := err.(*FlagValidationError); ok {
+			// Next-Gen design: colored ✗ Error: block, no duplicate "Error:" prefix.
+			fmt.Fprintln(color.Output, fv.Display())
+			errAction()
+			return
+		}
 		fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
 	case "json":
-		es := outputErrors{
-			Errors: []outputError{
-				{Detail: err.Error()},
-			},
+		var payload any
+		if fv, ok := err.(*FlagValidationError); ok {
+			payload = fv
+		} else {
+			payload = outputErrors{
+				Errors: []outputError{
+					{Detail: err.Error()},
+				},
+			}
 		}
 
-		b, _ := json.Marshal(&es)
+		b, _ := json.Marshal(payload)
 		fmt.Println(string(b))
 	}
 
