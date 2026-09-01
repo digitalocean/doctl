@@ -61,8 +61,8 @@ func TestVersion(t *testing.T) {
 	}{
 		// version with no label
 		{
-			v:    Version{Major: 0, Minor: 1, Patch: 2},
-			s:    `doctl version 0.1.2
+			v: Version{Major: 0, Minor: 1, Patch: 2},
+			s: `doctl version 0.1.2
 API endpoint: https://api.digitalocean.com/`,
 			json: "{\n  \"version\": \"0.1.2\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2",
@@ -70,8 +70,8 @@ API endpoint: https://api.digitalocean.com/`,
 		},
 		// version with label
 		{
-			v:    Version{Major: 0, Minor: 1, Patch: 2, Label: "dev"},
-			s:    `doctl version 0.1.2-dev
+			v: Version{Major: 0, Minor: 1, Patch: 2, Label: "dev"},
+			s: `doctl version 0.1.2-dev
 API endpoint: https://api.digitalocean.com/`,
 			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2-dev",
