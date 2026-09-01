@@ -89,13 +89,14 @@ type Facade struct {
 	mu            sync.Mutex
 	turns         map[string]*turnState
 	streamStarted bool
-	// expectingTurn is set just before SendInput and cleared once trackTurn
-	// registers the run (or SendInput fails). While true, lookupTurn retries
-	// a miss so the shared loop can claim events that arrive before the map
-	// write — without charging a wait on every permanently-untracked event.
-	// expectTurnDeadline is only a safety cap for a hung SendInput; the
-	// handoff itself is not bounded by a short wall-clock window that can
-	// expire during a slow SendInput RPC.
+	// expectingTurn is set before ensureEventLoop (and SendInput) and cleared
+	// once trackTurn registers the run (or either step fails). While true,
+	// lookupTurn retries a miss so the shared loop can claim events that
+	// arrive as soon as the stream attaches — before the map write, and
+	// before SendInput returns — without charging a wait on every
+	// permanently-untracked event. expectTurnDeadline is only a safety cap
+	// for a hung SendInput; the handoff itself is not bounded by a short
+	// wall-clock window that can expire during a slow SendInput RPC.
 	expectingTurn      bool
 	expectTurnDeadline time.Time
 
@@ -901,15 +902,6 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 				Message: fmt.Sprintf("thread %q not found; this proxy only serves thread %q", p.ThreadID, f.SessionID),
 			}
 		}
-		// Open (or confirm) the event-loop stream before SendInput, not after:
-		// SendInput is what makes the harness start the run, so a reader
-		// attached only afterward can race a fast run to completion and miss
-		// every event it emits. Live delivery is forward-only from the moment
-		// of attach (no Last-Event-ID recovery on a fresh cursor). See
-		// ensureEventLoop.
-		if err := f.ensureEventLoop(ctx); err != nil {
-			return nil, &agentproxy.RPCError{Code: -32000, Message: "opening event stream failed: " + err.Error()}
-		}
 		var text strings.Builder
 		for _, item := range p.Input {
 			if item.Type != "text" {
@@ -920,15 +912,31 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 			}
 			text.WriteString(item.Text)
 		}
-		// Arm the claim window before SendInput: the shared loop can see
-		// this run's first event as soon as the harness accepts it, which
-		// is before trackTurn writes the map entry below. Cleared by
-		// trackTurn (or on SendInput error) — not by a short deadline that
-		// could expire while SendInput itself is still in flight.
+		// Arm the claim window before ensureEventLoop (and SendInput): the
+		// shared loop starts draining as soon as StreamSession attaches, and
+		// the test harness emits QueueRun events on connect — so a turn's
+		// first event can land before trackTurn writes the map entry (and,
+		// under scheduling pressure, even before this goroutine reaches
+		// SendInput). Cleared by trackTurn or on error below — not by a
+		// short deadline that could expire while SendInput is still in
+		// flight. See lookupTurn.
 		f.mu.Lock()
 		f.expectingTurn = true
 		f.expectTurnDeadline = time.Now().Add(eventClaimSafety)
 		f.mu.Unlock()
+		// Open (or confirm) the event-loop stream before SendInput, not after:
+		// SendInput is what makes the real harness start the run, so a reader
+		// attached only afterward can race a fast run to completion and miss
+		// every event it emits. Live delivery is forward-only from the moment
+		// of attach (no Last-Event-ID recovery on a fresh cursor). See
+		// ensureEventLoop.
+		if err := f.ensureEventLoop(ctx); err != nil {
+			f.mu.Lock()
+			f.expectingTurn = false
+			f.expectTurnDeadline = time.Time{}
+			f.mu.Unlock()
+			return nil, &agentproxy.RPCError{Code: -32000, Message: "opening event stream failed: " + err.Error()}
+		}
 		req := &godo.HostedAgentSendInputRequest{Text: text.String()}
 		if f.rawEligible() {
 			// v2 inbound raw passthrough: ship the TUI's exact turn/start
@@ -1089,10 +1097,10 @@ const (
 // lookupTurn returns the tracked turnState for runID. While turn/start has
 // expectingTurn armed (see turn/start), it retries so the shared loop can
 // claim a run's first event that arrives before trackTurn's map write —
-// including events that land during a slow SendInput. Outside that handoff
-// a miss is returned immediately so permanently-untracked events
-// (already-finished runs, history that predates this connection) do not
-// stall the drain loop.
+// including events that land as soon as ensureEventLoop attaches the
+// stream, and during a slow SendInput. Outside that handoff a miss is
+// returned immediately so permanently-untracked events (already-finished
+// runs, history that predates this connection) do not stall the drain loop.
 func (f *Facade) lookupTurn(runID string) (*turnState, bool) {
 	for {
 		f.mu.Lock()
