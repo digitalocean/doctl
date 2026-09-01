@@ -53,6 +53,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/agentproxy"
 	"github.com/digitalocean/doctl/internal/agentproxy/codex"
+	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
 	"github.com/digitalocean/godo"
 	"github.com/muesli/termenv"
 	"github.com/pkg/browser"
@@ -480,7 +481,7 @@ func Agents() *Command {
 		"Bridge the Codex CLI to a hosted session",
 		agentsStartProxyHelpMD,
 		Writer, agentsNS()...)
-	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to bridge (v1: codex)")
+	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxyType, "", "codex", "Coding-agent protocol to bridge (codex, opencode)")
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
 	AddIntFlag(cmdStartProxy, doctl.ArgAgentProxyPort, "", 1144, "Local port to listen on")
 	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect")
@@ -1029,8 +1030,8 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if proxyType != "codex" {
-		return fmt.Errorf("unsupported --type %q; v1 supports only \"codex\"", proxyType)
+	if proxyType != "codex" && proxyType != "opencode" {
+		return fmt.Errorf("unsupported --type %q; supported types are \"codex\" and \"opencode\"", proxyType)
 	}
 
 	sessionRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentProxySession)
@@ -1056,12 +1057,26 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		return fmt.Errorf("session %q not found: %w", sessionRef, err)
 	}
 
+	// The two facades speak different transports, so the listen URL scheme
+	// and the connect command diverge per type. --replay is codex-only:
+	// opencode's attach fetches history itself (GET /session/{id}/message,
+	// served from M3 on), so there is nothing for the proxy to push.
+	listenURL := fmt.Sprintf("ws://127.0.0.1:%d", port)
+	connectCmd := fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)
+	if proxyType == "opencode" {
+		if replay {
+			return fmt.Errorf("--replay is codex-only; opencode's own `attach` replays history itself")
+		}
+		listenURL = fmt.Sprintf("http://127.0.0.1:%d", port)
+		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d", port)
+	}
+
 	stylingEnabled = detectStyling()
 	var body strings.Builder
 	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
 	body.WriteString(cardRow("Session", displaySessionRef(sess)))
-	body.WriteString(cardRow("Listen", fmt.Sprintf("ws://127.0.0.1:%d", port)))
-	body.WriteString(cardRow("Connect", fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)))
+	body.WriteString(cardRow("Listen", listenURL))
+	body.WriteString(cardRow("Connect", connectCmd))
 	renderAgentCard(c.Out, body.String())
 
 	// SIGTERM alongside SIGINT: under a process manager or plain `kill` (not
@@ -1069,6 +1084,21 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	// ServeListener never triggered — the process just died abruptly instead.
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
+	// opencode's facade is an http.Handler over REST + SSE, not a JSON-RPC
+	// Facade — one instance for the listener lifetime; the single-consumer
+	// rule lives on its event stream instead of on a connection.
+	if proxyType == "opencode" {
+		dir, err := os.Getwd()
+		if err != nil {
+			dir = "/"
+		}
+		return agentproxy.ServeHTTP(ctx, port, &opencode.Facade{
+			SessionID: sessionID,
+			Sessions:  svc,
+			Dir:       dir,
+		})
+	}
 
 	// Fresh Facade per connection (see ServeListener): per-connection state
 	// (notifier, in-flight turns, event loop, --replay gate) must not leak
