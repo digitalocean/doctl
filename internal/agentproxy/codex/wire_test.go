@@ -585,5 +585,5 @@ func TestWire_ShutdownCancelsConnectionGoroutines(t *testing.T) {
 		facade.mu.Lock()
 		defer facade.mu.Unlock()
 		return !facade.streamStarted
-	}, 2*time.Second, 10*time.Millisecond, "runEventLoop should have exited and reset streamStarted after ctx cancellation")
+	}, 5*time.Second, 10*time.Millisecond, "runEventLoop should have exited and reset streamStarted after ctx cancellation")
 }

@@ -1285,7 +1285,21 @@ func (f *Facade) runEventLoop(ctx context.Context, initial *godo.HostedAgentSess
 		}
 
 		connectedAt := time.Now()
+		// Next() reads the HTTP body with no select on ctx: cancel alone does
+		// not always unblock it promptly (the transport abort is best-effort).
+		// Close the body when ctx ends so drainStream returns and shutdown
+		// can finish — the path TestWire_ShutdownCancelsConnectionGoroutines
+		// pins, and the live SIGINT/SIGTERM case it was written for.
+		drainDone := make(chan struct{})
+		go func(s *godo.HostedAgentSessionStream) {
+			select {
+			case <-ctx.Done():
+				_ = s.Close()
+			case <-drainDone:
+			}
+		}(stream)
 		clientDead := f.drainStream(ctx, stream, &f.streamCursor)
+		close(drainDone)
 		streamErr := stream.Err()
 		stream.Close()
 		stream = nil

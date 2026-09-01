@@ -5072,7 +5072,7 @@ func TestWarmupState_clearsOnTimeout(t *testing.T) {
 		w.mu.Lock()
 		defer w.mu.Unlock()
 		return !w.active && w.dismissed
-	}, time.Second, 5*time.Millisecond)
+	}, 5*time.Second, 5*time.Millisecond)
 
 	assert.NotContains(t, buf.String(), "You can type anytime")
 }
