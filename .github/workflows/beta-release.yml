@@ -136,11 +136,8 @@ jobs:
           echo "${out}"
 
           # Binary's Version.String() is "Major.Minor.Patch-Label" with
-          # Label=beta (set in .goreleaser.beta.yml ldflags). The trailing
-          # ".N" of the tag is not embedded in the binary, so assert the
-          # base-and-label portion only.
-          base="${VER%%-*}"
-          expected="${base}-beta"
+          # Label={{ .Prerelease }} (e.g. beta.1) from .goreleaser.beta.yml.
+          expected="${VER}"
           if ! grep -F -- "${expected}" <<<"${out}" >/dev/null; then
             echo
             echo "Smoke test failed: expected 'doctl version' output to contain '${expected}', got:"
