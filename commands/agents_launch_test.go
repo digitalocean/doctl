@@ -119,16 +119,16 @@ func TestRunAgentsLaunch_UnresolvableRefExplainsBothReadings(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			ListSessions(&godo.HostedAgentSessionListOptions{Name: "pr-reveiwer-test"}).
+			ListSessions(&godo.HostedAgentSessionListOptions{Name: "pr-reviewer-test"}).
 			Return(nil, "", nil)
 
-		config.Args = []string{"pr-reveiwer-test"}
+		config.Args = []string{"pr-reviewer-test"}
 		err := RunAgentsLaunch(config)
 		require.Error(t, err)
 		msg := err.Error()
 		assert.Contains(t, msg, "isn't an existing session")
 		assert.Contains(t, msg, "no readable file exists at that path")
-		assert.Contains(t, msg, "launch pr-reveiwer-test")
+		assert.Contains(t, msg, "launch pr-reviewer-test")
 		assert.Contains(t, msg, "create --harness")
 	})
 }
