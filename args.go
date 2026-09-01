@@ -1056,24 +1056,32 @@ const (
 	// ArgAgentTriggerTimezone is the IANA timezone for kind=cron.
 	ArgAgentTriggerTimezone = "timezone"
 
-	// ArgAgentConfigID is the Agent Config ID a session is created from.
-	ArgAgentConfigID = "config-id"
+	// ArgAgentFromConfig names an existing Agent Config, by ID or by name, to
+	// create a session from. Spelled to sit beside --from-checkpoint rather
+	// than next to --name, where --config-id read as "the config's name".
+	ArgAgentFromConfig = "from-config"
 
-	// ArgAgentHarness selects a coding-agent runtime for `agents run`.
+	// ArgAgentHarness selects a coding-agent runtime for `agents create`.
 	ArgAgentHarness = "harness"
 
 	// ArgAgentRepo is a Git repository URL cloned into the session workspace.
 	ArgAgentRepo = "gh-repo"
 
-	// ArgAgentNoAttach is the older spelling of ArgAgentDetach, still accepted.
-	ArgAgentNoAttach = "no-attach"
-
-	// ArgAgentDetach stops `agents start` / `agents run` at the ready summary
-	// instead of opening the chat TUI.
-	ArgAgentDetach = "detach"
-
-	// ArgAgentWaitTimeout is how long `agents run` waits for readiness, in seconds.
+	// ArgAgentWaitTimeout is how long `agents create` waits for readiness, in
+	// seconds.
 	ArgAgentWaitTimeout = "wait-timeout"
+
+	// ArgAgentSecret carries a NAME=VALUE tenant secret injected into the
+	// manifest at create time. Repeatable; also NAME=@file and NAME=-.
+	ArgAgentSecret = "secret"
+
+	// ArgAgentDryRun prints the fully-resolved manifest instead of creating a
+	// session.
+	ArgAgentDryRun = "dry-run"
+
+	// ArgAgentOnHITL is the fixed outcome (approve|reject|defer) applied to
+	// every approval request during an unattended `agents create`.
+	ArgAgentOnHITL = "on-hitl"
 
 	// Gradient AI simulation args
 

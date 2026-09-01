@@ -134,172 +134,178 @@ func prettyHarnessName(h string) string {
 	return h
 }
 
-// RunAgentsRun creates a hosted agent session from --harness/--gh-repo/--prompt
-// (or --spec / --config-id), waits until the session is ready, optionally sends
-// an initial prompt, and attaches interactively.
-func RunAgentsRun(c *CmdConfig) error {
-	harness, err := c.Doit.GetString(c.NS, doctl.ArgAgentHarness)
-	if err != nil {
+// RunAgentsLaunch gets the caller looking at a session, whichever way that
+// takes. Given creation flags or a manifest it creates one and attaches; given
+// the name or ID of a session that already exists it attaches to that,
+// resuming it first if it is paused.
+//
+// The two modes are one command because they are one intent — "put me in a
+// session" — and splitting them is what made `run` and `attach` read as
+// near-synonyms. `create` is the command for the other intent, "make a session
+// and leave it alone".
+func RunAgentsLaunch(c *CmdConfig) error {
+	if err := rejectCreateOnlyLaunchFlags(c); err != nil {
 		return err
-	}
-	specPath, err := namedManifestPath(c)
-	if err != nil {
-		return err
-	}
-	configID, err := c.Doit.GetString(c.NS, doctl.ArgAgentConfigID)
-	if err != nil {
-		return err
-	}
-	repo, err := c.Doit.GetString(c.NS, doctl.ArgAgentRepo)
-	if err != nil {
-		return err
-	}
-	prompt, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerPrompt)
-	if err != nil {
-		return err
-	}
-	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
-	if err != nil {
-		return err
-	}
-	waitSec, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWaitTimeout)
-	if err != nil {
-		return err
-	}
-
-	harness = strings.TrimSpace(harness)
-	specPath = strings.TrimSpace(specPath)
-	configID = strings.TrimSpace(configID)
-	repo = strings.TrimSpace(repo)
-	prompt = strings.TrimSpace(prompt)
-
-	if len(c.Args) > 0 && (harness != "" || configID != "") {
-		return fmt.Errorf("a manifest path cannot be combined with --%s or --%s", doctl.ArgAgentHarness, doctl.ArgAgentConfigID)
-	}
-
-	sources := 0
-	for _, s := range []string{harness, specPath, configID} {
-		if s != "" {
-			sources++
-		}
-	}
-	if sources > 1 {
-		return fmt.Errorf("--%s, --%s, and --%s are mutually exclusive; provide only one", doctl.ArgAgentHarness, doctl.ArgAgentSpec, doctl.ArgAgentConfigID)
-	}
-	discoveredSpec := false
-	if sources == 0 {
-		// Nothing named and no other source selected, so an agents.yaml sitting
-		// in the working directory is unambiguously what the user meant.
-		if found := discoverManifestFile(); found != "" {
-			specPath, discoveredSpec = found, true
-		} else {
-			return missingManifestErr()
-		}
-	}
-	if configID != "" && repo != "" {
-		return fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentConfigID)
-	}
-	if name != "" {
-		if err := validateHostedAgentIdentifier(name); err != nil {
-			return err
-		}
 	}
 
 	stylingEnabled = detectStyling()
-	noticeDiscoveredManifest(specPath, discoveredSpec)
-	if repo != "" {
-		if err := maybeOfferGitHubAuth(c); err != nil {
-			return err
-		}
+
+	ref := ""
+	if len(c.Args) == 1 {
+		ref = strings.TrimSpace(c.Args[0])
+	}
+
+	// Disambiguation, documented in agentsLaunchHelpMD: a positional argument
+	// naming a readable file is a manifest; anything else is a session ref.
+	// Creation flags settle it before we ever look at the filesystem.
+	if !agentCreationFlagSet(c) && ref != "" && !isReadableFile(ref) {
+		return launchExistingSession(c, ref)
+	}
+	return launchNewSession(c)
+}
+
+// launchNewSession is `launch`'s create-then-attach mode: byte-for-byte the
+// same creation path as `create`, ending in the chat instead of a ready card.
+func launchNewSession(c *CmdConfig) error {
+	if !isInteractiveTerminal() {
+		return fmt.Errorf("`%s launch` ends in an interactive chat, which needs a terminal; use `%s create` to create a session without attaching", agentCLI, agentCLI)
+	}
+
+	src, err := resolveAgentCreationSource(c)
+	if err != nil {
+		return err
 	}
 
 	prog := newCreationProgress(c.Out)
 	defer prog.stop()
 	prog.header("Launching agent session")
 
-	var (
-		sess *do.HostedAgentSession
-		raw  []byte
-	)
-	switch {
-	case configID != "":
-		sess, err = createSessionFromConfig(c, configID, name, prog)
-		if err != nil {
-			return err
-		}
-	case specPath != "":
-		raw, err = readManifestBytes(os.Stdin, specPath)
-		if err != nil {
-			return err
-		}
-		if manifestUsesLegacyEnvelope(raw) {
-			warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
-				"switch to the flat format (top-level `agent:` key, no envelope — see `doctl harness-runtime start --help`). " +
-				"The envelope is still accepted for now but will be rejected after the transition window")
-		}
-		raw, err = injectManifestName(raw, name)
-		if err != nil {
-			return err
-		}
-		sess, err = startSessionFromRawManifest(c, raw, prog)
-		if err != nil {
-			return err
-		}
-	default:
-		raw, err = buildHarnessManifest(harness, repo, prompt, name)
-		if err != nil {
-			return err
-		}
-		raw, err = injectManifestName(raw, name)
-		if err != nil {
-			return err
-		}
-		sess, err = startSessionFromRawManifest(c, raw, prog)
-		if err != nil {
-			return err
-		}
-	}
-
-	sessionID := sess.SessionID
-	if sessionID == "" {
-		return errors.New("session create returned no session id")
-	}
-
-	wait := runWaitTimeout
-	if waitSec > 0 {
-		wait = time.Duration(waitSec) * time.Second
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), wait)
-	defer cancel()
-
-	sess, err = waitForSessionReady(ctx, c.HostedAgents(), sessionID, prog)
+	sess, err := createAgentSession(c, src, prog)
 	if err != nil {
 		return err
 	}
-
-	attach, err := attachAfterStart(c, isInteractiveTerminal())
+	if sess == nil {
+		return errors.New("session create returned no session")
+	}
+	sess, err = waitForAgentSessionReady(c, sess, prog)
 	if err != nil {
 		return err
 	}
-	if !attach {
-		repoRef, _ := normalizeHarnessRepoRef(repo)
-		printRunReadySummary(c.Out, runReadySummary{
-			Session: sess,
-			Harness: harness,
-			Repo:    repoRef,
-			Prompt:  prompt,
-		})
-		return nil
+	if err := sendInitialPrompt(c, sess.SessionID, src); err != nil {
+		return err
 	}
 
-	if prompt != "" && (raw == nil || !manifestIncludesPrompt(raw, prompt)) {
-		if _, err := c.HostedAgents().SendInput(sessionID, &godo.HostedAgentSendInputRequest{Text: prompt}); err != nil {
-			return fmt.Errorf("sending initial prompt: %w", err)
+	printCodexProxyTip(c, sess, src.harness)
+	return runAgentsAttachSession(c, sess.SessionID)
+}
+
+// launchExistingSession is `launch`'s attach-only mode. A paused session is
+// resumed on the way in, since "show me this session" and "it happens to be
+// asleep" should not be two commands the user has to sequence themselves.
+func launchExistingSession(c *CmdConfig, ref string) error {
+	if err := rejectCreationFlagsForExistingSession(c); err != nil {
+		return err
+	}
+
+	svc := c.HostedAgents()
+	sessionID, err := resolveSessionRef(svc, ref)
+	if err != nil {
+		return launchUnresolvableRefErr(ref, err)
+	}
+
+	sess, err := svc.GetSession(sessionID)
+	if err != nil {
+		return beautifyAgentError(err)
+	}
+	// A destroyed or failed session is not asleep, it is gone; attachToSession
+	// reports that rather than this trying to resume it.
+	if sess.Status == godo.HostedAgentSessionStatusPaused {
+		fmt.Fprintf(c.Out, "%s\n", colorize(fmt.Sprintf("Session %s is paused — resuming…", displaySessionRef(sess)), colMuted))
+		if err := svc.ResumeSession(sessionID); err != nil {
+			return beautifyAgentError(err)
+		}
+		// Re-read: the session we hold says "paused", which would banner and
+		// stream as though the resume had not happened.
+		return runAgentsAttachSession(c, sessionID)
+	}
+
+	return attachToSession(c, sess)
+}
+
+// launchUnresolvableRefErr explains both readings of a ref that matched
+// neither a session nor a file, because from the user's side the failure is
+// ambiguous: they may have fat-fingered a session name or a path.
+func launchUnresolvableRefErr(ref string, cause error) error {
+	if !agentRefNotFound(cause) {
+		return cause
+	}
+	return fmt.Errorf(`%q isn't an existing session, and no readable file exists at that path either.
+  %s launch %s    (if this is a session name)
+  %s create --harness ...    (to start a new one)`, ref, agentCLI, ref, agentCLI)
+}
+
+// agentRefNotFound reports whether resolveSessionRef failed because nothing
+// goes by that name, as opposed to an API or ambiguity error worth surfacing.
+func agentRefNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "no agent session goes by the name")
+}
+
+// agentCreationFlagSet reports whether the user named a creation source
+// explicitly, which decides Mode A without consulting the filesystem.
+func agentCreationFlagSet(c *CmdConfig) bool {
+	return c.Doit.IsSet(doctl.ArgAgentHarness) ||
+		c.Doit.IsSet(doctl.ArgAgentSpec) ||
+		c.Doit.IsSet(doctl.ArgAgentFromConfig)
+}
+
+// isReadableFile reports whether path names a regular file doctl can open.
+// This is the whole disambiguation rule for `launch`'s positional argument.
+func isReadableFile(path string) bool {
+	if path == "-" {
+		return true
+	}
+	info, err := os.Stat(path)
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	f.Close()
+	return true
+}
+
+// rejectCreateOnlyLaunchFlags turns `launch --dry-run` / `--on-hitl` into a
+// pointer at `create`, which is where those flags mean something.
+func rejectCreateOnlyLaunchFlags(c *CmdConfig) error {
+	for _, flag := range []string{doctl.ArgAgentDryRun, doctl.ArgAgentOnHITL} {
+		if c.Doit.IsSet(flag) {
+			return fmt.Errorf("--%s only applies when creating a session without attaching; use `%s create --%s`", flag, agentCLI, flag)
 		}
 	}
+	if Output == "json" {
+		return fmt.Errorf("`%s launch` opens an interactive chat and has no JSON form; use `%s create -o json`", agentCLI, agentCLI)
+	}
+	return nil
+}
 
-	printCodexProxyTip(c, sess, harness)
-	return runAgentsAttachSession(c, sessionID)
+// rejectCreationFlagsForExistingSession guards Mode B: the session already
+// exists, so a flag describing how to build one was either a typo or a
+// misunderstanding, and silently ignoring it would hide that.
+func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
+	for _, flag := range []string{
+		doctl.ArgAgentSecret,
+		doctl.ArgAgentName,
+		doctl.ArgAgentRepo,
+		doctl.ArgAgentTriggerPrompt,
+		doctl.ArgAgentWaitTimeout,
+	} {
+		if c.Doit.IsSet(flag) {
+			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
+		}
+	}
+	return nil
 }
 
 func displaySessionRef(sess *do.HostedAgentSession) string {
@@ -919,9 +925,9 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next step", colMuted))
-	body.WriteString(cardRow("attach", "doctl harness-runtime attach "+ref))
+	body.WriteString(cardRow("launch", agentCLI+" launch "+ref))
 	if isCodexReadyAgent(sum) {
-		body.WriteString(cardRow("proxy", "doctl harness-runtime start-proxy --type codex --session "+ref+" --port 1144"))
+		body.WriteString(cardRow("proxy", agentCLI+" start-proxy --type codex --session "+ref+" --port 1144"))
 	}
 
 	renderAgentCard(w, body.String())
@@ -1016,7 +1022,9 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached, godo.HostedAgentSessionStatusPaused:
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		body.WriteString(cardRow("attach", "doctl harness-runtime attach "+ref))
+		// launch resumes a paused session on the way in, so the same line is
+		// the right next step whether this one is awake or not.
+		body.WriteString(cardRow("launch", agentCLI+" launch "+ref))
 	}
 
 	renderAgentCard(w, body.String())

@@ -48,7 +48,8 @@ func TestRenderHelpCodeBlockPlain(t *testing.T) {
 }
 
 func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
-	assert.Contains(t, agentsRootHelpMD, agentCLI+" run")
+	assert.Contains(t, agentsRootHelpMD, agentCLI+" launch")
+	assert.Contains(t, agentsRootHelpMD, agentCLI+" create")
 	assert.Contains(t, agentsRootHelpMD, "Managed Agents Runtime Services (M.A.R.S)")
 	assert.NotContains(t, agentsRootHelpMD, "What's new")
 	assert.NotContains(t, agentsRootHelpMD, "whats new")
@@ -57,16 +58,36 @@ func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
 	assert.NotContains(t, agentsRootHelpMD, "Launch and manage")
 }
 
-func TestAgentsStartHelpDocumentsFlatName(t *testing.T) {
-	assert.Contains(t, agentsStartHelpMD, "name: my-session")
-	assert.Contains(t, agentsStartHelpMD, "agent: opencode")
-	assert.Contains(t, agentsStartHelpMD, "--name")
+func TestAgentsCreateHelpDocumentsFlatName(t *testing.T) {
+	assert.Contains(t, agentsCreateHelpMD, "name: my-session")
+	assert.Contains(t, agentsCreateHelpMD, "agent: opencode")
+	assert.Contains(t, agentsCreateHelpMD, "--name")
+}
+
+// The three new flags are the ones a reader cannot guess at, so each has to be
+// discoverable from create's own help rather than only the flag listing.
+func TestAgentsCreateHelpDocumentsNewFlags(t *testing.T) {
+	for _, want := range []string{"--from-config", "--secret", "--dry-run", "--on-hitl"} {
+		assert.Contains(t, agentsCreateHelpMD, want)
+	}
+	assert.Contains(t, agentsCreateHelpMD, "redacted", "--dry-run's secret handling must be stated")
+	assert.Contains(t, agentsCreateHelpMD, "NAME=@path", "the @file form is the one worth reaching for in CI")
+}
+
+// launch's positional argument is the only inference in the command surface, so
+// the rule behind it belongs in the help, not just in the code.
+func TestAgentsLaunchHelpDocumentsBothModes(t *testing.T) {
+	assert.Contains(t, agentsLaunchHelpMD, "readable file")
+	assert.Contains(t, agentsLaunchHelpMD, "paused session is resumed")
+	assert.Contains(t, agentsLaunchHelpMD, agentCLI+" launch my-session")
+	assert.Contains(t, agentsLaunchHelpMD, "--from-config")
+	assert.Contains(t, agentsLaunchHelpMD, "attach", "the alias should be named for muscle memory")
 }
 
 func TestAgentsStartProxyHelpExplainsBridge(t *testing.T) {
 	assert.Contains(t, agentsStartProxyHelpMD, "WebSocket")
 	assert.Contains(t, agentsStartProxyHelpMD, "codex --remote")
-	assert.Contains(t, agentsStartProxyHelpMD, "attach")
+	assert.Contains(t, agentsStartProxyHelpMD, "launch")
 	assert.NotContains(t, agentsStartProxyHelpMD, "What's new")
 }
 

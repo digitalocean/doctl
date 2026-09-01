@@ -246,7 +246,7 @@ func TestWaitForSessionReady_BitsReadyWhileProvisioning(t *testing.T) {
 	})
 }
 
-func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
+func TestRunAgentsCreate_Harness(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -283,31 +283,36 @@ func TestRunAgentsRun_NoAttachHarness(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "https://github.com/katanemo/plano")
 		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "Review README")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
-		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
 
 		tm.hostedAgents.EXPECT().
 			StartProviderAuth("github").
 			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
 
-		require.NoError(t, RunAgentsRun(config))
+		// buildHarnessManifest embeds the prompt only for Codex, so an
+		// opencode session has to be told once it is ready.
+		tm.hostedAgents.EXPECT().
+			SendInput("sess_run_1", &godo.HostedAgentSendInputRequest{Text: "Review README"}).
+			Return(nil, nil)
+
+		require.NoError(t, RunAgentsCreate(config))
 		out := buf.String()
-		assert.Contains(t, out, "Launching agent session")
+		assert.Contains(t, out, "Creating agent session")
 		assert.Contains(t, out, "GitHub already connected")
 		assert.Contains(t, out, "Validating configuration")
 		assert.Contains(t, out, "Creating hosted session")
 		assert.Contains(t, out, "Session created")
 		assert.Contains(t, out, "Agent is ready")
 		assert.NotContains(t, out, "SESSION_STATUS_")
-		assert.Contains(t, out, "doctl harness-runtime attach demo")
+		assert.Contains(t, out, "doctl harness-runtime launch demo")
 		assert.NotContains(t, out, "katanemo/plano", "repo is hidden by default; only shown with -v/--verbose")
 	})
 }
 
-// TestRunAgentsRun_ClaudeCodeMissingAnthropicKey ensures a missing inference
+// TestRunAgentsCreate_ClaudeCodeMissingAnthropicKey ensures a missing inference
 // key is caught locally (no CreateSessionFromManifest/GetSession
 // expectations set below — gomock fails the test if either is called) rather
 // than letting the harness fail once it's already hosted.
-func TestRunAgentsRun_ClaudeCodeMissingAnthropicKey(t *testing.T) {
+func TestRunAgentsCreate_ClaudeCodeMissingAnthropicKey(t *testing.T) {
 	_ = os.Unsetenv(anthropicAPIKeyEnv)
 	prevInteractive := Interactive
 	Interactive = false
@@ -321,9 +326,8 @@ func TestRunAgentsRun_ClaudeCodeMissingAnthropicKey(t *testing.T) {
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
-		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
 
-		err := RunAgentsRun(config)
+		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), anthropicAPIKeyEnv)
 	})
@@ -358,11 +362,11 @@ func TestPrepareClaudeCodeStart_ValidatesKey(t *testing.T) {
 	assert.Equal(t, 1, calls, "opencode manifest should not call validateAnthropicAPIKey")
 }
 
-// TestRunAgentsRun_ClaudeCodeBogusAnthropicKey ensures a present-but-invalid
+// TestRunAgentsCreate_ClaudeCodeBogusAnthropicKey ensures a present-but-invalid
 // ANTHROPIC_API_KEY is caught locally too — not just a missing one. No
 // CreateSessionFromManifest expectation is set below, so gomock fails the
 // test if the bogus key is not rejected before that call.
-func TestRunAgentsRun_ClaudeCodeBogusAnthropicKey(t *testing.T) {
+func TestRunAgentsCreate_ClaudeCodeBogusAnthropicKey(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-bogus")
 	orig := validateAnthropicAPIKey
 	t.Cleanup(func() { validateAnthropicAPIKey = orig })
@@ -375,15 +379,14 @@ func TestRunAgentsRun_ClaudeCodeBogusAnthropicKey(t *testing.T) {
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
-		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
 
-		err := RunAgentsRun(config)
+		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "rejected by Anthropic")
 	})
 }
 
-func TestRunAgentsRun_NoAttachHarness_VerboseShowsRepoAndID(t *testing.T) {
+func TestRunAgentsCreate_HarnessVerboseShowsRepoAndID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -419,13 +422,12 @@ func TestRunAgentsRun_NoAttachHarness_VerboseShowsRepoAndID(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "https://github.com/katanemo/plano")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-verbose")
-		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
 
 		tm.hostedAgents.EXPECT().
 			StartProviderAuth("github").
 			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
 
-		require.NoError(t, RunAgentsRun(config))
+		require.NoError(t, RunAgentsCreate(config))
 		out := buf.String()
 		assert.Contains(t, out, "katanemo/plano")
 		assert.Contains(t, out, "sess_run_2")
@@ -447,15 +449,16 @@ func TestPrintAttachBanner(t *testing.T) {
 	}, "")
 
 	assert.Equal(t, "\n● Connected  OpenCode · smoke-test\n"+
-		"  Enter send · Option/Alt + Enter newline · Ctrl + D detach · /help for more\n",
+		"  Enter send · Option/Alt + Enter newline · Ctrl + D detach · /help for more\n"+
+		"  y/a approve · n/r reject · d defer\n",
 		out.String())
 }
 
-// TestPrintAttachBannerStaysTwoLines pins the banner's height. It used to be a
+// TestPrintAttachBannerStaysCompact pins the banner's height. It used to be a
 // 15-line bordered card; the whole point of the compact header is that
-// attaching costs a couple of lines, so a regression that reintroduces a
-// multi-line block should fail here rather than in review.
-func TestPrintAttachBannerStaysTwoLines(t *testing.T) {
+// attaching costs a few lines, so a regression that reintroduces a multi-line
+// block should fail here rather than in review.
+func TestPrintAttachBannerStaysCompact(t *testing.T) {
 	prev := stylingEnabled
 	stylingEnabled = false
 	t.Cleanup(func() { stylingEnabled = prev })
@@ -470,8 +473,33 @@ func TestPrintAttachBannerStaysTwoLines(t *testing.T) {
 	}, "")
 
 	body := strings.TrimPrefix(out.String(), "\n")
-	assert.Len(t, strings.Split(strings.TrimRight(body, "\n"), "\n"), 2)
+	assert.Len(t, strings.Split(strings.TrimRight(body, "\n"), "\n"), 3)
 	assert.NotContains(t, out.String(), "╭", "the attach banner must not be a bordered card")
+}
+
+// The approval keys are the reason the banner is worth more than one line, so
+// pin that all three outcomes are offered and that they carry their colors.
+func TestPrintAttachBannerShowsColoredApprovalKeys(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var out bytes.Buffer
+	printAttachBanner(&out, &do.HostedAgentSession{
+		HostedAgentSession: &godo.HostedAgentSession{
+			SessionID: "sess_attach_1",
+			Name:      "smoke-test",
+			AgentKind: godo.HostedAgentKindOpenCode,
+		},
+	}, "")
+
+	got := out.String()
+	for _, want := range []string{"y/a", "approve", "n/r", "reject", "d", "defer"} {
+		assert.Contains(t, got, want)
+	}
+	assert.Contains(t, got, colorize("y/a", colSuccess), "approve reads green")
+	assert.Contains(t, got, colorize("n/r", colError), "reject reads red")
+	assert.Contains(t, got, colorize("d", colWarning), "defer reads amber")
 }
 
 // TestPrintAttachBannerBridgeNote pins that a bridge note earns its own
@@ -572,26 +600,26 @@ func TestMaybeOfferGitHubAuth_ConnectsWhenAccepted(t *testing.T) {
 	})
 }
 
-func TestRunAgentsRun_RequiresHarnessOrSpec(t *testing.T) {
+func TestRunAgentsCreate_RequiresHarnessOrSpec(t *testing.T) {
 	t.Chdir(t.TempDir()) // no agents.yaml to discover
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		err := RunAgentsRun(config)
+		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no manifest given")
 	})
 }
 
-func TestRunAgentsRun_RejectsHarnessAndSpecTogether(t *testing.T) {
+func TestRunAgentsCreate_RejectsHarnessAndSpecTogether(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, "agent.yaml")
-		err := RunAgentsRun(config)
+		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), "mutually exclusive"))
 	})
 }
 
-func TestRunAgentsRun_FromConfigID_NoAttach(t *testing.T) {
+func TestRunAgentsCreate_FromConfig(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
@@ -624,34 +652,33 @@ func TestRunAgentsRun_FromConfigID_NoAttach(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
-		config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
 
-		require.NoError(t, RunAgentsRun(config))
+		require.NoError(t, RunAgentsCreate(config))
 		got := buf.String()
 		assert.Contains(t, got, "Creating hosted session from config")
 		assert.Contains(t, got, "Agent is ready")
-		assert.Contains(t, got, "doctl harness-runtime attach demo")
+		assert.Contains(t, got, "doctl harness-runtime launch demo")
 	})
 }
 
-func TestRunAgentsRun_FromConfigID_RequiresName(t *testing.T) {
+func TestRunAgentsCreate_FromConfigID_RequiresName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
-		err := RunAgentsRun(config)
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
+		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "--name is required")
 	})
 }
 
-func TestRunAgentsRun_FromConfigID_RejectsRepo(t *testing.T) {
+func TestRunAgentsCreate_FromConfigID_RejectsRepo(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
 		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "org/repo")
-		err := RunAgentsRun(config)
+		err := RunAgentsCreate(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--gh-repo cannot be used with --config-id")
+		assert.Contains(t, err.Error(), "--gh-repo cannot be used with --from-config")
 	})
 }

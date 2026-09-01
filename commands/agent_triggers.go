@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -61,7 +62,10 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerOutputEmail, "", "", "Destination email when output-mode=email")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerOutputSlackWebhook, "", "", "Slack incoming webhook URL when output-mode=slack")
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", "Path to agents.yaml manifest for session-mode=fresh (\"-\" reads stdin). ${VAR} references are resolved from the local environment at create time and stored expanded.")
+	AddStringFlag(cmdCreate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to use as the session template for session-mode=fresh, instead of --spec. Its manifest is copied into this trigger at create time.")
+	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Paused session ID for session-mode=reuse")
+	cmdCreate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerProvider, "", "", "Webhook provider (github|gitlab|custom); default custom")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerCronExpr, "", "", "Cron expression when kind=cron")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerTimezone, "", "", "IANA timezone when kind=cron (e.g. America/New_York)")
@@ -85,7 +89,10 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerOutputEmail, "", "", "Destination email when output-mode=email")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerOutputSlackWebhook, "", "", "Slack incoming webhook URL when output-mode=slack")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "", "", "Updated agents.yaml manifest for fresh triggers (\"-\" reads stdin). ${VAR} references are resolved from the local environment at update time and stored expanded.")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config whose manifest becomes this trigger's session template, instead of --spec.")
+	AddStringSliceFlag(cmdUpdate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Updated bound session ID for reuse triggers")
+	cmdUpdate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerCronExpr, "", "", "Updated cron expression")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerTimezone, "", "", "Updated IANA timezone")
 	cmdUpdate.Example = `doctl harness-runtime triggers update TRIGGER_ID --status paused; doctl harness-runtime triggers update TRIGGER_ID --prompt 'New prompt'`
@@ -586,19 +593,12 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 
 	switch req.SessionMode {
 	case godo.HostedAgentTriggerSessionModeFresh:
-		specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+		manifest, err := agentTriggerSessionTemplate(c)
 		if err != nil {
 			return nil, err
 		}
-		if specPath == "" {
-			return nil, fmt.Errorf("--%s is required when --%s=fresh", doctl.ArgAgentSpec, doctl.ArgAgentTriggerSessionMode)
-		}
-		manifest, err := readManifest(os.Stdin, specPath)
-		if err != nil {
-			return nil, err
-		}
-		if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
-			return nil, err
+		if manifest == nil {
+			return nil, fmt.Errorf("--%s or --%s is required when --%s=fresh", doctl.ArgAgentSpec, doctl.ArgAgentFromConfig, doctl.ArgAgentTriggerSessionMode)
 		}
 		req.SessionTemplate = string(manifest)
 	case godo.HostedAgentTriggerSessionModeReuse:
@@ -647,6 +647,81 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 	return req, nil
 }
 
+// agentTriggerSessionTemplate resolves the manifest a fresh trigger mints its
+// sessions from, either read locally with --spec or copied from an existing
+// Agent Config with --from-config. Returns nil when neither was given, which
+// create treats as an error and update treats as "leave it alone".
+//
+// --from-config is a client-side copy, not a link: HostedAgentTriggerCreateRequest
+// has no config field, so the config's manifest is fetched and sent as the
+// SessionTemplate exactly as --spec would be. That means the copy is taken once,
+// and the config's server-held secret values are not part of it (they are never
+// returned to a client), so --secret must supply them here too. A real
+// backend-side config reference would remove both caveats.
+func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
+	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	if err != nil {
+		return nil, err
+	}
+	configRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentFromConfig)
+	if err != nil {
+		return nil, err
+	}
+	specPath = strings.TrimSpace(specPath)
+	configRef = strings.TrimSpace(configRef)
+
+	if specPath != "" && configRef != "" {
+		return nil, fmt.Errorf("--%s and --%s are mutually exclusive; provide only one", doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
+	}
+	secrets, err := agentSecretFlags(c)
+	if err != nil {
+		return nil, err
+	}
+	if specPath == "" && configRef == "" {
+		if len(secrets) > 0 {
+			return nil, fmt.Errorf("--%s needs a session template to inject into; pass --%s or --%s", doctl.ArgAgentSecret, doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
+		}
+		return nil, nil
+	}
+
+	var manifest []byte
+	if configRef != "" {
+		configID, err := resolveConfigRef(c.HostedAgents(), configRef)
+		if err != nil {
+			return nil, err
+		}
+		cfg, err := c.HostedAgents().GetAgentConfig(configID)
+		if err != nil {
+			return nil, err
+		}
+		if cfg == nil || len(bytes.TrimSpace(cfg.Manifest)) == 0 {
+			return nil, fmt.Errorf("agent config %s has no manifest to copy into this trigger", configRef)
+		}
+		// The config API returns the manifest as JSON, which the create
+		// endpoints accept interchangeably with YAML.
+		manifest, err = expandManifestEnv(cfg.Manifest)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		manifest, err = readManifest(os.Stdin, specPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if manifest, err = injectManifestSecrets(manifest, secrets); err != nil {
+		return nil, err
+	}
+	if err := rejectRedactedSecrets(manifest); err != nil {
+		return nil, err
+	}
+	if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
+		return nil, err
+	}
+	return manifest, nil
+}
+
 func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequest, error) {
 	update := &godo.HostedAgentTriggerUpdateRequest{}
 	changed := false
@@ -686,18 +761,11 @@ func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequ
 		changed = true
 	}
 
-	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	manifest, err := agentTriggerSessionTemplate(c)
 	if err != nil {
 		return nil, err
 	}
-	if specPath != "" {
-		manifest, err := readManifest(os.Stdin, specPath)
-		if err != nil {
-			return nil, err
-		}
-		if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
-			return nil, err
-		}
+	if manifest != nil {
 		update.SessionTemplate = string(manifest)
 		changed = true
 	}

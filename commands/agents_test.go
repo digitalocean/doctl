@@ -71,7 +71,31 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "start", "validate", "run", "attach", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "exec")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "exec")
+}
+
+// start, run and attach are gone outright rather than kept as deprecated
+// aliases: leaving them registered would preserve the three-near-synonym
+// problem the split exists to remove.
+func TestAgentsOldVerbsAreGone(t *testing.T) {
+	cmd := Agents()
+	for _, name := range []string{"start", "run"} {
+		found, _, err := cmd.Find([]string{name})
+		if err == nil {
+			assert.NotEqual(t, name, found.Name(), "%q should no longer be a command", name)
+		}
+	}
+}
+
+// attach survives only as an alias of launch, for muscle memory.
+func TestAgentsLaunchAliases(t *testing.T) {
+	cmd := Agents()
+	for _, name := range []string{"launch", "up", "chat", "attach"} {
+		found, _, err := cmd.Find([]string{name})
+		require.NoError(t, err, "alias %q", name)
+		require.NotNil(t, found, "alias %q", name)
+		assert.Equal(t, "launch", found.Name(), "alias %q should resolve to launch", name)
+	}
 }
 
 func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
@@ -81,19 +105,19 @@ func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
 	assert.Contains(t, cmd.Aliases, "agents")
 	assert.Contains(t, cmd.Aliases, "ohr")
 
-	found, _, err := cmd.Find([]string{"run"})
+	found, _, err := cmd.Find([]string{"launch"})
 	require.NoError(t, err)
-	assert.Equal(t, "run", found.Name())
+	assert.Equal(t, "launch", found.Name())
 
-	var start *Command
+	var create *Command
 	for _, child := range cmd.ChildCommands() {
-		if child.Name() == "start" {
-			start = child
+		if child.Name() == "create" {
+			create = child
 			break
 		}
 	}
-	require.NotNil(t, start)
-	assert.Equal(t, "agents.start", cmdNS(start), "viper keys must stay under agents.*")
+	require.NotNil(t, create)
+	assert.Equal(t, "agents.create", cmdNS(create), "viper keys must stay under agents.*")
 }
 
 func TestAgentsRemoveAliases(t *testing.T) {
@@ -223,51 +247,85 @@ func TestNamedManifestPath(t *testing.T) {
 	})
 }
 
-func TestAttachAfterStart(t *testing.T) {
-	t.Run("attaches by default on a terminal", func(t *testing.T) {
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			attach, err := attachAfterStart(config, true)
-			assert.NoError(t, err)
-			assert.True(t, attach)
-		})
-	})
+// Attaching used to be a flag on start/run, decided by attachAfterStart. It is
+// now the difference between two commands: create never attaches and launch
+// always does. These pin that boundary, since it is the whole point of the
+// split and a regression would silently reintroduce the ambiguity.
+func TestCreateNeverAttaches(t *testing.T) {
+	// A terminal is the condition under which the old code would have attached.
+	stubInteractiveTerminal(t, true)
 
-	t.Run("detach flag opts out", func(t *testing.T) {
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			config.Doit.Set(config.NS, doctl.ArgAgentDetach, true)
-			attach, err := attachAfterStart(config, true)
-			assert.NoError(t, err)
-			assert.False(t, attach)
-		})
-	})
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_no_attach",
+					Name:      "demo",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+		// Exactly one GetSession, from the readiness wait. Attaching would call
+		// it again to fetch the session it is about to stream.
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_no_attach").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_no_attach",
+					Name:      "demo",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil).
+			Times(1)
 
-	t.Run("no-attach still opts out", func(t *testing.T) {
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			config.Doit.Set(config.NS, doctl.ArgAgentNoAttach, true)
-			attach, err := attachAfterStart(config, true)
-			assert.NoError(t, err)
-			assert.False(t, attach)
-		})
-	})
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 
-	t.Run("json output opts out", func(t *testing.T) {
-		prev := Output
-		Output = "json"
-		t.Cleanup(func() { Output = prev })
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			attach, err := attachAfterStart(config, true)
-			assert.NoError(t, err)
-			assert.False(t, attach)
-		})
+		require.NoError(t, RunAgentsCreate(config))
+		out := buf.String()
+		assert.Contains(t, out, "Agent is ready")
+		assert.Contains(t, out, "doctl harness-runtime launch demo",
+			"the ready card should point at launch, the command that attaches")
 	})
+}
 
-	t.Run("a non-terminal opts out so pipelines do not hang", func(t *testing.T) {
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			attach, err := attachAfterStart(config, false)
-			assert.NoError(t, err)
-			assert.False(t, attach)
-		})
+func TestRunAgentsLaunch_RefusesWithoutATerminal(t *testing.T) {
+	stubInteractiveTerminal(t, false)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		err := RunAgentsLaunch(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "needs a terminal")
+		assert.Contains(t, err.Error(), "create", "the error must name the command that works in a pipeline")
 	})
+}
+
+func TestRunAgentsLaunch_RejectsJSONOutput(t *testing.T) {
+	prev := Output
+	Output = "json"
+	t.Cleanup(func() { Output = prev })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunAgentsLaunch(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no JSON form")
+	})
+}
+
+func TestRunAgentsLaunch_RejectsCreateOnlyFlags(t *testing.T) {
+	for _, flag := range []string{doctl.ArgAgentDryRun, doctl.ArgAgentOnHITL} {
+		t.Run(flag, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Doit.Set(config.NS, flag, "approve")
+				err := RunAgentsLaunch(config)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), flag)
+				assert.Contains(t, err.Error(), "create")
+			})
+		})
+	}
 }
 
 func TestDiscoverManifestFile(t *testing.T) {
@@ -298,7 +356,7 @@ func TestDiscoverManifestFile(t *testing.T) {
 	})
 }
 
-func TestRunAgentsStart_DiscoversAgentsYAML(t *testing.T) {
+func TestRunAgentsCreate_DiscoversAgentsYAML(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "agents.yaml"), []byte(sampleFlatManifest), 0o644))
 	t.Chdir(dir)
@@ -327,15 +385,15 @@ func TestRunAgentsStart_DiscoversAgentsYAML(t *testing.T) {
 			}, nil).
 			AnyTimes()
 
-		assert.NoError(t, RunAgentsStart(config))
+		assert.NoError(t, RunAgentsCreate(config))
 	})
 }
 
-func TestRunAgentsStart_RejectsManifestArgWithHarness(t *testing.T) {
+func TestRunAgentsCreate_RejectsManifestArgWithHarness(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = []string{"agents.yaml"}
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
-		err := RunAgentsStart(config)
+		err := RunAgentsCreate(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot be combined with")
 	})
@@ -426,7 +484,7 @@ func TestExpandManifestEnv(t *testing.T) {
 	})
 }
 
-func TestRunAgentsStart(t *testing.T) {
+func TestRunAgentsCreate(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
@@ -456,11 +514,11 @@ func TestRunAgentsStart(t *testing.T) {
 		defer func() { sessionReadyPollInterval = prev }()
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		assert.NoError(t, RunAgentsStart(config))
+		assert.NoError(t, RunAgentsCreate(config))
 	})
 }
 
-func TestRunAgentsStart_FromHarness(t *testing.T) {
+func TestRunAgentsCreate_FromHarness(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
 	origValidate := validateAnthropicAPIKey
 	t.Cleanup(func() { validateAnthropicAPIKey = origValidate })
@@ -500,11 +558,11 @@ func TestRunAgentsStart_FromHarness(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "harness-demo")
-		assert.NoError(t, RunAgentsStart(config))
+		assert.NoError(t, RunAgentsCreate(config))
 	})
 }
 
-func TestRunAgentsStart_WithName(t *testing.T) {
+func TestRunAgentsCreate_WithName(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
@@ -539,83 +597,30 @@ func TestRunAgentsStart_WithName(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
-		assert.NoError(t, RunAgentsStart(config))
+		assert.NoError(t, RunAgentsCreate(config))
 	})
 }
 
-func TestAgentsStart_SpecNotRequiredForConfigID(t *testing.T) {
-	cmd, _, err := DoitCmd.Find([]string{"agents", "start"})
+func TestAgentsCreate_SpecNotRequiredForFromConfig(t *testing.T) {
+	cmd, _, err := DoitCmd.Find([]string{"agents", "create"})
 	require.NoError(t, err)
-	require.NotNil(t, cmd.Flags().Lookup(doctl.ArgAgentConfigID))
+	require.NotNil(t, cmd.Flags().Lookup(doctl.ArgAgentFromConfig))
 
 	// LiveConfig.GetString is what the real CLI uses; TestConfig skips the
-	// required-flag check, so the FromConfigID runner tests cannot catch this.
-	require.False(t, viper.GetBool("required.agents.start.spec"),
-		"spec is still marked required; `doctl harness-runtime start --config-id` fails with (agents.start.spec) command is missing required arguments")
-	_, err = (&doctl.LiveConfig{}).GetString("agents.start", doctl.ArgAgentSpec)
+	// required-flag check, so the --from-config runner tests cannot catch this.
+	require.False(t, viper.GetBool("required.agents.create.spec"),
+		"spec is still marked required; `doctl harness-runtime create --from-config` fails with (agents.create.spec) command is missing required arguments")
+	_, err = (&doctl.LiveConfig{}).GetString("agents.create", doctl.ArgAgentSpec)
 	require.NoError(t, err)
 }
 
-func TestRunAgentsStart_FromConfigID(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().
-			CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
-				Name:     "my-session",
-				ConfigID: "cfg_abc123",
-			}).
-			Return(&do.HostedAgentSession{
-				HostedAgentSession: &godo.HostedAgentSession{
-					SessionID: "sess_test",
-					Name:      "my-session",
-					ConfigID:  "cfg_abc123",
-				},
-			}, nil)
-		tm.hostedAgents.EXPECT().
-			GetSession("sess_test").
-			Return(&do.HostedAgentSession{
-				HostedAgentSession: &godo.HostedAgentSession{
-					SessionID: "sess_test",
-					Name:      "my-session",
-					ConfigID:  "cfg_abc123",
-					Status:    godo.HostedAgentSessionStatusReady,
-				},
-			}, nil)
-
-		prev := sessionReadyPollInterval
-		sessionReadyPollInterval = time.Millisecond
-		defer func() { sessionReadyPollInterval = prev }()
-
-		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
-		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
-		assert.NoError(t, RunAgentsStart(config))
-	})
-}
-
-func TestRunAgentsStart_FromConfigID_RequiresName(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
-		err := RunAgentsStart(config)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "--name is required")
-	})
-}
-
-func TestRunAgentsStart_SpecAndConfigIDMutuallyExclusive(t *testing.T) {
+func TestRunAgentsCreate_SpecAndConfigMutuallyExclusive(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, "agent.yaml")
-		config.Doit.Set(config.NS, doctl.ArgAgentConfigID, "cfg_abc123")
-		err := RunAgentsStart(config)
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
+		err := RunAgentsCreate(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "mutually exclusive")
-	})
-}
-
-func TestRunAgentsStart_RequiresSource(t *testing.T) {
-	t.Chdir(t.TempDir()) // no agents.yaml to discover
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		err := RunAgentsStart(config)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "no manifest given")
 	})
 }
 
@@ -718,7 +723,7 @@ func TestManifestUsesLegacyEnvelope(t *testing.T) {
 	assert.False(t, manifestUsesLegacyEnvelope([]byte("::: not yaml :::")))
 }
 
-func TestRunAgentsStart_FlatWithName(t *testing.T) {
+func TestRunAgentsCreate_FlatWithName(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	assert.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o644))
@@ -753,7 +758,7 @@ func TestRunAgentsStart_FlatWithName(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
-		assert.NoError(t, RunAgentsStart(config))
+		assert.NoError(t, RunAgentsCreate(config))
 	})
 }
 
@@ -883,7 +888,7 @@ func TestRunAgentsShow(t *testing.T) {
 		got := buf.String()
 		assert.Contains(t, got, "demo")
 		assert.Contains(t, got, "ready")
-		assert.Contains(t, got, "doctl harness-runtime attach demo")
+		assert.Contains(t, got, "doctl harness-runtime launch demo")
 		assert.NotContains(t, got, "SESSION_STATUS_")
 	})
 }
@@ -1554,12 +1559,12 @@ func TestErrorResponseSurfacesNestedMessage(t *testing.T) {
 	assert.Contains(t, er.Error(), "forward input to OHR: ohr attach: connection error")
 }
 
-// TestRunAgentsStart_SkillsEnvSizeCapError pins that harness-api's
+// TestRunAgentsCreate_SkillsEnvSizeCapError pins that harness-api's
 // HARNESS_SKILLS env-size-cap rejection (agentspec.validateSkillsEnvSize,
 // returned as a 400 with the nested {"error":{"code":...,"message":...}}
 // envelope) surfaces to the CLI user as the server's own readable message,
 // not a raw JSON/HTTP dump.
-func TestRunAgentsStart_SkillsEnvSizeCapError(t *testing.T) {
+func TestRunAgentsCreate_SkillsEnvSizeCapError(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	assert.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
@@ -1580,7 +1585,7 @@ func TestRunAgentsStart_SkillsEnvSizeCapError(t *testing.T) {
 			Return(nil, er)
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		err := RunAgentsStart(config)
+		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), wantMessage)
 		assert.NotContains(t, err.Error(), `{"error"`)
@@ -3800,9 +3805,9 @@ func TestEventCursor(t *testing.T) {
 	assert.Equal(t, "evt_2", c.get())
 }
 
-// TestRunAgentsAttachAuthFailure: a 401 from pre-attach GetSession surfaces
+// TestRunAgentsLaunch_AttachAuthFailure: a 401 from pre-attach GetSession surfaces
 // a styled agentPrettyError, not the raw godo METHOD/URL dump.
-func TestRunAgentsAttachAuthFailure(t *testing.T) {
+func TestRunAgentsLaunch_AttachAuthFailure(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		authErr := &godo.ErrorResponse{
 			Response: &http.Response{
@@ -3814,7 +3819,7 @@ func TestRunAgentsAttachAuthFailure(t *testing.T) {
 		tm.hostedAgents.EXPECT().GetSession("sess_x").Return(nil, authErr)
 
 		config.Args = []string{"sess_x"}
-		err := RunAgentsAttach(config)
+		err := RunAgentsLaunch(config)
 		assert.Error(t, err)
 		var pretty *agentPrettyError
 		require.True(t, errors.As(err, &pretty))
@@ -3826,10 +3831,10 @@ func TestRunAgentsAttachAuthFailure(t *testing.T) {
 	})
 }
 
-// TestRunAgentsAttachTerminalSession: attach must fail fast (no banner, no
+// TestRunAgentsLaunch_AttachTerminalSession: attach must fail fast (no banner, no
 // interactive loop) when the session is already destroyed/destroying/failed,
 // instead of connecting and only failing once the user sends input.
-func TestRunAgentsAttachTerminalSession(t *testing.T) {
+func TestRunAgentsLaunch_AttachTerminalSession(t *testing.T) {
 	cases := []struct {
 		name   string
 		status godo.HostedAgentSessionStatus
@@ -3850,7 +3855,7 @@ func TestRunAgentsAttachTerminalSession(t *testing.T) {
 				}, nil)
 
 				config.Args = []string{"sess_x"}
-				err := RunAgentsAttach(config)
+				err := RunAgentsLaunch(config)
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "cannot be attached")
 				assert.Contains(t, err.Error(), humanSessionStatus(tc.status))
