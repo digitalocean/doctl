@@ -164,7 +164,11 @@ func Execute() {
 			os.Exit(-1)
 		}
 		// Route through checkErr so flag validation and other errors honor
-		// --output json and a consistent Error:/JSON shape.
+		// --output json and a consistent Error:/JSON shape, but keep the
+		// historical process exit status (-1 → 255) for top-level failures.
+		prev := errAction
+		errAction = func() { os.Exit(-1) }
+		defer func() { errAction = prev }()
 		checkErr(err)
 	}
 }

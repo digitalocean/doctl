@@ -79,15 +79,13 @@ func checkErr(err error) {
 		}
 		fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
 	case "json":
-		var payload any
-		if fv, ok := err.(*FlagValidationError); ok {
-			payload = fv
-		} else {
-			payload = outputErrors{
-				Errors: []outputError{
-					{Detail: err.Error()},
-				},
-			}
+		// Always keep the stable {"errors":[{"detail":...}]} envelope so
+		// automation parsing --output json is not broken by richer flag
+		// validation. Plain Error() text (no ANSI) goes in detail.
+		payload := outputErrors{
+			Errors: []outputError{
+				{Detail: err.Error()},
+			},
 		}
 
 		b, _ := json.Marshal(payload)

@@ -94,22 +94,18 @@ func TestValidateCommandFlags_MutuallyExclusive(t *testing.T) {
 
 func TestValidateCommandFlags_RequiredTogether(t *testing.T) {
 	cmd := CmdBuilder(newTestParent(), func(c *CmdConfig) error { return nil }, "create", "short", "long", &bytes.Buffer{})
-	AddStringFlag(cmd, doctl.ArgDropletBackupPolicyPlan, "", "", "plan")
-	AddStringFlag(cmd, doctl.ArgDropletBackupPolicyWeekday, "", "", "weekday")
-	AddIntFlag(cmd, doctl.ArgDropletBackupPolicyHour, "", 0, "hour")
-	cmd.MarkFlagsRequiredTogether(
-		doctl.ArgDropletBackupPolicyPlan,
-		doctl.ArgDropletBackupPolicyWeekday,
-		doctl.ArgDropletBackupPolicyHour,
-	)
+	AddStringFlag(cmd, "alpha", "", "", "alpha")
+	AddStringFlag(cmd, "beta", "", "", "beta")
+	AddIntFlag(cmd, "gamma", "", 0, "gamma")
+	cmd.MarkFlagsRequiredTogether("alpha", "beta", "gamma")
 
-	require.NoError(t, cmd.Flags().Set(doctl.ArgDropletBackupPolicyPlan, "weekly"))
+	require.NoError(t, cmd.Flags().Set("alpha", "one"))
 
 	err := validateCommandFlags(cmd.Command)
 	require.Error(t, err)
 	msg := err.Error()
-	assert.Contains(t, msg, doctl.ArgDropletBackupPolicyWeekday)
-	assert.Contains(t, msg, doctl.ArgDropletBackupPolicyHour)
+	assert.Contains(t, msg, "beta")
+	assert.Contains(t, msg, "gamma")
 	assert.Contains(t, msg, "must be set together")
 }
 
@@ -154,6 +150,25 @@ func TestDropletCreate_PreRunAggregatesSizeAndImage(t *testing.T) {
 	require.Contains(t, flags, doctl.ArgImage)
 	assert.True(t, strings.Contains(flags[doctl.ArgSizeSlug].Hint, "size list"))
 	assert.True(t, strings.Contains(flags[doctl.ArgImage].Hint, "image list"))
+}
+
+func TestDropletCreate_BackupPolicyPartialFlagsAllowed(t *testing.T) {
+	cmd := Droplet()
+	create := findSubCommand(cmd, "create")
+	require.NotNil(t, create)
+	require.NotNil(t, create.PreRunE)
+
+	require.NoError(t, create.Flags().Set(doctl.ArgSizeSlug, "s-1vcpu-1gb"))
+	require.NoError(t, create.Flags().Set(doctl.ArgImage, "ubuntu-22-04-x64"))
+
+	// Daily plan does not require weekday; hour may be omitted (defaults to 0).
+	require.NoError(t, create.Flags().Set(doctl.ArgDropletBackupPolicyPlan, "daily"))
+	assert.NoError(t, create.PreRunE(create.Command, []string{"example"}))
+
+	// Weekly plan with weekday but without hour should also pass (hour defaults to 0).
+	require.NoError(t, create.Flags().Set(doctl.ArgDropletBackupPolicyPlan, "weekly"))
+	require.NoError(t, create.Flags().Set(doctl.ArgDropletBackupPolicyWeekday, "SUN"))
+	assert.NoError(t, create.PreRunE(create.Command, []string{"example"}))
 }
 
 func findSubCommand(parent *Command, name string) *Command {

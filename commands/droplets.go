@@ -91,20 +91,18 @@ If you do not specify a region, the Droplet is created in the default region for
 		flagPurpose("Droplet size (vCPUs, RAM, and disk)"),
 		flagHint("run doctl compute size list"))
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet. By default, backups are created on a daily basis.")
+	// Backup policy flags are intentionally not MarkFlagsRequiredTogether:
+	// weekday is only needed for weekly plans, and hour defaults to 0 when omitted
+	// (see readDropletBackupPolicy).
 	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`,
 		flagPurpose("Backup frequency plan"),
-		flagHint("set --backup-policy-plan, --backup-policy-weekday, and --backup-policy-hour together"))
+		flagHint("for weekly plans also set --backup-policy-weekday; --backup-policy-hour defaults to 0"))
 	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`,
-		flagPurpose("Weekday for the backup window"),
-		flagHint("set --backup-policy-plan, --backup-policy-weekday, and --backup-policy-hour together"))
+		flagPurpose("Weekday for the backup window (weekly plans)"),
+		flagHint("required when --backup-policy-plan is weekly"))
 	AddIntFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`,
 		flagPurpose("Hour of day for the backup window"),
-		flagHint("set --backup-policy-plan, --backup-policy-weekday, and --backup-policy-hour together"))
-	cmdDropletCreate.MarkFlagsRequiredTogether(
-		doctl.ArgDropletBackupPolicyPlan,
-		doctl.ArgDropletBackupPolicyWeekday,
-		doctl.ArgDropletBackupPolicyHour,
-	)
+		flagHint("optional; defaults to 0 when omitted"))
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enables private networking for the Droplet by provisioning it inside of your account's default VPC for the region")
 
