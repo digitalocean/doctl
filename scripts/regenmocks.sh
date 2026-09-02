@@ -54,7 +54,6 @@ mockgen -source inference.go -package=mocks InferenceService > mocks/InferenceSe
 mockgen -source nfs.go -package=mocks NfsService > mocks/NfsService.go
 mockgen -source nfs_actions.go -package=mocks NfsActionsService > mocks/NfsActionsService.go
 mockgen -source microdroplets.go -package=mocks MicroDropletsService > mocks/MicroDropletsService.go
-mockgen -source micro_droplet_images.go -package=mocks MicroDropletImagesService > mocks/MicroDropletImagesService.go
 mockgen -source security.go -package=mocks SecurityService > mocks/SecurityService.go
 mockgen -source secrets.go -package=mocks SecretsService > mocks/SecretsService.go
 mockgen -source vector_databases.go -package=mocks VectorDBsService > mocks/VectorDBsService.go

@@ -32,11 +32,14 @@ var (
 			Name:       "sammy-microdroplet",
 			Region:     "nyc1",
 			State:      godo.MicroDropletStateRunning,
-			Size:       "md-1vcpu-512mb",
+			Size:       &godo.MicroDropletSize{CPU: 2, Memory: 4096, Disk: 80},
 			Networking: godo.MicroDropletNetworkingPublic,
-			Image:      "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000",
-			Endpoint:   "https://sammy.microdroplets.digitalocean.app",
-			Created:    "2026-07-16T10:00:00Z",
+			Source:     &godo.MicroDropletSource{OCIRef: "docker.io/library/nginx:1.27"},
+			URLs: []godo.MicroDropletURL{
+				{Hostname: "sammy.example.com", Port: 8080, Default: true, Status: godo.MicroDropletURLStatusActive},
+			},
+			Ports:   []uint32{8080},
+			Created: "2026-07-16T10:00:00Z",
 		},
 	}
 
@@ -44,23 +47,15 @@ var (
 
 	testMicroDropletCheckpoint = do.MicroDropletCheckpoint{
 		MicroDropletCheckpoint: &godo.MicroDropletCheckpoint{
-			ID:             "8f7a9a3f-5555-4444-9999-000000000001",
-			MicroDropletID: testMicroDropletID,
-			Name:           "sammy-checkpoint",
-			Status:         godo.MicroDropletCheckpointStatusAvailable,
-			MemoryBytes:    512 * 1024 * 1024,
-			DiskBytes:      1024 * 1024 * 1024,
-			Created:        "2026-07-16T10:05:00Z",
-		},
-	}
-
-	testMicroDropletImage = do.MicroDropletImage{
-		MicroDropletImage: &godo.MicroDropletImage{
-			ID:      "aa11bb22-cc33-dd44-ee55-ff6600000000",
-			Name:    "hello-world",
-			Source:  "docker.io/library/hello-world:latest",
-			Status:  godo.MicroDropletImageStatusAvailable,
-			Created: "2026-07-16T09:00:00Z",
+			ID:               "8f7a9a3f-5555-4444-9999-000000000001",
+			MicroDropletID:   testMicroDropletID,
+			MicroDropletName: "sammy-microdroplet",
+			Name:             "sammy-checkpoint",
+			Region:           "nyc1",
+			Status:           godo.MicroDropletCheckpointStatusAvailable,
+			MemoryBytes:      512 * 1024 * 1024,
+			DiskBytes:        1024 * 1024 * 1024,
+			Created:          "2026-07-16T10:05:00Z",
 		},
 	}
 )
@@ -68,13 +63,14 @@ var (
 func TestMicroDropletCommand(t *testing.T) {
 	cmd := MicroDroplet()
 	assert.NotNil(t, cmd)
+	assert.True(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
-		"checkpoints", "create", "delete", "get", "image", "list", "pause", "resume",
+		"checkpoint", "create", "delete", "get", "list", "options", "pause", "resume",
 	)
 }
 
-func TestMicroDropletImageCommand(t *testing.T) {
-	cmd := microDropletImages()
+func TestMicroDropletCheckpointCommand(t *testing.T) {
+	cmd := microDropletCheckpoints()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "create", "delete", "get", "list")
 }
@@ -116,16 +112,17 @@ func TestMicroDropletCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		enabled := true
 		expected := &godo.MicroDropletCreateRequest{
-			Name:         "sammy-microdroplet",
-			Region:       "nyc1",
-			Size:         "md-1vcpu-512mb",
-			Image:        "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000",
+			Name:   "sammy-microdroplet",
+			Region: "nyc1",
+			Size:   &godo.MicroDropletSizeRequest{CPU: 2, Memory: 4096},
+			Source: &godo.MicroDropletSource{OCIRef: "docker.io/library/nginx:1.27"},
 			Networking:   godo.MicroDropletNetworkingVPC,
 			VPCUUID:      "vpc-uuid-1234",
 			AutoPause:    &godo.AutoPauseConfig{Enabled: &enabled, IdleTimeout: "5m"},
 			AutoResume:   &enabled,
 			HTTPPort:     8080,
 			HTTPProtocol: godo.MicroDropletHTTPProtocolHTTP2,
+			Ports:        []uint32{80, 8080},
 			Environment:  map[string]string{"FOO": "bar", "BAZ": "qux"},
 			Tags:         []string{"prod", "web"},
 		}
@@ -133,8 +130,9 @@ func TestMicroDropletCreate(t *testing.T) {
 
 		config.Args = append(config.Args, "sammy-microdroplet")
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
-		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "md-1vcpu-512mb")
-		config.Doit.Set(config.NS, doctl.ArgImage, "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000")
+		config.Doit.Set(config.NS, "cpu", 2)
+		config.Doit.Set(config.NS, "memory", 4096)
+		config.Doit.Set(config.NS, "oci-ref", "docker.io/library/nginx:1.27")
 		config.Doit.Set(config.NS, "networking", "vpc")
 		config.Doit.Set(config.NS, doctl.ArgVPCUUID, "vpc-uuid-1234")
 		config.Doit.Set(config.NS, "auto-pause", true)
@@ -142,6 +140,7 @@ func TestMicroDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, "auto-resume", true)
 		config.Doit.Set(config.NS, "http-port", 8080)
 		config.Doit.Set(config.NS, "http-protocol", "http2")
+		config.Doit.Set(config.NS, "ports", []string{"80", "8080"})
 		config.Doit.Set(config.NS, "env", []string{"FOO=bar", "BAZ=qux"})
 		config.Doit.Set(config.NS, doctl.ArgTag, []string{"prod", "web"})
 
@@ -150,23 +149,32 @@ func TestMicroDropletCreate(t *testing.T) {
 	})
 }
 
-func TestMicroDropletCreate_minimal(t *testing.T) {
+func TestMicroDropletCreate_fromCheckpoint(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		expected := &godo.MicroDropletCreateRequest{
-			Name:   "sammy-microdroplet",
-			Region: "nyc1",
-			Size:   "md-1vcpu-512mb",
-			Image:  "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000",
+			Name:   "sammy-clone",
+			Source: &godo.MicroDropletSource{CheckpointID: testMicroDropletCheckpoint.ID},
 		}
 		tm.microDroplets.EXPECT().Create(expected).Return(&testMicroDroplet, nil)
 
-		config.Args = append(config.Args, "sammy-microdroplet")
-		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
-		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "md-1vcpu-512mb")
-		config.Doit.Set(config.NS, doctl.ArgImage, "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000")
+		config.Args = append(config.Args, "sammy-clone")
+		config.Doit.Set(config.NS, "checkpoint-id", testMicroDropletCheckpoint.ID)
 
 		err := RunMicroDropletCreate(config)
 		require.NoError(t, err)
+	})
+}
+
+func TestMicroDropletCreate_requiresSource(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, "sammy-microdroplet")
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, "cpu", 2)
+		config.Doit.Set(config.NS, "memory", 4096)
+
+		err := RunMicroDropletCreate(config)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "exactly one of --oci-ref or --checkpoint-id")
 	})
 }
 
@@ -174,8 +182,9 @@ func TestMicroDropletCreate_badEnv(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, "sammy-microdroplet")
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
-		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "md-1vcpu-512mb")
-		config.Doit.Set(config.NS, doctl.ArgImage, "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000")
+		config.Doit.Set(config.NS, "cpu", 2)
+		config.Doit.Set(config.NS, "memory", 4096)
+		config.Doit.Set(config.NS, "oci-ref", "docker.io/library/nginx:1.27")
 		config.Doit.Set(config.NS, "env", []string{"MALFORMED"})
 
 		err := RunMicroDropletCreate(config)
@@ -183,14 +192,13 @@ func TestMicroDropletCreate_badEnv(t *testing.T) {
 	})
 }
 
-// --auto-pause-idle-timeout has no meaning without --auto-pause, so setting
-// it alone is rejected before any API call is made.
 func TestMicroDropletCreate_idleTimeoutRequiresAutoPause(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, "sammy-microdroplet")
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
-		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "md-1vcpu-512mb")
-		config.Doit.Set(config.NS, doctl.ArgImage, "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000")
+		config.Doit.Set(config.NS, "cpu", 2)
+		config.Doit.Set(config.NS, "memory", 4096)
+		config.Doit.Set(config.NS, "oci-ref", "docker.io/library/nginx:1.27")
 		config.Doit.Set(config.NS, "auto-pause-idle-timeout", "5m")
 
 		err := RunMicroDropletCreate(config)
@@ -246,62 +254,59 @@ func TestMicroDropletDelete_multiple(t *testing.T) {
 	})
 }
 
-func TestMicroDropletCheckpoints(t *testing.T) {
+func TestMicroDropletCheckpointList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.microDroplets.EXPECT().ListCheckpoints(testMicroDropletID).Return(
 			do.MicroDropletCheckpoints{testMicroDropletCheckpoint}, nil,
 		)
 
+		config.Doit.Set(config.NS, "microdroplet-id", testMicroDropletID)
+		err := RunMicroDropletCheckpointList(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroDropletCheckpointGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microDroplets.EXPECT().GetCheckpoint(testMicroDropletCheckpoint.ID).Return(&testMicroDropletCheckpoint, nil)
+
+		config.Args = append(config.Args, testMicroDropletCheckpoint.ID)
+		err := RunMicroDropletCheckpointGet(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroDropletCheckpointCreate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microDroplets.EXPECT().CreateCheckpoint(testMicroDropletID, &godo.MicroDropletCheckpointCreateRequest{
+			Name: "named",
+		}).Return(&testMicroDropletCheckpoint, nil)
+
 		config.Args = append(config.Args, testMicroDropletID)
-		err := RunMicroDropletCheckpoints(config)
+		config.Doit.Set(config.NS, "name", "named")
+		err := RunMicroDropletCheckpointCreate(config)
 		require.NoError(t, err)
 	})
 }
 
-func TestMicroDropletImageList(t *testing.T) {
+func TestMicroDropletCheckpointDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.microDropletImages.EXPECT().List().Return(
-			do.MicroDropletImages{testMicroDropletImage}, nil,
-		)
-		err := RunMicroDropletImageList(config)
-		require.NoError(t, err)
-	})
-}
+		tm.microDroplets.EXPECT().DeleteCheckpoint(testMicroDropletCheckpoint.ID).Return(nil)
 
-func TestMicroDropletImageGet(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.microDropletImages.EXPECT().Get(testMicroDropletImage.ID).Return(&testMicroDropletImage, nil)
-
-		config.Args = append(config.Args, testMicroDropletImage.ID)
-		err := RunMicroDropletImageGet(config)
-		require.NoError(t, err)
-	})
-}
-
-func TestMicroDropletImageCreate(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		expected := &godo.MicroDropletImageCreateRequest{
-			Name:   "hello-world",
-			Source: "docker.io/library/hello-world:latest",
-		}
-		tm.microDropletImages.EXPECT().Create(expected).Return(&testMicroDropletImage, nil)
-
-		config.Args = append(config.Args, "hello-world")
-		config.Doit.Set(config.NS, "source", "docker.io/library/hello-world:latest")
-
-		err := RunMicroDropletImageCreate(config)
-		require.NoError(t, err)
-	})
-}
-
-func TestMicroDropletImageDelete(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.microDropletImages.EXPECT().Delete(testMicroDropletImage.ID).Return(nil)
-
-		config.Args = append(config.Args, testMicroDropletImage.ID)
+		config.Args = append(config.Args, testMicroDropletCheckpoint.ID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		err := RunMicroDropletCheckpointDelete(config)
+		require.NoError(t, err)
+	})
+}
 
-		err := RunMicroDropletImageDelete(config)
+func TestMicroDropletOptions(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microDroplets.EXPECT().GetCreateOptions().Return(&godo.MicroDropletCreateOptions{
+			DefaultRegion: "nyc1",
+			Regions:       []godo.MicroDropletRegionOption{{Slug: "nyc1", Available: true}},
+		}, nil)
+		err := RunMicroDropletOptions(config)
 		require.NoError(t, err)
 	})
 }

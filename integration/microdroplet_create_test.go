@@ -26,7 +26,7 @@ var _ = suite("compute/microdroplet/create", func(t *testing.T, when spec.G, it 
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/microdroplets/instances":
+			case "/v2/microdroplets":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -45,8 +45,8 @@ var _ = suite("compute/microdroplet/create", func(t *testing.T, when spec.G, it 
 				expect.NoError(json.Unmarshal(reqBody, &got))
 				expect.Equal("sammy-microdroplet", got["name"])
 				expect.Equal("nyc1", got["region"])
-				expect.Equal("md-1vcpu-512mb", got["size"])
-				expect.Equal("do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000", got["image"])
+				expect.Equal(map[string]any{"cpu": float64(2), "memory": float64(4096)}, got["size"])
+				expect.Equal(map[string]any{"oci_ref": "docker.io/library/nginx:1.27"}, got["source"])
 
 				w.WriteHeader(http.StatusCreated)
 				w.Write([]byte(microDropletCreateResponse))
@@ -68,8 +68,9 @@ var _ = suite("compute/microdroplet/create", func(t *testing.T, when spec.G, it 
 				"-u", server.URL,
 				"compute", "microdroplet", "create", "sammy-microdroplet",
 				"--region", "nyc1",
-				"--size", "md-1vcpu-512mb",
-				"--image", "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000",
+				"--cpu", "2",
+				"--memory", "4096",
+				"--oci-ref", "docker.io/library/nginx:1.27",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -88,15 +89,15 @@ var _ = suite("compute/microdroplet/create", func(t *testing.T, when spec.G, it 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "exactly one of --oci-ref or --checkpoint-id is required")
 		})
 	})
 })
 
 const (
 	microDropletCreateOutput = `
-ID                                      Name                  Region    State       Size              Networking    Image                                                         Endpoint    Created At
-b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microdroplet    nyc1      creating    md-1vcpu-512mb    public        do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000                2026-07-16T10:00:00Z
+ID                                      Name                  Region    State       Size                 Networking    Source                           Endpoint    Ports    Created At
+b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microdroplet    nyc1      creating    2vCPU/4096MiB/80GB    public        docker.io/library/nginx:1.27                8080     2026-07-16T10:00:00Z
 `
 	microDropletCreateResponse = `
 {
@@ -105,9 +106,11 @@ b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microdroplet    nyc1      creating
     "name": "sammy-microdroplet",
     "region": "nyc1",
     "state": "creating",
-    "size": "md-1vcpu-512mb",
+    "size": {"cpu": 2, "memory": 4096, "disk": 80},
     "networking": "public",
-    "image": "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000",
+    "source": {"oci_ref": "docker.io/library/nginx:1.27"},
+    "urls": [{"hostname": "", "port": 8080, "default": true, "status": "PENDING"}],
+    "ports": [8080],
     "created_at": "2026-07-16T10:00:00Z"
   }
 }
