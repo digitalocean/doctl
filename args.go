@@ -1083,6 +1083,134 @@ const (
 	// every approval request during an unattended `agents create`.
 	ArgAgentOnHITL = "on-hitl"
 
+	// Hosted Agents `config generate` args
+	//
+	// These name the flat agent-manifest fields (agent.flat.yaml) that
+	// `harness-runtime config generate` writes. Every one has a matching
+	// wizard question, so an interactive run is always reproducible as a
+	// single non-interactive command.
+
+	// The manifest's free-form description reuses ArgAgentDescription
+	// ("description"), declared with the Gradient AI agent args above.
+
+	// ArgAgentLabel is a repeatable KEY=VALUE manifest label.
+	ArgAgentLabel = "label"
+
+	// ArgAgentImage is the digest-pinned container image for `agent: custom`.
+	ArgAgentImage = "image"
+
+	// ArgAgentEntrypoint is the argv entrypoint for `agent: custom`.
+	ArgAgentEntrypoint = "entrypoint"
+
+	// ArgAgentEnv is a repeatable KEY=VALUE non-secret guest environment entry.
+	ArgAgentEnv = "env"
+
+	// ArgAgentInlineSecret writes a literal credential straight into the
+	// generated manifest, instead of the default ${VAR} placeholder.
+	ArgAgentInlineSecret = "inline-secret"
+
+	// ArgAgentInference selects where the agent gets inference from: its own
+	// vendor (native), DigitalOcean Serverless Inference (do), or another
+	// OpenAI-compatible endpoint (custom).
+	ArgAgentInference = "inference"
+
+	// ArgAgentInferenceURL is the OpenAI-compatible base URL used with
+	// --inference custom.
+	ArgAgentInferenceURL = "inference-url"
+
+	// ArgAgentModel sets the manifest's model (model.default in object form).
+	ArgAgentModel = "model"
+
+	// ArgAgentModelRouting sets model.routing.
+	ArgAgentModelRouting = "model-routing"
+
+	// ArgAgentSize is the sandbox size slug from `sizes list`.
+	ArgAgentSize = "size"
+
+	// ArgAgentTemplate pins a sandbox template instead of deriving it from the
+	// agent.
+	ArgAgentTemplate = "template"
+
+	// ArgAgentPersistentWorkspace keeps /workspace across idle suspend/resume.
+	ArgAgentPersistentWorkspace = "persistent-workspace"
+
+	// ArgAgentIdleTimeout is the per-session idle suspend duration (e.g. 10m).
+	ArgAgentIdleTimeout = "idle-timeout"
+
+	// ArgAgentMaxLifetime is the absolute session lifetime ceiling (e.g. 8h).
+	ArgAgentMaxLifetime = "max-lifetime"
+
+	// ArgAgentEgress is a repeatable egress allowlist host.
+	ArgAgentEgress = "egress"
+
+	// ArgAgentGitHubAccess declares the brokered GitHub OAuth secret slot and
+	// opens GitHub egress in one flag.
+	ArgAgentGitHubAccess = "github-access"
+
+	// ArgAgentPermissionDefault is permissions.default (allow|ask|deny).
+	ArgAgentPermissionDefault = "permission-default"
+
+	// ArgAgentAllowTool, ArgAgentAskTool, and ArgAgentDenyTool are repeatable
+	// TOOL[:match] permission rules.
+	ArgAgentAllowTool = "allow-tool"
+	ArgAgentAskTool   = "ask-tool"
+	ArgAgentDenyTool  = "deny-tool"
+
+	// ArgAgentToolsPreset attaches a curated DO tool bundle (none|default).
+	ArgAgentToolsPreset = "tools-preset"
+
+	// ArgAgentTool is a repeatable catalog tool attachment, e.g.
+	// do.actions or do.actions:web_search,execute_code.
+	ArgAgentTool = "tool"
+
+	// ArgAgentMCPServer is a repeatable inline MCP server as NAME=URL.
+	ArgAgentMCPServer = "mcp-server"
+
+	// ArgAgentMCPTools selects tools on an inline MCP server as NAME:tool,tool.
+	ArgAgentMCPTools = "mcp-tools"
+
+	// ArgAgentMCPAuthSecret points an inline MCP server at a declared secrets
+	// slot, as NAME=SECRET_SLOT.
+	ArgAgentMCPAuthSecret = "mcp-auth-secret"
+
+	// ArgAgentSkill is a repeatable inline skill as NAME=path/to/SKILL.md.
+	ArgAgentSkill = "skill"
+
+	// ArgAgentSkillDescription overrides a skill's derived description, as
+	// NAME=description.
+	ArgAgentSkillDescription = "skill-description"
+
+	// ArgAgentMode is the lifecycle mode (interactive|served).
+	ArgAgentMode = "mode"
+
+	// ArgAgentServingMin, ArgAgentServingMax, ArgAgentServingConcurrency, and
+	// ArgAgentServingScaleToZeroIdle describe a served fleet.
+	ArgAgentServingMin             = "serving-min"
+	ArgAgentServingMax             = "serving-max"
+	ArgAgentServingConcurrency     = "serving-concurrency"
+	ArgAgentServingScaleToZeroIdle = "serving-scale-to-zero-idle"
+
+	// ArgAgentOut is the file the generated manifest is written to. Empty
+	// prints to stdout.
+	ArgAgentOut = "out"
+
+	// ArgAgentManifestFormat is the generated manifest encoding (yaml|json).
+	ArgAgentManifestFormat = "manifest-format"
+
+	// ArgAgentOverwrite allows `config generate --out` to replace an existing
+	// file.
+	ArgAgentOverwrite = "overwrite"
+
+	// ArgAgentSkipValidate skips the client-side manifest check that otherwise
+	// runs before the manifest is emitted.
+	ArgAgentSkipValidate = "skip-validate"
+
+	// ArgAgentNoInteractive answers every `config generate` question with its
+	// default instead of prompting. Spelled positively as its own flag because
+	// the global escape hatch, `--interactive=false`, is neither discoverable
+	// from the command's own --help nor memorable.
+	ArgAgentNoInteractive = "no-interactive"
+
 	// Gradient AI simulation args
 
 	// ArgGenAISearch filters a Gradient AI list by a free-text search term.
