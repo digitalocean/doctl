@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -23,11 +24,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/deviceid"
+	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestParseForwardPair(t *testing.T) {
@@ -395,4 +400,81 @@ type closeTrackingBody struct {
 func (b *closeTrackingBody) Close() error {
 	b.closed = true
 	return nil
+}
+
+func TestEnsureSessionAwakeForPortForward_ResumesPaused(t *testing.T) {
+	prev := sessionReadyPollInterval
+	sessionReadyPollInterval = time.Millisecond
+	t.Cleanup(func() { sessionReadyPollInterval = prev })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		gomock.InOrder(
+			tm.hostedAgents.EXPECT().
+				GetSession("sess_paused").
+				Return(&do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_paused",
+						Name:      "bug044-test",
+						Status:    godo.HostedAgentSessionStatusPaused,
+					},
+				}, nil),
+			tm.hostedAgents.EXPECT().ResumeSession("sess_paused").Return(nil),
+			tm.hostedAgents.EXPECT().
+				GetSession("sess_paused").
+				Return(&do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_paused",
+						Name:      "bug044-test",
+						Status:    godo.HostedAgentSessionStatusReady,
+					},
+				}, nil),
+		)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, ensureSessionAwakeForPortForward(config, "sess_paused"))
+		assert.Contains(t, buf.String(), "is paused — resuming")
+	})
+}
+
+func TestEnsureSessionAwakeForPortForward_ReadyIsNoop(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_ready").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_ready",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+		// No ResumeSession expectation: gomock fails if it is called.
+
+		require.NoError(t, ensureSessionAwakeForPortForward(config, "sess_ready"))
+	})
+}
+
+func TestEnsureSessionAwakeForPortForward_RejectsTerminal(t *testing.T) {
+	for _, status := range []godo.HostedAgentSessionStatus{
+		godo.HostedAgentSessionStatusDestroyed,
+		godo.HostedAgentSessionStatusDestroying,
+		godo.HostedAgentSessionStatusFailed,
+	} {
+		t.Run(humanSessionStatus(status), func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().
+					GetSession("sess_gone").
+					Return(&do.HostedAgentSession{
+						HostedAgentSession: &godo.HostedAgentSession{
+							SessionID: "sess_gone",
+							Name:      "gone",
+							Status:    status,
+						},
+					}, nil)
+
+				err := ensureSessionAwakeForPortForward(config, "sess_gone")
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "cannot be port-forwarded")
+			})
+		})
+	}
 }

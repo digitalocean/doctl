@@ -19,6 +19,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/deviceid"
+	"github.com/digitalocean/godo"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
@@ -250,6 +251,41 @@ func tunnelHeader(token, deviceID string) http.Header {
 	return header
 }
 
+// ensureSessionAwakeForPortForward resumes a paused session before opening
+// tunnels, matching launch/attach so users don't have to sequence resume
+// themselves (BUG-044). Terminal sessions are rejected; already-ready
+// sessions are left alone.
+func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) error {
+	svc := c.HostedAgents()
+	sess, err := svc.GetSession(sessionID)
+	if err != nil {
+		return beautifyAgentError(err)
+	}
+	if isTerminalSessionStatus(sess.Status) {
+		return fmt.Errorf("session %s is %s and cannot be port-forwarded",
+			displaySessionRef(sess), humanSessionStatus(sess.Status))
+	}
+	if sess.Status != godo.HostedAgentSessionStatusPaused {
+		return nil
+	}
+
+	stylingEnabled = detectStyling()
+	fmt.Fprintf(c.Out, "%s\n", colorize(
+		fmt.Sprintf("Session %s is paused — resuming…", displaySessionRef(sess)), colMuted))
+	if err := svc.ResumeSession(sessionID); err != nil {
+		return beautifyAgentError(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), runWaitTimeout)
+	defer cancel()
+	prog := newCreationProgress(c.Out)
+	defer prog.stop()
+	if _, err := waitForSessionReady(ctx, svc, sessionID, prog); err != nil {
+		return beautifyAgentError(err)
+	}
+	return nil
+}
+
 // RunAgentsPortForward opens local TCP tunnels to ports inside the session's
 // sandbox and blocks until interrupted.
 func RunAgentsPortForward(c *CmdConfig) error {
@@ -258,6 +294,9 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	}
 	sessionID, err := resolveSessionRef(c.HostedAgents(), c.Args[0])
 	if err != nil {
+		return err
+	}
+	if err := ensureSessionAwakeForPortForward(c, sessionID); err != nil {
 		return err
 	}
 	pairs := make([]forwardPair, 0, len(c.Args)-1)
