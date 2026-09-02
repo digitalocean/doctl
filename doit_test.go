@@ -62,49 +62,51 @@ func TestVersion(t *testing.T) {
 	}{
 		// version with no label
 		{
-			v:    Version{Major: 0, Minor: 1, Patch: 2},
-			s:    `doctl version 0.1.2`,
-			json: "{\n  \"version\": \"0.1.2\",\n  \"latestRelease\": \"0.1.0\"\n}",
+			v: Version{Major: 0, Minor: 1, Patch: 2},
+			s: `doctl version 0.1.2
+API endpoint: https://api.digitalocean.com/`,
+			json: "{\n  \"version\": \"0.1.2\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2",
 			slr:  slr1,
 		},
 		// version with label
 		{
-			v:    Version{Major: 0, Minor: 1, Patch: 2, Label: "dev"},
-			s:    `doctl version 0.1.2-dev`,
-			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"latestRelease\": \"0.1.0\"\n}",
+			v: Version{Major: 0, Minor: 1, Patch: 2, Label: "dev"},
+			s: `doctl version 0.1.2-dev
+API endpoint: https://api.digitalocean.com/`,
+			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2-dev",
 			slr:  slr1,
 		},
 		// version with label and build
 		{
 			v:    Version{Major: 0, Minor: 1, Patch: 2, Label: "dev", Build: "12345"},
-			s:    "doctl version 0.1.2-dev\nGit commit hash: 12345",
-			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"commit\": \"12345\",\n  \"latestRelease\": \"0.1.0\"\n}",
+			s:    "doctl version 0.1.2-dev\nGit commit hash: 12345\nAPI endpoint: https://api.digitalocean.com/",
+			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"commit\": \"12345\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2-dev",
 			slr:  slr1,
 		},
 		// version with no label and higher released version
 		{
 			v:    Version{Major: 0, Minor: 1, Patch: 2},
-			s:    "doctl version 0.1.2\nrelease 1.0.0 is available, check it out! ",
-			json: "{\n  \"version\": \"0.1.2\",\n  \"latestRelease\": \"1.0.0\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
+			s:    "doctl version 0.1.2\nAPI endpoint: https://api.digitalocean.com/\nrelease 1.0.0 is available, check it out! ",
+			json: "{\n  \"version\": \"0.1.2\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"1.0.0\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
 			ver:  `0.1.2`,
 			slr:  slr2,
 		},
 		// version with dev label and released version
 		{
 			v:    Version{Major: 1, Minor: 0, Patch: 0, Label: "dev"},
-			s:    "doctl version 1.0.0-dev\nrelease 1.0.0 is available, check it out! ",
-			json: "{\n  \"version\": \"1.0.0-dev\",\n  \"latestRelease\": \"1.0.0\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
+			s:    "doctl version 1.0.0-dev\nAPI endpoint: https://api.digitalocean.com/\nrelease 1.0.0 is available, check it out! ",
+			json: "{\n  \"version\": \"1.0.0-dev\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"1.0.0\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
 			ver:  `1.0.0-dev`,
 			slr:  slr2,
 		},
 		// version with release label and released version available
 		{
 			v:    Version{Major: 1, Minor: 0, Patch: 0, Label: "release"},
-			s:    "doctl version 1.0.0-release",
-			json: "{\n  \"version\": \"1.0.0-release\",\n  \"latestRelease\": \"1.0.0\"\n}",
+			s:    "doctl version 1.0.0-release\nAPI endpoint: https://api.digitalocean.com/",
+			json: "{\n  \"version\": \"1.0.0-release\",\n  \"apiEndpoint\": \"https://api.digitalocean.com/\",\n  \"latestRelease\": \"1.0.0\"\n}",
 			ver:  `1.0.0-release`,
 			slr:  slr2,
 		},
@@ -177,6 +179,25 @@ func TestGetGodoClientBaseURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolvedAPIURL(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		viper.Set("api-url", "")
+		t.Cleanup(func() { viper.Set("api-url", "") })
+		if got, want := ResolvedAPIURL(), DefaultAPIURL; got != want {
+			t.Errorf("ResolvedAPIURL() = %q; want %q", got, want)
+		}
+	})
+
+	t.Run("override", func(t *testing.T) {
+		const custom = "https://ohr-agent.do-ai-test.run/"
+		viper.Set("api-url", custom)
+		t.Cleanup(func() { viper.Set("api-url", "") })
+		if got, want := ResolvedAPIURL(), custom; got != want {
+			t.Errorf("ResolvedAPIURL() = %q; want %q", got, want)
+		}
+	})
 }
 
 func TestCommandName(t *testing.T) {
