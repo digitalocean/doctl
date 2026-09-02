@@ -15,20 +15,26 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 const (
 	// Annotation keys stored on pflag for enriched pre-run validation.
-	annoFlagPurpose = "doctl_flag_purpose"
-	annoFlagHint    = "doctl_flag_hint"
+	annoFlagPurpose  = "doctl_flag_purpose"
+	annoFlagHint     = "doctl_flag_hint"
+	annoFlagRequired = "doctl_flag_required"
+	annoFlagViperKey = "doctl_flag_viper_key"
 
-	// cobraRequiredAnno is the annotation MarkFlagRequired sets.
+	// cobraRequiredAnno is the annotation MarkFlagRequired sets. Still
+	// honoured for flags marked that way outside requiredOpt().
 	cobraRequiredAnno = cobra.BashCompOneRequiredFlag
 )
 
@@ -47,16 +53,17 @@ type FlagValidationError struct {
 }
 
 func (e *FlagValidationError) Error() string {
-	return e.format(terminalStyle{})
+	return e.format(ui.NewStyle(ui.Plain(os.Stdout, os.Stderr)))
 }
 
 // Display renders the validation error using the Next-Gen terminal design
-// system (colored ✗ Error: label, bold flags/commands, dim hints).
+// system (colored error label, bold flags/commands, dim hints).
 func (e *FlagValidationError) Display() string {
-	return e.format(newTerminalStyle())
+	env := ui.Detect(os.Stdout, os.Stderr)
+	return e.format(ui.NewStyle(env))
 }
 
-func (e *FlagValidationError) format(style terminalStyle) string {
+func (e *FlagValidationError) format(style ui.Style) string {
 	if e == nil || len(e.Issues) == 0 {
 		return "flag validation failed"
 	}
@@ -74,9 +81,9 @@ func (e *FlagValidationError) format(style terminalStyle) string {
 	var b strings.Builder
 	if len(missing) > 0 {
 		if len(missing) == 1 {
-			fmt.Fprintf(&b, "%s Missing required flag for %s.\n\n", style.errorLabel(), e.Command)
+			fmt.Fprintf(&b, "%s Missing required flag for %s.\n\n", style.ErrorLabel(), e.Command)
 		} else {
-			fmt.Fprintf(&b, "%s Missing %d required flags for %s.\n\n", style.errorLabel(), len(missing), e.Command)
+			fmt.Fprintf(&b, "%s Missing %d required flags for %s.\n\n", style.ErrorLabel(), len(missing), e.Command)
 		}
 		for _, issue := range missing {
 			writeFlagIssue(&b, style, issue)
@@ -88,31 +95,31 @@ func (e *FlagValidationError) format(style terminalStyle) string {
 			b.WriteByte('\n')
 		}
 		if len(other) == 1 {
-			fmt.Fprintf(&b, "%s Invalid flag for %s.\n\n", style.errorLabel(), e.Command)
+			fmt.Fprintf(&b, "%s Invalid flag for %s.\n\n", style.ErrorLabel(), e.Command)
 		} else {
-			fmt.Fprintf(&b, "%s Invalid flags for %s (%d problems).\n\n", style.errorLabel(), e.Command, len(other))
+			fmt.Fprintf(&b, "%s Invalid flags for %s (%d problems).\n\n", style.ErrorLabel(), e.Command, len(other))
 		}
 		for _, issue := range other {
 			writeFlagIssue(&b, style, issue)
 		}
 	}
 
-	fmt.Fprintf(&b, "  Run  %s  for usage.", style.bold(e.Command+" --help"))
+	fmt.Fprintf(&b, "  Run  %s  for usage.", style.Bold(e.Command+" --help"))
 	return b.String()
 }
 
-func writeFlagIssue(b *strings.Builder, style terminalStyle, issue FlagIssue) {
-	fmt.Fprintf(b, "  %s\n", style.bold("--"+issue.Flag))
+func writeFlagIssue(b *strings.Builder, style ui.Style, issue FlagIssue) {
+	fmt.Fprintf(b, "  %s\n", style.Bold("--"+issue.Flag))
 	if issue.Purpose != "" {
 		fmt.Fprintf(b, "      %s\n", issue.Purpose)
 	}
 	switch {
 	case issue.Hint != "":
-		fmt.Fprintf(b, "      %s\n", style.dim(style.paintCommand("→ "+issue.Hint)))
+		fmt.Fprintf(b, "      %s\n", style.PaintCommand("→ "+issue.Hint))
 	case strings.Contains(issue.Problem, "was empty"):
-		fmt.Fprintf(b, "      %s\n", style.dim("→ provided but empty"))
+		fmt.Fprintf(b, "      %s\n", style.Dim("→ provided but empty"))
 	case issue.Problem != "" && !isMissingRequiredProblem(issue.Problem):
-		fmt.Fprintf(b, "      %s\n", style.dim("→ "+issue.Problem))
+		fmt.Fprintf(b, "      %s\n", style.Dim("→ "+issue.Problem))
 	}
 	b.WriteByte('\n')
 }
@@ -231,19 +238,49 @@ func validateCommandFlags(cmd *cobra.Command) error {
 	}
 }
 
+func isRequiredFlag(f *pflag.Flag) bool {
+	if flagAnnotation(f, annoFlagRequired) == "true" {
+		return true
+	}
+	required, found := f.Annotations[cobraRequiredAnno]
+	return found && len(required) > 0 && required[0] == "true"
+}
+
+// flagEffectiveValue returns the value doctl would actually use: the pflag
+// value (CLI or default), falling back to viper so config.yaml / env values
+// satisfy required flags even when pflag.Changed is false.
+func flagEffectiveValue(f *pflag.Flag) string {
+	if f == nil {
+		return ""
+	}
+
+	raw := strings.TrimSpace(f.Value.String())
+	if !isEmptyFlagRaw(raw) {
+		return raw
+	}
+
+	if key := flagAnnotation(f, annoFlagViperKey); key != "" {
+		if v := strings.TrimSpace(viper.GetString(key)); !isEmptyFlagRaw(v) {
+			return v
+		}
+	}
+
+	return raw
+}
+
+func isEmptyFlagRaw(raw string) bool {
+	return raw == "" || raw == "[]"
+}
+
 func collectMissingRequiredFlags(cmd *cobra.Command) []FlagIssue {
 	var issues []FlagIssue
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Hidden {
-			return
-		}
-		required, found := f.Annotations[cobraRequiredAnno]
-		if !found || len(required) == 0 || required[0] != "true" {
+		if f.Hidden || !isRequiredFlag(f) {
 			return
 		}
 
-		missing := !f.Changed || strings.TrimSpace(f.Value.String()) == "" || f.Value.String() == "[]"
-		if !missing {
+		val := flagEffectiveValue(f)
+		if !isEmptyFlagRaw(val) {
 			return
 		}
 

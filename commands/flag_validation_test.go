@@ -19,7 +19,10 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,6 +71,24 @@ func TestValidateCommandFlags_EmptyRequiredCountsAsMissing(t *testing.T) {
 	err := validateCommandFlags(cmd.Command)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "provided but empty")
+}
+
+func TestValidateCommandFlags_AcceptsNonEmptyDefault(t *testing.T) {
+	cmd := CmdBuilder(newTestParent(), func(c *CmdConfig) error { return nil }, "create", "short", "long", &bytes.Buffer{})
+	AddStringFlag(cmd, "subscription-tier", "", "basic", "tier", requiredOpt())
+
+	assert.NoError(t, validateCommandFlags(cmd.Command))
+}
+
+func TestValidateCommandFlags_AcceptsConfigValueWhenDefaultEmpty(t *testing.T) {
+	cmd := CmdBuilder(newTestParent(), func(c *CmdConfig) error { return nil }, "create", "short", "long", &bytes.Buffer{})
+	AddStringFlag(cmd, "region", "", "", "region", requiredOpt())
+
+	key := "test.create.region"
+	viper.Set(key, "nyc1")
+	t.Cleanup(func() { viper.Set(key, nil) })
+
+	assert.NoError(t, validateCommandFlags(cmd.Command))
 }
 
 func TestValidateCommandFlags_MutuallyExclusive(t *testing.T) {
@@ -170,6 +191,53 @@ func TestDropletCreate_BackupPolicyPartialFlagsAllowed(t *testing.T) {
 	require.NoError(t, create.Flags().Set(doctl.ArgDropletBackupPolicyWeekday, "SUN"))
 	assert.NoError(t, create.PreRunE(create.Command, []string{"example"}))
 }
+
+func TestRegistryCreate_DefaultSubscriptionTierPassesPreRun(t *testing.T) {
+	cmd := Registry()
+	create := findSubCommand(cmd, "create")
+	require.NotNil(t, create)
+	require.NotNil(t, create.PreRunE)
+	assert.NoError(t, create.PreRunE(create.Command, []string{"foo"}))
+}
+
+func TestKubernetesClusterCreate_DefaultRegionPassesPreRun(t *testing.T) {
+	cmd := Kubernetes()
+	cluster := findSubCommand(cmd, "cluster")
+	require.NotNil(t, cluster)
+	create := findSubCommand(cluster, "create")
+	require.NotNil(t, create)
+	require.NotNil(t, create.PreRunE)
+
+	// Region defaults to nyc1; other required flags still missing is OK for this check —
+	// we only assert region is not reported when unset on the CLI.
+	err := create.PreRunE(create.Command, []string{"my-cluster"})
+	if err == nil {
+		return
+	}
+	fv, ok := err.(*FlagValidationError)
+	require.True(t, ok, "got %T: %v", err, err)
+	for _, issue := range fv.Issues {
+		assert.NotEqual(t, doctl.ArgRegionSlug, issue.Flag, "default region should satisfy required --region")
+	}
+}
+
+func TestFlagValidationDisplayIncludesDesignRed(t *testing.T) {
+	err := &FlagValidationError{
+		Command: "doctl compute droplet create",
+		Issues: []FlagIssue{
+			{Flag: "size", Problem: "is required but was not set", Purpose: "Droplet size", Hint: "run doctl compute size list"},
+		},
+	}
+	env := ui.Detect(ioDiscard{}, ioDiscard{}, ui.WithProfile(termenv.TrueColor), ui.WithASCII(false))
+	out := err.format(ui.NewStyle(env))
+	if !strings.Contains(out, "38;2;215;70;35") {
+		t.Fatalf("expected design red in display output; got %q", out)
+	}
+}
+
+type ioDiscard struct{}
+
+func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }
 
 func findSubCommand(parent *Command, name string) *Command {
 	for _, child := range parent.ChildCommands() {

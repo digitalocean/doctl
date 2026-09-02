@@ -98,16 +98,14 @@ var _ = suite("vpcs/create", func(t *testing.T, when spec.G, it spec.S) {
 			"create",
 		}
 
-		baseErr := `Error: (vpcs.create%s) command is missing required arguments`
-
 		cases := []struct {
 			desc string
 			err  string
 			args []string
 		}{
-			{desc: "missing all", err: fmt.Sprintf(baseErr, ".name"), args: base},
-			{desc: "missing only name", err: fmt.Sprintf(baseErr, ".name"), args: append(base, []string{"--region", "not missing"}...)},
-			{desc: "missing only region", err: fmt.Sprintf(baseErr, ".region"), args: append(base, []string{"--name", "not missing"}...)},
+			{desc: "missing all", err: "Missing 2 required flags for doctl vpcs create", args: base},
+			{desc: "missing only name", err: "Missing required flag for doctl vpcs create", args: append(base, []string{"--region", "not missing"}...)},
+			{desc: "missing only region", err: "Missing required flag for doctl vpcs create", args: append(base, []string{"--name", "not missing"}...)},
 		}
 
 		for _, c := range cases {

@@ -254,9 +254,12 @@ type flagOpt func(c *Command, name, key string)
 
 func requiredOpt() flagOpt {
 	return func(c *Command, name, key string) {
-		// MarkFlagRequired must use the pflag name (e.g. "size"), not the
-		// namespaced viper key (e.g. "droplet.create.size").
-		_ = c.MarkFlagRequired(name)
+		// Use doctl-owned metadata instead of cobra.MarkFlagRequired.
+		// Cobra's required check only looks at pflag.Changed, so it rejects
+		// flags whose value comes from a non-empty default or config.yaml —
+		// behaviour doctl has long accepted via GetString/viper.
+		_ = c.Flags().SetAnnotation(name, annoFlagRequired, []string{"true"})
+		_ = c.Flags().SetAnnotation(name, annoFlagViperKey, []string{key})
 
 		viper.Set(fmt.Sprintf("required.%s", key), true)
 

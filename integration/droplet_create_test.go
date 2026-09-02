@@ -210,17 +210,15 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 			"create",
 		}
 
-		baseErr := `Error: (droplet.create%s) command is missing required arguments`
-
 		cases := []struct {
 			desc string
 			err  string
 			args []string
 		}{
-			{desc: "missing all", err: fmt.Sprintf(baseErr, ""), args: base},
-			{desc: "missing only name", err: fmt.Sprintf(baseErr, ""), args: append(base, []string{"--size", "test", "--region", "test", "--image", "test"}...)},
-			{desc: "missing only size", err: fmt.Sprintf(baseErr, ".size"), args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
-			{desc: "missing only image", err: fmt.Sprintf(baseErr, ".image"), args: append(base, []string{"some-name", "--size", "test", "--region", "test"}...)},
+			{desc: "missing all", err: "Missing 2 required flags for doctl compute droplet create", args: base},
+			{desc: "missing only name", err: "Error: (droplet.create) command is missing required arguments", args: append(base, []string{"--size", "test", "--region", "test", "--image", "test"}...)},
+			{desc: "missing only size", err: "Missing required flag for doctl compute droplet create", args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
+			{desc: "missing only image", err: "Missing required flag for doctl compute droplet create", args: append(base, []string{"some-name", "--size", "test", "--region", "test"}...)},
 		}
 
 		for _, c := range cases {
