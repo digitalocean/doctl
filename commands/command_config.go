@@ -41,17 +41,17 @@ type CmdConfig struct {
 	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
-	Keys               func() do.KeysService
-	Sizes              func() do.SizesService
-	Regions            func() do.RegionsService
-	Images             func() do.ImagesService
-	ImageActions       func() do.ImageActionsService
-	LoadBalancers      func() do.LoadBalancersService
+	Keys              func() do.KeysService
+	Sizes             func() do.SizesService
+	Regions           func() do.RegionsService
+	Images            func() do.ImagesService
+	ImageActions      func() do.ImageActionsService
+	LoadBalancers     func() do.LoadBalancersService
 	MicroDroplets     func() do.MicroDropletsService
 	ReservedIPs       func() do.ReservedIPsService
-	ReservedIPActions  func() do.ReservedIPActionsService
-	ReservedIPv6s      func() do.ReservedIPv6sService
-	BYOIPPrefixes      func() do.BYOIPPrefixsService
+	ReservedIPActions func() do.ReservedIPActionsService
+	ReservedIPv6s     func() do.ReservedIPv6sService
+	BYOIPPrefixes     func() do.BYOIPPrefixsService
 
 	Droplets            func() do.DropletsService
 	DropletActions      func() do.DropletActionsService
