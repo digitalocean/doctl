@@ -25,7 +25,7 @@ var _ = suite("compute/microdroplet/pause", func(t *testing.T, when spec.G, it s
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/microdroplets/instances/b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2/pause":
+			case "/v2/microdroplets/b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2/pause":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -71,8 +71,8 @@ var _ = suite("compute/microdroplet/pause", func(t *testing.T, when spec.G, it s
 
 const (
 	microDropletPauseOutput = `
-ID                                      Name                  Region    State     Size              Networking    Image                                                         Endpoint                                        Created At
-b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microdroplet    nyc1      paused    md-1vcpu-512mb    public        do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000    https://sammy.microdroplets.digitalocean.app    2026-07-16T10:00:00Z
+ID                                      Name                  Region    State     Size                 Networking    Source                           Endpoint                          Ports    Created At
+b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microdroplet    nyc1      paused    2vCPU/4096MiB/80GB    public        docker.io/library/nginx:1.27    sammy.microdroplets.example.com    8080     2026-07-16T10:00:00Z
 `
 	microDropletPauseResponse = `
 {
@@ -81,10 +81,11 @@ b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microdroplet    nyc1      paused  
     "name": "sammy-microdroplet",
     "region": "nyc1",
     "state": "paused",
-    "size": "md-1vcpu-512mb",
+    "size": {"cpu": 2, "memory": 4096, "disk": 80},
     "networking": "public",
-    "image": "do:microdroplet-image:0f0f0f0f-0000-0000-0000-000000000000",
-    "endpoint": "https://sammy.microdroplets.digitalocean.app",
+    "source": {"oci_ref": "docker.io/library/nginx:1.27"},
+    "urls": [{"hostname": "sammy.microdroplets.example.com", "port": 8080, "default": true, "status": "ACTIVE"}],
+    "ports": [8080],
     "created_at": "2026-07-16T10:00:00Z"
   }
 }

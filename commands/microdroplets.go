@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -32,7 +33,8 @@ func MicroDroplet() *Command {
 			Short: "Manage MicroDroplets",
 			Long: `The subcommands under ` + "`" + `doctl compute microdroplet` + "`" + ` manage MicroDroplets — lightweight ` +
 				`microVM sandboxes that pause when idle and resume on demand. Use these commands to ` +
-				`create, inspect, pause, resume, and delete MicroDroplets, and to list their checkpoints.`,
+				`create, inspect, pause, resume, and delete MicroDroplets, and to manage their checkpoints.`,
+			Hidden: true, // public preview: keep out of --help and generated docs until GA
 		},
 	}
 
@@ -50,15 +52,20 @@ func MicroDroplet() *Command {
 
 	cmdMicroDropletCreate := CmdBuilder(cmd, RunMicroDropletCreate, "create <microdroplet-name>",
 		"Create a new MicroDroplet",
-		"Creates a new MicroDroplet in the specified region from the specified image. "+
-			"`--region`, `--size`, and `--image` are required. The MicroDroplet UUID and current state are returned on success.",
+		"Creates a new MicroDroplet. Provide exactly one of `--oci-ref` or `--checkpoint-id`. "+
+			"When creating from an OCI ref, `--region`, `--cpu`, and `--memory` are required. "+
+			"When restoring from a checkpoint, region/size/environment may be omitted to inherit from the checkpoint.",
 		Writer, aliasOpt("c"), displayerType(&displayers.MicroDroplet{}))
 	AddStringFlag(cmdMicroDropletCreate, doctl.ArgRegionSlug, "", "",
-		"A `slug` specifying the region to create the MicroDroplet in, such as `nyc1`", requiredOpt())
-	AddStringFlag(cmdMicroDropletCreate, doctl.ArgSizeSlug, "", "",
-		"A `slug` indicating the MicroDroplet's size", requiredOpt())
-	AddStringFlag(cmdMicroDropletCreate, doctl.ArgImage, "", "",
-		"The URN or UUID of a MicroDroplet image to launch", requiredOpt())
+		"A `slug` specifying the region to create the MicroDroplet in, such as `nyc1` (required for `--oci-ref`; optional for `--checkpoint-id`)")
+	AddIntFlag(cmdMicroDropletCreate, "cpu", "", 0,
+		"Number of vCPUs (required for `--oci-ref`; optional for `--checkpoint-id`)")
+	AddIntFlag(cmdMicroDropletCreate, "memory", "", 0,
+		"Memory in MiB (required for `--oci-ref`; optional for `--checkpoint-id`)")
+	AddStringFlag(cmdMicroDropletCreate, "oci-ref", "", "",
+		"OCI reference for the workload container (mutually exclusive with `--checkpoint-id`)")
+	AddStringFlag(cmdMicroDropletCreate, "checkpoint-id", "", "",
+		"Checkpoint UUID to restore (mutually exclusive with `--oci-ref`)")
 	AddStringFlag(cmdMicroDropletCreate, "networking", "", "",
 		"Networking mode for the MicroDroplet: `public` or `vpc`")
 	AddStringFlag(cmdMicroDropletCreate, doctl.ArgVPCUUID, "", "",
@@ -73,6 +80,8 @@ func MicroDroplet() *Command {
 		"HTTP port exposed by the MicroDroplet workload")
 	AddStringFlag(cmdMicroDropletCreate, "http-protocol", "", "",
 		"HTTP protocol served by the MicroDroplet: `http` or `http2`")
+	AddStringSliceFlag(cmdMicroDropletCreate, "ports", "", []string{},
+		"Guest ports to open for ingress. Repeatable. Defaults to just `--http-port` when omitted.")
 	AddStringSliceFlag(cmdMicroDropletCreate, "env", "", []string{},
 		"Environment variables to inject, in `KEY=VALUE` form. Repeatable.")
 	AddStringSliceFlag(cmdMicroDropletCreate, doctl.ArgTag, "", []string{},
@@ -95,51 +104,52 @@ func MicroDroplet() *Command {
 	AddBoolFlag(cmdMicroDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the MicroDroplet(s) without a confirmation prompt")
 
-	CmdBuilder(cmd, RunMicroDropletCheckpoints, "checkpoints <microdroplet-id>",
-		"List checkpoints for a MicroDroplet",
-		"Retrieves a list of checkpoints for the specified MicroDroplet. "+
-			"Checkpoints are captured automatically by DigitalOcean when a MicroDroplet is paused; "+
-			"each one preserves the memory and disk state required to resume.",
-		Writer, aliasOpt("cp"), displayerType(&displayers.MicroDropletCheckpoint{}))
+	CmdBuilder(cmd, RunMicroDropletOptions, "options",
+		"List MicroDroplet create options",
+		"Retrieves the regions, sizes, features, and account limits available when creating a MicroDroplet.",
+		Writer, displayerType(&displayers.MicroDropletCreateOptions{}))
 
-	cmd.AddCommand(microDropletImages())
+	cmd.AddCommand(microDropletCheckpoints())
 
 	return cmd
 }
 
-func microDropletImages() *Command {
+func microDropletCheckpoints() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "image",
-			Short: "Manage MicroDroplet images",
-			Long: `The subcommands under ` + "`" + `doctl compute microdroplet image` + "`" + ` manage OCI images ` +
-				`imported for use with MicroDroplets.`,
+			Use:     "checkpoint",
+			Aliases: []string{"checkpoints", "cp"},
+			Short:   "Manage MicroDroplet checkpoints",
+			Long: `The subcommands under ` + "`" + `doctl compute microdroplet checkpoint` + "`" + ` manage ` +
+				`checkpoints — persisted memory and disk state captured from a MicroDroplet.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunMicroDropletImageList, "list",
-		"List MicroDroplet images on your account",
-		"Retrieves a list of MicroDroplet images on your account.",
-		Writer, aliasOpt("ls"), displayerType(&displayers.MicroDropletImage{}))
+	cmdList := CmdBuilder(cmd, RunMicroDropletCheckpointList, "list",
+		"List MicroDroplet checkpoints",
+		"Retrieves checkpoints for your account. Optionally filter by the MicroDroplet they were captured from.",
+		Writer, aliasOpt("ls"), displayerType(&displayers.MicroDropletCheckpoint{}))
+	AddStringFlag(cmdList, "microdroplet-id", "", "",
+		"Filter checkpoints captured from this MicroDroplet UUID")
 
-	CmdBuilder(cmd, RunMicroDropletImageGet, "get <image-id>",
-		"Retrieve information about a MicroDroplet image",
-		"Retrieves information about a MicroDroplet image by its UUID.",
-		Writer, aliasOpt("g"), displayerType(&displayers.MicroDropletImage{}))
+	CmdBuilder(cmd, RunMicroDropletCheckpointGet, "get <checkpoint-id>",
+		"Retrieve a MicroDroplet checkpoint",
+		"Retrieves information about a checkpoint by its UUID.",
+		Writer, aliasOpt("g"), displayerType(&displayers.MicroDropletCheckpoint{}))
 
-	cmdImageCreate := CmdBuilder(cmd, RunMicroDropletImageCreate, "create <image-name>",
-		"Import a new MicroDroplet image",
-		"Imports a new MicroDroplet image from a public OCI ref or a DOCR ref. Import is asynchronous.",
-		Writer, aliasOpt("c"), displayerType(&displayers.MicroDropletImage{}))
-	AddStringFlag(cmdImageCreate, "source", "", "",
-		"The OCI or DOCR source ref for the image", requiredOpt())
+	cmdCreate := CmdBuilder(cmd, RunMicroDropletCheckpointCreate, "create <microdroplet-id>",
+		"Create a checkpoint of a MicroDroplet",
+		"Starts an asynchronous checkpoint of a running MicroDroplet.",
+		Writer, aliasOpt("c"), displayerType(&displayers.MicroDropletCheckpoint{}))
+	AddStringFlag(cmdCreate, "name", "", "",
+		"Optional human-readable name for the checkpoint")
 
-	cmdImageDelete := CmdBuilder(cmd, RunMicroDropletImageDelete, "delete <image-id>...",
-		"Permanently delete one or more MicroDroplet images",
-		"Permanently deletes the specified MicroDroplet images. This is irreversible.",
+	cmdDelete := CmdBuilder(cmd, RunMicroDropletCheckpointDelete, "delete <checkpoint-id>...",
+		"Delete one or more MicroDroplet checkpoints",
+		"Releases the state stored by the specified checkpoints. This is irreversible.",
 		Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdImageDelete, doctl.ArgForce, doctl.ArgShortForce, false,
-		"Delete the image(s) without a confirmation prompt")
+	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Delete the checkpoint(s) without a confirmation prompt")
 
 	return cmd
 }
@@ -185,15 +195,27 @@ func RunMicroDropletCreate(c *CmdConfig) error {
 	}
 	name := c.Args[0]
 
+	ociRef, err := c.Doit.GetString(c.NS, "oci-ref")
+	if err != nil {
+		return err
+	}
+	checkpointID, err := c.Doit.GetString(c.NS, "checkpoint-id")
+	if err != nil {
+		return err
+	}
+	if (ociRef == "") == (checkpointID == "") {
+		return fmt.Errorf("exactly one of --oci-ref or --checkpoint-id is required")
+	}
+
 	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
-	size, err := c.Doit.GetString(c.NS, doctl.ArgSizeSlug)
+	cpu, err := c.Doit.GetInt(c.NS, "cpu")
 	if err != nil {
 		return err
 	}
-	image, err := c.Doit.GetString(c.NS, doctl.ArgImage)
+	memory, err := c.Doit.GetInt(c.NS, "memory")
 	if err != nil {
 		return err
 	}
@@ -225,6 +247,10 @@ func RunMicroDropletCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	portStrs, err := c.Doit.GetStringSlice(c.NS, "ports")
+	if err != nil {
+		return err
+	}
 	envPairs, err := c.Doit.GetStringSlice(c.NS, "env")
 	if err != nil {
 		return err
@@ -234,12 +260,32 @@ func RunMicroDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
-	req := &godo.MicroDropletCreateRequest{
-		Name:   name,
-		Region: region,
-		Size:   size,
-		Image:  image,
+	req := &godo.MicroDropletCreateRequest{Name: name}
+	if ociRef != "" {
+		if region == "" {
+			return fmt.Errorf("--region is required when creating from --oci-ref")
+		}
+		if cpu <= 0 || memory <= 0 {
+			return fmt.Errorf("--cpu and --memory are required when creating from --oci-ref")
+		}
+		req.Region = region
+		req.Size = &godo.MicroDropletSizeRequest{CPU: uint32(cpu), Memory: uint32(memory)}
+		req.Source = &godo.MicroDropletSource{OCIRef: ociRef}
+	} else {
+		// Checkpoint restore: leave region/size/environment unset so the API
+		// inherits them (api-v2 C6), unless the caller overrides.
+		req.Source = &godo.MicroDropletSource{CheckpointID: checkpointID}
+		if region != "" {
+			req.Region = region
+		}
+		if cpu > 0 || memory > 0 {
+			if cpu <= 0 || memory <= 0 {
+				return fmt.Errorf("--cpu and --memory must both be set when overriding size")
+			}
+			req.Size = &godo.MicroDropletSizeRequest{CPU: uint32(cpu), Memory: uint32(memory)}
+		}
 	}
+
 	if networking != "" {
 		req.Networking = godo.MicroDropletNetworking(networking)
 	}
@@ -265,6 +311,13 @@ func RunMicroDropletCreate(c *CmdConfig) error {
 	}
 	if httpProtocol != "" {
 		req.HTTPProtocol = godo.MicroDropletHTTPProtocol(httpProtocol)
+	}
+	if len(portStrs) > 0 {
+		ports, err := parsePorts(portStrs)
+		if err != nil {
+			return err
+		}
+		req.Ports = ports
 	}
 	if len(envPairs) > 0 {
 		env, err := parseEnvPairs(envPairs)
@@ -330,60 +383,62 @@ func RunMicroDropletDelete(c *CmdConfig) error {
 	return nil
 }
 
-// RunMicroDropletCheckpoints lists checkpoints for a MicroDroplet.
-func RunMicroDropletCheckpoints(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
+// RunMicroDropletOptions retrieves create options for MicroDroplets.
+func RunMicroDropletOptions(c *CmdConfig) error {
+	opts, err := c.MicroDroplets().GetCreateOptions()
+	if err != nil {
 		return err
 	}
-	checkpoints, err := c.MicroDroplets().ListCheckpoints(c.Args[0])
+	return c.Display(&displayers.MicroDropletCreateOptions{Options: opts})
+}
+
+// RunMicroDropletCheckpointList lists checkpoints, optionally filtered by MicroDroplet.
+func RunMicroDropletCheckpointList(c *CmdConfig) error {
+	microDropletID, err := c.Doit.GetString(c.NS, "microdroplet-id")
+	if err != nil {
+		return err
+	}
+	checkpoints, err := c.MicroDroplets().ListCheckpoints(microDropletID)
 	if err != nil {
 		return err
 	}
 	return c.Display(&displayers.MicroDropletCheckpoint{Checkpoints: checkpoints})
 }
 
-// RunMicroDropletImageList lists MicroDroplet images.
-func RunMicroDropletImageList(c *CmdConfig) error {
-	imgs, err := c.MicroDropletImages().List()
-	if err != nil {
-		return err
-	}
-	return c.Display(&displayers.MicroDropletImage{Images: imgs})
-}
-
-// RunMicroDropletImageGet retrieves a MicroDroplet image by UUID.
-func RunMicroDropletImageGet(c *CmdConfig) error {
+// RunMicroDropletCheckpointGet retrieves a checkpoint by UUID.
+func RunMicroDropletCheckpointGet(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	img, err := c.MicroDropletImages().Get(c.Args[0])
+	cp, err := c.MicroDroplets().GetCheckpoint(c.Args[0])
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.MicroDropletImage{Images: do.MicroDropletImages{*img}})
+	return c.Display(&displayers.MicroDropletCheckpoint{Checkpoints: do.MicroDropletCheckpoints{*cp}})
 }
 
-// RunMicroDropletImageCreate imports a MicroDroplet image from an OCI ref.
-func RunMicroDropletImageCreate(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+// RunMicroDropletCheckpointCreate starts a checkpoint of a MicroDroplet.
+func RunMicroDropletCheckpointCreate(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
 	}
-	source, err := c.Doit.GetString(c.NS, "source")
+	name, err := c.Doit.GetString(c.NS, "name")
 	if err != nil {
 		return err
 	}
-	img, err := c.MicroDropletImages().Create(&godo.MicroDropletImageCreateRequest{
-		Name:   c.Args[0],
-		Source: source,
-	})
+	req := &godo.MicroDropletCheckpointCreateRequest{}
+	if name != "" {
+		req.Name = name
+	}
+	cp, err := c.MicroDroplets().CreateCheckpoint(c.Args[0], req)
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.MicroDropletImage{Images: do.MicroDropletImages{*img}})
+	return c.Display(&displayers.MicroDropletCheckpoint{Checkpoints: do.MicroDropletCheckpoints{*cp}})
 }
 
-// RunMicroDropletImageDelete deletes one or more MicroDroplet images.
-func RunMicroDropletImageDelete(c *CmdConfig) error {
+// RunMicroDropletCheckpointDelete deletes one or more checkpoints.
+func RunMicroDropletCheckpointDelete(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
@@ -391,14 +446,14 @@ func RunMicroDropletImageDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if !(force || AskForConfirmDelete("MicroDroplet image", len(c.Args)) == nil) {
+	if !(force || AskForConfirmDelete("MicroDroplet checkpoint", len(c.Args)) == nil) {
 		return errOperationAborted
 	}
 
-	svc := c.MicroDropletImages()
+	svc := c.MicroDroplets()
 	for _, id := range c.Args {
-		if err := svc.Delete(id); err != nil {
-			return fmt.Errorf("Unable to delete MicroDroplet image %s: %v", id, err)
+		if err := svc.DeleteCheckpoint(id); err != nil {
+			return fmt.Errorf("Unable to delete checkpoint %s: %v", id, err)
 		}
 	}
 	return nil
@@ -416,4 +471,16 @@ func parseEnvPairs(pairs []string) (map[string]string, error) {
 		out[key] = value
 	}
 	return out, nil
+}
+
+func parsePorts(portStrs []string) ([]uint32, error) {
+	ports := make([]uint32, 0, len(portStrs))
+	for _, s := range portStrs {
+		n, err := strconv.ParseUint(s, 10, 32)
+		if err != nil || n == 0 || n > 65535 {
+			return nil, fmt.Errorf("invalid --ports value %q: expected an integer 1-65535", s)
+		}
+		ports = append(ports, uint32(n))
+	}
+	return ports, nil
 }
