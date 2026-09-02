@@ -211,7 +211,7 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 	}
 
 	// The `kvs` flag is a special flag to output KEY=VALUE pairs, and therefore
-	// takes precendence over a number of other flags.
+	// takes precedence over a number of other flags.
 	kvs, err := c.Doit.GetBool(c.NS, doctl.ArgSecretShowKV)
 	if err != nil {
 		return err
