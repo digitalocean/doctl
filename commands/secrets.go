@@ -16,7 +16,9 @@ package commands
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -95,6 +97,7 @@ Secret values are masked by default. Use --show to reveal them, or --key with --
 	AddStringFlag(cmdGet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringFlag(cmdGet, doctl.ArgKey, "", "", "Return only the value for this key.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretShow, "", false, "Reveal secret values instead of masking them.")
+	AddBoolFlag(cmdGet, doctl.ArgSecretShowKV, "", false, "Reveal secret values instead of masking them, displayed as KEY=VALUE pairs.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretRaw, "", false, "Write the value for --key to stdout with no formatting.")
 	cmdGet.Example = `The following example retrieves a secret: doctl secrets get ` + exampleSecretName + ` --region nyc3 --key ` + exampleSecretKey + ` --raw`
 
@@ -207,8 +210,28 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		return fmt.Errorf("--%s requires --%s", doctl.ArgSecretRaw, doctl.ArgKey)
 	}
 
+	// The `kvs` flag is a special flag to output KEY=VALUE pairs, and therefore
+	// takes precendence over a number of other flags.
+	kvs, err := c.Doit.GetBool(c.NS, doctl.ArgSecretShowKV)
+	if err != nil {
+		return err
+	}
+
 	secret, err := c.Secrets().Get(name, region)
 	if err != nil {
+		return err
+	}
+
+	if kvs {
+		var b strings.Builder
+		keys := slices.Sorted(maps.Keys(secret.Values))
+		for _, key := range keys {
+			b.WriteString(strings.ToUpper(key))
+			b.WriteString("=")
+			b.WriteString(secret.Values[key])
+			b.WriteString("\n")
+		}
+		_, err := c.Out.Write([]byte(b.String()))
 		return err
 	}
 
