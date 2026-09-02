@@ -93,6 +93,7 @@ var _ = suite("gradient/agent/functionroute/delete", func(t *testing.T, when spe
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--agent-id")
 		})
 
 		it("returns an error when function-id is missing", func() {
@@ -109,6 +110,7 @@ var _ = suite("gradient/agent/functionroute/delete", func(t *testing.T, when spe
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--function-id")
 		})
 	})
 })

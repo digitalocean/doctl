@@ -16,7 +16,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -108,10 +107,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		Doit: dc,
 		Out:  out,
 		Args: args,
-		UI: ui.Detect(out, os.Stderr,
-			ui.WithMachineOutput(Output != "text"),
-			ui.WithInteractive(Interactive),
-		),
+		UI: resolveUIEnv(out),
 
 		initServices: func(c *CmdConfig) error {
 			accessToken := c.getContextAccessToken()

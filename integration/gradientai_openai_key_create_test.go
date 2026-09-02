@@ -80,6 +80,7 @@ var _ = suite("gradient/openai-key/create", func(t *testing.T, when spec.G, it s
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 			expect.Contains(strings.TrimSpace(string(output)), "required flag")
+			expect.Contains(strings.TrimSpace(string(output)), "--name")
 		})
 	})
 
@@ -97,6 +98,7 @@ var _ = suite("gradient/openai-key/create", func(t *testing.T, when spec.G, it s
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 			expect.Contains(strings.TrimSpace(string(output)), "required flag")
+			expect.Contains(strings.TrimSpace(string(output)), "--api-key")
 		})
 	})
 })

@@ -40,9 +40,4 @@ func TestStyleUsesDesignHexColors(t *testing.T) {
 	if !strings.Contains(dim, "38;2;128;144;160") {
 		t.Fatalf("dim missing design #8090a0 RGB; got %q", dim)
 	}
-
-	green := style.Success("ok")
-	if !strings.Contains(green, "38;2;0;") || !strings.Contains(green, ";131m") {
-		t.Fatalf("green missing design #00c483 RGB; got %q", green)
-	}
 }

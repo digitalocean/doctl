@@ -211,19 +211,21 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 		}
 
 		cases := []struct {
-			desc string
-			err  string
-			args []string
+			desc  string
+			err   string
+			flags []string
+			args  []string
 		}{
-			{desc: "missing all", err: "Missing 2 required flags for doctl compute droplet create", args: base},
-			{desc: "missing only name", err: "Error: (droplet.create) command is missing required arguments", args: append(base, []string{"--size", "test", "--region", "test", "--image", "test"}...)},
-			{desc: "missing only size", err: "Missing required flag for doctl compute droplet create", args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
-			{desc: "missing only image", err: "Missing required flag for doctl compute droplet create", args: append(base, []string{"some-name", "--size", "test", "--region", "test"}...)},
+			{desc: "missing all", err: "Missing 2 required flags for doctl compute droplet create", flags: []string{"--size", "--image"}, args: base},
+			{desc: "missing only name", err: "Error: (droplet.create) command is missing required arguments", flags: nil, args: append(base, []string{"--size", "test", "--region", "test", "--image", "test"}...)},
+			{desc: "missing only size", err: "Missing required flag for doctl compute droplet create", flags: []string{"--size"}, args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
+			{desc: "missing only image", err: "Missing required flag for doctl compute droplet create", flags: []string{"--image"}, args: append(base, []string{"some-name", "--size", "test", "--region", "test"}...)},
 		}
 
 		for _, c := range cases {
 			commandArgs := c.args
 			expectedErr := c.err
+			expectedFlags := c.flags
 
 			when(c.desc, func() {
 				it("returns an error", func() {
@@ -231,7 +233,11 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 
 					output, err := cmd.CombinedOutput()
 					expect.Error(err)
-					expect.Contains(string(output), expectedErr)
+					out := string(output)
+					expect.Contains(out, expectedErr)
+					for _, flag := range expectedFlags {
+						expect.Contains(out, flag)
+					}
 				})
 			})
 		}

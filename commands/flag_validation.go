@@ -59,8 +59,7 @@ func (e *FlagValidationError) Error() string {
 // Display renders the validation error using the Next-Gen terminal design
 // system (colored error label, bold flags/commands, dim hints).
 func (e *FlagValidationError) Display() string {
-	env := ui.Detect(os.Stdout, os.Stderr)
-	return e.format(ui.NewStyle(env))
+	return e.format(ui.NewStyle(resolveUIEnv(os.Stdout)))
 }
 
 func (e *FlagValidationError) format(style ui.Style) string {
@@ -246,26 +245,42 @@ func isRequiredFlag(f *pflag.Flag) bool {
 	return found && len(required) > 0 && required[0] == "true"
 }
 
-// flagEffectiveValue returns the value doctl would actually use: the pflag
-// value (CLI or default), falling back to viper so config.yaml / env values
-// satisfy required flags even when pflag.Changed is false.
-func flagEffectiveValue(f *pflag.Flag) string {
+// flagIsSatisfied reports whether a required flag has a usable value, matching
+// LiveConfig semantics: non-empty strings, non-empty slices, and non-zero
+// int/float. Values may come from the CLI, pflag defaults, or viper (config/env).
+func flagIsSatisfied(f *pflag.Flag) bool {
 	if f == nil {
-		return ""
+		return false
 	}
 
 	raw := strings.TrimSpace(f.Value.String())
-	if !isEmptyFlagRaw(raw) {
-		return raw
-	}
+	key := flagAnnotation(f, annoFlagViperKey)
 
-	if key := flagAnnotation(f, annoFlagViperKey); key != "" {
-		if v := strings.TrimSpace(viper.GetString(key)); !isEmptyFlagRaw(v) {
-			return v
+	switch f.Value.Type() {
+	case "int", "int8", "int16", "int32", "int64":
+		if raw != "" && raw != "0" {
+			return true
 		}
+		return key != "" && viper.GetInt(key) != 0
+	case "float32", "float64":
+		if raw != "" && raw != "0" && raw != "0.0" {
+			return true
+		}
+		return key != "" && viper.GetFloat64(key) != 0
+	case "stringSlice", "stringArray":
+		if !isEmptyFlagRaw(raw) {
+			return true
+		}
+		return key != "" && len(viper.GetStringSlice(key)) > 0
+	default:
+		if !isEmptyFlagRaw(raw) {
+			return true
+		}
+		if key == "" {
+			return false
+		}
+		return !isEmptyFlagRaw(strings.TrimSpace(viper.GetString(key)))
 	}
-
-	return raw
 }
 
 func isEmptyFlagRaw(raw string) bool {
@@ -279,8 +294,7 @@ func collectMissingRequiredFlags(cmd *cobra.Command) []FlagIssue {
 			return
 		}
 
-		val := flagEffectiveValue(f)
-		if !isEmptyFlagRaw(val) {
+		if flagIsSatisfied(f) {
 			return
 		}
 

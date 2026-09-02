@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -163,9 +164,14 @@ func Execute() {
 		if strings.Contains(err.Error(), "unknown command") {
 			os.Exit(-1)
 		}
-		// Route through checkErr so flag validation and other errors honor
-		// --output json and a consistent Error:/JSON shape, but keep the
-		// historical process exit status (-1 → 255) for top-level failures.
+		// Missing/invalid flags historically exited 1 via checkErr → errAction.
+		// Keep that for FlagValidationError; reserve -1 (255) for other
+		// top-level failures that never went through Run/checkErr.
+		var fv *FlagValidationError
+		if errors.As(err, &fv) {
+			checkErr(err)
+			return
+		}
 		prev := errAction
 		errAction = func() { os.Exit(-1) }
 		defer func() { errAction = prev }()

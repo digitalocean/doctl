@@ -91,6 +91,26 @@ func TestValidateCommandFlags_AcceptsConfigValueWhenDefaultEmpty(t *testing.T) {
 	assert.NoError(t, validateCommandFlags(cmd.Command))
 }
 
+func TestValidateCommandFlags_AcceptsConfigStringSlice(t *testing.T) {
+	cmd := CmdBuilder(newTestParent(), func(c *CmdConfig) error { return nil }, "apply", "short", "long", &bytes.Buffer{})
+	AddStringSliceFlag(cmd, "resource", "", nil, "resources", requiredOpt())
+
+	key := "test.apply.resource"
+	viper.Set(key, []string{"do:droplet:12345"})
+	t.Cleanup(func() { viper.Set(key, nil) })
+
+	assert.NoError(t, validateCommandFlags(cmd.Command))
+}
+
+func TestValidateCommandFlags_ZeroIntRequiredIsMissing(t *testing.T) {
+	cmd := CmdBuilder(newTestParent(), func(c *CmdConfig) error { return nil }, "resize", "short", "long", &bytes.Buffer{})
+	AddIntFlag(cmd, "size", "", 0, "size in GiB", requiredOpt())
+
+	err := validateCommandFlags(cmd.Command)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--size")
+}
+
 func TestValidateCommandFlags_MutuallyExclusive(t *testing.T) {
 	cmd := CmdBuilder(newTestParent(), func(c *CmdConfig) error { return nil }, "create", "short", "long", &bytes.Buffer{})
 	AddStringFlag(cmd, doctl.ArgUserData, "", "", "inline",

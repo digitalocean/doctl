@@ -20,6 +20,8 @@ import (
 )
 
 // Next-Gen terminal palette from doctl-nextgen-design.html (Kraken tokens).
+// commands/charm/colors.go should mirror these so error/success chrome shares
+// one source of truth across interactive and CLI error paths.
 var (
 	ColorError   = lipgloss.Color("#d74623") // primary-terracotta
 	ColorSuccess = lipgloss.Color("#00c483") // primary-green-200
@@ -48,13 +50,9 @@ func (s Style) paint(text string, c lipgloss.Color, bold bool) string {
 	return s.env.SprintErr(st, text)
 }
 
-// ErrorLabel returns the leading "✘ Error:" (or ASCII) marker.
+// ErrorLabel returns the leading failure glyph plus "Error:" (ASCII-safe via Glyphs).
 func (s Style) ErrorLabel() string {
-	glyph := s.env.Glyphs().Failure
-	if s.env.ASCII {
-		return s.paint(glyph+" Error:", ColorError, true)
-	}
-	return s.paint(glyph+" Error:", ColorError, true)
+	return s.paint(s.env.Glyphs().Failure+" Error:", ColorError, true)
 }
 
 // Bold emphasises flag names and command paths when Err styling is on.
@@ -68,21 +66,6 @@ func (s Style) Bold(text string) string {
 // Dim renders secondary hint text.
 func (s Style) Dim(text string) string {
 	return s.paint(text, ColorMuted, false)
-}
-
-// Success paints success chrome.
-func (s Style) Success(text string) string {
-	return s.paint(text, ColorSuccess, false)
-}
-
-// Warning paints warning chrome.
-func (s Style) Warning(text string) string {
-	return s.paint(text, ColorWarning, true)
-}
-
-// Info paints informational chrome.
-func (s Style) Info(text string) string {
-	return s.paint(text, ColorInfo, false)
 }
 
 // PaintCommand dims the "→ run " / "run " prefix and bolds the command path.
