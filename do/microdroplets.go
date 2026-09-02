@@ -46,7 +46,13 @@ type MicroDropletsService interface {
 	Pause(id string) (*MicroDroplet, error)
 	Resume(id string) (*MicroDroplet, error)
 	Delete(id string) error
-	ListCheckpoints(id string) (MicroDropletCheckpoints, error)
+
+	ListCheckpoints(microDropletID string) (MicroDropletCheckpoints, error)
+	CreateCheckpoint(microDropletID string, req *godo.MicroDropletCheckpointCreateRequest) (*MicroDropletCheckpoint, error)
+	GetCheckpoint(id string) (*MicroDropletCheckpoint, error)
+	DeleteCheckpoint(id string) error
+
+	GetCreateOptions() (*godo.MicroDropletCreateOptions, error)
 }
 
 type microDropletsService struct {
@@ -144,9 +150,13 @@ func (s *microDropletsService) Delete(id string) error {
 	return err
 }
 
-func (s *microDropletsService) ListCheckpoints(id string) (MicroDropletCheckpoints, error) {
+func (s *microDropletsService) ListCheckpoints(microDropletID string) (MicroDropletCheckpoints, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := s.client.MicroDroplets.ListCheckpoints(context.TODO(), id, opt)
+		listOpt := &godo.ListMicroDropletCheckpointsOptions{
+			ListOptions:    *opt,
+			MicroDropletID: microDropletID,
+		}
+		list, resp, err := s.client.MicroDroplets.ListCheckpoints(context.TODO(), listOpt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -170,4 +180,30 @@ func (s *microDropletsService) ListCheckpoints(id string) (MicroDropletCheckpoin
 		list[i] = MicroDropletCheckpoint{MicroDropletCheckpoint: &cp}
 	}
 	return list, nil
+}
+
+func (s *microDropletsService) CreateCheckpoint(microDropletID string, req *godo.MicroDropletCheckpointCreateRequest) (*MicroDropletCheckpoint, error) {
+	cp, _, err := s.client.MicroDroplets.CreateCheckpoint(context.TODO(), microDropletID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &MicroDropletCheckpoint{MicroDropletCheckpoint: cp}, nil
+}
+
+func (s *microDropletsService) GetCheckpoint(id string) (*MicroDropletCheckpoint, error) {
+	cp, _, err := s.client.MicroDroplets.GetCheckpoint(context.TODO(), id)
+	if err != nil {
+		return nil, err
+	}
+	return &MicroDropletCheckpoint{MicroDropletCheckpoint: cp}, nil
+}
+
+func (s *microDropletsService) DeleteCheckpoint(id string) error {
+	_, err := s.client.MicroDroplets.DeleteCheckpoint(context.TODO(), id)
+	return err
+}
+
+func (s *microDropletsService) GetCreateOptions() (*godo.MicroDropletCreateOptions, error) {
+	opts, _, err := s.client.MicroDroplets.GetCreateOptions(context.TODO())
+	return opts, err
 }
