@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/fatih/color"
@@ -30,9 +31,7 @@ import (
 var (
 	errOperationAborted = fmt.Errorf("Operation aborted.")
 
-	colorErr    = color.RedString("Error")
-	colorWarn   = color.YellowString("Warning")
-	colorNotice = color.GreenString("Notice")
+	colorErr = color.RedString("Error")
 
 	// errAction specifies what should happen when an error occurs
 	errAction = func() {
@@ -110,14 +109,29 @@ func ensureOneArg(c *CmdConfig) error {
 }
 
 func warn(msg string, args ...any) {
-	fmt.Fprintf(color.Output, "%s: %s\n", colorWarn, fmt.Sprintf(msg, args...))
+	writeChrome("Warning", ui.ColorWarning, "\n", msg, args...)
 }
+
 func warnConfirm(msg string, args ...any) {
-	fmt.Fprintf(color.Output, "%s: %s", colorWarn, fmt.Sprintf(msg, args...))
+	writeChrome("Warning", ui.ColorWarning, "", msg, args...)
 }
 
 func notice(msg string, args ...any) {
-	fmt.Fprintf(color.Output, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
+	writeChrome("Notice", ui.ColorSuccess, "\n", msg, args...)
+}
+
+// writeChrome renders a labelled diagnostic on stderr.
+//
+// The colour decision comes from ui.Env, which resolves it per stream. The
+// fatih/color globals these helpers used to write through decide once, at
+// package init, from whether *stdout* is a terminal — so `doctl ... 2>log`
+// wrote escape sequences into the log file, and `doctl ... > data` stripped
+// colour from a terminal that was perfectly able to show it.
+func writeChrome(label string, color lipgloss.Color, suffix, msg string, args ...any) {
+	env := resolveUIEnv(Writer)
+	label = env.SprintErr(env.NewErrStyle().Foreground(color).Bold(true), label)
+
+	fmt.Fprintf(env.ErrWriter(), "%s: %s%s", label, fmt.Sprintf(msg, args...), suffix)
 }
 
 // resolveUIEnv builds the shared terminal capability Env used by CmdConfig and

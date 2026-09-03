@@ -65,7 +65,7 @@ func Apps() *Command {
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(create, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
-	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(create, false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
 	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, `A boolean value that creates or updates an app’s configuration with the attached app spec. This does not pull changes from the app’s container registry or source repository. Instead, App Platform uses the image from the app’s most recent deployment. To additionally pull the latest changes from the app’s source, set the `+"`"+`--update-sources`+"`"+` flag.`)
 	AddBoolFlag(create, doctl.ArgCommandUpdateSources, "", false, "Boolean that specifies whether, on update, the app should also update its source code")
@@ -112,7 +112,7 @@ Only basic information is included with the text output format. For complete app
 	)
 	AddStringFlag(update, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(update, doctl.ArgCommandUpdateSources, "", false, "Boolean that specifies whether the app should also update its source code")
-	AddBoolFlag(update, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(update, false,
 		"Boolean that specifies whether to wait for an app to complete updating before allowing further terminal input. This can be helpful for scripting.")
 	update.Example = `The following example updates an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the updated app's ID, ingress information, and creation date: doctl apps update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --spec src/your-app.yaml --format ID,DefaultIngress,Created`
 
@@ -141,7 +141,7 @@ This permanently deletes the app and all of its associated deployments.`,
 		displayerType(&displayers.Deployments{}),
 	)
 	AddStringSliceFlag(restartApp, doctl.ArgAppComponents, "", nil, "The components to restart. If not provided, all components are restarted.")
-	AddBoolFlag(restartApp, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(restartApp, false,
 		"Boolean that specifies whether to wait for the restart to complete before allowing further terminal input. This can be helpful for scripting.")
 	restartApp.Example = `The following example restarts an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. Additionally, the command returns the app's ID and status: doctl apps restart f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Status`
 
@@ -157,7 +157,7 @@ This permanently deletes the app and all of its associated deployments.`,
 		displayerType(&displayers.Deployments{}),
 	)
 	AddBoolFlag(deploymentCreate, doctl.ArgAppForceRebuild, "", false, "Force a re-build even if a previous build is eligible for reuse.")
-	AddBoolFlag(deploymentCreate, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(deploymentCreate, false,
 		"Boolean that specifies whether to wait for the deployment to complete before allowing further terminal input. This can be helpful for scripting.")
 	deploymentCreate.Example = `The following example creates a deployment for an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. Additionally, the command returns the app's ID and status: doctl apps create-deployment f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Status`
 
@@ -477,9 +477,13 @@ func RunAppsCreate(c *CmdConfig) error {
 	var errs error
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		apps := c.Apps()
-		notice("App creation is in progress, waiting for app to be running")
-		err := waitForActiveDeployment(apps, app.ID, app.GetPendingDeployment().GetID())
+		err = waitForActiveDeployment(w, apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
@@ -560,9 +564,13 @@ func RunAppsUpdate(c *CmdConfig) error {
 	var errs error
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		apps := c.Apps()
-		notice("App update is in progress, waiting for app to be running")
-		err := waitForActiveDeployment(apps, app.ID, app.GetPendingDeployment().GetID())
+		err = waitForActiveDeployment(w, apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
@@ -627,9 +635,13 @@ func RunAppsRestart(c *CmdConfig) error {
 	var errs error
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		apps := c.Apps()
-		notice("Restart is in progress, waiting for the restart to complete")
-		err := waitForActiveDeployment(apps, appID, deployment.ID)
+		err = waitForActiveDeployment(w, apps, appID, deployment.ID)
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Deployments{deployment}); err != nil {
@@ -669,9 +681,13 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 	var errs error
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		apps := c.Apps()
-		notice("App deployment is in progress, waiting for deployment to be running")
-		err := waitForActiveDeployment(apps, appID, deployment.ID)
+		err = waitForActiveDeployment(w, apps, appID, deployment.ID)
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Deployments{deployment}); err != nil {
@@ -687,37 +703,31 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 	return c.Display(displayers.Deployments{deployment})
 }
 
-func waitForActiveDeployment(apps do.AppsService, appID string, deploymentID string) error {
-	const maxAttempts = 180
-	attempts := 0
-	printNewLineSet := false
+// appDeploymentPollInterval is how often a deployment is re-read while
+// waiting. Builds run for minutes, so polling any faster only adds API
+// traffic; the spinner animates independently of the poll rate.
+const appDeploymentPollInterval = 10 * time.Second
 
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+func waitForActiveDeployment(w waiter, apps do.AppsService, appID string, deploymentID string) error {
+	return w.wait(waitOp{
+		Subject:  fmt.Sprintf("app (%s) deployment to complete", appID),
+		Success:  fmt.Sprintf("App (%s) deployment is complete", appID),
+		Interval: appDeploymentPollInterval,
+	}, func() (bool, string, error) {
 		deployment, err := apps.GetDeployment(appID, deploymentID)
 		if err != nil {
-			return err
-		}
-
-		allSuccessful := deployment.Progress.SuccessSteps == deployment.Progress.TotalSteps
-		if allSuccessful {
-			return nil
+			return false, "", err
 		}
 
 		if deployment.Progress.ErrorSteps > 0 {
-			return fmt.Errorf("error deploying app (%s) (deployment ID: %s):\n%s", appID, deployment.ID, godo.Stringify(deployment.Progress))
+			return false, "", fmt.Errorf("error deploying app (%s) (deployment ID: %s):\n%s", appID, deployment.ID, godo.Stringify(deployment.Progress))
 		}
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-	return fmt.Errorf("timeout waiting to app (%s) deployment", appID)
+
+		done := deployment.Progress.SuccessSteps == deployment.Progress.TotalSteps
+		detail := fmt.Sprintf("%d of %d steps complete", deployment.Progress.SuccessSteps, deployment.Progress.TotalSteps)
+
+		return done, detail, nil
+	})
 }
 
 // RunAppsGetDeployment gets a deployment for an app.

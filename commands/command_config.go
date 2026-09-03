@@ -107,7 +107,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		Doit: dc,
 		Out:  out,
 		Args: args,
-		UI: resolveUIEnv(out),
+		UI:   resolveUIEnv(out),
 
 		initServices: func(c *CmdConfig) error {
 			accessToken := c.getContextAccessToken()
@@ -253,6 +253,7 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 	dc := &displayers.Displayer{
 		Item: d,
 		Out:  c.Out,
+		UI:   c.UI,
 	}
 
 	columnList, err := c.Doit.GetString(c.NS, doctl.ArgFormat)

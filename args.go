@@ -199,6 +199,8 @@ const (
 	ArgCommandUpdateSources = "update-sources"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
+	// ArgWaitTimeout bounds how long --wait polls before giving up.
+	ArgWaitTimeout = "wait-timeout"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
 	ArgSetCurrentContext = "set-current-context"
 	// ArgDropletID is a droplet id argument.

@@ -76,8 +76,15 @@ type Env struct {
 	ASCII bool
 
 	// Width is the usable terminal width, or 0 when it cannot be determined
-	// and output should be left unconstrained.
+	// and output should be left unconstrained. It describes the session, so it
+	// is the right width for chrome on Err.
 	Width int
+
+	// DataWidth is the width available to data on Out, or 0 when data must be
+	// left unconstrained. It is tracked separately from Width because a
+	// terminal attached to Err says nothing about Out: reflowing a table to a
+	// width Out does not have would truncate the values a pipeline reads.
+	DataWidth int
 
 	// Machine reports whether the caller asked for machine-readable output.
 	// When true, Style, ErrStyle, and Anim are all false.
@@ -178,9 +185,10 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 	}
 
 	if cfg.width != nil {
-		env.Width = *cfg.width
+		env.Width, env.DataWidth = *cfg.width, *cfg.width
 	} else {
 		env.Width = detectWidth(out, err)
+		env.DataWidth = detectWidth(out)
 	}
 
 	return env

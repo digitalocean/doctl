@@ -16,7 +16,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -93,7 +92,7 @@ You can customize the configuration using the listed flags, all of which are opt
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in. The command uses the region's default VPC if excluded.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster to restore from.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup is used if excluded.")
-	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database cluster to be provisioned before returning control to the terminal.")
+	AddWaitFlags(cmdDatabaseCreate, false, "A boolean value that specifies whether to wait for the database cluster to be provisioned before returning control to the terminal.")
 	AddStringSliceFlag(cmdDatabaseCreate, doctl.ArgTag, "", nil, "A comma-separated list of tags to apply to the database cluster.")
 	cmdDatabaseCreate.Example = `The following example creates a database cluster named ` + "`" + `example-database` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region with a single  1 GB node: doctl databases create example-database --region nyc1 --size db-s-1vcpu-1gb --num-nodes 1`
 
@@ -138,7 +137,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	AddBoolFlag(cmdDatabaseResize, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(cmdDatabaseResize, false,
 		"Boolean that specifies whether to wait for the resize to complete before returning control to the terminal")
 	cmdDatabaseResize.Example = `The following example resizes a PostgreSQL or MySQL database to have two nodes, 16 vCPUs, 64 GB of memory, and 2048 GiB of storage space: doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000 --wait true`
 
@@ -146,12 +145,12 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, such as `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC network to create the database cluster in. The command uses the region's default VPC network if not specified.")
-	AddBoolFlag(cmdDatabaseMigrate, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database migration to complete before returning control to the terminal.")
+	AddWaitFlags(cmdDatabaseMigrate, false, "A boolean value that specifies whether to wait for the database migration to complete before returning control to the terminal.")
 
 	cmdDatabaseFork := CmdBuilder(cmd, RunDatabaseFork, "fork <name>", "Create a new database cluster by forking an existing database cluster.", `Creates a new database cluster from an existing cluster. The forked database contains all of the data from the original database at the time the fork is created.`, Writer, aliasOpt("f"))
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup is used if excluded.")
-	AddBoolFlag(cmdDatabaseFork, doctl.ArgCommandWait, "", false, "A boolean that specifies whether to wait for a database to complete before returning control to the terminal")
+	AddWaitFlags(cmdDatabaseFork, false, "A boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmdDatabaseFork.Example = `The following example forks a database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to create a new database cluster. The command also uses the ` + "`" + `--restore-from-timestamp` + "`" + ` flag to specifically fork the database from a cluster backup that was created on 2023 November 7: doctl databases fork new-db-cluster --restore-from-cluster-id f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --restore-from-timestamp 2023-11-07 12:34:56 +0000 UTC`
 
@@ -238,16 +237,16 @@ func RunDatabaseCreate(c *CmdConfig) error {
 	}
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		connection := db.Connection
 		dbs := c.Databases()
-		notice("Database creation is in progress, waiting for database to be online")
 
-		err := waitForDatabaseReady(dbs, db.ID)
-		if err != nil {
-			return fmt.Errorf(
-				"database couldn't enter the `online` state: %v",
-				err,
-			)
+		if err := waitForDatabaseReady(w, dbs, db.ID); err != nil {
+			return err
 		}
 
 		db, err = dbs.Get(db.ID)
@@ -367,16 +366,16 @@ func RunDatabaseFork(c *CmdConfig) error {
 	}
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		connection := db.Connection
 		dbs := c.Databases()
-		notice("Database forking is in progress, waiting for database to be online")
 
-		err := waitForDatabaseReady(dbs, db.ID)
-		if err != nil {
-			return fmt.Errorf(
-				"database couldn't enter the `online` state: %v",
-				err,
-			)
+		if err := waitForDatabaseReady(w, dbs, db.ID); err != nil {
+			return err
 		}
 
 		db, _ = dbs.Get(db.ID)
@@ -538,17 +537,14 @@ func RunDatabaseResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("Database resizing is in progress, waiting for resize to complete")
-
-		err := waitForDatabaseResize(dbs, id, r)
+		w, err := newWaiter(c)
 		if err != nil {
-			return fmt.Errorf(
-				"database resize did not complete: %v",
-				err,
-			)
+			return err
 		}
 
-		notice("Database resized successfully")
+		if err := waitForDatabaseResize(w, dbs, id, r); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -603,17 +599,14 @@ func RunDatabaseMigrate(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("Database migration is in progress, waiting for database to be online")
-
-		err := waitForDatabaseReady(dbs, id)
+		w, err := newWaiter(c)
 		if err != nil {
-			return fmt.Errorf(
-				"database couldn't enter the `online` state after migration: %v",
-				err,
-			)
+			return err
 		}
 
-		notice("Database migrated successfully")
+		if err := waitForDatabaseReady(w, dbs, id); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -2594,40 +2587,26 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 	return displayDatabaseFirewallRules(c, true, databaseID)
 }
 
-func waitForDatabaseReady(dbs do.DatabasesService, dbID string) error {
-	const (
-		maxAttempts = 180
-		wantStatus  = "online"
-	)
-	attempts := 0
-	printNewLineSet := false
+// databasePollInterval is how often a cluster is re-read while waiting.
+// Provisioning and resizing are measured in minutes, so polling any faster
+// only adds API traffic.
+const databasePollInterval = 10 * time.Second
 
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
+func waitForDatabaseReady(w waiter, dbs do.DatabasesService, dbID string) error {
+	const wantStatus = "online"
 
+	return w.wait(waitOp{
+		Subject:  fmt.Sprintf("database (%s) to become online", dbID),
+		Success:  fmt.Sprintf("Database (%s) is online", dbID),
+		Interval: databasePollInterval,
+	}, func() (bool, string, error) {
 		db, err := dbs.Get(dbID)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 
-		if db.Status == wantStatus {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf(
-		"timeout waiting for database (%s) to enter `online` state",
-		dbID,
-	)
+		return db.Status == wantStatus, db.Status, nil
+	})
 }
 
 // engineSupportsStorageSize reports whether the database engine supports
@@ -2658,37 +2637,19 @@ func isDatabaseResizeComplete(db *do.Database, req *godo.DatabaseResizeRequest) 
 	return true
 }
 
-func waitForDatabaseResize(dbs do.DatabasesService, dbID string, req *godo.DatabaseResizeRequest) error {
-	const maxAttempts = 180
-	attempts := 0
-	printNewLineSet := false
-
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+func waitForDatabaseResize(w waiter, dbs do.DatabasesService, dbID string, req *godo.DatabaseResizeRequest) error {
+	return w.wait(waitOp{
+		Subject:  fmt.Sprintf("database (%s) resize to complete", dbID),
+		Success:  fmt.Sprintf("Database (%s) resize is complete", dbID),
+		Interval: databasePollInterval,
+	}, func() (bool, string, error) {
 		db, err := dbs.Get(dbID)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 
-		if isDatabaseResizeComplete(db, req) {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf(
-		"timeout waiting for database (%s) resize to complete",
-		dbID,
-	)
+		return isDatabaseResizeComplete(db, req), db.Status, nil
+	})
 }
 
 func databaseConfiguration() *Command {

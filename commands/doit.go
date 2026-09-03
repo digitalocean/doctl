@@ -366,6 +366,16 @@ func AddDurationFlag(cmd *Command, name, shorthand string, def time.Duration, de
 	}
 }
 
+// AddWaitFlags registers the --wait / --wait-timeout pair shared by every
+// command that polls a resource to completion. They are registered together
+// because the waiter reads the timeout from the command's own namespace: a
+// command offering --wait without --wait-timeout would silently fall back to
+// the default with no way for the user to extend it.
+func AddWaitFlags(cmd *Command, def bool, desc string) {
+	AddBoolFlag(cmd, doctl.ArgCommandWait, "", def, desc)
+	AddDurationFlag(cmd, doctl.ArgWaitTimeout, "", defaultWaitTimeout, waitTimeoutDesc)
+}
+
 func flagName(cmd *Command, name string) string {
 	if cmd.Parent() != nil {
 		p := cmd.Parent().Name()

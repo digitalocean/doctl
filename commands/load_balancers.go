@@ -16,7 +16,6 @@ package commands
 import (
 	_ "embed"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -87,7 +86,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgForwardingRules, "", "",
 		forwardingRulesTxt)
-	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
+	AddWaitFlags(cmdLoadBalancerCreate, false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgProjectID, "", "", "Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
 	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgHTTPIdleTimeoutSeconds, "", 0, "HTTP idle timeout that configures the idle timeout for http connections on the load balancer")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgAllowList, "", []string{},
@@ -239,15 +238,14 @@ func RunLoadBalancerCreate(c *CmdConfig) error {
 	}
 
 	if wait {
-		lbs := c.LoadBalancers()
-		notice("Load balancer creation is in progress, waiting for load balancer to become active")
-
-		err := waitForActiveLoadBalancer(lbs, lb.ID)
+		w, err := newWaiter(c)
 		if err != nil {
-			return fmt.Errorf(
-				"load balancer couldn't enter `active` state: %v",
-				err,
-			)
+			return err
+		}
+
+		lbs := c.LoadBalancers()
+		if err := waitForActiveLoadBalancer(w, lbs, lb.ID); err != nil {
+			return err
 		}
 
 		lb, _ = lbs.Get(lb.ID)
@@ -744,44 +742,24 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	return nil
 }
 
-func waitForActiveLoadBalancer(lbs do.LoadBalancersService, lbID string) error {
-	const maxAttempts = 180
+func waitForActiveLoadBalancer(w waiter, lbs do.LoadBalancersService, lbID string) error {
 	const wantStatus = "active"
 	const errStatus = "errored"
-	attempts := 0
-	printNewLineSet := false
 
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+	return w.wait(waitOp{
+		Subject:  fmt.Sprintf("load balancer (%s) to become active", lbID),
+		Success:  fmt.Sprintf("Load balancer (%s) is active", lbID),
+		Interval: 10 * time.Second,
+	}, func() (bool, string, error) {
 		lb, err := lbs.Get(lbID)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 
 		if lb.Status == errStatus {
-			return fmt.Errorf(
-				"load balancer (%s) entered status `errored`",
-				lbID,
-			)
+			return false, "", fmt.Errorf("load balancer (%s) entered status `errored`", lbID)
 		}
 
-		if lb.Status == wantStatus {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf(
-		"timeout waiting for load balancer (%s) to become active",
-		lbID,
-	)
+		return lb.Status == wantStatus, lb.Status, nil
+	})
 }

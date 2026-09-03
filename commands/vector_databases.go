@@ -15,7 +15,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/digitalocean/doctl"
@@ -72,7 +71,7 @@ You can customize the configuration using the listed flags, all of which are opt
 	AddStringFlag(cmdVectorDBCreate, doctl.ArgSizeSlug, "", defaultVectorDBSize, sizeDetails)
 	AddStringSliceFlag(cmdVectorDBCreate, doctl.ArgTag, "", nil, "A comma-separated list of tags to apply to the vector database.")
 	AddStringFlag(cmdVectorDBCreate, doctl.ArgProjectID, "", "", "The ID of the project to assign the vector database to. If not specified, the default project will be used.")
-	AddBoolFlag(cmdVectorDBCreate, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the vector database to be active before returning control to the terminal.")
+	AddWaitFlags(cmdVectorDBCreate, false, "A boolean value that specifies whether to wait for the vector database to be active before returning control to the terminal.")
 	cmdVectorDBCreate.Example = `The following example creates a vector database named example-vdb in the nyc3 region: doctl vector-databases create example-vdb --region nyc3 --size small`
 
 	cmdVectorDBDelete := CmdBuilder(cmd, RunVectorDBDelete, "delete <vector-database-id>", "Delete a vector database", `Deletes the vector database with the specified ID.
@@ -89,7 +88,7 @@ To retrieve a list of your vector databases and their IDs, use `+"`"+`doctl vect
 
 	cmdVectorDBResize := CmdBuilder(cmd, RunVectorDBResize, "resize <vector-database-id>", "Resize a vector database", `Resizes the specified vector database to a new size tier.`, Writer, aliasOpt("rs"))
 	AddStringFlag(cmdVectorDBResize, doctl.ArgSizeSlug, "", "", sizeDetails, requiredOpt())
-	AddBoolFlag(cmdVectorDBResize, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the resize to complete before returning control to the terminal.")
+	AddWaitFlags(cmdVectorDBResize, false, "A boolean value that specifies whether to wait for the resize to complete before returning control to the terminal.")
 	cmdVectorDBResize.Example = `The following example resizes a vector database: doctl vector-databases resize f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --size medium`
 
 	cmdVectorDBTags := CmdBuilder(cmd, RunVectorDBTags, "tags <vector-database-id>", "Update tags on a vector database", `Replaces all tags on the specified vector database with the tags provided.`, Writer)
@@ -158,9 +157,13 @@ func RunVectorDBCreate(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("Vector database creation is in progress, waiting for vector database to be active")
-		if err := waitForVectorDBReady(svc, vdb.ID); err != nil {
-			return fmt.Errorf("vector database couldn't enter the `active` state: %v", err)
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
+		if err := waitForVectorDBReady(w, svc, vdb.ID); err != nil {
+			return err
 		}
 
 		vdb, err = svc.Get(vdb.ID)
@@ -295,11 +298,14 @@ func RunVectorDBResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("Vector database resizing is in progress, waiting for vector database to be active")
-		if err := waitForVectorDBReady(svc, id); err != nil {
-			return fmt.Errorf("vector database couldn't enter the `active` state after resizing: %v", err)
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
 		}
-		notice("Vector database resized successfully")
+
+		if err := waitForVectorDBReady(w, svc, id); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -392,35 +398,19 @@ func displayVectorDBs(c *CmdConfig, short bool, vdbs ...do.VectorDB) error {
 	return c.Display(item)
 }
 
-func waitForVectorDBReady(svc do.VectorDBsService, id string) error {
-	const (
-		maxAttempts = 180
-		wantStatus  = "active"
-	)
-	attempts := 0
-	printNewLineSet := false
+func waitForVectorDBReady(w waiter, svc do.VectorDBsService, id string) error {
+	const wantStatus = "active"
 
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+	return w.wait(waitOp{
+		Subject:  fmt.Sprintf("vector database (%s) to become active", id),
+		Success:  fmt.Sprintf("Vector database (%s) is active", id),
+		Interval: 10 * time.Second,
+	}, func() (bool, string, error) {
 		vdb, err := svc.Get(id)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 
-		if vdb.Status == wantStatus {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf("timeout waiting for vector database to become active")
+		return vdb.Status == wantStatus, vdb.Status, nil
+	})
 }

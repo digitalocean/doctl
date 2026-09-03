@@ -110,11 +110,19 @@ func TestDetectWidth(t *testing.T) {
 	var out, errOut bytes.Buffer
 
 	t.Run("explicit width wins", func(t *testing.T) {
-		assert.Equal(t, 120, Detect(&out, &errOut, WithWidth(120)).Width)
+		env := Detect(&out, &errOut, WithWidth(120))
+		assert.Equal(t, 120, env.Width)
+		assert.Equal(t, 120, env.DataWidth, "an explicit width applies to data too")
 	})
 
 	t.Run("zero width is honoured as unconstrained", func(t *testing.T) {
-		assert.Zero(t, Detect(&out, &errOut, WithWidth(0)).Width)
+		env := Detect(&out, &errOut, WithWidth(0))
+		assert.Zero(t, env.Width)
+		assert.Zero(t, env.DataWidth)
+	})
+
+	t.Run("data is unconstrained without a terminal on out", func(t *testing.T) {
+		assert.Zero(t, Detect(&out, &errOut).DataWidth)
 	})
 
 	// A redirected stream must not be reflowed because the shell happens to

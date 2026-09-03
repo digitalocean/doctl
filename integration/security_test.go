@@ -80,7 +80,7 @@ var _ = suite("security/cspm", func(t *testing.T, when spec.G, it spec.S) {
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(securityScanWaitCreateOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(securityScanWaitCreateOutput), normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
 	})
 })
@@ -110,8 +110,8 @@ const (
   }
 }`
 	securityScanWaitCreateOutput = `
-Notice: Scan in progress, waiting for scan to complete
-Notice: Scan completed
+Waiting for scan (497dcba3-ecbf-4587-a2dd-5eb0665e6880) to complete (elapsed)
+Success: Scan (497dcba3-ecbf-4587-a2dd-5eb0665e6880) is complete (elapsed)
 Rule ID    Name    Affected Resources    Found At                Severity
 rule-1     test    2                     2025-12-04T00:00:00Z    critical
 `

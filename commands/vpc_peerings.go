@@ -3,9 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -48,7 +46,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 		"Create a new VPC Peering", "Use this command to create a new VPC Peering on your account.", Writer, aliasOpt("c"))
 	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringVPCIDs, "", "",
 		"Peering VPC IDs should be comma separated", requiredOpt())
-	AddBoolFlag(cmdPeeringCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a VPC Peering creation to complete before returning control to the terminal")
+	AddWaitFlags(cmdPeeringCreate, false, "Boolean that specifies whether to wait for a VPC Peering creation to complete before returning control to the terminal")
 	cmdPeeringCreate.Example = `The following example creates a VPC Peering named ` +
 		"`" + `example-peering-name` + "`" +
 		` : doctl vpcs peerings create example-peering-name --vpc-ids f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268`
@@ -65,7 +63,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 		"Permanently delete a VPC Peering", `Permanently deletes the specified VPC Peering. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdPeeringDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the VPC Peering without any confirmation prompt")
-	AddBoolFlag(cmdPeeringDelete, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(cmdPeeringDelete, false,
 		"Boolean that specifies whether to wait for a VPC Peering deletion to complete before returning control to the terminal")
 	cmdPeeringDelete.Example = `The following example deletes the VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl vpcs peerings delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
@@ -129,11 +127,13 @@ func RunVPCPeeringCreate(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("VPC Peering creation is in progress, waiting for VPC Peering to become active")
-
-		err := waitForVPCPeering(vpcService, peering.ID, "ACTIVE", false)
+		w, err := newWaiter(c)
 		if err != nil {
-			return fmt.Errorf("VPC Peering couldn't enter `active` state: %v", err)
+			return err
+		}
+
+		if err := waitForVPCPeering(w, vpcService, peering.ID, "ACTIVE", false); err != nil {
+			return err
 		}
 
 		peering, _ = vpcService.GetPeering(peering.ID)
@@ -216,13 +216,14 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 		}
 
 		if wait {
-			notice("VPC Peering deletion is in progress, waiting for VPC Peering to be deleted")
-
-			err := waitForVPCPeering(vpcs, peeringID, "DELETED", true)
+			w, err := newWaiter(c)
 			if err != nil {
-				return fmt.Errorf("VPC Peering couldn't be deleted : %v", err)
+				return err
 			}
-			notice("VPC Peering is successfully deleted")
+
+			if err := waitForVPCPeering(w, vpcs, peeringID, "DELETED", true); err != nil {
+				return err
+			}
 		} else {
 			notice("VPC Peering deletion request accepted")
 		}
@@ -234,40 +235,27 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 	return nil
 }
 
-func waitForVPCPeering(vpcService do.VPCsService, peeringID string, wantStatus string, terminateOnNotFound bool) error {
-	const maxAttempts = 360
+func waitForVPCPeering(w waiter, vpcService do.VPCsService, peeringID string, wantStatus string, terminateOnNotFound bool) error {
 	const errStatus = "ERROR"
-	attempts := 0
-	printNewLineSet := false
 
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+	return w.wait(waitOp{
+		Subject: fmt.Sprintf("VPC Peering (%s) to become %s", peeringID, wantStatus),
+		Success: fmt.Sprintf("VPC Peering (%s) is %s", peeringID, wantStatus),
+	}, func() (bool, string, error) {
 		peering, err := vpcService.GetPeering(peeringID)
 		if err != nil {
+			// A peering being deleted disappears rather than reaching a
+			// terminal status, so its absence is the success condition.
 			if terminateOnNotFound && strings.Contains(err.Error(), "not found") {
-				return nil
+				return true, "", nil
 			}
-			return err
+			return false, "", err
 		}
 
 		if peering.Status == errStatus {
-			return fmt.Errorf("VPC Peering (%s) entered status `%s`", peeringID, errStatus)
+			return false, "", fmt.Errorf("VPC Peering (%s) entered status `%s`", peeringID, errStatus)
 		}
 
-		if peering.Status == wantStatus {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(5 * time.Second)
-	}
-
-	return fmt.Errorf("timeout waiting for VPC Peering (%s) to become %s", peeringID, wantStatus)
+		return peering.Status == wantStatus, peering.Status, nil
+	})
 }

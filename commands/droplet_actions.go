@@ -76,13 +76,13 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	AddStringFlag(cmdDropletActionEnableBackups, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`)
 	AddStringFlag(cmdDropletActionEnableBackups, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
 	AddIntFlag(cmdDropletActionEnableBackups, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
-	AddBoolFlag(cmdDropletActionEnableBackups, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddWaitFlags(cmdDropletActionEnableBackups, false, "Wait for action to complete")
 	cmdDropletActionEnableBackups.Example = `The following example enables backups on a Droplet with the ID ` + "`" + `386734086` + "` with a backup policy flag" + `: doctl compute droplet-action enable-backups 386734086 --backup-policy-plan weekly --backup-policy-weekday SUN --backup-policy-hour 4`
 
 	cmdDropletActionDisableBackups := CmdBuilder(cmd, RunDropletActionDisableBackups,
 		"disable-backups <droplet-id>", "Disable backups on a Droplet", `Disables backups on a Droplet. This does not delete existing backups.`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionDisableBackups, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionDisableBackups, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionDisableBackups.Example = `The following example disables backups on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action disable-backups 386734086`
 
 	cmdDropletActionChangeBackupPolicy := CmdBuilder(cmd, RunDropletActionChangeBackupPolicy,
@@ -91,19 +91,19 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	AddStringFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`, requiredOpt())
 	AddStringFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
 	AddIntFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
-	AddBoolFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddWaitFlags(cmdDropletActionChangeBackupPolicy, false, "Wait for action to complete")
 	cmdDropletActionChangeBackupPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action change-backup-policy 386734086 --backup-policy-plan weekly --backup-policy-weekday SUN --backup-policy-hour 4`
 
 	cmdDropletActionReboot := CmdBuilder(cmd, RunDropletActionReboot,
 		"reboot <droplet-id>", "Reboot a Droplet", `Reboots a Droplet. A reboot action is an attempt to reboot the Droplet in a graceful way, similar to using the reboot command from the Droplet's console.`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionReboot, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionReboot, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionReboot.Example = `The following example reboots a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action reboot 386734086`
 
 	cmdDropletActionPowerCycle := CmdBuilder(cmd, RunDropletActionPowerCycle,
 		"power-cycle <droplet-id>", "Powercycle a Droplet", `Powercycles a Droplet. A powercycle action is similar to pushing the reset button on a physical machine.`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionPowerCycle, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionPowerCycle, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPowerCycle.Example = `The following example powercycles a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action power-cycle 386734086`
 
 	cmdDropletActionShutdown := CmdBuilder(cmd, RunDropletActionShutdown,
@@ -113,7 +113,7 @@ A shutdown action is an attempt to shutdown the Droplet in a graceful way, simil
 		
 Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionShutdown, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionShutdown, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionShutdown.Example = `The following example shuts down a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action shutdown 386734086`
 
 	cmdDropletActionPowerOff := CmdBuilder(cmd, RunDropletActionPowerOff,
@@ -123,13 +123,13 @@ A `+"`"+`power_off`+"`"+` event is a hard shutdown and should only be used if th
 
 Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionPowerOff, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionPowerOff, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPowerOff.Example = `The following example powers off a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action power-off 386734086`
 
 	cmdDropletActionPowerOn := CmdBuilder(cmd, RunDropletActionPowerOn,
 		"power-on <droplet-id>", "Power on a Droplet", `Powers on a Droplet. This is similar to pressing the power button on a physical machine.`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionPowerOn, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionPowerOn, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPowerOn.Example = `The following example powers on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action power-on 386734086`
 
 	cmdDropletActionPasswordReset := CmdBuilder(cmd, RunDropletActionPasswordReset,
@@ -137,7 +137,7 @@ Droplets that are powered off are still billable. To stop incurring charges on a
 
 This also powercycles the Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionPasswordReset, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionPasswordReset, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPasswordReset.Example = `The following example resets the root password for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action password-reset 386734086`
 
 	cmdDropletActionEnableIPv6 := CmdBuilder(cmd, RunDropletActionEnableIPv6,
@@ -145,7 +145,7 @@ This also powercycles the Droplet.`, Writer,
 
 The Droplet may require additional network configuration to properly use the new IPv6 address. For more information, see: https://docs.digitalocean.com/products/networking/ipv6/how-to/enable`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionEnableIPv6, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionEnableIPv6, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionEnableIPv6.Example = `The following example enables IPv6 on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action enable-ipv6 386734086`
 
 	cmdDropletActionEnablePrivateNetworking := CmdBuilder(cmd, RunDropletActionEnablePrivateNetworking,
@@ -155,7 +155,7 @@ All Droplets created after 1 October 2020 are provided a private IP address and 
 
 Once you have manually enabled private networking for a Droplet, the Droplet requires additional internal network configuration for it to become accessible through the VPC network. For more information, see: https://docs.digitalocean.com/products/networking/vpc/how-to/enable`, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionEnablePrivateNetworking, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionEnablePrivateNetworking, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionEnablePrivateNetworking.Example = `The following example enables private networking on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action enable-private-networking 386734086`
 
 	cmdDropletActionRestore := CmdBuilder(cmd, RunDropletActionRestore,
@@ -164,7 +164,7 @@ Once you have manually enabled private networking for a Droplet, the Droplet req
 		To retrieve a list of backup images, use the `+"`"+`doctl compute image list`+"`"+` command.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdDropletActionRestore, doctl.ArgImageID, "", 0, "The ID of the image to restore the Droplet from", requiredOpt())
-	AddBoolFlag(cmdDropletActionRestore, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionRestore, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionRestore.Example = `The following example restores a Droplet with the ID ` + "`" + `386734086` + "`" + ` from a backup image with the ID ` + "`" + `146288445` + "`" + `: doctl compute droplet-action restore 386734086 --image-id 146288445`
 
 	dropletResizeDesc := `Resizes a Droplet to a different plan.
@@ -181,7 +181,7 @@ This command automatically powers off the Droplet before resizing it.`
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize the Droplet's disk size in addition to its RAM and CPUs")
 	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "A `slug` indicating the new size for the Droplet, for example `s-2vcpu-2gb`. Run `doctl compute size list` for a list of valid sizes.", requiredOpt())
-	AddBoolFlag(cmdDropletActionResize, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionResize, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionResize.Example = `The following example resizes a Droplet with the ID ` + "`" + `386734086` + "`" + ` to a Droplet with two CPUs, two GiB of RAM, and 60 GBs of disk space. The 60 GBs of disk space is the defined amount for the ` + "`" + `s-2vcpu-2gb` + "`" + ` plan: doctl compute droplet-action resize 386734086 --size s-2vcpu-2gb --resize-disk=true`
 
 	cmdDropletActionRebuild := CmdBuilder(cmd, RunDropletActionRebuild,
@@ -190,14 +190,14 @@ This command automatically powers off the Droplet before resizing it.`
 To retrieve a list of images on your account, use the `+"`"+`doctl compute image list`+"`"+` command. To retrieve a list of base images, use the `+"`"+`doctl compute image list-distribution`+"`"+` command.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionRebuild, doctl.ArgImage, "", "", "An image ID or slug", requiredOpt())
-	AddBoolFlag(cmdDropletActionRebuild, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionRebuild, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionRebuild.Example = `The following example rebuilds a Droplet with the ID ` + "`" + `386734086` + "`" + ` from the image with the ID ` + "`" + `146288445` + "`" + `: doctl compute droplet-action rebuild 386734086 --image 146288445`
 
 	cmdDropletActionRename := CmdBuilder(cmd, RunDropletActionRename,
 		"rename <droplet-id>", "Rename a Droplet", `Renames a Droplet. When using a Fully Qualified Domain Name (FQDN) this also updates the Droplet's pointer (PTR) record.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionRename, doctl.ArgDropletName, "", "", "The new name for the Droplet", requiredOpt())
-	AddBoolFlag(cmdDropletActionRename, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionRename, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionRename.Example = `The following example renames a Droplet with the ID ` + "`" + `386734086` + "`" + ` to ` + "`" + `example.com` + "`" + ` an FQDN: doctl compute droplet-action rename 386734086 --droplet-name example.com`
 
 	cmdDropletActionChangeKernel := CmdBuilder(cmd, RunDropletActionChangeKernel,
@@ -206,7 +206,7 @@ To retrieve a list of images on your account, use the `+"`"+`doctl compute image
 Use the `+"`"+`doctl compute droplet kernels <droplet-id>`+"`"+` command to retrieve a list of kernels for the Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdDropletActionChangeKernel, doctl.ArgKernelID, "", 0, "Kernel ID", requiredOpt())
-	AddBoolFlag(cmdDropletActionChangeKernel, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionChangeKernel, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 
 	cmdDropletActionSnapshot := CmdBuilder(cmd, RunDropletActionSnapshot,
 		"snapshot <droplet-id>", "Take a Droplet snapshot", `Takes a snapshot of a Droplet. Snapshots are complete disk images that contain all of the data on a Droplet at the time of the snapshot. This can be useful for restoring and rebuilding Droplets.
@@ -214,7 +214,7 @@ Use the `+"`"+`doctl compute droplet kernels <droplet-id>`+"`"+` command to retr
 We recommend that you power off the Droplet before taking a snapshot to ensure data consistency.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionSnapshot, doctl.ArgSnapshotName, "", "", "The snapshot's name", requiredOpt())
-	AddBoolFlag(cmdDropletActionSnapshot, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletActionSnapshot, false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 
 	return cmd
 }

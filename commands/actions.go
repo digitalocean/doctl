@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"time"
@@ -67,6 +68,7 @@ For example, if you find an action when calling `+"`"+`doctl compute action list
 		aliasOpt("w"), displayerType(&displayers.Action{}))
 	cmdActionWait.Example = `The following example waits for the action ` + "`" + `123456` + "`" + ` to complete before allowing further commands to execute: doctl compute action wait 123456`
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
+	AddDurationFlag(cmdActionWait, doctl.ArgWaitTimeout, "", defaultWaitTimeout, waitTimeoutDesc)
 
 	return cmd
 }
@@ -237,23 +239,45 @@ func RunCmdActionWait(c *CmdConfig) error {
 }
 
 func actionWait(c *CmdConfig, actionID, pollTime int) (*do.Action, error) {
-	as := c.Actions()
-
-	var a *do.Action
-	var err error
-
-	for {
-		a, err = as.Get(actionID)
-		if err != nil {
-			return nil, err
-		}
-
-		if a.Status != "in-progress" {
-			break
-		}
-
-		time.Sleep(time.Duration(pollTime) * time.Second)
+	w, err := newWaiter(c)
+	if err != nil {
+		return nil, err
 	}
 
-	return a, nil
+	return waitForAction(w, c.Actions(), actionID, time.Duration(pollTime)*time.Second)
+}
+
+// waitForAction polls an action until it leaves the in-progress state. An
+// action that ends in `errored` is reported as a failure: it used to be
+// returned as a successful wait, which left `--wait` claiming a resource was
+// ready when the API had already given up on it.
+func waitForAction(w waiter, as do.ActionsService, actionID int, interval time.Duration) (*do.Action, error) {
+	var action *do.Action
+
+	err := w.wait(waitOp{
+		Subject:  fmt.Sprintf("action (%d) to complete", actionID),
+		Success:  fmt.Sprintf("Action (%d) completed", actionID),
+		Interval: interval,
+	}, func() (bool, string, error) {
+		a, err := as.Get(actionID)
+		if err != nil {
+			return false, "", err
+		}
+
+		action = a
+
+		switch a.Status {
+		case "in-progress":
+			return false, a.Status, nil
+		case "errored":
+			return false, "", fmt.Errorf("action (%d) failed", actionID)
+		default:
+			return true, a.Status, nil
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return action, nil
 }

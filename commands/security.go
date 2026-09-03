@@ -15,7 +15,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/digitalocean/doctl"
@@ -56,7 +55,7 @@ func SecurityScan() *Command {
 
 	cmdScanCreate := CmdBuilder(cmd, RunCmdSecurityScanCreate, "create", "Create a CSPM scan", `Creates a new CSPM scan.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.SecurityScan{}))
-	AddBoolFlag(cmdScanCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a scan to complete before returning control to the terminal")
+	AddWaitFlags(cmdScanCreate, false, "Boolean that specifies whether to wait for a scan to complete before returning control to the terminal")
 	cmdScanCreate.Example = `The following example creates a CSPM scan for all droplets: doctl security scans create`
 
 	cmdScanGet := CmdBuilder(cmd, RunCmdSecurityScanGet, "get <scan-uuid>", "Get a CSPM scan", `Retrieves a CSPM scan and its findings.`, Writer,
@@ -95,21 +94,18 @@ func RunCmdSecurityScanCreate(c *CmdConfig) error {
 	}
 
 	if wait {
-		security := c.Security()
-		notice("Scan in progress, waiting for scan to complete")
-
-		err := waitForScanComplete(security, scan.ID)
+		w, err := newWaiter(c)
 		if err != nil {
-			return fmt.Errorf(
-				"scan did not complete: %v",
-				err,
-			)
+			return err
+		}
+
+		security := c.Security()
+		if err := waitForScanComplete(w, security, scan.ID); err != nil {
+			return err
 		}
 
 		scan, _ = security.GetScan(scan.ID, nil)
 	}
-
-	notice("Scan completed")
 
 	item := &displayers.SecurityScan{Scan: *scan}
 	return c.Display(item)
@@ -204,44 +200,24 @@ func securityScanFindingOptions(c *CmdConfig) (*godo.ScanFindingsOptions, error)
 	}, nil
 }
 
-func waitForScanComplete(scans do.SecurityService, id string) error {
-	const maxAttempts = 16
+func waitForScanComplete(w waiter, scans do.SecurityService, id string) error {
 	const wantStatus = "complete"
 	const errStatus = "error"
-	attempts := 0
-	printNewLineSet := false
 
-	for range maxAttempts {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+	return w.wait(waitOp{
+		Subject:  fmt.Sprintf("scan (%s) to complete", id),
+		Success:  fmt.Sprintf("Scan (%s) is complete", id),
+		Interval: 10 * time.Second,
+	}, func() (bool, string, error) {
 		scan, err := scans.GetScan(id, nil)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 
 		if scan.Status == errStatus {
-			return fmt.Errorf(
-				"scan (%s) entered status `ERROR`",
-				id,
-			)
+			return false, "", fmt.Errorf("scan (%s) entered status `ERROR`", id)
 		}
 
-		if scan.Status == wantStatus {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf(
-		"timeout waiting for scan (%s) to complete",
-		id,
-	)
+		return scan.Status == wantStatus, scan.Status, nil
+	})
 }

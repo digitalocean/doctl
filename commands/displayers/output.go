@@ -20,8 +20,14 @@ import (
 	"io"
 	"reflect"
 	"strings"
-	"text/tabwriter"
+
+	"github.com/charmbracelet/x/ansi"
+
+	"github.com/digitalocean/doctl/internal/ui"
 )
+
+// columnGap is the number of spaces separating text table columns.
+const columnGap = 4
 
 // Displayable is a displayable entity. These are used for printing results.
 type Displayable interface {
@@ -39,6 +45,10 @@ type Displayer struct {
 
 	Item Displayable
 	Out  io.Writer
+
+	// UI carries the terminal capabilities of Out. Its zero value renders
+	// plain, unconstrained text, which is what tests and pipelines want.
+	UI ui.Env
 }
 
 // Display ends up rendering the content in one of two formats (text|json)
@@ -58,25 +68,24 @@ func (d *Displayer) Display() error {
 			}
 		}
 
-		return DisplayText(d.Item, d.Out, d.NoHeaders, cols)
+		return DisplayText(d.Item, d.Out, d.NoHeaders, cols, d.UI)
 	default:
 		return fmt.Errorf("unknown output type")
 	}
 }
 
-// DisplayText writes tabbed content to the passed in io.Writer
-// while potentially adding or removing headers.
-func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string) error {
-	w := new(tabwriter.Writer)
-	w.Init(out, 0, 0, 4, ' ', 0)
-
+// DisplayText writes column-aligned content to the passed in io.Writer while
+// potentially adding or removing headers. Columns are narrowed to fit env's
+// data width, which is unconstrained unless out is a terminal.
+func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string, env ui.Env) error {
 	cols := item.Cols()
 	if len(includeCols) > 0 && includeCols[0] != "" {
 		cols = includeCols
 	}
 
+	var headers []string
 	if !noHeaders {
-		headers := make([]string, 0, len(cols))
+		headers = make([]string, 0, len(cols))
 		for _, k := range cols {
 			col := item.ColMap()[k]
 			if col == "" {
@@ -85,38 +94,116 @@ func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []
 
 			headers = append(headers, col)
 		}
-		fmt.Fprintln(w, strings.Join(headers, "\t"))
 	}
 
-	for _, r := range item.KV() {
-		values := make([]any, 0, len(cols))
-		formats := make([]string, 0, len(cols))
-
+	kv := item.KV()
+	rows := make([][]string, 0, len(kv))
+	for _, r := range kv {
+		row := make([]string, 0, len(cols))
 		for _, col := range cols {
-			v := r[col]
-
-			values = append(values, v)
-
-			switch v.(type) {
-			case string:
-				formats = append(formats, "%s")
-			case int:
-				formats = append(formats, "%d")
-			case float64:
-				formats = append(formats, "%f")
-			case bool:
-				formats = append(formats, "%v")
-			default:
-				formats = append(formats, "%v")
-			}
+			row = append(row, formatCell(r[col]))
 		}
-		format := strings.Join(formats, "\t")
-		fmt.Fprintf(w, format+"\n", values...)
+		rows = append(rows, row)
 	}
 
-	return w.Flush()
+	widths := columnWidths(headers, rows, env.DataWidth)
+	ellipsis := env.Glyphs().Ellipsis
+
+	var buf bytes.Buffer
+	if headers != nil {
+		writeRow(&buf, headers, widths, ellipsis)
+	}
+	for _, row := range rows {
+		writeRow(&buf, row, widths, ellipsis)
+	}
+
+	_, err := buf.WriteTo(out)
+	return err
 }
 
+// formatCell renders a column value as it appears in text output.
+func formatCell(v any) string {
+	if f, ok := v.(float64); ok {
+		return fmt.Sprintf("%f", f)
+	}
+	return fmt.Sprint(v)
+}
+
+// columnWidths measures how wide each column needs to be to hold its header
+// and values. When maxWidth is positive, the widest column is repeatedly
+// narrowed until the row fits, so the column with the most slack gives up
+// space first. A column is never narrowed past its header, which means an
+// unavoidably wide table still overflows rather than becoming unreadable.
+func columnWidths(headers []string, rows [][]string, maxWidth int) []int {
+	count := len(headers)
+	for _, row := range rows {
+		if len(row) > count {
+			count = len(row)
+		}
+	}
+	if count == 0 {
+		return nil
+	}
+
+	widths := make([]int, count)
+	floors := make([]int, count)
+	for i, header := range headers {
+		widths[i] = ansi.StringWidth(header)
+		floors[i] = widths[i]
+	}
+	for _, row := range rows {
+		for i, cell := range row {
+			if w := ansi.StringWidth(cell); w > widths[i] {
+				widths[i] = w
+			}
+		}
+	}
+
+	if maxWidth <= 0 {
+		return widths
+	}
+
+	total := columnGap * (count - 1)
+	for _, w := range widths {
+		total += w
+	}
+
+	for total > maxWidth {
+		widest, idx := 0, -1
+		for i, w := range widths {
+			if w > floors[i] && w > widest {
+				widest, idx = w, i
+			}
+		}
+		if idx < 0 {
+			break
+		}
+		widths[idx]--
+		total--
+	}
+
+	return widths
+}
+
+// writeRow writes one row, truncating cells that exceed their column with
+// ellipsis and padding the rest. Widths are measured in terminal cells rather
+// than bytes so that styled and double-width values stay aligned.
+func writeRow(buf *bytes.Buffer, cells []string, widths []int, ellipsis string) {
+	for i, cell := range cells {
+		if ansi.StringWidth(cell) > widths[i] {
+			cell = ansi.Truncate(cell, widths[i], ellipsis)
+		}
+		buf.WriteString(cell)
+
+		if i < len(cells)-1 {
+			padding := widths[i] - ansi.StringWidth(cell) + columnGap
+			if padding > 0 {
+				buf.WriteString(strings.Repeat(" ", padding))
+			}
+		}
+	}
+	buf.WriteString("\n")
+}
 func writeJSON(item any, w io.Writer) error {
 	b, err := json.Marshal(item)
 	if err != nil {

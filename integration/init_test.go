@@ -6,7 +6,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/sclevine/spec"
@@ -23,6 +25,23 @@ var (
 const (
 	confirmNonInteractiveOutput = "Warning: Requires confirmation. Use the `--force` flag to continue without confirmation.\nError: Operation aborted."
 )
+
+// waitElapsed matches the elapsed time a wait reports on each of its progress
+// lines, as in "Success: Database (some-id) is online (10s)".
+var waitElapsed = regexp.MustCompile(`\(\d+[a-z]+\)$`)
+
+// normalizeWaitElapsed replaces the elapsed time on wait progress lines with a
+// fixed token. A wait that polls on a ten second interval reports either 10s
+// or 11s depending on how loaded the machine is, which is not something a test
+// should be asserting on.
+func normalizeWaitElapsed(output string) string {
+	lines := strings.Split(output, "\n")
+	for i, line := range lines {
+		lines[i] = waitElapsed.ReplaceAllString(line, "(elapsed)")
+	}
+
+	return strings.Join(lines, "\n")
+}
 
 func TestRun(t *testing.T) {
 	suite.Run(t)
