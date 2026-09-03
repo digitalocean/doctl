@@ -155,16 +155,17 @@ func (f *Facade) handleSessionCreate(w http.ResponseWriter, r *http.Request) {
 	f.writeJSON(w, f.sessionObject())
 }
 
-// handleSessionList answers GET /session: empty until the client has
-// created/used the session, then a single-entry list. An empty list is the
-// "fresh server" state the TUI expects on first attach (verified in the M0
-// capture); returning the session unconditionally would make every attach
-// look like a resume.
+// handleSessionList answers GET /session: the bridged session appears when
+// this proxy has used it (sessionCreated) or when the hosted session has
+// replayable history — that's what lets `opencode attach --continue` and the
+// session picker resume prior turns through a freshly started proxy. A truly
+// fresh session lists empty, the "fresh server" state the TUI expects on
+// first attach (verified in the M0 capture).
 func (f *Facade) handleSessionList(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	created := f.sessionCreated
 	f.mu.Unlock()
-	if !created {
+	if !created && !f.hasHistory(r.Context()) {
 		f.writeJSON(w, []any{})
 		return
 	}
