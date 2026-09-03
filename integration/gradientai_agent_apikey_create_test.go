@@ -88,7 +88,8 @@ var _ = suite("gradient/agent/apikey/create", func(t *testing.T, when spec.G, it
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--agent-id")
 		})
 
 		it("returns an error when agent-uuid is missing", func() {
@@ -103,7 +104,8 @@ var _ = suite("gradient/agent/apikey/create", func(t *testing.T, when spec.G, it
 			)
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--agent-id")
 		})
 	})
 })

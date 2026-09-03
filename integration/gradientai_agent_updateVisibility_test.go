@@ -138,7 +138,8 @@ var _ = suite("gradient/agent/update-visibility", func(t *testing.T, when spec.G
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--visibility")
 		})
 	})
 

@@ -88,6 +88,13 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 		co(c)
 	}
 
+	// Aggregated flag validation runs in PreRunE so every missing/invalid
+	// flag is reported together (with purpose/hint metadata) before Cobra's
+	// bare required-flag check and before the command handler executes.
+	c.Command.PreRunE = func(cmd *cobra.Command, args []string) error {
+		return validateCommandFlags(cmd)
+	}
+
 	// This must be defined after the options have been applied
 	// so that changes made by the options are accessible here.
 	c.Command.Run = func(cmd *cobra.Command, args []string) {
