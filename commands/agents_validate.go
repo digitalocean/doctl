@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"regexp"
 	"sort"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
+	"github.com/google/uuid"
 	"github.com/muesli/reflow/wordwrap"
 	"golang.org/x/term"
 	yaml "gopkg.in/yaml.v2"
@@ -162,6 +164,7 @@ func validateAgentManifest(manifest []byte) *agentManifestValidation {
 	env, secretNames, envPath, secretsPath := extractManifestEnvAndSecrets(doc, legacy)
 	validateManifestEnvAndSecrets(adapter, env, secretNames, envPath, secretsPath, out)
 	validateManifestPermissionsAndSkills(doc, legacy, out)
+	validateManifestEgress(doc, legacy, out)
 	return out
 }
 
@@ -417,6 +420,246 @@ func validateManifestSkills(raw any, path string, out *agentManifestValidation) 
 			out.Errors = append(out.Errors, fmt.Sprintf(`%s.name: %q must match ^[a-z0-9]+(-[a-z0-9]+)*$`, itemPath, name))
 		}
 	}
+}
+
+// validateManifestEgress checks the egress policy oneOf (MARSOHS-1219): omitted,
+// "unrestricted", host list, or object with allow_hosts / allow_ips / vpc_uuid /
+// subnet_uuid. Mirrors harness-api agentspec error strings for fast client-side
+// feedback. Omitted egress is intentional (no ACL) and must not inject defaults.
+func validateManifestEgress(doc map[string]any, legacy bool, out *agentManifestValidation) {
+	raw, path, ok := extractManifestEgress(doc, legacy)
+	if !ok {
+		return
+	}
+	validateEgressValue(raw, path, out)
+}
+
+func extractManifestEgress(doc map[string]any, legacy bool) (raw any, path string, ok bool) {
+	if legacy {
+		spec, hasSpec := yamlMap(doc["spec"])
+		if !hasSpec {
+			return nil, "", false
+		}
+		if sandbox, hasSandbox := yamlMap(spec["sandbox"]); hasSandbox {
+			if _, present := sandbox["egress"]; present {
+				return sandbox["egress"], "spec.sandbox.egress", true
+			}
+		}
+		if _, present := spec["egress"]; present {
+			return spec["egress"], "spec.egress", true
+		}
+		return nil, "", false
+	}
+	if _, present := doc["egress"]; present {
+		return doc["egress"], "egress", true
+	}
+	if sandbox, hasSandbox := yamlMap(doc["sandbox"]); hasSandbox {
+		if _, present := sandbox["egress"]; present {
+			return sandbox["egress"], "sandbox.egress", true
+		}
+	}
+	return nil, "", false
+}
+
+func validateEgressValue(raw any, path string, out *agentManifestValidation) {
+	switch v := raw.(type) {
+	case nil:
+		// Explicit null is treated like omitted by the server; nothing to check.
+		return
+	case string:
+		if strings.TrimSpace(v) != "unrestricted" {
+			out.Errors = append(out.Errors, fmt.Sprintf(`%s scalar must be "unrestricted" (got %q)`, path, v))
+		}
+		return
+	case []any:
+		validateEgressHostList(v, path, out)
+		return
+	}
+
+	if m, ok := yamlMap(raw); ok {
+		validateEgressObject(m, path, out)
+		return
+	}
+	out.Errors = append(out.Errors, fmt.Sprintf(`%s must be "unrestricted", a host list, or an object`, path))
+}
+
+func validateEgressHostList(list []any, path string, out *agentManifestValidation) {
+	for i, item := range list {
+		host, ok := yamlString(item)
+		if !ok {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s[%d]: must be a hostname string", path, i))
+			continue
+		}
+		host = strings.TrimSpace(host)
+		if host == "" {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s[%d]: hostname must not be empty", path, i))
+			continue
+		}
+		if looksLikeIPLiteral(host) {
+			out.Errors = append(out.Errors, fmt.Sprintf(`%s[%d] %q looks like an IP; use %s.allow_ips`, path, i, host, path))
+		}
+	}
+}
+
+func validateEgressObject(m map[string]any, path string, out *agentManifestValidation) {
+	known := map[string]struct{}{
+		"allow_hosts": {}, "allowHosts": {}, "allow": {},
+		"allow_ips": {}, "allowIps": {},
+		"vpc_uuid": {}, "vpcUuid": {},
+		"subnet_uuid": {}, "subnetUuid": {},
+		"unrestricted": {},
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if _, ok := known[k]; !ok {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: unknown field", path, k))
+		}
+	}
+
+	if ur, present := m["unrestricted"]; present {
+		switch t := ur.(type) {
+		case bool:
+			if !t {
+				out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set`, path))
+			}
+		case string:
+			if strings.TrimSpace(t) != "unrestricted" && strings.ToLower(strings.TrimSpace(t)) != "true" {
+				out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set (got %q)`, path, t))
+			}
+		default:
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.unrestricted: must be a boolean", path))
+		}
+	}
+
+	hostsRaw, hasHosts := firstPresent(m, "allow_hosts", "allowHosts", "allow")
+	var hostCount int
+	if hasHosts {
+		hostCount = validateEgressAllowHosts(hostsRaw, path, out)
+	}
+
+	ipsRaw, hasIPs := firstPresent(m, "allow_ips", "allowIps")
+	if hasIPs {
+		validateEgressAllowIPs(ipsRaw, path, out)
+	}
+
+	vpcRaw, hasVPC := firstPresent(m, "vpc_uuid", "vpcUuid")
+	subnetRaw, hasSubnet := firstPresent(m, "subnet_uuid", "subnetUuid")
+	if hasVPC {
+		_ = validateEgressUUID(vpcRaw, path+".vpc_uuid", out)
+	}
+	if hasSubnet {
+		if !hasVPC {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.subnet_uuid requires %s.vpc_uuid", path, path))
+		}
+		_ = validateEgressUUID(subnetRaw, path+".subnet_uuid", out)
+	}
+
+	// Server advisory when IPs alone form the destination ACL (no host allowlist).
+	if hasIPs && hostCount == 0 {
+		if ur, ok := m["unrestricted"].(bool); ok && ur {
+			return
+		}
+		out.Warnings = append(out.Warnings, fmt.Sprintf("%s.allowIps: no host allowlist is set, so the destination ACL permits only these IP literals and denies every hostname", path))
+	}
+}
+
+func validateEgressAllowHosts(raw any, path string, out *agentManifestValidation) int {
+	// Stored camelCase envelope uses allow: [{host: "..."}]; authoring uses
+	// allow_hosts: ["..."].
+	if list, ok := yamlList(raw); ok {
+		count := 0
+		for i, item := range list {
+			itemPath := fmt.Sprintf("%s.allow_hosts[%d]", path, i)
+			if host, ok := yamlString(item); ok {
+				host = strings.TrimSpace(host)
+				if host == "" {
+					out.Errors = append(out.Errors, fmt.Sprintf("%s: hostname must not be empty", itemPath))
+					continue
+				}
+				if looksLikeIPLiteral(host) {
+					out.Errors = append(out.Errors, fmt.Sprintf(`%s %q looks like an IP; use %s.allow_ips`, itemPath, host, path))
+				}
+				count++
+				continue
+			}
+			if m, ok := yamlMap(item); ok {
+				host, _ := yamlString(firstValue(m, "host", "Host"))
+				host = strings.TrimSpace(host)
+				if host == "" {
+					out.Errors = append(out.Errors, fmt.Sprintf("%s.host: is required", itemPath))
+					continue
+				}
+				if looksLikeIPLiteral(host) {
+					out.Errors = append(out.Errors, fmt.Sprintf(`%s.host %q looks like an IP; use %s.allow_ips`, itemPath, host, path))
+				}
+				count++
+				continue
+			}
+			out.Errors = append(out.Errors, fmt.Sprintf("%s: must be a hostname string or {host: ...}", itemPath))
+		}
+		return count
+	}
+	out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_hosts: must be a list", path))
+	return 0
+}
+
+func validateEgressAllowIPs(raw any, path string, out *agentManifestValidation) {
+	list, ok := yamlList(raw)
+	if !ok {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_ips: must be a list", path))
+		return
+	}
+	for i, item := range list {
+		ip, ok := yamlString(item)
+		if !ok {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_ips[%d]: must be an IP literal string", path, i))
+			continue
+		}
+		ip = strings.TrimSpace(ip)
+		if ip == "" {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_ips[%d]: must not be empty", path, i))
+			continue
+		}
+		if strings.Contains(ip, "/") || net.ParseIP(ip) == nil {
+			out.Errors = append(out.Errors, fmt.Sprintf(`%s.allow_ips[%d] %q must be an IPv4/IPv6 literal (not a CIDR or hostname)`, path, i, ip))
+		}
+	}
+}
+
+func validateEgressUUID(raw any, path string, out *agentManifestValidation) string {
+	s, ok := yamlString(raw)
+	if !ok {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s must be a valid UUID", path))
+		return ""
+	}
+	s = strings.TrimSpace(s)
+	if _, err := uuid.Parse(s); err != nil {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s must be a valid UUID", path))
+		return ""
+	}
+	return s
+}
+
+func looksLikeIPLiteral(s string) bool {
+	return net.ParseIP(strings.TrimSpace(s)) != nil
+}
+
+func firstPresent(m map[string]any, keys ...string) (any, bool) {
+	for _, k := range keys {
+		if v, ok := m[k]; ok {
+			return v, true
+		}
+	}
+	return nil, false
+}
+
+func firstValue(m map[string]any, keys ...string) any {
+	v, _ := firstPresent(m, keys...)
+	return v
 }
 
 // validateAdapterModelEnv warns on known silent-failure env key footguns from
@@ -710,6 +953,8 @@ func looksLikeFieldPath(s string) bool {
 	case strings.HasPrefix(s, "spec."), strings.HasPrefix(s, "metadata."),
 		strings.HasPrefix(s, "env."), strings.HasPrefix(s, "secrets."),
 		strings.HasPrefix(s, "permissions."), strings.HasPrefix(s, "skills["),
+		strings.HasPrefix(s, "egress"), strings.HasPrefix(s, "sandbox.egress"),
+		strings.HasPrefix(s, "spec.sandbox.egress"), strings.HasPrefix(s, "spec.egress"),
 		s == "agent", s == "name", s == "apiVersion", s == "kind", s == "spec.runtime",
 		strings.HasPrefix(s, "spec.runtime"):
 		return true

@@ -69,6 +69,16 @@ These four are equivalent:
 ` + "```\n\n" + `Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
 ` + "```yaml\n" + `name: my-session
 agent: opencode
+` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
+
+- ` + "`egress: unrestricted`" + `
+- host allowlist: ` + "`egress: [api.github.com, pypi.org]`" + `
+- object: ` + "`allow_hosts`" + `, ` + "`allow_ips`" + ` (exact IPv4/IPv6 literals — not CIDRs), and optional ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + ` (` + "`subnet_uuid`" + ` requires ` + "`vpc_uuid`" + `; VPC attachment is create-time immutable)
+
+` + "```yaml\n" + `egress:
+  allow_hosts: [api.github.com]
+  allow_ips: ["203.0.113.10"]
+  vpc_uuid: <uuid>
 ` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
 **Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
@@ -87,7 +97,7 @@ Use ` + "`-o json`" + ` for machine-readable create output without waiting. Comb
 
 const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
 
-Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, and conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `). The API remains the authoritative validator for the full contract.
+Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
 
 Name the manifest as a positional path or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin); with none of these, ` + "`./agents.yaml`" + ` is used when it exists.
 

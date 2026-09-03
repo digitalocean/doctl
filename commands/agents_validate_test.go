@@ -355,6 +355,91 @@ func TestRunAgentsValidate_WarningsStyled(t *testing.T) {
 	})
 }
 
+func TestValidateAgentManifest_EgressOmittedOK(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: opencode\n"))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+}
+
+func TestValidateAgentManifest_EgressUnrestrictedOK(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: opencode\negress: unrestricted\n"))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+}
+
+func TestValidateAgentManifest_EgressHostListOK(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: opencode\negress:\n  - api.github.com\n  - pypi.org\n"))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+}
+
+func TestValidateAgentManifest_EgressObjectOK(t *testing.T) {
+	const manifest = `agent: opencode
+egress:
+  allow_hosts: [api.github.com]
+  allow_ips: ["203.0.113.10"]
+  vpc_uuid: 11111111-1111-4111-8111-111111111111
+  subnet_uuid: 22222222-2222-4222-8222-222222222222
+`
+	v := validateAgentManifest([]byte(manifest))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+}
+
+func TestValidateAgentManifest_EgressBadScalar(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: opencode\negress: open\n"))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], `"unrestricted"`)
+}
+
+func TestValidateAgentManifest_EgressIPInHostList(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: opencode\negress:\n  - 203.0.113.10\n"))
+	require.False(t, v.ok())
+	assert.Contains(t, joinStrings(v.Errors), "allow_ips")
+}
+
+func TestValidateAgentManifest_EgressAllowIPsRejectsCIDR(t *testing.T) {
+	const manifest = `agent: opencode
+egress:
+  allow_ips: ["203.0.113.0/24"]
+`
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, joinStrings(v.Errors), "IPv4/IPv6 literal")
+}
+
+func TestValidateAgentManifest_EgressSubnetRequiresVPC(t *testing.T) {
+	const manifest = `agent: opencode
+egress:
+  subnet_uuid: 22222222-2222-4222-8222-222222222222
+`
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, joinStrings(v.Errors), "subnet_uuid requires")
+}
+
+func TestValidateAgentManifest_EgressAllowIPsOnlyWarns(t *testing.T) {
+	const manifest = `agent: opencode
+egress:
+  allow_ips: ["203.0.113.10"]
+`
+	v := validateAgentManifest([]byte(manifest))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+	require.NotEmpty(t, v.Warnings)
+	assert.Contains(t, v.Warnings[0], "allowIps")
+	assert.Contains(t, v.Warnings[0], "denies every hostname")
+}
+
+func TestValidateAgentManifest_EgressEnvelopePath(t *testing.T) {
+	const manifest = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  runtime:
+    adapter: opencode
+  sandbox:
+    egress: open
+`
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, joinStrings(v.Errors), "spec.sandbox.egress")
+}
+
 func stringSliceToBytes(ss []string) [][]byte {
 	out := make([][]byte, len(ss))
 	for i, s := range ss {
