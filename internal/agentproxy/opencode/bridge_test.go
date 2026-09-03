@@ -157,7 +157,6 @@ func TestTurnStreamsAsOpencodeFrames(t *testing.T) {
 	}, types)
 
 	wantSession := "ses_" + strings.ReplaceAll(testSessionID, "-", "")
-	wantMsg := "msg_aaaaaaaabbbbccccddddeeeeeeeeeeee"
 
 	// server.connected is server-scoped; session frames carry directory and
 	// a top-level properties.sessionID.
@@ -184,9 +183,17 @@ func TestTurnStreamsAsOpencodeFrames(t *testing.T) {
 	msg := propsOf(t, frames[4])
 	info, ok := msg["info"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, wantMsg, info["id"])
+	wantMsg, ok := info["id"].(string)
+	require.True(t, ok)
 	assert.Equal(t, "assistant", info["role"])
 	assert.Equal(t, userInfo["id"], info["parentID"])
+	// Ids must sort chronologically as strings — the TUI orders messages by
+	// id, and a random-prefixed assistant id rendered the answer ABOVE the
+	// user's prompt (found live). User id strictly before assistant id.
+	userID, ok := userInfo["id"].(string)
+	require.True(t, ok)
+	assert.Regexp(t, `^msg_[0-9a-f]{12}`, wantMsg)
+	assert.Less(t, userID, wantMsg, "user message id must sort before the assistant's")
 
 	reasoningCreate := propsOf(t, frames[5])
 	rpart, ok := reasoningCreate["part"].(map[string]any)
@@ -230,6 +237,55 @@ func TestTurnStreamsAsOpencodeFrames(t *testing.T) {
 
 	status := propsOf(t, frames[12])
 	assert.Equal(t, map[string]any{"type": "idle"}, status["status"])
+}
+
+// The assistant id must sort after the user id even when the event clock
+// runs behind the clock that minted the user id (client-minted ids, or
+// container-vs-host skew on the dev stack — both observed live). The
+// comparison must happen on 48-bit T values: comparing a truncated T against
+// an untruncated millisecond count silently never fires (shipped once).
+func TestAssistantIDSortsAfterUserIDDespiteClockSkew(t *testing.T) {
+	srv, h := newBridgedFacade(t)
+	// Harness events are stamped 2026-01-01, far behind the wall clock that
+	// mints the fallback user id — exactly the inversion scenario.
+	h.QueueRun("run-skew",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+
+	// Client-minted user id far in the future of the event clock.
+	futureID := ocTimeID("msg_", timeNowMs()+3_600_000, 0, "clientmint")
+	body := `{"messageID":` + string(mustJSON(t, futureID)) + `,"parts":[{"type":"text","text":"skew test"}]}`
+	resp, err := http.Post(srv.URL+"/session/ses_x/prompt_async", "application/json", strings.NewReader(body))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	stream, err := http.Get(srv.URL + "/global/event")
+	require.NoError(t, err)
+	defer stream.Body.Close()
+	frames := drainFrames(t, stream.Body)
+
+	var userID, asstID string
+	for _, fr := range frames {
+		if fr.Payload.Type != "message.updated" {
+			continue
+		}
+		info, ok := propsOf(t, fr)["info"].(map[string]any)
+		require.True(t, ok)
+		switch info["role"] {
+		case "user":
+			userID = info["id"].(string)
+		case "assistant":
+			if asstID == "" {
+				asstID = info["id"].(string)
+			}
+		}
+	}
+	require.NotEmpty(t, userID)
+	require.NotEmpty(t, asstID)
+	assert.Equal(t, futureID, userID)
+	assert.Less(t, userID, asstID, "assistant id must sort after the user id")
 }
 
 func TestRunFailedEmitsSessionErrorThenIdle(t *testing.T) {

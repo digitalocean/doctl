@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +34,13 @@ type turnState struct {
 	// userMsgID is the client-minted id from the prompt body when present.
 	userMsgID  string
 	promptText string
+	// asstMsgID and the part ids are minted time-ordered (ocTimeID) at
+	// announce time so the conversation sorts correctly; stored here so
+	// every later frame references the same ids.
+	asstMsgID       string
+	userPartID      string
+	textPartID      string
+	reasoningPartID string
 	// startedSent: the turn-start frames (user echo, busy, assistant
 	// message.updated) went out. Normally set by run.started, but set lazily
 	// by the first delta too — a turn whose run.started this stream never
@@ -63,6 +71,58 @@ type turnState struct {
 // client pattern-matches id prefixes or separators.
 func ocID(prefix, uuid string) string {
 	return prefix + strings.ReplaceAll(uuid, "-", "")
+}
+
+// opencode ids embed a 48-bit time value: T = ((unix_ms << 12) | counter)
+// truncated to 48 bits, rendered as 12 hex chars after the prefix (sessions
+// use the bitwise NOT of T, which is why ses_ ids sort newest-first). The
+// encoding was decoded from a real server's ids and verified to the bit.
+//
+// This matters because the TUI orders messages lexicographically by id — the
+// time prefix is what makes id order chronological order. The first M2 cut
+// derived message ids from the run UUID (random), and the TUI rendered the
+// assistant's answer ABOVE the user's prompt (found live).
+const ocTimeMask = uint64(1)<<48 - 1
+
+// ocTimeVal is the 48-bit T for a millisecond timestamp (counter zero). All
+// ordering comparisons must happen on T values, never on raw milliseconds —
+// T is truncated mod 2^48, so a T recovered from an id and a fresh untruncated
+// ms are not comparable (that mismatch shipped once: the clock-skew guard
+// below silently never fired and the conversation stayed inverted).
+func ocTimeVal(ms int64) uint64 { return (uint64(ms) << 12) & ocTimeMask }
+
+// ocIDWithT mints an opencode-shaped ascending id from an explicit T.
+func ocIDWithT(prefix string, t uint64, counter uint16, tail string) string {
+	return fmt.Sprintf("%s%012x%s", prefix, (t|uint64(counter&0xfff))&ocTimeMask, tail)
+}
+
+// ocTimeID is ocIDWithT for callers that start from a timestamp.
+func ocTimeID(prefix string, ms int64, counter uint16, tail string) string {
+	return ocIDWithT(prefix, ocTimeVal(ms), counter, tail)
+}
+
+// tFromOCID recovers T (counter bits cleared) from an id's 12-hex-char time
+// prefix. ok=false for ids that don't parse (foreign format, too short).
+func tFromOCID(id string) (uint64, bool) {
+	i := strings.IndexByte(id, '_')
+	if i < 0 || len(id) < i+13 {
+		return 0, false
+	}
+	t, err := strconv.ParseUint(id[i+1:i+13], 16, 64)
+	if err != nil {
+		return 0, false
+	}
+	return t &^ 0xfff, true
+}
+
+// runTail is the id tail: a fragment of the run UUID for debuggability plus
+// a role marker, standing in for the real server's random base62 tail.
+func runTail(runID, marker string) string {
+	s := strings.ReplaceAll(runID, "-", "")
+	if len(s) > 10 {
+		s = s[:10]
+	}
+	return s + marker
 }
 
 // ocSessionID is the opencode-side id this facade advertises for the one
@@ -164,7 +224,7 @@ func (f *Facade) handlePromptAsync(w http.ResponseWriter, r *http.Request) {
 
 	userMsgID := body.MessageID
 	if userMsgID == "" {
-		userMsgID = ocID("msg_", resp.RunID) + "u"
+		userMsgID = ocTimeID("msg_", timeNowMs(), 0, runTail(resp.RunID, "us"))
 	}
 	f.mu.Lock()
 	if f.turns == nil {
@@ -235,7 +295,6 @@ func (f *Facade) runEventLoop(ctx context.Context, ew *eventWriter) {
 // client is gone.
 func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eventWriter) error {
 	sid := f.ocSessionID()
-	msgID := ocID("msg_", ev.RunID)
 	at := eventTimeMs(ev)
 
 	switch ev.Kind {
@@ -259,11 +318,12 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		}
 		// Unlike codex's protocol, opencode has a first-class reasoning
 		// channel: same flat delta frame, field "reasoning", its own part.
-		field, part := "text", ocID("prt_", ev.RunID)+"t"
+		field := "text"
+		part := &ts.textPartID
 		started := &ts.textPartStarted
+		marker := "tx"
 		if payload.IsReasoning {
-			field, part = "reasoning", ocID("prt_", ev.RunID)+"r"
-			started = &ts.reasoningPartStarted
+			field, part, started, marker = "reasoning", &ts.reasoningPartID, &ts.reasoningPartStarted, "re"
 		} else {
 			ts.sawText = true
 			ts.text.WriteString(payload.Text)
@@ -272,10 +332,11 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		// deltas only to parts a message.part.updated already created —
 		// verified live, a delta for an unannounced part renders nothing.
 		if !*started {
+			*part = ocTimeID("prt_", at, 2, runTail(ev.RunID, marker))
 			if err := ew.session("message.part.updated", map[string]any{
 				"sessionID": sid,
 				"part": map[string]any{
-					"id": part, "messageID": msgID, "sessionID": sid,
+					"id": *part, "messageID": ts.asstMsgID, "sessionID": sid,
 					"type": field, "text": "",
 					"time": map[string]any{"start": at},
 				},
@@ -286,8 +347,8 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		}
 		return ew.session("message.part.delta", map[string]any{
 			"sessionID": sid,
-			"messageID": msgID,
-			"partID":    part,
+			"messageID": ts.asstMsgID,
+			"partID":    *part,
 			"field":     field,
 			"delta":     payload.Text,
 		})
@@ -302,7 +363,7 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 			if err := ew.session("message.part.updated", map[string]any{
 				"sessionID": sid,
 				"part": map[string]any{
-					"id": ocID("prt_", ev.RunID) + "t", "messageID": msgID, "sessionID": sid,
+					"id": ts.textPartID, "messageID": ts.asstMsgID, "sessionID": sid,
 					"type": "text", "text": ts.text.String(),
 					"time": map[string]any{"start": ts.startMs, "end": at},
 				},
@@ -359,6 +420,19 @@ func (f *Facade) announceTurn(runID string, ts *turnState, ew *eventWriter, at i
 	ts.startMs = at
 	sid := f.ocSessionID()
 
+	// The assistant id must sort strictly after the user id (the TUI orders
+	// by id string). The user id's time prefix comes from a different clock
+	// — the client's when client-minted, the proxy's on the fallback — while
+	// `at` is the harness event time (the dev stack's container clock runs
+	// ~half a second behind the host, observed live). Mint the assistant id
+	// off whichever is later so skew can't invert the conversation.
+	asstT := ocTimeVal(at)
+	if userT, ok := tFromOCID(ts.userMsgID); ok && userT >= asstT {
+		asstT = userT + 0x1000 // +1ms in T-space
+	}
+	ts.asstMsgID = ocIDWithT("msg_", asstT, 1, runTail(runID, "as"))
+	ts.userPartID = ocIDWithT("prt_", asstT, 0, runTail(runID, "up"))
+
 	if ts.userMsgID != "" {
 		if err := ew.session("message.updated", map[string]any{
 			"sessionID": sid,
@@ -376,7 +450,7 @@ func (f *Facade) announceTurn(runID string, ts *turnState, ew *eventWriter, at i
 		if err := ew.session("message.part.updated", map[string]any{
 			"sessionID": sid,
 			"part": map[string]any{
-				"id": ocID("prt_", runID) + "u", "messageID": ts.userMsgID, "sessionID": sid,
+				"id": ts.userPartID, "messageID": ts.userMsgID, "sessionID": sid,
 				"type": "text", "text": ts.promptText,
 			},
 		}); err != nil {
@@ -394,7 +468,7 @@ func (f *Facade) announceTurn(runID string, ts *turnState, ew *eventWriter, at i
 	// `tokens.output` ("undefined is not an object", found live). Zeros are
 	// fine; absent is fatal. Field set mirrors the ground-truth capture.
 	info := map[string]any{
-		"id": ocID("msg_", runID), "sessionID": sid,
+		"id": ts.asstMsgID, "sessionID": sid,
 		"role":  "assistant",
 		"time":  map[string]any{"created": at},
 		"mode":  "build",
@@ -419,9 +493,14 @@ func (f *Facade) announceTurn(runID string, ts *turnState, ew *eventWriter, at i
 // finishAssistantMessage re-sends the assistant message.updated with
 // time.completed stamped, mirroring the real server's end-of-turn frame.
 func (f *Facade) finishAssistantMessage(runID string, ts *turnState, ew *eventWriter, at int64) error {
+	if ts.asstMsgID == "" {
+		// The turn was never announced (no run.started or delta seen) —
+		// there is no assistant message to close.
+		return nil
+	}
 	sid := f.ocSessionID()
 	info := map[string]any{
-		"id": ocID("msg_", runID), "sessionID": sid,
+		"id": ts.asstMsgID, "sessionID": sid,
 		"role":  "assistant",
 		"time":  map[string]any{"created": ts.startMs, "completed": at},
 		"mode":  "build",
