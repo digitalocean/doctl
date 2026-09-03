@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -12,16 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestFacade() *Facade {
-	return &Facade{SessionID: "sess-1", Dir: "/tmp/ws"}
-}
-
 // The attach burst captured from a real `opencode attach` (TestedVersion).
 // Every route the TUI hits at startup must answer 200 with valid JSON —
 // a 404 here is exactly the "new client version wants more" drift signal.
 func TestAttachBurstRoutesAnswer(t *testing.T) {
-	srv := httptest.NewServer(newTestFacade())
-	defer srv.Close()
+	srv, _ := newBridgedFacade(t)
 
 	routes := []string{
 		"/global/health",
@@ -65,8 +59,7 @@ func TestAttachBurstRoutesAnswer(t *testing.T) {
 }
 
 func TestHealthReportsTestedVersion(t *testing.T) {
-	srv := httptest.NewServer(newTestFacade())
-	defer srv.Close()
+	srv, _ := newBridgedFacade(t)
 
 	resp, err := http.Get(srv.URL + "/global/health")
 	require.NoError(t, err)
@@ -131,8 +124,7 @@ func TestSecondEventStreamConsumerConflicts(t *testing.T) {
 }
 
 func TestShareIsRefused(t *testing.T) {
-	srv := httptest.NewServer(newTestFacade())
-	defer srv.Close()
+	srv, _ := newBridgedFacade(t)
 
 	resp, err := http.Post(srv.URL+"/session/sess-1/share", "application/json", nil)
 	require.NoError(t, err)
@@ -141,8 +133,7 @@ func TestShareIsRefused(t *testing.T) {
 }
 
 func TestUnknownRouteIs404(t *testing.T) {
-	srv := httptest.NewServer(newTestFacade())
-	defer srv.Close()
+	srv, _ := newBridgedFacade(t)
 
 	resp, err := http.Get(srv.URL + "/no/such/route")
 	require.NoError(t, err)
@@ -154,8 +145,7 @@ func TestUnknownRouteIs404(t *testing.T) {
 // /config/providers points at the one provider/model pair every other
 // catalog route advertises.
 func TestSyntheticCatalogIsConsistent(t *testing.T) {
-	srv := httptest.NewServer(newTestFacade())
-	defer srv.Close()
+	srv, _ := newBridgedFacade(t)
 
 	resp, err := http.Get(srv.URL + "/config/providers")
 	require.NoError(t, err)
