@@ -9,11 +9,13 @@ import (
 	"text/tabwriter"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/ui"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testDisplayable struct {
@@ -153,6 +155,119 @@ func TestDisplayTextFitsTerminalWidth(t *testing.T) {
 	}
 }
 
+// tonedDisplayable overrides the shared classification for one column.
+type tonedDisplayable struct {
+	testDisplayable
+}
+
+func (t *tonedDisplayable) ColTone(col string, value any) (ui.Tone, bool) {
+	if col == "state" {
+		return ui.ToneNone, true
+	}
+
+	return ui.ToneNone, false
+}
+
+func stateTable() *testDisplayable {
+	return &testDisplayable{
+		cols:   []string{"id", "name", "status", "message"},
+		colMap: map[string]string{"id": "ID", "name": "Name", "status": "Status", "message": "Message"},
+		kv: []map[string]any{
+			{"id": 1, "name": "web", "status": "active", "message": "deploy failed earlier"},
+			{"id": 2, "name": "db", "status": "errored", "message": "n/a"},
+			{"id": 3, "name": "cache", "status": "PENDING_DEPLOY", "message": "n/a"},
+			{"id": 4, "name": "queue", "status": "somewhere-new-entirely", "message": "n/a"},
+		},
+	}
+}
+
+func TestDisplayTextStylesStateColumns(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := ui.Detect(&out, &errOut, ui.WithProfile(termenv.TrueColor))
+
+	require.NoError(t, DisplayText(stateTable(), &out, false, nil, env))
+	rendered := out.String()
+
+	assert.Contains(t, rendered, env.Sprint(env.NewStyle().Bold(true), "Status"),
+		"the header row should be emphasised")
+	assert.Contains(t, rendered, env.SprintTone(ui.ToneSuccess, "active"))
+	assert.Contains(t, rendered, env.SprintTone(ui.ToneError, "errored"))
+	assert.Contains(t, rendered, env.SprintTone(ui.TonePending, "PENDING_DEPLOY"))
+
+	// A value the vocabulary does not know stays plain rather than being
+	// guessed at, and prose in a non-state column is never painted even when
+	// it contains a state word.
+	assert.NotContains(t, rendered, env.SprintTone(ui.ToneSuccess, "somewhere-new-entirely"))
+	assert.NotContains(t, rendered, env.SprintTone(ui.ToneError, "deploy failed earlier"))
+	assert.Contains(t, rendered, "deploy failed earlier")
+}
+
+// TestDisplayTextStylingDoesNotMoveColumns is the guarantee that makes colour
+// safe to turn on: styling may only add escape sequences, never shift a cell.
+func TestDisplayTextStylingDoesNotMoveColumns(t *testing.T) {
+	var plainOut, styledOut, errOut bytes.Buffer
+
+	require.NoError(t, DisplayText(stateTable(), &plainOut, false, nil, ui.Plain(&plainOut, &errOut)))
+
+	styledEnv := ui.Detect(&styledOut, &errOut, ui.WithProfile(termenv.TrueColor))
+	require.NoError(t, DisplayText(stateTable(), &styledOut, false, nil, styledEnv))
+
+	assert.Equal(t, plainOut.String(), ansi.Strip(styledOut.String()))
+}
+
+// TestDisplayTextStylingNarrowTerminal covers styling and truncation together,
+// since a truncated cell is styled after its ellipsis is applied.
+func TestDisplayTextStylingNarrowTerminal(t *testing.T) {
+	var plainOut, styledOut, errOut bytes.Buffer
+
+	require.NoError(t, DisplayText(stateTable(), &plainOut, false, nil,
+		ui.Detect(&plainOut, &errOut, ui.WithWidth(40), ui.WithProfile(termenv.Ascii))))
+	require.NoError(t, DisplayText(stateTable(), &styledOut, false, nil,
+		ui.Detect(&styledOut, &errOut, ui.WithWidth(40), ui.WithProfile(termenv.TrueColor))))
+
+	assert.Equal(t, plainOut.String(), ansi.Strip(styledOut.String()))
+	for _, line := range strings.Split(strings.TrimRight(styledOut.String(), "\n"), "\n") {
+		assert.LessOrEqual(t, ansi.StringWidth(line), 40, "line %q exceeds the width", line)
+	}
+}
+
+func TestDisplayTextToneOverride(t *testing.T) {
+	item := &tonedDisplayable{testDisplayable{
+		cols:   []string{"state", "status"},
+		colMap: map[string]string{"state": "State", "status": "Status"},
+		kv:     []map[string]any{{"state": "active", "status": "active"}},
+	}}
+
+	var out, errOut bytes.Buffer
+	env := ui.Detect(&out, &errOut, ui.WithProfile(termenv.TrueColor))
+
+	require.NoError(t, DisplayText(item, &out, false, nil, env))
+
+	// The displayer declined State authoritatively and had no opinion on
+	// Status, which therefore falls through to the shared vocabulary. Both
+	// cells hold the same value, so only the styling tells them apart.
+	cells := strings.Fields(out.String())
+	assert.Equal(t, "active", cells[2], "the declined column stays plain")
+	assert.Equal(t, env.SprintTone(ui.ToneSuccess, "active"), cells[3],
+		"the column with no opinion is classified by the vocabulary")
+}
+
+func TestIsStateColumn(t *testing.T) {
+	for _, col := range []string{
+		"Status", "status", "State", "Phase", "Health", "Health Status",
+		"health_status", "Verdict", "Restore Status",
+	} {
+		assert.True(t, isStateColumn(col), "%q holds state", col)
+	}
+
+	for _, col := range []string{
+		"ID", "Name", "Message", "Error", "FailureReason", "Unhealthy Reason",
+		"PendingChanges", "HealthCheck", "Progress", "Severity",
+	} {
+		assert.False(t, isStateColumn(col), "%q does not hold state", col)
+	}
+}
+
 func TestFormatCell(t *testing.T) {
 	assert.Equal(t, "1.500000", formatCell(float64(1.5)))
 	assert.Equal(t, "42", formatCell(42))
@@ -260,7 +375,7 @@ func TestWriteRow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			writeRow(&buf, tt.cells, tt.widths, "…")
+			writeRow(&buf, tt.cells, tt.widths, "…", nil)
 			assert.Equal(t, tt.expected, buf.String())
 		})
 	}
