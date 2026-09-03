@@ -71,7 +71,7 @@ var _ = suite("compute/microdroplet/pause", func(t *testing.T, when spec.G, it s
 
 const (
 	microDropletPauseOutput = `
-ID                                      Name                  Region    State     Size                 Networking    Source                           Endpoint                          Ports    Created At
+ID                                      Name                  Region    State     Size                  Networking    Source                          Endpoint                           Ports    Created At
 b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microdroplet    nyc1      paused    2vCPU/4096MiB/80GB    public        docker.io/library/nginx:1.27    sammy.microdroplets.example.com    8080     2026-07-16T10:00:00Z
 `
 	microDropletPauseResponse = `
