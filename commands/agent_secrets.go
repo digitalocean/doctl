@@ -45,6 +45,11 @@ func agentSecretFlags(c *CmdConfig) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseAgentSecretPairs(pairs)
+}
+
+// parseAgentSecretPairs turns already-read --secret flag values into a map.
+func parseAgentSecretPairs(pairs []string) (map[string]string, error) {
 	if len(pairs) == 0 {
 		return nil, nil
 	}
@@ -52,7 +57,155 @@ func agentSecretFlags(c *CmdConfig) (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing --%s: %w", doctl.ArgAgentSecret, err)
 	}
+	for name, value := range secrets {
+		if strings.TrimSpace(value) == "" {
+			return nil, fmt.Errorf("--%s %s is empty (the @file or stdin value was blank). Pass a real key — an unset $VAR writes nothing",
+				doctl.ArgAgentSecret, name)
+		}
+	}
 	return secrets, nil
+}
+
+// rejectStdinSecretWithStdinManifest catches --secret NAME=- combined with a
+// manifest on stdin. Both read os.Stdin, so the second one would see EOF and
+// look like a mysterious empty-manifest or empty-secret failure.
+func rejectStdinSecretWithStdinManifest(manifestPath string, pairs []string) error {
+	if manifestPath != "-" {
+		return nil
+	}
+	for _, pair := range pairs {
+		_, value, err := parseKeyValueLine(pair)
+		if err != nil {
+			continue
+		}
+		if value == "-" {
+			return fmt.Errorf("--%s NAME=- and a manifest on stdin (--%s -) cannot be combined: both read stdin. Pass the secret as NAME=@path or NAME=VALUE, or pass the manifest as a file",
+				doctl.ArgAgentSecret, doctl.ArgAgentSpec)
+		}
+	}
+	return nil
+}
+
+// manifestSecretValues returns name -> value for every secret slot that
+// already has a value. Used so --secret ANTHROPIC_API_KEY=… satisfies the
+// claude-code key check and ${ANTHROPIC_API_KEY} expansion, instead of still
+// demanding the process environment.
+func manifestSecretValues(manifest []byte) map[string]string {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return nil
+	}
+
+	container := doc
+	if _, legacy := doc["apiVersion"]; legacy {
+		spec, ok := yamlMap(doc["spec"])
+		if !ok {
+			return nil
+		}
+		container = spec
+	}
+
+	raw, present := container["secrets"]
+	if !present || raw == nil {
+		return nil
+	}
+
+	out := map[string]string{}
+	if isYAMLMapping(raw) {
+		shorthand, _ := yamlStringMap(raw)
+		for name, value := range shorthand {
+			if v := strings.TrimSpace(value); v != "" && v != redactedSecretValue {
+				out[name] = v
+			}
+		}
+		return out
+	}
+	for _, slot := range yamlListOrNil(raw) {
+		m, ok := yamlMap(slot)
+		if !ok {
+			continue
+		}
+		name, _ := yamlString(m["name"])
+		value, _ := yamlString(m["value"])
+		name = strings.TrimSpace(name)
+		value = strings.TrimSpace(value)
+		if name == "" || value == "" || value == redactedSecretValue {
+			continue
+		}
+		out[name] = value
+	}
+	return out
+}
+
+func yamlListOrNil(v any) []any {
+	list, ok := yamlList(v)
+	if !ok {
+		return nil
+	}
+	return list
+}
+
+// dropEnvKeysCoveredBySecrets removes env entries that duplicate a secret
+// slot. --harness claude-code writes ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+// into env so a missing key can be prompted; once --secret fills the slot,
+// leaving both makes durable validation fail ("supply the value through
+// secrets, not env") and is what made NAME=- look documented-but-broken.
+func dropEnvKeysCoveredBySecrets(manifest []byte) []byte {
+	secrets := manifestSecretValues(manifest)
+	if len(secrets) == 0 {
+		return manifest
+	}
+
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return manifest
+	}
+
+	container := doc
+	legacy := false
+	if _, ok := doc["apiVersion"]; ok {
+		spec, ok := yamlMap(doc["spec"])
+		if !ok {
+			return manifest
+		}
+		container = spec
+		legacy = true
+	}
+
+	env, ok := yamlStringMap(container["env"])
+	if !ok || len(env) == 0 {
+		return manifest
+	}
+
+	changed := false
+	for name := range secrets {
+		if _, exists := env[name]; exists {
+			delete(env, name)
+			changed = true
+		}
+	}
+	if !changed {
+		return manifest
+	}
+
+	if len(env) == 0 {
+		delete(container, "env")
+	} else {
+		out := make(map[string]any, len(env))
+		for k, v := range env {
+			out[k] = v
+		}
+		container["env"] = out
+	}
+	if legacy {
+		doc["spec"] = container
+	}
+
+	raw, err := yaml.Marshal(doc)
+	if err != nil {
+		return manifest
+	}
+	return raw
 }
 
 // injectManifestSecrets writes each name/value pair into the manifest's secret

@@ -87,6 +87,54 @@ func TestAgentConfigCreate_SecretInjectedFromFlag(t *testing.T) {
 	})
 }
 
+// A --harness claude-code --dry-run manifest keeps ${ANTHROPIC_API_KEY} in env.
+// --secret must satisfy that reference on config create; requiring the env var
+// made NAME=- look documented-but-broken.
+func TestAgentConfigCreate_SecretSatisfiesClaudeEnvRef(t *testing.T) {
+	_ = os.Unsetenv(anthropicAPIKeyEnv)
+	prevInteractive := Interactive
+	Interactive = false
+	t.Cleanup(func() {
+		Interactive = prevInteractive
+		_ = os.Unsetenv(anthropicAPIKeyEnv)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte(
+			"agent: claude-code\nenv:\n  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any()).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+				assert.Contains(t, req.ManifestYAML, "sk-ant-from-secret")
+				assert.NotContains(t, req.ManifestYAML, "${ANTHROPIC_API_KEY}")
+				return &godo.HostedAgentConfig{ID: "cfg_claude", Name: "reviewer"}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "reviewer")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=sk-ant-from-secret"})
+		require.NoError(t, RunAgentsConfigCreate(config))
+	})
+}
+
+func TestRejectStdinSecretWithStdinManifest(t *testing.T) {
+	err := rejectStdinSecretWithStdinManifest("-", []string{"ANTHROPIC_API_KEY=-"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot be combined")
+
+	assert.NoError(t, rejectStdinSecretWithStdinManifest("agents.yaml", []string{"ANTHROPIC_API_KEY=-"}))
+	assert.NoError(t, rejectStdinSecretWithStdinManifest("-", []string{"ANTHROPIC_API_KEY=@/tmp/key"}))
+}
+
+func TestParseAgentSecretPairs_RejectsEmptyValue(t *testing.T) {
+	_, err := parseAgentSecretPairs([]string{"ANTHROPIC_API_KEY="})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "empty")
+}
+
 // The card is the handoff point to the next command, so it should name the verb
 // that now exists rather than the retired run/attach spelling.
 func TestAgentConfigCreate_CardPointsAtLaunch(t *testing.T) {

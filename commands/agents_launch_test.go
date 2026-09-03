@@ -500,6 +500,17 @@ func TestRunAgentsCreate_SecretReachesTheManifest(t *testing.T) {
 	})
 }
 
+func TestRunAgentsCreate_RejectsStdinSecretWithStdinSpec(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, "-")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=-"})
+
+		err := RunAgentsCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be combined")
+	})
+}
+
 func TestRunAgentsCreate_SecretRejectedWithFromConfig(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")

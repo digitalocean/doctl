@@ -555,5 +555,5 @@ func printSessionEndedNotice(w io.Writer, sessionRef string) {
 		ref = "<session>"
 	}
 	fmt.Fprintf(w, "  %s %s\n", colorize("remove", colMuted), "doctl harness-runtime remove "+ref)
-	fmt.Fprintf(w, "  %s %s\n", colorize("start ", colMuted), "doctl harness-runtime run --harness opencode --name new-session")
+	fmt.Fprintf(w, "  %s %s\n", colorize("create", colMuted), "doctl harness-runtime create --harness opencode --name new-session")
 }

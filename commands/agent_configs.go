@@ -112,19 +112,35 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	secrets, err := agentSecretFlags(c)
+	secretPairs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentSecret)
 	if err != nil {
 		return err
 	}
-	manifest, err := readManifest(os.Stdin, specPath)
+	if err := rejectStdinSecretWithStdinManifest(specPath, secretPairs); err != nil {
+		return err
+	}
+	secrets, err := parseAgentSecretPairs(secretPairs)
 	if err != nil {
 		return err
 	}
-	manifest, err = injectManifestSecrets(manifest, secrets)
+	// Inject --secret before ${VAR} expansion so --secret ANTHROPIC_API_KEY=-
+	// satisfies a claude-code manifest that references ${ANTHROPIC_API_KEY},
+	// instead of still requiring the process environment (--dry-run used to
+	// hide this because it never expands).
+	raw, err := readManifestBytes(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
-	if err := rejectRedactedSecrets(manifest); err != nil {
+	raw, err = injectManifestSecrets(raw, secrets)
+	if err != nil {
+		return err
+	}
+	raw = dropEnvKeysCoveredBySecrets(raw)
+	if err := rejectRedactedSecrets(raw); err != nil {
+		return err
+	}
+	manifest, err := expandManifestEnvCollect(raw, envLookupWithOverlay(secrets))
+	if err != nil {
 		return err
 	}
 	if err := reportDurableAgentManifestValidation(validateAgentManifest(manifest)); err != nil {

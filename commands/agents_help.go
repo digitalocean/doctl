@@ -47,7 +47,9 @@ Create a session and land in the chat:
   --gh-repo owner/repo \
   --prompt "Review the README"
 ` + agentCLI + ` launch my-session
-` + "```\n\n" + `Session commands accept a session ID or an exact unique name.`
+` + "```\n\n" + `Session commands accept a session ID or an exact unique name.
+
+**Renamed in recent betas.** ` + "`open-harness-runtime`" + ` is now ` + "`harness-runtime`" + ` (also ` + "`agent`" + `, ` + "`agents`" + `, ` + "`ohr`" + `). ` + "`start`" + ` / ` + "`run`" + ` are now ` + "`create`" + ` (both still work). ` + "`attach`" + ` is now ` + "`launch`" + ` (also ` + "`up`" + ` / ` + "`chat`" + ` / ` + "`attach`" + `; interactive only — scripts should use ` + "`create`" + `). ` + "`destroy`" + ` is now ` + "`remove`" + ` (still accepted as ` + "`destroy`" + ` / ` + "`rm`" + `).`
 
 const agentsCreateHelpMD = `Create a hosted session, wait until it is ready, optionally send ` + "`--prompt`" + `, and print a ready summary. It never opens the chat — that is ` + "`" + agentCLI + " launch`" + `, which is the only difference between the two commands. Open the session later with ` + "`" + agentCLI + " launch <session>`" + `.
 
@@ -69,7 +71,7 @@ These four are equivalent:
 agent: opencode
 ` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
-**Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
+**Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
 
 **Inspect before creating.** ` + "`--dry-run`" + ` prints the fully-resolved manifest — name applied, ` + "`${VAR}`" + ` expanded, secret values redacted — and exits without calling the API. That makes a working ` + "`--harness`" + ` invocation reusable, with no file ever touching disk:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --dry-run \
@@ -77,9 +79,11 @@ agent: opencode
 ` + "```\n\n" + `**Unattended runs.** ` + "`--on-hitl approve|reject|defer`" + ` stays attached headlessly after the session is ready — no TUI, no keyboard input, one log line per event — and resolves every approval request that way until the run finishes. Ctrl-C detaches and leaves the session running. Combined with the global ` + "`--interactive=false`" + `, an agent can drive a whole run with no human present:
 ` + "```bash\n" + agentCLI + ` create --spec agents.yaml --prompt "Fix the failing test" \
   --on-hitl approve --interactive=false
-` + "```\n\n" + `From another shell, poll with ` + "`show <session> -o json`" + `, move files with ` + "`upload`" + ` / ` + "`download`" + `, and tear down with ` + "`remove`" + `.
+` + "```\n\n" + `From another shell, poll with ` + "`show <session> -o json`" + `, move files with ` + "`upload`" + ` / ` + "`download`" + `, and tear down with ` + "`remove`" + ` (also ` + "`destroy`" + ` / ` + "`rm`" + `).
 
-Use ` + "`-o json`" + ` for machine-readable create output without waiting.`
+Creating from a manifest or ` + "`--harness`" + ` also persists an Agent Config named after the session (shown as Config on the ready card). Start later sessions from it with ` + "`create --from-config`" + ` or ` + "`config start-session`" + `.
+
+Use ` + "`-o json`" + ` for machine-readable create output without waiting. Combined with ` + "`--prompt`" + `, doctl still waits until the session is ready and delivers the prompt before printing JSON — otherwise the prompt would be dropped.`
 
 const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
 
@@ -164,7 +168,7 @@ const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalo
 
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " create --spec`" + `). ` + "`--name`" + ` must be unique within your team.
 
-` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.`
+` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. For ` + "`claude-code`" + `, that also satisfies ` + "`${ANTHROPIC_API_KEY}`" + ` in the manifest — the process environment is not required. ` + "`NAME=-`" + ` cannot be combined with ` + "`--spec -`" + `. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.`
 
 const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
 

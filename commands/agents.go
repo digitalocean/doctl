@@ -441,10 +441,13 @@ func Agents() *Command {
 		},
 	}
 
+	// start/run are kept as aliases so scripts written against earlier betas
+	// (and the partner guide that still says start) keep working; create is
+	// the canonical verb.
 	cmdCreate := CmdBuilder(cmd, RunAgentsCreate, "create [<manifest>]",
 		"Create a session without attaching",
 		agentsCreateHelpMD,
-		Writer, agentsNS(aliasOpt("deploy"),
+		Writer, agentsNS(aliasOpt("deploy", "start", "run"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 	addAgentCreationFlags(cmdCreate)
 	AddBoolFlag(cmdCreate, doctl.ArgAgentDryRun, "", false, "Print the fully-resolved manifest (secrets redacted) and exit without creating anything")
@@ -622,7 +625,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmd, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --from-config.")
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
-	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json.")
+	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 }
 
 func markAgentCreationSourcesExclusive(cmd *Command) {
@@ -672,7 +675,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	secrets, err := agentSecretFlags(c)
+	secretPairs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -724,6 +727,13 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		} else {
 			return nil, missingManifestErr()
 		}
+	}
+	if err := rejectStdinSecretWithStdinManifest(specPath, secretPairs); err != nil {
+		return nil, err
+	}
+	secrets, err := parseAgentSecretPairs(secretPairs)
+	if err != nil {
+		return nil, err
 	}
 	if configRef != "" && repo != "" {
 		return nil, fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentFromConfig)
@@ -780,6 +790,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if raw, err = injectManifestSecrets(raw, secrets); err != nil {
 		return nil, err
 	}
+	raw = dropEnvKeysCoveredBySecrets(raw)
 	src.manifest = raw
 	return src, nil
 }
@@ -860,6 +871,7 @@ func RunAgentsCreate(c *CmdConfig) error {
 		prog.header("Creating agent session")
 	}
 
+	createdAt := creationClock()
 	sess, err := createAgentSession(c, src, prog)
 	if err != nil {
 		return err
@@ -867,23 +879,42 @@ func RunAgentsCreate(c *CmdConfig) error {
 	if sess == nil {
 		return errors.New("session create returned no session")
 	}
-	if Output == "json" {
+	timings := creationTimings{Create: creationClock().Sub(createdAt)}
+
+	// -o json used to return the create response immediately, which silently
+	// dropped --prompt (the session was READY, the prompt never sent). Keep
+	// the no-wait shortcut when there is nothing to deliver; otherwise wait
+	// and send, then print JSON.
+	if Output == "json" && src.prompt == "" && onHITL == "" {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 
+	readyAt := creationClock()
 	sess, err = waitForAgentSessionReady(c, sess, prog)
 	if err != nil {
 		return err
 	}
+	timings.Ready = creationClock().Sub(readyAt)
+
+	promptAt := creationClock()
 	if err := sendInitialPrompt(c, sess.SessionID, src); err != nil {
 		return err
+	}
+	if src.prompt != "" {
+		timings.Prompt = creationClock().Sub(promptAt)
 	}
 
 	if onHITL != "" {
 		return watchSessionHeadless(c, sess.SessionID, onHITL)
 	}
 
-	printRunReadySummary(c.Out, readySummaryFor(src, sess))
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+
+	sum := readySummaryFor(src, sess)
+	sum.Timings = timings
+	printRunReadySummary(c.Out, sum)
 	return nil
 }
 
@@ -913,8 +944,14 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	// keeps a typo visible without corrupting the YAML on stdout.
 	var unbound []string
 	seen := map[string]bool{}
+	secrets := manifestSecretValues(src.manifest)
 	manifest, err := expandManifestEnvLookup(src.manifest, func(name string) (string, bool) {
 		if serverProvidedEnvPlaceholders[name] {
+			return "${" + name + "}", true
+		}
+		if _, ok := secrets[name]; ok {
+			// Bound via --secret (already injected, then redacted below). Keep
+			// the ${VAR} so the printed template stays pipeable.
 			return "${" + name + "}", true
 		}
 		if val, ok := os.LookupEnv(name); ok {
@@ -958,7 +995,7 @@ func waitForAgentSessionReady(c *CmdConfig, sess *do.HostedAgentSession, prog *c
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 
-	if prog == nil {
+	if prog == nil && Output != "json" {
 		prog = newCreationProgress(c.Out)
 		defer prog.stop()
 	}
@@ -1284,6 +1321,21 @@ func envLookupWithOverlay(overlay map[string]string) func(string) (string, bool)
 		}
 		return os.LookupEnv(name)
 	}
+}
+
+// mergeStringMaps copies maps in order; later entries win. Empty values are
+// skipped so a blank overlay cannot hide a real secret.
+func mergeStringMaps(maps ...map[string]string) map[string]string {
+	out := map[string]string{}
+	for _, m := range maps {
+		for k, v := range m {
+			if strings.TrimSpace(v) == "" {
+				continue
+			}
+			out[k] = v
+		}
+	}
+	return out
 }
 
 func expandManifestEnvLookup(manifest []byte, lookup func(string) (string, bool)) ([]byte, error) {
@@ -3699,7 +3751,7 @@ func classifyStreamError(err error) (string, bool) {
 			if status == http.StatusConflict && ape.title == "Conflict" {
 				// V0 single-connection rejection; prefer a clearer title.
 				ape.title = "Session already attached elsewhere"
-				ape.tips = []string{"Detach on the other device, then re-run doctl harness-runtime attach"}
+				ape.tips = []string{"Detach on the other device, then re-run doctl harness-runtime launch"}
 			}
 			if status == http.StatusNotFound {
 				ape.title = "Session not found"

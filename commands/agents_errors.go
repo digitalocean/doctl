@@ -201,9 +201,9 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 		case strings.Contains(lower, "active sessions"):
 			return "Config still has active sessions", []string{"doctl harness-runtime config list-sessions <config-id>", "doctl harness-runtime remove <session>"}
 		case strings.Contains(lower, "run is terminal"):
-			return "Session run has ended", []string{"doctl harness-runtime remove <session>", "doctl harness-runtime run --harness opencode --name new-session"}
+			return "Session run has ended", []string{"doctl harness-runtime remove <session>", "doctl harness-runtime create --harness opencode --name new-session"}
 		case strings.Contains(lower, "already attached") || strings.Contains(lower, "another device"):
-			return "Session already attached elsewhere", []string{"Detach on the other device, then re-run doctl harness-runtime attach"}
+			return "Session already attached elsewhere", []string{"Detach on the other device, then re-run doctl harness-runtime launch"}
 		default:
 			return "Conflict", nil
 		}

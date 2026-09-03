@@ -333,6 +333,62 @@ func TestRunAgentsCreate_ClaudeCodeMissingAnthropicKey(t *testing.T) {
 	})
 }
 
+// --secret ANTHROPIC_API_KEY=… must satisfy claude-code without the process
+// environment. Design partners hit this with NAME=-: --dry-run passed (no
+// key check) and the real create then demanded the env var.
+func TestRunAgentsCreate_ClaudeCodeSecretSatisfiesKey(t *testing.T) {
+	_ = os.Unsetenv(anthropicAPIKeyEnv)
+	prevInteractive := Interactive
+	Interactive = false
+	t.Cleanup(func() {
+		Interactive = prevInteractive
+		_ = os.Unsetenv(anthropicAPIKeyEnv)
+	})
+
+	orig := validateAnthropicAPIKey
+	t.Cleanup(func() { validateAnthropicAPIKey = orig })
+	var gotKey string
+	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
+		gotKey = apiKey
+		return nil
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "sk-ant-from-secret")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_secret_key",
+						Name:      "demo-claude",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_secret_key").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_secret_key",
+					Name:      "demo-claude",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=sk-ant-from-secret"})
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.Equal(t, "sk-ant-from-secret", gotKey)
+	})
+}
+
 // TestPrepareClaudeCodeStart_ValidatesKey confirms the key resolved via
 // ensureEnvVar is the one handed to validateAnthropicAPIKey, and that
 // non-claude-code manifests skip validation entirely (no network call).
@@ -659,6 +715,7 @@ func TestRunAgentsCreate_FromConfig(t *testing.T) {
 		got := buf.String()
 		assert.Contains(t, got, "Creating hosted session from config")
 		assert.Contains(t, got, "Agent is ready")
+		assert.Contains(t, got, "cfg_abc123", "the implicit/source config must be visible on the ready card")
 		assert.Contains(t, got, "doctl harness-runtime launch demo")
 	})
 }
@@ -681,4 +738,31 @@ func TestRunAgentsCreate_FromConfigID_RejectsRepo(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "--gh-repo cannot be used with --from-config")
 	})
+}
+
+func TestPrintRunReadySummary_ShowsPerPhaseTiming(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	var buf bytes.Buffer
+	printRunReadySummary(&buf, runReadySummary{
+		Session: &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+			Name:      "demo",
+			AgentKind: godo.HostedAgentKindOpenCode,
+			ConfigID:  "cfg_from_spec",
+		}},
+		Prompt: "classify this",
+		Timings: creationTimings{
+			Create: time.Second,
+			Ready:  24 * time.Second,
+			Prompt: time.Second,
+		},
+	})
+	got := buf.String()
+	assert.Contains(t, got, "Timing")
+	assert.Contains(t, got, "1s")
+	assert.Contains(t, got, "24s")
+	assert.Contains(t, got, "26s")
+	assert.Contains(t, got, "cfg_from_spec")
 }

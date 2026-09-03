@@ -74,16 +74,15 @@ func TestAgentsCommand(t *testing.T) {
 	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "resume", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "exec")
 }
 
-// start, run and attach are gone outright rather than kept as deprecated
-// aliases: leaving them registered would preserve the three-near-synonym
-// problem the split exists to remove.
-func TestAgentsOldVerbsAreGone(t *testing.T) {
+// start and run remain aliases of create for scripts written against earlier
+// betas; attach remains an alias of launch.
+func TestAgentsOldVerbsAreCreateAliases(t *testing.T) {
 	cmd := Agents()
-	for _, name := range []string{"start", "run"} {
+	for _, name := range []string{"start", "run", "deploy"} {
 		found, _, err := cmd.Find([]string{name})
-		if err == nil {
-			assert.NotEqual(t, name, found.Name(), "%q should no longer be a command", name)
-		}
+		require.NoError(t, err, "alias %q", name)
+		require.NotNil(t, found, "alias %q", name)
+		assert.Equal(t, "create", found.Name(), "alias %q should resolve to create", name)
 	}
 }
 
@@ -287,6 +286,77 @@ func TestCreateNeverAttaches(t *testing.T) {
 		assert.Contains(t, out, "Agent is ready")
 		assert.Contains(t, out, "doctl harness-runtime launch demo",
 			"the ready card should point at launch, the command that attaches")
+	})
+}
+
+// create -o json used to return as soon as the session existed, so --prompt
+// was accepted and then silently dropped. Honour it: wait, send, then JSON.
+func TestRunAgentsCreate_JSONHonoursPrompt(t *testing.T) {
+	prev := Output
+	Output = "json"
+	t.Cleanup(func() { Output = prev })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_json_prompt",
+					Name:      "demo",
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_json_prompt").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_json_prompt",
+					Name:      "demo",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			SendInput("sess_json_prompt", &godo.HostedAgentSendInputRequest{Text: "classify this"}).
+			Return(nil, nil)
+
+		prevPoll := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prevPoll }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "classify this")
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.NotContains(t, buf.String(), "Agent is ready", "json stdout must stay parseable")
+		assert.Contains(t, buf.String(), "sess_json_prompt")
+	})
+}
+
+func TestRunAgentsCreate_JSONWithoutPromptSkipsWait(t *testing.T) {
+	prev := Output
+	Output = "json"
+	t.Cleanup(func() { Output = prev })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_json_nowait",
+					Name:      "demo",
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		// No GetSession / SendInput: -o json without --prompt is the fire-and-forget path.
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.Contains(t, buf.String(), "sess_json_nowait")
 	})
 }
 

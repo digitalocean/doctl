@@ -51,6 +51,11 @@ func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
 	assert.Contains(t, agentsRootHelpMD, agentCLI+" launch")
 	assert.Contains(t, agentsRootHelpMD, agentCLI+" create")
 	assert.Contains(t, agentsRootHelpMD, "Managed Agents Runtime Services (M.A.R.S)")
+	assert.Contains(t, agentsRootHelpMD, "open-harness-runtime")
+	assert.Contains(t, agentsRootHelpMD, "start")
+	assert.Contains(t, agentsRootHelpMD, "run")
+	assert.Contains(t, agentsRootHelpMD, "both still work")
+	assert.Contains(t, agentsRootHelpMD, "attach")
 	assert.NotContains(t, agentsRootHelpMD, "What's new")
 	assert.NotContains(t, agentsRootHelpMD, "whats new")
 	assert.NotContains(t, agentsRootHelpMD, "singular")
@@ -72,6 +77,8 @@ func TestAgentsCreateHelpDocumentsNewFlags(t *testing.T) {
 	}
 	assert.Contains(t, agentsCreateHelpMD, "redacted", "--dry-run's secret handling must be stated")
 	assert.Contains(t, agentsCreateHelpMD, "NAME=@path", "the @file form is the one worth reaching for in CI")
+	assert.Contains(t, agentsCreateHelpMD, "--prompt", "json mode must document that --prompt is still delivered")
+	assert.Contains(t, agentsCreateHelpMD, "Agent Config", "implicit configs from create --spec must be named")
 }
 
 // launch's positional argument is the only inference in the command surface, so

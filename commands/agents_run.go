@@ -490,11 +490,13 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 		}
 	}
 
+	raw = dropEnvKeysCoveredBySecrets(raw)
+
 	if err := prepareClaudeCodeStart(context.Background(), raw, prog); err != nil {
 		return nil, err
 	}
 
-	lookup := envLookupWithOverlay(envOverlay)
+	lookup := envLookupWithOverlay(mergeStringMaps(manifestSecretValues(raw), envOverlay))
 	manifest, err := expandManifestEnvCollect(raw, lookup)
 	if err != nil {
 		return nil, err
@@ -543,9 +545,14 @@ func prepareClaudeCodeStart(ctx context.Context, raw []byte, prog *creationProgr
 		return nil
 	}
 
-	apiKey, err := ensureEnvVar(anthropicAPIKeyEnv)
-	if err != nil {
-		return fmt.Errorf("%s is required to start a %s session: %w", anthropicAPIKeyEnv, claudeCodeAgentName, err)
+	apiKey := strings.TrimSpace(manifestSecretValues(raw)[anthropicAPIKeyEnv])
+	if apiKey == "" {
+		var err error
+		apiKey, err = ensureEnvVar(anthropicAPIKeyEnv)
+		if err != nil {
+			return fmt.Errorf("%s is required to start a %s session (set the environment variable, or pass --%s %s=- / NAME=@path): %w",
+				anthropicAPIKeyEnv, claudeCodeAgentName, doctl.ArgAgentSecret, anthropicAPIKeyEnv, err)
+		}
 	}
 
 	if prog != nil {
@@ -890,11 +897,26 @@ func runStatusLabel(status godo.HostedAgentSessionStatus) string {
 	}
 }
 
+type creationTimings struct {
+	Create time.Duration
+	Ready  time.Duration
+	Prompt time.Duration
+}
+
+func (t creationTimings) total() time.Duration {
+	return t.Create + t.Ready + t.Prompt
+}
+
+func (t creationTimings) visible() bool {
+	return t.Create >= time.Second || t.Ready >= time.Second || t.Prompt >= time.Second
+}
+
 type runReadySummary struct {
 	Session *do.HostedAgentSession
 	Harness string
 	Repo    string
 	Prompt  string
+	Timings creationTimings
 }
 
 // printRunReadySummary renders a compact session card after create/wait
@@ -913,6 +935,11 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 		body.WriteString(cardRow("ID", colorize(sum.Session.SessionID, colMuted)))
 	}
 	body.WriteString(cardRow("Agent", agent))
+	if sum.Session != nil && sum.Session.HostedAgentSession != nil {
+		if cfg := strings.TrimSpace(sum.Session.ConfigID); cfg != "" {
+			body.WriteString(cardRow("Config", colorize(cfg, colMuted)))
+		}
+	}
 	if Verbose && sum.Repo != "" {
 		body.WriteString(cardRow("Repo", sum.Repo))
 	}
@@ -921,6 +948,16 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 			prompt = prompt[:69] + "…"
 		}
 		body.WriteString(cardRow("Prompt", colorize("\""+prompt+"\"", colMuted)))
+	}
+	if sum.Timings.visible() {
+		fmt.Fprintln(&body)
+		fmt.Fprintln(&body, colorize("Timing", colMuted))
+		body.WriteString(cardRow("create", formatPhaseDuration(sum.Timings.Create)))
+		body.WriteString(cardRow("ready", formatPhaseDuration(sum.Timings.Ready)))
+		if sum.Timings.Prompt > 0 || strings.TrimSpace(sum.Prompt) != "" {
+			body.WriteString(cardRow("prompt", formatPhaseDuration(sum.Timings.Prompt)))
+		}
+		body.WriteString(cardRow("total", formatPhaseDuration(sum.Timings.total())))
 	}
 
 	fmt.Fprintln(&body)
@@ -931,6 +968,13 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	}
 
 	renderAgentCard(w, body.String())
+}
+
+func formatPhaseDuration(d time.Duration) string {
+	if d < time.Second {
+		return "<1s"
+	}
+	return d.Truncate(time.Second).String()
 }
 
 func isCodexReadyAgent(sum runReadySummary) bool {
