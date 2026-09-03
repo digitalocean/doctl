@@ -1061,6 +1061,13 @@ const (
 	// than next to --name, where --config-id read as "the config's name".
 	ArgAgentFromConfig = "from-config"
 
+	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
+	// is rebased onto (coding-base | coding-codex | coding-opencode).
+	ArgAgentBaseTemplate = "base-template"
+
+	// ArgAgentSourceOCIRef is the customer OCI image used as template input.
+	ArgAgentSourceOCIRef = "source-oci-ref"
+
 	// ArgAgentHarness selects a coding-agent runtime for `agents create`.
 	ArgAgentHarness = "harness"
 

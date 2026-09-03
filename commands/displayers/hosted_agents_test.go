@@ -117,3 +117,28 @@ func TestHostedAgentWorkspaceUploadJSON_Single(t *testing.T) {
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out), "Single=true must be a bare JSON object")
 	assert.Equal(t, "src/main.go", out["path"])
 }
+
+func TestHostedAgentTemplateJSON_ListOneItem(t *testing.T) {
+	var buf bytes.Buffer
+	d := &HostedAgentTemplate{
+		Templates: []godo.HostedAgentTemplate{{TemplateID: "tpl-1", Name: "my-image"}},
+	}
+	require.NoError(t, d.JSON(&buf))
+
+	var out []any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out), "list with 1 item must still be a JSON array")
+	assert.Len(t, out, 1)
+}
+
+func TestHostedAgentTemplateJSON_GetSingleItem(t *testing.T) {
+	var buf bytes.Buffer
+	d := &HostedAgentTemplate{
+		Templates: []godo.HostedAgentTemplate{{TemplateID: "tpl-1", Name: "my-image"}},
+		Single:    true,
+	}
+	require.NoError(t, d.JSON(&buf))
+
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out), "Single=true must be a bare JSON object")
+	assert.Equal(t, "tpl-1", out["template_id"])
+}
