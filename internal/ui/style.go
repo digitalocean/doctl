@@ -20,8 +20,9 @@ import (
 )
 
 // Next-Gen terminal palette from doctl-nextgen-design.html (Kraken tokens).
-// commands/charm/colors.go should mirror these so error/success chrome shares
-// one source of truth across interactive and CLI error paths.
+// This is the one definition of doctl's colours: commands/charm/colors.go
+// reads them from here rather than restating them, so error and success chrome
+// cannot drift between the interactive and CLI paths.
 var (
 	ColorError   = lipgloss.Color("#d74623") // primary-terracotta
 	ColorSuccess = lipgloss.Color("#00c483") // primary-green-200

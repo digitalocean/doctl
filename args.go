@@ -356,6 +356,9 @@ const (
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"
 
+	// ArgColor controls whether ANSI styling is written to the terminal.
+	ArgColor = "color"
+
 	// ArgUptimeCheckName is the name of an uptime check.
 	ArgUptimeCheckName = "name"
 	// ArgUptimeCheckType is the type of an uptime check.

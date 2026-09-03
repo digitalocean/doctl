@@ -205,6 +205,17 @@ func Plain(out, err io.Writer) Env {
 	}
 }
 
+// Profile returns the colour profile resolved for Err. It is the profile that
+// governs chrome, which is what a process-wide styling stack should be pointed
+// at: styling on Out is decided per-write through Style.
+func (e Env) Profile() termenv.Profile {
+	if !e.ErrStyle {
+		return termenv.Ascii
+	}
+
+	return e.ErrRenderer().ColorProfile()
+}
+
 // Renderer returns the lipgloss renderer bound to Out.
 func (e Env) Renderer() *lipgloss.Renderer {
 	if e.renderer != nil {

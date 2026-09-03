@@ -59,7 +59,7 @@ func (e *FlagValidationError) Error() string {
 // Display renders the validation error using the Next-Gen terminal design
 // system (colored error label, bold flags/commands, dim hints).
 func (e *FlagValidationError) Display() string {
-	return e.format(ui.NewStyle(resolveUIEnv(os.Stdout)))
+	return e.format(ui.NewStyle(uiEnv()))
 }
 
 func (e *FlagValidationError) format(style ui.Style) string {
@@ -130,7 +130,6 @@ func isMissingRequiredProblem(problem string) bool {
 
 var (
 	requiredUsageSuffix = regexp.MustCompile(`(?i)\s*\(required\)\s*$`)
-	ansiEscapeRE        = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 	// Captures discovery commands embedded in flag help text.
 	doctlHintRE = regexp.MustCompile("(?i)(?:use the |run[`'\" ]+|via )[`'\"]?(doctl [^`'\".]+)[`'\"]?")
 )
@@ -159,8 +158,8 @@ func enrichFlagIssue(f *pflag.Flag, issue FlagIssue) FlagIssue {
 }
 
 func cleanFlagUsage(usage string) string {
-	// requiredOpt() appends a colored "(required)" — strip ANSI first, then the suffix.
-	usage = ansiEscapeRE.ReplaceAllString(usage, "")
+	// requiredOpt() appends "(required)", which is chrome for the help
+	// listing rather than part of the flag's purpose.
 	usage = requiredUsageSuffix.ReplaceAllString(usage, "")
 	usage = strings.ReplaceAll(usage, "`", "")
 	return strings.TrimSpace(usage)

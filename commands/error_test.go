@@ -14,39 +14,33 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
 	"os"
-	"regexp"
 	"testing"
 
-	"github.com/fatih/color"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/digitalocean/doctl/internal/ui"
 )
 
 func Test_checkErr(t *testing.T) {
 	defer func(a func()) { errAction = a }(errAction)
-	defer func(a io.Writer) { color.Output = a }(color.Output)
 
 	var b bytes.Buffer
-	w := bufio.NewWriter(&b)
-	color.Output = w
+	withUIEnv(t, ui.Plain(&b, &b))
 
 	errAction = func() {
 	}
 
-	e := errors.New("an error")
-	checkErr(e)
-	err := w.Flush()
-	assert.NoError(t, err)
+	checkErr(errors.New("an error"))
 
-	re := regexp.MustCompile(`an error`)
-	assert.True(t, re.Match(b.Bytes()))
+	// Same label a FlagValidationError carries, so both read as one voice.
+	assert.Equal(t, "✗ Error: an error\n", b.String())
 }
 
 func Test_checkErr_FlagValidationJSONKeepsErrorsEnvelope(t *testing.T) {

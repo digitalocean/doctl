@@ -136,15 +136,24 @@ func String(content string, data any) string {
 	return res
 }
 
-// PrintE executes a template and prints it directly to stdout.
+// Output is where Print writes, and ErrOutput is where it reports its own
+// failures. They default to the process's streams and are repointed by doctl
+// once it has resolved which writers the invocation should use, so that
+// template output follows the same redirection as every other command's.
+var (
+	Output    io.Writer = os.Stdout
+	ErrOutput io.Writer = os.Stderr
+)
+
+// PrintE executes a template and prints it to Output.
 func PrintE(content string, data any) error {
-	return Render(os.Stdout, content, data)
+	return Render(Output, content, data)
 }
 
-// Print executes a template and prints it directly to stdout. If an error occurs, it is written to stderr as well.
+// Print executes a template and prints it to Output. If an error occurs, it is written to ErrOutput as well.
 func Print(content string, data any) {
-	err := Render(os.Stdout, content, data)
+	err := Render(Output, content, data)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", text.Error.S(err))
+		fmt.Fprintf(ErrOutput, "%s\n", text.Error.S(err))
 	}
 }
