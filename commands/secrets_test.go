@@ -378,6 +378,25 @@ func TestRunCmdSecretsGetKV(t *testing.T) {
 		assert.Equal(t, testSecretValKVPair, config.Out.(*bytes.Buffer).String())
 	})
 }
+
+func TestRunCmdSecretsGetKVSucceedsEvenWithRawFlag(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		secret := cloneSecret(testSecret)
+		tm.secrets.EXPECT().Get(testSecretName, "nyc3").Return(&secret, nil)
+
+		config.Args = []string{testSecretName}
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Doit.Set(config.NS, doctl.ArgKey, testSecretKey)
+		config.Doit.Set(config.NS, doctl.ArgSecretRaw, true)
+		config.Doit.Set(config.NS, doctl.ArgSecretShowKV, true)
+		config.Out = &bytes.Buffer{}
+
+		err := RunCmdSecretsGet(config)
+		assert.NoError(t, err)
+		assert.Equal(t, testSecretValKVPair, config.Out.(*bytes.Buffer).String())
+	})
+}
+
 func TestRunCmdSecretsGetRawRequiresKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = []string{testSecretName}

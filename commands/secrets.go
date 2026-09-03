@@ -92,7 +92,9 @@ If no `+"`"+`--value`+"`"+` or `+"`"+`--from-env-file`+"`"+` flags are provided,
 
 	cmdGet := CmdBuilder(cmd, RunCmdSecretsGet, "get <name>", "Get a secret", `Retrieves a secret container and its key-value pairs.
 
-Secret values are masked by default. Use --show to reveal them, or --key with --raw to print a single value for scripting.`, Writer,
+Secret values are masked by default. Use --show to reveal them, or --key with --raw to print a single value for scripting.
+
+To print the key-value pairs in an .env file-style format, set the --kvs flag. Note that this flag takes precedence over others.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Secret{}))
 	AddStringFlag(cmdGet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringFlag(cmdGet, doctl.ArgKey, "", "", "Return only the value for this key.")
@@ -206,15 +208,15 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		return err
 	}
 
-	if raw && key == "" {
-		return fmt.Errorf("--%s requires --%s", doctl.ArgSecretRaw, doctl.ArgKey)
-	}
-
 	// The `kvs` flag is a special flag to output KEY=VALUE pairs, and therefore
 	// takes precedence over a number of other flags.
 	kvs, err := c.Doit.GetBool(c.NS, doctl.ArgSecretShowKV)
 	if err != nil {
 		return err
+	}
+
+	if (raw && key == "") && !kvs {
+		return fmt.Errorf("--%s requires --%s", doctl.ArgSecretRaw, doctl.ArgKey)
 	}
 
 	secret, err := c.Secrets().Get(name, region)
