@@ -61,7 +61,7 @@ func TestValidateAgentManifest_UnknownAdapter(t *testing.T) {
 }
 
 func TestValidateAgentManifest_RemovedAdaptersRejected(t *testing.T) {
-	for _, adapter := range []string{"cursor", "cursor-cli"} {
+	for _, adapter := range []string{"cursor-cli"} {
 		t.Run(adapter, func(t *testing.T) {
 			v := validateAgentManifest([]byte("agent: " + adapter + "\n"))
 			require.False(t, v.ok())
@@ -69,6 +69,16 @@ func TestValidateAgentManifest_RemovedAdaptersRejected(t *testing.T) {
 			assert.Contains(t, v.Errors[0], adapter)
 		})
 	}
+}
+
+// TestValidateAgentManifest_CursorAccepted pins the canonical adapter id back
+// to the server contract: harness-api agentspec lists cursor as a supported
+// adapter (AGENT_KIND_CURSOR_CLI), so rejecting it client-side turned a valid
+// manifest into a local error.
+func TestValidateAgentManifest_CursorAccepted(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: cursor\n"))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+	assert.Empty(t, v.Warnings)
 }
 
 func TestValidateAgentManifest_HermesAccepted(t *testing.T) {

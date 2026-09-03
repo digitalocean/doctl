@@ -696,3 +696,113 @@ func TestAgentTriggersGetExecution_TextMode(t *testing.T) {
 		assert.Contains(t, stdout.String(), "output truncated", "truncation notice must appear on stdout in text mode")
 	})
 }
+
+// A reuse trigger binds to a paused session, and `list-reusable-sessions`
+// prints names next to IDs — so the name is what gets copied. Every other
+// session-taking command accepts either, and this one has to as well.
+func TestAgentTriggersCreate_BoundSessionByName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListSessions(&godo.HostedAgentSessionListOptions{Name: "nightly-reviewer"}).
+			Return([]do.HostedAgentSession{{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_paused",
+					Name:      "nightly-reviewer",
+					Status:    godo.HostedAgentSessionStatusPaused,
+				},
+			}}, "", nil)
+
+		tm.hostedAgentTriggers.EXPECT().
+			Create(&godo.HostedAgentTriggerCreateRequest{
+				Kind:        godo.HostedAgentTriggerKindWebhook,
+				Name:        "on-push",
+				SessionMode: godo.HostedAgentTriggerSessionModeReuse,
+				Output:      godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
+				// The name resolved to this ID rather than being sent as-is.
+				BoundSessionID: "sess_paused",
+				Webhook:        &godo.HostedAgentCreateWebhookConfig{},
+			}).
+			Return(&do.HostedAgentTriggerCreateResult{
+				Trigger: &do.HostedAgentTrigger{
+					HostedAgentTrigger: &godo.HostedAgentTrigger{TriggerID: "tr_1", Name: "on-push"},
+				},
+			}, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "webhook")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "on-push")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "reuse")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerBoundSessionID, "nightly-reviewer")
+		require.NoError(t, RunAgentTriggersCreate(config))
+	})
+}
+
+func TestAgentTriggersUpdate_BoundSessionByName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListSessions(&godo.HostedAgentSessionListOptions{Name: "nightly-reviewer"}).
+			Return([]do.HostedAgentSession{{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_paused",
+					Name:      "nightly-reviewer",
+					Status:    godo.HostedAgentSessionStatusPaused,
+				},
+			}}, "", nil)
+
+		tm.hostedAgentTriggers.EXPECT().
+			Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{BoundSessionID: "sess_paused"}).
+			Return(&do.HostedAgentTrigger{
+				HostedAgentTrigger: &godo.HostedAgentTrigger{TriggerID: "tr_1"},
+			}, nil)
+
+		config.Args = []string{"tr_1"}
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerBoundSessionID, "nightly-reviewer")
+		require.NoError(t, RunAgentTriggersUpdate(config))
+	})
+}
+
+// An update replaces the whole output block, so a destination with no mode
+// cannot be applied. Exiting 0 having ignored it is the failure to avoid.
+func TestAgentTriggersUpdate_OutputDestinationNeedsMode(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		arg  string
+		val  string
+	}{
+		{name: "email", arg: doctl.ArgAgentTriggerOutputEmail, val: "oncall@example.com"},
+		{name: "slack", arg: doctl.ArgAgentTriggerOutputSlackWebhook, val: "https://hooks.slack.com/services/T/B/xxx"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				// No Update expectation: the command must fail before calling.
+				config.Args = []string{"tr_1"}
+				config.Doit.Set(config.NS, tt.arg, tt.val)
+
+				err := RunAgentTriggersUpdate(config)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "--"+doctl.ArgAgentTriggerOutputMode+" is required")
+			})
+		})
+	}
+}
+
+// With the mode supplied, the destination applies as it always did.
+func TestAgentTriggersUpdate_OutputModeWithDestination(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{
+				Output: &godo.HostedAgentTriggerOutputWrite{
+					Mode:  godo.HostedAgentTriggerOutputModeEmail,
+					Email: "oncall@example.com",
+				},
+			}).
+			Return(&do.HostedAgentTrigger{
+				HostedAgentTrigger: &godo.HostedAgentTrigger{TriggerID: "tr_1"},
+			}, nil)
+
+		config.Args = []string{"tr_1"}
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "email")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputEmail, "oncall@example.com")
+		require.NoError(t, RunAgentTriggersUpdate(config))
+	})
+}

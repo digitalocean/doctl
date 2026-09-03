@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,7 +34,7 @@ import (
 func TestAgentConfigsCommand(t *testing.T) {
 	cmd := AgentConfigs()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "delete", "list-sessions", "start-session")
+	assertCommandNames(t, cmd, "generate", "create", "list", "get", "delete", "list-sessions", "start-session")
 }
 
 func TestAgentConfigCreate(t *testing.T) {
@@ -290,5 +291,82 @@ func TestAgentConfigStartSession(t *testing.T) {
 		config.Args = append(config.Args, "cfg_1")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-session")
 		require.NoError(t, RunAgentsConfigStartSession(config))
+	})
+}
+
+// Server-side warnings are advisory, so they must not be allowed to append
+// prose to the document that -o json callers are parsing.
+func TestAgentConfigCreate_WarningsKeepJSONParseable(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any()).
+			Return(&godo.HostedAgentConfig{
+				ID:       "cfg_warned",
+				Name:     "my-config",
+				Warnings: []string{"adapter opencode is not yet supported for session create"},
+			}, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-config")
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		prev := Output
+		Output = "json"
+		defer func() { Output = prev }()
+
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentsConfigCreate(config))
+		})
+
+		raw := stdout.String()
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal([]byte(raw), &parsed), "stdout must be valid JSON in -o json mode, got: %q", raw)
+		assert.Equal(t, "cfg_warned", parsed["id"])
+
+		// The warning is reported as data in the payload rather than as prose
+		// appended after it, which is what made the document unparseable.
+		assert.Equal(t,
+			[]any{"adapter opencode is not yet supported for session create"},
+			parsed["warnings"],
+			"warnings must be carried in the JSON payload")
+
+		assert.Empty(t, stderr, "nothing may be written to stderr in -o json mode")
+	})
+}
+
+// In text mode there is no payload to carry the warning, so it is printed —
+// and to stderr, keeping the card on stdout pipeable on its own.
+func TestAgentConfigCreate_WarningsPrintedToStderrInTextMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any()).
+			Return(&godo.HostedAgentConfig{
+				ID:       "cfg_warned",
+				Name:     "my-config",
+				Warnings: []string{"adapter opencode is not yet supported for session create"},
+			}, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-config")
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentsConfigCreate(config))
+		})
+
+		assert.Contains(t, stderr, "not yet supported", "warning must reach the operator")
+		assert.NotContains(t, stdout.String(), "not yet supported", "warning must not be mixed into the card on stdout")
 	})
 }

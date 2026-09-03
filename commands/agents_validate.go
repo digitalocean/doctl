@@ -35,6 +35,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"claude-code":      {},
 	"opencode":         {},
 	"codex":            {},
+	"cursor":           {},
 	"codex-agentapi":   {},
 	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
 	"custom":           {},
@@ -254,7 +255,7 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, cursor, codex-agentapi, custom, …)", path, adapter))
 		return
 	}
 	switch adapter {

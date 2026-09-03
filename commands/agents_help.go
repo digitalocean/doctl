@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/digitalocean/doctl"
 	"github.com/spf13/cobra"
 )
 
@@ -169,6 +170,43 @@ const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalo
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " create --spec`" + `). ` + "`--name`" + ` must be unique within your team.
 
 ` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. For ` + "`claude-code`" + `, that also satisfies ` + "`${ANTHROPIC_API_KEY}`" + ` in the manifest — the process environment is not required. ` + "`NAME=-`" + ` cannot be combined with ` + "`--spec -`" + `. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.`
+
+const agentsConfigGenerateHelpMD = `Write an agent manifest — the ` + "`agents.yaml`" + ` that ` + "`" + agentCLI + " config create --spec`" + ` and ` + "`" + agentCLI + " create --spec`" + ` consume. This command only authors the file: nothing is created, started, or charged.
+
+Run it bare on a terminal and it walks you through the manifest one question at a time, each with a default you can accept with Enter:
+
+` + "```bash\n" + agentCLI + ` config generate
+` + "```\n\n" + `Every question has a flag, so any interactive run is reproducible as one command — useful in CI and for agents driving doctl:
+
+` + "```bash\n" + agentCLI + ` config generate \
+  --harness claude-code --name payments-reviewer \
+  --gh-repo acme/payments-service --github-access \
+  --tools-preset default --permission-default ask \
+  --out agents.yaml
+` + "```\n\n" + `Flags and prompts compose: a flag you pass is never asked about, and on a terminal anything you leave out is. Pass ` + "`--no-interactive`" + ` (or redirect stdout) to skip prompting entirely and take the default for every unanswered question.
+
+By default the manifest goes to stdout, so it pipes and copies:
+
+` + "```bash\n" + agentCLI + ` config generate --harness opencode > agents.yaml
+` + "```\n\n" + `## Inference
+
+` + "`--" + doctl.ArgAgentInference + "`" + ` picks where the agent gets its model, which decides the environment the manifest writes:
+
+- ` + "`do`" + ` — DigitalOcean Serverless Inference, and what the wizard recommends: one model access key, and its host is already allowed. Needs a ` + "`--" + doctl.ArgAgentModel + "`" + `, whose ids are DigitalOcean's own (` + "`anthropic-claude-4.5-sonnet`" + `, not ` + "`claude-sonnet-4-5`" + `); the wizard lists them for you, or see ` + "`" + doInferenceModelsCmd + "`" + `.
+- ` + "`native`" + ` — the agent's own vendor (Anthropic for claude-code, OpenAI for codex and opencode) and its own default model. This is the default when not prompting, because it is the only one that needs no model id.
+- ` + "`custom`" + ` — any other OpenAI-compatible endpoint, via ` + "`--" + doctl.ArgAgentInferenceURL + "`" + `. Adds its host to egress.
+
+So a manifest served by DigitalOcean is:
+
+` + "```bash\n" + agentCLI + ` config generate --harness opencode \
+  --` + doctl.ArgAgentInference + ` do --` + doctl.ArgAgentModel + ` deepseek-v4-pro
+` + "```\n\n" + `The two credential styles are mutually exclusive on purpose: an agent that finds its vendor's own key ignores the endpoint settings entirely, so a manifest declares one or the other, never both.
+
+## Secrets
+
+` + "`--secret NAME`" + ` declares a credential slot as a ` + "`${NAME}`" + ` placeholder and never writes the value, so the generated file is safe to commit — supply values later with ` + "`" + agentCLI + " config create --secret NAME=VALUE`" + `. Use ` + "`--secret NAME=oauth/github`" + ` for a brokered credential, or ` + "`--inline-secret NAME=VALUE`" + ` to deliberately embed a literal.
+
+The manifest is checked client-side before it is written; anything the server would reject is an error, and advisory notes are printed as warnings. Skip the check with ` + "`--skip-validate`" + `.`
 
 const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
 
