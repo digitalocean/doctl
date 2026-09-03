@@ -49,8 +49,42 @@ func (ht *historyTurn) endMs() int64 {
 	return ht.lastMs
 }
 
+// history returns the reconstructed message history, cached. The harness's
+// replay_only stream takes ~8s to close after it has caught up (a
+// server-side linger, measured against the dev stack — 68 events transfer
+// instantly and the close arrives at exactly 8.0s), and an attach fetches
+// history twice (list gating + the message list), so uncached history made
+// re-attach feel ~16s slow. The mutex doubles as single-flight: concurrent
+// callers wait for the one in-progress replay instead of starting their own.
+//
+// The cache is warmed at the first request the facade sees (the TUI's
+// /global/health preflight fires well before the attach burst) and
+// invalidated when a live turn completes (invalidateHistory).
+func (f *Facade) history(ctx context.Context) ([]historyMessage, error) {
+	f.histMu.Lock()
+	defer f.histMu.Unlock()
+	if f.histValid {
+		return f.hist, nil
+	}
+	msgs, err := f.fetchHistory(ctx)
+	if err != nil {
+		return nil, err
+	}
+	f.hist, f.histValid = msgs, true
+	return msgs, nil
+}
+
+// invalidateHistory drops the cache; the next history() call replays fresh.
+func (f *Facade) invalidateHistory() {
+	f.histMu.Lock()
+	f.histValid = false
+	f.hist = nil
+	f.histMu.Unlock()
+}
+
 // fetchHistory replays the durable event history and reconstructs completed
-// turns. Only text is reconstructed in M3 — tool-call parts are M4.
+// turns. Only text is reconstructed in M3 — tool-call parts are M4. Callers
+// go through history() for the cache; this always hits the harness.
 func (f *Facade) fetchHistory(ctx context.Context) ([]historyMessage, error) {
 	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, &godo.HostedAgentSessionStreamOptions{
 		ReplayOnly: true,
@@ -213,7 +247,7 @@ func (f *Facade) turnMessages(ht *historyTurn, t uint64) []historyMessage {
 // The TUI sends ?limit=N (100 on resume); the newest N messages win, order
 // preserved (oldest first), matching a real server's response.
 func (f *Facade) handleMessageList(w http.ResponseWriter, r *http.Request) {
-	msgs, err := f.fetchHistory(r.Context())
+	msgs, err := f.history(r.Context())
 	if err != nil {
 		http.Error(w, fmt.Sprintf("replaying session history failed: %v", err), http.StatusBadGateway)
 		return
@@ -233,6 +267,6 @@ func (f *Facade) handleMessageList(w http.ResponseWriter, r *http.Request) {
 // session list includes the bridged session when it does, so `--continue`
 // and the session picker can find it on a fresh proxy.
 func (f *Facade) hasHistory(ctx context.Context) bool {
-	msgs, err := f.fetchHistory(ctx)
+	msgs, err := f.history(ctx)
 	return err == nil && len(msgs) > 0
 }
