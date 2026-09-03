@@ -33,7 +33,7 @@ const SpinnerInterval = 100 * time.Millisecond
 const eraseLine = "\r\x1b[2K"
 
 // Stage names the state a progress line reports. A redirected stream leads
-// with the stage spelled out instead of a glyph, because ✔ and ✘ mean nothing
+// with the stage spelled out instead of a glyph, because ✓ and ✗ mean nothing
 // to grep and nothing to whoever reads the build log without having seen the
 // terminal it would have been drawn on.
 const (

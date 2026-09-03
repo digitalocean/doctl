@@ -210,7 +210,7 @@ func TestSprint(t *testing.T) {
 
 func TestGlyphs(t *testing.T) {
 	t.Run("unicode by default", func(t *testing.T) {
-		assert.Equal(t, "✔", Env{}.Glyphs().Success)
+		assert.Equal(t, "✓", Env{}.Glyphs().Success)
 	})
 
 	t.Run("ascii fallback", func(t *testing.T) {

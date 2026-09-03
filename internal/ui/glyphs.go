@@ -13,6 +13,20 @@ limitations under the License.
 
 package ui
 
+// Glyph characters are the one definition of doctl's symbol vocabulary, in
+// the same way that style.go owns the palette. commands/charm/text renders
+// these rather than restating them, so the glyph on an interactive prompt and
+// the glyph closing a --wait cannot drift apart.
+const (
+	GlyphSuccess  = "✓"
+	GlyphFailure  = "✗"
+	GlyphWarning  = "✱"
+	GlyphPending  = "⟳"
+	GlyphBullet   = "•"
+	GlyphArrow    = "❯"
+	GlyphEllipsis = "…"
+)
+
 // Glyphs is the symbol vocabulary used to convey state. It exists so that
 // meaning survives when colour does not: a status rendered as a glyph plus a
 // word still reads correctly when piped, when NO_COLOR is set, or on a
@@ -33,13 +47,13 @@ type Glyphs struct {
 
 var (
 	unicodeGlyphs = Glyphs{
-		Success:  "✔",
-		Failure:  "✘",
-		Warning:  "✱",
-		Pending:  "◌",
-		Bullet:   "●",
-		Arrow:    "❯",
-		Ellipsis: "…",
+		Success:  GlyphSuccess,
+		Failure:  GlyphFailure,
+		Warning:  GlyphWarning,
+		Pending:  GlyphPending,
+		Bullet:   GlyphBullet,
+		Arrow:    GlyphArrow,
+		Ellipsis: GlyphEllipsis,
 		Spinner:  []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
 	}
 

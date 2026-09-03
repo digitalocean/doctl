@@ -181,7 +181,7 @@ func TestSpinnerAnimates(t *testing.T) {
 	// closing line must erase it rather than appear underneath it.
 	assert.Contains(t, rendered, eraseLine)
 	assert.Contains(t, rendered, unicodeGlyphs.Spinner[0])
-	assert.True(t, strings.HasSuffix(rendered, "✔ Database is online (0s)\n"), "got %q", rendered)
+	assert.True(t, strings.HasSuffix(rendered, "✓ Database is online (0s)\n"), "got %q", rendered)
 	assert.Empty(t, out.String())
 }
 
