@@ -213,7 +213,7 @@ func RunAuthRemove(c *CmdConfig) error {
 		return fmt.Errorf("Context not found")
 	}
 
-	fmt.Println("Context deleted successfully")
+	notice("Context deleted successfully")
 
 	return writeConfig()
 }
@@ -326,7 +326,7 @@ func RunAuthSwitch(c *CmdConfig) error {
 
 	viper.Set("context", context)
 
-	fmt.Printf("Now using context [%s] by default\n", context)
+	notice("Now using context [%s] by default", context)
 	return writeConfig()
 }
 

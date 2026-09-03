@@ -1374,8 +1374,8 @@ var _ = suite("apps/upgrade-buildpack", func(t *testing.T, when spec.G, it spec.
 		output, err := cmd.CombinedOutput()
 
 		expect.Equal(heredoc.Doc(`
-			upgraded buildpack digitalocean/go. 2 components were affected: [api www].
-			triggered a new deployment to apply the upgrade:
+			Notice: upgraded buildpack digitalocean/go. 2 components were affected: [api www].
+			Notice: triggered a new deployment to apply the upgrade:
 			
 			ID                                      Cause     Progress    Phase             Created At                       Updated At
 			f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         PENDING_DEPLOY    1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC

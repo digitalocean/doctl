@@ -1433,10 +1433,10 @@ func RunAppUpgradeBuildpack(c *CmdConfig) error {
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "upgraded buildpack %s. %d components were affected: %v.\n", buildpack, len(components), components)
+	notice("upgraded buildpack %s. %d components were affected: %v.", buildpack, len(components), components)
 
 	if dep != nil {
-		fmt.Fprint(os.Stderr, "triggered a new deployment to apply the upgrade:\n\n")
+		notice("triggered a new deployment to apply the upgrade:\n")
 		return c.Display(displayers.Deployments([]*godo.Deployment{dep}))
 	}
 

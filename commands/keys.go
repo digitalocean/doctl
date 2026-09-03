@@ -104,9 +104,9 @@ func RunAccessKeyCreate(c *CmdConfig) error {
 		return err
 	}
 
-	// Display with security warning
-	fmt.Fprintf(c.Out, "Notice: The secret key for \"%s\" is shown below.\n", name)
-	fmt.Fprintf(c.Out, "Please save this secret. You will not be able to see it again.\n\n")
+	// The secret itself goes to stdout with the table so it can be piped;
+	// the warning about it is chrome and belongs on stderr.
+	notice("The secret key for %q is shown below. Please save it. You will not be able to see it again.\n", name)
 
 	// Display table with full secret (using ForCreate to show complete secret)
 	displayKeys := &displayers.AccessKeys{AccessKeys: []do.AccessKey{accessKey}}
