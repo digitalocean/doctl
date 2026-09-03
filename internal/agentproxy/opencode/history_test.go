@@ -3,8 +3,10 @@ package opencode
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/agentproxy/agentproxytest"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -113,6 +115,43 @@ func TestSessionListIncludesSessionWithHistory(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&list))
 	require.Len(t, list, 1)
 	assert.Equal(t, "ses_"+ocID("", testSessionID), list[0]["id"])
+}
+
+// History is fetched once and cached (the harness replay stream lingers ~8s
+// before closing, and an attach asks twice) until a completed turn
+// invalidates it.
+func TestHistoryIsCachedUntilInvalidated(t *testing.T) {
+	h := agentproxytest.New(t, testSessionID)
+	client, err := godo.New(nil, godo.SetBaseURL(h.Server.URL+"/"))
+	require.NoError(t, err)
+	f := &Facade{SessionID: testSessionID, Sessions: do.NewHostedAgentsService(client), Dir: "/tmp/ws"}
+	srv := httptest.NewServer(f)
+	t.Cleanup(srv.Close)
+
+	h.QueueReplayHistory(
+		agentproxytest.Event{RunID: "run-1", Type: string(godo.HostedAgentEventKindRunStarted), Data: json.RawMessage(`{"user_input":"old"}`)},
+		agentproxytest.Event{RunID: "run-1", Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"old answer"}`)},
+		agentproxytest.Event{RunID: "run-1", Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+	first := getMessages(t, srv.URL+"/session/ses_x/message")
+	require.Len(t, first, 2)
+
+	// The harness's durable history changes, but the cache still serves the
+	// old view...
+	h.QueueReplayHistory(
+		agentproxytest.Event{RunID: "run-2", Type: string(godo.HostedAgentEventKindRunStarted), Data: json.RawMessage(`{"user_input":"new"}`)},
+		agentproxytest.Event{RunID: "run-2", Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+	cached := getMessages(t, srv.URL+"/session/ses_x/message")
+	require.Len(t, cached, 2)
+	assert.Equal(t, "old", cached[0].Parts[0]["text"])
+
+	// ...until a completed live turn invalidates it (translateEvent does
+	// this; exercised directly here).
+	f.invalidateHistory()
+	fresh := getMessages(t, srv.URL+"/session/ses_x/message")
+	require.Len(t, fresh, 1) // run-2 has no answer text: user message only
+	assert.Equal(t, "new", fresh[0].Parts[0]["text"])
 }
 
 // Failed turns keep the user's message visible but don't fabricate a

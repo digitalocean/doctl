@@ -356,6 +356,8 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 
 	case godo.HostedAgentEventKindRunCompleted:
 		defer f.dropTurn(ev.RunID)
+		// The finished turn is durable history now; the cache predates it.
+		f.invalidateHistory()
 		// Finalize the text part with its full content before idling — the
 		// real server does (deltas stream, then the part's final state
 		// re-carries the whole text; plano's adapter must drop that as a
@@ -382,6 +384,7 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 
 	case godo.HostedAgentEventKindRunFailed:
 		defer f.dropTurn(ev.RunID)
+		f.invalidateHistory()
 		var payload struct {
 			Message string `json:"message"`
 		}

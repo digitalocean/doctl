@@ -12,6 +12,7 @@
 package opencode
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -70,11 +71,26 @@ type Facade struct {
 	// session, so the session list grows its single entry (see
 	// handleSessionList).
 	sessionCreated bool
+
+	// History cache (see history() in history.go): histMu also serves as
+	// single-flight for the slow replay_only fetch.
+	histMu    sync.Mutex
+	hist      []historyMessage
+	histValid bool
 }
 
 // ServeHTTP implements http.Handler.
 func (f *Facade) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.handlerOnce.Do(f.buildMux)
+	f.handlerOnce.Do(func() {
+		f.buildMux()
+		// Warm the history cache off the first request — the TUI's
+		// /global/health preflight lands well before the attach burst, so
+		// the slow replay (see history()) usually finishes before the burst
+		// asks for the session list or messages.
+		if f.Sessions != nil {
+			go func() { _, _ = f.history(context.Background()) }()
+		}
+	})
 	f.mux.ServeHTTP(w, r)
 }
 
