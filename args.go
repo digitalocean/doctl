@@ -732,6 +732,11 @@ const (
 	ArgSecretVersion = "version"
 	// ArgSecretShow reveals secret values instead of masking them on get.
 	ArgSecretShow = "show"
+	// ArgSecretShowKV reveals secret values instead of masking them on get,
+	// formatted as:
+	//
+	//	KEY=VALUE
+	ArgSecretShowKV = "kvs"
 	// ArgSecretRaw writes a single secret value to stdout with no formatting.
 	ArgSecretRaw = "raw"
 	// ArgSecretReplace replaces all key-value pairs in a secret on update.
