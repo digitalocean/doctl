@@ -37,6 +37,20 @@ const (
 	// settle.
 	defaultWaitTimeout = 30 * time.Minute
 
+	// defaultActionWaitTimeout bounds a `--wait` that polls an action.
+	//
+	// Actions cover the operations whose duration is set by how much data has
+	// to be moved rather than by how long a control plane takes to come up: an
+	// image transferred between regions, a snapshot of a full disk, a Droplet
+	// rebuilt from a custom image. Those run past half an hour often enough
+	// that defaultWaitTimeout would report a timeout on a perfectly healthy
+	// transfer, and a timeout that fires on success is worse than no timeout
+	// at all - it teaches the user to pass --wait-timeout reflexively.
+	//
+	// It is a default rather than a per-operation ceiling: --wait-timeout
+	// still overrides it and still means the same thing everywhere.
+	defaultActionWaitTimeout = 2 * time.Hour
+
 	// defaultWaitInterval is how often a resource is re-read while waiting.
 	// Individual operations override it to match how quickly they can
 	// plausibly change.

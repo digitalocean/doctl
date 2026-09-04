@@ -68,7 +68,7 @@ For example, if you find an action when calling `+"`"+`doctl compute action list
 		aliasOpt("w"), displayerType(&displayers.Action{}))
 	cmdActionWait.Example = `The following example waits for the action ` + "`" + `123456` + "`" + ` to complete before allowing further commands to execute: doctl compute action wait 123456`
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
-	AddDurationFlag(cmdActionWait, doctl.ArgWaitTimeout, "", defaultWaitTimeout, waitTimeoutDesc)
+	AddDurationFlag(cmdActionWait, doctl.ArgWaitTimeout, "", defaultActionWaitTimeout, waitTimeoutDesc)
 
 	return cmd
 }

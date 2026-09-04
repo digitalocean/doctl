@@ -20,10 +20,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/ui"
 )
 
 // recordingWaiter returns a waiter that renders to buf so that the progress a
@@ -179,6 +181,78 @@ func TestWaitNeverWritesToOut(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, out.String(), "progress must not contaminate piped data")
 	assert.NotEmpty(t, errOut.String())
+}
+
+// TestWaitFlagDefaults pins the deadline each class of wait applies. The value
+// reaches the waiter through the command's own --wait-timeout rather than
+// through a default inside the waiter, which is what lets --help state the
+// deadline the command will actually apply.
+func TestWaitFlagDefaults(t *testing.T) {
+	tests := []struct {
+		name    string
+		cmd     *Command
+		sub     string
+		timeout time.Duration
+	}{
+		{
+			// A control plane coming up is bounded by provisioning, which is
+			// measured in minutes.
+			name:    "a resource status wait",
+			cmd:     Databases(),
+			sub:     "create",
+			timeout: defaultWaitTimeout,
+		},
+		{
+			// An image crossing regions is bounded by how much data has to
+			// move, which can be hours.
+			name:    "an image transfer",
+			cmd:     ImageAction(),
+			sub:     "transfer",
+			timeout: defaultActionWaitTimeout,
+		},
+		{
+			name:    "a disk snapshot",
+			cmd:     DropletAction(),
+			sub:     "snapshot",
+			timeout: defaultActionWaitTimeout,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var sub *cobra.Command
+			for _, c := range tt.cmd.Commands() {
+				if c.Name() == tt.sub {
+					sub = c
+					break
+				}
+			}
+			require.NotNil(t, sub, "%s should have a %s subcommand", tt.cmd.Name(), tt.sub)
+
+			flag := sub.Flags().Lookup(doctl.ArgWaitTimeout)
+			require.NotNil(t, flag)
+			assert.Equal(t, tt.timeout.String(), flag.DefValue)
+		})
+	}
+}
+
+// TestEveryWaitIsBounded walks the whole command tree. A --wait without a
+// --wait-timeout beside it is a wait the user has no way to extend, which is
+// the pairing AddWaitFlags exists to enforce.
+func TestEveryWaitIsBounded(t *testing.T) {
+	var walk func(*cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		if cmd.Flags().Lookup(doctl.ArgCommandWait) != nil {
+			assert.NotNil(t, cmd.Flags().Lookup(doctl.ArgWaitTimeout),
+				"%s offers --wait without --wait-timeout", cmd.CommandPath())
+		}
+
+		for _, sub := range cmd.Commands() {
+			walk(sub)
+		}
+	}
+
+	walk(DoitCmd.Command)
 }
 
 func TestNewWaiter(t *testing.T) {

@@ -388,8 +388,20 @@ func AddDurationFlag(cmd *Command, name, shorthand string, def time.Duration, de
 // command offering --wait without --wait-timeout would silently fall back to
 // the default with no way for the user to extend it.
 func AddWaitFlags(cmd *Command, def bool, desc string) {
+	addWaitFlags(cmd, def, desc, defaultWaitTimeout)
+}
+
+// AddActionWaitFlags registers the pair for a command that waits on an action
+// rather than on a resource's status, which gets the longer default deadline
+// defaultActionWaitTimeout explains. The value is carried by the flag so that
+// --help states the deadline the command actually applies.
+func AddActionWaitFlags(cmd *Command, def bool, desc string) {
+	addWaitFlags(cmd, def, desc, defaultActionWaitTimeout)
+}
+
+func addWaitFlags(cmd *Command, def bool, desc string, timeout time.Duration) {
 	AddBoolFlag(cmd, doctl.ArgCommandWait, "", def, desc)
-	AddDurationFlag(cmd, doctl.ArgWaitTimeout, "", defaultWaitTimeout, waitTimeoutDesc)
+	AddDurationFlag(cmd, doctl.ArgWaitTimeout, "", timeout, waitTimeoutDesc)
 }
 
 func flagName(cmd *Command, name string) string {
