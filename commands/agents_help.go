@@ -200,7 +200,7 @@ Guest stdout and stderr pass through unchanged and the guest's exit code becomes
 
 Output is buffered until the command finishes, and capped at 1 MiB per stream. With ` + "`-o json`" + ` the full response is emitted instead of the raw streams.`
 
-const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`coding-base`" + `, ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `). Create and update kick a build; use ` + "`list-builds`" + ` and ` + "`build-logs`" + ` to watch it.
+const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`coding-base`" + `, ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `). Create and update kick a build; use ` + "`list-builds`" + ` to watch it.
 
 The team is taken from the authenticated principal — never from the request body or query.`
 
@@ -217,8 +217,6 @@ const agentsTemplatesDeleteHelpMD = `Delete a team custom template. Global catal
 const agentsTemplatesListBuildsHelpMD = `List build history for a template, newest first.`
 
 const agentsTemplatesGetBuildHelpMD = `Print details for one template build.`
-
-const agentsTemplatesBuildLogsHelpMD = `Print a short-lived (15-minute) signed URL for archived build logs, and fetch the log body when reachable.`
 
 const agentsCheckpointRootHelpMD = `Save points for a hosted agent session. Fork into new sessions or rollback the same session in place.`
 

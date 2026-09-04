@@ -15,9 +15,6 @@ package commands
 
 import (
 	"bytes"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -32,7 +29,7 @@ import (
 func TestAgentTemplatesCommand(t *testing.T) {
 	cmd := AgentTemplates()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "update", "delete", "list-builds", "get-build", "build-logs")
+	assertCommandNames(t, cmd, "create", "list", "get", "update", "delete", "list-builds", "get-build")
 }
 
 func TestAgentTemplateCreate(t *testing.T) {
@@ -174,30 +171,6 @@ func TestAgentTemplateGetBuild(t *testing.T) {
 
 		config.Args = []string{id, "bld-1"}
 		require.NoError(t, RunAgentsTemplateGetBuild(config))
-	})
-}
-
-func TestAgentTemplateBuildLogs(t *testing.T) {
-	id := "11111111-1111-1111-1111-111111111111"
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.WriteString(w, "build ok\n")
-	}))
-	t.Cleanup(srv.Close)
-
-	prev := fetchTemplateBuildLogURL
-	t.Cleanup(func() { fetchTemplateBuildLogURL = prev })
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().
-			GetTemplateBuildLogs(id, "bld-1").
-			Return(&godo.HostedAgentTemplateBuildLogs{SignedURL: srv.URL}, nil)
-
-		var buf bytes.Buffer
-		config.Out = &buf
-		config.Args = []string{id, "bld-1"}
-		require.NoError(t, RunAgentsTemplateBuildLogs(config))
-		assert.Contains(t, buf.String(), srv.URL)
-		assert.Contains(t, buf.String(), "build ok")
 	})
 }
 

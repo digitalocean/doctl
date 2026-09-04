@@ -97,7 +97,6 @@ type HostedAgentsService interface {
 	DeleteTemplate(templateID string) (*godo.HostedAgentTemplateDeleteResponse, error)
 	ListTemplateBuilds(templateID string, opt *godo.HostedAgentTemplateBuildListOptions) ([]godo.HostedAgentTemplateBuild, string, error)
 	GetTemplateBuild(templateID, buildID string) (*godo.HostedAgentTemplateBuild, error)
-	GetTemplateBuildLogs(templateID, buildID string) (*godo.HostedAgentTemplateBuildLogs, error)
 }
 
 type hostedAgentsService struct {
@@ -356,9 +355,4 @@ func (s *hostedAgentsService) ListTemplateBuilds(templateID string, opt *godo.Ho
 func (s *hostedAgentsService) GetTemplateBuild(templateID, buildID string) (*godo.HostedAgentTemplateBuild, error) {
 	build, _, err := s.client.HostedAgents.GetTemplateBuild(context.TODO(), templateID, buildID)
 	return build, err
-}
-
-func (s *hostedAgentsService) GetTemplateBuildLogs(templateID, buildID string) (*godo.HostedAgentTemplateBuildLogs, error) {
-	logs, _, err := s.client.HostedAgents.GetTemplateBuildLogs(context.TODO(), templateID, buildID)
-	return logs, err
 }

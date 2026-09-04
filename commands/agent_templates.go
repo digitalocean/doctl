@@ -16,7 +16,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strings"
 
@@ -34,19 +33,6 @@ const (
 	baseTemplateCodingCodex    = "coding-codex"
 	baseTemplateCodingOpenCode = "coding-opencode"
 )
-
-// fetchTemplateBuildLogURL GETs a signed build-log URL. Tests replace it.
-var fetchTemplateBuildLogURL = func(url string) (io.ReadCloser, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode >= 400 {
-		resp.Body.Close()
-		return nil, fmt.Errorf("GET %s: %s", url, resp.Status)
-	}
-	return resp.Body, nil
-}
 
 // AgentTemplates generates the `doctl harness-runtime template` subtree, which
 // wraps the godo team custom template API (/v2/agents/templates).
@@ -115,12 +101,6 @@ func AgentTemplates() *Command {
 		agentsTemplatesGetBuildHelpMD,
 		Writer, append(ns, aliasOpt("show-build"),
 			displayerType(&displayers.HostedAgentTemplateBuild{}))...)
-
-	CmdBuilder(cmd, RunAgentsTemplateBuildLogs, "build-logs <template> <build-id>",
-		"Get signed URL (and body) for archived build logs",
-		agentsTemplatesBuildLogsHelpMD,
-		Writer, append(ns, aliasOpt("logs"),
-			displayerType(&displayers.HostedAgentTemplateBuildLogs{}))...)
 
 	requireAgentSubcommand(cmd)
 	return cmd
@@ -319,24 +299,6 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 	stylingEnabled = detectStyling()
 	printTemplateBuildCard(c.Out, build)
 	return nil
-}
-
-// RunAgentsTemplateBuildLogs returns a signed URL for archived build logs and
-// prints the log body when the URL is reachable.
-func RunAgentsTemplateBuildLogs(c *CmdConfig) error {
-	templateID, buildID, err := templateBuildArgs(c)
-	if err != nil {
-		return err
-	}
-	logs, err := c.HostedAgents().GetTemplateBuildLogs(templateID, buildID)
-	if err != nil {
-		return err
-	}
-	if Output == "json" {
-		return c.Display(&displayers.HostedAgentTemplateBuildLogs{Logs: []godo.HostedAgentTemplateBuildLogs{*logs}, Single: true})
-	}
-	stylingEnabled = detectStyling()
-	return printTemplateBuildLogs(c.Out, logs)
 }
 
 func validateBaseTemplate(base string) error {
@@ -569,29 +531,7 @@ func printTemplateBuildCard(w io.Writer, b *godo.HostedAgentTemplateBuild) {
 	if !b.CreatedAt.Time.IsZero() {
 		body.WriteString(cardRow("Created", colorize(formatCreatedAt(b.CreatedAt.Time), colMuted)))
 	}
-	if tid := strings.TrimSpace(b.TemplateID); tid != "" && strings.TrimSpace(b.BuildID) != "" {
-		fmt.Fprintln(&body)
-		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		body.WriteString(cardRow("logs", agentCLI+" template build-logs "+tid+" "+b.BuildID))
-	}
 	renderAgentCard(w, body.String())
-}
-
-func printTemplateBuildLogs(w io.Writer, logs *godo.HostedAgentTemplateBuildLogs) error {
-	if logs == nil || strings.TrimSpace(logs.SignedURL) == "" {
-		fmt.Fprintln(w, colorize("No signed log URL", colMuted))
-		return nil
-	}
-	fmt.Fprintf(w, "%s %s\n", colorize("Signed URL (15m):", colMuted), logs.SignedURL)
-	body, err := fetchTemplateBuildLogURL(logs.SignedURL)
-	if err != nil {
-		fmt.Fprintf(w, "%s could not fetch logs: %v\n", colorize("Warning:", colWarning), err)
-		return nil
-	}
-	defer body.Close()
-	fmt.Fprintln(w)
-	_, err = io.Copy(w, body)
-	return err
 }
 
 func templateBase(tpl *godo.HostedAgentTemplate) string {

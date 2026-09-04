@@ -340,21 +340,6 @@ func (mr *MockHostedAgentsServiceMockRecorder) GetTemplateBuild(templateID, buil
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateBuild", reflect.TypeOf((*MockHostedAgentsService)(nil).GetTemplateBuild), templateID, buildID)
 }
 
-// GetTemplateBuildLogs mocks base method.
-func (m *MockHostedAgentsService) GetTemplateBuildLogs(templateID, buildID string) (*godo.HostedAgentTemplateBuildLogs, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTemplateBuildLogs", templateID, buildID)
-	ret0, _ := ret[0].(*godo.HostedAgentTemplateBuildLogs)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetTemplateBuildLogs indicates an expected call of GetTemplateBuildLogs.
-func (mr *MockHostedAgentsServiceMockRecorder) GetTemplateBuildLogs(templateID, buildID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateBuildLogs", reflect.TypeOf((*MockHostedAgentsService)(nil).GetTemplateBuildLogs), templateID, buildID)
-}
-
 // GetWorkspaceTransfer mocks base method.
 func (m *MockHostedAgentsService) GetWorkspaceTransfer(sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error) {
 	m.ctrl.T.Helper()
