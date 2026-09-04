@@ -290,8 +290,13 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 			)
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err)
-			expectedOutput := "Notice: App creation is in progress, waiting for app to be running\n.\nNotice: App created\n" + testAppsOutput
-			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+			expectedOutput := "Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (elapsed)\n" +
+				// Without an updating line to rewrite, each step count the
+				// deployment reports gets a line of its own.
+				"Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (0 of 1 steps complete) (elapsed)\n" +
+				"App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
+				"Notice: App created\n" + testAppsOutput
+			expect.Equal(expectedOutput, normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
 	})
 	when("the upsert flag is passed", func() {
@@ -644,8 +649,13 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 			)
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err)
-			expectedOutput := "Notice: App update is in progress, waiting for app to be running\n.\nNotice: App updated\n" + testAppsOutput
-			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+			expectedOutput := "Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (elapsed)\n" +
+				// Without an updating line to rewrite, each step count the
+				// deployment reports gets a line of its own.
+				"Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (0 of 1 steps complete) (elapsed)\n" +
+				"App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
+				"Notice: App updated\n" + testAppsOutput
+			expect.Equal(expectedOutput, normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
 	})
 })
@@ -801,8 +811,13 @@ var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.
 			output, _ := cmd.CombinedOutput()
 			//expect.NoError(err)
 
-			expectedOutput := "Notice: App deployment is in progress, waiting for deployment to be running\n.\nNotice: Deployment created\n" + testActiveDeploymentOutput
-			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+			expectedOutput := "Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (elapsed)\n" +
+				// Without an updating line to rewrite, each step count the
+				// deployment reports gets a line of its own.
+				"Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (0 of 1 steps complete) (elapsed)\n" +
+				"App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
+				"Notice: Deployment created\n" + testActiveDeploymentOutput
+			expect.Equal(expectedOutput, normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
 	})
 })
@@ -1359,8 +1374,8 @@ var _ = suite("apps/upgrade-buildpack", func(t *testing.T, when spec.G, it spec.
 		output, err := cmd.CombinedOutput()
 
 		expect.Equal(heredoc.Doc(`
-			upgraded buildpack digitalocean/go. 2 components were affected: [api www].
-			triggered a new deployment to apply the upgrade:
+			Notice: upgraded buildpack digitalocean/go. 2 components were affected: [api www].
+			Notice: triggered a new deployment to apply the upgrade:
 			
 			ID                                      Cause     Progress    Phase             Created At                       Updated At
 			f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         PENDING_DEPLOY    1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC

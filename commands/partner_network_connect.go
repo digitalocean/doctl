@@ -15,9 +15,7 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -112,7 +110,7 @@ With the Partner Attachment commands, you can get, list, create, update, or dele
 		aliasOpt("rm"), displayerType(&displayers.PartnerAttachment{}))
 	AddBoolFlag(cmdPartnerAttachmentDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the Partner Attachment without any confirmation prompt")
-	AddBoolFlag(cmdPartnerAttachmentDelete, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(cmdPartnerAttachmentDelete, false,
 		"Boolean that specifies whether to wait for a Partner Attachment deletion to complete before returning control to the terminal")
 	AddStringFlag(cmdPartnerAttachmentDelete, doctl.ArgPartnerAttachmentType, "", "partner", "Specify connect type (e.g., partner)")
 	cmdPartnerAttachmentDelete.Example = `The following example deletes a Partner Attachments with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
@@ -462,13 +460,14 @@ func RunPartnerAttachmentDelete(c *CmdConfig) error {
 		}
 
 		if wait {
-			notice("Partner Attachment is in progress, waiting for Partner Attachment to be deleted")
-
-			err := waitForPNC(pas, paID, "DELETED", true)
+			w, err := newWaiter(c)
 			if err != nil {
-				return fmt.Errorf("Partner Attachment couldn't be deleted : %v", err)
+				return err
 			}
-			notice("Partner Attachment is successfully deleted")
+
+			if err := waitForPNC(w, pas, paID, "DELETED", true); err != nil {
+				return err
+			}
 		} else {
 			notice("Partner Attachment deletion request accepted")
 		}
@@ -502,40 +501,27 @@ func RunPartnerAttachmentRouteList(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-func waitForPNC(pas do.PartnerAttachmentsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
-	const maxAttempts = 360
+func waitForPNC(w waiter, pas do.PartnerAttachmentsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
 	const errStatus = "ERROR"
-	attempts := 0
-	printNewLineSet := false
 
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+	return w.wait(waitOp{
+		Subject: fmt.Sprintf("Partner Attachment (%s) to become %s", iaID, wantStatus),
+		Success: fmt.Sprintf("Partner Attachment (%s) is %s", iaID, wantStatus),
+	}, func() (bool, string, error) {
 		pa, err := pas.GetPartnerAttachment(iaID)
 		if err != nil {
+			// An attachment being deleted disappears rather than reaching a
+			// terminal state, so its absence is the success condition.
 			if terminateOnNotFound && strings.Contains(err.Error(), "not found") {
-				return nil
+				return true, "", nil
 			}
-			return err
+			return false, "", err
 		}
 
 		if pa.PartnerAttachment.State == errStatus {
-			return fmt.Errorf("Partner Attachment (%s) entered status `%s`", iaID, errStatus)
+			return false, "", fmt.Errorf("Partner Attachment (%s) entered status `%s`", iaID, errStatus)
 		}
 
-		if pa.PartnerAttachment.State == wantStatus {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(5 * time.Second)
-	}
-
-	return fmt.Errorf("timeout waiting for Partner Attachment (%s) to become %s", iaID, wantStatus)
+		return pa.PartnerAttachment.State == wantStatus, pa.PartnerAttachment.State, nil
+	})
 }

@@ -199,6 +199,8 @@ const (
 	ArgCommandUpdateSources = "update-sources"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
+	// ArgWaitTimeout bounds how long --wait polls before giving up.
+	ArgWaitTimeout = "wait-timeout"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
 	ArgSetCurrentContext = "set-current-context"
 	// ArgDropletID is a droplet id argument.
@@ -353,6 +355,9 @@ const (
 
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"
+
+	// ArgColor controls whether ANSI styling is written to the terminal.
+	ArgColor = "color"
 
 	// ArgUptimeCheckName is the name of an uptime check.
 	ArgUptimeCheckName = "name"

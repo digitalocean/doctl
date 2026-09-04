@@ -54,7 +54,7 @@ func ImageAction() *Command {
 		"transfer <image-id>", "Transfer an image to another datacenter region", `Transfers an image to a different datacenter region. Also outputs the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "", "The target region to transfer the image to", requiredOpt())
-	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
+	AddActionWaitFlags(cmdImageActionsTransfer, false, "Instructs the terminal to wait for the action to complete before returning access to the user")
 	cmdImageActionsTransfer.Example = `The following example transfers an image with the ID 386734086 to the region with the slug nyc3: doctl compute image-action transfer 386734086 --region nyc3`
 
 	return cmd

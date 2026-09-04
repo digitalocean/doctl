@@ -14,39 +14,47 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
 	"os"
-	"regexp"
 	"testing"
 
-	"github.com/fatih/color"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/digitalocean/doctl/internal/ui"
 )
 
 func Test_checkErr(t *testing.T) {
 	defer func(a func()) { errAction = a }(errAction)
-	defer func(a io.Writer) { color.Output = a }(color.Output)
-
-	var b bytes.Buffer
-	w := bufio.NewWriter(&b)
-	color.Output = w
 
 	errAction = func() {
 	}
 
-	e := errors.New("an error")
-	checkErr(e)
-	err := w.Flush()
-	assert.NoError(t, err)
+	t.Run("a redirected stream gets the word", func(t *testing.T) {
+		var b bytes.Buffer
+		withUIEnv(t, ui.Plain(&b, &b))
 
-	re := regexp.MustCompile(`an error`)
-	assert.True(t, re.Match(b.Bytes()))
+		checkErr(errors.New("an error"))
+
+		// Same label a FlagValidationError carries, so both read as one voice.
+		assert.Equal(t, "Error: an error\n", b.String())
+	})
+
+	// The glyph is a screen affordance, so it is gated on stderr being a
+	// terminal rather than on colour. Everything parsing doctl's stderr - the
+	// integration suite included - matches on the plain form above.
+	t.Run("a terminal is led by the glyph", func(t *testing.T) {
+		var b bytes.Buffer
+		withUIEnv(t, ui.Env{Out: &b, Err: &b, ErrTTY: true})
+
+		checkErr(errors.New("an error"))
+
+		assert.Equal(t, ui.GlyphFailure+" Error: an error\n", b.String())
+	})
 }
 
 func Test_checkErr_FlagValidationJSONKeepsErrorsEnvelope(t *testing.T) {
@@ -77,7 +85,9 @@ func Test_checkErr_FlagValidationJSONKeepsErrorsEnvelope(t *testing.T) {
 	var payload outputErrors
 	require.NoError(t, json.Unmarshal(out, &payload))
 	require.Len(t, payload.Errors, 1)
-	assert.Contains(t, payload.Errors[0].Detail, "--size")
-	assert.Contains(t, payload.Errors[0].Detail, "Droplet size")
+	// The detail is the one-line summary, not the block a terminal is shown:
+	// automation parsing this envelope wants a sentence rather than a rendered
+	// layout complete with glyphs and suggested next commands.
+	assert.Equal(t, "missing required flag --size for doctl compute droplet create", payload.Errors[0].Detail)
 	assert.NotContains(t, string(out), `"issues"`)
 }

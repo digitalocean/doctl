@@ -24,7 +24,6 @@ import (
 
 	"github.com/digitalocean/doctl"
 
-	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -55,6 +54,8 @@ var (
 	Context string
 	//Output global output format
 	Output string
+	//Color controls when ANSI styling is written
+	Color string
 	//Token global authorization token
 	Token string
 	//Trace toggles http tracing output
@@ -68,8 +69,6 @@ var (
 	RetryMax     int
 	RetryWaitMax int
 	RetryWaitMin int
-
-	requiredColor = color.New(color.Bold).SprintfFunc()
 )
 
 func init() {
@@ -88,6 +87,12 @@ func init() {
 
 	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "Desired output format [text|json]")
 	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
+
+	rootPFlagSet.StringVarP(&Color, doctl.ArgColor, "", colorAuto, colorHelpText)
+	viper.BindPFlag(doctl.ArgColor, rootPFlagSet.Lookup(doctl.ArgColor))
+	DoitCmd.RegisterFlagCompletionFunc(doctl.ArgColor, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{colorAuto, colorAlways, colorNever}, cobra.ShellCompDirectiveNoFileComp
+	})
 
 	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "Specify a custom authentication context name")
 	DoitCmd.RegisterFlagCompletionFunc(doctl.ArgContext, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -115,6 +120,14 @@ func init() {
 	rootPFlagSet.IntVar(&RetryWaitMin, "http-retry-wait-min", 1, "Set the maximum number of seconds to wait before retrying a failed request")
 	viper.BindPFlag("http-retry-wait-min", rootPFlagSet.Lookup("http-retry-wait-min"))
 	DoitCmd.PersistentFlags().MarkHidden("http-retry-wait-min")
+
+	// Resolve the colour policy once, after flags are parsed and config is
+	// read but before any command writes. Cobra runs the nearest
+	// PersistentPreRunE walking up from the command being executed, and no
+	// subcommand defines one, so this governs every invocation.
+	DoitCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		return installOutputPolicy()
+	}
 
 	addCommands()
 
@@ -269,8 +282,11 @@ func requiredOpt() flagOpt {
 
 		viper.Set(fmt.Sprintf("required.%s", key), true)
 
+		// Plain text: flag usage is built at registration time, before any
+		// colour policy exists, and it is read back as prose by the flag
+		// validation error block.
 		u := c.Flag(name).Usage
-		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
+		c.Flag(name).Usage = fmt.Sprintf("%s (required)", u)
 	}
 }
 
@@ -364,6 +380,28 @@ func AddDurationFlag(cmd *Command, name, shorthand string, def time.Duration, de
 	for _, o := range opts {
 		o(cmd, name, fn)
 	}
+}
+
+// AddWaitFlags registers the --wait / --wait-timeout pair shared by every
+// command that polls a resource to completion. They are registered together
+// because the waiter reads the timeout from the command's own namespace: a
+// command offering --wait without --wait-timeout would silently fall back to
+// the default with no way for the user to extend it.
+func AddWaitFlags(cmd *Command, def bool, desc string) {
+	addWaitFlags(cmd, def, desc, defaultWaitTimeout)
+}
+
+// AddActionWaitFlags registers the pair for a command that waits on an action
+// rather than on a resource's status, which gets the longer default deadline
+// defaultActionWaitTimeout explains. The value is carried by the flag so that
+// --help states the deadline the command actually applies.
+func AddActionWaitFlags(cmd *Command, def bool, desc string) {
+	addWaitFlags(cmd, def, desc, defaultActionWaitTimeout)
+}
+
+func addWaitFlags(cmd *Command, def bool, desc string, timeout time.Duration) {
+	AddBoolFlag(cmd, doctl.ArgCommandWait, "", def, desc)
+	AddDurationFlag(cmd, doctl.ArgWaitTimeout, "", timeout, waitTimeoutDesc)
 }
 
 func flagName(cmd *Command, name string) string {

@@ -17,22 +17,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/ui"
-	"github.com/fatih/color"
-	"github.com/shiena/ansicolor"
-	"github.com/spf13/viper"
 )
 
 var (
 	errOperationAborted = fmt.Errorf("Operation aborted.")
-
-	colorErr    = color.RedString("Error")
-	colorWarn   = color.YellowString("Warning")
-	colorNotice = color.GreenString("Notice")
 
 	// errAction specifies what should happen when an error occurs
 	errAction = func() {
@@ -46,10 +39,6 @@ var (
 	// what caused the failure.
 	ErrExitSilently = fmt.Errorf("")
 )
-
-func init() {
-	color.Output = ansicolor.NewAnsiColorWriter(os.Stderr)
-}
 
 type outputErrors struct {
 	Errors []outputError `json:"errors"`
@@ -69,18 +58,22 @@ func checkErr(err error) {
 		return
 	}
 
-	output := viper.GetString("output")
-
-	switch output {
+	switch outputFormat() {
 	default:
+		env := uiEnv()
+
 		var fv *FlagValidationError
 		if errors.As(err, &fv) {
-			// Next-Gen design: colored error block, no duplicate "Error:" prefix.
-			fmt.Fprintln(color.Output, fv.Display())
+			// The validation block renders its own label, so it is printed
+			// as-is rather than prefixed a second time.
+			fmt.Fprintln(env.ErrWriter(), fv.format(ui.NewStyle(env)))
 			errAction()
 			return
 		}
-		fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
+
+		// Every failure carries the same label, whatever produced it, so
+		// that a validation error and an API error read as one voice.
+		fmt.Fprintf(env.ErrWriter(), "%s %v\n", ui.NewStyle(env).ErrorLabel(), err)
 	case "json":
 		// Always keep the stable {"errors":[{"detail":...}]} envelope so
 		// automation parsing --output json is not broken by richer flag
@@ -110,24 +103,26 @@ func ensureOneArg(c *CmdConfig) error {
 }
 
 func warn(msg string, args ...any) {
-	fmt.Fprintf(color.Output, "%s: %s\n", colorWarn, fmt.Sprintf(msg, args...))
-}
-func warnConfirm(msg string, args ...any) {
-	fmt.Fprintf(color.Output, "%s: %s", colorWarn, fmt.Sprintf(msg, args...))
+	writeChrome("Warning", ui.ColorWarning, "\n", msg, args...)
 }
 
 func notice(msg string, args ...any) {
-	fmt.Fprintf(color.Output, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
+	writeChrome("Notice", ui.ColorSuccess, "\n", msg, args...)
 }
 
-// resolveUIEnv builds the shared terminal capability Env used by CmdConfig and
-// error chrome so both paths honor --output and --interactive consistently.
-func resolveUIEnv(out io.Writer) ui.Env {
-	if out == nil {
-		out = os.Stdout
-	}
-	return ui.Detect(out, os.Stderr,
-		ui.WithMachineOutput(Output != "text"),
-		ui.WithInteractive(Interactive),
-	)
+// writeChrome renders a labelled diagnostic on stderr.
+//
+// The colour decision comes from ui.Env, which resolves it per stream. The
+// package-init decision it replaced looked at whether *stdout* was a terminal,
+// so `doctl ... 2>log` wrote escape sequences into the log file and
+// `doctl ... > data` stripped colour from a terminal well able to show it.
+func writeChrome(label string, color lipgloss.TerminalColor, suffix, msg string, args ...any) {
+	env := uiEnv()
+
+	// Coloured but not bolded, for the reason ui.Style.paint gives: bold plus a
+	// base ANSI colour renders bright on most terminals, which would make this
+	// label a different shade from a value painted in the same slot.
+	label = env.SprintErr(env.NewErrStyle().Foreground(color), label)
+
+	fmt.Fprintf(env.ErrWriter(), "%s: %s%s", label, fmt.Sprintf(msg, args...), suffix)
 }

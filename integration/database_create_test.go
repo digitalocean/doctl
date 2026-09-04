@@ -134,7 +134,7 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(databasesWaitCreateOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(databasesWaitCreateOutput), normalizeWaitElapsed(strings.TrimSpace(string(output))))
 
 		})
 	})
@@ -148,7 +148,8 @@ ID         Name                Engine    Version         Number of Nodes    Regi
 some-id    my-database-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC    100
 `
 	databasesWaitCreateOutput = `
-Notice: Database creation is in progress, waiting for database to be online
+Waiting for database (some-id) to become online (elapsed)
+Database (some-id) is online (elapsed)
 Notice: Database created
 ID         Name                Engine    Version         Number of Nodes    Region    Status    Size       URI                                                                                     Created At                       Storage (MiB)
 some-id    my-database-name    mysql     what-version    100                nyc3      online    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC    100

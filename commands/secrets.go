@@ -63,7 +63,7 @@ func secretsPromptsEnabled() bool {
 }
 
 func secretNotice(msg string, args ...any) {
-	fmt.Fprintf(os.Stderr, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
+	notice(msg, args...)
 }
 
 // Secrets creates the secrets command hierarchy.

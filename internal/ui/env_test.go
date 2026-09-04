@@ -110,11 +110,19 @@ func TestDetectWidth(t *testing.T) {
 	var out, errOut bytes.Buffer
 
 	t.Run("explicit width wins", func(t *testing.T) {
-		assert.Equal(t, 120, Detect(&out, &errOut, WithWidth(120)).Width)
+		env := Detect(&out, &errOut, WithWidth(120))
+		assert.Equal(t, 120, env.Width)
+		assert.Equal(t, 120, env.DataWidth, "an explicit width applies to data too")
 	})
 
 	t.Run("zero width is honoured as unconstrained", func(t *testing.T) {
-		assert.Zero(t, Detect(&out, &errOut, WithWidth(0)).Width)
+		env := Detect(&out, &errOut, WithWidth(0))
+		assert.Zero(t, env.Width)
+		assert.Zero(t, env.DataWidth)
+	})
+
+	t.Run("data is unconstrained without a terminal on out", func(t *testing.T) {
+		assert.Zero(t, Detect(&out, &errOut).DataWidth)
 	})
 
 	// A redirected stream must not be reflowed because the shell happens to
@@ -200,13 +208,45 @@ func TestSprint(t *testing.T) {
 	})
 }
 
+// TestProfiles covers the case a process-wide styling stack gets wrong: a
+// terminal on one stream and a redirect on the other. Each profile has to
+// answer for its own stream, or `doctl ... > data` writes escape sequences
+// into the file because stderr happened to be a terminal.
+func TestProfiles(t *testing.T) {
+	clearEnv(t)
+
+	env := Env{
+		Style:       false,
+		ErrStyle:    true,
+		renderer:    newRenderer(io.Discard, termenv.TrueColor),
+		errRenderer: newRenderer(io.Discard, termenv.TrueColor),
+	}
+
+	assert.Equal(t, termenv.Ascii, env.DataProfile(), "a redirected Out stays plain")
+	assert.Equal(t, termenv.TrueColor, env.Profile(), "a terminal on Err keeps colour")
+}
+
 func TestGlyphs(t *testing.T) {
 	t.Run("unicode by default", func(t *testing.T) {
-		assert.Equal(t, "✔", Env{}.Glyphs().Success)
+		assert.Equal(t, "✓", Env{}.Glyphs().Success)
 	})
 
 	t.Run("ascii fallback", func(t *testing.T) {
-		assert.Equal(t, "+", Env{ASCII: true}.Glyphs().Success)
+		assert.Equal(t, "OK", Env{ASCII: true}.Glyphs().Success)
+		assert.Equal(t, "X", Env{ASCII: true}.Glyphs().Failure)
+	})
+
+	t.Run("glyphs that are already ascii need no fallback", func(t *testing.T) {
+		for _, g := range []struct {
+			name    string
+			unicode string
+			ascii   string
+		}{
+			{"warning", unicodeGlyphs.Warning, asciiGlyphs.Warning},
+			{"info", unicodeGlyphs.Info, asciiGlyphs.Info},
+		} {
+			assert.Equal(t, g.unicode, g.ascii, "%s should not differ between the sets", g.name)
+		}
 	})
 
 	t.Run("spinner frames share a display width", func(t *testing.T) {

@@ -15,7 +15,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -52,23 +51,54 @@ type FlagValidationError struct {
 	Issues  []FlagIssue `json:"issues"`
 }
 
+// Error summarises the failure on a single line.
+//
+// It is deliberately not the block a terminal is shown: Error() is what ends
+// up in the `detail` field of doctl's JSON error envelope, and automation
+// reading that expects a sentence rather than a rendered layout complete with
+// glyphs, indentation and suggested next commands. Display renders the block.
 func (e *FlagValidationError) Error() string {
-	return e.format(ui.NewStyle(ui.Plain(os.Stdout, os.Stderr)))
+	if e == nil || len(e.Issues) == 0 {
+		return "flag validation failed"
+	}
+
+	missing, other := e.partition()
+
+	clauses := make([]string, 0, 2)
+	if len(missing) > 0 {
+		label := "missing required flag"
+		if len(missing) > 1 {
+			label = "missing required flags"
+		}
+
+		clauses = append(clauses, fmt.Sprintf("%s %s for %s", label, flagNames(missing), e.Command))
+	}
+	if len(other) > 0 {
+		problems := make([]string, 0, len(other))
+		for _, issue := range other {
+			problems = append(problems, "--"+issue.Flag+" "+issue.Problem)
+		}
+
+		clauses = append(clauses, fmt.Sprintf("invalid flags for %s: %s", e.Command, strings.Join(problems, ", ")))
+	}
+
+	return strings.Join(clauses, "; ")
 }
 
 // Display renders the validation error using the Next-Gen terminal design
 // system (colored error label, bold flags/commands, dim hints).
 func (e *FlagValidationError) Display() string {
-	return e.format(ui.NewStyle(resolveUIEnv(os.Stdout)))
+	return e.format(ui.NewStyle(uiEnv()))
 }
 
-func (e *FlagValidationError) format(style ui.Style) string {
-	if e == nil || len(e.Issues) == 0 {
-		return "flag validation failed"
-	}
+// partition splits the issues into flags that were never supplied and flags
+// that were supplied wrongly. Both renderings report the two separately,
+// because "you forgot this" and "these two cannot be combined" are different
+// mistakes and lumping them together reads as neither.
+func (e *FlagValidationError) partition() (missing, other []FlagIssue) {
+	missing = make([]FlagIssue, 0, len(e.Issues))
+	other = make([]FlagIssue, 0, len(e.Issues))
 
-	missing := make([]FlagIssue, 0, len(e.Issues))
-	other := make([]FlagIssue, 0, len(e.Issues))
 	for _, issue := range e.Issues {
 		if isMissingRequiredProblem(issue.Problem) {
 			missing = append(missing, issue)
@@ -76,6 +106,25 @@ func (e *FlagValidationError) format(style ui.Style) string {
 			other = append(other, issue)
 		}
 	}
+
+	return missing, other
+}
+
+func flagNames(issues []FlagIssue) string {
+	names := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		names = append(names, "--"+issue.Flag)
+	}
+
+	return strings.Join(names, ", ")
+}
+
+func (e *FlagValidationError) format(style ui.Style) string {
+	if e == nil || len(e.Issues) == 0 {
+		return "flag validation failed"
+	}
+
+	missing, other := e.partition()
 
 	var b strings.Builder
 	if len(missing) > 0 {
@@ -130,7 +179,6 @@ func isMissingRequiredProblem(problem string) bool {
 
 var (
 	requiredUsageSuffix = regexp.MustCompile(`(?i)\s*\(required\)\s*$`)
-	ansiEscapeRE        = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 	// Captures discovery commands embedded in flag help text.
 	doctlHintRE = regexp.MustCompile("(?i)(?:use the |run[`'\" ]+|via )[`'\"]?(doctl [^`'\".]+)[`'\"]?")
 )
@@ -159,8 +207,8 @@ func enrichFlagIssue(f *pflag.Flag, issue FlagIssue) FlagIssue {
 }
 
 func cleanFlagUsage(usage string) string {
-	// requiredOpt() appends a colored "(required)" — strip ANSI first, then the suffix.
-	usage = ansiEscapeRE.ReplaceAllString(usage, "")
+	// requiredOpt() appends "(required)", which is chrome for the help
+	// listing rather than part of the flag's purpose.
 	usage = requiredUsageSuffix.ReplaceAllString(usage, "")
 	usage = strings.ReplaceAll(usage, "`", "")
 	return strings.TrimSpace(usage)

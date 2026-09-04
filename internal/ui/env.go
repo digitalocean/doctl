@@ -76,8 +76,33 @@ type Env struct {
 	ASCII bool
 
 	// Width is the usable terminal width, or 0 when it cannot be determined
-	// and output should be left unconstrained.
+	// and output should be left unconstrained. It describes the session, so it
+	// is the right width for chrome on Err.
 	Width int
+
+	// DataWidth is the width available to data on Out, or 0 when data must be
+	// left unconstrained. It is tracked separately from Width because a
+	// terminal attached to Err says nothing about Out: reflowing a table to a
+	// width Out does not have would truncate the values a pipeline reads.
+	DataWidth int
+
+	// DataTTY reports whether Out is an interactive terminal. Presentation
+	// that is only meaningful on a screen - box rules around a table - is
+	// gated on it, so that what a pipeline reads stays column-separated text.
+	//
+	// It is deliberately not derived from Style: --color=never on a terminal
+	// should drop the colour and keep the layout, and --color=always into a
+	// pager should not start drawing furniture a script would have to strip.
+	DataTTY bool
+
+	// ErrTTY reports whether Err is an interactive terminal. Glyphs are gated
+	// on it: a symbol standing in for a word is a screen affordance, and a log
+	// read by grep wants the word.
+	//
+	// It is weaker than Anim, which also demands an interactive, non-CI
+	// session. A CI job with a terminal attached should still not receive
+	// animation frames, but there is nothing wrong with the glyph.
+	ErrTTY bool
 
 	// Machine reports whether the caller asked for machine-readable output.
 	// When true, Style, ErrStyle, and Anim are all false.
@@ -158,6 +183,8 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 		Machine:     cfg.machine,
 		Style:       outProfile != termenv.Ascii,
 		ErrStyle:    errProfile != termenv.Ascii,
+		DataTTY:     !cfg.machine && isTerminal(out),
+		ErrTTY:      !cfg.machine && isTerminal(err),
 		renderer:    newRenderer(out, outProfile),
 		errRenderer: newRenderer(err, errProfile),
 	}
@@ -178,9 +205,10 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 	}
 
 	if cfg.width != nil {
-		env.Width = *cfg.width
+		env.Width, env.DataWidth = *cfg.width, *cfg.width
 	} else {
 		env.Width = detectWidth(out, err)
+		env.DataWidth = detectWidth(out)
 	}
 
 	return env
@@ -195,6 +223,33 @@ func Plain(out, err io.Writer) Env {
 		renderer:    newRenderer(out, termenv.Ascii),
 		errRenderer: newRenderer(err, termenv.Ascii),
 	}
+}
+
+// Profile returns the colour profile resolved for Err. It is the profile that
+// governs chrome written through this Env; components that style per write go
+// through SprintErr instead.
+func (e Env) Profile() termenv.Profile {
+	if !e.ErrStyle {
+		return termenv.Ascii
+	}
+
+	return e.ErrRenderer().ColorProfile()
+}
+
+// DataProfile returns the colour profile resolved for Out.
+//
+// It is the profile a process-wide styling stack should be pointed at, because
+// a package-level style renders through that stack whatever writer it is
+// eventually handed, and the components still built that way - charm's
+// templates, prompts and styled text - write to Out. Pointing the global at
+// Err instead would reflow escape sequences into a redirected stdout whenever
+// a terminal happened to be attached to stderr.
+func (e Env) DataProfile() termenv.Profile {
+	if !e.Style {
+		return termenv.Ascii
+	}
+
+	return e.Renderer().ColorProfile()
 }
 
 // Renderer returns the lipgloss renderer bound to Out.

@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -30,6 +31,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
+
+// dropletPollInterval is how often a Droplet is re-read while it boots. A
+// Droplet is usually active within a minute, so this is quicker than the
+// intervals used for resources that provision for several minutes.
+const dropletPollInterval = 5 * time.Second
 
 // Droplet creates the droplet command.
 func Droplet() *Command {
@@ -82,7 +88,7 @@ If you do not specify a region, the Droplet is created in the default region for
 		flagPurpose("Path to a user-data / cloud-init file run on first boot"),
 		flagHint("Use either --user-data or --user-data-file, not both"))
 	cmdDropletCreate.MarkFlagsMutuallyExclusive(doctl.ArgUserData, doctl.ArgUserDataFile)
-	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
+	AddWaitFlags(cmdDropletCreate, false, "Instructs the terminal to wait for the action to complete before returning access to the user")
 	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A `slug` specifying the region to create the Droplet in, such as `nyc1`. Use the `doctl compute region list` command for a list of valid regions.",
 		flagPurpose("Region where the Droplet is created"),
 		flagHint("run doctl compute region list"))
@@ -333,9 +339,12 @@ func RunDropletCreate(c *CmdConfig) error {
 	ds := c.Droplets()
 
 	var wg sync.WaitGroup
-	var createdList do.Droplets
+	// Results are written by index rather than appended so that concurrent
+	// creates do not race, and so that output follows the order the names
+	// were given on the command line.
+	created := make([]*do.Droplet, len(c.Args))
 	errs := make(chan error, len(c.Args))
-	for _, name := range c.Args {
+	for i, name := range c.Args {
 		dcr := &godo.DropletCreateRequest{
 			Name:              name,
 			Region:            region,
@@ -362,20 +371,18 @@ func RunDropletCreate(c *CmdConfig) error {
 		go func() {
 			defer wg.Done()
 
-			d, err := ds.Create(dcr, wait)
+			d, err := ds.Create(dcr)
 			if err != nil {
 				errs <- err
 				return
 			}
 
-			createdList = append(createdList, *d)
+			created[i] = d
 		}()
 	}
 
 	wg.Wait()
 	close(errs)
-
-	item := &displayers.Droplet{Droplets: createdList}
 
 	for err := range errs {
 		if err != nil {
@@ -383,13 +390,95 @@ func RunDropletCreate(c *CmdConfig) error {
 		}
 	}
 
+	createdList := make(do.Droplets, 0, len(created))
+	for _, d := range created {
+		if d != nil {
+			createdList = append(createdList, *d)
+		}
+	}
+
+	// Assignment happens as soon as the Droplets exist, before any wait: a
+	// Droplet belongs to a project from the moment it is created, and waiting
+	// first would mean a wait that timed out left Droplets running outside the
+	// project the user asked for, with nothing recording that it was asked.
 	for _, createdDroplet := range createdList {
 		if err := c.moveToProject(projectUUID, createdDroplet); err != nil {
 			return err
 		}
 	}
 
-	return c.Display(item)
+	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
+		createdList, err = waitForActiveDroplets(w, ds, createdList)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.Display(&displayers.Droplet{Droplets: createdList})
+}
+
+// waitForActiveDroplets polls until every Droplet is active, then returns them
+// re-read so that the network addresses assigned during boot are displayed.
+//
+// A single wait covers the whole batch: creating several Droplets at once is
+// one operation from the user's point of view, and one progress line is far
+// easier to follow than a spinner per Droplet competing for the same terminal.
+func waitForActiveDroplets(w waiter, ds do.DropletsService, droplets do.Droplets) (do.Droplets, error) {
+	const wantStatus = "active"
+
+	if len(droplets) == 0 {
+		return droplets, nil
+	}
+
+	subject := fmt.Sprintf("Droplet (%s) to become active", droplets[0].Name)
+	success := fmt.Sprintf("Droplet (%s) is active", droplets[0].Name)
+	if len(droplets) > 1 {
+		subject = fmt.Sprintf("%d Droplets to become active", len(droplets))
+		success = fmt.Sprintf("%d Droplets are active", len(droplets))
+	}
+
+	active := make(do.Droplets, len(droplets))
+	// A Droplet that has reached active is not re-read on later passes, so a
+	// large batch does not keep paying for Droplets that are already up.
+	settled := make([]bool, len(droplets))
+
+	err := w.wait(waitOp{
+		Subject:  subject,
+		Success:  success,
+		Interval: dropletPollInterval,
+	}, func() (bool, string, error) {
+		ready := 0
+
+		for i, d := range droplets {
+			if settled[i] {
+				ready++
+				continue
+			}
+
+			current, err := ds.Get(d.ID)
+			if err != nil {
+				return false, "", err
+			}
+
+			active[i] = *current
+			if current.Status == wantStatus {
+				settled[i] = true
+				ready++
+			}
+		}
+
+		return ready == len(droplets), fmt.Sprintf("%d of %d active", ready, len(droplets)), nil
+	})
+	if err != nil {
+		return droplets, err
+	}
+
+	return active, nil
 }
 
 // ValidateProjectUUID checks if the given projectUUID exists

@@ -121,7 +121,7 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(fmt.Sprintf(kubeClustersCreateOutput, f.Name())), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(fmt.Sprintf(kubeClustersCreateOutput, f.Name())), normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
 
 		it("creates a kube cluster with HA defaulting to true when --ha is omitted", func() {
@@ -149,7 +149,7 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(fmt.Sprintf(kubeClustersCreateOutput, f.Name())), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(fmt.Sprintf(kubeClustersCreateOutput, f.Name())), normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
 
 		it("creates a kube cluster with HA disabled when --ha=false", func() {
@@ -272,7 +272,8 @@ const (
 `
 
 	kubeClustersCreateOutput = `
-Notice: Cluster is provisioning, waiting for cluster to be running
+Waiting for cluster (some-cluster-id) to start running (elapsed)
+Cluster (some-cluster-id) is running (elapsed)
 Notice: Cluster created, fetching credentials
 Notice: Adding cluster credentials to kubeconfig file found in %q
 Notice: Setting current-context to some-context
