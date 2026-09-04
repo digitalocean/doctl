@@ -6,7 +6,11 @@ import (
 	"net/http"
 )
 
-const microDropletBasePath = "v2/microdroplets/instances"
+const (
+	microDropletBasePath            = "v2/microdroplets"
+	microDropletCheckpointsBasePath = "v2/microdroplets/checkpoints"
+	microDropletOptionsPath         = "v2/microdroplets/options"
+)
 
 // MicroDropletState represents the lifecycle state of a MicroDroplet.
 type MicroDropletState string
@@ -43,6 +47,15 @@ const (
 	MicroDropletHTTPProtocolHTTP2 = MicroDropletHTTPProtocol("http2")
 )
 
+// MicroDropletURLStatus represents the lifecycle of a MicroDroplet URL.
+type MicroDropletURLStatus string
+
+// Possible statuses for a MicroDroplet URL.
+const (
+	MicroDropletURLStatusPending = MicroDropletURLStatus("PENDING")
+	MicroDropletURLStatusActive  = MicroDropletURLStatus("ACTIVE")
+)
+
 // MicroDropletCheckpointStatus represents the status of a MicroDroplet checkpoint.
 type MicroDropletCheckpointStatus string
 
@@ -53,6 +66,7 @@ const (
 	MicroDropletCheckpointStatusAvailable = MicroDropletCheckpointStatus("CHECKPOINT_AVAILABLE")
 	MicroDropletCheckpointStatusFailed    = MicroDropletCheckpointStatus("CHECKPOINT_FAILED")
 	MicroDropletCheckpointStatusDeleted   = MicroDropletCheckpointStatus("CHECKPOINT_DELETED")
+	MicroDropletCheckpointStatusDeleting  = MicroDropletCheckpointStatus("CHECKPOINT_DELETING")
 )
 
 // MicroDropletsService is an interface for interfacing with the MicroDroplet
@@ -67,7 +81,13 @@ type MicroDropletsService interface {
 	Pause(ctx context.Context, id string) (*MicroDroplet, *Response, error)
 	Resume(ctx context.Context, id string) (*MicroDroplet, *Response, error)
 	Delete(ctx context.Context, id string) (*Response, error)
-	ListCheckpoints(ctx context.Context, id string, opt *ListOptions) ([]MicroDropletCheckpoint, *Response, error)
+
+	ListCheckpoints(ctx context.Context, opt *ListMicroDropletCheckpointsOptions) ([]MicroDropletCheckpoint, *Response, error)
+	CreateCheckpoint(ctx context.Context, microDropletID string, createRequest *MicroDropletCheckpointCreateRequest) (*MicroDropletCheckpoint, *Response, error)
+	GetCheckpoint(ctx context.Context, id string) (*MicroDropletCheckpoint, *Response, error)
+	DeleteCheckpoint(ctx context.Context, id string) (*Response, error)
+
+	GetCreateOptions(ctx context.Context) (*MicroDropletCreateOptions, *Response, error)
 }
 
 // MicroDropletsServiceOp handles communication with the MicroDroplet related
@@ -78,19 +98,51 @@ type MicroDropletsServiceOp struct {
 
 var _ MicroDropletsService = &MicroDropletsServiceOp{}
 
+// MicroDropletSize is the compute capacity reported on a MicroDroplet.
+type MicroDropletSize struct {
+	CPU    uint32 `json:"cpu,omitempty"`
+	Memory uint32 `json:"memory,omitempty"`
+	Disk   uint64 `json:"disk,omitempty"`
+}
+
+// MicroDropletSizeRequest is the compute capacity requested at create time.
+// Disk is provisioned with the size and is not requested.
+type MicroDropletSizeRequest struct {
+	CPU    uint32 `json:"cpu"`
+	Memory uint32 `json:"memory"`
+}
+
+// MicroDropletSource names what a MicroDroplet runs. Exactly one of OCIRef or
+// CheckpointID must be set on create; the API rejects both or neither.
+type MicroDropletSource struct {
+	OCIRef       string `json:"oci_ref,omitempty"`
+	CheckpointID string `json:"checkpoint_id,omitempty"`
+}
+
+// MicroDropletURL is one ingress URL attached to a MicroDroplet.
+type MicroDropletURL struct {
+	Hostname string                `json:"hostname,omitempty"`
+	Port     int                   `json:"port,omitempty"`
+	Default  bool                  `json:"default,omitempty"`
+	Status   MicroDropletURLStatus `json:"status,omitempty"`
+}
+
 // MicroDroplet represents a DigitalOcean MicroDroplet.
 type MicroDroplet struct {
-	ID         string                 `json:"id,omitempty"`
-	Name       string                 `json:"name,omitempty"`
-	Region     string                 `json:"region,omitempty"`
-	State      MicroDropletState      `json:"state,omitempty"`
-	Size       string                 `json:"size,omitempty"`
-	Networking MicroDropletNetworking `json:"networking,omitempty"`
-	Image      string                 `json:"image,omitempty"`
-	Endpoint   string                 `json:"endpoint,omitempty"`
-	AutoPause  *AutoPauseConfig       `json:"auto_pause,omitempty"`
-	AutoResume *bool                  `json:"auto_resume,omitempty"`
-	Created    string                 `json:"created_at,omitempty"`
+	ID            string                 `json:"id,omitempty"`
+	Name          string                 `json:"name,omitempty"`
+	Region        string                 `json:"region,omitempty"`
+	State         MicroDropletState      `json:"state,omitempty"`
+	Size          *MicroDropletSize      `json:"size,omitempty"`
+	URLs          []MicroDropletURL      `json:"urls,omitempty"`
+	Ports         []uint32               `json:"ports,omitempty"`
+	FailureReason string                 `json:"failure_reason,omitempty"`
+	Networking    MicroDropletNetworking `json:"networking,omitempty"`
+	Source        *MicroDropletSource    `json:"source,omitempty"`
+	AutoPause     *AutoPauseConfig       `json:"auto_pause,omitempty"`
+	AutoResume    *bool                  `json:"auto_resume,omitempty"`
+	Created       string                 `json:"created_at,omitempty"`
+	Tags          []string               `json:"tags,omitempty"`
 }
 
 // AutoPauseConfig configures MicroDroplet auto-pause behavior. IdleTimeout is
@@ -102,32 +154,93 @@ type AutoPauseConfig struct {
 }
 
 // MicroDropletCheckpoint represents a checkpoint of a MicroDroplet
-// (persisted memory + disk state), captured automatically when the
-// MicroDroplet is paused.
+// (persisted memory + disk state).
 type MicroDropletCheckpoint struct {
-	ID             string                       `json:"id,omitempty"`
-	MicroDropletID string                       `json:"micro_droplet_id,omitempty"`
-	Status         MicroDropletCheckpointStatus `json:"status,omitempty"`
-	Name           string                       `json:"name,omitempty"`
-	MemoryBytes    uint64                       `json:"memory_bytes,omitempty"`
-	DiskBytes      uint64                       `json:"disk_bytes,omitempty"`
-	Created        string                       `json:"created_at,omitempty"`
+	ID               string                       `json:"id,omitempty"`
+	MicroDropletID   string                       `json:"micro_droplet_id,omitempty"`
+	MicroDropletName string                       `json:"micro_droplet_name,omitempty"`
+	Name             string                       `json:"name,omitempty"`
+	Region           string                       `json:"region,omitempty"`
+	Status           MicroDropletCheckpointStatus `json:"status,omitempty"`
+	MemoryBytes      uint64                       `json:"memory_bytes,omitempty"`
+	DiskBytes        uint64                       `json:"disk_bytes,omitempty"`
+	Created          string                       `json:"created_at,omitempty"`
 }
 
 // MicroDropletCreateRequest represents a request to create a MicroDroplet.
+// Size and Region may be omitted when restoring from a checkpoint so the API
+// can inherit them from the checkpoint (api-v2 C6).
 type MicroDropletCreateRequest struct {
 	Name         string                   `json:"name"`
-	Region       string                   `json:"region"`
-	Size         string                   `json:"size"`
-	Image        string                   `json:"image"`
+	Region       string                   `json:"region,omitempty"`
+	Size         *MicroDropletSizeRequest `json:"size,omitempty"`
+	Source       *MicroDropletSource      `json:"source"`
 	Networking   MicroDropletNetworking   `json:"networking,omitempty"`
 	VPCUUID      string                   `json:"vpc_uuid,omitempty"`
 	AutoPause    *AutoPauseConfig         `json:"auto_pause,omitempty"`
 	AutoResume   *bool                    `json:"auto_resume,omitempty"`
 	HTTPPort     uint32                   `json:"http_port,omitempty"`
 	HTTPProtocol MicroDropletHTTPProtocol `json:"http_protocol,omitempty"`
+	Ports        []uint32                 `json:"ports,omitempty"`
 	Environment  map[string]string        `json:"environment,omitempty"`
 	Tags         []string                 `json:"tags,omitempty"`
+}
+
+// MicroDropletCheckpointCreateRequest represents a request to create a checkpoint.
+type MicroDropletCheckpointCreateRequest struct {
+	Name string `json:"name,omitempty"`
+}
+
+// ListMicroDropletCheckpointsOptions are the optional parameters for listing
+// checkpoints. MicroDropletID filters to checkpoints captured from that
+// MicroDroplet; omit it to list all checkpoints for the team.
+type ListMicroDropletCheckpointsOptions struct {
+	ListOptions
+	MicroDropletID string `url:"micro_droplet_id,omitempty"`
+}
+
+// MicroDropletCreateOptions is the response from GET /v2/microdroplets/options.
+type MicroDropletCreateOptions struct {
+	Regions       []MicroDropletRegionOption  `json:"regions,omitempty"`
+	DefaultRegion string                      `json:"default_region,omitempty"`
+	Sizes         []MicroDropletSizeOption    `json:"sizes,omitempty"`
+	Features      []MicroDropletFeatureOption `json:"features,omitempty"`
+	AccountLimits *MicroDropletAccountLimits  `json:"account_limits,omitempty"`
+}
+
+// MicroDropletRegionOption is one region evaluated for the authenticated team.
+type MicroDropletRegionOption struct {
+	Slug              string `json:"slug,omitempty"`
+	Available         bool   `json:"available"`
+	UnavailableReason string `json:"unavailable_reason,omitempty"`
+}
+
+// MicroDropletSizeOption is one supported size evaluated for the team.
+type MicroDropletSizeOption struct {
+	Size      MicroDropletSize         `json:"size"`
+	Available bool                     `json:"available"`
+	Pricing   *MicroDropletSizePricing `json:"pricing,omitempty"`
+}
+
+// MicroDropletSizePricing is the USD price of one size.
+type MicroDropletSizePricing struct {
+	PricePerHour  float64 `json:"price_per_hour"`
+	PricePerMonth float64 `json:"price_per_month"`
+}
+
+// MicroDropletFeatureOption is one product feature gate for the team.
+type MicroDropletFeatureOption struct {
+	Name    string `json:"name,omitempty"`
+	Enabled bool   `json:"enabled"`
+}
+
+// MicroDropletAccountLimits are the team's effective MicroDroplet limits.
+type MicroDropletAccountLimits struct {
+	MaxConcurrentRunning  uint64 `json:"max_concurrent_running,omitempty"`
+	MaxTotalCount         uint64 `json:"max_total_count,omitempty"`
+	MaxMemoryBytes        uint64 `json:"max_memory_bytes,omitempty"`
+	MaxDiskBytes          uint64 `json:"max_disk_bytes,omitempty"`
+	MaxIdleTimeoutSeconds uint64 `json:"max_idle_timeout_seconds,omitempty"`
 }
 
 // String returns a human-readable description of a MicroDroplet.
@@ -158,6 +271,10 @@ type microDropletsRoot struct {
 	MicroDroplets []MicroDroplet `json:"micro_droplets"`
 	Links         *Links         `json:"links"`
 	Meta          *Meta          `json:"meta"`
+}
+
+type microDropletCheckpointRoot struct {
+	Checkpoint *MicroDropletCheckpoint `json:"checkpoint"`
 }
 
 type microDropletCheckpointsRoot struct {
@@ -323,15 +440,10 @@ func (s *MicroDropletsServiceOp) Delete(ctx context.Context, id string) (*Respon
 	return s.client.Do(ctx, req, nil)
 }
 
-// ListCheckpoints lists checkpoints that belong to a MicroDroplet.
-// Checkpoints are captured automatically by DigitalOcean when a MicroDroplet
-// is paused; each one preserves the memory and disk state required to resume.
-func (s *MicroDropletsServiceOp) ListCheckpoints(ctx context.Context, id string, opt *ListOptions) ([]MicroDropletCheckpoint, *Response, error) {
-	if id == "" {
-		return nil, nil, NewArgError("id", "cannot be empty")
-	}
-
-	path := fmt.Sprintf("%s/%s/checkpoints", microDropletBasePath, id)
+// ListCheckpoints lists checkpoints for the authenticated team. Pass a
+// MicroDropletID on opt to filter to checkpoints captured from that MicroDroplet.
+func (s *MicroDropletsServiceOp) ListCheckpoints(ctx context.Context, opt *ListMicroDropletCheckpointsOptions) ([]MicroDropletCheckpoint, *Response, error) {
+	path := microDropletCheckpointsBasePath
 	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err
@@ -355,4 +467,85 @@ func (s *MicroDropletsServiceOp) ListCheckpoints(ctx context.Context, id string,
 	}
 
 	return root.Checkpoints, resp, nil
+}
+
+// CreateCheckpoint starts an asynchronous checkpoint of a running MicroDroplet.
+func (s *MicroDropletsServiceOp) CreateCheckpoint(ctx context.Context, microDropletID string, createRequest *MicroDropletCheckpointCreateRequest) (*MicroDropletCheckpoint, *Response, error) {
+	if microDropletID == "" {
+		return nil, nil, NewArgError("microDropletID", "cannot be empty")
+	}
+	if createRequest == nil {
+		createRequest = &MicroDropletCheckpointCreateRequest{}
+	}
+
+	path := fmt.Sprintf("%s/%s/checkpoints", microDropletBasePath, microDropletID)
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(microDropletCheckpointRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Checkpoint, resp, nil
+}
+
+// GetCheckpoint retrieves a checkpoint by its ID.
+func (s *MicroDropletsServiceOp) GetCheckpoint(ctx context.Context, id string) (*MicroDropletCheckpoint, *Response, error) {
+	if id == "" {
+		return nil, nil, NewArgError("id", "cannot be empty")
+	}
+
+	path := fmt.Sprintf("%s/%s", microDropletCheckpointsBasePath, id)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(microDropletCheckpointRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Checkpoint, resp, nil
+}
+
+// DeleteCheckpoint releases the state stored by a checkpoint. Returns a 204
+// on success with no response body.
+func (s *MicroDropletsServiceOp) DeleteCheckpoint(ctx context.Context, id string) (*Response, error) {
+	if id == "" {
+		return nil, NewArgError("id", "cannot be empty")
+	}
+
+	path := fmt.Sprintf("%s/%s", microDropletCheckpointsBasePath, id)
+
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Do(ctx, req, nil)
+}
+
+// GetCreateOptions returns the regions, sizes, features, and account limits
+// available to the authenticated team when creating a MicroDroplet.
+func (s *MicroDropletsServiceOp) GetCreateOptions(ctx context.Context) (*MicroDropletCreateOptions, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, microDropletOptionsPath, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	opts := new(MicroDropletCreateOptions)
+	resp, err := s.client.Do(ctx, req, opts)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return opts, resp, nil
 }

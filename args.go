@@ -960,6 +960,141 @@ const (
 	// ArgInferenceSecondsTotal is the audio duration in seconds for async audio generation.
 	ArgInferenceSecondsTotal = "seconds-total"
 
+	// Hosted Agents Args
+
+	// ArgAgentSpec is the path to an agent spec file.
+	ArgAgentSpec = "spec"
+
+	// ArgAgentPageSize is the maximum number of sessions to return per page.
+	ArgAgentPageSize = "page-size"
+
+	// ArgAgentPageToken is the pagination cursor from a previous list response.
+	ArgAgentPageToken = "page-token"
+
+	// ArgAgentStatus filters sessions by lifecycle status.
+	ArgAgentStatus = "status"
+
+	// ArgAgentGracePeriod is the rotate-secret handoff window in seconds.
+	// Omit (or leave unset) for the server default of 5 minutes; 0 retires the
+	// old secret immediately; positive values set a custom window up to the
+	// server max (default 1 hour).
+	ArgAgentGracePeriod = "grace-period"
+
+	// ArgAgentWorkspacePath is the path inside the session workspace root (/workspace).
+	ArgAgentWorkspacePath = "workspace-path"
+
+	// ArgAgentLocalFile is the local file streamed up during a workspace upload.
+	ArgAgentLocalFile = "local-file"
+
+	// ArgAgentSaveTo is the local destination for a workspace download.
+	ArgAgentSaveTo = "save-to"
+
+	// ArgAgentArchive treats the workspace payload as a tar archive.
+	ArgAgentArchive = "archive"
+
+	// ArgAgentExecWorkdir is the guest directory a sandbox exec runs in.
+	ArgAgentExecWorkdir = "workdir"
+
+	// ArgAgentExecTimeout bounds a sandbox exec, in seconds.
+	ArgAgentExecTimeout = "timeout"
+
+	// ArgAgentProxyType selects which coding-agent protocol `start-proxy` impersonates.
+	ArgAgentProxyType = "type"
+
+	// ArgAgentProxySession is the session ID or name the proxy bridges to.
+	ArgAgentProxySession = "session"
+
+	// ArgAgentProxyPort is the local port `start-proxy` listens on.
+	ArgAgentProxyPort = "port"
+
+	// ArgAgentProxyReplay replays the session's event history into the first thread on connect.
+	ArgAgentProxyReplay = "replay"
+
+	// ArgAgentAuthNoBrowser prints the provider authorization URL instead of opening a browser.
+	ArgAgentAuthNoBrowser = "no-browser"
+
+	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
+	ArgAgentAuthNoWait = "no-wait"
+
+	// ArgAgentCheckpointLabel is an optional user label for an explicit checkpoint.
+	ArgAgentCheckpointLabel = "label"
+
+	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
+	ArgAgentForwardAddress = "address"
+
+	// ArgAgentFromCheckpoint is the checkpoint ID to fork or roll back from.
+	ArgAgentFromCheckpoint = "from-checkpoint"
+
+	// ArgAgentForkCount is how many child sessions a fork creates (1–4).
+	ArgAgentForkCount = "count"
+
+	// ArgAgentParentSessionID filters list to forked children of a parent session.
+	ArgAgentParentSessionID = "parent-session-id"
+
+	// ArgAgentTriggerKind filters or sets trigger kind (webhook|cron).
+	ArgAgentTriggerKind = "kind"
+
+	// ArgAgentTriggerSessionMode is fresh|reuse for create.
+	ArgAgentTriggerSessionMode = "session-mode"
+
+	// ArgAgentTriggerPrompt is the prompt template sent on each firing.
+	ArgAgentTriggerPrompt = "prompt"
+
+	// ArgAgentTriggerOutputMode is none|email|slack.
+	ArgAgentTriggerOutputMode = "output-mode"
+
+	// ArgAgentTriggerOutputEmail is the destination when output-mode=email.
+	ArgAgentTriggerOutputEmail = "output-email"
+
+	// ArgAgentTriggerOutputSlackWebhook is the Slack incoming webhook URL when output-mode=slack.
+	ArgAgentTriggerOutputSlackWebhook = "output-slack-webhook"
+
+	// ArgAgentTriggerBoundSessionID is the PAUSED session UUID for session-mode=reuse.
+	ArgAgentTriggerBoundSessionID = "bound-session-id"
+
+	// ArgAgentTriggerProvider is the webhook provider (github|gitlab|custom).
+	ArgAgentTriggerProvider = "provider"
+
+	// ArgAgentTriggerCronExpr is the cron expression for kind=cron.
+	ArgAgentTriggerCronExpr = "cron-expr"
+
+	// ArgAgentTriggerTimezone is the IANA timezone for kind=cron.
+	ArgAgentTriggerTimezone = "timezone"
+
+	// ArgAgentFromConfig names an existing Agent Config, by ID or by name, to
+	// create a session from. Spelled to sit beside --from-checkpoint rather
+	// than next to --name, where --config-id read as "the config's name".
+	ArgAgentFromConfig = "from-config"
+
+	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
+	// is rebased onto (coding-base | coding-codex | coding-opencode).
+	ArgAgentBaseTemplate = "base-template"
+
+	// ArgAgentSourceOCIRef is the customer OCI image used as template input.
+	ArgAgentSourceOCIRef = "source-oci-ref"
+
+	// ArgAgentHarness selects a coding-agent runtime for `agents create`.
+	ArgAgentHarness = "harness"
+
+	// ArgAgentRepo is a Git repository URL cloned into the session workspace.
+	ArgAgentRepo = "gh-repo"
+
+	// ArgAgentWaitTimeout is how long `agents create` waits for readiness, in
+	// seconds.
+	ArgAgentWaitTimeout = "wait-timeout"
+
+	// ArgAgentSecret carries a NAME=VALUE tenant secret injected into the
+	// manifest at create time. Repeatable; also NAME=@file and NAME=-.
+	ArgAgentSecret = "secret"
+
+	// ArgAgentDryRun prints the fully-resolved manifest instead of creating a
+	// session.
+	ArgAgentDryRun = "dry-run"
+
+	// ArgAgentOnHITL is the fixed outcome (approve|reject|defer) applied to
+	// every approval request during an unattended `agents create`.
+	ArgAgentOnHITL = "on-hitl"
+
 	// Gradient AI simulation args
 
 	// ArgGenAISearch filters a Gradient AI list by a free-text search term.

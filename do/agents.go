@@ -1,0 +1,358 @@
+/*
+Copyright 2026 The Doctl Authors All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package do
+
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
+
+// HostedAgentSession wraps godo.HostedAgentSession.
+type HostedAgentSession struct {
+	*godo.HostedAgentSession
+}
+
+// HostedAgentsService is the doctl-facing wrapper around godo.HostedAgentsService.
+// It folds (response, err) into err and uses context.TODO() so command runners
+// stay terse, matching the pattern used by every other do/* service.
+type HostedAgentsService interface {
+	// CreateSessionFromManifest POSTs the manifest bytes verbatim with
+	// Content-Type: application/x-yaml. Server owns schema validation.
+	// For OpenAI sandbox-provider sessions (adapter codex-agentapi), pass
+	// OpenAISessionID in opt so harness-api persists openai_session_id
+	// (?openai_session_id=). opt may be nil.
+	CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
+	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
+	GetSession(sessionID string) (*HostedAgentSession, error)
+	DestroySession(sessionID string) error
+	PauseSession(sessionID string) error
+	ResumeSession(sessionID string) error
+	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
+	// RelayRequest forwards one native agent-protocol request frame to the
+	// session's agent and returns its reply verbatim. Blocks on the agent, so
+	// it takes a context of its own rather than the package-wide
+	// context.TODO(): the caller is a proxy answering a client that is itself
+	// blocked, and it needs to be able to give up.
+	RelayRequest(ctx context.Context, sessionID string, body *godo.HostedAgentRelayRequest) (*godo.HostedAgentRelayResponse, error)
+	// ExecInSandbox runs one command inside the session's sandbox and returns
+	// the buffered result. Like RelayRequest it takes its own context rather
+	// than the package-wide context.TODO(): the call blocks for as long as the
+	// guest command runs, so the caller needs to be able to give up. A non-zero
+	// ExitCode is a successful call — only transport failure is an error.
+	ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error)
+	// ListSandboxSizes returns the customer-selectable sandbox size catalog.
+	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
+	// smallest-to-largest; no pagination.
+	ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error)
+	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
+	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
+	// external provider (e.g. "github"). The team is taken from the
+	// authenticated principal server-side; there is no request body.
+	StartProviderAuth(provider string) (*godo.HostedAgentProviderAuthStart, error)
+	// PollProviderAuth checks whether a pending connect link has been authorized.
+	// pollURL is the poll_url returned by StartProviderAuth.
+	PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error)
+	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
+	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
+	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
+	CreateWorkspaceTransferPartUploadURLs(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferPartUploadURLsRequest) (*godo.HostedAgentWorkspaceTransferPartUploadURLs, error)
+	CommitWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCommitRequest) (*godo.HostedAgentWorkspaceTransfer, error)
+	GetWorkspaceTransfer(sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error)
+	CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error)
+
+	// Checkpoint / fork / rollback.
+	CreateCheckpoint(sessionID string, create *godo.HostedAgentCheckpointCreateRequest) (*godo.HostedAgentCheckpoint, error)
+	ListCheckpoints(sessionID string, opt *godo.HostedAgentCheckpointListOptions) ([]godo.HostedAgentCheckpoint, string, error)
+	GetCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpoint, error)
+	DeleteCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpointDeleteResponse, error)
+	ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]HostedAgentSession, error)
+	RollbackToCheckpoint(sessionID, checkpointID string) (*HostedAgentSession, error)
+
+	// Agent Configs: immutable, team-scoped agent manifests plus config-backed
+	// session creation.
+	CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error)
+	ListAgentConfigs(opt *godo.HostedAgentConfigListOptions) ([]godo.HostedAgentConfigSummary, string, error)
+	GetAgentConfig(configID string) (*godo.HostedAgentConfig, error)
+	CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error)
+	DeleteAgentConfig(configID string) error
+	ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
+
+	// Team custom sandbox templates (/v2/agents/templates).
+	ListTemplates(opt *godo.HostedAgentTemplateListOptions) ([]godo.HostedAgentTemplate, string, error)
+	CreateTemplate(create *godo.HostedAgentTemplateCreateRequest) (*godo.HostedAgentTemplate, error)
+	GetTemplate(templateID string) (*godo.HostedAgentTemplate, error)
+	UpdateTemplate(templateID string, update *godo.HostedAgentTemplateUpdateRequest) (*godo.HostedAgentTemplate, error)
+	DeleteTemplate(templateID string) (*godo.HostedAgentTemplateDeleteResponse, error)
+	ListTemplateBuilds(templateID string, opt *godo.HostedAgentTemplateBuildListOptions) ([]godo.HostedAgentTemplateBuild, string, error)
+	GetTemplateBuild(templateID, buildID string) (*godo.HostedAgentTemplateBuild, error)
+}
+
+type hostedAgentsService struct {
+	client *godo.Client
+}
+
+var _ HostedAgentsService = &hostedAgentsService{}
+
+// NewHostedAgentsService builds a HostedAgentsService bound to the given godo client.
+func NewHostedAgentsService(client *godo.Client) HostedAgentsService {
+	return &hostedAgentsService{client: client}
+}
+
+func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.CreateSessionFromManifest(context.TODO(), manifest, opt)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) ListSessions(opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error) {
+	resp, _, err := s.client.HostedAgents.ListSessions(context.TODO(), opt)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]HostedAgentSession, len(resp.Sessions))
+	for i := range resp.Sessions {
+		sess := resp.Sessions[i]
+		out[i] = HostedAgentSession{HostedAgentSession: &sess}
+	}
+	return out, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetSession(sessionID string) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.GetSession(context.TODO(), sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) DestroySession(sessionID string) error {
+	_, err := s.client.HostedAgents.DestroySession(context.TODO(), sessionID)
+	return err
+}
+
+func (s *hostedAgentsService) PauseSession(sessionID string) error {
+	_, err := s.client.HostedAgents.PauseSession(context.TODO(), sessionID)
+	return err
+}
+
+func (s *hostedAgentsService) ResumeSession(sessionID string) error {
+	_, err := s.client.HostedAgents.ResumeSession(context.TODO(), sessionID)
+	return err
+}
+
+func (s *hostedAgentsService) SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error) {
+	resp, _, err := s.client.HostedAgents.SendInput(context.TODO(), sessionID, input)
+	return resp, err
+}
+
+func (s *hostedAgentsService) RelayRequest(ctx context.Context, sessionID string, body *godo.HostedAgentRelayRequest) (*godo.HostedAgentRelayResponse, error) {
+	resp, _, err := s.client.HostedAgents.RelayRequest(ctx, sessionID, body)
+	return resp, err
+}
+
+func (s *hostedAgentsService) ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {
+	resp, _, err := s.client.HostedAgents.ExecInSandbox(ctx, sessionID, body)
+	return resp, err
+}
+
+func (s *hostedAgentsService) ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error) {
+	resp, _, err := s.client.HostedAgents.ListSandboxSizes(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	return resp.Sizes, nil
+}
+
+func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
+	_, err := s.client.HostedAgents.ResolveHITL(context.TODO(), sessionID, requestID, body)
+	return err
+}
+
+func (s *hostedAgentsService) StartProviderAuth(provider string) (*godo.HostedAgentProviderAuthStart, error) {
+	start, _, err := s.client.HostedAgents.StartProviderAuth(context.TODO(), provider)
+	return start, err
+}
+
+func (s *hostedAgentsService) PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error) {
+	poll, _, err := s.client.HostedAgents.PollProviderAuth(context.TODO(), provider, pollURL)
+	return poll, err
+}
+
+// StreamSession opens the SSE stream and returns the typed godo iterator. The
+// caller MUST Close the returned stream. ctx is passed straight through so
+// cancellation terminates the stream.
+func (s *hostedAgentsService) StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+	stream, _, err := s.client.HostedAgents.StreamSession(ctx, sessionID, opt)
+	return stream, err
+}
+
+func (s *hostedAgentsService) CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+	xfer, _, err := s.client.HostedAgents.CreateWorkspaceTransfer(context.TODO(), sessionID, create)
+	return xfer, err
+}
+
+func (s *hostedAgentsService) CreateWorkspaceTransferPartUploadURLs(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferPartUploadURLsRequest) (*godo.HostedAgentWorkspaceTransferPartUploadURLs, error) {
+	part, _, err := s.client.HostedAgents.CreateWorkspaceTransferPartUploadURLs(context.TODO(), sessionID, transferID, input)
+	return part, err
+}
+
+func (s *hostedAgentsService) CommitWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCommitRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+	xfer, _, err := s.client.HostedAgents.CommitWorkspaceTransfer(context.TODO(), sessionID, transferID, input)
+	return xfer, err
+}
+
+func (s *hostedAgentsService) GetWorkspaceTransfer(sessionID, transferID string) (*godo.HostedAgentWorkspaceTransfer, error) {
+	xfer, _, err := s.client.HostedAgents.GetWorkspaceTransfer(context.TODO(), sessionID, transferID)
+	return xfer, err
+}
+
+func (s *hostedAgentsService) CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error) {
+	resp, _, err := s.client.HostedAgents.CancelWorkspaceTransfer(context.TODO(), sessionID, transferID, input)
+	return resp, err
+}
+
+func (s *hostedAgentsService) CreateCheckpoint(sessionID string, create *godo.HostedAgentCheckpointCreateRequest) (*godo.HostedAgentCheckpoint, error) {
+	cp, _, err := s.client.HostedAgents.CreateCheckpoint(context.TODO(), sessionID, create)
+	return cp, err
+}
+
+func (s *hostedAgentsService) ListCheckpoints(sessionID string, opt *godo.HostedAgentCheckpointListOptions) ([]godo.HostedAgentCheckpoint, string, error) {
+	resp, _, err := s.client.HostedAgents.ListCheckpoints(context.TODO(), sessionID, opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Checkpoints, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpoint, error) {
+	cp, _, err := s.client.HostedAgents.GetCheckpoint(context.TODO(), sessionID, checkpointID)
+	return cp, err
+}
+
+func (s *hostedAgentsService) DeleteCheckpoint(sessionID, checkpointID string) (*godo.HostedAgentCheckpointDeleteResponse, error) {
+	resp, _, err := s.client.HostedAgents.DeleteCheckpoint(context.TODO(), sessionID, checkpointID)
+	return resp, err
+}
+
+func (s *hostedAgentsService) ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]HostedAgentSession, error) {
+	resp, _, err := s.client.HostedAgents.ForkSession(context.TODO(), sessionID, fork)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]HostedAgentSession, len(resp.Sessions))
+	for i := range resp.Sessions {
+		sess := resp.Sessions[i]
+		out[i] = HostedAgentSession{HostedAgentSession: &sess}
+	}
+	return out, nil
+}
+
+func (s *hostedAgentsService) RollbackToCheckpoint(sessionID, checkpointID string) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.RollbackToCheckpoint(context.TODO(), sessionID, checkpointID)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.CreateSessionFromConfig(context.TODO(), create)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) ListAgentConfigs(opt *godo.HostedAgentConfigListOptions) ([]godo.HostedAgentConfigSummary, string, error) {
+	resp, _, err := s.client.HostedAgents.ListAgentConfigs(context.TODO(), opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Configs, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetAgentConfig(configID string) (*godo.HostedAgentConfig, error) {
+	cfg, _, err := s.client.HostedAgents.GetAgentConfig(context.TODO(), configID)
+	return cfg, err
+}
+
+func (s *hostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+	cfg, _, err := s.client.HostedAgents.CreateAgentConfig(context.TODO(), create)
+	return cfg, err
+}
+
+func (s *hostedAgentsService) DeleteAgentConfig(configID string) error {
+	_, err := s.client.HostedAgents.DeleteAgentConfig(context.TODO(), configID)
+	return err
+}
+
+func (s *hostedAgentsService) ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error) {
+	resp, _, err := s.client.HostedAgents.ListAgentConfigSessions(context.TODO(), configID, opt)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]HostedAgentSession, len(resp.Sessions))
+	for i := range resp.Sessions {
+		sess := resp.Sessions[i]
+		out[i] = HostedAgentSession{HostedAgentSession: &sess}
+	}
+	return out, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) ListTemplates(opt *godo.HostedAgentTemplateListOptions) ([]godo.HostedAgentTemplate, string, error) {
+	resp, _, err := s.client.HostedAgents.ListTemplates(context.TODO(), opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Templates, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) CreateTemplate(create *godo.HostedAgentTemplateCreateRequest) (*godo.HostedAgentTemplate, error) {
+	tpl, _, err := s.client.HostedAgents.CreateTemplate(context.TODO(), create)
+	return tpl, err
+}
+
+func (s *hostedAgentsService) GetTemplate(templateID string) (*godo.HostedAgentTemplate, error) {
+	tpl, _, err := s.client.HostedAgents.GetTemplate(context.TODO(), templateID)
+	return tpl, err
+}
+
+func (s *hostedAgentsService) UpdateTemplate(templateID string, update *godo.HostedAgentTemplateUpdateRequest) (*godo.HostedAgentTemplate, error) {
+	tpl, _, err := s.client.HostedAgents.UpdateTemplate(context.TODO(), templateID, update)
+	return tpl, err
+}
+
+func (s *hostedAgentsService) DeleteTemplate(templateID string) (*godo.HostedAgentTemplateDeleteResponse, error) {
+	resp, _, err := s.client.HostedAgents.DeleteTemplate(context.TODO(), templateID)
+	return resp, err
+}
+
+func (s *hostedAgentsService) ListTemplateBuilds(templateID string, opt *godo.HostedAgentTemplateBuildListOptions) ([]godo.HostedAgentTemplateBuild, string, error) {
+	resp, _, err := s.client.HostedAgents.ListTemplateBuilds(context.TODO(), templateID, opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Builds, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetTemplateBuild(templateID, buildID string) (*godo.HostedAgentTemplateBuild, error) {
+	build, _, err := s.client.HostedAgents.GetTemplateBuild(context.TODO(), templateID, buildID)
+	return build, err
+}
