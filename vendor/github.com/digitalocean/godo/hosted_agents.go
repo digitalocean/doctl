@@ -21,6 +21,7 @@ const (
 	hostedAgentWorkspaceMediaType = "application/octet-stream"
 
 	hostedAgentsSessionsBasePath                    = "/v2/agents/sessions"
+	hostedAgentPolicyValidatePath                   = hostedAgentsSessionsBasePath + "/policy/validate"
 	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
 	hostedAgentSessionEventsPath                    = hostedAgentSessionByIDPath + "/events"
 	hostedAgentSessionInputPath                     = hostedAgentSessionByIDPath + "/input"
@@ -84,6 +85,12 @@ type HostedAgentsService interface {
 	// application/json with a {name, config_id} body; the config's stored
 	// manifest and declared credentials seed the session at create time.
 	CreateSessionFromConfig(context.Context, *HostedAgentSessionFromConfigRequest) (*HostedAgentSession, *Response, error)
+	// ValidatePolicy checks a manifest's tool-permission policy against the
+	// agent's capabilities without creating a session. Manifest is the same YAML
+	// document accepted by CreateSessionFromManifest (Content-Type:
+	// application/x-yaml). Returns per-rule verdicts; OK is false when any strict
+	// rule is unsupported or unverified (i.e. CreateSession would reject it).
+	ValidatePolicy(context.Context, []byte) (*HostedAgentPolicyValidationResult, *Response, error)
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
@@ -133,6 +140,16 @@ type HostedAgentsService interface {
 	CreateAgentConfig(context.Context, *HostedAgentConfigCreateRequest) (*HostedAgentConfig, *Response, error)
 	DeleteAgentConfig(context.Context, string) (*Response, error)
 	ListAgentConfigSessions(context.Context, string, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
+
+	// Team custom templates (BYOA). Routes live under /v2/agents/templates.
+	ListTemplates(context.Context, *HostedAgentTemplateListOptions) (*HostedAgentTemplatesListResponse, *Response, error)
+	CreateTemplate(context.Context, *HostedAgentTemplateCreateRequest) (*HostedAgentTemplate, *Response, error)
+	GetTemplate(context.Context, string) (*HostedAgentTemplate, *Response, error)
+	UpdateTemplate(context.Context, string, *HostedAgentTemplateUpdateRequest) (*HostedAgentTemplate, *Response, error)
+	DeleteTemplate(context.Context, string) (*HostedAgentTemplateDeleteResponse, *Response, error)
+	ListTemplateBuilds(context.Context, string, *HostedAgentTemplateBuildListOptions) (*HostedAgentTemplateBuildsListResponse, *Response, error)
+	GetTemplateBuild(context.Context, string, string) (*HostedAgentTemplateBuild, *Response, error)
+	GetTemplateBuildLogs(context.Context, string, string) (*HostedAgentTemplateBuildLogs, *Response, error)
 }
 
 // HostedAgentsServiceOp handles communication with Hosted Agents session methods.

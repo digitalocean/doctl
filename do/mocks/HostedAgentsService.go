@@ -132,6 +132,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifest(manifes
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSessionFromManifest", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSessionFromManifest), manifest, opt)
 }
 
+// CreateTemplate mocks base method.
+func (m *MockHostedAgentsService) CreateTemplate(create *godo.HostedAgentTemplateCreateRequest) (*godo.HostedAgentTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateTemplate", create)
+	ret0, _ := ret[0].(*godo.HostedAgentTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateTemplate indicates an expected call of CreateTemplate.
+func (mr *MockHostedAgentsServiceMockRecorder) CreateTemplate(create any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTemplate", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateTemplate), create)
+}
+
 // CreateWorkspaceTransfer mocks base method.
 func (m *MockHostedAgentsService) CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
 	m.ctrl.T.Helper()
@@ -189,6 +204,21 @@ func (m *MockHostedAgentsService) DeleteCheckpoint(sessionID, checkpointID strin
 func (mr *MockHostedAgentsServiceMockRecorder) DeleteCheckpoint(sessionID, checkpointID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCheckpoint", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteCheckpoint), sessionID, checkpointID)
+}
+
+// DeleteTemplate mocks base method.
+func (m *MockHostedAgentsService) DeleteTemplate(templateID string) (*godo.HostedAgentTemplateDeleteResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTemplate", templateID)
+	ret0, _ := ret[0].(*godo.HostedAgentTemplateDeleteResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteTemplate indicates an expected call of DeleteTemplate.
+func (mr *MockHostedAgentsServiceMockRecorder) DeleteTemplate(templateID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTemplate", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteTemplate), templateID)
 }
 
 // DestroySession mocks base method.
@@ -278,6 +308,51 @@ func (m *MockHostedAgentsService) GetSession(sessionID string) (*do.HostedAgentS
 func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSession", reflect.TypeOf((*MockHostedAgentsService)(nil).GetSession), sessionID)
+}
+
+// GetTemplate mocks base method.
+func (m *MockHostedAgentsService) GetTemplate(templateID string) (*godo.HostedAgentTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplate", templateID)
+	ret0, _ := ret[0].(*godo.HostedAgentTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplate indicates an expected call of GetTemplate.
+func (mr *MockHostedAgentsServiceMockRecorder) GetTemplate(templateID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*MockHostedAgentsService)(nil).GetTemplate), templateID)
+}
+
+// GetTemplateBuild mocks base method.
+func (m *MockHostedAgentsService) GetTemplateBuild(templateID, buildID string) (*godo.HostedAgentTemplateBuild, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplateBuild", templateID, buildID)
+	ret0, _ := ret[0].(*godo.HostedAgentTemplateBuild)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplateBuild indicates an expected call of GetTemplateBuild.
+func (mr *MockHostedAgentsServiceMockRecorder) GetTemplateBuild(templateID, buildID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateBuild", reflect.TypeOf((*MockHostedAgentsService)(nil).GetTemplateBuild), templateID, buildID)
+}
+
+// GetTemplateBuildLogs mocks base method.
+func (m *MockHostedAgentsService) GetTemplateBuildLogs(templateID, buildID string) (*godo.HostedAgentTemplateBuildLogs, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplateBuildLogs", templateID, buildID)
+	ret0, _ := ret[0].(*godo.HostedAgentTemplateBuildLogs)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplateBuildLogs indicates an expected call of GetTemplateBuildLogs.
+func (mr *MockHostedAgentsServiceMockRecorder) GetTemplateBuildLogs(templateID, buildID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateBuildLogs", reflect.TypeOf((*MockHostedAgentsService)(nil).GetTemplateBuildLogs), templateID, buildID)
 }
 
 // GetWorkspaceTransfer mocks base method.
@@ -372,6 +447,38 @@ func (m *MockHostedAgentsService) ListSessions(arg0 *godo.HostedAgentSessionList
 func (mr *MockHostedAgentsServiceMockRecorder) ListSessions(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSessions", reflect.TypeOf((*MockHostedAgentsService)(nil).ListSessions), arg0)
+}
+
+// ListTemplateBuilds mocks base method.
+func (m *MockHostedAgentsService) ListTemplateBuilds(templateID string, opt *godo.HostedAgentTemplateBuildListOptions) ([]godo.HostedAgentTemplateBuild, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTemplateBuilds", templateID, opt)
+	ret0, _ := ret[0].([]godo.HostedAgentTemplateBuild)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListTemplateBuilds indicates an expected call of ListTemplateBuilds.
+func (mr *MockHostedAgentsServiceMockRecorder) ListTemplateBuilds(templateID, opt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplateBuilds", reflect.TypeOf((*MockHostedAgentsService)(nil).ListTemplateBuilds), templateID, opt)
+}
+
+// ListTemplates mocks base method.
+func (m *MockHostedAgentsService) ListTemplates(opt *godo.HostedAgentTemplateListOptions) ([]godo.HostedAgentTemplate, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTemplates", opt)
+	ret0, _ := ret[0].([]godo.HostedAgentTemplate)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListTemplates indicates an expected call of ListTemplates.
+func (mr *MockHostedAgentsServiceMockRecorder) ListTemplates(opt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplates", reflect.TypeOf((*MockHostedAgentsService)(nil).ListTemplates), opt)
 }
 
 // PauseSession mocks base method.
@@ -504,4 +611,19 @@ func (m *MockHostedAgentsService) StreamSession(ctx context.Context, sessionID s
 func (mr *MockHostedAgentsServiceMockRecorder) StreamSession(ctx, sessionID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamSession", reflect.TypeOf((*MockHostedAgentsService)(nil).StreamSession), ctx, sessionID, opt)
+}
+
+// UpdateTemplate mocks base method.
+func (m *MockHostedAgentsService) UpdateTemplate(templateID string, update *godo.HostedAgentTemplateUpdateRequest) (*godo.HostedAgentTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTemplate", templateID, update)
+	ret0, _ := ret[0].(*godo.HostedAgentTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateTemplate indicates an expected call of UpdateTemplate.
+func (mr *MockHostedAgentsServiceMockRecorder) UpdateTemplate(templateID, update any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTemplate", reflect.TypeOf((*MockHostedAgentsService)(nil).UpdateTemplate), templateID, update)
 }

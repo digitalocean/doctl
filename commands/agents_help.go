@@ -200,6 +200,26 @@ Guest stdout and stderr pass through unchanged and the guest's exit code becomes
 
 Output is buffered until the command finishes, and capped at 1 MiB per stream. With ` + "`-o json`" + ` the full response is emitted instead of the raw streams.`
 
+const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`coding-base`" + `, ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `). Create and update kick a build; use ` + "`list-builds`" + ` and ` + "`build-logs`" + ` to watch it.
+
+The team is taken from the authenticated principal — never from the request body or query.`
+
+const agentsTemplatesCreateHelpMD = `Create a team custom template and kick a build. ` + "`--name`" + ` must be unique within your team. ` + "`--base-template`" + ` is the platform base to rebase onto. ` + "`--source-oci-ref`" + ` is the customer image (registry/repo:tag or digest).`
+
+const agentsTemplatesListHelpMD = `List custom templates for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
+
+const agentsTemplatesGetHelpMD = `Print one team custom template. Accepts a template ID or the template's team-unique name.`
+
+const agentsTemplatesUpdateHelpMD = `Update a template's source and kick a new build. Pass ` + "`--source-oci-ref`" + ` and/or ` + "`--base-template`" + `. Global catalog templates cannot be updated.`
+
+const agentsTemplatesDeleteHelpMD = `Delete a team custom template. Global catalog templates cannot be deleted.`
+
+const agentsTemplatesListBuildsHelpMD = `List build history for a template, newest first.`
+
+const agentsTemplatesGetBuildHelpMD = `Print details for one template build.`
+
+const agentsTemplatesBuildLogsHelpMD = `Print a short-lived (15-minute) signed URL for archived build logs, and fetch the log body when reachable.`
+
 const agentsCheckpointRootHelpMD = `Save points for a hosted agent session. Fork into new sessions or rollback the same session in place.`
 
 const agentsCheckpointCreateHelpMD = `Create a checkpoint for a session. Can only be taken between agent turns. Optional ` + "`--label`" + ` for a human-readable name.`

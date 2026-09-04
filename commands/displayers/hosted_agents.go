@@ -370,3 +370,145 @@ func (h *HostedAgentSandboxSize) KV() []map[string]any {
 	}
 	return out
 }
+
+// HostedAgentTemplate wraps team custom sandbox templates for display.
+type HostedAgentTemplate struct {
+	Templates []godo.HostedAgentTemplate
+	Single    bool
+}
+
+var _ Displayable = &HostedAgentTemplate{}
+
+func (h *HostedAgentTemplate) JSON(out io.Writer) error {
+	if h.Single && len(h.Templates) == 1 {
+		return writeJSON(h.Templates[0], out)
+	}
+	return writeJSON(h.Templates, out)
+}
+
+func (h *HostedAgentTemplate) Cols() []string {
+	return []string{"TemplateID", "Name", "Status", "BaseTemplate", "CreatedAt"}
+}
+
+func (h *HostedAgentTemplate) ColMap() map[string]string {
+	return map[string]string{
+		"TemplateID":   "Template",
+		"Name":         "Name",
+		"Status":       "Status",
+		"BaseTemplate": "Base",
+		"CreatedAt":    "Created",
+	}
+}
+
+func (h *HostedAgentTemplate) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Templates))
+	for _, t := range h.Templates {
+		base := ""
+		if t.Spec != nil {
+			base = t.Spec.BaseTemplate
+		}
+		created := ""
+		if !t.CreatedAt.Time.IsZero() {
+			created = t.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
+		}
+		out = append(out, map[string]any{
+			"TemplateID":   t.TemplateID,
+			"Name":         t.Name,
+			"Status":       t.Status,
+			"BaseTemplate": base,
+			"CreatedAt":    created,
+		})
+	}
+	return out
+}
+
+// HostedAgentTemplateBuild wraps template build history for display.
+type HostedAgentTemplateBuild struct {
+	Builds []godo.HostedAgentTemplateBuild
+	Single bool
+}
+
+var _ Displayable = &HostedAgentTemplateBuild{}
+
+func (h *HostedAgentTemplateBuild) JSON(out io.Writer) error {
+	if h.Single && len(h.Builds) == 1 {
+		return writeJSON(h.Builds[0], out)
+	}
+	return writeJSON(h.Builds, out)
+}
+
+func (h *HostedAgentTemplateBuild) Cols() []string {
+	return []string{"BuildID", "TemplateID", "Name", "Status", "CreatedAt"}
+}
+
+func (h *HostedAgentTemplateBuild) ColMap() map[string]string {
+	return map[string]string{
+		"BuildID":    "Build",
+		"TemplateID": "Template",
+		"Name":       "Name",
+		"Status":     "Status",
+		"CreatedAt":  "Created",
+	}
+}
+
+func (h *HostedAgentTemplateBuild) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Builds))
+	for _, b := range h.Builds {
+		created := ""
+		if !b.CreatedAt.Time.IsZero() {
+			created = b.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
+		}
+		out = append(out, map[string]any{
+			"BuildID":    b.BuildID,
+			"TemplateID": b.TemplateID,
+			"Name":       b.Name,
+			"Status":     b.Status,
+			"CreatedAt":  created,
+		})
+	}
+	return out
+}
+
+// HostedAgentTemplateBuildLogs renders GET .../builds/{id}/logs.
+type HostedAgentTemplateBuildLogs struct {
+	Logs   []godo.HostedAgentTemplateBuildLogs
+	Single bool
+}
+
+var _ Displayable = &HostedAgentTemplateBuildLogs{}
+
+func (h *HostedAgentTemplateBuildLogs) JSON(out io.Writer) error {
+	if h.Single && len(h.Logs) == 1 {
+		return writeJSON(h.Logs[0], out)
+	}
+	return writeJSON(h.Logs, out)
+}
+
+func (h *HostedAgentTemplateBuildLogs) Cols() []string {
+	return []string{"SignedURL"}
+}
+
+func (h *HostedAgentTemplateBuildLogs) ColMap() map[string]string {
+	return map[string]string{
+		"SignedURL": "SignedURL",
+	}
+}
+
+func (h *HostedAgentTemplateBuildLogs) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Logs))
+	for _, l := range h.Logs {
+		out = append(out, map[string]any{
+			"SignedURL": l.SignedURL,
+		})
+	}
+	return out
+}

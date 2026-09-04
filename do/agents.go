@@ -88,6 +88,16 @@ type HostedAgentsService interface {
 	CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error)
 	DeleteAgentConfig(configID string) error
 	ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
+
+	// Team custom sandbox templates (/v2/agents/templates).
+	ListTemplates(opt *godo.HostedAgentTemplateListOptions) ([]godo.HostedAgentTemplate, string, error)
+	CreateTemplate(create *godo.HostedAgentTemplateCreateRequest) (*godo.HostedAgentTemplate, error)
+	GetTemplate(templateID string) (*godo.HostedAgentTemplate, error)
+	UpdateTemplate(templateID string, update *godo.HostedAgentTemplateUpdateRequest) (*godo.HostedAgentTemplate, error)
+	DeleteTemplate(templateID string) (*godo.HostedAgentTemplateDeleteResponse, error)
+	ListTemplateBuilds(templateID string, opt *godo.HostedAgentTemplateBuildListOptions) ([]godo.HostedAgentTemplateBuild, string, error)
+	GetTemplateBuild(templateID, buildID string) (*godo.HostedAgentTemplateBuild, error)
+	GetTemplateBuildLogs(templateID, buildID string) (*godo.HostedAgentTemplateBuildLogs, error)
 }
 
 type hostedAgentsService struct {
@@ -305,4 +315,50 @@ func (s *hostedAgentsService) ListAgentConfigSessions(configID string, opt *godo
 		out[i] = HostedAgentSession{HostedAgentSession: &sess}
 	}
 	return out, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) ListTemplates(opt *godo.HostedAgentTemplateListOptions) ([]godo.HostedAgentTemplate, string, error) {
+	resp, _, err := s.client.HostedAgents.ListTemplates(context.TODO(), opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Templates, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) CreateTemplate(create *godo.HostedAgentTemplateCreateRequest) (*godo.HostedAgentTemplate, error) {
+	tpl, _, err := s.client.HostedAgents.CreateTemplate(context.TODO(), create)
+	return tpl, err
+}
+
+func (s *hostedAgentsService) GetTemplate(templateID string) (*godo.HostedAgentTemplate, error) {
+	tpl, _, err := s.client.HostedAgents.GetTemplate(context.TODO(), templateID)
+	return tpl, err
+}
+
+func (s *hostedAgentsService) UpdateTemplate(templateID string, update *godo.HostedAgentTemplateUpdateRequest) (*godo.HostedAgentTemplate, error) {
+	tpl, _, err := s.client.HostedAgents.UpdateTemplate(context.TODO(), templateID, update)
+	return tpl, err
+}
+
+func (s *hostedAgentsService) DeleteTemplate(templateID string) (*godo.HostedAgentTemplateDeleteResponse, error) {
+	resp, _, err := s.client.HostedAgents.DeleteTemplate(context.TODO(), templateID)
+	return resp, err
+}
+
+func (s *hostedAgentsService) ListTemplateBuilds(templateID string, opt *godo.HostedAgentTemplateBuildListOptions) ([]godo.HostedAgentTemplateBuild, string, error) {
+	resp, _, err := s.client.HostedAgents.ListTemplateBuilds(context.TODO(), templateID, opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Builds, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetTemplateBuild(templateID, buildID string) (*godo.HostedAgentTemplateBuild, error) {
+	build, _, err := s.client.HostedAgents.GetTemplateBuild(context.TODO(), templateID, buildID)
+	return build, err
+}
+
+func (s *hostedAgentsService) GetTemplateBuildLogs(templateID, buildID string) (*godo.HostedAgentTemplateBuildLogs, error) {
+	logs, _, err := s.client.HostedAgents.GetTemplateBuildLogs(context.TODO(), templateID, buildID)
+	return logs, err
 }
