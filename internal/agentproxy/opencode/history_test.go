@@ -55,9 +55,10 @@ func TestHistoryReconstructsTurns(t *testing.T) {
 	assert.Equal(t, "first question", msgs[0].Parts[0]["text"])
 	assert.Equal(t, "assistant", msgs[1].Info["role"])
 	assert.Equal(t, msgs[0].Info["id"], msgs[1].Info["parentID"])
-	require.Len(t, msgs[1].Parts, 1)
+	require.Len(t, msgs[1].Parts, 2) // text + step-finish
 	assert.Equal(t, "text", msgs[1].Parts[0]["type"])
 	assert.Equal(t, "first answer", msgs[1].Parts[0]["text"])
+	assert.Equal(t, "step-finish", msgs[1].Parts[1]["type"])
 	// Completed turns carry finish + time.completed (the TUI treats a
 	// message without them as still in flight).
 	assert.Equal(t, "stop", msgs[1].Info["finish"])
@@ -69,7 +70,7 @@ func TestHistoryReconstructsTurns(t *testing.T) {
 	assert.Contains(t, msgs[1].Info, "cost")
 
 	// Turn 2: reasoning reconstructs as its own part, before the text part.
-	require.Len(t, msgs[3].Parts, 2)
+	require.Len(t, msgs[3].Parts, 3) // reasoning + text + step-finish
 	assert.Equal(t, "reasoning", msgs[3].Parts[0]["type"])
 	assert.Equal(t, "hmm", msgs[3].Parts[0]["text"])
 	assert.Equal(t, "second answer", msgs[3].Parts[1]["text"])
@@ -115,6 +116,46 @@ func TestSessionListIncludesSessionWithHistory(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&list))
 	require.Len(t, list, 1)
 	assert.Equal(t, "ses_"+ocID("", testSessionID), list[0]["id"])
+}
+
+// Tool-using turns reconstruct their tool parts (with the guest's own part
+// ids), the turn's real token/cost totals, and part order tool → text.
+func TestHistoryReconstructsToolTurn(t *testing.T) {
+	srv, h := newBridgedFacade(t)
+	h.QueueReplayHistory(
+		agentproxytest.Event{RunID: "run-t", Type: string(godo.HostedAgentEventKindRunStarted), Data: json.RawMessage(`{"agent":"run echo hi"}`)},
+		agentproxytest.Event{RunID: "run-t", Type: string(godo.HostedAgentEventKindToolCallStarted), Data: json.RawMessage(`{"tool_call_id":"prt_05d38cd67001guest","name":"bash","input":{"command":"echo hi"}}`)},
+		agentproxytest.Event{RunID: "run-t", Type: string(godo.HostedAgentEventKindToolCallCompleted), Data: json.RawMessage(`{"tool_call_id":"prt_05d38cd67001guest","ok":true,"summary":"hi\n"}`)},
+		agentproxytest.Event{RunID: "run-t", Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"it printed hi"}`)},
+		agentproxytest.Event{RunID: "run-t", Type: string(godo.HostedAgentEventKindRunCompleted), Data: json.RawMessage(`{"total_tokens_in":700,"total_tokens_out":30,"run_cost_micros":31500}`)},
+	)
+
+	msgs := getMessages(t, srv.URL+"/session/ses_x/message")
+	require.Len(t, msgs, 2)
+	asst := msgs[1]
+	require.Len(t, asst.Parts, 3) // tool + text + step-finish
+
+	tool := asst.Parts[0]
+	assert.Equal(t, "tool", tool["type"])
+	assert.Equal(t, "prt_05d38cd67001guest", tool["id"])
+	state, _ := tool["state"].(map[string]any)
+	assert.Equal(t, "completed", state["status"])
+	assert.Equal(t, "hi\n", state["output"])
+	assert.Equal(t, map[string]any{"command": "echo hi"}, state["input"])
+
+	assert.Equal(t, "it printed hi", asst.Parts[1]["text"])
+	// Part ids order tool before text (the answer follows the activity).
+	assert.Less(t, tool["id"].(string), asst.Parts[1]["id"].(string))
+
+	sf := asst.Parts[2]
+	assert.Equal(t, "step-finish", sf["type"])
+	tokens, _ := sf["tokens"].(map[string]any)
+	assert.Equal(t, float64(700), tokens["input"])
+	assert.Equal(t, 0.0315, sf["cost"])
+	// The turn totals also land on the assistant info (flat model fields too).
+	infoTokens, _ := asst.Info["tokens"].(map[string]any)
+	assert.Equal(t, float64(30), infoTokens["output"])
+	assert.Equal(t, modelID, asst.Info["modelID"])
 }
 
 // History is fetched once and cached (the harness replay stream lingers ~8s

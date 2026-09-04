@@ -40,6 +40,21 @@ type historyTurn struct {
 	text      []byte
 	reasoning []byte
 	failed    bool
+	// tools in event order; totals from run.completed's payload.
+	tools                           []*histTool
+	tokensIn, tokensOut, costMicros int64
+}
+
+// histTool is one replayed tool invocation.
+type histTool struct {
+	callID  string
+	name    string
+	input   json.RawMessage
+	summary string
+	ok      bool
+	done    bool
+	startMs int64
+	endMs   int64
 }
 
 func (ht *historyTurn) endMs() int64 {
@@ -142,8 +157,43 @@ func (f *Facade) fetchHistory(ctx context.Context) ([]historyMessage, error) {
 			} else {
 				ht.text = append(ht.text, payload.Text...)
 			}
+		case godo.HostedAgentEventKindToolCallStarted:
+			var payload struct {
+				ToolCallID string          `json:"tool_call_id"`
+				Name       string          `json:"name"`
+				Input      json.RawMessage `json:"input"`
+			}
+			if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+				continue
+			}
+			ht.tools = append(ht.tools, &histTool{
+				callID: payload.ToolCallID, name: payload.Name,
+				input: payload.Input, startMs: at, endMs: at,
+			})
+		case godo.HostedAgentEventKindToolCallCompleted:
+			var payload struct {
+				ToolCallID string `json:"tool_call_id"`
+				OK         bool   `json:"ok"`
+				Summary    string `json:"summary"`
+			}
+			if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+				continue
+			}
+			for _, tool := range ht.tools {
+				if tool.callID == payload.ToolCallID {
+					tool.done, tool.ok, tool.summary, tool.endMs = true, payload.OK, payload.Summary, at
+					break
+				}
+			}
 		case godo.HostedAgentEventKindRunCompleted:
 			ht.doneMs = at
+			var totals struct {
+				TokensIn   int64 `json:"total_tokens_in"`
+				TokensOut  int64 `json:"total_tokens_out"`
+				CostMicros int64 `json:"run_cost_micros"`
+			}
+			_ = json.Unmarshal(ev.Payload, &totals)
+			ht.tokensIn, ht.tokensOut, ht.costMicros = totals.TokensIn, totals.TokensOut, totals.CostMicros
 		case godo.HostedAgentEventKindRunFailed:
 			ht.failed = true
 			ht.doneMs = at
@@ -200,22 +250,23 @@ func (f *Facade) turnMessages(ht *historyTurn, t uint64) []historyMessage {
 		})
 	}
 
-	if len(ht.text) == 0 && len(ht.reasoning) == 0 && !ht.failed {
+	if len(ht.text) == 0 && len(ht.reasoning) == 0 && len(ht.tools) == 0 && !ht.failed {
 		return msgs
 	}
+	// Assistant info: flat modelID/providerID (assistant-message shape; the
+	// nested model{} form is user-message shape) and the turn's real
+	// token/cost totals from run.completed.
 	info := map[string]any{
 		"id": asstMsgID, "sessionID": sid,
-		"role":  "assistant",
-		"time":  map[string]any{"created": ht.startMs, "completed": ht.endMs()},
-		"mode":  "build",
-		"agent": "build",
-		"model": map[string]any{"providerID": providerID, "modelID": modelID},
-		"path":  map[string]any{"cwd": f.Dir, "root": f.Dir},
-		"cost":  0,
-		"tokens": map[string]any{
-			"input": 0, "output": 0, "reasoning": 0,
-			"cache": map[string]any{"read": 0, "write": 0},
-		},
+		"role":       "assistant",
+		"time":       map[string]any{"created": ht.startMs, "completed": ht.endMs()},
+		"mode":       "build",
+		"agent":      "build",
+		"modelID":    modelID,
+		"providerID": providerID,
+		"path":       map[string]any{"cwd": f.Dir, "root": f.Dir},
+		"cost":       float64(ht.costMicros) / 1e6,
+		"tokens":     tokensObject(ht.tokensIn, ht.tokensOut),
 	}
 	if ht.userText != "" {
 		info["parentID"] = userMsgID
@@ -223,22 +274,60 @@ func (f *Facade) turnMessages(ht *historyTurn, t uint64) []historyMessage {
 	if !ht.failed {
 		info["finish"] = "stop"
 	}
+
 	var parts []map[string]any
-	partT := t
+	// Tool parts keep the guest opencode's own prt_ ids when they parse
+	// (time-encoded by the guest, so they sort where the tool actually ran);
+	// text/reasoning are minted at the turn's END so the final answer sorts
+	// after the tool activity, matching how the turn actually played out.
+	for i, tool := range ht.tools {
+		partID := tool.callID
+		if _, ok := tFromOCID(partID); !ok {
+			partID = ocIDWithT("prt_", ocTimeVal(tool.startMs), uint16(5+i), runTail(ht.runID, "htc"))
+		}
+		status := "completed"
+		if !tool.done || !tool.ok {
+			status = "error"
+		}
+		state := map[string]any{
+			"status": status,
+			"input":  json.RawMessage(tool.input),
+			"output": tool.summary,
+			"time":   map[string]any{"start": tool.startMs, "end": tool.endMs},
+		}
+		if !tool.done {
+			state["error"] = "turn ended before the tool completed"
+		}
+		parts = append(parts, map[string]any{
+			"id": partID, "messageID": asstMsgID, "sessionID": sid,
+			"type": "tool", "tool": tool.name, "callID": partID,
+			"state": state,
+		})
+	}
+	endT := ocTimeVal(ht.endMs())
+	if endT < t {
+		endT = t // clock oddities must not sort the answer before the message
+	}
 	if len(ht.reasoning) > 0 {
 		parts = append(parts, map[string]any{
-			"id": ocIDWithT("prt_", partT, 3, runTail(ht.runID, "hr")), "messageID": asstMsgID, "sessionID": sid,
+			"id": ocIDWithT("prt_", endT, 3, runTail(ht.runID, "hr")), "messageID": asstMsgID, "sessionID": sid,
 			"type": "reasoning", "text": string(ht.reasoning),
 			"time": map[string]any{"start": ht.startMs, "end": ht.endMs()},
 		})
 	}
 	if len(ht.text) > 0 {
 		parts = append(parts, map[string]any{
-			"id": ocIDWithT("prt_", partT, 4, runTail(ht.runID, "ht")), "messageID": asstMsgID, "sessionID": sid,
+			"id": ocIDWithT("prt_", endT, 4, runTail(ht.runID, "ht")), "messageID": asstMsgID, "sessionID": sid,
 			"type": "text", "text": string(ht.text),
 			"time": map[string]any{"start": ht.startMs, "end": ht.endMs()},
 		})
 	}
+	parts = append(parts, map[string]any{
+		"id": ocIDWithT("prt_", endT, 6, runTail(ht.runID, "hs")), "messageID": asstMsgID, "sessionID": sid,
+		"type": "step-finish", "reason": "stop",
+		"tokens": tokensObject(ht.tokensIn, ht.tokensOut),
+		"cost":   float64(ht.costMicros) / 1e6,
+	})
 	msgs = append(msgs, historyMessage{Info: info, Parts: parts})
 	return msgs
 }

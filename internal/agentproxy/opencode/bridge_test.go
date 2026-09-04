@@ -151,6 +151,7 @@ func TestTurnStreamsAsOpencodeFrames(t *testing.T) {
 		"message.part.delta",   // "Par"
 		"message.part.delta",   // "is"
 		"message.part.updated", // text part finalized
+		"message.part.updated", // step-finish (tokens/cost)
 		"message.updated",      // assistant finalized (time.completed)
 		"session.status",       // idle
 		"session.idle",
@@ -227,16 +228,109 @@ func TestTurnStreamsAsOpencodeFrames(t *testing.T) {
 	assert.Equal(t, "Paris", part["text"])
 	assert.Equal(t, textDelta["partID"], part["id"])
 
-	finalMsg := propsOf(t, frames[11])
+	stepFinish := propsOf(t, frames[11])
+	sfPart, ok := stepFinish["part"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "step-finish", sfPart["type"])
+	assert.Contains(t, sfPart, "tokens")
+
+	finalMsg := propsOf(t, frames[12])
 	finalInfo, ok := finalMsg["info"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, wantMsg, finalInfo["id"])
 	tm, ok := finalInfo["time"].(map[string]any)
 	require.True(t, ok)
 	assert.Contains(t, tm, "completed")
+	// Assistant messages carry FLAT modelID/providerID (footer model display).
+	assert.Equal(t, modelID, finalInfo["modelID"])
 
-	status := propsOf(t, frames[12])
+	status := propsOf(t, frames[13])
 	assert.Equal(t, map[string]any{"type": "idle"}, status["status"])
+}
+
+// A tool-using turn: tool parts go out as running then completed, with the
+// input re-carried on completion, and the step-finish carries the turn's
+// real token/cost totals from run.completed.
+func TestToolTurnStreamsToolParts(t *testing.T) {
+	srv, h := newBridgedFacade(t)
+	h.QueueRun("run-tool",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindToolCallStarted), Data: json.RawMessage(`{"tool_call_id":"prt_05d38cd67001guest","name":"bash","input":{"command":"echo hi"}}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindToolCallCompleted), Data: json.RawMessage(`{"tool_call_id":"prt_05d38cd67001guest","ok":true,"duration_ms":12,"summary":"hi\n"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"done"}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted), Data: json.RawMessage(`{"total_tokens_in":700,"total_tokens_out":30,"run_cost_micros":31500}`)},
+	)
+
+	resp := postPrompt(t, srv, "run echo hi")
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	stream, err := http.Get(srv.URL + "/global/event")
+	require.NoError(t, err)
+	defer stream.Body.Close()
+	frames := drainFrames(t, stream.Body)
+
+	var tools []map[string]any
+	var stepFinish map[string]any
+	for _, fr := range frames {
+		if fr.Payload.Type != "message.part.updated" {
+			continue
+		}
+		part, _ := propsOf(t, fr)["part"].(map[string]any)
+		switch part["type"] {
+		case "tool":
+			tools = append(tools, part)
+		case "step-finish":
+			stepFinish = part
+		}
+	}
+	require.Len(t, tools, 2)
+	// The guest's own prt_ id is reused, so the part sorts where it ran.
+	assert.Equal(t, "prt_05d38cd67001guest", tools[0]["id"])
+	assert.Equal(t, "bash", tools[0]["tool"])
+	running, _ := tools[0]["state"].(map[string]any)
+	assert.Equal(t, "running", running["status"])
+	assert.Equal(t, map[string]any{"command": "echo hi"}, running["input"])
+	completed, _ := tools[1]["state"].(map[string]any)
+	assert.Equal(t, "completed", completed["status"])
+	assert.Equal(t, "hi\n", completed["output"])
+	assert.Equal(t, map[string]any{"command": "echo hi"}, completed["input"])
+	assert.Equal(t, "echo hi", completed["title"])
+
+	require.NotNil(t, stepFinish)
+	tokens, _ := stepFinish["tokens"].(map[string]any)
+	assert.Equal(t, float64(700), tokens["input"])
+	assert.Equal(t, float64(30), tokens["output"])
+	assert.Equal(t, 0.0315, stepFinish["cost"])
+}
+
+// A tool left running when the turn ends is closed out as an error — a part
+// stuck "running" renders as in-flight forever.
+func TestDanglingToolClosedOnTurnEnd(t *testing.T) {
+	srv, h := newBridgedFacade(t)
+	h.QueueRun("run-dangle",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindToolCallStarted), Data: json.RawMessage(`{"tool_call_id":"prt_05d38cd67001dngl","name":"bash","input":{"command":"sleep 999"}}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunFailed), Data: json.RawMessage(`{"message":"timeout"}`)},
+	)
+
+	resp := postPrompt(t, srv, "hang")
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	stream, err := http.Get(srv.URL + "/global/event")
+	require.NoError(t, err)
+	defer stream.Body.Close()
+	frames := drainFrames(t, stream.Body)
+
+	var last map[string]any
+	for _, fr := range frames {
+		if fr.Payload.Type != "message.part.updated" {
+			continue
+		}
+		if part, _ := propsOf(t, fr)["part"].(map[string]any); part["type"] == "tool" {
+			last = part
+		}
+	}
+	require.NotNil(t, last)
+	state, _ := last["state"].(map[string]any)
+	assert.Equal(t, "error", state["status"])
 }
 
 // The assistant id must sort after the user id even when the event clock

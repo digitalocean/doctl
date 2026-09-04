@@ -64,6 +64,22 @@ type turnState struct {
 	text strings.Builder
 	// startMs stamps part time.start; the finalizer adds time.end.
 	startMs int64
+	// tools tracks in-flight tool calls by canonical tool_call_id, so the
+	// completion frame can re-carry the input (the TUI keeps the part's
+	// final state) and dangling tools can be closed out on turn end.
+	tools map[string]*toolCall
+	// Per-turn totals from run.completed's payload, rendered as the
+	// step-finish part and the final assistant message's tokens/cost.
+	tokensIn, tokensOut, costMicros int64
+}
+
+// toolCall is one tracked tool invocation within a turn.
+type toolCall struct {
+	partID  string
+	name    string
+	input   json.RawMessage
+	startMs int64
+	done    bool
 }
 
 // ocID strips the dashes from a harness UUID so synthesized ids match the
@@ -354,10 +370,89 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 			"delta":     payload.Text,
 		})
 
+	case godo.HostedAgentEventKindToolCallStarted:
+		var payload struct {
+			ToolCallID string          `json:"tool_call_id"`
+			Name       string          `json:"name"`
+			Input      json.RawMessage `json:"input"`
+		}
+		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+			return nil
+		}
+		if !ts.startedSent {
+			if err := f.announceTurn(ev.RunID, ts, ew, at); err != nil {
+				return err
+			}
+		}
+		// The canonical tool_call_id is the guest opencode's own part id
+		// (prt_..., time-encoded by the guest's clock) — reuse it so the
+		// part sorts where the tool actually ran; mint only when a non-
+		// opencode-shaped id shows up.
+		partID := payload.ToolCallID
+		if _, ok := tFromOCID(partID); !ok {
+			partID = ocTimeID("prt_", at, 5, runTail(ev.RunID, "tc"))
+		}
+		tc := &toolCall{partID: partID, name: payload.Name, input: payload.Input, startMs: at}
+		if ts.tools == nil {
+			ts.tools = map[string]*toolCall{}
+		}
+		ts.tools[payload.ToolCallID] = tc
+		return ew.session("message.part.updated", map[string]any{
+			"sessionID": sid,
+			"part":      f.toolPart(ts, tc, "running", "", at),
+		})
+
+	case godo.HostedAgentEventKindToolCallCompleted:
+		var payload struct {
+			ToolCallID string `json:"tool_call_id"`
+			OK         bool   `json:"ok"`
+			Summary    string `json:"summary"`
+		}
+		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+			return nil
+		}
+		tc, ok := ts.tools[payload.ToolCallID]
+		if !ok {
+			// Completion for a start this stream never saw (mid-turn
+			// connect): synthesize what we can.
+			tc = &toolCall{
+				partID:  ocTimeID("prt_", at, 5, runTail(ev.RunID, "tc")),
+				name:    "tool",
+				startMs: at,
+			}
+		}
+		tc.done = true
+		status := "completed"
+		if !payload.OK {
+			status = "error"
+		}
+		return ew.session("message.part.updated", map[string]any{
+			"sessionID": sid,
+			"part":      f.toolPart(ts, tc, status, payload.Summary, at),
+		})
+
+	case godo.HostedAgentEventKindRunUsageRecorded, godo.HostedAgentEventKindRunCostAccrued, godo.HostedAgentEventKindRunLog:
+		// Deliberate no-ops: per-turn token/cost totals ride run.completed's
+		// own payload (used below), and run.log is guest debug noise. Listed
+		// explicitly so they don't spam the unhandled-kind log.
+		return nil
+
 	case godo.HostedAgentEventKindRunCompleted:
 		defer f.dropTurn(ev.RunID)
 		// The finished turn is durable history now; the cache predates it.
 		f.invalidateHistory()
+		// Close any dangling tool part first — a part stuck "running"
+		// renders as in-flight forever.
+		if err := f.closeDanglingTools(ts, ew, sid, at); err != nil {
+			return err
+		}
+		var totals struct {
+			TokensIn   int64 `json:"total_tokens_in"`
+			TokensOut  int64 `json:"total_tokens_out"`
+			CostMicros int64 `json:"run_cost_micros"`
+		}
+		_ = json.Unmarshal(ev.Payload, &totals)
+		ts.tokensIn, ts.tokensOut, ts.costMicros = totals.TokensIn, totals.TokensOut, totals.CostMicros
 		// Finalize the text part with its full content before idling — the
 		// real server does (deltas stream, then the part's final state
 		// re-carries the whole text; plano's adapter must drop that as a
@@ -374,6 +469,23 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 				return err
 			}
 		}
+		// step-finish carries the turn's real token/cost numbers — the TUI's
+		// token counter and cost display key off it (real server emits one
+		// per inference step; the canonical stream only has per-turn totals,
+		// so one closing step-finish stands in for the lot).
+		if ts.startedSent {
+			if err := ew.session("message.part.updated", map[string]any{
+				"sessionID": sid,
+				"part": map[string]any{
+					"id": ocTimeID("prt_", at, 6, runTail(ev.RunID, "sf")), "messageID": ts.asstMsgID, "sessionID": sid,
+					"type": "step-finish", "reason": "stop",
+					"tokens": tokensObject(ts.tokensIn, ts.tokensOut),
+					"cost":   float64(ts.costMicros) / 1e6,
+				},
+			}); err != nil {
+				return err
+			}
+		}
 		// Close the assistant message with time.completed — without it the
 		// TUI leaves the turn looking in-flight (a lingering QUEUED tag on
 		// the user message, found live).
@@ -385,6 +497,9 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 	case godo.HostedAgentEventKindRunFailed:
 		defer f.dropTurn(ev.RunID)
 		f.invalidateHistory()
+		if err := f.closeDanglingTools(ts, ew, sid, at); err != nil {
+			return err
+		}
 		var payload struct {
 			Message string `json:"message"`
 		}
@@ -470,28 +585,82 @@ func (f *Facade) announceTurn(runID string, ts *turnState, ew *eventWriter, at i
 	// The assistant info's cost/tokens are not optional decoration: the TUI
 	// crashes rendering a message list whose assistant entries lack
 	// `tokens.output` ("undefined is not an object", found live). Zeros are
-	// fine; absent is fatal. Field set mirrors the ground-truth capture.
-	info := map[string]any{
-		"id": ts.asstMsgID, "sessionID": sid,
-		"role":  "assistant",
-		"time":  map[string]any{"created": at},
-		"mode":  "build",
-		"agent": "build",
-		"model": map[string]any{"providerID": providerID, "modelID": modelID},
-		"path":  map[string]any{"cwd": f.Dir, "root": f.Dir},
-		"cost":  0,
-		"tokens": map[string]any{
-			"input": 0, "output": 0, "reasoning": 0,
-			"cache": map[string]any{"read": 0, "write": 0},
-		},
-	}
-	if ts.userMsgID != "" {
-		info["parentID"] = ts.userMsgID
-	}
+	// fine; absent is fatal. Shared shape: assistantInfo.
 	return ew.session("message.updated", map[string]any{
 		"sessionID": sid,
-		"info":      info,
+		"info":      f.assistantInfo(ts, map[string]any{"created": at}),
 	})
+}
+
+// toolPart renders a tool part's state frame. Shape per the real-server tool
+// capture: state{status, input, output/metadata on completion, title,
+// time{start[,end]}}; callID mirrors the part id (canonical has no separate
+// provider call id to carry).
+func (f *Facade) toolPart(ts *turnState, tc *toolCall, status, output string, at int64) map[string]any {
+	input := any(map[string]any{})
+	if len(tc.input) > 0 {
+		input = json.RawMessage(tc.input)
+	}
+	state := map[string]any{
+		"status": status,
+		"input":  input,
+		"time":   map[string]any{"start": tc.startMs},
+	}
+	if status != "running" {
+		state["time"] = map[string]any{"start": tc.startMs, "end": at}
+		state["output"] = output
+		state["metadata"] = map[string]any{"output": output}
+		if title := toolTitle(tc); title != "" {
+			state["title"] = title
+		}
+		if status == "error" {
+			state["error"] = output
+		}
+	}
+	return map[string]any{
+		"id": tc.partID, "messageID": ts.asstMsgID, "sessionID": f.ocSessionID(),
+		"type": "tool", "tool": tc.name, "callID": tc.partID,
+		"state": state,
+	}
+}
+
+// toolTitle is the human title the TUI shows on a finished tool part — the
+// command for bash-shaped inputs, nothing otherwise.
+func toolTitle(tc *toolCall) string {
+	var input struct {
+		Command string `json:"command"`
+	}
+	_ = json.Unmarshal(tc.input, &input)
+	return input.Command
+}
+
+// closeDanglingTools finishes any tool part still "running" when the turn
+// ends — the completion event was lost or the run died mid-tool, and a part
+// stuck running renders as in-flight forever.
+func (f *Facade) closeDanglingTools(ts *turnState, ew *eventWriter, sid string, at int64) error {
+	for _, tc := range ts.tools {
+		if tc.done {
+			continue
+		}
+		tc.done = true
+		if err := ew.session("message.part.updated", map[string]any{
+			"sessionID": sid,
+			"part":      f.toolPart(ts, tc, "error", "turn ended before the tool completed", at),
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// tokensObject is the tokens map used on step-finish parts and assistant
+// info; reasoning/cache are not broken out by the canonical totals, so they
+// render as zero.
+func tokensObject(in, out int64) map[string]any {
+	return map[string]any{
+		"total": in + out, "input": in, "output": out, "reasoning": 0,
+		"cache": map[string]any{"read": 0, "write": 0},
+	}
 }
 
 // finishAssistantMessage re-sends the assistant message.updated with
@@ -503,24 +672,34 @@ func (f *Facade) finishAssistantMessage(runID string, ts *turnState, ew *eventWr
 		return nil
 	}
 	sid := f.ocSessionID()
+	info := f.assistantInfo(ts, map[string]any{"created": ts.startMs, "completed": at})
+	info["tokens"] = tokensObject(ts.tokensIn, ts.tokensOut)
+	info["cost"] = float64(ts.costMicros) / 1e6
+	info["finish"] = "stop"
+	return ew.session("message.updated", map[string]any{"sessionID": sid, "info": info})
+}
+
+// assistantInfo is the shared assistant message info shape. modelID and
+// providerID are FLAT fields on assistant messages (the nested model{} form
+// is user-message shape — mixing them up leaves the TUI's footer model
+// segment blank, observed live against the real server's history payloads).
+func (f *Facade) assistantInfo(ts *turnState, timeObj map[string]any) map[string]any {
 	info := map[string]any{
-		"id": ts.asstMsgID, "sessionID": sid,
-		"role":  "assistant",
-		"time":  map[string]any{"created": ts.startMs, "completed": at},
-		"mode":  "build",
-		"agent": "build",
-		"model": map[string]any{"providerID": providerID, "modelID": modelID},
-		"path":  map[string]any{"cwd": f.Dir, "root": f.Dir},
-		"cost":  0,
-		"tokens": map[string]any{
-			"input": 0, "output": 0, "reasoning": 0,
-			"cache": map[string]any{"read": 0, "write": 0},
-		},
+		"id": ts.asstMsgID, "sessionID": f.ocSessionID(),
+		"role":       "assistant",
+		"time":       timeObj,
+		"mode":       "build",
+		"agent":      "build",
+		"modelID":    modelID,
+		"providerID": providerID,
+		"path":       map[string]any{"cwd": f.Dir, "root": f.Dir},
+		"cost":       0,
+		"tokens":     tokensObject(0, 0),
 	}
 	if ts.userMsgID != "" {
 		info["parentID"] = ts.userMsgID
 	}
-	return ew.session("message.updated", map[string]any{"sessionID": sid, "info": info})
+	return info
 }
 
 // emitIdle ends a turn on the stream the way the real server does: a
