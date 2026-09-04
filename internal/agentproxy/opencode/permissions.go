@@ -254,8 +254,16 @@ func (f *Facade) handlePermissionReply(w http.ResponseWriter, perID, reply, mess
 		http.Error(w, fmt.Sprintf("unknown permission reply %q", reply), http.StatusBadRequest)
 		return
 	}
+	// Record the client's reply string BEFORE resolving: the harness can
+	// deliver run.human_input_received (whose handler echoes p.reply in
+	// permission.replied) the instant the resolve call lands, racing a
+	// write placed after it. Rolled back if the resolve fails — the ask is
+	// then still pending and unreplied.
 	f.mu.Lock()
 	p := f.perms[perID]
+	if p != nil {
+		p.reply = reply
+	}
 	f.mu.Unlock()
 	if p == nil {
 		// Matches the real server's PermissionNotFoundError behavior for
@@ -268,21 +276,24 @@ func (f *Facade) handlePermissionReply(w http.ResponseWriter, perID, reply, mess
 		Reason:  message,
 		Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
 	}); err != nil {
+		f.mu.Lock()
+		p.reply = ""
+		f.mu.Unlock()
 		http.Error(w, fmt.Sprintf("resolving the permission with the hosted session failed: %v", err), http.StatusBadGateway)
 		return
 	}
-	f.mu.Lock()
-	p.reply = reply
-	// "Allow always": remember this ask's persist-patterns so future matching
-	// asks auto-approve without a dialog (proxy-side sticky-approval
-	// emulation — see the fidelity note atop this file).
+	// "Allow always": now that the resolve succeeded, remember this ask's
+	// persist-patterns so future matching asks auto-approve without a dialog
+	// (proxy-side sticky-approval emulation — see the fidelity note atop this
+	// file). p.reply was already recorded before the resolve (race fix above).
 	if reply == "always" && p.permission != "" && len(p.always) > 0 {
+		f.mu.Lock()
 		if f.allowAlways == nil {
 			f.allowAlways = map[string][]string{}
 		}
 		f.allowAlways[p.permission] = append(f.allowAlways[p.permission], p.always...)
+		f.mu.Unlock()
 	}
-	f.mu.Unlock()
 	// The real server answers the reply POST with a bare `true` (captured).
 	f.writeJSON(w, true)
 }
