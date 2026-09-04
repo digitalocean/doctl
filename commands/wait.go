@@ -161,9 +161,14 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 			return nil
 		}
 
+		// Reported on every pass rather than only when the detail changes, so
+		// that a plain stream can repeat an unmoved stage on its heartbeat
+		// instead of falling silent for the length of the wait.
+		message := op.message()
 		if detail != "" {
-			spinner.Message(fmt.Sprintf("%s (%s)", op.message(), detail))
+			message = fmt.Sprintf("%s (%s)", message, detail)
 		}
+		spinner.Message(message)
 
 		remaining := time.Until(deadline)
 		if remaining <= 0 {

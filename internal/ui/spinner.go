@@ -23,23 +23,21 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// SpinnerInterval is how often an animated spinner repaints. It is fast enough
-// to read as motion and slow enough that a remote terminal is not flooded.
-const SpinnerInterval = 100 * time.Millisecond
+// SpinnerInterval is how often an animated spinner repaints. It matches the
+// rate the agents renderer on the beta line animates at, so two waits sitting
+// in the same scrollback keep step with each other.
+const SpinnerInterval = 120 * time.Millisecond
 
 // eraseLine returns the cursor to the start of the line and clears it. It is
 // only ever emitted when Anim is set, which requires a terminal on Err, so a
 // redirected stream never receives escape sequences.
 const eraseLine = "\r\x1b[2K"
 
-// Stage names the state a progress line reports. A redirected stream leads
-// with the stage spelled out instead of a glyph, because ✓ and ✗ mean nothing
-// to grep and nothing to whoever reads the build log without having seen the
-// terminal it would have been drawn on.
-const (
-	stageSuccess = "Success"
-	stageFailure = "Failure"
-)
+// StageHeartbeat is how often a plain stream repeats a stage that has not
+// changed. A long provision would otherwise emit one line and then go quiet
+// for twenty minutes, which reads to whoever is watching the build log as a
+// hung job rather than a slow one.
+const StageHeartbeat = time.Minute
 
 // Spinner reports the progress of a long-running operation. It renders to Err
 // so that data on Out stays parseable, and it degrades in two steps: an
@@ -61,9 +59,11 @@ type Spinner struct {
 	// be erased before anything else is written.
 	painted bool
 	stopped bool
-	// reported is the last message written to a plain stream, so that a stage
-	// which has not moved is not reported again.
-	reported string
+	// reported is the last message written to a plain stream, and reportedAt
+	// when it was written, so that an unchanged stage repeats on a heartbeat
+	// rather than on every poll.
+	reported   string
+	reportedAt time.Time
 
 	quit chan struct{}
 	done chan struct{}
@@ -95,7 +95,7 @@ func (s *Spinner) Start() {
 	animate := s.env.Anim
 
 	if !animate {
-		s.report(0)
+		s.report(s.started)
 		s.mu.Unlock()
 		return
 	}
@@ -141,21 +141,21 @@ func (s *Spinner) Message(message string) {
 	// An animated line is rewritten in place by the next frame, and a spinner
 	// that has not started yet reports its message when it does.
 	if !s.env.Anim && !s.started.IsZero() {
-		s.report(s.now().Sub(s.started))
+		s.report(s.now())
 	}
 }
 
 // Succeed stops the spinner and reports that the operation completed, leaving
 // the outcome and the elapsed time on screen.
 func (s *Spinner) Succeed(format string, a ...any) {
-	s.finish(stageSuccess, s.glyphs.Success, ColorSuccess, fmt.Sprintf(format, a...))
+	s.finish(s.glyphs.Success, ColorSuccess, fmt.Sprintf(format, a...))
 }
 
 // Fail stops the spinner and reports that the operation did not complete.
 // The error itself is reported separately by the command, so the message here
 // should say what doctl was waiting for rather than restate the cause.
 func (s *Spinner) Fail(format string, a ...any) {
-	s.finish(stageFailure, s.glyphs.Failure, ColorError, fmt.Sprintf(format, a...))
+	s.finish(s.glyphs.Failure, ColorError, fmt.Sprintf(format, a...))
 }
 
 // Stop halts the spinner without reporting an outcome, clearing any frame it
@@ -191,7 +191,7 @@ func (s *Spinner) Elapsed() time.Duration {
 	return s.now().Sub(s.started)
 }
 
-func (s *Spinner) finish(stage, glyph string, color lipgloss.Color, message string) {
+func (s *Spinner) finish(glyph string, color lipgloss.TerminalColor, message string) {
 	elapsed := s.Elapsed()
 
 	s.halt()
@@ -209,35 +209,44 @@ func (s *Spinner) finish(stage, glyph string, color lipgloss.Color, message stri
 		s.painted = false
 	}
 
-	// An animated terminal has the room and the context for a glyph; a log or
-	// a pipe gets the stage named, in the same `Label: message` shape as the
-	// error and notice chrome it will sit next to.
-	lead := stage + ":"
-	if s.env.Anim {
-		lead = glyph
+	// A plain stream closes on the sentence alone. The design system renders a
+	// piped wait as a running narrative - one line per stage, then the outcome
+	// - so a `Success:` label here would be chrome the format does not have,
+	// and a failure is already followed by the command's own `Error:` line.
+	if !s.env.Anim {
+		fmt.Fprintf(s.out, "%s %s\n", message, s.duration(elapsed))
+		return
 	}
 
-	lead = s.env.SprintErr(s.env.NewErrStyle().Foreground(color).Bold(true), lead)
+	// On a terminal the symbol carries the colour and the message stays
+	// default, so the outcome is legible at a glance without the whole line
+	// shouting.
+	lead := s.env.SprintErr(s.env.NewErrStyle().Foreground(color), glyph)
+
 	fmt.Fprintf(s.out, "%s %s %s\n", lead, message, s.duration(elapsed))
 }
 
-// report writes the current message to a plain stream, skipping a stage that
-// has already been reported: a wait that re-reads a resource every ten seconds
-// would otherwise repeat one line for the whole of a twenty minute provision.
+// report writes the current message to a plain stream. A stage that has moved
+// is reported at once; one that has not is repeated only every StageHeartbeat,
+// so a wait polling every five seconds neither floods the log nor falls silent
+// through a twenty minute provision.
 //
 // The line carries no glyph and no cursor movement, which is what makes the
 // spinner safe to leave enabled when stderr is a log file or a pipe. The
 // caller's message already opens with the stage it is in ("Waiting for ..."),
 // so nothing is prefixed here.
 //
+// The caller passes the time it already read rather than having this read the
+// clock again, so that a spinner under a test clock advances once per event.
+//
 // s.mu must be held.
-func (s *Spinner) report(elapsed time.Duration) {
-	if s.message == s.reported {
+func (s *Spinner) report(now time.Time) {
+	if s.message == s.reported && now.Sub(s.reportedAt) < StageHeartbeat {
 		return
 	}
-	s.reported = s.message
+	s.reported, s.reportedAt = s.message, now
 
-	fmt.Fprintf(s.out, "%s %s\n", s.message, s.duration(elapsed))
+	fmt.Fprintf(s.out, "%s %s\n", s.message, s.duration(now.Sub(s.started)))
 }
 
 // paint draws one animation frame over the previous one.
@@ -249,6 +258,9 @@ func (s *Spinner) paint(frame int) {
 		return
 	}
 
+	// Only the frame is coloured, and in the info slot rather than the warning
+	// one: an operation still running is not a problem, and painting the whole
+	// line makes a routine wait read like a caution.
 	frames := s.glyphs.Spinner
 	glyph := s.env.SprintErr(s.env.NewErrStyle().Foreground(ColorInfo), frames[frame%len(frames)])
 	line := fmt.Sprintf("%s %s %s", glyph, s.message, s.duration(s.now().Sub(s.started)))
@@ -258,9 +270,10 @@ func (s *Spinner) paint(frame int) {
 }
 
 // duration renders an elapsed time as dim chrome, in whole seconds so that the
-// value does not churn between frames.
+// value does not churn between frames. Seconds are truncated rather than
+// rounded, so a counter never reports a second that has not finished passing.
 func (s *Spinner) duration(d time.Duration) string {
-	return s.env.SprintErr(s.env.NewErrStyle().Foreground(ColorMuted), "("+d.Round(time.Second).String()+")")
+	return s.env.SprintErr(s.env.NewErrStyle().Foreground(ColorMuted), "("+d.Truncate(time.Second).String()+")")
 }
 
 // halt shuts the animation goroutine down and waits for the final frame to

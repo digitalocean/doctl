@@ -23,7 +23,7 @@ var (
 	// Crossmark is a crossmark icon.
 	Crossmark = NewStyled(ui.GlyphFailure)
 	// Astreisk is a astreisk icon.
-	Astreisk = NewStyled(ui.GlyphWarning)
+	Astreisk = NewStyled(ui.GlyphAsterisk)
 	// PromptPrefix is a prompt-prefix icon.
 	PromptPrefix = NewStyled(ui.GlyphArrow)
 	// PointerUpCharacter is an up pointer icon.

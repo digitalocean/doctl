@@ -86,6 +86,24 @@ type Env struct {
 	// width Out does not have would truncate the values a pipeline reads.
 	DataWidth int
 
+	// DataTTY reports whether Out is an interactive terminal. Presentation
+	// that is only meaningful on a screen - box rules around a table - is
+	// gated on it, so that what a pipeline reads stays column-separated text.
+	//
+	// It is deliberately not derived from Style: --color=never on a terminal
+	// should drop the colour and keep the layout, and --color=always into a
+	// pager should not start drawing furniture a script would have to strip.
+	DataTTY bool
+
+	// ErrTTY reports whether Err is an interactive terminal. Glyphs are gated
+	// on it: a symbol standing in for a word is a screen affordance, and a log
+	// read by grep wants the word.
+	//
+	// It is weaker than Anim, which also demands an interactive, non-CI
+	// session. A CI job with a terminal attached should still not receive
+	// animation frames, but there is nothing wrong with the glyph.
+	ErrTTY bool
+
 	// Machine reports whether the caller asked for machine-readable output.
 	// When true, Style, ErrStyle, and Anim are all false.
 	Machine bool
@@ -165,6 +183,8 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 		Machine:     cfg.machine,
 		Style:       outProfile != termenv.Ascii,
 		ErrStyle:    errProfile != termenv.Ascii,
+		DataTTY:     !cfg.machine && isTerminal(out),
+		ErrTTY:      !cfg.machine && isTerminal(err),
 		renderer:    newRenderer(out, outProfile),
 		errRenderer: newRenderer(err, errProfile),
 	}

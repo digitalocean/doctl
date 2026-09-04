@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 
@@ -29,6 +30,18 @@ import (
 
 func newTestParent() *Command {
 	return &Command{Command: &cobra.Command{Use: "test"}}
+}
+
+// rendered returns the block a terminal is shown, which is where a flag's
+// purpose and the command that lists its values live. Error() is the one-line
+// summary automation reads, so the two are asserted on separately.
+func rendered(t *testing.T, err error) string {
+	t.Helper()
+
+	fv, ok := err.(*FlagValidationError)
+	require.True(t, ok, "got %T: %v", err, err)
+
+	return fv.format(ui.NewStyle(ui.Plain(io.Discard, io.Discard)))
 }
 
 func TestValidateCommandFlags_AggregatesMissingRequired(t *testing.T) {
@@ -51,7 +64,7 @@ func TestValidateCommandFlags_AggregatesMissingRequired(t *testing.T) {
 	require.True(t, ok)
 	assert.Len(t, fv.Issues, 2)
 
-	msg := err.Error()
+	msg := rendered(t, err)
 	assert.Contains(t, msg, "--size")
 	assert.Contains(t, msg, "--image")
 	assert.Contains(t, msg, "Droplet size")
@@ -62,6 +75,62 @@ func TestValidateCommandFlags_AggregatesMissingRequired(t *testing.T) {
 	assert.Contains(t, msg, "for usage")
 }
 
+// TestFlagValidationErrorSummarisesOnOneLine covers what automation sees. The
+// detail field of doctl's JSON error envelope is err.Error(), so it must be a
+// sentence rather than the rendered block: no glyphs, no indentation, and no
+// suggested next commands.
+func TestFlagValidationErrorSummarisesOnOneLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		issues   []FlagIssue
+		expected string
+	}{
+		{
+			name:     "no issues",
+			expected: "flag validation failed",
+		},
+		{
+			name:     "one missing flag",
+			issues:   []FlagIssue{{Flag: "size", Problem: "is required but was not set", Purpose: "Droplet size", Hint: "run doctl compute size list"}},
+			expected: "missing required flag --size for doctl compute droplet create",
+		},
+		{
+			name: "several missing flags",
+			issues: []FlagIssue{
+				{Flag: "image", Problem: "is required but was not set"},
+				{Flag: "size", Problem: "is required but was empty"},
+			},
+			expected: "missing required flags --image, --size for doctl compute droplet create",
+		},
+		{
+			name: "a flag supplied wrongly",
+			issues: []FlagIssue{
+				{Flag: "user-data", Problem: "cannot be combined with --user-data-file"},
+			},
+			expected: "invalid flags for doctl compute droplet create: --user-data cannot be combined with --user-data-file",
+		},
+		{
+			name: "both kinds of problem",
+			issues: []FlagIssue{
+				{Flag: "size", Problem: "is required but was not set"},
+				{Flag: "user-data", Problem: "cannot be combined with --user-data-file"},
+			},
+			expected: "missing required flag --size for doctl compute droplet create; " +
+				"invalid flags for doctl compute droplet create: --user-data cannot be combined with --user-data-file",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := &FlagValidationError{Command: "doctl compute droplet create", Issues: tt.issues}
+
+			assert.Equal(t, tt.expected, err.Error())
+			assert.NotContains(t, err.Error(), "\n")
+			assert.NotContains(t, err.Error(), ui.GlyphFailure)
+		})
+	}
+}
+
 func TestValidateCommandFlags_EmptyRequiredCountsAsMissing(t *testing.T) {
 	cmd := CmdBuilder(newTestParent(), func(c *CmdConfig) error { return nil }, "create", "short", "long", &bytes.Buffer{})
 	AddStringFlag(cmd, "size", "", "", "size desc", requiredOpt(), flagPurpose("Droplet size"))
@@ -70,7 +139,7 @@ func TestValidateCommandFlags_EmptyRequiredCountsAsMissing(t *testing.T) {
 
 	err := validateCommandFlags(cmd.Command)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "provided but empty")
+	assert.Contains(t, rendered(t, err), "provided but empty")
 }
 
 func TestValidateCommandFlags_AcceptsNonEmptyDefault(t *testing.T) {
@@ -156,7 +225,7 @@ func TestValidateCommandFlags_UsesFlagUsageAsFallback(t *testing.T) {
 
 	err := validateCommandFlags(cmd.Command)
 	require.Error(t, err)
-	msg := err.Error()
+	msg := rendered(t, err)
 	assert.Contains(t, msg, "--size")
 	assert.Contains(t, msg, "The size of the nodes.")
 	assert.Contains(t, msg, "run doctl kubernetes options sizes")
@@ -241,7 +310,11 @@ func TestKubernetesClusterCreate_DefaultRegionPassesPreRun(t *testing.T) {
 	}
 }
 
-func TestFlagValidationDisplayIncludesDesignRed(t *testing.T) {
+// TestFlagValidationDisplayUsesRedSlot checks that a validation failure is
+// painted in the same red slot as every other error, so the two read as one
+// voice. TrueColor is forced because that is the profile where a fixed hex
+// would survive rather than being downsampled out of sight.
+func TestFlagValidationDisplayUsesRedSlot(t *testing.T) {
 	err := &FlagValidationError{
 		Command: "doctl compute droplet create",
 		Issues: []FlagIssue{
@@ -250,8 +323,11 @@ func TestFlagValidationDisplayIncludesDesignRed(t *testing.T) {
 	}
 	env := ui.Detect(ioDiscard{}, ioDiscard{}, ui.WithProfile(termenv.TrueColor), ui.WithASCII(false))
 	out := err.format(ui.NewStyle(env))
-	if !strings.Contains(out, "38;2;215;70;35") {
-		t.Fatalf("expected design red in display output; got %q", out)
+	if !strings.Contains(out, "\x1b[31m") {
+		t.Fatalf("expected the red slot in display output; got %q", out)
+	}
+	if strings.Contains(out, "38;2;") {
+		t.Fatalf("expected a slot rather than a fixed truecolor value; got %q", out)
 	}
 }
 

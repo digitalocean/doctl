@@ -22,13 +22,20 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/digitalocean/doctl/internal/ui"
 )
 
-// columnGap is the number of spaces separating text table columns.
-const columnGap = 4
+const (
+	// columnGap is the number of spaces separating plain text table columns.
+	columnGap = 4
+
+	// cellPad is the space between a boxed cell's value and the rules on
+	// either side of it.
+	cellPad = 1
+)
 
 // Displayable is a displayable entity. These are used for printing results.
 type Displayable interface {
@@ -97,6 +104,12 @@ func (d *Displayer) Display() error {
 // DisplayText writes column-aligned content to the passed in io.Writer while
 // potentially adding or removing headers. Columns are narrowed to fit env's
 // data width, which is unconstrained unless out is a terminal.
+//
+// A terminal gets the table drawn inside box rules, which is what makes a wide
+// row readable at a glance and a truncated cell obviously truncated. Anything
+// else - a pipe, a file, a test - gets the same space-separated columns doctl
+// has always written, because the rules are chrome and a script reading the
+// table must not have to strip them.
 func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string, env ui.Env) error {
 	cols := item.Cols()
 	if len(includeCols) > 0 && includeCols[0] != "" {
@@ -126,16 +139,21 @@ func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []
 		rows = append(rows, row)
 	}
 
-	widths := columnWidths(headers, rows, env.DataWidth)
 	ellipsis := env.Glyphs().Ellipsis
+	count := columnCount(headers, rows)
+	widths := columnWidths(headers, rows, contentBudget(env.DataWidth, count, env.DataTTY), ansi.StringWidth(ellipsis))
 	rowPainter := tonePainters(env, item, cols, kv)
 
 	var buf bytes.Buffer
-	if headers != nil {
-		writeRow(&buf, headers, widths, ellipsis, headerPainter(env))
-	}
-	for i, row := range rows {
-		writeRow(&buf, row, widths, ellipsis, rowPainter(i))
+	if env.DataTTY {
+		writeBox(&buf, headers, rows, widths, ellipsis, env, headerPainter(env), rowPainter)
+	} else {
+		if headers != nil {
+			writeRow(&buf, headers, widths, ellipsis, headerPainter(env))
+		}
+		for i, row := range rows {
+			writeRow(&buf, row, widths, ellipsis, rowPainter(i))
+		}
 	}
 
 	_, err := buf.WriteTo(out)
@@ -246,27 +264,66 @@ func formatCell(v any) string {
 	return fmt.Sprint(v)
 }
 
-// columnWidths measures how wide each column needs to be to hold its header
-// and values. When maxWidth is positive, the widest column is repeatedly
-// narrowed until the row fits, so the column with the most slack gives up
-// space first. A column is never narrowed past its header, which means an
-// unavoidably wide table still overflows rather than becoming unreadable.
-func columnWidths(headers []string, rows [][]string, maxWidth int) []int {
+// columnCount reports how many columns the table has.
+func columnCount(headers []string, rows [][]string) int {
 	count := len(headers)
 	for _, row := range rows {
 		if len(row) > count {
 			count = len(row)
 		}
 	}
+
+	return count
+}
+
+// contentBudget is the width left for values once the chrome separating the
+// columns is paid for. It returns 0 when the table is unconstrained, and never
+// less than 1 otherwise, so that a budget too small to honour still asks for
+// as much narrowing as the floors allow rather than reading as no limit.
+func contentBudget(maxWidth, count int, boxed bool) int {
+	if maxWidth <= 0 || count == 0 {
+		return 0
+	}
+
+	chrome := columnGap * (count - 1)
+	if boxed {
+		// A rule to the left of every column plus one closing the row, and a
+		// pad either side of every value.
+		chrome = count + 1 + 2*cellPad*count
+	}
+
+	if budget := maxWidth - chrome; budget > 1 {
+		return budget
+	}
+
+	return 1
+}
+
+// columnWidths measures how wide each column needs to be to hold its header
+// and values. When budget is positive, the widest column is repeatedly
+// narrowed until the values fit within it, so the column with the most slack
+// gives up space first.
+//
+// A column is never narrowed past its header, nor past floor, which is the
+// width of the ellipsis a truncated cell ends in: a column cut narrower than
+// that has nothing left to show but the mark saying it was cut. An unavoidably
+// wide table therefore overflows rather than becoming unreadable.
+func columnWidths(headers []string, rows [][]string, budget, floor int) []int {
+	count := columnCount(headers, rows)
 	if count == 0 {
 		return nil
 	}
 
 	widths := make([]int, count)
 	floors := make([]int, count)
+	for i := range floors {
+		floors[i] = floor
+	}
 	for i, header := range headers {
 		widths[i] = ansi.StringWidth(header)
-		floors[i] = widths[i]
+		if widths[i] > floors[i] {
+			floors[i] = widths[i]
+		}
 	}
 	for _, row := range rows {
 		for i, cell := range row {
@@ -276,16 +333,16 @@ func columnWidths(headers []string, rows [][]string, maxWidth int) []int {
 		}
 	}
 
-	if maxWidth <= 0 {
+	if budget <= 0 {
 		return widths
 	}
 
-	total := columnGap * (count - 1)
+	total := 0
 	for _, w := range widths {
 		total += w
 	}
 
-	for total > maxWidth {
+	for total > budget {
 		widest, idx := 0, -1
 		for i, w := range widths {
 			if w > floors[i] && w > widest {
@@ -327,6 +384,74 @@ func writeRow(buf *bytes.Buffer, cells []string, widths []int, ellipsis string, 
 	}
 	buf.WriteString("\n")
 }
+
+// writeBox draws the table inside box rules, with the header separated from
+// the values by a rule of its own.
+//
+// The rules are drawn from lipgloss's border sets rather than literals so that
+// the ASCII fallback is the same one the rest of doctl's chrome falls back to,
+// and they are painted as muted chrome so that the values keep the reader's
+// eye. Cells are measured and truncated exactly as they are in the plain
+// layout, which is what keeps a boxed table and a piped one showing the same
+// values.
+func writeBox(buf *bytes.Buffer, headers []string, rows [][]string, widths []int, ellipsis string, env ui.Env, head painter, rowPaint func(int) painter) {
+	if len(widths) == 0 {
+		return
+	}
+
+	border := lipgloss.NormalBorder()
+	if env.ASCII {
+		border = lipgloss.ASCIIBorder()
+	}
+
+	muted := env.NewStyle().Foreground(ui.ColorMuted)
+	vertical := env.Sprint(muted, border.Left)
+
+	rule := func(left, join, right string) {
+		segments := make([]string, len(widths))
+		for i, w := range widths {
+			segments[i] = strings.Repeat(border.Top, w+2*cellPad)
+		}
+
+		buf.WriteString(env.Sprint(muted, left+strings.Join(segments, join)+right))
+		buf.WriteString("\n")
+	}
+
+	row := func(cells []string, paint painter) {
+		pad := strings.Repeat(" ", cellPad)
+
+		buf.WriteString(vertical)
+		for i, width := range widths {
+			var cell string
+			if i < len(cells) {
+				cell = cells[i]
+			}
+
+			if ansi.StringWidth(cell) > width {
+				cell = ansi.Truncate(cell, width, ellipsis)
+			}
+			fill := strings.Repeat(" ", width-ansi.StringWidth(cell))
+
+			if paint != nil {
+				cell = paint(i, cell)
+			}
+
+			buf.WriteString(pad + cell + fill + pad + vertical)
+		}
+		buf.WriteString("\n")
+	}
+
+	rule(border.TopLeft, border.MiddleTop, border.TopRight)
+	if headers != nil {
+		row(headers, head)
+		rule(border.MiddleLeft, border.Middle, border.MiddleRight)
+	}
+	for i, cells := range rows {
+		row(cells, rowPaint(i))
+	}
+	rule(border.BottomLeft, border.MiddleBottom, border.BottomRight)
+}
+
 func writeJSON(item any, w io.Writer) error {
 	b, err := json.Marshal(item)
 	if err != nil {

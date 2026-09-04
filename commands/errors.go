@@ -116,9 +116,13 @@ func notice(msg string, args ...any) {
 // package-init decision it replaced looked at whether *stdout* was a terminal,
 // so `doctl ... 2>log` wrote escape sequences into the log file and
 // `doctl ... > data` stripped colour from a terminal well able to show it.
-func writeChrome(label string, color lipgloss.Color, suffix, msg string, args ...any) {
+func writeChrome(label string, color lipgloss.TerminalColor, suffix, msg string, args ...any) {
 	env := uiEnv()
-	label = env.SprintErr(env.NewErrStyle().Foreground(color).Bold(true), label)
+
+	// Coloured but not bolded, for the reason ui.Style.paint gives: bold plus a
+	// base ANSI colour renders bright on most terminals, which would make this
+	// label a different shade from a value painted in the same slot.
+	label = env.SprintErr(env.NewErrStyle().Foreground(color), label)
 
 	fmt.Fprintf(env.ErrWriter(), "%s: %s%s", label, fmt.Sprintf(msg, args...), suffix)
 }

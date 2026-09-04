@@ -213,7 +213,7 @@ ID      Status       Type      Started At                       Completed At    
 	computeActionWaitOutput = `
 Waiting for action (10101) to complete (elapsed)
 Waiting for action (10101) to complete (in-progress) (elapsed)
-Success: Action (10101) completed (elapsed)
+Action (10101) completed (elapsed)
 ID       Status       Type      Started At                       Completed At                     Resource ID    Resource Type    Region
 20202    completed    create    2014-11-14 16:29:21 +0000 UTC    2014-11-14 16:30:06 +0000 UTC    2222           droplet          nyc3
 	`

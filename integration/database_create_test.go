@@ -149,7 +149,7 @@ some-id    my-database-name    mysql     what-version    100                nyc3
 `
 	databasesWaitCreateOutput = `
 Waiting for database (some-id) to become online (elapsed)
-Success: Database (some-id) is online (elapsed)
+Database (some-id) is online (elapsed)
 Notice: Database created
 ID         Name                Engine    Version         Number of Nodes    Region    Status    Size       URI                                                                                     Created At                       Storage (MiB)
 some-id    my-database-name    mysql     what-version    100                nyc3      online    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC    100

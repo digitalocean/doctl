@@ -133,7 +133,7 @@ ID                                      IP    IPv6    Name             Status   
 
 	lbWaitCreateOutput = `
 Waiting for load balancer (4de7ac8b-495b-4884-9a69-1050c6793cd6) to become active (elapsed)
-Success: Load balancer (4de7ac8b-495b-4884-9a69-1050c6793cd6) is active (elapsed)
+Load balancer (4de7ac8b-495b-4884-9a69-1050c6793cd6) is active (elapsed)
 Notice: Load balancer created
 ID                                      IP    IPv6    Name             Status    Created At              Region    Size        Size Unit    VPC UUID                                Subnet UUID    Tag    Droplet IDs        SSL     Sticky Sessions                                Health Check                                                                                                                                 Forwarding Rules    Firewall Rules                                                            Disable Lets Encrypt DNS Records
 4de7ac8b-495b-4884-9a69-1050c6793cd6                  example-lb-01    active    2017-02-01T22:22:58Z    nyc3      lb-small    <nil>        00000000-0000-4000-8000-000000000000                          3164444,3164445    true    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0,proxy_protocol:<nil>                        allow:[ip:1.2.3.4 cidr:10.0.0.1/10],deny:[ip:2.3.4.5 cidr:10.0.0.2/32]    true

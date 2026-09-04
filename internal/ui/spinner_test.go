@@ -46,14 +46,19 @@ func TestSpinnerWithoutAnimation(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "a completed operation names the stage and reports elapsed time",
+			// A redirected wait reads as a running narrative: one line per
+			// stage and then the outcome, with no label standing in for the
+			// glyph a terminal would have drawn.
+			name:     "a completed operation closes on the outcome and its elapsed time",
 			finish:   func(s *Spinner) { s.Succeed("Database is online") },
-			expected: "Waiting for database (0s)\nSuccess: Database is online (1s)\n",
+			expected: "Waiting for database (0s)\nDatabase is online (1s)\n",
 		},
 		{
-			name:     "a failed operation names the stage",
+			// The cause is reported separately by the command's own Error
+			// line, so the closing line says only what doctl gave up on.
+			name:     "a failed operation closes on what it was waiting for",
 			finish:   func(s *Spinner) { s.Fail("Timed out waiting for database") },
-			expected: "Waiting for database (0s)\nFailure: Timed out waiting for database (1s)\n",
+			expected: "Waiting for database (0s)\nTimed out waiting for database (1s)\n",
 		},
 		{
 			// A plain stream is already glyph-free, so the ASCII fallback has
@@ -61,7 +66,7 @@ func TestSpinnerWithoutAnimation(t *testing.T) {
 			name:     "the ascii fallback changes nothing",
 			opts:     []Option{WithASCII(true)},
 			finish:   func(s *Spinner) { s.Succeed("Database is online") },
-			expected: "Waiting for database (0s)\nSuccess: Database is online (1s)\n",
+			expected: "Waiting for database (0s)\nDatabase is online (1s)\n",
 		},
 		{
 			name:     "stopping without an outcome leaves only the opening line",
@@ -137,7 +142,8 @@ func TestSpinnerReportsEachStageChangeWithoutAnimation(t *testing.T) {
 	s.Start()
 	s.Message("Waiting for database (some-id) to become online (creating)")
 	// A poll that comes back with the stage unchanged must not add a line, or
-	// a twenty minute provision fills the log with one line per poll.
+	// a twenty minute provision fills the log with one line per poll. The
+	// clock is frozen here, so the heartbeat never comes due.
 	s.Message("Waiting for database (some-id) to become online (creating)")
 	s.Message("Waiting for database (some-id) to become online (configuring)")
 	s.Succeed("Database (some-id) is online")
@@ -145,10 +151,32 @@ func TestSpinnerReportsEachStageChangeWithoutAnimation(t *testing.T) {
 	expected := "Waiting for database (some-id) to become online (0s)\n" +
 		"Waiting for database (some-id) to become online (creating) (0s)\n" +
 		"Waiting for database (some-id) to become online (configuring) (0s)\n" +
-		"Success: Database (some-id) is online (0s)\n"
+		"Database (some-id) is online (0s)\n"
 
 	assert.Equal(t, expected, errOut.String())
 	assert.Empty(t, out.String())
+}
+
+// TestSpinnerRepeatsUnchangedStageOnHeartbeat covers the other half of that
+// behaviour: a stage that has not moved still has to show up periodically, or
+// a slow provision looks to whoever is watching the build log like a hung job.
+func TestSpinnerRepeatsUnchangedStageOnHeartbeat(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := Detect(&out, &errOut, WithAnimation(false))
+
+	s := env.NewSpinner("Waiting for droplet to become active")
+	s.now = fixedClock(StageHeartbeat)
+	s.Start()
+	s.Message("Waiting for droplet to become active (new)")
+	s.Message("Waiting for droplet to become active (new)")
+	s.Message("Waiting for droplet to become active (new)")
+
+	expected := "Waiting for droplet to become active (0s)\n" +
+		"Waiting for droplet to become active (new) (1m0s)\n" +
+		"Waiting for droplet to become active (new) (2m0s)\n" +
+		"Waiting for droplet to become active (new) (3m0s)\n"
+
+	assert.Equal(t, expected, errOut.String())
 }
 
 // TestSpinnerMessageBeforeStartIsNotReportedTwice guards the plain path
@@ -183,6 +211,35 @@ func TestSpinnerAnimates(t *testing.T) {
 	assert.Contains(t, rendered, unicodeGlyphs.Spinner[0])
 	assert.True(t, strings.HasSuffix(rendered, "✓ Database is online (0s)\n"), "got %q", rendered)
 	assert.Empty(t, out.String())
+}
+
+// TestSpinnerPaintsOnlyTheSymbol pins the animated line to the design system:
+// the symbol carries the colour and the message stays default, so a routine
+// wait does not read as a caution. The frame uses the info slot rather than
+// the warning one for the same reason, and the elapsed counter trails as
+// muted chrome.
+//
+// This deliberately differs from the agents renderer on the beta line, which
+// paints the frame and the message together in the warning colour.
+func TestSpinnerPaintsOnlyTheSymbol(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := Detect(&out, &errOut, WithAnimation(true), WithProfile(termenv.TrueColor))
+
+	s := env.NewSpinner("Waiting for database")
+	s.Start()
+	s.Succeed("Database is online")
+
+	rendered := errOut.String()
+
+	assert.Contains(t, rendered,
+		env.SprintErr(env.NewErrStyle().Foreground(ColorInfo), unicodeGlyphs.Spinner[0])+" Waiting for database ",
+		"the frame is painted in the info slot and the message left plain")
+
+	assert.NotContains(t, rendered, env.SprintErr(env.NewErrStyle().Foreground(ColorWarning), "Waiting for database"),
+		"the message must not be painted as a warning")
+
+	closing := env.SprintErr(env.NewErrStyle().Foreground(ColorSuccess), unicodeGlyphs.Success) + " Database is online "
+	assert.Contains(t, rendered, closing, "the closing symbol carries the colour and the message stays default")
 }
 
 func TestSpinnerMessageChangesTheAnimatedLine(t *testing.T) {

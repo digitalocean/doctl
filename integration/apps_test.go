@@ -294,7 +294,7 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 				// Without an updating line to rewrite, each step count the
 				// deployment reports gets a line of its own.
 				"Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (0 of 1 steps complete) (elapsed)\n" +
-				"Success: App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
+				"App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
 				"Notice: App created\n" + testAppsOutput
 			expect.Equal(expectedOutput, normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
@@ -653,7 +653,7 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 				// Without an updating line to rewrite, each step count the
 				// deployment reports gets a line of its own.
 				"Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (0 of 1 steps complete) (elapsed)\n" +
-				"Success: App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
+				"App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
 				"Notice: App updated\n" + testAppsOutput
 			expect.Equal(expectedOutput, normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})
@@ -815,7 +815,7 @@ var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.
 				// Without an updating line to rewrite, each step count the
 				// deployment reports gets a line of its own.
 				"Waiting for app (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment to complete (0 of 1 steps complete) (elapsed)\n" +
-				"Success: App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
+				"App (93a37175-f520-4a12-a7ad-26e63491dbf4) deployment is complete (elapsed)\n" +
 				"Notice: Deployment created\n" + testActiveDeploymentOutput
 			expect.Equal(expectedOutput, normalizeWaitElapsed(strings.TrimSpace(string(output))))
 		})

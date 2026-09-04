@@ -71,7 +71,9 @@ func Test_checkErr_FlagValidationJSONKeepsErrorsEnvelope(t *testing.T) {
 	var payload outputErrors
 	require.NoError(t, json.Unmarshal(out, &payload))
 	require.Len(t, payload.Errors, 1)
-	assert.Contains(t, payload.Errors[0].Detail, "--size")
-	assert.Contains(t, payload.Errors[0].Detail, "Droplet size")
+	// The detail is the one-line summary, not the block a terminal is shown:
+	// automation parsing this envelope wants a sentence rather than a rendered
+	// layout complete with glyphs and suggested next commands.
+	assert.Equal(t, "missing required flag --size for doctl compute droplet create", payload.Errors[0].Detail)
 	assert.NotContains(t, string(out), `"issues"`)
 }

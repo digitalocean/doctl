@@ -214,7 +214,21 @@ func TestGlyphs(t *testing.T) {
 	})
 
 	t.Run("ascii fallback", func(t *testing.T) {
-		assert.Equal(t, "+", Env{ASCII: true}.Glyphs().Success)
+		assert.Equal(t, "OK", Env{ASCII: true}.Glyphs().Success)
+		assert.Equal(t, "X", Env{ASCII: true}.Glyphs().Failure)
+	})
+
+	t.Run("glyphs that are already ascii need no fallback", func(t *testing.T) {
+		for _, g := range []struct {
+			name    string
+			unicode string
+			ascii   string
+		}{
+			{"warning", unicodeGlyphs.Warning, asciiGlyphs.Warning},
+			{"info", unicodeGlyphs.Info, asciiGlyphs.Info},
+		} {
+			assert.Equal(t, g.unicode, g.ascii, "%s should not differ between the sets", g.name)
+		}
 	})
 
 	t.Run("spinner frames share a display width", func(t *testing.T) {

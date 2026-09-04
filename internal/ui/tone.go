@@ -150,7 +150,7 @@ func isToneWordSeparator(r rune) bool {
 
 // toneColor maps a tone onto the palette. It is the only place tones and
 // colours meet.
-func toneColor(tone Tone) (lipgloss.Color, bool) {
+func toneColor(tone Tone) (lipgloss.TerminalColor, bool) {
 	switch tone {
 	case ToneSuccess:
 		return ColorSuccess, true
@@ -161,7 +161,7 @@ func toneColor(tone Tone) (lipgloss.Color, bool) {
 	case ToneMuted:
 		return ColorMuted, true
 	default:
-		return lipgloss.Color(""), false
+		return lipgloss.NoColor{}, false
 	}
 }
 

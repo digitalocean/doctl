@@ -27,7 +27,7 @@ const (
 )
 
 // waitElapsed matches the elapsed time a wait reports on each of its progress
-// lines, as in "Success: Database (some-id) is online (10s)".
+// lines, as in "Database (some-id) is online (10s)".
 var waitElapsed = regexp.MustCompile(`\(\d+[a-z]+\)$`)
 
 // normalizeWaitElapsed replaces the elapsed time on wait progress lines with a

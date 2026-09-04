@@ -52,7 +52,7 @@ func TestWaitPollsUntilDone(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 3, calls)
 	assert.Contains(t, buf.String(), "Waiting for database (abc) to become online")
-	assert.Contains(t, buf.String(), "Success: Database (abc) is online")
+	assert.Contains(t, buf.String(), "Database (abc) is online")
 }
 
 // TestWaitPollsImmediately guards the case that used to cost a full interval:
@@ -90,7 +90,9 @@ func TestWaitReturnsPollError(t *testing.T) {
 	})
 
 	assert.ErrorIs(t, err, sentinel)
-	assert.Contains(t, buf.String(), "Failure: Gave up waiting for cluster (abc) to start running")
+	// The cause is left to the command's own Error line rather than restated
+	// here, so the closing line says only what doctl gave up on.
+	assert.Contains(t, buf.String(), "Gave up waiting for cluster (abc) to start running")
 }
 
 func TestWaitTimesOut(t *testing.T) {
@@ -112,7 +114,7 @@ func TestWaitTimesOut(t *testing.T) {
 	assert.Contains(t, err.Error(), "timed out after 5ms waiting for database (abc) to become online")
 	assert.Contains(t, err.Error(), "still running")
 	assert.Contains(t, err.Error(), "--wait-timeout")
-	assert.Contains(t, buf.String(), "Failure: Timed out waiting for database (abc) to become online")
+	assert.Contains(t, buf.String(), "Timed out waiting for database (abc) to become online")
 }
 
 func TestWaitShowsPollDetail(t *testing.T) {

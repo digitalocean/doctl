@@ -80,8 +80,11 @@ func TestToneFor(t *testing.T) {
 func TestSprintTone(t *testing.T) {
 	var out, errOut bytes.Buffer
 
+	// The green slot, not a fixed green: the profile is TrueColor and the
+	// sequence is still the plain SGR 32, because the palette names a slot and
+	// leaves the value to whatever theme the user is running.
 	styled := Detect(&out, &errOut, WithProfile(termenv.TrueColor))
-	assert.Equal(t, "\x1b[38;2;0;195;131mactive\x1b[0m", styled.SprintTone(ToneSuccess, "active"),
+	assert.Equal(t, "\x1b[32mactive\x1b[0m", styled.SprintTone(ToneSuccess, "active"),
 		"success renders in ColorSuccess")
 	assert.Equal(t, "active", styled.SprintTone(ToneNone, "active"),
 		"an unclassified value must not be painted")

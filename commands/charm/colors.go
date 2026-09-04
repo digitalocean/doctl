@@ -6,12 +6,16 @@ import (
 )
 
 // ColorScheme describes a color scheme.
+//
+// The fields are TerminalColor rather than Color because internal/ui names the
+// palette as slots in the terminal's own 16 colors, which lipgloss models as
+// ANSIColor. Only the interface is wide enough to hold either.
 type ColorScheme struct {
-	Success   lipgloss.Color
-	Warning   lipgloss.Color
-	Error     lipgloss.Color
-	Highlight lipgloss.Color
-	Muted     lipgloss.Color
+	Success   lipgloss.TerminalColor
+	Warning   lipgloss.TerminalColor
+	Error     lipgloss.TerminalColor
+	Highlight lipgloss.TerminalColor
+	Muted     lipgloss.TerminalColor
 }
 
 // Colors contains the default doctl color scheme.

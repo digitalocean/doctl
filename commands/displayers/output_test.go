@@ -155,6 +155,132 @@ func TestDisplayTextFitsTerminalWidth(t *testing.T) {
 	}
 }
 
+// terminalEnv returns an Env that reports Out as an interactive terminal, so
+// that the boxed layout can be exercised against a buffer.
+func terminalEnv(out, errOut *bytes.Buffer, opts ...ui.Option) ui.Env {
+	env := ui.Detect(out, errOut, opts...)
+	env.DataTTY = true
+
+	return env
+}
+
+func TestDisplayTextBoxesTerminalOutput(t *testing.T) {
+	item := &testDisplayable{
+		cols:   []string{"id", "name"},
+		colMap: map[string]string{"id": "ID", "name": "Name"},
+		kv: []map[string]any{
+			{"id": 1, "name": "web"},
+			{"id": 22, "name": "database"},
+		},
+	}
+
+	tests := []struct {
+		name      string
+		opts      []ui.Option
+		noHeaders bool
+		expected  string
+	}{
+		{
+			name: "a table on a terminal is drawn inside rules",
+			expected: "┌────┬──────────┐\n" +
+				"│ ID │ Name     │\n" +
+				"├────┼──────────┤\n" +
+				"│ 1  │ web      │\n" +
+				"│ 22 │ database │\n" +
+				"└────┴──────────┘\n",
+		},
+		{
+			name: "the ascii fallback draws the same table without box characters",
+			opts: []ui.Option{ui.WithASCII(true)},
+			expected: "+----+----------+\n" +
+				"| ID | Name     |\n" +
+				"+----+----------+\n" +
+				"| 1  | web      |\n" +
+				"| 22 | database |\n" +
+				"+----+----------+\n",
+		},
+		{
+			// --no-header drops the labels and the rule that separated them,
+			// leaving the values framed by the same box.
+			name:      "dropping the headers drops the rule below them",
+			noHeaders: true,
+			expected: "┌────┬──────────┐\n" +
+				"│ 1  │ web      │\n" +
+				"│ 22 │ database │\n" +
+				"└────┴──────────┘\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			env := terminalEnv(&out, &errOut, tt.opts...)
+
+			require.NoError(t, DisplayText(item, &out, tt.noHeaders, nil, env))
+			assert.Equal(t, tt.expected, out.String())
+		})
+	}
+}
+
+// TestDisplayTextDoesNotBoxRedirectedOutput is the other half of the boxed
+// layout: the rules are chrome, so a script reading the table must never have
+// to strip them.
+func TestDisplayTextDoesNotBoxRedirectedOutput(t *testing.T) {
+	item := &testDisplayable{
+		cols:   []string{"id", "name"},
+		colMap: map[string]string{"id": "ID", "name": "Name"},
+		kv:     []map[string]any{{"id": 1, "name": "web"}},
+	}
+
+	var out, errOut bytes.Buffer
+
+	require.NoError(t, DisplayText(item, &out, false, nil, ui.Detect(&out, &errOut)))
+	assert.Equal(t, "ID    Name\n1     web\n", out.String())
+}
+
+func TestDisplayTextBoxFitsTerminalWidth(t *testing.T) {
+	item := &testDisplayable{
+		cols:   []string{"id", "name", "desc"},
+		colMap: map[string]string{"id": "ID", "name": "Name", "desc": "Description"},
+		kv: []map[string]any{
+			{"id": 1, "name": "a-fairly-long-droplet-name", "desc": "a description that runs well past the edge"},
+		},
+	}
+
+	const width = 46
+
+	var out, errOut bytes.Buffer
+	env := terminalEnv(&out, &errOut, ui.WithWidth(width))
+
+	require.NoError(t, DisplayText(item, &out, false, nil, env))
+
+	// The rules are part of the width the terminal has to spend, so the values
+	// are narrowed further than they would be in the plain layout.
+	assert.Equal(t, "┌────┬───────────────────┬───────────────────┐\n"+
+		"│ ID │ Name              │ Description       │\n"+
+		"├────┼───────────────────┼───────────────────┤\n"+
+		"│ 1  │ a-fairly-long-dr… │ a description th… │\n"+
+		"└────┴───────────────────┴───────────────────┘\n", out.String())
+
+	for _, line := range strings.Split(strings.TrimRight(out.String(), "\n"), "\n") {
+		assert.LessOrEqual(t, ansi.StringWidth(line), width, "line %q exceeds the width", line)
+	}
+}
+
+// TestDisplayTextBoxStylingDoesNotMoveColumns holds the boxed layout to the
+// same guarantee as the plain one: colour may only add escape sequences.
+func TestDisplayTextBoxStylingDoesNotMoveColumns(t *testing.T) {
+	var plainOut, styledOut, errOut bytes.Buffer
+
+	require.NoError(t, DisplayText(stateTable(), &plainOut, false, nil,
+		terminalEnv(&plainOut, &errOut, ui.WithProfile(termenv.Ascii))))
+	require.NoError(t, DisplayText(stateTable(), &styledOut, false, nil,
+		terminalEnv(&styledOut, &errOut, ui.WithProfile(termenv.TrueColor))))
+
+	assert.Equal(t, plainOut.String(), ansi.Strip(styledOut.String()))
+	assert.Contains(t, styledOut.String(), "\x1b[", "a styled table should carry colour")
+}
+
 // tonedDisplayable overrides the shared classification for one column.
 type tonedDisplayable struct {
 	testDisplayable
@@ -287,54 +413,108 @@ func TestColumnWidths(t *testing.T) {
 		name     string
 		headers  []string
 		rows     [][]string
-		maxWidth int
+		budget   int
 		expected []int
 	}{
 		{
 			name:     "unconstrained uses the widest value in each column",
 			headers:  headers,
 			rows:     rows,
-			maxWidth: 0,
+			budget:   0,
 			expected: []int{2, 4, 32},
 		},
 		{
-			name:     "a width larger than the table changes nothing",
+			name:     "a budget larger than the table changes nothing",
 			headers:  headers,
 			rows:     rows,
-			maxWidth: 200,
+			budget:   200,
 			expected: []int{2, 4, 32},
 		},
 		{
 			name:     "the column with the most slack gives up space first",
 			headers:  headers,
 			rows:     rows,
-			maxWidth: 30,
+			budget:   22,
 			expected: []int{2, 4, 16},
 		},
 		{
 			name:     "columns are never narrowed past their header",
 			headers:  []string{"Description", "Name"},
 			rows:     [][]string{{"ab", "cdef"}},
-			maxWidth: 5,
+			budget:   1,
 			expected: []int{11, 4},
+		},
+		{
+			// Without a header to hold the column open, the ellipsis width is
+			// the floor: a column cut narrower than its own truncation mark
+			// has nothing left to show.
+			name:     "an unheadered column is never narrowed past the ellipsis",
+			rows:     [][]string{{"a-long-value", "another-long-value"}},
+			budget:   1,
+			expected: []int{1, 1},
 		},
 		{
 			name:     "double-width runes are measured in terminal cells",
 			headers:  []string{"名前"},
 			rows:     [][]string{{"ab"}},
-			maxWidth: 0,
+			budget:   0,
 			expected: []int{4},
 		},
 		{
 			name:     "no columns yields no widths",
-			maxWidth: 80,
+			budget:   80,
 			expected: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, columnWidths(tt.headers, tt.rows, tt.maxWidth))
+			assert.Equal(t, tt.expected, columnWidths(tt.headers, tt.rows, tt.budget, 1))
+		})
+	}
+}
+
+func TestContentBudget(t *testing.T) {
+	tests := []struct {
+		name     string
+		maxWidth int
+		count    int
+		boxed    bool
+		expected int
+	}{
+		{
+			name:     "an unconstrained width leaves the table unconstrained",
+			maxWidth: 0,
+			count:    3,
+			expected: 0,
+		},
+		{
+			name:     "plain columns pay for the gaps between them",
+			maxWidth: 30,
+			count:    3,
+			expected: 22,
+		},
+		{
+			name:     "boxed columns pay for their rules and pads",
+			maxWidth: 30,
+			count:    3,
+			boxed:    true,
+			expected: 20,
+		},
+		{
+			// A budget of zero would read as unconstrained, which is the one
+			// thing a terminal too narrow for its table must not do.
+			name:     "a width smaller than the chrome still asks for narrowing",
+			maxWidth: 4,
+			count:    3,
+			boxed:    true,
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, contentBudget(tt.maxWidth, tt.count, tt.boxed))
 		})
 	}
 }
