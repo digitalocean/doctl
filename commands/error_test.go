@@ -16,13 +16,17 @@ package commands
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"regexp"
 	"testing"
 
 	"github.com/fatih/color"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_checkErr(t *testing.T) {
@@ -43,4 +47,37 @@ func Test_checkErr(t *testing.T) {
 
 	re := regexp.MustCompile(`an error`)
 	assert.True(t, re.Match(b.Bytes()))
+}
+
+func Test_checkErr_FlagValidationJSONKeepsErrorsEnvelope(t *testing.T) {
+	defer func(a func()) { errAction = a }(errAction)
+	defer func() { viper.Set("output", "") }()
+
+	errAction = func() {}
+	viper.Set("output", "json")
+
+	// Capture stdout where JSON is printed.
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	checkErr(&FlagValidationError{
+		Command: "doctl compute droplet create",
+		Issues: []FlagIssue{
+			{Flag: "size", Problem: "is required but was not set", Purpose: "Droplet size"},
+		},
+	})
+
+	require.NoError(t, w.Close())
+	os.Stdout = old
+	out, err := io.ReadAll(r)
+	require.NoError(t, err)
+
+	var payload outputErrors
+	require.NoError(t, json.Unmarshal(out, &payload))
+	require.Len(t, payload.Errors, 1)
+	assert.Contains(t, payload.Errors[0].Detail, "--size")
+	assert.Contains(t, payload.Errors[0].Detail, "Droplet size")
+	assert.NotContains(t, string(out), `"issues"`)
 }

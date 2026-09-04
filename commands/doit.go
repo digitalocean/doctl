@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -159,10 +160,22 @@ func configHome() string {
 // Execute executes the current command using DoitCmd.
 func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
-		if !strings.Contains(err.Error(), "unknown command") {
-			fmt.Println(err)
+		// Unknown-command errors are already printed by Cobra/usage handling.
+		if strings.Contains(err.Error(), "unknown command") {
+			os.Exit(-1)
 		}
-		os.Exit(-1)
+		// Missing/invalid flags historically exited 1 via checkErr → errAction.
+		// Keep that for FlagValidationError; reserve -1 (255) for other
+		// top-level failures that never went through Run/checkErr.
+		var fv *FlagValidationError
+		if errors.As(err, &fv) {
+			checkErr(err)
+			return
+		}
+		prev := errAction
+		errAction = func() { os.Exit(-1) }
+		defer func() { errAction = prev }()
+		checkErr(err)
 	}
 }
 
@@ -247,10 +260,14 @@ type flagOpt func(c *Command, name, key string)
 
 func requiredOpt() flagOpt {
 	return func(c *Command, name, key string) {
-		c.MarkFlagRequired(key)
+		// Use doctl-owned metadata instead of cobra.MarkFlagRequired.
+		// Cobra's required check only looks at pflag.Changed, so it rejects
+		// flags whose value comes from a non-empty default or config.yaml —
+		// behaviour doctl has long accepted via GetString/viper.
+		_ = c.Flags().SetAnnotation(name, annoFlagRequired, []string{"true"})
+		_ = c.Flags().SetAnnotation(name, annoFlagViperKey, []string{key})
 
-		key = fmt.Sprintf("required.%s", key)
-		viper.Set(key, true)
+		viper.Set(fmt.Sprintf("required.%s", key), true)
 
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))

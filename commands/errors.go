@@ -17,9 +17,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/fatih/color"
 	"github.com/shiena/ansicolor"
 	"github.com/spf13/viper"
@@ -71,15 +73,25 @@ func checkErr(err error) {
 
 	switch output {
 	default:
+		var fv *FlagValidationError
+		if errors.As(err, &fv) {
+			// Next-Gen design: colored error block, no duplicate "Error:" prefix.
+			fmt.Fprintln(color.Output, fv.Display())
+			errAction()
+			return
+		}
 		fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
 	case "json":
-		es := outputErrors{
+		// Always keep the stable {"errors":[{"detail":...}]} envelope so
+		// automation parsing --output json is not broken by richer flag
+		// validation. Plain Error() text (no ANSI) goes in detail.
+		payload := outputErrors{
 			Errors: []outputError{
 				{Detail: err.Error()},
 			},
 		}
 
-		b, _ := json.Marshal(&es)
+		b, _ := json.Marshal(payload)
 		fmt.Println(string(b))
 	}
 
@@ -106,4 +118,16 @@ func warnConfirm(msg string, args ...any) {
 
 func notice(msg string, args ...any) {
 	fmt.Fprintf(color.Output, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
+}
+
+// resolveUIEnv builds the shared terminal capability Env used by CmdConfig and
+// error chrome so both paths honor --output and --interactive consistently.
+func resolveUIEnv(out io.Writer) ui.Env {
+	if out == nil {
+		out = os.Stdout
+	}
+	return ui.Detect(out, os.Stderr,
+		ui.WithMachineOutput(Output != "text"),
+		ui.WithInteractive(Interactive),
+	)
 }

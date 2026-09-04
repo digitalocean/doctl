@@ -122,7 +122,8 @@ var _ = suite("gradient/agent/functionroute/create", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--agent-id")
 		})
 
 		it("returns an error when name is missing", func() {
@@ -143,7 +144,8 @@ var _ = suite("gradient/agent/functionroute/create", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--name")
 		})
 
 		it("returns an error when description is missing", func() {
@@ -164,7 +166,8 @@ var _ = suite("gradient/agent/functionroute/create", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--description")
 		})
 
 		it("returns an error when faas-name is missing", func() {
@@ -185,7 +188,8 @@ var _ = suite("gradient/agent/functionroute/create", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--faas-name")
 		})
 
 		it("returns an error when faas-namespace is missing", func() {
@@ -206,7 +210,8 @@ var _ = suite("gradient/agent/functionroute/create", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--faas-namespace")
 		})
 
 		it("returns an error when input-schema is missing", func() {
@@ -227,7 +232,8 @@ var _ = suite("gradient/agent/functionroute/create", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--input-schema")
 		})
 
 		it("returns an error when output-schema is missing", func() {
@@ -248,7 +254,8 @@ var _ = suite("gradient/agent/functionroute/create", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--output-schema")
 		})
 	})
 

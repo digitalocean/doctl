@@ -24,6 +24,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps/builder"
+	"github.com/digitalocean/doctl/internal/ui"
 )
 
 // CmdConfig is a command configuration.
@@ -33,6 +34,11 @@ type CmdConfig struct {
 	Out     io.Writer
 	Args    []string
 	Command *cobra.Command
+
+	// UI carries the terminal capabilities for this invocation. Components
+	// should take it as an argument rather than deriving their own, so that a
+	// single policy governs colour, animation, width, and ASCII fallback.
+	UI ui.Env
 
 	initServices            func(*CmdConfig) error
 	getContextAccessToken   func() string
@@ -101,6 +107,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		Doit: dc,
 		Out:  out,
 		Args: args,
+		UI: resolveUIEnv(out),
 
 		initServices: func(c *CmdConfig) error {
 			accessToken := c.getContextAccessToken()

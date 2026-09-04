@@ -75,16 +75,34 @@ If you do not specify a region, the Droplet is created in the default region for
 	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", dropletCreateLongDesc, Writer,
 		aliasOpt("c"), displayerType(&displayers.Droplet{}))
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "A list of SSH key IDs or fingerprints to embed in the Droplet's root account upon creation")
-	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "A shell script to run on the Droplet's first boot")
-	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing a shell script or Cloud-init YAML file to run on the Droplet's first boot. Example: `path/to/file.yaml`")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "A shell script to run on the Droplet's first boot",
+		flagPurpose("Inline user-data script run on first boot"),
+		flagHint("Use either --user-data or --user-data-file, not both"))
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing a shell script or Cloud-init YAML file to run on the Droplet's first boot. Example: `path/to/file.yaml`",
+		flagPurpose("Path to a user-data / cloud-init file run on first boot"),
+		flagHint("Use either --user-data or --user-data-file, not both"))
+	cmdDropletCreate.MarkFlagsMutuallyExclusive(doctl.ArgUserData, doctl.ArgUserDataFile)
 	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
-	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A `slug` specifying the region to create the Droplet in, such as `nyc1`. Use the `doctl compute region list` command for a list of valid regions.")
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A `slug` specifying the region to create the Droplet in, such as `nyc1`. Use the `doctl compute region list` command for a list of valid regions.",
+		flagPurpose("Region where the Droplet is created"),
+		flagHint("run doctl compute region list"))
 	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A `slug` indicating the Droplet's number of vCPUs, RAM, and disk size. For example, `s-1vcpu-1gb` specifies a Droplet with one vCPU and 1 GiB of RAM. The disk size is defined by the slug's plan. Run `doctl compute size list` for a list of valid size slugs and their disk sizes.",
-		requiredOpt())
+		requiredOpt(),
+		flagPurpose("Droplet size (vCPUs, RAM, and disk)"),
+		flagHint("run doctl compute size list"))
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet. By default, backups are created on a daily basis.")
-	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`)
-	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
-	AddIntFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
+	// Backup policy flags are intentionally not MarkFlagsRequiredTogether:
+	// weekday is only needed for weekly plans, and hour defaults to 0 when omitted
+	// (see readDropletBackupPolicy).
+	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`,
+		flagPurpose("Backup frequency plan"),
+		flagHint("for weekly plans also set --backup-policy-weekday; --backup-policy-hour defaults to 0"))
+	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`,
+		flagPurpose("Weekday for the backup window (weekly plans)"),
+		flagHint("required when --backup-policy-plan is weekly"))
+	AddIntFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`,
+		flagPurpose("Hour of day for the backup window"),
+		flagHint("optional; defaults to 0 when omitted"))
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enables private networking for the Droplet by provisioning it inside of your account's default VPC for the region")
 
@@ -92,7 +110,9 @@ If you do not specify a region, the Droplet is created in the default region for
 
 	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Installs the DigitalOcean agent for additional monitoring")
 	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "An ID or slug specifying the image to use to create the Droplet, such as `ubuntu-20-04-x64`. Use the commands under `doctl compute image` to find additional images.",
-		requiredOpt())
+		requiredOpt(),
+		flagPurpose("Image ID or slug used to create the Droplet"),
+		flagHint("run doctl compute image list"))
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "Applies a tag to the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of a non-default VPC to create the Droplet in")
 	AddStringFlag(cmdDropletCreate, doctl.ArgProjectID, "", "", "The UUID of the project to assign the Droplet to")
