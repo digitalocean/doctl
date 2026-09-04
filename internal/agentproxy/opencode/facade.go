@@ -60,6 +60,16 @@ type Facade struct {
 	eventInUse  bool
 	handlerOnce sync.Once
 	mux         *http.ServeMux
+
+	// mu guards turns and sessionCreated: turns is written by prompt
+	// handlers (request goroutines) and read by the event loop (the SSE
+	// handler goroutine).
+	mu    sync.Mutex
+	turns map[string]*turnState
+	// sessionCreated flips once the client has created/prompted the bridged
+	// session, so the session list grows its single entry (see
+	// handleSessionList).
+	sessionCreated bool
 }
 
 // ServeHTTP implements http.Handler.
@@ -151,10 +161,25 @@ func (f *Facade) buildMux() {
 	mux.HandleFunc("GET /experimental/workspace", f.json([]any{}))
 	mux.HandleFunc("GET /experimental/workspace/status", f.json([]any{}))
 
-	// Session listing: empty until M3 serves history. The TUI treats an
-	// empty list as "fresh session, create lazily on first prompt" — exactly
-	// the M1 empty-ready-conversation state.
-	mux.HandleFunc("GET /session", f.json([]any{}))
+	// The bridged session: list/create/get plus the prompt bridge (M2).
+	// History (GET .../message) returns empty until M3 serves it from a
+	// replay_only stream pass.
+	mux.HandleFunc("GET /session", f.handleSessionList)
+	mux.HandleFunc("POST /session", f.handleSessionCreate)
+	mux.HandleFunc("GET /session/{id}", func(w http.ResponseWriter, r *http.Request) {
+		f.writeJSON(w, f.sessionObject())
+	})
+	mux.HandleFunc("GET /session/{id}/message", f.json([]any{}))
+	mux.HandleFunc("POST /session/{id}/prompt_async", f.handlePromptAsync)
+	// The synchronous variant officially awaits the reply; bridging that
+	// faithfully would block a request goroutine for a whole turn. Current
+	// TUIs use prompt_async (M0 capture); if a client POSTs /message, treat
+	// it as fire-and-forget and let the reply ride the stream — log it so a
+	// client that genuinely blocks on the response is diagnosable.
+	mux.HandleFunc("POST /session/{id}/message", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("agentproxy/opencode: POST message treated as prompt_async (reply rides the stream)")
+		f.handlePromptAsync(w, r)
+	})
 
 	// The /api/* surface (new in recent opencode versions; sits alongside
 	// the older paths above — the TUI queries both). Wrapped responses:
@@ -193,8 +218,8 @@ func (f *Facade) buildMux() {
 }
 
 // handleGlobalEvent serves the SSE event stream: server.connected first (the
-// TUI's liveness signal), then blocks until the client disconnects or the
-// server shuts down. M2 wires the harness event loop in here.
+// TUI's liveness signal), then the live harness event loop until the client
+// disconnects, the harness stream ends, or the server shuts down.
 func (f *Facade) handleGlobalEvent(w http.ResponseWriter, r *http.Request) {
 	f.eventSlot.Lock()
 	if f.eventInUse {
@@ -219,32 +244,67 @@ func (f *Facade) handleGlobalEvent(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(http.StatusOK)
 
-	if err := f.sendEvent(w, "server.connected", map[string]any{}); err != nil {
+	ew := &eventWriter{f: f, w: w, fl: fl}
+	if err := ew.global("server.connected", map[string]any{}); err != nil {
 		return
 	}
-	fl.Flush()
 
 	// r.Context() is rooted in the transport's ctx (ServeHTTPListener's
-	// BaseContext), so both a client disconnect and a proxy shutdown land
-	// here — no separate signal plumbing needed.
-	<-r.Context().Done()
+	// BaseContext), so both a client disconnect and a proxy shutdown cancel
+	// the harness stream — no separate signal plumbing needed.
+	f.runEventLoop(r.Context(), ew)
 }
 
-// sendEvent writes one global-stream SSE frame. Envelope shape per the
-// capture: data: {"payload":{"id":"evt_<n>","type":T,"properties":P}}
-func (f *Facade) sendEvent(w http.ResponseWriter, eventType string, properties any) error {
-	frame, err := json.Marshal(map[string]any{
-		"payload": map[string]any{
-			"id":         fmt.Sprintf("evt_%d", f.eventSeq.Add(1)),
-			"type":       eventType,
-			"properties": properties,
-		},
-	})
+// eventWriter frames global-stream SSE events. Envelope shape per the M0
+// capture: data: {"payload":{"id":"evt_<n>","type":T,"properties":P}}, with
+// top-level directory/project keys on directory-scoped (session) events —
+// mirroring how the real global stream tags them (project.updated carries
+// them; server.connected doesn't).
+//
+// Only the /global/event handler goroutine writes, by construction — the
+// prompt handlers never touch the stream — so unlike the WS transport's
+// wsNotifier there is no write mutex here. That changes the moment anything
+// else needs to emit (M5's HITL resolution is the candidate); add the mutex
+// then, not never.
+type eventWriter struct {
+	f  *Facade
+	w  http.ResponseWriter
+	fl http.Flusher
+}
+
+func (ew *eventWriter) send(envelope map[string]any) error {
+	frame, err := json.Marshal(envelope)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(w, "data: %s\n\n", frame)
-	return err
+	if _, err := fmt.Fprintf(ew.w, "data: %s\n\n", frame); err != nil {
+		return err
+	}
+	ew.fl.Flush()
+	return nil
+}
+
+func (ew *eventWriter) payload(eventType string, properties any) map[string]any {
+	return map[string]any{
+		"id":         fmt.Sprintf("evt_%d", ew.f.eventSeq.Add(1)),
+		"type":       eventType,
+		"properties": properties,
+	}
+}
+
+// global emits a server-scoped frame (server.connected).
+func (ew *eventWriter) global(eventType string, properties any) error {
+	return ew.send(map[string]any{"payload": ew.payload(eventType, properties)})
+}
+
+// session emits a directory-scoped frame (everything about the bridged
+// session).
+func (ew *eventWriter) session(eventType string, properties any) error {
+	return ew.send(map[string]any{
+		"directory": ew.f.Dir,
+		"project":   "global",
+		"payload":   ew.payload(eventType, properties),
+	})
 }
 
 // json returns a handler that writes a fixed JSON body. For bodies that
