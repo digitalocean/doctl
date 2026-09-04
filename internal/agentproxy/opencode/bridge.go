@@ -3,11 +3,13 @@ package opencode
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/digitalocean/godo"
@@ -267,24 +269,202 @@ func (f *Facade) dropTurn(runID string) {
 	f.mu.Unlock()
 }
 
+// Reconnect schedule for runEventLoop's StreamSession loop. Mirrors the codex
+// facade's constants (which themselves mirror doctl agents attach) —
+// duplicated a third time now; if these ever need to change, extract a shared
+// package rather than editing three copies.
+const (
+	maxAutoReconnectAttempts = 5
+	initialReconnectBackoff  = 1 * time.Second
+	maxReconnectBackoff      = 30 * time.Second
+)
+
+// healthyStreamDuration is how long a harness stream must stay connected
+// before a drop counts as a normal idle timeout (resetting the reconnect
+// budget) rather than a failing connection. Var, not const, so tests can
+// shrink it.
+var healthyStreamDuration = 30 * time.Second
+
+func nextReconnectBackoff(cur time.Duration) time.Duration {
+	next := cur * 2
+	if next > maxReconnectBackoff {
+		return maxReconnectBackoff
+	}
+	return next
+}
+
+// sleepCtx waits for d or returns false immediately if ctx is done.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
+}
+
+// reconnectSleep is the backoff wait between reconnect attempts, behind an
+// atomic.Pointer for the same reason as the codex facade's identical hook: a
+// test's event loop can outlive the test that started it and race a later
+// test's reassignment under -race.
+var reconnectSleep atomic.Pointer[func(context.Context, time.Duration) bool]
+
+func init() {
+	fn := sleepCtx
+	reconnectSleep.Store(&fn)
+}
+
+func setReconnectSleepForTest(fn func(context.Context, time.Duration) bool) (restore func()) {
+	old := reconnectSleep.Load()
+	reconnectSleep.Store(&fn)
+	return func() { reconnectSleep.Store(old) }
+}
+
+// isTerminalStreamError reports whether reconnecting is pointless — auth
+// failure, session gone, or a conflicting single-connection consumer (a
+// concurrent `doctl agents attach` holds the same per-session slot this
+// proxy's stream needs).
+func isTerminalStreamError(err error) bool {
+	var er *godo.ErrorResponse
+	if !errors.As(err, &er) || er.Response == nil {
+		return false
+	}
+	switch er.Response.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict:
+		return true
+	}
+	return false
+}
+
 // runEventLoop is the live StreamSession drain for one connected event
 // stream. It runs inside the /global/event handler goroutine — the SSE
 // response writer has exactly one writer by construction, so no notifier
 // mutex is needed the way the WS transport's wsNotifier is.
 //
-// M2 scope: no reconnect. A dropped harness stream ends the SSE response,
-// and the TUI's own re-attach opens a fresh one (which re-runs this loop).
-// M6 adds replay_from-cursor reconnects inside a single SSE response.
+// M6: the loop reconnects across transient harness-stream drops inside the
+// one client SSE response, resuming with a replay_from cursor so no event is
+// lost or duplicated. The cursor is the last event id SEEN, recorded
+// unconditionally and never compared — event ids are random UUIDv4s, so a
+// max-id ratchet would skip events (the codex facade's shipped drainStream
+// bug; the test harness mints random ids for exactly this reason).
+//
+// The loop exits (ending the SSE response, which the TUI answers with its own
+// re-attach) when the client is gone, the proxy is shutting down, a terminal
+// stream error makes retrying pointless, the reconnect budget is exhausted,
+// or — the common case — the harness stream ends with no turn in flight:
+// nothing is owed to the client, and the TUI's next prompt arrives on a fresh
+// handler anyway. Turns still in flight at give-up are failed loudly
+// (failTrackedTurns) rather than left spinning.
 func (f *Facade) runEventLoop(ctx context.Context, ew *eventWriter) {
-	stream, err := f.Sessions.StreamSession(ctx, f.SessionID, nil)
-	if err != nil {
-		log.Printf("agentproxy/opencode: StreamSession failed: %v", err)
-		return
-	}
-	defer stream.Close()
+	var cursor string
+	backoff := initialReconnectBackoff
+	failures := 0
 
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		var opts *godo.HostedAgentSessionStreamOptions
+		if cursor != "" {
+			opts = &godo.HostedAgentSessionStreamOptions{ReplayFrom: cursor}
+		}
+		stream, err := f.Sessions.StreamSession(ctx, f.SessionID, opts)
+		if err != nil {
+			if isTerminalStreamError(err) {
+				log.Printf("agentproxy/opencode: StreamSession failed (terminal), giving up: %v", err)
+				f.failTrackedTurns(ew, "hosted session stream unavailable: "+err.Error())
+				return
+			}
+			failures++
+			if failures >= maxAutoReconnectAttempts {
+				log.Printf("agentproxy/opencode: StreamSession failed %d times in a row, giving up: %v", failures, err)
+				f.failTrackedTurns(ew, "lost connection to the hosted session")
+				return
+			}
+			log.Printf("agentproxy/opencode: StreamSession failed, reconnecting: %v", err)
+			if !(*reconnectSleep.Load())(ctx, backoff) {
+				return
+			}
+			backoff = nextReconnectBackoff(backoff)
+			continue
+		}
+
+		connectedAt := time.Now()
+		// Next() reads the HTTP body with no select on ctx; close the body
+		// when ctx ends so the drain returns and shutdown can finish.
+		drainDone := make(chan struct{})
+		go func(s *godo.HostedAgentSessionStream) {
+			select {
+			case <-ctx.Done():
+				_ = s.Close()
+			case <-drainDone:
+			}
+		}(stream)
+		clientDead := f.drainStream(stream, ew, &cursor)
+		close(drainDone)
+		streamErr := stream.Err()
+		stream.Close()
+
+		if clientDead || ctx.Err() != nil {
+			return
+		}
+		if streamErr != nil && isTerminalStreamError(streamErr) {
+			log.Printf("agentproxy/opencode: stream error (terminal), giving up: %v", streamErr)
+			f.failTrackedTurns(ew, "hosted session stream unavailable: "+streamErr.Error())
+			return
+		}
+
+		// Nothing in flight: a stream end here owes the client nothing, and
+		// the next prompt opens its own fresh stream state. This is also the
+		// exit that ends the SSE response when the harness closes a drained
+		// stream normally.
+		f.mu.Lock()
+		noTurnsLeft := len(f.turns) == 0
+		f.mu.Unlock()
+		if noTurnsLeft {
+			if streamErr != nil {
+				log.Printf("agentproxy/opencode: harness stream ended: %v", streamErr)
+			}
+			return
+		}
+
+		// A drop after a healthy, long-lived connection is a normal idle
+		// timeout, not a failing session: reset the budget so a long-lived
+		// proxy survives unbounded idle drops while still giving up on a
+		// session that keeps failing immediately.
+		if time.Since(connectedAt) >= healthyStreamDuration {
+			failures = 0
+			backoff = initialReconnectBackoff
+		} else {
+			failures++
+		}
+		if failures >= maxAutoReconnectAttempts {
+			log.Printf("agentproxy/opencode: reconnected %d times without staying healthy, giving up", failures)
+			f.failTrackedTurns(ew, "lost connection to the hosted session")
+			return
+		}
+		log.Printf("agentproxy/opencode: harness stream dropped mid-turn (err=%v), reconnecting from cursor", streamErr)
+		if !(*reconnectSleep.Load())(ctx, backoff) {
+			return
+		}
+		backoff = nextReconnectBackoff(backoff)
+	}
+}
+
+// drainStream reads one harness stream until it ends, translating events for
+// tracked turns. cursor is updated with every event's id as it is seen,
+// before processing — even an event this facade fails to handle must never be
+// re-requested on reconnect (re-receiving it wouldn't fix it). Returns true
+// when a client write failed — the SSE consumer is gone and reconnecting to
+// the harness would help nothing.
+func (f *Facade) drainStream(stream *godo.HostedAgentSessionStream, ew *eventWriter, cursor *string) bool {
 	for stream.Next() {
 		ev := stream.Current()
+		if ev.EventID != "" {
+			*cursor = ev.EventID
+		}
 		// Control frames (stream.state) and anything else without a run id
 		// belong to no turn.
 		if ev.RunID == "" {
@@ -296,12 +476,46 @@ func (f *Facade) runEventLoop(ctx context.Context, ew *eventWriter) {
 		}
 		if err := f.translateEvent(ev, ts, ew); err != nil {
 			log.Printf("agentproxy/opencode: client write failed, closing stream: %v", err)
-			return
+			return true
 		}
 	}
-	if err := stream.Err(); err != nil && ctx.Err() == nil {
-		log.Printf("agentproxy/opencode: harness stream ended: %v", err)
+	return false
+}
+
+// failTrackedTurns ends every in-flight turn on the client when the event
+// loop gives up for good: dismiss pending permission dialogs, close dangling
+// tool parts and assistant messages, then surface one session.error and go
+// idle. Best-effort — the client may itself be the casualty — so write
+// errors are ignored; the SSE response is about to end either way.
+func (f *Facade) failTrackedTurns(ew *eventWriter, message string) {
+	f.mu.Lock()
+	turns := f.turns
+	f.turns = nil
+	perms := f.perms
+	f.perms = nil
+	f.permsByHitl = nil
+	f.mu.Unlock()
+	if len(turns) == 0 && len(perms) == 0 {
+		return
 	}
+
+	for _, p := range perms {
+		_ = f.emitPermissionReplied(ew, p.perID, "reject")
+	}
+	sid := f.ocSessionID()
+	at := timeNowMs()
+	for runID, ts := range turns {
+		_ = f.closeDanglingTools(ts, ew, sid, at)
+		_ = f.finishAssistantMessage(runID, ts, ew, at)
+	}
+	_ = ew.session("session.error", map[string]any{
+		"sessionID": sid,
+		"error": map[string]any{
+			"name": "UnknownError",
+			"data": map[string]any{"message": message},
+		},
+	})
+	_ = f.emitIdle(sid, ew)
 }
 
 // translateEvent maps one canonical event to opencode frames on the
