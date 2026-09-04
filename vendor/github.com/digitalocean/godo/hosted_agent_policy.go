@@ -37,11 +37,11 @@ const (
 // HostedAgentPolicyResolvedRule is a rule after resolution, carrying a stable
 // id for audit correlation.
 type HostedAgentPolicyResolvedRule struct {
-	ID          string                        `json:"id,omitempty"`
-	Tool        string                        `json:"tool,omitempty"`
-	Match       map[string]string             `json:"match,omitempty"`
-	Action      HostedAgentPolicyAction       `json:"action,omitempty"`
-	Enforcement HostedAgentPolicyEnforcement  `json:"enforcement,omitempty"`
+	ID          string                       `json:"id,omitempty"`
+	Tool        string                       `json:"tool,omitempty"`
+	Match       map[string]string            `json:"match,omitempty"`
+	Action      HostedAgentPolicyAction      `json:"action,omitempty"`
+	Enforcement HostedAgentPolicyEnforcement `json:"enforcement,omitempty"`
 }
 
 // HostedAgentPolicyRuleVerdict pairs a resolved rule with its validation outcome.
@@ -68,8 +68,8 @@ type HostedAgentPolicyValidationResult struct {
 	DefaultActionVerdict HostedAgentPolicyVerdict `json:"defaultActionVerdict,omitempty"`
 	// DefaultActionRendered is the disposition the agent will actually enforce
 	// as the catch-all.
-	DefaultActionRendered HostedAgentPolicyAction `json:"defaultActionRendered,omitempty"`
-	DefaultActionReason   string                  `json:"defaultActionReason,omitempty"`
+	DefaultActionRendered HostedAgentPolicyAction        `json:"defaultActionRendered,omitempty"`
+	DefaultActionReason   string                         `json:"defaultActionReason,omitempty"`
 	Verdicts              []HostedAgentPolicyRuleVerdict `json:"verdicts,omitempty"`
 	// ActionGatewayReason is set when a do.actions tool/toolbelt reference failed
 	// tool-registry's existence check.
