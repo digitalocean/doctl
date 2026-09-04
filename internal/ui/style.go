@@ -65,15 +65,21 @@ func (s Style) paint(text string, c lipgloss.TerminalColor) string {
 	return s.env.SprintErr(s.env.NewErrStyle().Foreground(c), text)
 }
 
-// ErrorLabel returns the failure label, led by its glyph.
+// ErrorLabel returns the failure label, led by its glyph on a terminal.
 //
-// The glyph is kept even when the stream is redirected. Stripping colour and
-// keeping the symbol and the word is what the design system asks for, on the
-// grounds that the symbol is half of what carries the meaning once the colour
-// is gone; only the ANSI codes are dropped. Terminals that cannot render the
-// symbol get the ASCII fallback rather than nothing.
+// The glyph is gated on the stream rather than on colour, for the reason
+// Env.ErrTTY gives: it stands in for the word on a screen, and a log read by
+// grep wants the word. So a terminal with --color=never keeps the symbol and
+// loses only the ANSI codes, while a redirected stream gets "Error:" - which
+// is also what every script and test matching on doctl's errors expects.
+// Terminals that cannot render the symbol get the ASCII fallback.
 func (s Style) ErrorLabel() string {
-	return s.paint(s.env.Glyphs().Failure+" Error:", ColorError)
+	label := "Error:"
+	if s.env.ErrTTY {
+		label = s.env.Glyphs().Failure + " " + label
+	}
+
+	return s.paint(label, ColorError)
 }
 
 // Bold emphasises flag names and command paths when Err styling is on.

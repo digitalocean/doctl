@@ -208,6 +208,24 @@ func TestSprint(t *testing.T) {
 	})
 }
 
+// TestProfiles covers the case a process-wide styling stack gets wrong: a
+// terminal on one stream and a redirect on the other. Each profile has to
+// answer for its own stream, or `doctl ... > data` writes escape sequences
+// into the file because stderr happened to be a terminal.
+func TestProfiles(t *testing.T) {
+	clearEnv(t)
+
+	env := Env{
+		Style:       false,
+		ErrStyle:    true,
+		renderer:    newRenderer(io.Discard, termenv.TrueColor),
+		errRenderer: newRenderer(io.Discard, termenv.TrueColor),
+	}
+
+	assert.Equal(t, termenv.Ascii, env.DataProfile(), "a redirected Out stays plain")
+	assert.Equal(t, termenv.TrueColor, env.Profile(), "a terminal on Err keeps colour")
+}
+
 func TestGlyphs(t *testing.T) {
 	t.Run("unicode by default", func(t *testing.T) {
 		assert.Equal(t, "✓", Env{}.Glyphs().Success)

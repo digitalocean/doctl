@@ -104,6 +104,11 @@ func detectUIEnvFor(out io.Writer) ui.Env {
 // --output, and NO_COLOR without each of their call sites having to know about
 // ui.Env.
 //
+// They are pointed at different streams because they are read by call sites
+// that write to different streams: lipgloss backs charm's templates, prompts
+// and styled text, which write to Out, while the one remaining fatih/color
+// site writes to color.Error. Each has to follow the stream it lands on.
+//
 // charm's template output is repointed for the same reason: it defaults to the
 // process's own stdout, which ignores doctl's writer.
 func installOutputPolicy() error {
@@ -117,7 +122,7 @@ func installOutputPolicy() error {
 	env := detectUIEnv()
 	resolvedEnv = &env
 
-	lipgloss.SetColorProfile(env.Profile())
+	lipgloss.SetColorProfile(env.DataProfile())
 	color.NoColor = !env.ErrStyle
 	template.Output, template.ErrOutput = env.Writer(), env.ErrWriter()
 
@@ -137,8 +142,18 @@ func colorOption() (ui.Option, bool) {
 	}
 }
 
+// colorPolicy reports the requested colour policy. viper is authoritative for
+// the same reason it is for --output: it folds in config.yaml and the bound
+// flag, so a `color: never` in a config file is honoured rather than silently
+// losing to the flag's default. It is empty before initConfig runs, in which
+// case the flag variable applies.
 func colorPolicy() string {
-	policy := strings.ToLower(strings.TrimSpace(Color))
+	policy := viper.GetString(doctl.ArgColor)
+	if policy == "" {
+		policy = Color
+	}
+
+	policy = strings.ToLower(strings.TrimSpace(policy))
 	if policy == "" {
 		return colorAuto
 	}

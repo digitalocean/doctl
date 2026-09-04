@@ -226,14 +226,30 @@ func Plain(out, err io.Writer) Env {
 }
 
 // Profile returns the colour profile resolved for Err. It is the profile that
-// governs chrome, which is what a process-wide styling stack should be pointed
-// at: styling on Out is decided per-write through Style.
+// governs chrome written through this Env; components that style per write go
+// through SprintErr instead.
 func (e Env) Profile() termenv.Profile {
 	if !e.ErrStyle {
 		return termenv.Ascii
 	}
 
 	return e.ErrRenderer().ColorProfile()
+}
+
+// DataProfile returns the colour profile resolved for Out.
+//
+// It is the profile a process-wide styling stack should be pointed at, because
+// a package-level style renders through that stack whatever writer it is
+// eventually handed, and the components still built that way - charm's
+// templates, prompts and styled text - write to Out. Pointing the global at
+// Err instead would reflow escape sequences into a redirected stdout whenever
+// a terminal happened to be attached to stderr.
+func (e Env) DataProfile() termenv.Profile {
+	if !e.Style {
+		return termenv.Ascii
+	}
+
+	return e.Renderer().ColorProfile()
 }
 
 // Renderer returns the lipgloss renderer bound to Out.

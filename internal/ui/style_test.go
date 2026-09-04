@@ -58,3 +58,39 @@ func TestStyleUsesTerminalColorSlots(t *testing.T) {
 		}
 	}
 }
+
+// TestErrorLabelGlyphFollowsTheStream guards the two halves of the label
+// separately: the glyph belongs to a screen and the colour belongs to a stream
+// that permits styling. A redirected stderr therefore reads "Error:", which is
+// what the scripts and tests matching doctl's errors have always matched on.
+func TestErrorLabelGlyphFollowsTheStream(t *testing.T) {
+	t.Run("a terminal is led by the glyph", func(t *testing.T) {
+		label := ui.NewStyle(ui.Env{ErrTTY: true}).ErrorLabel()
+
+		if want := ui.GlyphFailure + " Error:"; label != want {
+			t.Fatalf("got %q, want %q", label, want)
+		}
+	})
+
+	t.Run("a redirected stream gets the word alone", func(t *testing.T) {
+		label := ui.NewStyle(ui.Env{}).ErrorLabel()
+
+		if label != "Error:" {
+			t.Fatalf("got %q, want %q", label, "Error:")
+		}
+	})
+
+	// --color=never on a terminal drops the ANSI codes and nothing else: the
+	// symbol is still legible, and it is half of what carries the meaning once
+	// the colour is gone.
+	t.Run("colour and glyph are decided separately", func(t *testing.T) {
+		label := ui.NewStyle(ui.Env{ErrTTY: true, ErrStyle: false}).ErrorLabel()
+
+		if !strings.Contains(label, ui.GlyphFailure) {
+			t.Fatalf("unstyled terminal lost the glyph; got %q", label)
+		}
+		if strings.Contains(label, "\x1b[") {
+			t.Fatalf("unstyled terminal gained escape sequences; got %q", label)
+		}
+	})
+}

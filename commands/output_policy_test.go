@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/internal/ui"
@@ -48,13 +49,18 @@ func withColorPolicy(t *testing.T, policy string) {
 	t.Helper()
 
 	prevColor, prevEnv := Color, resolvedEnv
+	prevViper := viper.GetString(doctl.ArgColor)
 	prevProfile, prevNoColor := lipgloss.ColorProfile(), color.NoColor
 	prevOut, prevErrOut := template.Output, template.ErrOutput
 
+	// Set both: the policy is read through viper, which is what folds in
+	// config.yaml and the bound flag, and falls back to the flag variable.
 	Color = policy
+	viper.Set(doctl.ArgColor, policy)
 
 	t.Cleanup(func() {
 		Color, resolvedEnv = prevColor, prevEnv
+		viper.Set(doctl.ArgColor, prevViper)
 		lipgloss.SetColorProfile(prevProfile)
 		color.NoColor = prevNoColor
 		template.Output, template.ErrOutput = prevOut, prevErrOut
@@ -126,8 +132,9 @@ func TestOutputPolicy(t *testing.T) {
 
 			// The two legacy stacks must agree with the policy, since that is
 			// what makes charm chrome and the remaining fatih/color sites
-			// follow it without knowing about ui.Env.
-			assert.Equal(t, tt.profile, lipgloss.ColorProfile(), "lipgloss profile")
+			// follow it without knowing about ui.Env. lipgloss follows Out
+			// because that is the stream the call sites reading it write to.
+			assert.Equal(t, env.DataProfile(), lipgloss.ColorProfile(), "lipgloss profile")
 			assert.Equal(t, tt.disabled, color.NoColor, "fatih/color")
 		})
 	}
@@ -167,6 +174,20 @@ func TestColorOption(t *testing.T) {
 		t.Setenv("COLORTERM", "truecolor")
 		assert.Equal(t, termenv.TrueColor, forcedProfile())
 	})
+}
+
+// TestColorPolicyHonorsConfig covers `color: never` in config.yaml. The flag
+// is bound to viper, so the value has to be read back through viper the way
+// --output is: reading the flag variable alone means a config file loses to
+// the flag's own default and silently does nothing.
+func TestColorPolicyHonorsConfig(t *testing.T) {
+	withColorPolicy(t, colorAuto)
+
+	// What an untouched flag plus a configured value looks like.
+	Color = colorAuto
+	viper.Set(doctl.ArgColor, colorNever)
+
+	assert.Equal(t, colorNever, colorPolicy())
 }
 
 func envWith(opt ui.Option) ui.Env {

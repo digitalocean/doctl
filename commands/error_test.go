@@ -31,16 +31,30 @@ import (
 func Test_checkErr(t *testing.T) {
 	defer func(a func()) { errAction = a }(errAction)
 
-	var b bytes.Buffer
-	withUIEnv(t, ui.Plain(&b, &b))
-
 	errAction = func() {
 	}
 
-	checkErr(errors.New("an error"))
+	t.Run("a redirected stream gets the word", func(t *testing.T) {
+		var b bytes.Buffer
+		withUIEnv(t, ui.Plain(&b, &b))
 
-	// Same label a FlagValidationError carries, so both read as one voice.
-	assert.Equal(t, "✗ Error: an error\n", b.String())
+		checkErr(errors.New("an error"))
+
+		// Same label a FlagValidationError carries, so both read as one voice.
+		assert.Equal(t, "Error: an error\n", b.String())
+	})
+
+	// The glyph is a screen affordance, so it is gated on stderr being a
+	// terminal rather than on colour. Everything parsing doctl's stderr - the
+	// integration suite included - matches on the plain form above.
+	t.Run("a terminal is led by the glyph", func(t *testing.T) {
+		var b bytes.Buffer
+		withUIEnv(t, ui.Env{Out: &b, Err: &b, ErrTTY: true})
+
+		checkErr(errors.New("an error"))
+
+		assert.Equal(t, ui.GlyphFailure+" Error: an error\n", b.String())
+	})
 }
 
 func Test_checkErr_FlagValidationJSONKeepsErrorsEnvelope(t *testing.T) {
