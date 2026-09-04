@@ -397,6 +397,16 @@ func RunDropletCreate(c *CmdConfig) error {
 		}
 	}
 
+	// Assignment happens as soon as the Droplets exist, before any wait: a
+	// Droplet belongs to a project from the moment it is created, and waiting
+	// first would mean a wait that timed out left Droplets running outside the
+	// project the user asked for, with nothing recording that it was asked.
+	for _, createdDroplet := range createdList {
+		if err := c.moveToProject(projectUUID, createdDroplet); err != nil {
+			return err
+		}
+	}
+
 	if wait {
 		w, err := newWaiter(c)
 		if err != nil {
@@ -405,12 +415,6 @@ func RunDropletCreate(c *CmdConfig) error {
 
 		createdList, err = waitForActiveDroplets(w, ds, createdList)
 		if err != nil {
-			return err
-		}
-	}
-
-	for _, createdDroplet := range createdList {
-		if err := c.moveToProject(projectUUID, createdDroplet); err != nil {
 			return err
 		}
 	}

@@ -86,26 +86,28 @@ func (e Env) NewSpinner(message string) *Spinner {
 // leaves later stages to Message, so that a log records where the operation
 // got to without accumulating a frame per tick.
 func (s *Spinner) Start() {
+	quit, done := make(chan struct{}), make(chan struct{})
+
 	s.mu.Lock()
 	if s.stopped || !s.started.IsZero() {
 		s.mu.Unlock()
 		return
 	}
 	s.started = s.now()
-	animate := s.env.Anim
 
-	if !animate {
+	if !s.env.Anim {
 		s.report(s.started)
 		s.mu.Unlock()
 		return
 	}
+
+	// Assigned under the lock that halt reads them under, so that a Stop from
+	// another goroutine cannot race the Start that created them.
+	s.quit, s.done = quit, done
 	s.mu.Unlock()
 
-	quit, done := make(chan struct{}), make(chan struct{})
-	s.quit, s.done = quit, done
-
-	// The channels are captured as locals because halt clears the fields, and
-	// a select on a nil channel blocks forever.
+	// The channels are used as locals from here because halt clears the
+	// fields, and a select on a nil channel blocks forever.
 	go func() {
 		defer close(done)
 

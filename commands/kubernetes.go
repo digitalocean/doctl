@@ -2662,9 +2662,14 @@ func removeKubeconfig(remote, local *clientcmdapi.Config) error {
 }
 
 // waitForClusterRunning waits for a cluster to be running.
+//
+// The cluster last read is returned however the wait ends, so that a caller
+// reporting a wait that did not reach `running` can still say what state the
+// cluster is actually in. Returning nil there would have the caller announce
+// that the cluster had vanished when it is merely still provisioning.
 func waitForClusterRunning(w waiter, kube do.KubernetesService, clusterID string) (*do.KubernetesCluster, error) {
 	var (
-		running  *do.KubernetesCluster
+		last     *do.KubernetesCluster
 		failures int
 	)
 
@@ -2689,25 +2694,20 @@ func waitForClusterRunning(w waiter, kube do.KubernetesService, clusterID string
 			return false, "", nil
 		}
 
+		last = cluster
+
 		state := cluster.Status.State
 		switch state {
 		case godo.KubernetesClusterStatusRunning:
-			running = cluster
 			return true, string(state), nil
 		case godo.KubernetesClusterStatusProvisioning:
 			return false, string(state), nil
 		default:
-			running = cluster
 			return false, "", fmt.Errorf("Unknown status: [%s]", state)
 		}
 	})
-	if err != nil {
-		// The cluster is still returned on an unknown status so that the
-		// caller can show the user what state it actually reached.
-		return running, err
-	}
 
-	return running, nil
+	return last, err
 }
 
 func displayClusters(c *CmdConfig, short bool, clusters ...do.KubernetesCluster) error {

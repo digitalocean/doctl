@@ -27,8 +27,10 @@ const (
 )
 
 // waitElapsed matches the elapsed time a wait reports on each of its progress
-// lines, as in "Database (some-id) is online (10s)".
-var waitElapsed = regexp.MustCompile(`\(\d+[a-z]+\)$`)
+// lines, as in "Database (some-id) is online (10s)". Go renders a duration in
+// as many units as it needs, so the unit repeats: a wait that crosses a minute
+// reports "(1m40s)".
+var waitElapsed = regexp.MustCompile(`\((?:\d+[a-z]+)+\)$`)
 
 // normalizeWaitElapsed replaces the elapsed time on wait progress lines with a
 // fixed token. A wait that polls on a ten second interval reports either 10s
