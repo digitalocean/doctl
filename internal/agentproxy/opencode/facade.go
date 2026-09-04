@@ -62,11 +62,16 @@ type Facade struct {
 	handlerOnce sync.Once
 	mux         *http.ServeMux
 
-	// mu guards turns and sessionCreated: turns is written by prompt
-	// handlers (request goroutines) and read by the event loop (the SSE
-	// handler goroutine).
+	// mu guards turns, sessionCreated, and the pending-permission maps: all
+	// written by request goroutines (prompt/reply handlers) and read by the
+	// event loop (the SSE handler goroutine).
 	mu    sync.Mutex
 	turns map[string]*turnState
+	// perms indexes outstanding permission asks by the minted per_ id (the
+	// reply routes) and permsByHitl by the harness hitl id (the resolved
+	// event). Both point at the same pendingPerm entries.
+	perms       map[string]*pendingPerm
+	permsByHitl map[string]*pendingPerm
 	// sessionCreated flips once the client has created/prompted the bridged
 	// session, so the session list grows its single entry (see
 	// handleSessionList).
@@ -218,6 +223,32 @@ func (f *Facade) buildMux() {
 		f.writeJSON(w, map[string]any{"location": f.apiLocation(), "data": []any{apiModel()}})
 	})
 
+	// Permission replies (M5). The TestedVersion TUI answers an ask with the
+	// global route; the session-scoped route is the older equivalent (it's
+	// what plano's adapter drives against a guest server) — same semantics,
+	// different body key. Both resolve the hosted session's HITL request.
+	mux.HandleFunc("POST /permission/{requestID}/reply", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Reply   string `json:"reply"`
+			Message string `json:"message"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, fmt.Sprintf("malformed reply body: %v", err), http.StatusBadRequest)
+			return
+		}
+		f.handlePermissionReply(w, r.PathValue("requestID"), body.Reply, body.Message)
+	})
+	mux.HandleFunc("POST /session/{id}/permissions/{permissionID}", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Response string `json:"response"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, fmt.Sprintf("malformed reply body: %v", err), http.StatusBadRequest)
+			return
+		}
+		f.handlePermissionReply(w, r.PathValue("permissionID"), body.Response, "")
+	})
+
 	// Share syncs conversation history to opencode's public share
 	// infrastructure — never appropriate for a hosted session. Refuse
 	// loudly rather than 404-ing quietly.
@@ -281,10 +312,12 @@ func (f *Facade) handleGlobalEvent(w http.ResponseWriter, r *http.Request) {
 // them; server.connected doesn't).
 //
 // Only the /global/event handler goroutine writes, by construction — the
-// prompt handlers never touch the stream — so unlike the WS transport's
-// wsNotifier there is no write mutex here. That changes the moment anything
-// else needs to emit (M5's HITL resolution is the candidate); add the mutex
-// then, not never.
+// prompt and permission-reply handlers never touch the stream — so unlike the
+// WS transport's wsNotifier there is no write mutex here. M5 kept the rule on
+// purpose: permission.replied is emitted by the event loop when
+// run.human_input_received comes back (which also covers out-of-band
+// resolutions), not by the reply handler. Anything that breaks the
+// single-writer property must add the mutex.
 type eventWriter struct {
 	f  *Facade
 	w  http.ResponseWriter
