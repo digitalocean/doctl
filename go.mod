@@ -23,7 +23,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sclevine/spec v1.3.0
-	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.11.0
