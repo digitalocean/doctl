@@ -488,7 +488,7 @@ func Agents() *Command {
 	AddStringFlag(cmdStartProxy, doctl.ArgAgentProxySession, "", "", "Session ID or name to bridge to", requiredOpt())
 	AddIntFlag(cmdStartProxy, doctl.ArgAgentProxyPort, "", 1144, "Local port to listen on")
 	AddBoolFlag(cmdStartProxy, doctl.ArgAgentProxyReplay, "", false, "Replay the session's event history into the first thread on connect")
-	cmdStartProxy.Example = agentCLI + ` start-proxy --type codex --session my-session --port 1144`
+	cmdStartProxy.Example = agentCLI + ` start-proxy --type codex --session my-session --port 1144; ` + agentCLI + ` start-proxy --type opencode --session my-session`
 
 	cmdList := CmdBuilder(cmd, RunAgentsList, "list",
 		"List your sessions",

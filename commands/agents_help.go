@@ -18,6 +18,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
@@ -148,7 +150,7 @@ const agentsRollbackHelpMD = `Rewind a session to a prior checkpoint. The sessio
 
 const agentsStartProxyHelpMD = `Bridge a local coding-agent CLI to a hosted M.A.R.S session.
 
-` + "`launch`" + ` is doctl's built-in chat. ` + "`start-proxy`" + ` is different: it runs a small local WebSocket server that speaks the agent CLI's own protocol (today: Codex), so you can keep using the native Codex UI while the sandbox lives on DigitalOcean.
+` + "`launch`" + ` is doctl's built-in chat. ` + "`start-proxy`" + ` is different: it runs a small local server that speaks the agent CLI's own protocol — a WebSocket JSON-RPC server for Codex, an HTTP+SSE opencode server for opencode — so you can keep using the agent's native UI while the sandbox lives on DigitalOcean.
 
 Typical flow:
 ` + "```bash\n" + `# terminal 1 — keep this running
@@ -156,7 +158,11 @@ Typical flow:
 
 # terminal 2 — connect Codex to the proxy
 codex --remote ws://127.0.0.1:1144
-` + "```\n\n" + `Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.`
+` + "```\n\n" + `With ` + "`--type opencode`" + `, connect the opencode TUI instead (` + "`--continue`" + ` resumes the session's prior turns):
+` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --continue
+` + "```\n\n" + `The opencode bridge is tested against opencode ` + opencode.TestedVersion + `; other versions usually work, and the proxy logs any request it does not recognize.
+
+Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.`
 
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from it — by name or by ID — with ` + "`" + agentCLI + " create --from-config`" + `, ` + "`" + agentCLI + " launch --from-config`" + `, or ` + "`" + agentCLI + " config start-session`" + `.
 
