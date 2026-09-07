@@ -132,7 +132,7 @@ ID                                      IP    IPv6    Name             Status   
 `
 
 	lbWaitCreateOutput = `
-Waiting for load balancer (4de7ac8b-495b-4884-9a69-1050c6793cd6) to become active (elapsed)
+Creating load balancer (4de7ac8b-495b-4884-9a69-1050c6793cd6) (elapsed)
 Load balancer (4de7ac8b-495b-4884-9a69-1050c6793cd6) is active (elapsed)
 Notice: Load balancer created
 ID                                      IP    IPv6    Name             Status    Created At              Region    Size        Size Unit    VPC UUID                                Subnet UUID    Tag    Droplet IDs        SSL     Sticky Sessions                                Health Check                                                                                                                                 Forwarding Rules    Firewall Rules                                                            Disable Lets Encrypt DNS Records

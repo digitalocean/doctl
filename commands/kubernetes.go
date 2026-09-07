@@ -2674,6 +2674,7 @@ func waitForClusterRunning(w waiter, kube do.KubernetesService, clusterID string
 	)
 
 	err := w.wait(waitOp{
+		Activity: fmt.Sprintf("Creating cluster (%s)", clusterID),
 		Subject:  fmt.Sprintf("cluster (%s) to start running", clusterID),
 		Success:  fmt.Sprintf("Cluster (%s) is running", clusterID),
 		Interval: clusterPollInterval,

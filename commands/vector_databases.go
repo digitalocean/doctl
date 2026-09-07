@@ -162,7 +162,7 @@ func RunVectorDBCreate(c *CmdConfig) error {
 			return err
 		}
 
-		if err := waitForVectorDBReady(w, svc, vdb.ID); err != nil {
+		if err := waitForVectorDBReady(w, svc, vdb.ID, "Creating"); err != nil {
 			return err
 		}
 
@@ -303,7 +303,7 @@ func RunVectorDBResize(c *CmdConfig) error {
 			return err
 		}
 
-		if err := waitForVectorDBReady(w, svc, id); err != nil {
+		if err := waitForVectorDBReady(w, svc, id, "Resizing"); err != nil {
 			return err
 		}
 	}
@@ -398,10 +398,14 @@ func displayVectorDBs(c *CmdConfig, short bool, vdbs ...do.VectorDB) error {
 	return c.Display(item)
 }
 
-func waitForVectorDBReady(w waiter, svc do.VectorDBsService, id string) error {
+// waitForVectorDBReady polls until a vector database is active. verb is what
+// the caller is doing to it - "Creating", "Resizing" - which only the caller
+// knows and which is the whole of the progress line the user reads.
+func waitForVectorDBReady(w waiter, svc do.VectorDBsService, id, verb string) error {
 	const wantStatus = "active"
 
 	return w.wait(waitOp{
+		Activity: fmt.Sprintf("%s vector database (%s)", verb, id),
 		Subject:  fmt.Sprintf("vector database (%s) to become active", id),
 		Success:  fmt.Sprintf("Vector database (%s) is active", id),
 		Interval: 10 * time.Second,

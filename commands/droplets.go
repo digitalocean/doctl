@@ -435,9 +435,11 @@ func waitForActiveDroplets(w waiter, ds do.DropletsService, droplets do.Droplets
 		return droplets, nil
 	}
 
+	activity := fmt.Sprintf("Creating Droplet (%s)", droplets[0].Name)
 	subject := fmt.Sprintf("Droplet (%s) to become active", droplets[0].Name)
 	success := fmt.Sprintf("Droplet (%s) is active", droplets[0].Name)
 	if len(droplets) > 1 {
+		activity = fmt.Sprintf("Creating %d Droplets", len(droplets))
 		subject = fmt.Sprintf("%d Droplets to become active", len(droplets))
 		success = fmt.Sprintf("%d Droplets are active", len(droplets))
 	}
@@ -448,6 +450,7 @@ func waitForActiveDroplets(w waiter, ds do.DropletsService, droplets do.Droplets
 	settled := make([]bool, len(droplets))
 
 	err := w.wait(waitOp{
+		Activity: activity,
 		Subject:  subject,
 		Success:  success,
 		Interval: dropletPollInterval,
@@ -472,7 +475,15 @@ func waitForActiveDroplets(w waiter, ds do.DropletsService, droplets do.Droplets
 			}
 		}
 
-		return ready == len(droplets), fmt.Sprintf("%d of %d active", ready, len(droplets)), nil
+		// A count is worth the width only once there is more than one Droplet
+		// to count: "0 of 1 active" alongside "Creating Droplet (web-01)" is
+		// the same sentence twice.
+		detail := ""
+		if len(droplets) > 1 {
+			detail = fmt.Sprintf("%d of %d active", ready, len(droplets))
+		}
+
+		return ready == len(droplets), detail, nil
 	})
 	if err != nil {
 		return droplets, err

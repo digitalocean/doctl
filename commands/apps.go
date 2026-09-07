@@ -710,6 +710,7 @@ const appDeploymentPollInterval = 10 * time.Second
 
 func waitForActiveDeployment(w waiter, apps do.AppsService, appID string, deploymentID string) error {
 	return w.wait(waitOp{
+		Activity: fmt.Sprintf("Deploying app (%s)", appID),
 		Subject:  fmt.Sprintf("app (%s) deployment to complete", appID),
 		Success:  fmt.Sprintf("App (%s) deployment is complete", appID),
 		Interval: appDeploymentPollInterval,

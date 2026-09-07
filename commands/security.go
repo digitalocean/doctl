@@ -205,6 +205,7 @@ func waitForScanComplete(w waiter, scans do.SecurityService, id string) error {
 	const errStatus = "error"
 
 	return w.wait(waitOp{
+		Activity: fmt.Sprintf("Running scan (%s)", id),
 		Subject:  fmt.Sprintf("scan (%s) to complete", id),
 		Success:  fmt.Sprintf("Scan (%s) is complete", id),
 		Interval: 10 * time.Second,

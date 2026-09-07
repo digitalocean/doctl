@@ -64,10 +64,24 @@ const waitTimeoutDesc = "The longest doctl waits for the operation to finish, as
 
 // waitOp describes a long-running operation to the shared waiter.
 type waitOp struct {
+	// Activity is the progress line: what doctl is doing, in as few words as
+	// still name the thing it is doing it to. "Creating Droplet (web-01)".
+	//
+	// It is deliberately not "Waiting for Droplet (web-01) to become active".
+	// The spinner already says doctl is waiting and the closing line already
+	// says what for, so a progress line that repeats both spends on ceremony
+	// the width that the stage detail needs - and the stage detail is the only
+	// part of the line that changes while the user watches it.
+	Activity string
+
 	// Subject names what is being waited on and the state it must reach, as
-	// in "database cluster (abc-123) to become online". It is phrased to read
-	// correctly inside both the progress line and the timeout error, so it
-	// starts lower case and carries no terminal punctuation.
+	// in "database cluster (abc-123) to become online". It reads inside a
+	// sentence rather than on a line of its own, so it starts lower case and
+	// carries no terminal punctuation.
+	//
+	// It is the long form on purpose: it appears in the timeout error and the
+	// failure line, where the words the progress line drops are what tell a
+	// user what doctl gave up on.
 	Subject string
 
 	// Success is the line reported once the operation completes, written as a
@@ -84,10 +98,6 @@ type waitOp struct {
 	Interval time.Duration
 }
 
-func (op waitOp) message() string {
-	return "Waiting for " + op.Subject
-}
-
 // pollFunc re-reads a resource and reports whether it has settled. Returning
 // an error abandons the wait.
 //
@@ -95,6 +105,12 @@ func (op waitOp) message() string {
 // resource's current status or a step count. It is shown alongside the
 // progress line and refreshed on every poll, which is the difference between
 // telling a user that doctl is still waiting and telling them why.
+//
+// It is worth reporting only while it says something the activity does not. A
+// count of one ("0 of 1 active") and the single in-flight status an API has to
+// offer ("in-progress") are both restatements of a line the user is already
+// reading, and a detail that never changes trains them to stop looking at the
+// one place a wait has anything new to say.
 type pollFunc func() (done bool, detail string, err error)
 
 // waiter drives a poll loop and reports its progress. It is built from a
@@ -157,7 +173,7 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 		timeout = defaultWaitTimeout
 	}
 
-	spinner := w.env.NewSpinner(op.message())
+	spinner := w.env.NewSpinner(op.Activity)
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -178,7 +194,7 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 		// Reported on every pass rather than only when the detail changes, so
 		// that a plain stream can repeat an unmoved stage on its heartbeat
 		// instead of falling silent for the length of the wait.
-		message := op.message()
+		message := op.Activity
 		if detail != "" {
 			message = fmt.Sprintf("%s (%s)", message, detail)
 		}

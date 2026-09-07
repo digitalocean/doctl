@@ -747,6 +747,7 @@ func waitForActiveLoadBalancer(w waiter, lbs do.LoadBalancersService, lbID strin
 	const errStatus = "errored"
 
 	return w.wait(waitOp{
+		Activity: fmt.Sprintf("Creating load balancer (%s)", lbID),
 		Subject:  fmt.Sprintf("load balancer (%s) to become active", lbID),
 		Success:  fmt.Sprintf("Load balancer (%s) is active", lbID),
 		Interval: 10 * time.Second,

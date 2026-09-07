@@ -44,8 +44,9 @@ func TestWaitPollsUntilDone(t *testing.T) {
 
 	calls := 0
 	err := w.wait(waitOp{
-		Subject: "database (abc) to become online",
-		Success: "Database (abc) is online",
+		Activity: "Creating database (abc)",
+		Subject:  "database (abc) to become online",
+		Success:  "Database (abc) is online",
 	}, func() (bool, string, error) {
 		calls++
 		return calls == 3, "creating", nil
@@ -53,8 +54,33 @@ func TestWaitPollsUntilDone(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, 3, calls)
-	assert.Contains(t, buf.String(), "Waiting for database (abc) to become online")
+	assert.Contains(t, buf.String(), "Creating database (abc)")
 	assert.Contains(t, buf.String(), "Database (abc) is online")
+}
+
+// TestWaitProgressStaysShort holds the progress line to the short form while
+// leaving the long one to the messages that are read after the fact.
+//
+// The line a user watches is rewritten every tick and competes with the stage
+// detail for the terminal's width, so it says what doctl is doing and no more.
+// A timeout error is read once, out of context, often out of a CI log, so it
+// spells out what was being waited for and what state it never reached.
+func TestWaitProgressStaysShort(t *testing.T) {
+	var buf bytes.Buffer
+	w := recordingWaiter(&buf, 5*time.Millisecond)
+
+	err := w.wait(waitOp{
+		Activity: "Creating Droplet (web-01)",
+		Subject:  "Droplet (web-01) to become active",
+		Success:  "Droplet (web-01) is active",
+	}, func() (bool, string, error) {
+		return false, "", nil
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, buf.String(), "Creating Droplet (web-01)")
+	assert.NotContains(t, buf.String(), "Waiting for Droplet (web-01) to become active")
+	assert.Contains(t, err.Error(), "waiting for Droplet (web-01) to become active")
 }
 
 // TestWaitPollsImmediately guards the case that used to cost a full interval:
@@ -66,6 +92,7 @@ func TestWaitPollsImmediately(t *testing.T) {
 	calls := 0
 	start := time.Now()
 	err := w.wait(waitOp{
+		Activity: "Running action (1)",
 		Subject:  "action (1) to complete",
 		Success:  "Action (1) completed",
 		Interval: time.Hour,
@@ -85,8 +112,9 @@ func TestWaitReturnsPollError(t *testing.T) {
 
 	sentinel := errors.New("cluster entered status `errored`")
 	err := w.wait(waitOp{
-		Subject: "cluster (abc) to start running",
-		Success: "Cluster (abc) is running",
+		Activity: "Creating cluster (abc)",
+		Subject:  "cluster (abc) to start running",
+		Success:  "Cluster (abc) is running",
 	}, func() (bool, string, error) {
 		return false, "", sentinel
 	})
@@ -102,8 +130,9 @@ func TestWaitTimesOut(t *testing.T) {
 	w := recordingWaiter(&buf, 5*time.Millisecond)
 
 	err := w.wait(waitOp{
-		Subject: "database (abc) to become online",
-		Success: "Database (abc) is online",
+		Activity: "Creating database (abc)",
+		Subject:  "database (abc) to become online",
+		Success:  "Database (abc) is online",
 	}, func() (bool, string, error) {
 		return false, "creating", nil
 	})
@@ -130,8 +159,9 @@ func TestWaitShowsPollDetail(t *testing.T) {
 
 		calls := 0
 		err := w.wait(waitOp{
-			Subject: "app (abc) deployment to complete",
-			Success: "App (abc) deployment is complete",
+			Activity: "Deploying app (abc)",
+			Subject:  "app (abc) deployment to complete",
+			Success:  "App (abc) deployment is complete",
 		}, func() (bool, string, error) {
 			calls++
 			return calls == 3, "2 of 7 steps complete", nil
@@ -150,8 +180,9 @@ func TestWaitShowsPollDetail(t *testing.T) {
 
 		calls := 0
 		err := w.wait(waitOp{
-			Subject: "app (abc) deployment to complete",
-			Success: "App (abc) deployment is complete",
+			Activity: "Deploying app (abc)",
+			Subject:  "app (abc) deployment to complete",
+			Success:  "App (abc) deployment is complete",
 		}, func() (bool, string, error) {
 			calls++
 			return calls == 3, fmt.Sprintf("%d of 7 steps complete", calls), nil
@@ -172,8 +203,9 @@ func TestWaitNeverWritesToOut(t *testing.T) {
 	}
 
 	err := w.wait(waitOp{
-		Subject: "database (abc) to become online",
-		Success: "Database (abc) is online",
+		Activity: "Creating database (abc)",
+		Subject:  "database (abc) to become online",
+		Success:  "Database (abc) is online",
 	}, func() (bool, string, error) {
 		return true, "", nil
 	})

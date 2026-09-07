@@ -245,7 +245,7 @@ func RunDatabaseCreate(c *CmdConfig) error {
 		connection := db.Connection
 		dbs := c.Databases()
 
-		if err := waitForDatabaseReady(w, dbs, db.ID); err != nil {
+		if err := waitForDatabaseReady(w, dbs, db.ID, "Creating"); err != nil {
 			return err
 		}
 
@@ -374,7 +374,7 @@ func RunDatabaseFork(c *CmdConfig) error {
 		connection := db.Connection
 		dbs := c.Databases()
 
-		if err := waitForDatabaseReady(w, dbs, db.ID); err != nil {
+		if err := waitForDatabaseReady(w, dbs, db.ID, "Forking"); err != nil {
 			return err
 		}
 
@@ -604,7 +604,7 @@ func RunDatabaseMigrate(c *CmdConfig) error {
 			return err
 		}
 
-		if err := waitForDatabaseReady(w, dbs, id); err != nil {
+		if err := waitForDatabaseReady(w, dbs, id, "Migrating"); err != nil {
 			return err
 		}
 	}
@@ -2592,10 +2592,14 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 // only adds API traffic.
 const databasePollInterval = 10 * time.Second
 
-func waitForDatabaseReady(w waiter, dbs do.DatabasesService, dbID string) error {
+// waitForDatabaseReady polls until a cluster is online. verb is what the
+// caller is doing to it - "Creating", "Forking", "Migrating" - which only the
+// caller knows and which is the whole of the progress line the user reads.
+func waitForDatabaseReady(w waiter, dbs do.DatabasesService, dbID, verb string) error {
 	const wantStatus = "online"
 
 	return w.wait(waitOp{
+		Activity: fmt.Sprintf("%s database (%s)", verb, dbID),
 		Subject:  fmt.Sprintf("database (%s) to become online", dbID),
 		Success:  fmt.Sprintf("Database (%s) is online", dbID),
 		Interval: databasePollInterval,
@@ -2639,6 +2643,7 @@ func isDatabaseResizeComplete(db *do.Database, req *godo.DatabaseResizeRequest) 
 
 func waitForDatabaseResize(w waiter, dbs do.DatabasesService, dbID string, req *godo.DatabaseResizeRequest) error {
 	return w.wait(waitOp{
+		Activity: fmt.Sprintf("Resizing database (%s)", dbID),
 		Subject:  fmt.Sprintf("database (%s) resize to complete", dbID),
 		Success:  fmt.Sprintf("Database (%s) resize is complete", dbID),
 		Interval: databasePollInterval,

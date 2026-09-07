@@ -132,7 +132,7 @@ func RunVPCPeeringCreate(c *CmdConfig) error {
 			return err
 		}
 
-		if err := waitForVPCPeering(w, vpcService, peering.ID, "ACTIVE", false); err != nil {
+		if err := waitForVPCPeering(w, vpcService, peering.ID, "ACTIVE", "Creating", false); err != nil {
 			return err
 		}
 
@@ -221,7 +221,7 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 				return err
 			}
 
-			if err := waitForVPCPeering(w, vpcs, peeringID, "DELETED", true); err != nil {
+			if err := waitForVPCPeering(w, vpcs, peeringID, "DELETED", "Deleting", true); err != nil {
 				return err
 			}
 		} else {
@@ -235,12 +235,17 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 	return nil
 }
 
-func waitForVPCPeering(w waiter, vpcService do.VPCsService, peeringID string, wantStatus string, terminateOnNotFound bool) error {
+// waitForVPCPeering polls until a peering reaches wantStatus. verb is what the
+// caller is doing to it - "Creating", "Deleting" - which the target status
+// implies but does not state, and which is the whole of the progress line the
+// user reads.
+func waitForVPCPeering(w waiter, vpcService do.VPCsService, peeringID, wantStatus, verb string, terminateOnNotFound bool) error {
 	const errStatus = "ERROR"
 
 	return w.wait(waitOp{
-		Subject: fmt.Sprintf("VPC Peering (%s) to become %s", peeringID, wantStatus),
-		Success: fmt.Sprintf("VPC Peering (%s) is %s", peeringID, wantStatus),
+		Activity: fmt.Sprintf("%s VPC Peering (%s)", verb, peeringID),
+		Subject:  fmt.Sprintf("VPC Peering (%s) to become %s", peeringID, wantStatus),
+		Success:  fmt.Sprintf("VPC Peering (%s) is %s", peeringID, wantStatus),
 	}, func() (bool, string, error) {
 		peering, err := vpcService.GetPeering(peeringID)
 		if err != nil {

@@ -465,7 +465,7 @@ func RunPartnerAttachmentDelete(c *CmdConfig) error {
 				return err
 			}
 
-			if err := waitForPNC(w, pas, paID, "DELETED", true); err != nil {
+			if err := waitForPNC(w, pas, paID, "DELETED", "Deleting", true); err != nil {
 				return err
 			}
 		} else {
@@ -501,12 +501,17 @@ func RunPartnerAttachmentRouteList(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-func waitForPNC(w waiter, pas do.PartnerAttachmentsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
+// waitForPNC polls until an attachment reaches wantStatus. verb is what the
+// caller is doing to it - "Creating", "Deleting" - which the target state
+// implies but does not state, and which is the whole of the progress line the
+// user reads.
+func waitForPNC(w waiter, pas do.PartnerAttachmentsService, iaID, wantStatus, verb string, terminateOnNotFound bool) error {
 	const errStatus = "ERROR"
 
 	return w.wait(waitOp{
-		Subject: fmt.Sprintf("Partner Attachment (%s) to become %s", iaID, wantStatus),
-		Success: fmt.Sprintf("Partner Attachment (%s) is %s", iaID, wantStatus),
+		Activity: fmt.Sprintf("%s Partner Attachment (%s)", verb, iaID),
+		Subject:  fmt.Sprintf("Partner Attachment (%s) to become %s", iaID, wantStatus),
+		Success:  fmt.Sprintf("Partner Attachment (%s) is %s", iaID, wantStatus),
 	}, func() (bool, string, error) {
 		pa, err := pas.GetPartnerAttachment(iaID)
 		if err != nil {

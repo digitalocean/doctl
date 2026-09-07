@@ -272,7 +272,7 @@ const (
 `
 
 	kubeClustersCreateOutput = `
-Waiting for cluster (some-cluster-id) to start running (elapsed)
+Creating cluster (some-cluster-id) (elapsed)
 Cluster (some-cluster-id) is running (elapsed)
 Notice: Cluster created, fetching credentials
 Notice: Adding cluster credentials to kubeconfig file found in %q

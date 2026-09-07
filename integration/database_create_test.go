@@ -148,7 +148,7 @@ ID         Name                Engine    Version         Number of Nodes    Regi
 some-id    my-database-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC    100
 `
 	databasesWaitCreateOutput = `
-Waiting for database (some-id) to become online (elapsed)
+Creating database (some-id) (elapsed)
 Database (some-id) is online (elapsed)
 Notice: Database created
 ID         Name                Engine    Version         Number of Nodes    Region    Status    Size       URI                                                                                     Created At                       Storage (MiB)

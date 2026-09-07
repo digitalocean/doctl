@@ -235,8 +235,8 @@ func (s *Spinner) finish(glyph string, color lipgloss.TerminalColor, message str
 //
 // The line carries no glyph and no cursor movement, which is what makes the
 // spinner safe to leave enabled when stderr is a log file or a pipe. The
-// caller's message already opens with the stage it is in ("Waiting for ..."),
-// so nothing is prefixed here.
+// caller's message already names the activity it is reporting on ("Creating
+// Droplet (web-01)"), so nothing is prefixed here.
 //
 // The caller passes the time it already read rather than having this read the
 // clock again, so that a spinner under a test clock advances once per event.

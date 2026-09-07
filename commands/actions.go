@@ -255,6 +255,7 @@ func waitForAction(w waiter, as do.ActionsService, actionID int, interval time.D
 	var action *do.Action
 
 	err := w.wait(waitOp{
+		Activity: fmt.Sprintf("Running action (%d)", actionID),
 		Subject:  fmt.Sprintf("action (%d) to complete", actionID),
 		Success:  fmt.Sprintf("Action (%d) completed", actionID),
 		Interval: interval,
@@ -268,7 +269,9 @@ func waitForAction(w waiter, as do.ActionsService, actionID int, interval time.D
 
 		switch a.Status {
 		case "in-progress":
-			return false, a.Status, nil
+			// The only status an action in flight reports, so naming it says
+			// nothing the spinner has not already said.
+			return false, "", nil
 		case "errored":
 			return false, "", fmt.Errorf("action (%d) failed", actionID)
 		default:
