@@ -279,7 +279,11 @@ func waitForAction(w waiter, as do.ActionsService, actionID int, interval time.D
 		}
 	})
 	if err != nil {
-		return nil, err
+		// The action goes back with the error when one was fetched, so a
+		// caller can show what the API last said about it rather than only
+		// the error string. It stays nil when the poll itself never
+		// succeeded.
+		return action, err
 	}
 
 	return action, nil

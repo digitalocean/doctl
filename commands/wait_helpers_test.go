@@ -49,8 +49,11 @@ func TestWaitForAction(t *testing.T) {
 
 			a, err := waitForAction(newTestWaiter(), config.Actions(), 1, 0)
 
-			assert.Nil(t, a)
 			assert.EqualError(t, err, "action (1) failed")
+			// Handed back alongside the error so a caller can report the
+			// status the API ended on.
+			require.NotNil(t, a)
+			assert.Equal(t, "errored", a.Status)
 		})
 	})
 }
