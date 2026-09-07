@@ -117,7 +117,7 @@ func TestDisplayTextFitsTerminalWidth(t *testing.T) {
 		cols:   []string{"id", "name", "desc"},
 		colMap: map[string]string{"id": "ID", "name": "Name", "desc": "Description"},
 		kv: []map[string]any{
-			{"id": 1, "name": "a-fairly-long-droplet-name", "desc": "a description that runs well past the edge"},
+			{"id": 1, "name": "web", "desc": "a description that runs well past the edge"},
 		},
 	}
 
@@ -129,14 +129,14 @@ func TestDisplayTextFitsTerminalWidth(t *testing.T) {
 		{
 			name: "columns are narrowed to the width",
 			opts: []ui.Option{ui.WithWidth(46)},
-			expected: "ID    Name                  Description\n" +
-				"1     a-fairly-long-dro…    a description tha…\n",
+			expected: "ID    Name    Description\n" +
+				"1     web     a description that runs well pa…\n",
 		},
 		{
 			name: "the ascii fallback avoids a unicode ellipsis",
 			opts: []ui.Option{ui.WithWidth(46), ui.WithASCII(true)},
-			expected: "ID    Name                  Description\n" +
-				"1     a-fairly-long-d...    a description t...\n",
+			expected: "ID    Name    Description\n" +
+				"1     web     a description that runs well ...\n",
 		},
 	}
 
@@ -153,6 +153,31 @@ func TestDisplayTextFitsTerminalWidth(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestDisplayTextKeepsUnbreakableValuesWhole is the rule that decides which
+// tables get fitted at all: an ID, an address or a name is the value a user
+// came to the table for and usually the value they are about to copy out of
+// it, so it is shown whole even when that costs the fit and the rules that
+// would have been drawn around it.
+func TestDisplayTextKeepsUnbreakableValuesWhole(t *testing.T) {
+	item := &testDisplayable{
+		cols:   []string{"id", "name", "ipv4", "tags"},
+		colMap: map[string]string{"id": "ID", "name": "Name", "ipv4": "Public IPv4", "tags": "Tags"},
+		kv: []map[string]any{
+			{"id": 504211456, "name": "a-fairly-long-droplet-name", "ipv4": "167.71.255.12", "tags": "web,production"},
+		},
+	}
+
+	var out, errOut bytes.Buffer
+	env := terminalEnv(&out, &errOut, ui.WithWidth(46))
+
+	require.NoError(t, DisplayText(item, &out, false, nil, env))
+
+	assert.Equal(t, "ID           Name                          Public IPv4      Tags\n"+
+		"504211456    a-fairly-long-droplet-name    167.71.255.12    web,production\n", out.String())
+	assert.NotContains(t, out.String(), "…", "no value should have been cut")
+	assert.NotContains(t, out.String(), "│", "a table the terminal will wrap is not boxed")
 }
 
 // terminalEnv returns an Env that reports Out as an interactive terminal, so
@@ -243,7 +268,7 @@ func TestDisplayTextBoxFitsTerminalWidth(t *testing.T) {
 		cols:   []string{"id", "name", "desc"},
 		colMap: map[string]string{"id": "ID", "name": "Name", "desc": "Description"},
 		kv: []map[string]any{
-			{"id": 1, "name": "a-fairly-long-droplet-name", "desc": "a description that runs well past the edge"},
+			{"id": 1, "name": "web", "desc": "a description that runs well past the edge"},
 		},
 	}
 
@@ -256,11 +281,11 @@ func TestDisplayTextBoxFitsTerminalWidth(t *testing.T) {
 
 	// The rules are part of the width the terminal has to spend, so the values
 	// are narrowed further than they would be in the plain layout.
-	assert.Equal(t, "┌────┬───────────────────┬───────────────────┐\n"+
-		"│ ID │ Name              │ Description       │\n"+
-		"├────┼───────────────────┼───────────────────┤\n"+
-		"│ 1  │ a-fairly-long-dr… │ a description th… │\n"+
-		"└────┴───────────────────┴───────────────────┘\n", out.String())
+	assert.Equal(t, "┌────┬──────┬────────────────────────────────┐\n"+
+		"│ ID │ Name │ Description                    │\n"+
+		"├────┼──────┼────────────────────────────────┤\n"+
+		"│ 1  │ web  │ a description that runs well … │\n"+
+		"└────┴──────┴────────────────────────────────┘\n", out.String())
 
 	for _, line := range strings.Split(strings.TrimRight(out.String(), "\n"), "\n") {
 		assert.LessOrEqual(t, ansi.StringWidth(line), width, "line %q exceeds the width", line)
@@ -346,14 +371,19 @@ func TestDisplayTextStylingDoesNotMoveColumns(t *testing.T) {
 func TestDisplayTextStylingNarrowTerminal(t *testing.T) {
 	var plainOut, styledOut, errOut bytes.Buffer
 
-	require.NoError(t, DisplayText(stateTable(), &plainOut, false, nil,
-		ui.Detect(&plainOut, &errOut, ui.WithWidth(40), ui.WithProfile(termenv.Ascii))))
-	require.NoError(t, DisplayText(stateTable(), &styledOut, false, nil,
-		ui.Detect(&styledOut, &errOut, ui.WithWidth(40), ui.WithProfile(termenv.TrueColor))))
+	// Wide enough that the Message column can be narrowed to hold the table
+	// within it, which is what puts an ellipsis next to a painted state.
+	const width = 56
 
+	require.NoError(t, DisplayText(stateTable(), &plainOut, false, nil,
+		ui.Detect(&plainOut, &errOut, ui.WithWidth(width), ui.WithProfile(termenv.Ascii))))
+	require.NoError(t, DisplayText(stateTable(), &styledOut, false, nil,
+		ui.Detect(&styledOut, &errOut, ui.WithWidth(width), ui.WithProfile(termenv.TrueColor))))
+
+	assert.Contains(t, plainOut.String(), "…", "the table should have been narrowed to fit")
 	assert.Equal(t, plainOut.String(), ansi.Strip(styledOut.String()))
 	for _, line := range strings.Split(strings.TrimRight(styledOut.String(), "\n"), "\n") {
-		assert.LessOrEqual(t, ansi.StringWidth(line), 40, "line %q exceeds the width", line)
+		assert.LessOrEqual(t, ansi.StringWidth(line), width, "line %q exceeds the width", line)
 	}
 }
 
@@ -415,6 +445,7 @@ func TestColumnWidths(t *testing.T) {
 		rows     [][]string
 		budget   int
 		expected []int
+		fits     bool
 	}{
 		{
 			name:     "unconstrained uses the widest value in each column",
@@ -422,6 +453,7 @@ func TestColumnWidths(t *testing.T) {
 			rows:     rows,
 			budget:   0,
 			expected: []int{2, 4, 32},
+			fits:     true,
 		},
 		{
 			name:     "a budget larger than the table changes nothing",
@@ -429,6 +461,7 @@ func TestColumnWidths(t *testing.T) {
 			rows:     rows,
 			budget:   200,
 			expected: []int{2, 4, 32},
+			fits:     true,
 		},
 		{
 			name:     "the column with the most slack gives up space first",
@@ -436,22 +469,45 @@ func TestColumnWidths(t *testing.T) {
 			rows:     rows,
 			budget:   22,
 			expected: []int{2, 4, 16},
+			fits:     true,
 		},
 		{
 			name:     "columns are never narrowed past their header",
 			headers:  []string{"Description", "Name"},
-			rows:     [][]string{{"ab", "cdef"}},
-			budget:   1,
+			rows:     [][]string{{"a value longer than its own header", "cdef"}},
+			budget:   15,
 			expected: []int{11, 4},
+			fits:     true,
+		},
+		{
+			// A value with no space or comma in it has no point at which a
+			// reader would recognise what was cut, so the column holding it
+			// keeps its full width and the table reports that it overflowed.
+			name:     "a column of unbreakable values is not narrowed",
+			headers:  []string{"ID", "Address"},
+			rows:     [][]string{{"504211456", "167.71.255.12"}},
+			budget:   12,
+			expected: []int{9, 13},
+		},
+		{
+			// The same column narrows once its values have somewhere to break:
+			// each entry of the list survives whole up to the cut.
+			name:     "a column of lists is narrowed to the longest entry",
+			headers:  []string{"ID", "Tags"},
+			rows:     [][]string{{"504211456", "web,production,europe"}},
+			budget:   20,
+			expected: []int{9, 11},
+			fits:     true,
 		},
 		{
 			// Without a header to hold the column open, the ellipsis width is
 			// the floor: a column cut narrower than its own truncation mark
 			// has nothing left to show.
 			name:     "an unheadered column is never narrowed past the ellipsis",
-			rows:     [][]string{{"a-long-value", "another-long-value"}},
+			rows:     [][]string{{"a b c d e"}},
 			budget:   1,
-			expected: []int{1, 1},
+			expected: []int{1},
+			fits:     true,
 		},
 		{
 			name:     "double-width runes are measured in terminal cells",
@@ -459,17 +515,21 @@ func TestColumnWidths(t *testing.T) {
 			rows:     [][]string{{"ab"}},
 			budget:   0,
 			expected: []int{4},
+			fits:     true,
 		},
 		{
 			name:     "no columns yields no widths",
 			budget:   80,
 			expected: nil,
+			fits:     true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, columnWidths(tt.headers, tt.rows, tt.budget, 1))
+			widths, fits := columnWidths(tt.headers, tt.rows, tt.budget, 1)
+			assert.Equal(t, tt.expected, widths)
+			assert.Equal(t, tt.fits, fits)
 		})
 	}
 }

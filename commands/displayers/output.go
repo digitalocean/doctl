@@ -110,6 +110,12 @@ func (d *Displayer) Display() error {
 // else - a pipe, a file, a test - gets the same space-separated columns doctl
 // has always written, because the rules are chrome and a script reading the
 // table must not have to strip them.
+//
+// A table that cannot be narrowed to the terminal without cutting a value in
+// half is written at its full width and without rules, and left to the
+// terminal to wrap. Rules drawn around a row wider than the terminal are
+// broken by that wrap anyway, and a wrapped table the user can still read an
+// ID out of beats a framed one that has replaced it with an ellipsis.
 func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string, env ui.Env) error {
 	cols := item.Cols()
 	if len(includeCols) > 0 && includeCols[0] != "" {
@@ -141,11 +147,11 @@ func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []
 
 	ellipsis := env.Glyphs().Ellipsis
 	count := columnCount(headers, rows)
-	widths := columnWidths(headers, rows, contentBudget(env.DataWidth, count, env.DataTTY), ansi.StringWidth(ellipsis))
+	widths, fits := columnWidths(headers, rows, contentBudget(env.DataWidth, count, env.DataTTY), ansi.StringWidth(ellipsis))
 	rowPainter := tonePainters(env, item, cols, kv)
 
 	var buf bytes.Buffer
-	if env.DataTTY {
+	if env.DataTTY && fits {
 		writeBox(&buf, headers, rows, widths, ellipsis, env, headerPainter(env), rowPainter)
 	} else {
 		if headers != nil {
@@ -302,16 +308,23 @@ func contentBudget(maxWidth, count int, boxed bool) int {
 // columnWidths measures how wide each column needs to be to hold its header
 // and values. When budget is positive, the widest column is repeatedly
 // narrowed until the values fit within it, so the column with the most slack
-// gives up space first.
+// gives up space first. It reports whether the table ended up within budget.
 //
-// A column is never narrowed past its header, nor past floor, which is the
-// width of the ellipsis a truncated cell ends in: a column cut narrower than
-// that has nothing left to show but the mark saying it was cut. An unavoidably
-// wide table therefore overflows rather than becoming unreadable.
-func columnWidths(headers []string, rows [][]string, budget, floor int) []int {
+// A column is never narrowed past its header, past floor - the width of the
+// ellipsis a truncated cell ends in - nor past the longest run of its values
+// that cannot be broken. That last floor is what keeps a wait from reporting
+// a Droplet as `5…` at `167.71.255…`: half an ID is not a shorter ID, it is a
+// different one, and a user who cannot copy the value out of the table has to
+// go and ask the API for it again.
+//
+// A table whose floors do not fit the budget is returned at its full width
+// rather than narrowed as far as the floors allow. Cutting the columns that
+// happen to be cuttable would not make such a table fit, so it would cost
+// values without buying anything back.
+func columnWidths(headers []string, rows [][]string, budget, floor int) ([]int, bool) {
 	count := columnCount(headers, rows)
 	if count == 0 {
-		return nil
+		return nil, true
 	}
 
 	widths := make([]int, count)
@@ -330,12 +343,18 @@ func columnWidths(headers []string, rows [][]string, budget, floor int) []int {
 			if w := ansi.StringWidth(cell); w > widths[i] {
 				widths[i] = w
 			}
+			if w := unbreakableWidth(cell); w > floors[i] {
+				floors[i] = w
+			}
 		}
 	}
 
 	if budget <= 0 {
-		return widths
+		return widths, true
 	}
+
+	natural := make([]int, count)
+	copy(natural, widths)
 
 	total := 0
 	for _, w := range widths {
@@ -350,13 +369,38 @@ func columnWidths(headers []string, rows [][]string, budget, floor int) []int {
 			}
 		}
 		if idx < 0 {
-			break
+			return natural, false
 		}
 		widths[idx]--
 		total--
 	}
 
-	return widths
+	return widths, true
+}
+
+// unbreakableWidth is the width of the longest run in cell that has to be read
+// whole to mean anything: an ID, an IP address, a UUID, a resource name.
+//
+// Prose and the comma-separated lists doctl prints for tags, features and
+// volumes are series of short runs, so those columns can still give up space
+// to hold a table within the terminal. A value that is one run from end to end
+// cannot, because there is no point in it at which a reader would recognise
+// what was cut.
+func unbreakableWidth(cell string) int {
+	widest := 0
+	for _, run := range strings.FieldsFunc(cell, isBreak) {
+		if w := ansi.StringWidth(run); w > widest {
+			widest = w
+		}
+	}
+
+	return widest
+}
+
+// isBreak reports whether a value can be cut at r without the part that
+// survives reading as a value in its own right.
+func isBreak(r rune) bool {
+	return unicode.IsSpace(r) || r == ','
 }
 
 // writeRow writes one row, truncating cells that exceed their column with
