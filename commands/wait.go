@@ -208,11 +208,12 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 
 		// Poll once more right on the deadline rather than sleeping past it,
 		// so a resource that settles just in time is still noticed.
-		if remaining < interval {
-			interval = remaining
+		sleep := interval
+		if remaining < sleep {
+			sleep = remaining
 		}
 
-		time.Sleep(interval)
+		time.Sleep(sleep)
 	}
 }
 
