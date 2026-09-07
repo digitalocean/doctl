@@ -121,8 +121,8 @@ func TestWaitReturnsPollError(t *testing.T) {
 
 	assert.ErrorIs(t, err, sentinel)
 	// The cause is left to the command's own Error line rather than restated
-	// here, so the closing line says only what doctl gave up on.
-	assert.Contains(t, buf.String(), "Gave up waiting for cluster (abc) to start running")
+	// here, so the closing line says only what the wait was for.
+	assert.Contains(t, buf.String(), "Failed while waiting for cluster (abc) to start running")
 }
 
 func TestWaitTimesOut(t *testing.T) {

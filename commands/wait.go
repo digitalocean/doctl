@@ -182,7 +182,7 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 	for {
 		done, detail, err := poll()
 		if err != nil {
-			spinner.Fail("Gave up waiting for %s", op.Subject)
+			spinner.Fail("Failed while waiting for %s", op.Subject)
 			return err
 		}
 
