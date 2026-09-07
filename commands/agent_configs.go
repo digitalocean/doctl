@@ -59,6 +59,15 @@ func AgentConfigs() *Command {
 	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	cmdCreate.Example = agentCLI + ` config create --spec agent-spec.yaml --name my-config; ` + agentCLI + ` config create --spec agent-spec.yaml --name my-config --secret ANTHROPIC_API_KEY=@~/.secrets/anthropic.key`
 
+	// `generate` sits next to `create` because it authors the very manifest
+	// `create` consumes — but it is local-only and makes no API call at all.
+	cmdGenerate := CmdBuilder(cmd, RunAgentsConfigGenerate, "generate",
+		"Generate an agent manifest locally",
+		agentsConfigGenerateHelpMD,
+		Writer, append(ns, aliasOpt("gen"))...)
+	addAgentConfigGenerateFlags(cmdGenerate)
+	cmdGenerate.Example = agentCLI + ` config generate; ` + agentCLI + ` config generate --harness claude-code --name payments-reviewer --gh-repo acme/payments-service --github-access --out agents.yaml; ` + agentCLI + ` config generate --harness opencode --inference do --model deepseek-v4-pro`
+
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
 		agentsConfigListHelpMD,
@@ -154,16 +163,14 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 		return err
 	}
 	if Output == "json" {
-		if err := c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true}); err != nil {
-			return err
-		}
-	} else {
-		stylingEnabled = detectStyling()
-		printAgentConfigCard(c.Out, cfg, true)
+		// The payload carries its own "warnings" field, so JSON callers are
+		// already told. Appending the prose form here would have left the
+		// document unparseable for the scripts that asked for JSON.
+		return c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true})
 	}
-	for _, w := range cfg.Warnings {
-		fmt.Fprintf(c.Out, "%s %s\n", colorize("Warning:", colWarning), w)
-	}
+	stylingEnabled = detectStyling()
+	printAgentConfigCard(c.Out, cfg, true)
+	printAgentManifestWarnings(os.Stderr, cfg.Warnings)
 	return nil
 }
 

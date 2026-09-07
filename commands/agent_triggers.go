@@ -64,7 +64,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", "Path to agents.yaml manifest for session-mode=fresh (\"-\" reads stdin). ${VAR} references are resolved from the local environment at create time and stored expanded.")
 	AddStringFlag(cmdCreate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to use as the session template for session-mode=fresh, instead of --spec. Its manifest is copied into this trigger at create time.")
 	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
-	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Paused session ID for session-mode=reuse")
+	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Paused session ID or name for session-mode=reuse")
 	cmdCreate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerProvider, "", "", "Webhook provider (github|gitlab|custom); default custom")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerCronExpr, "", "", "Cron expression when kind=cron")
@@ -91,7 +91,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "", "", "Updated agents.yaml manifest for fresh triggers (\"-\" reads stdin). ${VAR} references are resolved from the local environment at update time and stored expanded.")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config whose manifest becomes this trigger's session template, instead of --spec.")
 	AddStringSliceFlag(cmdUpdate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
-	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Updated bound session ID for reuse triggers")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Updated bound session ID or name for reuse triggers")
 	cmdUpdate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerCronExpr, "", "", "Updated cron expression")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerTimezone, "", "", "Updated IANA timezone")
@@ -609,7 +609,14 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 		if bound == "" {
 			return nil, fmt.Errorf("--%s is required when --%s=reuse", doctl.ArgAgentTriggerBoundSessionID, doctl.ArgAgentTriggerSessionMode)
 		}
-		req.BoundSessionID = bound
+		// Accept a name as well as an ID, like every other command that takes a
+		// session. `list-reusable-sessions` shows both, so the name is often
+		// what gets copied.
+		boundID, err := resolveSessionRef(c.HostedAgents(), bound)
+		if err != nil {
+			return nil, err
+		}
+		req.BoundSessionID = boundID
 	default:
 		return nil, fmt.Errorf("invalid --%s %q; want fresh or reuse", doctl.ArgAgentTriggerSessionMode, sessionMode)
 	}
@@ -752,13 +759,28 @@ func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequ
 	if err != nil {
 		return nil, err
 	}
-	if outputMode != "" {
+	outputEmail, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerOutputEmail)
+	if err != nil {
+		return nil, err
+	}
+	outputSlack, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerOutputSlackWebhook)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case outputMode != "":
 		output, err := agentTriggerOutputWrite(c, true)
 		if err != nil {
 			return nil, err
 		}
 		update.Output = output
 		changed = true
+	case outputEmail != "" || outputSlack != "":
+		// An update replaces the whole output block rather than merging into
+		// it, so a destination on its own has no mode to attach to. Say so
+		// instead of exiting 0 having changed nothing.
+		return nil, fmt.Errorf("--%s is required to change where run results go; pass it alongside --%s or --%s",
+			doctl.ArgAgentTriggerOutputMode, doctl.ArgAgentTriggerOutputEmail, doctl.ArgAgentTriggerOutputSlackWebhook)
 	}
 
 	manifest, err := agentTriggerSessionTemplate(c)
@@ -775,7 +797,11 @@ func agentTriggerUpdateRequest(c *CmdConfig) (*godo.HostedAgentTriggerUpdateRequ
 		return nil, err
 	}
 	if bound != "" {
-		update.BoundSessionID = bound
+		boundID, err := resolveSessionRef(c.HostedAgents(), bound)
+		if err != nil {
+			return nil, err
+		}
+		update.BoundSessionID = boundID
 		changed = true
 	}
 
