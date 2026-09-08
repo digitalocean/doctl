@@ -95,9 +95,9 @@ func Auth() *Command {
 			Short: "Display commands for authenticating doctl with an account",
 			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
-If you work with a just one account, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
+If you work with just one account, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
 
-To switch between multiple DigitalOcean accounts, including team accounts, create named contexts using ` + "`" + `doctl auth init --context <name>` + "`" + `, then providing the applicable token when prompted. This saves the token under the name you provide. To switch between contexts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.
+To switch between multiple DigitalOcean accounts, including team accounts, create named contexts using ` + "`" + `doctl auth init --context <name>` + "`" + `, then provide the applicable token when prompted. This saves the token under the name you provide. To switch between contexts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.
 
 To remove accounts from the configuration file, run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This removes the token under the name you provide.`,
 			GroupID: configureDoctlGroup,
@@ -106,15 +106,17 @@ To remove accounts from the configuration file, run ` + "`" + `doctl auth remove
 
 	cmdAuthInit := cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "Initialize doctl to use a specific account", `This command allows you to initialize doctl with a token that allows it to query and manage your account details and resources.
 
-The command requires and API token to authenticate, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
+The command requires an API token to authenticate, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
-The `+"`"+`--context`+"`"+` flag allows you to add authentication for multiple accounts and then switch between them as needed. Provide a case-sensitive name for the context and then enter the API token you want use for that context when prompted. You can switch authentication contexts using `+"`"+`doctl auth switch`+"`"+`, which re-initializes doctl. You can also provide the `+"`"+`--context`+"`"+` flag when using any doctl command to specify the auth context for that command. This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
+The `+"`"+`--context`+"`"+` flag allows you to add authentication for multiple accounts and then switch between them as needed. Provide a name for the context and then enter the API token you want to use for that context when prompted. Context names are not case-sensitive, and doctl stores them in lowercase. Adding a context does not start using it: run `+"`"+`doctl auth switch --context <name>`+"`"+` to make it the default. You can also provide the `+"`"+`--context`+"`"+` flag when using any doctl command to specify the auth context for that command. This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
 
 If the `+"`"+`--context`+"`"+` flag is not specified, doctl creates a default authentication context named `+"`"+`default`+"`"+`.
 
+When the `+"`"+`--access-token`+"`"+` flag or the `+"`"+`DIGITALOCEAN_ACCESS_TOKEN`+"`"+` environment variable is set, doctl validates and saves that token instead of prompting you for one, replacing any token already saved. Both apply only to the `+"`"+`default`+"`"+` context; set a token for a named context by entering it at the prompt.
+
 You can use doctl without initializing it by adding the `+"`"+`--access-token`+"`"+` flag to each command and providing an API token as the argument.`, Writer, false)
 	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
-	cmdAuthInit.Example = `The following example initializes doctl with a token for a single account with the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
+	cmdAuthInit.Example = `The following example saves a token under the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
 
 	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switch between authentication contexts", `This command allows you to switch between authentication contexts you've already created.
 
@@ -124,7 +126,7 @@ For details on creating an authentication context, see the help for `+"`"+`doctl
 	cmdAuthSwitch.AddValidArgsFunc(authContextListValidArgsFunc)
 	cmdAuthSwitch.Example = `The following example switches to the context ` + "`" + `your-team` + "`" + `: doctl auth switch --context your-team`
 
-	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove --context <name>", "Remove authentication contexts ", `This command allows you to remove authentication contexts you've already created.
+	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove --context <name>", "Remove authentication contexts", `This command allows you to remove authentication contexts you've already created.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
