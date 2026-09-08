@@ -99,7 +99,9 @@ If you work with just one account, call ` + "`" + `doctl auth init` + "`" + ` an
 
 To switch between multiple DigitalOcean accounts, including team accounts, create named contexts using ` + "`" + `doctl auth init --context <name>` + "`" + `, then provide the applicable token when prompted. This saves the token under the name you provide. To switch between contexts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.
 
-To remove accounts from the configuration file, run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This removes the token under the name you provide.`,
+To remove accounts from the configuration file, run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This removes the token under the name you provide.
+
+A token from the ` + "`" + `--access-token` + "`" + ` flag or the ` + "`" + `DIGITALOCEAN_ACCESS_TOKEN` + "`" + ` environment variable outranks the one saved for the ` + "`" + `default` + "`" + ` context, and applies only to the command you run: doctl does not write it to your configuration file. The exception is ` + "`" + `doctl auth init` + "`" + `, which saves the token it validates. Run ` + "`" + `doctl` + "`" + ` with no arguments to see which account is active and where its token came from.`,
 			GroupID: configureDoctlGroup,
 		},
 	}

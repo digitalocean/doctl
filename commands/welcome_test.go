@@ -83,6 +83,56 @@ func TestRenderWelcomeShowsTeamOnlyWhenKnown(t *testing.T) {
 	assert.NotContains(t, out, "Team")
 }
 
+// A token from outside the config file outranks the saved one, so the account
+// on screen may not be the configured one. Name the source, and say nothing in
+// the ordinary case.
+func TestRenderWelcomeNamesAnAmbientTokenSource(t *testing.T) {
+	base := welcome{version: "1.2.3", context: "default", auth: authStateValid, account: "ci-robot@example.com"}
+
+	render := func(source tokenSource) string {
+		var buf bytes.Buffer
+		w := base
+		w.tokenSource = source
+
+		return renderWelcome(ui.Plain(&buf, &buf), w)
+	}
+
+	out := render(tokenSourceEnvVar)
+	assert.Contains(t, out, "ci-robot@example.com (from DIGITALOCEAN_ACCESS_TOKEN)")
+
+	out = render(tokenSourceFlag)
+	assert.Contains(t, out, "ci-robot@example.com (from --access-token)")
+
+	// The saved token is the unremarkable case and earns no annotation.
+	out = render(tokenSourceConfigFile)
+	assert.Contains(t, out, "ci-robot@example.com")
+	assert.NotContains(t, out, "(from")
+}
+
+// Naming the source is meant to tell the user which token to fix, so it has
+// to survive the states where something is wrong.
+func TestRenderWelcomeNamesTheSourceOfABadToken(t *testing.T) {
+	for _, state := range []authState{authStateInvalid, authStateUnverified} {
+		t.Run(state.String(), func(t *testing.T) {
+			var buf bytes.Buffer
+
+			out := renderWelcome(ui.Plain(&buf, &buf), welcome{
+				version:     "1.2.3",
+				context:     "default",
+				auth:        state,
+				tokenSource: tokenSourceEnvVar,
+			})
+
+			assert.Contains(t, out, "(from DIGITALOCEAN_ACCESS_TOKEN)")
+		})
+	}
+
+	// With no token at all there is no source to report.
+	var buf bytes.Buffer
+	out := renderWelcome(ui.Plain(&buf, &buf), welcome{version: "1.2.3", context: "default", auth: authStateNoToken})
+	assert.NotContains(t, out, "(from")
+}
+
 // Each auth state has to read differently, and in particular an unreachable
 // API must never be presented as a bad token.
 func TestRenderWelcomeDistinguishesAuthStates(t *testing.T) {
@@ -239,11 +289,36 @@ func TestWelcomeJSON(t *testing.T) {
 		"context":       "default",
 		"authenticated": true,
 		"authStatus":    "valid",
+		"tokenSource":   "config-file",
 		"account":       "sammy@example.com",
 		"team":          "Sharks",
 		"latestRelease": "1.3.0",
 		"updateCommand": "brew upgrade doctl",
 	}, payload)
+}
+
+// Automation checking whether it is running on an ambient credential needs
+// this without parsing the greeting, so it is always present.
+func TestWelcomeJSONReportsTokenSource(t *testing.T) {
+	tests := []struct {
+		source tokenSource
+		want   string
+	}{
+		{tokenSourceConfigFile, "config-file"},
+		{tokenSourceEnvVar, "environment"},
+		{tokenSourceFlag, "flag"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := welcomeJSON(welcome{version: "1.2.3", context: "default", tokenSource: tt.source})
+
+			var payload map[string]any
+			require.NoError(t, json.Unmarshal([]byte(got), &payload))
+
+			assert.Equal(t, tt.want, payload["tokenSource"])
+		})
+	}
 }
 
 // An unverified token is not an authenticated one, so automation reading this
@@ -371,6 +446,91 @@ func TestGatherWelcomeResolvesContextAndToken(t *testing.T) {
 			assert.Equal(t, authStateValid, w.auth)
 			assert.Equal(t, "sammy@example.com", w.account)
 			assert.Equal(t, "Sharks", w.team)
+		})
+	}
+}
+
+// Provenance is established by comparing the resolved token against each
+// layer, because viper merges them and forgets where every value came from.
+// The config values below are what viper resolves once the named layer wins.
+func TestAccessTokenForContextReportsProvenance(t *testing.T) {
+	tests := []struct {
+		name       string
+		context    string
+		config     map[string]any
+		env        string
+		flag       string
+		wantToken  string
+		wantSource tokenSource
+	}{
+		{
+			name:       "a token from the config file",
+			config:     map[string]any{"context": "default", doctl.ArgAccessToken: "saved-token"},
+			wantToken:  "saved-token",
+			wantSource: tokenSourceConfigFile,
+		},
+		{
+			name:       "a token from the environment",
+			config:     map[string]any{"context": "default", doctl.ArgAccessToken: "env-token"},
+			env:        "env-token",
+			wantToken:  "env-token",
+			wantSource: tokenSourceEnvVar,
+		},
+		{
+			name:       "a token from the flag",
+			config:     map[string]any{"context": "default", doctl.ArgAccessToken: "flag-token"},
+			flag:       "flag-token",
+			wantToken:  "flag-token",
+			wantSource: tokenSourceFlag,
+		},
+		{
+			name:       "the flag outranks the environment",
+			config:     map[string]any{"context": "default", doctl.ArgAccessToken: "flag-token"},
+			env:        "env-token",
+			flag:       "flag-token",
+			wantToken:  "flag-token",
+			wantSource: tokenSourceFlag,
+		},
+		{
+			// Nothing is shadowed, but the environment did supply it.
+			name:       "the same token in the file and the environment",
+			config:     map[string]any{"context": "default", doctl.ArgAccessToken: "same-token"},
+			env:        "same-token",
+			wantToken:  "same-token",
+			wantSource: tokenSourceEnvVar,
+		},
+		{
+			// The flag and the variable only ever feed the default context.
+			name:       "a named context ignores the environment and the flag",
+			context:    "work",
+			config:     map[string]any{"context": "work", "auth-contexts": map[string]string{"work": "work-token"}},
+			env:        "env-token",
+			flag:       "flag-token",
+			wantToken:  "work-token",
+			wantSource: tokenSourceConfigFile,
+		},
+		{
+			name:       "no token at all has no source to report",
+			config:     map[string]any{"context": "default"},
+			wantSource: tokenSourceConfigFile,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer withStubConfig(t, tt.config)()
+			defer withTokenFlag(t, tt.flag)()
+			t.Setenv(envAccessToken, tt.env)
+
+			context := tt.context
+			if context == "" {
+				context = doctl.ArgDefaultContext
+			}
+
+			token, source := accessTokenForContext(context)
+
+			assert.Equal(t, tt.wantToken, token)
+			assert.Equal(t, tt.wantSource, source)
 		})
 	}
 }
@@ -670,4 +830,14 @@ func withContext(t *testing.T, context string) func() {
 	Context = context
 
 	return func() { Context = old }
+}
+
+// withTokenFlag sets the global --access-token value and restores it.
+func withTokenFlag(t *testing.T, token string) func() {
+	t.Helper()
+
+	old := Token
+	Token = token
+
+	return func() { Token = old }
 }

@@ -57,7 +57,51 @@ const (
 
 	// envNoUpdateCheck disables the release lookup entirely.
 	envNoUpdateCheck = "DOCTL_NO_UPDATE_CHECK"
+
+	// envAccessToken supplies a token for the default context.
+	envAccessToken = "DIGITALOCEAN_ACCESS_TOKEN"
 )
+
+// tokenSource is the layer that supplied the active token: the config file,
+// DIGITALOCEAN_ACCESS_TOKEN, or --access-token, in ascending order of
+// precedence. The outer two win silently, so naming an account without naming
+// its source leaves a user no way to explain who doctl is acting as.
+type tokenSource int
+
+const (
+	// tokenSourceConfigFile is a token that `auth init` saved.
+	tokenSourceConfigFile tokenSource = iota
+
+	// tokenSourceEnvVar is DIGITALOCEAN_ACCESS_TOKEN.
+	tokenSourceEnvVar
+
+	// tokenSourceFlag is --access-token.
+	tokenSourceFlag
+)
+
+func (s tokenSource) String() string {
+	switch s {
+	case tokenSourceEnvVar:
+		return "environment"
+	case tokenSourceFlag:
+		return "flag"
+	default:
+		return "config-file"
+	}
+}
+
+// label names the source as the greeting shows it: the thing a user would go
+// and unset, rather than the category String reports to machines.
+func (s tokenSource) label() string {
+	switch s {
+	case tokenSourceEnvVar:
+		return envAccessToken
+	case tokenSourceFlag:
+		return "--" + doctl.ArgAccessToken
+	default:
+		return "config file"
+	}
+}
 
 // authState is what doctl was able to establish about the active context's
 // token. "Configured" and "working" are different claims, and conflating them
@@ -114,6 +158,11 @@ type welcome struct {
 	// the work is as much of the answer as which login is.
 	account string
 	team    string
+
+	// tokenSource qualifies account and team: a token from outside the config
+	// file shadows the saved one, so the names above may not be the ones the
+	// user configured.
+	tokenSource tokenSource
 
 	// latest is a published release newer than version, or "" when doctl is
 	// current or the lookup was skipped or failed.
@@ -187,7 +236,8 @@ func gatherWelcome(deps welcomeDeps) welcome {
 		auth:    authStateNoToken,
 	}
 
-	token := accessTokenForContext(context)
+	token, source := accessTokenForContext(context)
+	w.tokenSource = source
 
 	// A freshly installed doctl reaches nothing. There is no account to
 	// resolve, and a binary the user has not yet configured should not make
@@ -236,14 +286,35 @@ func gatherWelcome(deps welcomeDeps) welcome {
 	return w
 }
 
-// accessTokenForContext mirrors CmdConfig.getContextAccessToken. The welcome
-// screen runs on the root command, which never builds a CmdConfig.
-func accessTokenForContext(context string) string {
-	if context == doctl.ArgDefaultContext {
-		return viper.GetString(doctl.ArgAccessToken)
+// accessTokenForContext mirrors CmdConfig.getContextAccessToken and also
+// reports which layer supplied the token. The welcome screen runs on the root
+// command, which never builds a CmdConfig.
+func accessTokenForContext(context string) (string, tokenSource) {
+	// --access-token and DIGITALOCEAN_ACCESS_TOKEN only ever feed the default
+	// context, so a named context is always whatever the file holds.
+	if context != doctl.ArgDefaultContext {
+		return viper.GetStringMapString("auth-contexts")[context], tokenSourceConfigFile
 	}
 
-	return viper.GetStringMapString("auth-contexts")[context]
+	token := viper.GetString(doctl.ArgAccessToken)
+
+	return token, tokenSourceFor(token)
+}
+
+// tokenSourceFor identifies the layer that produced token by comparing it
+// against each one, in viper's order of precedence. Viper cannot answer this:
+// it merges the layers and forgets where every value came from.
+func tokenSourceFor(token string) tokenSource {
+	switch {
+	case token == "":
+		return tokenSourceConfigFile
+	case token == Token:
+		return tokenSourceFlag
+	case token == os.Getenv(envAccessToken):
+		return tokenSourceEnvVar
+	default:
+		return tokenSourceConfigFile
+	}
 }
 
 // verifyTokenWithAPI asks the API who the token belongs to, giving up after
@@ -342,7 +413,16 @@ func renderWelcome(env ui.Env, w welcome) string {
 	fmt.Fprintf(&b, "  %s %s\n", dim(pad("Version", 9)), w.version)
 
 	glyph, glyphColor, summary := authSummary(env, w)
-	fmt.Fprintf(&b, "  %s %s %s\n", dim(pad("Account", 9)), paint(glyph, glyphColor), summary)
+	fmt.Fprintf(&b, "  %s %s %s", dim(pad("Account", 9)), paint(glyph, glyphColor), summary)
+
+	// Only a token that outranks the saved one is worth annotating, and it
+	// qualifies the account named on this row rather than standing alone,
+	// including when that "account" is a rejected token the user has to find.
+	if w.tokenSource != tokenSourceConfigFile {
+		fmt.Fprintf(&b, " %s", dim("(from "+w.tokenSource.label()+")"))
+	}
+
+	fmt.Fprintln(&b)
 
 	// Only shown when the API named a team, since a token that is not scoped
 	// to one has no team to report and a blank row would just raise questions.
@@ -440,6 +520,7 @@ func welcomeJSON(w welcome) string {
 		Context       string `json:"context"`
 		Authenticated bool   `json:"authenticated"`
 		AuthStatus    string `json:"authStatus"`
+		TokenSource   string `json:"tokenSource"`
 		Account       string `json:"account,omitempty"`
 		Team          string `json:"team,omitempty"`
 		LatestRelease string `json:"latestRelease,omitempty"`
@@ -449,6 +530,7 @@ func welcomeJSON(w welcome) string {
 		Context:       w.context,
 		Authenticated: w.auth == authStateValid,
 		AuthStatus:    w.auth.String(),
+		TokenSource:   w.tokenSource.String(),
 		Account:       w.account,
 		Team:          w.team,
 		LatestRelease: w.latest,
