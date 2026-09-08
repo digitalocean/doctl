@@ -394,6 +394,33 @@ DIGITALOCEAN_CONTEXT=my-context doctl auth list
 DIGITALOCEAN_ACCESS_TOKEN=my-do-token doctl
 ```
 
+Running `doctl` with no arguments prints a short summary of your version and
+authentication state, and tells you when a newer release is available:
+
+```
+Welcome to DigitalOcean
+doctl is the command line interface for the DigitalOcean API.
+
+  Version   1.146.0
+  Account   ✔ sammy@example.com
+  Team      Sharks
+  Context   default
+```
+
+The account line reflects what the API says about the token for your current
+context, so it distinguishes a working token from one that has been revoked. If
+the API cannot be reached, the token is reported as unverified rather than
+rejected. `Team` is shown when the token is scoped to a team, since the same
+login can belong to several.
+
+The release check contacts GitHub at most once a day and is skipped
+automatically in CI. Until you have authenticated, `doctl` makes no network
+requests at all. To turn the check off entirely:
+
+```
+DOCTL_NO_UPDATE_CHECK=1 doctl
+```
+
 ## Enabling Shell Auto-Completion
 
 `doctl` also has auto-completion support. It can be set up so that if you partially type a command and then press `TAB`, the rest of the command is automatically filled in. For example, if you type `doctl comp<TAB><TAB> drop<TAB><TAB>` with auto-completion enabled, you'll see `doctl compute droplet` appear on your command prompt.

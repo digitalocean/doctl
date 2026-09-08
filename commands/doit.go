@@ -43,6 +43,9 @@ var (
 		Command: &cobra.Command{
 			Use:   "doctl",
 			Short: "doctl is a command line interface (CLI) for the DigitalOcean API.",
+			// Args is left unset so that cobra keeps rejecting unknown
+			// subcommands; Run only fires when no subcommand was given.
+			Run: runWelcome,
 		},
 	}
 
