@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -160,6 +162,45 @@ func TestAuthForcesLowercase(t *testing.T) {
 		// should not error because context does exist
 		assert.NoError(t, err)
 	})
+}
+
+func TestDefaultConfigFileWriterUsesLoadedConfig(t *testing.T) {
+	// Regression: a config carrying a stale top-level "config:" path (e.g. copied
+	// from another machine) must not hijack where auth switch writes. The write
+	// must land in the config file viper actually loaded.
+	origContext := viper.Get("context")
+	origConfig := viper.Get("config")
+	origFile := viper.ConfigFileUsed()
+	defer func() {
+		viper.Set("context", origContext)
+		viper.Set("config", origConfig)
+		viper.SetConfigFile(origFile)
+	}()
+
+	dir := t.TempDir()
+	realCfg := filepath.Join(dir, "config.yaml")
+	staleCfg := filepath.Join(dir, "copied-from-another-host.yaml")
+
+	require.NoError(t, os.WriteFile(realCfg,
+		[]byte("context: default\nconfig: "+staleCfg+"\n"), 0600))
+
+	// Mimic initConfig: point viper at the real file and read it in.
+	viper.SetConfigFile(realCfg)
+	require.NoError(t, viper.ReadInConfig())
+
+	// The loaded file now carries `config: <staleCfg>`. The pre-fix code used
+	// viper.GetString("config") as the write target and would land on staleCfg;
+	// the assertions below prove the writer targets the loaded file instead.
+	w, err := defaultConfigFileWriter()
+	require.NoError(t, err)
+	_, err = io.WriteString(w, "context: newcontext\n")
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	assert.NoFileExists(t, staleCfg, "must not write to the stale config path")
+	got, err := os.ReadFile(realCfg)
+	require.NoError(t, err)
+	assert.Contains(t, string(got), "newcontext", "must rewrite the loaded config file")
 }
 
 func TestAuthList(t *testing.T) {

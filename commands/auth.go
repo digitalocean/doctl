@@ -355,7 +355,18 @@ func writeConfig() error {
 // When using the default config file path the default config home directory will be created; Otherwise
 // the custom config home directory must exist and be writable to the user issuing the auth command.
 func defaultConfigFileWriter() (io.WriteCloser, error) {
-	cfgFile := viper.GetString("config")
+	// Write to the config file viper actually loaded, not the value of the
+	// "config" key. writeConfig persists viper.AllSettings(), which includes the
+	// bound "config" flag, so a top-level "config:" entry ends up in the file. On
+	// a later run viper reads it back, and because a config-file value outranks a
+	// flag's default, viper.GetString("config") returns that stored path. When the
+	// config was copied from another machine the path is stale, and auth switch
+	// would silently write there instead of the live config. ConfigFileUsed() is
+	// the path set at init, before the file is read, so it is not hijacked.
+	cfgFile := viper.ConfigFileUsed()
+	if cfgFile == "" {
+		cfgFile = viper.GetString("config")
+	}
 
 	defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
 	if cfgFile == defaultCfgFile {
