@@ -601,6 +601,7 @@ A paused session is resumed automatically before the tunnel opens, same as `+"`"
 	cmd.AddCommand(AgentConfigs())
 	cmd.AddCommand(AgentSizes())
 	cmd.AddCommand(AgentTemplates())
+	cmd.AddCommand(AgentFiles())
 
 	requireAgentSubcommand(cmd)
 	cmd.Command.SetHelpFunc(agentsStyledHelpFunc)

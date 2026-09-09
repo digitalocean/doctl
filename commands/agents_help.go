@@ -148,6 +148,22 @@ const agentsDownloadHelpMD = `Copy a file from the session workspace to a local 
 
 Use ` + "`--archive`" + ` to download a directory as a tar archive. Maximum size 50 GiB.`
 
+const agentsFilesRootHelpMD = `Look inside a session's workspace: ` + "`" + `ls` + "`" + ` to see what is there, ` + "`" + `cat` + "`" + ` to read a file. Both take a path relative to the workspace root (` + "`/workspace`" + `), same as ` + "`--workspace-path`" + ` on ` + "`" + agentCLI + " upload`" + ` and ` + "`" + agentCLI + " download`" + `; an absolute path works too.
+
+These read the workspace through the session's sandbox, so they need a session that is running, and they inherit ` + "`" + agentCLI + " exec`" + `'s 1 MiB per stream cap. Use ` + "`" + agentCLI + " download`" + ` for anything larger, for a whole directory, or for binary files.`
+
+const agentsFilesLsHelpMD = `List the contents of one directory in the session workspace. With no path, the workspace root is listed; given a file rather than a directory, that file is what you get, the same answer ` + "`ls`" + ` gives.
+
+The ` + "`Path`" + ` column is the path inside the workspace, so it can be handed straight to a follow-up ` + "`" + agentCLI + " files ls`" + `, ` + "`" + agentCLI + " files cat`" + `, ` + "`" + agentCLI + " download`" + `, or ` + "`" + agentCLI + " exec --workdir`" + `:
+` + "```bash\n" + agentCLI + ` files ls my-session          # the workspace root
+` + agentCLI + ` files ls my-session src      # one directory down
+` + agentCLI + ` files ls my-session src -R   # and everything under it
+` + "```\n\n" + `Hidden entries are always included. Use ` + "`-o json`" + ` for the same listing as an array of objects.`
+
+const agentsFilesCatHelpMD = `Print a file from the session workspace to stdout.
+
+The file's bytes pass through unchanged and the guest's exit code becomes doctl's, so this composes in pipelines and ` + "`&&`" + ` chains — a missing file is a non-zero exit, not a partial read. Output is capped at 1 MiB; use ` + "`" + agentCLI + " download`" + ` for larger or binary files. With ` + "`-o json`" + ` the contents are wrapped in an object alongside the path and size.`
+
 const agentsAuthHelpMD = `Connect an external provider (e.g. GitHub) so sessions can clone and push to private repositories.
 
 Opens a browser to authorize unless ` + "`--no-browser`" + ` is set. The connection is shared by your team. Use ` + "`--no-wait`" + ` to print the URL and exit without waiting.`
