@@ -16,6 +16,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -102,6 +103,7 @@ You can customize the configuration using the listed flags, all of which are opt
 To retrieve a list of your database clusters and their IDs, use `+"`"+`doctl databases list`+"`"+`.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the database cluster without a confirmation prompt")
+	AddBoolFlag(cmdDatabaseDelete, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database cluster to be deleted before returning control to the terminal.")
 	cmdDatabaseDelete.Example = `The following example deletes the database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl databases delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdDatabaseGetConn := CmdBuilder(cmd, RunDatabaseConnectionGet, "connection <database-cluster-id>", "Retrieve connection details for a database cluster", `Retrieves the following connection details for a database cluster:
@@ -452,7 +454,25 @@ func RunDatabaseDelete(c *CmdConfig) error {
 
 	if force || AskForConfirmDelete("database cluster", 1) == nil {
 		id := c.Args[0]
-		return c.Databases().Delete(id)
+		dbs := c.Databases()
+		if err := dbs.Delete(id); err != nil {
+			return err
+		}
+
+		wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+		if err != nil {
+			return err
+		}
+
+		if wait {
+			notice("Database deletion is in progress, waiting for database to be deleted")
+			if err := waitForDatabaseDeleted(dbs, id); err != nil {
+				return fmt.Errorf("database couldn't be deleted: %v", err)
+			}
+			notice("Database is successfully deleted")
+		}
+
+		return nil
 	}
 
 	return errOperationAborted
@@ -2626,6 +2646,38 @@ func waitForDatabaseReady(dbs do.DatabasesService, dbID string) error {
 
 	return fmt.Errorf(
 		"timeout waiting for database (%s) to enter `online` state",
+		dbID,
+	)
+}
+
+func waitForDatabaseDeleted(dbs do.DatabasesService, dbID string) error {
+	const maxAttempts = 180
+	attempts := 0
+	printNewLineSet := false
+
+	for i := 0; i < maxAttempts; i++ {
+		if attempts != 0 {
+			fmt.Fprint(os.Stderr, ".")
+			if !printNewLineSet {
+				printNewLineSet = true
+				defer fmt.Fprintln(os.Stderr)
+			}
+		}
+
+		_, err := dbs.Get(dbID)
+		if err != nil {
+			if errResp, ok := err.(*godo.ErrorResponse); ok && errResp.Response.StatusCode == http.StatusNotFound {
+				return nil
+			}
+			return err
+		}
+
+		attempts++
+		time.Sleep(10 * time.Second)
+	}
+
+	return fmt.Errorf(
+		"timeout waiting for database (%s) to be deleted",
 		dbID,
 	)
 }
