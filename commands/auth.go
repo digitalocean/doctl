@@ -243,16 +243,19 @@ func RunAuthToken(c *CmdConfig) error {
 }
 
 func ensureDefaultContextAndKeysOrder(contexts map[string]any) []string {
-	// Because the default context isn't present on the auth-contexts field,
-	// we add it manually so that it's always included in the output, and so
-	// we can check if it's the current context.
-	contexts[doctl.ArgDefaultContext] = true
-
-	// Extract and sort the map keys so that the order that we display the
-	// auth contexts is consistent.
-	keys := make([]string, 0)
+	// The default context isn't stored under auth-contexts (its token lives in
+	// the top-level access-token). Include it in the display keys without
+	// mutating the caller's map, which may be backed by Viper's live config.
+	keys := make([]string, 0, len(contexts)+1)
+	hasDefault := false
 	for ctx := range contexts {
+		if ctx == doctl.ArgDefaultContext {
+			hasDefault = true
+		}
 		keys = append(keys, ctx)
+	}
+	if !hasDefault {
+		keys = append(keys, doctl.ArgDefaultContext)
 	}
 	sort.Strings(keys)
 
@@ -298,30 +301,21 @@ func RunAuthSwitch(c *CmdConfig) error {
 		context = strings.ToLower(viper.GetString("context"))
 	}
 
-	// check that context exists
-	contextsAvail := viper.GetStringMap("auth-contexts")
-	contextsAvail[doctl.ArgDefaultContext] = true
-	keys := make([]string, 0)
-	for ctx := range contextsAvail {
-		keys = append(keys, ctx)
-	}
-
-	var contextExists bool
-	for _, ctx := range keys {
-		if ctx == context {
-			contextExists = true
+	// The default context is always valid; its token is stored in the
+	// top-level access-token, not under auth-contexts. Do not inject a
+	// synthetic "default" key into auth-contexts — that previously caused
+	// writeConfig() to persist default: "true" (see #1816).
+	contexts := viper.GetStringMapString("auth-contexts")
+	if context != doctl.ArgDefaultContext {
+		if _, ok := contexts[context]; !ok {
+			return errors.New("context does not exist")
 		}
-	}
-
-	if !contextExists {
-		return errors.New("context does not exist")
 	}
 
 	// The two lines below aren't required for doctl specific functionality,
 	// but somehow magically fixes an issue
 	// (https://github.com/digitalocean/doctl/issues/996) where auth-contexts
 	// are mangled when running this command.
-	contexts := viper.GetStringMapString("auth-contexts")
 	viper.Set("auth-contexts", contexts)
 
 	viper.Set("context", context)

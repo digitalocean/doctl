@@ -291,6 +291,39 @@ context: default
 		})
 	})
 
+	when("switching back to the default context", func() {
+		it("does not write a synthetic default entry into auth-contexts", func() {
+			var testConfigBytes = []byte(`access-token: first-token
+auth-contexts:
+  next: second-token
+context: next
+`)
+
+			tmpDir := t.TempDir()
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"switch",
+				"--config", testConfig,
+				"--context", "default",
+			)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, string(output))
+			expect.Contains(string(output), "Now using context [default] by default")
+
+			fileBytes, err := os.ReadFile(testConfig)
+			expect.NoError(err)
+			fileContents := string(fileBytes)
+			expect.Contains(fileContents, "context: default")
+			expect.Contains(fileContents, "next: second-token")
+			expect.NotContains(fileContents, "default: \"true\"")
+			expect.NotContains(fileContents, "default: true")
+		})
+	})
+
 	when("switching contexts containing a period", func() {
 		it("does not mangle that context", func() {
 			var testConfigBytes = []byte(`access-token: first-token
@@ -314,7 +347,10 @@ context: default
 
 			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
-			expect.Contains(string(fileBytes), "test@example.com: second-token")
+			fileContents := string(fileBytes)
+			expect.Contains(fileContents, "test@example.com: second-token")
+			expect.NotContains(fileContents, "default: \"true\"")
+			expect.NotContains(fileContents, "default: true")
 
 			err = os.Remove(testConfig)
 			expect.NoError(err)
