@@ -945,7 +945,7 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	// keeps a typo visible without corrupting the YAML on stdout.
 	var unbound []string
 	seen := map[string]bool{}
-	secrets := manifestSecretValues(src.manifest)
+	secrets := resolvedManifestSecretValues(src.manifest)
 	manifest, err := expandManifestEnvLookup(src.manifest, func(name string) (string, bool) {
 		if serverProvidedEnvPlaceholders[name] {
 			return "${" + name + "}", true

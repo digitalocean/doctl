@@ -496,7 +496,7 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 		return nil, err
 	}
 
-	lookup := envLookupWithOverlay(mergeStringMaps(manifestSecretValues(raw), envOverlay))
+	lookup := envLookupWithOverlay(mergeStringMaps(resolvedManifestSecretValues(raw), envOverlay))
 	manifest, err := expandManifestEnvCollect(raw, lookup)
 	if err != nil {
 		return nil, err
@@ -545,7 +545,7 @@ func prepareClaudeCodeStart(ctx context.Context, raw []byte, prog *creationProgr
 		return nil
 	}
 
-	apiKey := strings.TrimSpace(manifestSecretValues(raw)[anthropicAPIKeyEnv])
+	apiKey := strings.TrimSpace(resolvedManifestSecretValues(raw)[anthropicAPIKeyEnv])
 	if apiKey == "" {
 		var err error
 		apiKey, err = ensureEnvVar(anthropicAPIKeyEnv)

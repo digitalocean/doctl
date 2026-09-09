@@ -389,6 +389,54 @@ func TestRunAgentsCreate_ClaudeCodeSecretSatisfiesKey(t *testing.T) {
 	})
 }
 
+// secrets: OPENAI_API_KEY: ${OPENAI_API_KEY} must expand from the environment
+// on the real create path (not only when --secret supplies a concrete value).
+func TestRunAgentsCreate_SecretPlaceholderExpandsFromEnv(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "sk-from-env")
+	prevInteractive := Interactive
+	Interactive = false
+	t.Cleanup(func() { Interactive = prevInteractive })
+
+	spec := t.TempDir() + "/agents.yaml"
+	require.NoError(t, os.WriteFile(spec, []byte(`name: syed-verify
+agent: opencode
+secrets:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+`), 0o600))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "sk-from-env")
+				assert.NotContains(t, string(manifest), "${OPENAI_API_KEY}")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_syed",
+						Name:      "syed-verify",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_syed").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_syed",
+					Name:      "syed-verify",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, spec)
+		require.NoError(t, RunAgentsCreate(config))
+	})
+}
+
 // TestPrepareClaudeCodeStart_ValidatesKey confirms the key resolved via
 // ensureEnvVar is the one handed to validateAnthropicAPIKey, and that
 // non-claude-code manifests skip validation entirely (no network call).

@@ -158,3 +158,58 @@ func TestFindMissingManifestEnvRefs(t *testing.T) {
 	)
 	assert.Equal(t, []string{"DOCTL_TEST_MISS"}, missing)
 }
+
+func TestResolvedManifestSecretValues_SkipsPlaceholders(t *testing.T) {
+	raw := []byte(`name: demo
+agent: opencode
+secrets:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+  OTHER_TOKEN: sk-literal
+`)
+	all := manifestSecretValues(raw)
+	assert.Equal(t, "${OPENAI_API_KEY}", all["OPENAI_API_KEY"])
+	assert.Equal(t, "sk-literal", all["OTHER_TOKEN"])
+
+	resolved := resolvedManifestSecretValues(raw)
+	_, hasPlaceholder := resolved["OPENAI_API_KEY"]
+	assert.False(t, hasPlaceholder)
+	assert.Equal(t, "sk-literal", resolved["OTHER_TOKEN"])
+}
+
+// secrets: NAME: ${NAME} must expand from the process environment. Overlaying
+// the placeholder itself used to make lookup succeed with "${NAME}" and send
+// the unexpanded value to the API (Syed / MARSOHS partners).
+func TestExpandSecretPlaceholderFromEnv(t *testing.T) {
+	raw := []byte(`name: syed-verify
+agent: opencode
+secrets:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+`)
+	t.Setenv("OPENAI_API_KEY", "sk-from-env")
+
+	lookup := envLookupWithOverlay(mergeStringMaps(resolvedManifestSecretValues(raw), nil))
+	out, err := expandManifestEnvCollect(raw, lookup)
+	require.NoError(t, err)
+	assert.Contains(t, string(out), "sk-from-env")
+	assert.NotContains(t, string(out), "${OPENAI_API_KEY}")
+}
+
+func TestExpandSecretPlaceholderMissingEnvErrors(t *testing.T) {
+	_ = os.Unsetenv("OPENAI_API_KEY")
+	prevInteractive := Interactive
+	t.Cleanup(func() {
+		Interactive = prevInteractive
+		_ = os.Unsetenv("OPENAI_API_KEY")
+	})
+	Interactive = false
+
+	raw := []byte(`name: syed-verify
+agent: opencode
+secrets:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+`)
+	lookup := envLookupWithOverlay(mergeStringMaps(resolvedManifestSecretValues(raw), nil))
+	_, err := expandManifestEnvCollect(raw, lookup)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "OPENAI_API_KEY")
+}
