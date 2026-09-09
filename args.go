@@ -998,6 +998,17 @@ const (
 	// ArgAgentExecTimeout bounds a sandbox exec, in seconds.
 	ArgAgentExecTimeout = "timeout"
 
+	// ArgAgentPromptTimeout bounds how long `prompt` waits for the run it
+	// started to finish, in seconds.
+	ArgAgentPromptTimeout = "timeout"
+
+	// ArgAgentPromptIncludeReasoning also emits the model's reasoning, not
+	// just its answer, from a `prompt` run.
+	ArgAgentPromptIncludeReasoning = "include-reasoning"
+
+	// ArgAgentPromptQuiet suppresses `prompt`'s progress reporting on stderr.
+	ArgAgentPromptQuiet = "quiet"
+
 	// ArgAgentProxyType selects which coding-agent protocol `start-proxy` impersonates.
 	ArgAgentProxyType = "type"
 

@@ -564,6 +564,17 @@ func Agents() *Command {
 	AddIntFlag(cmdExec, doctl.ArgAgentExecTimeout, "", 0, "Maximum seconds the command may run (0 uses the server default)")
 	cmdExec.Example = `doctl harness-runtime exec sess_abc123 -- ls -la; doctl harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
 
+	cmdPrompt := CmdBuilder(cmd, RunAgentsPrompt, "prompt <session> <prompt>...",
+		"Send one prompt to a session and print the answer",
+		agentsPromptHelpMD,
+		Writer, agentsNS(aliasOpt("ask"),
+			displayerType(&displayers.HostedAgentPrompt{}))...)
+	AddStringFlag(cmdPrompt, doctl.ArgAgentOnHITL, "", "", "Resolve every approval request this way (approve|reject|defer). Without it, an approval request stops the command, since nothing here can ask a human.")
+	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds to wait for the run to finish, exiting 124 if it does not (0 waits indefinitely). The agent keeps going either way.")
+	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptIncludeReasoning, "", false, "Also print the model's reasoning to stderr, not just its answer")
+	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptQuiet, "q", false, "Suppress progress on stderr; stdout still carries the answer")
+	cmdPrompt.Example = agentCLI + ` prompt my-session What is the capital of France?; ` + agentCLI + ` prompt sess_abc123 "Summarize the README" --timeout 300; ` + agentCLI + ` prompt my-session "Fix the failing test" --on-hitl approve; cat task.md | ` + agentCLI + ` prompt my-session -`
+
 	cmdAuth := CmdBuilder(cmd, RunAgentsAuth, "auth <provider>",
 		"Connect an external provider (e.g. github) for agent git operations",
 		agentsAuthHelpMD,

@@ -237,6 +237,71 @@ func (h *HostedAgentSandboxExec) KV() []map[string]any {
 	return out
 }
 
+// HostedAgentPromptResult is one headless prompt run: the answer the agent
+// produced, plus the accounting for the run that produced it. There is no godo
+// type for this — it is assembled from the run's events rather than returned by
+// a single call.
+type HostedAgentPromptResult struct {
+	SessionID      string `json:"session_id"`
+	RunID          string `json:"run_id"`
+	Text           string `json:"text"`
+	Reasoning      string `json:"reasoning,omitempty"`
+	Status         string `json:"status"`
+	TotalTokensIn  int64  `json:"total_tokens_in,omitempty"`
+	TotalTokensOut int64  `json:"total_tokens_out,omitempty"`
+	RunCostMicros  int64  `json:"run_cost_micros,omitempty"`
+	Error          string `json:"error,omitempty"`
+}
+
+// HostedAgentPrompt renders the result of `doctl harness-runtime prompt`. Set
+// Single=true so the verb emits a bare JSON object rather than a one-element
+// array, matching the sandbox exec displayer.
+type HostedAgentPrompt struct {
+	Prompts []*HostedAgentPromptResult
+	Single  bool
+}
+
+var _ Displayable = &HostedAgentPrompt{}
+
+func (h *HostedAgentPrompt) JSON(out io.Writer) error {
+	if h.Single && len(h.Prompts) == 1 {
+		return writeJSON(h.Prompts[0], out)
+	}
+	return writeJSON(h.Prompts, out)
+}
+
+func (h *HostedAgentPrompt) Cols() []string {
+	return []string{"SessionID", "RunID", "Status", "Text"}
+}
+
+func (h *HostedAgentPrompt) ColMap() map[string]string {
+	return map[string]string{
+		"SessionID": "SessionID",
+		"RunID":     "RunID",
+		"Status":    "Status",
+		"Text":      "Text",
+	}
+}
+
+func (h *HostedAgentPrompt) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Prompts))
+	for _, p := range h.Prompts {
+		if p == nil {
+			continue
+		}
+		out = append(out, map[string]any{
+			"SessionID": p.SessionID,
+			"RunID":     p.RunID,
+			"Status":    p.Status,
+			"Text":      p.Text,
+		})
+	}
+	return out
+}
+
 // HostedAgentConfig renders full Agent Configs, backing `doctl harness-runtime config
 // get` and `... create`. Set Single=true so those verbs emit a bare JSON
 // object; the list verb uses HostedAgentConfigSummary instead.

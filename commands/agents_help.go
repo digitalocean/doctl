@@ -200,6 +200,16 @@ Guest stdout and stderr pass through unchanged and the guest's exit code becomes
 
 Output is buffered until the command finishes, and capped at 1 MiB per stream. With ` + "`-o json`" + ` the full response is emitted instead of the raw streams.`
 
+const agentsPromptHelpMD = `Send one prompt to an existing session, wait for the agent to finish, and print its answer. Headless execution: no TUI, no keyboard input.
+
+The prompt is everything after the session, so it need not be quoted. Pass ` + "`-`" + ` to read it from stdin instead.
+
+Only the agent's answer goes to stdout, so it can be captured directly (` + "`ANSWER=$(" + agentCLI + " prompt my-session 'What changed?')`" + `). Progress, tool calls, and the closing token and cost summary go to stderr, where they stay visible on a terminal without corrupting a pipe. Add ` + "`--include-reasoning`" + ` to also emit the model's thinking on stderr, or ` + "`--quiet`" + ` to silence stderr entirely. With ` + "`-o json`" + ` the answer, run ID, status, and usage are emitted as one object instead.
+
+The exit code reports the run: 0 when it completed, 1 when it failed, and 124 when ` + "`--timeout`" + ` expired, so this composes in ` + "`&&`" + ` chains and ` + "`if`" + ` tests. A timeout stops waiting locally and does not stop the agent — the run continues and its output stays readable with ` + "`" + agentCLI + " logs`" + `.
+
+A paused session is resumed on the way in. Because nothing here can ask a human, an approval request stops the command unless ` + "`--on-hitl`" + ` says how to answer.`
+
 const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`coding-base`" + `, ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `). Create and update kick a build; use ` + "`list-builds`" + ` to watch it.
 
 The team is taken from the authenticated principal — never from the request body or query.`

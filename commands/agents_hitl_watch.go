@@ -77,8 +77,6 @@ func watchSessionHeadless(c *CmdConfig, sessionID string, outcome godo.HostedAge
 
 	svc := c.HostedAgents()
 	cursor := &eventCursor{}
-	backoff := initialReconnectBackoff
-	failures := 0
 	// Resolving the same request twice is harmless server-side but noisy in the
 	// log, and SSE replay after a reconnect makes it likely.
 	resolved := map[string]bool{}
@@ -86,68 +84,11 @@ func watchSessionHeadless(c *CmdConfig, sessionID string, outcome godo.HostedAge
 	fmt.Fprintf(c.Out, "%s\n", colorize(fmt.Sprintf("Watching %s · approvals will be %s automatically · Ctrl-C detaches",
 		sessionID, humanHITLOutcome(outcome)), colMuted))
 
-	for {
-		if ctx.Err() != nil {
-			return nil
-		}
-
-		stream, err := svc.StreamSession(ctx, sessionID, &godo.HostedAgentSessionStreamOptions{
-			ReplayFrom: cursor.get(),
+	return runHeadlessStream(ctx, svc, sessionID, cursor,
+		func(msg string) { fmt.Fprintln(c.Out, msg) },
+		func(stream *godo.HostedAgentSessionStream) (bool, error) {
+			return drainHeadless(c, svc, sessionID, stream, cursor, outcome, resolved)
 		})
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil
-			}
-			if msg, terminal := classifyStreamError(err); terminal {
-				fmt.Fprintln(c.Out, msg)
-				return nil
-			}
-			failures++
-			if failures >= maxAutoReconnectAttempts {
-				return fmt.Errorf("lost the event stream for session %s after %d attempts: %w", sessionID, failures, err)
-			}
-			if !reconnectSleepFn(ctx, backoff) {
-				return nil
-			}
-			backoff = nextBackoff(backoff)
-			continue
-		}
-
-		connectedAt := streamClock()
-		done, watchErr := drainHeadless(c, svc, sessionID, stream, cursor, outcome, resolved)
-		streamErr := stream.Err()
-		stream.Close()
-
-		if watchErr != nil {
-			return watchErr
-		}
-		if done || ctx.Err() != nil {
-			return nil
-		}
-
-		// A stream that stayed up is a server idle timeout, not a fault, so it
-		// must not consume the failure budget — an unattended run can sit quiet
-		// for a long time while the agent thinks.
-		if streamClock().Sub(connectedAt) >= healthyStreamDuration {
-			failures = 0
-			backoff = initialReconnectBackoff
-		} else {
-			failures++
-		}
-		if streamErr != nil {
-			if msg, terminal := classifyStreamError(streamErr); terminal {
-				fmt.Fprintln(c.Out, msg)
-				return nil
-			}
-		}
-		if failures >= maxAutoReconnectAttempts {
-			return fmt.Errorf("lost the event stream for session %s after %d attempts", sessionID, failures)
-		}
-		if !reconnectSleepFn(ctx, backoff) {
-			return nil
-		}
-		backoff = nextBackoff(backoff)
-	}
 }
 
 // drainHeadless consumes one connection's events. done is true when the run
