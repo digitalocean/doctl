@@ -75,11 +75,11 @@ func TestValidateCommandFlags_AggregatesMissingRequired(t *testing.T) {
 	assert.Contains(t, msg, "for usage")
 }
 
-// TestFlagValidationErrorSummarisesOnOneLine covers what automation sees. The
+// TestFlagValidationErrorSummarizesOnOneLine covers what automation sees. The
 // detail field of doctl's JSON error envelope is err.Error(), so it must be a
 // sentence rather than the rendered block: no glyphs, no indentation, and no
 // suggested next commands.
-func TestFlagValidationErrorSummarisesOnOneLine(t *testing.T) {
+func TestFlagValidationErrorSummarizesOnOneLine(t *testing.T) {
 	tests := []struct {
 		name     string
 		issues   []FlagIssue
@@ -310,11 +310,11 @@ func TestKubernetesClusterCreate_DefaultRegionPassesPreRun(t *testing.T) {
 	}
 }
 
-// TestFlagValidationDisplayUsesRedSlot checks that a validation failure is
-// painted in the same red slot as every other error, so the two read as one
-// voice. TrueColor is forced because that is the profile where a fixed hex
-// would survive rather than being downsampled out of sight.
-func TestFlagValidationDisplayUsesRedSlot(t *testing.T) {
+// TestFlagValidationDisplayUsesTheErrorColor checks that a validation failure
+// is painted in the same red as every other error, so the two read as one
+// voice. TrueColor is forced because that is the profile where the palette's
+// exact color reaches the sequence rather than being downsampled out of sight.
+func TestFlagValidationDisplayUsesTheErrorColor(t *testing.T) {
 	err := &FlagValidationError{
 		Command: "doctl compute droplet create",
 		Issues: []FlagIssue{
@@ -323,11 +323,9 @@ func TestFlagValidationDisplayUsesRedSlot(t *testing.T) {
 	}
 	env := ui.Detect(ioDiscard{}, ioDiscard{}, ui.WithProfile(termenv.TrueColor), ui.WithASCII(false))
 	out := err.format(ui.NewStyle(env))
-	if !strings.Contains(out, "\x1b[31m") {
-		t.Fatalf("expected the red slot in display output; got %q", out)
-	}
-	if strings.Contains(out, "38;2;") {
-		t.Fatalf("expected a slot rather than a fixed truecolor value; got %q", out)
+	want := "\x1b[1;" + termenv.TrueColor.Color(string(ui.ColorError)).Sequence(false) + "m"
+	if !strings.Contains(out, want) {
+		t.Fatalf("expected the bold error color in display output; got %q", out)
 	}
 }
 

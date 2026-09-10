@@ -21,6 +21,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// ToneIdentifier is decided by the column a value sits in, so no value should
+// ever produce it on its own.
+func TestToneForNeverReturnsIdentifier(t *testing.T) {
+	for _, value := range []string{"name", "identifier", "web-01", "id", ""} {
+		tone, _ := ToneFor(value)
+		assert.NotEqual(t, ToneIdentifier, tone, "value %q", value)
+	}
+}
+
 func TestToneFor(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -31,6 +40,7 @@ func TestToneFor(t *testing.T) {
 		{name: "droplet active", value: "active", tone: ToneSuccess},
 		{name: "droplet off", value: "off", tone: ToneMuted},
 		{name: "droplet new", value: "new", tone: TonePending},
+		{name: "agent session paused", value: "paused", tone: TonePending},
 		{name: "action in-progress", value: "in-progress", tone: TonePending},
 		{name: "action errored", value: "errored", tone: ToneError},
 		{name: "database online", value: "online", tone: ToneSuccess},
@@ -80,11 +90,11 @@ func TestToneFor(t *testing.T) {
 func TestSprintTone(t *testing.T) {
 	var out, errOut bytes.Buffer
 
-	// The green slot, not a fixed green: the profile is TrueColor and the
-	// sequence is still the plain SGR 32, because the palette names a slot and
-	// leaves the value to whatever theme the user is running.
+	// Compared against the palette rather than a literal, so this pins that a
+	// success is painted ColorSuccess and not what ColorSuccess happens to be.
 	styled := Detect(&out, &errOut, WithProfile(termenv.TrueColor))
-	assert.Equal(t, "\x1b[32mactive\x1b[0m", styled.SprintTone(ToneSuccess, "active"),
+	want := "\x1b[" + termenv.TrueColor.Color(string(ColorSuccess)).Sequence(false) + "mactive\x1b[0m"
+	assert.Equal(t, want, styled.SprintTone(ToneSuccess, "active"),
 		"success renders in ColorSuccess")
 	assert.Equal(t, "active", styled.SprintTone(ToneNone, "active"),
 		"an unclassified value must not be painted")

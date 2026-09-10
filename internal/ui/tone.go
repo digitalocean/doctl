@@ -19,9 +19,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Tone is the meaning a value carries, separate from how it is painted. It
-// exists so callers classify data and leave the palette to this package: a
-// displayer should say that a Droplet is off, not that it is grey.
+// Tone is the meaning a value carries, separate from how it is painted.
 type Tone int
 
 const (
@@ -29,23 +27,20 @@ const (
 	ToneNone Tone = iota
 	// ToneSuccess is a resource that has reached its desired state.
 	ToneSuccess
-	// TonePending is a resource still moving towards it, and anything that
-	// warrants attention without being a failure.
+	// TonePending is a resource still moving towards it, or worth attention.
 	TonePending
 	// ToneError is a resource that failed or is unusable.
 	ToneError
-	// ToneMuted is a resource that is intentionally inert: off, deleted,
-	// superseded, or simply unknown.
+	// ToneMuted is a resource that is intentionally inert: off, deleted, unknown.
 	ToneMuted
+	// ToneIdentifier is the value that names the resource a row is about.
+	// ToneFor never returns it: a name belongs to no vocabulary, so only a
+	// caller that knows which column identifies the resource can ask for it.
+	ToneIdentifier
 )
 
-// toneVocabulary maps the state words doctl receives to a meaning.
-//
-// doctl surfaces state from many APIs in three encodings - lowercase
-// ("active"), upper ("CREATING"), and proto-style
-// ("SCENARIO_SET_STATUS_READY") - so ToneFor normalizes before looking a value
-// up here. The vocabulary is deliberately about words rather than resources,
-// because "failed" means the same thing whichever API said it.
+// toneVocabulary maps state words to a meaning. doctl receives state in
+// several encodings, so ToneFor normalizes before looking a value up here.
 var toneVocabulary = map[string]Tone{
 	// Reached the desired state.
 	"active":     ToneSuccess,
@@ -76,6 +71,7 @@ var toneVocabulary = map[string]Tone{
 	"inconclusive": TonePending,
 	"migrating":    TonePending,
 	"new":          TonePending,
+	"paused":       TonePending,
 	"pending":      TonePending,
 	"preparing":    TonePending,
 	"progress":     TonePending,
@@ -110,19 +106,14 @@ var toneVocabulary = map[string]Tone{
 	"expired":    ToneMuted,
 	"inactive":   ToneMuted,
 	"off":        ToneMuted,
-	"paused":     ToneMuted,
 	"skipped":    ToneMuted,
 	"superseded": ToneMuted,
 	"unknown":    ToneMuted,
 }
 
-// ToneFor classifies a state value, reporting false when the value is not
-// recognized so that callers leave unfamiliar text alone rather than guessing.
-//
-// The whole value is tried first, then each of its words. Word matching is
-// what lets one vocabulary cover every encoding: "PENDING_DEPLOY" is pending
-// on its first word, "SCENARIO_SET_STATUS_READY" is a success on its last, and
-// "application error" is an error on its second.
+// ToneFor classifies a state value, reporting false when it is not recognized
+// so that callers leave unfamiliar text alone. The whole value is tried first,
+// then each of its words: "SCENARIO_SET_STATUS_READY" is a success on its last.
 func ToneFor(value string) (Tone, bool) {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	if normalized == "" {
@@ -148,8 +139,7 @@ func isToneWordSeparator(r rune) bool {
 	return r == '_' || r == ' ' || r == '\t'
 }
 
-// toneColor maps a tone onto the palette. It is the only place tones and
-// colours meet.
+// toneColor maps a tone onto the palette, and is the only place the two meet.
 func toneColor(tone Tone) (lipgloss.TerminalColor, bool) {
 	switch tone {
 	case ToneSuccess:
@@ -160,19 +150,30 @@ func toneColor(tone Tone) (lipgloss.TerminalColor, bool) {
 		return ColorError, true
 	case ToneMuted:
 		return ColorMuted, true
+	case ToneIdentifier:
+		return ColorInfo, true
 	default:
 		return lipgloss.NoColor{}, false
 	}
 }
 
-// SprintTone renders s in the colour for tone when styling is permitted on
-// Out, and returns s unchanged otherwise. Meaning still survives without
-// colour because the value itself is the state word.
+// toneBold reports whether a tone is drawn bold. Only the identifier is.
+func toneBold(tone Tone) bool {
+	return tone == ToneIdentifier
+}
+
+// SprintTone renders s in the color for tone when styling is permitted on Out,
+// and returns s unchanged otherwise.
 func (e Env) SprintTone(tone Tone, s string) string {
 	color, ok := toneColor(tone)
 	if !ok || !e.Style {
 		return s
 	}
 
-	return e.Sprint(e.NewStyle().Foreground(color), s)
+	style := e.NewStyle().Foreground(color)
+	if toneBold(tone) {
+		style = style.Bold(true)
+	}
+
+	return e.Sprint(style, s)
 }

@@ -294,7 +294,7 @@ func TestNewWaiter(t *testing.T) {
 		expected time.Duration
 	}{
 		{
-			name:     "an explicit timeout is honoured",
+			name:     "an explicit timeout is honored",
 			timeout:  90 * time.Second,
 			expected: 90 * time.Second,
 		},

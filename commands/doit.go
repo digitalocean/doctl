@@ -54,8 +54,6 @@ var (
 	Context string
 	//Output global output format
 	Output string
-	//Color controls when ANSI styling is written
-	Color string
 	//Token global authorization token
 	Token string
 	//Trace toggles http tracing output
@@ -88,12 +86,6 @@ func init() {
 	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "Desired output format [text|json]")
 	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
 
-	rootPFlagSet.StringVarP(&Color, doctl.ArgColor, "", colorAuto, colorHelpText)
-	viper.BindPFlag(doctl.ArgColor, rootPFlagSet.Lookup(doctl.ArgColor))
-	DoitCmd.RegisterFlagCompletionFunc(doctl.ArgColor, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{colorAuto, colorAlways, colorNever}, cobra.ShellCompDirectiveNoFileComp
-	})
-
 	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "Specify a custom authentication context name")
 	DoitCmd.RegisterFlagCompletionFunc(doctl.ArgContext, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return getAuthContextList(), cobra.ShellCompDirectiveNoFileComp
@@ -121,12 +113,13 @@ func init() {
 	viper.BindPFlag("http-retry-wait-min", rootPFlagSet.Lookup("http-retry-wait-min"))
 	DoitCmd.PersistentFlags().MarkHidden("http-retry-wait-min")
 
-	// Resolve the colour policy once, after flags are parsed and config is
+	// Resolve the output policy once, after flags are parsed and config is
 	// read but before any command writes. Cobra runs the nearest
 	// PersistentPreRunE walking up from the command being executed, and no
 	// subcommand defines one, so this governs every invocation.
 	DoitCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
-		return installOutputPolicy()
+		installOutputPolicy()
+		return nil
 	}
 
 	addCommands()
@@ -276,14 +269,14 @@ func requiredOpt() flagOpt {
 		// Use doctl-owned metadata instead of cobra.MarkFlagRequired.
 		// Cobra's required check only looks at pflag.Changed, so it rejects
 		// flags whose value comes from a non-empty default or config.yaml —
-		// behaviour doctl has long accepted via GetString/viper.
+		// behavior doctl has long accepted via GetString/viper.
 		_ = c.Flags().SetAnnotation(name, annoFlagRequired, []string{"true"})
 		_ = c.Flags().SetAnnotation(name, annoFlagViperKey, []string{key})
 
 		viper.Set(fmt.Sprintf("required.%s", key), true)
 
 		// Plain text: flag usage is built at registration time, before any
-		// colour policy exists, and it is read back as prose by the flag
+		// color policy exists, and it is read back as prose by the flag
 		// validation error block.
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s (required)", u)
@@ -397,6 +390,13 @@ func AddWaitFlags(cmd *Command, def bool, desc string) {
 // --help states the deadline the command actually applies.
 func AddActionWaitFlags(cmd *Command, def bool, desc string) {
 	addWaitFlags(cmd, def, desc, defaultActionWaitTimeout)
+}
+
+// AddWaitFlagsWithTimeout registers the pair with a deadline of the command's
+// own choosing, for an operation whose usual duration is nothing like the
+// general default. --help states whichever deadline the command applies.
+func AddWaitFlagsWithTimeout(cmd *Command, def bool, desc string, timeout time.Duration) {
+	addWaitFlags(cmd, def, desc, timeout)
 }
 
 func addWaitFlags(cmd *Command, def bool, desc string, timeout time.Duration) {

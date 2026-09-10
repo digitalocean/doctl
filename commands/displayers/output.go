@@ -20,10 +20,6 @@ import (
 	"io"
 	"reflect"
 	"strings"
-	"unicode"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
 
 	"github.com/digitalocean/doctl/internal/ui"
 )
@@ -32,9 +28,23 @@ const (
 	// columnGap is the number of spaces separating plain text table columns.
 	columnGap = 4
 
-	// cellPad is the space between a boxed cell's value and the rules on
-	// either side of it.
+	// cellPad is the space between a boxed cell's value and its rules.
 	cellPad = 1
+
+	// cardPad is the margin between a card's rules and its contents.
+	cardPad = 2
+
+	// cardGap is the space between a card's label and its value.
+	cardGap = 1
+
+	// nextIndent sets the command in the card's footer under its heading.
+	nextIndent = 2
+
+	// minCardValue floors a card's values; past it the card overruns instead.
+	minCardValue = 8
+
+	// recordIndent indents a record's fields under the headline naming it.
+	recordIndent = 2
 )
 
 // Displayable is a displayable entity. These are used for printing results.
@@ -45,24 +55,17 @@ type Displayable interface {
 	JSON(io.Writer) error
 }
 
-// Toned is an optional interface for displayers whose columns the shared state
-// vocabulary would classify wrongly.
-//
-// Returning false means no opinion, leaving the column to the default
-// classification. Returning true is authoritative, including ui.ToneNone to
-// force a column to stay plain.
+// Toned is an optional interface for a displayer to tone its own columns.
+// Returning false leaves a column to the default classification.
 type Toned interface {
 	ColTone(col string, value any) (ui.Tone, bool)
 }
 
-// stateWords are the column names that hold the state of a resource, as
-// opposed to describing or identifying it.
-//
-// Tone is applied only when a column is named for state and its value is a
-// word the vocabulary knows. Both halves matter: state words appear in prose
-// that lives in columns like Message and Failure Reason, which must not be
-// painted just because a resource happens to be failing.
-var stateWords = []string{"status", "state", "phase", "health", "verdict"}
+// Tabular is an optional interface that keeps a displayer in the table layout
+// even when one resource is shown, for fields only meaningful side by side.
+type Tabular interface {
+	Tabular() bool
+}
 
 // Displayer has the display options, the item to display, and where to display to
 type Displayer struct {
@@ -70,11 +73,16 @@ type Displayer struct {
 	ColumnList string
 	NoHeaders  bool
 
+	// Detail reports a single-resource fetch, shown in a terminal as a card.
+	Detail bool
+
+	// NextStep is the command to run after this one, shown at a card's foot.
+	NextStep string
+
 	Item Displayable
 	Out  io.Writer
 
-	// UI carries the terminal capabilities of Out. Its zero value renders
-	// plain, unconstrained text, which is what tests and pipelines want.
+	// UI carries the terminal capabilities of Out. Its zero value is plain text.
 	UI ui.Env
 }
 
@@ -95,30 +103,51 @@ func (d *Displayer) Display() error {
 			}
 		}
 
-		return DisplayText(d.Item, d.Out, d.NoHeaders, cols, d.UI)
+		return DisplayText(d.Item, d.Out, d.NoHeaders, cols, d.UI,
+			WithDetail(d.Detail), WithNextStep(d.NextStep))
 	default:
 		return fmt.Errorf("unknown output type")
 	}
 }
 
-// DisplayText writes column-aligned content to the passed in io.Writer while
-// potentially adding or removing headers. Columns are narrowed to fit env's
-// data width, which is unconstrained unless out is a terminal.
+// TextOption adjusts how DisplayText renders, mirroring ui.Option.
+type TextOption func(*textConfig)
+
+// textConfig holds the resolved options. Its zero value is the table layout.
+type textConfig struct {
+	detail   bool
+	nextStep string
+}
+
+// WithDetail reports that item describes a single resource, shown as a card.
+func WithDetail(v bool) TextOption {
+	return func(c *textConfig) { c.detail = v }
+}
+
+// WithNextStep names the command to run after this one, shown at a card's foot.
+func WithNextStep(v string) TextOption {
+	return func(c *textConfig) { c.nextStep = v }
+}
+
+// DisplayText writes column-aligned content to out. Layout follows the stream,
+// rules and cards being chrome, and no layout cuts a value:
 //
-// A terminal gets the table drawn inside box rules, which is what makes a wide
-// row readable at a glance and a truncated cell obviously truncated. Anything
-// else - a pipe, a file, a test - gets the same space-separated columns doctl
-// has always written, because the rules are chrome and a script reading the
-// table must not have to strip them.
-//
-// A table that cannot be narrowed to the terminal without cutting a value in
-// half is written at its full width and without rules, and left to the
-// terminal to wrap. Rules drawn around a row wider than the terminal are
-// broken by that wrap anyway, and a wrapped table the user can still read an
-// ID out of beats a framed one that has replaced it with an ellipsis.
-func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string, env ui.Env) error {
+//   - a pipe, file, or test gets space-separated columns;
+//   - a terminal showing one resource gets a card, a field to a line;
+//   - a terminal showing a table that fits gets it inside box rules;
+//   - a table too wide to fit becomes one record per resource;
+//   - --no-header leaves a record no labels, so it wraps at full width unruled;
+//   - naming columns overrides the width rule, since they were picked by hand,
+//     and the table overruns rather than dropping any of them.
+func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string, env ui.Env, opts ...TextOption) error {
+	var cfg textConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	cols := item.Cols()
-	if len(includeCols) > 0 && includeCols[0] != "" {
+	explicitCols := len(includeCols) > 0 && includeCols[0] != ""
+	if explicitCols {
 		cols = includeCols
 	}
 
@@ -140,25 +169,33 @@ func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []
 	for _, r := range kv {
 		row := make([]string, 0, len(cols))
 		for _, col := range cols {
-			row = append(row, formatCell(r[col]))
+			row = append(row, formatCell(r[col], env.DataTTY))
 		}
 		rows = append(rows, row)
 	}
 
-	ellipsis := env.Glyphs().Ellipsis
 	count := columnCount(headers, rows)
-	widths, fits := columnWidths(headers, rows, contentBudget(env.DataWidth, count, env.DataTTY), ansi.StringWidth(ellipsis))
-	rowPainter := tonePainters(env, item, cols, kv)
+	widths := columnWidths(headers, rows)
+	fits := fitsBudget(widths, contentBudget(env.DataWidth, count, env.DataTTY))
+	tones := newToneTable(env, item, cols, kv)
+	plainRow := func(row int) painter { return tones.painter(row, ui.ToneNone) }
 
 	var buf bytes.Buffer
-	if env.DataTTY && fits {
-		writeBox(&buf, headers, rows, widths, ellipsis, env, headerPainter(env), rowPainter)
-	} else {
+	r := newRenderer(&buf, env)
+
+	switch {
+	case env.DataTTY && shouldCard(cfg, item, headers, len(rows)):
+		r.card(headers, rows[0], cfg.nextStep, plainRow(0))
+	case env.DataTTY && (fits || explicitCols):
+		r.box(headers, rows, widths, headerPainter(env), plainRow)
+	case env.DataTTY && headers != nil:
+		r.records(headers, rows, tones)
+	default:
 		if headers != nil {
-			writeRow(&buf, headers, widths, ellipsis, headerPainter(env))
+			r.row(headers, widths, headerPainter(env))
 		}
 		for i, row := range rows {
-			writeRow(&buf, row, widths, ellipsis, rowPainter(i))
+			r.row(row, widths, plainRow(i))
 		}
 	}
 
@@ -166,334 +203,63 @@ func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []
 	return err
 }
 
-// painter styles one cell of a row. It runs after the cell has been measured
-// and truncated so that escape sequences never enter width arithmetic.
-type painter func(col int, cell string) string
-
-// headerPainter emphasises the header row, which is what separates the labels
-// from the data when a table is long enough to scroll.
-func headerPainter(env ui.Env) painter {
-	if !env.Style {
-		return nil
+// shouldCard reports whether to draw a card, out being known to be a terminal.
+// rowCount is checked too, so a get returning several resources stays a table.
+func shouldCard(cfg textConfig, item Displayable, headers []string, rowCount int) bool {
+	if !cfg.detail || rowCount != 1 || headers == nil {
+		return false
 	}
 
-	header := env.NewStyle().Bold(true)
+	tabular, ok := item.(Tabular)
 
-	return func(_ int, cell string) string {
-		return env.Sprint(header, cell)
-	}
+	return !ok || !tabular.Tabular()
 }
 
-// tonePainters classifies the table once and returns a painter per row. When
-// the env forbids styling it classifies nothing at all, so redirected output
-// costs no more than it did before tones existed.
-func tonePainters(env ui.Env, item Displayable, cols []string, kv []map[string]any) func(row int) painter {
-	if !env.Style {
-		return func(int) painter { return nil }
-	}
-
-	tones := tableTones(item, cols, kv)
-
-	return func(row int) painter {
-		return func(col int, cell string) string {
-			return env.SprintTone(tones[row][col], cell)
-		}
-	}
-}
-
-// tableTones classifies every cell, giving the displayer the final say.
-func tableTones(item Displayable, cols []string, kv []map[string]any) [][]ui.Tone {
-	toned, overrides := item.(Toned)
-
-	// Whether a column holds state is a property of the table, so it is
-	// decided once rather than for every row.
-	stateCols := make([]bool, len(cols))
-	for i, col := range cols {
-		stateCols[i] = isStateColumn(col)
-	}
-
-	tones := make([][]ui.Tone, 0, len(kv))
-	for _, r := range kv {
-		row := make([]ui.Tone, len(cols))
-		for i, col := range cols {
-			if overrides {
-				if tone, decided := toned.ColTone(col, r[col]); decided {
-					row[i] = tone
-					continue
-				}
-			}
-
-			if !stateCols[i] {
-				continue
-			}
-
-			// Only strings are classified. Booleans are left alone because
-			// their polarity belongs to the column rather than the value: true
-			// is healthy under Advertised and unhealthy under Disabled.
-			if s, ok := r[col].(string); ok {
-				row[i], _ = ui.ToneFor(s)
-			}
-		}
-		tones = append(tones, row)
-	}
-
-	return tones
-}
-
-// isStateColumn reports whether col names the state of a resource. Separators
-// are dropped before matching so that "Health Status" and "HealthStatus" are
-// treated alike.
-func isStateColumn(col string) bool {
-	normalized := strings.Map(func(r rune) rune {
-		switch r {
-		case ' ', '_', '-':
-			return -1
-		default:
-			return unicode.ToLower(r)
-		}
-	}, col)
-
-	for _, word := range stateWords {
-		if normalized == word || strings.HasSuffix(normalized, word) {
-			return true
-		}
-	}
-
-	return false
-}
+// goNil is how fmt spells a nil value. Displayers build their cells with fmt,
+// so an unset field reaches this package already spelled this way.
+const goNil = "<nil>"
 
 // formatCell renders a column value as it appears in text output.
-func formatCell(v any) string {
+//
+// human asks for the reading a person wants of an unset field, which is
+// nothing at all. A redirected stream keeps fmt's "<nil>" instead, because a
+// script parsing doctl's output is entitled to the bytes it was written
+// against.
+func formatCell(v any, human bool) string {
+	if human && isNil(v) {
+		return ""
+	}
+
+	var cell string
 	if f, ok := v.(float64); ok {
-		return fmt.Sprintf("%f", f)
+		cell = fmt.Sprintf("%f", f)
+	} else {
+		cell = fmt.Sprint(v)
 	}
-	return fmt.Sprint(v)
+
+	// A compound cell is assembled by the displayer, so a field it left unset
+	// arrives as "<nil>" inside an otherwise good value.
+	if human {
+		cell = strings.ReplaceAll(cell, goNil, "")
+	}
+
+	return cell
 }
 
-// columnCount reports how many columns the table has.
-func columnCount(headers []string, rows [][]string) int {
-	count := len(headers)
-	for _, row := range rows {
-		if len(row) > count {
-			count = len(row)
-		}
+// isNil reports whether v holds nothing, including the typed nil an absent
+// pointer field yields, which is not equal to the untyped nil of an unset key.
+// Slices and maps are deliberately not treated as nil; that is the displayer's call.
+func isNil(v any) bool {
+	if v == nil {
+		return true
 	}
 
-	return count
-}
-
-// contentBudget is the width left for values once the chrome separating the
-// columns is paid for. It returns 0 when the table is unconstrained, and never
-// less than 1 otherwise, so that a budget too small to honour still asks for
-// as much narrowing as the floors allow rather than reading as no limit.
-func contentBudget(maxWidth, count int, boxed bool) int {
-	if maxWidth <= 0 || count == 0 {
-		return 0
+	switch rv := reflect.ValueOf(v); rv.Kind() {
+	case reflect.Pointer, reflect.Interface:
+		return rv.IsNil()
+	default:
+		return false
 	}
-
-	chrome := columnGap * (count - 1)
-	if boxed {
-		// A rule to the left of every column plus one closing the row, and a
-		// pad either side of every value.
-		chrome = count + 1 + 2*cellPad*count
-	}
-
-	if budget := maxWidth - chrome; budget > 1 {
-		return budget
-	}
-
-	return 1
-}
-
-// columnWidths measures how wide each column needs to be to hold its header
-// and values. When budget is positive, the widest column is repeatedly
-// narrowed until the values fit within it, so the column with the most slack
-// gives up space first. It reports whether the table ended up within budget.
-//
-// A column is never narrowed past its header, past floor - the width of the
-// ellipsis a truncated cell ends in - nor past the longest run of its values
-// that cannot be broken. That last floor is what keeps a wait from reporting
-// a Droplet as `5…` at `167.71.255…`: half an ID is not a shorter ID, it is a
-// different one, and a user who cannot copy the value out of the table has to
-// go and ask the API for it again.
-//
-// A table whose floors do not fit the budget is returned at its full width
-// rather than narrowed as far as the floors allow. Cutting the columns that
-// happen to be cuttable would not make such a table fit, so it would cost
-// values without buying anything back.
-func columnWidths(headers []string, rows [][]string, budget, floor int) ([]int, bool) {
-	count := columnCount(headers, rows)
-	if count == 0 {
-		return nil, true
-	}
-
-	widths := make([]int, count)
-	floors := make([]int, count)
-	for i := range floors {
-		floors[i] = floor
-	}
-	for i, header := range headers {
-		widths[i] = ansi.StringWidth(header)
-		if widths[i] > floors[i] {
-			floors[i] = widths[i]
-		}
-	}
-	for _, row := range rows {
-		for i, cell := range row {
-			if w := ansi.StringWidth(cell); w > widths[i] {
-				widths[i] = w
-			}
-			if w := unbreakableWidth(cell); w > floors[i] {
-				floors[i] = w
-			}
-		}
-	}
-
-	if budget <= 0 {
-		return widths, true
-	}
-
-	natural := make([]int, count)
-	copy(natural, widths)
-
-	total := 0
-	for _, w := range widths {
-		total += w
-	}
-
-	for total > budget {
-		widest, idx := 0, -1
-		for i, w := range widths {
-			if w > floors[i] && w > widest {
-				widest, idx = w, i
-			}
-		}
-		if idx < 0 {
-			return natural, false
-		}
-		widths[idx]--
-		total--
-	}
-
-	return widths, true
-}
-
-// unbreakableWidth is the width of the longest run in cell that has to be read
-// whole to mean anything: an ID, an IP address, a UUID, a resource name.
-//
-// Prose and the comma-separated lists doctl prints for tags, features and
-// volumes are series of short runs, so those columns can still give up space
-// to hold a table within the terminal. A value that is one run from end to end
-// cannot, because there is no point in it at which a reader would recognise
-// what was cut.
-func unbreakableWidth(cell string) int {
-	widest := 0
-	for _, run := range strings.FieldsFunc(cell, isBreak) {
-		if w := ansi.StringWidth(run); w > widest {
-			widest = w
-		}
-	}
-
-	return widest
-}
-
-// isBreak reports whether a value can be cut at r without the part that
-// survives reading as a value in its own right.
-func isBreak(r rune) bool {
-	return unicode.IsSpace(r) || r == ','
-}
-
-// writeRow writes one row, truncating cells that exceed their column with
-// ellipsis and padding the rest. Widths are measured in terminal cells rather
-// than bytes so that styled and double-width values stay aligned.
-//
-// Styling is applied last, once a cell has been measured and padded for, so
-// that a coloured table lays out identically to a plain one.
-func writeRow(buf *bytes.Buffer, cells []string, widths []int, ellipsis string, paint painter) {
-	for i, cell := range cells {
-		if ansi.StringWidth(cell) > widths[i] {
-			cell = ansi.Truncate(cell, widths[i], ellipsis)
-		}
-
-		padding := widths[i] - ansi.StringWidth(cell) + columnGap
-
-		if paint != nil {
-			cell = paint(i, cell)
-		}
-		buf.WriteString(cell)
-
-		if i < len(cells)-1 && padding > 0 {
-			buf.WriteString(strings.Repeat(" ", padding))
-		}
-	}
-	buf.WriteString("\n")
-}
-
-// writeBox draws the table inside box rules, with the header separated from
-// the values by a rule of its own.
-//
-// The rules are drawn from lipgloss's border sets rather than literals so that
-// the ASCII fallback is the same one the rest of doctl's chrome falls back to,
-// and they are painted as muted chrome so that the values keep the reader's
-// eye. Cells are measured and truncated exactly as they are in the plain
-// layout, which is what keeps a boxed table and a piped one showing the same
-// values.
-func writeBox(buf *bytes.Buffer, headers []string, rows [][]string, widths []int, ellipsis string, env ui.Env, head painter, rowPaint func(int) painter) {
-	if len(widths) == 0 {
-		return
-	}
-
-	border := lipgloss.NormalBorder()
-	if env.ASCII {
-		border = lipgloss.ASCIIBorder()
-	}
-
-	muted := env.NewStyle().Foreground(ui.ColorMuted)
-	vertical := env.Sprint(muted, border.Left)
-
-	rule := func(left, join, right string) {
-		segments := make([]string, len(widths))
-		for i, w := range widths {
-			segments[i] = strings.Repeat(border.Top, w+2*cellPad)
-		}
-
-		buf.WriteString(env.Sprint(muted, left+strings.Join(segments, join)+right))
-		buf.WriteString("\n")
-	}
-
-	row := func(cells []string, paint painter) {
-		pad := strings.Repeat(" ", cellPad)
-
-		buf.WriteString(vertical)
-		for i, width := range widths {
-			var cell string
-			if i < len(cells) {
-				cell = cells[i]
-			}
-
-			if ansi.StringWidth(cell) > width {
-				cell = ansi.Truncate(cell, width, ellipsis)
-			}
-			fill := strings.Repeat(" ", width-ansi.StringWidth(cell))
-
-			if paint != nil {
-				cell = paint(i, cell)
-			}
-
-			buf.WriteString(pad + cell + fill + pad + vertical)
-		}
-		buf.WriteString("\n")
-	}
-
-	rule(border.TopLeft, border.MiddleTop, border.TopRight)
-	if headers != nil {
-		row(headers, head)
-		rule(border.MiddleLeft, border.Middle, border.MiddleRight)
-	}
-	for i, cells := range rows {
-		row(cells, rowPaint(i))
-	}
-	rule(border.BottomLeft, border.MiddleBottom, border.BottomRight)
 }
 
 func writeJSON(item any, w io.Writer) error {
@@ -512,8 +278,7 @@ func writeJSON(item any, w io.Writer) error {
 	return err
 }
 
-// containsOnlyNiSlice returns true if the given interface's concrete type is
-// a pointer to a struct that contains a single nil slice field.
+// containsOnlyNilSlice reports whether i points to a struct holding one nil slice.
 func containsOnlyNilSlice(i any) bool {
 	if reflect.TypeOf(i).Kind() != reflect.Ptr {
 		return false

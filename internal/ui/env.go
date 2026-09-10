@@ -12,27 +12,9 @@ limitations under the License.
 */
 
 // Package ui holds the terminal capability kernel that doctl's output
-// components are built on.
-//
-// Every presentation decision derives from the same handful of facts about the
-// current process: whether each stream is a terminal, whether colour is
-// permitted, whether animation is safe, how wide the terminal is, and whether
-// the caller asked for machine-readable output. Env captures those facts once
-// so that components take them as an argument rather than re-deriving them, or
-// worse, consulting a mutable package global.
-//
-// Three conventions hold throughout:
-//
-//   - Out carries data and Err carries chrome. Spinners, progress, prompts and
-//     notices belong on Err so that piping data into another program keeps
-//     working while the terminal still shows progress.
-//   - Styling and animation are separate capabilities. A CI job is frequently
-//     colour-capable but must never receive animation frames, so Anim is never
-//     inferred from Style.
-//   - An Env owns the lipgloss renderer used to draw with it. Components must
-//     style through Env rather than through package-level lipgloss helpers,
-//     which resolve against a process-wide renderer and therefore make output
-//     depend on the machine running the code.
+// components are built on. Env captures the current process's capabilities -
+// terminals, color, animation, width - so components take them as an argument
+// rather than a package global. Out carries data and Err carries chrome.
 package ui
 
 import (
@@ -47,65 +29,45 @@ import (
 	"golang.org/x/term"
 )
 
-// Env describes the terminal capabilities available to a single command
-// invocation. The zero value is safe: it renders plain, unstyled, unanimated
-// output, which is what tests and pipelines want.
+// Env describes the capabilities available to a single command invocation.
 type Env struct {
-	// Out is the destination for data: tables, JSON, and anything a user might
-	// pipe into another program.
+	// Out is the destination for data: tables, JSON, anything pipeable.
 	Out io.Writer
 
-	// Err is the destination for chrome: spinners, progress, prompts, and
-	// diagnostics.
+	// Err is the destination for chrome: spinners, prompts, and diagnostics.
 	Err io.Writer
 
 	// Style reports whether ANSI styling may be written to Out.
 	Style bool
 
-	// ErrStyle reports whether ANSI styling may be written to Err. It is
-	// tracked separately from Style because the two streams are routinely
-	// redirected independently, as in `doctl ... | less`.
+	// ErrStyle reports whether ANSI styling may be written to Err.
 	ErrStyle bool
 
-	// Anim reports whether animation may be written to Err. It is stricter
-	// than ErrStyle: it additionally requires an interactive session and a
-	// non-CI environment.
+	// Anim reports whether animation may be written to Err. It is stricter than
+	// ErrStyle, additionally requiring an interactive, non-CI session.
 	Anim bool
 
 	// ASCII reports whether output must avoid non-ASCII glyphs.
 	ASCII bool
 
-	// Width is the usable terminal width, or 0 when it cannot be determined
-	// and output should be left unconstrained. It describes the session, so it
-	// is the right width for chrome on Err.
+	// Width is the session width, for chrome on Err, or 0 when undetermined.
 	Width int
 
 	// DataWidth is the width available to data on Out, or 0 when data must be
 	// left unconstrained. It is tracked separately from Width because a
-	// terminal attached to Err says nothing about Out: reflowing a table to a
-	// width Out does not have would truncate the values a pipeline reads.
+	// terminal on Err says nothing about Out: reflowing to a width Out does not
+	// have would corrupt a pipe.
 	DataWidth int
 
-	// DataTTY reports whether Out is an interactive terminal. Presentation
-	// that is only meaningful on a screen - box rules around a table - is
-	// gated on it, so that what a pipeline reads stays column-separated text.
-	//
-	// It is deliberately not derived from Style: --color=never on a terminal
-	// should drop the colour and keep the layout, and --color=always into a
-	// pager should not start drawing furniture a script would have to strip.
+	// DataTTY reports whether Out is an interactive terminal. Layout that is
+	// only meaningful on a screen is gated on it rather than on Style.
 	DataTTY bool
 
-	// ErrTTY reports whether Err is an interactive terminal. Glyphs are gated
-	// on it: a symbol standing in for a word is a screen affordance, and a log
-	// read by grep wants the word.
-	//
-	// It is weaker than Anim, which also demands an interactive, non-CI
-	// session. A CI job with a terminal attached should still not receive
-	// animation frames, but there is nothing wrong with the glyph.
+	// ErrTTY reports whether Err is an interactive terminal, which gates glyphs.
 	ErrTTY bool
 
-	// Machine reports whether the caller asked for machine-readable output.
-	// When true, Style, ErrStyle, and Anim are all false.
+	// Machine reports whether machine-readable output was asked for. When true,
+	// Style, ErrStyle, and Anim are all false.
 	Machine bool
 
 	renderer    *lipgloss.Renderer
@@ -124,15 +86,12 @@ type config struct {
 // Option customises capability detection.
 type Option func(*config)
 
-// WithMachineOutput marks the invocation as machine-readable, which suppresses
-// all styling and animation. It takes precedence over every other option.
+// WithMachineOutput suppresses all styling and animation, overriding options.
 func WithMachineOutput(v bool) Option {
 	return func(c *config) { c.machine = v }
 }
 
-// WithInteractive records whether interactive behaviour was permitted, which
-// corresponds to doctl's --interactive flag. Animation additionally requires a
-// terminal and a non-CI environment.
+// WithInteractive records whether doctl's --interactive flag permitted it.
 func WithInteractive(v bool) Option {
 	return func(c *config) { c.interactive = v }
 }
@@ -142,22 +101,17 @@ func WithASCII(v bool) Option {
 	return func(c *config) { c.ascii = &v }
 }
 
-// WithWidth overrides the detected terminal width. A width of 0 leaves output
-// unconstrained.
+// WithWidth overrides the detected width. A width of 0 leaves it unconstrained.
 func WithWidth(v int) Option {
 	return func(c *config) { c.width = &v }
 }
 
-// WithProfile forces the colour profile of both streams instead of detecting
-// it. Passing termenv.Ascii disables styling outright. This backs a
-// `--color=always|never` style flag, and it is how tests obtain deterministic
-// styled output regardless of the terminal they run under.
+// WithProfile forces the color profile of both streams; termenv.Ascii is off.
 func WithProfile(p termenv.Profile) Option {
 	return func(c *config) { c.profile = &p }
 }
 
-// WithAnimation forces animation on or off rather than deriving it. Machine
-// output still wins.
+// WithAnimation forces animation on or off. Machine output still wins.
 func WithAnimation(v bool) Option {
 	return func(c *config) { c.anim = &v }
 }
@@ -214,8 +168,7 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 	return env
 }
 
-// Plain returns an Env with every capability disabled. It is the appropriate
-// choice for tests and for any context where deterministic output matters.
+// Plain returns an Env with every capability disabled, for deterministic output.
 func Plain(out, err io.Writer) Env {
 	return Env{
 		Out:         out,
@@ -225,9 +178,7 @@ func Plain(out, err io.Writer) Env {
 	}
 }
 
-// Profile returns the colour profile resolved for Err. It is the profile that
-// governs chrome written through this Env; components that style per write go
-// through SprintErr instead.
+// Profile returns the color profile resolved for Err.
 func (e Env) Profile() termenv.Profile {
 	if !e.ErrStyle {
 		return termenv.Ascii
@@ -236,14 +187,7 @@ func (e Env) Profile() termenv.Profile {
 	return e.ErrRenderer().ColorProfile()
 }
 
-// DataProfile returns the colour profile resolved for Out.
-//
-// It is the profile a process-wide styling stack should be pointed at, because
-// a package-level style renders through that stack whatever writer it is
-// eventually handed, and the components still built that way - charm's
-// templates, prompts and styled text - write to Out. Pointing the global at
-// Err instead would reflow escape sequences into a redirected stdout whenever
-// a terminal happened to be attached to stderr.
+// DataProfile returns the color profile for Out, where a global must point.
 func (e Env) DataProfile() termenv.Profile {
 	if !e.Style {
 		return termenv.Ascii
@@ -280,9 +224,8 @@ func (e Env) NewErrStyle() lipgloss.Style {
 	return e.ErrRenderer().NewStyle()
 }
 
-// Sprint renders s with style when styling is permitted on Out, and returns s
-// unchanged otherwise. The style is rebound to this Env's renderer so that a
-// style built with package-level lipgloss helpers still honours the Env.
+// Sprint renders s with style when styling is permitted on Out, rebinding the
+// style to this Env's renderer.
 func (e Env) Sprint(style lipgloss.Style, s string) string {
 	if !e.Style {
 		return s
@@ -291,8 +234,7 @@ func (e Env) Sprint(style lipgloss.Style, s string) string {
 	return style.Renderer(e.Renderer()).Render(s)
 }
 
-// SprintErr renders s with style when styling is permitted on Err, and returns
-// s unchanged otherwise.
+// SprintErr renders s with style when styling is permitted on Err.
 func (e Env) SprintErr(style lipgloss.Style, s string) string {
 	if !e.ErrStyle {
 		return s
@@ -339,8 +281,7 @@ func isTerminal(w io.Writer) bool {
 	return isatty.IsTerminal(f.Fd()) || isatty.IsCygwinTerminal(f.Fd())
 }
 
-// profileFor reports the colour profile of w. termenv resolves NO_COLOR,
-// CLICOLOR_FORCE, and TERM for us.
+// profileFor reports the color profile of w. termenv resolves NO_COLOR here.
 func profileFor(w io.Writer) termenv.Profile {
 	f, ok := w.(*os.File)
 	if !ok || !isTerminal(f) {
@@ -366,9 +307,7 @@ func detectWidth(writers ...io.Writer) int {
 		}
 	}
 
-	// COLUMNS is consulted only when a terminal is actually attached. Shells
-	// frequently export it, and a redirected stream must not be reflowed
-	// because of an ambient variable: piped output stays unconstrained.
+	// COLUMNS is consulted only when a terminal is attached, never for a pipe.
 	if !attached {
 		return 0
 	}
@@ -384,9 +323,7 @@ func asciiRequested() bool {
 	return truthy(os.Getenv("DOCTL_ASCII"))
 }
 
-// ciVariables are set by the CI providers doctl is most likely to run under.
-// Their presence suppresses animation, which would otherwise fill build logs
-// with thousands of discarded frames.
+// ciVariables are set by CI providers, and their presence suppresses animation.
 var ciVariables = []string{
 	"CI",
 	"CONTINUOUS_INTEGRATION",

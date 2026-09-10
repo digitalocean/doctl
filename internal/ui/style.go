@@ -19,31 +19,24 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// The semantic palette, named as slots in the terminal's own 16 colours
-// rather than as exact values. This is the one definition of doctl's colours:
-// commands/charm/colors.go reads them from here rather than restating them, so
-// error and success chrome cannot drift between the interactive and CLI paths.
-//
-// Slots rather than hex is what the design system asks for, and the reason is
-// contrast: every terminal renders green a little differently, and a fixed
-// value gambles that it stays readable against whatever background the user
-// picked. Deferring to the slot means the user's own theme decides, which is
-// the only way doctl can be legible on all of them. It also keeps DigitalOcean
-// blue out of the palette, which is deliberate for the same reason.
-//
-// The values are the ANSI slots, not brand tokens: red, green, yellow, cyan,
-// and bright black for dim.
-var (
-	ColorError   lipgloss.TerminalColor = lipgloss.ANSIColor(1)
-	ColorSuccess lipgloss.TerminalColor = lipgloss.ANSIColor(2)
-	ColorWarning lipgloss.TerminalColor = lipgloss.ANSIColor(3)
-	ColorInfo    lipgloss.TerminalColor = lipgloss.ANSIColor(6)
-	ColorMuted   lipgloss.TerminalColor = lipgloss.ANSIColor(8)
+// The semantic palette, and the one definition of doctl's colors. They are
+// the colors doctl's interactive surfaces already use, so that a table, a
+// prompt and an error all name the same state the same way. termenv
+// downsamples them for terminals that cannot show truecolor.
+const (
+	// ColorError is the red a failure is named in.
+	ColorError lipgloss.Color = "#ff6188"
+	// ColorSuccess is the green of a resource that reached its desired state.
+	ColorSuccess lipgloss.Color = "#04b575"
+	// ColorWarning is the yellow that reads as attention without alarm.
+	ColorWarning lipgloss.Color = "#ffd866"
+	// ColorInfo is the blue that names a resource.
+	ColorInfo lipgloss.Color = "#2ea0f9"
+	// ColorMuted is xterm 241, dim enough to recede behind a value.
+	ColorMuted lipgloss.Color = "241"
 )
 
-// Style is a presentation helper bound to an Env. Build chrome (errors,
-// notices) through Style so colour/glyph policy stays consistent with the
-// rest of doctl.
+// Style is a presentation helper bound to an Env, for chrome written to Err.
 type Style struct {
 	env Env
 }
@@ -53,36 +46,26 @@ func NewStyle(env Env) Style {
 	return Style{env: env}
 }
 
-// paint colours text without touching its weight.
-//
-// Weight is deliberately not combined with the palette. The palette names
-// slots in the terminal's own 16 colours, and most terminals render bold plus
-// one of the eight base colours as that colour's bright variant - Terminal.app
-// and iTerm2 both do by default. A bold label and an unbolded value in the
-// same colour would then be two visibly different reds. The design system asks
-// for neither: bold is its own meaning, Highlight, which carries no colour.
-func (s Style) paint(text string, c lipgloss.TerminalColor) string {
-	return s.env.SprintErr(s.env.NewErrStyle().Foreground(c), text)
+func (s Style) paint(text string, c lipgloss.TerminalColor, bold bool) string {
+	style := s.env.NewErrStyle().Foreground(c)
+	if bold {
+		style = style.Bold(true)
+	}
+
+	return s.env.SprintErr(style, text)
 }
 
 // ErrorLabel returns the failure label, led by its glyph on a terminal.
-//
-// The glyph is gated on the stream rather than on colour, for the reason
-// Env.ErrTTY gives: it stands in for the word on a screen, and a log read by
-// grep wants the word. So a terminal with --color=never keeps the symbol and
-// loses only the ANSI codes, while a redirected stream gets "Error:" - which
-// is also what every script and test matching on doctl's errors expects.
-// Terminals that cannot render the symbol get the ASCII fallback.
 func (s Style) ErrorLabel() string {
 	label := "Error:"
 	if s.env.ErrTTY {
 		label = s.env.Glyphs().Failure + " " + label
 	}
 
-	return s.paint(label, ColorError)
+	return s.paint(label, ColorError, true)
 }
 
-// Bold emphasises flag names and command paths when Err styling is on.
+// Bold emphasizes flag names and command paths when Err styling is on.
 func (s Style) Bold(text string) string {
 	if !s.env.ErrStyle {
 		return text
@@ -92,17 +75,34 @@ func (s Style) Bold(text string) string {
 
 // Dim renders secondary hint text.
 func (s Style) Dim(text string) string {
-	return s.paint(text, ColorMuted)
+	return s.paint(text, ColorMuted, false)
 }
 
-// PaintCommand dims the "→ run " / "run " prefix and bolds the command path.
+// SuccessLine reports that a command finished, glyph and message painted
+// together so that completion reads as one mark rather than a labelled
+// diagnostic. The glyph leads only on a terminal, as ErrorLabel's does.
+func (s Style) SuccessLine(msg string) string {
+	if s.env.ErrTTY {
+		msg = s.env.Glyphs().Success + " " + msg
+	}
+
+	return s.paint(msg, ColorSuccess, false)
+}
+
+// Hint renders the suggestion that follows a diagnostic, led by its arrow.
+func (s Style) Hint(text string) string {
+	return s.PaintCommand(s.env.Glyphs().Hint + " " + text)
+}
+
+// PaintCommand dims the lead-in of a suggestion and bolds the command path, so
+// that the part worth copying stands out from the sentence around it.
 func (s Style) PaintCommand(line string) string {
-	lower := strings.ToLower(line)
-	for _, prefix := range []string{"run ", "→ run ", "> run "} {
-		if strings.HasPrefix(lower, prefix) {
+	for _, prefix := range []string{s.env.Glyphs().Hint + " run ", "run "} {
+		if len(line) >= len(prefix) && strings.EqualFold(line[:len(prefix)], prefix) {
 			cmd := strings.TrimSpace(line[len(prefix):])
 			return s.Dim(line[:len(prefix)]) + s.Bold(cmd)
 		}
 	}
+
 	return s.Dim(line)
 }

@@ -106,23 +106,34 @@ func warn(msg string, args ...any) {
 	writeChrome("Warning", ui.ColorWarning, "\n", msg, args...)
 }
 
+// notice reports how a command went. It records that it has done so, which is
+// what keeps the default closing line from following a command that already
+// said its own piece.
 func notice(msg string, args ...any) {
+	reportedOutcome = true
 	writeChrome("Notice", ui.ColorSuccess, "\n", msg, args...)
 }
 
-// writeChrome renders a labelled diagnostic on stderr.
-//
-// The colour decision comes from ui.Env, which resolves it per stream. The
-// package-init decision it replaced looked at whether *stdout* was a terminal,
-// so `doctl ... 2>log` wrote escape sequences into the log file and
-// `doctl ... > data` stripped colour from a terminal well able to show it.
+// reportSuccess is the closing line of a command that reported nothing itself.
+// Unlike a notice it carries no label: there is nothing to introduce, so the
+// tick and the sentence are painted together as one mark of completion.
+func reportSuccess(msg string, args ...any) {
+	reportedOutcome = true
+
+	env := uiEnv()
+	line := ui.NewStyle(env).SuccessLine(fmt.Sprintf(msg, args...))
+	fmt.Fprintf(env.ErrWriter(), "%s\n", line)
+}
+
+// writeChrome renders a labelled diagnostic on stderr. The color decision
+// comes from ui.Env, which resolves it per stream.
 func writeChrome(label string, color lipgloss.TerminalColor, suffix, msg string, args ...any) {
 	env := uiEnv()
 
-	// Coloured but not bolded, for the reason ui.Style.paint gives: bold plus a
-	// base ANSI colour renders bright on most terminals, which would make this
-	// label a different shade from a value painted in the same slot.
-	label = env.SprintErr(env.NewErrStyle().Foreground(color), label)
+	// Bolded as well as colored, for the reason ui.Style.paint gives: this is
+	// a label, and weight is what sets it apart from the message it
+	// introduces while the two share a color.
+	label = env.SprintErr(env.NewErrStyle().Foreground(color).Bold(true), label)
 
 	fmt.Fprintf(env.ErrWriter(), "%s: %s%s", label, fmt.Sprintf(msg, args...), suffix)
 }

@@ -22,38 +22,14 @@ import (
 	"github.com/digitalocean/doctl/internal/ui"
 )
 
-// Every `--wait` in doctl polls the API until a resource settles, and each one
-// used to do it slightly differently: some printed a trail of dots, some
-// printed nothing at all, and several would poll forever if the resource never
-// settled. The waiter below is the single implementation they all share, so
-// that a user sees the same progress line and the same timeout behaviour no
-// matter which resource they are waiting on.
-
 const (
-	// defaultWaitTimeout bounds every `--wait`. Provisioning a database
-	// cluster or a Kubernetes control plane legitimately takes tens of
-	// minutes, so the default is generous; the point is that a wait always
-	// ends rather than leaving a script wedged on a resource that will never
-	// settle.
+	// defaultWaitTimeout bounds every `--wait`, so a wait always ends.
 	defaultWaitTimeout = 30 * time.Minute
 
-	// defaultActionWaitTimeout bounds a `--wait` that polls an action.
-	//
-	// Actions cover the operations whose duration is set by how much data has
-	// to be moved rather than by how long a control plane takes to come up: an
-	// image transferred between regions, a snapshot of a full disk, a Droplet
-	// rebuilt from a custom image. Those run past half an hour often enough
-	// that defaultWaitTimeout would report a timeout on a perfectly healthy
-	// transfer, and a timeout that fires on success is worse than no timeout
-	// at all - it teaches the user to pass --wait-timeout reflexively.
-	//
-	// It is a default rather than a per-operation ceiling: --wait-timeout
-	// still overrides it and still means the same thing everywhere.
+	// defaultActionWaitTimeout is longer because actions are bounded by how
+	// much data moves, not control-plane startup. --wait-timeout still overrides.
 	defaultActionWaitTimeout = 2 * time.Hour
 
-	// defaultWaitInterval is how often a resource is re-read while waiting.
-	// Individual operations override it to match how quickly they can
-	// plausibly change.
 	defaultWaitInterval = 5 * time.Second
 )
 
@@ -64,79 +40,44 @@ const waitTimeoutDesc = "The longest doctl waits for the operation to finish, as
 
 // waitOp describes a long-running operation to the shared waiter.
 type waitOp struct {
-	// Activity is the progress line: what doctl is doing, in as few words as
-	// still name the thing it is doing it to. "Creating Droplet (web-01)".
-	//
-	// It is deliberately not "Waiting for Droplet (web-01) to become active".
-	// The spinner already says doctl is waiting and the closing line already
-	// says what for, so a progress line that repeats both spends on ceremony
-	// the width that the stage detail needs - and the stage detail is the only
-	// part of the line that changes while the user watches it.
+	// Heading optionally titles the wait, as in "Creating Droplet".
+	Heading string
+
+	// Activity is the progress line, as in "Creating Droplet (web-01)".
 	Activity string
 
-	// Subject names what is being waited on and the state it must reach, as
-	// in "database cluster (abc-123) to become online". It reads inside a
-	// sentence rather than on a line of its own, so it starts lower case and
-	// carries no terminal punctuation.
-	//
-	// It is the long form on purpose: it appears in the timeout error and the
-	// failure line, where the words the progress line drops are what tell a
-	// user what doctl gave up on.
+	// Subject reads inside a sentence: "droplet (web-01) to become active".
 	Subject string
 
-	// Success is the line reported once the operation completes, written as a
-	// finished statement: "Database cluster (abc-123) is online".
+	// Success is the finished statement: "Droplet (web-01) is active".
 	Success string
 
-	// Interval overrides how often poll is called. Defaults to
-	// defaultWaitInterval.
-	//
-	// There is deliberately no per-operation timeout: how long a user is
-	// willing to wait is their decision, not the resource's, and one policy
-	// for every wait is what makes --wait-timeout mean the same thing
-	// everywhere.
+	// Interval overrides the poll interval. Defaults to defaultWaitInterval.
 	Interval time.Duration
 }
 
-// pollFunc re-reads a resource and reports whether it has settled. Returning
-// an error abandons the wait.
-//
-// detail is optional context about where the operation has got to, such as the
-// resource's current status or a step count. It is shown alongside the
-// progress line and refreshed on every poll, which is the difference between
-// telling a user that doctl is still waiting and telling them why.
-//
-// It is worth reporting only while it says something the activity does not. A
-// count of one ("0 of 1 active") and the single in-flight status an API has to
-// offer ("in-progress") are both restatements of a line the user is already
-// reading, and a detail that never changes trains them to stop looking at the
-// one place a wait has anything new to say.
+// pollFunc re-reads a resource and reports whether it has settled. Returning an
+// error abandons the wait. detail is optional context shown next to the progress
+// line; report it only while it says something the activity does not.
 type pollFunc func() (done bool, detail string, err error)
 
-// waiter drives a poll loop and reports its progress. It is built from a
-// CmdConfig so that terminal capabilities and the user's --wait-timeout are
-// resolved once, then passed to the resource-specific helpers, which stay
-// unit-testable without a full command.
+// waiter drives a poll loop and reports its progress.
 type waiter struct {
 	env     ui.Env
 	timeout time.Duration
 
-	// interval, when set, overrides the poll interval each operation asks
-	// for. It exists so that tests can exercise a real poll loop without
-	// sleeping for the intervals a live API needs.
+	// interval overrides each operation's interval, so tests need no real sleeps.
 	interval time.Duration
 }
 
-// newWaiter builds the waiter for this invocation, honouring --wait-timeout.
+// newWaiter builds the waiter for this invocation, honoring --wait-timeout.
 func newWaiter(c *CmdConfig) (waiter, error) {
 	timeout, err := c.Doit.GetDuration(c.NS, doctl.ArgWaitTimeout)
 	if err != nil {
 		return waiter{}, err
 	}
 
-	// A command that predates --wait-timeout, or a config that leaves it
-	// unset, reads back as zero. Treat that as unspecified rather than as a
-	// request to give up immediately.
+	// Zero means unspecified, not a request to give up immediately.
 	if timeout <= 0 {
 		timeout = defaultWaitTimeout
 	}
@@ -144,8 +85,6 @@ func newWaiter(c *CmdConfig) (waiter, error) {
 	return waiter{env: c.UI, timeout: timeout}, nil
 }
 
-// newTestWaiter returns a waiter that renders nothing and polls without
-// pausing, for unit tests.
 func newTestWaiter() waiter {
 	return waiter{
 		env:      ui.Plain(io.Discard, io.Discard),
@@ -154,11 +93,8 @@ func newTestWaiter() waiter {
 	}
 }
 
-// wait polls until the operation completes, the deadline passes, or poll
-// fails, reporting progress on stderr throughout.
-//
-// The first poll happens immediately, because an operation that has already
-// finished by the time doctl asks should not cost the user an interval.
+// wait polls until the operation completes, the deadline passes, or poll fails,
+// reporting progress on stderr. The first poll happens immediately.
 func (w waiter) wait(op waitOp, poll pollFunc) error {
 	interval := op.Interval
 	if w.interval > 0 {
@@ -173,7 +109,12 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 		timeout = defaultWaitTimeout
 	}
 
-	spinner := w.env.NewSpinner(op.Activity)
+	var opts []ui.SpinnerOption
+	if op.Heading != "" {
+		opts = append(opts, ui.WithHeading("%s", op.Heading))
+	}
+
+	spinner := w.env.NewSpinner(op.Activity, opts...)
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -188,12 +129,13 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 
 		if done {
 			spinner.Succeed("%s", op.Success)
+			reportedOutcome = true
+
 			return nil
 		}
 
-		// Reported on every pass rather than only when the detail changes, so
-		// that a plain stream can repeat an unmoved stage on its heartbeat
-		// instead of falling silent for the length of the wait.
+		// Reported on every pass, not only on change, so a plain stream keeps
+		// its heartbeat.
 		message := op.Activity
 		if detail != "" {
 			message = fmt.Sprintf("%s (%s)", message, detail)
@@ -217,9 +159,6 @@ func (w waiter) wait(op waitOp, poll pollFunc) error {
 	}
 }
 
-// waitTimeoutError reports that doctl stopped waiting. It says so in terms the
-// user can act on: the operation itself is unaffected and the wait can be
-// extended.
 type waitTimeoutError struct {
 	subject string
 	timeout time.Duration

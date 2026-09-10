@@ -40,7 +40,7 @@ func TestDetectNonTerminal(t *testing.T) {
 	var out, errOut bytes.Buffer
 	env := Detect(&out, &errOut)
 
-	assert.False(t, env.Style, "a buffer is never colour-capable")
+	assert.False(t, env.Style, "a buffer is never color-capable")
 	assert.False(t, env.ErrStyle)
 	assert.False(t, env.Anim, "a buffer is never animatable")
 	assert.Zero(t, env.Width)
@@ -68,7 +68,7 @@ func TestDetectProfile(t *testing.T) {
 
 	var out, errOut bytes.Buffer
 
-	t.Run("a colour profile enables styling", func(t *testing.T) {
+	t.Run("a color profile enables styling", func(t *testing.T) {
 		env := Detect(&out, &errOut, WithProfile(termenv.TrueColor))
 		assert.True(t, env.Style)
 		assert.True(t, env.ErrStyle)
@@ -115,7 +115,7 @@ func TestDetectWidth(t *testing.T) {
 		assert.Equal(t, 120, env.DataWidth, "an explicit width applies to data too")
 	})
 
-	t.Run("zero width is honoured as unconstrained", func(t *testing.T) {
+	t.Run("zero width is honored as unconstrained", func(t *testing.T) {
 		env := Detect(&out, &errOut, WithWidth(0))
 		assert.Zero(t, env.Width)
 		assert.Zero(t, env.DataWidth)
@@ -223,7 +223,7 @@ func TestProfiles(t *testing.T) {
 	}
 
 	assert.Equal(t, termenv.Ascii, env.DataProfile(), "a redirected Out stays plain")
-	assert.Equal(t, termenv.TrueColor, env.Profile(), "a terminal on Err keeps colour")
+	assert.Equal(t, termenv.TrueColor, env.Profile(), "a terminal on Err keeps color")
 }
 
 func TestGlyphs(t *testing.T) {

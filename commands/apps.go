@@ -314,6 +314,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 		`Instantiates a console session for a component of an app. Note: avoid creating scripts or making changes that need to persist on these instances, as they are ephemeral and may be terminated at any time`,
 		Writer,
 		aliasOpt("cs"),
+		noDefaultSuccess(),
 	)
 	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
 	AddStringFlag(console, doctl.ArgAppInstanceName, "", "", "Starts a console session for a specific instance name. Optional, defaults to the first available instance. For apps with multiple instances, you can specify the instance name to start the console session for that particular instance.")

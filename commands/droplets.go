@@ -413,9 +413,17 @@ func RunDropletCreate(c *CmdConfig) error {
 			return err
 		}
 
-		createdList, err = waitForActiveDroplets(w, ds, createdList)
-		if err != nil {
-			return err
+		var waitErr error
+		createdList, waitErr = waitForActiveDroplets(w, ds, createdList)
+		if waitErr != nil {
+			// The Droplets exist whether or not they reached active, so they
+			// are shown before the failure is reported: their IDs are the only
+			// handle the user has on a wait that timed out.
+			if err := c.Display(&displayers.Droplet{Droplets: createdList}); err != nil {
+				return err
+			}
+
+			return waitErr
 		}
 	}
 
@@ -435,10 +443,12 @@ func waitForActiveDroplets(w waiter, ds do.DropletsService, droplets do.Droplets
 		return droplets, nil
 	}
 
+	heading := "Creating Droplet"
 	activity := fmt.Sprintf("Creating Droplet (%s)", droplets[0].Name)
 	subject := fmt.Sprintf("Droplet (%s) to become active", droplets[0].Name)
 	success := fmt.Sprintf("Droplet (%s) is active", droplets[0].Name)
 	if len(droplets) > 1 {
+		heading = fmt.Sprintf("Creating %d Droplets", len(droplets))
 		activity = fmt.Sprintf("Creating %d Droplets", len(droplets))
 		subject = fmt.Sprintf("%d Droplets to become active", len(droplets))
 		success = fmt.Sprintf("%d Droplets are active", len(droplets))
@@ -450,6 +460,7 @@ func waitForActiveDroplets(w waiter, ds do.DropletsService, droplets do.Droplets
 	settled := make([]bool, len(droplets))
 
 	err := w.wait(waitOp{
+		Heading:  heading,
 		Activity: activity,
 		Subject:  subject,
 		Success:  success,

@@ -238,7 +238,7 @@ func RunAuthList(c *CmdConfig) error {
 // RunAuthToken displays the current context token from the user's doctl config.
 func RunAuthToken(c *CmdConfig) error {
 	accessToken := c.getContextAccessToken()
-	fmt.Println(accessToken)
+	fmt.Fprintln(c.Out, accessToken)
 	return nil
 }
 

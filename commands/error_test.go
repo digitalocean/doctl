@@ -45,7 +45,7 @@ func Test_checkErr(t *testing.T) {
 	})
 
 	// The glyph is a screen affordance, so it is gated on stderr being a
-	// terminal rather than on colour. Everything parsing doctl's stderr - the
+	// terminal rather than on color. Everything parsing doctl's stderr - the
 	// integration suite included - matches on the plain form above.
 	t.Run("a terminal is led by the glyph", func(t *testing.T) {
 		var b bytes.Buffer

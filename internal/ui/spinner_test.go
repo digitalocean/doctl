@@ -95,7 +95,7 @@ func TestSpinnerWithoutAnimation(t *testing.T) {
 // spinner safe to leave enabled when stderr is redirected to a log or a pipe.
 func TestSpinnerWritesNoEscapesWithoutAnimation(t *testing.T) {
 	var out, errOut bytes.Buffer
-	// A colour profile is forced on to prove that the absence of escapes comes
+	// A color profile is forced on to prove that the absence of escapes comes
 	// from animation being off, not merely from an undetectable buffer.
 	env := Detect(&out, &errOut, WithAnimation(false), WithProfile(termenv.TrueColor))
 
@@ -158,7 +158,7 @@ func TestSpinnerReportsEachStageChangeWithoutAnimation(t *testing.T) {
 }
 
 // TestSpinnerRepeatsUnchangedStageOnHeartbeat covers the other half of that
-// behaviour: a stage that has not moved still has to show up periodically, or
+// behavior: a stage that has not moved still has to show up periodically, or
 // a slow provision looks to whoever is watching the build log like a hung job.
 func TestSpinnerRepeatsUnchangedStageOnHeartbeat(t *testing.T) {
 	var out, errOut bytes.Buffer
@@ -214,14 +214,14 @@ func TestSpinnerAnimates(t *testing.T) {
 }
 
 // TestSpinnerPaintsOnlyTheSymbol pins the animated line to the design system:
-// the symbol carries the colour and the message stays default, so a routine
+// the symbol carries the color and the message stays default, so a routine
 // wait does not read as a caution. The frame uses the info slot rather than
 // the warning one for the same reason, and the elapsed counter trails as
 // muted chrome.
 //
 // This deliberately differs from the agents renderer on the beta line, which
-// paints the frame and the message together in the warning colour.
-func TestSpinnerPaintsOnlyTheSymbol(t *testing.T) {
+// paints the frame and the message together in the warning color.
+func TestSpinnerPaintsTheRunningLineAsPending(t *testing.T) {
 	var out, errOut bytes.Buffer
 	env := Detect(&out, &errOut, WithAnimation(true), WithProfile(termenv.TrueColor))
 
@@ -231,15 +231,56 @@ func TestSpinnerPaintsOnlyTheSymbol(t *testing.T) {
 
 	rendered := errOut.String()
 
+	pending := env.NewErrStyle().Foreground(ColorWarning)
 	assert.Contains(t, rendered,
-		env.SprintErr(env.NewErrStyle().Foreground(ColorInfo), unicodeGlyphs.Spinner[0])+" Waiting for database ",
-		"the frame is painted in the info slot and the message left plain")
+		env.SprintErr(pending, unicodeGlyphs.Spinner[0])+" "+env.SprintErr(pending, "Waiting for database"+unicodeGlyphs.Ellipsis),
+		"frame and message share the pending slot, and the message trails an ellipsis")
 
-	assert.NotContains(t, rendered, env.SprintErr(env.NewErrStyle().Foreground(ColorWarning), "Waiting for database"),
-		"the message must not be painted as a warning")
+	success := env.NewErrStyle().Foreground(ColorSuccess)
+	closing := env.SprintErr(success, unicodeGlyphs.Success) + " " + env.SprintErr(success.Bold(true), "Database is online")
+	assert.Contains(t, rendered, closing, "the outcome takes both the color and the weight")
 
-	closing := env.SprintErr(env.NewErrStyle().Foreground(ColorSuccess), unicodeGlyphs.Success) + " Database is online "
-	assert.Contains(t, rendered, closing, "the closing symbol carries the colour and the message stays default")
+	assert.Contains(t, rendered, env.SprintErr(env.NewErrStyle().Foreground(ColorMuted), "(0s)"),
+		"the elapsed time stays dim chrome")
+}
+
+func TestSpinnerHeadingTitlesTheWait(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := Detect(&out, &errOut, WithAnimation(true), WithProfile(termenv.TrueColor))
+
+	s := env.NewSpinner("Creating Droplet (web-01)", WithHeading("Creating Droplet"))
+	s.Start()
+	s.Note("Validating configuration")
+	s.Succeed("Droplet (web-01) is active")
+
+	rendered := errOut.String()
+
+	assert.Contains(t, rendered,
+		env.SprintErr(env.NewErrStyle().Foreground(ColorInfo).Bold(true), "Creating Droplet")+"\n",
+		"the heading is a committed line of its own")
+
+	info := env.NewErrStyle().Foreground(ColorInfo)
+	assert.Contains(t, rendered,
+		env.SprintErr(info, unicodeGlyphs.Bullet)+" "+env.SprintErr(info, "Validating configuration"+unicodeGlyphs.Ellipsis),
+		"a note keeps the heading's color and takes the bullet")
+}
+
+func TestSpinnerHeadingAndNotesArePlainWithoutAnimation(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := Detect(&out, &errOut, WithAnimation(false))
+
+	s := env.NewSpinner("Creating Droplet (web-01)", WithHeading("Creating Droplet"))
+	s.now = fixedClock(time.Second)
+	s.Start()
+	s.Note("Validating configuration")
+	s.Succeed("Droplet (web-01) is active")
+
+	rendered := errOut.String()
+
+	assert.NotContains(t, rendered, "\x1b[", "a redirected stream receives no escape sequences")
+	assert.NotContains(t, rendered, unicodeGlyphs.Bullet, "and no glyphs")
+	assert.Contains(t, rendered, "Creating Droplet\n")
+	assert.Contains(t, rendered, "Validating configuration\n")
 }
 
 func TestSpinnerMessageChangesTheAnimatedLine(t *testing.T) {
@@ -276,7 +317,7 @@ func TestSpinnerIsIdempotentAfterFinishing(t *testing.T) {
 }
 
 func TestSpinnerStyling(t *testing.T) {
-	t.Run("styles the glyph when err supports colour", func(t *testing.T) {
+	t.Run("styles the glyph when err supports color", func(t *testing.T) {
 		var out, errOut bytes.Buffer
 		env := Detect(&out, &errOut, WithAnimation(false), WithProfile(termenv.TrueColor))
 
@@ -347,4 +388,49 @@ func TestTruncate(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSpinnerColorFollowsTheStreamNotTheAnimation guards a stream that can
+// carry color but not animation, which is what --interactive=false on a
+// terminal amounts to. Color used to key off Anim, so the words came out
+// plain while the elapsed time kept its escapes.
+func TestSpinnerColorFollowsTheStreamNotTheAnimation(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := Detect(&out, &errOut, WithProfile(termenv.TrueColor), WithAnimation(false))
+	require.False(t, env.Anim, "animation must be off for this case to mean anything")
+	require.True(t, env.ErrStyle, "the stream must still be able to carry color")
+
+	s := env.NewSpinner("Creating Droplet", WithHeading("Creating"))
+	s.Start()
+	s.Note("Validating")
+	s.Succeed("Droplet is active")
+
+	got := errOut.String()
+	for _, want := range []string{"Creating", "Validating", "Droplet is active"} {
+		assert.Contains(t, got, "\x1b[", "a color-capable stream must be painted")
+		assert.Contains(t, got, want, "the words must survive the paint")
+	}
+
+	// Nothing may be left plain while its neighbor on the same line is
+	// painted, which is the inconsistency this guards.
+	for _, line := range strings.Split(strings.TrimSpace(got), "\n") {
+		if strings.Contains(line, "(") && strings.Contains(line, "\x1b[") {
+			assert.True(t, strings.HasPrefix(line, "\x1b["),
+				"line %q paints its elapsed time but not its words", line)
+		}
+	}
+}
+
+// TestSpinnerPipedStreamStaysPlain is the other half: a stream that cannot
+// carry color records the words alone, whatever the animation setting.
+func TestSpinnerPipedStreamStaysPlain(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := Plain(&out, &errOut)
+
+	s := env.NewSpinner("Creating Droplet", WithHeading("Creating"))
+	s.Start()
+	s.Note("Validating")
+	s.Succeed("Droplet is active")
+
+	assert.NotContains(t, errOut.String(), "\x1b[", "a plain stream takes no escape sequences")
 }

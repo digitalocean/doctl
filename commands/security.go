@@ -55,7 +55,9 @@ func SecurityScan() *Command {
 
 	cmdScanCreate := CmdBuilder(cmd, RunCmdSecurityScanCreate, "create", "Create a CSPM scan", `Creates a new CSPM scan.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.SecurityScan{}))
-	AddWaitFlags(cmdScanCreate, false, "Boolean that specifies whether to wait for a scan to complete before returning control to the terminal")
+	AddWaitFlagsWithTimeout(cmdScanCreate, false,
+		"Boolean that specifies whether to wait for a scan to complete before returning control to the terminal",
+		scanWaitTimeout)
 	cmdScanCreate.Example = `The following example creates a CSPM scan for all droplets: doctl security scans create`
 
 	cmdScanGet := CmdBuilder(cmd, RunCmdSecurityScanGet, "get <scan-uuid>", "Get a CSPM scan", `Retrieves a CSPM scan and its findings.`, Writer,
@@ -199,6 +201,12 @@ func securityScanFindingOptions(c *CmdConfig) (*godo.ScanFindingsOptions, error)
 		Type:     findingType,
 	}, nil
 }
+
+// scanWaitTimeout bounds `security scans create --wait`. A CSPM scan either
+// finishes in a couple of minutes or is not going to, so it keeps roughly the
+// bound doctl polled to before the shared waiter rather than inheriting the
+// half-hour default, which would leave a stuck scan hanging the terminal.
+const scanWaitTimeout = 3 * time.Minute
 
 func waitForScanComplete(w waiter, scans do.SecurityService, id string) error {
 	const wantStatus = "complete"

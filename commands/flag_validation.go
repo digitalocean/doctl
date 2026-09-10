@@ -33,7 +33,7 @@ const (
 	annoFlagViperKey = "doctl_flag_viper_key"
 
 	// cobraRequiredAnno is the annotation MarkFlagRequired sets. Still
-	// honoured for flags marked that way outside requiredOpt().
+	// honored for flags marked that way outside requiredOpt().
 	cobraRequiredAnno = cobra.BashCompOneRequiredFlag
 )
 
@@ -51,7 +51,7 @@ type FlagValidationError struct {
 	Issues  []FlagIssue `json:"issues"`
 }
 
-// Error summarises the failure on a single line.
+// Error summarizes the failure on a single line.
 //
 // It is deliberately not the block a terminal is shown: Error() is what ends
 // up in the `detail` field of doctl's JSON error envelope, and automation
@@ -163,11 +163,11 @@ func writeFlagIssue(b *strings.Builder, style ui.Style, issue FlagIssue) {
 	}
 	switch {
 	case issue.Hint != "":
-		fmt.Fprintf(b, "      %s\n", style.PaintCommand("→ "+issue.Hint))
+		fmt.Fprintf(b, "      %s\n", style.Hint(issue.Hint))
 	case strings.Contains(issue.Problem, "was empty"):
-		fmt.Fprintf(b, "      %s\n", style.Dim("→ provided but empty"))
+		fmt.Fprintf(b, "      %s\n", style.Hint("provided but empty"))
 	case issue.Problem != "" && !isMissingRequiredProblem(issue.Problem):
-		fmt.Fprintf(b, "      %s\n", style.Dim("→ "+issue.Problem))
+		fmt.Fprintf(b, "      %s\n", style.Hint(issue.Problem))
 	}
 	b.WriteByte('\n')
 }
@@ -370,9 +370,13 @@ func collectFlagGroupIssues(cmd *cobra.Command) []FlagIssue {
 	requiredGroups := map[string]map[string]bool{}
 	exclusiveGroups := map[string]map[string]bool{}
 
+	// The two groups ask different questions. Required-as-group asks whether a
+	// value is present, which config and the environment can supply as well as
+	// the command line; exclusivity asks what was actually asked for, so a
+	// value a flag merely defaults to is not reported as a conflict.
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		recordGroup(cmd.Flags(), f, requiredAsGroup, requiredGroups)
-		recordGroup(cmd.Flags(), f, mutuallyExclusive, exclusiveGroups)
+		recordGroup(cmd.Flags(), f, requiredAsGroup, requiredGroups, flagIsSatisfied)
+		recordGroup(cmd.Flags(), f, mutuallyExclusive, exclusiveGroups, flagWasChanged)
 	})
 
 	var issues []FlagIssue
@@ -420,7 +424,10 @@ func collectFlagGroupIssues(cmd *cobra.Command) []FlagIssue {
 	return issues
 }
 
-func recordGroup(fs *pflag.FlagSet, f *pflag.Flag, annotation string, out map[string]map[string]bool) {
+// recordGroup notes, for every group f belongs to under annotation, whether
+// isSet considers f provided. The whole group is seeded so that flags never
+// visited still appear, and groups naming a flag this command lacks are skipped.
+func recordGroup(fs *pflag.FlagSet, f *pflag.Flag, annotation string, out map[string]map[string]bool, isSet func(*pflag.Flag) bool) {
 	groups, found := f.Annotations[annotation]
 	if !found {
 		return
@@ -436,8 +443,14 @@ func recordGroup(fs *pflag.FlagSet, f *pflag.Flag, annotation string, out map[st
 				out[group][name] = false
 			}
 		}
-		out[group][f.Name] = f.Changed
+		out[group][f.Name] = isSet(f)
 	}
+}
+
+// flagWasChanged reports whether the command line set f, ignoring any value it
+// picked up from config, the environment, or its own default.
+func flagWasChanged(f *pflag.Flag) bool {
+	return f != nil && f.Changed
 }
 
 func allFlagsExist(fs *pflag.FlagSet, names ...string) bool {

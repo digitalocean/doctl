@@ -23,45 +23,34 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// SpinnerInterval is how often an animated spinner repaints. It matches the
-// rate the agents renderer on the beta line animates at, so two waits sitting
-// in the same scrollback keep step with each other.
+// SpinnerInterval is how often an animated spinner repaints.
 const SpinnerInterval = 120 * time.Millisecond
 
 // eraseLine returns the cursor to the start of the line and clears it. It is
-// only ever emitted when Anim is set, which requires a terminal on Err, so a
-// redirected stream never receives escape sequences.
+// only emitted when Anim is set, so a pipe never receives escape sequences.
 const eraseLine = "\r\x1b[2K"
 
-// StageHeartbeat is how often a plain stream repeats a stage that has not
-// changed. A long provision would otherwise emit one line and then go quiet
-// for twenty minutes, which reads to whoever is watching the build log as a
-// hung job rather than a slow one.
+// StageHeartbeat is how often a plain stream repeats an unchanged stage.
 const StageHeartbeat = time.Minute
 
 // Spinner reports the progress of a long-running operation. It renders to Err
-// so that data on Out stays parseable, and it degrades in two steps: an
-// animated frame on an interactive terminal, and plain text everywhere else —
-// one line per stage change, with no glyphs and no escape sequences.
-//
-// A Spinner is safe for concurrent use, and every method is a no-op after Stop
-// so that callers may defer a Stop and still report an outcome.
+// so that data on Out stays parseable: an animated frame on a terminal, one
+// plain line per stage change elsewhere. Every method is a no-op after Stop.
 type Spinner struct {
 	env    Env
 	out    io.Writer
 	glyphs Glyphs
 	now    func() time.Time
 
+	heading string
+
 	mu      sync.Mutex
 	message string
 	started time.Time
-	// painted records that an animation frame is currently on screen and must
-	// be erased before anything else is written.
+	// painted records that a frame is on screen and must be erased first.
 	painted bool
 	stopped bool
-	// reported is the last message written to a plain stream, and reportedAt
-	// when it was written, so that an unchanged stage repeats on a heartbeat
-	// rather than on every poll.
+	// reported and reportedAt are the last message written to a plain stream.
 	reported   string
 	reportedAt time.Time
 
@@ -69,22 +58,35 @@ type Spinner struct {
 	done chan struct{}
 }
 
-// NewSpinner returns a Spinner that reports message while an operation runs.
-// The caller must Start it.
-func (e Env) NewSpinner(message string) *Spinner {
-	return &Spinner{
+// SpinnerOption configures a Spinner.
+type SpinnerOption func(*Spinner)
+
+// WithHeading titles the wait, on its own line above the progress line.
+func WithHeading(format string, a ...any) SpinnerOption {
+	return func(s *Spinner) {
+		s.heading = fmt.Sprintf(format, a...)
+	}
+}
+
+// NewSpinner returns a Spinner reporting message. The caller must Start it.
+func (e Env) NewSpinner(message string, opts ...SpinnerOption) *Spinner {
+	s := &Spinner{
 		env:     e,
 		out:     e.ErrWriter(),
 		glyphs:  e.Glyphs(),
 		now:     time.Now,
 		message: message,
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
 }
 
-// Start begins reporting progress. On an interactive terminal it animates
-// until the spinner is stopped; otherwise it prints the opening line once and
-// leaves later stages to Message, so that a log records where the operation
-// got to without accumulating a frame per tick.
+// Start begins reporting progress. It animates on an interactive terminal, and
+// otherwise prints the opening line and leaves later stages to Message.
 func (s *Spinner) Start() {
 	quit, done := make(chan struct{}), make(chan struct{})
 
@@ -95,14 +97,17 @@ func (s *Spinner) Start() {
 	}
 	s.started = s.now()
 
+	if s.heading != "" {
+		s.commit(s.styled(ColorInfo, true, s.heading))
+	}
+
 	if !s.env.Anim {
 		s.report(s.started)
 		s.mu.Unlock()
 		return
 	}
 
-	// Assigned under the lock that halt reads them under, so that a Stop from
-	// another goroutine cannot race the Start that created them.
+	// Assigned under the lock halt reads them under, so Stop cannot race Start.
 	s.quit, s.done = quit, done
 	s.mu.Unlock()
 
@@ -126,10 +131,7 @@ func (s *Spinner) Start() {
 	}()
 }
 
-// Message replaces the text shown alongside the spinner. It lets a single
-// spinner narrate an operation that moves through phases without leaving a
-// line behind for each one on a terminal, while a plain stream gets one line
-// per phase so that a log still shows where the operation got to.
+// Message replaces the text shown alongside the spinner.
 func (s *Spinner) Message(message string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -140,29 +142,44 @@ func (s *Spinner) Message(message string) {
 
 	s.message = message
 
-	// An animated line is rewritten in place by the next frame, and a spinner
-	// that has not started yet reports its message when it does.
+	// An animated line is rewritten by the next frame; an unstarted spinner
+	// reports when it starts.
 	if !s.env.Anim && !s.started.IsZero() {
 		s.report(s.now())
 	}
 }
 
-// Succeed stops the spinner and reports that the operation completed, leaving
-// the outcome and the elapsed time on screen.
+// Note records a stage that has passed, leaving it on screen as work moves on.
+func (s *Spinner) Note(format string, a ...any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.stopped {
+		return
+	}
+
+	text := fmt.Sprintf(format, a...)
+	if !s.env.Anim {
+		s.commit(s.styled(ColorInfo, false, text))
+		return
+	}
+
+	glyph := s.styled(ColorInfo, false, s.glyphs.Bullet)
+	s.commit(glyph + " " + s.styled(ColorInfo, false, text+s.glyphs.Ellipsis))
+}
+
+// Succeed stops the spinner and reports that the operation completed.
 func (s *Spinner) Succeed(format string, a ...any) {
 	s.finish(s.glyphs.Success, ColorSuccess, fmt.Sprintf(format, a...))
 }
 
 // Fail stops the spinner and reports that the operation did not complete.
-// The error itself is reported separately by the command, so the message here
-// should say what doctl was waiting for rather than restate the cause.
 func (s *Spinner) Fail(format string, a ...any) {
 	s.finish(s.glyphs.Failure, ColorError, fmt.Sprintf(format, a...))
 }
 
 // Stop halts the spinner without reporting an outcome, clearing any frame it
-// left on screen. It is safe to call more than once, which makes it suitable
-// for a defer that guards an early return.
+// left on screen. It is safe to call more than once, so a defer may guard it.
 func (s *Spinner) Stop() {
 	s.halt()
 
@@ -180,8 +197,7 @@ func (s *Spinner) Stop() {
 	}
 }
 
-// Elapsed reports how long the operation has been running, or how long it ran
-// before the spinner was stopped.
+// Elapsed reports how long the operation has run, or ran before it stopped.
 func (s *Spinner) Elapsed() time.Duration {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -211,35 +227,45 @@ func (s *Spinner) finish(glyph string, color lipgloss.TerminalColor, message str
 		s.painted = false
 	}
 
-	// A plain stream closes on the sentence alone. The design system renders a
-	// piped wait as a running narrative - one line per stage, then the outcome
-	// - so a `Success:` label here would be chrome the format does not have,
-	// and a failure is already followed by the command's own `Error:` line.
+	// A plain stream closes on the sentence alone: no glyph, and no `Success:`
+	// label, which a running narrative of one line per stage does not carry.
 	if !s.env.Anim {
-		fmt.Fprintf(s.out, "%s %s\n", message, s.duration(elapsed))
+		fmt.Fprintf(s.out, "%s %s\n", s.styled(color, true, message), s.duration(elapsed))
 		return
 	}
 
-	// On a terminal the symbol carries the colour and the message stays
-	// default, so the outcome is legible at a glance without the whole line
-	// shouting.
 	lead := s.env.SprintErr(s.env.NewErrStyle().Foreground(color), glyph)
+	text := s.env.SprintErr(s.env.NewErrStyle().Foreground(color).Bold(true), message)
 
-	fmt.Fprintf(s.out, "%s %s %s\n", lead, message, s.duration(elapsed))
+	fmt.Fprintf(s.out, "%s %s %s\n", lead, text, s.duration(elapsed))
 }
 
-// report writes the current message to a plain stream. A stage that has moved
-// is reported at once; one that has not is repeated only every StageHeartbeat,
-// so a wait polling every five seconds neither floods the log nor falls silent
-// through a twenty minute provision.
+// styled paints one piece of a progress line. Whether the paint lands is
+// ErrStyle's decision rather than Anim's, so animation off still keeps color.
+func (s *Spinner) styled(color lipgloss.TerminalColor, bold bool, text string) string {
+	style := s.env.NewErrStyle().Foreground(color)
+	if bold {
+		style = style.Bold(true)
+	}
+
+	return s.env.SprintErr(style, text)
+}
+
+// commit writes a line that stays on screen, erasing any animation frame first.
 //
-// The line carries no glyph and no cursor movement, which is what makes the
-// spinner safe to leave enabled when stderr is a log file or a pipe. The
-// caller's message already names the activity it is reporting on ("Creating
-// Droplet (web-01)"), so nothing is prefixed here.
-//
-// The caller passes the time it already read rather than having this read the
-// clock again, so that a spinner under a test clock advances once per event.
+// s.mu must be held.
+func (s *Spinner) commit(line string) {
+	if s.painted {
+		fmt.Fprint(s.out, eraseLine)
+		s.painted = false
+	}
+
+	fmt.Fprintln(s.out, line)
+}
+
+// report writes the current message to a plain stream, at once when the stage
+// has moved and every StageHeartbeat when it has not. It carries no glyph or
+// cursor movement, and takes the caller's clock reading rather than its own.
 //
 // s.mu must be held.
 func (s *Spinner) report(now time.Time) {
@@ -248,7 +274,7 @@ func (s *Spinner) report(now time.Time) {
 	}
 	s.reported, s.reportedAt = s.message, now
 
-	fmt.Fprintf(s.out, "%s %s\n", s.message, s.duration(now.Sub(s.started)))
+	fmt.Fprintf(s.out, "%s %s\n", s.styled(ColorWarning, false, s.message), s.duration(now.Sub(s.started)))
 }
 
 // paint draws one animation frame over the previous one.
@@ -260,26 +286,22 @@ func (s *Spinner) paint(frame int) {
 		return
 	}
 
-	// Only the frame is coloured, and in the info slot rather than the warning
-	// one: an operation still running is not a problem, and painting the whole
-	// line makes a routine wait read like a caution.
 	frames := s.glyphs.Spinner
-	glyph := s.env.SprintErr(s.env.NewErrStyle().Foreground(ColorInfo), frames[frame%len(frames)])
-	line := fmt.Sprintf("%s %s %s", glyph, s.message, s.duration(s.now().Sub(s.started)))
+	style := s.env.NewErrStyle().Foreground(ColorWarning)
+	glyph := s.env.SprintErr(style, frames[frame%len(frames)])
+	message := s.env.SprintErr(style, s.message+s.glyphs.Ellipsis)
+	line := fmt.Sprintf("%s %s %s", glyph, message, s.duration(s.now().Sub(s.started)))
 
 	fmt.Fprint(s.out, eraseLine+truncate(line, s.env.Width, s.glyphs.Ellipsis))
 	s.painted = true
 }
 
-// duration renders an elapsed time as dim chrome, in whole seconds so that the
-// value does not churn between frames. Seconds are truncated rather than
-// rounded, so a counter never reports a second that has not finished passing.
+// duration renders elapsed time as dim chrome, truncated to whole seconds.
 func (s *Spinner) duration(d time.Duration) string {
 	return s.env.SprintErr(s.env.NewErrStyle().Foreground(ColorMuted), "("+d.Truncate(time.Second).String()+")")
 }
 
-// halt shuts the animation goroutine down and waits for the final frame to
-// land, so that nothing is painted after the closing line is written.
+// halt stops the animation goroutine and waits for the final frame to land.
 func (s *Spinner) halt() {
 	s.mu.Lock()
 	quit, done := s.quit, s.done
@@ -294,10 +316,8 @@ func (s *Spinner) halt() {
 	<-done
 }
 
-// truncate keeps an animated line within the terminal so that a long message
-// does not wrap and leave orphaned rows behind as the spinner repaints.
-// ansi.Truncate measures in terminal cells and preserves escape sequences, so
-// a styled line cannot be cut mid-sequence and leave colour switched on.
+// truncate keeps an animated line within the terminal so that it does not wrap.
+// ansi.Truncate preserves escape sequences, so no line is cut mid-sequence.
 func truncate(line string, width int, ellipsis string) string {
 	if width <= 0 || ansi.StringWidth(line) <= width {
 		return line
