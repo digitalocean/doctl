@@ -3037,9 +3037,26 @@ var streamClock = time.Now
 // while the backend retries, and make it explicit that typed input will be
 // queued once the user starts entering a prompt. Overridable in tests.
 const (
-	msgAgentWarmup       = "Agent is warming up… please wait"
+	msgAgentWarmup       = "Agent is warming up…"
 	msgAgentWarmupQueued = "Input queued until agent is ready"
 )
+
+// warmupElapsedLabel renders how long the banner has been up. Empty for the
+// first second so the row does not open on a meaningless "0s", and empty when
+// the start time is unset (non-raw output has no spinner to hang it on).
+func warmupElapsedLabel(startedAt time.Time) string {
+	if startedAt.IsZero() {
+		return ""
+	}
+	d := warmupClock().Sub(startedAt)
+	if d < time.Second {
+		return ""
+	}
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%dm%02ds", int(d.Minutes()), int(d.Seconds())%60)
+}
 
 // warmupQueuedLabel replaces the generic queued notice once messages have
 // actually been accepted, so the banner reflects how many are waiting rather
@@ -3502,7 +3519,10 @@ func humanRunLogMarker(msg string) string {
 	return ""
 }
 
-func runLogPhase(payload json.RawMessage) string {
+// runLogMessage extracts the human-facing text from a run.log payload, with the
+// machine-readable markers mapped to prose. Untruncated: the banner has one row
+// to work with and truncates, the transcript does not.
+func runLogMessage(payload json.RawMessage) string {
 	var p struct {
 		Message string `json:"message"`
 		Text    string `json:"text"`
@@ -3519,9 +3539,13 @@ func runLogPhase(payload json.RawMessage) string {
 		if human := humanRunLogMarker(msg); human != "" {
 			return human
 		}
-		return truncateWarmupPhase(msg)
+		return msg
 	}
 	return ""
+}
+
+func runLogPhase(payload json.RawMessage) string {
+	return truncateWarmupPhase(runLogMessage(payload))
 }
 
 func backendPhaseFromStatus(status godo.HostedAgentSessionStatus) string {
@@ -5319,6 +5343,10 @@ type promptDisplay struct {
 	warmupSpinnerLabel string
 	warmupPhaseLabel   string
 	warmupQueuedLabel  string
+	// warmupStartedAt drives the elapsed counter on the spinner row. Without it
+	// the banner is a fixed string for its whole lifetime, which on a slow start
+	// is indistinguishable from a hung client.
+	warmupStartedAt time.Time
 	// freezeLine suppresses painting lineBuf during a bracketed paste so the
 	// warm-up spinner (and any other in-place repaint) cannot rewrite a
 	// still-growing, wrapping prompt hundreds of times (MARSOHS-1095).
@@ -5603,6 +5631,7 @@ func (p *promptDisplay) warmupInit(frame, label string) {
 	p.warmupSpinnerLabel = label
 	p.warmupPhaseLabel = ""
 	p.warmupQueuedLabel = ""
+	p.warmupStartedAt = warmupClock()
 	fmt.Fprintf(p.out, "%s %s\r\n", frame, label)
 	p.paintPromptLocked(false)
 }
@@ -5670,6 +5699,9 @@ func (p *promptDisplay) warmupBlockLinesLocked() []string {
 	label := p.warmupSpinnerLabel
 	if label == "" {
 		label = msgAgentWarmup
+	}
+	if elapsed := warmupElapsedLabel(p.warmupStartedAt); elapsed != "" {
+		label += " " + colorize(elapsed, colMuted)
 	}
 	lines := []string{fmt.Sprintf("%s %s", frame, label)}
 	if p.warmupPhaseLabel != "" {
@@ -5782,6 +5814,7 @@ func (p *promptDisplay) warmupStopLocked() {
 	p.warmupSpinnerLabel = ""
 	p.warmupPhaseLabel = ""
 	p.warmupQueuedLabel = ""
+	p.warmupStartedAt = time.Time{}
 	p.paintPromptLocked(false)
 }
 
@@ -6647,6 +6680,15 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		// The server sometimes echoes the prompt in `agent`, so don't render it;
 		// keep the marker clean and let the spinner convey activity.
 		fmt.Fprintf(w, "\n%s\n", colorize("▶ run started", colMuted))
+	case godo.HostedAgentEventKindRunLog:
+		// Only `agents logs` reaches this: the attach loop handles run.log in its
+		// own arm and never falls through, because printing between token chunks
+		// splits a streaming message. Replay has no such constraint, and without
+		// this the transcript showed a bare timestamped "run.log" with the
+		// message — the whole content of the event — dropped on the floor.
+		if msg := runLogMessage(ev.Payload); msg != "" {
+			fmt.Fprintf(w, "%s\n", colorize("  "+msg, colMuted))
+		}
 	case godo.HostedAgentEventKindToolCallStarted:
 		var p toolCallStartedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {

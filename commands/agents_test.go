@@ -5320,6 +5320,60 @@ func TestDrainStream_ordinaryRunLogKeepsWarmup(t *testing.T) {
 	warmup.clear()
 }
 
+// TestRenderEvent_runLogPrintsTheMessage pins that replay shows a run.log's
+// content. `agents logs` prints the kind and delegates the body to renderEvent,
+// which had no run.log case — so the whole point of the event was dropped and
+// the transcript showed a bare timestamped "run.log".
+func TestRenderEvent_runLogPrintsTheMessage(t *testing.T) {
+	var buf bytes.Buffer
+	renderEvent(&buf, godo.HostedAgentEvent{
+		Kind:    godo.HostedAgentEventKindRunLog,
+		Payload: json.RawMessage(`{"level":"info","message":"starting codex"}`),
+	})
+	assert.Contains(t, buf.String(), "starting codex")
+}
+
+// TestRenderEvent_runLogWithNoMessageIsSilent pins that an empty payload does
+// not open a blank row in the transcript.
+func TestRenderEvent_runLogWithNoMessageIsSilent(t *testing.T) {
+	var buf bytes.Buffer
+	renderEvent(&buf, godo.HostedAgentEvent{
+		Kind:    godo.HostedAgentEventKindRunLog,
+		Payload: json.RawMessage(`{"level":"info"}`),
+	})
+	assert.Empty(t, buf.String())
+}
+
+// TestWarmupElapsedLabel pins the elapsed counter on the spinner row. The banner
+// is otherwise a fixed string for its whole lifetime, which on a slow start
+// reads as a hung client.
+func TestWarmupElapsedLabel(t *testing.T) {
+	start := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	old := warmupClock
+	t.Cleanup(func() { warmupClock = old })
+
+	tests := []struct {
+		name string
+		at   time.Time
+		want string
+	}{
+		{"unset start time renders nothing", time.Time{}, ""},
+		{"sub-second is suppressed", start.Add(300 * time.Millisecond), ""},
+		{"seconds", start.Add(12 * time.Second), "12s"},
+		{"rolls over into minutes", start.Add(63 * time.Second), "1m03s"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			warmupClock = func() time.Time { return tt.at }
+			from := start
+			if tt.at.IsZero() {
+				from = time.Time{}
+			}
+			assert.Equal(t, tt.want, warmupElapsedLabel(from))
+		})
+	}
+}
+
 // TestRunLogPhase_rendersMarkersAsProse pins that the banner never captions
 // itself with a raw enum token. It prints whatever run.log hands it.
 func TestRunLogPhase_rendersMarkersAsProse(t *testing.T) {
