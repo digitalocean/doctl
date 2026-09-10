@@ -89,7 +89,9 @@ func rejectStdinSecretWithStdinManifest(manifestPath string, pairs []string) err
 // manifestSecretValues returns name -> value for every secret slot that
 // already has a value. Used so --secret ANTHROPIC_API_KEY=… satisfies the
 // claude-code key check and ${ANTHROPIC_API_KEY} expansion, instead of still
-// demanding the process environment.
+// demanding the process environment. Values may still be ${VAR} placeholders
+// written in the YAML; callers that need a concrete credential must use
+// resolvedManifestSecretValues instead.
 func manifestSecretValues(manifest []byte) map[string]string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
@@ -133,6 +135,24 @@ func manifestSecretValues(manifest []byte) map[string]string {
 			continue
 		}
 		out[name] = value
+	}
+	return out
+}
+
+func resolvedManifestSecretValues(manifest []byte) map[string]string {
+	vals := manifestSecretValues(manifest)
+	if len(vals) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(vals))
+	for name, value := range vals {
+		if isEnvPlaceholder(value) {
+			continue
+		}
+		out[name] = value
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -617,6 +618,23 @@ func TestDatabasesDelete(t *testing.T) {
 
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+
+		err := RunDatabaseDelete(config)
+		assert.NoError(t, err)
+	})
+
+	// Successful with wait flag
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		notFound := &godo.ErrorResponse{
+			Response: &http.Response{StatusCode: http.StatusNotFound},
+			Message:  "not found",
+		}
+		tm.databases.EXPECT().Delete(testDBCluster.ID).Return(nil)
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(nil, notFound)
+
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
 
 		err := RunDatabaseDelete(config)
 		assert.NoError(t, err)
