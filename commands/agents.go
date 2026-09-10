@@ -3468,6 +3468,40 @@ func sessionUpdatedPhase(payload json.RawMessage) string {
 	return ""
 }
 
+// run.log markers the runtime emits as machine-readable tokens rather than
+// prose. godo does not export them; the producers are plano's
+// agent_adapters::driver::emit::IDLE_MARKER_MESSAGE and hosted-agents'
+// spi.RunLogMsgSessionIdleAwaitingUser, which pin the same two strings.
+const (
+	runLogMsgSessionIdleAwaitingUser = "session_idle_awaiting_user"
+	runLogMsgInactivityTimeout       = "inactivity_timeout"
+)
+
+// isAgentIdleMarker reports whether a run.log payload is the runtime's
+// agent-is-up-and-waiting marker.
+func isAgentIdleMarker(payload json.RawMessage) bool {
+	var p struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return false
+	}
+	return strings.TrimSpace(p.Message) == runLogMsgSessionIdleAwaitingUser
+}
+
+// humanRunLogMarker renders the known markers as prose. Without this the banner
+// prints the token verbatim, since it captions itself with whatever run.log
+// carries.
+func humanRunLogMarker(msg string) string {
+	switch msg {
+	case runLogMsgSessionIdleAwaitingUser:
+		return "agent ready"
+	case runLogMsgInactivityTimeout:
+		return "session idle"
+	}
+	return ""
+}
+
 func runLogPhase(payload json.RawMessage) string {
 	var p struct {
 		Message string `json:"message"`
@@ -3478,9 +3512,14 @@ func runLogPhase(payload json.RawMessage) string {
 		return ""
 	}
 	for _, s := range []string{p.Message, p.Text, p.Line} {
-		if msg := strings.TrimSpace(s); msg != "" {
-			return truncateWarmupPhase(msg)
+		msg := strings.TrimSpace(s)
+		if msg == "" {
+			continue
 		}
+		if human := humanRunLogMarker(msg); human != "" {
+			return human
+		}
+		return truncateWarmupPhase(msg)
 	}
 	return ""
 }
@@ -3969,7 +4008,18 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			// a streaming message into separately-rendered blocks — one sentence
 			// arriving as three, with blank lines where the invisible event was.
 			// Feed the warm-up banner, advance the cursor, disturb nothing else.
-			warmup.noteBackendEvent(ev)
+			//
+			// The idle marker is the exception: it is the runtime saying the
+			// agent process is up and parked waiting for a prompt, which is the
+			// question the warm-up notice exists to answer. Every other dismissal
+			// waits for output (run.started, a token) or the 60s timeout, so an
+			// idle session used to sit under "warming up" for the full minute
+			// after it was ready.
+			if isAgentIdleMarker(ev.Payload) {
+				warmup.clear()
+			} else {
+				warmup.noteBackendEvent(ev)
+			}
 			cursor.set(ev.EventID)
 			continue
 		case godo.HostedAgentEventKindSessionUpdated,

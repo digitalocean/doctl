@@ -5262,6 +5262,84 @@ func TestDrainStream_runLogDoesNotSplitStreamedMessage(t *testing.T) {
 	assert.Equal(t, "e5", cursor.get(), "run.log must still advance the resume cursor")
 }
 
+// TestDrainStream_idleMarkerClearsWarmup pins the one run.log the banner must
+// act on. The runtime emits it once the agent is up and parked waiting for a
+// prompt; every other dismissal needs output or the 60s timeout, so a session
+// nobody types into used to show "warming up" long after it was ready.
+func TestDrainStream_idleMarkerClearsWarmup(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindRunLog),
+		`{"level":"info","message":"session_idle_awaiting_user"}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	cursor := &eventCursor{}
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+
+	drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), warmup, &tokenDeduper{})
+
+	assert.True(t, warmup.dismissed, "the idle marker must dismiss the warm-up notice")
+	assert.Equal(t, "e1", cursor.get(), "run.log must still advance the resume cursor")
+}
+
+// TestDrainStream_ordinaryRunLogKeepsWarmup pins the other half: a diagnostic
+// run.log is boot noise, so it relabels the spinner and nothing more.
+func TestDrainStream_ordinaryRunLogKeepsWarmup(t *testing.T) {
+	evt := sseFrame("e1", string(godo.HostedAgentEventKindRunLog),
+		`{"level":"info","message":"cloning repository"}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(evt, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+
+	oldClock := warmupClock
+	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	warmupClock = func() time.Time { return now }
+	t.Cleanup(func() { warmupClock = oldClock })
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, now)
+	warmup.start()
+
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+
+	assert.False(t, warmup.dismissed, "a diagnostic run.log must not dismiss the notice")
+	assert.Contains(t, buf.String(), "cloning repository")
+	warmup.clear()
+}
+
+// TestRunLogPhase_rendersMarkersAsProse pins that the banner never captions
+// itself with a raw enum token. It prints whatever run.log hands it.
+func TestRunLogPhase_rendersMarkersAsProse(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		want    string
+	}{
+		{"idle marker", `{"message":"session_idle_awaiting_user"}`, "agent ready"},
+		{"inactivity timeout", `{"message":"inactivity_timeout"}`, "session idle"},
+		{"free-form log passes through", `{"message":"cloning repository"}`, "cloning repository"},
+		{"empty payload yields no phase", `{}`, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, runLogPhase(json.RawMessage(tt.payload)))
+		})
+	}
+}
+
 // TestMsgAccumulatorWhitespaceOnlyFlushIsSilent pins that flushing a buffer
 // holding only whitespace writes nothing. Mid-message flushes routinely catch
 // the buffer between paragraphs, and spending the block's leading and trailing
