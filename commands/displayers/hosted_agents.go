@@ -15,6 +15,7 @@ package displayers
 
 import (
 	"io"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
@@ -300,6 +301,99 @@ func (h *HostedAgentPrompt) KV() []map[string]any {
 		})
 	}
 	return out
+}
+
+// HostedAgentWorkspaceEntryItem is one directory entry in a workspace listing.
+// The listing is assembled client-side from a sandbox exec, so there is no godo
+// wire type to wrap.
+type HostedAgentWorkspaceEntryItem struct {
+	// Type is a friendly label for the entry kind: dir, file, symlink, and so on.
+	Type string `json:"type"`
+	// SizeBytes is the entry's apparent size, as reported by the guest.
+	SizeBytes int64 `json:"size_bytes"`
+	// ModifiedAt is the entry's mtime.
+	ModifiedAt time.Time `json:"modified_at"`
+	// Path is the entry's path as the guest resolved it, ready to be passed
+	// back to `ls`, `cat`, `download`, or `exec --workdir`.
+	Path string `json:"path"`
+}
+
+// HostedAgentWorkspaceEntry renders the listing produced by
+// `doctl harness-runtime files ls`. Entries is the only field so an empty listing
+// still emits `[]` under `-o json`.
+type HostedAgentWorkspaceEntry struct {
+	Entries []HostedAgentWorkspaceEntryItem
+}
+
+var _ Displayable = &HostedAgentWorkspaceEntry{}
+
+func (h *HostedAgentWorkspaceEntry) JSON(out io.Writer) error {
+	return writeJSON(h.Entries, out)
+}
+
+func (h *HostedAgentWorkspaceEntry) Cols() []string {
+	return []string{"Type", "SizeBytes", "ModifiedAt", "Path"}
+}
+
+func (h *HostedAgentWorkspaceEntry) ColMap() map[string]string {
+	return map[string]string{
+		"Type":       "Type",
+		"SizeBytes":  "Size",
+		"ModifiedAt": "Modified",
+		"Path":       "Path",
+	}
+}
+
+func (h *HostedAgentWorkspaceEntry) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Entries))
+	for _, e := range h.Entries {
+		out = append(out, map[string]any{
+			"Type":       e.Type,
+			"SizeBytes":  e.SizeBytes,
+			"ModifiedAt": e.ModifiedAt.UTC().Format("2006-01-02T15:04:05Z"),
+			"Path":       e.Path,
+		})
+	}
+	return out
+}
+
+// HostedAgentWorkspaceFile renders the result of `doctl harness-runtime files cat`
+// under `-o json`. Text output never reaches this displayer: the command writes
+// the file's bytes straight through instead, so it composes in a pipeline.
+type HostedAgentWorkspaceFile struct {
+	Path      string `json:"path"`
+	Content   string `json:"content"`
+	SizeBytes int    `json:"size_bytes"`
+}
+
+var _ Displayable = &HostedAgentWorkspaceFile{}
+
+func (h *HostedAgentWorkspaceFile) JSON(out io.Writer) error {
+	return writeJSON(h, out)
+}
+
+func (h *HostedAgentWorkspaceFile) Cols() []string {
+	return []string{"Path", "SizeBytes"}
+}
+
+func (h *HostedAgentWorkspaceFile) ColMap() map[string]string {
+	return map[string]string{
+		"Path":      "Path",
+		"SizeBytes": "Size",
+	}
+}
+
+func (h *HostedAgentWorkspaceFile) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	return []map[string]any{{
+		"Path":      h.Path,
+		"SizeBytes": h.SizeBytes,
+	}}
 }
 
 // HostedAgentConfig renders full Agent Configs, backing `doctl harness-runtime config

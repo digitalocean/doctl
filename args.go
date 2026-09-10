@@ -1009,6 +1009,10 @@ const (
 	// ArgAgentPromptQuiet suppresses `prompt`'s progress reporting on stderr.
 	ArgAgentPromptQuiet = "quiet"
 
+	// ArgAgentLsRecursive lists nested workspace entries, not just the
+	// immediate children of the listed directory.
+	ArgAgentLsRecursive = "recursive"
+
 	// ArgAgentProxyType selects which coding-agent protocol `start-proxy` impersonates.
 	ArgAgentProxyType = "type"
 
