@@ -998,6 +998,10 @@ const (
 	// ArgAgentExecTimeout bounds a sandbox exec, in seconds.
 	ArgAgentExecTimeout = "timeout"
 
+	// ArgAgentLsRecursive lists nested workspace entries, not just the
+	// immediate children of the listed directory.
+	ArgAgentLsRecursive = "recursive"
+
 	// ArgAgentProxyType selects which coding-agent protocol `start-proxy` impersonates.
 	ArgAgentProxyType = "type"
 
