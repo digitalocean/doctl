@@ -1336,6 +1336,16 @@ func envLookupWithOverlay(overlay map[string]string) func(string) (string, bool)
 	}
 }
 
+func withServerProvidedOverlay(base, overlay map[string]string) map[string]string {
+	out := mergeStringMaps(base, overlay)
+	for k, v := range overlay {
+		if serverProvidedEnvPlaceholders[k] {
+			out[k] = v
+		}
+	}
+	return out
+}
+
 // mergeStringMaps copies maps in order; later entries win. Empty values are
 // skipped so a blank overlay cannot hide a real secret.
 func mergeStringMaps(maps ...map[string]string) map[string]string {
@@ -2416,13 +2426,38 @@ func (r *openAIAttachRenderer) clearWarmup() {
 	}
 }
 
+func normalizeOpenAISessionEventType(t string) string {
+	return strings.TrimPrefix(strings.TrimSpace(t), "agent.")
+}
+
+func openAIEventUsage(evt map[string]any) (inTok, outTok float64) {
+	if usage, ok := evt["usage"].(map[string]any); ok {
+		inTok, _ = usage["input_tokens"].(float64)
+		outTok, _ = usage["output_tokens"].(float64)
+		return inTok, outTok
+	}
+	if turn, ok := evt["turn"].(map[string]any); ok {
+		if usage, ok := turn["usage"].(map[string]any); ok {
+			inTok, _ = usage["input_tokens"].(float64)
+			outTok, _ = usage["output_tokens"].(float64)
+		}
+	}
+	return inTok, outTok
+}
+
 func (r *openAIAttachRenderer) handle(evt map[string]any) {
 	t, _ := evt["type"].(string)
+	t = normalizeOpenAISessionEventType(t)
 	switch t {
 	case "session.in_progress", "session.turn.in_progress", "session.turn.created":
 		r.clearWarmup()
 		if r.thinking != nil {
 			r.thinking.setTurnRunning(true)
+			r.thinking.start()
+		}
+	case "session.environment.pending":
+		r.clearWarmup()
+		if r.thinking != nil {
 			r.thinking.start()
 		}
 	case "session.environment.connected":
@@ -2501,12 +2536,8 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		r.sawOutputDelta = false
 		r.activeToolCmd = ""
 		summary := "run complete"
-		if usage, ok := evt["usage"].(map[string]any); ok {
-			inTok, _ := usage["input_tokens"].(float64)
-			outTok, _ := usage["output_tokens"].(float64)
-			if inTok > 0 || outTok > 0 {
-				summary = fmt.Sprintf("run complete · %d in / %d out tokens", int(inTok), int(outTok))
-			}
+		if inTok, outTok := openAIEventUsage(evt); inTok > 0 || outTok > 0 {
+			summary = fmt.Sprintf("run complete · %d in / %d out tokens", int(inTok), int(outTok))
 		}
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✓", colSuccess), colorize(summary, colMuted))
 		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
@@ -2528,6 +2559,18 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		}
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
 		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
+	case "session.turn.cancelled":
+		r.clearWarmup()
+		r.ensureReasoning().end()
+		if r.thinking != nil {
+			r.thinking.setTurnRunning(false)
+			r.thinking.stop()
+		}
+		r.acc.flush(r.out)
+		r.sawOutputDelta = false
+		r.activeToolCmd = ""
+		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize("run cancelled", colMuted))
+		fmt.Fprintln(r.out, colorize(runSeparator, colMuted))
 	case "session.idle":
 		r.clearWarmup()
 		r.ensureReasoning().end()
@@ -2548,6 +2591,24 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		r.acc.flush(r.out)
 		r.activeToolCmd = ""
 		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize("session failed", colError))
+	case "session.requires_action", "session.action_required":
+		r.clearWarmup()
+		if r.thinking != nil {
+			r.thinking.start()
+		}
+		fmt.Fprintf(r.out, "\n%s %s\n", colorize("●", colMuted), colorize("waiting for environment connection", colMuted))
+	case "error":
+		r.clearWarmup()
+		if r.thinking != nil {
+			r.thinking.stop()
+		}
+		msg := "agent error"
+		if errObj, ok := evt["error"].(map[string]any); ok {
+			if m, ok := errObj["message"].(string); ok && m != "" {
+				msg = m
+			}
+		}
+		fmt.Fprintf(r.out, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
 	default:
 		// Suppress noisy protocol events (item echoes, etc.). Reasoning
 		// deltas/items are handled explicitly above.

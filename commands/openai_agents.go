@@ -38,9 +38,13 @@ const (
 	openAIAPIKeyEnv          = "OPENAI_API_KEY"
 	// Prefer AGENT_API_BASE_URL (SDK). OPENAI_BASE_URL is accepted but normalized
 	// so values like https://api.openai.com/v1 do not produce /v1/v1/... 404s.
-	openAIAPIBaseURLEnv = "OPENAI_BASE_URL"
-	agentAPIBaseURLEnv  = "AGENT_API_BASE_URL"
-	envIDPlaceholder    = "ENV_ID"
+	openAIAPIBaseURLEnv    = "OPENAI_BASE_URL"
+	agentAPIBaseURLEnv     = "AGENT_API_BASE_URL"
+	envIDPlaceholder       = "ENV_ID"
+	remoteURLPlaceholder   = "REMOTE_URL"
+	openAIAgentsBetaHeader = "OpenAI-Beta"
+	openAIAgentsBetaValue  = "agents=v1"
+	openAIAgentsInputEvent = "agent.session.input.message"
 )
 
 // openAIAgentsClient talks to OpenAI's Agents API for the sandbox-provider POC.
@@ -54,6 +58,7 @@ type openAIAgentsClient interface {
 type openAIAgentsSession struct {
 	ID            string
 	EnvironmentID string
+	RemoteURL     string
 }
 
 type httpOpenAIAgentsClient struct {
@@ -99,6 +104,17 @@ func resolveOpenAIAgentsBaseURL() string {
 	return defaultOpenAIAgentsBase
 }
 
+func setOpenAIAgentsHeaders(req *http.Request, apiKey, contentType, accept string) {
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set(openAIAgentsBetaHeader, openAIAgentsBetaValue)
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	if accept != "" {
+		req.Header.Set("Accept", accept)
+	}
+}
+
 // createOpenAIAgentsSession is the production helper used by agents start.
 var createOpenAIAgentsSession = func(ctx context.Context, apiKey string, body json.RawMessage) (*openAIAgentsSession, error) {
 	return newHTTPOpenAIAgentsClient().CreateSession(ctx, apiKey, body)
@@ -118,9 +134,7 @@ func (c *httpOpenAIAgentsClient) CreateSession(ctx context.Context, apiKey strin
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	setOpenAIAgentsHeaders(req, apiKey, "application/json", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -151,7 +165,7 @@ func (c *httpOpenAIAgentsClient) SendInput(ctx context.Context, apiKey, sessionI
 	payload, err := json.Marshal(map[string]any{
 		"events": []map[string]any{
 			{
-				"type": "session.input.message",
+				"type": openAIAgentsInputEvent,
 				"input": []map[string]any{
 					{
 						"role": "user",
@@ -171,9 +185,7 @@ func (c *httpOpenAIAgentsClient) SendInput(ctx context.Context, apiKey, sessionI
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	setOpenAIAgentsHeaders(req, apiKey, "application/json", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -201,8 +213,7 @@ func (c *httpOpenAIAgentsClient) Stream(ctx context.Context, apiKey, sessionID s
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Accept", "text/event-stream")
+	setOpenAIAgentsHeaders(req, apiKey, "", "text/event-stream")
 
 	// Streaming can be long-lived; don't inherit the create client's hard timeout.
 	client := &http.Client{Timeout: 0}
@@ -261,6 +272,9 @@ func parseOpenAIAgentsSession(raw []byte) (*openAIAgentsSession, error) {
 		ID          string          `json:"id"`
 		SessionID   string          `json:"session_id"`
 		Environment json.RawMessage `json:"environment"`
+		Connect     *struct {
+			RemoteURL string `json:"remote_url"`
+		} `json:"connect"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return nil, fmt.Errorf("decoding OpenAI Agents session response: %w", err)
@@ -271,13 +285,24 @@ func parseOpenAIAgentsSession(raw []byte) (*openAIAgentsSession, error) {
 	if sess.ID == "" {
 		return nil, fmt.Errorf("OpenAI Agents session response missing id")
 	}
+	if envelope.Connect != nil {
+		sess.RemoteURL = strings.TrimSpace(envelope.Connect.RemoteURL)
+	}
 	if len(envelope.Environment) > 0 && string(envelope.Environment) != "null" {
 		var envObj struct {
 			ID            string `json:"id"`
 			EnvironmentID string `json:"environment_id"`
+			RemoteURL     string `json:"remote_url"`
+			Connect       *struct {
+				RemoteURL string `json:"remote_url"`
+			} `json:"connect"`
 		}
 		if err := json.Unmarshal(envelope.Environment, &envObj); err == nil {
 			sess.EnvironmentID = firstNonEmpty(envObj.EnvironmentID, envObj.ID)
+			sess.RemoteURL = firstNonEmpty(envObj.RemoteURL, sess.RemoteURL)
+			if envObj.Connect != nil {
+				sess.RemoteURL = firstNonEmpty(envObj.Connect.RemoteURL, sess.RemoteURL)
+			}
 		}
 		if sess.EnvironmentID == "" {
 			// Some previews return the environment id as a bare string.
@@ -492,5 +517,9 @@ func prepareOpenAISandboxStart(ctx context.Context, manifest []byte) (openaiSess
 	if err != nil {
 		return "", nil, err
 	}
-	return sess.ID, map[string]string{envIDPlaceholder: sess.EnvironmentID}, nil
+	overlay := map[string]string{
+		envIDPlaceholder:     sess.EnvironmentID,
+		remoteURLPlaceholder: sess.RemoteURL,
+	}
+	return sess.ID, overlay, nil
 }

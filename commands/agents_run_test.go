@@ -89,7 +89,12 @@ func TestBuildHarnessManifest(t *testing.T) {
 		env, ok := doc["env"].(map[any]any)
 		require.True(t, ok)
 		assert.Equal(t, "${ENV_ID}", env["CODEX_ENVIRONMENT_ID"])
-		assert.Equal(t, "${OPENAI_API_KEY}", env["CODEX_API_KEY"])
+		assert.Equal(t, "${REMOTE_URL}", env["CODEX_REMOTE_URL"])
+		_, hasKeyInEnv := env["CODEX_API_KEY"]
+		assert.False(t, hasKeyInEnv)
+		secrets, ok := doc["secrets"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, "${OPENAI_API_KEY}", secrets["CODEX_API_KEY"])
 
 		cfg, ok := doc["config"].(map[any]any)
 		require.True(t, ok)
@@ -105,9 +110,11 @@ func TestBuildHarnessManifest(t *testing.T) {
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
 		assert.Equal(t, "claude-code", doc["agent"])
-		env, ok := doc["env"].(map[any]any)
+		_, hasEnv := doc["env"]
+		assert.False(t, hasEnv)
+		secrets, ok := doc["secrets"].(map[any]any)
 		require.True(t, ok)
-		assert.Equal(t, "${ANTHROPIC_API_KEY}", env["ANTHROPIC_API_KEY"])
+		assert.Equal(t, "${ANTHROPIC_API_KEY}", secrets["ANTHROPIC_API_KEY"])
 		assert.NotContains(t, doc, "config")
 	})
 

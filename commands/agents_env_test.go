@@ -114,6 +114,20 @@ func TestEnsureManifestEnvVars_SkipsENV_ID(t *testing.T) {
 	_, err = expandManifestEnvLookup([]byte("id: ${ENV_ID}\n"), os.LookupEnv)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ENV_ID")
+
+	err = ensureManifestEnvVars([]byte("url: ${REMOTE_URL}\n"), os.LookupEnv)
+	require.NoError(t, err)
+}
+
+func TestWithServerProvidedOverlayKeepsEmptyRemoteURL(t *testing.T) {
+	out := withServerProvidedOverlay(map[string]string{"A": "1"}, map[string]string{
+		"ENV_ID":     "env_x",
+		"REMOTE_URL": "",
+	})
+	assert.Equal(t, "env_x", out["ENV_ID"])
+	v, ok := out["REMOTE_URL"]
+	assert.True(t, ok)
+	assert.Empty(t, v)
 }
 
 func TestPrepareOpenAISandboxStart_PromptsForAPIKey(t *testing.T) {
@@ -138,6 +152,7 @@ func TestPrepareOpenAISandboxStart_PromptsForAPIKey(t *testing.T) {
 	const manifest = `agent: codex-agentapi
 env:
   CODEX_ENVIRONMENT_ID: ${ENV_ID}
+secrets:
   CODEX_API_KEY: ${OPENAI_API_KEY}
 config:
   agent:
@@ -147,6 +162,7 @@ config:
 	require.NoError(t, err)
 	assert.Equal(t, "oa_1", id)
 	assert.Equal(t, "env_1", overlay["ENV_ID"])
+	assert.Equal(t, "", overlay["REMOTE_URL"])
 	assert.Equal(t, "sk-prompted", os.Getenv(openAIAPIKeyEnv))
 }
 

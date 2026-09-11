@@ -332,11 +332,12 @@ func resolveHarnessAgent(harness string) (string, error) {
 }
 
 type harnessManifest struct {
-	Name   string            `yaml:"name,omitempty"`
-	Agent  string            `yaml:"agent"`
-	Repos  []string          `yaml:"repos,omitempty"`
-	Config map[string]any    `yaml:"config,omitempty"`
-	Env    map[string]string `yaml:"env,omitempty"`
+	Name    string            `yaml:"name,omitempty"`
+	Agent   string            `yaml:"agent"`
+	Repos   []string          `yaml:"repos,omitempty"`
+	Config  map[string]any    `yaml:"config,omitempty"`
+	Env     map[string]string `yaml:"env,omitempty"`
+	Secrets map[string]string `yaml:"secrets,omitempty"`
 }
 
 func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
@@ -359,7 +360,10 @@ func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
 	case isOpenAISandboxAdapter(agent):
 		doc.Env = map[string]string{
 			"CODEX_ENVIRONMENT_ID": "${ENV_ID}",
-			"CODEX_API_KEY":        "${OPENAI_API_KEY}",
+			"CODEX_REMOTE_URL":     "${REMOTE_URL}",
+		}
+		doc.Secrets = map[string]string{
+			"CODEX_API_KEY": "${OPENAI_API_KEY}",
 		}
 		doc.Config = defaultCodexRunConfig(prompt)
 	case agent == claudeCodeAgentName:
@@ -371,7 +375,7 @@ func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
 		// Anthropic's API before doctl ever calls CreateSessionFromManifest,
 		// instead of failing deep into a hosted session that was never going
 		// to work.
-		doc.Env = map[string]string{
+		doc.Secrets = map[string]string{
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
 	}
@@ -496,7 +500,7 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 		return nil, err
 	}
 
-	lookup := envLookupWithOverlay(mergeStringMaps(resolvedManifestSecretValues(raw), envOverlay))
+	lookup := envLookupWithOverlay(withServerProvidedOverlay(resolvedManifestSecretValues(raw), envOverlay))
 	manifest, err := expandManifestEnvCollect(raw, lookup)
 	if err != nil {
 		return nil, err

@@ -56,10 +56,10 @@ spec:
     template: codex-agentapi
   env:
     CODEX_ENVIRONMENT_ID: ${ENV_ID}
-    CODEX_API_KEY: ${OPENAI_API_KEY}
   secrets:
     - name: CODEX_API_KEY
       source: tenantSecret
+      value: ${OPENAI_API_KEY}
 `
 
 // sampleOpenAIManifestLegacy uses the pre-agentspec location for the OpenAI
@@ -75,7 +75,10 @@ spec:
     template: codex-agentapi
   env:
     CODEX_ENVIRONMENT_ID: ${ENV_ID}
-    CODEX_API_KEY: ${OPENAI_API_KEY}
+  secrets:
+    - name: CODEX_API_KEY
+      source: tenantSecret
+      value: ${OPENAI_API_KEY}
   openai:
     agent:
       model: gpt-5.6-sol
@@ -103,6 +106,7 @@ config:
           text: "hello"
 env:
   CODEX_ENVIRONMENT_ID: ${ENV_ID}
+secrets:
   CODEX_API_KEY: ${OPENAI_API_KEY}
 `
 
@@ -114,14 +118,25 @@ func TestParseOpenAIAgentsSession(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "sess_a91f3", sess.ID)
 	assert.Equal(t, "env_abc123", sess.EnvironmentID)
+	assert.Empty(t, sess.RemoteURL)
 
 	sess, err = parseOpenAIAgentsSession([]byte(`{
 		"session_id": "sess_alt",
-		"environment": {"id": "env_alt"}
+		"environment": {"id": "env_alt", "remote_url": "wss://codex-cloud-environments.chatgpt.com/env_alt"}
 	}`))
 	require.NoError(t, err)
 	assert.Equal(t, "sess_alt", sess.ID)
 	assert.Equal(t, "env_alt", sess.EnvironmentID)
+	assert.Equal(t, "wss://codex-cloud-environments.chatgpt.com/env_alt", sess.RemoteURL)
+
+	sess, err = parseOpenAIAgentsSession([]byte(`{
+		"id": "sess_connect",
+		"environment": {"id": "env_c"},
+		"connect": {"remote_url": "https://api.openai.com/v1/agents/api"}
+	}`))
+	require.NoError(t, err)
+	assert.Equal(t, "sess_connect", sess.ID)
+	assert.Equal(t, "https://api.openai.com/v1/agents/api", sess.RemoteURL)
 }
 
 func TestExtractOpenAICreateBody(t *testing.T) {
@@ -223,7 +238,7 @@ func TestPrepareOpenAISandboxStart_FlatCreatesSession(t *testing.T) {
 	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte(sampleFlatOpenAIManifest))
 	require.NoError(t, err)
 	assert.Equal(t, "sess_flat1", id)
-	assert.Equal(t, map[string]string{"ENV_ID": "env_flat1"}, overlay)
+	assert.Equal(t, map[string]string{"ENV_ID": "env_flat1", "REMOTE_URL": ""}, overlay)
 }
 
 func TestPrepareOpenAISandboxStart_CreatesSession(t *testing.T) {
@@ -241,7 +256,7 @@ func TestPrepareOpenAISandboxStart_CreatesSession(t *testing.T) {
 	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte(sampleOpenAIManifest))
 	require.NoError(t, err)
 	assert.Equal(t, "sess_a91f3", id)
-	assert.Equal(t, map[string]string{"ENV_ID": "env_abc123"}, overlay)
+	assert.Equal(t, map[string]string{"ENV_ID": "env_abc123", "REMOTE_URL": ""}, overlay)
 }
 
 func TestHTTPOpenAIAgentsClient_SendInput(t *testing.T) {
@@ -254,7 +269,8 @@ func TestHTTPOpenAIAgentsClient_SendInput(t *testing.T) {
 		require.True(t, ok)
 		require.Len(t, events, 1)
 		evt := events[0].(map[string]any)
-		assert.Equal(t, "session.input.message", evt["type"])
+		assert.Equal(t, "agents=v1", r.Header.Get("OpenAI-Beta"))
+		assert.Equal(t, openAIAgentsInputEvent, evt["type"])
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	t.Cleanup(srv.Close)
@@ -283,8 +299,9 @@ func TestHTTPOpenAIAgentsClient_CreateSession(t *testing.T) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Equal(t, "/sessions", r.URL.Path)
 		assert.Equal(t, "Bearer sk-test", r.Header.Get("Authorization"))
+		assert.Equal(t, "agents=v1", r.Header.Get("OpenAI-Beta"))
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"id":"sess_http","environment":{"environment_id":"env_http"}}`))
+		_, _ = w.Write([]byte(`{"id":"sess_http","environment":{"id":"env_http","remote_url":"wss://example/remote"}}`))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -293,6 +310,7 @@ func TestHTTPOpenAIAgentsClient_CreateSession(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "sess_http", sess.ID)
 	assert.Equal(t, "env_http", sess.EnvironmentID)
+	assert.Equal(t, "wss://example/remote", sess.RemoteURL)
 }
 
 func TestRunAgentsCreate_OpenAI(t *testing.T) {
@@ -314,7 +332,8 @@ func TestRunAgentsCreate_OpenAI(t *testing.T) {
 				require.NotNil(t, opt)
 				assert.Equal(t, "sess_a91f3", opt.OpenAISessionID)
 				assert.Contains(t, string(manifest), "CODEX_ENVIRONMENT_ID: env_abc123")
-				assert.Contains(t, string(manifest), "CODEX_API_KEY: sk-test-key")
+				assert.Contains(t, string(manifest), "value: sk-test-key")
+				assert.Contains(t, string(manifest), "secrets:")
 				assert.NotContains(t, string(manifest), "${")
 				assert.NotContains(t, string(manifest), "openai:")
 				// Create body lives under runtime.config and is sent to DO.
@@ -373,6 +392,7 @@ func TestRunAgentsCreate_OpenAIFlat(t *testing.T) {
 				assert.Equal(t, "sess_flat1", opt.OpenAISessionID)
 				assert.Contains(t, string(manifest), "CODEX_ENVIRONMENT_ID: env_flat1")
 				assert.Contains(t, string(manifest), "CODEX_API_KEY: sk-test-key")
+				assert.Contains(t, string(manifest), "secrets:")
 				assert.NotContains(t, string(manifest), "${")
 				// The flat manifest carries no envelope and keeps its config
 				// block for DO.
@@ -590,4 +610,80 @@ func TestOpenAIAttachRenderer_ReasoningDoesNotLeakIntoFinalAnswer(t *testing.T) 
 	completedIdx := strings.Index(out, "the actual answer")
 	require.NotEqual(t, -1, completedIdx)
 	assert.NotContains(t, out[completedIdx:], "internal thoughts")
+}
+
+func TestNormalizeOpenAISessionEventType(t *testing.T) {
+	assert.Equal(t, "session.turn.completed", normalizeOpenAISessionEventType("agent.session.turn.completed"))
+	assert.Equal(t, "session.environment.connected", normalizeOpenAISessionEventType("session.environment.connected"))
+	assert.Equal(t, "error", normalizeOpenAISessionEventType("error"))
+}
+
+func TestPrepareOpenAISandboxStart_IncludesRemoteURL(t *testing.T) {
+	t.Setenv(openAIAPIKeyEnv, "sk-test")
+	orig := createOpenAIAgentsSession
+	t.Cleanup(func() { createOpenAIAgentsSession = orig })
+	createOpenAIAgentsSession = func(ctx context.Context, apiKey string, body json.RawMessage) (*openAIAgentsSession, error) {
+		return &openAIAgentsSession{
+			ID:            "sess_r",
+			EnvironmentID: "env_r",
+			RemoteURL:     "wss://codex-cloud-environments.chatgpt.com/env_r",
+		}, nil
+	}
+
+	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte(sampleFlatOpenAIManifest))
+	require.NoError(t, err)
+	assert.Equal(t, "sess_r", id)
+	assert.Equal(t, "env_r", overlay["ENV_ID"])
+	assert.Equal(t, "wss://codex-cloud-environments.chatgpt.com/env_r", overlay["REMOTE_URL"])
+}
+
+func TestHTTPOpenAIAgentsClient_StreamSetsBetaHeader(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/sessions/sess_x/events", r.URL.Path)
+		assert.Equal(t, "true", r.URL.Query().Get("stream"))
+		assert.Equal(t, "agents=v1", r.Header.Get("OpenAI-Beta"))
+		assert.Equal(t, "text/event-stream", r.Header.Get("Accept"))
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"type\":\"agent.session.idle\"}\n\n"))
+	}))
+	t.Cleanup(srv.Close)
+
+	var got string
+	client := &httpOpenAIAgentsClient{httpClient: srv.Client(), baseURL: srv.URL}
+	require.NoError(t, client.Stream(context.Background(), "sk-test", "sess_x", func(evt map[string]any) {
+		got, _ = evt["type"].(string)
+	}))
+	assert.Equal(t, "agent.session.idle", got)
+}
+
+func TestOpenAIAttachRenderer_BetaPrefixedEvents(t *testing.T) {
+	var buf strings.Builder
+	r := &openAIAttachRenderer{out: &buf}
+
+	r.handle(map[string]any{"type": "agent.session.environment.connected"})
+	r.handle(map[string]any{"type": "agent.session.turn.created"})
+	r.handle(map[string]any{"type": "agent.session.turn.output_text.delta", "delta": "hello from beta"})
+	r.handle(map[string]any{
+		"type": "agent.session.turn.completed",
+		"turn": map[string]any{"usage": map[string]any{"input_tokens": float64(3), "output_tokens": float64(2)}},
+	})
+
+	out := buf.String()
+	assert.Contains(t, out, "environment connected")
+	assert.Contains(t, out, "hello from beta")
+	assert.Contains(t, out, "run complete")
+	assert.Contains(t, out, "3 in / 2 out")
+}
+
+func TestOpenAIAttachRenderer_TurnCancelledAndActionRequired(t *testing.T) {
+	var buf strings.Builder
+	r := &openAIAttachRenderer{out: &buf}
+
+	r.handle(map[string]any{"type": "agent.session.action_required"})
+	r.handle(map[string]any{"type": "agent.session.turn.cancelled"})
+
+	out := buf.String()
+	assert.Contains(t, out, "waiting for environment connection")
+	assert.Contains(t, out, "run cancelled")
 }

@@ -25,7 +25,8 @@ import (
 // serverProvidedEnvPlaceholders are ${VAR} names filled by doctl after talking
 // to an upstream API (e.g. OpenAI Agents mint ENV_ID). Never prompt for these.
 var serverProvidedEnvPlaceholders = map[string]bool{
-	"ENV_ID": true,
+	"ENV_ID":     true,
+	"REMOTE_URL": true,
 }
 
 // promptEnvVarValue asks the user for a missing environment variable on an
