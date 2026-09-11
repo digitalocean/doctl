@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -35,9 +37,11 @@ type Command struct {
 
 	childCommands []*Command
 
-	// overrideNS specifies a namespace to use in config.
-	// Set using the overrideCmdNS cmdOption when calling CmdBuilder
+	// overrideNS specifies a namespace to use in config. Set with overrideCmdNS.
 	overrideNS string
+
+	// noDefaultSuccess opts out of the default closing line.
+	noDefaultSuccess bool
 }
 
 // AddCommand adds child commands and adds child commands for cobra as well.
@@ -55,15 +59,51 @@ func (c *Command) ChildCommands() []*Command {
 
 type ValidArgsFunc func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective)
 
-// AddValidArgsFunc sets the function to run for dynamic completions
-// ValidArgsFunc and ValidArgs are mutually exclusive. This function will
-// return an error if ValidArgs is already set.
+// AddValidArgsFunc sets the function to run for dynamic completions. It errors
+// if ValidArgs is already set, since the two are mutually exclusive.
 func (c *Command) AddValidArgsFunc(fn ValidArgsFunc) error {
 	if len(c.Command.ValidArgs) == 0 {
 		c.Command.ValidArgsFunction = fn
 		return nil
 	}
 	return errors.New("unable to add ValidArgsFunction when ValidArgs is already set")
+}
+
+// defaultSuccess closes a command that reports nothing of its own.
+const defaultSuccess = "Command completed successfully"
+
+// owesClosingLine reports whether doctl still has to say how the command went.
+//
+// wrote is whether the command reported anything itself. Only a person is
+// told, and only when nothing else was: the line is chrome rather than a
+// result, so a redirected stderr keeps the silence a script was written
+// against.
+func (c *Command) owesClosingLine(wrote bool, env ui.Env) bool {
+	return !wrote && !reportedOutcome && !c.noDefaultSuccess && env.ErrTTY
+}
+
+// reportedOutcome records that doctl has already said how the command went,
+// through a notice or the line a wait leaves behind. A warning deliberately
+// does not set it: it says something went oddly, not that the command finished,
+// so a command that only warns still owes a closing line.
+var reportedOutcome bool
+
+// reportingWriter notes whether anything reached stdout, which is what tells a
+// command that printed a result from one the user heard nothing from.
+//
+// A waiter writes from the goroutine it polls on, so the flag is atomic.
+type reportingWriter struct {
+	out   io.Writer
+	wrote atomic.Bool
+}
+
+func (w *reportingWriter) Write(p []byte) (int, error) {
+	n, err := w.out.Write(p)
+	if n > 0 {
+		w.wrote.Store(true)
+	}
+
+	return n, err
 }
 
 // CmdBuilder builds a new command.
@@ -88,17 +128,15 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 		co(c)
 	}
 
-	// Aggregated flag validation runs in PreRunE so every missing/invalid
-	// flag is reported together (with purpose/hint metadata) before Cobra's
-	// bare required-flag check and before the command handler executes.
+	// Aggregated so every missing or invalid flag is reported together, before
+	// Cobra's bare required-flag check and before the handler executes.
 	c.Command.PreRunE = func(cmd *cobra.Command, args []string) error {
 		return validateCommandFlags(cmd)
 	}
 
-	// This must be defined after the options have been applied
-	// so that changes made by the options are accessible here.
+	// Defined after the options are applied so their changes are visible here.
 	c.Command.Run = func(cmd *cobra.Command, args []string) {
-		c, err := NewCmdConfig(
+		cfg, err := NewCmdConfig(
 			cmdNS(c),
 			&doctl.LiveConfig{},
 			out,
@@ -107,10 +145,26 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 		)
 		checkErr(err)
 
-		c.Command = cmd
+		// A command writes to stdout through its own writer or through the
+		// shared charm template output, so both are pointed at one reporter
+		// and neither is missed. A command given a writer of its own, as tests
+		// do, gets a reporter of its own.
+		reported := stdoutSink
+		if reported == nil || cfg.Out != io.Writer(Writer) {
+			reported = &reportingWriter{out: cfg.Out}
+		}
+		reported.wrote.Store(false)
 
-		err = cr(c)
+		cfg.Out = reported
+		cfg.Command = cmd
+		reportedOutcome = false
+
+		err = cr(cfg)
 		checkErr(err)
+
+		if c.owesClosingLine(reported.wrote.Load(), uiEnv()) {
+			reportSuccess(defaultSuccess)
+		}
 	}
 
 	if cols := c.fmtCols; cols != nil {

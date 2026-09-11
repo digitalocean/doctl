@@ -100,7 +100,7 @@ func TestDropletCreate(t *testing.T) {
 			UserData:          "#cloud-config",
 			Tags:              []string{"one", "two"},
 		}
-		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Create(dcr).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
 
@@ -146,7 +146,7 @@ func TestDropletCreateWithBackupPolicy(t *testing.T) {
 			BackupPolicy:      &dropletPolicy,
 		}
 
-		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Create(dcr).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
 
@@ -180,7 +180,7 @@ func TestDropletCreateWithTag(t *testing.T) {
 			PrivateNetworking: false,
 			UserData:          "#cloud-config",
 			Tags:              []string{"my-tag"}}
-		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Create(dcr).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
 
@@ -235,7 +235,7 @@ coreos:
 			PrivateNetworking: false,
 			UserData:          userData,
 		}
-		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Create(dcr).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
 
@@ -260,7 +260,7 @@ func TestDropletCreateWithProjectID(t *testing.T) {
 			Image:   godo.DropletCreateImage{ID: 0, Slug: "image"},
 			SSHKeys: []godo.DropletCreateSSHKey{},
 		}
-		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Create(dcr).Return(&testDroplet, nil)
 		tm.projects.EXPECT().Get(projectUUID).Return(&testProject, nil)
 		tm.projects.EXPECT().
 			AssignResources(projectUUID, []string{testDroplet.URN()}).
@@ -649,7 +649,7 @@ func TestDropletCreateWithAgent(t *testing.T) {
 					dcr.WithDropletAgent = tt.agent
 				}
 
-				tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+				tm.droplets.EXPECT().Create(dcr).Return(&testDroplet, nil)
 
 				config.Args = append(config.Args, "droplet")
 				config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
@@ -702,7 +702,7 @@ func TestDropletCreateWithPublicNetworking(t *testing.T) {
 					PublicNetworking:  tt.publicNetworking,
 				}
 
-				tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+				tm.droplets.EXPECT().Create(dcr).Return(&testDroplet, nil)
 
 				config.Args = append(config.Args, "droplet")
 				config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")

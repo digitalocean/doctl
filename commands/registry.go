@@ -476,7 +476,7 @@ func RunRegistryLogin(c *CmdConfig) error {
 		regCredReq.ExpirySeconds = nil
 	}
 
-	fmt.Printf("Logging Docker in to %s\n", c.Registry().Endpoint())
+	fmt.Fprintf(c.Out, "Logging Docker in to %s\n", c.Registry().Endpoint())
 	creds, err := c.Registry().DockerCredentials(&regCredReq)
 	if err != nil {
 		return err
@@ -630,7 +630,7 @@ func RunRegistryLogout(c *CmdConfig) error {
 	}
 
 	server := c.Registry().Endpoint()
-	fmt.Printf("Removing login credentials for %s\n", server)
+	fmt.Fprintf(c.Out, "Removing login credentials for %s\n", server)
 
 	cf := dockerconf.LoadDefaultConfigFile(os.Stderr)
 	dockerCreds := cf.GetCredentialsStore(server)
@@ -1379,7 +1379,7 @@ func RunRegistriesLogin(c *CmdConfig) error {
 		return err
 	}
 
-	fmt.Printf("Logging Docker in to %s\n", reg.Endpoint())
+	fmt.Fprintf(c.Out, "Logging Docker in to %s\n", reg.Endpoint())
 	creds, err := c.Registries().DockerCredentials(registryName, &regCredReq)
 	if err != nil {
 		return err
@@ -1455,7 +1455,7 @@ func RunRegistriesLogout(c *CmdConfig) error {
 	}
 
 	server := reg.Endpoint()
-	fmt.Printf("Removing login credentials for %s\n", server)
+	fmt.Fprintf(c.Out, "Removing login credentials for %s\n", server)
 
 	// Use the base hostname for credential lookup (same as single registry)
 	// Docker credentials are stored under registry.digitalocean.com, not registry.digitalocean.com/registry-name

@@ -75,10 +75,10 @@ var _ = suite("compute/image/create", func(t *testing.T, when spec.G, it spec.S)
 		}
 
 		var cases = []struct {
-			desc   string
-			err    string
-			flags  []string
-			args   []string
+			desc  string
+			err   string
+			flags []string
+			args  []string
 		}{
 			{
 				desc:  "missing all",

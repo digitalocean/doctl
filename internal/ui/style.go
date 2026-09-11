@@ -19,20 +19,24 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Next-Gen terminal palette from doctl-nextgen-design.html (Kraken tokens).
-// commands/charm/colors.go should mirror these so error/success chrome shares
-// one source of truth across interactive and CLI error paths.
-var (
-	ColorError   = lipgloss.Color("#d74623") // primary-terracotta
-	ColorSuccess = lipgloss.Color("#00c483") // primary-green-200
-	ColorWarning = lipgloss.Color("#daa549") // tentacle-500
-	ColorInfo    = lipgloss.Color("#6FE0ED") // foam-200
-	ColorMuted   = lipgloss.Color("#8090a0") // secondary / dim
+// The semantic palette, and the one definition of doctl's colors. They are
+// the colors doctl's interactive surfaces already use, so that a table, a
+// prompt and an error all name the same state the same way. termenv
+// downsamples them for terminals that cannot show truecolor.
+const (
+	// ColorError is the red a failure is named in.
+	ColorError lipgloss.Color = "#ff6188"
+	// ColorSuccess is the green of a resource that reached its desired state.
+	ColorSuccess lipgloss.Color = "#04b575"
+	// ColorWarning is the yellow that reads as attention without alarm.
+	ColorWarning lipgloss.Color = "#ffd866"
+	// ColorInfo is the blue that names a resource.
+	ColorInfo lipgloss.Color = "#2ea0f9"
+	// ColorMuted is xterm 241, dim enough to recede behind a value.
+	ColorMuted lipgloss.Color = "241"
 )
 
-// Style is a presentation helper bound to an Env. Build chrome (errors,
-// notices) through Style so colour/glyph policy stays consistent with the
-// rest of doctl.
+// Style is a presentation helper bound to an Env, for chrome written to Err.
 type Style struct {
 	env Env
 }
@@ -42,20 +46,26 @@ func NewStyle(env Env) Style {
 	return Style{env: env}
 }
 
-func (s Style) paint(text string, c lipgloss.Color, bold bool) string {
-	st := s.env.NewErrStyle().Foreground(c)
+func (s Style) paint(text string, c lipgloss.TerminalColor, bold bool) string {
+	style := s.env.NewErrStyle().Foreground(c)
 	if bold {
-		st = st.Bold(true)
+		style = style.Bold(true)
 	}
-	return s.env.SprintErr(st, text)
+
+	return s.env.SprintErr(style, text)
 }
 
-// ErrorLabel returns the leading failure glyph plus "Error:" (ASCII-safe via Glyphs).
+// ErrorLabel returns the failure label, led by its glyph on a terminal.
 func (s Style) ErrorLabel() string {
-	return s.paint(s.env.Glyphs().Failure+" Error:", ColorError, true)
+	label := "Error:"
+	if s.env.ErrTTY {
+		label = s.env.Glyphs().Failure + " " + label
+	}
+
+	return s.paint(label, ColorError, true)
 }
 
-// Bold emphasises flag names and command paths when Err styling is on.
+// Bold emphasizes flag names and command paths when Err styling is on.
 func (s Style) Bold(text string) string {
 	if !s.env.ErrStyle {
 		return text
@@ -68,14 +78,31 @@ func (s Style) Dim(text string) string {
 	return s.paint(text, ColorMuted, false)
 }
 
-// PaintCommand dims the "→ run " / "run " prefix and bolds the command path.
+// SuccessLine reports that a command finished, glyph and message painted
+// together so that completion reads as one mark rather than a labelled
+// diagnostic. The glyph leads only on a terminal, as ErrorLabel's does.
+func (s Style) SuccessLine(msg string) string {
+	if s.env.ErrTTY {
+		msg = s.env.Glyphs().Success + " " + msg
+	}
+
+	return s.paint(msg, ColorSuccess, false)
+}
+
+// Hint renders the suggestion that follows a diagnostic, led by its arrow.
+func (s Style) Hint(text string) string {
+	return s.PaintCommand(s.env.Glyphs().Hint + " " + text)
+}
+
+// PaintCommand dims the lead-in of a suggestion and bolds the command path, so
+// that the part worth copying stands out from the sentence around it.
 func (s Style) PaintCommand(line string) string {
-	lower := strings.ToLower(line)
-	for _, prefix := range []string{"run ", "→ run ", "> run "} {
-		if strings.HasPrefix(lower, prefix) {
+	for _, prefix := range []string{s.env.Glyphs().Hint + " run ", "run "} {
+		if len(line) >= len(prefix) && strings.EqualFold(line[:len(prefix)], prefix) {
 			cmd := strings.TrimSpace(line[len(prefix):])
 			return s.Dim(line[:len(prefix)]) + s.Bold(cmd)
 		}
 	}
+
 	return s.Dim(line)
 }

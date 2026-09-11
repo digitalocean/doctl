@@ -1789,7 +1789,7 @@ func (n *nilCluster) Get(clusterID string) (*do.KubernetesCluster, error) {
 }
 
 func Test_waitForClusterRunningDoesntPanicWithNilGet(t *testing.T) {
-	cluster, err := waitForClusterRunning(&nilCluster{}, "123")
+	cluster, err := waitForClusterRunning(newTestWaiter(), &nilCluster{}, "123")
 	require.Nil(t, cluster)
 	require.EqualError(t, err, "can't find 123")
 }

@@ -98,7 +98,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			expect.NotZero(count)
 
 			expect.Contains(buf.String(), "Validating token...")
-			expect.Contains(buf.String(), "✔")
+			expect.Contains(buf.String(), "✓")
 
 			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
@@ -189,7 +189,7 @@ context: default
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token...")
-			expect.Contains(buf.String(), "✔")
+			expect.Contains(buf.String(), "✓")
 
 			location, err := getDefaultConfigLocation()
 			expect.NoError(err)
@@ -239,7 +239,7 @@ context: default
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token...")
-			expect.Contains(buf.String(), "✘")
+			expect.Contains(buf.String(), "✗")
 			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v1/oauth/token/info: 401", server.URL))
 		})
 	})

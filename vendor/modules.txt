@@ -373,9 +373,6 @@ github.com/sahilm/fuzzy
 ## explicit
 github.com/sclevine/spec
 github.com/sclevine/spec/report
-# github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
-## explicit
-github.com/shiena/ansicolor
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus

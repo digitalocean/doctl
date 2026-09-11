@@ -23,7 +23,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sclevine/spec v1.3.0
-	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.11.0
@@ -46,6 +45,7 @@ require (
 	github.com/charmbracelet/bubbles v0.13.1-0.20220731172002-8f6516082803
 	github.com/charmbracelet/bubbletea v0.22.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
+	github.com/charmbracelet/x/ansi v0.8.0
 	github.com/coreos/go-oidc v2.5.0+incompatible
 	github.com/erikgeiser/promptkit v0.7.1-0.20220721185625-1f33bc73d091
 	github.com/joho/godotenv v1.4.0
@@ -53,6 +53,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.16.0
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
+	github.com/spf13/pflag v1.0.5
 	go.uber.org/mock v0.2.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/term v0.30.0
@@ -66,7 +67,6 @@ require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
-	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21 // indirect
@@ -123,7 +123,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect

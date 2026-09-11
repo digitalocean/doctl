@@ -13,45 +13,85 @@ limitations under the License.
 
 package ui
 
+// Glyph characters are the one definition of doctl's symbol vocabulary, in the
+// same way that style.go owns the palette.
+const (
+	GlyphSuccess   = "✓"
+	GlyphFailure   = "✗"
+	GlyphWarning   = "!"
+	GlyphInfo      = "i"
+	GlyphCancelled = "·"
+	GlyphPending   = "⟳"
+	GlyphBullet    = "•"
+	GlyphArrow     = "❯"
+	GlyphHint      = "→"
+	GlyphEllipsis  = "…"
+	GlyphSeparator = "·"
+	GlyphNone      = "—"
+
+	// GlyphAsterisk marks a required field on a prompt. It is decoration rather
+	// than state, which is why it is not part of Glyphs.
+	GlyphAsterisk = "✱"
+)
+
 // Glyphs is the symbol vocabulary used to convey state. It exists so that
-// meaning survives when colour does not: a status rendered as a glyph plus a
-// word still reads correctly when piped, when NO_COLOR is set, or on a
-// terminal that cannot render the palette.
+// meaning survives when color does not, as when output is piped.
 type Glyphs struct {
-	Success  string
-	Failure  string
-	Warning  string
-	Pending  string
-	Bullet   string
-	Arrow    string
-	Ellipsis string
+	Success   string
+	Failure   string
+	Warning   string
+	Info      string
+	Cancelled string
+	Pending   string
+	Bullet    string
+	Arrow     string
+	Ellipsis  string
+
+	// Hint leads the suggestion that follows a diagnostic, pointing at what to
+	// do about it. It is a different arrow from Arrow, which prefixes prompts.
+	Hint string
+
+	// Separator and None carry no state, but both need an ASCII fallback.
+	Separator string
+	None      string
 
 	// Spinner holds the animation frames, which must all be the same display
-	// width or the line will jitter as it cycles.
+	// width or the line jitters as it cycles.
 	Spinner []string
 }
 
+// Several glyphs are already ASCII and therefore need no fallback.
 var (
 	unicodeGlyphs = Glyphs{
-		Success:  "✔",
-		Failure:  "✘",
-		Warning:  "✱",
-		Pending:  "◌",
-		Bullet:   "●",
-		Arrow:    "❯",
-		Ellipsis: "…",
-		Spinner:  []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+		Success:   GlyphSuccess,
+		Failure:   GlyphFailure,
+		Warning:   GlyphWarning,
+		Info:      GlyphInfo,
+		Cancelled: GlyphCancelled,
+		Pending:   GlyphPending,
+		Bullet:    GlyphBullet,
+		Arrow:     GlyphArrow,
+		Hint:      GlyphHint,
+		Ellipsis:  GlyphEllipsis,
+		Separator: GlyphSeparator,
+		None:      GlyphNone,
+		Spinner:   []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
 	}
 
 	asciiGlyphs = Glyphs{
-		Success:  "+",
-		Failure:  "x",
-		Warning:  "!",
-		Pending:  "o",
-		Bullet:   "*",
-		Arrow:    ">",
-		Ellipsis: "...",
-		Spinner:  []string{"|", "/", "-", "\\"},
+		Success:   "OK",
+		Failure:   "X",
+		Warning:   GlyphWarning,
+		Info:      GlyphInfo,
+		Cancelled: "-",
+		Pending:   "o",
+		Bullet:    "*",
+		Arrow:     ">",
+		Hint:      "->",
+		Ellipsis:  "...",
+		Separator: "|",
+		None:      "-",
+		Spinner:   []string{"-", "\\", "|", "/"},
 	}
 )
 
