@@ -360,6 +360,8 @@ To set a new default context, run `doctl auth switch --context <new-context-name
 
 The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` [environment variable](#environment-variables) are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
 
+When the `default` context is used, the flag and the environment variable take precedence over the token saved in your configuration file, and they apply only to the command you run: `doctl` does not write them to the file. The exception is `doctl auth init`, which saves the token it validates whatever its source, because saving a token is what that command is for. Run `doctl` with no arguments to see which account is active and whether its token came from your configuration file or from the environment.
+
 ## Configuring Default Values
 
 The `doctl` configuration file is used to store your API Access Token as well as the defaults for command flags. If you find yourself using certain flags frequently, you can change their default values to avoid typing them every time. This can be useful when, for example, you want to change the username or port used for SSH.
@@ -368,9 +370,11 @@ On OS X, `doctl` saves its configuration as `${HOME}/Library/Application Support
 
 On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%APPDATA%\doctl\config.yaml`.
 
-The configuration file is automatically created and populated with default properties when you authenticate with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
+The configuration file is created when you authenticate with `doctl` for the first time. It holds your credentials plus any flag defaults you choose to set. `doctl` only writes the settings you ask it to save, so you set a default by adding the property yourself. The format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
 
-To change the default SSH user used when connecting to a Droplet with `doctl`, look for the `compute.ssh.ssh-user` property and change the value after the colon. In this example, we changed it to the username **sammy**.
+Configuration files written by older versions of `doctl` contain a large block of pre-populated properties. Those are still honored, and `doctl` leaves them alone; you can delete any you have not deliberately changed.
+
+To change the default SSH user used when connecting to a Droplet with `doctl`, add the `compute.ssh.ssh-user` property with the username you want. In this example, we set it to **sammy**.
 
 ```
 . . .
@@ -392,6 +396,35 @@ DIGITALOCEAN_CONTEXT=my-context doctl auth list
 ```
 # Use instead of --access-token argument
 DIGITALOCEAN_ACCESS_TOKEN=my-do-token doctl
+```
+
+These affect only the session, and `doctl` never writes them to `config.yaml`. `doctl auth init` is the exception: it saves the token it validates, so running it with `DIGITALOCEAN_ACCESS_TOKEN` set replaces the token stored for the `default` context with the one from your environment.
+
+Running `doctl` with no arguments prints a short summary of your version and
+authentication state, and tells you when a newer release is available:
+
+```
+Welcome to DigitalOcean
+doctl is the command line interface for the DigitalOcean API.
+
+  Version   1.146.0
+  Account   ✔ sammy@example.com
+  Team      Sharks
+  Context   default
+```
+
+The account line reflects what the API says about the token for your current
+context, so it distinguishes a working token from one that has been revoked. If
+the API cannot be reached, the token is reported as unverified rather than
+rejected. `Team` is shown when the token is scoped to a team, since the same
+login can belong to several.
+
+The release check contacts GitHub at most once a day and is skipped
+automatically in CI. Until you have authenticated, `doctl` makes no network
+requests at all. To turn the check off entirely:
+
+```
+DOCTL_NO_UPDATE_CHECK=1 doctl
 ```
 
 ## Enabling Shell Auto-Completion
