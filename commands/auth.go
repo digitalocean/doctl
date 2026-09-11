@@ -30,7 +30,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -195,7 +194,18 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		template.Render(c.Out, `{{success checkmark}}{{nl}}{{nl}}`, nil)
 
-		return writeConfig()
+		cfg, err := loadConfigFile()
+		if err != nil {
+			return err
+		}
+
+		// Saving a token is the whole job of init, so it saves the one it just
+		// validated whatever its source: the prompt, --access-token, or
+		// DIGITALOCEAN_ACCESS_TOKEN. The latter two only ever reach the
+		// default context. Every other command leaves the credentials alone.
+		cfg.setToken(context, token)
+
+		return cfg.write()
 	}
 }
 
@@ -207,15 +217,18 @@ func RunAuthRemove(c *CmdConfig) error {
 		return fmt.Errorf("You must provide a context name")
 	}
 
-	err := c.removeContext(context)
-
+	cfg, err := loadConfigFile()
 	if err != nil {
-		return fmt.Errorf("Context not found")
+		return err
+	}
+
+	if err := cfg.removeContext(context); err != nil {
+		return err
 	}
 
 	notice("Context deleted successfully")
 
-	return writeConfig()
+	return cfg.write()
 }
 
 // RunAuthList lists all available auth contexts from the user's doctl config.
@@ -331,24 +344,20 @@ func RunAuthSwitch(c *CmdConfig) error {
 }
 
 func writeConfig() error {
-	f, err := cfgFileWriter()
+	cfg, err := loadConfigFile()
 	if err != nil {
 		return err
 	}
 
-	defer f.Close()
-
-	b, err := yaml.Marshal(viper.AllSettings())
-	if err != nil {
-		return errors.New("Unable to encode configuration to YAML format.")
+	if !cfg.hasContext(context) {
+		return errors.New("context does not exist")
 	}
 
-	_, err = f.Write(b)
-	if err != nil {
-		return errors.New("Unable to write configuration.")
-	}
+	cfg.setCurrentContext(context)
 
-	return nil
+	fmt.Printf("Now using context [%s] by default\n", context)
+
+	return cfg.write()
 }
 
 // defaultConfigFileWriter returns a writer to a newly created config.yaml file in the default config home.

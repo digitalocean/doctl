@@ -368,9 +368,11 @@ On OS X, `doctl` saves its configuration as `${HOME}/Library/Application Support
 
 On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%APPDATA%\doctl\config.yaml`.
 
-The configuration file is automatically created and populated with default properties when you authenticate with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
+The configuration file is created when you authenticate with `doctl` for the first time. It holds your credentials plus any flag defaults you choose to set. `doctl` only writes the settings you ask it to save, so you set a default by adding the property yourself. The format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
 
-To change the default SSH user used when connecting to a Droplet with `doctl`, look for the `compute.ssh.ssh-user` property and change the value after the colon. In this example, we changed it to the username **sammy**.
+Configuration files written by older versions of `doctl` contain a large block of pre-populated properties. Those are still honored, and `doctl` leaves them alone; you can delete any you have not deliberately changed.
+
+To change the default SSH user used when connecting to a Droplet with `doctl`, add the `compute.ssh.ssh-user` property with the username you want. In this example, we set it to **sammy**.
 
 ```
 . . .
