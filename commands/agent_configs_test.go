@@ -87,9 +87,9 @@ func TestAgentConfigCreate_SecretInjectedFromFlag(t *testing.T) {
 	})
 }
 
-// A --harness claude-code --dry-run manifest keeps ${ANTHROPIC_API_KEY} in env.
-// --secret must satisfy that reference on config create; requiring the env var
-// made NAME=- look documented-but-broken.
+// A claude-code manifest may still put ${ANTHROPIC_API_KEY} under env; --secret
+// must satisfy that reference on config create. Requiring the env var made
+// NAME=- look documented-but-broken.
 func TestAgentConfigCreate_SecretSatisfiesClaudeEnvRef(t *testing.T) {
 	_ = os.Unsetenv(anthropicAPIKeyEnv)
 	prevInteractive := Interactive

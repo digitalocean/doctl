@@ -435,10 +435,10 @@ func TestRedactedSecretIsRejectedInsteadOfStored(t *testing.T) {
 	})
 }
 
-// --harness claude-code asks for its key as an env reference rather than a
-// secret slot, and --secret fills slots. So the key must be present locally to
-// create for real; --dry-run instead leaves the reference standing and says so,
-// which is what lets the manifest be generated on a machine that has no key.
+// --harness claude-code declares ANTHROPIC_API_KEY as a secret slot. Creating
+// for real needs the key locally (or via --secret); --dry-run still prints a
+// usable template with the slot redacted so a machine without the key can pipe
+// it into config create --secret ANTHROPIC_API_KEY=@path.
 func TestRunAgentsCreate_DryRunLeavesUnsetEnvAsPlaceholder(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		var buf bytes.Buffer
@@ -447,8 +447,12 @@ func TestRunAgentsCreate_DryRunLeavesUnsetEnvAsPlaceholder(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
 
 		require.NoError(t, RunAgentsCreate(config))
-		assert.Contains(t, buf.String(), "${ANTHROPIC_API_KEY}",
-			"an unset reference stays a placeholder so the template can still be produced")
+		out := buf.String()
+		assert.Contains(t, out, "ANTHROPIC_API_KEY",
+			"the secret slot stays visible so the template can still be produced")
+		assert.Contains(t, out, redactedSecretValue,
+			"an unset secret is redacted rather than echoed as a ${VAR} placeholder")
+		assert.NotContains(t, out, "env:")
 	})
 }
 

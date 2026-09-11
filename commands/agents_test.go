@@ -601,9 +601,11 @@ func TestRunAgentsCreate_FromHarness(t *testing.T) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				assert.Equal(t, "claude-code", doc["agent"])
-				env, ok := doc["env"].(map[any]any)
+				_, hasEnv := doc["env"]
+				assert.False(t, hasEnv)
+				secrets, ok := doc["secrets"].(map[any]any)
 				assert.True(t, ok)
-				assert.Equal(t, "sk-ant-test", env["ANTHROPIC_API_KEY"])
+				assert.Equal(t, "sk-ant-test", secrets["ANTHROPIC_API_KEY"])
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID: "sess_harness",
