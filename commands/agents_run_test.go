@@ -772,6 +772,10 @@ func TestRunAgentsCreate_FromConfig(t *testing.T) {
 		assert.Contains(t, got, "Agent is ready")
 		assert.Contains(t, got, "cfg_abc123", "the implicit/source config must be visible on the ready card")
 		assert.Contains(t, got, "doctl harness-runtime launch demo")
+		assert.NotContains(t, got, autoCreatedConfigNotice,
+			"--from-config must not claim a new Agent Config was created")
+		assert.NotContains(t, got, "create --from-config cfg_abc123 --name <session>",
+			"--from-config ready card should not advertise reuse of a just-created config")
 	})
 }
 
@@ -813,6 +817,7 @@ func TestPrintRunReadySummary_ShowsPerPhaseTiming(t *testing.T) {
 			Ready:  24 * time.Second,
 			Prompt: time.Second,
 		},
+		AutoCreatedConfig: true,
 	})
 	got := buf.String()
 	assert.Contains(t, got, "Timing")
@@ -820,4 +825,61 @@ func TestPrintRunReadySummary_ShowsPerPhaseTiming(t *testing.T) {
 	assert.Contains(t, got, "24s")
 	assert.Contains(t, got, "26s")
 	assert.Contains(t, got, "cfg_from_spec")
+	assert.Contains(t, got, autoCreatedConfigNotice)
+	assert.Contains(t, got, "doctl harness-runtime create --from-config cfg_from_spec --name <session>")
+}
+
+func TestPrintRunReadySummary_AutoCreatedConfigNotice(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	t.Run("shows notice and reuse step when config was auto-created", func(t *testing.T) {
+		var buf bytes.Buffer
+		printRunReadySummary(&buf, runReadySummary{
+			Session: &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				ConfigID:  "cfg_auto",
+			}},
+			AutoCreatedConfig: true,
+		})
+		got := buf.String()
+		assert.Contains(t, got, autoCreatedConfigNotice)
+		assert.Contains(t, got, "reuse")
+		assert.Contains(t, got, "create --from-config cfg_auto --name <session>")
+	})
+
+	t.Run("omits notice when session came from an existing config", func(t *testing.T) {
+		var buf bytes.Buffer
+		printRunReadySummary(&buf, runReadySummary{
+			Session: &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				ConfigID:  "cfg_existing",
+			}},
+			AutoCreatedConfig: false,
+		})
+		got := buf.String()
+		assert.Contains(t, got, "cfg_existing", "Config ID still shown as identity")
+		assert.NotContains(t, got, autoCreatedConfigNotice)
+		assert.NotContains(t, got, "reuse")
+	})
+}
+
+func TestReadySummaryFor_AutoCreatedConfig(t *testing.T) {
+	sess := &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+		Name:     "demo",
+		ConfigID: "cfg_new",
+	}}
+
+	fromHarness := readySummaryFor(&agentCreationSource{harness: "opencode"}, sess)
+	assert.True(t, fromHarness.AutoCreatedConfig)
+
+	fromConfig := readySummaryFor(&agentCreationSource{configID: "cfg_existing"}, sess)
+	assert.False(t, fromConfig.AutoCreatedConfig)
+
+	noConfig := readySummaryFor(&agentCreationSource{harness: "opencode"},
+		&do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{Name: "demo"}})
+	assert.False(t, noConfig.AutoCreatedConfig)
 }

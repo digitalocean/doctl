@@ -261,6 +261,7 @@ func TestCreateNeverAttaches(t *testing.T) {
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_no_attach",
 					Name:      "demo",
+					ConfigID:  "cfg_auto_demo",
 					Status:    godo.HostedAgentSessionStatusReady,
 				},
 			}, nil)
@@ -272,6 +273,7 @@ func TestCreateNeverAttaches(t *testing.T) {
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_no_attach",
 					Name:      "demo",
+					ConfigID:  "cfg_auto_demo",
 					Status:    godo.HostedAgentSessionStatusReady,
 				},
 			}, nil).
@@ -286,6 +288,9 @@ func TestCreateNeverAttaches(t *testing.T) {
 		assert.Contains(t, out, "Agent is ready")
 		assert.Contains(t, out, "doctl harness-runtime launch demo",
 			"the ready card should point at launch, the command that attaches")
+		assert.Contains(t, out, autoCreatedConfigNotice,
+			"one-shot create should explain the auto-persisted Agent Config")
+		assert.Contains(t, out, "create --from-config cfg_auto_demo --name <session>")
 	})
 }
 

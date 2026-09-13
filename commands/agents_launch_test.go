@@ -175,6 +175,43 @@ func TestRunAgentsLaunch_CreationFlagWinsOverFilesystem(t *testing.T) {
 	})
 }
 
+// One-shot launch (manifest / --harness) persists an Agent Config; tell the
+// user before the TUI attaches so the Cloud UI "Agent" isn't a surprise.
+func TestRunAgentsLaunch_PrintsAutoCreatedConfigNotice(t *testing.T) {
+	stubInteractiveTerminal(t, true)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		ready := &do.HostedAgentSession{
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_launch",
+				Name:      "demo",
+				ConfigID:  "cfg_launch_auto",
+				Status:    godo.HostedAgentSessionStatusReady,
+				AgentKind: godo.HostedAgentKindOpenCode,
+			},
+		}
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			Return(ready, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_launch").
+			Return(ready, nil)
+		// Attach re-fetches the session; fail there so we can assert on stdout
+		// without driving the full TUI.
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_launch").
+			Return(nil, assertCalledErr)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+
+		err := RunAgentsLaunch(config)
+		require.ErrorIs(t, err, assertCalledErr)
+		assert.Contains(t, buf.String(), autoCreatedConfigNotice)
+	})
+}
+
 // --- launch's resume-if-paused ----------------------------------------------
 
 func TestRunAgentsLaunch_ResumesPausedSession(t *testing.T) {
