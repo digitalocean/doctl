@@ -114,8 +114,7 @@ func manifestSecretValues(manifest []byte) map[string]string {
 
 	out := map[string]string{}
 	if isYAMLMapping(raw) {
-		shorthand, _ := yamlStringMap(raw)
-		for name, value := range shorthand {
+		for name, value := range secretMappingSlotValues(raw) {
 			if v := strings.TrimSpace(value); v != "" && v != redactedSecretValue {
 				out[name] = v
 			}
@@ -137,6 +136,41 @@ func manifestSecretValues(manifest []byte) map[string]string {
 		out[name] = value
 	}
 	return out
+}
+
+// secretMappingSlotValues reads map-form secrets. A nested object must yield
+// its `value` field; fmt.Sprint of the map used to overlay garbage and block
+// ${VAR} expansion.
+func secretMappingSlotValues(raw any) map[string]string {
+	m, ok := yamlMap(raw)
+	if !ok {
+		return nil
+	}
+	out := make(map[string]string, len(m))
+	for name, slot := range m {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if value, ok := secretSlotValueString(slot); ok {
+			out[name] = value
+		}
+	}
+	return out
+}
+
+// secretSlotValueString returns the credential string from a map-form secret
+// entry: a bare string, or the `value` field of a nested object.
+func secretSlotValueString(slot any) (string, bool) {
+	if s, ok := yamlString(slot); ok {
+		return s, true
+	}
+	if obj, ok := yamlMap(slot); ok {
+		if s, ok := yamlString(obj["value"]); ok {
+			return s, true
+		}
+	}
+	return "", false
 }
 
 func resolvedManifestSecretValues(manifest []byte) map[string]string {
@@ -276,16 +310,31 @@ func injectManifestSecrets(manifest []byte, secrets map[string]string) ([]byte, 
 }
 
 // mergeSecretSlots folds secrets into whatever shape the manifest already
-// uses. The map shorthand (`secrets: {NAME: value}`) is preserved when present
-// so we don't rewrite a user's file into a different style; everything else
-// becomes the canonical list of {name, source, value} slots.
+// uses. The map form (`secrets: {NAME: value}` or `NAME: {value, url}`) is
+// preserved when present so we don't rewrite a user's file into a different
+// style; everything else becomes the canonical list of {name, source, value}
+// slots.
 func mergeSecretSlots(existing any, secrets map[string]string) (any, error) {
-	if shorthand, ok := yamlStringMap(existing); ok && existing != nil {
-		out := make(map[string]any, len(shorthand)+len(secrets))
-		for name, value := range shorthand {
-			out[name] = value
+	if existing != nil && isYAMLMapping(existing) {
+		m, ok := yamlMap(existing)
+		if !ok {
+			return nil, fmt.Errorf("manifest secrets must be a list of slots or a name/value mapping to apply --%s", doctl.ArgAgentSecret)
+		}
+		out := make(map[string]any, len(m)+len(secrets))
+		for name, slot := range m {
+			out[name] = slot
 		}
 		for name, value := range secrets {
+			if slot, ok := yamlMap(out[name]); ok {
+				// Keep sibling fields (e.g. url) and only fill value.
+				cp := make(map[string]any, len(slot)+1)
+				for k, v := range slot {
+					cp[k] = v
+				}
+				cp["value"] = value
+				out[name] = cp
+				continue
+			}
 			out[name] = value
 		}
 		return out, nil
@@ -370,9 +419,23 @@ func redactManifestSecrets(manifest []byte) []byte {
 
 	switch {
 	case isYAMLMapping(raw):
-		shorthand, _ := yamlStringMap(raw)
-		out := make(map[string]any, len(shorthand))
-		for name := range shorthand {
+		m, ok := yamlMap(raw)
+		if !ok {
+			return manifest
+		}
+		out := make(map[string]any, len(m))
+		for name, slot := range m {
+			if obj, ok := yamlMap(slot); ok {
+				cp := make(map[string]any, len(obj))
+				for k, v := range obj {
+					cp[k] = v
+				}
+				if _, hasValue := cp["value"]; hasValue {
+					cp["value"] = redactedSecretValue
+				}
+				out[name] = cp
+				continue
+			}
 			out[name] = redactedSecretValue
 		}
 		container["secrets"] = out
@@ -438,8 +501,7 @@ func errRedactedSecretNames(manifest []byte) []string {
 
 	var names []string
 	if isYAMLMapping(raw) {
-		shorthand, _ := yamlStringMap(raw)
-		for name, value := range shorthand {
+		for name, value := range secretMappingSlotValues(raw) {
 			if value == redactedSecretValue {
 				names = append(names, name)
 			}
