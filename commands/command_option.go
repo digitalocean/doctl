@@ -52,3 +52,12 @@ func overrideCmdNS(ns string) cmdOption {
 		c.overrideNS = ns
 	}
 }
+
+// WithOverrideNS is a cmdOption that sets the overrideNS for the command.
+// This should be used when the overrideNS needs to be set before the command
+// is fully built, such as when flags need to be registered with the correct namespace.
+func WithOverrideNS(ns string) cmdOption {
+	return func(c *Command) {
+		c.overrideNS = ns
+	}
+}
