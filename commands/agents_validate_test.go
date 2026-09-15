@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -288,6 +289,31 @@ skills:
     description: ok
     instructions: "Test"
 `
+	v := validateAgentManifest([]byte(manifest))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+}
+
+func TestValidateAgentManifest_SkillInstructionsTooLarge(t *testing.T) {
+	manifest := fmt.Sprintf("agent: opencode\nskills:\n  - name: release-checklist\n    description: ok\n    instructions: %q\n",
+		strings.Repeat("a", maxSkillInstructionsBytes+1))
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "skills[0].instructions")
+	assert.Contains(t, v.Errors[0], fmt.Sprintf("%d-byte limit", maxSkillInstructionsBytes))
+}
+
+func TestValidateAgentManifest_SkillDescriptionTooLarge(t *testing.T) {
+	manifest := fmt.Sprintf("agent: opencode\nskills:\n  - name: release-checklist\n    description: %q\n    instructions: test\n",
+		strings.Repeat("a", maxSkillDescriptionBytes+1))
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "skills[0].description")
+	assert.Contains(t, v.Errors[0], fmt.Sprintf("%d-byte limit", maxSkillDescriptionBytes))
+}
+
+func TestValidateAgentManifest_SkillInstructionsAtLimitIsValid(t *testing.T) {
+	manifest := fmt.Sprintf("agent: opencode\nskills:\n  - name: release-checklist\n    description: ok\n    instructions: %q\n",
+		strings.Repeat("a", maxSkillInstructionsBytes))
 	v := validateAgentManifest([]byte(manifest))
 	assert.True(t, v.ok(), "errors=%v", v.Errors)
 }

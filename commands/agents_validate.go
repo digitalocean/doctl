@@ -114,6 +114,17 @@ var validPermissionDefaults = map[string]struct{}{
 // lowercase alphanumeric segments separated by single hyphens.
 var skillNameRE = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
+// maxSkillDescriptionBytes and maxSkillInstructionsBytes mirror harness-api
+// agentspec's maxDescriptionLen / maxSkillInstructionsLen (MARSOHS-1350):
+// checked here too so an oversized skill fails fast, locally, with a clear
+// field path instead of a generic API 400 buried in an HTTP status line.
+// len() is already a byte count for a Go string, matching the server's
+// byte-based check exactly (no UTF-8 encoding step needed).
+const (
+	maxSkillDescriptionBytes  = 1024
+	maxSkillInstructionsBytes = 32 * 1024
+)
+
 // agentManifestValidation is the result of client-side agents.yaml checks.
 type agentManifestValidation struct {
 	Errors   []string
@@ -418,6 +429,12 @@ func validateManifestSkills(raw any, path string, out *agentManifestValidation) 
 		}
 		if !skillNameRE.MatchString(name) {
 			out.Errors = append(out.Errors, fmt.Sprintf(`%s.name: %q must match ^[a-z0-9]+(-[a-z0-9]+)*$`, itemPath, name))
+		}
+		if description, ok := yamlString(m["description"]); ok && len(description) > maxSkillDescriptionBytes {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.description: %d bytes, exceeds the %d-byte limit", itemPath, len(description), maxSkillDescriptionBytes))
+		}
+		if instructions, ok := yamlString(m["instructions"]); ok && len(instructions) > maxSkillInstructionsBytes {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.instructions: %d bytes, exceeds the %d-byte limit", itemPath, len(instructions), maxSkillInstructionsBytes))
 		}
 	}
 }
