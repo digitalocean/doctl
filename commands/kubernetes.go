@@ -326,6 +326,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --enable-routing-agent=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnablePeerToPeerOciRegistryPlugin, "", false,
 		"Creates the cluster with Peer-to-peer OCI registry plugin enabled. Defaults to false. To enable it, supply --enable-peer-to-peer-oci-registry-plugin=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableNfsCsiPlugin, "", false,
+		"Creates the cluster with the NFS CSI plugin enabled. Defaults to false. To enable it, supply --enable-nfs-csi-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableCorednsAutoscaler, "", false,
 		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --enable-coredns-autoscaler=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
@@ -400,6 +402,8 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Creates the cluster with routing-agent enabled. Defaults to false. To enable routing-agent, supply --routing-agent=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnablePeerToPeerOciRegistryPlugin, "", false,
 		"Creates the cluster with Peer-to-peer OCI registry plugin enabled. Defaults to false. To enable it, supply --enable-peer-to-peer-oci-registry-plugin=true.")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableNfsCsiPlugin, "", false,
+		"Updates the cluster with the NFS CSI plugin enabled. Defaults to false. To enable it, supply --enable-nfs-csi-plugin=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableCorednsAutoscaler, "", false,
 		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). To always enable it, supply --enable-coredns-autoscaler=true.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
@@ -1884,6 +1888,16 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
+	enableNfsCsiPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableNfsCsiPlugin)
+	if err != nil {
+		return err
+	}
+	if enableNfsCsiPlugin != nil {
+		r.NfsCsiPlugin = &godo.KubernetesNfsCsiPlugin{
+			Enabled: enableNfsCsiPlugin,
+		}
+	}
+
 	// Only forward the CoreDNS Autoscaler flag when the user explicitly sets it so the
 	// server-side defaulting (version-based) isn't suppressed by sending an unset "false".
 	if c.Doit.IsSet(doctl.ArgEnableCorednsAutoscaler) {
@@ -2142,6 +2156,16 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	if enableP2pOciRegistryPlugin != nil {
 		r.P2pOciRegistryPlugin = &godo.KubernetesP2pOciRegistry{
 			Enabled: enableP2pOciRegistryPlugin,
+		}
+	}
+
+	enableNfsCsiPlugin, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableNfsCsiPlugin)
+	if err != nil {
+		return err
+	}
+	if enableNfsCsiPlugin != nil {
+		r.NfsCsiPlugin = &godo.KubernetesNfsCsiPlugin{
+			Enabled: enableNfsCsiPlugin,
 		}
 	}
 
