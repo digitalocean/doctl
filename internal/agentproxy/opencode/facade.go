@@ -12,6 +12,7 @@
 package opencode
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -72,11 +73,31 @@ type Facade struct {
 	// session, so the session list grows its single entry (see
 	// handleSessionList).
 	sessionCreated bool
+
+	// History cache (see history() in history.go). histMu guards only the
+	// fields — the slow replay_only fetch runs outside it so invalidation
+	// never blocks behind it; histFetching/histDone single-flight concurrent
+	// fetchers, and histGen detects an invalidation that overlapped a fetch.
+	histMu       sync.Mutex
+	hist         []historyMessage
+	histValid    bool
+	histGen      int
+	histFetching bool
+	histDone     chan struct{}
 }
 
 // ServeHTTP implements http.Handler.
 func (f *Facade) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.handlerOnce.Do(f.buildMux)
+	f.handlerOnce.Do(func() {
+		f.buildMux()
+		// Warm the history cache off the first request — the TUI's
+		// /global/health preflight lands well before the attach burst, so
+		// the slow replay (see history()) usually finishes before the burst
+		// asks for the session list or messages.
+		if f.Sessions != nil {
+			go func() { _, _ = f.history(context.Background()) }()
+		}
+	})
 	f.mux.ServeHTTP(w, r)
 }
 
@@ -163,15 +184,18 @@ func (f *Facade) buildMux() {
 	mux.HandleFunc("GET /experimental/workspace", f.json([]any{}))
 	mux.HandleFunc("GET /experimental/workspace/status", f.json([]any{}))
 
-	// The bridged session: list/create/get plus the prompt bridge (M2).
-	// History (GET .../message) returns empty until M3 serves it from a
-	// replay_only stream pass.
+	// The bridged session: list/create/get plus the prompt bridge (M2) and
+	// history (M3, served from a replay_only stream pass). diff/todo are the
+	// two lookups the TUI fires after every turn (post-idle refresh) and on
+	// resume — real server returns empty arrays for a no-edits session.
 	mux.HandleFunc("GET /session", f.handleSessionList)
 	mux.HandleFunc("POST /session", f.handleSessionCreate)
 	mux.HandleFunc("GET /session/{id}", func(w http.ResponseWriter, r *http.Request) {
 		f.writeJSON(w, f.sessionObject())
 	})
-	mux.HandleFunc("GET /session/{id}/message", f.json([]any{}))
+	mux.HandleFunc("GET /session/{id}/message", f.handleMessageList)
+	mux.HandleFunc("GET /session/{id}/diff", f.json([]any{}))
+	mux.HandleFunc("GET /session/{id}/todo", f.json([]any{}))
 	mux.HandleFunc("POST /session/{id}/prompt_async", f.handlePromptAsync)
 	// The synchronous variant officially awaits the reply; bridging that
 	// faithfully would block a request goroutine for a whole turn. Current
