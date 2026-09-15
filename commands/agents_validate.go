@@ -422,6 +422,11 @@ func validateManifestSkills(raw any, path string, out *agentManifestValidation) 
 	}
 }
 
+const (
+	egressFormatFlat           = "flat"
+	egressFormatLegacyEnvelope = "legacy envelope"
+)
+
 // egressAliasField describes one egress-object concept's format-specific
 // spelling. Mirrors harness-api's decode structs (agentspec.go Egress,
 // agentspec_flat.go flatEgress.objectForm): each concept has exactly one
@@ -462,10 +467,10 @@ func egressKnownKeysForFormat(legacy bool) map[string]struct{} {
 func egressWrongFormatHint(k string, legacy bool) (hint string, matched bool) {
 	for _, f := range egressAliasFields {
 		right, wrong := f.flatKey, f.legacyKey
-		wrongFormatName, thisFormatName := "legacy envelope", "flat"
+		wrongFormatName, thisFormatName := egressFormatLegacyEnvelope, egressFormatFlat
 		if legacy {
 			right, wrong = f.legacyKey, f.flatKey
-			wrongFormatName, thisFormatName = "flat", "legacy envelope"
+			wrongFormatName, thisFormatName = egressFormatFlat, egressFormatLegacyEnvelope
 		}
 		if k == wrong {
 			return fmt.Sprintf("%q is the %s spelling; the %s format uses %q", k, wrongFormatName, thisFormatName, right), true
