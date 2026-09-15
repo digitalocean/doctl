@@ -422,16 +422,68 @@ func validateManifestSkills(raw any, path string, out *agentManifestValidation) 
 	}
 }
 
+// egressAliasField describes one egress-object concept's format-specific
+// spelling. Mirrors harness-api's decode structs (agentspec.go Egress,
+// agentspec_flat.go flatEgress.objectForm): each concept has exactly one
+// valid key per format; the other spelling is an unknown-field 400
+// server-side, never accepted as an alias. Kept in sync manually since doctl
+// cannot import harness-api's internal Go packages.
+type egressAliasField struct {
+	flatKey   string
+	legacyKey string
+}
+
+var egressAliasFields = []egressAliasField{
+	{flatKey: "allow_hosts", legacyKey: "allow"},
+	{flatKey: "allow_ips", legacyKey: "allowIps"},
+	{flatKey: "vpc_uuid", legacyKey: "vpcUuid"},
+	{flatKey: "subnet_uuid", legacyKey: "subnetUuid"},
+}
+
+func egressKnownKeysForFormat(legacy bool) map[string]struct{} {
+	known := make(map[string]struct{}, len(egressAliasFields)+1)
+	for _, f := range egressAliasFields {
+		if legacy {
+			known[f.legacyKey] = struct{}{}
+		} else {
+			known[f.flatKey] = struct{}{}
+		}
+	}
+	if legacy {
+		known["unrestricted"] = struct{}{}
+	}
+	return known
+}
+
+// egressWrongFormatHint reports whether k is the OTHER format's spelling for
+// a known egress concept, so the error can name the correct key instead of a
+// bare "unknown field". A key matching neither format (e.g. the fictitious
+// "allowHosts") falls through to the generic unknown-field error.
+func egressWrongFormatHint(k string, legacy bool) (hint string, matched bool) {
+	for _, f := range egressAliasFields {
+		right, wrong := f.flatKey, f.legacyKey
+		wrongFormatName, thisFormatName := "legacy envelope", "flat"
+		if legacy {
+			right, wrong = f.legacyKey, f.flatKey
+			wrongFormatName, thisFormatName = "flat", "legacy envelope"
+		}
+		if k == wrong {
+			return fmt.Sprintf("%q is the %s spelling; the %s format uses %q", k, wrongFormatName, thisFormatName, right), true
+		}
+	}
+	return "", false
+}
+
 // validateManifestEgress checks the egress policy oneOf (MARSOHS-1219): omitted,
 // "unrestricted", host list, or object with allow_hosts / allow_ips / vpc_uuid /
-// subnet_uuid. Mirrors harness-api agentspec error strings for fast client-side
-// feedback. Omitted egress is intentional (no ACL) and must not inject defaults.
+// subnet_uuid. Structural checks only — advisory wording (e.g. IP-only ACL) is
+// harness-api session.warnings, not duplicated here (MARSOHS-1404).
 func validateManifestEgress(doc map[string]any, legacy bool, out *agentManifestValidation) {
 	raw, path, ok := extractManifestEgress(doc, legacy)
 	if !ok {
 		return
 	}
-	validateEgressValue(raw, path, out)
+	validateEgressValue(raw, path, legacy, out)
 }
 
 func extractManifestEgress(doc map[string]any, legacy bool) (raw any, path string, ok bool) {
@@ -461,7 +513,7 @@ func extractManifestEgress(doc map[string]any, legacy bool) (raw any, path strin
 	return nil, "", false
 }
 
-func validateEgressValue(raw any, path string, out *agentManifestValidation) {
+func validateEgressValue(raw any, path string, legacy bool, out *agentManifestValidation) {
 	switch v := raw.(type) {
 	case nil:
 		// Explicit null is treated like omitted by the server; nothing to check.
@@ -477,7 +529,7 @@ func validateEgressValue(raw any, path string, out *agentManifestValidation) {
 	}
 
 	if m, ok := yamlMap(raw); ok {
-		validateEgressObject(m, path, out)
+		validateEgressObject(m, path, legacy, out)
 		return
 	}
 	out.Errors = append(out.Errors, fmt.Sprintf(`%s must be "unrestricted", a host list, or an object`, path))
@@ -501,79 +553,74 @@ func validateEgressHostList(list []any, path string, out *agentManifestValidatio
 	}
 }
 
-func validateEgressObject(m map[string]any, path string, out *agentManifestValidation) {
-	known := map[string]struct{}{
-		"allow_hosts": {}, "allowHosts": {}, "allow": {},
-		"allow_ips": {}, "allowIps": {},
-		"vpc_uuid": {}, "vpcUuid": {},
-		"subnet_uuid": {}, "subnetUuid": {},
-		"unrestricted": {},
-	}
+func validateEgressObject(m map[string]any, path string, legacy bool, out *agentManifestValidation) {
+	known := egressKnownKeysForFormat(legacy)
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		if _, ok := known[k]; !ok {
-			out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: unknown field", path, k))
+		if _, ok := known[k]; ok {
+			continue
 		}
+		if hint, ok := egressWrongFormatHint(k, legacy); ok {
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: %s", path, k, hint))
+			continue
+		}
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: unknown field", path, k))
 	}
 
-	if ur, present := m["unrestricted"]; present {
-		switch t := ur.(type) {
-		case bool:
-			if !t {
-				out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set`, path))
+	hostsKey, ipsKey, vpcKey, subnetKey := "allow_hosts", "allow_ips", "vpc_uuid", "subnet_uuid"
+	if legacy {
+		hostsKey, ipsKey, vpcKey, subnetKey = "allow", "allowIps", "vpcUuid", "subnetUuid"
+	}
+
+	if legacy {
+		if ur, present := m["unrestricted"]; present {
+			switch t := ur.(type) {
+			case bool:
+				if !t {
+					out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set`, path))
+				}
+			case string:
+				if strings.TrimSpace(t) != "unrestricted" && strings.ToLower(strings.TrimSpace(t)) != "true" {
+					out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set (got %q)`, path, t))
+				}
+			default:
+				out.Errors = append(out.Errors, fmt.Sprintf("%s.unrestricted: must be a boolean", path))
 			}
-		case string:
-			if strings.TrimSpace(t) != "unrestricted" && strings.ToLower(strings.TrimSpace(t)) != "true" {
-				out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set (got %q)`, path, t))
-			}
-		default:
-			out.Errors = append(out.Errors, fmt.Sprintf("%s.unrestricted: must be a boolean", path))
 		}
 	}
 
-	hostsRaw, hasHosts := firstPresent(m, "allow_hosts", "allowHosts", "allow")
-	var hostCount int
-	if hasHosts {
-		hostCount = validateEgressAllowHosts(hostsRaw, path, out)
+	if hostsRaw, present := m[hostsKey]; present {
+		validateEgressAllowHosts(hostsRaw, path, hostsKey, ipsKey, out)
+	}
+	if ipsRaw, present := m[ipsKey]; present {
+		validateEgressAllowIPs(ipsRaw, path, ipsKey, out)
 	}
 
-	ipsRaw, hasIPs := firstPresent(m, "allow_ips", "allowIps")
-	if hasIPs {
-		validateEgressAllowIPs(ipsRaw, path, out)
-	}
-
-	vpcRaw, hasVPC := firstPresent(m, "vpc_uuid", "vpcUuid")
-	subnetRaw, hasSubnet := firstPresent(m, "subnet_uuid", "subnetUuid")
-	if hasVPC {
-		_ = validateEgressUUID(vpcRaw, path+".vpc_uuid", out)
-	}
-	if hasSubnet {
-		if !hasVPC {
-			out.Errors = append(out.Errors, fmt.Sprintf("%s.subnet_uuid requires %s.vpc_uuid", path, path))
+	if vpcRaw, hasVPC := m[vpcKey]; hasVPC {
+		_ = validateEgressUUID(vpcRaw, path+"."+vpcKey, out)
+		if subnetRaw, hasSubnet := m[subnetKey]; hasSubnet {
+			_ = validateEgressUUID(subnetRaw, path+"."+subnetKey, out)
 		}
-		_ = validateEgressUUID(subnetRaw, path+".subnet_uuid", out)
+	} else if subnetRaw, hasSubnet := m[subnetKey]; hasSubnet {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s requires %s.%s", path, subnetKey, path, vpcKey))
+		_ = validateEgressUUID(subnetRaw, path+"."+subnetKey, out)
 	}
 
-	// Server advisory when IPs alone form the destination ACL (no host allowlist).
-	if hasIPs && hostCount == 0 {
-		if ur, ok := m["unrestricted"].(bool); ok && ur {
-			return
-		}
-		out.Warnings = append(out.Warnings, fmt.Sprintf("%s.allowIps: no host allowlist is set, so the destination ACL permits only these IP literals and denies every hostname", path))
-	}
+	// The "no host allowlist is set" advisory is intentionally NOT generated
+	// here. It is harness-api's session.warnings content (computeWarnings +
+	// flatPathWarnings) exactly once, after create (MARSOHS-1404).
 }
 
-func validateEgressAllowHosts(raw any, path string, out *agentManifestValidation) int {
-	// Stored camelCase envelope uses allow: [{host: "..."}]; authoring uses
+func validateEgressAllowHosts(raw any, path, hostsKey, ipsKey string, out *agentManifestValidation) {
+	// Legacy envelope uses allow: [{host: "..."}]; flat authoring uses
 	// allow_hosts: ["..."].
 	if list, ok := yamlList(raw); ok {
-		count := 0
 		for i, item := range list {
-			itemPath := fmt.Sprintf("%s.allow_hosts[%d]", path, i)
+			itemPath := fmt.Sprintf("%s.%s[%d]", path, hostsKey, i)
 			if host, ok := yamlString(item); ok {
 				host = strings.TrimSpace(host)
 				if host == "" {
@@ -581,9 +628,8 @@ func validateEgressAllowHosts(raw any, path string, out *agentManifestValidation
 					continue
 				}
 				if looksLikeIPLiteral(host) {
-					out.Errors = append(out.Errors, fmt.Sprintf(`%s %q looks like an IP; use %s.allow_ips`, itemPath, host, path))
+					out.Errors = append(out.Errors, fmt.Sprintf(`%s %q looks like an IP; use %s.%s`, itemPath, host, path, ipsKey))
 				}
-				count++
 				continue
 			}
 			if m, ok := yamlMap(item); ok {
@@ -594,38 +640,36 @@ func validateEgressAllowHosts(raw any, path string, out *agentManifestValidation
 					continue
 				}
 				if looksLikeIPLiteral(host) {
-					out.Errors = append(out.Errors, fmt.Sprintf(`%s.host %q looks like an IP; use %s.allow_ips`, itemPath, host, path))
+					out.Errors = append(out.Errors, fmt.Sprintf(`%s.host %q looks like an IP; use %s.%s`, itemPath, host, path, ipsKey))
 				}
-				count++
 				continue
 			}
 			out.Errors = append(out.Errors, fmt.Sprintf("%s: must be a hostname string or {host: ...}", itemPath))
 		}
-		return count
+		return
 	}
-	out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_hosts: must be a list", path))
-	return 0
+	out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: must be a list", path, hostsKey))
 }
 
-func validateEgressAllowIPs(raw any, path string, out *agentManifestValidation) {
+func validateEgressAllowIPs(raw any, path, ipsKey string, out *agentManifestValidation) {
 	list, ok := yamlList(raw)
 	if !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_ips: must be a list", path))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: must be a list", path, ipsKey))
 		return
 	}
 	for i, item := range list {
 		ip, ok := yamlString(item)
 		if !ok {
-			out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_ips[%d]: must be an IP literal string", path, i))
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.%s[%d]: must be an IP literal string", path, ipsKey, i))
 			continue
 		}
 		ip = strings.TrimSpace(ip)
 		if ip == "" {
-			out.Errors = append(out.Errors, fmt.Sprintf("%s.allow_ips[%d]: must not be empty", path, i))
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.%s[%d]: must not be empty", path, ipsKey, i))
 			continue
 		}
 		if strings.Contains(ip, "/") || net.ParseIP(ip) == nil {
-			out.Errors = append(out.Errors, fmt.Sprintf(`%s.allow_ips[%d] %q must be an IPv4/IPv6 literal (not a CIDR or hostname)`, path, i, ip))
+			out.Errors = append(out.Errors, fmt.Sprintf(`%s.%s[%d] %q must be an IPv4/IPv6 literal (not a CIDR or hostname)`, path, ipsKey, i, ip))
 		}
 	}
 }

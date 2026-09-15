@@ -414,16 +414,86 @@ egress:
 	assert.Contains(t, joinStrings(v.Errors), "subnet_uuid requires")
 }
 
-func TestValidateAgentManifest_EgressAllowIPsOnlyWarns(t *testing.T) {
+func TestValidateAgentManifest_EgressAllowIPsOnlyNoClientWarning(t *testing.T) {
 	const manifest = `agent: opencode
 egress:
   allow_ips: ["203.0.113.10"]
 `
 	v := validateAgentManifest([]byte(manifest))
 	assert.True(t, v.ok(), "errors=%v", v.Errors)
-	require.NotEmpty(t, v.Warnings)
-	assert.Contains(t, v.Warnings[0], "allowIps")
-	assert.Contains(t, v.Warnings[0], "denies every hostname")
+	assert.Empty(t, v.Warnings, "IP-only egress advisory is server-only (MARSOHS-1404)")
+}
+
+func TestValidateAgentManifest_EgressEnvelopeAllowIPsOnlyOK(t *testing.T) {
+	const manifest = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  runtime:
+    adapter: opencode
+  sandbox:
+    egress:
+      allowIps: ["203.0.113.10"]
+`
+	v := validateAgentManifest([]byte(manifest))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+	assert.Empty(t, v.Warnings)
+}
+
+func TestValidateAgentManifest_EgressWrongFormatSpelling(t *testing.T) {
+	t.Run("flat allowIps", func(t *testing.T) {
+		const manifest = `agent: opencode
+egress:
+  allowIps: ["203.0.113.10"]
+`
+		v := validateAgentManifest([]byte(manifest))
+		require.False(t, v.ok())
+		joined := joinStrings(v.Errors)
+		assert.Contains(t, joined, "is the legacy envelope spelling")
+		assert.Contains(t, joined, "allow_ips")
+	})
+
+	t.Run("legacy allow_ips", func(t *testing.T) {
+		const manifest = `apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+spec:
+  runtime:
+    adapter: opencode
+  sandbox:
+    egress:
+      allow_ips: ["203.0.113.10"]
+`
+		v := validateAgentManifest([]byte(manifest))
+		require.False(t, v.ok())
+		joined := joinStrings(v.Errors)
+		assert.Contains(t, joined, "is the flat spelling")
+		assert.Contains(t, joined, "allowIps")
+	})
+
+	t.Run("flat subnetUuid", func(t *testing.T) {
+		const manifest = `agent: opencode
+egress:
+  vpc_uuid: 11111111-1111-4111-8111-111111111111
+  subnetUuid: 22222222-2222-4222-8222-222222222222
+`
+		v := validateAgentManifest([]byte(manifest))
+		require.False(t, v.ok())
+		joined := joinStrings(v.Errors)
+		assert.Contains(t, joined, "subnetUuid")
+		assert.Contains(t, joined, "subnet_uuid")
+	})
+
+	t.Run("allowHosts unknown field", func(t *testing.T) {
+		const manifest = `agent: opencode
+egress:
+  allowHosts: [api.github.com]
+`
+		v := validateAgentManifest([]byte(manifest))
+		require.False(t, v.ok())
+		joined := joinStrings(v.Errors)
+		assert.Contains(t, joined, "allowHosts: unknown field")
+		assert.NotContains(t, joined, "legacy envelope spelling")
+		assert.NotContains(t, joined, "flat spelling")
+	})
 }
 
 func TestValidateAgentManifest_EgressEnvelopePath(t *testing.T) {
