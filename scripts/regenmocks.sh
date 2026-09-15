@@ -56,3 +56,5 @@ mockgen -source nfs_actions.go -package=mocks NfsActionsService > mocks/NfsActio
 mockgen -source security.go -package=mocks SecurityService > mocks/SecurityService.go
 mockgen -source secrets.go -package=mocks SecretsService > mocks/SecretsService.go
 mockgen -source vector_databases.go -package=mocks VectorDBsService > mocks/VectorDBsService.go
+mockgen -source agents.go -package=mocks HostedAgentsService > mocks/HostedAgentsService.go
+mockgen -source agent_triggers.go -package=mocks HostedAgentTriggersService > mocks/HostedAgentTriggersService.go

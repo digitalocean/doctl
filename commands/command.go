@@ -38,6 +38,10 @@ type Command struct {
 	// overrideNS specifies a namespace to use in config.
 	// Set using the overrideCmdNS cmdOption when calling CmdBuilder
 	overrideNS string
+
+	// prettyAgentErrors enables styled agent error cards instead of raw
+	// godo "METHOD URL: status message" dumps.
+	prettyAgentErrors bool
 }
 
 // AddCommand adds child commands and adds child commands for cobra as well.
@@ -90,8 +94,9 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 
 	// This must be defined after the options have been applied
 	// so that changes made by the options are accessible here.
+	prettyAgentErrors := c.prettyAgentErrors
 	c.Command.Run = func(cmd *cobra.Command, args []string) {
-		c, err := NewCmdConfig(
+		cfg, err := NewCmdConfig(
 			cmdNS(c),
 			&doctl.LiveConfig{},
 			out,
@@ -100,9 +105,12 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 		)
 		checkErr(err)
 
-		c.Command = cmd
+		cfg.Command = cmd
 
-		err = cr(c)
+		err = cr(cfg)
+		if prettyAgentErrors {
+			err = beautifyAgentError(err)
+		}
 		checkErr(err)
 	}
 

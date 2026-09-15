@@ -164,6 +164,7 @@ type NfsAccessPoint struct {
 	UpdatedAt    string               `json:"updated_at"`
 	IsDefault    bool                 `json:"is_default"`
 	VpcID        *string              `json:"vpc_id,omitempty"`
+	VpcIDs       []string             `json:"vpc_ids,omitempty"`
 }
 
 // NfsCreateRequest represents a request to create an NFS share.
