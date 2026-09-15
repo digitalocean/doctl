@@ -17,11 +17,26 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/spf13/cobra"
+)
+
+const (
+	// exitGeneralError is doctl's default failure code: a command ran and
+	// returned an error, or startup failed for a reason unrelated to how
+	// doctl was invoked (e.g. an unreadable config file).
+	exitGeneralError = 1
+
+	// exitUsageError is reserved for failures that never reached a command's
+	// handler - an unknown subcommand or a flag Cobra itself rejected before
+	// Run. Kept distinct from exitGeneralError so the two are intentional,
+	// not whichever branch happened to catch the error.
+	exitUsageError = 255
 )
 
 var (
@@ -29,7 +44,7 @@ var (
 
 	// errAction specifies what should happen when an error occurs
 	errAction = func() {
-		os.Exit(1)
+		os.Exit(exitGeneralError)
 	}
 
 	// ErrExitSilently instructs doctl to exit silently with a bad status code. This can be used to fail a command
@@ -38,14 +53,121 @@ var (
 	// IMPORTANT! Make sure to print your own error message if you use this! It is important for users to know
 	// what caused the failure.
 	ErrExitSilently = fmt.Errorf("")
+
+	// activeCommand is the cobra command currently running, set by
+	// cmdBuilderWithInit's Run before the handler is invoked. It exists so
+	// checkErr can default the next step to that command's --help without
+	// every call site having to pass a *cobra.Command through.
+	activeCommand *cobra.Command
 )
+
+// NextStepper lets an error supply its own "next step" suggestion, overriding
+// the default `<command> --help` hint checkErr otherwise prints. It is the
+// narrow interface for an error that only wants to change one field; a type
+// wanting to control the whole block implements StructuredError instead.
+type NextStepper interface {
+	NextStep() string
+}
+
+// StructuredError lets an error supply the whole Title → Reason → Status →
+// Next step block checkErr renders, and the same four fields mirrored into
+// the JSON envelope. Every error checkErr sees is resolved to one via
+// resolveStructured, so checkErr and the JSON path always have a single
+// source to read from, whether or not err implements this itself.
+type StructuredError interface {
+	error
+
+	// Title is the one-line summary shown after the "Error:" label. Falls
+	// back to err.Error() when empty, so a plain error renders exactly as it
+	// always has.
+	Title() string
+
+	// Reason expands on Title with what the failure means. Empty suppresses
+	// the line.
+	Reason() string
+
+	// Status is the API status code the failure carries, or 0 if none.
+	Status() int
+
+	// NextStep is the suggested command. Empty suppresses the line.
+	NextStep() string
+}
+
+// genericStructuredError is the StructuredError synthesized for an error
+// that doesn't implement the interface itself. It is what makes an
+// unannotated godo API error render with the same Title/Reason/Status/
+// NextStep shape as a purpose-built one, by reading the status-code table.
+type genericStructuredError struct {
+	err error
+}
+
+func (e genericStructuredError) Error() string { return e.err.Error() }
+func (e genericStructuredError) Unwrap() error { return e.err }
+
+// Title is left blank for anything the status-code table doesn't recognize,
+// so checkErr falls back to printing err.Error() as it always has.
+func (e genericStructuredError) Title() string {
+	if status := statusFor(e.err); status != 0 {
+		return http.StatusText(status)
+	}
+	return ""
+}
+
+func (e genericStructuredError) Reason() string {
+	if entry, ok := lookupErrorCode(e.err); ok {
+		return entry.Reason
+	}
+	return ""
+}
+
+func (e genericStructuredError) Status() int {
+	return statusFor(e.err)
+}
+
+// NextStep prefers an explicit NextStepper override on the wrapped error,
+// then the status-code table, then the generic `<command> --help` fallback.
+func (e genericStructuredError) NextStep() string {
+	var ns NextStepper
+	if errors.As(e.err, &ns) {
+		if step := ns.NextStep(); step != "" {
+			return step
+		}
+	}
+	if entry, ok := lookupErrorCode(e.err); ok {
+		return resolvedNextStep(entry)
+	}
+	return defaultNextStep()
+}
+
+// defaultNextStep suggests the active command's help text. Empty if no
+// command is active (e.g. errors raised during early config bootstrap).
+func defaultNextStep() string {
+	if activeCommand == nil {
+		return ""
+	}
+	return fmt.Sprintf("run %s --help", activeCommand.CommandPath())
+}
+
+// resolveStructured returns err's own StructuredError if it implements one,
+// otherwise a genericStructuredError wrapping it.
+func resolveStructured(err error) StructuredError {
+	var se StructuredError
+	if errors.As(err, &se) {
+		return se
+	}
+	return genericStructuredError{err: err}
+}
 
 type outputErrors struct {
 	Errors []outputError `json:"errors"`
 }
 
 type outputError struct {
-	Detail string `json:"detail"`
+	Detail   string `json:"detail"`
+	Title    string `json:"title,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+	Status   int    `json:"status,omitempty"`
+	NextStep string `json:"next_step,omitempty"`
 }
 
 func checkErr(err error) {
@@ -57,6 +179,8 @@ func checkErr(err error) {
 		errAction()
 		return
 	}
+
+	se := resolveStructured(err)
 
 	switch outputFormat() {
 	default:
@@ -72,15 +196,39 @@ func checkErr(err error) {
 		}
 
 		// Every failure carries the same label, whatever produced it, so
-		// that a validation error and an API error read as one voice.
-		fmt.Fprintf(env.ErrWriter(), "%s %v\n", ui.NewStyle(env).ErrorLabel(), err)
+		// that a validation error and an API error read as one voice. Title
+		// falls back to the raw error text, which is what keeps a plain
+		// error's rendering exactly as it always was.
+		style := ui.NewStyle(env)
+		title := se.Title()
+		if title == "" {
+			title = err.Error()
+		}
+		fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.ErrorLabel(), title)
+
+		if reason := se.Reason(); reason != "" {
+			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Dim(reason))
+		}
+		if status := se.Status(); status != 0 {
+			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Dim(fmt.Sprintf("status %d", status)))
+		}
+		if step := se.NextStep(); step != "" {
+			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Hint(step))
+		}
 	case "json":
 		// Always keep the stable {"errors":[{"detail":...}]} envelope so
 		// automation parsing --output json is not broken by richer flag
-		// validation. Plain Error() text (no ANSI) goes in detail.
+		// validation. Plain Error() text (no ANSI) goes in detail; title,
+		// reason, status and next_step are additive and omitted when empty.
 		payload := outputErrors{
 			Errors: []outputError{
-				{Detail: err.Error()},
+				{
+					Detail:   err.Error(),
+					Title:    se.Title(),
+					Reason:   se.Reason(),
+					Status:   se.Status(),
+					NextStep: se.NextStep(),
+				},
 			},
 		}
 

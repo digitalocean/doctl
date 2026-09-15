@@ -85,6 +85,32 @@ func (e *FlagValidationError) Error() string {
 	return strings.Join(clauses, "; ")
 }
 
+// Title, Reason, Status and NextStep satisfy StructuredError so the JSON
+// error envelope carries the same fields a godo API error does. The text
+// path still renders through format() below, which is the richer per-flag
+// block; these only feed --output json.
+
+// Title summarizes the failure kind, distinct from Error()'s per-flag detail.
+func (e *FlagValidationError) Title() string {
+	return "Flag validation failed"
+}
+
+// Reason is the one-line summary also used for Error(), since that already
+// says which flags were missing or invalid.
+func (e *FlagValidationError) Reason() string {
+	return e.Error()
+}
+
+// Status is always 0: a flag validation failure never reaches the API.
+func (e *FlagValidationError) Status() int {
+	return 0
+}
+
+// NextStep points at the failing command's own help text.
+func (e *FlagValidationError) NextStep() string {
+	return fmt.Sprintf("run %s --help", e.Command)
+}
+
 // Display renders the validation error using the Next-Gen terminal design
 // system (colored error label, bold flags/commands, dim hints).
 func (e *FlagValidationError) Display() string {
