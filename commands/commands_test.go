@@ -249,6 +249,7 @@ type tcMocks struct {
 	apps                  *domocks.MockAppsService
 	balance               *domocks.MockBalanceService
 	billingHistory        *domocks.MockBillingHistoryService
+	prepayment            *domocks.MockPrepaymentService
 	databases             *domocks.MockDatabasesService
 	dropletActions        *domocks.MockDropletActionsService
 	dropletAutoscale      *domocks.MockDropletAutoscaleService
@@ -311,6 +312,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		apps:                  domocks.NewMockAppsService(ctrl),
 		balance:               domocks.NewMockBalanceService(ctrl),
 		billingHistory:        domocks.NewMockBillingHistoryService(ctrl),
+		prepayment:            domocks.NewMockPrepaymentService(ctrl),
 		keys:                  domocks.NewMockKeysService(ctrl),
 		sizes:                 domocks.NewMockSizesService(ctrl),
 		regions:               domocks.NewMockRegionsService(ctrl),
@@ -399,6 +401,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Account:             func() do.AccountService { return tm.account },
 		Balance:             func() do.BalanceService { return tm.balance },
 		BillingHistory:      func() do.BillingHistoryService { return tm.billingHistory },
+		Prepayment:          func() do.PrepaymentService { return tm.prepayment },
 		Invoices:            func() do.InvoicesService { return tm.invoices },
 		Tags:                func() do.TagsService { return tm.tags },
 		UptimeChecks:        func() do.UptimeChecksService { return tm.uptimeChecks },

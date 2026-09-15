@@ -68,14 +68,24 @@ const (
 )
 
 type NfsService interface {
-	// List retrieves a list of NFS shares filtered by region
+	// List retrieves a list of NFS shares filtered by region.
 	List(ctx context.Context, opts *ListOptions, region string) ([]*Nfs, *Response, error)
+	// ListWithOptions retrieves a list of NFS shares filtered by NFS-specific
+	// options, including exact-name matching.
+	ListWithOptions(ctx context.Context, opts *NfsListOptions) ([]*Nfs, *Response, error)
 	// Create creates a new NFS share with the provided configuration
 	Create(ctx context.Context, nfsCreateRequest *NfsCreateRequest) (*Nfs, *Response, error)
-	// Delete removes an NFS share by its ID and region
+	// Delete removes an NFS share by its ID and region.
 	Delete(ctx context.Context, nfsShareId string, region string) (*Response, error)
+	// DeleteWithOptions removes an NFS share using NFS-specific options,
+	// including whether its active snapshots should also be deleted.
+	DeleteWithOptions(ctx context.Context, nfsShareId string, opts *NfsDeleteOptions) (*Response, error)
 	// Get retrieves a specific NFS share by its ID and region
 	Get(ctx context.Context, nfsShareId string, region string) (*Nfs, *Response, error)
+	// GetOptions retrieves the valid parameter values for creating NFS
+	// shares: the available performance tiers with the size range each
+	// tier accepts, and the regions where NFS is supported
+	GetOptions(ctx context.Context) (*NfsOptions, *Response, error)
 	// List retrieves a list of NFS snapshots filtered by an optional share ID and region
 	ListSnapshots(ctx context.Context, opts *ListOptions, nfsShareId string, region string) ([]*NfsSnapshot, *Response, error)
 	// Get retrieves a specific NFS snapshot by its ID and region
@@ -120,8 +130,10 @@ type Nfs struct {
 	Host string `json:"host"`
 	// MountPath is the path at which the share will be available
 	MountPath string `json:"mount_path"`
-	//PerformanceTier is the performance tier of the NFS share
+	// PerformanceTier is the performance tier of the NFS share
 	PerformanceTier string `json:"performance_tier"`
+	// ManagerURN associates the share with the resource that manages it
+	ManagerURN string `json:"manager_urn,omitempty"`
 	// AccessPoints is the list of access points configured for the NFS share.
 	AccessPoints []*NfsAccessPoint `json:"access_points,omitempty"`
 }
@@ -173,6 +185,31 @@ type NfsCreateRequest struct {
 	Region          string   `json:"region"`
 	VpcIDs          []string `json:"vpc_ids,omitempty"`
 	PerformanceTier string   `json:"performance_tier,omitempty"`
+	ManagerURN      string   `json:"manager_urn,omitempty"`
+}
+
+// NfsOptions represents the valid parameter values for creating NFS shares.
+type NfsOptions struct {
+	// PerformanceTiers lists the performance tiers a share can be created
+	// with and the size range each accepts.
+	PerformanceTiers []*NfsPerformanceTierOption `json:"performance_tiers"`
+	// SupportedRegions lists the region slugs where NFS is supported —
+	// the same allowlist share creation validates against, so callers
+	// can fail fast before creating.
+	SupportedRegions []string `json:"supported_regions"`
+}
+
+// NfsPerformanceTierOption represents a performance tier available for share
+// creation and its accepted size range.
+type NfsPerformanceTierOption struct {
+	// Tier is the value accepted by NfsCreateRequest.PerformanceTier
+	// (e.g. "standard", "high").
+	Tier string `json:"tier"`
+	// MinSizeGib is the minimum share size in GiB for this tier.
+	MinSizeGib uint64 `json:"min_size_gib"`
+	// MaxSizeGib is the maximum share size in GiB for this tier. May vary
+	// per account.
+	MaxSizeGib uint64 `json:"max_size_gib"`
 }
 
 // NfsCreateAccessPointRequest represents a request to create an NFS access point.
@@ -181,6 +218,25 @@ type NfsCreateAccessPointRequest struct {
 	Path         string          `json:"path"`
 	AccessPolicy NfsAccessPolicy `json:"access_policy"`
 	VpcID        string          `json:"vpc_id"`
+}
+
+// NfsListOptions represents the options for listing NFS shares.
+type NfsListOptions struct {
+	ListOptions
+
+	// Region filters shares by region slug.
+	Region string `url:"region,omitempty"`
+	// Name filters shares by exact name match. Share names are not unique,
+	// so a name-filtered list may return multiple shares.
+	Name string `url:"name,omitempty"`
+}
+
+// NfsDeleteOptions represents the options for deleting an NFS share.
+type NfsDeleteOptions struct {
+	// Region is retained for compatibility with the existing NFS API.
+	Region string `url:"region,omitempty"`
+	// DeleteSnapshots deletes the share's active snapshots along with it.
+	DeleteSnapshots bool `url:"delete_snapshots,omitempty"`
 }
 
 // NfsListAccessPointsOptions represents filters for listing access points.
@@ -234,22 +290,22 @@ type nfsAccessPointActionRoot struct {
 	Action      *NfsAction      `json:"action"`
 }
 
-// nfsOptions represents the query param options for NFS operations
-type nfsOptions struct {
+// nfsQueryOptions represents the query param options for NFS operations
+type nfsQueryOptions struct {
 	// Region is the datacenter region where the NFS share/shapshot is located
-	Region string `url:"region"`
+	Region string `url:"region,omitempty"`
 	// ShareID is the unique identifier of the share from which this snapshot was created.
 	ShareID string `url:"share_id,omitempty"`
 }
 
 // Create creates a new NFS share.
+//
+// There is no client-side size validation: minimum and maximum sizes differ
+// per performance tier and can change server-side, so the API is the source
+// of truth. Use Nfs.GetOptions to read the current per-tier floors.
 func (s *NfsServiceOp) Create(ctx context.Context, createRequest *NfsCreateRequest) (*Nfs, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, NewArgError("createRequest", "cannot be nil")
-	}
-
-	if createRequest.SizeGib < 50 {
-		return nil, nil, NewArgError("size_gib", "it cannot be less than 50Gib")
 	}
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, nfsBasePath, createRequest)
@@ -274,7 +330,7 @@ func (s *NfsServiceOp) Get(ctx context.Context, nfsShareId string, region string
 
 	path := fmt.Sprintf("%s/%s", nfsBasePath, nfsShareId)
 
-	getOpts := &nfsOptions{Region: region}
+	getOpts := &nfsQueryOptions{Region: region}
 	path, err := addOptions(path, getOpts)
 	if err != nil {
 		return nil, nil, err
@@ -294,15 +350,20 @@ func (s *NfsServiceOp) Get(ctx context.Context, nfsShareId string, region string
 	return root.Share, resp, nil
 }
 
-// List returns a list of NFS shares.
+// List returns a list of NFS shares using the original public method
+// signature. Use ListWithOptions when an NFS-specific filter is needed.
 func (s *NfsServiceOp) List(ctx context.Context, opts *ListOptions, region string) ([]*Nfs, *Response, error) {
-	path, err := addOptions(nfsBasePath, opts)
-	if err != nil {
-		return nil, nil, err
+	nfsOpts := &NfsListOptions{Region: region}
+	if opts != nil {
+		nfsOpts.ListOptions = *opts
 	}
+	return s.ListWithOptions(ctx, nfsOpts)
+}
 
-	listOpts := &nfsOptions{Region: region}
-	path, err = addOptions(path, listOpts)
+// ListWithOptions returns a list of NFS shares filtered by NFS-specific
+// options, including exact-name matching.
+func (s *NfsServiceOp) ListWithOptions(ctx context.Context, opts *NfsListOptions) ([]*Nfs, *Response, error) {
+	path, err := addOptions(nfsBasePath, opts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -328,15 +389,21 @@ func (s *NfsServiceOp) List(ctx context.Context, opts *ListOptions, region strin
 	return root.Shares, resp, nil
 }
 
-// Delete deletes an NFS share by ID and region.
+// Delete deletes an NFS share by ID and region using the original public
+// method signature. It does not delete active snapshots.
 func (s *NfsServiceOp) Delete(ctx context.Context, nfsShareId string, region string) (*Response, error) {
+	return s.DeleteWithOptions(ctx, nfsShareId, &NfsDeleteOptions{Region: region})
+}
+
+// DeleteWithOptions deletes an NFS share. Set DeleteSnapshots to delete active
+// snapshots with the share; otherwise the API returns 412 when snapshots exist.
+func (s *NfsServiceOp) DeleteWithOptions(ctx context.Context, nfsShareId string, opts *NfsDeleteOptions) (*Response, error) {
 	if nfsShareId == "" {
 		return nil, NewArgError("id", "cannot be empty")
 	}
 	path := fmt.Sprintf("%s/%s", nfsBasePath, nfsShareId)
 
-	deleteOpts := &nfsOptions{Region: region}
-	path, err := addOptions(path, deleteOpts)
+	path, err := addOptions(path, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -354,6 +421,28 @@ func (s *NfsServiceOp) Delete(ctx context.Context, nfsShareId string, region str
 	return resp, nil
 }
 
+// GetOptions retrieves the valid parameter values for creating NFS shares:
+// the available performance tiers with the size range each tier accepts,
+// and the regions where NFS is supported. Size bounds are per-account and
+// can change; treat the endpoint as the source of truth rather than
+// hard-coding values.
+func (s *NfsServiceOp) GetOptions(ctx context.Context) (*NfsOptions, *Response, error) {
+	path := fmt.Sprintf("%s/options", nfsBasePath)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(NfsOptions)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root, resp, nil
+}
+
 // Get retrieves an NFS snapshot by ID and region.
 func (s *NfsServiceOp) GetSnapshot(ctx context.Context, nfsSnapshotID string, region string) (*NfsSnapshot, *Response, error) {
 	if nfsSnapshotID == "" {
@@ -362,7 +451,7 @@ func (s *NfsServiceOp) GetSnapshot(ctx context.Context, nfsSnapshotID string, re
 
 	path := fmt.Sprintf("%s/%s", nfsSnapshotsBasePath, nfsSnapshotID)
 
-	getOpts := &nfsOptions{Region: region}
+	getOpts := &nfsQueryOptions{Region: region}
 	path, err := addOptions(path, getOpts)
 	if err != nil {
 		return nil, nil, err
@@ -390,7 +479,7 @@ func (s *NfsServiceOp) ListSnapshots(ctx context.Context, opts *ListOptions, nfs
 		return nil, nil, err
 	}
 
-	listOpts := &nfsOptions{Region: region, ShareID: nfsShareId}
+	listOpts := &nfsQueryOptions{Region: region, ShareID: nfsShareId}
 	path, err = addOptions(path, listOpts)
 	if err != nil {
 		return nil, nil, err
@@ -424,7 +513,7 @@ func (s *NfsServiceOp) DeleteSnapshot(ctx context.Context, nfsSnapshotID string,
 	}
 	path := fmt.Sprintf("%s/%s", nfsSnapshotsBasePath, nfsSnapshotID)
 
-	deleteOpts := &nfsOptions{Region: region}
+	deleteOpts := &nfsQueryOptions{Region: region}
 	path, err := addOptions(path, deleteOpts)
 	if err != nil {
 		return nil, err
