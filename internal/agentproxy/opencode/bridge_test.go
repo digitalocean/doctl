@@ -424,6 +424,9 @@ func TestRunFailedEmitsSessionErrorThenIdle(t *testing.T) {
 	tm, ok := finalInfo["time"].(map[string]any)
 	require.True(t, ok)
 	assert.Contains(t, tm, "completed")
+	// ...but a failed turn must not claim a clean finish (same distinction
+	// the history reconstruction makes for failed turns).
+	assert.NotContains(t, finalInfo, "finish")
 
 	errProps := propsOf(t, frames[6])
 	errObj, ok := errProps["error"].(map[string]any)

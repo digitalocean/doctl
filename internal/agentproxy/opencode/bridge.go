@@ -511,7 +511,7 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		// Close the assistant message with time.completed — without it the
 		// TUI leaves the turn looking in-flight (a lingering QUEUED tag on
 		// the user message, found live).
-		if err := f.finishAssistantMessage(ev.RunID, ts, ew, at); err != nil {
+		if err := f.finishAssistantMessage(ev.RunID, ts, ew, at, false); err != nil {
 			return err
 		}
 		return f.emitIdle(sid, ew)
@@ -532,7 +532,7 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		// Close the assistant message on failure too — the TUI keys "this
 		// message is done" off time.completed, so without it a failed run
 		// leaves the reply looking in-flight (spinner/QUEUED) forever.
-		if err := f.finishAssistantMessage(ev.RunID, ts, ew, at); err != nil {
+		if err := f.finishAssistantMessage(ev.RunID, ts, ew, at, true); err != nil {
 			return err
 		}
 		if err := ew.session("session.error", map[string]any{
@@ -693,7 +693,10 @@ func tokensObject(in, out int64) map[string]any {
 
 // finishAssistantMessage re-sends the assistant message.updated with
 // time.completed stamped, mirroring the real server's end-of-turn frame.
-func (f *Facade) finishAssistantMessage(runID string, ts *turnState, ew *eventWriter, at int64) error {
+// Failed turns still get time.completed (the TUI keys "done" off it) but no
+// finish reason — a failed run must not claim a clean "stop" (history's
+// failed-turn reconstruction makes the same distinction).
+func (f *Facade) finishAssistantMessage(runID string, ts *turnState, ew *eventWriter, at int64, failed bool) error {
 	if ts.asstMsgID == "" {
 		// The turn was never announced (no run.started or delta seen) —
 		// there is no assistant message to close.
@@ -703,7 +706,9 @@ func (f *Facade) finishAssistantMessage(runID string, ts *turnState, ew *eventWr
 	info := f.assistantInfo(ts, map[string]any{"created": ts.startMs, "completed": at})
 	info["tokens"] = tokensObject(ts.tokensIn, ts.tokensOut)
 	info["cost"] = float64(ts.costMicros) / 1e6
-	info["finish"] = "stop"
+	if !failed {
+		info["finish"] = "stop"
+	}
 	return ew.session("message.updated", map[string]any{"sessionID": sid, "info": info})
 }
 
