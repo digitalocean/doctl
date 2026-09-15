@@ -75,6 +75,7 @@ type Droplet struct {
 	Tags             []string      `json:"tags,omitempty"`
 	VolumeIDs        []string      `json:"volume_ids"`
 	VPCUUID          string        `json:"vpc_uuid,omitempty"`
+	SubnetUUID       string        `json:"subnet_uuid,omitempty"`
 	// GPUPartitionMode is echoed back on create when the Droplet was created
 	// with a partitioned GPU. Note: read-back on droplet GET is not delivered in
 	// v1, so this is only reliably populated on the create response.
@@ -247,6 +248,7 @@ type DropletCreateRequest struct {
 	Volumes           []DropletCreateVolume       `json:"volumes,omitempty"`
 	Tags              []string                    `json:"tags"`
 	VPCUUID           string                      `json:"vpc_uuid,omitempty"`
+	SubnetUUID        string                      `json:"subnet_uuid,omitempty"`
 	WithDropletAgent  *bool                       `json:"with_droplet_agent,omitempty"`
 	BackupPolicy      *DropletBackupPolicyRequest `json:"backup_policy,omitempty"`
 	PublicNetworking  *bool                       `json:"public_networking,omitempty"`
@@ -270,6 +272,7 @@ type DropletMultiCreateRequest struct {
 	UserData          string                      `json:"user_data,omitempty"`
 	Tags              []string                    `json:"tags"`
 	VPCUUID           string                      `json:"vpc_uuid,omitempty"`
+	SubnetUUID        string                      `json:"subnet_uuid,omitempty"`
 	WithDropletAgent  *bool                       `json:"with_droplet_agent,omitempty"`
 	BackupPolicy      *DropletBackupPolicyRequest `json:"backup_policy,omitempty"`
 	PublicNetworking  *bool                       `json:"public_networking,omitempty"`
