@@ -15,8 +15,9 @@ import (
 // pushes history), so re-attaching shows prior turns. The facade serves that
 // endpoint from a one-shot replay_only StreamSession pass over the session's
 // durable event history, reconstructed into the [{info, parts}] shape
-// captured from a real server (see the capture doc). No cache: history is
-// fetched per request, and the TUI asks once per attach.
+// captured from a real server (see the capture doc). Replays are cached for
+// the proxy's lifetime (see history()): fetched once, single-flighted, warmed
+// at the facade's first request, and invalidated when a live turn completes.
 
 // historyMessage is one reconstructed message: the {info, parts} pair the
 // history endpoint returns.
@@ -54,29 +55,61 @@ func (ht *historyTurn) endMs() int64 {
 // server-side linger, measured against the dev stack — 68 events transfer
 // instantly and the close arrives at exactly 8.0s), and an attach fetches
 // history twice (list gating + the message list), so uncached history made
-// re-attach feel ~16s slow. The mutex doubles as single-flight: concurrent
-// callers wait for the one in-progress replay instead of starting their own.
+// re-attach feel ~16s slow.
+//
+// The slow fetch runs OUTSIDE histMu: the event loop calls
+// invalidateHistory() when a turn completes, and holding the lock across the
+// ~8s replay would stall event translation behind it. Single-flight rides
+// histFetching/histDone instead — concurrent callers wait for the in-flight
+// replay (or their ctx), then re-check the cache. A fetch that an
+// invalidation overlapped (histGen moved) still returns its snapshot to the
+// caller — it was a valid point-in-time read — but is not cached, so the
+// next call replays fresh.
 //
 // The cache is warmed at the first request the facade sees (the TUI's
-// /global/health preflight fires well before the attach burst) and
-// invalidated when a live turn completes (invalidateHistory).
+// /global/health preflight fires well before the attach burst).
 func (f *Facade) history(ctx context.Context) ([]historyMessage, error) {
-	f.histMu.Lock()
-	defer f.histMu.Unlock()
-	if f.histValid {
-		return f.hist, nil
+	for {
+		f.histMu.Lock()
+		if f.histValid {
+			msgs := f.hist
+			f.histMu.Unlock()
+			return msgs, nil
+		}
+		if f.histFetching {
+			done := f.histDone
+			f.histMu.Unlock()
+			select {
+			case <-done:
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		f.histFetching = true
+		f.histDone = make(chan struct{})
+		gen := f.histGen
+		f.histMu.Unlock()
+
+		msgs, err := f.fetchHistory(ctx)
+
+		f.histMu.Lock()
+		f.histFetching = false
+		close(f.histDone)
+		if err == nil && f.histGen == gen {
+			f.hist, f.histValid = msgs, true
+		}
+		f.histMu.Unlock()
+		return msgs, err
 	}
-	msgs, err := f.fetchHistory(ctx)
-	if err != nil {
-		return nil, err
-	}
-	f.hist, f.histValid = msgs, true
-	return msgs, nil
 }
 
 // invalidateHistory drops the cache; the next history() call replays fresh.
+// Only ever a fast lock — never blocked behind an in-flight fetch (the event
+// loop calls this on turn completion and must not stall).
 func (f *Facade) invalidateHistory() {
 	f.histMu.Lock()
+	f.histGen++
 	f.histValid = false
 	f.hist = nil
 	f.histMu.Unlock()

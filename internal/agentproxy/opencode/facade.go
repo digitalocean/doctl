@@ -74,11 +74,16 @@ type Facade struct {
 	// handleSessionList).
 	sessionCreated bool
 
-	// History cache (see history() in history.go): histMu also serves as
-	// single-flight for the slow replay_only fetch.
-	histMu    sync.Mutex
-	hist      []historyMessage
-	histValid bool
+	// History cache (see history() in history.go). histMu guards only the
+	// fields — the slow replay_only fetch runs outside it so invalidation
+	// never blocks behind it; histFetching/histDone single-flight concurrent
+	// fetchers, and histGen detects an invalidation that overlapped a fetch.
+	histMu       sync.Mutex
+	hist         []historyMessage
+	histValid    bool
+	histGen      int
+	histFetching bool
+	histDone     chan struct{}
 }
 
 // ServeHTTP implements http.Handler.

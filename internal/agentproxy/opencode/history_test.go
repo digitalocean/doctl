@@ -1,10 +1,13 @@
 package opencode
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/agentproxy/agentproxytest"
@@ -168,4 +171,60 @@ func TestHistoryFailedTurn(t *testing.T) {
 	assert.Equal(t, "user", msgs[0].Info["role"])
 	assert.Equal(t, "assistant", msgs[1].Info["role"])
 	assert.NotContains(t, msgs[1].Info, "finish")
+}
+
+// invalidateHistory must never wait on an in-flight replay: the event loop
+// calls it when a turn completes, and the replay stream lingers ~8s server-
+// side — holding histMu across the fetch would stall event translation for
+// that long (review finding on the cache commit).
+func TestInvalidateHistoryDoesNotBlockOnInFlightFetch(t *testing.T) {
+	h := agentproxytest.New(t, testSessionID)
+	client, err := godo.New(nil, godo.SetBaseURL(h.Server.URL+"/"))
+	require.NoError(t, err)
+	f := &Facade{SessionID: testSessionID, Sessions: do.NewHostedAgentsService(client), Dir: "/tmp/ws"}
+
+	// Hold the replay mid-stream: the WaitForHITL gate blocks delivery of the
+	// second event until the test resolves "gate-1", modeling the server-side
+	// linger for exactly as long as the test needs. (HangStreamAfterEvents
+	// can't do this — the harness exempts replay_only streams from it.)
+	h.QueueReplayHistory(
+		agentproxytest.Event{RunID: "run-1", Type: string(godo.HostedAgentEventKindRunStarted), Data: json.RawMessage(`{"user_input":"held"}`)},
+		agentproxytest.Event{RunID: "run-1", Type: string(godo.HostedAgentEventKindRunCompleted), WaitForHITL: "gate-1"},
+	)
+
+	fetchReturned := make(chan struct{})
+	go func() {
+		defer close(fetchReturned)
+		_, _ = f.history(context.Background())
+	}()
+
+	// Wait until the fetch is actually in flight.
+	require.Eventually(t, func() bool {
+		f.histMu.Lock()
+		defer f.histMu.Unlock()
+		return f.histFetching
+	}, 5*time.Second, 5*time.Millisecond, "the history fetch never started")
+
+	invalidated := make(chan struct{})
+	go func() {
+		f.invalidateHistory()
+		close(invalidated)
+	}()
+	select {
+	case <-invalidated:
+	case <-time.After(2 * time.Second):
+		t.Fatal("invalidateHistory blocked behind the in-flight replay")
+	}
+
+	// Release the gate so the fetch completes; its result must NOT be cached
+	// (the invalidation superseded it), so the next read replays fresh.
+	resp, err := http.Post(h.Server.URL+"/v2/agents/sessions/"+testSessionID+"/hitl/gate-1",
+		"application/json", strings.NewReader(`{"outcome":"HITL_OUTCOME_APPROVE"}`))
+	require.NoError(t, err)
+	resp.Body.Close()
+	<-fetchReturned
+	f.histMu.Lock()
+	valid := f.histValid
+	f.histMu.Unlock()
+	assert.False(t, valid, "a fetch overlapped by an invalidation must not populate the cache")
 }
