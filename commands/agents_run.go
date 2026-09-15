@@ -43,7 +43,9 @@ func defaultAskConnectGitHub() (bool, error) {
 		return false, nil
 	}
 	choice, err := confirm.New(
-		"GitHub is not connected for your team. Connect now? (optional — needed for private repos)",
+		// Keep this short: confirm prompts Truncate/WordWrap on one line with
+		// "yes/no", so a long parenthetical was clipped to "(optional " (MARSOHS-1396).
+		"GitHub is not connected. Connect now? (optional — press N to skip)",
 		confirm.WithDefaultChoice(confirm.No),
 	).Prompt()
 	if err != nil {
