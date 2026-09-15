@@ -225,8 +225,16 @@ func (f *Facade) handlePermissionReply(w http.ResponseWriter, perID, reply, mess
 		http.Error(w, fmt.Sprintf("unknown permission reply %q", reply), http.StatusBadRequest)
 		return
 	}
+	// Record the client's reply string BEFORE resolving: the harness can
+	// deliver run.human_input_received (whose handler echoes p.reply in
+	// permission.replied) the instant the resolve call lands, racing a
+	// write placed after it. Rolled back if the resolve fails — the ask is
+	// then still pending and unreplied.
 	f.mu.Lock()
 	p := f.perms[perID]
+	if p != nil {
+		p.reply = reply
+	}
 	f.mu.Unlock()
 	if p == nil {
 		// Matches the real server's PermissionNotFoundError behavior for
@@ -239,12 +247,12 @@ func (f *Facade) handlePermissionReply(w http.ResponseWriter, perID, reply, mess
 		Reason:  message,
 		Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
 	}); err != nil {
+		f.mu.Lock()
+		p.reply = ""
+		f.mu.Unlock()
 		http.Error(w, fmt.Sprintf("resolving the permission with the hosted session failed: %v", err), http.StatusBadGateway)
 		return
 	}
-	f.mu.Lock()
-	p.reply = reply
-	f.mu.Unlock()
 	// The real server answers the reply POST with a bare `true` (captured).
 	f.writeJSON(w, true)
 }

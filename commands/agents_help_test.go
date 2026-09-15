@@ -16,6 +16,7 @@ package commands
 import (
 	"testing"
 
+	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,6 +95,9 @@ func TestAgentsLaunchHelpDocumentsBothModes(t *testing.T) {
 func TestAgentsStartProxyHelpExplainsBridge(t *testing.T) {
 	assert.Contains(t, agentsStartProxyHelpMD, "WebSocket")
 	assert.Contains(t, agentsStartProxyHelpMD, "codex --remote")
+	assert.Contains(t, agentsStartProxyHelpMD, "opencode attach")
+	assert.Contains(t, agentsStartProxyHelpMD, opencode.TestedVersion,
+		"the help must state which opencode version the bridge was tested against")
 	assert.Contains(t, agentsStartProxyHelpMD, "launch")
 	assert.NotContains(t, agentsStartProxyHelpMD, "What's new")
 }
