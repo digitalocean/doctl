@@ -344,10 +344,10 @@ func RunAuthSwitch(c *CmdConfig) error {
 	viper.Set("context", context)
 
 	notice("Now using context [%s] by default", context)
-	return writeConfig()
+	return writeConfig(context)
 }
 
-func writeConfig() error {
+func writeConfig(context string) error {
 	cfg, err := loadConfigFile()
 	if err != nil {
 		return err

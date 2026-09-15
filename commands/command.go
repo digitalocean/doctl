@@ -136,6 +136,10 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 
 	// Defined after the options are applied so their changes are visible here.
 	c.Command.Run = func(cmd *cobra.Command, args []string) {
+		// Recorded so checkErr can suggest `<command> --help` as the default
+		// next step without threading cmd through every call site.
+		activeCommand = cmd
+
 		cfg, err := NewCmdConfig(
 			cmdNS(c),
 			&doctl.LiveConfig{},
