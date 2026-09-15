@@ -96,6 +96,7 @@ func AgentConfigs() *Command {
 		Writer, append(ns, aliasOpt("start"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddStringFlag(cmdStartSession, doctl.ArgAgentName, "", "", "Name for the new session", requiredOpt())
+	AddBoolFlag(cmdStartSession, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 	cmdStartSession.Example = `doctl harness-runtime config start-session cfg_abc123 --name my-session`
 
 	requireAgentSubcommand(cmd)
@@ -301,9 +302,14 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	resumeOnTopoff, err := c.Doit.GetBool(c.NS, doctl.ArgAgentResumeOnTopoff)
+	if err != nil {
+		return err
+	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
-		Name:     name,
-		ConfigID: configID,
+		Name:           name,
+		ConfigID:       configID,
+		ResumeOnTopoff: resumeOnTopoff,
 	})
 	if err != nil {
 		return err

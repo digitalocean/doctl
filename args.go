@@ -1110,6 +1110,10 @@ const (
 	// every approval request during an unattended `agents create`.
 	ArgAgentOnHITL = "on-hitl"
 
+	// ArgAgentResumeOnTopoff opts a new session in to automatic resumption when
+	// the team's prepayment balance is topped off after a low-balance pause.
+	ArgAgentResumeOnTopoff = "resume-on-topoff"
+
 	// Gradient AI simulation args
 
 	// ArgGenAISearch filters a Gradient AI list by a free-text search term.
