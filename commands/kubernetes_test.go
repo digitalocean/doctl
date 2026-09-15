@@ -61,6 +61,9 @@ var (
 			P2pOciRegistryPlugin: &godo.KubernetesP2pOciRegistry{
 				Enabled: boolPtr(true),
 			},
+			NfsCsiPlugin: &godo.KubernetesNfsCsiPlugin{
+				Enabled: boolPtr(true),
+			},
 			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
 				Enabled: boolPtr(true),
 			},
@@ -743,6 +746,9 @@ func TestKubernetesCreate(t *testing.T) {
 			P2pOciRegistryPlugin: &godo.KubernetesP2pOciRegistry{
 				Enabled: boolPtr(true),
 			},
+			NfsCsiPlugin: &godo.KubernetesNfsCsiPlugin{
+				Enabled: boolPtr(true),
+			},
 			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
 				Enabled: boolPtr(true),
 			},
@@ -797,6 +803,7 @@ func TestKubernetesCreate(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnablePeerToPeerOciRegistryPlugin, testCluster.P2pOciRegistryPlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNfsCsiPlugin, testCluster.NfsCsiPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
@@ -920,6 +927,9 @@ func TestKubernetesUpdate(t *testing.T) {
 			P2pOciRegistryPlugin: &godo.KubernetesP2pOciRegistry{
 				Enabled: boolPtr(true),
 			},
+			NfsCsiPlugin: &godo.KubernetesNfsCsiPlugin{
+				Enabled: boolPtr(true),
+			},
 			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
 				Enabled: boolPtr(true),
 			},
@@ -961,6 +971,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnablePeerToPeerOciRegistryPlugin, testCluster.P2pOciRegistryPlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNfsCsiPlugin, testCluster.NfsCsiPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
@@ -1002,6 +1013,9 @@ func TestKubernetesUpdate(t *testing.T) {
 				Enabled: boolPtr(true),
 			},
 			P2pOciRegistryPlugin: &godo.KubernetesP2pOciRegistry{
+				Enabled: boolPtr(true),
+			},
+			NfsCsiPlugin: &godo.KubernetesNfsCsiPlugin{
 				Enabled: boolPtr(true),
 			},
 			AmdGpuDevicePlugin: &godo.KubernetesAmdGpuDevicePlugin{
@@ -1046,6 +1060,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 		config.Doit.Set(config.NS, doctl.ArgEnableRoutingAgent, testCluster.RoutingAgent.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnablePeerToPeerOciRegistryPlugin, testCluster.P2pOciRegistryPlugin.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgEnableNfsCsiPlugin, testCluster.NfsCsiPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDevicePlugin, testCluster.AmdGpuDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, testCluster.AmdGpuDeviceMetricsExporterPlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableNvidiaGpuDevicePlugin, testCluster.NvidiaGpuDevicePlugin.Enabled)
