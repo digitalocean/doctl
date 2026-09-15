@@ -381,6 +381,11 @@ type HostedAgentSession struct {
 	// (manifest parse + policy fidelity). Populated on the create response
 	// only; omitted on get/list.
 	Warnings []string `json:"warnings,omitempty"`
+	// ResumeOnTopoff reports that the session consented at create time to being
+	// resumed automatically once the team's prepayment balance is topped off
+	// after a low-balance pause. Set at create only (there is no update
+	// surface), never inherited by forks, and omitted when false.
+	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -494,6 +499,12 @@ type HostedAgentSessionCreateRequest struct {
 type HostedAgentSessionFromConfigRequest struct {
 	Name     string `json:"name"`
 	ConfigID string `json:"config_id"`
+	// ResumeOnTopoff opts the new session in to automatic resumption when the
+	// team's prepayment balance is restored. Session-scoped, not config-scoped:
+	// the referenced config never confers it, so one shared config cannot
+	// enrol every session created from it. Omitted when false, which leaves
+	// the server default (also false).
+	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
 }
 
 // HostedAgentManifestCreateOptions configures CreateSessionFromManifest.
@@ -502,6 +513,12 @@ type HostedAgentSessionFromConfigRequest struct {
 // correlation. See docs/design/openai-sandbox-provider.md.
 type HostedAgentManifestCreateOptions struct {
 	OpenAISessionID string `url:"openai_session_id,omitempty"`
+	// ResumeOnTopoff opts the new session in to automatic resumption when the
+	// team's prepayment balance is restored after a low-balance pause. It is a
+	// query parameter rather than an agents.yaml field because that document is
+	// immutable and shared through Agent Configs, while spending consent has to
+	// stay per-session. Omitted when false (the server default).
+	ResumeOnTopoff bool `url:"resume_on_topoff,omitempty"`
 }
 
 // HostedAgentSessionListOptions specifies optional list filters.

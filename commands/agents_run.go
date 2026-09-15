@@ -300,6 +300,9 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentRepo,
 		doctl.ArgAgentTriggerPrompt,
 		doctl.ArgAgentWaitTimeout,
+		// The server sets top-off consent at create time only, so accepting it
+		// here would leave the user believing an existing session was enrolled.
+		doctl.ArgAgentResumeOnTopoff,
 	} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
@@ -467,7 +470,7 @@ func manifestIncludesPrompt(manifest []byte, prompt string) bool {
 
 // startSessionFromRawManifest uploads a manifest and creates a hosted session.
 // When prog is non-nil it prints Plano-style lifecycle steps around each phase.
-func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgress) (*do.HostedAgentSession, error) {
+func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if prog != nil {
 		prog.step("Validating configuration…")
 	}
@@ -510,8 +513,11 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, prog *creationProgres
 	}
 
 	var createOpt *godo.HostedAgentManifestCreateOptions
-	if openaiSessionID != "" {
-		createOpt = &godo.HostedAgentManifestCreateOptions{OpenAISessionID: openaiSessionID}
+	if openaiSessionID != "" || resumeOnTopoff {
+		createOpt = &godo.HostedAgentManifestCreateOptions{
+			OpenAISessionID: openaiSessionID,
+			ResumeOnTopoff:  resumeOnTopoff,
+		}
 	}
 
 	if prog != nil {
@@ -1061,6 +1067,11 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	}
 	if parent := strings.TrimSpace(sess.ParentSessionID); parent != "" {
 		body.WriteString(cardRow("Parent", colorize(parent, colMuted)))
+	}
+	// Only shown when granted: the server omits the field when false, and a
+	// "Resume on top-off: no" row on every session would be noise.
+	if sess.ResumeOnTopoff {
+		body.WriteString(cardRow("Resume on top-off", "enabled"))
 	}
 	if !sess.CreatedAt.Time.IsZero() {
 		body.WriteString(cardRow("Created", colorize(formatCreatedAt(sess.CreatedAt.Time), colMuted)))

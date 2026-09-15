@@ -91,6 +91,11 @@ agent: opencode
   --on-hitl approve --interactive=false
 ` + "```\n\n" + `From another shell, poll with ` + "`show <session> -o json`" + `, move files with ` + "`upload`" + ` / ` + "`download`" + `, and tear down with ` + "`remove`" + ` (also ` + "`destroy`" + ` / ` + "`rm`" + `).
 
+**Surviving a low balance.** When a team's prepayment balance runs out, running sessions are paused. ` + "`--resume-on-topoff`" + ` opts this session in to being resumed automatically once the balance is topped off, so an unattended run picks up where it stopped instead of waiting for someone to notice:
+` + "```bash\n" + agentCLI + ` create --spec agents.yaml --prompt "Fix the failing test" \
+  --on-hitl approve --resume-on-topoff
+` + "```\n\n" + `It is off by default and is spending consent, so it is deliberately narrow: per-session (never inherited from an Agent Config, and never by a fork), settable only at create time, and honoured only for a session paused for low balance whose last run had not finished. A session you paused yourself, or one that idled out, stays paused. It is not an ` + "`agents.yaml`" + ` field — pass the flag on each create.
+
 Creating from a manifest or ` + "`--harness`" + ` also persists an Agent Config named after the session (shown as Config on the ready card). Start later sessions from it with ` + "`create --from-config`" + ` or ` + "`config start-session`" + `.
 
 Use ` + "`-o json`" + ` for machine-readable create output without waiting. Combined with ` + "`--prompt`" + `, doctl still waits until the session is ready and delivers the prompt before printing JSON — otherwise the prompt would be dropped.`
@@ -204,7 +209,9 @@ const agentsConfigDeleteHelpMD = `Delete a config and free its name. Remove acti
 
 const agentsConfigListSessionsHelpMD = `List sessions started from a config. Filter with ` + "`--status`" + ` or ` + "`--name`" + `.`
 
-const agentsConfigStartSessionHelpMD = `Start a new session from a config ID. ` + "`--name`" + ` is required and must be unique among active sessions.`
+const agentsConfigStartSessionHelpMD = `Start a new session from a config ID. ` + "`--name`" + ` is required and must be unique among active sessions.
+
+` + "`--resume-on-topoff`" + ` opts the new session in to being resumed automatically after a low-balance pause, once the team's prepayment balance is topped off. It is per-session rather than config-scoped, so the config never confers it and one shared config cannot enrol every session started from it — pass the flag on each start.`
 
 const agentsExecHelpMD = `Run one command in a session's sandbox and print its output.
 
