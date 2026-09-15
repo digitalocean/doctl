@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -77,6 +78,9 @@ func drainFrames(t *testing.T, body io.Reader) []frame {
 		require.NoError(t, json.Unmarshal(bytes.TrimPrefix(line, []byte("data: ")), &fr))
 		frames = append(frames, fr)
 	}
+	// A scan error (overlong line, IO failure) must fail the test rather
+	// than silently truncate the frame list.
+	require.NoError(t, sc.Err())
 	return frames
 }
 
@@ -313,17 +317,53 @@ func TestRunFailedEmitsSessionErrorThenIdle(t *testing.T) {
 		"message.part.updated", // user prompt part
 		"session.status",       // busy
 		"message.updated",      // assistant
+		"message.updated",      // assistant finalized (time.completed)
 		"session.error",
 		"session.status", // idle
 		"session.idle",
 	}, types)
 
-	errProps := propsOf(t, frames[5])
+	// The assistant message is closed on failure too — the TUI keys "done"
+	// off time.completed, and without it a failed reply spins forever.
+	finalInfo, ok := propsOf(t, frames[5])["info"].(map[string]any)
+	require.True(t, ok)
+	tm, ok := finalInfo["time"].(map[string]any)
+	require.True(t, ok)
+	assert.Contains(t, tm, "completed")
+
+	errProps := propsOf(t, frames[6])
 	errObj, ok := errProps["error"].(map[string]any)
 	require.True(t, ok)
 	data, ok := errObj["data"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "provider exploded", data["message"])
+}
+
+// The tracked-turn map is bounded: a facade whose event stream is never
+// drained (so no run.completed/run.failed ever deletes entries) evicts its
+// oldest turns instead of retaining every prompt forever.
+func TestTrackedTurnsAreBounded(t *testing.T) {
+	h := agentproxytest.New(t, testSessionID)
+	client, err := godo.New(nil, godo.SetBaseURL(h.Server.URL+"/"))
+	require.NoError(t, err)
+	f := &Facade{SessionID: testSessionID, Sessions: do.NewHostedAgentsService(client), Dir: "/tmp/ws"}
+	srv := httptest.NewServer(f)
+	t.Cleanup(srv.Close)
+
+	for i := 0; i < maxTrackedTurns+9; i++ {
+		h.QueueRun(fmt.Sprintf("run-%d", i))
+		resp := postPrompt(t, srv, "prompt with some text worth not leaking")
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	}
+
+	f.mu.Lock()
+	n := len(f.turns)
+	_, newestKept := f.turns[fmt.Sprintf("run-%d", maxTrackedTurns+8)]
+	_, oldestGone := f.turns["run-0"]
+	f.mu.Unlock()
+	assert.Equal(t, maxTrackedTurns, n)
+	assert.True(t, newestKept, "the newest turn must survive eviction")
+	assert.False(t, oldestGone, "the oldest turn must have been evicted")
 }
 
 // Events for runs this facade didn't start (another device's turns) are not

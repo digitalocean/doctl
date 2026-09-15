@@ -61,11 +61,13 @@ type Facade struct {
 	handlerOnce sync.Once
 	mux         *http.ServeMux
 
-	// mu guards turns and sessionCreated: turns is written by prompt
-	// handlers (request goroutines) and read by the event loop (the SSE
-	// handler goroutine).
-	mu    sync.Mutex
-	turns map[string]*turnState
+	// mu guards turns/turnOrder and sessionCreated: turns is written by
+	// prompt handlers (request goroutines) and read by the event loop (the
+	// SSE handler goroutine). turnOrder tracks insertion order for the
+	// maxTrackedTurns eviction.
+	mu        sync.Mutex
+	turns     map[string]*turnState
+	turnOrder []string
 	// sessionCreated flips once the client has created/prompted the bridged
 	// session, so the session list grows its single entry (see
 	// handleSessionList).

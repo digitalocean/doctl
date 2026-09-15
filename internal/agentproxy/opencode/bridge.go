@@ -21,6 +21,12 @@ func timeNowMs() int64 { return time.Now().UnixMilli() }
 // (crates/agent_adapters/src/opencode/raw.rs) — when unsure how a canonical
 // event should look in opencode terms, that adapter is the answer key.
 
+// maxTrackedTurns bounds how many in-flight turns the facade retains — see
+// the eviction in handlePromptAsync. Far above anything a single interactive
+// client produces (turns are deleted as their runs end); it exists so a
+// facade whose event stream is never drained can't grow without bound.
+const maxTrackedTurns = 16
+
 // turnState tracks one in-flight hosted run and the opencode ids synthesized
 // for it. Created when SendInput returns the run id; deleted on
 // run.completed/run.failed. Events for runs this facade isn't tracking are
@@ -231,6 +237,16 @@ func (f *Facade) handlePromptAsync(w http.ResponseWriter, r *http.Request) {
 		f.turns = make(map[string]*turnState)
 	}
 	f.turns[resp.RunID] = &turnState{userMsgID: userMsgID, promptText: text}
+	f.turnOrder = append(f.turnOrder, resp.RunID)
+	// Evict the oldest tracked turn beyond the cap. Turns are normally
+	// deleted when their run completes/fails on the event stream; the cap
+	// only matters when no /global/event consumer ever drains those terminal
+	// events — without it, prompting a stream-less facade forever would
+	// retain every prompt's text.
+	for len(f.turns) > maxTrackedTurns && len(f.turnOrder) > 0 {
+		delete(f.turns, f.turnOrder[0])
+		f.turnOrder = f.turnOrder[1:]
+	}
 	f.sessionCreated = true
 	f.mu.Unlock()
 
@@ -247,6 +263,12 @@ func (f *Facade) lookupTurn(runID string) (*turnState, bool) {
 func (f *Facade) dropTurn(runID string) {
 	f.mu.Lock()
 	delete(f.turns, runID)
+	for i, id := range f.turnOrder {
+		if id == runID {
+			f.turnOrder = append(f.turnOrder[:i], f.turnOrder[i+1:]...)
+			break
+		}
+	}
 	f.mu.Unlock()
 }
 
@@ -388,6 +410,12 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		if payload.Message == "" {
 			payload.Message = "hosted session run failed"
 		}
+		// Close the assistant message on failure too — the TUI keys "this
+		// message is done" off time.completed, so without it a failed run
+		// leaves the reply looking in-flight (spinner/QUEUED) forever.
+		if err := f.finishAssistantMessage(ev.RunID, ts, ew, at); err != nil {
+			return err
+		}
 		if err := ew.session("session.error", map[string]any{
 			"sessionID": sid,
 			"error": map[string]any{
@@ -402,7 +430,7 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 	default:
 		// Tool calls, usage, HITL: M4/M5. The log is the backlog, exactly
 		// like the codex facade's unhandled-method log was.
-		log.Printf("unhandled event kind: %s", ev.Kind)
+		log.Printf("agentproxy/opencode: unhandled event kind: %s", ev.Kind)
 		return nil
 	}
 }
