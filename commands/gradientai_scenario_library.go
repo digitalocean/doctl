@@ -29,6 +29,7 @@ func ScenarioLibraryCmd() *Command {
 			Aliases: []string{"sl"},
 			Short:   "Display commands that browse the Gradient AI scenario library.",
 			Long:    "The subcommands of `doctl gradient scenario-library` browse the curated scenarios that DigitalOcean publishes and copy them into your own scenario sets.",
+			Hidden:  true,
 		},
 	}
 
