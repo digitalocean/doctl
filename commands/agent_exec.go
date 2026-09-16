@@ -86,7 +86,10 @@ func RunAgentsExec(c *CmdConfig) error {
 		return err
 	}
 
-	if Output == "json" {
+	// Passing the guest's bytes through is the default, but not when the caller
+	// asked for a document or for columns: those name what they want back, and
+	// the exit code still carries the guest's status either way.
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentSandboxExec{
 			Execs:  []*godo.HostedAgentSandboxExecResponse{resp},
 			Single: true,

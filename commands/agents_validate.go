@@ -848,7 +848,7 @@ func RunAgentsValidate(c *CmdConfig) error {
 		}
 		discovered = true
 	}
-	noticeDiscoveredManifest(specPath, discovered)
+	noticeDiscoveredManifest(c, specPath, discovered)
 	raw, err := readManifest(os.Stdin, specPath)
 	if err != nil {
 		return err

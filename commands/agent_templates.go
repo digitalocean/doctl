@@ -131,7 +131,7 @@ func RunAgentsTemplateCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTemplate{Templates: []godo.HostedAgentTemplate{*tpl}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -157,7 +157,7 @@ func RunAgentsTemplateList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentTemplate{Templates: templates}); err != nil {
 			return err
 		}
@@ -182,7 +182,7 @@ func RunAgentsTemplateGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTemplate{Templates: []godo.HostedAgentTemplate{*tpl}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -219,7 +219,7 @@ func RunAgentsTemplateUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTemplate{Templates: []godo.HostedAgentTemplate{*tpl}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -268,7 +268,7 @@ func RunAgentsTemplateListBuilds(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentTemplateBuild{Builds: builds}); err != nil {
 			return err
 		}
@@ -293,7 +293,7 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTemplateBuild{Builds: []godo.HostedAgentTemplateBuild{*build}, Single: true})
 	}
 	stylingEnabled = detectStyling()

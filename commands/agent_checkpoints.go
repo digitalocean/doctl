@@ -84,7 +84,7 @@ func RunAgentsCheckpointCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -117,7 +117,7 @@ func RunAgentsCheckpointList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: checkpoints}); err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ func RunAgentsCheckpointGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentCheckpoint{Checkpoints: []godo.HostedAgentCheckpoint{*cp}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -198,7 +198,7 @@ func RunAgentsFork(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentSession{Sessions: sessions})
 	}
 	stylingEnabled = detectStyling()
@@ -219,7 +219,7 @@ func RunAgentsRollback(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 	stylingEnabled = detectStyling()

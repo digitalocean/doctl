@@ -174,7 +174,7 @@ func RunAgentTriggersList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentTrigger{Triggers: triggers}); err != nil {
 			return err
 		}
@@ -213,6 +213,18 @@ func RunAgentTriggersCreate(c *CmdConfig) error {
 			WebhookSecret:      result.WebhookSecret,
 		})
 	}
+	if agentColumnOutput(c) {
+		// --format picks from the trigger's columns, and the one-time secret is
+		// not one of them. stderr keeps it out of a captured stdout without
+		// throwing away the only copy the server will ever send.
+		if secret := strings.TrimSpace(result.WebhookSecret); secret != "" {
+			fmt.Fprintf(os.Stderr, "Webhook secret (shown once): %s\n", secret)
+		}
+		if result.Trigger == nil {
+			return nil
+		}
+		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*result.Trigger}, Single: true})
+	}
 	stylingEnabled = detectStyling()
 	webhookURL := ""
 	if result.Trigger != nil && result.Trigger.Webhook != nil {
@@ -235,7 +247,7 @@ func RunAgentTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -256,7 +268,7 @@ func RunAgentTriggersUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -302,7 +314,7 @@ func agentTriggersSetStatus(c *CmdConfig, status godo.HostedAgentTriggerStatus) 
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -372,7 +384,7 @@ func RunAgentTriggersListExecutions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentTriggerExecution{Executions: execs}); err != nil {
 			return err
 		}
@@ -396,7 +408,7 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -413,7 +425,7 @@ func RunAgentTriggersGetBySession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -431,7 +443,7 @@ func RunAgentTriggersListReusableSessions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentReusableSession{Sessions: sessions}); err != nil {
 			return err
 		}
@@ -449,7 +461,7 @@ func RunAgentTriggersListProviders(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentWebhookProvider{Providers: providers})
 	}
 	stylingEnabled = detectStyling()
@@ -463,7 +475,9 @@ func printNextPageToken(c *CmdConfig, next string) error {
 	if next == "" {
 		return nil
 	}
-	if Output == "json" {
+	// The token is commentary on the page, not part of it, so it goes to
+	// stderr whenever stdout is being parsed — columns as much as JSON.
+	if agentStructuredOutput(c) {
 		fmt.Fprintf(os.Stderr, "Next page token: %s\n", next)
 	} else {
 		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), next)
