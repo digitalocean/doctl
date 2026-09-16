@@ -59,16 +59,26 @@ type Env struct {
 	// have would corrupt a pipe.
 	DataWidth int
 
-	// DataTTY reports whether Out is an interactive terminal. Layout that is
-	// only meaningful on a screen is gated on it rather than on Style.
+	// DataTTY reports whether Out is an interactive terminal outside CI.
+	// Layout that is only meaningful on a screen someone is watching live -
+	// cards, boxed tables, the records fallback - is gated on it rather than
+	// on Style.
 	DataTTY bool
 
-	// ErrTTY reports whether Err is an interactive terminal, which gates glyphs.
+	// ErrTTY reports whether Err is an interactive terminal outside CI, which
+	// gates glyphs and other screen-only chrome.
 	ErrTTY bool
 
 	// Machine reports whether machine-readable output was asked for. When true,
 	// Style, ErrStyle, and Anim are all false.
 	Machine bool
+
+	// Mask reports whether sensitive values (secrets, tokens, and similar)
+	// should be hidden rather than printed in full. It is independent of
+	// Machine: --output json still masks, since piping to a script is not
+	// consent to leak a secret into a log. It is true unless the invocation
+	// is running in CI or --show was passed.
+	Mask bool
 
 	renderer    *lipgloss.Renderer
 	errRenderer *lipgloss.Renderer
@@ -77,6 +87,7 @@ type Env struct {
 type config struct {
 	interactive bool
 	machine     bool
+	show        bool
 	ascii       *bool
 	width       *int
 	profile     *termenv.Profile
@@ -94,6 +105,12 @@ func WithMachineOutput(v bool) Option {
 // WithInteractive records whether doctl's --interactive flag permitted it.
 func WithInteractive(v bool) Option {
 	return func(c *config) { c.interactive = v }
+}
+
+// WithShow records whether doctl's --show flag was passed, revealing values
+// Mask would otherwise hide.
+func WithShow(v bool) Option {
+	return func(c *config) { c.show = v }
 }
 
 // WithASCII forces the ASCII fallback on or off, overriding DOCTL_ASCII.
@@ -131,14 +148,27 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 		outProfile, errProfile = termenv.Ascii, termenv.Ascii
 	}
 
+	// CI gets the plain, uncolored, uncarded output doctl always produced
+	// there, even on a runner whose pty would otherwise pass every other
+	// capability check: a CI log is read later, out of context, not watched
+	// live, so color, cards, boxed tables, and the records fallback are all
+	// screen-only chrome it never asked for. This wins over an explicit
+	// WithProfile because that option exists for tests and manual overrides,
+	// neither of which run with real CI env vars set.
+	if IsCI() {
+		outProfile, errProfile = termenv.Ascii, termenv.Ascii
+	}
+
+	tty := !cfg.machine && !IsCI()
+
 	env := Env{
 		Out:         out,
 		Err:         err,
 		Machine:     cfg.machine,
 		Style:       outProfile != termenv.Ascii,
 		ErrStyle:    errProfile != termenv.Ascii,
-		DataTTY:     !cfg.machine && isTerminal(out),
-		ErrTTY:      !cfg.machine && isTerminal(err),
+		DataTTY:     tty && isTerminal(out),
+		ErrTTY:      tty && isTerminal(err),
 		renderer:    newRenderer(out, outProfile),
 		errRenderer: newRenderer(err, errProfile),
 	}
@@ -164,6 +194,11 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 		env.Width = detectWidth(out, err)
 		env.DataWidth = detectWidth(out)
 	}
+
+	// CI is treated as a script that needs the real value, not a screen
+	// someone is watching, so it is exempt from masking. --show overrides
+	// both directions.
+	env.Mask = !cfg.show && !IsCI()
 
 	return env
 }

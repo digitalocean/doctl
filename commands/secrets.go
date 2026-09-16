@@ -94,7 +94,6 @@ Secret values are masked by default. Use --show to reveal them, or --key with --
 		aliasOpt("g"), displayerType(&displayers.Secret{}))
 	AddStringFlag(cmdGet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringFlag(cmdGet, doctl.ArgKey, "", "", "Return only the value for this key.")
-	AddBoolFlag(cmdGet, doctl.ArgSecretShow, "", false, "Reveal secret values instead of masking them.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretRaw, "", false, "Write the value for --key to stdout with no formatting.")
 	cmdGet.Example = `The following example retrieves a secret: doctl secrets get ` + exampleSecretName + ` --region nyc3 --key ` + exampleSecretKey + ` --raw`
 
@@ -193,11 +192,6 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		return err
 	}
 
-	show, err := c.Doit.GetBool(c.NS, doctl.ArgSecretShow)
-	if err != nil {
-		return err
-	}
-
 	raw, err := c.Doit.GetBool(c.NS, doctl.ArgSecretRaw)
 	if err != nil {
 		return err
@@ -230,7 +224,7 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		displaySecret.Values = map[string]string{key: value}
 	}
 
-	if !show {
+	if c.UI.Mask {
 		displaySecret = maskSecretValues(displaySecret)
 	}
 
