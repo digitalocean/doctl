@@ -266,8 +266,8 @@ func TestRenderWelcomeUsesASCIIGlyphsWhenRequired(t *testing.T) {
 
 	out := renderWelcome(env, welcome{version: "1.2.3", context: "default", auth: authStateValid})
 
-	assert.Contains(t, out, "+")
-	assert.NotContains(t, out, "✔")
+	assert.Contains(t, out, "OK")
+	assert.NotContains(t, out, "✓")
 }
 
 func TestWelcomeJSON(t *testing.T) {
