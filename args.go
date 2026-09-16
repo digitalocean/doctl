@@ -229,6 +229,8 @@ const (
 	ArgImageSlug = "image-slug"
 	// ArgInteractive is the argument to enable an interactive CLI.
 	ArgInteractive = "interactive"
+	// ArgShow reveals masked values, such as secrets, instead of hiding them.
+	ArgShow = "show"
 	// ArgIPAddress is an IP address argument.
 	ArgIPAddress = "ip-address"
 	// ArgDropletName is a droplet name argument.
@@ -732,8 +734,6 @@ const (
 	ArgSecretFromEnvFile = "from-env-file"
 	// ArgSecretVersion is the current version of a secret for update operations.
 	ArgSecretVersion = "version"
-	// ArgSecretShow reveals secret values instead of masking them on get.
-	ArgSecretShow = "show"
 	// ArgSecretRaw writes a single secret value to stdout with no formatting.
 	ArgSecretRaw = "raw"
 	// ArgSecretReplace replaces all key-value pairs in a secret on update.

@@ -64,6 +64,8 @@ var (
 	Verbose bool
 	//Interactive toggle interactive behavior
 	Interactive bool
+	//Show reveals values that are masked by default, such as secrets
+	Show bool
 
 	// Retry settings to pass through to godo.RetryConfig
 	RetryMax     int
@@ -103,6 +105,8 @@ func init() {
 		interactiveHelpText += " (default false)"
 	}
 	rootPFlagSet.BoolVarP(&Interactive, doctl.ArgInteractive, "", interactive, interactiveHelpText)
+
+	rootPFlagSet.BoolVarP(&Show, doctl.ArgShow, "", false, "Reveal masked values, such as secrets, instead of hiding them. Values are unmasked automatically in CI")
 
 	rootPFlagSet.IntVar(&RetryMax, "http-retry-max", 5, "Set maximum number of retries for requests that fail with a 429 or 500-level error")
 	viper.BindPFlag("http-retry-max", rootPFlagSet.Lookup("http-retry-max"))
