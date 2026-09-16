@@ -851,13 +851,19 @@ func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationPr
 }
 
 // readySummaryFor describes the created session for the ready card.
+// AutoCreatedConfig is set when create/launch persisted a new Agent Config
+// (manifest / --harness path), not when the session came from --from-config.
 func readySummaryFor(src *agentCreationSource, sess *do.HostedAgentSession) runReadySummary {
 	repoRef, _ := normalizeHarnessRepoRef(src.repo)
+	autoCreated := src.configID == "" &&
+		sess != nil && sess.HostedAgentSession != nil &&
+		strings.TrimSpace(sess.ConfigID) != ""
 	return runReadySummary{
-		Session: sess,
-		Harness: src.harness,
-		Repo:    repoRef,
-		Prompt:  src.prompt,
+		Session:           sess,
+		Harness:           src.harness,
+		Repo:              repoRef,
+		Prompt:            src.prompt,
+		AutoCreatedConfig: autoCreated,
 	}
 }
 

@@ -32,6 +32,7 @@ func SimulationRunCmd() *Command {
 			Aliases: []string{"sim", "simulation-runs"},
 			Short:   "Display commands that manage Gradient AI simulation runs.",
 			Long:    "The subcommands of `doctl gradient simulation-run` run scenario sets against an agent and inspect the resulting journeys.",
+			Hidden:  true,
 		},
 	}
 

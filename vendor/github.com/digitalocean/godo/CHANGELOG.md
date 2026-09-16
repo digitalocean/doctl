@@ -1,5 +1,17 @@
 # Change Log
 
+## [1.208.0] - 2026-09-15
+
+- #1105 - @AKatruwar - registry: expose registry UUID and add ListByUUID
+
+## [1.207.0] - 2026-09-15
+
+- #1090 - @abhishekk-fcb10 - MNFS-794: Add NFS client methods for CSI
+- #1103 - @arkahood - firewall: accept and return action optionally
+- #1101 - @ddatta-do - droplet: accept and return subnetUUID optionally
+- #1100 - @johannaratliff - VPC Subnets CRUD support
+- #1098 - @sgupta832 - microdroplets: reshape onto api-v2 contract (MDROP-336)
+
 ## [1.206.0] - 2026-08-31
 
 - #1094 - @sshirolkar - add godo support for simulations rpcs

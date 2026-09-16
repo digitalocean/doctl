@@ -257,6 +257,52 @@ func TestFirewallAddRules(t *testing.T) {
 	})
 }
 
+func TestFirewallAddRulesWithAction(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		fID := "ab06e011-6dd1-4034-9293-201f71aba299"
+		inboundRules := []godo.InboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "80",
+				Action:    "deny",
+				Sources: &godo.Sources{
+					Addresses: []string{"10.0.0.0/8"},
+				},
+			},
+			{
+				Protocol:  "tcp",
+				PortRange: "443",
+				Sources: &godo.Sources{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		}
+		outboundRules := []godo.OutboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "22",
+				Action:    "allow",
+				Destinations: &godo.Destinations{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		}
+		firewallRulesRequest := &godo.FirewallRulesRequest{
+			InboundRules:  inboundRules,
+			OutboundRules: outboundRules,
+		}
+
+		tm.firewalls.EXPECT().AddRules(fID, firewallRulesRequest).Return(nil)
+
+		config.Args = append(config.Args, fID)
+		config.Doit.Set(config.NS, doctl.ArgInboundRules, "protocol:tcp,ports:80,action:deny,address:10.0.0.0/8 protocol:tcp,ports:443,address:0.0.0.0/0")
+		config.Doit.Set(config.NS, doctl.ArgOutboundRules, "protocol:tcp,ports:22,action:allow,address:0.0.0.0/0")
+
+		err := RunFirewallAddRules(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestFirewallRemoveRules(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fID := "ab06e011-6dd1-4034-9293-201f71aba299"

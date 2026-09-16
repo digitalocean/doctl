@@ -43,7 +43,9 @@ func defaultAskConnectGitHub() (bool, error) {
 		return false, nil
 	}
 	choice, err := confirm.New(
-		"GitHub is not connected for your team. Connect now? (optional — needed for private repos)",
+		// Keep this short: confirm prompts Truncate/WordWrap on one line with
+		// "yes/no", so a long parenthetical was clipped to "(optional " (MARSOHS-1396).
+		"GitHub is not connected. Connect now? (optional — press N to skip)",
 		confirm.WithDefaultChoice(confirm.No),
 	).Prompt()
 	if err != nil {
@@ -193,6 +195,12 @@ func launchNewSession(c *CmdConfig) error {
 	}
 	if err := sendInitialPrompt(c, sess.SessionID, src); err != nil {
 		return err
+	}
+
+	// One-shot create-then-attach persists an Agent Config; say so before
+	// the TUI takes over, matching the ready-card notice on `create`.
+	if src.configID == "" && sess.HostedAgentSession != nil && strings.TrimSpace(sess.ConfigID) != "" {
+		printAutoCreatedConfigNotice(c.Out)
 	}
 
 	printCodexProxyTip(c, sess, src.harness)
@@ -927,6 +935,20 @@ type runReadySummary struct {
 	Repo    string
 	Prompt  string
 	Timings creationTimings
+	// AutoCreatedConfig is true when create/launch from a manifest or
+	// --harness also persisted an Agent Config for later reuse. False when
+	// the session was created from an existing --from-config.
+	AutoCreatedConfig bool
+}
+
+// autoCreatedConfigNotice explains the durable Agent Config that one-shot
+// create/launch persists alongside the session — the Cloud UI "Agent".
+const autoCreatedConfigNotice = "An Agent Config was created for this session and can be reused later for new sessions."
+
+// printAutoCreatedConfigNotice tells the user a durable Agent Config was
+// persisted with the session (one-shot create/launch path only).
+func printAutoCreatedConfigNotice(w io.Writer) {
+	fmt.Fprintln(w, colorize(autoCreatedConfigNotice, colMuted))
 }
 
 // printRunReadySummary renders a compact session card after create/wait
@@ -959,6 +981,10 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 		}
 		body.WriteString(cardRow("Prompt", colorize("\""+prompt+"\"", colMuted)))
 	}
+	if sum.AutoCreatedConfig {
+		fmt.Fprintln(&body)
+		fmt.Fprintln(&body, colorize(autoCreatedConfigNotice, colMuted))
+	}
 	if sum.Timings.visible() {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Timing", colMuted))
@@ -973,6 +999,11 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next step", colMuted))
 	body.WriteString(cardRow("launch", agentCLI+" launch "+ref))
+	if sum.AutoCreatedConfig && sum.Session != nil && sum.Session.HostedAgentSession != nil {
+		if cfg := strings.TrimSpace(sum.Session.ConfigID); cfg != "" {
+			body.WriteString(cardRow("reuse", agentCLI+" create --from-config "+cfg+" --name <session>"))
+		}
+	}
 	if isCodexReadyAgent(sum) {
 		body.WriteString(cardRow("proxy", agentCLI+" start-proxy --type codex --session "+ref+" --port 1144"))
 	}
