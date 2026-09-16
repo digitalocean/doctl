@@ -210,9 +210,9 @@ func (h *HostedAgentWorkspaceUpload) KV() []map[string]any {
 }
 
 // HostedAgentSandboxExec renders the result of `doctl harness-runtime exec`
-// under `-o json`. Text output never reaches this displayer: the command passes
-// the guest's stdout and stderr straight through instead, so it composes in a
-// pipeline.
+// under `-o json`, or under `--format`. By default the command passes the
+// guest's stdout and stderr straight through instead, so it composes in a
+// pipeline; only a caller who asked for a document or for columns gets these.
 //
 // Single is always set by the exec verb (one command, one result), but the field
 // is kept explicit rather than unwrapping on len==1, so the JSON container type
@@ -384,8 +384,8 @@ func (h *HostedAgentWorkspaceEntry) KV() []map[string]any {
 }
 
 // HostedAgentWorkspaceFile renders the result of `doctl harness-runtime files cat`
-// under `-o json`. Text output never reaches this displayer: the command writes
-// the file's bytes straight through instead, so it composes in a pipeline.
+// under `-o json`, or under `--format`. By default the command writes the
+// file's bytes straight through instead, so it composes in a pipeline.
 type HostedAgentWorkspaceFile struct {
 	Path      string `json:"path"`
 	Content   string `json:"content"`
