@@ -86,6 +86,28 @@ func TestHostedAgentSessionJSON_GetSingleItem(t *testing.T) {
 	assert.Equal(t, "sess_1", out["session_id"])
 }
 
+// MARSOHS-1438: -o json must preserve API fields that live on the godo
+// HostedAgentSession wire type (sandbox_id, resume_on_topoff).
+func TestHostedAgentSessionJSON_PreservesSandboxIDAndResumeOnTopoff(t *testing.T) {
+	var buf bytes.Buffer
+	d := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{{
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID:      "sess_1",
+				SandboxID:      "sbx_1",
+				ResumeOnTopoff: true,
+			},
+		}},
+		Single: true,
+	}
+	require.NoError(t, d.JSON(&buf))
+
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, "sbx_1", out["sandbox_id"])
+	assert.Equal(t, true, out["resume_on_topoff"])
+}
+
 // --- HostedAgentWorkspaceUpload JSON shape ------------------------------------
 //
 // Upload is currently single-file-only (always exactly one item), so this
