@@ -575,6 +575,24 @@ func TestRunAgentsList_StyledText(t *testing.T) {
 	})
 }
 
+func TestRunAgentsList_SizeSlug(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().ListSessions(nil).Return([]do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_1",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+				SizeSlug:  "mv-2vcpu-4gb",
+			}},
+		}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
+		assert.NoError(t, RunAgentsList(config))
+		assert.Contains(t, buf.String(), "mv-2vcpu-4gb")
+	})
+}
+
 func TestRunAgentsList_Pagination(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		want := &godo.HostedAgentSessionListOptions{
@@ -672,6 +690,45 @@ func TestRunAgentsShow(t *testing.T) {
 		assert.Contains(t, got, "ready")
 		assert.Contains(t, got, "doctl open-harness-runtime attach demo")
 		assert.NotContains(t, got, "SESSION_STATUS_")
+	})
+}
+
+func TestRunAgentsShow_SizeSlug(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(&do.HostedAgentSession{
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_test",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+				SizeSlug:  "mv-2vcpu-4gb",
+			},
+		}, nil)
+		config.Args = []string{"sess_test"}
+		var buf bytes.Buffer
+		config.Out = &buf
+		assert.NoError(t, RunAgentsShow(config))
+		assert.Contains(t, buf.String(), "mv-2vcpu-4gb")
+	})
+}
+
+// A session predating this field, or one that has not reached a sandbox yet,
+// must render cleanly with no "Size" row rather than an empty one.
+func TestRunAgentsShow_SizeSlugAbsent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(&do.HostedAgentSession{
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_test",
+				Name:      "demo",
+				AgentKind: godo.HostedAgentKindOpenCode,
+				Status:    godo.HostedAgentSessionStatusReady,
+			},
+		}, nil)
+		config.Args = []string{"sess_test"}
+		var buf bytes.Buffer
+		config.Out = &buf
+		assert.NoError(t, RunAgentsShow(config))
+		assert.NotContains(t, buf.String(), "Size")
 	})
 }
 
