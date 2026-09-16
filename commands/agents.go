@@ -845,7 +845,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		return src, nil
 	}
 
-	noticeDiscoveredManifest(specPath, discoveredSpec)
+	noticeDiscoveredManifest(c, specPath, discoveredSpec)
 
 	var raw []byte
 	if harness != "" {
@@ -937,7 +937,7 @@ func RunAgentsCreate(c *CmdConfig) error {
 		return fmt.Errorf("--%s creates nothing, so there is no run for --%s to watch", doctl.ArgAgentDryRun, doctl.ArgAgentOnHITL)
 	}
 
-	if Output != "json" {
+	if !agentStructuredOutput(c) {
 		stylingEnabled = detectStyling()
 	}
 
@@ -951,7 +951,7 @@ func RunAgentsCreate(c *CmdConfig) error {
 	}
 
 	prog := (*creationProgress)(nil)
-	if Output != "json" {
+	if !agentStructuredOutput(c) {
 		prog = newCreationProgress(c.Out)
 		defer prog.stop()
 		prog.header("Creating agent session")
@@ -967,11 +967,11 @@ func RunAgentsCreate(c *CmdConfig) error {
 	}
 	timings := creationTimings{Create: creationClock().Sub(createdAt)}
 
-	// -o json used to return the create response immediately, which silently
-	// dropped --prompt (the session was READY, the prompt never sent). Keep
-	// the no-wait shortcut when there is nothing to deliver; otherwise wait
-	// and send, then print JSON.
-	if Output == "json" && src.prompt == "" && onHITL == "" {
+	// Machine-readable output used to return the create response immediately,
+	// which silently dropped --prompt (the session was READY, the prompt never
+	// sent). Keep the no-wait shortcut when there is nothing to deliver;
+	// otherwise wait and send, then print the row.
+	if agentStructuredOutput(c) && src.prompt == "" && onHITL == "" {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 
@@ -994,7 +994,7 @@ func RunAgentsCreate(c *CmdConfig) error {
 		return watchSessionHeadless(c, sess.SessionID, onHITL)
 	}
 
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 
@@ -1090,7 +1090,7 @@ func waitForAgentSessionReady(c *CmdConfig, sess *do.HostedAgentSession, prog *c
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 
-	if prog == nil && Output != "json" {
+	if prog == nil && !agentStructuredOutput(c) {
 		prog = newCreationProgress(c.Out)
 		defer prog.stop()
 	}
@@ -1345,10 +1345,10 @@ func discoverManifestFile() string {
 }
 
 // noticeDiscoveredManifest names an implicitly chosen manifest, so a run never
-// reads a file the user did not mention. Suppressed under -o json, which must
-// stay parseable.
-func noticeDiscoveredManifest(path string, discovered bool) {
-	if discovered && Output != "json" {
+// reads a file the user did not mention. It goes to stdout, so it is suppressed
+// whenever stdout has to stay parseable: -o json, or a column table.
+func noticeDiscoveredManifest(c *CmdConfig, path string, discovered bool) {
+	if discovered && !agentStructuredOutput(c) {
 		notice("using %s", path)
 	}
 }
@@ -1529,7 +1529,7 @@ func RunAgentsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
 			return err
 		}
@@ -1692,7 +1692,7 @@ func RunAgentsShow(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -2052,7 +2052,7 @@ func workspaceTransferUpload(c *CmdConfig, sessionID, workspacePath string, f *o
 	if written == 0 {
 		written = size
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentWorkspaceUpload{
 			Uploads: []*godo.HostedAgentWorkspaceUploadResponse{{
 				Path:         workspacePath,

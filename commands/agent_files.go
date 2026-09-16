@@ -189,7 +189,9 @@ func RunAgentsFilesCat(c *CmdConfig) error {
 		return err
 	}
 
-	if Output == "json" {
+	// As with exec, the file's bytes are the default output, and a caller who
+	// asked for a document or for columns gets those instead.
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentWorkspaceFile{
 			Path:      path,
 			Content:   resp.Stdout,

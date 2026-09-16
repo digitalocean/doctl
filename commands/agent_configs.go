@@ -154,7 +154,7 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true}); err != nil {
 			return err
 		}
@@ -162,8 +162,15 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 		stylingEnabled = detectStyling()
 		printAgentConfigCard(c.Out, cfg, true)
 	}
+	// Advisories are commentary on the config, so they follow the card on
+	// stdout but step aside to stderr once stdout is a document or a table
+	// somebody is about to parse.
+	warnOut := c.Out
+	if agentStructuredOutput(c) {
+		warnOut = os.Stderr
+	}
 	for _, w := range cfg.Warnings {
-		fmt.Fprintf(c.Out, "%s %s\n", colorize("Warning:", colWarning), w)
+		fmt.Fprintf(warnOut, "%s %s\n", colorize("Warning:", colWarning), w)
 	}
 	return nil
 }
@@ -186,7 +193,7 @@ func RunAgentsConfigList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentConfigSummary{Configs: configs}); err != nil {
 			return err
 		}
@@ -214,7 +221,7 @@ func RunAgentsConfigGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true})
 	}
 	stylingEnabled = detectStyling()
@@ -274,7 +281,7 @@ func RunAgentsConfigListSessions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
 			return err
 		}
@@ -314,7 +321,7 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 	stylingEnabled = detectStyling()
