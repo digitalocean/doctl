@@ -344,6 +344,44 @@ func TestRunCmdSecretsGet(t *testing.T) {
 	})
 }
 
+func TestRunCmdSecretsGetMasksByDefault(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		secret := cloneSecret(testSecret)
+		tm.secrets.EXPECT().Get(testSecretName, "nyc3").Return(&secret, nil)
+
+		config.Args = []string{testSecretName}
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Out = &bytes.Buffer{}
+		config.UI.Mask = true
+
+		err := RunCmdSecretsGet(config)
+		assert.NoError(t, err)
+
+		output := config.Out.(*bytes.Buffer).String()
+		assert.Contains(t, output, secretMaskedValue)
+		assert.NotContains(t, output, testSecretVal)
+	})
+}
+
+func TestRunCmdSecretsGetShowRevealsValue(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		secret := cloneSecret(testSecret)
+		tm.secrets.EXPECT().Get(testSecretName, "nyc3").Return(&secret, nil)
+
+		config.Args = []string{testSecretName}
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+		config.Out = &bytes.Buffer{}
+		config.UI.Mask = false
+
+		err := RunCmdSecretsGet(config)
+		assert.NoError(t, err)
+
+		output := config.Out.(*bytes.Buffer).String()
+		assert.Contains(t, output, testSecretVal)
+		assert.NotContains(t, output, secretMaskedValue)
+	})
+}
+
 func TestRunCmdSecretsGetRaw(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		secret := cloneSecret(testSecret)

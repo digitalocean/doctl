@@ -63,6 +63,7 @@ func detectUIEnvFor(out io.Writer) ui.Env {
 	return ui.Detect(out, os.Stderr,
 		ui.WithMachineOutput(outputFormat() != "text"),
 		ui.WithInteractive(Interactive),
+		ui.WithShow(Show),
 	)
 }
 
