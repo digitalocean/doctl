@@ -82,8 +82,9 @@ type HostedAgentsService interface {
 	CreateSessionFromManifest(context.Context, []byte, *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error)
 	// CreateSessionFromConfig provisions a session from an existing immutable
 	// Agent Config, referenced by config_id. The request uses Content-Type:
-	// application/json with a {name, config_id} body; the config's stored
-	// manifest and declared credentials seed the session at create time.
+	// application/json with a {name, config_id} body (optional
+	// resume_on_topoff); the config's stored manifest and declared credentials
+	// seed the session at create time.
 	CreateSessionFromConfig(context.Context, *HostedAgentSessionFromConfigRequest) (*HostedAgentSession, *Response, error)
 	// ValidatePolicy checks a manifest's tool-permission policy against the
 	// agent's capabilities without creating a session. Manifest is the same YAML
@@ -366,9 +367,9 @@ type HostedAgentSession struct {
 	SandboxID string `json:"sandbox_id,omitempty"`
 	// ResumeOnTopoff is the create-time consent to auto-resume this session when
 	// a prepayment balance is restored. There is no update endpoint; the value
-	// is set only via the resume_on_topoff create query parameter and returned
-	// on get/list so clients can confirm enrollment. Never inherited by forks.
-	// Omitted when false.
+	// is set only at create (manifest query param or config JSON body) and
+	// returned on get/list so clients can confirm enrollment. Never inherited
+	// by forks. Omitted when false.
 	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
 	// OpenAISessionID is the OpenAI Agents session id (sess_…) linked to this DO
 	// sandbox for AGENT_KIND_OPENAI_CODEX. Used by attach to bridge to OpenAI;
@@ -515,11 +516,14 @@ type HostedAgentSessionFromConfigRequest struct {
 // OpenAISessionID is sent as the openai_session_id query parameter (not in the
 // YAML body). harness-api persists it for AGENT_KIND_OPENAI_CODEX attach
 // correlation. See docs/design/openai-sandbox-provider.md.
-// ResumeOnTopoff is sent as the resume_on_topoff query parameter and recorded
-// on the session at create time only (no later toggle).
 type HostedAgentManifestCreateOptions struct {
 	OpenAISessionID string `url:"openai_session_id,omitempty"`
-	ResumeOnTopoff  bool   `url:"resume_on_topoff,omitempty"`
+	// ResumeOnTopoff opts the new session in to automatic resumption when the
+	// team's prepayment balance is restored after a low-balance pause. It is a
+	// query parameter rather than an agents.yaml field because that document is
+	// immutable and shared through Agent Configs, while spending consent has to
+	// stay per-session. Omitted when false (the server default).
+	ResumeOnTopoff bool `url:"resume_on_topoff,omitempty"`
 }
 
 // HostedAgentSessionListOptions specifies optional list filters.
