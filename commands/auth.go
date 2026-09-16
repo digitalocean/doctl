@@ -315,39 +315,6 @@ func RunAuthSwitch(c *CmdConfig) error {
 		context = strings.ToLower(viper.GetString("context"))
 	}
 
-	// check that context exists
-	contextsAvail := viper.GetStringMap("auth-contexts")
-	contextsAvail[doctl.ArgDefaultContext] = true
-	keys := make([]string, 0)
-	for ctx := range contextsAvail {
-		keys = append(keys, ctx)
-	}
-
-	var contextExists bool
-	for _, ctx := range keys {
-		if ctx == context {
-			contextExists = true
-		}
-	}
-
-	if !contextExists {
-		return errors.New("context does not exist")
-	}
-
-	// The two lines below aren't required for doctl specific functionality,
-	// but somehow magically fixes an issue
-	// (https://github.com/digitalocean/doctl/issues/996) where auth-contexts
-	// are mangled when running this command.
-	contexts := viper.GetStringMapString("auth-contexts")
-	viper.Set("auth-contexts", contexts)
-
-	viper.Set("context", context)
-
-	notice("Now using context [%s] by default", context)
-	return writeConfig()
-}
-
-func writeConfig() error {
 	cfg, err := loadConfigFile()
 	if err != nil {
 		return err
@@ -359,8 +326,7 @@ func writeConfig() error {
 
 	cfg.setCurrentContext(context)
 
-	fmt.Printf("Now using context [%s] by default\n", context)
-
+	notice("Now using context [%s] by default", context)
 	return cfg.write()
 }
 
