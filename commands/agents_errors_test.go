@@ -87,6 +87,39 @@ func TestBeautifyAgentError_LocalValidation(t *testing.T) {
 	assert.NotContains(t, pretty.DisplayError(), "POST https://")
 }
 
+// A prepay 402 must never fall through to the generic "Request failed" card,
+// and must name the one thing that resolves it.
+func TestBeautifyAgentError_PrepayBlocked(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusPaymentRequired, prepayBlockedWireMessage))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, prepayBlockedTitle, pretty.title)
+	assert.Equal(t, http.StatusPaymentRequired, pretty.status)
+
+	display := pretty.DisplayError()
+	assert.Contains(t, display, "402")
+	assert.Contains(t, display, prepayTopUpURL)
+	assert.Contains(t, display, prepayBalanceCmd)
+	assert.Contains(t, display, "work is saved")
+	assert.NotContains(t, display, "POST https://")
+}
+
+// The gate failing closed is a retry, not a top-up. Telling a solvent user to
+// add funds because a mirror lookup timed out would be actively misleading.
+func TestBeautifyAgentError_PrepayUnknown(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusServiceUnavailable, prepayUnknownWireMessage))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, prepayUnknownTitle, pretty.title)
+
+	display := pretty.DisplayError()
+	assert.Contains(t, display, "503")
+	assert.Contains(t, display, "Retry in a moment")
+	assert.NotContains(t, strings.ToLower(display), "add funds")
+}
+
 func TestBeautifyAgentError_Idempotent(t *testing.T) {
 	first := beautifyAgentError(errors.New("no agent session goes by the name foo"))
 	second := beautifyAgentError(first)

@@ -116,6 +116,23 @@ func httpStatusLabel(code int) string {
 	return fmt.Sprintf("%d %s", code, text)
 }
 
+// beautifyAgentErrorFor is beautifyAgentError plus billing enrichment: a
+// prepayment-gate 402 gets the team's live balance and auto top-off state
+// folded into its card. Every spend path returns through here, so no call site
+// has to opt in.
+//
+// It re-derives the prepay card even from an already-beautified error, because
+// several commands beautify early and would otherwise keep the plain variant.
+func beautifyAgentErrorFor(c *CmdConfig, err error) error {
+	if err == nil {
+		return nil
+	}
+	if prepayBlockedErr(err) {
+		return newPrepayBlockedError(c, err)
+	}
+	return beautifyAgentError(err)
+}
+
 // beautifyAgentError rewrites bare API/local errors into agentPrettyError so
 // checkErr can render a card instead of a raw REST dump.
 func beautifyAgentError(err error) error {
@@ -128,6 +145,21 @@ func beautifyAgentError(err error) error {
 	var already *agentPrettyError
 	if errors.As(err, &already) {
 		return err
+	}
+
+	// Billing gate responses carry copy of their own: 402 must say "add funds"
+	// and 503 must not, so neither may fall through to the generic cards.
+	if prepayBlockedErr(err) {
+		return newPrepayBlockedError(nil, err)
+	}
+	if prepayUnknownErr(err) {
+		return &agentPrettyError{
+			title:  prepayUnknownTitle,
+			reason: "We couldn't confirm your team's prepayment status. This is usually brief.",
+			status: http.StatusServiceUnavailable,
+			tips:   []string{"Retry in a moment"},
+			cause:  err,
+		}
 	}
 
 	if msg, status, ok := agentAPIError(err); ok {
@@ -207,6 +239,8 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 		default:
 			return "Conflict", nil
 		}
+	case http.StatusPaymentRequired:
+		return prepayBlockedTitle, []string{fmt.Sprintf("Add funds at %s", prepayTopUpURL), prepayBalanceCmd}
 	case http.StatusTooManyRequests:
 		return "Rate limited", []string{"Wait a moment and retry"}
 	case http.StatusBadRequest:

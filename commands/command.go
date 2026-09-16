@@ -109,7 +109,7 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 
 		err = cr(cfg)
 		if prettyAgentErrors {
-			err = beautifyAgentError(err)
+			err = beautifyAgentErrorFor(cfg, err)
 		}
 		checkErr(err)
 	}

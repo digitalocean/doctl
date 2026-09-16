@@ -92,6 +92,7 @@ type CmdConfig struct {
 	Security            func() do.SecurityService
 	HostedAgents        func() do.HostedAgentsService
 	HostedAgentTriggers func() do.HostedAgentTriggersService
+	Prepayment          func() do.PrepaymentService
 	Secrets             func() do.SecretsService
 }
 
@@ -171,6 +172,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.HostedAgentTriggers = func() do.HostedAgentTriggersService {
 				return do.NewHostedAgentTriggersService(godoClient)
 			}
+			c.Prepayment = func() do.PrepaymentService { return do.NewPrepaymentService(godoClient) }
 			c.Secrets = func() do.SecretsService { return do.NewSecretsService(godoClient) }
 			return nil
 		},
