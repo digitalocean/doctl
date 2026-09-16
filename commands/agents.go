@@ -316,14 +316,19 @@ func mdWrapWidth() int {
 	return 80
 }
 
-// msgAccumulator collects final-answer token deltas. Attach streams them live
-// via streamLive; logs replay buffers and markdown-renders on flush.
+// msgAccumulator collects final-answer token deltas. On a real attach display
+// (streamReplacer) tokens echo live so the reply is readable while streaming;
+// flush then replaces that draft with a markdown-rendered block. On pipes and
+// in tests (plain writers) it only buffers, and flush renders once.
 type msgAccumulator struct {
 	buf      strings.Builder
 	tail     string // last previewTailMaxRunes for bounded previews
-	streamed bool   // true after streamLive; flush must not reprint
+	streamed bool   // true after a live echo; flush replaces instead of appending
 }
 
+// previewTailMaxRunes caps how much recent text msgAccumulator keeps around
+// for the live spinner preview — comfortably more than thinkingPreviewLabel
+// ends up showing, so trimming there never runs out of material.
 const previewTailMaxRunes = 200
 
 func (m *msgAccumulator) add(s string) {
@@ -331,17 +336,28 @@ func (m *msgAccumulator) add(s string) {
 	m.tail = trimTailRunes(m.tail+s, previewTailMaxRunes)
 }
 
-func (m *msgAccumulator) streamLive(out io.Writer, s string) {
+// streamLive buffers s and, when out can later replace the draft with
+// markdown, echoes it immediately. Returns whether it echoed live.
+func (m *msgAccumulator) streamLive(out io.Writer, s string) bool {
 	if s == "" {
-		return
+		return false
 	}
 	m.add(s)
-	fmt.Fprint(out, s)
-	m.streamed = true
+	if _, ok := out.(streamReplacer); ok && stylingEnabled {
+		fmt.Fprint(out, s)
+		m.streamed = true
+		return true
+	}
+	return false
 }
 
+// previewTail returns the most recently streamed text, for a live "thinking"
+// preview while the message is still being buffered.
 func (m *msgAccumulator) previewTail() string { return m.tail }
 
+// flush writes the buffered message. If tokens were echoed live on a
+// streamReplacer, the draft is erased and replaced with the markdown render;
+// otherwise the render is printed fresh (pipes, logs, unit tests).
 func (m *msgAccumulator) flush(out io.Writer) {
 	m.tail = ""
 	if m.buf.Len() == 0 {
@@ -353,24 +369,43 @@ func (m *msgAccumulator) flush(out io.Writer) {
 	streamed := m.streamed
 	m.streamed = false
 
+	rendered := renderMarkdown(text)
+	if rendered == "" {
+		// Whitespace-only buffer: there is nothing to show, and emitting the
+		// newlines below would spend blank lines on it.
+		return
+	}
+	if !strings.HasSuffix(rendered, "\n") {
+		rendered += "\n"
+	}
+
 	if streamed {
+		if r, ok := out.(streamReplacer); ok {
+			r.replaceStreamed(text, rendered)
+			return
+		}
+		// Draft already printed and we can't rewrite it — just seal the line.
 		if !strings.HasSuffix(text, "\n") {
 			fmt.Fprintln(out)
 		}
 		return
 	}
 
-	rendered := renderMarkdown(text)
-	if rendered == "" {
-		return
-	}
-	if !strings.HasSuffix(rendered, "\n") {
-		rendered += "\n"
-	}
+	// renderMarkdown returns a styled block with no blank edges, so own the
+	// spacing here: one blank line separating the answer from the event line
+	// above it. Every event line prints its own leading newline, which supplies
+	// the blank line below. Plain mode stays byte-clean for pipes and scripts.
 	if stylingEnabled {
 		rendered = "\n" + rendered
 	}
 	fmt.Fprint(out, rendered)
+}
+
+// streamReplacer can erase a previously echoed raw answer draft and write the
+// markdown-rendered final answer in its place. *promptDisplay implements this
+// for interactive attach; plain writers (pipes, tests) do not.
+type streamReplacer interface {
+	replaceStreamed(raw, replacement string)
 }
 
 // trimTailRunes keeps only the last n runes of s, respecting UTF-8
@@ -383,13 +418,21 @@ func trimTailRunes(s string, n int) string {
 	return string(r[len(r)-n:])
 }
 
-// reasoningStreamer prints reasoning tokens live (dim italic).
+// reasoningStreamer prints model reasoning/"thinking" content live, styled
+// distinctly (dim italic) from the final answer, as it arrives — unlike
+// msgAccumulator, it never buffers for a later markdown render. Reasoning is
+// plain prose and the point is to show it as it streams in, not after the
+// fact. Shared by the SPI drainStream loop (run.token_delta with
+// is_reasoning=true) and the OpenAI sandbox attach renderer (its own
+// reasoning delta/item events).
 type reasoningStreamer struct {
 	out      io.Writer
 	thinking *thinkingState
 	active   bool
 }
 
+// stream writes a reasoning chunk, printing a leading label the first time a
+// block starts and pausing the thinking spinner while the block is live.
 func (r *reasoningStreamer) stream(text string) {
 	if text == "" {
 		return
@@ -404,12 +447,14 @@ func (r *reasoningStreamer) stream(text string) {
 	fmt.Fprint(r.out, italicMuted(text))
 }
 
+// end closes out a streamed reasoning block, if one is open, and resumes the
+// thinking spinner for whatever comes next in the turn.
 func (r *reasoningStreamer) end() {
 	r.endWithLabel("")
 }
 
 // endNoResume closes the reasoning block without restarting the spinner
-// (used when the final answer is about to stream live).
+// (used when the final answer is about to stream live onto the display).
 func (r *reasoningStreamer) endNoResume() {
 	if !r.active {
 		return
@@ -418,6 +463,11 @@ func (r *reasoningStreamer) endNoResume() {
 	r.active = false
 }
 
+// endWithLabel is like end, but seeds the resumed spinner's label
+// immediately — see thinkingState.startWithLabel. Callers that already know
+// the next preview (the final answer's first chunk, right as a reasoning
+// block closes) should use this instead of end()+setLabel so the spinner
+// never visibly reverts to the generic caption in between.
 func (r *reasoningStreamer) endWithLabel(label string) {
 	if !r.active {
 		return
@@ -2432,7 +2482,7 @@ type openAIAttachRenderer struct {
 	warmup    *warmupState
 	acc       msgAccumulator
 	reasoning reasoningStreamer
-	// sawOutputDelta tracks whether we already streamed assistant text live
+	// sawOutputDelta tracks whether we already buffered streamed assistant text
 	// so output_text.done / item.done fallbacks do not duplicate it.
 	sawOutputDelta bool
 	// activeToolCmd is the in-flight command_execution command line.
@@ -2519,12 +2569,22 @@ func (r *openAIAttachRenderer) handle(evt map[string]any) {
 		fmt.Fprintln(r.out, colorize("Tip: remove and start a fresh session; wait for ● environment connected before sending work.", colMuted))
 	case "session.turn.output_text.delta":
 		r.clearWarmup()
-		r.ensureReasoning().endNoResume()
-		if r.thinking != nil {
-			r.thinking.stop()
-		}
 		if d, ok := evt["delta"].(string); ok && d != "" {
-			r.acc.streamLive(r.out, d)
+			// Echo live on attach displays; spinner preview when only buffering.
+			if _, ok := r.out.(streamReplacer); ok && stylingEnabled {
+				r.ensureReasoning().endNoResume()
+				if r.thinking != nil {
+					r.thinking.stop()
+				}
+				r.acc.streamLive(r.out, d)
+			} else {
+				r.acc.add(d)
+				label := thinkingPreviewLabel(r.acc.previewTail())
+				r.ensureReasoning().endWithLabel(label)
+				if r.thinking != nil {
+					r.thinking.setLabel(label)
+				}
+			}
 			r.sawOutputDelta = true
 		}
 	case "session.turn.output_text.done":
@@ -4047,11 +4107,30 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			var p tokenChunkPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil && dedup.allow(p.Text) {
 				if p.IsReasoning {
+					// SPI TokenChunk.is_reasoning: stream live and separately
+					// from the final answer, which starts at the first
+					// is_reasoning=false chunk.
 					reasoning.stream(p.Text)
-				} else {
+				} else if _, ok := out.(streamReplacer); ok && stylingEnabled {
+					// Live draft on the attach display; flush replaces it with
+					// markdown once the turn completes.
 					reasoning.endNoResume()
 					thinking.stop()
 					acc.streamLive(out, p.Text)
+				} else {
+					acc.add(p.Text)
+					// Buffered (not streamed raw) because the whole point is a
+					// clean markdown render once the message is complete; the
+					// live preview keeps the spinner from looking dead in the
+					// meantime.
+					label := thinkingPreviewLabel(acc.previewTail())
+					// endWithLabel (not end()+setLabel): if this chunk is the
+					// one closing out a reasoning block, the spinner it
+					// resumes should show this preview on its very first
+					// frame — otherwise defaultThinkingLabel flashes before
+					// setLabel catches up.
+					reasoning.endWithLabel(label)
+					thinking.setLabel(label)
 				}
 			}
 		case godo.HostedAgentEventKindHITLRequested:
@@ -5497,6 +5576,81 @@ func promptRowCount(prompt, line string, cols int) int {
 		return 1
 	}
 	return (width + cols - 1) / cols
+}
+
+// visualRows counts how many terminal rows `s` occupies at the given column
+// width, matching how a TTY wraps lines. A trailing newline does not add an
+// extra content row — it only moves the cursor onto the line below.
+func visualRows(s string, cols int) int {
+	if s == "" {
+		return 0
+	}
+	if cols < 1 {
+		cols = 80
+	}
+	lines := strings.Split(s, "\n")
+	if strings.HasSuffix(s, "\n") {
+		lines = lines[:len(lines)-1]
+	}
+	total := 0
+	for _, line := range lines {
+		w := lipgloss.Width(line)
+		if w <= 0 {
+			total++
+			continue
+		}
+		total += (w + cols - 1) / cols
+	}
+	return total
+}
+
+// replaceStreamed erases the raw answer draft that was echoed live and writes
+// the markdown-rendered replacement in the same place. Implements streamReplacer.
+func (p *promptDisplay) replaceStreamed(raw, replacement string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if !p.raw {
+		if p.midLine && !strings.HasSuffix(raw, "\n") {
+			fmt.Fprint(p.out, "\n")
+		}
+		fmt.Fprint(p.out, replacement)
+		p.midLine = !strings.HasSuffix(replacement, "\n")
+		return
+	}
+
+	cols := p.columnsLocked()
+
+	// A newline inside the draft may have painted the prompt under the cursor;
+	// clear it before walking back up through the content rows.
+	if p.promptRows > 0 {
+		var b strings.Builder
+		p.appendClearPromptRows(&b)
+		io.WriteString(p.out, b.String())
+	}
+
+	rows := visualRows(raw, cols)
+	if rows > 0 {
+		var b strings.Builder
+		if strings.HasSuffix(raw, "\n") {
+			// Cursor is on the blank line below the draft (where the prompt was).
+			b.WriteString("\x1b[A")
+		}
+		b.WriteString("\r\x1b[K")
+		for i := 1; i < rows; i++ {
+			b.WriteString("\x1b[A\r\x1b[K")
+		}
+		io.WriteString(p.out, b.String())
+	}
+
+	io.WriteString(p.out, strings.ReplaceAll(replacement, "\n", "\r\n"))
+	if strings.HasSuffix(replacement, "\n") {
+		p.paintPromptLocked(false)
+		p.midLine = false
+	} else {
+		p.midLine = true
+		p.promptRows = 0
+	}
 }
 
 // clearPromptRowsLocked erases every terminal row occupied by the last painted

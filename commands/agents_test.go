@@ -4415,31 +4415,15 @@ func TestDrainStream_HITLResolvedReprintsRequestLabel(t *testing.T) {
 	assert.Contains(t, approvedLine, hitlID)
 }
 
-func TestMsgAccumulatorStreamLive(t *testing.T) {
-	prev := stylingEnabled
-	stylingEnabled = false
-	defer func() { stylingEnabled = prev }()
-
-	var buf bytes.Buffer
-	acc := &msgAccumulator{}
-	acc.streamLive(&buf, "Hello ")
-	acc.streamLive(&buf, "world")
-	assert.Equal(t, "Hello world", buf.String())
-
-	acc.flush(&buf)
-	assert.Equal(t, "Hello world\n", buf.String(), "flush must only seal the line, not reprint")
-
-	buf.Reset()
-	acc.add("buffered only")
-	acc.flush(&buf)
-	assert.Equal(t, "buffered only\n", buf.String())
-}
-
-func TestDrainStream_TokenChunksStreamLive(t *testing.T) {
+// TestDrainStream_TokenChunksUpdateThinkingPreview pins that drainStream feeds
+// each streamed final-answer token_delta chunk (is_reasoning omitted/false)
+// into the thinking spinner's live preview label when the writer can't echo
+// live (plain buffers / pipes), so the spinner reads as a typing indicator
+// while the message buffers toward its markdown-rendered flush.
+func TestDrainStream_TokenChunksUpdateThinkingPreview(t *testing.T) {
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
 		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"Let me look "}`) +
-		sseFrame("evt-3", string(godo.HostedAgentEventKindTokenChunk), `{"text":"at the file."}`) +
-		sseFrame("evt-4", string(godo.HostedAgentEventKindRunCompleted), `{}`)
+		sseFrame("evt-3", string(godo.HostedAgentEventKindTokenChunk), `{"text":"at the file."}`)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -4452,9 +4436,71 @@ func TestDrainStream_TokenChunksStreamLive(t *testing.T) {
 	thinking := newThinkingState(&buf)
 	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, thinking, nil, &tokenDeduper{})
 
-	out := buf.String()
-	assert.Contains(t, out, "Let me look at the file.")
-	assert.Equal(t, 1, strings.Count(out, "Let me look at the file."))
+	assert.Equal(t, "Let me look at the file.", thinking.currentLabel())
+}
+
+func TestMsgAccumulatorStreamThenReplace(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	r := &recordingStreamReplacer{}
+	acc := &msgAccumulator{}
+	assert.True(t, acc.streamLive(r, "See `x`"))
+	assert.Equal(t, "See `x`", r.live.String())
+
+	acc.flush(r)
+	assert.Equal(t, "See `x`", r.replacedRaw)
+	assert.NotContains(t, visibleText(r.replacedWith), "`x`", "replacement must be markdown-rendered")
+	assert.Contains(t, visibleText(r.replacedWith), "See x")
+}
+
+func TestVisualRows(t *testing.T) {
+	assert.Equal(t, 0, visualRows("", 80))
+	assert.Equal(t, 1, visualRows("hello", 80))
+	assert.Equal(t, 1, visualRows("hello\n", 80), "trailing newline is not an extra content row")
+	assert.Equal(t, 2, visualRows("hello\nworld", 80))
+	assert.Equal(t, 2, visualRows(strings.Repeat("a", 81), 80), "soft-wrap adds a row")
+}
+
+// recordingStreamReplacer captures live echoes and replaceStreamed calls for tests.
+type recordingStreamReplacer struct {
+	live         strings.Builder
+	replacedRaw  string
+	replacedWith string
+}
+
+func (r *recordingStreamReplacer) Write(p []byte) (int, error) { return r.live.Write(p) }
+func (r *recordingStreamReplacer) replaceStreamed(raw, replacement string) {
+	r.replacedRaw = raw
+	r.replacedWith = replacement
+}
+
+// TestDrainStream_FinalAnswerRendersMarkdown pins that SPI token chunks are
+// buffered and flushed through glamour — not printed raw mid-stream.
+func TestDrainStream_FinalAnswerRendersMarkdown(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk),
+			`{"text":"Run: `+"`"+`doctl agents port-forward id 5173`+"`"+`\n"}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindRunCompleted), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	visible := visibleText(buf.String())
+	assert.Contains(t, visible, "doctl agents port-forward id 5173")
+	assert.NotContains(t, visible, "`doctl", "inline-code backticks should be consumed by markdown render")
 }
 
 // TestDrainStream_RunStaysStickyThroughToolCall pins that the "Run in
@@ -4586,6 +4632,11 @@ func TestDrainStream_ToolCallNotDeferredWithoutSpinner(t *testing.T) {
 	assert.Contains(t, out, "  ✓ 4 files")
 }
 
+// TestDrainStream_ReasoningTokensStreamDistinctlyFromFinalAnswer pins that
+// run.token_delta chunks flagged is_reasoning=true stream live and separately
+// (dim italic, via reasoningStreamer) from the buffered final answer, which
+// starts at the first is_reasoning=false chunk — mirroring the SPI
+// TokenChunk.is_reasoning contract.
 func TestDrainStream_ReasoningTokensStreamDistinctlyFromFinalAnswer(t *testing.T) {
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
 		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"Let me think... ","is_reasoning":true}`) +
@@ -4604,13 +4655,27 @@ func TestDrainStream_ReasoningTokensStreamDistinctlyFromFinalAnswer(t *testing.T
 	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, thinking, nil, &tokenDeduper{})
 
 	out := buf.String()
-	assert.Contains(t, out, "reasoning")
-	assert.Contains(t, out, "Let me think... this looks right.")
-	assert.Contains(t, out, "The answer is 42.")
-	assert.Equal(t, 1, strings.Count(out, "The answer is 42."))
-	assert.NotEqual(t, "The answer is 42.", thinking.currentLabel())
+	assert.Contains(t, out, "reasoning", "reasoning block gets a leading label")
+	assert.Contains(t, out, "Let me think... this looks right.", "reasoning text streams live")
+	// The final answer is buffered and rendered as markdown, not streamed
+	// into the reasoning block or lost.
+	assert.Contains(t, out, "42")
+	// The live preview label only ever reflects the buffered final answer,
+	// never raw reasoning text — reasoning already has its own display.
+	assert.Equal(t, "The answer is 42.", thinking.currentLabel())
 }
 
+// TestDrainStream_ReasoningToAnswerTransitionDoesNotFlashDefaultLabel is a
+// regression test for the sticky spinner visibly showing "Run in progress"
+// twice per turn: once at RunStarted, and again for one frame every time a
+// reasoning block closes and the final answer's first chunk arrives — because
+// resuming the spinner reset its label to blank (falling back to the default
+// caption) before the very next setLabel call caught up. The fix seeds the
+// resumed spinner's first frame with the already-known preview instead
+// (reasoningStreamer.endWithLabel / thinkingState.startWithLabel), so
+// defaultThinkingLabel should only ever appear once — from RunStarted — not
+// a second time at the reasoning/answer boundary. Uses a *promptDisplay so
+// isSticky() is true and the literal spinnerInit text is observable.
 func TestDrainStream_ReasoningToAnswerTransitionDoesNotFlashDefaultLabel(t *testing.T) {
 	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunStarted), `{"agent":"claude-code"}`) +
 		sseFrame("evt-2", string(godo.HostedAgentEventKindTokenChunk), `{"text":"Let me think... ","is_reasoning":true}`) +
@@ -4634,7 +4699,10 @@ func TestDrainStream_ReasoningToAnswerTransitionDoesNotFlashDefaultLabel(t *test
 	drainStream(stream, state.display, pending, &eventCursor{}, thinking, nil, &tokenDeduper{})
 
 	out := buf.String()
-	assert.Equal(t, 1, strings.Count(out, defaultThinkingLabel))
+	assert.Equal(t, 1, strings.Count(out, defaultThinkingLabel),
+		"the generic caption should only show once (RunStarted), not again when reasoning hands off to the final answer")
+	// The spinner resumed right at the reasoning/answer boundary with the
+	// answer's own preview text, not a blank/default frame.
 	assert.Contains(t, out, "The answer is 42.")
 }
 

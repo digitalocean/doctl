@@ -524,6 +524,36 @@ func TestOpenAIAttachRenderer_PolishedOutput(t *testing.T) {
 	assert.NotContains(t, out, `"event_id"`)
 }
 
+// TestOpenAIAttachRenderer_FinalAnswerRendersMarkdown pins that attach buffers
+// output_text deltas and flushes them through glamour — raw fences / link
+// syntax must not appear in the terminal (the regression Syed reported when
+// answers streamed live as plain markdown).
+func TestOpenAIAttachRenderer_FinalAnswerRendersMarkdown(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	var buf strings.Builder
+	r := &openAIAttachRenderer{out: &buf}
+
+	r.handle(map[string]any{"type": "session.turn.created"})
+	r.handle(map[string]any{
+		"type":  "session.turn.output_text.delta",
+		"delta": "App path: [do-ai-signal-desk](/workspace/do-ai-signal-desk)\n\n```bash\ndoctl agents port-forward id 5173\n```\n",
+	})
+	// Still buffering — raw markdown must not have been printed yet.
+	assert.NotContains(t, buf.String(), "```")
+	assert.NotContains(t, buf.String(), "](/workspace")
+
+	r.handle(map[string]any{"type": "session.turn.completed"})
+
+	visible := visibleText(buf.String())
+	assert.NotContains(t, visible, "```", "markdown fences should be consumed, not printed literally")
+	assert.NotContains(t, visible, "](/workspace", "raw markdown links should not appear")
+	assert.Contains(t, visible, "doctl agents port-forward id 5173")
+	assert.Contains(t, visible, "do-ai-signal-desk")
+}
+
 func TestOpenAIAttachRenderer_ReasoningStreamedViaDelta(t *testing.T) {
 	var buf strings.Builder
 	r := &openAIAttachRenderer{out: &buf}
