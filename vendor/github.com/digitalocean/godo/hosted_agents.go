@@ -367,7 +367,8 @@ type HostedAgentSession struct {
 	// ResumeOnTopoff is the create-time consent to auto-resume this session when
 	// a prepayment balance is restored. There is no update endpoint; the value
 	// is set only via the resume_on_topoff create query parameter and returned
-	// on get/list so clients can confirm enrollment. Omitted when false.
+	// on get/list so clients can confirm enrollment. Never inherited by forks.
+	// Omitted when false.
 	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
 	// OpenAISessionID is the OpenAI Agents session id (sess_…) linked to this DO
 	// sandbox for AGENT_KIND_OPENAI_CODEX. Used by attach to bridge to OpenAI;
@@ -502,6 +503,12 @@ type HostedAgentSessionCreateRequest struct {
 type HostedAgentSessionFromConfigRequest struct {
 	Name     string `json:"name"`
 	ConfigID string `json:"config_id"`
+	// ResumeOnTopoff opts the new session in to automatic resumption when the
+	// team's prepayment balance is restored. Session-scoped, not config-scoped:
+	// the referenced config never confers it, so one shared config cannot
+	// enrol every session created from it. Omitted when false, which leaves
+	// the server default (also false).
+	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
 }
 
 // HostedAgentManifestCreateOptions configures CreateSessionFromManifest.

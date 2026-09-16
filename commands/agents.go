@@ -639,7 +639,15 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --from-config.")
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
+	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 }
+
+// agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
+// one place, because it is spending consent: every command that offers it has
+// to describe the same scope and the same irreversibility.
+const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
+	"Off by default, per-session (never inherited from an Agent Config or by a fork), and settable only at create time. " +
+	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
 
 func markAgentCreationSourcesExclusive(cmd *Command) {
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
@@ -663,6 +671,10 @@ type agentCreationSource struct {
 	prompt   string
 	name     string
 	manifest []byte
+	// resumeOnTopoff travels beside the manifest rather than inside it: the
+	// server takes it as a query parameter precisely so the immutable,
+	// config-shareable agents.yaml cannot carry per-session spending consent.
+	resumeOnTopoff bool
 }
 
 // resolveAgentCreationSource reads and validates the creation flags, resolving
@@ -689,6 +701,10 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		return nil, err
 	}
 	secretPairs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentSecret)
+	if err != nil {
+		return nil, err
+	}
+	resumeOnTopoff, err := c.Doit.GetBool(c.NS, doctl.ArgAgentResumeOnTopoff)
 	if err != nil {
 		return nil, err
 	}
@@ -761,10 +777,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 
 	src := &agentCreationSource{
-		harness: harness,
-		repo:    repo,
-		prompt:  prompt,
-		name:    name,
+		harness:        harness,
+		repo:           repo,
+		prompt:         prompt,
+		name:           name,
+		resumeOnTopoff: resumeOnTopoff,
 	}
 
 	if configRef != "" {
@@ -823,14 +840,14 @@ func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationPr
 		}
 	}
 	if src.configID != "" {
-		return createSessionFromConfig(c, src.configID, src.name, prog)
+		return createSessionFromConfig(c, src.configID, src.name, src.resumeOnTopoff, prog)
 	}
 	// Checked here rather than at resolution time so --dry-run, which stores
 	// nothing, can still re-print a manifest it already redacted.
 	if err := rejectRedactedSecrets(src.manifest); err != nil {
 		return nil, err
 	}
-	return startSessionFromRawManifest(c, src.manifest, prog)
+	return startSessionFromRawManifest(c, src.manifest, src.resumeOnTopoff, prog)
 }
 
 // readySummaryFor describes the created session for the ready card.
@@ -991,6 +1008,15 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 			strings.Join(unbound, ", "), doctl.ArgAgentSecret, unbound[0])
 	}
 
+	// Top-off consent is a query parameter, not a manifest field, so it is
+	// absent from the YAML on stdout by design — and therefore lost if that
+	// YAML is piped into `config create`. Say so rather than let the user
+	// assume the printed document carries it.
+	if src.resumeOnTopoff {
+		notice("--%s is sent as a request parameter, not written into the manifest, so it does not appear below and does not survive being piped elsewhere; pass it again on the command that creates the session",
+			doctl.ArgAgentResumeOnTopoff)
+	}
+
 	out := redactManifestSecrets(manifest)
 	if !bytes.HasSuffix(out, []byte("\n")) {
 		out = append(out, '\n')
@@ -1036,7 +1062,7 @@ func sendInitialPrompt(c *CmdConfig, sessionID string, src *agentCreationSource)
 
 // createSessionFromConfig creates a session from an Agent Config ID. Shared by
 // `create --from-config` and `launch --from-config`.
-func createSessionFromConfig(c *CmdConfig, configID, name string, prog *creationProgress) (*do.HostedAgentSession, error) {
+func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if name == "" {
 		return nil, fmt.Errorf("--%s is required when creating from --%s", doctl.ArgAgentName, doctl.ArgAgentFromConfig)
 	}
@@ -1047,8 +1073,9 @@ func createSessionFromConfig(c *CmdConfig, configID, name string, prog *creation
 		prog.wait("Creating hosted session from config…")
 	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
-		Name:     name,
-		ConfigID: configID,
+		Name:           name,
+		ConfigID:       configID,
+		ResumeOnTopoff: resumeOnTopoff,
 	})
 	if err != nil {
 		if sessionLimitErr(err) {
