@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/digitalocean/godo"
 )
@@ -20,11 +22,20 @@ import (
 //	POST /permission/{id}/reply {"reply":...}  → ResolveHITL(outcome)
 //	run.human_input_received → permission.replied
 //
-// Fidelity notes, both documented behavior rather than bugs:
-//   - "always" degrades to a one-time approve. The canonical outcome enum has
-//     no sticky-approval; the adapter turns HITL_OUTCOME_APPROVE into a "once"
-//     reply to the guest, so the guest asks again next time. (The raw
-//     passthrough section of the plan is the eventual fix.)
+// Fidelity notes, documented behavior rather than bugs:
+//   - "Allow always" is emulated proxy-side. The canonical HITL outcome enum
+//     has no sticky approval, so an "always" reply reaches the guest as a
+//     one-time approve and the guest would re-ask next time. To make the
+//     button do what users expect, the facade remembers the ask's own
+//     persist-patterns (the guest-supplied `always` globs) for the proxy's
+//     lifetime and auto-approves later matching asks itself, without a dialog
+//     — see allowAlways / matchesAllowAlways. Caveats, all deliberate: the
+//     memory is in-process (a proxy restart forgets it), the auto-approvals
+//     resolve out-of-band (the audit trail attributes them to the proxy, not
+//     a per-ask keystroke), and the glob match (globMatch) is the facade's
+//     own approximation of the guest's matcher. The durable fix is the raw
+//     ResolveHITL.source_raw passthrough so the guest persists the rule
+//     itself (plan's passthrough section).
 //   - The reply's optional free-text message rides ResolveHITL.reason. That
 //     reaches the harness's audit trail and — for question-kind HITLs — the
 //     guest's answer text, but opencode's permission-reply API has no note
@@ -42,6 +53,11 @@ type pendingPerm struct {
 	// echoes what the client actually chose; empty until then (an ask
 	// resolved out-of-band maps from the canonical outcome instead).
 	reply string
+	// permission and always carry what an "always" reply should remember: the
+	// permission type (e.g. "bash") and the guest-supplied persist-patterns
+	// from this ask (the `always` globs). See allowAlways.
+	permission string
+	always     []string
 }
 
 // hitlRequestedPayload is the canonical run.human_input_requested data: the
@@ -68,6 +84,16 @@ func (f *Facade) handleHITLRequested(ev godo.HostedAgentEvent, ts *turnState, ew
 		// must not stall stream translation (same shape as the codex facade's
 		// auto-reject goroutines).
 		go f.autoRejectHITL(payload.HitlID, "question-style prompts are not supported by the opencode proxy yet; re-run the request without requiring an answer")
+		return nil
+	}
+
+	permission, _ := payload.Payload["permission"].(string)
+	command := askCommand(payload.Payload)
+	// A prior "Allow always" for a matching command auto-approves this ask
+	// with no dialog — the proxy-side emulation of sticky approval (see the
+	// fidelity note atop this file).
+	if f.matchesAllowAlways(permission, command) {
+		go f.autoApproveHITL(payload.HitlID, permission, command)
 		return nil
 	}
 	// An ask for a turn whose start this stream never saw (mid-turn connect):
@@ -120,7 +146,10 @@ func (f *Facade) handleHITLRequested(ev godo.HostedAgentEvent, ts *turnState, ew
 		}
 	}
 
-	p := &pendingPerm{hitlID: payload.HitlID, perID: perID, runID: ev.RunID}
+	p := &pendingPerm{
+		hitlID: payload.HitlID, perID: perID, runID: ev.RunID,
+		permission: permission, always: alwaysPatterns(payload.Payload),
+	}
 	f.mu.Lock()
 	if f.perms == nil {
 		f.perms = map[string]*pendingPerm{}
@@ -244,9 +273,123 @@ func (f *Facade) handlePermissionReply(w http.ResponseWriter, perID, reply, mess
 	}
 	f.mu.Lock()
 	p.reply = reply
+	// "Allow always": remember this ask's persist-patterns so future matching
+	// asks auto-approve without a dialog (proxy-side sticky-approval
+	// emulation — see the fidelity note atop this file).
+	if reply == "always" && p.permission != "" && len(p.always) > 0 {
+		if f.allowAlways == nil {
+			f.allowAlways = map[string][]string{}
+		}
+		f.allowAlways[p.permission] = append(f.allowAlways[p.permission], p.always...)
+	}
 	f.mu.Unlock()
 	// The real server answers the reply POST with a bare `true` (captured).
 	f.writeJSON(w, true)
+}
+
+// matchesAllowAlways reports whether a prior "Allow always" covers this
+// command: any remembered glob for this permission type matches it. A blank
+// command never matches (nothing to test against) — the ask is surfaced.
+func (f *Facade) matchesAllowAlways(permission, command string) bool {
+	if permission == "" || command == "" {
+		return false
+	}
+	f.mu.Lock()
+	globs := f.allowAlways[permission]
+	f.mu.Unlock()
+	for _, g := range globs {
+		if globMatch(g, command) {
+			return true
+		}
+	}
+	return false
+}
+
+// autoApproveHITL approves an ask a prior "Allow always" already covered,
+// out-of-band and with no client-facing dialog. Runs on its own goroutine
+// (ResolveHITL is an HTTP round-trip). The guest's run.human_input_received
+// then has no pendingPerm to reconcile, so no permission.replied is emitted —
+// the tool simply runs, which is the point.
+func (f *Facade) autoApproveHITL(hitlID, permission, command string) {
+	log.Printf("agentproxy/opencode: auto-approving HITL %s (%s %q matched an Allow-always rule)", hitlID, permission, command)
+	if err := f.Sessions.ResolveHITL(f.SessionID, hitlID, &godo.HostedAgentResolveHITLRequest{
+		Outcome: godo.HostedAgentHITLOutcomeApprove,
+		Source:  godo.HostedAgentResolutionSourceOutOfBand,
+	}); err != nil {
+		log.Printf("agentproxy/opencode: auto-approve of HITL %s failed: %v", hitlID, err)
+	}
+}
+
+// askCommand pulls the human-readable command an ask is gating: bash-shaped
+// asks carry it in metadata.command, otherwise the first pattern stands in.
+// Empty when neither is present (a permission type this heuristic doesn't
+// cover) — such asks never auto-approve.
+func askCommand(props map[string]any) string {
+	if md, ok := props["metadata"].(map[string]any); ok {
+		if cmd, ok := md["command"].(string); ok && cmd != "" {
+			return cmd
+		}
+	}
+	for _, p := range toStrings(props["patterns"]) {
+		if p != "" {
+			return p
+		}
+	}
+	return ""
+}
+
+// alwaysPatterns is the ask's guest-supplied persist-globs (the `always`
+// field): what an "Allow always" on this ask should remember.
+func alwaysPatterns(props map[string]any) []string {
+	return toStrings(props["always"])
+}
+
+// toStrings coerces a JSON array-of-strings (as decoded into []any or already
+// []string) to []string, dropping non-strings.
+func toStrings(v any) []string {
+	switch xs := v.(type) {
+	case []string:
+		return xs
+	case []any:
+		out := make([]string, 0, len(xs))
+		for _, x := range xs {
+			if s, ok := x.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+// globMatch matches a shell-style glob (as opencode's `always` patterns use)
+// against a command: `*` spans any run of characters (including spaces and
+// `/`, unlike filepath.Match, so "cat *" covers "cat /etc/passwd") and `?`
+// matches one. It is the facade's own approximation of the guest's matcher —
+// deliberately permissive, since a false match only ever broadens what a user
+// already chose to always-allow within this proxy's lifetime.
+func globMatch(glob, s string) bool {
+	re := globToRegexp(glob)
+	return re.MatchString(s)
+}
+
+func globToRegexp(glob string) *regexp.Regexp {
+	var b strings.Builder
+	b.WriteString("^")
+	for _, r := range glob {
+		switch r {
+		case '*':
+			b.WriteString(".*")
+		case '?':
+			b.WriteString(".")
+		default:
+			b.WriteString(regexp.QuoteMeta(string(r)))
+		}
+	}
+	b.WriteString("$")
+	// Cannot fail: QuoteMeta-escaped literals plus .*/. are always valid.
+	re, _ := regexp.Compile(b.String())
+	return re
 }
 
 // autoRejectHITL resolves a HITL this facade can't surface to the client,

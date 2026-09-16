@@ -10,11 +10,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/agentproxy/agentproxytest"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// bridgedFacadeF is newBridgedFacade but also hands back the *Facade, for the
+// tests that inspect or pre-arm its state (allowAlways).
+func bridgedFacadeF(t *testing.T) (*httptest.Server, *agentproxytest.Harness, *Facade) {
+	t.Helper()
+	h := agentproxytest.New(t, testSessionID)
+	client, err := godo.New(nil, godo.SetBaseURL(h.Server.URL+"/"))
+	require.NoError(t, err)
+	f := &Facade{SessionID: testSessionID, Sessions: do.NewHostedAgentsService(client), Dir: "/tmp/ws"}
+	srv := httptest.NewServer(f)
+	t.Cleanup(srv.Close)
+	return srv, h, f
+}
 
 // frameStream reads global-stream frames one at a time — needed for the
 // permission tests, where the harness gates later events on the resolution
@@ -177,11 +191,11 @@ func TestPermissionRejectViaSessionRoute(t *testing.T) {
 	assert.Equal(t, "reject", replied["reply"])
 }
 
-// "always" resolves as a plain approve (the canonical outcome enum has no
-// sticky approval — a documented fidelity loss) but the broadcast echoes the
-// client's actual choice so the TUI reconciles what it sent.
-func TestAlwaysReplyDegradesToApprove(t *testing.T) {
-	srv, h := newBridgedFacade(t)
+// An "always" reply resolves as approve (the canonical enum has no sticky
+// approval) AND arms the proxy-side emulation: the broadcast still echoes
+// "always", and the ask's persist-globs are remembered under allowAlways.
+func TestAlwaysReplyApprovesAndArmsEmulation(t *testing.T) {
+	srv, h, f := bridgedFacadeF(t)
 	h.QueueRun("run-alw",
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
 		agentproxytest.Event{Type: string(godo.HostedAgentEventKindHITLRequested), Data: guestAskPayload("hitl-3")},
@@ -204,6 +218,96 @@ func TestAlwaysReplyDegradesToApprove(t *testing.T) {
 
 	replied := propsOf(t, fs.until("permission.replied"))
 	assert.Equal(t, "always", replied["reply"])
+
+	// The ask's persist-glob ("echo *") was remembered for future asks.
+	f.mu.Lock()
+	globs := f.allowAlways["bash"]
+	f.mu.Unlock()
+	assert.Contains(t, globs, "echo *")
+}
+
+// With a prior "Allow always" armed, a later matching ask auto-approves with
+// NO dialog: the facade resolves the HITL out-of-band and emits no
+// permission.asked. allowAlways is pre-armed directly (the reply path that
+// arms it is covered above), keeping this to a single turn/stream.
+func TestAllowAlwaysAutoApprovesMatchingLaterAsk(t *testing.T) {
+	srv, h, f := bridgedFacadeF(t)
+	f.allowAlways = map[string][]string{"bash": {"echo *"}}
+
+	h.QueueRun("run-a2",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindHITLRequested), Data: json.RawMessage(`{"hitl_id":"hitl-a2","payload":{"sessionID":"ses_g","permission":"bash","patterns":["echo two"],"metadata":{"command":"echo two"},"always":["echo *"],"tool":{"messageID":"m","callID":"c"}}}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindHITLResolved), WaitForHITL: "hitl-a2", Data: json.RawMessage(`{"hitl_id":"hitl-a2","outcome":1}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+	resp := postPrompt(t, srv, "echo two")
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	stream, err := http.Get(srv.URL + "/global/event")
+	require.NoError(t, err)
+	defer stream.Body.Close()
+
+	// The auto-approve resolves out-of-band, which releases the gated
+	// RunCompleted and ends the stream.
+	res := h.NextHITLResolution(t, 5*time.Second)
+	assert.Equal(t, "hitl-a2", res.RequestID)
+	assert.Equal(t, string(godo.HostedAgentHITLOutcomeApprove), res.Outcome)
+	assert.Equal(t, string(godo.HostedAgentResolutionSourceOutOfBand), res.Source)
+
+	for _, fr := range drainFrames(t, stream.Body) {
+		assert.NotEqual(t, "permission.asked", fr.Payload.Type, "auto-approved ask must not show a dialog")
+	}
+}
+
+// A command the remembered glob does NOT cover still shows its dialog — the
+// emulation is scoped to what was actually always-allowed.
+func TestAllowAlwaysDoesNotApproveNonMatching(t *testing.T) {
+	srv, h, f := bridgedFacadeF(t)
+	f.allowAlways = map[string][]string{"bash": {"echo *"}}
+
+	// A `cat` command is not covered by the remembered `echo *` — the dialog
+	// must be surfaced; reply so the gated RunCompleted releases and the
+	// stream (and srv.Close) don't hang.
+	h.QueueRun("run-b2",
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunStarted)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindHITLRequested), Data: json.RawMessage(`{"hitl_id":"hitl-b2","payload":{"sessionID":"ses_g","permission":"bash","patterns":["cat /etc/hosts"],"metadata":{"command":"cat /etc/hosts"},"always":["cat *"],"tool":{"messageID":"m","callID":"c"}}}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindHITLResolved), WaitForHITL: "hitl-b2", Data: json.RawMessage(`{"hitl_id":"hitl-b2","outcome":2}`)},
+		agentproxytest.Event{Type: string(godo.HostedAgentEventKindRunCompleted)},
+	)
+	resp := postPrompt(t, srv, "cat hosts")
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	fs := openFrameStream(t, srv)
+	ask := propsOf(t, fs.until("permission.asked"))
+	assert.Equal(t, "bash", ask["permission"], "a non-matching command must still be surfaced")
+
+	perID := ask["id"].(string)
+	replyResp, err := http.Post(srv.URL+"/permission/"+perID+"/reply", "application/json",
+		strings.NewReader(`{"reply":"reject"}`))
+	require.NoError(t, err)
+	replyResp.Body.Close()
+	h.NextHITLResolution(t, 5*time.Second)
+}
+
+func TestGlobMatch(t *testing.T) {
+	cases := []struct {
+		glob, s string
+		want    bool
+	}{
+		{"echo *", "echo hello", true},
+		{"echo *", "echo hello world", true},
+		// `*` spans `/` (unlike filepath.Match) so path args are covered.
+		{"cat *", "cat /etc/passwd", true},
+		{"echo *", "cat /etc/passwd", false},
+		{"whoami", "whoami", true},
+		{"whoami", "whoami --help", false},
+		{"npm run ?", "npm run x", true},
+		{"npm run ?", "npm run build", false},
+		// Regex metacharacters in the command are literal, not patterns.
+		{"grep *", "grep a.b+c", true},
+		{"echo a.b", "echo aXb", false},
+	}
+	for _, c := range cases {
+		assert.Equalf(t, c.want, globMatch(c.glob, c.s), "glob %q vs %q", c.glob, c.s)
+	}
 }
 
 // Question-kind HITLs (the guest's question.asked) have no opencode TUI

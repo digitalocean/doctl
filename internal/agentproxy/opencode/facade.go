@@ -74,6 +74,10 @@ type Facade struct {
 	// event). Both point at the same pendingPerm entries.
 	perms       map[string]*pendingPerm
 	permsByHitl map[string]*pendingPerm
+	// allowAlways is the proxy-side emulation of "Allow always": permission
+	// type -> approved glob patterns, remembered for the proxy's lifetime so
+	// matching asks auto-approve without a dialog (see permissions.go).
+	allowAlways map[string][]string
 	// sessionCreated flips once the client has created/prompted the bridged
 	// session, so the session list grows its single entry (see
 	// handleSessionList).
