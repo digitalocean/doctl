@@ -598,6 +598,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) StreamSession(ctx, sessionID, opt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamSession", reflect.TypeOf((*MockHostedAgentsService)(nil).StreamSession), ctx, sessionID, opt)
 }
 
+// UpdateSession mocks base method.
+func (m *MockHostedAgentsService) UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*do.HostedAgentSession, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateSession", sessionID, update)
+	ret0, _ := ret[0].(*do.HostedAgentSession)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateSession indicates an expected call of UpdateSession.
+func (mr *MockHostedAgentsServiceMockRecorder) UpdateSession(sessionID, update any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSession", reflect.TypeOf((*MockHostedAgentsService)(nil).UpdateSession), sessionID, update)
+}
+
 // UpdateTemplate mocks base method.
 func (m *MockHostedAgentsService) UpdateTemplate(templateID string, update *godo.HostedAgentTemplateUpdateRequest) (*godo.HostedAgentTemplate, error) {
 	m.ctrl.T.Helper()

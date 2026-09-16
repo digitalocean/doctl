@@ -214,6 +214,9 @@ func launchExistingSession(c *CmdConfig, ref string) error {
 	if err := rejectCreationFlagsForExistingSession(c); err != nil {
 		return err
 	}
+	if err := rejectBoolFlagValueAsArg(c, doctl.ArgAgentResumeOnTopoff); err != nil {
+		return err
+	}
 
 	svc := c.HostedAgents()
 	sessionID, err := resolveSessionRef(svc, ref)
@@ -224,6 +227,12 @@ func launchExistingSession(c *CmdConfig, ref string) error {
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
 		return beautifyAgentError(err)
+	}
+	// Patch after the fetch and before any resume: the API rejects a terminal
+	// session with a 409, and attachToSession explains that far better, while a
+	// session about to wake should already carry the consent when it does.
+	if sess, err = applyLaunchSessionUpdates(c, sess); err != nil {
+		return err
 	}
 	// A destroyed or failed session is not asleep, it is gone; attachToSession
 	// reports that rather than this trying to resume it.
@@ -238,6 +247,36 @@ func launchExistingSession(c *CmdConfig, ref string) error {
 	}
 
 	return attachToSession(c, sess)
+}
+
+// applyLaunchSessionUpdates patches session settings named on a `launch
+// <session>` invocation before the chat opens, so enrolling a session and
+// looking at it stay a single command. Sessions in a terminal state are left
+// alone: the API would answer 409, and attachToSession reports the real problem.
+// Returns the session to carry forward, updated when a patch was sent.
+func applyLaunchSessionUpdates(c *CmdConfig, sess *do.HostedAgentSession) (*do.HostedAgentSession, error) {
+	if !c.Doit.IsSet(doctl.ArgAgentResumeOnTopoff) || isTerminalSessionStatus(sess.Status) {
+		return sess, nil
+	}
+	resumeOnTopoff, err := c.Doit.GetBool(c.NS, doctl.ArgAgentResumeOnTopoff)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := c.HostedAgents().UpdateSession(sess.SessionID, &godo.HostedAgentSessionUpdateRequest{
+		ResumeOnTopoff: &resumeOnTopoff,
+	})
+	if err != nil {
+		return nil, beautifyAgentError(err)
+	}
+	if resumeOnTopoff {
+		printAgentSuccess(c.Out, "Session will resume automatically after a balance top-off")
+	} else {
+		printAgentSuccess(c.Out, "Session will no longer resume automatically after a balance top-off")
+	}
+	if updated != nil && updated.HostedAgentSession != nil {
+		return updated, nil
+	}
+	return sess, nil
 }
 
 // launchUnresolvableRefErr explains both readings of a ref that matched
@@ -308,9 +347,6 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentRepo,
 		doctl.ArgAgentTriggerPrompt,
 		doctl.ArgAgentWaitTimeout,
-		// The server sets top-off consent at create time only, so accepting it
-		// here would leave the user believing an existing session was enrolled.
-		doctl.ArgAgentResumeOnTopoff,
 	} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)

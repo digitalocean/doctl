@@ -586,6 +586,14 @@ func Agents() *Command {
 		Writer, agentsNS()...)
 	cmdResume.Example = `doctl harness-runtime resume sess_abc123`
 
+	cmdUpdate := CmdBuilder(cmd, RunAgentsUpdate, "update <session>",
+		"Update settings on an existing session",
+		agentsUpdateHelpMD,
+		Writer, agentsNS(
+			displayerType(&displayers.HostedAgentSession{}))...)
+	AddBoolFlag(cmdUpdate, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
+	cmdUpdate.Example = agentCLI + ` update my-session --resume-on-topoff; ` + agentCLI + ` update sess_abc123 --resume-on-topoff=false`
+
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
 		agentsUploadHelpMD,
@@ -693,10 +701,11 @@ func addAgentCreationFlags(cmd *Command) {
 }
 
 // agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
-// one place, because it is spending consent: every command that offers it has
-// to describe the same scope and the same irreversibility.
+// one place, because it is spending consent: every command that offers it —
+// create, config start-session, launch, update — has to describe the same
+// scope and the same way to revoke it.
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
-	"Off by default, per-session (never inherited from an Agent Config or by a fork), and settable only at create time. " +
+	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
 	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
 
 func markAgentCreationSourcesExclusive(cmd *Command) {
@@ -1673,6 +1682,34 @@ func resolveSessionRef(svc do.HostedAgentsService, ref string) (string, error) {
 	}
 }
 
+// rejectBoolFlagValueAsArg catches `--flag false`, which pflag does not read as
+// a value: boolean flags only take one attached with `=`, so the flag becomes
+// true and the literal becomes a positional argument. Left alone that surfaces
+// as "too many arguments" on `update`, and worse on `launch`, where the stray
+// `false` is taken for a session name and doctl reports no such session.
+//
+// The check looks at os.Args (as IsSet already does) for the bare flag followed
+// immediately by a boolean literal, which is precisely the misparse. Matching on
+// c.Args instead would misfire on a session legitimately named "1" or "false".
+func rejectBoolFlagValueAsArg(c *CmdConfig, flag string) error {
+	if !c.Doit.IsSet(flag) {
+		return nil
+	}
+	token := "--" + flag
+	for i, arg := range os.Args {
+		if arg != token || i+1 >= len(os.Args) {
+			continue
+		}
+		next := os.Args[i+1]
+		switch strings.ToLower(next) {
+		case "true", "false", "1", "0":
+			return fmt.Errorf("--%s is a boolean flag, so its value has to be attached with an equals sign: --%s=%s. Written as `--%s %s` it sets the flag to true and leaves %q behind as an argument",
+				flag, flag, strings.ToLower(next), flag, next, next)
+		}
+	}
+	return nil
+}
+
 // sessionIDArg validates that exactly one positional argument was supplied and
 // resolves it (either a session ID or a session name) to a session ID.
 func sessionIDArg(c *CmdConfig) (string, error) {
@@ -1741,6 +1778,71 @@ func RunAgentsResume(c *CmdConfig) error {
 	stylingEnabled = detectStyling()
 	printAgentSuccess(c.Out, fmt.Sprintf("Session %s resumed", sessionID))
 	return nil
+}
+
+// RunAgentsUpdate patches session-scoped settings on an existing session. Only
+// flags the user actually passed are sent, so the command can grow alongside
+// the server's patchable set without ever clobbering a field by omission.
+func RunAgentsUpdate(c *CmdConfig) error {
+	if err := rejectBoolFlagValueAsArg(c, doctl.ArgAgentResumeOnTopoff); err != nil {
+		return err
+	}
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
+		return err
+	}
+
+	update, err := agentSessionUpdateRequest(c)
+	if err != nil {
+		return err
+	}
+
+	sess, err := c.HostedAgents().UpdateSession(sessionID, update)
+	if err != nil {
+		return err
+	}
+	if sess == nil || sess.HostedAgentSession == nil {
+		return errors.New("session update returned no session")
+	}
+	if Output == "json" {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+
+	stylingEnabled = detectStyling()
+	// State the resulting consent explicitly. The show card only renders its
+	// top-off row when the consent is granted, so on a revoke the card alone
+	// would confirm nothing at all.
+	if update.ResumeOnTopoff != nil {
+		if *update.ResumeOnTopoff {
+			printAgentSuccess(c.Out, fmt.Sprintf("Session %s will resume automatically after a balance top-off", displaySessionRef(sess)))
+		} else {
+			printAgentSuccess(c.Out, fmt.Sprintf("Session %s will no longer resume automatically after a balance top-off", displaySessionRef(sess)))
+		}
+	}
+	printSessionShowCard(c.Out, sess)
+	return nil
+}
+
+// agentSessionUpdateRequest builds the PATCH body from the flags that were
+// actually passed. Reading GetBool unconditionally would send resume_on_topoff
+// on every call and silently revoke a consent the user never mentioned, so
+// each field is gated on IsSet.
+func agentSessionUpdateRequest(c *CmdConfig) (*godo.HostedAgentSessionUpdateRequest, error) {
+	update := &godo.HostedAgentSessionUpdateRequest{}
+	if c.Doit.IsSet(doctl.ArgAgentResumeOnTopoff) {
+		resumeOnTopoff, err := c.Doit.GetBool(c.NS, doctl.ArgAgentResumeOnTopoff)
+		if err != nil {
+			return nil, err
+		}
+		update.ResumeOnTopoff = &resumeOnTopoff
+	}
+	if update.ResumeOnTopoff == nil {
+		// The server answers an empty body with a 400, so say what to pass
+		// instead of forwarding a request that cannot succeed.
+		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke)",
+			doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentResumeOnTopoff)
+	}
+	return update, nil
 }
 
 // agentProviderAuthStatusSuccess is the connect-flow status harness-api returns

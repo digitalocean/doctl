@@ -36,6 +36,9 @@ type HostedAgentsService interface {
 	CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
+	// UpdateSession patches session-scoped settings (never the agent manifest
+	// or config) and returns the updated session.
+	UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error)
 	DestroySession(sessionID string) error
 	PauseSession(sessionID string) error
 	ResumeSession(sessionID string) error
@@ -133,6 +136,14 @@ func (s *hostedAgentsService) ListSessions(opt *godo.HostedAgentSessionListOptio
 
 func (s *hostedAgentsService) GetSession(sessionID string) (*HostedAgentSession, error) {
 	sess, _, err := s.client.HostedAgents.GetSession(context.TODO(), sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error) {
+	sess, _, err := s.client.HostedAgents.UpdateSession(context.TODO(), sessionID, update)
 	if err != nil {
 		return nil, err
 	}

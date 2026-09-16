@@ -94,7 +94,7 @@ agent: opencode
 **Surviving a low balance.** When a team's prepayment balance runs out, running sessions are paused. ` + "`--resume-on-topoff`" + ` opts this session in to being resumed automatically once the balance is topped off, so an unattended run picks up where it stopped instead of waiting for someone to notice:
 ` + "```bash\n" + agentCLI + ` create --spec agents.yaml --prompt "Fix the failing test" \
   --on-hitl approve --resume-on-topoff
-` + "```\n\n" + `It is off by default and is spending consent, so it is deliberately narrow: per-session (never inherited from an Agent Config, and never by a fork), settable only at create time, and honoured only for a session paused for low balance whose last run had not finished. A session you paused yourself, or one that idled out, stays paused. It is not an ` + "`agents.yaml`" + ` field — pass the flag on each create.
+` + "```\n\n" + `It is off by default and is spending consent, so it is deliberately narrow: per-session (never inherited from an Agent Config, and never by a fork) and honoured only for a session paused for low balance whose last run had not finished. A session you paused yourself, or one that idled out, stays paused. It is not an ` + "`agents.yaml`" + ` field — pass the flag on each create, or change it later with ` + "`" + agentCLI + " update <session> --resume-on-topoff[=false]`" + `.
 
 Creating from a manifest or ` + "`--harness`" + ` also persists an Agent Config named after the session (shown as Config on the ready card). Start later sessions from it with ` + "`create --from-config`" + ` or ` + "`config start-session`" + `.
 
@@ -144,6 +144,17 @@ const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox
 const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`" + agentCLI + " resume`" + `.`
 
 const agentsResumeHelpMD = `Resume a previously paused session.`
+
+const agentsUpdateHelpMD = `Change settings on a session that already exists. Only flags you pass are changed; everything else is left alone. This never edits the agent manifest — configs are immutable, so create a new one to change how the agent runs.
+
+Today the one setting is ` + "`--resume-on-topoff`" + `, the consent to be resumed automatically after a low-balance pause:
+` + "```bash\n" + agentCLI + ` update my-session --resume-on-topoff
+` + agentCLI + ` update my-session --resume-on-topoff=false
+` + "```\n\n" + `Note the ` + "`=`" + `: boolean flags take a value only when it is attached, so ` + "`--resume-on-topoff false`" + ` would set the flag to true and leave ` + "`false`" + ` behind as an argument.
+
+Two asymmetries are worth knowing. Revoking takes effect immediately for later top-offs, but granting it does **not** wake a session that is already paused — use ` + "`" + agentCLI + " resume`" + ` for that. And a session that has been destroyed or has failed cannot be updated at all.
+
+` + "`" + agentCLI + " launch <session> --resume-on-topoff`" + ` applies the same change on the way into the chat, so enrolling a session and opening it stay one command.`
 
 const agentsUploadHelpMD = `Copy a local file into the session workspace at ` + "`--workspace-path`" + ` (under ` + "`/workspace`" + `).
 
@@ -211,7 +222,7 @@ const agentsConfigListSessionsHelpMD = `List sessions started from a config. Fil
 
 const agentsConfigStartSessionHelpMD = `Start a new session from a config ID. ` + "`--name`" + ` is required and must be unique among active sessions.
 
-` + "`--resume-on-topoff`" + ` opts the new session in to being resumed automatically after a low-balance pause, once the team's prepayment balance is topped off. It is per-session rather than config-scoped, so the config never confers it and one shared config cannot enrol every session started from it — pass the flag on each start.`
+` + "`--resume-on-topoff`" + ` opts the new session in to being resumed automatically after a low-balance pause, once the team's prepayment balance is topped off. It is per-session rather than config-scoped, so the config never confers it and one shared config cannot enrol every session started from it — pass the flag on each start, or change it afterwards with ` + "`" + agentCLI + " update <session> --resume-on-topoff[=false]`" + `.`
 
 const agentsExecHelpMD = `Run one command in a session's sandbox and print its output.
 
