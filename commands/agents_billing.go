@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 )
 
 const (
@@ -158,17 +159,58 @@ func reportHITLResolveErr(c *CmdConfig, state *attachState, err error) {
 	fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
 }
 
-// pauseReasonLowBalance is the prepay gate's pause reason on the session
-// model. harness-api documents pause reasons as an open string set and tells
-// clients to treat unrecognized values as opaque, so this is compared against,
-// never switched on exhaustively.
-const pauseReasonLowBalance = "low_balance"
+// pauseReasonLowBalance is the prepay gate's pause reason. harness-api
+// documents pause reasons as an open string set and tells clients to treat
+// unrecognized values as opaque, so this is compared against, never switched
+// on exhaustively. It is kept as a string rather than godo's typed constant
+// because the run-event stream reports the reason as a bare string too, and
+// both sources are normalized through the same path.
+const pauseReasonLowBalance = string(godo.HostedAgentSessionPauseReasonLowBalance)
 
-// isLowBalancePauseReason matches the gate's reason case-insensitively,
-// because the session model and the run-event stream spell their reasons in
-// different cases.
+// normalizePauseReason folds a reason to its wire spelling. The session model
+// and the run-event stream disagree on case, and the --paused-by flag reads
+// better hyphenated (low-balance) than the underscored value it matches.
+func normalizePauseReason(reason string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(reason), "-", "_"))
+}
+
+// isLowBalancePauseReason reports whether the prepay gate is what paused a
+// session.
 func isLowBalancePauseReason(reason string) bool {
-	return strings.EqualFold(strings.TrimSpace(reason), pauseReasonLowBalance)
+	return normalizePauseReason(reason) == pauseReasonLowBalance
+}
+
+// filterByPauseReason narrows a page of sessions to one pause reason.
+//
+// ListSessions accepts only page_size, page_token, status, name, and
+// parent_session_id — there is no server-side pause-reason filter — so this
+// runs over whatever a page returned. Callers pair it with an implied
+// status=paused, which is as much narrowing as the API can do for us.
+func filterByPauseReason(sessions []do.HostedAgentSession, reason string) []do.HostedAgentSession {
+	want := normalizePauseReason(reason)
+	if want == "" {
+		return sessions
+	}
+
+	out := make([]do.HostedAgentSession, 0, len(sessions))
+	for _, s := range sessions {
+		if normalizePauseReason(string(s.PauseReason)) == want {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// sessionStatusWithReason renders a session's status, naming why it is paused
+// when the server said. Unrecognized reasons are shown verbatim rather than
+// flattened to "unknown", since the API reserves the right to add values.
+func sessionStatusWithReason(sess *do.HostedAgentSession) string {
+	status := colorizeSessionStatus(sess.Status)
+	reason := strings.TrimSpace(string(sess.PauseReason))
+	if reason == "" {
+		return status
+	}
+	return status + colorize(fmt.Sprintf(" (%s)", reason), colMuted)
 }
 
 // renderRunPaused announces a pause the user did not ask for. Without it the

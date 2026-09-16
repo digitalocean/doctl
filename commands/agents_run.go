@@ -1094,7 +1094,7 @@ func printSessionListItem(w io.Writer, sess *do.HostedAgentSession) {
 	agent := prettyAgentKind(sess.AgentKind)
 
 	fmt.Fprintf(w, "%s %s\n", sessionStatusGlyph(sess.Status), boldColor(ref, colHighlight))
-	meta := []string{agent, colorizeSessionStatus(sess.Status)}
+	meta := []string{agent, sessionStatusWithReason(sess)}
 	if !sess.CreatedAt.Time.IsZero() {
 		meta = append(meta, colorize(createdAgo(sess.CreatedAt.Time), colMuted))
 	}
@@ -1126,7 +1126,7 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 		}
 	}
 	body.WriteString(cardRow("Agent", agent))
-	body.WriteString(cardRow("Status", sessionStatusGlyph(sess.Status)+" "+colorizeSessionStatus(sess.Status)))
+	body.WriteString(cardRow("Status", sessionStatusGlyph(sess.Status)+" "+sessionStatusWithReason(sess)))
 	if Verbose {
 		if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
 			body.WriteString(cardRow("Repo", repo))
@@ -1148,6 +1148,12 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached, godo.HostedAgentSessionStatusPaused:
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
+		if isLowBalancePauseReason(string(sess.PauseReason)) {
+			// Pointing at launch first would just reproduce the 402: the gate
+			// blocks the resume until the balance is restored.
+			body.WriteString(cardRow("add funds", prepayTopUpURL))
+			body.WriteString(cardRow("balance", prepayBalanceCmd))
+		}
 		// launch resumes a paused session on the way in, so the same line is
 		// the right next step whether this one is awake or not.
 		body.WriteString(cardRow("launch", agentCLI+" launch "+ref))

@@ -229,6 +229,40 @@ func TestIsLowBalancePauseReason(t *testing.T) {
 	assert.False(t, isLowBalancePauseReason(""))
 }
 
+func TestNormalizePauseReason(t *testing.T) {
+	// The flag reads better hyphenated than the underscored value it matches,
+	// so both spellings have to land on the same reason.
+	assert.Equal(t, "low_balance", normalizePauseReason("low-balance"))
+	assert.Equal(t, "low_balance", normalizePauseReason("LOW_BALANCE"))
+	assert.Equal(t, "low_balance", normalizePauseReason(" low_balance "))
+	assert.Equal(t, "idle", normalizePauseReason("Idle"))
+	assert.Equal(t, "", normalizePauseReason(""))
+}
+
+func TestFilterByPauseReason(t *testing.T) {
+	sessions := []do.HostedAgentSession{
+		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "running"}},
+		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke", PauseReason: godo.HostedAgentSessionPauseReasonLowBalance}},
+		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "idle", PauseReason: godo.HostedAgentSessionPauseReasonIdle}},
+		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke2", PauseReason: godo.HostedAgentSessionPauseReasonLowBalance}},
+	}
+
+	t.Run("matches the hyphenated flag spelling", func(t *testing.T) {
+		got := filterByPauseReason(sessions, "low-balance")
+		require.Len(t, got, 2)
+		assert.Equal(t, "broke", got[0].SessionID)
+		assert.Equal(t, "broke2", got[1].SessionID)
+	})
+
+	t.Run("an empty filter is a no-op", func(t *testing.T) {
+		assert.Len(t, filterByPauseReason(sessions, ""), len(sessions))
+	})
+
+	t.Run("an unmatched reason yields nothing rather than everything", func(t *testing.T) {
+		assert.Empty(t, filterByPauseReason(sessions, "manual"))
+	})
+}
+
 // The card is latched per gate episode: a user retrying in a tight loop should
 // see the explanation once, not once per keystroke.
 func TestPrintPrepayBlocked_OncePerEpisode(t *testing.T) {

@@ -550,7 +550,8 @@ func Agents() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123`
+	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (low-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
+	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by low-balance`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show one session",
@@ -1547,6 +1548,11 @@ func RunAgentsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	pausedBy, err := c.Doit.GetString(c.NS, doctl.ArgAgentPausedBy)
+	if err != nil {
+		return err
+	}
+	sessions = filterByPauseReason(sessions, pausedBy)
 	if Output == "json" {
 		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
 			return err
@@ -1585,6 +1591,20 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	parentRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentParentSessionID)
 	if err != nil {
 		return nil, err
+	}
+	pausedBy, err := c.Doit.GetString(c.NS, doctl.ArgAgentPausedBy)
+	if err != nil {
+		return nil, err
+	}
+	if pausedBy != "" {
+		// A pause reason only exists on paused sessions, so asking for one
+		// alongside a different status can never match anything.
+		pausedStatus := string(godo.HostedAgentSessionStatusPaused)
+		if status != "" && !strings.EqualFold(status, pausedStatus) {
+			return nil, fmt.Errorf("--%s only applies to paused sessions, so it cannot be combined with --%s %s",
+				doctl.ArgAgentPausedBy, doctl.ArgAgentStatus, status)
+		}
+		status = pausedStatus
 	}
 	var parentSessionID string
 	if parentRef != "" {

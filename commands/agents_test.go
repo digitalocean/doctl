@@ -890,6 +890,55 @@ func TestRunAgentsList_Pagination(t *testing.T) {
 	})
 }
 
+// --paused-by narrows to a pause reason the API cannot filter on, so it must
+// both imply status=paused on the request and filter the page it gets back.
+func TestRunAgentsList_PausedBy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentSessionListOptions{
+			Status: godo.HostedAgentSessionStatusPaused,
+		}
+		tm.hostedAgents.EXPECT().ListSessions(want).Return([]do.HostedAgentSession{
+			{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:   "sess_broke",
+					Name:        "broke",
+					PauseReason: godo.HostedAgentSessionPauseReasonLowBalance,
+				},
+			},
+			{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:   "sess_idle",
+					Name:        "napping",
+					PauseReason: godo.HostedAgentSessionPauseReasonIdle,
+				},
+			},
+		}, "", nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentPausedBy, "low-balance")
+
+		require.NoError(t, RunAgentsList(config))
+		got := buf.String()
+		assert.Contains(t, got, "broke")
+		assert.Contains(t, got, "low_balance", "the reason belongs on the row, not just in the filter")
+		assert.NotContains(t, got, "napping")
+	})
+}
+
+// Asking for a pause reason alongside a non-paused status can never match, so
+// it is rejected rather than silently returning nothing.
+func TestRunAgentsList_PausedByConflictsWithStatus(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentPausedBy, "low-balance")
+		config.Doit.Set(config.NS, doctl.ArgAgentStatus, string(godo.HostedAgentSessionStatusReady))
+
+		err := RunAgentsList(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "only applies to paused sessions")
+	})
+}
+
 // TestRunAgentsList_JSONPaginationCleanStdout pins the fix for MARSOHS-235: under
 // -o json the pagination hint must not be written to stdout (it would follow the
 // JSON array and break parsers like jq). It goes to stderr instead so the cursor
