@@ -428,6 +428,12 @@ type HostedAgentSession struct {
 	// Returned on create/get/list; omitted for sessions created before
 	// environment references were stored. Historically called Agent Config.
 	ConfigID string `json:"config_id,omitempty"`
+	// SizeSlug is the sandbox size slug this session's sandbox actually
+	// booted at (spec.sandbox.sizeSlug, or the service default when the
+	// manifest omitted one), e.g. "mars-2vcpu-4gb". Empty for a session that
+	// has not reached a sandbox yet, and for sessions created before this
+	// field existed.
+	SizeSlug string `json:"size_slug,omitempty"`
 	// Warnings carries non-fatal create-time advisories from the server
 	// (manifest parse + policy fidelity). Populated on the create response
 	// only; omitted on get/list.

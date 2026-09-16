@@ -1270,6 +1270,9 @@ func printSessionListItem(w io.Writer, sess *do.HostedAgentSession) {
 
 	fmt.Fprintf(w, "%s %s\n", sessionStatusGlyph(sess.Status), boldColor(ref, colHighlight))
 	meta := []string{agent, sessionStatusWithReason(sess)}
+	if size := strings.TrimSpace(sess.SizeSlug); size != "" {
+		meta = append(meta, colorize(size, colMuted))
+	}
 	if !sess.CreatedAt.Time.IsZero() {
 		meta = append(meta, colorize(createdAgo(sess.CreatedAt.Time), colMuted))
 	}
@@ -1302,6 +1305,9 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	}
 	body.WriteString(cardRow("Agent", agent))
 	body.WriteString(cardRow("Status", sessionStatusGlyph(sess.Status)+" "+sessionStatusWithReason(sess)))
+	if size := strings.TrimSpace(sess.SizeSlug); size != "" {
+		body.WriteString(cardRow("Size", size))
+	}
 	if Verbose {
 		if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
 			body.WriteString(cardRow("Repo", repo))
