@@ -70,10 +70,10 @@ type NextStepper interface {
 }
 
 // StructuredError lets an error supply the whole Title → Reason → Status →
-// Next step block checkErr renders, and the same four fields mirrored into
-// the JSON envelope. Every error checkErr sees is resolved to one via
-// resolveStructured, so checkErr and the JSON path always have a single
-// source to read from, whether or not err implements this itself.
+// Request ID → Next step block checkErr renders, and the same fields
+// mirrored into the JSON envelope. Every error checkErr sees is resolved to
+// one via resolveStructured, so checkErr and the JSON path always have a
+// single source to read from, whether or not err implements this itself.
 type StructuredError interface {
 	error
 
@@ -88,6 +88,10 @@ type StructuredError interface {
 
 	// Status is the API status code the failure carries, or 0 if none.
 	Status() int
+
+	// RequestID is the identifier the API assigned the request, for support
+	// to look up. Empty suppresses the line.
+	RequestID() string
 
 	// NextStep is the suggested command. Empty suppresses the line.
 	NextStep() string
@@ -113,7 +117,13 @@ func (e genericStructuredError) Title() string {
 	return ""
 }
 
+// Reason prefers the message the API itself returned, since it is specific
+// to the request that failed; the status-code table's line is a fallback for
+// when the API had nothing more to say than the status code.
 func (e genericStructuredError) Reason() string {
+	if gerr, ok := apiError(e.err); ok && gerr.Message != "" {
+		return gerr.Message
+	}
 	if entry, ok := lookupErrorCode(e.err); ok {
 		return entry.Reason
 	}
@@ -122,6 +132,16 @@ func (e genericStructuredError) Reason() string {
 
 func (e genericStructuredError) Status() int {
 	return statusFor(e.err)
+}
+
+// RequestID is the identifier godo's API client attached to the request, so
+// that reporting an issue to support can reference it without digging it out
+// of Error()'s full text.
+func (e genericStructuredError) RequestID() string {
+	if gerr, ok := apiError(e.err); ok {
+		return gerr.RequestID
+	}
+	return ""
 }
 
 // NextStep prefers an explicit NextStepper override on the wrapped error,
@@ -134,7 +154,9 @@ func (e genericStructuredError) NextStep() string {
 		}
 	}
 	if entry, ok := lookupErrorCode(e.err); ok {
-		return resolvedNextStep(entry)
+		if step := resolvedNextStep(entry); step != "" {
+			return step
+		}
 	}
 	return defaultNextStep()
 }
@@ -163,11 +185,12 @@ type outputErrors struct {
 }
 
 type outputError struct {
-	Detail   string `json:"detail"`
-	Title    string `json:"title,omitempty"`
-	Reason   string `json:"reason,omitempty"`
-	Status   int    `json:"status,omitempty"`
-	NextStep string `json:"next_step,omitempty"`
+	Detail    string `json:"detail"`
+	Title     string `json:"title,omitempty"`
+	Reason    string `json:"reason,omitempty"`
+	Status    int    `json:"status,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
+	NextStep  string `json:"next_step,omitempty"`
 }
 
 func checkErr(err error) {
@@ -209,8 +232,15 @@ func checkErr(err error) {
 		if reason := se.Reason(); reason != "" {
 			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Dim(reason))
 		}
+		// The label is dimmed to recede behind the value that names the actual
+		// status or request. The value is painted in ColorInfo rather than
+		// left in the default foreground, which read too close to the bold
+		// default-colored command path in the hint below it.
 		if status := se.Status(); status != 0 {
-			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Dim(fmt.Sprintf("status %d", status)))
+			fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.Dim("status"), paintValue(env, fmt.Sprintf("%d", status)))
+		}
+		if reqID := se.RequestID(); reqID != "" {
+			fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.Dim("request"), paintValue(env, reqID))
 		}
 		if step := se.NextStep(); step != "" {
 			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Hint(step))
@@ -219,15 +249,17 @@ func checkErr(err error) {
 		// Always keep the stable {"errors":[{"detail":...}]} envelope so
 		// automation parsing --output json is not broken by richer flag
 		// validation. Plain Error() text (no ANSI) goes in detail; title,
-		// reason, status and next_step are additive and omitted when empty.
+		// reason, status, request_id and next_step are additive and omitted
+		// when empty.
 		payload := outputErrors{
 			Errors: []outputError{
 				{
-					Detail:   err.Error(),
-					Title:    se.Title(),
-					Reason:   se.Reason(),
-					Status:   se.Status(),
-					NextStep: se.NextStep(),
+					Detail:    err.Error(),
+					Title:     se.Title(),
+					Reason:    se.Reason(),
+					Status:    se.Status(),
+					RequestID: se.RequestID(),
+					NextStep:  se.NextStep(),
 				},
 			},
 		}
@@ -237,6 +269,18 @@ func checkErr(err error) {
 	}
 
 	errAction()
+}
+
+// errorValueColor is a light neutral grey for a status/request value: lighter
+// than the muted label introducing it, but not a new hue like ui.ColorInfo,
+// so it stays quieter than an identifier while still reading apart from the
+// bold default-colored command path in the hint line beneath it. Kept local
+// to this file rather than added to the shared palette in internal/ui.
+const errorValueColor lipgloss.Color = "252"
+
+// paintValue colors a status/request value in errorValueColor.
+func paintValue(env ui.Env, s string) string {
+	return env.SprintErr(env.NewErrStyle().Foreground(errorValueColor), s)
 }
 
 func ensureOneArg(c *CmdConfig) error {

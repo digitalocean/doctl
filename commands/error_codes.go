@@ -55,8 +55,10 @@ var errorCodeTable = map[int]errorCodeEntry{
 		NextStep: "run doctl auth list",
 	},
 	http.StatusNotFound: {
-		Reason:   "the requested resource does not exist, or not in this account/context",
-		NextStep: "run doctl auth list",
+		// No canned next step: a bad ID and a wrong auth context both surface
+		// as 404, and the ID typo is by far the more common of the two, so
+		// there is no single suggestion that fits most of the time.
+		Reason: "the requested resource does not exist, or not in this account/context",
 	},
 	http.StatusConflict: {
 		Reason:   "the resource is in a state that conflicts with this request",
@@ -88,11 +90,20 @@ var errorCodeTable = map[int]errorCodeEntry{
 	},
 }
 
+// apiError unwraps err to the godo API error it carries, if any.
+func apiError(err error) (*godo.ErrorResponse, bool) {
+	var gerr *godo.ErrorResponse
+	if !errors.As(err, &gerr) {
+		return nil, false
+	}
+	return gerr, true
+}
+
 // statusFor returns the HTTP status code carried by err, if it wraps a godo
 // API error.
 func statusFor(err error) int {
-	var gerr *godo.ErrorResponse
-	if !errors.As(err, &gerr) || gerr.Response == nil {
+	gerr, ok := apiError(err)
+	if !ok || gerr.Response == nil {
 		return 0
 	}
 	return gerr.Response.StatusCode

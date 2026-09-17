@@ -106,6 +106,11 @@ func (e *FlagValidationError) Status() int {
 	return 0
 }
 
+// RequestID is always empty: a flag validation failure never reaches the API.
+func (e *FlagValidationError) RequestID() string {
+	return ""
+}
+
 // NextStep points at the failing command's own help text.
 func (e *FlagValidationError) NextStep() string {
 	return fmt.Sprintf("run %s --help", e.Command)
