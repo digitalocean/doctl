@@ -83,6 +83,42 @@ env:
 	assert.Empty(t, v.Warnings)
 }
 
+// Langgraph is a supported session adapter (AGENT_KIND_LANGGRAPH). It must not
+// get the "declared but not yet supported for session create" warning that
+// still applies to openai-agents / claude-agent-sdk / crewai.
+func TestValidateAgentManifest_LanggraphAcceptedWithoutUnsupportedWarning(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: langgraph\n"))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+	for _, w := range v.Warnings {
+		assert.NotContains(t, w, "not yet supported for session create")
+	}
+
+	legacy := validateAgentManifest([]byte(`apiVersion: agents.digitalocean.com/v1alpha1
+kind: Agent
+metadata:
+  name: lg
+spec:
+  runtime:
+    adapter: langgraph
+`))
+	assert.True(t, legacy.ok(), "errors=%v", legacy.Errors)
+	for _, w := range legacy.Warnings {
+		assert.NotContains(t, w, "not yet supported for session create")
+	}
+}
+
+func TestValidateAgentManifest_DeclaredButUnsupportedAdaptersWarn(t *testing.T) {
+	for _, adapter := range []string{"openai-agents", "claude-agent-sdk", "crewai"} {
+		t.Run(adapter, func(t *testing.T) {
+			v := validateAgentManifest([]byte("agent: " + adapter + "\n"))
+			assert.True(t, v.ok(), "errors=%v", v.Errors)
+			require.NotEmpty(t, v.Warnings)
+			assert.Contains(t, v.Warnings[0], "not yet supported for session create")
+			assert.Contains(t, v.Warnings[0], adapter)
+		})
+	}
+}
+
 func TestValidateAgentManifest_HermesWithoutModelWarns(t *testing.T) {
 	v := validateAgentManifest([]byte("agent: hermes\n"))
 	require.True(t, v.ok(), "errors=%v", v.Errors)

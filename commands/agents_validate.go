@@ -39,12 +39,12 @@ var knownAgentAdapters = map[string]struct{}{
 	"codex":            {},
 	"codex-agentapi":   {},
 	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
+	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
 	"custom":           {},
 	"codex-cli":        {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
 	"claude-agent-sdk": {},
 	"crewai":           {},
-	"langgraph":        {},
 }
 
 // reservedAgentEnvKeys mirrors harness-api agentspec.ReservedEnvKeys for the
@@ -274,7 +274,7 @@ func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	switch adapter {
 	case "codex-cli":
 		out.Warnings = append(out.Warnings, fmt.Sprintf(`%s "codex-cli" is deprecated; use "codex"`, path))
-	case "openai-agents", "claude-agent-sdk", "crewai", "langgraph":
+	case "openai-agents", "claude-agent-sdk", "crewai":
 		out.Warnings = append(out.Warnings, fmt.Sprintf("%s %q is declared but not yet supported for session create", path, adapter))
 	}
 }
