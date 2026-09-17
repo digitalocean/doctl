@@ -47,7 +47,7 @@ context: default
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 
-			expect.Equal("Error: You must provide a context name\n", string(output[:]))
+			expect.Equal("Error: You must provide a context name\n→ run doctl auth remove --help\n", string(output[:]))
 		})
 	})
 

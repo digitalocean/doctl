@@ -123,7 +123,7 @@ var _ = suite("compute/reserved-ip/create", func(t *testing.T, when spec.G, it s
 
 				output, err := cmd.CombinedOutput()
 				expect.Error(err)
-				expect.Equal(strings.TrimSpace("Error: Only one of `--region` or `--droplet-id` may be specified when creating a reserved IP address."), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace("Error: Only one of `--region` or `--droplet-id` may be specified when creating a reserved IP address.\n→ run doctl compute reserved-ip create --help"), strings.TrimSpace(string(output)))
 			}
 		})
 	})
@@ -145,7 +145,7 @@ var _ = suite("compute/reserved-ip/create", func(t *testing.T, when spec.G, it s
 
 				output, err := cmd.CombinedOutput()
 				expect.Error(err)
-				expect.Equal(strings.TrimSpace("Error: Only one of `--project-id` or `--droplet-id` may be specified when creating a reserved IP address."), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace("Error: Only one of `--project-id` or `--droplet-id` may be specified when creating a reserved IP address.\n→ run doctl compute reserved-ip create --help"), strings.TrimSpace(string(output)))
 			}
 		})
 	})
