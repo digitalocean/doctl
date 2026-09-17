@@ -179,6 +179,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Balance())
 	DoitCmd.AddCommand(BillingHistory())
+	DoitCmd.AddCommand(Prepayment())
 	DoitCmd.AddCommand(Invoices())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Kubernetes())
