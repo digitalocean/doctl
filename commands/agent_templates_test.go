@@ -213,8 +213,10 @@ func TestValidateBaseTemplate(t *testing.T) {
 	assert.NoError(t, validateBaseTemplate("coding-claude-code"))
 	assert.NoError(t, validateBaseTemplate("coding-codex"))
 	assert.NoError(t, validateBaseTemplate("coding-opencode"))
+	assert.NoError(t, validateBaseTemplate("coding-hermes"))
 	assert.NoError(t, validateBaseTemplate("langgraph"))
 	err := validateBaseTemplate("coding-base")
 	require.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "base-template"))
+	assert.Contains(t, err.Error(), "coding-hermes")
 }
