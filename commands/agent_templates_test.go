@@ -210,10 +210,11 @@ func TestTemplateImageRef(t *testing.T) {
 }
 
 func TestValidateBaseTemplate(t *testing.T) {
-	assert.NoError(t, validateBaseTemplate("coding-base"))
+	assert.NoError(t, validateBaseTemplate("coding-claude-code"))
 	assert.NoError(t, validateBaseTemplate("coding-codex"))
 	assert.NoError(t, validateBaseTemplate("coding-opencode"))
-	err := validateBaseTemplate("coding-claude")
+	assert.NoError(t, validateBaseTemplate("langgraph"))
+	err := validateBaseTemplate("coding-base")
 	require.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "base-template"))
 }

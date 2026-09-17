@@ -29,9 +29,10 @@ import (
 const (
 	templateRefPageSize = 200
 
-	baseTemplateCodingBase     = "coding-base"
-	baseTemplateCodingCodex    = "coding-codex"
-	baseTemplateCodingOpenCode = "coding-opencode"
+	baseTemplateCodingClaudeCode = "coding-claude-code"
+	baseTemplateCodingCodex      = "coding-codex"
+	baseTemplateCodingOpenCode   = "coding-opencode"
+	baseTemplateLanggraph        = "langgraph"
 )
 
 // AgentTemplates generates the `doctl harness-runtime template` subtree, which
@@ -54,7 +55,7 @@ func AgentTemplates() *Command {
 		Writer, append(ns, aliasOpt("c"),
 			displayerType(&displayers.HostedAgentTemplate{}))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the template", requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgAgentBaseTemplate, "", "", "Platform base to rebase onto (coding-base, coding-codex, coding-opencode)", requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentBaseTemplate, "", "", "Platform base to rebase onto (coding-claude-code, coding-codex, coding-opencode, langgraph)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentSourceOCIRef, "", "", "Customer OCI image (registry/repo:tag or digest)", requiredOpt())
 	cmdCreate.Example = `doctl harness-runtime template create --name my-image --base-template coding-opencode --source-oci-ref registry.digitalocean.com/myreg/agent:latest`
 
@@ -79,7 +80,7 @@ func AgentTemplates() *Command {
 		Writer, append(ns, aliasOpt("u"),
 			displayerType(&displayers.HostedAgentTemplate{}))...)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentSourceOCIRef, "", "", "New customer OCI image (registry/repo:tag or digest)")
-	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base (coding-base, coding-codex, coding-opencode)")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base (coding-claude-code, coding-codex, coding-opencode, langgraph)")
 	cmdUpdate.Example = `doctl harness-runtime template update my-image --source-oci-ref registry.digitalocean.com/myreg/agent:v2`
 
 	CmdBuilder(cmd, RunAgentsTemplateDelete, "delete <template>",
@@ -303,11 +304,11 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 
 func validateBaseTemplate(base string) error {
 	switch base {
-	case baseTemplateCodingBase, baseTemplateCodingCodex, baseTemplateCodingOpenCode:
+	case baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateLanggraph:
 		return nil
 	default:
-		return fmt.Errorf("base-template must be one of %s, %s, %s",
-			baseTemplateCodingBase, baseTemplateCodingCodex, baseTemplateCodingOpenCode)
+		return fmt.Errorf("base-template must be one of %s, %s, %s, %s",
+			baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateLanggraph)
 	}
 }
 

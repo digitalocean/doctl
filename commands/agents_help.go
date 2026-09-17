@@ -250,7 +250,7 @@ The exit code reports the run: 0 when it completed, 1 when it failed, and 124 wh
 
 A paused session is resumed on the way in. Because nothing here can ask a human, an approval request stops the command unless ` + "`--on-hitl`" + ` says how to answer.`
 
-const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`coding-base`" + `, ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `). Create and update kick a build; use ` + "`list-builds`" + ` to watch it.
+const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`coding-claude-code`" + `, ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `, ` + "`langgraph`" + `). Create and update kick a build; use ` + "`list-builds`" + ` to watch it.
 
 The team is taken from the authenticated principal — never from the request body or query.`
 

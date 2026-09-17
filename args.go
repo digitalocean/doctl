@@ -1082,7 +1082,7 @@ const (
 	ArgAgentFromConfig = "from-config"
 
 	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
-	// is rebased onto (coding-base | coding-codex | coding-opencode).
+	// is rebased onto (coding-claude-code | coding-codex | coding-opencode | langgraph).
 	ArgAgentBaseTemplate = "base-template"
 
 	// ArgAgentSourceOCIRef is the customer OCI image used as template input.
