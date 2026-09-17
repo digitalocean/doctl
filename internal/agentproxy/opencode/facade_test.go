@@ -83,8 +83,11 @@ func TestHealthReportsTestedVersion(t *testing.T) {
 // The global stream's first frame must be server.connected in the wrapped
 // payload envelope — the TUI treats it as the liveness signal.
 func TestGlobalEventStreamsServerConnectedFirst(t *testing.T) {
-	srv := httptest.NewServer(newTestFacade())
-	defer srv.Close()
+	// A wired harness with a hanging stream: the SSE handler now runs the
+	// live event loop after server.connected, so it needs a real (fake)
+	// harness to stream from.
+	srv, h := newBridgedFacade(t)
+	h.HangStreamAfterEvents(true)
 
 	resp, err := http.Get(srv.URL + "/global/event")
 	require.NoError(t, err)
@@ -111,8 +114,8 @@ func TestGlobalEventStreamsServerConnectedFirst(t *testing.T) {
 // transport's single-client slot, enforced on the stream rather than the
 // listener since plain REST requests may overlap freely.
 func TestSecondEventStreamConsumerConflicts(t *testing.T) {
-	srv := httptest.NewServer(newTestFacade())
-	defer srv.Close()
+	srv, h := newBridgedFacade(t)
+	h.HangStreamAfterEvents(true)
 
 	first, err := http.Get(srv.URL + "/global/event")
 	require.NoError(t, err)
