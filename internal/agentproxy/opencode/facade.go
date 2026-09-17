@@ -25,10 +25,12 @@ import (
 
 // TestedVersion is the opencode CLI version the route inventory and response
 // shapes below were captured against (`opencode serve` + `opencode attach`
-// through a logging relay). opencode releases near-daily and a v2 API surface
-// is rolling out alongside v1, so re-capture on upgrades rather than assuming
-// stability; the unhandled-route log below is the drift detector.
-const TestedVersion = "1.18.25"
+// through a logging relay; originally 1.18.25, re-verified at 1.18.27 with an
+// identical attach burst plus the M5 permission surface). opencode releases
+// near-daily and a v2 API surface is rolling out alongside v1, so re-capture
+// on upgrades rather than assuming stability; the unhandled-route log below
+// is the drift detector.
+const TestedVersion = "1.18.27"
 
 // Facade impersonates an opencode server for one hosted session. It is the
 // http.Handler ServeHTTP-transport variant of the codex Facade: dispatch is
