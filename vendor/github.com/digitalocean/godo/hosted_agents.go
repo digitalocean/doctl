@@ -667,6 +667,16 @@ type HostedAgentResolveHITLRequest struct {
 	// call. Outcome stays required alongside it — it is what the audit trail
 	// records, and what the agent falls back to when this is absent.
 	SourceRaw []byte `json:"source_raw,omitempty"`
+
+	// Content is a structured answer for a gated request that asks for DATA
+	// rather than just a verdict — an MCP *form* elicitation sends a
+	// requestedSchema and expects an object matching it back (e.g.
+	// {"site_url": "https://acme.atlassian.net"} for a Jira connection). Its
+	// keys are the requesting server's, never fixed here. Omitted for plain
+	// approvals, where Outcome alone is the whole answer. Mirrors
+	// harness-api's resolveHITLBody.Content; forwarded to the run and never
+	// persisted (form content can carry user-entered secrets).
+	Content map[string]any `json:"content,omitempty"`
 }
 
 // HostedAgentProviderAuthStart is returned by POST /v2/agents/auth/{provider}.
