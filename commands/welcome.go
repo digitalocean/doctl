@@ -404,10 +404,13 @@ func renderWelcome(env ui.Env, w welcome) string {
 	paint := func(s string, c lipgloss.TerminalColor) string {
 		return env.Sprint(env.NewStyle().Foreground(c), s)
 	}
+	boldPaint := func(s string, c lipgloss.TerminalColor) string {
+		return env.Sprint(env.NewStyle().Bold(true).Foreground(c), s)
+	}
 
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "\n%s\n", bold("Welcome to DigitalOcean"))
+	fmt.Fprintf(&b, "\n%s\n", boldPaint("Welcome to DigitalOcean", ui.ColorInfo))
 	fmt.Fprintf(&b, "%s\n\n", dim("doctl is the command line interface for the DigitalOcean API."))
 
 	fmt.Fprintf(&b, "  %s %s\n", dim(pad("Version", 9)), w.version)
@@ -432,7 +435,7 @@ func renderWelcome(env ui.Env, w welcome) string {
 
 	fmt.Fprintf(&b, "  %s %s\n", dim(pad("Context", 9)), w.context)
 
-	fmt.Fprintf(&b, "\n%s\n", bold("Get started"))
+	fmt.Fprintf(&b, "\n%s\n", boldPaint("Get started", ui.ColorSuccess))
 	for _, step := range welcomeSteps(w.auth) {
 		fmt.Fprintf(&b, "  %s %s\n", bold(pad(step.command, 34)), dim(step.summary))
 	}
