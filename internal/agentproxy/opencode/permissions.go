@@ -76,7 +76,7 @@ type hitlRequestedPayload struct {
 func (f *Facade) handleHITLRequested(ev godo.HostedAgentEvent, ts *turnState, ew *eventWriter, at int64) error {
 	var payload hitlRequestedPayload
 	if err := json.Unmarshal(ev.Payload, &payload); err != nil || payload.HitlID == "" {
-		log.Printf("agentproxy/opencode: unparseable human_input_requested payload")
+		log.Printf("agentproxy/opencode: unparsable human_input_requested payload")
 		return nil
 	}
 	if payload.Payload["category"] == "question" {
