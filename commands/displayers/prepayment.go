@@ -67,8 +67,14 @@ func (p *PrepaymentConfig) KV() []map[string]any {
 		x["IsAutoPrepayEnabled"] = p.Config.IsAutoPrepayEnabled
 		x["PrepayAmount"] = p.Config.PrepayAmount
 		x["PrepayThreshold"] = p.Config.PrepayThreshold
-		x["CreatedAt"] = p.Config.CreatedAt.Format(time.RFC3339)
-		x["UpdatedAt"] = p.Config.UpdatedAt.Format(time.RFC3339)
+		x["CreatedAt"] = ""
+		x["UpdatedAt"] = ""
+		if !p.Config.CreatedAt.IsZero() {
+			x["CreatedAt"] = p.Config.CreatedAt.Format(time.RFC3339)
+		}
+		if !p.Config.UpdatedAt.IsZero() {
+			x["UpdatedAt"] = p.Config.UpdatedAt.Format(time.RFC3339)
+		}
 	}
 	if p.Status != nil {
 		x["Balance"] = p.Status.Balance
