@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -102,7 +101,11 @@ var _ = suite("retries/server-error", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expectedErr := fmt.Sprintf("Error: GET %s/v2/account: 500 something broke; giving up after 3 attempt(s)", server.URL)
+			// The structured render surfaces the API's message (gerr.Message),
+			// not err.Error()'s full text, so the "giving up after N
+			// attempt(s)" annotation - part of Error() but not of Message -
+			// no longer distinguishes this case from the one below.
+			expectedErr := "Error: Internal Server Error\nsomething broke\nstatus 500\n→ run doctl account get"
 			expect.Equal(strings.TrimSpace(string(output)), expectedErr)
 		})
 	})
@@ -120,8 +123,7 @@ var _ = suite("retries/server-error", func(t *testing.T, when spec.G, it spec.S)
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 
-			// Does not contain "giving up after"
-			expectedErr := fmt.Sprintf("Error: GET %s/v2/account: 500 something broke", server.URL)
+			expectedErr := "Error: Internal Server Error\nsomething broke\nstatus 500\n→ run doctl account get"
 			expect.Equal(strings.TrimSpace(string(output)), expectedErr)
 		})
 	})

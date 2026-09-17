@@ -1244,7 +1244,7 @@ services:
 		output, err := cmd.CombinedOutput()
 		expect.Equal("exit status 1", err.Error())
 
-		expectedOutput := "Error: parsing app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec"
+		expectedOutput := "Error: parsing app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec\n→ run doctl apps propose --help"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 })

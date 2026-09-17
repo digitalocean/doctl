@@ -236,7 +236,7 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 
 				output, err := cmd.CombinedOutput()
 				expect.Error(err)
-				expect.Equal(`Error: Flags "size" and "count" cannot be provided when "node-pool" is present`, strings.TrimSpace(string(output)))
+				expect.Equal("Error: Flags \"size\" and \"count\" cannot be provided when \"node-pool\" is present\n→ run doctl kubernetes cluster create --help", strings.TrimSpace(string(output)))
 			})
 		})
 

@@ -110,7 +110,7 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput)+"\n→ run doctl compute image delete --help", strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -128,7 +128,7 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput)+"\n→ run doctl compute image delete --help", strings.TrimSpace(string(output)))
 		})
 	})
 })
