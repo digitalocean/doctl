@@ -333,6 +333,17 @@ func (p *promptCollector) resolveApproval(q hitlRequestedPayload) (bool, error) 
 	if requestID == "" || p.resolved[requestID] {
 		return false, nil
 	}
+	if q.shape() == hitlShapeForm {
+		what := q.commandSummary()
+		if what == "" {
+			what = "a data form"
+		}
+		return false, fmt.Errorf(
+			"the agent needs %s, and `prompt` is headless so there is nobody to ask.\n"+
+				"--on-hitl has no value to supply for a data form. Resolve it with "+
+				"`%s approve %s %s approve --content '{...}'`, or attach with `%s launch %s` to answer it yourself.",
+			what, agentCLI, p.sessionID, requestID, agentCLI, p.sessionID)
+	}
 	if err := p.svc.ResolveHITL(p.sessionID, requestID, &godo.HostedAgentResolveHITLRequest{
 		Outcome: p.outcome,
 		Source:  godo.HostedAgentResolutionSourceOutOfBand,

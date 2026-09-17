@@ -130,6 +130,19 @@ func drainHeadless(
 			if requestID == "" || resolved[requestID] {
 				continue
 			}
+			if p.shape() == hitlShapeForm {
+				// There's no value to synthesize for a data form under a fixed
+				// approve/reject/defer policy — --on-hitl can wave through a
+				// verdict, not invent the site_url a server actually asked for.
+				what := p.commandSummary()
+				if what == "" {
+					what = "a data form"
+				}
+				return false, fmt.Errorf(
+					"the agent needs %s, and --%s has no value to supply.\n"+
+						"Resolve it with `%s approve %s %s approve --content '{...}'`, or attach interactively.",
+					what, doctl.ArgAgentOnHITL, agentCLI, sessionID, requestID)
+			}
 			if err := svc.ResolveHITL(sessionID, requestID, &godo.HostedAgentResolveHITLRequest{
 				Outcome: outcome,
 				Source:  godo.HostedAgentResolutionSourceOutOfBand,

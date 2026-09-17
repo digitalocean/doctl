@@ -314,6 +314,28 @@ func TestAgentsPromptFailsFastOnApprovalWithoutPolicy(t *testing.T) {
 	})
 }
 
+// A data-form elicitation needs values --on-hitl cannot supply, even when
+// set: it must fail loudly and point at `approve ... --content`, not
+// silently submit an empty answer.
+func TestAgentsPromptDataFormFailsLoudlyEvenWithPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		capturePrompt(t, config)
+
+		sse := promptFrame("evt-1", testPromptRunID, godo.HostedAgentEventKindHITLRequested,
+			`{"hitl_id":"hitl_1","details":{"kind":"mcp_elicitation","mode":"form","serverName":"jira","requestedSchema":{"type":"object","properties":{"site_url":{"type":"string"}},"required":["site_url"]}}}`)
+		promptStream(t, tm, sse)
+		expectSendInput(tm, "")
+
+		config.Args = []string{testPromptSessionID, "connect jira"}
+		config.Doit.Set(config.NS, doctl.ArgAgentOnHITL, "approve")
+
+		err := RunAgentsPrompt(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--content")
+		assert.Contains(t, err.Error(), "hitl_1")
+	})
+}
+
 func TestAgentsPromptAutoResolvesApprovalWithPolicy(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		_, stderr, _ := capturePrompt(t, config)

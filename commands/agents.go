@@ -563,10 +563,12 @@ func Agents() *Command {
 		agentsLogsHelpMD,
 		Writer, agentsNS()...)
 
-	CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
+	cmdApprove := CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
 		agentsApproveHelpMD,
 		Writer, agentsNS()...)
+	AddStringFlag(cmdApprove, doctl.ArgAgentHITLContent, "", "", `A JSON object answering an MCP form elicitation's requestedSchema (e.g. '{"site_url":"https://acme.atlassian.net"}'). Required when the pending request is a data form, not a plain approval.`)
+	cmdApprove.Example = agentCLI + ` approve sess_abc123 req_1 approve; ` + agentCLI + ` approve sess_abc123 req_1 approve --content '{"site_url":"https://acme.atlassian.net"}'`
 
 	cmdRemove := CmdBuilder(cmd, RunAgentsDestroy, "remove <session>",
 		"Remove a session",
@@ -2380,9 +2382,27 @@ func RunAgentsApprove(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
+	// Content answers an MCP form elicitation's requestedSchema (e.g.
+	// {"site_url": "..."}). There's no server-side way today to look up what a
+	// pending request is asking for before resolving it, so this is blind: the
+	// caller has to already know the shape (from having seen it in `attach` or
+	// `logs`).
+	rawContent, err := c.Doit.GetString(c.NS, doctl.ArgAgentHITLContent)
+	if err != nil {
+		return err
+	}
+	var content map[string]any
+	if strings.TrimSpace(rawContent) != "" {
+		if err := json.Unmarshal([]byte(rawContent), &content); err != nil {
+			return fmt.Errorf("unable to parse --%s: %w", doctl.ArgAgentHITLContent, err)
+		}
+	}
+
 	if err := c.HostedAgents().ResolveHITL(sessionID, requestID, &godo.HostedAgentResolveHITLRequest{
 		Outcome: outcome,
 		Source:  godo.HostedAgentResolutionSourceOutOfBand,
+		Content: content,
 	}); err != nil {
 		return err
 	}
@@ -4184,7 +4204,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		case godo.HostedAgentEventKindHITLRequested:
 			var p hitlRequestedPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
-				pending.set(p.id(), p.actionLabel())
+				pending.setElicitation(p.id(), p)
 			}
 		case godo.HostedAgentEventKindHITLResolved:
 			var p hitlResolvedPayload
@@ -4243,10 +4263,20 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			dedup.reset()
 			var p hitlRequestedPayload
 			if err := json.Unmarshal(ev.Payload, &p); err == nil {
-				// Queue until a paired tool_call_started names the command; on
-				// reattach the server re-injects only this frame, so summary
-				// must come from the HITL payload itself (details.command).
-				awaiting = append(awaiting, awaitingApproval{id: p.id(), summary: p.commandSummary()})
+				if p.isMCPElicitation() {
+					// An MCP elicitation is self-contained — message, URL/schema,
+					// tool context all ride this one payload — so it renders
+					// immediately rather than waiting on a paired tool_call_started
+					// the way a bash/GitHub approval does.
+					hitlLabels[p.id()] = p.commandSummary()
+					renderApprovalLine(out, p.id(), p.commandSummary())
+					renderElicitationCard(out, p)
+				} else {
+					// Queue until a paired tool_call_started names the command; on
+					// reattach the server re-injects only this frame, so summary
+					// must come from the HITL payload itself (details.command).
+					awaiting = append(awaiting, awaitingApproval{id: p.id(), summary: p.commandSummary()})
+				}
 			}
 		case godo.HostedAgentEventKindToolCallStarted:
 			warmup.clear()
@@ -4478,6 +4508,12 @@ type pendingEntry struct {
 type pendingHITL struct {
 	mu      sync.Mutex
 	entries []pendingEntry
+	// elicitations holds the full payload for any entry that's an MCP
+	// elicitation, so handleAttachByte can tell a data form (needs its own
+	// field-by-field prompt) from a plain approve/reject/defer verdict.
+	// Absent (rather than embedded on pendingEntry) so every existing caller
+	// that only ever had an action label keeps working unchanged.
+	elicitations map[string]hitlRequestedPayload
 }
 
 // set enqueues id at the tail if not already queued. action is optional and
@@ -4501,6 +4537,30 @@ func (p *pendingHITL) set(id string, action ...string) {
 	p.entries = append(p.entries, pendingEntry{id: id, action: a})
 }
 
+// setElicitation is set plus recording the full payload, so a data-form
+// elicitation can be told apart from a plain verdict once it reaches the head
+// of the queue.
+func (p *pendingHITL) setElicitation(id string, payload hitlRequestedPayload) {
+	p.set(id, payload.actionLabel())
+	if id == "" {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.elicitations == nil {
+		p.elicitations = map[string]hitlRequestedPayload{}
+	}
+	p.elicitations[id] = payload
+}
+
+// elicitation returns the payload recorded by setElicitation for id, if any.
+func (p *pendingHITL) elicitation(id string) (hitlRequestedPayload, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	payload, ok := p.elicitations[id]
+	return payload, ok
+}
+
 // get returns the head (oldest) id, or "" if the queue is empty.
 func (p *pendingHITL) get() string {
 	p.mu.Lock()
@@ -4520,6 +4580,7 @@ func (p *pendingHITL) clearIf(id string) {
 	for i, e := range p.entries {
 		if e.id == id {
 			p.entries = append(p.entries[:i], p.entries[i+1:]...)
+			delete(p.elicitations, id)
 			return
 		}
 	}
@@ -4547,6 +4608,7 @@ func (p *pendingHITL) reset() int {
 	defer p.mu.Unlock()
 	n := len(p.entries)
 	p.entries = nil
+	p.elicitations = nil
 	return n
 }
 
@@ -4834,6 +4896,10 @@ type attachState struct {
 	escSeq     []byte
 	pasting    bool
 	confirm    *largePasteConfirmation
+	// form drives a schema-bearing MCP elicitation's field-by-field prompt.
+	// Set once the head of pending is recognized as hitlShapeForm; cleared on
+	// submit, resolve failure, or detach.
+	form *elicitationForm
 	// Input history for bash-style ↑/↓ recall within this attach session.
 	history   []string
 	histIndex int    // len(history) means draft/new line; 0..len-1 browses history
@@ -4899,9 +4965,13 @@ func (s *attachState) promptString() string {
 	s.mu.Lock()
 	confirm := s.confirm
 	sel := s.hitlSel
+	form := s.form
 	s.mu.Unlock()
 	if confirm != nil {
 		return fmt.Sprintf("You pasted %d lines. Send them together as one message? [y/N] ", confirm.lines)
+	}
+	if form != nil {
+		return form.promptString()
 	}
 	n := s.pending.len()
 	if n == 0 {
@@ -4947,6 +5017,24 @@ func (s *attachState) largePasteConfirmation() *largePasteConfirmation {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.confirm
+}
+
+func (s *attachState) setElicitationForm(f *elicitationForm) {
+	s.mu.Lock()
+	s.form = f
+	s.mu.Unlock()
+}
+
+func (s *attachState) elicitationForm() *elicitationForm {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.form
+}
+
+func (s *attachState) clearElicitationForm() {
+	s.mu.Lock()
+	s.form = nil
+	s.mu.Unlock()
 }
 
 // moveLineCursor shifts the text-input caret by delta bytes, clamped to the
@@ -6340,6 +6428,19 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 	}
 
 	if id := state.pending.get(); id != "" {
+		if form := state.elicitationForm(); form != nil && form.hitlID == id {
+			return handleElicitationFormByte(c, svc, sessionID, b, state)
+		}
+		if payload, ok := state.pending.elicitation(id); ok && payload.shape() == hitlShapeForm {
+			fields := payload.schemaFields()
+			if !isApproveBooleanOnly(fields) {
+				state.setElicitationForm(&elicitationForm{hitlID: id, fields: fields, values: map[string]any{}})
+				state.display.redraw()
+				return handleElicitationFormByte(c, svc, sessionID, b, state)
+			}
+			return handleApproveBooleanByte(c, svc, sessionID, id, b, state)
+		}
+
 		var outcome godo.HostedAgentHITLOutcome
 		var matched bool
 		switch b {
@@ -7006,10 +7107,16 @@ func (p hitlRequestedPayload) fields() map[string]any {
 }
 
 func (p hitlRequestedPayload) commandSummary() string {
+	if p.isMCPElicitation() {
+		return p.elicitationSummary()
+	}
 	return hitlCommandSummary(p.fields())
 }
 
 func (p hitlRequestedPayload) actionLabel() string {
+	if p.isMCPElicitation() {
+		return p.elicitationSummary()
+	}
 	return hitlActionLabel(p.fields())
 }
 
@@ -7075,6 +7182,9 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		var p hitlRequestedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
 			renderApprovalLine(w, p.id(), p.commandSummary())
+			if p.isMCPElicitation() {
+				renderElicitationCard(w, p)
+			}
 		}
 	case godo.HostedAgentEventKindHITLResolved:
 		var p hitlResolvedPayload

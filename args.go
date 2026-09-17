@@ -1110,6 +1110,10 @@ const (
 	// every approval request during an unattended `agents create`.
 	ArgAgentOnHITL = "on-hitl"
 
+	// ArgAgentHITLContent is a JSON object answering an MCP form elicitation's
+	// requestedSchema, passed to `agents approve` alongside the outcome.
+	ArgAgentHITLContent = "content"
+
 	// ArgAgentResumeOnTopoff opts a session in to automatic resumption when the
 	// team's prepayment balance is topped off after a low-balance pause. Set at
 	// create, or changed later on an existing session with `agents update`.

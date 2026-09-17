@@ -139,7 +139,7 @@ const agentsShowHelpMD = `Print details for one session. Pass the session ID or 
 
 const agentsLogsHelpMD = `Replay the session's event history, then exit. Very old or long histories may show only recent events.`
 
-const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "`approve`" + `, ` + "`reject`" + `, or ` + "`defer`" + `.`
+const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "`approve`" + `, ` + "`reject`" + `, or ` + "`defer`" + `. For an MCP elicitation that asks for values (a data form), pass ` + "`--content`" + ` with a JSON object matching what it requested — a plain ` + "`approve`" + ` with no ` + "`--content`" + ` is only correct for a yes/no approval or an OAuth link, not a form.`
 
 const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox. Aliases: ` + "`destroy`" + `, ` + "`rm`" + `.`
 

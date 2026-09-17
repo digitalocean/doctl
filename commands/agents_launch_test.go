@@ -902,6 +902,35 @@ func TestWatchSessionHeadless_ResolvesAndStopsAtTerminalRun(t *testing.T) {
 	})
 }
 
+// A data-form elicitation has no value --on-hitl can synthesize, so it must
+// fail loudly rather than either hanging or auto-submitting an empty answer.
+func TestWatchSessionHeadless_DataFormFailsLoudly(t *testing.T) {
+	stubReconnectSleep(t)
+
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindHITLRequested),
+		`{"hitl_id":"hitl_1","details":{"kind":"mcp_elicitation","mode":"form","serverName":"jira","requestedSchema":{"type":"object","properties":{"site_url":{"type":"string"}},"required":["site_url"]}}}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				return openHostedAgentStream(t, client, opt), nil
+			}).
+			Times(1)
+		// No ResolveHITL expectation: watchSessionHeadless must not call it.
+
+		config.Out = io.Discard
+		err := watchSessionHeadless(config, "sess_x", godo.HostedAgentHITLOutcomeApprove)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--content")
+	})
+}
+
 // SSE replay after a reconnect re-delivers the same approval. Resolving twice is
 // harmless server-side but would double the log lines and the API calls, so the
 // second sighting is dropped.

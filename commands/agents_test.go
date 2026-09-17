@@ -1230,6 +1230,28 @@ func TestRunAgentsApprove(t *testing.T) {
 	})
 }
 
+func TestRunAgentsApprove_Content(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentResolveHITLRequest{
+			Outcome: godo.HostedAgentHITLOutcomeApprove,
+			Source:  godo.HostedAgentResolutionSourceOutOfBand,
+			Content: map[string]any{"site_url": "https://acme.atlassian.net"},
+		}
+		tm.hostedAgents.EXPECT().ResolveHITL("sess_test", "req_1", want).Return(nil)
+		config.Args = []string{"sess_test", "req_1", "approve"}
+		config.Doit.Set(config.NS, doctl.ArgAgentHITLContent, `{"site_url":"https://acme.atlassian.net"}`)
+		assert.NoError(t, RunAgentsApprove(config))
+	})
+}
+
+func TestRunAgentsApprove_InvalidContent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"sess_test", "req_1", "approve"}
+		config.Doit.Set(config.NS, doctl.ArgAgentHITLContent, `not json`)
+		assert.Error(t, RunAgentsApprove(config))
+	})
+}
+
 func TestRunAgentsUpload(t *testing.T) {
 	prevPoll := workspaceTransferPollInterval
 	workspaceTransferPollInterval = 0
