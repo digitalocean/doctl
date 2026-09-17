@@ -453,6 +453,12 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 			"part":      f.toolPart(ts, tc, status, payload.Summary, at),
 		})
 
+	case godo.HostedAgentEventKindHITLRequested:
+		return f.handleHITLRequested(ev, ts, ew, at)
+
+	case godo.HostedAgentEventKindHITLResolved:
+		return f.handleHITLResolved(ev, ew)
+
 	case godo.HostedAgentEventKindRunUsageRecorded, godo.HostedAgentEventKindRunCostAccrued, godo.HostedAgentEventKindRunLog:
 		// Deliberate no-ops: per-turn token/cost totals ride run.completed's
 		// own payload (used below), and run.log is guest debug noise. Listed
@@ -464,8 +470,12 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		// The finished turn is durable history now; the cache predates it.
 		f.invalidateHistory()
 		// Close any dangling tool part first — a part stuck "running"
-		// renders as in-flight forever.
+		// renders as in-flight forever — and dismiss any permission dialog
+		// still up for this run.
 		if err := f.closeDanglingTools(ts, ew, sid, at); err != nil {
+			return err
+		}
+		if err := f.closePendingPerms(ev.RunID, ew); err != nil {
 			return err
 		}
 		var totals struct {
@@ -522,6 +532,9 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		if err := f.closeDanglingTools(ts, ew, sid, at); err != nil {
 			return err
 		}
+		if err := f.closePendingPerms(ev.RunID, ew); err != nil {
+			return err
+		}
 		var payload struct {
 			Message string `json:"message"`
 		}
@@ -547,8 +560,8 @@ func (f *Facade) translateEvent(ev godo.HostedAgentEvent, ts *turnState, ew *eve
 		return f.emitIdle(sid, ew)
 
 	default:
-		// Tool calls, usage, HITL: M4/M5. The log is the backlog, exactly
-		// like the codex facade's unhandled-method log was.
+		// The log is the backlog, exactly like the codex facade's
+		// unhandled-method log was.
 		log.Printf("agentproxy/opencode: unhandled event kind: %s", ev.Kind)
 		return nil
 	}
