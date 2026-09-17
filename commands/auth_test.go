@@ -17,7 +17,6 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"path/filepath"
 	"testing"
 
 	"errors"
@@ -84,8 +83,10 @@ func TestAuthInitConfig(t *testing.T) {
 		var configFile testConfig
 		err = yaml.Unmarshal(buf.Bytes(), &configFile)
 		assert.NoError(t, err)
-		defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
-		assert.Equal(t, configFile["config"], defaultCfgFile, "unexpected setting for 'config'")
+		// --config defaults to "" in the flag definition; the resolved path is
+		// filled in at runtime by initConfig / defaultConfigFileWriter, and is
+		// not persisted into the written config file itself.
+		assert.Equal(t, "", configFile["config"], "unexpected setting for 'config'")
 
 		// Ensure that the dev.config.set.dev-config setting is correct to prevent
 		// a conflict with the base config setting.

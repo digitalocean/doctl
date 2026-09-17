@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.209.0] - 2026-09-17
+
+- #1107 - @rodrigoea - billing(prepayment): add public config and status client methods
+
+## [1.208.0] - 2026-09-15
+
+- #1105 - @AKatruwar - registry: expose registry UUID and add ListByUUID
+
 ## [1.207.0] - 2026-09-15
 
 - #1090 - @abhishekk-fcb10 - MNFS-794: Add NFS client methods for CSI
