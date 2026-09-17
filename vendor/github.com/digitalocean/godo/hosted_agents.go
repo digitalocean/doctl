@@ -94,6 +94,9 @@ type HostedAgentsService interface {
 	ValidatePolicy(context.Context, []byte) (*HostedAgentPolicyValidationResult, *Response, error)
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
+	// UpdateSession patches session-scoped settings on an existing session and
+	// returns the updated snapshot. Never touches the agent manifest or config.
+	UpdateSession(context.Context, string, *HostedAgentSessionUpdateRequest) (*HostedAgentSession, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
 	PauseSession(context.Context, string) (*Response, error)
 	ResumeSession(context.Context, string) (*Response, error)
@@ -365,11 +368,11 @@ type HostedAgentSession struct {
 	// SandboxID is the sandbox identity for support / debugging. Informational;
 	// omitted until a sandbox is allocated.
 	SandboxID string `json:"sandbox_id,omitempty"`
-	// ResumeOnTopoff is the create-time consent to auto-resume this session when
-	// a prepayment balance is restored. There is no update endpoint; the value
-	// is set only at create (manifest query param or config JSON body) and
-	// returned on get/list so clients can confirm enrollment. Never inherited
-	// by forks. Omitted when false.
+	// ResumeOnTopoff is the consent to auto-resume this session when a
+	// prepayment balance is restored. Set at create (manifest query param or
+	// config JSON body), toggled afterwards with UpdateSession, and returned on
+	// get/list so clients can confirm enrollment. Never inherited by forks.
+	// Omitted when false.
 	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
 	// OpenAISessionID is the OpenAI Agents session id (sess_…) linked to this DO
 	// sandbox for AGENT_KIND_OPENAI_CODEX. Used by attach to bridge to OpenAI;
@@ -510,6 +513,27 @@ type HostedAgentSessionFromConfigRequest struct {
 	// enrol every session created from it. Omitted when false, which leaves
 	// the server default (also false).
 	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
+}
+
+// HostedAgentSessionUpdateRequest is the body for PATCH
+// /v2/agents/sessions/{session_id}: an allowlisted subset of session-scoped
+// settings, never an agents.yaml or Agent Config mutation. The server rejects
+// unknown top-level keys, and rejects an empty object, so every field is a
+// pointer: nil omits it and leaves the server-side value untouched.
+type HostedAgentSessionUpdateRequest struct {
+	// ResumeOnTopoff sets whether the session opts in to automatic resumption
+	// once the team's prepayment balance is restored after a low-balance pause.
+	// Nil leaves the current consent unchanged. Revoking takes effect
+	// immediately for later sweeps; granting it does not by itself resume a
+	// session that is already paused.
+	ResumeOnTopoff *bool `json:"resume_on_topoff,omitempty"`
+}
+
+// empty reports whether the request would serialize to {}, which the server
+// rejects with a 400. Checked client-side so a no-op call fails locally with a
+// useful message instead of spending a round-trip to earn a certain error.
+func (r *HostedAgentSessionUpdateRequest) empty() bool {
+	return r == nil || r.ResumeOnTopoff == nil
 }
 
 // HostedAgentManifestCreateOptions configures CreateSessionFromManifest.
@@ -947,6 +971,33 @@ func (s *HostedAgentsServiceOp) GetSession(ctx context.Context, sessionID string
 	}
 	if root.Session == nil {
 		return nil, resp, errors.New("hosted agents: get session returned no session")
+	}
+	return root.Session, resp, nil
+}
+
+// UpdateSession patches session-scoped settings and returns the updated
+// session. Only the fields set on update are sent; the rest are left alone.
+// A session in a terminal state (destroyed, failed) cannot be patched and the
+// API answers 409.
+func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID string, update *HostedAgentSessionUpdateRequest) (*HostedAgentSession, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if update.empty() {
+		return nil, nil, errors.New("hosted agents: update request must set at least one field")
+	}
+	path := fmt.Sprintf(hostedAgentSessionByIDPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPatch, path, update)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(hostedAgentSessionRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if root.Session == nil {
+		return nil, resp, errors.New("hosted agents: update session returned no session")
 	}
 	return root.Session, resp, nil
 }
