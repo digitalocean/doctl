@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
@@ -409,39 +410,118 @@ func writeHelpExample(b *strings.Builder, p helpPainter, cmd *cobra.Command) {
 	b.WriteByte('\n')
 }
 
-// formatExampleLine highlights a doctl invocation whether it is the whole line
-// or embedded mid-sentence (the common "The following example …: doctl …" shape).
+// formatExampleLine highlights every real doctl invocation on the line, whether
+// bare or embedded mid-sentence, without greening trailing prose or English
+// phrases like "initializes doctl with…".
 func formatExampleLine(p helpPainter, line string) string {
 	trimmedRight := strings.TrimRightFunc(line, unicode.IsSpace)
 	content := strings.TrimLeft(trimmedRight, " \t")
 	indent := trimmedRight[:len(trimmedRight)-len(content)]
 
-	idx := indexDoctlInvocation(content)
-	if idx < 0 {
-		return indent + content
+	var b strings.Builder
+	b.WriteString(indent)
+	remaining := content
+	for {
+		idx := indexDoctlInvocation(remaining)
+		if idx < 0 {
+			b.WriteString(remaining)
+			return b.String()
+		}
+		b.WriteString(remaining[:idx])
+		invocation, suffix := splitDoctlInvocation(remaining[idx:])
+		b.WriteString(p.successBadge(invocation))
+		remaining = suffix
 	}
-
-	prefix := content[:idx]
-	invocation := strings.TrimSpace(content[idx:])
-	return indent + prefix + p.successBadge(invocation)
 }
 
-// indexDoctlInvocation returns the start of the first doctl command token in s,
-// or -1 when none is present. A preceding letter/digit keeps "xdoctl " from matching.
+// indexDoctlInvocation returns the start of the next real doctl CLI invocation
+// in s, or -1. Prose that merely mentions "doctl" (e.g. "initializes doctl with")
+// is skipped by requiring the following token to be a known root command.
 func indexDoctlInvocation(s string) int {
+	roots := doctlRootCommandNames()
 	for i := 0; i+6 <= len(s); i++ {
 		if !strings.HasPrefix(s[i:], "doctl ") {
 			continue
 		}
 		if i > 0 {
 			prev := s[i-1]
-			if unicode.IsLetter(rune(prev)) || unicode.IsDigit(rune(prev)) || prev == '_' {
+			if unicode.IsLetter(rune(prev)) || unicode.IsDigit(rune(prev)) || prev == '_' || prev == '-' {
 				continue
 			}
+		}
+		arg := firstCLIToken(s[i+len("doctl "):])
+		if arg == "" || !roots[arg] {
+			continue
 		}
 		return i
 	}
 	return -1
+}
+
+// doctlRootCommandNames is the set of top-level doctl subcommands, used to tell
+// real invocations apart from English that happens to contain "doctl ".
+func doctlRootCommandNames() map[string]bool {
+	names := make(map[string]bool)
+	for _, c := range DoitCmd.Commands() {
+		if c.IsAvailableCommand() || c.Name() == "help" {
+			names[c.Name()] = true
+			for _, a := range c.Aliases {
+				names[a] = true
+			}
+		}
+	}
+	// Always allow these even if hidden/grouped unusually during tests.
+	names["help"] = true
+	names["completion"] = true
+	names["version"] = true
+	return names
+}
+
+func firstCLIToken(s string) string {
+	s = strings.TrimLeft(s, " \t")
+	if s == "" {
+		return ""
+	}
+	end := 0
+	for end < len(s) {
+		r, size := utf8.DecodeRuneInString(s[end:])
+		if unicode.IsSpace(r) || r == '"' || r == '\'' {
+			break
+		}
+		end += size
+	}
+	return s[:end]
+}
+
+// splitDoctlInvocation separates a doctl command from trailing prose on the same
+// line. Many Example strings continue after the command with a new sentence
+// ("…: doctl foo bar. Note that…"); greening through EOL would paint that note
+// and, because EXAMPLES is last in help, look like color bled to the end.
+func splitDoctlInvocation(s string) (invocation, suffix string) {
+	end := len(s)
+	for i := 0; i < len(s)-1; i++ {
+		if s[i] != '.' && s[i] != '!' && s[i] != '?' {
+			continue
+		}
+		if s[i+1] != ' ' {
+			continue
+		}
+		j := i + 2
+		for j < len(s) && s[j] == ' ' {
+			j++
+		}
+		if j < len(s) {
+			r, _ := utf8.DecodeRuneInString(s[j:])
+			if unicode.IsUpper(r) {
+				end = i
+				break
+			}
+		}
+	}
+
+	invocation = strings.TrimSpace(s[:end])
+	suffix = s[end:]
+	return invocation, suffix
 }
 
 func writeHelpFooter(b *strings.Builder, p helpPainter, cmd *cobra.Command) {

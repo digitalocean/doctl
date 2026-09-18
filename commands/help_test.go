@@ -94,11 +94,111 @@ func TestFormatExampleLine_HighlightsEmbeddedDoctl(t *testing.T) {
 	assert.Equal(t, embedded, formatExampleLine(p, embedded))
 	assert.Equal(t, -1, indexDoctlInvocation("not a command"))
 	assert.Equal(t, 0, indexDoctlInvocation("doctl version"))
-	assert.Equal(t, strings.Index(embedded, "doctl "), indexDoctlInvocation(embedded))
+	assert.Equal(t, strings.Index(embedded, "doctl kubernetes"), indexDoctlInvocation(embedded))
 	assert.Equal(t, -1, indexDoctlInvocation("mydoctl version"))
+	// English mention must not count as an invocation.
+	assert.Equal(t, -1, indexDoctlInvocation("initializes doctl with a token"))
+	auth := "The following example initializes doctl with a token for a single account with the context `your-team`: doctl auth init --context your-team"
+	assert.Equal(t, strings.Index(auth, "doctl auth"), indexDoctlInvocation(auth))
 
 	bare := "doctl compute droplet create example"
 	assert.Equal(t, "  "+bare, formatExampleLine(p, "  "+bare+"  "))
+}
+
+func TestSplitDoctlInvocation_StopsBeforeTrailingProse(t *testing.T) {
+	inv, suffix := splitDoctlInvocation("doctl registries delete example-registry. Note that you can delete only one registry at a time.")
+	assert.Equal(t, "doctl registries delete example-registry", inv)
+	assert.Equal(t, ". Note that you can delete only one registry at a time.", suffix)
+
+	inv, suffix = splitDoctlInvocation("doctl kubernetes cluster create example-cluster --region nyc1")
+	assert.Equal(t, "doctl kubernetes cluster create example-cluster --region nyc1", inv)
+	assert.Equal(t, "", suffix)
+
+	// Period inside a flag value must not truncate the command.
+	inv, suffix = splitDoctlInvocation("doctl kubernetes cluster create example --version 1.28.2-do.0 --region nyc1")
+	assert.Equal(t, "doctl kubernetes cluster create example --version 1.28.2-do.0 --region nyc1", inv)
+	assert.Equal(t, "", suffix)
+}
+
+func TestFormatExampleLine_KeepsTrailingNoteUnhighlighted(t *testing.T) {
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	p := helpPainter{env: env, onErr: false}
+
+	line := "The following example deletes a registry named `example-registry`: doctl registries delete example-registry. Note that you can delete only one registry at a time."
+	got := formatExampleLine(p, line)
+	assert.Equal(t, line, got) // machine mode: paint is identity, but split must preserve full text
+	assert.Contains(t, got, "doctl registries delete example-registry")
+	assert.Contains(t, got, "Note that you can delete only one registry at a time.")
+}
+
+func TestFormatExampleLine_HighlightsSecondDoctlAfterProse(t *testing.T) {
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	p := helpPainter{env: env, onErr: false}
+
+	line := "The following example initiates a console session for the app with the ID `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` and the component `web`: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web. To initiate a console session to a specific instance, append the instance id: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web sample-golang-5d9f95556c-5f58g"
+	assert.Equal(t, line, formatExampleLine(p, line))
+
+	first := indexDoctlInvocation(line)
+	require.Greater(t, first, -1)
+	_, suffix := splitDoctlInvocation(line[first:])
+	secondRel := indexDoctlInvocation(suffix)
+	require.Greater(t, secondRel, -1)
+	assert.True(t, strings.HasPrefix(suffix[secondRel:], "doctl apps console"))
+}
+
+func TestScanAllExamples_InvocationDetection(t *testing.T) {
+	var problems []string
+	var trailing []string
+	var walk func(*cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		for _, line := range strings.Split(cmd.Example, "\n") {
+			if !strings.Contains(line, "doctl ") {
+				continue
+			}
+			remaining := line
+			found := 0
+			for {
+				idx := indexDoctlInvocation(remaining)
+				if idx < 0 {
+					break
+				}
+				found++
+				inv, suffix := splitDoctlInvocation(remaining[idx:])
+				if !strings.HasPrefix(inv, "doctl ") {
+					problems = append(problems, cmd.CommandPath()+": bad inv")
+				}
+				if strings.TrimSpace(suffix) != "" {
+					trailing = append(trailing, cmd.CommandPath())
+				}
+				remaining = suffix
+			}
+			// Lines that only mention doctl in English should yield zero invocations.
+			if found == 0 && strings.Contains(line, ": doctl ") {
+				problems = append(problems, cmd.CommandPath()+": missed : doctl invocation in "+line)
+			}
+		}
+		for _, c := range cmd.Commands() {
+			walk(c)
+		}
+	}
+	walk(DoitCmd.Command)
+	assert.Empty(t, problems)
+	// Only the known sentence-continuation Examples should split a suffix.
+	assert.ElementsMatch(t, []string{"doctl apps console", "doctl registries delete"}, uniqueStrings(trailing))
+}
+
+func uniqueStrings(in []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, s := range in {
+		if !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func TestRenderStyledHelp_HighlightsMidLineExample(t *testing.T) {
