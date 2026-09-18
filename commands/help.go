@@ -404,15 +404,44 @@ func writeHelpExample(b *strings.Builder, p helpPainter, cmd *cobra.Command) {
 	}
 	fmt.Fprintf(b, "%s\n", p.section("EXAMPLES"))
 	for _, line := range strings.Split(ex, "\n") {
-		trimmed := strings.TrimRightFunc(line, unicode.IsSpace)
-		if strings.HasPrefix(strings.TrimSpace(trimmed), "doctl ") {
-			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
-			fmt.Fprintf(b, "%s%s\n", indent, p.successBadge(strings.TrimSpace(trimmed)))
-			continue
-		}
-		fmt.Fprintf(b, "%s\n", trimmed)
+		fmt.Fprintf(b, "%s\n", formatExampleLine(p, line))
 	}
 	b.WriteByte('\n')
+}
+
+// formatExampleLine highlights a doctl invocation whether it is the whole line
+// or embedded mid-sentence (the common "The following example …: doctl …" shape).
+func formatExampleLine(p helpPainter, line string) string {
+	trimmedRight := strings.TrimRightFunc(line, unicode.IsSpace)
+	content := strings.TrimLeft(trimmedRight, " \t")
+	indent := trimmedRight[:len(trimmedRight)-len(content)]
+
+	idx := indexDoctlInvocation(content)
+	if idx < 0 {
+		return indent + content
+	}
+
+	prefix := content[:idx]
+	invocation := strings.TrimSpace(content[idx:])
+	return indent + prefix + p.successBadge(invocation)
+}
+
+// indexDoctlInvocation returns the start of the first doctl command token in s,
+// or -1 when none is present. A preceding letter/digit keeps "xdoctl " from matching.
+func indexDoctlInvocation(s string) int {
+	for i := 0; i+6 <= len(s); i++ {
+		if !strings.HasPrefix(s[i:], "doctl ") {
+			continue
+		}
+		if i > 0 {
+			prev := s[i-1]
+			if unicode.IsLetter(rune(prev)) || unicode.IsDigit(rune(prev)) || prev == '_' {
+				continue
+			}
+		}
+		return i
+	}
+	return -1
 }
 
 func writeHelpFooter(b *strings.Builder, p helpPainter, cmd *cobra.Command) {

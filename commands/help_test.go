@@ -84,3 +84,34 @@ func TestRenderStyledHelp_RootListsCommandGroups(t *testing.T) {
 	assert.Contains(t, out, "doctl [command]")
 	assert.NotContains(t, out, "\n  create ")
 }
+
+func TestFormatExampleLine_HighlightsEmbeddedDoctl(t *testing.T) {
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	p := helpPainter{env: env, onErr: false}
+
+	embedded := "The following example creates a cluster named `example-cluster`: doctl kubernetes cluster create example-cluster --region nyc1"
+	assert.Equal(t, embedded, formatExampleLine(p, embedded))
+	assert.Equal(t, -1, indexDoctlInvocation("not a command"))
+	assert.Equal(t, 0, indexDoctlInvocation("doctl version"))
+	assert.Equal(t, strings.Index(embedded, "doctl "), indexDoctlInvocation(embedded))
+	assert.Equal(t, -1, indexDoctlInvocation("mydoctl version"))
+
+	bare := "doctl compute droplet create example"
+	assert.Equal(t, "  "+bare, formatExampleLine(p, "  "+bare+"  "))
+}
+
+func TestRenderStyledHelp_HighlightsMidLineExample(t *testing.T) {
+	root := &cobra.Command{Use: "doctl"}
+	parent := &Command{Command: root}
+	cmd := CmdBuilder(parent, func(*CmdConfig) error { return nil }, "create", "Create a cluster", "Creates a cluster.", Writer)
+	cmd.Example = "The following example creates a cluster named `example-cluster`: doctl kubernetes cluster create example-cluster --region nyc1"
+
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	require.NoError(t, renderStyledHelp(cmd.Command, &buf, env, false))
+	out := buf.String()
+	assert.Contains(t, out, "EXAMPLES")
+	assert.Contains(t, out, "The following example creates a cluster named `example-cluster`:")
+	assert.Contains(t, out, "doctl kubernetes cluster create example-cluster --region nyc1")
+}
