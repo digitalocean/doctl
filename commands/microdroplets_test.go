@@ -112,10 +112,10 @@ func TestMicroDropletCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		enabled := true
 		expected := &godo.MicroDropletCreateRequest{
-			Name:   "sammy-microdroplet",
-			Region: "nyc1",
-			Size:   &godo.MicroDropletSizeRequest{CPU: 2, Memory: 4096},
-			Source: &godo.MicroDropletSource{OCIRef: "docker.io/library/nginx:1.27"},
+			Name:         "sammy-microdroplet",
+			Region:       "nyc1",
+			Size:         &godo.MicroDropletSizeRequest{CPU: 2, Memory: 4096},
+			Source:       &godo.MicroDropletSource{OCIRef: "docker.io/library/nginx:1.27"},
 			Networking:   godo.MicroDropletNetworkingVPC,
 			VPCUUID:      "vpc-uuid-1234",
 			AutoPause:    &godo.AutoPauseConfig{Enabled: &enabled, IdleTimeout: "5m"},
