@@ -297,7 +297,7 @@ type tcMocks struct {
 	inference             *domocks.MockInferenceService
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
-	microDroplets         *domocks.MockMicroDropletsService
+	microVMs              *domocks.MockMicroVMsService
 	security              *domocks.MockSecurityService
 	hostedAgents          *domocks.MockHostedAgentsService
 	hostedAgentTriggers   *domocks.MockHostedAgentTriggersService
@@ -377,7 +377,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		inference:             domocks.NewMockInferenceService(ctrl),
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
-		microDroplets:         domocks.NewMockMicroDropletsService(ctrl),
+		microVMs:              domocks.NewMockMicroVMsService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
 		hostedAgents:          domocks.NewMockHostedAgentsService(ctrl),
 		hostedAgentTriggers:   domocks.NewMockHostedAgentTriggersService(ctrl),
@@ -451,7 +451,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Inference:           func() do.InferenceService { return tm.inference },
 		Nfs:                 func() do.NfsService { return tm.nfs },
 		NfsActions:          func() do.NfsActionsService { return tm.nfsActions },
-		MicroDroplets:       func() do.MicroDropletsService { return tm.microDroplets },
+		MicroVMs:            func() do.MicroVMsService { return tm.microVMs },
 		Security:            func() do.SecurityService { return tm.security },
 		HostedAgents:        func() do.HostedAgentsService { return tm.hostedAgents },
 		HostedAgentTriggers: func() do.HostedAgentTriggersService { return tm.hostedAgentTriggers },
