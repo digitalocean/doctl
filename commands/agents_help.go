@@ -58,7 +58,7 @@ const agentsCreateHelpMD = `Create a hosted session, wait until it is ready, opt
 Provide exactly one of:
 
 - a **manifest** — as a positional path, or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin). With none of these, ` + "`./agents.yaml`" + ` is used when it exists.
-- ` + "`--harness`" + ` — opencode, claude-code, or codex (builds the manifest for you)
+- ` + "`--harness`" + ` — opencode, claude-code, codex, or codex-agentapi (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
 - ` + "`--from-config`" + ` — an existing Agent Config, by name or ID (` + "`--name`" + ` required)
 
 These four are equivalent:
@@ -81,7 +81,7 @@ agent: opencode
   allow_hosts: [api.github.com]
   allow_ips: ["203.0.113.10"]
   vpc_uuid: <uuid>
-` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
+` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + ` and ` + "`codex-agentapi`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
 **Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
 

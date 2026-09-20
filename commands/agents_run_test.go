@@ -40,16 +40,29 @@ func TestResolveHarnessAgent(t *testing.T) {
 		}
 	})
 
-	t.Run("codex maps to codex-agentapi", func(t *testing.T) {
+	// codex is the Codex CLI supervised by DigitalOcean; codex-agentapi is
+	// OpenAI's sandbox-provider adapter. Mapping codex onto codex-agentapi
+	// silently hands the caller the wrong one, so pin both directions.
+	t.Run("codex maps to the Codex CLI", func(t *testing.T) {
 		got, err := resolveHarnessAgent("codex")
 		require.NoError(t, err)
-		assert.Equal(t, openAIAgentsAdapter, got)
+		assert.Equal(t, codexAgentName, got)
+		assert.NotEqual(t, openAIAgentsAdapter, got)
+	})
+
+	t.Run("codex-agentapi aliases", func(t *testing.T) {
+		for _, in := range []string{"codex-agentapi", "openai-codex", "CODEX-AGENTAPI"} {
+			got, err := resolveHarnessAgent(in)
+			require.NoError(t, err)
+			assert.Equal(t, openAIAgentsAdapter, got)
+		}
 	})
 
 	t.Run("unknown harness", func(t *testing.T) {
 		_, err := resolveHarnessAgent("not-a-harness")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported")
+		assert.Contains(t, err.Error(), "codex-agentapi")
 	})
 }
 
@@ -79,8 +92,28 @@ func TestBuildHarnessManifest(t *testing.T) {
 		assert.Equal(t, "katanemo/plano", repos[0])
 	})
 
-	t.Run("codex includes openai config and env", func(t *testing.T) {
+	t.Run("codex builds the Codex CLI manifest", func(t *testing.T) {
 		raw, err := buildHarnessManifest("codex", "", "hello world", "")
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, codexAgentName, doc["agent"])
+		secrets, ok := doc["secrets"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, "${OPENAI_API_KEY}", secrets["OPENAI_API_KEY"])
+
+		// config is codex-agentapi's OpenAI create-session body and the
+		// CODEX_* env is how that adapter finds the OpenAI-side environment.
+		// Neither belongs here, and the prompt goes out post-ready via
+		// sendInitialPrompt rather than riding in config.input.
+		assert.NotContains(t, doc, "config")
+		assert.NotContains(t, doc, "env")
+		assert.NotContains(t, string(raw), "hello world")
+	})
+
+	t.Run("codex-agentapi includes openai config and env", func(t *testing.T) {
+		raw, err := buildHarnessManifest("codex-agentapi", "", "hello world", "")
 		require.NoError(t, err)
 
 		var doc map[string]any

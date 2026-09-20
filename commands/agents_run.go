@@ -84,10 +84,15 @@ func maybeOfferGitHubAuth(c *CmdConfig) error {
 }
 
 const (
-	defaultCodexRunModel = "gpt-5.6-sol"
-	defaultRunWait       = 5 * time.Minute
+	// defaultCodexAgentAPIModel is the model named in the OpenAI Agents
+	// create-session body built for agent codex-agentapi. It has nothing to do
+	// with agent codex, whose model is resolved inside the guest from that
+	// guest's own inference env.
+	defaultCodexAgentAPIModel = "gpt-5.6-sol"
+	defaultRunWait            = 5 * time.Minute
 
 	claudeCodeAgentName = "claude-code"
+	codexAgentName      = "codex"
 	anthropicAPIKeyEnv  = "ANTHROPIC_API_KEY"
 )
 
@@ -99,12 +104,20 @@ var (
 )
 
 // harnessAgentNames maps friendly --harness values to flat-manifest agent keys.
+//
+// codex and codex-agentapi are two different adapters, not two spellings of
+// one: codex is the Codex CLI supervised by OHR in the coding-codex template,
+// where DigitalOcean runs the agent loop; codex-agentapi is OpenAI's
+// sandbox-provider model, where the loop and session state live at OpenAI and
+// DigitalOcean supplies only the sandbox. Collapsing them silently hands
+// --harness codex users the OpenAI-managed adapter, which also differs in what
+// it supports (for example it is excluded from checkpoint/fork/rollback).
 var harnessAgentNames = map[string]string{
 	"opencode":       "opencode",
 	"open-code":      "opencode",
-	"claude-code":    "claude-code",
-	"claude":         "claude-code",
-	"codex":          openAIAgentsAdapter,
+	"claude-code":    claudeCodeAgentName,
+	"claude":         claudeCodeAgentName,
+	"codex":          codexAgentName,
 	"codex-agentapi": openAIAgentsAdapter,
 	"openai-codex":   openAIAgentsAdapter,
 }
@@ -114,7 +127,8 @@ var harnessAgentNames = map[string]string{
 // by prettyAgentKind (e.g. "opencode" -> "OpenCode").
 var harnessDisplayNames = map[string]string{
 	"opencode":          "OpenCode",
-	"claude-code":       "Claude Code",
+	claudeCodeAgentName: "Claude Code",
+	codexAgentName:      "Codex CLI",
 	openAIAgentsAdapter: "Codex",
 }
 
@@ -372,7 +386,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 	}
 	agent, ok := harnessAgentNames[key]
 	if !ok {
-		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex",
+		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi",
 			doctl.ArgAgentHarness, harness)
 	}
 	return agent, nil
@@ -412,7 +426,23 @@ func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
 		doc.Secrets = map[string]string{
 			"CODEX_API_KEY": "${OPENAI_API_KEY}",
 		}
-		doc.Config = defaultCodexRunConfig(prompt)
+		doc.Config = defaultCodexAgentAPIConfig(prompt)
+	case agent == codexAgentName:
+		// The Codex CLI in the coding-codex template resolves its credentials
+		// from the guest env (brightstaff runs with `credentials: backend:
+		// env`, and the adapter regenerates .codex/auth.json per run from it).
+		// OPENAI_API_KEY is the slot that set takes first, so this asks for the
+		// same thing claude-code asks for with its own key. A manifest may use
+		// the HARNESS_INFERENCE_* set instead, but --harness writes the common
+		// case rather than every case.
+		//
+		// No config block and no CODEX_* env: those belong to codex-agentapi
+		// above, where OpenAI runs the loop. The prompt is not embedded here
+		// either; it is sent post-ready by sendInitialPrompt, as for opencode
+		// and claude-code.
+		doc.Secrets = map[string]string{
+			"OPENAI_API_KEY": "${" + openAIAPIKeyEnv + "}",
+		}
 	case agent == claudeCodeAgentName:
 		// Claude Code needs its own inference key just like Codex needs
 		// OPENAI_API_KEY. Referencing it here (rather than baking in a
@@ -477,10 +507,13 @@ func validateGitHubOwnerRepo(ref string) (string, error) {
 	return ref, nil
 }
 
-func defaultCodexRunConfig(prompt string) map[string]any {
+// defaultCodexAgentAPIConfig builds the OpenAI Agents create-session body for
+// agent codex-agentapi. The prompt rides in config.input because that adapter's
+// first turn starts at OpenAI, before the DigitalOcean session is attachable.
+func defaultCodexAgentAPIConfig(prompt string) map[string]any {
 	cfg := map[string]any{
 		"agent": map[string]any{
-			"model": defaultCodexRunModel,
+			"model": defaultCodexAgentAPIModel,
 		},
 		"environment": map[string]any{
 			"type":                "self_hosted",
