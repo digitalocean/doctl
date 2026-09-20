@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,6 +27,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/input"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/godo"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -203,26 +205,32 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			return err
 		}
 
-		validate := func(token string) error {
+		// validate saves the token to the context and checks it against the
+		// API. rejected is true only when the API answered 401, as opposed to
+		// a client or network failure.
+		validate := func(token string) (rejected bool, err error) {
 			c.setContextAccessToken(token)
 
 			template.Render(c.Out, `{{nl}}Validating token... `, nil)
 
 			// need to initial the godo client since we've changed the configuration.
 			if err := c.initServices(c); err != nil {
-				return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
+				return false, fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
 			}
 
 			if _, err := c.OAuth().TokenInfo(server); err != nil {
 				template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
-				return fmt.Errorf("Unable to use supplied token to access API: %s", err)
+				var errResp *godo.ErrorResponse
+				rejected = errors.As(err, &errResp) && errResp.Response != nil &&
+					errResp.Response.StatusCode == http.StatusUnauthorized
+				return rejected, fmt.Errorf("Unable to use supplied token to access API: %s", err)
 			}
 
-			return nil
+			return false, nil
 		}
 
-		if err := validate(token); err != nil {
-			if source != "config" {
+		if rejected, err := validate(token); err != nil {
+			if source != "config" || !rejected {
 				return err
 			}
 
@@ -234,7 +242,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 				return fmt.Errorf("%s. Pass a new token with --access-token to replace it", err)
 			}
 
-			if err := validate(strings.TrimSpace(in)); err != nil {
+			if _, err := validate(strings.TrimSpace(in)); err != nil {
 				return err
 			}
 		}

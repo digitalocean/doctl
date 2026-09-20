@@ -161,7 +161,7 @@ context: default
 		it("saves the provided token to a named context non-interactively", func() {
 			var testConfigBytes = []byte(`access-token: first-token
 auth-contexts:
-  new-context: second-token
+  new-context: stale-token
 context: default
 `)
 
@@ -187,7 +187,7 @@ context: default
 			expect.NoError(err)
 
 			expect.Contains(string(fileBytes), "new-context: some-magic-token")
-			expect.NotContains(string(fileBytes), "second-token")
+			expect.NotContains(string(fileBytes), "stale-token")
 			// The default context is left alone.
 			expect.Contains(string(fileBytes), "context: default")
 		})

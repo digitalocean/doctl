@@ -17,6 +17,8 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -25,6 +27,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -197,6 +200,17 @@ func TestAuthInitEnvTokenDefaultContext(t *testing.T) {
 	})
 }
 
+// unauthorizedErr mimics the error godo returns when the API answers 401.
+func unauthorizedErr() error {
+	return &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Request:    &http.Request{Method: http.MethodGet, URL: &url.URL{Path: "/v1/oauth/token/info"}},
+		},
+		Message: "Unable to authenticate you",
+	}
+}
+
 func TestAuthInitRepromptsWhenStoredTokenIsRejected(t *testing.T) {
 	cfw := cfgFileWriter
 	viper.Set(doctl.ArgAccessToken, "expired-token")
@@ -215,7 +229,7 @@ func TestAuthInitRepromptsWhenStoredTokenIsRejected(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		gomock.InOrder(
-			tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, errors.New("401 Unable to authenticate you")),
+			tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, unauthorizedErr()),
 			tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil),
 		)
 
@@ -246,12 +260,39 @@ func TestAuthInitRejectedStoredTokenNonInteractive(t *testing.T) {
 	}
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, errors.New("401 Unable to authenticate you"))
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, unauthorizedErr())
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "401 Unable to authenticate you")
 		assert.Contains(t, err.Error(), "--access-token")
+	})
+}
+
+func TestAuthInitStoredTokenNetworkErrorDoesNotPrompt(t *testing.T) {
+	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, "stored-token")
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set(doctl.ArgAccessToken, nil)
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "", errors.New("should not have prompted")
+	}
+
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return nil, errors.New("config must not be written when validation fails")
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, errors.New("dial tcp: connection refused"))
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "connection refused")
+		assert.NotContains(t, err.Error(), "should not have prompted")
+		assert.NotContains(t, err.Error(), "--access-token")
 	})
 }
 
