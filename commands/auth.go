@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,6 +27,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/input"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/godo"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -39,6 +41,10 @@ const (
 
 	legacyTokenLength = 64
 	v1TokenLength     = 71
+
+	// accessTokenEnvVar is the environment variable viper binds to the
+	// access-token setting through the DIGITALOCEAN prefix.
+	accessTokenEnvVar = "DIGITALOCEAN_ACCESS_TOKEN"
 )
 
 // ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
@@ -113,6 +119,8 @@ The `+"`"+`--context`+"`"+` flag allows you to add authentication for multiple a
 
 If the `+"`"+`--context`+"`"+` flag is not specified, doctl creates a default authentication context named `+"`"+`default`+"`"+`.
 
+To set or replace a context's token without being prompted, for example in a script, pass the token with the `+"`"+`--access-token`+"`"+` flag. It is validated and saved to the given context, replacing any token already stored there.
+
 You can use doctl without initializing it by adding the `+"`"+`--access-token`+"`"+` flag to each command and providing an API token as the argument.`, Writer, false)
 	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
 	cmdAuthInit.Example = `The following example initializes doctl with a token for a single account with the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
@@ -164,23 +172,32 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			context = strings.ToLower(viper.GetString("context"))
 		}
 
-		if token == "" {
+		// Name where the token came from so that a validation failure explains
+		// itself. The stored token is only consulted when nothing more explicit
+		// was supplied.
+		var source string
+		switch {
+		case Token != "":
+			// --access-token was passed on the command line. It names the token
+			// to save regardless of the context; the stored token for a named
+			// context must not shadow it (#703, #1176).
+			token = Token
+			source = "--access-token"
+		case token == "":
 			in, err := retrieveUserTokenFunc()
 			if err != nil {
 				return fmt.Errorf("Unable to read DigitalOcean access token: %s", err)
 			}
 			token = strings.TrimSpace(in)
-		} else {
-			template.Render(c.Out, `Using token for context {{highlight .}}{{nl}}`, context)
+		case context == doctl.ArgDefaultContext && os.Getenv(accessTokenEnvVar) != "":
+			source = accessTokenEnvVar
+		default:
+			source = "config"
 		}
 
-		c.setContextAccessToken(token)
-
-		template.Render(c.Out, `{{nl}}Validating token... `, nil)
-
-		// need to initial the godo client since we've changed the configuration.
-		if err := c.initServices(c); err != nil {
-			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
+		if source != "" {
+			template.Render(c.Out, `Using token from {{.Source}} for context {{highlight .Context}}{{nl}}`,
+				map[string]string{"Source": source, "Context": context})
 		}
 
 		server, err := c.Doit.GetString(c.NS, doctl.ArgTokenValidationServer)
@@ -188,9 +205,46 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			return err
 		}
 
-		if _, err := c.OAuth().TokenInfo(server); err != nil {
-			template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
-			return fmt.Errorf("Unable to use supplied token to access API: %s", err)
+		// validate saves the token to the context and checks it against the
+		// API. rejected is true only when the API answered 401, as opposed to
+		// a client or network failure.
+		validate := func(token string) (rejected bool, err error) {
+			c.setContextAccessToken(token)
+
+			template.Render(c.Out, `{{nl}}Validating token... `, nil)
+
+			// need to initial the godo client since we've changed the configuration.
+			if err := c.initServices(c); err != nil {
+				return false, fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
+			}
+
+			if _, err := c.OAuth().TokenInfo(server); err != nil {
+				template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
+				var errResp *godo.ErrorResponse
+				rejected = errors.As(err, &errResp) && errResp.Response != nil &&
+					errResp.Response.StatusCode == http.StatusUnauthorized
+				return rejected, fmt.Errorf("Unable to use supplied token to access API: %s", err)
+			}
+
+			return false, nil
+		}
+
+		if rejected, err := validate(token); err != nil {
+			if source != "config" || !rejected {
+				return err
+			}
+
+			// The token already saved for this context no longer works, which
+			// is the most common reason to run init again. Offer a replacement
+			// prompt rather than leaving the user to edit the config file.
+			in, promptErr := retrieveUserTokenFunc()
+			if promptErr != nil {
+				return fmt.Errorf("%s. Pass a new token with --access-token to replace it", err)
+			}
+
+			if _, err := validate(strings.TrimSpace(in)); err != nil {
+				return err
+			}
 		}
 
 		template.Render(c.Out, `{{success checkmark}}{{nl}}{{nl}}`, nil)
