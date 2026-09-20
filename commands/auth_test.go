@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"io"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"errors"
@@ -120,6 +121,164 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestAuthInitFlagOverridesNamedContextToken(t *testing.T) {
+	cfw := cfgFileWriter
+	origToken := Token
+	// Simulate `doctl auth init --context team -t <flag-token>` against a
+	// config that already holds a (stale) token for that context.
+	Token = "flag-token"
+	viper.Set("context", "team")
+	defer func() {
+		cfgFileWriter = cfw
+		Token = origToken
+		viper.Set("context", nil)
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "", errors.New("should not have prompted")
+	}
+
+	var out bytes.Buffer
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Out = &out
+		// The harness stubs the context accessors; stand in for a named
+		// context that already holds a stale token and record what init saves.
+		var saved string
+		config.getContextAccessToken = func() string { return "stale-token" }
+		config.setContextAccessToken = func(token string) { saved = token }
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "flag-token", saved,
+			"the --access-token value should replace the stored token for the named context")
+		assert.Contains(t, out.String(), "Using token from --access-token for context team")
+	})
+}
+
+func TestAuthInitEnvTokenDefaultContext(t *testing.T) {
+	cfw := cfgFileWriter
+	// Mirror initConfig so that viper resolves DIGITALOCEAN_ACCESS_TOKEN.
+	viper.SetEnvPrefix("DIGITALOCEAN")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	t.Setenv(accessTokenEnvVar, "env-token")
+	viper.Set(doctl.ArgAccessToken, nil)
+	viper.Set("context", doctl.ArgDefaultContext)
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set("context", nil)
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "", errors.New("should not have prompted")
+	}
+
+	var out bytes.Buffer
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Out = &out
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
+
+		var saved string
+		config.setContextAccessToken = func(token string) { saved = token }
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+		assert.Equal(t, "env-token", saved)
+		assert.Contains(t, out.String(), "Using token from DIGITALOCEAN_ACCESS_TOKEN for context default")
+	})
+}
+
+func TestAuthInitRepromptsWhenStoredTokenIsRejected(t *testing.T) {
+	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, "expired-token")
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set(doctl.ArgAccessToken, nil)
+	}()
+
+	prompted := 0
+	retrieveUserTokenFunc := func() (string, error) {
+		prompted++
+		return "fresh-token", nil
+	}
+
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		gomock.InOrder(
+			tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, errors.New("401 Unable to authenticate you")),
+			tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil),
+		)
+
+		var saved string
+		config.setContextAccessToken = func(token string) { saved = token }
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, prompted)
+		assert.Equal(t, "fresh-token", saved)
+	})
+}
+
+func TestAuthInitRejectedStoredTokenNonInteractive(t *testing.T) {
+	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, "expired-token")
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set(doctl.ArgAccessToken, nil)
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "", ErrUnknownTerminal
+	}
+
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return nil, errors.New("config must not be written when validation fails")
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, errors.New("401 Unable to authenticate you"))
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "401 Unable to authenticate you")
+		assert.Contains(t, err.Error(), "--access-token")
+	})
+}
+
+func TestAuthInitRejectedFlagTokenDoesNotPrompt(t *testing.T) {
+	cfw := cfgFileWriter
+	origToken := Token
+	Token = "bad-flag-token"
+	defer func() {
+		cfgFileWriter = cfw
+		Token = origToken
+		viper.Set(doctl.ArgAccessToken, nil)
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "", errors.New("should not have prompted")
+	}
+
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return nil, errors.New("config must not be written when validation fails")
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(nil, errors.New("401 Unable to authenticate you"))
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.Error(t, err)
+		assert.NotContains(t, err.Error(), "should not have prompted")
 	})
 }
 

@@ -157,6 +157,40 @@ context: default
 
 			expect.Contains(string(fileBytes), "access-token: some-magic-token")
 		})
+
+		it("saves the provided token to a named context non-interactively", func() {
+			var testConfigBytes = []byte(`access-token: first-token
+auth-contexts:
+  new-context: second-token
+context: default
+`)
+
+			tmpDir := t.TempDir()
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"auth",
+				"init",
+				"--context", "new-context",
+				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, string(output))
+			expect.Contains(string(output), "Using token from --access-token for context new-context")
+
+			fileBytes, err := os.ReadFile(testConfig)
+			expect.NoError(err)
+
+			expect.Contains(string(fileBytes), "new-context: some-magic-token")
+			expect.NotContains(string(fileBytes), "second-token")
+			// The default context is left alone.
+			expect.Contains(string(fileBytes), "context: default")
+		})
 	})
 
 	when("no custom config is provided", func() {
