@@ -65,7 +65,7 @@ func TestMicroVMCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.True(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
-		"checkpoint", "create", "delete", "get", "list", "options", "pause", "resume",
+		"checkpoint", "console", "create", "delete", "exec", "get", "list", "options", "pause", "resume",
 	)
 }
 
@@ -310,5 +310,37 @@ func TestMicroVMOptions(t *testing.T) {
 		}, nil)
 		err := RunMicroVMOptions(config)
 		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMExec(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().Exec(testMicroVMID, &godo.MicroVMExecRequest{
+			Argv: []string{"echo", "hi"},
+			Cwd:  "/app",
+		}).Return(&godo.MicroVMExecResult{
+			Stdout:   "hi\n",
+			ExitCode: 0,
+		}, nil)
+
+		config.Args = append(config.Args, testMicroVMID, "echo", "hi")
+		config.Doit.Set(config.NS, "cwd", "/app")
+		err := RunMicroVMExec(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMExecNonZeroExit(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().Exec(testMicroVMID, &godo.MicroVMExecRequest{
+			Argv: []string{"false"},
+		}).Return(&godo.MicroVMExecResult{
+			ExitCode: 1,
+		}, nil)
+
+		config.Args = append(config.Args, testMicroVMID, "false")
+		err := RunMicroVMExec(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exit")
 	})
 }

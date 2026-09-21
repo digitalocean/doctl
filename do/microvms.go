@@ -35,6 +35,8 @@ type MicroVMCheckpoint struct {
 // MicroVMCheckpoints is a slice of MicroVMCheckpoint.
 type MicroVMCheckpoints []MicroVMCheckpoint
 
+//go:generate go run go.uber.org/mock/mockgen -source microvms.go -package=mocks -destination mocks/MicroVMsService.go MicroVMsService
+
 // MicroVMsService is an interface for interacting with DigitalOcean's
 // MicroVM API.
 type MicroVMsService interface {
@@ -53,6 +55,9 @@ type MicroVMsService interface {
 	DeleteCheckpoint(id string) error
 
 	GetCreateOptions() (*godo.MicroVMCreateOptions, error)
+
+	Exec(id string, req *godo.MicroVMExecRequest) (*godo.MicroVMExecResult, error)
+	ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error)
 }
 
 type microVMsService struct {
@@ -206,4 +211,13 @@ func (s *microVMsService) DeleteCheckpoint(id string) error {
 func (s *microVMsService) GetCreateOptions() (*godo.MicroVMCreateOptions, error) {
 	opts, _, err := s.client.MicroVMs.GetCreateOptions(context.TODO())
 	return opts, err
+}
+
+func (s *microVMsService) Exec(id string, req *godo.MicroVMExecRequest) (*godo.MicroVMExecResult, error) {
+	result, _, err := s.client.MicroVMs.Exec(context.TODO(), id, req)
+	return result, err
+}
+
+func (s *microVMsService) ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error) {
+	return s.client.MicroVMs.ConsoleURL(id, opt)
 }

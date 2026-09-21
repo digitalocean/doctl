@@ -14,15 +14,23 @@ limitations under the License.
 package commands
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
+	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/term"
 )
 
 // MicroVM creates the microvm command tree.
@@ -33,7 +41,7 @@ func MicroVM() *Command {
 			Short: "Manage MicroVMs",
 			Long: `The subcommands under ` + "`" + `doctl compute microvm` + "`" + ` manage MicroVMs — lightweight ` +
 				`microVM sandboxes that pause when idle and resume on demand. Use these commands to ` +
-				`create, inspect, pause, resume, and delete MicroVMs, and to manage their checkpoints.`,
+				`create, inspect, pause, resume, delete, exec into, and console into MicroVMs, and to manage their checkpoints.`,
 			Hidden: true, // public preview: keep out of --help and generated docs until GA
 		},
 	}
@@ -108,6 +116,21 @@ func MicroVM() *Command {
 		"List MicroVM create options",
 		"Retrieves the sizes (with available regions), features, and account limits available when creating a MicroVM.",
 		Writer, displayerType(&displayers.MicroVMCreateOptions{}))
+
+	cmdMicroVMExec := CmdBuilder(cmd, RunMicroVMExec, "exec <microvm-id> -- <command> [args...]",
+		"Run a one-shot command in a MicroVM",
+		"Runs a one-shot, non-PTY command in the MicroVM's workload container and prints stdout/stderr. "+
+			"Requires the `exec_pty` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed. "+
+			"A non-zero guest exit code makes doctl exit non-zero.",
+		Writer)
+	AddStringFlag(cmdMicroVMExec, "cwd", "", "",
+		"Working directory inside the workload container")
+
+	CmdBuilder(cmd, RunMicroVMConsole, "console <microvm-id>",
+		"Open an interactive console to a MicroVM",
+		"Opens an interactive PTY console to the MicroVM's workload container over WebSocket. "+
+			"Requires the `exec_pty` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
+		Writer)
 
 	cmd.AddCommand(microVMCheckpoints())
 
@@ -457,6 +480,162 @@ func RunMicroVMCheckpointDelete(c *CmdConfig) error {
 		}
 	}
 	return nil
+}
+
+// RunMicroVMExec runs a one-shot command in a MicroVM workload container.
+func RunMicroVMExec(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	id := c.Args[0]
+	argv := c.Args[1:]
+
+	cwd, err := c.Doit.GetString(c.NS, "cwd")
+	if err != nil {
+		return err
+	}
+
+	result, err := c.MicroVMs().Exec(id, &godo.MicroVMExecRequest{Argv: argv, Cwd: cwd})
+	if err != nil {
+		return err
+	}
+
+	if result.Stdout != "" {
+		fmt.Fprint(c.Out, result.Stdout)
+	}
+	if result.Stderr != "" {
+		fmt.Fprint(os.Stderr, result.Stderr)
+	}
+	if result.Truncated {
+		fmt.Fprintln(os.Stderr, "warning: exec output was truncated by the server")
+	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("command exited with code %d", result.ExitCode)
+	}
+	return nil
+}
+
+// RunMicroVMConsole opens an interactive PTY console to a MicroVM.
+func RunMicroVMConsole(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	id := c.Args[0]
+
+	opt := &godo.MicroVMConsoleOptions{}
+	if size := terminalSize(); size != nil {
+		opt.Rows = uint32(size.Height)
+		opt.Cols = uint32(size.Width)
+	}
+
+	wsURL, err := c.MicroVMs().ConsoleURL(id, opt)
+	if err != nil {
+		return err
+	}
+	u, err := url.Parse(wsURL)
+	if err != nil {
+		return err
+	}
+
+	token := c.getContextAccessToken()
+	if token == "" {
+		return fmt.Errorf("access token is required for MicroVM console")
+	}
+
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+token)
+
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), header)
+	if err != nil {
+		return fmt.Errorf("error creating websocket connection: %w", err)
+	}
+	defer conn.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	term := c.Doit.Terminal()
+	stdinCh := make(chan string)
+	restoreTerminal, err := term.ReadRawStdin(ctx, stdinCh)
+	if err != nil {
+		return err
+	}
+	defer restoreTerminal()
+
+	resizeEvents := make(chan terminal.TerminalSize)
+	grp, ctx := errgroup.WithContext(ctx)
+
+	grp.Go(func() error {
+		return term.MonitorResizeEvents(ctx, resizeEvents)
+	})
+
+	grp.Go(func() error {
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case in := <-stdinCh:
+				if err := conn.WriteMessage(websocket.BinaryMessage, []byte(in)); err != nil {
+					return fmt.Errorf("error writing stdin: %w", err)
+				}
+			case ev := <-resizeEvents:
+				payload, err := godo.MarshalMicroVMConsoleResize(uint32(ev.Height), uint32(ev.Width))
+				if err != nil {
+					return fmt.Errorf("error encoding resize: %w", err)
+				}
+				if err := conn.WriteMessage(websocket.TextMessage, payload); err != nil {
+					return fmt.Errorf("error writing resize: %w", err)
+				}
+			}
+		}
+	})
+
+	grp.Go(func() error {
+		defer cancel()
+		for {
+			msgType, message, err := conn.ReadMessage()
+			if err != nil {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					return nil
+				}
+				return fmt.Errorf("error reading from websocket: %w", err)
+			}
+			switch msgType {
+			case websocket.BinaryMessage:
+				if _, err := c.Out.Write(message); err != nil {
+					return err
+				}
+			case websocket.TextMessage:
+				ctrl, err := godo.ParseMicroVMConsoleControl(message)
+				if err != nil {
+					// ignore unrecognized control frames
+					continue
+				}
+				if ctrl.Error != nil {
+					return fmt.Errorf("console error (%s): %s", ctrl.Error.Code, ctrl.Error.Message)
+				}
+				if ctrl.Exit != nil {
+					if ctrl.Exit.Code != 0 {
+						return fmt.Errorf("console exited with code %d", ctrl.Exit.Code)
+					}
+					return nil
+				}
+				// status frames (e.g. resuming) are informational; keep the session open
+			}
+		}
+	})
+
+	return grp.Wait()
+}
+
+func terminalSize() *terminal.TerminalSize {
+	// Best-effort initial size for ConsoleURL ?rows=&cols=. Resize events
+	// update the PTY after connect; failing here just uses server defaults.
+	w, h, err := term.GetSize(int(os.Stdin.Fd()))
+	if err != nil || w <= 0 || h <= 0 {
+		return nil
+	}
+	return &terminal.TerminalSize{Width: w, Height: h}
 }
 
 // parseEnvPairs turns "KEY=VALUE" pairs into a map, returning an error on
