@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 	"time"
@@ -1006,6 +1007,98 @@ func TestDatabaseConnectionGet(t *testing.T) {
 	})
 }
 
+func TestMaskDatabaseConnection(t *testing.T) {
+	masked := maskDatabaseConnection(testDBConnection)
+
+	assert.Equal(t, databaseMaskedValue, masked.Password)
+	assert.NotContains(t, masked.URI, testGODOConnection.Password)
+	assert.Contains(t, masked.URI, databaseMaskedValue)
+	// Everything else about the connection is untouched.
+	assert.Equal(t, testGODOConnection.User, masked.User)
+	assert.Equal(t, testGODOConnection.Host, masked.Host)
+}
+
+func TestMaskDatabaseUser(t *testing.T) {
+	masked := maskDatabaseUser(testDBUser)
+
+	assert.Equal(t, databaseMaskedValue, masked.Password)
+	assert.Equal(t, testGODOUser.Name, masked.Name)
+	assert.Equal(t, testGODOUser.Role, masked.Role)
+}
+
+func TestMaskConnectionURIPassword(t *testing.T) {
+	tests := []struct {
+		name string
+		uri  string
+		want string
+	}{
+		{
+			name: "a userinfo password is masked",
+			uri:  "postgres://doadmin:foobaz@example.com:25060/defaultdb?sslmode=require",
+			want: "postgres://doadmin:" + databaseMaskedValue + "@example.com:25060/defaultdb?sslmode=require",
+		},
+		{
+			name: "no userinfo at all is returned unchanged",
+			uri:  "postgres://example.com:25060/defaultdb",
+			want: "postgres://example.com:25060/defaultdb",
+		},
+		{
+			name: "a username with no password is returned unchanged",
+			uri:  "postgres://doadmin@example.com:25060/defaultdb",
+			want: "postgres://doadmin@example.com:25060/defaultdb",
+		},
+		{
+			name: "a malformed URI is returned unchanged rather than guessed at",
+			uri:  "://not a valid uri",
+			want: "://not a valid uri",
+		},
+		{
+			name: "empty is returned unchanged",
+			uri:  "",
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, maskConnectionURIPassword(tt.uri))
+		})
+	}
+}
+
+func TestDatabaseConnectionGetMasksPasswordByDefault(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, false).Return(&testDBConnection, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Out = &bytes.Buffer{}
+		config.UI.Mask = true
+
+		err := RunDatabaseConnectionGet(config)
+		assert.NoError(t, err)
+
+		output := config.Out.(*bytes.Buffer).String()
+		assert.Contains(t, output, databaseMaskedValue)
+		assert.NotContains(t, output, testGODOConnection.Password)
+		assert.NotContains(t, output, "foobaz@", "the URI's embedded password must also be masked")
+	})
+}
+
+func TestDatabaseConnectionGetShowRevealsPassword(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, false).Return(&testDBConnection, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Out = &bytes.Buffer{}
+		config.UI.Mask = false
+
+		err := RunDatabaseConnectionGet(config)
+		assert.NoError(t, err)
+
+		output := config.Out.(*bytes.Buffer).String()
+		assert.Contains(t, output, testGODOConnection.Password)
+		assert.NotContains(t, output, databaseMaskedValue)
+	})
+}
+
 func TestDatabaseConnectionGetPrivate(t *testing.T) {
 	// Success
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -1188,6 +1281,38 @@ func TestDatabasesUserGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDatabaseUserGet(config)
 		assert.EqualError(t, doctl.NewMissingArgsErr(config.NS), err.Error())
+	})
+}
+
+func TestDatabasesUserGetMasksPasswordByDefault(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetUser(testDBCluster.ID, testDBUser.Name).Return(&testDBUser, nil)
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Out = &bytes.Buffer{}
+		config.UI.Mask = true
+
+		err := RunDatabaseUserGet(config)
+		assert.NoError(t, err)
+
+		output := config.Out.(*bytes.Buffer).String()
+		assert.Contains(t, output, databaseMaskedValue)
+		assert.NotContains(t, output, testGODOUser.Password)
+	})
+}
+
+func TestDatabasesUserGetShowRevealsPassword(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetUser(testDBCluster.ID, testDBUser.Name).Return(&testDBUser, nil)
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Out = &bytes.Buffer{}
+		config.UI.Mask = false
+
+		err := RunDatabaseUserGet(config)
+		assert.NoError(t, err)
+
+		output := config.Out.(*bytes.Buffer).String()
+		assert.Contains(t, output, testGODOUser.Password)
+		assert.NotContains(t, output, databaseMaskedValue)
 	})
 }
 

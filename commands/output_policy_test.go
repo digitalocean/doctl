@@ -105,6 +105,45 @@ func TestOutputPolicy(t *testing.T) {
 	}
 }
 
+// TestOutputPolicyThreadsShow covers that the global --show flag reaches
+// ui.Env.Mask through the same policy every other capability resolves from,
+// rather than each command reading the flag for itself.
+func TestOutputPolicyThreadsShow(t *testing.T) {
+	tests := []struct {
+		name string
+		show bool
+		want bool
+	}{
+		{name: "show unset masks", show: false, want: true},
+		{name: "show set reveals", show: true, want: false},
+	}
+
+	// Mask treats CI as a script that needs the real value, so this test's
+	// own CI runner must not leak in and flip the "show unset masks" case.
+	ciVariables := []string{
+		"CI", "CONTINUOUS_INTEGRATION", "BUILDKITE", "CIRCLECI",
+		"CODEBUILD_BUILD_ID", "DRONE", "GITHUB_ACTIONS", "GITLAB_CI",
+		"JENKINS_URL", "TEAMCITY_VERSION", "TF_BUILD", "TRAVIS",
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withOutputPolicy(t)
+			for _, name := range ciVariables {
+				t.Setenv(name, "")
+			}
+
+			prevShow := Show
+			Show = tt.show
+			t.Cleanup(func() { Show = prevShow })
+
+			installOutputPolicy()
+
+			assert.Equal(t, tt.want, uiEnv().Mask)
+		})
+	}
+}
+
 func TestInstallOutputPolicyRepointsTemplateOutput(t *testing.T) {
 	withOutputPolicy(t)
 

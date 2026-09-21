@@ -16,6 +16,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -40,6 +41,11 @@ const (
 This command requires the ID of a database cluster, which you can retrieve by calling:
 
 	doctl databases list`
+
+	// databaseMaskedValue replaces credentials masked from database user and
+	// connection output. It matches the mask secrets use, so the two read the
+	// same way wherever a user sees them side by side.
+	databaseMaskedValue = "********"
 )
 
 // Databases creates the databases command
@@ -113,7 +119,9 @@ To retrieve a list of your database clusters and their IDs, use `+"`"+`doctl dat
 - The randomly-generated password for the default username
 - A boolean value indicating if the connection should be made over SSL
 
-While you can use these connection details, you can manually update the connection string's parameters to change how you connect to the database, such using a private hostname, custom username, or a different database.`, Writer,
+While you can use these connection details, you can manually update the connection string's parameters to change how you connect to the database, such using a private hostname, custom username, or a different database.
+
+The password is masked, both standalone and inside the connection string. Use --show to reveal it.`, Writer,
 		aliasOpt("conn"), displayerType(&displayers.DatabaseConnection{}))
 	AddBoolFlag(cmdDatabaseGetConn, doctl.ArgDatabasePrivateConnectionBool, "", false, "Returns connection details that use the database's VPC network connection.")
 	cmdDatabaseGetConn.Example = `The following example retrieves the connection details for a database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl databases connection f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
@@ -486,6 +494,10 @@ func RunDatabaseConnectionGet(c *CmdConfig) error {
 }
 
 func displayDatabaseConnection(c *CmdConfig, conn do.DatabaseConnection) error {
+	if c.UI.Mask {
+		conn = maskDatabaseConnection(conn)
+	}
+
 	item := &displayers.DatabaseConnection{DatabaseConnection: conn}
 	return c.Display(item)
 }
@@ -880,7 +892,7 @@ func databaseUser() *Command {
 			Short:   "Display commands for managing database users",
 			Long: `The commands under ` + "`" + `doctl databases user` + "`" + ` allow you to view details for, and create, database users.
 
-Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password.`,
+Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password, masked by default. Use --show to reveal it.`,
 		},
 	}
 	databaseKafkaACLsTxt := `A comma-separated list of kafka ACL rules, in ` + "`" + `topic:permission` + "`" + ` format.`
@@ -888,7 +900,7 @@ Database user accounts are scoped to one database cluster, to which they have fu
 	userDetailsDesc := `
 
 - The username for the user
-- The password for the user
+- The password for the user, masked by default. Use --show to reveal it.
 - The user's role, either "primary" or "normal"
 
 Primary user accounts are created by DigitalOcean at database cluster creation time and can't be deleted. You can create additional users with a "normal" role. Both have administrative privileges on the database cluster.
@@ -906,7 +918,7 @@ To retrieve a list of database users for a database cluster, call `+"`"+`doctl d
 	cmdDatabaseUserGet.Example = `The following example retrieves the details for the user with the username ` + "`" + `example-user` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the user's name and role: doctl databases user get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-user --format Name,Role`
 
 	cmdDatabaseUserCreate := CmdBuilder(cmd, RunDatabaseUserCreate, "create <database-cluster-id> <user-name>",
-		"Create a database user", `Creates a new user for a database. New users are given a role of `+"`"+`normal`+"`"+` and are given an automatically-generated password.
+		"Create a database user", `Creates a new user for a database. New users are given a role of `+"`"+`normal`+"`"+` and are given an automatically-generated password, masked by default. Use --show to reveal it.
 
 To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("c"))
 
@@ -1119,8 +1131,72 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 }
 
 func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
+	if c.UI.Mask {
+		masked := make(do.DatabaseUsers, len(users))
+		for i, u := range users {
+			masked[i] = maskDatabaseUser(u)
+		}
+		users = masked
+	}
+
 	item := &displayers.DatabaseUsers{DatabaseUsers: users}
 	return c.Display(item)
+}
+
+// maskDatabaseUser hides a database user's password, leaving every other
+// field, such as an ACL, untouched.
+func maskDatabaseUser(u do.DatabaseUser) do.DatabaseUser {
+	masked := *u.DatabaseUser
+	masked.Password = databaseMaskedValue
+	return do.DatabaseUser{DatabaseUser: &masked}
+}
+
+// maskDatabaseConnection hides a connection's password, both standalone and
+// embedded in the URI, since a copy-pasted URI leaks the password otherwise.
+func maskDatabaseConnection(conn do.DatabaseConnection) do.DatabaseConnection {
+	masked := *conn.DatabaseConnection
+	masked.Password = databaseMaskedValue
+	masked.URI = maskConnectionURIPassword(masked.URI)
+	return do.DatabaseConnection{DatabaseConnection: &masked}
+}
+
+// maskConnectionURIPassword replaces the password in a userinfo-style
+// connection URI. A URI that fails to parse, or carries no password, is
+// returned unchanged rather than guessed at.
+//
+// The replacement is done on the raw string, not by reassembling a
+// url.URL, because URL.String re-escapes userinfo and would mangle any
+// special character the real username or password contained.
+func maskConnectionURIPassword(uri string) string {
+	parsed, err := url.Parse(uri)
+	if err != nil || parsed.User == nil {
+		return uri
+	}
+
+	if _, ok := parsed.User.Password(); !ok {
+		return uri
+	}
+
+	const schemeSep = "://"
+	start := strings.Index(uri, schemeSep)
+	if start == -1 {
+		return uri
+	}
+	start += len(schemeSep)
+
+	at := strings.Index(uri[start:], "@")
+	if at == -1 {
+		return uri
+	}
+	at += start
+
+	colon := strings.Index(uri[start:at], ":")
+	if colon == -1 {
+		return uri
+	}
+	colon += start
+
+	return uri[:colon+1] + databaseMaskedValue + uri[at:]
 }
 
 func displayDatabaseCA(c *CmdConfig, dbCA *do.DatabaseCA) error {
@@ -1760,7 +1836,7 @@ This command requires that you pass in the replica's name, which you can retriev
 	cmdDatabaseReplicaConnectionGet := CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-cluster-id> <replica-name>",
 		"Retrieve information for connecting to a read-only database replica",
-		`Retrieves information for connecting to the specified read-only database replica in the specified database cluster`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
+		`Retrieves information for connecting to the specified read-only database replica in the specified database cluster. The password is masked, both standalone and inside the connection string. Use --show to reveal it.`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
 	cmdDatabaseReplicaConnectionGet.Example = `The following example retrieves the connection details for a read-only replica named ` + "`" + `example-replica` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases replica connection get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-replica`
 
 	return cmd
@@ -1901,6 +1977,10 @@ func RunDatabaseReplicaConnectionGet(c *CmdConfig) error {
 }
 
 func displayDatabaseReplicaConnection(c *CmdConfig, conn do.DatabaseConnection) error {
+	if c.UI.Mask {
+		conn = maskDatabaseConnection(conn)
+	}
+
 	item := &displayers.DatabaseConnection{DatabaseConnection: conn}
 	return c.Display(item)
 }
