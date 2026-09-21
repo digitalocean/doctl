@@ -126,6 +126,7 @@ func init() {
 	}
 
 	addCommands()
+	installHelpRenderer()
 
 	cobra.OnInitialize(initConfig)
 }
