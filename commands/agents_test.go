@@ -4405,7 +4405,7 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 
 	var buf bytes.Buffer
 	pending := &pendingHITL{}
-	superseded := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+	superseded, _ := drainStream(stream, &buf, pending, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
 
 	assert.False(t, superseded)
 	out := buf.String()
@@ -4837,7 +4837,7 @@ func TestDrainStream_skipsStreamStateControlFrames(t *testing.T) {
 
 	var buf bytes.Buffer
 	cursor := &eventCursor{}
-	superseded := drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil, &tokenDeduper{})
+	superseded, _ := drainStream(stream, &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil, &tokenDeduper{})
 
 	assert.False(t, superseded)
 	assert.Equal(t, 1, strings.Count(buf.String(), "session updated"))

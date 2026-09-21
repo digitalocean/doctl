@@ -3335,7 +3335,29 @@ const (
 	msgReconnecting          = "Reconnecting..."
 	msgReconnectFailed       = "Failed to reconnect to agent activity stream."
 	msgSuperseded            = "This session was attached from another window on this device. Stopping the stream here."
+
+	// Shown when the stream goes quiet after the prepay gate paused the
+	// session, in place of the reconnect chatter that would otherwise be the
+	// only explanation on offer. The pause card above has already named the
+	// cause; these say what doctl is doing about it.
+	msgPausedStayingAttached = "Staying attached while the session is paused — add funds and send a message to pick up where it left off."
+	msgPausedStoppedWatching = "Stopped watching the paused session. Your work is saved — add funds, then re-attach to continue."
 )
+
+// giveUpMessage explains an exhausted reconnect budget in terms of what the
+// stream last reported. A session the gate stopped is not a session doctl
+// failed to reach, and the generic wording sends the user off to debug a
+// network that is working.
+//
+// It is a fixed string rather than the balance-enriched card: this runs on the
+// stream goroutine, where a billing round-trip would stall the one message
+// that explains the silence. `doctl harness-runtime balance` has the number.
+func giveUpMessage(pausedBy string) string {
+	if isLowBalancePauseReason(pausedBy) {
+		return msgPausedStoppedWatching
+	}
+	return msgReconnectFailed
+}
 
 // healthyStreamDuration is how long a stream must stay connected before a
 // mid-stream drop is treated as a normal idle timeout (which resets the
@@ -4024,6 +4046,10 @@ func streamWithReconnect(
 	backoff := initialReconnectBackoff
 	failures := 0
 	reconnecting := false
+	// The pause in effect when the last connection ended, kept across attempts
+	// so a connect that fails on the way back in is still explained by it.
+	pausedBy := ""
+	balanceExplained := false
 
 	for {
 		if ctx.Err() != nil {
@@ -4050,7 +4076,7 @@ func streamWithReconnect(
 			}
 			failures++
 			if failures >= maxAutoReconnectAttempts {
-				fmt.Fprintf(out, "\n%s\n", msgReconnectFailed)
+				fmt.Fprintf(out, "\n%s\n", giveUpMessage(pausedBy))
 				return
 			}
 			if !reconnectSleepFn(ctx, backoff) {
@@ -4061,7 +4087,19 @@ func streamWithReconnect(
 		}
 
 		connectedAt := streamClock()
-		superseded := drainStream(stream, out, pending, cursor, thinking, warmup, dedup)
+		superseded, pause := drainStream(stream, out, pending, cursor, thinking, warmup, dedup)
+		// Only a connection that saw the session pause or resume has anything
+		// to say about it. A connection that dropped before delivering an event
+		// knows nothing, and must not report a paused session as running again.
+		if pause.observed {
+			pausedBy = pause.reason
+			if !isLowBalancePauseReason(pausedBy) {
+				// Resumed, or paused for some other reason. Reopen the latch so
+				// a balance pause later in this attach is explained again
+				// rather than treated as the same episode.
+				balanceExplained = false
+			}
+		}
 		streamErr := stream.Err()
 		stream.Close()
 
@@ -4075,6 +4113,16 @@ func streamWithReconnect(
 		// would take it back and start an eviction loop between the two.
 		if superseded {
 			return
+		}
+
+		// A stream that ends right after a prepay pause was closed by the gate,
+		// not dropped by the network. Reconnecting is still right — a top-off
+		// in another window brings the session back and the stream with it —
+		// but the "Reconnecting..." that follows reads as a connection fault
+		// and leaves the one cause the user can actually fix unmentioned.
+		if isLowBalancePauseReason(pausedBy) && !balanceExplained {
+			balanceExplained = true
+			fmt.Fprintf(out, "\n%s\n", colorize(msgPausedStayingAttached, colMuted))
 		}
 
 		// An interactive attach ends only when the user detaches (ctx cancel,
@@ -4101,7 +4149,7 @@ func streamWithReconnect(
 			failures++
 		}
 		if failures >= maxAutoReconnectAttempts {
-			fmt.Fprintf(out, "\n%s\n", msgReconnectFailed)
+			fmt.Fprintf(out, "\n%s\n", giveUpMessage(pausedBy))
 			return
 		}
 		if !reconnectSleepFn(ctx, backoff) {
@@ -4187,8 +4235,16 @@ func sessionLimitErr(err error) bool {
 // this device took over the session. That is the one stream end the caller must
 // not reconnect from: re-attaching would supersede the connection that just
 // superseded us, and the two would evict each other indefinitely.
-func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, warmup *warmupState, dedup *tokenDeduper) (superseded bool) {
+//
+// It also returns what this connection learned about the session being paused.
+// A stream that ends right after a pause did not drop — it was stopped, for a
+// reason already known here — so the caller can explain the silence instead of
+// reporting it as a connection failure.
+func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *pendingHITL, cursor *eventCursor, thinking *thinkingState, warmup *warmupState, dedup *tokenDeduper) (superseded bool, pause pauseOutcome) {
 	acc := &msgAccumulator{}
+	// Scoped to one connection: a reconnect resumes from the cursor set past
+	// the pause event, so the pause is not replayed and cannot double-print.
+	paused := &pauseTracker{}
 	reasoning := &reasoningStreamer{out: out, thinking: thinking}
 	// awaiting is a FIFO queue of HITL approvals whose lines haven't printed
 	// yet: we hold each until a paired tool-call reveals the command being
@@ -4208,6 +4264,28 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 	// tools holds each tool call between its start and its result so the pair
 	// renders as one line — see toolLineTracker.
 	tools := &toolLineTracker{}
+	// announcePause settles the transcript and explains the pause once.
+	//
+	// A pause ends the turn, so unlike the other discrete events this one must
+	// leave the spinner down: nothing further is coming until the user sends a
+	// prompt or a top-off resumes the session, and a spinner left turning over
+	// a stopped session is the "hung CLI" look the notice exists to prevent.
+	announcePause := func(ev godo.HostedAgentEvent, subject, reason string) {
+		warmup.clear()
+		thinking.setTurnRunning(false)
+		reasoning.end()
+		thinking.stop()
+		acc.flush(out)
+		flushAwaitingApproval(out, &awaiting, hitlLabels)
+		// A tool call caught in flight by the pause still gets its committed
+		// line, rather than being dropped on the floor by the stream ending.
+		tools.flush(out)
+		dedup.reset()
+		if paused.note(reason) {
+			renderPauseNotice(out, subject, reason)
+		}
+		cursor.set(ev.EventID)
+	}
 	for stream.Next() {
 		ev := stream.Current()
 
@@ -4222,7 +4300,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 				flushAwaitingApproval(out, &awaiting, hitlLabels)
 				tools.flush(out)
 				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
-				return true
+				return true, paused.outcome()
 			}
 			_ = warmup.noteBackendEvent(ev)
 			continue
@@ -4242,8 +4320,12 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		}
 
 		switch ev.Kind {
-		case godo.HostedAgentEventKindRunStarted:
+		case godo.HostedAgentEventKindRunStarted, godo.HostedAgentEventKindRunResumed:
 			warmup.clear()
+			// The session is running again, so the pause on screen is history:
+			// reopen the latch or a second pause later in this attach would be
+			// suppressed as a duplicate of the first.
+			paused.clear()
 			thinking.setTurnRunning(true)
 			reasoning.end()
 			thinking.stop()
@@ -4391,8 +4473,26 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			}
 			cursor.set(ev.EventID)
 			continue
-		case godo.HostedAgentEventKindSessionUpdated,
-			godo.HostedAgentEventKindRunSandboxAllocated,
+		case godo.HostedAgentEventKindRunPaused:
+			var p runPausedPayload
+			// Render even on a malformed payload: an unexplained pause is worse
+			// than one with no reason attached.
+			_ = json.Unmarshal(ev.Payload, &p)
+			announcePause(ev, pauseSubjectRun, p.Reason)
+			continue
+		case godo.HostedAgentEventKindSessionUpdated:
+			var p sessionUpdatedPayload
+			_ = json.Unmarshal(ev.Payload, &p)
+			if p.announcesPause() {
+				// The one session.updated that is not boot noise. Folding a
+				// pause into the warm-up banner hid it twice over: the banner
+				// is a transient one-liner, and it is dismissed by the next
+				// event — which, for a paused session, never comes.
+				announcePause(ev, pauseSubjectSession, p.PauseReason)
+				continue
+			}
+			fallthrough
+		case godo.HostedAgentEventKindRunSandboxAllocated,
 			godo.HostedAgentEventKindRunSandboxReleased:
 			// Boot/lifecycle noise during warm-up — fold into the banner instead
 			// of printing competing lines or dismissing the notice.
@@ -4452,7 +4552,7 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 	acc.flush(out)
 	flushAwaitingApproval(out, &awaiting, hitlLabels)
 	tools.flush(out)
-	return false
+	return false, paused.outcome()
 }
 
 // awaitingApproval is a HITL approval whose line is deferred until a paired
@@ -7189,6 +7289,59 @@ type runPausedPayload struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+// sessionUpdatedPayload is the session.updated event body.
+//
+// A prepay pause arrives here as well as on run.paused, and often only here:
+// run.paused needs a run to pause, so a session the gate stops between turns —
+// or while it sits idle waiting for a prompt — announces itself solely through
+// this event. That made the balance explanation unreachable on the path where
+// the stream goes quiet and stays quiet.
+type sessionUpdatedPayload struct {
+	Status      string `json:"status"`
+	PauseReason string `json:"pause_reason,omitempty"`
+	// ChangedFields is the server's own statement of what this event changed.
+	// Every session.updated after a pause still carries status=paused, so
+	// without it a long-paused session would reprint its pause card on every
+	// unrelated update (a rename, a sandbox field) for as long as it stayed
+	// paused.
+	ChangedFields []string `json:"changed_fields,omitempty"`
+}
+
+// isPaused reports whether this update describes a paused session. The event
+// spells the status short ("paused") while the session model uses the enum
+// ("SESSION_STATUS_PAUSED"); both reach this code, so both are accepted.
+func (p sessionUpdatedPayload) isPaused() bool {
+	return normalizeSessionStatus(p.Status) == humanSessionStatus(godo.HostedAgentSessionStatusPaused)
+}
+
+// announcesPause reports whether this is the update that paused the session,
+// as opposed to a later one that merely still carries status=paused. Only the
+// former is worth interrupting the transcript for.
+func (p sessionUpdatedPayload) announcesPause() bool {
+	if !p.isPaused() {
+		return false
+	}
+	if len(p.ChangedFields) == 0 {
+		// The field is optional, and a paused status is then all we have to go
+		// on. Announcing is the safer default: a repeated card is noise, but a
+		// silent pause is the bug this exists to fix.
+		return true
+	}
+	for _, f := range p.ChangedFields {
+		switch strings.ToLower(strings.TrimSpace(f)) {
+		case "status", "pause_reason":
+			return true
+		}
+	}
+	return false
+}
+
+// normalizeSessionStatus folds a status to the bare form humanSessionStatus
+// produces, so the stream's short spelling and the model's enum compare equal.
+func normalizeSessionStatus(s string) string {
+	return humanSessionStatus(godo.HostedAgentSessionStatus(strings.ToUpper(strings.TrimSpace(s))))
+}
+
 func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	switch ev.Kind {
 	case godo.HostedAgentEventKindTokenChunk:
@@ -7283,6 +7436,14 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		// on its own.
 		fmt.Fprintf(w, "\n%s\n", colorize("▶ run resumed", colMuted))
 	case godo.HostedAgentEventKindSessionUpdated:
+		var p sessionUpdatedPayload
+		// Render even on a malformed payload: "• session updated" is the right
+		// fallback, and an unexplained pause is worse than none attached.
+		_ = json.Unmarshal(ev.Payload, &p)
+		if p.announcesPause() {
+			renderPauseNotice(w, pauseSubjectSession, p.PauseReason)
+			return
+		}
 		fmt.Fprintf(w, "\n%s\n", colorize("• session updated", colMuted))
 	case godo.HostedAgentEventKindRunSandboxAllocated:
 		fmt.Fprintf(w, "\n%s\n", colorize("• sandbox allocated", colMuted))
