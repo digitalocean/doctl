@@ -16,19 +16,23 @@ package commands
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/digitalocean/doctl/do"
+	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 // harnessAPIErr builds the error godo produces from a real harness-api
@@ -211,6 +215,260 @@ func TestNewPrepayBlockedError_Enrichment(t *testing.T) {
 		require.True(t, ok, "an unbounded lookup would stall the card behind billing")
 		assert.LessOrEqual(t, time.Until(deadline), prepayLookupTimeout)
 	})
+}
+
+// The exact session.updated body harness-api emits when the prepayment gate
+// pauses a session, minus the envelope sseFrame adds.
+const sessionPausedLowBalanceData = `{"status":"paused","pause_reason":"low_balance","changed_fields":["status","pause_reason"]}`
+
+func TestSessionUpdatedPayload_announcesPause(t *testing.T) {
+	cases := []struct {
+		name    string
+		payload string
+		want    bool
+	}{
+		{"the gate's pause", sessionPausedLowBalanceData, true},
+		// The stream spells the status short; the session model uses the enum.
+		// Both reach this code, so neither may be the only one recognized.
+		{"enum spelling", `{"status":"SESSION_STATUS_PAUSED","pause_reason":"low_balance"}`, true},
+		{"idle pause", `{"status":"paused","pause_reason":"idle","changed_fields":["status"]}`, true},
+		// A pause with no reason is still a pause, and still the reason the
+		// transcript is about to go quiet.
+		{"pause with no reason", `{"status":"paused","changed_fields":["status"]}`, true},
+		// changed_fields is optional; a paused status is then all we have.
+		{"no changed_fields", `{"status":"paused","pause_reason":"low_balance"}`, true},
+		// Every update while paused still carries status=paused. Only the one
+		// that changed it is news; the rest would reprint the card forever.
+		{"unrelated update while paused", `{"status":"paused","pause_reason":"low_balance","changed_fields":["name"]}`, false},
+		{"running session", `{"status":"ready","changed_fields":["status"]}`, false},
+		{"empty payload", `{}`, false},
+		{"malformed payload", `{not-json`, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var p sessionUpdatedPayload
+			_ = json.Unmarshal([]byte(tc.payload), &p)
+			assert.Equal(t, tc.want, p.announcesPause())
+		})
+	}
+}
+
+// A session paused between turns announces itself only on session.updated —
+// there is no run to pause — so that event has to reach the same balance card
+// run.paused does. It used to render a bare "• session updated".
+func TestRenderEvent_sessionUpdatedPause(t *testing.T) {
+	t.Run("a low-balance pause renders the balance card", func(t *testing.T) {
+		var buf bytes.Buffer
+		renderEvent(&buf, godo.HostedAgentEvent{
+			Kind:    godo.HostedAgentEventKindSessionUpdated,
+			Payload: json.RawMessage(sessionPausedLowBalanceData),
+		})
+
+		out := buf.String()
+		assert.Contains(t, out, "Paused — prepayment balance exhausted")
+		assert.Contains(t, out, prepayTopUpURL)
+		assert.NotContains(t, out, "session updated")
+	})
+
+	t.Run("other pause reasons name the session, not the run", func(t *testing.T) {
+		var buf bytes.Buffer
+		renderEvent(&buf, godo.HostedAgentEvent{
+			Kind:    godo.HostedAgentEventKindSessionUpdated,
+			Payload: json.RawMessage(`{"status":"paused","pause_reason":"IDLE"}`),
+		})
+		assert.Contains(t, buf.String(), "session paused (idle)")
+	})
+
+	// The ordinary case must stay as quiet as it was.
+	t.Run("a non-pause update is still one muted line", func(t *testing.T) {
+		var buf bytes.Buffer
+		renderEvent(&buf, godo.HostedAgentEvent{
+			Kind:    godo.HostedAgentEventKindSessionUpdated,
+			Payload: json.RawMessage(`{"status":"ready","changed_fields":["status"]}`),
+		})
+		assert.Equal(t, "\n• session updated\n", buf.String())
+	})
+}
+
+// A pause arriving during warm-up used to be folded into the warm-up banner
+// like the boot events it shares a code path with. That hid it twice: the
+// banner is a transient one-liner, and it is dismissed by the next event —
+// which, for a session the gate just stopped, never arrives.
+func TestDrainStream_lowBalancePauseSurvivesWarmup(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	warmup := newWarmupState(&buf, time.Now())
+	warmup.start()
+
+	_, pause := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
+
+	assert.Contains(t, buf.String(), "Paused — prepayment balance exhausted")
+	assert.Equal(t, pauseOutcome{observed: true, reason: "low_balance"}, pause,
+		"the caller needs the reason to explain the stream ending")
+}
+
+// The gate announces one pause on both run.paused and session.updated. The
+// user is looking at one stalled agent, so they get one card.
+func TestDrainStream_pauseIsExplainedOnce(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunPaused), `{"reason":"low_balance"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	_, pause := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.Equal(t, 1, strings.Count(buf.String(), "Paused — prepayment balance exhausted"))
+	assert.Equal(t, "low_balance", pause.reason)
+}
+
+// A resume is the session proving it is alive again, so the next pause is a
+// new fact rather than a duplicate of the one already on screen.
+func TestDrainStream_pauseAfterResumeIsExplainedAgain(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindRunResumed), `{}`) +
+		sseFrame("evt-3", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.Equal(t, 2, strings.Count(buf.String(), "Paused — prepayment balance exhausted"))
+}
+
+// A session that is merely running must not leave a pause reason behind, or
+// an ordinary mid-stream drop would be reported as a billing problem.
+func TestDrainStream_noPauseReportsNothing(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	_, pause := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.False(t, pause.observed, "a session that never paused is no news about pausing")
+	assert.Empty(t, pause.reason)
+	assert.Contains(t, buf.String(), "session updated")
+}
+
+// The whole point of carrying the reason out of drainStream: a stream the gate
+// closed used to be reported as "Failed to reconnect to agent activity
+// stream.", which sends the user to debug a network that is working and never
+// mentions the balance they could top up to fix it.
+func TestStreamWithReconnect_lowBalancePauseExplainsTheSilence(t *testing.T) {
+	stubReconnectSleep(t)
+
+	var (
+		mu    sync.Mutex
+		calls int
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		calls++
+		first := calls == 1
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		// Only the first connection carries the pause: a real server resumes
+		// from the cursor set past it, so later attempts find nothing waiting
+		// and drop straight away — which is exactly the silence under test.
+		if first {
+			_, _ = io.WriteString(w, sseFrame("evt-1",
+				string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData))
+		}
+		_, _ = io.WriteString(w, "data: {not-json\n\n")
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+			return openHostedAgentStream(t, client, opt), nil
+		}).
+		Times(maxAutoReconnectAttempts)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{},
+		&eventCursor{}, newThinkingState(&buf), nil)
+
+	out := buf.String()
+	assert.Contains(t, out, "Paused — prepayment balance exhausted")
+	assert.Equal(t, 1, strings.Count(out, msgPausedStayingAttached),
+		"the reason doctl is still connected is worth saying once, not once per attempt")
+	assert.Contains(t, out, msgPausedStoppedWatching)
+	assert.NotContains(t, out, msgReconnectFailed,
+		"a session the gate stopped is not a session doctl failed to reach")
+}
+
+// The balance wording must stay on the balance path: an ordinary drop is still
+// a connection problem and still says so.
+func TestStreamWithReconnect_ordinaryDropKeepsGenericWording(t *testing.T) {
+	stubReconnectSleep(t)
+
+	srv := httptest.NewServer(hostedAgentSSEHandler(
+		sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`), errors.New("drop")))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+			return openHostedAgentStream(t, client, opt), nil
+		}).
+		Times(maxAutoReconnectAttempts)
+
+	var buf bytes.Buffer
+	streamWithReconnect(context.Background(), mock, "sess_x", &buf, &pendingHITL{},
+		&eventCursor{}, newThinkingState(&buf), nil)
+
+	out := buf.String()
+	assert.Contains(t, out, msgReconnectFailed)
+	assert.NotContains(t, out, msgPausedStoppedWatching)
+	assert.NotContains(t, out, msgPausedStayingAttached)
+}
+
+func TestGiveUpMessage(t *testing.T) {
+	// A session the gate stopped is not a session doctl failed to reach.
+	assert.Equal(t, msgPausedStoppedWatching, giveUpMessage("low_balance"))
+	assert.Equal(t, msgPausedStoppedWatching, giveUpMessage("LOW_BALANCE"))
+	// Everything else really is a connection we could not hold.
+	assert.Equal(t, msgReconnectFailed, giveUpMessage("idle"))
+	assert.Equal(t, msgReconnectFailed, giveUpMessage(""))
 }
 
 func TestRenderRunPaused(t *testing.T) {

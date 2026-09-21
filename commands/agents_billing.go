@@ -213,10 +213,22 @@ func sessionStatusWithReason(sess *do.HostedAgentSession) string {
 	return status + colorize(fmt.Sprintf(" (%s)", reason), colMuted)
 }
 
-// renderRunPaused announces a pause the user did not ask for. Without it the
+// The thing a pause notice says stopped. run.paused pauses a turn in flight;
+// session.updated pauses the whole session, often with no run to speak of, and
+// calling that one "run paused" would point the user at the wrong scope.
+const (
+	pauseSubjectRun     = "run"
+	pauseSubjectSession = "session"
+)
+
+// renderPauseNotice announces a pause the user did not ask for. Without it the
 // stream just stops mid-sentence: the spinner clears, the accumulator flushes,
 // and nothing on screen explains why the agent went quiet.
-func renderRunPaused(w io.Writer, reason string) {
+//
+// The balance card is deliberately identical whichever event carried the
+// reason. The user is looking at one stalled agent, and the run/session
+// distinction that matters to the API is not one they can act on differently.
+func renderPauseNotice(w io.Writer, subject, reason string) {
 	if isLowBalancePauseReason(reason) {
 		fmt.Fprintf(w, "\n%s %s\n", colorize("⏸", colWarning),
 			boldColor("Paused — prepayment balance exhausted", colWarning))
@@ -226,11 +238,66 @@ func renderRunPaused(w io.Writer, reason string) {
 		return
 	}
 
-	label := "run paused"
+	label := subject + " paused"
 	if r := strings.TrimSpace(reason); r != "" {
-		label = fmt.Sprintf("run paused (%s)", strings.ToLower(r))
+		label = fmt.Sprintf("%s paused (%s)", subject, strings.ToLower(r))
 	}
 	fmt.Fprintf(w, "\n%s\n", colorize("⏸ "+label, colMuted))
+}
+
+// renderRunPaused announces a paused run.
+func renderRunPaused(w io.Writer, reason string) {
+	renderPauseNotice(w, pauseSubjectRun, reason)
+}
+
+// pauseOutcome is what one connection learned about the session being paused.
+//
+// Knowing nothing is deliberately distinct from knowing it is not paused: a
+// connection that drops before delivering an event carries no news, and must
+// not erase what an earlier connection established. Collapsing the two would
+// make a paused session look healthy again after one silent reconnect.
+type pauseOutcome struct {
+	// observed is set when this connection saw the session pause or resume.
+	observed bool
+	// reason is the pause in effect when the connection ended, empty if the
+	// session was last seen running.
+	reason string
+}
+
+// pauseTracker latches the pause a stream has already explained.
+//
+// The gate announces one pause on both run.paused and session.updated, and a
+// session that stays paused keeps saying so, so the card is printed once per
+// pause rather than once per event.
+type pauseTracker struct {
+	observed bool
+	notified bool
+	reason   string
+}
+
+// note records a pause and reports whether it still needs rendering. A
+// different reason always renders: it is a new fact about the session, not a
+// repeat of the one already on screen.
+func (p *pauseTracker) note(reason string) bool {
+	fresh := !p.notified || normalizePauseReason(p.reason) != normalizePauseReason(reason)
+	p.observed = true
+	p.notified = true
+	p.reason = reason
+	return fresh
+}
+
+// clear records that the session is running again. It reopens the latch, so a
+// second pause later in the same attach is announced rather than swallowed as
+// a duplicate of the first, and it counts as news in its own right: a resume
+// is how the caller learns a pause it was told about is over.
+func (p *pauseTracker) clear() {
+	p.observed = true
+	p.notified = false
+	p.reason = ""
+}
+
+func (p *pauseTracker) outcome() pauseOutcome {
+	return pauseOutcome{observed: p.observed, reason: p.reason}
 }
 
 // formatPrepayMoney renders billing's decimal-dollar string as a display
