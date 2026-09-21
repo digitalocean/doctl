@@ -3,6 +3,7 @@ package ui
 import (
 	"bytes"
 	"io"
+	"runtime"
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
@@ -87,14 +88,30 @@ func TestDetectProfile(t *testing.T) {
 
 // TestDetectCIForcesPlainOutput covers that CI gets the same plain,
 // uncolored, uncarded output it always did, even on a runner whose streams
-// would otherwise pass every terminal capability check. out and err are real
-// ptys, not buffers, so isTerminal alone would say yes to both; only the CI
-// check in Detect stops cards, boxing, and color from reaching them.
+// would otherwise pass every terminal capability check. Where a real pty is
+// available, out and err are ptys rather than buffers so isTerminal alone
+// would say yes to both; only the CI check in Detect stops cards, boxing,
+// and color from reaching them. Windows has no pty, so those cases skip and
+// the WithProfile-under-CI case below still runs against buffers.
 func TestDetectCIForcesPlainOutput(t *testing.T) {
 	clearEnv(t)
 
+	t.Run("CI: an explicit profile still reaches the stream", func(t *testing.T) {
+		t.Setenv("GITHUB_ACTIONS", "true")
+
+		var out, errOut bytes.Buffer
+		env := Detect(&out, &errOut, WithProfile(termenv.TrueColor))
+
+		assert.True(t, env.Style, "WithProfile is how tests pin a palette under CI")
+		assert.True(t, env.ErrStyle)
+		assert.False(t, env.DataTTY, "CI still does not get cards or boxed tables")
+		assert.False(t, env.ErrTTY, "CI still does not get glyphs")
+	})
+
 	ptmx, tty, err := pty.Open()
-	require.NoError(t, err)
+	if err != nil {
+		t.Skipf("pty not available on %s: %v", runtime.GOOS, err)
+	}
 	defer ptmx.Close()
 	defer tty.Close()
 
@@ -120,17 +137,6 @@ func TestDetectCIForcesPlainOutput(t *testing.T) {
 		assert.False(t, env.ErrTTY, "CI must not receive glyphs or other screen-only chrome")
 		assert.Equal(t, termenv.Ascii, env.Profile())
 		assert.Equal(t, termenv.Ascii, env.DataProfile())
-	})
-
-	t.Run("CI: an explicit profile still reaches the stream", func(t *testing.T) {
-		t.Setenv("GITHUB_ACTIONS", "true")
-
-		env := Detect(tty, tty, WithProfile(termenv.TrueColor))
-
-		assert.True(t, env.Style, "WithProfile is how tests pin a palette under CI")
-		assert.True(t, env.ErrStyle)
-		assert.False(t, env.DataTTY, "CI still does not get cards or boxed tables")
-		assert.False(t, env.ErrTTY, "CI still does not get glyphs")
 	})
 }
 
