@@ -152,10 +152,13 @@ func Detect(out, err io.Writer, opts ...Option) Env {
 	// there, even on a runner whose pty would otherwise pass every other
 	// capability check: a CI log is read later, out of context, not watched
 	// live, so color, cards, boxed tables, and the records fallback are all
-	// screen-only chrome it never asked for. This wins over an explicit
-	// WithProfile because that option exists for tests and manual overrides,
-	// neither of which run with real CI env vars set.
-	if IsCI() {
+	// screen-only chrome it never asked for.
+	//
+	// An explicit WithProfile is the exception. That option exists for tests
+	// that pin a palette, and those tests themselves run under CI providers
+	// (GITHUB_ACTIONS, and others). Ambient CI must not erase a profile the
+	// caller asked for.
+	if IsCI() && cfg.profile == nil {
 		outProfile, errProfile = termenv.Ascii, termenv.Ascii
 	}
 

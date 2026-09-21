@@ -112,7 +112,7 @@ func TestDetectCIForcesPlainOutput(t *testing.T) {
 	t.Run("CI: the same terminal is forced plain", func(t *testing.T) {
 		t.Setenv("GITHUB_ACTIONS", "true")
 
-		env := Detect(tty, tty, WithProfile(termenv.TrueColor))
+		env := Detect(tty, tty)
 
 		assert.False(t, env.Style, "CI must not receive color on stdout")
 		assert.False(t, env.ErrStyle, "CI must not receive color on stderr")
@@ -120,6 +120,17 @@ func TestDetectCIForcesPlainOutput(t *testing.T) {
 		assert.False(t, env.ErrTTY, "CI must not receive glyphs or other screen-only chrome")
 		assert.Equal(t, termenv.Ascii, env.Profile())
 		assert.Equal(t, termenv.Ascii, env.DataProfile())
+	})
+
+	t.Run("CI: an explicit profile still reaches the stream", func(t *testing.T) {
+		t.Setenv("GITHUB_ACTIONS", "true")
+
+		env := Detect(tty, tty, WithProfile(termenv.TrueColor))
+
+		assert.True(t, env.Style, "WithProfile is how tests pin a palette under CI")
+		assert.True(t, env.ErrStyle)
+		assert.False(t, env.DataTTY, "CI still does not get cards or boxed tables")
+		assert.False(t, env.ErrTTY, "CI still does not get glyphs")
 	})
 }
 
