@@ -734,6 +734,8 @@ const (
 	ArgSecretFromEnvFile = "from-env-file"
 	// ArgSecretVersion is the current version of a secret for update operations.
 	ArgSecretVersion = "version"
+	// ArgSecretShowKV prints secret values as KEY=VALUE pairs on get.
+	ArgSecretShowKV = "kvs"
 	// ArgSecretRaw writes a single secret value to stdout with no formatting.
 	ArgSecretRaw = "raw"
 	// ArgSecretReplace replaces all key-value pairs in a secret on update.

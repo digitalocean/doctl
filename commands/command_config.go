@@ -67,6 +67,7 @@ type CmdConfig struct {
 	Account             func() do.AccountService
 	Balance             func() do.BalanceService
 	BillingHistory      func() do.BillingHistoryService
+	Prepayment          func() do.PrepaymentService
 	Invoices            func() do.InvoicesService
 	Tags                func() do.TagsService
 	UptimeChecks        func() do.UptimeChecksService
@@ -134,6 +135,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
 			c.Balance = func() do.BalanceService { return do.NewBalanceService(godoClient) }
 			c.BillingHistory = func() do.BillingHistoryService { return do.NewBillingHistoryService(godoClient) }
+			c.Prepayment = func() do.PrepaymentService { return do.NewPrepaymentService(godoClient) }
 			c.Invoices = func() do.InvoicesService { return do.NewInvoicesService(godoClient) }
 			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
 			c.UptimeChecks = func() do.UptimeChecksService { return do.NewUptimeChecksService(godoClient) }

@@ -46,7 +46,19 @@ import (
 const (
 	// LatestReleaseURL is the latest release URL endpoint.
 	LatestReleaseURL = "https://api.github.com/repos/digitalocean/doctl/releases/latest"
+
+	// DefaultAPIURL is godo's default DigitalOcean API base URL.
+	DefaultAPIURL = "https://api.digitalocean.com/"
 )
+
+// ResolvedAPIURL returns the API base URL doctl will use: --api-url,
+// DIGITALOCEAN_API_URL, config, then DefaultAPIURL.
+func ResolvedAPIURL() string {
+	if u := strings.TrimSpace(viper.GetString("api-url")); u != "" {
+		return u
+	}
+	return DefaultAPIURL
+}
 
 // Version is the version info for doit.
 type Version struct {
@@ -124,6 +136,8 @@ func (v Version) Complete(lv LatestVersioner) string {
 		buffer.WriteString(fmt.Sprintf("\nGit commit hash: %s", v.Build))
 	}
 
+	buffer.WriteString(fmt.Sprintf("\nAPI endpoint: %s", ResolvedAPIURL()))
+
 	if tagName := v.NewerRelease(lv); tagName != "" {
 		buffer.WriteString(fmt.Sprintf("\nrelease %s is available, check it out! ", tagName))
 	}
@@ -169,11 +183,13 @@ func (v Version) CompleteJSON(lv LatestVersioner) string {
 	versionInfo := &struct {
 		Version       string `json:"version,omitempty"`
 		Commit        string `json:"commit,omitempty"`
+		APIEndpoint   string `json:"apiEndpoint"`
 		LatestRelease string `json:"latestRelease"`
 		Notification  string `json:"notification,omitempty"`
 	}{
-		Version: v.String(),
-		Commit:  v.Build,
+		Version:     v.String(),
+		Commit:      v.Build,
+		APIEndpoint: ResolvedAPIURL(),
 	}
 
 	if tagName, err := lv.LatestVersion(); err == nil {

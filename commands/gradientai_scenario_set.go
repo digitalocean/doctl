@@ -31,6 +31,7 @@ func ScenarioSetCmd() *Command {
 			Aliases: []string{"ss", "scenario-sets"},
 			Short:   "Display commands that manage Gradient AI scenario sets.",
 			Long:    "The subcommands of `doctl gradient scenario-set` manage the scenario sets that Gradient AI simulations run against.",
+			Hidden:  true,
 		},
 	}
 

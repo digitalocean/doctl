@@ -61,10 +61,14 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 	
 Available source keys are: ` + "`" + `address` + "`" + `, ` + "`" + `droplet_id` + "`" + `, ` + "`" + `load_balancer_uid` + "`" + `, ` + "`" + `kubernetes_id` + "`" + `, and ` + "`" + `tag` + "`" + `. 
 
+You can optionally specify an ` + "`" + `action` + "`" + ` key to set the rule action. Supported values are ` + "`" + `allow` + "`" + ` and ` + "`" + `deny` + "`" + `. When not specified, the action defaults to ` + "`" + `allow` + "`" + `.
+
 Use a quoted string of space-separated values for multiple rules.`
 	outboundRulesTxt := `A comma-separate key-value list that defines an outbound rule. The rule must define a communication protocol, a port number, and a destination location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that the firewall only allows traffic to be sent to port 22 of any IPv4 address on the internet: ` + "`" + `protocol:tcp,ports:22,address:0.0.0.0/0` + "`" + `.
 
 Available destination keys are: ` + "`" + `address` + "`" + `, ` + "`" + `droplet_id` + "`" + `, ` + "`" + `load_balancer_uid` + "`" + `, ` + "`" + `kubernetes_id` + "`" + `, and ` + "`" + `tag` + "`" + `. 
+
+You can optionally specify an ` + "`" + `action` + "`" + ` key to set the rule action. Supported values are ` + "`" + `allow` + "`" + ` and ` + "`" + `deny` + "`" + `. When not specified, the action defaults to ` + "`" + `allow` + "`" + `.
 
 Use a quoted string of space-separated values for multiple rules.`
 	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the cloud firewall, for example: `386734086,391669331`"

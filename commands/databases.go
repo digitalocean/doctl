@@ -16,6 +16,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -107,6 +108,7 @@ You can customize the configuration using the listed flags, all of which are opt
 To retrieve a list of your database clusters and their IDs, use `+"`"+`doctl databases list`+"`"+`.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the database cluster without a confirmation prompt")
+	AddWaitFlags(cmdDatabaseDelete, false, "A boolean value that specifies whether to wait for the database cluster to be deleted before returning control to the terminal.")
 	cmdDatabaseDelete.Example = `The following example deletes the database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl databases delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdDatabaseGetConn := CmdBuilder(cmd, RunDatabaseConnectionGet, "connection <database-cluster-id>", "Retrieve connection details for a database cluster", `Retrieves the following connection details for a database cluster:
@@ -462,7 +464,27 @@ func RunDatabaseDelete(c *CmdConfig) error {
 	}
 
 	id := c.Args[0]
-	return c.Databases().Delete(id)
+	dbs := c.Databases()
+	if err := dbs.Delete(id); err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+		if err := waitForDatabaseDeleted(w, dbs, id); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func displayDatabases(c *CmdConfig, short bool, dbs ...do.Database) error {
@@ -2690,6 +2712,26 @@ func waitForDatabaseReady(w waiter, dbs do.DatabasesService, dbID, verb string) 
 		}
 
 		return db.Status == wantStatus, db.Status, nil
+	})
+}
+
+func waitForDatabaseDeleted(w waiter, dbs do.DatabasesService, dbID string) error {
+	return w.wait(waitOp{
+		Activity: fmt.Sprintf("Deleting database (%s)", dbID),
+		Subject:  fmt.Sprintf("database (%s) to be deleted", dbID),
+		Success:  fmt.Sprintf("Database (%s) is deleted", dbID),
+		Interval: databasePollInterval,
+	}, func() (bool, string, error) {
+		_, err := dbs.Get(dbID)
+		if err != nil {
+			var errResp *godo.ErrorResponse
+			if errors.As(err, &errResp) && errResp.Response != nil && errResp.Response.StatusCode == http.StatusNotFound {
+				return true, "", nil
+			}
+			return false, "", err
+		}
+
+		return false, "deleting", nil
 	})
 }
 
