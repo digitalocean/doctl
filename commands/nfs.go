@@ -71,7 +71,7 @@ doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 	AddStringFlag(cmdNfsResize, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsResize, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddStringFlag(cmdNfsResize, "size", "s", "", "the size of the NFS share in GiB", requiredOpt())
-	AddBoolFlag(cmdNfsResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddActionWaitFlags(cmdNfsResize, false, "Wait for action to complete")
 	cmdNfsResize.Example =
 		`doctl nfs resize --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --size 1024`
 
@@ -79,7 +79,7 @@ doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 	AddStringFlag(cmdNfsAttach, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsAttach, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddStringFlag(cmdNfsAttach, "vpc-id", "", "", "the id of the VPC we want to attach NFS share to", requiredOpt())
-	AddBoolFlag(cmdNfsAttach, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddActionWaitFlags(cmdNfsAttach, false, "Wait for action to complete")
 	cmdNfsAttach.Example =
 		`doctl nfs attach --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --vpc-id example-vpc-id`
 
@@ -87,7 +87,7 @@ doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 	AddStringFlag(cmdNfsDetach, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsDetach, "region", "r", "", "the region where the NFS share resides", requiredOpt())
 	AddStringFlag(cmdNfsDetach, "vpc-id", "", "", "the id of the VPC we want to detach NFS share from", requiredOpt())
-	AddBoolFlag(cmdNfsDetach, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddActionWaitFlags(cmdNfsDetach, false, "Wait for action to complete")
 	cmdNfsDetach.Example =
 		`doctl nfs detach --region 'atl1' --id b050990d-4337-4a9d-9c8d-9f759a83936a --vpc-id example-vpc-id`
 
@@ -95,14 +95,14 @@ doctl nfs list --region 'atl1' --format ID,Name,Size,Status`
 	AddStringFlag(cmdNfsReassign, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsReassign, "old-vpc-id", "", "", "the id of the VPC we want to detach NFS share from", requiredOpt())
 	AddStringFlag(cmdNfsReassign, "new-vpc-id", "", "", "the id of the VPC we want to attach NFS share to", requiredOpt())
-	AddBoolFlag(cmdNfsReassign, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddActionWaitFlags(cmdNfsReassign, false, "Wait for action to complete")
 	cmdNfsReassign.Example =
 		`doctl nfs reassign --id b050990d-4337-4a9d-9c8d-9f759a83936a --old-vpc-id old-vpc-id --new-vpc-id new-vpc-id`
 
 	cmdNfsSwitchPerformanceTier := CmdBuilder(cmd, nfsSwitchPerformanceTier, "switch-performance-tier [flags]", "Switch the performance tier of an NFS share", "Switch the performance tier of an NFS share with the given ID and tier.", Writer)
 	AddStringFlag(cmdNfsSwitchPerformanceTier, "id", "", "", "the ID of the NFS share", requiredOpt())
 	AddStringFlag(cmdNfsSwitchPerformanceTier, "performance-tier", "", "", "the performance tier of the NFS share", requiredOpt())
-	AddBoolFlag(cmdNfsSwitchPerformanceTier, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddActionWaitFlags(cmdNfsSwitchPerformanceTier, false, "Wait for action to complete")
 	cmdNfsSwitchPerformanceTier.Example =
 		`doctl nfs switch-performance-tier --id b050990d-4337-4a9d-9c8d-9f759a83936a --performance-tier high`
 
@@ -159,7 +159,7 @@ func nfsSnapshots() *Command {
 	AddStringFlag(cmdNfsSnapshotCreate, "name", "n", "", "the name of the NFS snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotCreate, "share-id", "", "", "the ID of the NFS share to snapshot", requiredOpt())
 	AddStringFlag(cmdNfsSnapshotCreate, "region", "r", "", "the region where the NFS share resides", requiredOpt())
-	AddBoolFlag(cmdNfsSnapshotCreate, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddActionWaitFlags(cmdNfsSnapshotCreate, false, "Wait for action to complete")
 
 	cmdNfsSnapshotGet := CmdBuilder(cmd, nfsSnapshotGet, "get [flags]", "Get an NFS snapshot by ID", "Get an NFS snapshot with the given ID and region.", Writer, displayerType(&displayers.NfsSnapshot{}), overrideCmdNS("nfs-snapshot"))
 	AddStringFlag(cmdNfsSnapshotGet, "id", "", "", "the ID of the NFS snapshot", requiredOpt())

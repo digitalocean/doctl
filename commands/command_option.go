@@ -52,3 +52,13 @@ func overrideCmdNS(ns string) cmdOption {
 		c.overrideNS = ns
 	}
 }
+
+// noDefaultSuccess suppresses the closing line a command gets when it reports
+// nothing of its own. It is for commands whose output does not pass through
+// doctl: one that hands the terminal to another program, streams until
+// interrupted, or writes a file.
+func noDefaultSuccess() cmdOption {
+	return func(c *Command) {
+		c.noDefaultSuccess = true
+	}
+}

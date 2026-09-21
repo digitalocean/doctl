@@ -196,12 +196,12 @@ func RunBYOIPPrefixDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("byoip prefix", 1) == nil {
-		prefixUUID := c.Args[0]
-		return bp.Delete(prefixUUID)
+	if err := confirmDelete(force, "byoip prefix", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	prefixUUID := c.Args[0]
+	return bp.Delete(prefixUUID)
 }
 
 // RunBYOIPPrefixList runs byoip prefix list.

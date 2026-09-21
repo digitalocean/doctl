@@ -108,7 +108,8 @@ var _ = suite("gen-ai/agent/route/add", func(t *testing.T, when spec.G, it spec.
 
 		output, err := cmd.CombinedOutput()
 		expect.Error(err)
-		expect.Contains(string(output), "missing required arguments")
+		expect.Contains(string(output), "required flag")
+		expect.Contains(string(output), "--parent-agent-id")
 	})
 
 	it("returns an error when child-agent-id is missing", func() {
@@ -124,7 +125,8 @@ var _ = suite("gen-ai/agent/route/add", func(t *testing.T, when spec.G, it spec.
 
 		output, err := cmd.CombinedOutput()
 		expect.Error(err)
-		expect.Contains(string(output), "missing required arguments")
+		expect.Contains(string(output), "required flag")
+		expect.Contains(string(output), "--child-agent-id")
 	})
 
 	it("returns an error when both agent IDs are missing", func() {
@@ -139,7 +141,9 @@ var _ = suite("gen-ai/agent/route/add", func(t *testing.T, when spec.G, it spec.
 
 		output, err := cmd.CombinedOutput()
 		expect.Error(err)
-		expect.Contains(string(output), "missing required arguments")
+		expect.Contains(string(output), "required flag")
+		expect.Contains(string(output), "--parent-agent-id")
+		expect.Contains(string(output), "--child-agent-id")
 	})
 
 	it("returns an authentication error", func() {

@@ -17,7 +17,6 @@ import (
 	"context"
 
 	"github.com/digitalocean/godo"
-	"github.com/digitalocean/godo/util"
 )
 
 // DropletIPTable is a table of interface IPS.
@@ -71,7 +70,7 @@ type DropletsService interface {
 	ListByTag(string) (Droplets, error)
 	ListWithGPUs() (Droplets, error)
 	Get(int) (*Droplet, error)
-	Create(*godo.DropletCreateRequest, bool) (*Droplet, error)
+	Create(*godo.DropletCreateRequest) (*Droplet, error)
 	CreateMultiple(*godo.DropletMultiCreateRequest) (Droplets, error)
 	Delete(int) error
 	DeleteByTag(string) error
@@ -176,29 +175,13 @@ func (ds *dropletsService) Get(id int) (*Droplet, error) {
 	return &Droplet{Droplet: d}, nil
 }
 
-func (ds *dropletsService) Create(dcr *godo.DropletCreateRequest, wait bool) (*Droplet, error) {
-	d, resp, err := ds.client.Droplets.Create(context.TODO(), dcr)
+// Create requests a Droplet. Waiting for it to boot is the caller's job: the
+// command layer polls with a shared, bounded waiter that reports progress,
+// whereas waiting here was silent, unbounded, and discarded its own error.
+func (ds *dropletsService) Create(dcr *godo.DropletCreateRequest) (*Droplet, error) {
+	d, _, err := ds.client.Droplets.Create(context.TODO(), dcr)
 	if err != nil {
 		return nil, err
-	}
-
-	if wait {
-		var action *godo.LinkAction
-		for _, a := range resp.Links.Actions {
-			if a.Rel == "create" {
-				action = &a
-				break
-			}
-		}
-
-		if action != nil {
-			_ = util.WaitForActive(context.TODO(), ds.client, action.HREF)
-			doDroplet, err := ds.Get(d.ID)
-			if err != nil {
-				return nil, err
-			}
-			d = doDroplet.Droplet
-		}
 	}
 
 	return &Droplet{Droplet: d}, nil

@@ -14,10 +14,8 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"bytes"
 	"io"
-	"path/filepath"
 	"testing"
 
 	"errors"
@@ -26,6 +24,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -37,17 +36,13 @@ func TestAuthCommand(t *testing.T) {
 }
 
 func TestAuthInit(t *testing.T) {
-	cfw := cfgFileWriter
 	viper.Set(doctl.ArgAccessToken, nil)
-	defer func() {
-		cfgFileWriter = cfw
-	}()
 
 	retrieveUserTokenFunc := func() (string, error) {
 		return "valid-token", nil
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+	withStubConfigFile(t, "")
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
@@ -57,99 +52,109 @@ func TestAuthInit(t *testing.T) {
 	})
 }
 
-func TestAuthInitConfig(t *testing.T) {
-	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, nil)
-	defer func() {
-		cfgFileWriter = cfw
-	}()
+// init saves the token it just validated, and nothing else. doctl resolves its
+// settings from defaults, flags, and the environment as well as the file, and
+// writing that merged view back is what buried an environment token and every
+// bound flag in the user's config.
+func TestAuthInitWritesOnlyAuthSettings(t *testing.T) {
+	defer withStubConfig(t, map[string]any{"context": doctl.ArgDefaultContext})()
+	defer withContext(t, "")()
 
 	retrieveUserTokenFunc := func() (string, error) {
 		return "valid-token", nil
 	}
 
-	var buf bytes.Buffer
-	cfgFileWriter = func() (io.WriteCloser, error) {
-		return &nopWriteCloser{
-			Writer: bufio.NewWriter(&buf),
-		}, nil
-	}
+	cfg := withStubConfigFile(t, "unrelated: keep-me\n")
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		var configFile testConfig
-		err = yaml.Unmarshal(buf.Bytes(), &configFile)
-		assert.NoError(t, err)
-		defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
-		assert.Equal(t, configFile["config"], defaultCfgFile, "unexpected setting for 'config'")
+		written := cfg.settings(t)
 
-		// Ensure that the dev.config.set.dev-config setting is correct to prevent
-		// a conflict with the base config setting.
-		devConfig := configFile["dev"]
-		devConfigSetting := devConfig.(map[any]any)["config"]
-		expectedConfigSetting := map[any]any(
-			map[any]any{
-				"set":   map[any]any{"dev-config": ""},
-				"unset": map[any]any{"dev-config": ""},
-			},
-		)
-		assert.Equal(t, expectedConfigSetting, devConfigSetting, "unexpected setting for 'dev.config'")
+		assert.Equal(t, "valid-token", written[doctl.ArgAccessToken])
+		assert.Equal(t, "keep-me", written["unrelated"], "a key doctl did not touch must survive")
+
+		for _, key := range []string{"config", "dev", "http-retry-max", "output", "interactive"} {
+			assert.NotContains(t, written, key,
+				"%q is a resolved setting, not something the user asked to save", key)
+		}
 	})
 }
 
 func TestAuthInitWithProvidedToken(t *testing.T) {
-	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, "valid-token")
-	defer func() {
-		cfgFileWriter = cfw
-		viper.Set(doctl.ArgAccessToken, nil)
-	}()
+	defer withStubConfig(t, map[string]any{
+		"context":            doctl.ArgDefaultContext,
+		doctl.ArgAccessToken: "valid-token",
+	})()
+	defer withContext(t, "")()
 
 	retrieveUserTokenFunc := func() (string, error) {
 		return "", errors.New("should not have called this")
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+	cfg := withStubConfigFile(t, "")
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
-		assert.NoError(t, err)
+		require.NoError(t, err)
+
+		// A token supplied by --access-token or the environment is still saved
+		// when init is what the user ran: saving a token is the whole job of
+		// the command. It is the other auth commands that must leave it alone.
+		assert.Equal(t, "valid-token", cfg.settings(t)[doctl.ArgAccessToken])
 	})
 }
 
+// Switching contexts changes which context is current. It must not also write
+// out the token doctl resolved for this invocation, which is how a token
+// exported for one CI job became a durable plaintext file.
+func TestAuthSwitchPersistsOnlyTheContext(t *testing.T) {
+	cfg := withStubConfigFile(t, `access-token: saved-token
+auth-contexts:
+  work: work-token
+context: default
+`)
+
+	// The token doctl resolved for this invocation, as --access-token or
+	// DIGITALOCEAN_ACCESS_TOKEN would supply it.
+	defer withStubConfig(t, map[string]any{
+		"context":            doctl.ArgDefaultContext,
+		doctl.ArgAccessToken: "ambient-token",
+	})()
+	defer withContext(t, "work")()
+
+	require.NoError(t, RunAuthSwitch(&CmdConfig{Out: io.Discard}))
+
+	written := cfg.settings(t)
+
+	assert.Equal(t, "work", written[doctl.ArgContext])
+	assert.Equal(t, "saved-token", written[doctl.ArgAccessToken], "the stored token must be left as it was")
+	assert.NotContains(t, cfg.String(), "ambient-token")
+}
+
 func TestAuthForcesLowercase(t *testing.T) {
-	cfw := cfgFileWriter
 	viper.Set(doctl.ArgAccessToken, "valid-token")
-	defer func() {
-		cfgFileWriter = cfw
-		viper.Set(doctl.ArgAccessToken, nil)
-	}()
+	defer viper.Set(doctl.ArgAccessToken, nil)
 
 	retrieveUserTokenFunc := func() (string, error) {
 		return "", errors.New("should not have called this")
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+	withStubConfigFile(t, "")
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
-		contexts := map[string]any{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
-		context := "TestCapitalCase"
-		viper.Set("auth-contexts", contexts)
-		viper.Set("context", context)
+		viper.Set("context", "TestCapitalCase")
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
 
-		contexts = map[string]any{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
-		viper.Set("auth-contexts", contexts)
 		viper.Set("context", "contextDoesntExist")
 		err = RunAuthSwitch(config)
 		// should error because context doesn't exist
@@ -343,12 +348,52 @@ func TestTokenInputValidator(t *testing.T) {
 
 type testConfig map[string]any
 
-type nopWriteCloser struct {
-	io.Writer
+// stubConfigFile stands in for the config file on disk. Writes are visible to
+// later reads, as they would be through a real file, so a test can run one
+// auth command and then assert what the next one sees.
+type stubConfigFile struct {
+	contents []byte
 }
 
-var _ io.WriteCloser = (*nopWriteCloser)(nil)
+var _ io.WriteCloser = (*stubConfigFile)(nil)
 
-func (d *nopWriteCloser) Close() error {
-	return nil
+func (s *stubConfigFile) Write(p []byte) (int, error) {
+	s.contents = append(s.contents, p...)
+	return len(p), nil
+}
+
+func (s *stubConfigFile) Close() error { return nil }
+
+func (s *stubConfigFile) String() string { return string(s.contents) }
+
+// settings decodes what has been written so far.
+func (s *stubConfigFile) settings(t *testing.T) testConfig {
+	t.Helper()
+
+	var cfg testConfig
+	require.NoError(t, yaml.Unmarshal(s.contents, &cfg))
+
+	return cfg
+}
+
+// withStubConfigFile points config reads and writes at memory, so tests
+// neither depend on nor overwrite the config of whoever is running them.
+func withStubConfigFile(t *testing.T, contents string) *stubConfigFile {
+	t.Helper()
+
+	stub := &stubConfigFile{contents: []byte(contents)}
+
+	reader, writer := cfgFileReader, cfgFileWriter
+	t.Cleanup(func() {
+		cfgFileReader, cfgFileWriter = reader, writer
+	})
+
+	cfgFileReader = func() ([]byte, error) { return stub.contents, nil }
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		// A real write truncates.
+		stub.contents = nil
+		return stub, nil
+	}
+
+	return stub
 }

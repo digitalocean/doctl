@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -24,6 +25,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps/builder"
+	"github.com/digitalocean/doctl/internal/ui"
 )
 
 // CmdConfig is a command configuration.
@@ -34,10 +36,14 @@ type CmdConfig struct {
 	Args    []string
 	Command *cobra.Command
 
+	// UI carries the terminal capabilities for this invocation. Components
+	// should take it as an argument rather than deriving their own, so that a
+	// single policy governs color, animation, width, and ASCII fallback.
+	UI ui.Env
+
 	initServices            func(*CmdConfig) error
 	getContextAccessToken   func() string
 	setContextAccessToken   func(string)
-	removeContext           func(string) error
 	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
@@ -102,12 +108,13 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		Doit: dc,
 		Out:  out,
 		Args: args,
+		UI:   resolveUIEnv(out),
 
 		initServices: func(c *CmdConfig) error {
 			accessToken := c.getContextAccessToken()
 			godoClient, err := c.Doit.GetGodoClient(Trace, true, accessToken)
 			if err != nil {
-				return fmt.Errorf("Unable to initialize DigitalOcean API client: %s", err)
+				return fmt.Errorf("Unable to initialize DigitalOcean API client: %w", err)
 			}
 
 			c.Keys = func() do.KeysService { return do.NewKeysService(godoClient) }
@@ -207,27 +214,6 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 		},
 
-		removeContext: func(context string) error {
-			if context == "default" {
-				viper.Set("access-token", "")
-				return nil
-			}
-
-			contexts := viper.GetStringMapString("auth-contexts")
-
-			_, ok := contexts[context]
-
-			if !ok {
-				return fmt.Errorf("Context not found")
-			}
-
-			delete(contexts, context)
-
-			viper.Set("auth-contexts", contexts)
-
-			return nil
-		},
-
 		componentBuilderFactory: &builder.DefaultComponentBuilderFactory{},
 	}
 
@@ -248,6 +234,7 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 	dc := &displayers.Displayer{
 		Item: d,
 		Out:  c.Out,
+		UI:   c.UI,
 	}
 
 	columnList, err := c.Doit.GetString(c.NS, doctl.ArgFormat)
@@ -263,8 +250,100 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 	dc.NoHeaders = withHeaders
 	dc.ColumnList = columnList
 	dc.OutputType = Output
+	// Only text is laid out as a card, and only a card has a footer, so the
+	// work of finding the next command is not done for output that discards
+	// it. Resolving it reads the resource through KV, which the JSON path has
+	// no other reason to call.
+	if dc.OutputType == "text" {
+		dc.Detail = isDetailNS(c.NS)
+		if dc.Detail {
+			dc.NextStep = nextStep(c.Command, d)
+		}
+	}
 
 	return dc.Display()
+}
+
+// nextStep suggests the command to run after this one: the get for the
+// resource just reported, which is where its full state lives.
+//
+// It is only offered when the command tree really has that get and the
+// resource really has an identifier to pass it. Anything missing falls back to
+// the help, which is where a user finds what this resource does support.
+func nextStep(cmd *cobra.Command, d displayers.Displayable) string {
+	// A get already shows what a get would show, so it suggests nothing
+	// rather than pointing at itself.
+	if cmd != nil && cmd.Name() == "get" {
+		return ""
+	}
+
+	get := getSibling(cmd)
+	id := resourceID(d)
+	if get == nil || id == "" {
+		return "doctl --help"
+	}
+
+	return get.CommandPath() + " " + id
+}
+
+// getSibling finds the get that belongs to the same resource as cmd - the
+// `get` next to the `create` that just ran. A hidden one is skipped: a
+// command the help does not list is not one to suggest.
+func getSibling(cmd *cobra.Command) *cobra.Command {
+	if cmd == nil || cmd.Parent() == nil {
+		return nil
+	}
+
+	for _, sibling := range cmd.Parent().Commands() {
+		if sibling.Name() == "get" && !sibling.Hidden {
+			return sibling
+		}
+	}
+
+	return nil
+}
+
+// resourceID is what the get needs to name the resource. ID is preferred
+// because it is unique; a name is accepted where that is all the resource
+// has, since doctl's gets take either.
+func resourceID(d displayers.Displayable) string {
+	kv := d.KV()
+	if len(kv) != 1 {
+		return ""
+	}
+
+	for _, key := range []string{"ID", "UUID", "Name"} {
+		if value, ok := kv[0][key]; ok {
+			if s := strings.TrimSpace(fmt.Sprint(value)); s != "" && s != "<nil>" {
+				return s
+			}
+		}
+	}
+
+	return ""
+}
+
+// detailVerbs name the commands that report a single resource, which a
+// terminal is shown as a card. Add to this rather than annotating each command.
+//
+// create earns a card for the same reason get does: it ends with one resource
+// the user is about to work with, and a card is how doctl presents one
+// resource. shouldCard still requires a single row, so creating several
+// Droplets in one command stays a table.
+var detailVerbs = map[string]bool{
+	"get":    true,
+	"create": true,
+}
+
+// isDetailNS reports whether ns names one of those commands. A namespace ends
+// in the command's own name - "droplet.get" - so the verb is its last segment.
+func isDetailNS(ns string) bool {
+	verb := ns
+	if i := strings.LastIndex(ns, "."); i >= 0 {
+		verb = ns[i+1:]
+	}
+
+	return detailVerbs[verb]
 }
 
 // An urner implements the URN method, which returns a valid uniform resource

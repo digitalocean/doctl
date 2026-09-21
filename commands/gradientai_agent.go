@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -316,16 +314,16 @@ func RunAgentDelete(c *CmdConfig) error {
 	}
 
 	// Ask for confirmation unless --force is set
-	if force || AskForConfirmDelete("Agent", 1) == nil {
-		agents := c.GradientAI()
-		err := agents.DeleteAgent(agentID)
-		if err != nil {
-			return err
-		}
-		notice("Agent deleted successfully")
-	} else {
-		return fmt.Errorf("operation aborted")
+	if err := confirmDelete(force, "Agent", 1); err != nil {
+		return err
 	}
+
+	agents := c.GradientAI()
+	err = agents.DeleteAgent(agentID)
+	if err != nil {
+		return err
+	}
+	notice("Agent deleted successfully")
 
 	return nil
 }

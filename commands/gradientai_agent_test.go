@@ -141,12 +141,12 @@ func TestRunAgentDelete_WithoutForce(t *testing.T) {
 		config.Args = []string{agentID}
 		config.Doit.Set(config.NS, doctl.ArgForce, false) // Don't force delete
 
-		// Since we can't easily mock user input for confirmation,
-		// this test will check that the function attempts to ask for confirmation
-		// and aborts when no confirmation is given
+		// Since we can't easily mock user input for confirmation, and the
+		// test harness isn't interactive, this checks that the function
+		// reports that confirmation was required rather than proceeding
+		// without it - see confirmation.go.
 		err := RunAgentDelete(config)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "operation aborted")
+		assert.ErrorIs(t, err, errConfirmationRequired)
 	})
 }
 func TestRunAgentUpdateVisibility(t *testing.T) {

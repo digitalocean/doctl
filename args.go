@@ -199,6 +199,8 @@ const (
 	ArgCommandUpdateSources = "update-sources"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
+	// ArgWaitTimeout bounds how long --wait polls before giving up.
+	ArgWaitTimeout = "wait-timeout"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
 	ArgSetCurrentContext = "set-current-context"
 	// ArgDropletID is a droplet id argument.
@@ -227,6 +229,8 @@ const (
 	ArgImageSlug = "image-slug"
 	// ArgInteractive is the argument to enable an interactive CLI.
 	ArgInteractive = "interactive"
+	// ArgShow reveals masked values, such as secrets, instead of hiding them.
+	ArgShow = "show"
 	// ArgIPAddress is an IP address argument.
 	ArgIPAddress = "ip-address"
 	// ArgDropletName is a droplet name argument.
@@ -730,12 +734,7 @@ const (
 	ArgSecretFromEnvFile = "from-env-file"
 	// ArgSecretVersion is the current version of a secret for update operations.
 	ArgSecretVersion = "version"
-	// ArgSecretShow reveals secret values instead of masking them on get.
-	ArgSecretShow = "show"
-	// ArgSecretShowKV reveals secret values instead of masking them on get,
-	// formatted as:
-	//
-	//	KEY=VALUE
+	// ArgSecretShowKV prints secret values as KEY=VALUE pairs on get.
 	ArgSecretShowKV = "kvs"
 	// ArgSecretRaw writes a single secret value to stdout with no formatting.
 	ArgSecretRaw = "raw"

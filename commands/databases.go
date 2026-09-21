@@ -17,7 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -42,6 +42,11 @@ const (
 This command requires the ID of a database cluster, which you can retrieve by calling:
 
 	doctl databases list`
+
+	// databaseMaskedValue replaces credentials masked from database user and
+	// connection output. It matches the mask secrets use, so the two read the
+	// same way wherever a user sees them side by side.
+	databaseMaskedValue = "********"
 )
 
 // Databases creates the databases command
@@ -94,7 +99,7 @@ You can customize the configuration using the listed flags, all of which are opt
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in. The command uses the region's default VPC if excluded.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster to restore from.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup is used if excluded.")
-	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database cluster to be provisioned before returning control to the terminal.")
+	AddWaitFlags(cmdDatabaseCreate, false, "A boolean value that specifies whether to wait for the database cluster to be provisioned before returning control to the terminal.")
 	AddStringSliceFlag(cmdDatabaseCreate, doctl.ArgTag, "", nil, "A comma-separated list of tags to apply to the database cluster.")
 	cmdDatabaseCreate.Example = `The following example creates a database cluster named ` + "`" + `example-database` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region with a single  1 GB node: doctl databases create example-database --region nyc1 --size db-s-1vcpu-1gb --num-nodes 1`
 
@@ -103,7 +108,7 @@ You can customize the configuration using the listed flags, all of which are opt
 To retrieve a list of your database clusters and their IDs, use `+"`"+`doctl databases list`+"`"+`.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the database cluster without a confirmation prompt")
-	AddBoolFlag(cmdDatabaseDelete, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database cluster to be deleted before returning control to the terminal.")
+	AddWaitFlags(cmdDatabaseDelete, false, "A boolean value that specifies whether to wait for the database cluster to be deleted before returning control to the terminal.")
 	cmdDatabaseDelete.Example = `The following example deletes the database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl databases delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdDatabaseGetConn := CmdBuilder(cmd, RunDatabaseConnectionGet, "connection <database-cluster-id>", "Retrieve connection details for a database cluster", `Retrieves the following connection details for a database cluster:
@@ -116,7 +121,9 @@ To retrieve a list of your database clusters and their IDs, use `+"`"+`doctl dat
 - The randomly-generated password for the default username
 - A boolean value indicating if the connection should be made over SSL
 
-While you can use these connection details, you can manually update the connection string's parameters to change how you connect to the database, such using a private hostname, custom username, or a different database.`, Writer,
+While you can use these connection details, you can manually update the connection string's parameters to change how you connect to the database, such using a private hostname, custom username, or a different database.
+
+The password is masked, both standalone and inside the connection string. Use --show to reveal it.`, Writer,
 		aliasOpt("conn"), displayerType(&displayers.DatabaseConnection{}))
 	AddBoolFlag(cmdDatabaseGetConn, doctl.ArgDatabasePrivateConnectionBool, "", false, "Returns connection details that use the database's VPC network connection.")
 	cmdDatabaseGetConn.Example = `The following example retrieves the connection details for a database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl databases connection f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
@@ -140,7 +147,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	AddBoolFlag(cmdDatabaseResize, doctl.ArgCommandWait, "", false,
+	AddWaitFlags(cmdDatabaseResize, false,
 		"Boolean that specifies whether to wait for the resize to complete before returning control to the terminal")
 	cmdDatabaseResize.Example = `The following example resizes a PostgreSQL or MySQL database to have two nodes, 16 vCPUs, 64 GB of memory, and 2048 GiB of storage space: doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000 --wait true`
 
@@ -148,12 +155,12 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, such as `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC network to create the database cluster in. The command uses the region's default VPC network if not specified.")
-	AddBoolFlag(cmdDatabaseMigrate, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database migration to complete before returning control to the terminal.")
+	AddWaitFlags(cmdDatabaseMigrate, false, "A boolean value that specifies whether to wait for the database migration to complete before returning control to the terminal.")
 
 	cmdDatabaseFork := CmdBuilder(cmd, RunDatabaseFork, "fork <name>", "Create a new database cluster by forking an existing database cluster.", `Creates a new database cluster from an existing cluster. The forked database contains all of the data from the original database at the time the fork is created.`, Writer, aliasOpt("f"))
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup is used if excluded.")
-	AddBoolFlag(cmdDatabaseFork, doctl.ArgCommandWait, "", false, "A boolean that specifies whether to wait for a database to complete before returning control to the terminal")
+	AddWaitFlags(cmdDatabaseFork, false, "A boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmdDatabaseFork.Example = `The following example forks a database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to create a new database cluster. The command also uses the ` + "`" + `--restore-from-timestamp` + "`" + ` flag to specifically fork the database from a cluster backup that was created on 2023 November 7: doctl databases fork new-db-cluster --restore-from-cluster-id f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --restore-from-timestamp 2023-11-07 12:34:56 +0000 UTC`
 
@@ -240,16 +247,16 @@ func RunDatabaseCreate(c *CmdConfig) error {
 	}
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		connection := db.Connection
 		dbs := c.Databases()
-		notice("Database creation is in progress, waiting for database to be online")
 
-		err := waitForDatabaseReady(dbs, db.ID)
-		if err != nil {
-			return fmt.Errorf(
-				"database couldn't enter the `online` state: %v",
-				err,
-			)
+		if err := waitForDatabaseReady(w, dbs, db.ID, "Creating"); err != nil {
+			return err
 		}
 
 		db, err = dbs.Get(db.ID)
@@ -369,16 +376,16 @@ func RunDatabaseFork(c *CmdConfig) error {
 	}
 
 	if wait {
+		w, err := newWaiter(c)
+		if err != nil {
+			return err
+		}
+
 		connection := db.Connection
 		dbs := c.Databases()
-		notice("Database forking is in progress, waiting for database to be online")
 
-		err := waitForDatabaseReady(dbs, db.ID)
-		if err != nil {
-			return fmt.Errorf(
-				"database couldn't enter the `online` state: %v",
-				err,
-			)
+		if err := waitForDatabaseReady(w, dbs, db.ID, "Forking"); err != nil {
+			return err
 		}
 
 		db, _ = dbs.Get(db.ID)
@@ -452,30 +459,32 @@ func RunDatabaseDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database cluster", 1) == nil {
-		id := c.Args[0]
-		dbs := c.Databases()
-		if err := dbs.Delete(id); err != nil {
-			return err
-		}
+	if err := confirmDelete(force, "database cluster", 1); err != nil {
+		return err
+	}
 
-		wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	id := c.Args[0]
+	dbs := c.Databases()
+	if err := dbs.Delete(id); err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		w, err := newWaiter(c)
 		if err != nil {
 			return err
 		}
-
-		if wait {
-			notice("Database deletion is in progress, waiting for database to be deleted")
-			if err := waitForDatabaseDeleted(dbs, id); err != nil {
-				return fmt.Errorf("database couldn't be deleted: %v", err)
-			}
-			notice("Database is successfully deleted")
+		if err := waitForDatabaseDeleted(w, dbs, id); err != nil {
+			return err
 		}
-
-		return nil
 	}
 
-	return errOperationAborted
+	return nil
 }
 
 func displayDatabases(c *CmdConfig, short bool, dbs ...do.Database) error {
@@ -507,6 +516,10 @@ func RunDatabaseConnectionGet(c *CmdConfig) error {
 }
 
 func displayDatabaseConnection(c *CmdConfig, conn do.DatabaseConnection) error {
+	if c.UI.Mask {
+		conn = maskDatabaseConnection(conn)
+	}
+
 	item := &displayers.DatabaseConnection{DatabaseConnection: conn}
 	return c.Display(item)
 }
@@ -558,17 +571,14 @@ func RunDatabaseResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("Database resizing is in progress, waiting for resize to complete")
-
-		err := waitForDatabaseResize(dbs, id, r)
+		w, err := newWaiter(c)
 		if err != nil {
-			return fmt.Errorf(
-				"database resize did not complete: %v",
-				err,
-			)
+			return err
 		}
 
-		notice("Database resized successfully")
+		if err := waitForDatabaseResize(w, dbs, id, r); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -623,17 +633,14 @@ func RunDatabaseMigrate(c *CmdConfig) error {
 	}
 
 	if wait {
-		notice("Database migration is in progress, waiting for database to be online")
-
-		err := waitForDatabaseReady(dbs, id)
+		w, err := newWaiter(c)
 		if err != nil {
-			return fmt.Errorf(
-				"database couldn't enter the `online` state after migration: %v",
-				err,
-			)
+			return err
 		}
 
-		notice("Database migrated successfully")
+		if err := waitForDatabaseReady(w, dbs, id, "Migrating"); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -907,7 +914,7 @@ func databaseUser() *Command {
 			Short:   "Display commands for managing database users",
 			Long: `The commands under ` + "`" + `doctl databases user` + "`" + ` allow you to view details for, and create, database users.
 
-Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password.`,
+Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password, masked by default. Use --show to reveal it.`,
 		},
 	}
 	databaseKafkaACLsTxt := `A comma-separated list of kafka ACL rules, in ` + "`" + `topic:permission` + "`" + ` format.`
@@ -915,7 +922,7 @@ Database user accounts are scoped to one database cluster, to which they have fu
 	userDetailsDesc := `
 
 - The username for the user
-- The password for the user
+- The password for the user, masked by default. Use --show to reveal it.
 - The user's role, either "primary" or "normal"
 
 Primary user accounts are created by DigitalOcean at database cluster creation time and can't be deleted. You can create additional users with a "normal" role. Both have administrative privileges on the database cluster.
@@ -933,7 +940,7 @@ To retrieve a list of database users for a database cluster, call `+"`"+`doctl d
 	cmdDatabaseUserGet.Example = `The following example retrieves the details for the user with the username ` + "`" + `example-user` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the user's name and role: doctl databases user get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-user --format Name,Role`
 
 	cmdDatabaseUserCreate := CmdBuilder(cmd, RunDatabaseUserCreate, "create <database-cluster-id> <user-name>",
-		"Create a database user", `Creates a new user for a database. New users are given a role of `+"`"+`normal`+"`"+` and are given an automatically-generated password.
+		"Create a database user", `Creates a new user for a database. New users are given a role of `+"`"+`normal`+"`"+` and are given an automatically-generated password, masked by default. Use --show to reveal it.
 
 To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("c"))
 
@@ -1136,18 +1143,82 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database user", 1) == nil {
-		databaseID := c.Args[0]
-		userID := c.Args[1]
-		return c.Databases().DeleteUser(databaseID, userID)
+	if err := confirmDelete(force, "database user", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	userID := c.Args[1]
+	return c.Databases().DeleteUser(databaseID, userID)
 }
 
 func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
+	if c.UI.Mask {
+		masked := make(do.DatabaseUsers, len(users))
+		for i, u := range users {
+			masked[i] = maskDatabaseUser(u)
+		}
+		users = masked
+	}
+
 	item := &displayers.DatabaseUsers{DatabaseUsers: users}
 	return c.Display(item)
+}
+
+// maskDatabaseUser hides a database user's password, leaving every other
+// field, such as an ACL, untouched.
+func maskDatabaseUser(u do.DatabaseUser) do.DatabaseUser {
+	masked := *u.DatabaseUser
+	masked.Password = databaseMaskedValue
+	return do.DatabaseUser{DatabaseUser: &masked}
+}
+
+// maskDatabaseConnection hides a connection's password, both standalone and
+// embedded in the URI, since a copy-pasted URI leaks the password otherwise.
+func maskDatabaseConnection(conn do.DatabaseConnection) do.DatabaseConnection {
+	masked := *conn.DatabaseConnection
+	masked.Password = databaseMaskedValue
+	masked.URI = maskConnectionURIPassword(masked.URI)
+	return do.DatabaseConnection{DatabaseConnection: &masked}
+}
+
+// maskConnectionURIPassword replaces the password in a userinfo-style
+// connection URI. A URI that fails to parse, or carries no password, is
+// returned unchanged rather than guessed at.
+//
+// The replacement is done on the raw string, not by reassembling a
+// url.URL, because URL.String re-escapes userinfo and would mangle any
+// special character the real username or password contained.
+func maskConnectionURIPassword(uri string) string {
+	parsed, err := url.Parse(uri)
+	if err != nil || parsed.User == nil {
+		return uri
+	}
+
+	if _, ok := parsed.User.Password(); !ok {
+		return uri
+	}
+
+	const schemeSep = "://"
+	start := strings.Index(uri, schemeSep)
+	if start == -1 {
+		return uri
+	}
+	start += len(schemeSep)
+
+	at := strings.Index(uri[start:], "@")
+	if at == -1 {
+		return uri
+	}
+	at += start
+
+	colon := strings.Index(uri[start:at], ":")
+	if colon == -1 {
+		return uri
+	}
+	colon += start
+
+	return uri[:colon+1] + databaseMaskedValue + uri[at:]
 }
 
 func displayDatabaseCA(c *CmdConfig, dbCA *do.DatabaseCA) error {
@@ -1589,13 +1660,13 @@ func RunDatabasePoolDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database pool", 1) == nil {
-		databaseID := c.Args[0]
-		poolID := c.Args[1]
-		return c.Databases().DeletePool(databaseID, poolID)
+	if err := confirmDelete(force, "database pool", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	poolID := c.Args[1]
+	return c.Databases().DeletePool(databaseID, poolID)
 }
 
 func displayDatabasePools(c *CmdConfig, pools ...do.DatabasePool) error {
@@ -1706,13 +1777,13 @@ func RunDatabaseDBDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database", 1) == nil {
-		databaseID := c.Args[0]
-		dbID := c.Args[1]
-		return c.Databases().DeleteDB(databaseID, dbID)
+	if err := confirmDelete(force, "database", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	dbID := c.Args[1]
+	return c.Databases().DeleteDB(databaseID, dbID)
 }
 
 func displayDatabaseDBs(c *CmdConfig, dbs ...do.DatabaseDB) error {
@@ -1787,7 +1858,7 @@ This command requires that you pass in the replica's name, which you can retriev
 	cmdDatabaseReplicaConnectionGet := CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-cluster-id> <replica-name>",
 		"Retrieve information for connecting to a read-only database replica",
-		`Retrieves information for connecting to the specified read-only database replica in the specified database cluster`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
+		`Retrieves information for connecting to the specified read-only database replica in the specified database cluster. The password is masked, both standalone and inside the connection string. Use --show to reveal it.`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
 	cmdDatabaseReplicaConnectionGet.Example = `The following example retrieves the connection details for a read-only replica named ` + "`" + `example-replica` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases replica connection get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-replica`
 
 	return cmd
@@ -1883,13 +1954,13 @@ func RunDatabaseReplicaDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database replica", 1) == nil {
-		databaseID := c.Args[0]
-		replicaID := c.Args[1]
-		return c.Databases().DeleteReplica(databaseID, replicaID)
+	if err := confirmDelete(force, "database replica", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	replicaID := c.Args[1]
+	return c.Databases().DeleteReplica(databaseID, replicaID)
 }
 
 // RunDatabaseReplicaPromote promotes a read-only replica to become a primary cluster
@@ -1928,6 +1999,10 @@ func RunDatabaseReplicaConnectionGet(c *CmdConfig) error {
 }
 
 func displayDatabaseReplicaConnection(c *CmdConfig, conn do.DatabaseConnection) error {
+	if c.UI.Mask {
+		conn = maskDatabaseConnection(conn)
+	}
+
 	item := &displayers.DatabaseConnection{DatabaseConnection: conn}
 	return c.Display(item)
 }
@@ -2047,13 +2122,13 @@ func RunDatabaseTopicDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("kafka topic", 1) == nil {
-		databaseID := c.Args[0]
-		topicName := c.Args[1]
-		return c.Databases().DeleteTopic(databaseID, topicName)
+	if err := confirmDelete(force, "kafka topic", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+	return c.Databases().DeleteTopic(databaseID, topicName)
 }
 
 func RunDatabaseTopicCreate(c *CmdConfig) error {
@@ -2614,72 +2689,50 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 	return displayDatabaseFirewallRules(c, true, databaseID)
 }
 
-func waitForDatabaseReady(dbs do.DatabasesService, dbID string) error {
-	const (
-		maxAttempts = 180
-		wantStatus  = "online"
-	)
-	attempts := 0
-	printNewLineSet := false
+// databasePollInterval is how often a cluster is re-read while waiting.
+// Provisioning and resizing are measured in minutes, so polling any faster
+// only adds API traffic.
+const databasePollInterval = 10 * time.Second
 
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
+// waitForDatabaseReady polls until a cluster is online. verb is what the
+// caller is doing to it - "Creating", "Forking", "Migrating" - which only the
+// caller knows and which is the whole of the progress line the user reads.
+func waitForDatabaseReady(w waiter, dbs do.DatabasesService, dbID, verb string) error {
+	const wantStatus = "online"
 
+	return w.wait(waitOp{
+		Activity: fmt.Sprintf("%s database (%s)", verb, dbID),
+		Subject:  fmt.Sprintf("database (%s) to become online", dbID),
+		Success:  fmt.Sprintf("Database (%s) is online", dbID),
+		Interval: databasePollInterval,
+	}, func() (bool, string, error) {
 		db, err := dbs.Get(dbID)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 
-		if db.Status == wantStatus {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf(
-		"timeout waiting for database (%s) to enter `online` state",
-		dbID,
-	)
+		return db.Status == wantStatus, db.Status, nil
+	})
 }
 
-func waitForDatabaseDeleted(dbs do.DatabasesService, dbID string) error {
-	const maxAttempts = 180
-	attempts := 0
-	printNewLineSet := false
-
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+func waitForDatabaseDeleted(w waiter, dbs do.DatabasesService, dbID string) error {
+	return w.wait(waitOp{
+		Activity: fmt.Sprintf("Deleting database (%s)", dbID),
+		Subject:  fmt.Sprintf("database (%s) to be deleted", dbID),
+		Success:  fmt.Sprintf("Database (%s) is deleted", dbID),
+		Interval: databasePollInterval,
+	}, func() (bool, string, error) {
 		_, err := dbs.Get(dbID)
 		if err != nil {
-			if errResp, ok := err.(*godo.ErrorResponse); ok && errResp.Response.StatusCode == http.StatusNotFound {
-				return nil
+			var errResp *godo.ErrorResponse
+			if errors.As(err, &errResp) && errResp.Response != nil && errResp.Response.StatusCode == http.StatusNotFound {
+				return true, "", nil
 			}
-			return err
+			return false, "", err
 		}
 
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf(
-		"timeout waiting for database (%s) to be deleted",
-		dbID,
-	)
+		return false, "deleting", nil
+	})
 }
 
 // engineSupportsStorageSize reports whether the database engine supports
@@ -2710,37 +2763,20 @@ func isDatabaseResizeComplete(db *do.Database, req *godo.DatabaseResizeRequest) 
 	return true
 }
 
-func waitForDatabaseResize(dbs do.DatabasesService, dbID string, req *godo.DatabaseResizeRequest) error {
-	const maxAttempts = 180
-	attempts := 0
-	printNewLineSet := false
-
-	for i := 0; i < maxAttempts; i++ {
-		if attempts != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
+func waitForDatabaseResize(w waiter, dbs do.DatabasesService, dbID string, req *godo.DatabaseResizeRequest) error {
+	return w.wait(waitOp{
+		Activity: fmt.Sprintf("Resizing database (%s)", dbID),
+		Subject:  fmt.Sprintf("database (%s) resize to complete", dbID),
+		Success:  fmt.Sprintf("Database (%s) resize is complete", dbID),
+		Interval: databasePollInterval,
+	}, func() (bool, string, error) {
 		db, err := dbs.Get(dbID)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 
-		if isDatabaseResizeComplete(db, req) {
-			return nil
-		}
-
-		attempts++
-		time.Sleep(10 * time.Second)
-	}
-
-	return fmt.Errorf(
-		"timeout waiting for database (%s) resize to complete",
-		dbID,
-	)
+		return isDatabaseResizeComplete(db, req), db.Status, nil
+	})
 }
 
 func databaseConfiguration() *Command {
@@ -3117,11 +3153,11 @@ func RunDatabaseIndexDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("opensearch index", 1) == nil {
-		databaseID := c.Args[0]
-		indexName := c.Args[1]
-		return c.Databases().DeleteIndex(databaseID, indexName)
+	if err := confirmDelete(force, "opensearch index", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	indexName := c.Args[1]
+	return c.Databases().DeleteIndex(databaseID, indexName)
 }

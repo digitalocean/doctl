@@ -114,7 +114,8 @@ var _ = suite("gradient/agent/create", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--name")
 		})
 
 		it("returns an error when instruction is missing", func() {
@@ -132,7 +133,8 @@ var _ = suite("gradient/agent/create", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--instruction")
 		})
 
 		it("returns an error when model-id is missing", func() {
@@ -150,7 +152,8 @@ var _ = suite("gradient/agent/create", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--model-id")
 		})
 	})
 })

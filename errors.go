@@ -31,6 +31,27 @@ func (e *MissingArgsErr) Error() string {
 	return fmt.Sprintf("(%s) command is missing required arguments", e.Command)
 }
 
+// MissingAccessTokenErr is returned when doctl needs an API token to
+// initialize a client and none was configured.
+type MissingAccessTokenErr struct{}
+
+var _ error = &MissingAccessTokenErr{}
+
+// NewMissingAccessTokenErr creates a MissingAccessTokenErr instance.
+func NewMissingAccessTokenErr() *MissingAccessTokenErr {
+	return &MissingAccessTokenErr{}
+}
+
+func (e *MissingAccessTokenErr) Error() string {
+	return "access token is required. (hint: run 'doctl auth init')"
+}
+
+// NextStep is empty on purpose: Error() already names the command to run,
+// so commands.checkErr's generic `<command> --help` fallback would only
+// contradict it. Structurally satisfies commands.NextStepper without an
+// import (commands already depends on this package, not the reverse).
+func (e *MissingAccessTokenErr) NextStep() string { return "" }
+
 // TooManyArgsErr is returned when there are too many arguments for a command.
 type TooManyArgsErr struct {
 	Command string

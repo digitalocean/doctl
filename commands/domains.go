@@ -180,18 +180,17 @@ func RunDomainDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("domain", 1) == nil {
-		ds := c.Domains()
-
-		if len(name) < 1 {
-			return errors.New("Invalid domain name.")
-		}
-
-		err := ds.Delete(name)
+	if err := confirmDelete(force, "domain", 1); err != nil {
 		return err
 	}
 
-	return errOperationAborted
+	ds := c.Domains()
+
+	if len(name) < 1 {
+		return errors.New("Invalid domain name.")
+	}
+
+	return ds.Delete(name)
 }
 
 // RunRecordList list records for a domain.
@@ -312,22 +311,22 @@ func RunRecordDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	if force || AskForConfirmDelete("domain record", len(ids)) == nil {
-		ds := c.Domains()
+	if err := confirmDelete(force, "domain record", len(ids)); err != nil {
+		return err
+	}
 
-		for _, i := range ids {
-			id, err := strconv.Atoi(i)
-			if err != nil {
-				return fmt.Errorf("Invalid record id %q", i)
-			}
+	ds := c.Domains()
 
-			err = ds.DeleteRecord(domainName, id)
-			if err != nil {
-				return err
-			}
+	for _, i := range ids {
+		id, err := strconv.Atoi(i)
+		if err != nil {
+			return fmt.Errorf("Invalid record id %q", i)
 		}
-	} else {
-		return errOperationAborted
+
+		err = ds.DeleteRecord(domainName, id)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

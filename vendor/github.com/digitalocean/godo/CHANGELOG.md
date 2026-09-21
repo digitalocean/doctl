@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.210.0] - 2026-09-18
+
+- #1110 - @kwadhwa-source - Mdrop 391/create options sizes
+
 ## [1.209.0] - 2026-09-17
 
 - #1107 - @rodrigoea - billing(prepayment): add public config and status client methods

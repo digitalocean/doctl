@@ -104,7 +104,8 @@ var _ = suite("gradient/agent/functionroute/update", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--agent-id")
 		})
 
 		it("returns an error when function-id is missing", func() {
@@ -126,7 +127,8 @@ var _ = suite("gradient/agent/functionroute/update", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required arguments")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--function-id")
 		})
 
 		it("returns an error when no update fields are provided", func() {
