@@ -892,7 +892,7 @@ func databaseUser() *Command {
 			Short:   "Display commands for managing database users",
 			Long: `The commands under ` + "`" + `doctl databases user` + "`" + ` allow you to view details for, and create, database users.
 
-Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password.`,
+Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password, masked by default. Use --show to reveal it.`,
 		},
 	}
 	databaseKafkaACLsTxt := `A comma-separated list of kafka ACL rules, in ` + "`" + `topic:permission` + "`" + ` format.`
@@ -918,7 +918,7 @@ To retrieve a list of database users for a database cluster, call `+"`"+`doctl d
 	cmdDatabaseUserGet.Example = `The following example retrieves the details for the user with the username ` + "`" + `example-user` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the user's name and role: doctl databases user get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-user --format Name,Role`
 
 	cmdDatabaseUserCreate := CmdBuilder(cmd, RunDatabaseUserCreate, "create <database-cluster-id> <user-name>",
-		"Create a database user", `Creates a new user for a database. New users are given a role of `+"`"+`normal`+"`"+` and are given an automatically-generated password.
+		"Create a database user", `Creates a new user for a database. New users are given a role of `+"`"+`normal`+"`"+` and are given an automatically-generated password, masked by default. Use --show to reveal it.
 
 To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("c"))
 
