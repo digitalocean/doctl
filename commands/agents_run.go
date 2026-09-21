@@ -178,6 +178,7 @@ func launchNewSession(c *CmdConfig) error {
 		return err
 	}
 
+	maybePrintAgentPublicPreviewTermsNotice(c)
 	prog := newCreationProgress(c.Out)
 	defer prog.stop()
 	prog.header("Launching agent session")

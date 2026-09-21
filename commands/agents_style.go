@@ -21,6 +21,7 @@ import (
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/viper"
 )
 
 // relativeTimeAgo renders t as a short relative duration ("just now", "5m
@@ -63,6 +64,110 @@ func createdAgo(t time.Time) string {
 // printAgentSuccess prints a compact success line used by side-effect verbs.
 func printAgentSuccess(w io.Writer, msg string) {
 	fmt.Fprintf(w, "%s %s\n", colorize("✓", colSuccess), msg)
+}
+
+// printAgentPublicPreviewTermsNotice prints the Public Preview Terms link.
+// Prefer maybePrintAgentPublicPreviewTermsNotice so it only appears once per user.
+func printAgentPublicPreviewTermsNotice(w io.Writer) {
+	if w == nil {
+		return
+	}
+	fmt.Fprintf(w, "%s %s\n",
+		colorize("Public preview", colMuted),
+		colorize("· Public Preview Terms: "+agentPublicPreviewTermsURL, colMuted))
+}
+
+// agentPublicPreviewAccountUUID resolves the signed-in account UUID for
+// once-per-user tracking. Tests replace this.
+var agentPublicPreviewAccountUUID = defaultAgentPublicPreviewAccountUUID
+
+// agentPublicPreviewHasExistingSessions reports whether the account already
+// has at least one Harness session. ok is false when the list call fails.
+// Tests replace this.
+var agentPublicPreviewHasExistingSessions = defaultAgentPublicPreviewHasExistingSessions
+
+func defaultAgentPublicPreviewAccountUUID(c *CmdConfig) string {
+	if c == nil || c.Account == nil {
+		return ""
+	}
+	acct, err := c.Account().Get()
+	if err != nil || acct == nil || acct.Account == nil {
+		return ""
+	}
+	return strings.TrimSpace(acct.UUID)
+}
+
+func defaultAgentPublicPreviewHasExistingSessions(c *CmdConfig) (hasSessions bool, ok bool) {
+	if c == nil || c.HostedAgents == nil {
+		return false, false
+	}
+	sessions, _, err := c.HostedAgents().ListSessions(&godo.HostedAgentSessionListOptions{PageSize: 1})
+	if err != nil {
+		return false, false
+	}
+	return len(sessions) > 0, true
+}
+
+// maybePrintAgentPublicPreviewTermsNotice shows the Public Preview Terms link
+// when this looks like the account's first Harness session (ListSessions empty).
+// After showing — or when sessions already exist — we persist a local
+// user:<uuid> flag so the notice is not repeated (including after all sessions
+// are deleted, or if list fails once and we fall back to show-once).
+func maybePrintAgentPublicPreviewTermsNotice(c *CmdConfig) {
+	if c == nil || c.Out == nil {
+		return
+	}
+	key := agentPublicPreviewTermsUserKey(c)
+	if hasSeenAgentPublicPreviewTerms(key) {
+		return
+	}
+
+	hasSessions, listed := agentPublicPreviewHasExistingSessions(c)
+	if listed && hasSessions {
+		// Already using Harness — not a first-session user. Remember locally
+		// so we do not keep listing on every create.
+		markAgentPublicPreviewTermsSeen(key)
+		return
+	}
+
+	// No sessions yet, or list failed: show once, then persist.
+	printAgentPublicPreviewTermsNotice(c.Out)
+	markAgentPublicPreviewTermsSeen(key)
+}
+
+func agentPublicPreviewTermsUserKey(c *CmdConfig) string {
+	if uuid := strings.ToLower(strings.TrimSpace(agentPublicPreviewAccountUUID(c))); uuid != "" {
+		return "user:" + uuid
+	}
+	ctx := strings.ToLower(strings.TrimSpace(viper.GetString("context")))
+	if ctx == "" {
+		ctx = "default"
+	}
+	return "context:" + ctx
+}
+
+func hasSeenAgentPublicPreviewTerms(key string) bool {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return false
+	}
+	for _, seen := range viper.GetStringSlice(agentPublicPreviewTermsSeenKey) {
+		if strings.EqualFold(seen, key) {
+			return true
+		}
+	}
+	return false
+}
+
+func markAgentPublicPreviewTermsSeen(key string) {
+	key = strings.TrimSpace(key)
+	if key == "" || hasSeenAgentPublicPreviewTerms(key) {
+		return
+	}
+	seen := append(viper.GetStringSlice(agentPublicPreviewTermsSeenKey), key)
+	viper.Set(agentPublicPreviewTermsSeenKey, seen)
+	// Best-effort: failing to persist should not block create/launch.
+	_ = writeConfig()
 }
 
 // printAgentNextPage prints a muted pagination hint when next is non-empty.

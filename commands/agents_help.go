@@ -29,9 +29,22 @@ import (
 const (
 	agentCmdName = "harness-runtime"
 	agentCLI     = "doctl " + agentCmdName
+
+	// agentPublicPreviewTermsURL is the Public Preview Terms link shown next to
+	// create/launch, matching the console "Public Preview Terms" affordance.
+	// ACK is not required; creating a session is enough. Shown when ListSessions
+	// is empty (first Harness session), then remembered locally per account UUID
+	// so it is not repeated.
+	agentPublicPreviewTermsURL = "https://www.digitalocean.com/legal/managed-agents-runtime-services-public-preview"
+
+	// agentPublicPreviewTermsSeenKey is a config.yaml string-slice of user keys
+	// (user:<uuid> or context:<name>) that have already been shown the notice.
+	agentPublicPreviewTermsSeenKey = "agents-public-preview-terms-seen"
 )
 
 const agentsRootHelpMD = `**Managed Agents Runtime Services (M.A.R.S)** — run a coding agent (Claude Code, OpenCode, Codex, …) in a DigitalOcean sandbox.
+
+Currently in **public preview**. [Public Preview Terms](` + agentPublicPreviewTermsURL + `).
 
 Two verbs cover the lifecycle, split on whether you want to watch:
 

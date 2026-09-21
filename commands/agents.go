@@ -963,6 +963,7 @@ func RunAgentsCreate(c *CmdConfig) error {
 
 	prog := (*creationProgress)(nil)
 	if Output != "json" {
+		maybePrintAgentPublicPreviewTermsNotice(c)
 		prog = newCreationProgress(c.Out)
 		defer prog.stop()
 		prog.header("Creating agent session")

@@ -14,9 +14,12 @@ limitations under the License.
 package commands
 
 import (
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,6 +55,8 @@ func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
 	assert.Contains(t, agentsRootHelpMD, agentCLI+" launch")
 	assert.Contains(t, agentsRootHelpMD, agentCLI+" create")
 	assert.Contains(t, agentsRootHelpMD, "Managed Agents Runtime Services (M.A.R.S)")
+	assert.Contains(t, agentsRootHelpMD, "public preview")
+	assert.Contains(t, agentsRootHelpMD, agentPublicPreviewTermsURL)
 	assert.Contains(t, agentsRootHelpMD, "open-harness-runtime")
 	assert.Contains(t, agentsRootHelpMD, "start")
 	assert.Contains(t, agentsRootHelpMD, "run")
@@ -62,6 +67,96 @@ func TestAgentsRootHelpHasNoStylingMeta(t *testing.T) {
 	assert.NotContains(t, agentsRootHelpMD, "singular")
 	assert.NotContains(t, agentsRootHelpMD, "alias")
 	assert.NotContains(t, agentsRootHelpMD, "Launch and manage")
+}
+
+func TestPrintAgentPublicPreviewTermsNotice(t *testing.T) {
+	var buf strings.Builder
+	printAgentPublicPreviewTermsNotice(&buf)
+	got := buf.String()
+	assert.Contains(t, got, "Public preview")
+	assert.Contains(t, got, "Public Preview Terms:")
+	assert.Contains(t, got, agentPublicPreviewTermsURL)
+}
+
+func TestMaybePrintAgentPublicPreviewTermsNoticeFirstSessionOnly(t *testing.T) {
+	prevWriter := cfgFileWriter
+	prevUUID := agentPublicPreviewAccountUUID
+	prevSessions := agentPublicPreviewHasExistingSessions
+	t.Cleanup(func() {
+		cfgFileWriter = prevWriter
+		agentPublicPreviewAccountUUID = prevUUID
+		agentPublicPreviewHasExistingSessions = prevSessions
+		viper.Set(agentPublicPreviewTermsSeenKey, nil)
+		viper.Set("context", "")
+	})
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return &nopWriteCloser{Writer: io.Discard}, nil
+	}
+	agentPublicPreviewAccountUUID = func(*CmdConfig) string { return "acct-uuid-123" }
+	viper.Set(agentPublicPreviewTermsSeenKey, nil)
+
+	cfg := &CmdConfig{}
+
+	t.Run("shows when no sessions yet", func(t *testing.T) {
+		viper.Set(agentPublicPreviewTermsSeenKey, nil)
+		agentPublicPreviewHasExistingSessions = func(*CmdConfig) (bool, bool) { return false, true }
+
+		var buf strings.Builder
+		cfg.Out = &buf
+		maybePrintAgentPublicPreviewTermsNotice(cfg)
+		assert.Contains(t, buf.String(), agentPublicPreviewTermsURL)
+		assert.True(t, hasSeenAgentPublicPreviewTerms("user:acct-uuid-123"))
+	})
+
+	t.Run("skips when sessions already exist and marks seen", func(t *testing.T) {
+		viper.Set(agentPublicPreviewTermsSeenKey, nil)
+		agentPublicPreviewHasExistingSessions = func(*CmdConfig) (bool, bool) { return true, true }
+
+		var buf strings.Builder
+		cfg.Out = &buf
+		maybePrintAgentPublicPreviewTermsNotice(cfg)
+		assert.Empty(t, buf.String())
+		assert.True(t, hasSeenAgentPublicPreviewTerms("user:acct-uuid-123"))
+	})
+
+	t.Run("does not show again after local seen flag", func(t *testing.T) {
+		viper.Set(agentPublicPreviewTermsSeenKey, []string{"user:acct-uuid-123"})
+		agentPublicPreviewHasExistingSessions = func(*CmdConfig) (bool, bool) {
+			t.Fatal("should not list sessions when already marked seen")
+			return false, false
+		}
+
+		var buf strings.Builder
+		cfg.Out = &buf
+		maybePrintAgentPublicPreviewTermsNotice(cfg)
+		assert.Empty(t, buf.String())
+	})
+
+	t.Run("list failure falls back to show once", func(t *testing.T) {
+		viper.Set(agentPublicPreviewTermsSeenKey, nil)
+		agentPublicPreviewHasExistingSessions = func(*CmdConfig) (bool, bool) { return false, false }
+
+		var first strings.Builder
+		cfg.Out = &first
+		maybePrintAgentPublicPreviewTermsNotice(cfg)
+		assert.Contains(t, first.String(), agentPublicPreviewTermsURL)
+
+		var second strings.Builder
+		cfg.Out = &second
+		maybePrintAgentPublicPreviewTermsNotice(cfg)
+		assert.Empty(t, second.String())
+	})
+}
+
+func TestAgentPublicPreviewTermsUserKeyFallsBackToContext(t *testing.T) {
+	prevUUID := agentPublicPreviewAccountUUID
+	t.Cleanup(func() {
+		agentPublicPreviewAccountUUID = prevUUID
+		viper.Set("context", "")
+	})
+	agentPublicPreviewAccountUUID = func(*CmdConfig) string { return "" }
+	viper.Set("context", "work")
+	assert.Equal(t, "context:work", agentPublicPreviewTermsUserKey(&CmdConfig{}))
 }
 
 func TestAgentsCreateHelpDocumentsFlatName(t *testing.T) {
