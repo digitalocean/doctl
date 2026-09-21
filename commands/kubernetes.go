@@ -999,12 +999,12 @@ func getUpgradeVersionOrLatest(c *CmdConfig, clusterID string) (string, bool, er
 
 	cluster, err := c.Kubernetes().Get(clusterID)
 	if err != nil {
-		return "", false, fmt.Errorf("Unable to look up cluster to find the latest version from the API: %v", err)
+		return "", false, fmt.Errorf("Unable to look up cluster to find the latest version from the API: %w", err)
 	}
 
 	versions, err := c.Kubernetes().GetUpgrades(clusterID)
 	if err != nil {
-		return "", false, fmt.Errorf("Unable to look up the latest version from the API: %v", err)
+		return "", false, fmt.Errorf("Unable to look up the latest version from the API: %w", err)
 	}
 	if len(versions) == 0 {
 		return "", false, nil
@@ -2966,7 +2966,7 @@ func getVersionOrLatest(c *CmdConfig) (string, error) {
 	}
 	versions, err := c.Kubernetes().GetVersions()
 	if err != nil {
-		return "", fmt.Errorf("No version flag provided. Unable to lookup the latest version from the API: %v", err)
+		return "", fmt.Errorf("No version flag provided. Unable to lookup the latest version from the API: %w", err)
 	}
 	if len(versions) > 0 {
 		return versions[0].Slug, nil

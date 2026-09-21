@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
@@ -159,31 +160,103 @@ func (e genericStructuredError) Unwrap() error { return e.err }
 
 // Title is left blank for anything the status-code table doesn't recognize,
 // so checkErr falls back to printing err.Error() as it always has.
+//
+// When a call site wrapped the API error to say what it was attempting,
+// that sentence is the title instead of the bare status name: "Unable to
+// delete Droplet 111" identifies which of several droplets failed, where
+// "Conflict" alone does not. The status still gets its own line below.
 func (e genericStructuredError) Title() string {
-	if status := statusFor(e.err); status != 0 {
-		return http.StatusText(status)
+	status := statusFor(e.err)
+	if status == 0 {
+		return ""
 	}
-	return ""
+
+	if attempting := wrappedContext(e.err); attempting != "" {
+		return attempting
+	}
+	return http.StatusText(status)
 }
 
-// Reason prefers the message the API itself returned, since it is specific
-// to the request that failed; the status-code table's line is a fallback for
-// when the API had nothing more to say than the status code. When godo's
-// retry client attached one, the attempt count is appended: it only shows up
-// in gerr.Error()'s full text otherwise, which checkErr never prints, and
-// without it an exhausted-retry failure reads identically to one where
-// retries were never attempted at all.
+// wrappedContext recovers the prose a call site put ahead of an API error
+// when it wrapped it, so "Unable to delete Droplet 111: DELETE https://...:
+// 409 ..." yields "Unable to delete Droplet 111".
+//
+// It compares against the godo error's own text rather than splitting on a
+// separator, because that text is full of colons - a method, a URL, and a
+// status - and any of them would fool a naive split. Returns empty when the
+// error was not wrapped, or was wrapped somewhere the godo text no longer
+// appears whole.
+func wrappedContext(err error) string {
+	gerr, ok := apiError(err)
+	if !ok {
+		return ""
+	}
+
+	full, inner := err.Error(), gerr.Error()
+	idx := strings.Index(full, inner)
+	if idx <= 0 {
+		return ""
+	}
+
+	return strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(full[:idx]), ":"))
+}
+
+// Reason explains the failure in one line, and notes when godo's retry
+// client gave up getting past it. The attempt count only appears in
+// gerr.Error()'s full text, which checkErr never prints, so without this an
+// exhausted retry reads exactly like one that was never attempted.
 func (e genericStructuredError) Reason() string {
-	if gerr, ok := apiError(e.err); ok && gerr.Message != "" {
-		if gerr.Attempts > 0 {
-			return fmt.Sprintf("%s (gave up after %d attempt(s))", gerr.Message, gerr.Attempts)
-		}
+	reason := e.baseReason()
+	if reason == "" {
+		return ""
+	}
+
+	if gerr, ok := apiError(e.err); ok && gerr.Attempts > 0 {
+		return fmt.Sprintf("%s (gave up after %d attempt(s))", reason, gerr.Attempts)
+	}
+	return reason
+}
+
+// baseReason prefers the message the API itself returned, since it is
+// specific to the request that failed, and falls back to the status-code
+// table when the API said nothing usable.
+func (e genericStructuredError) baseReason() string {
+	if gerr, ok := apiError(e.err); ok && isReadableMessage(gerr.Message) {
 		return gerr.Message
 	}
 	if entry, ok := lookupErrorCode(e.err); ok {
 		return entry.Reason
 	}
 	return ""
+}
+
+// maxReadableMessage is the longest API message worth quoting as a reason.
+// A sentence written for a person fits well inside it.
+const maxReadableMessage = 200
+
+// isReadableMessage reports whether msg is a message rather than a payload.
+// godo fills ErrorResponse.Message with the raw body when that body is not
+// the JSON it expected, so anything between doctl and the API - a proxy, a
+// load balancer, a captive portal - can put an HTML error page here. Left
+// unchecked that page becomes the Reason line, and a 502 prints fifty lines
+// of markup where one sentence belongs. The canned reason for the status is
+// a better answer than that; the raw body is still in the JSON detail for
+// anyone who needs it.
+func isReadableMessage(msg string) bool {
+	msg = strings.TrimSpace(msg)
+
+	switch {
+	case msg == "":
+		return false
+	case len(msg) > maxReadableMessage:
+		return false
+	case strings.ContainsAny(msg, "\n\r"):
+		return false
+	case strings.HasPrefix(msg, "<"):
+		return false
+	default:
+		return true
+	}
 }
 
 func (e genericStructuredError) Status() int {

@@ -168,7 +168,7 @@ func RunVectorDBCreate(c *CmdConfig) error {
 
 		vdb, err = svc.Get(vdb.ID)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve the new vector database: %v", err)
+			return fmt.Errorf("failed to retrieve the new vector database: %w", err)
 		}
 	}
 

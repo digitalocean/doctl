@@ -242,8 +242,10 @@ context: default
 			// The rejected token surfaces as a structured 401 rather than the
 			// raw request line: the wrapper preserves the godo error, so the
 			// status-code table supplies the reason and points at auth init
-			// instead of the generic --help fallback.
-			expect.Contains(buf.String(), "Error: Unauthorized")
+			// instead of the generic --help fallback. The title is what doctl
+			// was attempting, since the wrapper said so; 401 is on its own
+			// line rather than standing in as the headline.
+			expect.Contains(buf.String(), "Error: Unable to use supplied token to access API")
 			expect.Contains(buf.String(), "your API token is missing, invalid, or expired")
 			expect.Contains(buf.String(), "status 401")
 			expect.Contains(buf.String(), "run doctl auth init")

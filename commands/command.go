@@ -50,6 +50,35 @@ func (c *Command) AddCommand(commands ...*Command) {
 	for _, cmd := range commands {
 		c.Command.AddCommand(cmd.Command)
 	}
+	rejectUnknownSubcommand(c.Command)
+}
+
+// rejectUnknownSubcommand makes a command that exists only to dispatch to
+// children fail when handed an argument that names no child.
+//
+// Cobra checks this for the root and nowhere else: `doctl bogus` exits 255,
+// but `doctl compute bogus` treated "bogus" as a positional argument,
+// printed the compute help, and exited 0 - so a mistyped subcommand was
+// indistinguishable from success to anything reading the exit code.
+//
+// The check has to live in a RunE rather than in Args, because cobra
+// returns flag.ErrHelp for a command that is not runnable before it ever
+// validates arguments. Being runnable also means a bare `doctl compute`
+// reaches this and prints its help, exactly as it did before.
+func rejectUnknownSubcommand(cmd *cobra.Command) {
+	if cmd.Runnable() {
+		return
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		// Phrased the way cobra phrases it at the root, which is what
+		// Execute matches on to choose exitUsageError.
+		return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
+	}
 }
 
 // ChildCommands returns the child commands.

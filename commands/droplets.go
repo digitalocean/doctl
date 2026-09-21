@@ -703,7 +703,7 @@ func RunDropletDelete(c *CmdConfig) error {
 	fn := func(ids []int) error {
 		for _, id := range ids {
 			if err := ds.Delete(id); err != nil {
-				return fmt.Errorf("Unable to delete Droplet %d: %v", id, err)
+				return fmt.Errorf("Unable to delete Droplet %d: %w", id, err)
 			}
 		}
 		return nil

@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -151,6 +152,83 @@ func Test_NextStep_HonorsAnEmptyOverride(t *testing.T) {
 
 	assert.Equal(t, "run doctl auth list",
 		genericStructuredError{err: errUnknownAuthContext}.NextStep())
+}
+
+// godo puts the raw body in Message when that body was not the JSON it
+// expected, so anything between doctl and the API can land an HTML error
+// page in the reason line. The canned reason for the status beats that.
+func Test_Reason_RefusesAPayloadMasqueradingAsAMessage(t *testing.T) {
+	const gatewayReason = "the API gateway could not reach the upstream service"
+
+	nginxPage := "<html>\n<head><title>502 Bad Gateway</title></head>\n<body>\n" +
+		strings.Repeat("<!-- padding -->\n", 40) + "</body>\n</html>"
+
+	tests := []struct {
+		name string
+		msg  string
+		want string
+	}{
+		{
+			name: "a sentence the API wrote is quoted as-is",
+			msg:  "Droplet is currently locked by an in-progress event",
+			want: "Droplet is currently locked by an in-progress event",
+		},
+		{
+			name: "an HTML error page is not",
+			msg:  nginxPage,
+			want: gatewayReason,
+		},
+		{
+			name: "neither is a single long line of markup",
+			msg:  "<html><body>" + strings.Repeat("x", 300) + "</body></html>",
+			want: gatewayReason,
+		},
+		{
+			name: "nor anything that runs past a reasonable sentence",
+			msg:  strings.Repeat("verbose ", 40),
+			want: gatewayReason,
+		},
+		{
+			name: "an empty message falls back too",
+			msg:  "",
+			want: gatewayReason,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason := genericStructuredError{
+				err: apiErr(http.StatusBadGateway, 0, tt.msg),
+			}.Reason()
+
+			assert.Equal(t, tt.want, reason)
+			assert.NotContains(t, reason, "\n", "the reason stays one line")
+		})
+	}
+}
+
+// The attempt count has to survive that fallback, or a 502 behind a proxy
+// loses the one detail saying the retries were already spent.
+func Test_Reason_KeepsAttemptCountOnTheCannedReason(t *testing.T) {
+	err := apiErr(http.StatusBadGateway, 4, "<html>a proxy page</html>")
+
+	assert.Equal(t,
+		"the API gateway could not reach the upstream service (gave up after 4 attempt(s))",
+		genericStructuredError{err: err}.Reason())
+}
+
+// A call site that wrapped the API error to say what it was attempting
+// knows something the status name does not - which droplet, which key.
+func Test_Title_PrefersWhatTheCommandWasAttempting(t *testing.T) {
+	bare := apiErr(http.StatusConflict, 0, "locked")
+	assert.Equal(t, "Conflict", genericStructuredError{err: bare}.Title())
+
+	wrapped := fmt.Errorf("Unable to delete Droplet 111: %w", bare)
+	title := genericStructuredError{err: wrapped}.Title()
+
+	assert.Equal(t, "Unable to delete Droplet 111", title)
+	// The method and URL godo puts in Error() stay out of the title.
+	assert.NotContains(t, title, "http")
 }
 
 func Test_checkErr(t *testing.T) {
