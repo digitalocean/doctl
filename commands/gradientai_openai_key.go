@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -198,14 +196,14 @@ func RunOpenAIKeyDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("OpenAI API Key", 1) == nil {
-		_, err := c.GradientAI().DeleteOpenAIAPIKey(openAIApiKeyID)
-		if err != nil {
-			return err
-		}
-		notice("OpenAI API Key deleted successfully")
-	} else {
-		return fmt.Errorf("operation aborted")
+	if err := confirmDelete(force, "OpenAI API Key", 1); err != nil {
+		return err
 	}
+
+	_, err = c.GradientAI().DeleteOpenAIAPIKey(openAIApiKeyID)
+	if err != nil {
+		return err
+	}
+	notice("OpenAI API Key deleted successfully")
 	return nil
 }

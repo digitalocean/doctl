@@ -17,19 +17,42 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/spf13/cobra"
+)
+
+const (
+	// exitGeneralError is doctl's default failure code: a command ran and
+	// returned an error, or startup failed for a reason unrelated to how
+	// doctl was invoked (e.g. an unreadable config file).
+	exitGeneralError = 1
+
+	// exitUsageError is reserved for failures that never reached a command's
+	// handler - an unknown subcommand or a flag Cobra itself rejected before
+	// Run. Kept distinct from exitGeneralError so the two are intentional,
+	// not whichever branch happened to catch the error.
+	exitUsageError = 255
 )
 
 var (
-	errOperationAborted = fmt.Errorf("Operation aborted.")
+	// errOperationAborted is what confirmDelete/confirmAction return when
+	// the user declines to proceed. Its NextStep is empty on purpose: the
+	// confirmation prompt (or the non-interactive warning that replaces it)
+	// already told the user what to do differently, usually --force, so a
+	// generic `--help` hint underneath would only contradict that.
+	errOperationAborted error = operationAbortedError{}
 
 	// errAction specifies what should happen when an error occurs
 	errAction = func() {
-		os.Exit(1)
+		os.Exit(exitGeneralError)
 	}
 
 	// ErrExitSilently instructs doctl to exit silently with a bad status code. This can be used to fail a command
@@ -38,14 +61,298 @@ var (
 	// IMPORTANT! Make sure to print your own error message if you use this! It is important for users to know
 	// what caused the failure.
 	ErrExitSilently = fmt.Errorf("")
+
+	// activeCommand is the cobra command currently running, set by
+	// cmdBuilderWithInit's Run before the handler is invoked. It exists so
+	// checkErr can default the next step to that command's --help without
+	// every call site having to pass a *cobra.Command through.
+	activeCommand *cobra.Command
 )
+
+// NextStepper lets an error supply its own "next step" suggestion, overriding
+// the default `<command> --help` hint checkErr otherwise prints. It is the
+// narrow interface for an error that only wants to change one field; a type
+// wanting to control the whole block implements StructuredError instead.
+type NextStepper interface {
+	NextStep() string
+}
+
+// operationAbortedError reports that the user declined a confirmation
+// prompt. nextStep is the hint to print instead of the default silence, for
+// a call site that has something specific to suggest; left empty - the
+// common case, via errOperationAborted - no next step is printed at all,
+// since the prompt the user just answered already said what it was asking.
+type operationAbortedError struct {
+	nextStep string
+}
+
+func (e operationAbortedError) Error() string    { return "Operation aborted." }
+func (e operationAbortedError) NextStep() string { return e.nextStep }
+
+// errUnknownAuthContext reports that the named auth context is not in the
+// config file. Listing the contexts that do exist is the one thing that
+// reliably helps here, so it says so rather than falling silent.
+var errUnknownAuthContext error = unknownAuthContextError{}
+
+type unknownAuthContextError struct{}
+
+func (e unknownAuthContextError) Error() string    { return "context does not exist" }
+func (e unknownAuthContextError) NextStep() string { return "run doctl auth list" }
+
+// errConfirmationRequired reports that a command needed confirmation but had
+// no way to ask: stderr is not a terminal and --force was not passed.
+//
+// It is a real error rather than a warning plus ErrExitSilently so that the
+// failure reaches checkErr and is rendered once, in whichever format the
+// user asked for - `--output json` otherwise got the warning on stderr and
+// an empty stdout, leaving automation nothing to parse.
+var errConfirmationRequired error = confirmationRequiredError{}
+
+type confirmationRequiredError struct{}
+
+func (e confirmationRequiredError) Error() string {
+	return "Requires confirmation. Use the `--force` flag to continue without confirmation."
+}
+
+// NextStep is empty for the same reason operationAbortedError's is: the
+// message already names the flag to pass, so the default `--help` hint
+// would only argue with it.
+func (e confirmationRequiredError) NextStep() string { return "" }
+
+// StructuredError lets an error supply the whole Title → Reason → Status →
+// Request ID → Next step block checkErr renders, and the same fields
+// mirrored into the JSON envelope. Every error checkErr sees is resolved to
+// one via resolveStructured, so checkErr and the JSON path always have a
+// single source to read from, whether or not err implements this itself.
+type StructuredError interface {
+	error
+
+	// Title is the one-line summary shown after the "Error:" label. Falls
+	// back to err.Error() when empty, so a plain error renders exactly as it
+	// always has.
+	Title() string
+
+	// Reason expands on Title with what the failure means. Empty suppresses
+	// the line.
+	Reason() string
+
+	// Status is the API status code the failure carries, or 0 if none.
+	Status() int
+
+	// RequestID is the identifier the API assigned the request, for support
+	// to look up. Empty suppresses the line.
+	RequestID() string
+
+	// NextStep is the suggested command. Empty suppresses the line.
+	NextStep() string
+}
+
+// genericStructuredError is the StructuredError synthesized for an error
+// that doesn't implement the interface itself. It is what makes an
+// unannotated godo API error render with the same Title/Reason/Status/
+// NextStep shape as a purpose-built one, by reading the status-code table.
+type genericStructuredError struct {
+	err error
+}
+
+func (e genericStructuredError) Error() string { return e.err.Error() }
+func (e genericStructuredError) Unwrap() error { return e.err }
+
+// Title is left blank for anything the status-code table doesn't recognize,
+// so checkErr falls back to printing err.Error() as it always has.
+//
+// When a call site wrapped the API error to say what it was attempting,
+// that sentence is the title instead of the bare status name: "Unable to
+// delete Droplet 111" identifies which of several droplets failed, where
+// "Conflict" alone does not. The status still gets its own line below.
+func (e genericStructuredError) Title() string {
+	status := statusFor(e.err)
+	if status == 0 {
+		return ""
+	}
+
+	if attempting := wrappedContext(e.err); attempting != "" {
+		return attempting
+	}
+	return http.StatusText(status)
+}
+
+// wrappedContext recovers the prose a call site put ahead of an API error
+// when it wrapped it, so "Unable to delete Droplet 111: DELETE https://...:
+// 409 ..." yields "Unable to delete Droplet 111".
+//
+// It compares against the godo error's own text rather than splitting on a
+// separator, because that text is full of colons - a method, a URL, and a
+// status - and any of them would fool a naive split. Returns empty when the
+// error was not wrapped, or was wrapped somewhere the godo text no longer
+// appears whole.
+func wrappedContext(err error) string {
+	gerr, ok := apiError(err)
+	if !ok {
+		return ""
+	}
+
+	full, inner := err.Error(), gerr.Error()
+	idx := strings.Index(full, inner)
+	if idx <= 0 {
+		return ""
+	}
+
+	return strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(full[:idx]), ":"))
+}
+
+// Reason explains the failure in one line, and notes when godo's retry
+// client gave up getting past it. The attempt count only appears in
+// gerr.Error()'s full text, which checkErr never prints, so without this an
+// exhausted retry reads exactly like one that was never attempted.
+func (e genericStructuredError) Reason() string {
+	reason := e.baseReason()
+	if reason == "" {
+		return ""
+	}
+
+	if gerr, ok := apiError(e.err); ok && gerr.Attempts > 0 {
+		return fmt.Sprintf("%s (gave up after %d attempt(s))", reason, gerr.Attempts)
+	}
+	return reason
+}
+
+// baseReason prefers the message the API itself returned, since it is
+// specific to the request that failed, and falls back to the status-code
+// table when the API said nothing usable.
+func (e genericStructuredError) baseReason() string {
+	if gerr, ok := apiError(e.err); ok && isReadableMessage(gerr.Message) {
+		return gerr.Message
+	}
+	if entry, ok := lookupErrorCode(e.err); ok {
+		return entry.Reason
+	}
+	return ""
+}
+
+// maxReadableMessage is the longest API message worth quoting as a reason.
+// A sentence written for a person fits well inside it.
+const maxReadableMessage = 200
+
+// isReadableMessage reports whether msg is a message rather than a payload.
+// godo fills ErrorResponse.Message with the raw body when that body is not
+// the JSON it expected, so anything between doctl and the API - a proxy, a
+// load balancer, a captive portal - can put an HTML error page here. Left
+// unchecked that page becomes the Reason line, and a 502 prints fifty lines
+// of markup where one sentence belongs. The canned reason for the status is
+// a better answer than that; the raw body is still in the JSON detail for
+// anyone who needs it.
+func isReadableMessage(msg string) bool {
+	msg = strings.TrimSpace(msg)
+
+	switch {
+	case msg == "":
+		return false
+	case len(msg) > maxReadableMessage:
+		return false
+	case strings.ContainsAny(msg, "\n\r"):
+		return false
+	case strings.HasPrefix(msg, "<"):
+		return false
+	default:
+		return true
+	}
+}
+
+func (e genericStructuredError) Status() int {
+	return statusFor(e.err)
+}
+
+// RequestID is the identifier godo's API client attached to the request, so
+// that reporting an issue to support can reference it without digging it out
+// of Error()'s full text.
+func (e genericStructuredError) RequestID() string {
+	if gerr, ok := apiError(e.err); ok {
+		return gerr.RequestID
+	}
+	return ""
+}
+
+// NextStep resolves the suggestion in order of how much the source knows
+// about the failure:
+//
+//  1. An explicit NextStepper override on the wrapped error, honored
+//     exactly - including an intentionally empty string, since an error
+//     implementing the interface has already decided what to suggest.
+//  2. The status-code table. An entry that offers no step has decided
+//     there is nothing useful to say for that status (404 and 409 both do);
+//     that decision stands rather than being second-guessed.
+//  3. `<command> --help`, but only for a failure doctl raised itself,
+//     before or instead of talking to the API - a bad argument, a rejected
+//     flag combination. Help text describes usage, so it is an answer to
+//     those and only those.
+//
+// A failure the API or the network produced gets no fallback suggestion.
+// Sending someone who hit a 404, a refused connection, or an exhausted
+// retry to `--help` points them at a page that cannot explain any of it;
+// the status and request ID above are the useful part there.
+func (e genericStructuredError) NextStep() string {
+	var ns NextStepper
+	if errors.As(e.err, &ns) {
+		return ns.NextStep()
+	}
+	if entry, ok := lookupErrorCode(e.err); ok {
+		attempts := 0
+		if gerr, ok := apiError(e.err); ok {
+			attempts = gerr.Attempts
+		}
+		return resolvedNextStep(entry, attempts)
+	}
+	if e.Status() != 0 || isTransportError(e.err) {
+		return ""
+	}
+	return defaultNextStep()
+}
+
+// isTransportError reports whether err came from the attempt to reach the
+// API rather than from anything doctl or the API decided - a refused
+// connection, a DNS miss, a timeout. These carry no status code, so they
+// would otherwise be indistinguishable from a local validation failure.
+func isTransportError(err error) bool {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return true
+	}
+
+	var netErr net.Error
+	return errors.As(err, &netErr)
+}
+
+// defaultNextStep suggests the active command's help text. Empty if no
+// command is active (e.g. errors raised during early config bootstrap).
+func defaultNextStep() string {
+	if activeCommand == nil {
+		return ""
+	}
+	return fmt.Sprintf("run %s --help", activeCommand.CommandPath())
+}
+
+// resolveStructured returns err's own StructuredError if it implements one,
+// otherwise a genericStructuredError wrapping it.
+func resolveStructured(err error) StructuredError {
+	var se StructuredError
+	if errors.As(err, &se) {
+		return se
+	}
+	return genericStructuredError{err: err}
+}
 
 type outputErrors struct {
 	Errors []outputError `json:"errors"`
 }
 
 type outputError struct {
-	Detail string `json:"detail"`
+	Detail    string `json:"detail"`
+	Title     string `json:"title,omitempty"`
+	Reason    string `json:"reason,omitempty"`
+	Status    int    `json:"status,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
+	NextStep  string `json:"next_step,omitempty"`
 }
 
 func checkErr(err error) {
@@ -57,6 +364,8 @@ func checkErr(err error) {
 		errAction()
 		return
 	}
+
+	se := resolveStructured(err)
 
 	switch outputFormat() {
 	default:
@@ -72,15 +381,48 @@ func checkErr(err error) {
 		}
 
 		// Every failure carries the same label, whatever produced it, so
-		// that a validation error and an API error read as one voice.
-		fmt.Fprintf(env.ErrWriter(), "%s %v\n", ui.NewStyle(env).ErrorLabel(), err)
+		// that a validation error and an API error read as one voice. Title
+		// falls back to the raw error text, which is what keeps a plain
+		// error's rendering exactly as it always was.
+		style := ui.NewStyle(env)
+		title := se.Title()
+		if title == "" {
+			title = err.Error()
+		}
+		fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.ErrorLabel(), title)
+
+		if reason := se.Reason(); reason != "" {
+			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Dim(reason))
+		}
+		// The label is dimmed to recede behind the value that names the actual
+		// status or request. The value is painted in ColorInfo rather than
+		// left in the default foreground, which read too close to the bold
+		// default-colored command path in the hint below it.
+		if status := se.Status(); status != 0 {
+			fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.Dim("status"), paintValue(env, fmt.Sprintf("%d", status)))
+		}
+		if reqID := se.RequestID(); reqID != "" {
+			fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.Dim("request"), paintValue(env, reqID))
+		}
+		if step := se.NextStep(); step != "" {
+			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Hint(step))
+		}
 	case "json":
 		// Always keep the stable {"errors":[{"detail":...}]} envelope so
 		// automation parsing --output json is not broken by richer flag
-		// validation. Plain Error() text (no ANSI) goes in detail.
+		// validation. Plain Error() text (no ANSI) goes in detail; title,
+		// reason, status, request_id and next_step are additive and omitted
+		// when empty.
 		payload := outputErrors{
 			Errors: []outputError{
-				{Detail: err.Error()},
+				{
+					Detail:    err.Error(),
+					Title:     se.Title(),
+					Reason:    se.Reason(),
+					Status:    se.Status(),
+					RequestID: se.RequestID(),
+					NextStep:  se.NextStep(),
+				},
 			},
 		}
 
@@ -89,6 +431,18 @@ func checkErr(err error) {
 	}
 
 	errAction()
+}
+
+// errorValueColor is a light neutral grey for a status/request value: lighter
+// than the muted label introducing it, but not a new hue like ui.ColorInfo,
+// so it stays quieter than an identifier while still reading apart from the
+// bold default-colored command path in the hint line beneath it. Kept local
+// to this file rather than added to the shared palette in internal/ui.
+const errorValueColor lipgloss.Color = "252"
+
+// paintValue colors a status/request value in errorValueColor.
+func paintValue(env ui.Env, s string) string {
+	return env.SprintErr(env.NewErrStyle().Foreground(errorValueColor), s)
 }
 
 func ensureOneArg(c *CmdConfig) error {

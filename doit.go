@@ -263,7 +263,7 @@ var _ Config = &LiveConfig{}
 // GetGodoClient returns a GodoClient.
 func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error) {
 	if accessToken == "" {
-		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")
+		return nil, NewMissingAccessTokenErr()
 	}
 
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})

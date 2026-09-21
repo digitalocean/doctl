@@ -367,8 +367,8 @@ func RunSimulationRunCancel(c *CmdConfig) error {
 		return err
 	}
 
-	if !force && AskForConfirm("cancel this simulation run") != nil {
-		return errOperationAborted
+	if err := confirmAction(force, "cancel this simulation run"); err != nil {
+		return err
 	}
 
 	run, err := c.GradientAI().CancelSimulationRun(c.Args[0])
@@ -390,8 +390,8 @@ func RunSimulationRunDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if !force && AskForConfirmDelete("simulation run", 1) != nil {
-		return errOperationAborted
+	if err := confirmDelete(force, "simulation run", 1); err != nil {
+		return err
 	}
 
 	if err := c.GradientAI().DeleteSimulationRun(c.Args[0]); err != nil {

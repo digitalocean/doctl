@@ -132,12 +132,12 @@ func RunReservedIPv6Delete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("reserved IPv6", 1) == nil {
-		ip := c.Args[0]
-		return ris.Delete(ip)
+	if err := confirmDelete(force, "reserved IPv6", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	ip := c.Args[0]
+	return ris.Delete(ip)
 }
 
 // RunReservedIPv6List runs reserved IP list.
@@ -187,7 +187,7 @@ func RunReservedIPv6sAssign(c *CmdConfig) error {
 
 	a, err := fia.Assign(ip, dropletID)
 	if err != nil {
-		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
+		checkErr(fmt.Errorf("could not assign IP to droplet: %w", err))
 	}
 
 	item := &displayers.Action{Actions: do.Actions{*a}}
@@ -207,7 +207,7 @@ func RunReservedIPv6sUnassign(c *CmdConfig) error {
 
 	a, err := fia.Unassign(ip)
 	if err != nil {
-		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
+		checkErr(fmt.Errorf("could not unassign IP to droplet: %w", err))
 	}
 
 	item := &displayers.Action{Actions: do.Actions{*a}}

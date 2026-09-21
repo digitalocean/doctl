@@ -486,7 +486,7 @@ func RunAppsCreate(c *CmdConfig) error {
 		apps := c.Apps()
 		err = waitForActiveDeployment(w, apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %w", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
 				errs = multierror.Append(errs, err)
 			}
@@ -573,7 +573,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 		apps := c.Apps()
 		err = waitForActiveDeployment(w, apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %w", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
 				errs = multierror.Append(errs, err)
 			}
@@ -599,8 +599,8 @@ func RunAppsDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if !force && AskForConfirmDelete("App", 1) != nil {
-		return errOperationAborted
+	if err := confirmDelete(force, "App", 1); err != nil {
+		return err
 	}
 
 	err = c.Apps().Delete(id)
@@ -644,7 +644,7 @@ func RunAppsRestart(c *CmdConfig) error {
 		apps := c.Apps()
 		err = waitForActiveDeployment(w, apps, appID, deployment.ID)
 		if err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %w", err))
 			if err := c.Display(displayers.Deployments{deployment}); err != nil {
 				errs = multierror.Append(errs, err)
 			}
@@ -690,7 +690,7 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 		apps := c.Apps()
 		err = waitForActiveDeployment(w, apps, appID, deployment.ID)
 		if err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %w", err))
 			if err := c.Display(displayers.Deployments{deployment}); err != nil {
 				errs = multierror.Append(errs, err)
 			}

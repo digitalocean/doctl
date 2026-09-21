@@ -127,16 +127,16 @@ func RunCmdTagDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("tag", len(c.Args)) == nil {
-		for id := range c.Args {
-			name := c.Args[id]
-			ts := c.Tags()
-			if err := ts.Delete(name); err != nil {
-				return err
-			}
+	if err := confirmDelete(force, "tag", len(c.Args)); err != nil {
+		return err
+	}
+
+	for id := range c.Args {
+		name := c.Args[id]
+		ts := c.Tags()
+		if err := ts.Delete(name); err != nil {
+			return err
 		}
-	} else {
-		return errOperationAborted
 	}
 
 	return nil

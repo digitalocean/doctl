@@ -16,7 +16,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -146,7 +145,7 @@ func initConfig() {
 
 	if _, err := os.Stat(cfgFile); err == nil {
 		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("Config initialization failed:", err)
+			checkErr(fmt.Errorf("config initialization failed: %w", err))
 		}
 	}
 }
@@ -172,18 +171,19 @@ func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
 		// Unknown-command errors are already printed by Cobra/usage handling.
 		if strings.Contains(err.Error(), "unknown command") {
-			os.Exit(-1)
+			os.Exit(exitUsageError)
 		}
-		// Missing/invalid flags historically exited 1 via checkErr → errAction.
-		// Keep that for FlagValidationError; reserve -1 (255) for other
-		// top-level failures that never went through Run/checkErr.
+		// Missing/invalid flags historically exited exitGeneralError via
+		// checkErr → errAction. Keep that for FlagValidationError; reserve
+		// exitUsageError for other top-level failures that never went
+		// through Run/checkErr.
 		var fv *FlagValidationError
 		if errors.As(err, &fv) {
 			checkErr(err)
 			return
 		}
 		prev := errAction
-		errAction = func() { os.Exit(-1) }
+		errAction = func() { os.Exit(exitUsageError) }
 		defer func() { errAction = prev }()
 		checkErr(err)
 	}

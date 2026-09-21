@@ -803,12 +803,14 @@ func TestGarbageCollectionStart(t *testing.T) {
 			expectError: fmt.Errorf("(test) command contains unsupported arguments"),
 		},
 		{
+			// Not interactive in the test harness and --force isn't set, so
+			// AskForConfirm has no way to ask - see confirmation.go.
 			name: "prompt to confirm without --force argument",
 			extraArgs: []string{
 				testRegistryName,
 			},
 			expect:      func(m *mocks.MockRegistryService, config *CmdConfig) {},
-			expectError: errOperationAborted,
+			expectError: errConfirmationRequired,
 		},
 	}
 	for _, test := range tests {

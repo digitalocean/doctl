@@ -169,7 +169,9 @@ auth-contexts:
 	t.Run("an unknown context is an error", func(t *testing.T) {
 		cfg := loadStubbedConfig(t, "auth-contexts:\n  work: work-token\n")
 
-		assert.ErrorContains(t, cfg.removeContext("nope"), "Context not found")
+		// Same error auth switch reports for the same condition, so the two
+		// commands no longer disagree about what to call a missing context.
+		assert.ErrorIs(t, cfg.removeContext("nope"), errUnknownAuthContext)
 		assert.Equal(t, "work-token", cfg.contexts()["work"], "nothing is removed on failure")
 	})
 }

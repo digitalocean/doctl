@@ -351,8 +351,8 @@ func RunScenarioSetDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if !force && AskForConfirmDelete("scenario set", 1) != nil {
-		return errOperationAborted
+	if err := confirmDelete(force, "scenario set", 1); err != nil {
+		return err
 	}
 
 	if err := c.GradientAI().DeleteScenarioSet(c.Args[0]); err != nil {

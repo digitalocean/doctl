@@ -349,14 +349,10 @@ func RunDropletAutoscaleDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("droplet autoscale pool", 1) == nil {
-		if err = c.DropletAutoscale().Delete(id); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "droplet autoscale pool", 1); err != nil {
+		return err
 	}
-	return nil
+	return c.DropletAutoscale().Delete(id)
 }
 
 // RunDropletAutoscaleDeleteDangerous deletes an autoscale pool and all underlying members
@@ -370,12 +366,8 @@ func RunDropletAutoscaleDeleteDangerous(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("droplet autoscale pool", 1) == nil {
-		if err = c.DropletAutoscale().DeleteDangerous(id); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "droplet autoscale pool", 1); err != nil {
+		return err
 	}
-	return nil
+	return c.DropletAutoscale().DeleteDangerous(id)
 }

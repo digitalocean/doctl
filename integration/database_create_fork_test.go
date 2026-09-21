@@ -124,7 +124,7 @@ var _ = suite("database/create/fork", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(restoreFromTimestampError), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(restoreFromTimestampError)+"\n→ run doctl databases fork --help", strings.TrimSpace(string(output)))
 		})
 	})
 })

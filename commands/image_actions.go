@@ -114,7 +114,7 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 
 	a, err := ias.Transfer(id, req)
 	if err != nil {
-		checkErr(fmt.Errorf("Could not transfer image: %v", err))
+		checkErr(fmt.Errorf("Could not transfer image: %w", err))
 	}
 
 	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)

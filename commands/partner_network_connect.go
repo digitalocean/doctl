@@ -446,34 +446,32 @@ func RunPartnerAttachmentDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("Partner Attachment", 1) == nil {
+	if err := confirmDelete(force, "Partner Attachment", 1); err != nil {
+		return err
+	}
 
-		pas := c.PartnerAttachments()
-		err := pas.DeletePartnerAttachment(paID)
+	pas := c.PartnerAttachments()
+	err = pas.DeletePartnerAttachment(paID)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		w, err := newWaiter(c)
 		if err != nil {
 			return err
 		}
 
-		wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
-		if err != nil {
+		if err := waitForPNC(w, pas, paID, "DELETED", "Deleting", true); err != nil {
 			return err
 		}
-
-		if wait {
-			w, err := newWaiter(c)
-			if err != nil {
-				return err
-			}
-
-			if err := waitForPNC(w, pas, paID, "DELETED", "Deleting", true); err != nil {
-				return err
-			}
-		} else {
-			notice("Partner Attachment deletion request accepted")
-		}
-
 	} else {
-		return fmt.Errorf("operation aborted")
+		notice("Partner Attachment deletion request accepted")
 	}
 
 	return nil

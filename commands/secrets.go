@@ -384,11 +384,11 @@ func RunCmdSecretsDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("secret", 1) == nil {
-		return c.Secrets().Delete(name, region)
+	if err := confirmDelete(force, "secret", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	return c.Secrets().Delete(name, region)
 }
 
 // RunCmdSecretsRestore restores a secret container scheduled for deletion.
@@ -517,19 +517,9 @@ func confirmSecretKeysRemoved(c *CmdConfig, name string, keys []string) error {
 	if err != nil {
 		return err
 	}
-	if force {
-		return nil
-	}
 
 	message := fmt.Sprintf("remove keys %s from %q", strings.Join(keys, ", "), name)
-	if err := AskForConfirm(message); err != nil {
-		if err == ErrExitSilently {
-			return err
-		}
-		return errOperationAborted
-	}
-
-	return nil
+	return confirmAction(force, message)
 }
 
 func writeSecret(c *CmdConfig, name, region string, values map[string]string, version int) error {

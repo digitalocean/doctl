@@ -229,15 +229,15 @@ func RunFirewallDelete(c *CmdConfig) error {
 		return err
 	}
 
+	if err := confirmDelete(force, "firewall", len(c.Args)); err != nil {
+		return err
+	}
+
 	fs := c.Firewalls()
-	if force || AskForConfirmDelete("firewall", len(c.Args)) == nil {
-		for _, id := range c.Args {
-			if err := fs.Delete(id); err != nil {
-				return err
-			}
+	for _, id := range c.Args {
+		if err := fs.Delete(id); err != nil {
+			return err
 		}
-	} else {
-		return errOperationAborted
 	}
 
 	return nil

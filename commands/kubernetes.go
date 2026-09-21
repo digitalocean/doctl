@@ -999,12 +999,12 @@ func getUpgradeVersionOrLatest(c *CmdConfig, clusterID string) (string, bool, er
 
 	cluster, err := c.Kubernetes().Get(clusterID)
 	if err != nil {
-		return "", false, fmt.Errorf("Unable to look up cluster to find the latest version from the API: %v", err)
+		return "", false, fmt.Errorf("Unable to look up cluster to find the latest version from the API: %w", err)
 	}
 
 	versions, err := c.Kubernetes().GetUpgrades(clusterID)
 	if err != nil {
-		return "", false, fmt.Errorf("Unable to look up the latest version from the API: %v", err)
+		return "", false, fmt.Errorf("Unable to look up the latest version from the API: %w", err)
 	}
 	if len(versions) == 0 {
 		return "", false, nil
@@ -1084,10 +1084,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 			return err
 		}
 
-		if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
-			// continue
-		} else {
-			return fmt.Errorf("Operation aborted")
+		if err := confirmDelete(force, "Kubernetes cluster", 1); err != nil {
+			return err
 		}
 
 		var kubeconfig []byte
@@ -1157,10 +1155,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		return err
 	}
 
-	if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
-		// continue
-	} else {
-		return fmt.Errorf("Operation aborted")
+	if err := confirmDelete(force, "Kubernetes cluster", 1); err != nil {
+		return err
 	}
 
 	kube := c.Kubernetes()
@@ -1664,15 +1660,10 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolDelete(c *CmdConfig) err
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("Kubernetes node pool", 1) == nil {
-		kube := c.Kubernetes()
-		if err := kube.DeleteNodePool(clusterID, poolID); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "Kubernetes node pool", 1); err != nil {
+		return err
 	}
-	return nil
+	return c.Kubernetes().DeleteNodePool(clusterID, poolID)
 }
 
 // RunKubernetesNodeDelete deletes a Kubernetes Node
@@ -1709,8 +1700,8 @@ func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
 		msg = "replace this Kubernetes node?"
 	}
 
-	if !(force || AskForConfirm(msg) == nil) {
-		return errOperationAborted
+	if err := confirmAction(force, msg); err != nil {
+		return err
 	}
 
 	skipDrain, err := c.Doit.GetBool(c.NS, "skip-drain")
@@ -2975,7 +2966,7 @@ func getVersionOrLatest(c *CmdConfig) (string, error) {
 	}
 	versions, err := c.Kubernetes().GetVersions()
 	if err != nil {
-		return "", fmt.Errorf("No version flag provided. Unable to lookup the latest version from the API: %v", err)
+		return "", fmt.Errorf("No version flag provided. Unable to lookup the latest version from the API: %w", err)
 	}
 	if len(versions) > 0 {
 		return versions[0].Slug, nil

@@ -690,25 +690,25 @@ func RunDropletDelete(c *CmdConfig) error {
 			resourceType = "Droplets"
 		}
 
-		if force || AskForConfirm(fmt.Sprintf("delete %d %s tagged \"%s\"? [affected %s: %s]", len(list), resourceType, tagName, resourceType, affectedIDs)) == nil {
-			return ds.DeleteByTag(tagName)
+		if err := confirmAction(force, fmt.Sprintf("delete %d %s tagged \"%s\"? [affected %s: %s]", len(list), resourceType, tagName, resourceType, affectedIDs)); err != nil {
+			return err
 		}
-		return errOperationAborted
+		return ds.DeleteByTag(tagName)
 	}
 
-	if force || AskForConfirmDelete("Droplet", len(c.Args)) == nil {
+	if err := confirmDelete(force, "Droplet", len(c.Args)); err != nil {
+		return err
+	}
 
-		fn := func(ids []int) error {
-			for _, id := range ids {
-				if err := ds.Delete(id); err != nil {
-					return fmt.Errorf("Unable to delete Droplet %d: %v", id, err)
-				}
+	fn := func(ids []int) error {
+		for _, id := range ids {
+			if err := ds.Delete(id); err != nil {
+				return fmt.Errorf("Unable to delete Droplet %d: %w", id, err)
 			}
-			return nil
 		}
-		return matchDroplets(c.Args, ds, fn)
+		return nil
 	}
-	return errOperationAborted
+	return matchDroplets(c.Args, ds, fn)
 }
 
 type matchDropletsFn func(ids []int) error

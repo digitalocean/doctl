@@ -114,7 +114,7 @@ func (c *configFile) removeContext(context string) error {
 
 	key := c.contextKey(context)
 	if _, ok := contexts[key]; !ok {
-		return errors.New("Context not found")
+		return errUnknownAuthContext
 	}
 
 	delete(contexts, key)
