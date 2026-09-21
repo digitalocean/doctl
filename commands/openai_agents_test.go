@@ -16,6 +16,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -206,6 +207,27 @@ func TestPrepareOpenAISandboxStart_NonOpenAI(t *testing.T) {
 
 func TestPrepareOpenAISandboxStart_FlatNonOpenAI(t *testing.T) {
 	id, overlay, err := prepareOpenAISandboxStart(context.Background(), []byte("agent: opencode\n"))
+	require.NoError(t, err)
+	assert.Empty(t, id)
+	assert.Nil(t, overlay)
+}
+
+// Agent codex is the Codex CLI, not OpenAI's sandbox-provider adapter: no
+// OpenAI session is created for it, so there is nothing for ${ENV_ID} or
+// ${REMOTE_URL} to expand to. Built through buildHarnessManifest so the
+// manifest `--harness codex` actually ships is the one under test.
+func TestPrepareOpenAISandboxStart_CodexCLIBypasses(t *testing.T) {
+	orig := createOpenAIAgentsSession
+	t.Cleanup(func() { createOpenAIAgentsSession = orig })
+	createOpenAIAgentsSession = func(context.Context, string, json.RawMessage) (*openAIAgentsSession, error) {
+		t.Error("agent codex must not create an OpenAI Agents session")
+		return nil, errors.New("unexpected create")
+	}
+
+	raw, err := buildHarnessManifest("codex", "", "hello world", "")
+	require.NoError(t, err)
+
+	id, overlay, err := prepareOpenAISandboxStart(context.Background(), raw)
 	require.NoError(t, err)
 	assert.Empty(t, id)
 	assert.Nil(t, overlay)

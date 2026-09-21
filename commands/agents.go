@@ -698,7 +698,7 @@ const agentSecretFlagDesc = "Tenant secret as NAME=VALUE, injected into the mani
 // commands cannot drift on spelling, defaults, or help text — the drift that
 // made `start` and `run` indistinguishable in the first place.
 func addAgentCreationFlags(cmd *Command) {
-	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex). Builds the manifest for you. Mutually exclusive with --spec and --from-config.")
+	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
