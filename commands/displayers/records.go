@@ -41,7 +41,10 @@ func (r renderer) records(headers []string, rows [][]string, tones toneTable) {
 
 		row = withPlaceholders(row, count, none)
 		r.headline(row, headline, tones.rowTone(i))
-		r.fields(headers, row, headline, tones.painter(i, ui.ToneMuted))
+		// The label already reads as secondary (labelStyle), so an
+		// unclassified value is left in the default foreground: a value
+		// muted to match its label rendered the two indistinguishably.
+		r.fields(headers, row, headline, tones.painter(i, ui.ToneNone))
 	}
 }
 
@@ -270,10 +273,12 @@ func headlineColumns(headers []string) []int {
 	return headline
 }
 
-// labelStyle draws a field's label faint as well as muted, so it sits behind
-// its own value.
+// labelStyle draws a field's label muted, so it recedes behind the value that
+// follows it. It used to add Faint on top of the muted color; stacking the
+// two attributes reduced most terminals' intensity twice over, leaving
+// labels unreadable on a dark background.
 func labelStyle(env ui.Env) lipgloss.Style {
-	return env.NewStyle().Foreground(ui.ColorMuted).Faint(true)
+	return env.NewStyle().Foreground(ui.ColorMuted)
 }
 
 // fieldSeparator divides the fields sharing a line, drawn as a label is.
