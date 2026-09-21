@@ -56,3 +56,33 @@ func (mr *MockPrepaymentServiceMockRecorder) Get(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrepaymentService)(nil).Get), ctx)
 }
+
+// GetConfig mocks base method.
+func (m *MockPrepaymentService) GetConfig() (*do.PrepaymentConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConfig")
+	ret0, _ := ret[0].(*do.PrepaymentConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConfig indicates an expected call of GetConfig.
+func (mr *MockPrepaymentServiceMockRecorder) GetConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfig", reflect.TypeOf((*MockPrepaymentService)(nil).GetConfig))
+}
+
+// GetStatus mocks base method.
+func (m *MockPrepaymentService) GetStatus() (*do.PrepaymentStatusResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStatus")
+	ret0, _ := ret[0].(*do.PrepaymentStatusResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStatus indicates an expected call of GetStatus.
+func (mr *MockPrepaymentServiceMockRecorder) GetStatus() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStatus", reflect.TypeOf((*MockPrepaymentService)(nil).GetStatus))
+}

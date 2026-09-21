@@ -61,6 +61,7 @@ type CmdConfig struct {
 	Account             func() do.AccountService
 	Balance             func() do.BalanceService
 	BillingHistory      func() do.BillingHistoryService
+	Prepayment          func() do.PrepaymentService
 	Invoices            func() do.InvoicesService
 	Tags                func() do.TagsService
 	UptimeChecks        func() do.UptimeChecksService
@@ -92,7 +93,6 @@ type CmdConfig struct {
 	Security            func() do.SecurityService
 	HostedAgents        func() do.HostedAgentsService
 	HostedAgentTriggers func() do.HostedAgentTriggersService
-	Prepayment          func() do.PrepaymentService
 	Secrets             func() do.SecretsService
 }
 
@@ -130,6 +130,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
 			c.Balance = func() do.BalanceService { return do.NewBalanceService(godoClient) }
 			c.BillingHistory = func() do.BillingHistoryService { return do.NewBillingHistoryService(godoClient) }
+			c.Prepayment = func() do.PrepaymentService { return do.NewPrepaymentService(godoClient) }
 			c.Invoices = func() do.InvoicesService { return do.NewInvoicesService(godoClient) }
 			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
 			c.UptimeChecks = func() do.UptimeChecksService { return do.NewUptimeChecksService(godoClient) }
@@ -172,7 +173,6 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.HostedAgentTriggers = func() do.HostedAgentTriggersService {
 				return do.NewHostedAgentTriggersService(godoClient)
 			}
-			c.Prepayment = func() do.PrepaymentService { return do.NewPrepaymentService(godoClient) }
 			c.Secrets = func() do.SecretsService { return do.NewSecretsService(godoClient) }
 			return nil
 		},

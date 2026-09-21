@@ -118,6 +118,24 @@ func (s stubPrepayment) Get(ctx context.Context) (*do.PrepaymentConfig, *do.Prep
 	return s.cfg, s.status, s.err
 }
 
+func (s stubPrepayment) GetConfig() (*do.PrepaymentConfigResponse, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &do.PrepaymentConfigResponse{
+		PrepaymentConfigResponse: &godo.PrepaymentConfigResponse{Config: s.cfg, Status: s.status},
+	}, nil
+}
+
+func (s stubPrepayment) GetStatus() (*do.PrepaymentStatusResponse, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &do.PrepaymentStatusResponse{
+		PrepaymentStatusResponse: &godo.PrepaymentStatusResponse{Status: s.status},
+	}, nil
+}
+
 func configWithPrepayment(svc do.PrepaymentService) *CmdConfig {
 	return &CmdConfig{
 		Out:        &bytes.Buffer{},

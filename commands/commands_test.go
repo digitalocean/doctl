@@ -249,6 +249,7 @@ type tcMocks struct {
 	apps                  *domocks.MockAppsService
 	balance               *domocks.MockBalanceService
 	billingHistory        *domocks.MockBillingHistoryService
+	prepayment            *domocks.MockPrepaymentService
 	databases             *domocks.MockDatabasesService
 	dropletActions        *domocks.MockDropletActionsService
 	dropletAutoscale      *domocks.MockDropletAutoscaleService
@@ -299,7 +300,6 @@ type tcMocks struct {
 	security              *domocks.MockSecurityService
 	hostedAgents          *domocks.MockHostedAgentsService
 	hostedAgentTriggers   *domocks.MockHostedAgentTriggersService
-	prepayment            *domocks.MockPrepaymentService
 	secrets               *domocks.MockSecretsService
 	vectorDBs             *domocks.MockVectorDBsService
 }
@@ -314,6 +314,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		apps:                  domocks.NewMockAppsService(ctrl),
 		balance:               domocks.NewMockBalanceService(ctrl),
 		billingHistory:        domocks.NewMockBillingHistoryService(ctrl),
+		prepayment:            domocks.NewMockPrepaymentService(ctrl),
 		keys:                  domocks.NewMockKeysService(ctrl),
 		sizes:                 domocks.NewMockSizesService(ctrl),
 		regions:               domocks.NewMockRegionsService(ctrl),
@@ -364,7 +365,6 @@ func withTestClient(t *testing.T, tFn testFn) {
 		security:              domocks.NewMockSecurityService(ctrl),
 		hostedAgents:          domocks.NewMockHostedAgentsService(ctrl),
 		hostedAgentTriggers:   domocks.NewMockHostedAgentTriggersService(ctrl),
-		prepayment:            domocks.NewMockPrepaymentService(ctrl),
 		secrets:               domocks.NewMockSecretsService(ctrl),
 		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
 	}
@@ -405,6 +405,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Account:             func() do.AccountService { return tm.account },
 		Balance:             func() do.BalanceService { return tm.balance },
 		BillingHistory:      func() do.BillingHistoryService { return tm.billingHistory },
+		Prepayment:          func() do.PrepaymentService { return tm.prepayment },
 		Invoices:            func() do.InvoicesService { return tm.invoices },
 		Tags:                func() do.TagsService { return tm.tags },
 		UptimeChecks:        func() do.UptimeChecksService { return tm.uptimeChecks },
@@ -437,7 +438,6 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Security:            func() do.SecurityService { return tm.security },
 		HostedAgents:        func() do.HostedAgentsService { return tm.hostedAgents },
 		HostedAgentTriggers: func() do.HostedAgentTriggersService { return tm.hostedAgentTriggers },
-		Prepayment:          func() do.PrepaymentService { return tm.prepayment },
 		Secrets:             func() do.SecretsService { return tm.secrets },
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
 	}
