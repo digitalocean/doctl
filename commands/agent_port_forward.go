@@ -272,8 +272,11 @@ func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) error {
 	stylingEnabled = detectStyling()
 	fmt.Fprintf(c.Out, "%s\n", colorize(
 		fmt.Sprintf("Session %s is paused — resuming…", displaySessionRef(sess)), colMuted))
+	// port-forward is the one agent command outside the pretty-error wrapper,
+	// so the prepay card has to be built here or a gated resume would print a
+	// raw REST dump.
 	if err := svc.ResumeSession(sessionID); err != nil {
-		return beautifyAgentError(err)
+		return beautifyAgentErrorFor(c, err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), runWaitTimeout)

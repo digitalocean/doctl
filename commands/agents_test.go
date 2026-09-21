@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "template", "exec", "prompt", "files")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -887,6 +887,55 @@ func TestRunAgentsList_Pagination(t *testing.T) {
 
 		assert.NoError(t, RunAgentsList(config))
 		assert.Contains(t, buf.String(), "Next page token: 1561")
+	})
+}
+
+// --paused-by narrows to a pause reason the API cannot filter on, so it must
+// both imply status=paused on the request and filter the page it gets back.
+func TestRunAgentsList_PausedBy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentSessionListOptions{
+			Status: godo.HostedAgentSessionStatusPaused,
+		}
+		tm.hostedAgents.EXPECT().ListSessions(want).Return([]do.HostedAgentSession{
+			{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:   "sess_broke",
+					Name:        "broke",
+					PauseReason: godo.HostedAgentSessionPauseReasonLowBalance,
+				},
+			},
+			{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:   "sess_idle",
+					Name:        "napping",
+					PauseReason: godo.HostedAgentSessionPauseReasonIdle,
+				},
+			},
+		}, "", nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentPausedBy, "low-balance")
+
+		require.NoError(t, RunAgentsList(config))
+		got := buf.String()
+		assert.Contains(t, got, "broke")
+		assert.Contains(t, got, "low_balance", "the reason belongs on the row, not just in the filter")
+		assert.NotContains(t, got, "napping")
+	})
+}
+
+// Asking for a pause reason alongside a non-paused status can never match, so
+// it is rejected rather than silently returning nothing.
+func TestRunAgentsList_PausedByConflictsWithStatus(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentPausedBy, "low-balance")
+		config.Doit.Set(config.NS, doctl.ArgAgentStatus, string(godo.HostedAgentSessionStatusReady))
+
+		err := RunAgentsList(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "only applies to paused sessions")
 	})
 }
 

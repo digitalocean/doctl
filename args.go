@@ -1046,6 +1046,9 @@ const (
 	// ArgAgentParentSessionID filters list to forked children of a parent session.
 	ArgAgentParentSessionID = "parent-session-id"
 
+	// ArgAgentPausedBy filters list to paused sessions with a given pause reason.
+	ArgAgentPausedBy = "paused-by"
+
 	// ArgAgentTriggerKind filters or sets trigger kind (webhook|cron).
 	ArgAgentTriggerKind = "kind"
 

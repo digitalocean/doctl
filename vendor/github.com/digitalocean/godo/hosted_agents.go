@@ -193,6 +193,23 @@ const (
 	HostedAgentSessionStatusPaused       HostedAgentSessionStatus = "SESSION_STATUS_PAUSED"
 )
 
+// HostedAgentSessionPauseReason is why a paused session was paused. The API
+// reserves the right to add reasons, so an unrecognized value is an opaque
+// reason string rather than an error: compare against the constants below to
+// recognize a reason, but pass anything else through as-is.
+type HostedAgentSessionPauseReason string
+
+const (
+	// HostedAgentSessionPauseReasonManual is a pause requested through PauseSession.
+	HostedAgentSessionPauseReasonManual HostedAgentSessionPauseReason = "manual"
+	// HostedAgentSessionPauseReasonIdle is an automatic pause after inactivity.
+	HostedAgentSessionPauseReasonIdle HostedAgentSessionPauseReason = "idle"
+	// HostedAgentSessionPauseReasonLowBalance is a pause by the prepayment gate.
+	// It is the only reason the server auto-resumes from, and only for sessions
+	// with ResumeOnTopoff set.
+	HostedAgentSessionPauseReasonLowBalance HostedAgentSessionPauseReason = "low_balance"
+)
+
 // HostedAgentProviderAuthState tracks OAuth authorization for an external provider.
 type HostedAgentProviderAuthState string
 
@@ -365,6 +382,10 @@ type HostedAgentSession struct {
 	// Origin is present for newly created sessions (including direct). Older
 	// sessions may omit it.
 	Origin *HostedAgentSessionOrigin `json:"origin,omitempty"`
+	// PauseReason qualifies Status when it is SESSION_STATUS_PAUSED, and is
+	// omitted otherwise. Unrecognized values are opaque, not errors — see
+	// HostedAgentSessionPauseReason.
+	PauseReason HostedAgentSessionPauseReason `json:"pause_reason,omitempty"`
 	// SandboxID is the sandbox identity for support / debugging. Informational;
 	// omitted until a sandbox is allocated.
 	SandboxID string `json:"sandbox_id,omitempty"`

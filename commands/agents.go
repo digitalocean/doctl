@@ -550,7 +550,8 @@ func Agents() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123`
+	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (low-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
+	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by low-balance`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show one session",
@@ -666,6 +667,13 @@ A paused session is resumed automatically before the tunnel opens, same as `+"`"
 		Writer)
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
 	cmdPortForward.Example = `doctl agents port-forward sess_abc123 3000 8080:8000`
+
+	cmdBalance := CmdBuilder(cmd, RunAgentsBalance, "balance",
+		"Show your team's prepayment balance and gate status",
+		agentsBalanceHelpMD,
+		Writer, agentsNS(
+			displayerType(&displayers.HarnessPrepayBalance{}))...)
+	cmdBalance.Example = `doctl harness-runtime balance; doctl harness-runtime balance -o json`
 
 	cmd.AddCommand(AgentCheckpoints())
 	cmd.AddCommand(AgentTriggers())
@@ -1541,6 +1549,11 @@ func RunAgentsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	pausedBy, err := c.Doit.GetString(c.NS, doctl.ArgAgentPausedBy)
+	if err != nil {
+		return err
+	}
+	sessions = filterByPauseReason(sessions, pausedBy)
 	if Output == "json" {
 		if err := c.Display(&displayers.HostedAgentSession{Sessions: sessions}); err != nil {
 			return err
@@ -1579,6 +1592,20 @@ func agentsListOptions(c *CmdConfig) (*godo.HostedAgentSessionListOptions, error
 	parentRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentParentSessionID)
 	if err != nil {
 		return nil, err
+	}
+	pausedBy, err := c.Doit.GetString(c.NS, doctl.ArgAgentPausedBy)
+	if err != nil {
+		return nil, err
+	}
+	if pausedBy != "" {
+		// A pause reason only exists on paused sessions, so asking for one
+		// alongside a different status can never match anything.
+		pausedStatus := string(godo.HostedAgentSessionStatusPaused)
+		if status != "" && !strings.EqualFold(status, pausedStatus) {
+			return nil, fmt.Errorf("--%s only applies to paused sessions, so it cannot be combined with --%s %s",
+				doctl.ArgAgentPausedBy, doctl.ArgAgentStatus, status)
+		}
+		status = pausedStatus
 	}
 	var parentSessionID string
 	if parentRef != "" {
@@ -4636,7 +4663,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 					Outcome: outcome,
 					Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
 				}); err != nil {
-					fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+					reportHITLResolveErr(c, state, err)
 				} else {
 					// Clear client-side now; the server's HITLResolved event
 					// will arrive over SSE and call clearIf again (idempotent).
@@ -4679,7 +4706,7 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 					Outcome: outcome,
 					Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
 				}); err != nil {
-					fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+					reportHITLResolveErr(c, state, err)
 				} else {
 					pending.clearIf(id)
 				}
@@ -4731,9 +4758,14 @@ func attachLoop(c *CmdConfig, svc do.HostedAgentsService, sessionID string, in i
 				printSessionEndedNotice(c.Out, state.sessionRef)
 				return nil
 			}
+			if prepayBlockedErr(err) {
+				printPrepayBlocked(c, state, err)
+				continue
+			}
 			fmt.Fprintf(c.Out, "send failed: %v\n", err)
 			continue
 		}
+		state.clearPrepayBlocked()
 		printAttachSendAck(c.Out, nil, thinking)
 	}
 }
@@ -4901,6 +4933,9 @@ type attachState struct {
 	// Set once the head of pending is recognized as hitlShapeForm; cleared on
 	// submit, resolve failure, or detach.
 	form *elicitationForm
+	// prepayNotified latches the add-funds card to once per gate episode, so
+	// retrying in a tight loop does not wallpaper the terminal. Guarded by mu.
+	prepayNotified bool
 	// Input history for bash-style ↑/↓ recall within this attach session.
 	history   []string
 	histIndex int    // len(history) means draft/new line; 0..len-1 browses history
@@ -6474,7 +6509,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 				Outcome: outcome,
 				Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
 			}); err != nil {
-				fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+				reportHITLResolveErr(c, state, err)
 			} else {
 				state.pending.clearIf(id)
 			}
@@ -6635,8 +6670,9 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 				Outcome: outcome,
 				Source:  godo.HostedAgentResolutionSourceInlineKeystroke,
 			}); err != nil {
-				fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
+				reportHITLResolveErr(c, state, err)
 			} else {
+				state.clearPrepayBlocked()
 				state.pending.clearIf(id)
 			}
 			return false
@@ -6657,10 +6693,18 @@ func processAttachLine(c *CmdConfig, svc do.HostedAgentsService, sessionID, line
 			printSessionEndedNotice(c.Out, state.sessionRef)
 			return true
 		}
+		if prepayBlockedErr(err) {
+			printPrepayBlocked(c, state, err)
+			// Give the message back: the send failed for a billing reason that
+			// had nothing to do with what the user typed.
+			restoreInput(state, line)
+			return false
+		}
 		fmt.Fprintf(c.Out, "send failed: %v\n", err)
 		restoreInput(state, line)
 		return false
 	}
+	state.clearPrepayBlocked()
 	if warmup != nil && warmup.isActive() {
 		warmup.markInputQueued()
 	}
@@ -7139,6 +7183,12 @@ type runFailedPayload struct {
 	Message string `json:"message,omitempty"`
 }
 
+// runPausedPayload carries why a run stopped. The server documents the reason
+// as an open string, so it is rendered rather than switched on exhaustively.
+type runPausedPayload struct {
+	Reason string `json:"reason,omitempty"`
+}
+
 func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	switch ev.Kind {
 	case godo.HostedAgentEventKindTokenChunk:
@@ -7221,6 +7271,17 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 			fmt.Fprintf(w, "\n%s %s\n", colorize("✗", colError), colorize(msg, colError))
 			fmt.Fprintln(w, colorize(runSeparator, colMuted))
 		}
+	case godo.HostedAgentEventKindRunPaused:
+		var p runPausedPayload
+		// Render even on a malformed payload: an unexplained pause is worse
+		// than one with no reason attached.
+		_ = json.Unmarshal(ev.Payload, &p)
+		renderRunPaused(w, p.Reason)
+	case godo.HostedAgentEventKindRunResumed:
+		// The prepay top-off sweep resumes a session by forwarding a literal
+		// "continue", so without this the agent looks like it started talking
+		// on its own.
+		fmt.Fprintf(w, "\n%s\n", colorize("▶ run resumed", colMuted))
 	case godo.HostedAgentEventKindSessionUpdated:
 		fmt.Fprintf(w, "\n%s\n", colorize("• session updated", colMuted))
 	case godo.HostedAgentEventKindRunSandboxAllocated:

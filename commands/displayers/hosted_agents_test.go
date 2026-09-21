@@ -108,6 +108,90 @@ func TestHostedAgentSessionJSON_PreservesSandboxIDAndResumeOnTopoff(t *testing.T
 	assert.Equal(t, true, out["resume_on_topoff"])
 }
 
+// --- HostedAgentSession pause reason -----------------------------------------
+
+func TestHostedAgentSessionJSON_CarriesPauseReason(t *testing.T) {
+	var buf bytes.Buffer
+	d := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{{
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID:   "sess_1",
+				Status:      godo.HostedAgentSessionStatusPaused,
+				PauseReason: godo.HostedAgentSessionPauseReasonLowBalance,
+			},
+		}},
+		Single: true,
+	}
+	require.NoError(t, d.JSON(&buf))
+
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, "sess_1", out["session_id"], "godo's fields must still be flat, not nested under the wrapper")
+	assert.Equal(t, "low_balance", out["pause_reason"])
+}
+
+func TestHostedAgentSessionJSON_OmitsEmptyPauseReason(t *testing.T) {
+	var buf bytes.Buffer
+	d := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{{
+			HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"},
+		}},
+		Single: true,
+	}
+	require.NoError(t, d.JSON(&buf))
+
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.NotContains(t, out, "pause_reason", "a running session has no pause reason to report")
+}
+
+// The column is only carried when it has something to say, so an ordinary list
+// does not grow a blank column.
+func TestHostedAgentSessionCols_PauseReasonIsConditional(t *testing.T) {
+	running := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"}},
+		},
+	}
+	assert.NotContains(t, running.Cols(), "PauseReason")
+
+	paused := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"}},
+			{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:   "sess_2",
+					PauseReason: godo.HostedAgentSessionPauseReasonIdle,
+				},
+			},
+		},
+	}
+	assert.Contains(t, paused.Cols(), "PauseReason")
+
+	// With nothing to display the column still appears, so --format documents it.
+	assert.Contains(t, (&HostedAgentSession{}).Cols(), "PauseReason")
+
+	// ColMap always knows it, so --format PauseReason works either way.
+	assert.Equal(t, "Pause Reason", running.ColMap()["PauseReason"])
+}
+
+func TestHostedAgentSessionKV_PassesUnknownReasonVerbatim(t *testing.T) {
+	d := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{{
+			HostedAgentSession: &godo.HostedAgentSession{
+				SessionID: "sess_1",
+				// The API reserves the right to add reasons; an unrecognized
+				// one must not be flattened to "unknown".
+				PauseReason: "some_future_reason",
+			},
+		}},
+	}
+
+	kv := d.KV()
+	require.Len(t, kv, 1)
+	assert.Equal(t, "some_future_reason", kv[0]["PauseReason"])
+}
+
 // --- HostedAgentWorkspaceUpload JSON shape ------------------------------------
 //
 // Upload is currently single-file-only (always exactly one item), so this

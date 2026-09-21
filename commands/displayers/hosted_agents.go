@@ -47,7 +47,25 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSession) Cols() []string {
-	return []string{"SessionID", "Name", "AgentKind", "Status", "ConfigID", "ParentSessionID", "ForkID", "RepoHint", "CreatedAt"}
+	cols := []string{"SessionID", "Name", "AgentKind", "Status", "ConfigID", "ParentSessionID", "ForkID", "RepoHint", "CreatedAt"}
+
+	// A pause reason only exists on paused sessions, so the column is carried
+	// only when some session has one — otherwise every list would grow a blank
+	// column. It is also included when there is nothing to show, so the column
+	// still appears in the --format help text and stays discoverable.
+	if len(h.Sessions) == 0 || h.anyPauseReason() {
+		cols = append(cols, "PauseReason")
+	}
+	return cols
+}
+
+func (h *HostedAgentSession) anyPauseReason() bool {
+	for _, s := range h.Sessions {
+		if s.PauseReason != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HostedAgentSession) ColMap() map[string]string {
@@ -61,6 +79,7 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"ForkID":          "Fork",
 		"RepoHint":        "Repo",
 		"CreatedAt":       "Created",
+		"PauseReason":     "Pause Reason",
 	}
 }
 
@@ -83,6 +102,10 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			"ForkID":          s.ForkID,
 			"RepoHint":        s.RepoHint,
 			"CreatedAt":       s.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+			// Passed through verbatim: the API reserves the right to add
+			// reasons, so an unrecognized value is shown as-is rather than
+			// flattened to "unknown".
+			"PauseReason": string(s.PauseReason),
 		})
 	}
 	return out
