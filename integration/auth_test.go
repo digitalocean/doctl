@@ -5,7 +5,6 @@ package integration
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -240,7 +239,14 @@ context: default
 
 			expect.Contains(buf.String(), "Validating token...")
 			expect.Contains(buf.String(), "✗")
-			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v1/oauth/token/info: 401", server.URL))
+			// The rejected token surfaces as a structured 401 rather than the
+			// raw request line: the wrapper preserves the godo error, so the
+			// status-code table supplies the reason and points at auth init
+			// instead of the generic --help fallback.
+			expect.Contains(buf.String(), "Error: Unauthorized")
+			expect.Contains(buf.String(), "your API token is missing, invalid, or expired")
+			expect.Contains(buf.String(), "status 401")
+			expect.Contains(buf.String(), "run doctl auth init")
 		})
 	})
 

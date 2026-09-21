@@ -17,7 +17,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/charmbracelet/lipgloss"
@@ -40,7 +42,12 @@ const (
 )
 
 var (
-	errOperationAborted = fmt.Errorf("Operation aborted.")
+	// errOperationAborted is what confirmDelete/confirmAction return when
+	// the user declines to proceed. Its NextStep is empty on purpose: the
+	// confirmation prompt (or the non-interactive warning that replaces it)
+	// already told the user what to do differently, usually --force, so a
+	// generic `--help` hint underneath would only contradict that.
+	errOperationAborted error = operationAbortedError{}
 
 	// errAction specifies what should happen when an error occurs
 	errAction = func() {
@@ -68,6 +75,48 @@ var (
 type NextStepper interface {
 	NextStep() string
 }
+
+// operationAbortedError reports that the user declined a confirmation
+// prompt. nextStep is the hint to print instead of the default silence, for
+// a call site that has something specific to suggest; left empty - the
+// common case, via errOperationAborted - no next step is printed at all,
+// since the prompt the user just answered already said what it was asking.
+type operationAbortedError struct {
+	nextStep string
+}
+
+func (e operationAbortedError) Error() string    { return "Operation aborted." }
+func (e operationAbortedError) NextStep() string { return e.nextStep }
+
+// errUnknownAuthContext reports that the named auth context is not in the
+// config file. Listing the contexts that do exist is the one thing that
+// reliably helps here, so it says so rather than falling silent.
+var errUnknownAuthContext error = unknownAuthContextError{}
+
+type unknownAuthContextError struct{}
+
+func (e unknownAuthContextError) Error() string    { return "context does not exist" }
+func (e unknownAuthContextError) NextStep() string { return "run doctl auth list" }
+
+// errConfirmationRequired reports that a command needed confirmation but had
+// no way to ask: stderr is not a terminal and --force was not passed.
+//
+// It is a real error rather than a warning plus ErrExitSilently so that the
+// failure reaches checkErr and is rendered once, in whichever format the
+// user asked for - `--output json` otherwise got the warning on stderr and
+// an empty stdout, leaving automation nothing to parse.
+var errConfirmationRequired error = confirmationRequiredError{}
+
+type confirmationRequiredError struct{}
+
+func (e confirmationRequiredError) Error() string {
+	return "Requires confirmation. Use the `--force` flag to continue without confirmation."
+}
+
+// NextStep is empty for the same reason operationAbortedError's is: the
+// message already names the flag to pass, so the default `--help` hint
+// would only argue with it.
+func (e confirmationRequiredError) NextStep() string { return "" }
 
 // StructuredError lets an error supply the whole Title → Reason → Status →
 // Request ID → Next step block checkErr renders, and the same fields
@@ -119,9 +168,16 @@ func (e genericStructuredError) Title() string {
 
 // Reason prefers the message the API itself returned, since it is specific
 // to the request that failed; the status-code table's line is a fallback for
-// when the API had nothing more to say than the status code.
+// when the API had nothing more to say than the status code. When godo's
+// retry client attached one, the attempt count is appended: it only shows up
+// in gerr.Error()'s full text otherwise, which checkErr never prints, and
+// without it an exhausted-retry failure reads identically to one where
+// retries were never attempted at all.
 func (e genericStructuredError) Reason() string {
 	if gerr, ok := apiError(e.err); ok && gerr.Message != "" {
+		if gerr.Attempts > 0 {
+			return fmt.Sprintf("%s (gave up after %d attempt(s))", gerr.Message, gerr.Attempts)
+		}
 		return gerr.Message
 	}
 	if entry, ok := lookupErrorCode(e.err); ok {
@@ -144,21 +200,54 @@ func (e genericStructuredError) RequestID() string {
 	return ""
 }
 
-// NextStep prefers an explicit NextStepper override on the wrapped error,
-// then the status-code table, then the generic `<command> --help` fallback.
+// NextStep resolves the suggestion in order of how much the source knows
+// about the failure:
+//
+//  1. An explicit NextStepper override on the wrapped error, honored
+//     exactly - including an intentionally empty string, since an error
+//     implementing the interface has already decided what to suggest.
+//  2. The status-code table. An entry that offers no step has decided
+//     there is nothing useful to say for that status (404 and 409 both do);
+//     that decision stands rather than being second-guessed.
+//  3. `<command> --help`, but only for a failure doctl raised itself,
+//     before or instead of talking to the API - a bad argument, a rejected
+//     flag combination. Help text describes usage, so it is an answer to
+//     those and only those.
+//
+// A failure the API or the network produced gets no fallback suggestion.
+// Sending someone who hit a 404, a refused connection, or an exhausted
+// retry to `--help` points them at a page that cannot explain any of it;
+// the status and request ID above are the useful part there.
 func (e genericStructuredError) NextStep() string {
 	var ns NextStepper
 	if errors.As(e.err, &ns) {
-		if step := ns.NextStep(); step != "" {
-			return step
-		}
+		return ns.NextStep()
 	}
 	if entry, ok := lookupErrorCode(e.err); ok {
-		if step := resolvedNextStep(entry); step != "" {
-			return step
+		attempts := 0
+		if gerr, ok := apiError(e.err); ok {
+			attempts = gerr.Attempts
 		}
+		return resolvedNextStep(entry, attempts)
+	}
+	if e.Status() != 0 || isTransportError(e.err) {
+		return ""
 	}
 	return defaultNextStep()
+}
+
+// isTransportError reports whether err came from the attempt to reach the
+// API rather than from anything doctl or the API decided - a refused
+// connection, a DNS miss, a timeout. These carry no status code, so they
+// would otherwise be indistinguishable from a local validation failure.
+func isTransportError(err error) bool {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return true
+	}
+
+	var netErr net.Error
+	return errors.As(err, &netErr)
 }
 
 // defaultNextStep suggests the active command's help text. Empty if no

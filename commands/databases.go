@@ -449,12 +449,12 @@ func RunDatabaseDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database cluster", 1) == nil {
-		id := c.Args[0]
-		return c.Databases().Delete(id)
+	if err := confirmDelete(force, "database cluster", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	id := c.Args[0]
+	return c.Databases().Delete(id)
 }
 
 func displayDatabases(c *CmdConfig, short bool, dbs ...do.Database) error {
@@ -1109,13 +1109,13 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database user", 1) == nil {
-		databaseID := c.Args[0]
-		userID := c.Args[1]
-		return c.Databases().DeleteUser(databaseID, userID)
+	if err := confirmDelete(force, "database user", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	userID := c.Args[1]
+	return c.Databases().DeleteUser(databaseID, userID)
 }
 
 func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
@@ -1562,13 +1562,13 @@ func RunDatabasePoolDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database pool", 1) == nil {
-		databaseID := c.Args[0]
-		poolID := c.Args[1]
-		return c.Databases().DeletePool(databaseID, poolID)
+	if err := confirmDelete(force, "database pool", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	poolID := c.Args[1]
+	return c.Databases().DeletePool(databaseID, poolID)
 }
 
 func displayDatabasePools(c *CmdConfig, pools ...do.DatabasePool) error {
@@ -1679,13 +1679,13 @@ func RunDatabaseDBDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database", 1) == nil {
-		databaseID := c.Args[0]
-		dbID := c.Args[1]
-		return c.Databases().DeleteDB(databaseID, dbID)
+	if err := confirmDelete(force, "database", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	dbID := c.Args[1]
+	return c.Databases().DeleteDB(databaseID, dbID)
 }
 
 func displayDatabaseDBs(c *CmdConfig, dbs ...do.DatabaseDB) error {
@@ -1856,13 +1856,13 @@ func RunDatabaseReplicaDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("database replica", 1) == nil {
-		databaseID := c.Args[0]
-		replicaID := c.Args[1]
-		return c.Databases().DeleteReplica(databaseID, replicaID)
+	if err := confirmDelete(force, "database replica", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	replicaID := c.Args[1]
+	return c.Databases().DeleteReplica(databaseID, replicaID)
 }
 
 // RunDatabaseReplicaPromote promotes a read-only replica to become a primary cluster
@@ -2020,13 +2020,13 @@ func RunDatabaseTopicDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("kafka topic", 1) == nil {
-		databaseID := c.Args[0]
-		topicName := c.Args[1]
-		return c.Databases().DeleteTopic(databaseID, topicName)
+	if err := confirmDelete(force, "kafka topic", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+	return c.Databases().DeleteTopic(databaseID, topicName)
 }
 
 func RunDatabaseTopicCreate(c *CmdConfig) error {
@@ -3031,11 +3031,11 @@ func RunDatabaseIndexDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("opensearch index", 1) == nil {
-		databaseID := c.Args[0]
-		indexName := c.Args[1]
-		return c.Databases().DeleteIndex(databaseID, indexName)
+	if err := confirmDelete(force, "opensearch index", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	databaseID := c.Args[0]
+	indexName := c.Args[1]
+	return c.Databases().DeleteIndex(databaseID, indexName)
 }

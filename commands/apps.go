@@ -599,8 +599,8 @@ func RunAppsDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if !force && AskForConfirmDelete("App", 1) != nil {
-		return errOperationAborted
+	if err := confirmDelete(force, "App", 1); err != nil {
+		return err
 	}
 
 	err = c.Apps().Delete(id)

@@ -250,12 +250,12 @@ func RunCDNDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("CDN", 1) == nil {
-		id := c.Args[0]
-		return c.CDNs().Delete(id)
+	if err := confirmDelete(force, "CDN", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	id := c.Args[0]
+	return c.CDNs().Delete(id)
 }
 
 // RunCDNFlushCache flushes the cache of an individual cdn

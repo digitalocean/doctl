@@ -234,7 +234,7 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 			"invalid-gc-uuid",
 		)
 		output, err := cmd.CombinedOutput()
-		expectMsg := "Error: Not Found\nthe requested resource does not exist, or not in this account/context\nstatus 404\n→ run doctl registry garbage-collection cancel --help"
+		expectMsg := "Error: Not Found\nthe requested resource does not exist, or not in this account/context\nstatus 404"
 		expect.Equal(strings.TrimSpace(expectMsg), strings.TrimSpace(string(output)))
 		expect.Error(err)
 	})
@@ -250,7 +250,7 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 			validGCUUID,
 		)
 		output, err := cmd.CombinedOutput()
-		expectMsg := "Error: Not Found\nthe requested resource does not exist, or not in this account/context\nstatus 404\n→ run doctl registry garbage-collection cancel --help"
+		expectMsg := "Error: Not Found\nthe requested resource does not exist, or not in this account/context\nstatus 404"
 		expect.Equal(strings.TrimSpace(expectMsg), strings.TrimSpace(string(output)))
 		expect.Error(err)
 	})

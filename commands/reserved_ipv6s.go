@@ -132,12 +132,12 @@ func RunReservedIPv6Delete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("reserved IPv6", 1) == nil {
-		ip := c.Args[0]
-		return ris.Delete(ip)
+	if err := confirmDelete(force, "reserved IPv6", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	ip := c.Args[0]
+	return ris.Delete(ip)
 }
 
 // RunReservedIPv6List runs reserved IP list.

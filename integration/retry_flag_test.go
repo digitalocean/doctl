@@ -101,11 +101,12 @@ var _ = suite("retries/server-error", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			// The structured render surfaces the API's message (gerr.Message),
-			// not err.Error()'s full text, so the "giving up after N
-			// attempt(s)" annotation - part of Error() but not of Message -
-			// no longer distinguishes this case from the one below.
-			expectedErr := "Error: Internal Server Error\nsomething broke\nstatus 500\n→ run doctl account get"
+			// The Reason line calls out the exhausted retries (gerr.Attempts),
+			// which is what distinguishes this from the "retries disabled"
+			// case below. No next step follows: the 500 entry drops its
+			// "run %s" once retries are exhausted, and --help cannot explain
+			// a server-side failure, so the status is the last word.
+			expectedErr := "Error: Internal Server Error\nsomething broke (gave up after 3 attempt(s))\nstatus 500"
 			expect.Equal(strings.TrimSpace(string(output)), expectedErr)
 		})
 	})

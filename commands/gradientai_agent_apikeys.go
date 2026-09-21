@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -177,16 +175,16 @@ func RunAgentAPIKeyDelete(c *CmdConfig) error {
 	}
 
 	// Ask for confirmation unless --force is set
-	if force || AskForConfirmDelete("ApiKey", 1) == nil {
-		apikeys := c.GradientAI()
-		err := apikeys.DeleteAgentAPIKey(agentID, apikeyID)
-		if err != nil {
-			return err
-		}
-		notice("API Key deleted successfully")
-	} else {
-		return fmt.Errorf("operation aborted")
+	if err := confirmDelete(force, "ApiKey", 1); err != nil {
+		return err
 	}
+
+	apikeys := c.GradientAI()
+	err = apikeys.DeleteAgentAPIKey(agentID, apikeyID)
+	if err != nil {
+		return err
+	}
+	notice("API Key deleted successfully")
 
 	return nil
 }

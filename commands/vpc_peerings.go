@@ -204,32 +204,31 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("VPC Peering", 1) == nil {
-		vpcs := c.VPCs()
-		if err := vpcs.DeleteVPCPeering(peeringID); err != nil {
-			return err
-		}
+	if err := confirmDelete(force, "VPC Peering", 1); err != nil {
+		return err
+	}
 
-		wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	vpcs := c.VPCs()
+	if err := vpcs.DeleteVPCPeering(peeringID); err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		w, err := newWaiter(c)
 		if err != nil {
 			return err
 		}
 
-		if wait {
-			w, err := newWaiter(c)
-			if err != nil {
-				return err
-			}
-
-			if err := waitForVPCPeering(w, vpcs, peeringID, "DELETED", "Deleting", true); err != nil {
-				return err
-			}
-		} else {
-			notice("VPC Peering deletion request accepted")
+		if err := waitForVPCPeering(w, vpcs, peeringID, "DELETED", "Deleting", true); err != nil {
+			return err
 		}
-
 	} else {
-		return fmt.Errorf("operation aborted")
+		notice("VPC Peering deletion request accepted")
 	}
 
 	return nil

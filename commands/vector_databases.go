@@ -217,11 +217,11 @@ func RunVectorDBDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("vector database", 1) == nil {
-		return c.VectorDBs().Delete(c.Args[0])
+	if err := confirmDelete(force, "vector database", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	return c.VectorDBs().Delete(c.Args[0])
 }
 
 // RunVectorDBUpdate updates a vector database configuration.

@@ -121,12 +121,12 @@ var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) 
 			{
 				desc: "when tagging and droplet id is missing",
 				args: append(base, []string{"tag", "1444", "--tag-name", "my-tag"}...),
-				err:  "^Error: Not Found\ntag not found\nstatus 404\n→ run doctl compute droplet tag --help$",
+				err:  "^Error: Not Found\ntag not found\nstatus 404$",
 			},
 			{
 				desc: "when untagging and droplet id is missing",
 				args: append(base, []string{"untag", "1444", "--tag-name", "my-tag"}...),
-				err:  "^Error: Not Found\ntag not found\nstatus 404\n→ run doctl compute droplet untag --help$",
+				err:  "^Error: Not Found\ntag not found\nstatus 404$",
 			},
 			{
 				desc: "when tagging and droplet name is missing",

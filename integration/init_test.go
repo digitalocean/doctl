@@ -23,7 +23,11 @@ var (
 )
 
 const (
-	confirmNonInteractiveOutput = "Warning: Requires confirmation. Use the `--force` flag to continue without confirmation.\nError: Operation aborted."
+	// confirmNonInteractiveOutput is checkErr's whole output when a command
+	// needs confirmation outside a terminal and --force was not passed. The
+	// message names the flag to use, so no next-step line follows it - see
+	// commands/confirmation.go and commands/errors.go.
+	confirmNonInteractiveOutput = "Error: Requires confirmation. Use the `--force` flag to continue without confirmation."
 )
 
 // waitElapsed matches the elapsed time a wait reports on each of its progress

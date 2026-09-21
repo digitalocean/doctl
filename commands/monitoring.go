@@ -430,16 +430,16 @@ func RunCmdAlertPolicyDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("alert policy", len(c.Args)) == nil {
-		for id := range c.Args {
-			uuid := c.Args[id]
-			ms := c.Monitoring()
-			if err := ms.DeleteAlertPolicy(uuid); err != nil {
-				return err
-			}
+	if err := confirmDelete(force, "alert policy", len(c.Args)); err != nil {
+		return err
+	}
+
+	for id := range c.Args {
+		uuid := c.Args[id]
+		ms := c.Monitoring()
+		if err := ms.DeleteAlertPolicy(uuid); err != nil {
+			return err
 		}
-	} else {
-		return errOperationAborted
 	}
 
 	return nil

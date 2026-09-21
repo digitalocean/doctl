@@ -255,12 +255,8 @@ func RunVPCNATGatewayDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("vpc nat gateway", 1) == nil {
-		if err = c.VPCNATGateways().Delete(id); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "vpc nat gateway", 1); err != nil {
+		return err
 	}
-	return nil
+	return c.VPCNATGateways().Delete(id)
 }

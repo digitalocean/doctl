@@ -408,15 +408,15 @@ func RunKnowledgeBaseDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("Knowledge Base", 1) == nil {
-		err := c.GradientAI().DeleteKnowledgeBase(knowledgeBaseId)
-		if err != nil {
-			return err
-		}
-		notice("Knowledge Base deleted successfully")
-	} else {
-		return fmt.Errorf("operation aborted")
+	if err := confirmDelete(force, "Knowledge Base", 1); err != nil {
+		return err
 	}
+
+	err = c.GradientAI().DeleteKnowledgeBase(knowledgeBaseId)
+	if err != nil {
+		return err
+	}
+	notice("Knowledge Base deleted successfully")
 	return nil
 }
 
@@ -483,17 +483,17 @@ func RunKnowledgeBaseDeleteDataSource(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("DataSource of Knowledge Base", 1) == nil {
-		err := c.GradientAI().DeleteKnowledgeBaseDataSource(c.Args[0], c.Args[1])
-		if err != nil {
-			return err
-		}
-		notice("DataSource of Knowledge Base deleted successfully")
-	} else {
-		return fmt.Errorf("operation aborted")
+	if err := confirmDelete(force, "DataSource of Knowledge Base", 1); err != nil {
+		return err
 	}
 
-	return err
+	err = c.GradientAI().DeleteKnowledgeBaseDataSource(c.Args[0], c.Args[1])
+	if err != nil {
+		return err
+	}
+	notice("DataSource of Knowledge Base deleted successfully")
+
+	return nil
 }
 
 // RunAttachKnowledgeBase attaches a knowledge base to an agent.
@@ -518,16 +518,16 @@ func RunDetachKnowledgeBase(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("Detach Knowledge Base from an Agent?", 1) == nil {
-		agent, err := c.GradientAI().DetachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
-		if err != nil {
-			return err
-		}
-		notice("Knowledge Base detached successfully")
-		return c.Display(&displayers.Agent{Agents: do.Agents{*agent}})
-	} else {
-		return fmt.Errorf("operation aborted")
+	if err := confirmDelete(force, "Detach Knowledge Base from an Agent?", 1); err != nil {
+		return err
 	}
+
+	agent, err := c.GradientAI().DetachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
+	if err != nil {
+		return err
+	}
+	notice("Knowledge Base detached successfully")
+	return c.Display(&displayers.Agent{Agents: do.Agents{*agent}})
 }
 
 // RunKnowledgeBaseListIndexingJobs lists all indexing jobs for knowledge bases.

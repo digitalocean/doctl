@@ -183,7 +183,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		// need to initial the godo client since we've changed the configuration.
 		if err := c.initServices(c); err != nil {
-			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
+			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %w", err)
 		}
 
 		server, err := c.Doit.GetString(c.NS, doctl.ArgTokenValidationServer)
@@ -193,7 +193,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		if _, err := c.OAuth().TokenInfo(server); err != nil {
 			template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
-			return fmt.Errorf("Unable to use supplied token to access API: %s", err)
+			return fmt.Errorf("Unable to use supplied token to access API: %w", err)
 		}
 
 		template.Render(c.Out, `{{success checkmark}}{{nl}}{{nl}}`, nil)
@@ -321,7 +321,7 @@ func RunAuthSwitch(c *CmdConfig) error {
 	}
 
 	if !cfg.hasContext(context) {
-		return errors.New("context does not exist")
+		return errUnknownAuthContext
 	}
 
 	cfg.setCurrentContext(context)

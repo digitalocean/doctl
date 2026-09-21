@@ -142,12 +142,12 @@ func RunReservedIPDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("reserved IP", 1) == nil {
-		ip := c.Args[0]
-		return ris.Delete(ip)
+	if err := confirmDelete(force, "reserved IP", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	ip := c.Args[0]
+	return ris.Delete(ip)
 }
 
 // RunReservedIPList runs reserved IP create.

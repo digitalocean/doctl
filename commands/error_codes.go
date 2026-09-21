@@ -35,12 +35,21 @@ type errorCodeEntry struct {
 	// hint in doctl. A "%s" placeholder is substituted with the path of the
 	// command that failed (see resolvedNextStep).
 	NextStep string
+
+	// SuppressNextStepOnRetryExhaustion omits NextStep once godo's retry
+	// client has already given up (the API error carries Attempts > 0).
+	// Re-running the identical command immediately after exhausted retries
+	// is unlikely to fare any better, so the canned "run it again" hint
+	// would be actively misleading rather than just unhelpful.
+	SuppressNextStepOnRetryExhaustion bool
 }
 
 // errorCodeTable covers the status codes doctl users hit most often. It is
-// deliberately short: an entry earns its place by being common enough that a
-// canned next step beats sending everyone to --help. Codes not listed here
-// fall back to defaultNextStep.
+// deliberately short: an entry earns its place by having something specific
+// to say. An entry may set Reason without NextStep, which means there is no
+// useful command to suggest for that status - genericStructuredError.NextStep
+// takes that at face value. Codes absent from the table get no suggestion
+// either, since an API failure is not something --help explains.
 var errorCodeTable = map[int]errorCodeEntry{
 	http.StatusBadRequest: {
 		Reason:   "the request was malformed or failed validation",
@@ -61,8 +70,10 @@ var errorCodeTable = map[int]errorCodeEntry{
 		Reason: "the requested resource does not exist, or not in this account/context",
 	},
 	http.StatusConflict: {
-		Reason:   "the resource is in a state that conflicts with this request",
-		NextStep: "run %s",
+		// No canned next step: re-running the identical command right after
+		// a conflict does not reliably help, since whatever state caused it
+		// may well still be there.
+		Reason: "the resource is in a state that conflicts with this request",
 	},
 	http.StatusUnprocessableEntity: {
 		Reason:   "the request was well-formed but semantically invalid",
@@ -73,20 +84,24 @@ var errorCodeTable = map[int]errorCodeEntry{
 		NextStep: "run doctl account ratelimit",
 	},
 	http.StatusInternalServerError: {
-		Reason:   "the API had an internal error",
-		NextStep: "run %s",
+		Reason:                            "the API had an internal error",
+		NextStep:                          "run %s",
+		SuppressNextStepOnRetryExhaustion: true,
 	},
 	http.StatusBadGateway: {
-		Reason:   "the API gateway could not reach the upstream service",
-		NextStep: "run %s",
+		Reason:                            "the API gateway could not reach the upstream service",
+		NextStep:                          "run %s",
+		SuppressNextStepOnRetryExhaustion: true,
 	},
 	http.StatusServiceUnavailable: {
-		Reason:   "the API is temporarily unavailable",
-		NextStep: "run %s",
+		Reason:                            "the API is temporarily unavailable",
+		NextStep:                          "run %s",
+		SuppressNextStepOnRetryExhaustion: true,
 	},
 	http.StatusGatewayTimeout: {
-		Reason:   "the API did not respond in time",
-		NextStep: "run %s",
+		Reason:                            "the API did not respond in time",
+		NextStep:                          "run %s",
+		SuppressNextStepOnRetryExhaustion: true,
 	},
 }
 
@@ -123,7 +138,13 @@ func lookupErrorCode(err error) (errorCodeEntry, bool) {
 // resolvedNextStep fills entry.NextStep's "%s" placeholder, if it has one,
 // with the failed command's path. Falls back to "doctl" when no command is
 // active, which only happens for errors raised outside a command's Run.
-func resolvedNextStep(entry errorCodeEntry) string {
+// attempts is the retry count godo attached to the error, if any; entries
+// marked SuppressNextStepOnRetryExhaustion return "" once retries have
+// already been exhausted rather than suggesting the same command again.
+func resolvedNextStep(entry errorCodeEntry, attempts int) string {
+	if entry.SuppressNextStepOnRetryExhaustion && attempts > 0 {
+		return ""
+	}
 	if !strings.Contains(entry.NextStep, "%s") {
 		return entry.NextStep
 	}

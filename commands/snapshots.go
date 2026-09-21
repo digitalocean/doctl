@@ -189,15 +189,15 @@ func RunSnapshotDelete(c *CmdConfig) error {
 	ss := c.Snapshots()
 	ids := c.Args
 
-	if force || AskForConfirmDelete("snapshot", len(ids)) == nil {
-		for _, id := range ids {
-			err := ss.Delete(id)
-			if err != nil {
-				return err
-			}
+	if err := confirmDelete(force, "snapshot", len(ids)); err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		err := ss.Delete(id)
+		if err != nil {
+			return err
 		}
-	} else {
-		return errOperationAborted
 	}
 	return nil
 }

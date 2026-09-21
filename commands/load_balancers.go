@@ -292,16 +292,12 @@ func RunLoadBalancerDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("load balancer", 1) == nil {
-		lbs := c.LoadBalancers()
-		if err := lbs.Delete(lbID); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "load balancer", 1); err != nil {
+		return err
 	}
 
-	return nil
+	lbs := c.LoadBalancers()
+	return lbs.Delete(lbID)
 }
 
 // RunLoadBalancerAddDroplets adds droplets to a load balancer.
@@ -401,13 +397,13 @@ func RunLoadBalancerPurgeCache(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("purge CDN cache for global load balancer") == nil {
-		lbs := c.LoadBalancers()
-		if err := lbs.PurgeCache(lbID); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmAction(force, "purge CDN cache for global load balancer"); err != nil {
+		return err
+	}
+
+	lbs := c.LoadBalancers()
+	if err := lbs.PurgeCache(lbID); err != nil {
+		return err
 	}
 
 	return nil

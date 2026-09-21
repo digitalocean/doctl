@@ -222,11 +222,12 @@ func RunVolumeDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("volume", 1) == nil {
-		id := c.Args[0]
-		return c.Volumes().DeleteVolume(id)
+	if err := confirmDelete(force, "volume", 1); err != nil {
+		return err
 	}
-	return errOperationAborted
+
+	id := c.Args[0]
+	return c.Volumes().DeleteVolume(id)
 }
 
 // RunVolumeGet gets a volume.

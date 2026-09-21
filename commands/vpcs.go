@@ -14,8 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -217,13 +215,13 @@ func RunVPCDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("VPC", 1) == nil {
-		vpcs := c.VPCs()
-		if err := vpcs.Delete(vpcUUID); err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("operation aborted")
+	if err := confirmDelete(force, "VPC", 1); err != nil {
+		return err
+	}
+
+	vpcs := c.VPCs()
+	if err := vpcs.Delete(vpcUUID); err != nil {
+		return err
 	}
 
 	return nil
