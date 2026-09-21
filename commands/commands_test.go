@@ -308,6 +308,20 @@ func withTestClient(t *testing.T, tFn testFn) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	// Public Preview Terms runs on create/launch and would otherwise call
+	// Account.Get / ListSessions on every test that never stubs them.
+	prevUUID := agentPublicPreviewAccountUUID
+	prevSessions := agentPublicPreviewHasExistingSessions
+	prevSeen := viper.GetStringSlice(agentPublicPreviewTermsSeenKey)
+	agentPublicPreviewAccountUUID = func(*CmdConfig) string { return "unit-test-account" }
+	agentPublicPreviewHasExistingSessions = func(*CmdConfig) (bool, bool) { return true, true }
+	viper.Set(agentPublicPreviewTermsSeenKey, []string{"user:unit-test-account"})
+	t.Cleanup(func() {
+		agentPublicPreviewAccountUUID = prevUUID
+		agentPublicPreviewHasExistingSessions = prevSessions
+		viper.Set(agentPublicPreviewTermsSeenKey, prevSeen)
+	})
+
 	tm := &tcMocks{
 		account:               domocks.NewMockAccountService(ctrl),
 		actions:               domocks.NewMockActionsService(ctrl),
