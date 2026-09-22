@@ -2556,9 +2556,79 @@ func attachToSession(c *CmdConfig, sess *do.HostedAgentSession) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Render stored history to completion, synchronously, before the live
+	// stream opens or stdin is read — see replayHistoryBeforeAttach. cursor
+	// comes out seeded at the last history event's id, so the live stream
+	// below has nothing left in its own catching_up window to redo.
+	replayHistoryBeforeAttach(ctx, svc, sessionID, c.Out, pending, cursor, thinking, warmup)
+
 	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking, warmup)
 
 	return runAttach(c, svc, sessionID, os.Stdin, state, warmup, thinking)
+}
+
+// replayHistoryBeforeAttach reads a session's stored event history to
+// completion and renders it, then returns — before the caller opens the live
+// stream or starts reading stdin.
+//
+// This is doctl's counterpart to ui-aquarium's "backfill then live" model
+// (useSessionHistoryPager gating useStreamSession on headLoaded, anchored at
+// the pager's newestEventId): a finite history read first, a live attach
+// anchored strictly after it second, rather than one connection whose
+// catching_up phase and live phase share the wire and must be spliced apart.
+// doctl previously only had the single-connection form — streamWithReconnect
+// opens with ReplayFrom empty on first attach, and OHP decides how much
+// recent history to replay before flipping that same connection to live.
+//
+// Splitting it like this, on the same goroutine that will call runAttach
+// right after, is what actually closes MARSOHS-1026's user-visible symptom on
+// doctl's side: stdin is never read until this function returns, so a
+// resent/duplicate turn arriving as ordinary live traffic — the failure mode
+// OHP's own ingest-side dedupe (MARSOHS-1026) now catches, but a defense doctl
+// should not depend on alone — cannot render interleaved with something the
+// user already typed. And because cursor is seeded to the last id this read
+// renders (drainStream's cursor.set(ev.EventID) runs on every event, including
+// stream.state's continue path), the live stream opens with ReplayFrom already
+// past everything shown here, so there is no overlap window left to
+// deduplicate at the splice — history and live meet at a clean seam.
+//
+// Best-effort: a terminal error (auth, missing session) is reported exactly
+// like streamWithReconnect's own classifyStreamError handling and then this
+// still returns, leaving the live stream to report the same failure again on
+// its own connect. A transient error is not reported here at all — it
+// silently falls through to the live stream's own catching_up window, which
+// is the pre-existing behavior for that failure mode and no worse than before
+// this function existed.
+func replayHistoryBeforeAttach(
+	ctx context.Context,
+	svc do.HostedAgentsService,
+	sessionID string,
+	out io.Writer,
+	pending *pendingHITL,
+	cursor *eventCursor,
+	thinking *thinkingState,
+	warmup *warmupState,
+) {
+	stream, err := svc.StreamSession(ctx, sessionID, &godo.HostedAgentSessionStreamOptions{ReplayOnly: true})
+	if err != nil {
+		if ctx.Err() != nil {
+			return
+		}
+		if msg, terminal := classifyStreamError(err); terminal {
+			fmt.Fprintln(out, msg)
+		}
+		return
+	}
+	defer stream.Close()
+
+	dedup := &tokenDeduper{}
+	drainStream(stream, out, pending, cursor, thinking, warmup, dedup)
+
+	if streamErr := stream.Err(); streamErr != nil && ctx.Err() == nil {
+		if msg, terminal := classifyStreamError(streamErr); terminal {
+			fmt.Fprintln(out, msg)
+		}
+	}
 }
 
 func isOpenAISandboxSession(sess *do.HostedAgentSession) bool {

@@ -4387,6 +4387,102 @@ func TestStreamWithReconnect_supersededStopsWithoutReconnect(t *testing.T) {
 	assert.NotContains(t, out, msgReconnectFailed)
 }
 
+// TestReplayHistoryBeforeAttach_RendersHistoryAndSeedsCursor pins the
+// ui-aquarium-parity seam: a ReplayOnly-only read (no ReplayFrom — the head of
+// the stored history) is issued, its events render exactly like a live
+// drainStream would, and cursor ends up seeded at the last event's id so a
+// live attach opened right after has nothing left in its own catching_up
+// window to redo.
+func TestReplayHistoryBeforeAttach_RendersHistoryAndSeedsCursor(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindRunStarted), `{"run":{},"user_input":"hi"}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		DoAndReturn(func(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+			assert.True(t, opt.ReplayOnly, "history read must set ReplayOnly")
+			assert.Empty(t, opt.ReplayFrom, "the head history read has no prior cursor")
+			return openHostedAgentStream(t, client, opt), nil
+		}).
+		Times(1)
+
+	var buf bytes.Buffer
+	cursor := &eventCursor{}
+	replayHistoryBeforeAttach(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil)
+
+	assert.Contains(t, buf.String(), "session updated")
+	assert.Equal(t, "evt-2", cursor.get(), "cursor must advance to the last history event so the live attach resumes strictly after it")
+}
+
+// TestReplayHistoryBeforeAttach_TerminalErrorReportsAndReturns mirrors
+// streamWithReconnect's own classifyStreamError handling: a terminal failure
+// (session gone) on the history read is reported once here, and the function
+// returns rather than blocking attach forever — the live stream that follows
+// will hit and report the same terminal error again on its own connect.
+func TestReplayHistoryBeforeAttach_TerminalErrorReportsAndReturns(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		Return(nil, terminalStreamErr()).
+		Times(1)
+
+	var buf bytes.Buffer
+	cursor := &eventCursor{}
+	replayHistoryBeforeAttach(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil)
+
+	assert.Contains(t, buf.String(), "Session not found")
+	assert.Empty(t, cursor.get())
+}
+
+// TestReplayHistoryBeforeAttach_TransientErrorFallsThroughSilently is the
+// counterpart for a non-terminal failure (network blip on this one read): it
+// must not print anything of its own, since the live stream's own
+// catching_up window covers the same ground next — a network hiccup on this
+// extra read must not be a new, separate failure surface the user sees before
+// the attach has even opened a connection.
+func TestReplayHistoryBeforeAttach_TransientErrorFallsThroughSilently(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		Return(nil, errors.New("dial tcp: connection refused")).
+		Times(1)
+
+	var buf bytes.Buffer
+	cursor := &eventCursor{}
+	replayHistoryBeforeAttach(context.Background(), mock, "sess_x", &buf, &pendingHITL{}, cursor, newThinkingState(&buf), nil)
+
+	assert.Empty(t, buf.String(), "a transient failure on the history read must be silent, not a second error the user sees")
+	assert.Empty(t, cursor.get())
+}
+
+// TestReplayHistoryBeforeAttach_CancelledContextIsSilent covers detaching (or
+// any other context cancellation) racing the history read: it must not print
+// the generic error path's message over whatever the caller is already
+// reporting for the cancellation itself.
+func TestReplayHistoryBeforeAttach_CancelledContextIsSilent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mock := domocks.NewMockHostedAgentsService(ctrl)
+	mock.EXPECT().
+		StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+		Return(nil, context.Canceled).
+		Times(1)
+
+	var buf bytes.Buffer
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	replayHistoryBeforeAttach(ctx, mock, "sess_x", &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil)
+
+	assert.Empty(t, buf.String())
+}
+
 // TestDrainStream_HITLReattachShowsCommand reproduces MARSOHS-648: on reattach
 // the server re-injects only run.human_input_requested (no tool_call_started).
 // The approval line must still show details.command, not "action pending".
