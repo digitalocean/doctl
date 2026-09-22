@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.211.0] - 2026-09-22
+
+- #1021 - @SSharma-10 - Add OHS endpoints
+
 ## [1.210.0] - 2026-09-18
 
 - #1110 - @kwadhwa-source - Mdrop 391/create options sizes
