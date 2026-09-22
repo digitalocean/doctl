@@ -1834,7 +1834,7 @@ func RunAgentsUpdate(c *CmdConfig) error {
 	if sess == nil || sess.HostedAgentSession == nil {
 		return errors.New("session update returned no session")
 	}
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 
