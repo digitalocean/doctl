@@ -36,6 +36,10 @@ Authenticate using --access-token. The value may be a model access key or a Digi
 	cmd.AddCommand(serverlessInferenceModelsCmd())
 	cmd.AddCommand(serverlessInferenceResponsesCmd())
 	cmd.AddCommand(serverlessInferenceAsyncCmd())
+	// GenAI platform management commands (formerly under doctl gradient)
+	cmd.AddCommand(ListModelsCmd())
+	cmd.AddCommand(ListRegionsCmd())
+	cmd.AddCommand(OpenAIKeyCmd())
 
 	return cmd
 }
