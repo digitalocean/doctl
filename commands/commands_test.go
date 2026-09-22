@@ -298,6 +298,8 @@ type tcMocks struct {
 	nfs                   *domocks.MockNfsService
 	nfsActions            *domocks.MockNfsActionsService
 	security              *domocks.MockSecurityService
+	hostedAgents          *domocks.MockHostedAgentsService
+	hostedAgentTriggers   *domocks.MockHostedAgentTriggersService
 	secrets               *domocks.MockSecretsService
 	vectorDBs             *domocks.MockVectorDBsService
 }
@@ -305,6 +307,20 @@ type tcMocks struct {
 func withTestClient(t *testing.T, tFn testFn) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	// Public Preview Terms runs on create/launch and would otherwise call
+	// Account.Get / ListSessions on every test that never stubs them.
+	prevUUID := agentPublicPreviewAccountUUID
+	prevSessions := agentPublicPreviewHasExistingSessions
+	prevSeen := viper.GetStringSlice(agentPublicPreviewTermsSeenKey)
+	agentPublicPreviewAccountUUID = func(*CmdConfig) string { return "unit-test-account" }
+	agentPublicPreviewHasExistingSessions = func(*CmdConfig) (bool, bool) { return true, true }
+	viper.Set(agentPublicPreviewTermsSeenKey, []string{"user:unit-test-account"})
+	t.Cleanup(func() {
+		agentPublicPreviewAccountUUID = prevUUID
+		agentPublicPreviewHasExistingSessions = prevSessions
+		viper.Set(agentPublicPreviewTermsSeenKey, prevSeen)
+	})
 
 	tm := &tcMocks{
 		account:               domocks.NewMockAccountService(ctrl),
@@ -361,6 +377,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		nfs:                   domocks.NewMockNfsService(ctrl),
 		nfsActions:            domocks.NewMockNfsActionsService(ctrl),
 		security:              domocks.NewMockSecurityService(ctrl),
+		hostedAgents:          domocks.NewMockHostedAgentsService(ctrl),
+		hostedAgentTriggers:   domocks.NewMockHostedAgentTriggersService(ctrl),
 		secrets:               domocks.NewMockSecretsService(ctrl),
 		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
 	}
@@ -432,6 +450,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Nfs:                 func() do.NfsService { return tm.nfs },
 		NfsActions:          func() do.NfsActionsService { return tm.nfsActions },
 		Security:            func() do.SecurityService { return tm.security },
+		HostedAgents:        func() do.HostedAgentsService { return tm.hostedAgents },
+		HostedAgentTriggers: func() do.HostedAgentTriggersService { return tm.hostedAgentTriggers },
 		Secrets:             func() do.SecretsService { return tm.secrets },
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
 	}

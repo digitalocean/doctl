@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	do "github.com/digitalocean/doctl/do"
@@ -38,6 +39,22 @@ func NewMockPrepaymentService(ctrl *gomock.Controller) *MockPrepaymentService {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPrepaymentService) EXPECT() *MockPrepaymentServiceMockRecorder {
 	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockPrepaymentService) Get(ctx context.Context) (*do.PrepaymentConfig, *do.PrepaymentStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx)
+	ret0, _ := ret[0].(*do.PrepaymentConfig)
+	ret1, _ := ret[1].(*do.PrepaymentStatus)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockPrepaymentServiceMockRecorder) Get(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrepaymentService)(nil).Get), ctx)
 }
 
 // GetConfig mocks base method.
