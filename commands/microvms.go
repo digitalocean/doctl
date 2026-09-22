@@ -48,10 +48,14 @@ func MicroVM() *Command {
 
 	cmdMicroVMList := CmdBuilder(cmd, RunMicroVMList, "list",
 		"List MicroVMs on your account",
-		"Retrieves a list of MicroVMs on your account, optionally filtered by region.",
+		"Retrieves a list of MicroVMs on your account. Filters combine: `--region`, `--name`, and `--tag-name` are ANDed.",
 		Writer, aliasOpt("ls"), displayerType(&displayers.MicroVM{}))
 	AddStringFlag(cmdMicroVMList, doctl.ArgRegionSlug, "", "",
 		"Filter MicroVMs by region slug, such as `nyc1`")
+	AddStringFlag(cmdMicroVMList, "name", "", "",
+		"Filter MicroVMs by exact name")
+	AddStringFlag(cmdMicroVMList, doctl.ArgTagName, "", "",
+		"Filter MicroVMs by resource tag name. A tag that matches nothing returns an empty list")
 
 	CmdBuilder(cmd, RunMicroVMGet, "get <microvm-id>",
 		"Retrieve information about a MicroVM",
@@ -79,11 +83,11 @@ func MicroVM() *Command {
 	AddStringFlag(cmdMicroVMCreate, doctl.ArgVPCUUID, "", "",
 		"The UUID of a non-default VPC to place the MicroVM in (only valid when `--networking=vpc`)")
 	AddBoolFlag(cmdMicroVMCreate, "auto-pause", "", false,
-		"Enable auto-pause when the MicroVM is idle")
+		"Whether the MicroVM auto-pauses after the idle timeout. Omit to keep the product default (enabled). Pass `--auto-pause=false` to disable")
 	AddStringFlag(cmdMicroVMCreate, "auto-pause-idle-timeout", "", "",
-		"Idle duration before auto-pause (e.g. `5m`, `30s`); requires `--auto-pause`")
+		"Idle duration before auto-pause (e.g. `5m`, `30s`). Can be set without `--auto-pause`")
 	AddBoolFlag(cmdMicroVMCreate, "auto-resume", "", false,
-		"Enable auto-resume when the MicroVM is paused and receives traffic")
+		"Whether the MicroVM auto-resumes on incoming HTTP traffic. Omit to keep the default (enabled). Pass `--auto-resume=false` to require an explicit resume")
 	AddIntFlag(cmdMicroVMCreate, "http-port", "", 0,
 		"HTTP port exposed by the MicroVM workload")
 	AddStringFlag(cmdMicroVMCreate, "http-protocol", "", "",
@@ -177,21 +181,26 @@ func microVMCheckpoints() *Command {
 	return cmd
 }
 
-// RunMicroVMList lists MicroVMs, optionally filtered by region.
+// RunMicroVMList lists MicroVMs, optionally filtered by region, name, and tag.
 func RunMicroVMList(c *CmdConfig) error {
 	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
-
-	svc := c.MicroVMs()
-
-	var list do.MicroVMs
-	if region != "" {
-		list, err = svc.ListByRegion(region)
-	} else {
-		list, err = svc.List()
+	name, err := c.Doit.GetString(c.NS, "name")
+	if err != nil {
+		return err
 	}
+	tagName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
+	if err != nil {
+		return err
+	}
+
+	list, err := c.MicroVMs().List(do.MicroVMListFilter{
+		Region:  region,
+		Name:    name,
+		TagName: tagName,
+	})
 	if err != nil {
 		return err
 	}
@@ -250,7 +259,7 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	autoPauseEnabled, err := c.Doit.GetBool(c.NS, "auto-pause")
+	autoPause, err := c.Doit.GetBoolPtr(c.NS, "auto-pause")
 	if err != nil {
 		return err
 	}
@@ -258,7 +267,7 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	autoResumeEnabled, err := c.Doit.GetBool(c.NS, "auto-resume")
+	autoResume, err := c.Doit.GetBoolPtr(c.NS, "auto-resume")
 	if err != nil {
 		return err
 	}
@@ -315,19 +324,17 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if vpcUUID != "" {
 		req.VPCUUID = vpcUUID
 	}
-	if autoPauseIdle != "" && !autoPauseEnabled {
-		return fmt.Errorf("--auto-pause-idle-timeout requires --auto-pause")
-	}
-	if autoPauseEnabled {
-		enabled := true
+	// Omit auto_pause entirely unless the caller set enabled or a timeout.
+	// An explicit false disables auto-pause; a timeout alone leaves the
+	// product default (enabled) in place.
+	if autoPause != nil || autoPauseIdle != "" {
 		req.AutoPause = &godo.AutoPauseConfig{
-			Enabled:     &enabled,
+			Enabled:     autoPause,
 			IdleTimeout: autoPauseIdle,
 		}
 	}
-	if autoResumeEnabled {
-		enabled := true
-		req.AutoResume = &enabled
+	if autoResume != nil {
+		req.AutoResume = autoResume
 	}
 	if httpPort > 0 {
 		req.HTTPPort = uint32(httpPort)

@@ -34,22 +34,25 @@ func (m *MicroVM) JSON(out io.Writer) error {
 
 func (m *MicroVM) Cols() []string {
 	return []string{
-		"ID", "Name", "Region", "State", "Size", "Networking", "Source", "Endpoint", "Ports", "Created",
+		"ID", "Name", "Region", "State", "Size", "Networking", "Source", "Endpoint", "Ports", "Protocol", "Tags", "FailureReason", "Created",
 	}
 }
 
 func (m *MicroVM) ColMap() map[string]string {
 	return map[string]string{
-		"ID":         "ID",
-		"Name":       "Name",
-		"Region":     "Region",
-		"State":      "State",
-		"Size":       "Size",
-		"Networking": "Networking",
-		"Source":     "Source",
-		"Endpoint":   "Endpoint",
-		"Ports":      "Ports",
-		"Created":    "Created At",
+		"ID":            "ID",
+		"Name":          "Name",
+		"Region":        "Region",
+		"State":         "State",
+		"Size":          "Size",
+		"Networking":    "Networking",
+		"Source":        "Source",
+		"Endpoint":      "Endpoint",
+		"Ports":         "Ports",
+		"Protocol":      "Protocol",
+		"Tags":          "Tags",
+		"FailureReason": "Failure Reason",
+		"Created":       "Created At",
 	}
 }
 
@@ -57,16 +60,19 @@ func (m *MicroVM) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(m.MicroVMs))
 	for _, md := range m.MicroVMs {
 		out = append(out, map[string]any{
-			"ID":         md.ID,
-			"Name":       md.Name,
-			"Region":     md.Region,
-			"State":      string(md.State),
-			"Size":       formatMicroVMSize(md.Size),
-			"Networking": string(md.Networking),
-			"Source":     formatMicroVMSource(md.Source),
-			"Endpoint":   defaultMicroVMHostname(md.URLs),
-			"Ports":      formatPorts(md.Ports),
-			"Created":    md.Created,
+			"ID":            md.ID,
+			"Name":          md.Name,
+			"Region":        md.Region,
+			"State":         string(md.State),
+			"Size":          formatMicroVMSize(md.Size),
+			"Networking":    string(md.Networking),
+			"Source":        formatMicroVMSource(md.Source),
+			"Endpoint":      defaultMicroVMHostname(md.URLs),
+			"Ports":         formatPorts(md.Ports),
+			"Protocol":      string(md.HTTPProtocol),
+			"Tags":          strings.Join(md.Tags, ","),
+			"FailureReason": md.FailureReason,
+			"Created":       md.Created,
 		})
 	}
 	return out
@@ -84,7 +90,7 @@ func (c *MicroVMCheckpoint) JSON(out io.Writer) error {
 
 func (c *MicroVMCheckpoint) Cols() []string {
 	return []string{
-		"ID", "MicroVMID", "MicroVMName", "Name", "Region", "Status", "MemoryBytes", "DiskBytes", "Created",
+		"ID", "MicroVMID", "MicroVMName", "Name", "Region", "Size", "Status", "MemoryBytes", "DiskBytes", "Created",
 	}
 }
 
@@ -95,6 +101,7 @@ func (c *MicroVMCheckpoint) ColMap() map[string]string {
 		"MicroVMName": "MicroVM Name",
 		"Name":        "Name",
 		"Region":      "Region",
+		"Size":        "Size",
 		"Status":      "Status",
 		"MemoryBytes": "Memory Bytes",
 		"DiskBytes":   "Disk Bytes",
@@ -111,6 +118,7 @@ func (c *MicroVMCheckpoint) KV() []map[string]any {
 			"MicroVMName": cp.MicroVMName,
 			"Name":        cp.Name,
 			"Region":      cp.Region,
+			"Size":        formatMicroVMSize(cp.Size),
 			"Status":      string(cp.Status),
 			"MemoryBytes": cp.MemoryBytes,
 			"DiskBytes":   cp.DiskBytes,
@@ -131,7 +139,7 @@ func (o *MicroVMCreateOptions) JSON(out io.Writer) error {
 }
 
 func (o *MicroVMCreateOptions) Cols() []string {
-	return []string{"DefaultRegion", "Sizes", "Features"}
+	return []string{"DefaultRegion", "Sizes", "Features", "AccountLimits"}
 }
 
 func (o *MicroVMCreateOptions) ColMap() map[string]string {
@@ -139,6 +147,7 @@ func (o *MicroVMCreateOptions) ColMap() map[string]string {
 		"DefaultRegion": "Default Region",
 		"Sizes":         "Sizes",
 		"Features":      "Features",
+		"AccountLimits": "Account Limits",
 	}
 }
 
@@ -162,6 +171,7 @@ func (o *MicroVMCreateOptions) KV() []map[string]any {
 		"DefaultRegion": o.Options.DefaultRegion,
 		"Sizes":         strings.Join(sizes, ","),
 		"Features":      strings.Join(features, ","),
+		"AccountLimits": formatAccountLimits(o.Options.AccountLimits),
 	}}
 }
 
@@ -174,10 +184,24 @@ func formatMicroVMSize(size *godo.MicroVMSize) string {
 
 func formatMicroVMSizeOption(s godo.MicroVMSizeOption) string {
 	size := fmt.Sprintf("%dvCPU/%dMiB/%dGB", s.CPU, s.Memory, s.Disk)
+	if s.Pricing != nil {
+		size = fmt.Sprintf("%s $%g/hr", size, s.Pricing.PricePerHour)
+	}
+	if !s.Available {
+		size = "unavailable " + size
+	}
 	if len(s.Regions) == 0 {
 		return size
 	}
 	return fmt.Sprintf("%s[%s]", size, strings.Join(s.Regions, ","))
+}
+
+func formatAccountLimits(l *godo.MicroVMAccountLimits) string {
+	if l == nil {
+		return ""
+	}
+	return fmt.Sprintf("running=%d total=%d mem=%d disk=%d idle=%ds",
+		l.MaxConcurrentRunning, l.MaxTotalCount, l.MaxMemoryBytes, l.MaxDiskBytes, l.MaxIdleTimeoutSeconds)
 }
 
 func formatMicroVMSource(src *godo.MicroVMSource) string {

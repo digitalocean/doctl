@@ -77,7 +77,7 @@ func TestMicroVMCheckpointCommand(t *testing.T) {
 
 func TestMicroVMsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.microVMs.EXPECT().List().Return(testMicroVMList, nil)
+		tm.microVMs.EXPECT().List(do.MicroVMListFilter{}).Return(testMicroVMList, nil)
 		err := RunMicroVMList(config)
 		require.NoError(t, err)
 	})
@@ -85,8 +85,18 @@ func TestMicroVMsList(t *testing.T) {
 
 func TestMicroVMsListByRegion(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.microVMs.EXPECT().ListByRegion("nyc1").Return(testMicroVMList, nil)
+		tm.microVMs.EXPECT().List(do.MicroVMListFilter{Region: "nyc1"}).Return(testMicroVMList, nil)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		err := RunMicroVMList(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMsListByNameAndTag(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().List(do.MicroVMListFilter{Name: "sammy-microvm", TagName: "prod"}).Return(testMicroVMList, nil)
+		config.Doit.Set(config.NS, "name", "sammy-microvm")
+		config.Doit.Set(config.NS, doctl.ArgTagName, "prod")
 		err := RunMicroVMList(config)
 		require.NoError(t, err)
 	})
@@ -192,8 +202,17 @@ func TestMicroVMCreate_badEnv(t *testing.T) {
 	})
 }
 
-func TestMicroVMCreate_idleTimeoutRequiresAutoPause(t *testing.T) {
+func TestMicroVMCreate_idleTimeoutWithoutAutoPause(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expected := &godo.MicroVMCreateRequest{
+			Name:      "sammy-microvm",
+			Region:    "nyc1",
+			Size:      &godo.MicroVMSizeRequest{CPU: 2, Memory: 4096},
+			Source:    &godo.MicroVMSource{OCIRef: "docker.io/library/nginx:1.27"},
+			AutoPause: &godo.AutoPauseConfig{IdleTimeout: "5m"},
+		}
+		tm.microVMs.EXPECT().Create(expected).Return(&testMicroVM, nil)
+
 		config.Args = append(config.Args, "sammy-microvm")
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
 		config.Doit.Set(config.NS, "cpu", 2)
@@ -202,8 +221,33 @@ func TestMicroVMCreate_idleTimeoutRequiresAutoPause(t *testing.T) {
 		config.Doit.Set(config.NS, "auto-pause-idle-timeout", "5m")
 
 		err := RunMicroVMCreate(config)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "--auto-pause-idle-timeout requires --auto-pause")
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMCreate_disablesAutoPauseAndResume(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		disabled := false
+		expected := &godo.MicroVMCreateRequest{
+			Name:       "sammy-microvm",
+			Region:     "nyc1",
+			Size:       &godo.MicroVMSizeRequest{CPU: 2, Memory: 4096},
+			Source:     &godo.MicroVMSource{OCIRef: "docker.io/library/nginx:1.27"},
+			AutoPause:  &godo.AutoPauseConfig{Enabled: &disabled},
+			AutoResume: &disabled,
+		}
+		tm.microVMs.EXPECT().Create(expected).Return(&testMicroVM, nil)
+
+		config.Args = append(config.Args, "sammy-microvm")
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, "cpu", 2)
+		config.Doit.Set(config.NS, "memory", 4096)
+		config.Doit.Set(config.NS, "oci-ref", "docker.io/library/nginx:1.27")
+		config.Doit.Set(config.NS, "auto-pause", false)
+		config.Doit.Set(config.NS, "auto-resume", false)
+
+		err := RunMicroVMCreate(config)
+		require.NoError(t, err)
 	})
 }
 

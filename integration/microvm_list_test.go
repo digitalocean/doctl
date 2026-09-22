@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"net/url"
 	"os/exec"
 	"strings"
 	"testing"
@@ -15,8 +16,9 @@ import (
 
 var _ = suite("compute/microvm/list", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect   *require.Assertions
+		server   *httptest.Server
+		gotQuery url.Values
 	)
 
 	it.Before(func() {
@@ -36,6 +38,7 @@ var _ = suite("compute/microvm/list", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
+				gotQuery = req.URL.Query()
 				w.Write([]byte(microVMListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -59,6 +62,9 @@ var _ = suite("compute/microvm/list", func(t *testing.T, when spec.G, it spec.S)
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(microVMListOutput), strings.TrimSpace(string(output)))
+			expect.Empty(gotQuery.Get("region"))
+			expect.Empty(gotQuery.Get("name"))
+			expect.Empty(gotQuery.Get("tag_name"))
 		})
 	})
 
@@ -74,14 +80,33 @@ var _ = suite("compute/microvm/list", func(t *testing.T, when spec.G, it spec.S)
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(microVMListOutput), strings.TrimSpace(string(output)))
+			expect.Equal("nyc1", gotQuery.Get("region"))
+		})
+	})
+
+	when("name and tag are provided", func() {
+		it("filters microvms by name and tag", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute", "microvm", "list",
+				"--name", "sammy-microvm",
+				"--tag-name", "prod",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(microVMListOutput), strings.TrimSpace(string(output)))
+			expect.Equal("sammy-microvm", gotQuery.Get("name"))
+			expect.Equal("prod", gotQuery.Get("tag_name"))
 		})
 	})
 })
 
 const (
 	microVMListOutput = `
-ID                                      Name             Region    State      Size                  Networking    Source                          Endpoint                      Ports    Created At
-b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microvm    nyc1      running    2vCPU/4096MiB/80GB    public        docker.io/library/nginx:1.27    sammy.microvms.example.com    8080     2026-07-16T10:00:00Z
+ID                                      Name             Region    State      Size                  Networking    Source                          Endpoint                      Ports    Protocol    Tags    Failure Reason    Created At
+b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microvm    nyc1      running    2vCPU/4096MiB/80GB    public        docker.io/library/nginx:1.27    sammy.microvms.example.com    8080     http        prod                      2026-07-16T10:00:00Z
 `
 	microVMListResponse = `
 {
@@ -96,6 +121,8 @@ b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microvm    nyc1      running    2v
       "source": {"oci_ref": "docker.io/library/nginx:1.27"},
       "urls": [{"hostname": "sammy.microvms.example.com", "port": 8080, "default": true, "status": "ACTIVE"}],
       "ports": [8080],
+      "http_protocol": "http",
+      "tags": ["prod"],
       "created_at": "2026-07-16T10:00:00Z"
     }
   ],

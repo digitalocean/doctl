@@ -96,8 +96,8 @@ var _ = suite("compute/microvm/create", func(t *testing.T, when spec.G, it spec.
 
 const (
 	microVMCreateOutput = `
-ID                                      Name             Region    State       Size                  Networking    Source                          Endpoint    Ports    Created At
-b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microvm    nyc1      creating    2vCPU/4096MiB/80GB    public        docker.io/library/nginx:1.27                8080     2026-07-16T10:00:00Z
+ID                                      Name             Region    State       Size                  Networking    Source                          Endpoint    Ports    Protocol    Tags    Failure Reason    Created At
+b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microvm    nyc1      creating    2vCPU/4096MiB/80GB    public        docker.io/library/nginx:1.27                8080     http        prod                      2026-07-16T10:00:00Z
 `
 	microVMCreateResponse = `
 {
@@ -111,6 +111,8 @@ b2a2f7a4-8d34-4c1c-9c66-3f2b7f8f38f2    sammy-microvm    nyc1      creating    2
     "source": {"oci_ref": "docker.io/library/nginx:1.27"},
     "urls": [{"hostname": "", "port": 8080, "default": true, "status": "PENDING"}],
     "ports": [8080],
+    "http_protocol": "http",
+    "tags": ["prod"],
     "created_at": "2026-07-16T10:00:00Z"
   }
 }

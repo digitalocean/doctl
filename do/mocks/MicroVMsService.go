@@ -169,48 +169,18 @@ func (mr *MockMicroVMsServiceMockRecorder) GetCreateOptions() *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockMicroVMsService) List() (do.MicroVMs, error) {
+func (m *MockMicroVMsService) List(filter do.MicroVMListFilter) (do.MicroVMs, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
+	ret := m.ctrl.Call(m, "List", filter)
 	ret0, _ := ret[0].(do.MicroVMs)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockMicroVMsServiceMockRecorder) List() *gomock.Call {
+func (mr *MockMicroVMsServiceMockRecorder) List(filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMicroVMsService)(nil).List))
-}
-
-// ListByName mocks base method.
-func (m *MockMicroVMsService) ListByName(name string) (do.MicroVMs, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByName", name)
-	ret0, _ := ret[0].(do.MicroVMs)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListByName indicates an expected call of ListByName.
-func (mr *MockMicroVMsServiceMockRecorder) ListByName(name any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByName", reflect.TypeOf((*MockMicroVMsService)(nil).ListByName), name)
-}
-
-// ListByRegion mocks base method.
-func (m *MockMicroVMsService) ListByRegion(region string) (do.MicroVMs, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByRegion", region)
-	ret0, _ := ret[0].(do.MicroVMs)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListByRegion indicates an expected call of ListByRegion.
-func (mr *MockMicroVMsServiceMockRecorder) ListByRegion(region any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByRegion", reflect.TypeOf((*MockMicroVMsService)(nil).ListByRegion), region)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMicroVMsService)(nil).List), filter)
 }
 
 // ListCheckpoints mocks base method.

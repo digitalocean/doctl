@@ -37,12 +37,18 @@ type MicroVMCheckpoints []MicroVMCheckpoint
 
 //go:generate go run go.uber.org/mock/mockgen -source microvms.go -package=mocks -destination mocks/MicroVMsService.go MicroVMsService
 
+// MicroVMListFilter selects which MicroVMs List returns. Empty fields are
+// omitted. Region, Name, and TagName combine: the API ANDs whichever are set.
+type MicroVMListFilter struct {
+	Region  string
+	Name    string
+	TagName string
+}
+
 // MicroVMsService is an interface for interacting with DigitalOcean's
 // MicroVM API.
 type MicroVMsService interface {
-	List() (MicroVMs, error)
-	ListByRegion(region string) (MicroVMs, error)
-	ListByName(name string) (MicroVMs, error)
+	List(filter MicroVMListFilter) (MicroVMs, error)
 	Get(id string) (*MicroVM, error)
 	Create(req *godo.MicroVMCreateRequest) (*MicroVM, error)
 	Pause(id string) (*MicroVM, error)
@@ -72,27 +78,18 @@ func NewMicroVMsService(client *godo.Client) MicroVMsService {
 	return &microVMsService{client: client}
 }
 
-func (s *microVMsService) List() (MicroVMs, error) {
-	return s.paginate(func(opt *godo.ListOptions) ([]godo.MicroVM, *godo.Response, error) {
-		return s.client.MicroVMs.List(context.TODO(), opt)
-	})
-}
-
-func (s *microVMsService) ListByRegion(region string) (MicroVMs, error) {
-	return s.paginate(func(opt *godo.ListOptions) ([]godo.MicroVM, *godo.Response, error) {
-		return s.client.MicroVMs.ListByRegion(context.TODO(), region, opt)
-	})
-}
-
-func (s *microVMsService) ListByName(name string) (MicroVMs, error) {
-	return s.paginate(func(opt *godo.ListOptions) ([]godo.MicroVM, *godo.Response, error) {
-		return s.client.MicroVMs.ListByName(context.TODO(), name, opt)
-	})
-}
-
-func (s *microVMsService) paginate(lister func(*godo.ListOptions) ([]godo.MicroVM, *godo.Response, error)) (MicroVMs, error) {
+func (s *microVMsService) List(filter MicroVMListFilter) (MicroVMs, error) {
+	base := &godo.ListMicroVMsOptions{
+		Region:  filter.Region,
+		Name:    filter.Name,
+		TagName: filter.TagName,
+	}
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := lister(opt)
+		listOpt := *base
+		if opt != nil {
+			listOpt.ListOptions = *opt
+		}
+		list, resp, err := s.client.MicroVMs.ListFiltered(context.TODO(), &listOpt)
 		if err != nil {
 			return nil, nil, err
 		}
