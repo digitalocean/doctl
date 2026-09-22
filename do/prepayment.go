@@ -15,9 +15,24 @@ package do
 
 import (
 	"context"
+	"errors"
+	"net/http"
 
 	"github.com/digitalocean/godo"
 )
+
+// ErrNoBillingPermission is returned when the API token lacks the billing:read
+// scope that prepay routes require. It is a distinct, user-actionable state
+// rather than a failure: the caller can still be told to ask a Team Owner or
+// Biller, which is the only thing they could act on anyway.
+var ErrNoBillingPermission = errors.New("token lacks the billing:read scope required to read the prepayment balance")
+
+// PrepaymentConfig aliases godo.PrepaymentConfig so harness-runtime callers can
+// use do.* types without depending on godo directly.
+type PrepaymentConfig = godo.PrepaymentConfig
+
+// PrepaymentStatus aliases godo.PrepaymentStatus.
+type PrepaymentStatus = godo.PrepaymentStatus
 
 // PrepaymentConfigResponse is a wrapper for godo.PrepaymentConfigResponse.
 type PrepaymentConfigResponse struct {
@@ -33,6 +48,10 @@ type PrepaymentStatusResponse struct {
 type PrepaymentService interface {
 	GetConfig() (*PrepaymentConfigResponse, error)
 	GetStatus() (*PrepaymentStatusResponse, error)
+	// Get returns config and status together (same wire response as GetConfig)
+	// and accepts a context so callers enriching a 402 card can bound the
+	// lookup. A 403 becomes ErrNoBillingPermission.
+	Get(ctx context.Context) (*PrepaymentConfig, *PrepaymentStatus, error)
 }
 
 type prepaymentService struct {
@@ -64,4 +83,19 @@ func (ps *prepaymentService) GetStatus() (*PrepaymentStatusResponse, error) {
 	}
 
 	return &PrepaymentStatusResponse{PrepaymentStatusResponse: resp}, nil
+}
+
+func (ps *prepaymentService) Get(ctx context.Context) (*PrepaymentConfig, *PrepaymentStatus, error) {
+	resp, _, err := ps.client.Prepayment.GetConfig(ctx)
+	if err != nil {
+		var er *godo.ErrorResponse
+		if errors.As(err, &er) && er.Response != nil && er.Response.StatusCode == http.StatusForbidden {
+			return nil, nil, ErrNoBillingPermission
+		}
+		return nil, nil, err
+	}
+	if resp == nil {
+		return nil, nil, nil
+	}
+	return resp.Config, resp.Status, nil
 }
