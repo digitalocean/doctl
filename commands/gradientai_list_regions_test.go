@@ -65,8 +65,8 @@ func TestListRegionsCommand(t *testing.T) {
 	cmd := ListRegionsCmd()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "list-regions", cmd.Use)
-	assert.Equal(t, "List Gradient AI regions", cmd.Short)
-	assert.Contains(t, cmd.Long, "doctl gradient list-regions")
+	assert.Equal(t, "List inference regions", cmd.Short)
+	assert.Contains(t, cmd.Long, "doctl inference list-regions")
 }
 
 func TestRunGradientAIListRegions(t *testing.T) {

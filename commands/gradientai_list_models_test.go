@@ -81,10 +81,10 @@ func TestListModelsCommand(t *testing.T) {
 	cmd := ListModelsCmd()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "list-models", cmd.Use)
-	assert.Contains(t, cmd.Aliases, "models")
+	assert.NotContains(t, cmd.Aliases, "models")
 	assert.Contains(t, cmd.Aliases, "lm")
-	assert.Equal(t, "List Gradient AI models", cmd.Short)
-	assert.Contains(t, cmd.Long, "doctl gradient list-models")
+	assert.Equal(t, "List available models", cmd.Short)
+	assert.Contains(t, cmd.Long, "doctl inference list-models")
 }
 
 func TestRunGradientAIListModels(t *testing.T) {
