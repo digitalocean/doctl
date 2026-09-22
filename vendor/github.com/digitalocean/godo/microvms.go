@@ -2,8 +2,11 @@ package godo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 const (
@@ -88,6 +91,9 @@ type MicroVMsService interface {
 	DeleteCheckpoint(ctx context.Context, id string) (*Response, error)
 
 	GetCreateOptions(ctx context.Context) (*MicroVMCreateOptions, *Response, error)
+
+	Exec(ctx context.Context, id string, execRequest *MicroVMExecRequest) (*MicroVMExecResult, *Response, error)
+	ConsoleURL(id string, opt *MicroVMConsoleOptions) (string, error)
 }
 
 // MicroVMsServiceOp handles communication with the MicroVM related
@@ -240,19 +246,70 @@ type MicroVMAccountLimits struct {
 	MaxIdleTimeoutSeconds uint64 `json:"max_idle_timeout_seconds,omitempty"`
 }
 
+// MicroVMExecRequest is a one-shot, non-PTY command run in a MicroVM's
+// workload container. Argv must be non-empty (e.g. ["echo", "hi"]).
+type MicroVMExecRequest struct {
+	Argv []string `json:"argv"`
+	Cwd  string   `json:"cwd,omitempty"`
+}
+
+// MicroVMExecResult is the outcome of a one-shot exec. A non-zero ExitCode
+// is not a client error — the API returns HTTP 200 with the exit code set.
+// Truncated is true when the server clipped stdout/stderr to its output bound.
+type MicroVMExecResult struct {
+	Stdout    string `json:"stdout"`
+	Stderr    string `json:"stderr"`
+	ExitCode  int32  `json:"exit_code"`
+	Truncated bool   `json:"truncated,omitempty"`
+}
+
+// MicroVMConsoleOptions sets the initial PTY size for ConsoleURL.
+// The server defaults to 24 rows by 80 columns when either is zero / unset.
+type MicroVMConsoleOptions struct {
+	Rows uint32
+	Cols uint32
+}
+
+// Stable console WebSocket error.code values (server → client text frames).
+const (
+	MicroVMConsoleErrDialFailed  = "dial_failed"
+	MicroVMConsoleErrStartFailed = "start_failed"
+	MicroVMConsoleErrAgentError  = "agent_error"
+)
+
+// MicroVMConsoleControl is a decoded server → client text control frame.
+// Exactly one of Error, Exit, or Status is set for a well-formed frame.
+type MicroVMConsoleControl struct {
+	Error  *MicroVMConsoleError  `json:"error,omitempty"`
+	Exit   *MicroVMConsoleExit   `json:"exit,omitempty"`
+	Status *MicroVMConsoleStatus `json:"status,omitempty"`
+}
+
+// MicroVMConsoleError is the payload of an {"error":...} control frame.
+type MicroVMConsoleError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// MicroVMConsoleExit is the payload of an {"exit":...} control frame.
+type MicroVMConsoleExit struct {
+	Code int32 `json:"code"`
+}
+
+// MicroVMConsoleStatus is the payload of a {"status":...} control frame
+// (e.g. state "resuming" while a paused MicroVM is auto-resumed).
+type MicroVMConsoleStatus struct {
+	State string `json:"state"`
+}
+
 // String returns a human-readable description of a MicroVM.
 func (m MicroVM) String() string {
 	return Stringify(m)
 }
 
 // URN returns the MicroVM ID in a valid DO API URN form.
-//
-// The collection is still "microdroplet" on purpose. URNs are persisted by
-// tags and emitted in billing events, and the collection name comes from a
-// proto enum shared across those consumers, so renaming it is a coordinated
-// change rather than part of this one.
 func (m MicroVM) URN() string {
-	return ToURN("MicroDroplet", m.ID)
+	return ToURN("MicroVM", m.ID)
 }
 
 // String returns a human-readable description of a MicroVMCheckpoint.
@@ -551,4 +608,106 @@ func (s *MicroVMsServiceOp) GetCreateOptions(ctx context.Context) (*MicroVMCreat
 	}
 
 	return opts, resp, nil
+}
+
+// Exec runs a one-shot, non-PTY command in the MicroVM's workload container
+// and returns its stdout, stderr, and exit code. Requires the exec_pty feature
+// gate (see GetCreateOptions Features). A paused MicroVM is auto-resumed.
+// A non-zero ExitCode is not a Go error — the API returns HTTP 200.
+func (s *MicroVMsServiceOp) Exec(ctx context.Context, id string, execRequest *MicroVMExecRequest) (*MicroVMExecResult, *Response, error) {
+	if id == "" {
+		return nil, nil, NewArgError("id", "cannot be empty")
+	}
+	if execRequest == nil {
+		return nil, nil, NewArgError("execRequest", "cannot be nil")
+	}
+	if len(execRequest.Argv) == 0 {
+		return nil, nil, NewArgError("execRequest.Argv", "cannot be empty")
+	}
+
+	path := fmt.Sprintf("%s/%s/exec", microVMBasePath, id)
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, execRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(MicroVMExecResult)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return result, resp, nil
+}
+
+// ConsoleURL builds the WebSocket URL for an interactive PTY console on the
+// MicroVM (GET /v2/microvms/{id}/console). godo does not dial WebSockets; the
+// caller supplies its own client. The bearer token lives on godo's HTTP
+// transport and is not attached to requests built here, so the caller must set
+// Authorization: Bearer <token> on the WebSocket handshake. Binary frames are
+// raw terminal I/O; text frames carry resize (client→server) and error/exit/
+// status control (server→client) — see MarshalMicroVMConsoleResize and
+// ParseMicroVMConsoleControl.
+func (s *MicroVMsServiceOp) ConsoleURL(id string, opt *MicroVMConsoleOptions) (string, error) {
+	if id == "" {
+		return "", NewArgError("id", "cannot be empty")
+	}
+	if s.client == nil || s.client.BaseURL == nil {
+		return "", NewArgError("client.BaseURL", "cannot be nil")
+	}
+
+	u, err := s.client.BaseURL.Parse(fmt.Sprintf("%s/%s/console", microVMBasePath, id))
+	if err != nil {
+		return "", err
+	}
+
+	switch u.Scheme {
+	case "https":
+		u.Scheme = "wss"
+	case "http":
+		u.Scheme = "ws"
+	}
+
+	if opt != nil {
+		q := url.Values{}
+		if opt.Rows > 0 {
+			q.Set("rows", strconv.FormatUint(uint64(opt.Rows), 10))
+		}
+		if opt.Cols > 0 {
+			q.Set("cols", strconv.FormatUint(uint64(opt.Cols), 10))
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	return u.String(), nil
+}
+
+// MarshalMicroVMConsoleResize encodes a client → server text frame that
+// resizes the console PTY: {"resize":{"rows":N,"cols":M}}.
+func MarshalMicroVMConsoleResize(rows, cols uint32) ([]byte, error) {
+	return json.Marshal(struct {
+		Resize struct {
+			Rows uint32 `json:"rows"`
+			Cols uint32 `json:"cols"`
+		} `json:"resize"`
+	}{Resize: struct {
+		Rows uint32 `json:"rows"`
+		Cols uint32 `json:"cols"`
+	}{Rows: rows, Cols: cols}})
+}
+
+// ParseMicroVMConsoleControl decodes a server → client text control frame
+// (error, exit, or status). Binary frames are raw PTY stdout and should not
+// be passed here. Returns an error if the payload is not valid JSON or does
+// not contain any recognized control field.
+func ParseMicroVMConsoleControl(data []byte) (*MicroVMConsoleControl, error) {
+	ctrl := new(MicroVMConsoleControl)
+	if err := json.Unmarshal(data, ctrl); err != nil {
+		return nil, err
+	}
+	if ctrl.Error == nil && ctrl.Exit == nil && ctrl.Status == nil {
+		return nil, fmt.Errorf("microvm console: unrecognized control frame")
+	}
+	return ctrl, nil
 }
