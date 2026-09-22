@@ -375,7 +375,7 @@ func (p *promptCollector) report(c *CmdConfig, ctx context.Context) error {
 		p.status = promptStatusIncomplete
 	}
 
-	if Output == "json" {
+	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentPrompt{
 			Prompts: []*displayers.HostedAgentPromptResult{{
 				SessionID:      p.sessionID,
