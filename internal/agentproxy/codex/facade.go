@@ -381,6 +381,29 @@ type appListResult struct {
 	NextCursor *string `json:"nextCursor"`
 }
 
+// configRequirementsReadResult is ConfigRequirementsReadResponse. A null
+// requirements is the protocol's own "none configured" (no requirements.toml,
+// no MDM entries), which is the truth for a hosted session: the policy that
+// governs it lives in the sandbox, not in anything the TUI enforces locally.
+// Fatal if missing — codex 0.155 aborts its bootstrap when this request fails.
+type configRequirementsReadResult struct {
+	Requirements any `json:"requirements"`
+}
+
+// collaborationModeListResult is CollaborationModeListResponse. reasoning_effort
+// is snake_case on the wire here, unlike the camelCase the rest of the protocol
+// uses; this matches what a real app-server emits.
+type collaborationModeListResult struct {
+	Data []collaborationModeInfo `json:"data"`
+}
+
+type collaborationModeInfo struct {
+	Name            string  `json:"name"`
+	Mode            string  `json:"mode"`
+	Model           *string `json:"model"`
+	ReasoningEffort *string `json:"reasoning_effort"`
+}
+
 // threadUnsubscribeResult is ThreadUnsubscribeResponse (thread.rs). status is
 // one of "notLoaded" | "notSubscribed" | "unsubscribed" — "unsubscribed" is
 // always a truthful, safe answer here since this facade holds no real
@@ -886,6 +909,18 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 	case "app/list":
 		return appListResult{Data: []any{}}, nil
 
+	case "configRequirements/read":
+		return configRequirementsReadResult{}, nil
+
+	case "collaborationMode/list":
+		// The default mode only. A real app-server also offers "plan", but
+		// the mode a turn runs under is chosen inside the sandbox and
+		// turn/start carries no mode for this proxy to forward, so a second
+		// entry would be a picker that changes nothing.
+		return collaborationModeListResult{
+			Data: []collaborationModeInfo{{Name: "Default", Mode: "default"}},
+		}, nil
+
 	case "thread/unsubscribe":
 		// thread_id isn't checked: unsubscribing from the one thread this
 		// facade ever serves (or from anything else) is always a safe no-op.
@@ -964,28 +999,14 @@ func (f *Facade) Dispatch(ctx context.Context, method string, params json.RawMes
 		}, nil
 
 	case "turn/interrupt":
-		// Relayed rather than stubbed: the stub returned success while the
-		// turn kept running, so Esc appeared to do nothing. If the session
-		// can't relay (non-codex agent, older harness), fall back to the old
-		// empty reply — the TUI needs *an* answer either way.
-		if result, handled, err := f.relayRequest(ctx, method, params); handled {
-			return result, err
-		}
+		// Acknowledged without stopping anything: there is no path from here
+		// to the in-sandbox agent for a request, so the turn runs on. The TUI
+		// needs *an* answer either way.
 		return turnInterruptResult{}, nil
 
 	default:
-		// Anything this facade has no synthesized answer for goes to the real
-		// agent. That is what makes methods added to codex after this proxy
-		// shipped — new slash commands especially — work without a doctl
-		// release, and it is the inbound mirror of the outbound raw
-		// passthrough's denylist: the in-sandbox adapter, not this switch,
-		// decides what is safe to forward.
-		if result, handled, err := f.relayRequest(ctx, method, params); handled {
-			return result, err
-		}
-		// Not relayable. The bridge logs it as "unhandled: <method>" and, if
-		// it was a request, answers with a JSON-RPC error so codex never
-		// hangs.
+		// The bridge logs it as "unhandled: <method>" and, if it was a
+		// request, answers with a JSON-RPC error so codex never hangs.
 		return nil, agentproxy.ErrMethodNotFound
 	}
 }
