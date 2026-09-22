@@ -106,6 +106,10 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		Args: args,
 
 		initServices: func(c *CmdConfig) error {
+			if err := refreshExpiredOAuthToken(c); err != nil {
+				return err
+			}
+
 			accessToken := c.getContextAccessToken()
 			godoClient, err := c.Doit.GetGodoClient(Trace, true, accessToken)
 			if err != nil {

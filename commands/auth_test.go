@@ -32,7 +32,13 @@ import (
 func TestAuthCommand(t *testing.T) {
 	cmd := Auth()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "init", "list", "remove", "switch", "token")
+	assertCommandNames(t, cmd, "client", "init", "list", "login", "remove", "switch", "token")
+}
+
+func TestAuthClientCommand(t *testing.T) {
+	cmd := authClient()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "show")
 }
 
 func TestAuthInit(t *testing.T) {
