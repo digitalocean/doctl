@@ -1828,6 +1828,26 @@ func RunRegistriesRepositoryDeleteTag(c *CmdConfig) error {
 		return fmt.Errorf("tag deletion is destructive and irreversible, please use --force flag to continue")
 	}
 
+	// The Registries DeleteTag API can return success for a missing repository
+	// or tag, which made the CLI report false positives (#1790). Verify the
+	// tags exist before deleting so we surface a clear not-found error.
+	existing, err := c.Registries().ListRepositoryTags(registryName, repositoryName)
+	if err != nil {
+		return err
+	}
+	present := make(map[string]struct{}, len(existing))
+	for _, t := range existing {
+		if t.RepositoryTag == nil {
+			continue
+		}
+		present[t.Tag] = struct{}{}
+	}
+	for _, tag := range tags {
+		if _, ok := present[tag]; !ok {
+			return fmt.Errorf("tag %q not found in repository %s/%s", tag, registryName, repositoryName)
+		}
+	}
+
 	for _, tag := range tags {
 		err := c.Registries().DeleteTag(registryName, repositoryName, tag)
 		if err != nil {
