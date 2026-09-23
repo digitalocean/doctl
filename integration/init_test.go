@@ -40,8 +40,9 @@ func TestMain(m *testing.M) {
 		builtBinaryPath += ".exe"
 	}
 
-	// tried to use -mod=vendor but it blew up
-	cmd := exec.Command("go", "build", "-o", builtBinaryPath, packagePath)
+	// -mod=vendor so the integration binary matches unit tests, including
+	// MicroVM client fields vendored ahead of the next godo release.
+	cmd := exec.Command("go", "build", "-mod=vendor", "-o", builtBinaryPath, packagePath)
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
