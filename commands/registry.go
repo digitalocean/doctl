@@ -163,10 +163,9 @@ func Repository() *Command {
 		cmd,
 		RunListRepositories, "list",
 		"List repositories for a container registry", listRepositoriesDesc,
-		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("ls"), displayerType(&displayers.Repository{}),
 		hiddenCmd(),
 	)
-	cmdListRepositories.overrideNS = overrideNS
 	addRegistryFlag(cmdListRepositories)
 	cmdListRepositories.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the name and update time of each repository: doctl registry repository list --format Name,UpdatedAt`
 
@@ -181,9 +180,8 @@ func Repository() *Command {
 		cmd,
 		RunListRepositoriesV2, "list-v2",
 		"List repositories for a container registry", listRepositoriesV2Desc,
-		Writer, aliasOpt("ls2"), displayerType(&displayers.Repository{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("ls2"), displayerType(&displayers.Repository{}),
 	)
-	cmdListRepositoriesV2.overrideNS = overrideNS
 	addRegistryFlag(cmdListRepositoriesV2)
 	cmdListRepositoriesV2.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the name and update time of each repository: doctl registry repository list-v2 --format Name,UpdatedAt`
 
@@ -197,9 +195,8 @@ func Repository() *Command {
 		cmd,
 		RunListRepositoryTags, "list-tags <repository>",
 		"List tags for a repository in a container registry", listRepositoryTagsDesc,
-		Writer, aliasOpt("lt"), displayerType(&displayers.RepositoryTag{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("lt"), displayerType(&displayers.RepositoryTag{}),
 	)
-	cmdListRepositoryTags.overrideNS = overrideNS
 	addRegistryFlag(cmdListRepositoryTags)
 	cmdListRepositoryTags.Example = `The following example lists tags in a repository named ` + "`" + `example-repository` + "`" + ` in a registry named ` + "`" + `example-registry` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the tag name and manifest digest for each tag: doctl registry repository list-tags example-repository --format Tag,ManifestDigest`
 
@@ -230,9 +227,8 @@ func Repository() *Command {
 		cmd,
 		RunListRepositoryManifests, "list-manifests <repository>",
 		"List manifests for a repository in a container registry", listRepositoryManifests,
-		Writer, aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
 	)
-	cmdListRepositoryManifests.overrideNS = overrideNS
 	addRegistryFlag(cmdListRepositoryManifests)
 	cmdListRepositoryManifests.Example = `The following example lists manifests in a repository named ` + "`" + `example-repository` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time for each manifest: doctl registry repository list-manifests example-repository --format Digest,UpdatedAt`
 
@@ -280,10 +276,10 @@ func GarbageCollection() *Command {
 		"Start garbage collection for a container registry",
 		runStartGarbageCollectionDesc,
 		Writer,
+		overrideCmdNS(overrideNS),
 		aliasOpt("s"),
 		displayerType(&displayers.GarbageCollection{}),
 	)
-	cmdStartGarbageCollection.overrideNS = overrideNS
 	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgGCIncludeUntaggedManifests, "", false,
 		"Include untagged manifests in garbage collection.")
 	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgGCExcludeUnreferencedBlobs, "", false,
@@ -309,10 +305,10 @@ func GarbageCollection() *Command {
 		"Retrieve information about the currently-active garbage collection for a container registry",
 		runGetGarbageCollectionDesc,
 		Writer,
+		overrideCmdNS(overrideNS),
 		aliasOpt("ga", "g"),
 		displayerType(&displayers.GarbageCollection{}),
 	)
-	cmdGetGarbageCollection.overrideNS = overrideNS
 	cmdGetGarbageCollection.Example = `The following example retrieves the currently-active garbage collection for a registry: doctl registry garbage-collection get-active
 	
 The following example retrieves the currently-active garbage collection for a registry named ` + "`" + `example-registry` + "`" + `: doctl registry garbage-collection get-active example-registry`
@@ -325,10 +321,10 @@ The following example retrieves the currently-active garbage collection for a re
 		"Retrieve information about past garbage collections for a container registry",
 		runListGarbageCollectionsDesc,
 		Writer,
+		overrideCmdNS(overrideNS),
 		aliasOpt("ls", "l"),
 		displayerType(&displayers.GarbageCollection{}),
 	)
-	cmdListGarbageCollections.overrideNS = overrideNS
 	cmdListGarbageCollections.Example = `The following example retrieves a list of past garbage collections for a registry: doctl registry garbage-collection list
 	
 The following example retrieves a list of past garbage collections for a registry named ` + "`" + `example-registry` + "`" + `: doctl registry garbage-collection list example-registry`
@@ -1564,10 +1560,9 @@ func RegistriesRepository() *Command {
 		cmd,
 		RunRegistriesListRepositories, "list <registry-name>",
 		"List repositories for a container registry", listRepositoriesDesc,
-		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("ls"), displayerType(&displayers.Repository{}),
 		hiddenCmd(),
 	)
-	cmdListRepositories.overrideNS = overrideNS
 	cmdListRepositories.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the name and update time of each repository: doctl registries repository list example-registry --format Name,UpdatedAt`
 
 	listRepositoriesV2Desc := `Retrieves information about repositories in a registry, including:
@@ -1581,9 +1576,8 @@ func RegistriesRepository() *Command {
 		cmd,
 		RunRegistriesListRepositoriesV2, "list-v2 <registry-name>",
 		"List repositories for a container registry", listRepositoriesV2Desc,
-		Writer, aliasOpt("ls2"), displayerType(&displayers.Repository{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("ls2"), displayerType(&displayers.Repository{}),
 	)
-	cmdListRepositoriesV2.overrideNS = overrideNS
 	cmdListRepositoriesV2.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the name and update time of each repository: doctl registries repository list-v2 example-registry --format Name,UpdatedAt`
 
 	listRepositoryTagsDesc := `Retrieves information about tags in a repository, including:
@@ -1596,9 +1590,8 @@ func RegistriesRepository() *Command {
 		cmd,
 		RunRegistriesListRepositoryTags, "list-tags <registry-name> <repository>",
 		"List tags for a repository in a container registry", listRepositoryTagsDesc,
-		Writer, aliasOpt("lt"), displayerType(&displayers.RepositoryTag{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("lt"), displayerType(&displayers.RepositoryTag{}),
 	)
-	cmdListRepositoryTags.overrideNS = overrideNS
 	cmdListRepositoryTags.Example = `The following example lists tags in a repository named ` + "`" + `example-repository` + "`" + ` in a registry named ` + "`" + `example-registry` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the tag name and manifest digest for each tag: doctl registries repository list-tags example-registry example-repository --format Tag,ManifestDigest`
 
 	deleteTagDesc := "Permanently deletes one or more repository tags."
@@ -1627,9 +1620,8 @@ func RegistriesRepository() *Command {
 		cmd,
 		RunRegistriesListRepositoryManifests, "list-manifests <registry-name> <repository>",
 		"List manifests for a repository in a container registry", listRepositoryManifests,
-		Writer, aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
+		Writer, overrideCmdNS(overrideNS), aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
 	)
-	cmdListRepositoryManifests.overrideNS = overrideNS
 	cmdListRepositoryManifests.Example = `The following example lists manifests in a repository named ` + "`" + `example-repository` + "`" + ` in a registry named ` + "`" + `example-registry` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time for each manifest: doctl registries repository list-manifests example-registry example-repository --format Digest,UpdatedAt`
 
 	deleteManifestDesc := "Permanently deletes one or more repository manifests by digest."
@@ -1670,10 +1662,10 @@ func RegistriesGarbageCollection() *Command {
 		"Start garbage collection for a container registry",
 		runStartGarbageCollectionDesc,
 		Writer,
+		overrideCmdNS(overrideNS),
 		aliasOpt("s"),
 		displayerType(&displayers.GarbageCollection{}),
 	)
-	cmdStartGarbageCollection.overrideNS = overrideNS
 	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgGCIncludeUntaggedManifests, "", false,
 		"Include untagged manifests in garbage collection.")
 	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgGCExcludeUnreferencedBlobs, "", false,
@@ -1699,10 +1691,10 @@ func RegistriesGarbageCollection() *Command {
 		"Retrieve information about the currently-active garbage collection for a container registry",
 		runGetGarbageCollectionDesc,
 		Writer,
+		overrideCmdNS(overrideNS),
 		aliasOpt("ga", "g"),
 		displayerType(&displayers.GarbageCollection{}),
 	)
-	cmdGetGarbageCollection.overrideNS = overrideNS
 	cmdGetGarbageCollection.Example = `The following example retrieves the currently-active garbage collection for a registry named ` + "`" + `example-registry` + "`" + `: doctl registries garbage-collection get-active example-registry`
 
 	runListGarbageCollectionsDesc := "Retrieves a list of past garbage collections for a registry. Information about each garbage collection includes:" + gcInfoIncluded
@@ -1713,10 +1705,10 @@ func RegistriesGarbageCollection() *Command {
 		"Retrieve information about past garbage collections for a container registry",
 		runListGarbageCollectionsDesc,
 		Writer,
+		overrideCmdNS(overrideNS),
 		aliasOpt("ls", "l"),
 		displayerType(&displayers.GarbageCollection{}),
 	)
-	cmdListGarbageCollections.overrideNS = overrideNS
 	cmdListGarbageCollections.Example = `The following example retrieves a list of past garbage collections for a registry named ` + "`" + `example-registry` + "`" + `: doctl registries garbage-collection list example-registry`
 
 	runCancelGarbageCollectionDesc := "Cancels the currently-active garbage collection for a container registry."
