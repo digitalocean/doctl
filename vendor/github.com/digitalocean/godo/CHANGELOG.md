@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.213.0] - 2026-09-23
+
+- #1102 - @kgautam676 - Adding nfs_csi_plugin to kubernetes cluster types
+- #1120 - @sgupta832 - microvm: decode http_protocol, checkpoint size, and combined list filters
+
 ## [1.212.0] - 2026-09-22
 
 - #1117 - @sgupta832 - MicroVM URN flip + Exec/ConsoleURL (MDROP-392, MDROP-427)

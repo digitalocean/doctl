@@ -79,6 +79,8 @@ type MicroVMsService interface {
 	List(ctx context.Context, opt *ListOptions) ([]MicroVM, *Response, error)
 	ListByRegion(ctx context.Context, region string, opt *ListOptions) ([]MicroVM, *Response, error)
 	ListByName(ctx context.Context, name string, opt *ListOptions) ([]MicroVM, *Response, error)
+	ListByTag(ctx context.Context, tag string, opt *ListOptions) ([]MicroVM, *Response, error)
+	ListFiltered(ctx context.Context, opt *ListMicroVMsOptions) ([]MicroVM, *Response, error)
 	Get(ctx context.Context, id string) (*MicroVM, *Response, error)
 	Create(ctx context.Context, createRequest *MicroVMCreateRequest) (*MicroVM, *Response, error)
 	Pause(ctx context.Context, id string) (*MicroVM, *Response, error)
@@ -135,20 +137,21 @@ type MicroVMURL struct {
 
 // MicroVM represents a DigitalOcean MicroVM.
 type MicroVM struct {
-	ID            string            `json:"id,omitempty"`
-	Name          string            `json:"name,omitempty"`
-	Region        string            `json:"region,omitempty"`
-	State         MicroVMState      `json:"state,omitempty"`
-	Size          *MicroVMSize      `json:"size,omitempty"`
-	URLs          []MicroVMURL      `json:"urls,omitempty"`
-	Ports         []uint32          `json:"ports,omitempty"`
-	FailureReason string            `json:"failure_reason,omitempty"`
-	Networking    MicroVMNetworking `json:"networking,omitempty"`
-	Source        *MicroVMSource    `json:"source,omitempty"`
-	AutoPause     *AutoPauseConfig  `json:"auto_pause,omitempty"`
-	AutoResume    *bool             `json:"auto_resume,omitempty"`
-	Created       string            `json:"created_at,omitempty"`
-	Tags          []string          `json:"tags,omitempty"`
+	ID            string              `json:"id,omitempty"`
+	Name          string              `json:"name,omitempty"`
+	Region        string              `json:"region,omitempty"`
+	State         MicroVMState        `json:"state,omitempty"`
+	Size          *MicroVMSize        `json:"size,omitempty"`
+	URLs          []MicroVMURL        `json:"urls,omitempty"`
+	Ports         []uint32            `json:"ports,omitempty"`
+	FailureReason string              `json:"failure_reason,omitempty"`
+	Networking    MicroVMNetworking   `json:"networking,omitempty"`
+	Source        *MicroVMSource      `json:"source,omitempty"`
+	AutoPause     *AutoPauseConfig    `json:"auto_pause,omitempty"`
+	AutoResume    *bool               `json:"auto_resume,omitempty"`
+	HTTPProtocol  MicroVMHTTPProtocol `json:"http_protocol,omitempty"`
+	Created       string              `json:"created_at,omitempty"`
+	Tags          []string            `json:"tags,omitempty"`
 }
 
 // AutoPauseConfig configures MicroVM auto-pause behavior. IdleTimeout is
@@ -162,11 +165,14 @@ type AutoPauseConfig struct {
 // MicroVMCheckpoint represents a checkpoint of a MicroVM
 // (persisted memory + disk state).
 type MicroVMCheckpoint struct {
-	ID          string                  `json:"id,omitempty"`
-	MicroVMID   string                  `json:"microvm_id,omitempty"`
-	MicroVMName string                  `json:"microvm_name,omitempty"`
-	Name        string                  `json:"name,omitempty"`
-	Region      string                  `json:"region,omitempty"`
+	ID          string `json:"id,omitempty"`
+	MicroVMID   string `json:"microvm_id,omitempty"`
+	MicroVMName string `json:"microvm_name,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Region      string `json:"region,omitempty"`
+	// Size is the guest shape this checkpoint restores at. Omitted when the
+	// checkpoint does not record one; a create from it must then name a size.
+	Size        *MicroVMSize            `json:"size,omitempty"`
 	Status      MicroVMCheckpointStatus `json:"status,omitempty"`
 	MemoryBytes uint64                  `json:"memory_bytes,omitempty"`
 	DiskBytes   uint64                  `json:"disk_bytes,omitempty"`
@@ -342,16 +348,23 @@ type microVMCheckpointsRoot struct {
 	Meta        *Meta               `json:"meta"`
 }
 
-// listMicroVMOptions holds MicroVM-specific list filters that are
-// not part of the shared ListOptions.
-type listMicroVMOptions struct {
-	Region string `url:"region,omitempty"`
-	Name   string `url:"name,omitempty"`
+// ListMicroVMsOptions filters GET /v2/microvms. Pagination lives on the
+// embedded ListOptions. Region, Name, and TagName are omitted when empty
+// and combine: the API ANDs whichever are set.
+type ListMicroVMsOptions struct {
+	ListOptions
+	Region  string `url:"region,omitempty"`
+	Name    string `url:"name,omitempty"`
+	TagName string `url:"tag_name,omitempty"`
 }
 
 // List lists all MicroVMs, with optional pagination.
 func (s *MicroVMsServiceOp) List(ctx context.Context, opt *ListOptions) ([]MicroVM, *Response, error) {
-	return s.list(ctx, opt, nil)
+	var filtered *ListMicroVMsOptions
+	if opt != nil {
+		filtered = &ListMicroVMsOptions{ListOptions: *opt}
+	}
+	return s.ListFiltered(ctx, filtered)
 }
 
 // ListByRegion lists MicroVMs filtered by region slug, with optional pagination.
@@ -359,7 +372,11 @@ func (s *MicroVMsServiceOp) ListByRegion(ctx context.Context, region string, opt
 	if region == "" {
 		return nil, nil, NewArgError("region", "cannot be empty")
 	}
-	return s.list(ctx, opt, &listMicroVMOptions{Region: region})
+	filtered := &ListMicroVMsOptions{Region: region}
+	if opt != nil {
+		filtered.ListOptions = *opt
+	}
+	return s.ListFiltered(ctx, filtered)
 }
 
 // ListByName lists MicroVMs filtered by exact name match, with optional pagination.
@@ -367,16 +384,30 @@ func (s *MicroVMsServiceOp) ListByName(ctx context.Context, name string, opt *Li
 	if name == "" {
 		return nil, nil, NewArgError("name", "cannot be empty")
 	}
-	return s.list(ctx, opt, &listMicroVMOptions{Name: name})
+	filtered := &ListMicroVMsOptions{Name: name}
+	if opt != nil {
+		filtered.ListOptions = *opt
+	}
+	return s.ListFiltered(ctx, filtered)
 }
 
-func (s *MicroVMsServiceOp) list(ctx context.Context, opt *ListOptions, listOpt *listMicroVMOptions) ([]MicroVM, *Response, error) {
+// ListByTag lists MicroVMs that carry the given resource tag. A tag that
+// matches nothing returns an empty list rather than an error.
+func (s *MicroVMsServiceOp) ListByTag(ctx context.Context, tag string, opt *ListOptions) ([]MicroVM, *Response, error) {
+	if tag == "" {
+		return nil, nil, NewArgError("tag", "cannot be empty")
+	}
+	filtered := &ListMicroVMsOptions{TagName: tag}
+	if opt != nil {
+		filtered.ListOptions = *opt
+	}
+	return s.ListFiltered(ctx, filtered)
+}
+
+// ListFiltered lists MicroVMs using any combination of region, name, and tag.
+func (s *MicroVMsServiceOp) ListFiltered(ctx context.Context, opt *ListMicroVMsOptions) ([]MicroVM, *Response, error) {
 	path := microVMBasePath
 	path, err := addOptions(path, opt)
-	if err != nil {
-		return nil, nil, err
-	}
-	path, err = addOptions(path, listOpt)
 	if err != nil {
 		return nil, nil, err
 	}
