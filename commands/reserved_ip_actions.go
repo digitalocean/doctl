@@ -36,7 +36,7 @@ func ReservedIPAction() *Command {
 	flipActionDetail := `
 
 - The unique numeric ID used to identify and reference a reserved IP action
-- The status of the reserved IP action. Possible values: "in-progress", "completed", "errored"
+- The status of the reserved IP action. Possible values: ` + "`" + `in-progress` + "`" + `, ` + "`" + `completed` + "`" + `, ` + "`" + `errored` + "`" + `
 - When the action was initiated, in ISO8601 combined date and time format
 - When the action was completed, in ISO8601 combined date and time format
 - The ID of the resource that the action is associated with
