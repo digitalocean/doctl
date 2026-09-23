@@ -38,7 +38,7 @@ type MicroVMCheckpoints []MicroVMCheckpoint
 //go:generate go run go.uber.org/mock/mockgen -source microvms.go -package=mocks -destination mocks/MicroVMsService.go MicroVMsService
 
 // MicroVMListFilter selects which MicroVMs List returns. Empty fields are
-// omitted. Region, Name, and TagName combine: the API ANDs whichever are set.
+// omitted. Region, Name, and TagName combine with logical AND when set.
 type MicroVMListFilter struct {
 	Region  string
 	Name    string

@@ -48,7 +48,7 @@ func MicroVM() *Command {
 
 	cmdMicroVMList := CmdBuilder(cmd, RunMicroVMList, "list",
 		"List MicroVMs on your account",
-		"Retrieves a list of MicroVMs on your account. Filters combine: `--region`, `--name`, and `--tag-name` are ANDed.",
+		"Retrieves a list of MicroVMs on your account. Filters combine with logical AND: `--region`, `--name`, and `--tag-name`.",
 		Writer, aliasOpt("ls"), displayerType(&displayers.MicroVM{}))
 	AddStringFlag(cmdMicroVMList, doctl.ArgRegionSlug, "", "",
 		"Filter MicroVMs by region slug, such as `nyc1`")
