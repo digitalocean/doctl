@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"os"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -223,5 +224,86 @@ func TestDropletAutoscaleDeleteDangerous(t *testing.T) {
 
 		err := RunDropletAutoscaleDeleteDangerous(c)
 		assert.NoError(t, err)
+	})
+}
+
+func TestDropletAutoscaleCreateUserDataFile(t *testing.T) {
+	userData := "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n"
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "doctlAutoscaleTest-*.yml")
+	assert.NoError(t, err)
+
+	_, err = tmpFile.WriteString(userData)
+	assert.NoError(t, err)
+
+	err = tmpFile.Close()
+	assert.NoError(t, err)
+
+	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
+		createReq := godo.DropletAutoscalePoolRequest{
+			Name: "test-droplet-autoscale-pool-01",
+			Config: &godo.DropletAutoscaleConfiguration{
+				TargetNumberInstances: 3,
+			},
+			DropletTemplate: &godo.DropletAutoscaleResourceTemplate{
+				UserData: userData,
+			},
+		}
+
+		tm.dropletAutoscale.EXPECT().Create(&createReq).Return(testAutoscalePools[0], nil)
+
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleName, "test-droplet-autoscale-pool-01")
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleTargetInstances, "3")
+		c.Doit.Set(c.NS, doctl.ArgUserDataFile, tmpFile.Name())
+
+		err := RunDropletAutoscaleCreate(c)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDropletAutoscaleUpdateUserDataFile(t *testing.T) {
+	userData := "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n"
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "doctlAutoscaleTest-*.yml")
+	assert.NoError(t, err)
+
+	_, err = tmpFile.WriteString(userData)
+	assert.NoError(t, err)
+
+	err = tmpFile.Close()
+	assert.NoError(t, err)
+
+	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
+		poolID := "51154959-e07b-4093-98fb-828590ecc76d"
+		updateReq := godo.DropletAutoscalePoolRequest{
+			Name: "test-droplet-autoscale-pool-01",
+			Config: &godo.DropletAutoscaleConfiguration{
+				TargetNumberInstances: 3,
+			},
+			DropletTemplate: &godo.DropletAutoscaleResourceTemplate{
+				UserData: userData,
+			},
+		}
+
+		tm.dropletAutoscale.EXPECT().Update(poolID, &updateReq).Return(testAutoscalePools[0], nil)
+		c.Args = append(c.Args, poolID)
+
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleName, "test-droplet-autoscale-pool-01")
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleTargetInstances, "3")
+		c.Doit.Set(c.NS, doctl.ArgUserDataFile, tmpFile.Name())
+
+		err := RunDropletAutoscaleUpdate(c)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDropletAutoscaleCreateUserDataFileMissing(t *testing.T) {
+	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleName, "test-droplet-autoscale-pool-01")
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleTargetInstances, "3")
+		c.Doit.Set(c.NS, doctl.ArgUserDataFile, "/nonexistent/doctl-user-data.yml")
+
+		err := RunDropletAutoscaleCreate(c)
+		assert.Error(t, err)
 	})
 }
