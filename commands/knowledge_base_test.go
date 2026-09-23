@@ -65,6 +65,19 @@ var (
 			TotalBytesIndexed: "1024000",
 		},
 	}
+
+	testAgent = do.Agent{
+		Agent: &godo.Agent{
+			Uuid:      "00000000-0000-4000-8000-000000000000",
+			Name:      "Agent1",
+			Region:    "tor1",
+			ProjectId: "00000000-0000-4000-8000-000000000000",
+			Model: &godo.Model{
+				Uuid: "00000000-0000-4000-8000-000000000000",
+			},
+			Instruction: "You are an agent who thinks deeply about the world",
+		},
+	}
 )
 
 func TestKnowledgeBasesCommand(t *testing.T) {

@@ -743,62 +743,6 @@ const (
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
 
-	// Agent Args
-
-	// ArgAgentId is the ID of the agent.
-	ArgAgentId = "agent-id"
-
-	// ArgAgentName is the name of the agent.
-	ArgAgentName = "name"
-
-	// ArgAgentInstruction is the instruction for the agent.
-	ArgAgentInstruction = "instruction"
-
-	// ArgAgentModelId is the model ID for the agent.
-	ArgModelId = "model-id"
-
-	// ArgAgentProjectId is the project ID for the agent.
-	ArgAgentProjectId = "project-id"
-
-	// ArgAgentRegion is the region where the agent is deployed.
-	ArgAgentRegion = "region"
-
-	// ArgAnthropicKeyId is the Anthropic key ID for the agent.
-	ArgAnthropicKeyId = "Anthropic-key-id"
-
-	// ArgAgentDescription is the description for the agent.
-	ArgAgentDescription = "description"
-
-	// ArgKnowledgeBaseId is the knowledge base ID(s) attached to the agent.
-	ArgKnowledgeBaseId = "knowledge-base-id"
-
-	// ArgOpenAIKeyId is the OpenAI API key ID for the agent.
-	ArgOpenAIKeyId = "openai-key-id"
-
-	// ArgTags are the tags applied to the agent.
-	ArgTags = "tags"
-
-	// ArgWorkspaceUuid is the UUID of the workspace the agent belongs to.
-	ArgWorkspaceUuid = "workspace-uuid"
-
-	// ArgAgentForce forces agent deletion without confirmation.
-	ArgAgentForce = "force"
-
-	// ArgK specifies how many results should be considered from an attached knowledge base.
-	ArgK = "k"
-
-	// ArgMaxTokens is the maximum number of tokens to generate in the response.
-	ArgMaxTokens = "max-tokens"
-
-	// ArgRetrievalMethod is the method used to retrieve information from the knowledge base.
-	ArgRetrievalMethod = "retrieval-method"
-
-	// ArgTemperature is the temperature for the response generation.
-	ArgTemperature = "temperature"
-
-	// ArgTopProbability is the top probability for the response generation.
-	ArgTopProbability = "top-p"
-
 	// ArgKnowledgeBaseDatabaseID is the ID of the database
 	ArgKnowledgeBaseDatabaseID = "database-id"
 
@@ -852,51 +796,6 @@ const (
 
 	// ArgAdvertise is a byoip prefix argument.
 	ArgAdvertise = "advertise"
-
-	// ArgAgentParentID is the ID for the parent agent.
-	ArgParentAgentId = "parent-agent-id"
-
-	// ArgChildAgentID is the ID for the child agent.
-	ArgChildAgentId = "child-agent-id"
-
-	// ArgAgentRouteId is the UUID for the agent linkage.
-	ArgAgentRouteId = "route-id"
-
-	// ArgAgentRouteName is the name of the route.
-	ArgAgentRouteName = "route-name"
-
-	// ArgAgentRouteIfCase is the if-case condition for the route.
-	ArgAgentRouteIfCase = "if-case"
-
-	// ArgFunctionIDs is the name of the function.
-	ArgFunctionID = "function-id"
-
-	//ArgFunctionName is the name of the function.
-	ArgFunctionName = "name"
-
-	// ArgFunctionDescription is the description of the function.
-	ArgFunctionRouteDescription = "description"
-
-	// ArgFunctionRouteFaasName is the name of the function route in the DigitalOcean functions platform
-	ArgFunctionRouteFaasName = "faas-name"
-
-	// ArgFunctionRouteFaasNamespace is the namespace of the function route in the DigitalOcean functions platform
-	ArgFunctionRouteFaasNamespace = "faas-namespace"
-
-	// ArgFunctionRouteInputSchema is the input schema of the function route
-	ArgFunctionRouteInputSchema = "input-schema"
-
-	// ArgFunctionRouteOutputSchema is the output schema of the function route
-	ArgFunctionRouteOutputSchema = "output-schema"
-
-	// ArgAgentAPIKeyName is the name of API Key of the agent.
-	ArgAgentAPIKeyName = "name"
-
-	// ArgAgentUUID is the uuid of the apikey.
-	ArgAPIkeyUUID = "api-key-uuid"
-
-	// ArgAPIKeyForce forces API Key deletion without confirmation.
-	ArgAPIKeyForce = "force"
 
 	// ArgOpenAIKeyName is the name of the OpenAI API Key
 	ArgOpenAIKeyName = "name"

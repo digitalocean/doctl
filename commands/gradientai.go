@@ -15,7 +15,7 @@ package commands
 
 import "github.com/spf13/cobra"
 
-// GradientAI creates the gradient command and adds the agent, knowledge base, model, region, and OpenAI key subcommands.
+// GradientAI creates the gradient command and adds the model, region, and OpenAI key subcommands.
 func GradientAI() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -27,10 +27,6 @@ func GradientAI() *Command {
 		},
 	}
 
-	// Add the agent command as a subcommand to Gradient AI
-	cmd.AddCommand(AgentCmd())
-	// Add the knowledgebase command as a subcommand to Gradient AI
-	cmd.AddCommand(KnowledgeBaseCmd())
 	// Add the model command as a subcommand to Gradient AI
 	cmd.AddCommand(ListModelsCmd())
 	// Add the region command as a subcommand to Gradient AI
