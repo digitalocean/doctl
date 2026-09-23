@@ -3395,6 +3395,16 @@ func (c *eventCursor) get() string {
 	return c.id
 }
 
+// clear forgets the last-rendered EventID so the next reconnect attaches
+// head-anchored (no Last-Event-ID) instead of resuming. Used after a rollback:
+// the cursor points inside the range the server rewound, so resuming from it
+// would skip the restored transcript; a head-anchored reattach re-reads it.
+func (c *eventCursor) clear() {
+	c.mu.Lock()
+	c.id = ""
+	c.mu.Unlock()
+}
+
 // Backoff schedule for auto reconnects between attempts. maxAutoReconnectAttempts
 // bounds CONSECUTIVE failed reconnects, not the lifetime total: a connection
 // that stays healthy resets the budget (see healthyStreamDuration).
@@ -3405,6 +3415,7 @@ const (
 	msgReconnecting          = "Reconnecting..."
 	msgReconnectFailed       = "Failed to reconnect to agent activity stream."
 	msgSuperseded            = "This session was attached from another window on this device. Stopping the stream here."
+	msgRolledBack            = "── session restored to an earlier checkpoint; reloading transcript ──"
 
 	// Shown when the stream goes quiet after the prepay gate paused the
 	// session, in place of the reconnect chatter that would otherwise be the
@@ -4363,14 +4374,33 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		// activity, so it never renders and never moves the cursor.
 		if ev.Kind == godo.HostedAgentEventKindStreamState {
 			var st godo.HostedAgentStreamState
-			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
-				reasoning.end()
-				thinking.stop()
-				acc.flush(out)
-				flushAwaitingApproval(out, &awaiting, hitlLabels)
-				tools.flush(out)
-				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
-				return true, paused.outcome()
+			if err := json.Unmarshal(ev.Payload, &st); err == nil {
+				switch st.State {
+				case godo.HostedAgentStreamStateSuperseded:
+					reasoning.end()
+					thinking.stop()
+					acc.flush(out)
+					flushAwaitingApproval(out, &awaiting, hitlLabels)
+					tools.flush(out)
+					fmt.Fprintf(out, "\n%s\n", msgSuperseded)
+					return true, paused.outcome()
+				case godo.HostedAgentStreamStateRolledBack:
+					// The session was restored to an earlier checkpoint, so the
+					// turns already printed on this stream have been rewound. Flush
+					// what's buffered, drop the resume cursor, and return for a
+					// reconnect: a head-anchored reattach replays the restored
+					// transcript up to the checkpoint in one go. (We can't unprint
+					// the stale turns in a terminal, so the divider marks where the
+					// restored history begins.)
+					reasoning.end()
+					thinking.stop()
+					acc.flush(out)
+					flushAwaitingApproval(out, &awaiting, hitlLabels)
+					tools.flush(out)
+					fmt.Fprintf(out, "\n%s\n", colorize(msgRolledBack, colMuted))
+					cursor.clear()
+					return false, paused.outcome()
+				}
 			}
 			_ = warmup.noteBackendEvent(ev)
 			continue

@@ -339,6 +339,14 @@ const (
 	// device took over. The server closes this stream; the client should stop
 	// rather than reconnect, or the two connections will evict each other.
 	HostedAgentStreamStateSuperseded HostedAgentStreamStateValue = "superseded"
+	// HostedAgentStreamStateRolledBack means the session was restored to an
+	// earlier checkpoint, so every event after that checkpoint (including ones
+	// already delivered on this stream) has been rewound. The server closes this
+	// stream. Unlike superseded, the client should reconnect — but it must first
+	// discard its resume cursor and reattach without a Last-Event-ID, so it
+	// re-reads the restored transcript from the checkpoint rather than resuming
+	// from a position that now sits inside the rewound range.
+	HostedAgentStreamStateRolledBack HostedAgentStreamStateValue = "rolled_back"
 )
 
 // HostedAgentSessionOriginProduct identifies the product workflow that created
