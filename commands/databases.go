@@ -2295,9 +2295,9 @@ This command lists the following details for each partition of a given topic in 
 		AddIntFlag(c, doctl.ArgDatabaseTopicReplicationFactor, "", 2, "Specifies the number of nodes to replicate data across the kafka cluster")
 		AddIntFlag(c, doctl.ArgDatabaseTopicPartitionCount, "", 1, "Specifies the number of partitions available for the topic")
 		AddStringFlag(c, doctl.ArgDatabaseTopicCleanupPolicy, "", "delete",
-			"Specifies the retention policy to use on log segments: Possible values are 'delete', 'compact_delete', 'compact'")
+			"Specifies the retention policy to use on log segments: Possible values are `delete`, `compact_delete`, `compact`")
 		AddStringFlag(c, doctl.ArgDatabaseTopicCompressionType, "", "producer",
-			"Specifies the compression type for a kafka topic: Possible values are 'producer', 'gzip', 'snappy', 'Iz4', 'zstd', 'uncompressed'")
+			"Specifies the compression type for a kafka topic: Possible values are `producer`, `gzip`, `snappy`, `lz4`, `zstd`, `uncompressed`")
 		AddStringFlag(c, doctl.ArgDatabaseTopicDeleteRetentionMS, "", "",
 			"Specifies how long (in ms) to retain delete tombstone markers for topics")
 		AddStringFlag(c, doctl.ArgDatabaseTopicFileDeleteDelayMS, "", "",
