@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
@@ -151,6 +152,27 @@ func TestRepositoryCommand(t *testing.T) {
 	cmd := Repository()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "list", "list-v2", "list-manifests", "list-tags", "delete-manifest", "delete-tag")
+
+	for _, child := range cmd.ChildCommands() {
+		if child.Name() == "list-v2" {
+			assert.Equal(t, (&displayers.RepositoryV2{}).Cols(), child.fmtCols)
+		} else if child.Name() == "list" {
+			assert.Equal(t, (&displayers.Repository{}).Cols(), child.fmtCols)
+		}
+	}
+}
+
+func TestRegistriesRepositoryCommand(t *testing.T) {
+	cmd := RegistriesRepository()
+	assert.NotNil(t, cmd)
+
+	for _, child := range cmd.ChildCommands() {
+		if strings.HasPrefix(child.Name(), "list-v2") {
+			assert.Equal(t, (&displayers.RepositoryV2{}).Cols(), child.fmtCols)
+		} else if strings.HasPrefix(child.Name(), "list ") {
+			assert.Equal(t, (&displayers.Repository{}).Cols(), child.fmtCols)
+		}
+	}
 }
 
 func TestGarbageCollectionCommand(t *testing.T) {
@@ -332,6 +354,24 @@ func TestRepositoryListV2(t *testing.T) {
 			assert.True(t, strings.Contains(output, "<none>")) // default value when latest manifest has no tags
 			// basic text format doesn't include blob data
 			assert.False(t, strings.Contains(output, testRepositoryV2NoTags.LatestManifest.Blobs[0].Digest))
+		})
+	})
+	t.Run("with custom V2 format fields", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+			tm.registry.EXPECT().ListRepositoriesV2(testRepositoryV2.RegistryName).Return([]do.RepositoryV2{testRepositoryV2}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgFormat, "Name,ManifestCount,UpdatedAt,LatestManifest,LatestTag,TagCount")
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			assert.True(t, strings.Contains(output, testRepositoryV2.Name))
+			assert.True(t, strings.Contains(output, fmt.Sprintf("%d", testRepositoryV2.ManifestCount)))
+			assert.True(t, strings.Contains(output, testRepositoryV2.LatestManifest.Digest))
 		})
 	})
 }
@@ -1287,5 +1327,48 @@ func TestRegistriesList(t *testing.T) {
 
 		output := buf.String()
 		assert.Contains(t, output, testRegistry.Name)
+	})
+}
+
+func TestRegistriesListRepositoriesV2(t *testing.T) {
+	t.Run("default format", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = append(config.Args, testRegistryName)
+			config.Registries = func() do.RegistriesService {
+				return tm.registries
+			}
+			tm.registries.EXPECT().ListRepositoriesV2(testRegistryName).Return([]do.RepositoryV2{testRepositoryV2}, nil)
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunRegistriesListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			assert.True(t, strings.Contains(output, testRepositoryV2.Name))
+			assert.True(t, strings.Contains(output, testRepositoryV2.LatestManifest.Digest))
+		})
+	})
+
+	t.Run("with custom V2 format fields", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = append(config.Args, testRegistryName)
+			config.Registries = func() do.RegistriesService {
+				return tm.registries
+			}
+			tm.registries.EXPECT().ListRepositoriesV2(testRegistryName).Return([]do.RepositoryV2{testRepositoryV2}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgFormat, "Name,ManifestCount,UpdatedAt,LatestManifest,LatestTag,TagCount")
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunRegistriesListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			assert.True(t, strings.Contains(output, testRepositoryV2.Name))
+			assert.True(t, strings.Contains(output, fmt.Sprintf("%d", testRepositoryV2.ManifestCount)))
+			assert.True(t, strings.Contains(output, testRepositoryV2.LatestManifest.Digest))
+		})
 	})
 }
