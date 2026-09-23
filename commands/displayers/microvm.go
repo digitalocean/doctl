@@ -34,7 +34,7 @@ func (m *MicroVM) JSON(out io.Writer) error {
 
 func (m *MicroVM) Cols() []string {
 	return []string{
-		"ID", "Name", "Region", "State", "Size", "Networking", "Source", "Endpoint", "Ports", "Tags", "FailureReason", "Created",
+		"ID", "Name", "Region", "State", "Size", "Networking", "Source", "Endpoint", "Ports", "Protocol", "Tags", "FailureReason", "Created",
 	}
 }
 
@@ -49,6 +49,7 @@ func (m *MicroVM) ColMap() map[string]string {
 		"Source":        "Source",
 		"Endpoint":      "Endpoint",
 		"Ports":         "Ports",
+		"Protocol":      "Protocol",
 		"Tags":          "Tags",
 		"FailureReason": "Failure Reason",
 		"Created":       "Created At",
@@ -68,6 +69,7 @@ func (m *MicroVM) KV() []map[string]any {
 			"Source":        formatMicroVMSource(md.Source),
 			"Endpoint":      defaultMicroVMHostname(md.URLs),
 			"Ports":         formatPorts(md.Ports),
+			"Protocol":      string(md.HTTPProtocol),
 			"Tags":          strings.Join(md.Tags, ","),
 			"FailureReason": md.FailureReason,
 			"Created":       md.Created,
@@ -88,7 +90,7 @@ func (c *MicroVMCheckpoint) JSON(out io.Writer) error {
 
 func (c *MicroVMCheckpoint) Cols() []string {
 	return []string{
-		"ID", "MicroVMID", "MicroVMName", "Name", "Region", "Status", "MemoryBytes", "DiskBytes", "Created",
+		"ID", "MicroVMID", "MicroVMName", "Name", "Region", "Size", "Status", "MemoryBytes", "DiskBytes", "Created",
 	}
 }
 
@@ -99,6 +101,7 @@ func (c *MicroVMCheckpoint) ColMap() map[string]string {
 		"MicroVMName": "MicroVM Name",
 		"Name":        "Name",
 		"Region":      "Region",
+		"Size":        "Size",
 		"Status":      "Status",
 		"MemoryBytes": "Memory Bytes",
 		"DiskBytes":   "Disk Bytes",
@@ -115,6 +118,7 @@ func (c *MicroVMCheckpoint) KV() []map[string]any {
 			"MicroVMName": cp.MicroVMName,
 			"Name":        cp.Name,
 			"Region":      cp.Region,
+			"Size":        formatMicroVMSize(cp.Size),
 			"Status":      string(cp.Status),
 			"MemoryBytes": cp.MemoryBytes,
 			"DiskBytes":   cp.DiskBytes,

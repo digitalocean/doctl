@@ -79,23 +79,17 @@ func NewMicroVMsService(client *godo.Client) MicroVMsService {
 }
 
 func (s *microVMsService) List(filter MicroVMListFilter) (MicroVMs, error) {
-	// godo v1.212.0 exposes region/name list helpers only. Combined tag_name
-	// filtering (ListFiltered) lands in a later godo; until then narrow with
-	// the best server-side filter and finish AND semantics client-side.
+	base := &godo.ListMicroVMsOptions{
+		Region:  filter.Region,
+		Name:    filter.Name,
+		TagName: filter.TagName,
+	}
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		var (
-			list []godo.MicroVM
-			resp *godo.Response
-			err  error
-		)
-		switch {
-		case filter.Region != "":
-			list, resp, err = s.client.MicroVMs.ListByRegion(context.TODO(), filter.Region, opt)
-		case filter.Name != "":
-			list, resp, err = s.client.MicroVMs.ListByName(context.TODO(), filter.Name, opt)
-		default:
-			list, resp, err = s.client.MicroVMs.List(context.TODO(), opt)
+		listOpt := *base
+		if opt != nil {
+			listOpt.ListOptions = *opt
 		}
+		list, resp, err := s.client.MicroVMs.ListFiltered(context.TODO(), &listOpt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -104,7 +98,8 @@ func (s *microVMsService) List(filter MicroVMListFilter) (MicroVMs, error) {
 		for i := range list {
 			si[i] = list[i]
 		}
-		return si, resp, nil
+
+		return si, resp, err
 	}
 
 	si, err := PaginateResp(f)
@@ -112,27 +107,12 @@ func (s *microVMsService) List(filter MicroVMListFilter) (MicroVMs, error) {
 		return nil, err
 	}
 
-	list := make(MicroVMs, 0, len(si))
+	list := make(MicroVMs, len(si))
 	for i := range si {
 		md := si[i].(godo.MicroVM)
-		if filter.Name != "" && filter.Region != "" && md.Name != filter.Name {
-			continue
-		}
-		if filter.TagName != "" && !microVMHasTag(md.Tags, filter.TagName) {
-			continue
-		}
-		list = append(list, MicroVM{MicroVM: &md})
+		list[i] = MicroVM{MicroVM: &md}
 	}
 	return list, nil
-}
-
-func microVMHasTag(tags []string, want string) bool {
-	for _, t := range tags {
-		if t == want {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *microVMsService) Get(id string) (*MicroVM, error) {
