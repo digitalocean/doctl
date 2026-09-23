@@ -44,7 +44,7 @@ Available Commands:
 Flags:
   -t, --access-token string   API V2 access token
   -u, --api-url string        Override default API endpoint
-  -c, --config string         Specify a custom config file (default "$HOME/.config/doctl/config.yaml")
+  -c, --config string         Specify a custom config file
       --context string        Specify a custom authentication context name
   -h, --help                  help for doctl
   -o, --output string         Desired output format [text|json] (default "text")

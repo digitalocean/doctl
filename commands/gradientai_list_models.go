@@ -5,7 +5,8 @@ import (
 )
 
 func ListModelsCmd() *Command {
-	cmd := CmdBuilder(nil, RunGradientAIListModels, "list-models", "List Gradient AI models", `The `+"`doctl gradient list-models`"+` command lists all available Gradient AI models.
+	// Alias is "lm" only — "models" would collide with doctl inference models.
+	cmd := CmdBuilder(nil, RunGradientAIListModels, "list-models", "List available models", `The `+"`doctl inference list-models`"+` command lists all available models from the GenAI platform catalog.
 
 The command returns the following details for each model:
 	- The model ID
@@ -17,9 +18,9 @@ The command returns the following details for each model:
 	- Model has been fully uploaded
 	- Download URL for the model
 	- Version information about a model
-	- is_foundational: True if it is a foundational model provided by DigitalOcean`, Writer, displayerType(&displayers.Model{}), aliasOpt("models", "lm"))
+	- is_foundational: True if it is a foundational model provided by DigitalOcean`, Writer, displayerType(&displayers.Model{}), aliasOpt("lm"))
 
-	cmd.Example = `doctl gradient list-models`
+	cmd.Example = `doctl inference list-models`
 
 	return cmd
 }

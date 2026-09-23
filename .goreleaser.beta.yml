@@ -15,7 +15,7 @@ builds:
   - -X github.com/digitalocean/doctl.Major={{ .Major }}
   - -X github.com/digitalocean/doctl.Minor={{ .Minor }}
   - -X github.com/digitalocean/doctl.Patch={{ .Patch }}
-  - -X github.com/digitalocean/doctl.Label=beta
+  - -X github.com/digitalocean/doctl.Label={{ .Prerelease }}
   goos:
   - windows
   - darwin

@@ -35,6 +35,7 @@ const (
 	configureDoctlGroup      = "configureDoctl"
 	viewBillingGroup         = "viewBilling"
 	serverlessInferenceGroup = "serverlessInference"
+	hostedAgentsGroup        = "hostedAgents"
 )
 
 var (
@@ -76,7 +77,7 @@ func init() {
 
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
-		filepath.Join(defaultConfigHome(), defaultConfigName), "Specify a custom config file")
+		"", "Specify a custom config file")
 	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API endpoint")
@@ -127,6 +128,10 @@ func initConfig() {
 	viper.SetConfigType("yaml")
 
 	cfgFile := viper.GetString("config")
+	if cfgFile == "" {
+		cfgFile = filepath.Join(defaultConfigHome(), defaultConfigName)
+		viper.Set("config", cfgFile)
+	}
 	viper.SetConfigFile(cfgFile)
 
 	viper.SetDefault("output", "text")
@@ -171,6 +176,7 @@ func addCommands() {
 
 	DoitCmd.AddGroup(&cobra.Group{ID: manageResourcesGroup, Title: "Manage DigitalOcean Resources:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: serverlessInferenceGroup, Title: "Inference:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: hostedAgentsGroup, Title: "Managed Agents Runtime Services (M.A.R.S):"})
 	DoitCmd.AddGroup(&cobra.Group{ID: configureDoctlGroup, Title: "Configure doctl:"})
 	DoitCmd.AddGroup(&cobra.Group{ID: viewBillingGroup, Title: "View Billing:"})
 
@@ -179,6 +185,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Balance())
 	DoitCmd.AddCommand(BillingHistory())
+	DoitCmd.AddCommand(Prepayment())
 	DoitCmd.AddCommand(Invoices())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Kubernetes())
@@ -200,6 +207,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Inference())
 	DoitCmd.AddCommand(Nfs())
 	DoitCmd.AddCommand(Security())
+	DoitCmd.AddCommand(Agents())
 	DoitCmd.AddCommand(Secrets())
 }
 
@@ -220,6 +228,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(DropletAutoscale())
 	cmd.AddCommand(Domain())
+	cmd.AddCommand(MicroVM())
 	cmd.AddCommand(VPCNATGateway())
 	cmd.AddCommand(Firewall())
 	cmd.AddCommand(ReservedIP())
