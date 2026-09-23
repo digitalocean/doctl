@@ -28,6 +28,10 @@ func GradientAI() *Command {
 	}
 
 	// Kept under gradient but hidden (same pattern as scenario/simulation cmds).
+	// Public home is now doctl knowledge-base.
+	cmd.AddCommand(deprecatedKnowledgeBaseCmd())
+
+	// Kept under gradient but hidden (same pattern as scenario/simulation cmds).
 	// Public home is now doctl inference.
 	listModels := ListModelsCmd()
 	listModels.Hidden = true

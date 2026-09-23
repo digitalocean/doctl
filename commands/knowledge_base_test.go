@@ -86,6 +86,21 @@ func TestKnowledgeBasesCommand(t *testing.T) {
 	assertCommandNames(t, cmd, "add-datasource", "attach", "cancel-indexing-job", "create", "delete", "delete-datasource", "detach", "get", "get-indexing-job", "list", "list-datasources", "list-indexing-job-data-sources", "list-indexing-jobs", "update")
 }
 
+func TestDeprecatedKnowledgeBasesCommand(t *testing.T) {
+	cmd := deprecatedKnowledgeBaseCmd()
+	assert.NotNil(t, cmd)
+	assert.True(t, cmd.Hidden)
+	assert.Empty(t, cmd.Commands(), "the old path forwards instead of rebuilding the tree")
+	assert.Contains(t, cmd.Aliases, "kb")
+}
+
+func TestGradientAICommandKeepsDeprecatedKnowledgeBase(t *testing.T) {
+	cmd, _, err := GradientAI().Find([]string{"knowledge-base"})
+	assert.NoError(t, err)
+	assert.Equal(t, "knowledge-base", cmd.Name())
+	assert.True(t, cmd.Hidden)
+}
+
 func TestKnowledgeBaseGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"

@@ -11,6 +11,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// deprecatedKnowledgeBaseCmd keeps the knowledge base commands reachable at their
+// former location, `doctl gradient knowledge-base`, so that existing scripts keep
+// working. It warns and then replays the arguments against `doctl knowledge-base`.
+//
+// It forwards rather than building a second copy of the tree: flags are bound to
+// viper under `<parent>.<command>.<flag>`, so a second copy would rebind every
+// knowledge base flag to itself and leave the surviving tree unable to read them.
+func deprecatedKnowledgeBaseCmd() *Command {
+	return &Command{
+		Command: &cobra.Command{
+			Use:     "knowledge-base",
+			Aliases: []string{"kb"},
+			Short:   "Display commands that manage DigitalOcean Agent Knowledge Bases.",
+			Long:    "Deprecated. Use `doctl knowledge-base` instead.",
+			Hidden:  true,
+			// The arguments belong to the command we forward to, not to this one.
+			DisableFlagParsing: true,
+			RunE: func(cmd *cobra.Command, args []string) error {
+				warn("`doctl gradient knowledge-base` is deprecated and will be removed in a future release. Use `doctl knowledge-base` instead.")
+
+				root := cmd.Root()
+				root.SetArgs(append([]string{"knowledge-base"}, args...))
+
+				return root.Execute()
+			},
+		},
+	}
+}
+
 // KnowledgeBaseCmd handles operation for KnowledgeBase using its subcommands.
 func KnowledgeBaseCmd() *Command {
 	cmd := &Command{
