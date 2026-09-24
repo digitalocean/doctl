@@ -8,14 +8,15 @@ import (
 )
 
 const (
-	hostedAgentTriggersBasePath         = "/v2/agents/triggers"
-	hostedAgentTriggerByIDPath          = hostedAgentTriggersBasePath + "/%s"
-	hostedAgentTriggerRotateSecretPath  = hostedAgentTriggerByIDPath + "/rotate-secret"
-	hostedAgentTriggerExecutionsPath    = hostedAgentTriggerByIDPath + "/executions"
-	hostedAgentTriggerExecutionByIDPath = hostedAgentTriggerExecutionsPath + "/%s"
-	hostedAgentTriggerBySessionPath     = hostedAgentTriggersBasePath + "/by-session/%s"
-	hostedAgentReusableSessionsPath     = hostedAgentTriggersBasePath + "/reusable-sessions"
-	hostedAgentWebhookProvidersPath     = "/v2/agents/webhook-providers"
+	hostedAgentTriggersBasePath           = "/v2/agents/triggers"
+	hostedAgentTriggerByIDPath            = hostedAgentTriggersBasePath + "/%s"
+	hostedAgentTriggerRotateSecretPath    = hostedAgentTriggerByIDPath + "/rotate-secret"
+	hostedAgentTriggerExecutionsPath      = hostedAgentTriggerByIDPath + "/executions"
+	hostedAgentTriggerExecutionByIDPath   = hostedAgentTriggerExecutionsPath + "/%s"
+	hostedAgentTriggerExecutionCancelPath = hostedAgentTriggerExecutionByIDPath + "/cancel"
+	hostedAgentTriggerBySessionPath       = hostedAgentTriggersBasePath + "/by-session/%s"
+	hostedAgentReusableSessionsPath       = hostedAgentTriggersBasePath + "/reusable-sessions"
+	hostedAgentWebhookProvidersPath       = "/v2/agents/webhook-providers"
 )
 
 // HostedAgentTriggersService exposes the Hosted Agents Triggers public REST API
@@ -30,6 +31,7 @@ type HostedAgentTriggersService interface {
 	RotateSecret(context.Context, string, *HostedAgentTriggerRotateSecretOptions) (*HostedAgentTriggerRotateSecretResponse, *Response, error)
 	ListExecutions(context.Context, string, *HostedAgentTriggerExecutionListOptions) (*HostedAgentTriggerExecutionsListResponse, *Response, error)
 	GetExecution(context.Context, string, string) (*HostedAgentTriggerExecution, *Response, error)
+	Cancel(context.Context, string, string, *HostedAgentTriggerCancelExecutionOptions) (*HostedAgentTriggerExecution, *Response, error)
 	GetBySession(context.Context, string) (*HostedAgentTrigger, *Response, error)
 	ListReusableSessions(context.Context, *HostedAgentReusableSessionListOptions) (*HostedAgentReusableSessionsListResponse, *Response, error)
 	ListWebhookProviders(context.Context) (*HostedAgentWebhookProvidersListResponse, *Response, error)
@@ -265,6 +267,15 @@ type HostedAgentTriggerExecutionsListResponse struct {
 	NextPageToken string                        `json:"next_page_token,omitempty"`
 }
 
+// HostedAgentTriggerCancelExecutionOptions specifies optional cancel behaviour.
+type HostedAgentTriggerCancelExecutionOptions struct {
+	// Force cancels even if the execution has not started a run yet (the
+	// worker's own dispatch may still be in flight). Without this, that
+	// case returns 409; the server-side reclaim sweep clears it
+	// automatically within 15m regardless.
+	Force bool `url:"force,omitempty"`
+}
+
 // HostedAgentWebhookProviderSignature describes how a provider signs deliveries.
 type HostedAgentWebhookProviderSignature struct {
 	Header string                            `json:"header,omitempty"`
@@ -478,6 +489,40 @@ func (s *HostedAgentTriggersServiceOp) GetExecution(ctx context.Context, trigger
 	}
 	if root.Execution == nil {
 		return nil, resp, errors.New("hosted agent triggers: get execution returned no execution")
+	}
+	return root.Execution, resp, nil
+}
+
+// Cancel ends a running execution: fails it and frees the trigger's
+// in-flight slot. A fresh-mode session is destroyed outright; a reuse-mode
+// session is only paused, since the API has no run-interrupt call -- the
+// agent's turn may still be in flight server-side. Cancelling a
+// non-running execution is a no-op that still succeeds. See
+// HostedAgentTriggerCancelExecutionOptions.Force for the 409 this can
+// return when the execution has not started a run yet.
+func (s *HostedAgentTriggersServiceOp) Cancel(ctx context.Context, triggerID, executionID string, opt *HostedAgentTriggerCancelExecutionOptions) (*HostedAgentTriggerExecution, *Response, error) {
+	if triggerID == "" {
+		return nil, nil, errors.New("hosted agent triggers: trigger id is required")
+	}
+	if executionID == "" {
+		return nil, nil, errors.New("hosted agent triggers: execution id is required")
+	}
+	path := fmt.Sprintf(hostedAgentTriggerExecutionCancelPath, triggerID, executionID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(hostedAgentTriggerExecutionRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if root.Execution == nil {
+		return nil, resp, errors.New("hosted agent triggers: cancel returned no execution")
 	}
 	return root.Execution, resp, nil
 }

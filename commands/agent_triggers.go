@@ -138,6 +138,14 @@ func AgentTriggers() *Command {
 		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 
+	cmdCancelExecution := CmdBuilder(cmd, RunAgentTriggersCancelExecution, "cancel-execution <trigger-id> <execution-id>",
+		"Cancel a running trigger execution",
+		agentsTriggersCancelExecutionHelpMD,
+		Writer, agentPrettyErrors(),
+		displayerType(&displayers.HostedAgentTriggerExecution{}))
+	AddBoolFlag(cmdCancelExecution, doctl.ArgForce, doctl.ArgShortForce, false, "Cancel even if the execution has not started a run yet")
+	cmdCancelExecution.Example = `doctl harness-runtime triggers cancel-execution TRIGGER_ID EXECUTION_ID --force`
+
 	CmdBuilder(cmd, RunAgentTriggersGetBySession, "get-by-session <session-id>",
 		"Look up the trigger for a session",
 		agentsTriggersGetBySessionHelpMD,
@@ -405,6 +413,30 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	e, err := c.HostedAgentTriggers().GetExecution(c.Args[0], c.Args[1])
+	if err != nil {
+		return err
+	}
+	if agentStructuredOutput(c) {
+		return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerExecutionCard(c.Out, e)
+	return nil
+}
+
+// RunAgentTriggersCancelExecution ends a running execution.
+func RunAgentTriggersCancelExecution(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	if len(c.Args) > 2 {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	e, err := c.HostedAgentTriggers().Cancel(c.Args[0], c.Args[1], force)
 	if err != nil {
 		return err
 	}
