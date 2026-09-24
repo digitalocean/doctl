@@ -219,7 +219,7 @@ func TestNewPrepayBlockedError_Enrichment(t *testing.T) {
 
 // The exact session.updated body harness-api emits when the prepayment gate
 // pauses a session, minus the envelope sseFrame adds.
-const sessionPausedLowBalanceData = `{"status":"paused","pause_reason":"low_balance","changed_fields":["status","pause_reason"]}`
+const sessionPausedZeroBalanceData = `{"status":"paused","pause_reason":"zero_balance","changed_fields":["status","pause_reason"]}`
 
 func TestSessionUpdatedPayload_announcesPause(t *testing.T) {
 	cases := []struct {
@@ -227,19 +227,21 @@ func TestSessionUpdatedPayload_announcesPause(t *testing.T) {
 		payload string
 		want    bool
 	}{
-		{"the gate's pause", sessionPausedLowBalanceData, true},
+		{"the gate's pause", sessionPausedZeroBalanceData, true},
 		// The stream spells the status short; the session model uses the enum.
 		// Both reach this code, so neither may be the only one recognized.
-		{"enum spelling", `{"status":"SESSION_STATUS_PAUSED","pause_reason":"low_balance"}`, true},
+		{"enum spelling", `{"status":"SESSION_STATUS_PAUSED","pause_reason":"zero_balance"}`, true},
+		// backward-compat: legacy servers still emit "low_balance"
+		{"legacy low_balance", `{"status":"paused","pause_reason":"low_balance","changed_fields":["status","pause_reason"]}`, true},
 		{"idle pause", `{"status":"paused","pause_reason":"idle","changed_fields":["status"]}`, true},
 		// A pause with no reason is still a pause, and still the reason the
 		// transcript is about to go quiet.
 		{"pause with no reason", `{"status":"paused","changed_fields":["status"]}`, true},
 		// changed_fields is optional; a paused status is then all we have.
-		{"no changed_fields", `{"status":"paused","pause_reason":"low_balance"}`, true},
+		{"no changed_fields", `{"status":"paused","pause_reason":"zero_balance"}`, true},
 		// Every update while paused still carries status=paused. Only the one
 		// that changed it is news; the rest would reprint the card forever.
-		{"unrelated update while paused", `{"status":"paused","pause_reason":"low_balance","changed_fields":["name"]}`, false},
+		{"unrelated update while paused", `{"status":"paused","pause_reason":"zero_balance","changed_fields":["name"]}`, false},
 		{"running session", `{"status":"ready","changed_fields":["status"]}`, false},
 		{"empty payload", `{}`, false},
 		{"malformed payload", `{not-json`, false},
@@ -257,11 +259,11 @@ func TestSessionUpdatedPayload_announcesPause(t *testing.T) {
 // there is no run to pause — so that event has to reach the same balance card
 // run.paused does. It used to render a bare "• session updated".
 func TestRenderEvent_sessionUpdatedPause(t *testing.T) {
-	t.Run("a low-balance pause renders the balance card", func(t *testing.T) {
+	t.Run("a zero-balance pause renders the balance card", func(t *testing.T) {
 		var buf bytes.Buffer
 		renderEvent(&buf, godo.HostedAgentEvent{
 			Kind:    godo.HostedAgentEventKindSessionUpdated,
-			Payload: json.RawMessage(sessionPausedLowBalanceData),
+			Payload: json.RawMessage(sessionPausedZeroBalanceData),
 		})
 
 		out := buf.String()
@@ -294,8 +296,8 @@ func TestRenderEvent_sessionUpdatedPause(t *testing.T) {
 // like the boot events it shares a code path with. That hid it twice: the
 // banner is a transient one-liner, and it is dismissed by the next event —
 // which, for a session the gate just stopped, never arrives.
-func TestDrainStream_lowBalancePauseSurvivesWarmup(t *testing.T) {
-	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData)
+func TestDrainStream_zeroBalancePauseSurvivesWarmup(t *testing.T) {
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedZeroBalanceData)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -311,15 +313,15 @@ func TestDrainStream_lowBalancePauseSurvivesWarmup(t *testing.T) {
 	_, pause := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
 
 	assert.Contains(t, buf.String(), "Paused — prepayment balance exhausted")
-	assert.Equal(t, pauseOutcome{observed: true, reason: "low_balance"}, pause,
+	assert.Equal(t, pauseOutcome{observed: true, reason: "zero_balance"}, pause,
 		"the caller needs the reason to explain the stream ending")
 }
 
 // The gate announces one pause on both run.paused and session.updated. The
 // user is looking at one stalled agent, so they get one card.
 func TestDrainStream_pauseIsExplainedOnce(t *testing.T) {
-	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunPaused), `{"reason":"low_balance"}`) +
-		sseFrame("evt-2", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData)
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindRunPaused), `{"reason":"zero_balance"}`) +
+		sseFrame("evt-2", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedZeroBalanceData)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -332,15 +334,15 @@ func TestDrainStream_pauseIsExplainedOnce(t *testing.T) {
 	_, pause := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
 
 	assert.Equal(t, 1, strings.Count(buf.String(), "Paused — prepayment balance exhausted"))
-	assert.Equal(t, "low_balance", pause.reason)
+	assert.Equal(t, "zero_balance", pause.reason)
 }
 
 // A resume is the session proving it is alive again, so the next pause is a
 // new fact rather than a duplicate of the one already on screen.
 func TestDrainStream_pauseAfterResumeIsExplainedAgain(t *testing.T) {
-	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData) +
+	body := sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedZeroBalanceData) +
 		sseFrame("evt-2", string(godo.HostedAgentEventKindRunResumed), `{}`) +
-		sseFrame("evt-3", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData)
+		sseFrame("evt-3", string(godo.HostedAgentEventKindSessionUpdated), sessionPausedZeroBalanceData)
 	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
 	t.Cleanup(srv.Close)
 
@@ -399,7 +401,7 @@ func TestStreamWithReconnect_lowBalancePauseExplainsTheSilence(t *testing.T) {
 		// and drop straight away — which is exactly the silence under test.
 		if first {
 			_, _ = io.WriteString(w, sseFrame("evt-1",
-				string(godo.HostedAgentEventKindSessionUpdated), sessionPausedLowBalanceData))
+				string(godo.HostedAgentEventKindSessionUpdated), sessionPausedZeroBalanceData))
 		}
 		_, _ = io.WriteString(w, "data: {not-json\n\n")
 		if f, ok := w.(http.Flusher); ok {
@@ -464,6 +466,9 @@ func TestStreamWithReconnect_ordinaryDropKeepsGenericWording(t *testing.T) {
 
 func TestGiveUpMessage(t *testing.T) {
 	// A session the gate stopped is not a session doctl failed to reach.
+	assert.Equal(t, msgPausedStoppedWatching, giveUpMessage("zero_balance"))
+	assert.Equal(t, msgPausedStoppedWatching, giveUpMessage("ZERO_BALANCE"))
+	// backward-compat: legacy servers still return "low_balance"
 	assert.Equal(t, msgPausedStoppedWatching, giveUpMessage("low_balance"))
 	assert.Equal(t, msgPausedStoppedWatching, giveUpMessage("LOW_BALANCE"))
 	// Everything else really is a connection we could not hold.
@@ -472,13 +477,22 @@ func TestGiveUpMessage(t *testing.T) {
 }
 
 func TestRenderRunPaused(t *testing.T) {
-	t.Run("low balance explains itself", func(t *testing.T) {
+	t.Run("zero balance explains itself", func(t *testing.T) {
+		var buf bytes.Buffer
+		renderRunPaused(&buf, "zero_balance")
+
+		out := buf.String()
+		assert.Contains(t, out, "Paused — prepayment balance exhausted")
+		assert.Contains(t, out, "Your work is saved.")
+		assert.Contains(t, out, prepayTopUpURL)
+	})
+
+	t.Run("legacy low_balance also explains itself (backward-compat)", func(t *testing.T) {
 		var buf bytes.Buffer
 		renderRunPaused(&buf, "low_balance")
 
 		out := buf.String()
 		assert.Contains(t, out, "Paused — prepayment balance exhausted")
-		assert.Contains(t, out, "Your work is saved.")
 		assert.Contains(t, out, prepayTopUpURL)
 	})
 
@@ -495,19 +509,27 @@ func TestRenderRunPaused(t *testing.T) {
 	})
 }
 
-func TestIsLowBalancePauseReason(t *testing.T) {
+func TestIsZeroBalancePauseReason(t *testing.T) {
 	// The session model and the run-event stream disagree on case, so the
-	// comparison tolerates both.
-	assert.True(t, isLowBalancePauseReason("low_balance"))
-	assert.True(t, isLowBalancePauseReason("LOW_BALANCE"))
-	assert.True(t, isLowBalancePauseReason(" low_balance "))
-	assert.False(t, isLowBalancePauseReason("idle"))
-	assert.False(t, isLowBalancePauseReason(""))
+	// comparison tolerates both. The function also accepts the legacy
+	// "low_balance" value for backward compatibility.
+	assert.True(t, isZeroBalancePauseReason("zero_balance"))
+	assert.True(t, isZeroBalancePauseReason("ZERO_BALANCE"))
+	assert.True(t, isZeroBalancePauseReason(" zero_balance "))
+	// backward-compat: legacy servers still return "low_balance"
+	assert.True(t, isZeroBalancePauseReason("low_balance"))
+	assert.True(t, isZeroBalancePauseReason("LOW_BALANCE"))
+	assert.True(t, isZeroBalancePauseReason(" low_balance "))
+	assert.False(t, isZeroBalancePauseReason("idle"))
+	assert.False(t, isZeroBalancePauseReason(""))
 }
 
 func TestNormalizePauseReason(t *testing.T) {
 	// The flag reads better hyphenated than the underscored value it matches,
 	// so both spellings have to land on the same reason.
+	assert.Equal(t, "zero_balance", normalizePauseReason("zero-balance"))
+	assert.Equal(t, "zero_balance", normalizePauseReason("ZERO_BALANCE"))
+	assert.Equal(t, "zero_balance", normalizePauseReason(" zero_balance "))
 	assert.Equal(t, "low_balance", normalizePauseReason("low-balance"))
 	assert.Equal(t, "low_balance", normalizePauseReason("LOW_BALANCE"))
 	assert.Equal(t, "low_balance", normalizePauseReason(" low_balance "))
@@ -518,13 +540,28 @@ func TestNormalizePauseReason(t *testing.T) {
 func TestFilterByPauseReason(t *testing.T) {
 	sessions := []do.HostedAgentSession{
 		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "running"}},
-		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke", PauseReason: godo.HostedAgentSessionPauseReasonLowBalance}},
+		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke", PauseReason: godo.HostedAgentSessionPauseReasonZeroBalance}},
 		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "idle", PauseReason: godo.HostedAgentSessionPauseReasonIdle}},
-		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke2", PauseReason: godo.HostedAgentSessionPauseReasonLowBalance}},
+		{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke2", PauseReason: godo.HostedAgentSessionPauseReasonZeroBalance}},
 	}
 
 	t.Run("matches the hyphenated flag spelling", func(t *testing.T) {
-		got := filterByPauseReason(sessions, "low-balance")
+		got := filterByPauseReason(sessions, "zero-balance")
+		require.Len(t, got, 2)
+		assert.Equal(t, "broke", got[0].SessionID)
+		assert.Equal(t, "broke2", got[1].SessionID)
+	})
+
+	// backward-compat: old servers still return "low_balance"; scripts using
+	// --paused-by low-balance must continue to pick those up.
+	t.Run("legacy low-balance flag spelling still matches low_balance sessions (backward-compat)", func(t *testing.T) {
+		legacySessions := []do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "running"}},
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke", PauseReason: godo.HostedAgentSessionPauseReasonLowBalance}},
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "idle", PauseReason: godo.HostedAgentSessionPauseReasonIdle}},
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "broke2", PauseReason: godo.HostedAgentSessionPauseReasonLowBalance}},
+		}
+		got := filterByPauseReason(legacySessions, "low-balance")
 		require.Len(t, got, 2)
 		assert.Equal(t, "broke", got[0].SessionID)
 		assert.Equal(t, "broke2", got[1].SessionID)
