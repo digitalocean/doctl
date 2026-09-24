@@ -1182,7 +1182,7 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached, godo.HostedAgentSessionStatusPaused:
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		if isLowBalancePauseReason(string(sess.PauseReason)) {
+		if isZeroBalancePauseReason(string(sess.PauseReason)) {
 			// Pointing at launch first would just reproduce the 402: the gate
 			// blocks the resume until the balance is restored.
 			body.WriteString(cardRow("add funds", prepayTopUpURL))

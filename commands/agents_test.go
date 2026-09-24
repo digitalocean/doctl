@@ -902,7 +902,41 @@ func TestRunAgentsList_PausedBy(t *testing.T) {
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID:   "sess_broke",
 					Name:        "broke",
-					PauseReason: godo.HostedAgentSessionPauseReasonLowBalance,
+					PauseReason: godo.HostedAgentSessionPauseReasonZeroBalance,
+				},
+			},
+			{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:   "sess_idle",
+					Name:        "napping",
+					PauseReason: godo.HostedAgentSessionPauseReasonIdle,
+				},
+			},
+		}, "", nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentPausedBy, "zero-balance")
+
+		require.NoError(t, RunAgentsList(config))
+		got := buf.String()
+		assert.Contains(t, got, "broke")
+		assert.Contains(t, got, "zero_balance", "the reason belongs on the row, not just in the filter")
+		assert.NotContains(t, got, "napping")
+	})
+
+	// backward-compat: old servers still return "low_balance"; --paused-by low-balance
+	// must continue to pick up those sessions.
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		want := &godo.HostedAgentSessionListOptions{
+			Status: godo.HostedAgentSessionStatusPaused,
+		}
+		tm.hostedAgents.EXPECT().ListSessions(want).Return([]do.HostedAgentSession{
+			{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID:   "sess_broke",
+					Name:        "broke",
+					PauseReason: godo.HostedAgentSessionPauseReasonLowBalance, // old server
 				},
 			},
 			{
@@ -920,8 +954,8 @@ func TestRunAgentsList_PausedBy(t *testing.T) {
 
 		require.NoError(t, RunAgentsList(config))
 		got := buf.String()
-		assert.Contains(t, got, "broke")
-		assert.Contains(t, got, "low_balance", "the reason belongs on the row, not just in the filter")
+		assert.Contains(t, got, "broke", "legacy --paused-by low-balance must still match low_balance sessions from old servers")
+		assert.Contains(t, got, "low_balance", "the reason belongs on the row")
 		assert.NotContains(t, got, "napping")
 	})
 }
