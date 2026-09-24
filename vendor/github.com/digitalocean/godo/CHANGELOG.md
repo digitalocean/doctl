@@ -1,5 +1,63 @@
 # Change Log
 
+## [1.215.0] - 2026-09-24
+
+- #1127 - @vrindavinod-do - hosted_agents: add ZeroBalance pause reason, deprecate LowBalance
+
+## [1.214.0] - 2026-09-24
+
+- #1125 - @SSharma-10 - Add Environment aliases for Managed Agents
+- #1123 - @SSharma-10 -  Add post-release checksum verification steps to CONTRIBUTING.md
+
+## [1.213.0] - 2026-09-23
+
+- #1102 - @kgautam676 - Adding nfs_csi_plugin to kubernetes cluster types
+- #1120 - @sgupta832 - microvm: decode http_protocol, checkpoint size, and combined list filters
+
+## [1.212.0] - 2026-09-22
+
+- #1117 - @sgupta832 - MicroVM URN flip + Exec/ConsoleURL (MDROP-392, MDROP-427)
+
+## [1.211.0] - 2026-09-22
+
+- #1021 - @SSharma-10 - Add OHS endpoints
+
+## [1.210.0] - 2026-09-18
+
+- #1110 - @kwadhwa-source - Mdrop 391/create options sizes
+
+## [1.209.0] - 2026-09-17
+
+- #1107 - @rodrigoea - billing(prepayment): add public config and status client methods
+
+## [1.208.0] - 2026-09-15
+
+- #1105 - @AKatruwar - registry: expose registry UUID and add ListByUUID
+
+## [1.207.0] - 2026-09-15
+
+- #1090 - @abhishekk-fcb10 - MNFS-794: Add NFS client methods for CSI
+- #1103 - @arkahood - firewall: accept and return action optionally
+- #1101 - @ddatta-do - droplet: accept and return subnetUUID optionally
+- #1100 - @johannaratliff - VPC Subnets CRUD support
+- #1098 - @sgupta832 - microdroplets: reshape onto api-v2 contract (MDROP-336)
+
+## [1.206.0] - 2026-08-31
+
+- #1094 - @sshirolkar - add godo support for simulations rpcs
+
+## [1.205.0] - 2026-08-25
+
+- #1089 - @ddatta-do - feat : add routes endpoints
+
+## [1.204.0] - 2026-08-10
+
+- #1080 - @nayanjd-do - Add constant to string match against volume capacity errors
+
+## [1.203.0] - 2026-08-05
+
+- #1076 - @rak16 - microdroplets: add image region, fix image URN, drop https protocol
+
 ## [1.202.0] - 2026-07-29
 
 - #1069 - @varshavaradarajan - doks: add isolated workers to kubernetes create call

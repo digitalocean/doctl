@@ -16,7 +16,9 @@ package commands
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -90,11 +92,14 @@ If no `+"`"+`--value`+"`"+` or `+"`"+`--from-env-file`+"`"+` flags are provided,
 
 	cmdGet := CmdBuilder(cmd, RunCmdSecretsGet, "get <name>", "Get a secret", `Retrieves a secret container and its key-value pairs.
 
-Secret values are masked by default. Use --show to reveal them, or --key with --raw to print a single value for scripting.`, Writer,
+Secret values are masked by default. Use --show to reveal them, or --key with --raw to print a single value for scripting.
+
+To print the key-value pairs in an .env file-style format, set the --kvs flag. Note that this flag takes precedence over others.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Secret{}))
 	AddStringFlag(cmdGet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringFlag(cmdGet, doctl.ArgKey, "", "", "Return only the value for this key.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretShow, "", false, "Reveal secret values instead of masking them.")
+	AddBoolFlag(cmdGet, doctl.ArgSecretShowKV, "", false, "Reveal secret values instead of masking them, displayed as KEY=VALUE pairs.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretRaw, "", false, "Write the value for --key to stdout with no formatting.")
 	cmdGet.Example = `The following example retrieves a secret: doctl secrets get ` + exampleSecretName + ` --region nyc3 --key ` + exampleSecretKey + ` --raw`
 
@@ -203,12 +208,32 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		return err
 	}
 
-	if raw && key == "" {
+	// The `kvs` flag is a special flag to output KEY=VALUE pairs, and therefore
+	// takes precedence over a number of other flags.
+	kvs, err := c.Doit.GetBool(c.NS, doctl.ArgSecretShowKV)
+	if err != nil {
+		return err
+	}
+
+	if (raw && key == "") && !kvs {
 		return fmt.Errorf("--%s requires --%s", doctl.ArgSecretRaw, doctl.ArgKey)
 	}
 
 	secret, err := c.Secrets().Get(name, region)
 	if err != nil {
+		return err
+	}
+
+	if kvs {
+		var b strings.Builder
+		keys := slices.Sorted(maps.Keys(secret.Values))
+		for _, key := range keys {
+			b.WriteString(strings.ToUpper(key))
+			b.WriteString("=")
+			b.WriteString(secret.Values[key])
+			b.WriteString("\n")
+		}
+		_, err := c.Out.Write([]byte(b.String()))
 		return err
 	}
 
@@ -693,65 +718,14 @@ This replaces all key-value pairs in the secret. Enter the full set you want to 
 Submit an empty key name when you are done.`, name, region)
 }
 
+// parseSecretValues parses --value pairs. The key=value / @file / - grammar
+// lives in parseKeyValueInputs, shared with the agents --secret flag; only the
+// "a secret needs at least one pair" rule is specific to this command.
 func parseSecretValues(lines []string) (map[string]string, error) {
 	if len(lines) == 0 {
 		return nil, fmt.Errorf("at least one key-value pair is required")
 	}
-
-	values := make(map[string]string, len(lines))
-	for _, line := range lines {
-		key, value, err := parseSecretValueLine(line)
-		if err != nil {
-			return nil, err
-		}
-		if _, exists := values[key]; exists {
-			return nil, fmt.Errorf("duplicate key %q", key)
-		}
-
-		resolved, err := resolveSecretValueInput(value)
-		if err != nil {
-			return nil, err
-		}
-
-		values[key] = resolved
-	}
-
-	return values, nil
-}
-
-func parseSecretValueLine(line string) (string, string, error) {
-	parts := strings.SplitN(strings.TrimSpace(line), "=", 2)
-	if len(parts) != 2 || parts[0] == "" {
-		return "", "", fmt.Errorf("invalid key-value pair %q, expected key=value", line)
-	}
-
-	return parts[0], parts[1], nil
-}
-
-func resolveSecretValueInput(value string) (string, error) {
-	if value == "-" {
-		data, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return "", err
-		}
-		return strings.TrimRight(string(data), "\r\n"), nil
-	}
-
-	if strings.HasPrefix(value, "@") {
-		path := strings.TrimPrefix(value, "@")
-		if path == "" {
-			return "", fmt.Errorf("file path is required after @")
-		}
-
-		content, err := readInputFromFile(path)
-		if err != nil {
-			return "", err
-		}
-
-		return strings.TrimRight(content, "\r\n"), nil
-	}
-
-	return value, nil
+	return parseKeyValueInputs(lines)
 }
 
 func maskSecretValues(secret do.Secret) do.Secret {

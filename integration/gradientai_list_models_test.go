@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("gradient/list-models", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("inference/list-models", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -52,13 +52,13 @@ var _ = suite("gradient/list-models", func(t *testing.T, when spec.G, it spec.S)
 
 	when("required flags are passed", func() {
 		it("lists all models", func() {
-			aliases := []string{"list-models", "models", "lm"}
+			aliases := []string{"list-models", "lm"}
 
 			for _, alias := range aliases {
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"gradient",
+					"inference",
 					alias,
 				)
 

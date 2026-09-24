@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
@@ -46,7 +47,19 @@ import (
 const (
 	// LatestReleaseURL is the latest release URL endpoint.
 	LatestReleaseURL = "https://api.github.com/repos/digitalocean/doctl/releases/latest"
+
+	// DefaultAPIURL is godo's default DigitalOcean API base URL.
+	DefaultAPIURL = "https://api.digitalocean.com/"
 )
+
+// ResolvedAPIURL returns the API base URL doctl will use: --api-url,
+// DIGITALOCEAN_API_URL, config, then DefaultAPIURL.
+func ResolvedAPIURL() string {
+	if u := strings.TrimSpace(viper.GetString("api-url")); u != "" {
+		return u
+	}
+	return DefaultAPIURL
+}
 
 // Version is the version info for doit.
 type Version struct {
@@ -124,6 +137,8 @@ func (v Version) Complete(lv LatestVersioner) string {
 		buffer.WriteString(fmt.Sprintf("\nGit commit hash: %s", v.Build))
 	}
 
+	buffer.WriteString(fmt.Sprintf("\nAPI endpoint: %s", ResolvedAPIURL()))
+
 	if tagName, err := lv.LatestVersion(); err == nil {
 		v0, err1 := semver.Make(tagName)
 		v1, err2 := semver.Make(v.String())
@@ -145,11 +160,13 @@ func (v Version) CompleteJSON(lv LatestVersioner) string {
 	versionInfo := &struct {
 		Version       string `json:"version,omitempty"`
 		Commit        string `json:"commit,omitempty"`
+		APIEndpoint   string `json:"apiEndpoint"`
 		LatestRelease string `json:"latestRelease"`
 		Notification  string `json:"notification,omitempty"`
 	}{
-		Version: v.String(),
-		Commit:  v.Build,
+		Version:     v.String(),
+		Commit:      v.Build,
+		APIEndpoint: ResolvedAPIURL(),
 	}
 
 	if tagName, err := lv.LatestVersion(); err == nil {
@@ -208,7 +225,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 
 // Config is an interface that represent doit's config.
 type Config interface {
-	GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error)
+	GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error)
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
@@ -234,8 +251,10 @@ type LiveConfig struct {
 
 var _ Config = &LiveConfig{}
 
-// GetGodoClient returns a GodoClient.
-func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error) {
+// GetGodoClient returns a GodoClient. opts are applied before the --api-url
+// override, so a caller-supplied default base URL yields to an endpoint the
+// user asked for explicitly (DIGITALOCEAN_API_URL / --api-url).
+func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error) {
 	if accessToken == "" {
 		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")
 	}
@@ -272,6 +291,8 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string)
 		args = append(args, godo.WithRetryAndBackoffs(retryConfig))
 	}
 
+	args = append(args, opts...)
+
 	apiURL := viper.GetString("api-url")
 	if apiURL != "" {
 		args = append(args, godo.SetBaseURL(apiURL))
@@ -298,6 +319,10 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string)
 
 		client.HTTPClient.Transport = r
 	}
+
+	// Stamp the host UUID on hosted-agents requests. Wrapped after the trace
+	// recorder so --trace surfaces the header; no-op when Get() is empty.
+	client.HTTPClient.Transport = deviceid.NewTransport(client.HTTPClient.Transport, deviceid.Get())
 
 	return client, nil
 }
@@ -530,7 +555,7 @@ func NewTestConfig() *TestConfig {
 
 // GetGodoClient mocks a GetGodoClient call. The returned godo client will
 // be nil.
-func (c *TestConfig) GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error) {
+func (c *TestConfig) GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error) {
 	return &godo.Client{}, nil
 }
 
