@@ -120,6 +120,22 @@ func TestBeautifyAgentError_PrepayUnknown(t *testing.T) {
 	assert.NotContains(t, strings.ToLower(display), "add funds")
 }
 
+// The message names OPENAI_API_KEY as the alternative provider, which is enough
+// to match the generic "openai" card — titling a supported setup step as a
+// failed request that the user should retry.
+func TestBeautifyAgentError_ModelAccessKeyBeatsOpenAICard(t *testing.T) {
+	out := beautifyAgentError(errors.New(
+		"--harness codex needs a model access key to run on DigitalOcean inference (kimi-k3): " +
+			"set HARNESS_INFERENCE_API_KEY to one created at https://example.com, " +
+			"or set OPENAI_API_KEY to use your own provider"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Model access key needed", pretty.title)
+	assert.NotContains(t, pretty.tips, "Retry in a moment")
+	assert.NotContains(t, pretty.tips, "Check $OPENAI_API_KEY")
+}
+
 func TestBeautifyAgentError_Idempotent(t *testing.T) {
 	first := beautifyAgentError(errors.New("no agent session goes by the name foo"))
 	second := beautifyAgentError(first)

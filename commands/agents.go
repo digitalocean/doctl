@@ -910,12 +910,21 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 
 	var raw []byte
 	if harness != "" {
+		agent, aerr := resolveHarnessAgent(harness)
+		if aerr != nil {
+			return nil, aerr
+		}
+		inference, ierr := resolveDOInference(c, agent, secrets)
+		if ierr != nil {
+			return nil, ierr
+		}
 		raw, err = buildHarnessManifest(harnessManifestOpts{
 			harness:    harness,
 			repo:       repo,
 			prompt:     prompt,
 			name:       name,
 			permission: permission,
+			inference:  inference,
 		})
 		if err != nil {
 			return nil, err

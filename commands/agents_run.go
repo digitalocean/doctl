@@ -419,6 +419,9 @@ type harnessManifestOpts struct {
 	prompt     string
 	name       string
 	permission string
+	// inference is non-nil when no provider key was supplied and the session
+	// should run on DigitalOcean inference instead.
+	inference *doInference
 }
 
 func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
@@ -452,6 +455,21 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 			"CODEX_API_KEY": "${OPENAI_API_KEY}",
 		}
 		doc.Config = defaultCodexAgentAPIConfig(prompt)
+	case o.inference != nil:
+		// No provider key was supplied, so the session runs on DigitalOcean
+		// inference. The adapter's native key slot is deliberately left out:
+		// writing `OPENAI_API_KEY: ${OPENAI_API_KEY}` here would expand to
+		// nothing and strand the session on an empty credential, which is the
+		// failure this branch exists to avoid. OHR prefers a native key over
+		// the HARNESS_INFERENCE_* group, so a user who later exports one
+		// overrides this without editing anything.
+		doc.Env = map[string]string{
+			harnessInferenceModelEnv:   o.inference.model,
+			harnessInferenceBaseURLEnv: defaultDOInferenceBaseURL,
+		}
+		doc.Secrets = map[string]string{
+			harnessInferenceAPIKeyEnv: o.inference.apiKey,
+		}
 	case agent == codexAgentName:
 		// The Codex CLI in the coding-codex template resolves its credentials
 		// from the guest env (brightstaff runs with `credentials: backend:
