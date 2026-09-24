@@ -783,7 +783,12 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	secretPairs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentSecret)
+	// Flag-set form, not GetStringSlice: viper merges the config file into every
+	// namespaced lookup, so a credential persisted there once under `--secret`
+	// would keep filling that slot in every later session — including in a fresh
+	// shell where the user had deliberately unset the variable. Credentials come
+	// from this invocation or from the environment, never from doctl's own config.
+	secretPairs, _, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgAgentSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -1103,7 +1108,7 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 			// the ${VAR} so the printed template stays pipeable.
 			return "${" + name + "}", true
 		}
-		if val, ok := os.LookupEnv(name); ok {
+		if val, ok := lookupEnvNonEmpty(name); ok {
 			return val, true
 		}
 		if !seen[name] {
@@ -1474,11 +1479,11 @@ func expandManifestEnv(manifest []byte) ([]byte, error) {
 func envLookupWithOverlay(overlay map[string]string) func(string) (string, bool) {
 	return func(name string) (string, bool) {
 		if overlay != nil {
-			if v, ok := overlay[name]; ok {
+			if v, ok := overlay[name]; ok && strings.TrimSpace(v) != "" {
 				return v, true
 			}
 		}
-		return os.LookupEnv(name)
+		return lookupEnvNonEmpty(name)
 	}
 }
 
