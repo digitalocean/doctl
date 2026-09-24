@@ -117,7 +117,7 @@ func TestHostedAgentSessionJSON_CarriesPauseReason(t *testing.T) {
 			HostedAgentSession: &godo.HostedAgentSession{
 				SessionID:   "sess_1",
 				Status:      godo.HostedAgentSessionStatusPaused,
-				PauseReason: godo.HostedAgentSessionPauseReasonLowBalance,
+				PauseReason: godo.HostedAgentSessionPauseReasonZeroBalance,
 			},
 		}},
 		Single: true,
@@ -127,7 +127,7 @@ func TestHostedAgentSessionJSON_CarriesPauseReason(t *testing.T) {
 	var out map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
 	assert.Equal(t, "sess_1", out["session_id"], "godo's fields must still be flat, not nested under the wrapper")
-	assert.Equal(t, "low_balance", out["pause_reason"])
+	assert.Equal(t, "zero_balance", out["pause_reason"])
 }
 
 func TestHostedAgentSessionJSON_OmitsEmptyPauseReason(t *testing.T) {

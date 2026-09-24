@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.215.0] - 2026-09-24
+
+- #1127 - @vrindavinod-do - hosted_agents: add ZeroBalance pause reason, deprecate LowBalance
+
+## [1.214.0] - 2026-09-24
+
+- #1125 - @SSharma-10 - Add Environment aliases for Managed Agents
+- #1123 - @SSharma-10 -  Add post-release checksum verification steps to CONTRIBUTING.md
+
 ## [1.213.0] - 2026-09-23
 
 - #1102 - @kgautam676 - Adding nfs_csi_plugin to kubernetes cluster types
