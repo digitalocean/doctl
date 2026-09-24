@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.215.0] - 2026-09-24
+
+- #1127 - @vrindavinod-do - hosted_agents: add ZeroBalance pause reason, deprecate LowBalance
+
 ## [1.214.0] - 2026-09-24
 
 - #1125 - @SSharma-10 - Add Environment aliases for Managed Agents

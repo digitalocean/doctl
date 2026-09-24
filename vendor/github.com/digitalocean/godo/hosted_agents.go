@@ -222,8 +222,8 @@ const (
 	// It is the only reason the server auto-resumes from, and only for sessions
 	// with ResumeOnTopoff set.
 	HostedAgentSessionPauseReasonZeroBalance HostedAgentSessionPauseReason = "zero_balance"
-	// HostedAgentSessionPauseReasonLowBalance is a pause by the prepayment gate.
-	// Deprecated: servers now return "zero_balance". Kept for backward compatibility.
+	// Deprecated: Use HostedAgentSessionPauseReasonZeroBalance. Servers now return
+	// "zero_balance"; this constant is kept for backward compatibility with older API responses.
 	HostedAgentSessionPauseReasonLowBalance HostedAgentSessionPauseReason = "low_balance"
 )
 
