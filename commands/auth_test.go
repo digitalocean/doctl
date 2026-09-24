@@ -348,6 +348,50 @@ type nopWriteCloser struct {
 	io.Writer
 }
 
+// writeConfig serializes viper's merged view, which carries the live flags of
+// whichever command happens to be running. Anything credential-shaped in there
+// must not reach the file: it would sit in plaintext and, worse, be
+// indistinguishable at read time from a value the user passed this time.
+func TestStripCredentialFlagValues(t *testing.T) {
+	in := map[string]any{
+		"access-token": "dop_v1_real",
+		"context":      "default",
+		"auth-contexts": map[string]any{
+			"my-secret-context": "dop_v1_other",
+		},
+		"harness-runtime": map[string]any{
+			"create": map[string]any{
+				"secret":  []string{"OPENAI_API_KEY=sk-live"},
+				"harness": "codex",
+			},
+		},
+		"secrets": map[string]any{
+			"create": map[string]any{"value": []string{"DB_PASSWORD=hunter2"}},
+		},
+		"databases": map[string]any{
+			"create": map[string]any{"password": "pw", "region": "nyc3"},
+		},
+	}
+
+	got := stripCredentialFlagValues(in, 0)
+
+	assert.Equal(t, "dop_v1_real", got["access-token"],
+		"the top-level token is the one credential doctl stores on purpose")
+	assert.Equal(t, in["auth-contexts"], got["auth-contexts"],
+		"auth-contexts is keyed by user-chosen names; matching inside it would drop a context")
+
+	hr := got["harness-runtime"].(map[string]any)["create"].(map[string]any)
+	assert.NotContains(t, hr, "secret")
+	assert.Equal(t, "codex", hr["harness"], "non-credential flags are left alone")
+
+	assert.NotContains(t, got, "secrets",
+		"a credential-named namespace goes wholesale: secrets.create.value holds one without being named like one")
+
+	db := got["databases"].(map[string]any)["create"].(map[string]any)
+	assert.NotContains(t, db, "password")
+	assert.Equal(t, "nyc3", db["region"])
+}
+
 var _ io.WriteCloser = (*nopWriteCloser)(nil)
 
 func (d *nopWriteCloser) Close() error {

@@ -229,3 +229,18 @@ secrets:
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "OPENAI_API_KEY")
 }
+
+func TestLookupEnvNonEmptyTreatsBlankAsUnset(t *testing.T) {
+	t.Setenv("DOCTL_TEST_ENV_LOOKUP", "")
+	_, ok := lookupEnvNonEmpty("DOCTL_TEST_ENV_LOOKUP")
+	assert.False(t, ok, "an exported-but-empty variable must read as unset")
+
+	t.Setenv("DOCTL_TEST_ENV_LOOKUP", "   ")
+	_, ok = lookupEnvNonEmpty("DOCTL_TEST_ENV_LOOKUP")
+	assert.False(t, ok, "a whitespace-only variable must read as unset")
+
+	t.Setenv("DOCTL_TEST_ENV_LOOKUP", "value")
+	v, ok := lookupEnvNonEmpty("DOCTL_TEST_ENV_LOOKUP")
+	assert.True(t, ok)
+	assert.Equal(t, "value", v)
+}
