@@ -22,8 +22,15 @@ func GradientAI() *Command {
 			Use:     "gradient",
 			Aliases: []string{"ai", "genai", "gradientai"},
 			Short:   "Manage Gradient AI resources",
-			Long:    "The subcommands of `doctl gradient` manage your Gradient AI resources.",
+			Long: `doctl gradient is deprecated and hidden from help.
+
+Public commands moved to:
+  doctl knowledge-base
+  doctl inference`,
 			GroupID: manageResourcesGroup,
+			// All public children moved to knowledge-base / inference; keep this
+			// parent only for hidden/deprecated aliases and scenario/simulation cmds.
+			Hidden: true,
 		},
 	}
 
