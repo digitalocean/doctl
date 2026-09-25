@@ -71,20 +71,26 @@ const (
 type HostedAgentsService interface {
 	// CreateSession provisions a session using the legacy JSON body (agent_kind,
 	// repo_hint, idle_timeout_seconds). Prefer CreateSessionFromManifest for
-	// agents.digitalocean.com/v1alpha1 Agent manifests.
+	// Environment Spec YAML (or CreateSessionFromEnvironment for a saved
+	// Environment).
 	CreateSession(context.Context, *HostedAgentSessionCreateRequest) (*HostedAgentSession, *Response, error)
-	// CreateSessionFromManifest uploads a customer Agent manifest YAML document
-	// (Content-Type: application/x-yaml). For OpenAI sandbox-provider sessions
-	// (adapter codex-agentapi), pass OpenAISessionID in opt so harness-api can
-	// persist openai_session_id for attach correlation (?openai_session_id=).
-	// doctl resolves ${...} placeholders client-side before calling this API;
-	// there is no server-side variables map.
+	// CreateSessionFromManifest uploads an environment spec YAML document
+	// (Content-Type: application/x-yaml). Legacy agents.digitalocean.com/v1alpha1
+	// Agent manifests are also accepted where the API still supports them.
+	// For OpenAI sandbox-provider sessions (adapter codex-agentapi), pass
+	// OpenAISessionID in opt so harness-api can persist openai_session_id for
+	// attach correlation (?openai_session_id=). doctl resolves ${...}
+	// placeholders client-side before calling this API; there is no
+	// server-side variables map.
 	CreateSessionFromManifest(context.Context, []byte, *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error)
-	// CreateSessionFromConfig provisions a session from an existing immutable
-	// Agent Config, referenced by config_id. The request uses Content-Type:
-	// application/json with a {name, config_id} body (optional
-	// resume_on_topoff); the config's stored manifest and declared credentials
-	// seed the session at create time.
+	// CreateSessionFromEnvironment provisions a session from an existing
+	// immutable Environment, referenced by config_id. The request uses
+	// Content-Type: application/json with a {name, config_id} body (optional
+	// resume_on_topoff); the environment's stored manifest and declared
+	// credentials seed the session at create time.
+	CreateSessionFromEnvironment(context.Context, *HostedAgentSessionFromEnvironmentRequest) (*HostedAgentSession, *Response, error)
+	// CreateSessionFromConfig is an alias for CreateSessionFromEnvironment.
+	// Prefer CreateSessionFromEnvironment; this name remains for compatibility.
 	CreateSessionFromConfig(context.Context, *HostedAgentSessionFromConfigRequest) (*HostedAgentSession, *Response, error)
 	// ValidatePolicy checks a manifest's tool-permission policy against the
 	// agent's capabilities without creating a session. Manifest is the same YAML
@@ -137,8 +143,16 @@ type HostedAgentsService interface {
 	ForkSession(context.Context, string, *HostedAgentForkSessionRequest) (*HostedAgentForkSessionResponse, *Response, error)
 	RollbackToCheckpoint(context.Context, string, string) (*HostedAgentSession, *Response, error)
 
-	// Agent Configs (immutable team-scoped agent definitions). Routes live
-	// under /v2/agents/configs.
+	// Environments (immutable team-scoped environment definitions). Routes
+	// live under /v2/agents/configs. Prefer the Environment* methods; the
+	// AgentConfig* names remain as compatible aliases.
+	ListEnvironments(context.Context, *HostedEnvironmentListOptions) (*HostedEnvironmentsListResponse, *Response, error)
+	GetEnvironment(context.Context, string) (*HostedEnvironment, *Response, error)
+	CreateEnvironment(context.Context, *HostedEnvironmentCreateRequest) (*HostedEnvironment, *Response, error)
+	DeleteEnvironment(context.Context, string) (*Response, error)
+	ListEnvironmentSessions(context.Context, string, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
+	// Prefer ListEnvironments / GetEnvironment / CreateEnvironment /
+	// DeleteEnvironment / ListEnvironmentSessions.
 	ListAgentConfigs(context.Context, *HostedAgentConfigListOptions) (*HostedAgentConfigsListResponse, *Response, error)
 	GetAgentConfig(context.Context, string) (*HostedAgentConfig, *Response, error)
 	CreateAgentConfig(context.Context, *HostedAgentConfigCreateRequest) (*HostedAgentConfig, *Response, error)
@@ -204,9 +218,12 @@ const (
 	HostedAgentSessionPauseReasonManual HostedAgentSessionPauseReason = "manual"
 	// HostedAgentSessionPauseReasonIdle is an automatic pause after inactivity.
 	HostedAgentSessionPauseReasonIdle HostedAgentSessionPauseReason = "idle"
-	// HostedAgentSessionPauseReasonLowBalance is a pause by the prepayment gate.
+	// HostedAgentSessionPauseReasonZeroBalance is a pause by the prepayment gate.
 	// It is the only reason the server auto-resumes from, and only for sessions
 	// with ResumeOnTopoff set.
+	HostedAgentSessionPauseReasonZeroBalance HostedAgentSessionPauseReason = "zero_balance"
+	// Deprecated: Use HostedAgentSessionPauseReasonZeroBalance. Servers now return
+	// "zero_balance"; this constant is kept for backward compatibility with older API responses.
 	HostedAgentSessionPauseReasonLowBalance HostedAgentSessionPauseReason = "low_balance"
 )
 
@@ -406,10 +423,10 @@ type HostedAgentSession struct {
 	ParentSessionID string `json:"parent_session_id,omitempty"`
 	// ForkID is a branch label on forked sessions; empty/omitted for roots.
 	ForkID string `json:"fork_id,omitempty"`
-	// ConfigID is the durable Agent Config UUID the session was created from
-	// (inline manifests persist a config too, named after the session).
-	// Returned on create/get/list; omitted for sessions created before config
-	// references were stored.
+	// ConfigID is the durable Environment UUID the session was created from
+	// (inline manifests persist an environment too, named after the session).
+	// Returned on create/get/list; omitted for sessions created before
+	// environment references were stored. Historically called Agent Config.
 	ConfigID string `json:"config_id,omitempty"`
 	// Warnings carries non-fatal create-time advisories from the server
 	// (manifest parse + policy fidelity). Populated on the create response
@@ -522,19 +539,25 @@ type HostedAgentSessionCreateRequest struct {
 }
 
 // HostedAgentSessionFromConfigRequest creates a session from an existing
-// immutable Agent Config (POST /v2/agents/sessions with a JSON body). Name is
-// required and becomes the new session name; ConfigID must be the UUID of a
-// config owned by the caller's team.
+// immutable Environment (POST /v2/agents/sessions with a JSON body). Name is
+// required and becomes the new session name; ConfigID must be the UUID of an
+// Environment owned by the caller's team.
+// Prefer HostedAgentSessionFromEnvironmentRequest; this name remains for
+// compatibility. The JSON field remains "config_id" on the wire.
 type HostedAgentSessionFromConfigRequest struct {
 	Name     string `json:"name"`
 	ConfigID string `json:"config_id"`
 	// ResumeOnTopoff opts the new session in to automatic resumption when the
-	// team's prepayment balance is restored. Session-scoped, not config-scoped:
-	// the referenced config never confers it, so one shared config cannot
-	// enrol every session created from it. Omitted when false, which leaves
-	// the server default (also false).
+	// team's prepayment balance is restored. Session-scoped, not
+	// environment-scoped: the referenced Environment never confers it, so one
+	// shared Environment cannot enrol every session created from it. Omitted
+	// when false, which leaves the server default (also false).
 	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
 }
+
+// HostedAgentSessionFromEnvironmentRequest is the advertised alias for
+// HostedAgentSessionFromConfigRequest.
+type HostedAgentSessionFromEnvironmentRequest = HostedAgentSessionFromConfigRequest
 
 // HostedAgentSessionUpdateRequest is the body for PATCH
 // /v2/agents/sessions/{session_id}: an allowlisted subset of session-scoped
@@ -915,10 +938,19 @@ func (s *HostedAgentsServiceOp) CreateSessionFromManifest(ctx context.Context, m
 	return s.doCreateSession(ctx, req)
 }
 
-// CreateSessionFromConfig provisions a session from a durable Agent Config.
-// The JSON {name, config_id} body selects the config-backed create path on the
-// server, which reloads the config's stored manifest and resolves its declared
-// credentials into the new session.
+// CreateSessionFromEnvironment provisions a session from a durable Environment.
+// The JSON {name, config_id} body selects the environment-backed create path on
+// the server, which reloads the Environment's stored manifest and resolves its
+// declared credentials into the new session.
+func (s *HostedAgentsServiceOp) CreateSessionFromEnvironment(ctx context.Context, create *HostedAgentSessionFromEnvironmentRequest) (*HostedAgentSession, *Response, error) {
+	return s.CreateSessionFromConfig(ctx, create)
+}
+
+// CreateSessionFromConfig provisions a session from a durable Environment.
+// Prefer CreateSessionFromEnvironment; this name remains for compatibility.
+// The JSON {name, config_id} body selects the environment-backed create path on
+// the server, which reloads the Environment's stored manifest and resolves its
+// declared credentials into the new session.
 func (s *HostedAgentsServiceOp) CreateSessionFromConfig(ctx context.Context, create *HostedAgentSessionFromConfigRequest) (*HostedAgentSession, *Response, error) {
 	if create == nil {
 		return nil, nil, errors.New("hosted agents: create request is required")

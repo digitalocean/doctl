@@ -550,8 +550,8 @@ func Agents() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (low-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
-	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by low-balance`
+	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (zero-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
+	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by zero-balance`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show one session",
@@ -3423,7 +3423,7 @@ const (
 // stream goroutine, where a billing round-trip would stall the one message
 // that explains the silence. `doctl harness-runtime balance` has the number.
 func giveUpMessage(pausedBy string) string {
-	if isLowBalancePauseReason(pausedBy) {
+	if isZeroBalancePauseReason(pausedBy) {
 		return msgPausedStoppedWatching
 	}
 	return msgReconnectFailed
@@ -4163,7 +4163,7 @@ func streamWithReconnect(
 		// knows nothing, and must not report a paused session as running again.
 		if pause.observed {
 			pausedBy = pause.reason
-			if !isLowBalancePauseReason(pausedBy) {
+			if !isZeroBalancePauseReason(pausedBy) {
 				// Resumed, or paused for some other reason. Reopen the latch so
 				// a balance pause later in this attach is explained again
 				// rather than treated as the same episode.
@@ -4190,7 +4190,7 @@ func streamWithReconnect(
 		// in another window brings the session back and the stream with it —
 		// but the "Reconnecting..." that follows reads as a connection fault
 		// and leaves the one cause the user can actually fix unmentioned.
-		if isLowBalancePauseReason(pausedBy) && !balanceExplained {
+		if isZeroBalancePauseReason(pausedBy) && !balanceExplained {
 			balanceExplained = true
 			fmt.Fprintf(out, "\n%s\n", colorize(msgPausedStayingAttached, colMuted))
 		}
