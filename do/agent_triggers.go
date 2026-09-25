@@ -69,6 +69,7 @@ type HostedAgentTriggersService interface {
 	RotateSecret(triggerID string, gracePeriodSeconds *int) (*HostedAgentTriggerRotateSecretResult, error)
 	ListExecutions(triggerID string, opt *godo.HostedAgentTriggerExecutionListOptions) ([]HostedAgentTriggerExecution, string, error)
 	GetExecution(triggerID, executionID string) (*HostedAgentTriggerExecution, error)
+	Cancel(triggerID, executionID string, force bool) (*HostedAgentTriggerExecution, error)
 	GetBySession(sessionID string) (*HostedAgentTrigger, error)
 	ListReusableSessions(*godo.HostedAgentReusableSessionListOptions) ([]HostedAgentReusableSession, string, error)
 	ListWebhookProviders() ([]HostedAgentWebhookProvider, error)
@@ -174,6 +175,14 @@ func (s *hostedAgentTriggersService) ListExecutions(triggerID string, opt *godo.
 
 func (s *hostedAgentTriggersService) GetExecution(triggerID, executionID string) (*HostedAgentTriggerExecution, error) {
 	e, _, err := s.svc.GetExecution(context.TODO(), triggerID, executionID)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentTriggerExecution{HostedAgentTriggerExecution: e}, nil
+}
+
+func (s *hostedAgentTriggersService) Cancel(triggerID, executionID string, force bool) (*HostedAgentTriggerExecution, error) {
+	e, _, err := s.svc.Cancel(context.TODO(), triggerID, executionID, &godo.HostedAgentTriggerCancelExecutionOptions{Force: force})
 	if err != nil {
 		return nil, err
 	}
