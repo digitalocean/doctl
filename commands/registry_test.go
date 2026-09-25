@@ -1289,3 +1289,83 @@ func TestRegistriesList(t *testing.T) {
 		assert.Contains(t, output, testRegistry.Name)
 	})
 }
+
+func TestRegistriesRepositoryDeleteTag(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		expect      func(m *mocks.MockRegistriesService)
+		expectedErr string
+		wantOut     string
+	}{
+		{
+			name: "missing arguments",
+			args: []string{
+				testRegistryName,
+				testRepositoryTag.Repository,
+			},
+			expectedErr: "(test) command is missing required arguments",
+		},
+		{
+			name: "missing tag returns not found",
+			args: []string{
+				testRegistryName,
+				testRepositoryTag.Repository,
+				"missing-tag",
+			},
+			expect: func(m *mocks.MockRegistriesService) {
+				m.EXPECT().ListRepositoryTags(
+					testRegistryName,
+					testRepositoryTag.Repository,
+				).Return([]do.RepositoryTag{testRepositoryTag}, nil)
+			},
+			expectedErr: fmt.Sprintf("tag %q not found in repository %s/%s", "missing-tag", testRegistryName, testRepositoryTag.Repository),
+		},
+		{
+			name: "existing tag deleted",
+			args: []string{
+				testRegistryName,
+				testRepositoryTag.Repository,
+				testRepositoryTag.Tag,
+			},
+			expect: func(m *mocks.MockRegistriesService) {
+				m.EXPECT().ListRepositoryTags(
+					testRegistryName,
+					testRepositoryTag.Repository,
+				).Return([]do.RepositoryTag{testRepositoryTag}, nil)
+				m.EXPECT().DeleteTag(
+					testRegistryName,
+					testRepositoryTag.Repository,
+					testRepositoryTag.Tag,
+				).Return(nil)
+			},
+			wantOut: "Successfully deleted 1 tag(s)\n",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registries)
+				}
+
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				config.Args = append(config.Args, test.args...)
+
+				var buf bytes.Buffer
+				config.Out = &buf
+
+				err := RunRegistriesRepositoryDeleteTag(config)
+				if test.expectedErr == "" {
+					assert.NoError(t, err)
+					assert.Equal(t, test.wantOut, buf.String())
+				} else {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectedErr, err.Error())
+				}
+			})
+		})
+	}
+}
