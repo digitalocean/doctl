@@ -666,7 +666,7 @@ func Agents() *Command {
 A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
 		Writer)
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
-	cmdPortForward.Example = `doctl agents port-forward sess_abc123 3000 8080:8000`
+	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`
 
 	cmdBalance := CmdBuilder(cmd, RunAgentsBalance, "balance",
 		"Show your team's prepayment balance and gate status",
