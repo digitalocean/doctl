@@ -167,19 +167,28 @@ func reportHITLResolveErr(c *CmdConfig, state *attachState, err error) {
 // both sources are normalized through the same path.
 const pauseReasonZeroBalance = string(godo.HostedAgentSessionPauseReasonZeroBalance)
 
-// normalizePauseReason folds a reason to its wire spelling. The session model
-// and the run-event stream disagree on case, and the --paused-by flag reads
-// better hyphenated (low-balance) than the underscored value it matches.
+// normalizePauseReason folds a reason to its canonical wire spelling. The
+// session model and the run-event stream disagree on case, and the --paused-by
+// flag reads better hyphenated (zero-balance) than the underscored value it
+// matches. The deprecated "low_balance" spelling is mapped to "zero_balance"
+// so that every comparison site (filter, identity check, dedup) works with a
+// single canonical value.
 func normalizePauseReason(reason string) string {
-	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(reason), "-", "_"))
+	r := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(reason), "-", "_"))
+	switch r {
+	case "low_balance":
+		return "zero_balance"
+	case "low_balance_resuming":
+		return "zero_balance_resuming"
+	}
+	return r
 }
 
 // isZeroBalancePauseReason reports whether the prepay gate is what paused a
 // session. It accepts both "zero_balance" (current) and "low_balance"
-// (deprecated) so that existing sessions and scripts continue to work.
+// (deprecated) because normalizePauseReason canonicalizes the old spelling.
 func isZeroBalancePauseReason(reason string) bool {
-	r := normalizePauseReason(reason)
-	return r == pauseReasonZeroBalance || r == "low_balance"
+	return normalizePauseReason(reason) == pauseReasonZeroBalance
 }
 
 // filterByPauseReason narrows a page of sessions to one pause reason.

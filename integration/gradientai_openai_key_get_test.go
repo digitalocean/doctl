@@ -246,4 +246,32 @@ const (
 	openAIKeyOutput = `
 Name       UUID                                    Created At                       Created By    Updated At                       Deleted At
 api-key    11f066ea-0000-0000-0000-4e013e2ddde4    2025-07-22 10:57:42 +0000 UTC    18919793      2025-07-22 10:57:42 +0000 UTC    <nil>`
+
+	agentListResponse = `
+{
+  "agents": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "name": "Agent1",
+      "region": "tor1",
+      "project_id": "00000000-0000-4000-8000-000000000000",
+      "model": {
+        "uuid": "00000000-0000-4000-8000-000000000000"
+      },
+      "instruction": "You are an agent who thinks deeply about the world",
+      "created_at": "2023-01-01T00:00:00Z",
+      "user_id": "user1"
+    }
+  ],
+  "links": {},
+  "meta": {
+    "total": 1
+  }
+}
+`
+
+	agentListOutput = `
+ID                                      Name      Region    Project ID                              Model ID                                Created At                       User ID
+00000000-0000-4000-8000-000000000000    Agent1    tor1      00000000-0000-4000-8000-000000000000    00000000-0000-4000-8000-000000000000    2023-01-01 00:00:00 +0000 UTC    user1
+`
 )
