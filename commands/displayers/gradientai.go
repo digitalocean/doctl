@@ -628,6 +628,7 @@ func (m *Model) Cols() []string {
 		"Id",
 		"Name",
 		"Agreement",
+		"AgreementURL",
 		"CreatedAt",
 		"UpdatedAt",
 		"isFoundational",
@@ -643,6 +644,7 @@ func (m *Model) ColMap() map[string]string {
 		"Id":             "ID",
 		"Name":           "Name",
 		"Agreement":      "Agreement",
+		"AgreementURL":   "Agreement URL",
 		"CreatedAt":      "Created At",
 		"UpdatedAt":      "Updated At",
 		"isFoundational": "Is Foundational",
@@ -659,10 +661,12 @@ func (m *Model) KV() []map[string]any {
 	}
 	out := make([]map[string]any, 0, len(m.Models))
 	for _, model := range m.Models {
-		// Format Agreement field
+		// Format Agreement fields
 		agreementName := ""
+		agreementURL := ""
 		if model.Agreement != nil {
 			agreementName = model.Agreement.Name
+			agreementURL = model.Agreement.Url
 		}
 
 		// Format Version field
@@ -675,6 +679,7 @@ func (m *Model) KV() []map[string]any {
 			"Id":             model.Uuid,
 			"Name":           model.Name,
 			"Agreement":      agreementName,
+			"AgreementURL":   agreementURL,
 			"CreatedAt":      model.CreatedAt,
 			"UpdatedAt":      model.UpdatedAt,
 			"isFoundational": model.IsFoundational,
