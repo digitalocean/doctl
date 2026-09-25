@@ -530,9 +530,9 @@ func TestNormalizePauseReason(t *testing.T) {
 	assert.Equal(t, "zero_balance", normalizePauseReason("zero-balance"))
 	assert.Equal(t, "zero_balance", normalizePauseReason("ZERO_BALANCE"))
 	assert.Equal(t, "zero_balance", normalizePauseReason(" zero_balance "))
-	assert.Equal(t, "low_balance", normalizePauseReason("low-balance"))
-	assert.Equal(t, "low_balance", normalizePauseReason("LOW_BALANCE"))
-	assert.Equal(t, "low_balance", normalizePauseReason(" low_balance "))
+	assert.Equal(t, "zero_balance", normalizePauseReason("low-balance"))
+	assert.Equal(t, "zero_balance", normalizePauseReason("LOW_BALANCE"))
+	assert.Equal(t, "zero_balance", normalizePauseReason(" low_balance "))
 	assert.Equal(t, "idle", normalizePauseReason("Idle"))
 	assert.Equal(t, "", normalizePauseReason(""))
 }

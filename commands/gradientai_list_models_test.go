@@ -40,6 +40,7 @@ var (
 			Agreement: &godo.Agreement{
 				Name:        "OpenAI Terms of Service",
 				Description: "Standard OpenAI API terms and conditions",
+				Url:         "https://openai.com/policies/terms-of-use",
 			},
 			Version: &godo.ModelVersion{
 				Major: 4,
@@ -65,6 +66,7 @@ var (
 			Agreement: &godo.Agreement{
 				Name:        "Anthropic Service Terms",
 				Description: "Anthropic API service agreement",
+				Url:         "https://www.anthropic.com/legal/consumer-terms",
 			},
 			Version: &godo.ModelVersion{
 				Major: 3,
