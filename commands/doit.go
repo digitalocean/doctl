@@ -189,6 +189,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Invoices())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Kubernetes())
+	DoitCmd.AddCommand(KnowledgeBaseCmd())
 	DoitCmd.AddCommand(Databases())
 	DoitCmd.AddCommand(VectorDatabases())
 	DoitCmd.AddCommand(Projects())
