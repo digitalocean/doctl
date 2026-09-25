@@ -224,7 +224,7 @@ func TestPrepareOpenAISandboxStart_CodexCLIBypasses(t *testing.T) {
 		return nil, errors.New("unexpected create")
 	}
 
-	raw, err := buildHarnessManifest("codex", "", "hello world", "")
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "codex", prompt: "hello world"})
 	require.NoError(t, err)
 
 	id, overlay, err := prepareOpenAISandboxStart(context.Background(), raw)

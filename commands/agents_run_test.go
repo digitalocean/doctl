@@ -68,7 +68,12 @@ func TestResolveHarnessAgent(t *testing.T) {
 
 func TestBuildHarnessManifest(t *testing.T) {
 	t.Run("opencode with repo and prompt", func(t *testing.T) {
-		raw, err := buildHarnessManifest("opencode", "https://github.com/katanemo/plano", "Review README", "demo")
+		raw, err := buildHarnessManifest(harnessManifestOpts{
+			harness: "opencode",
+			repo:    "https://github.com/katanemo/plano",
+			prompt:  "Review README",
+			name:    "demo",
+		})
 		require.NoError(t, err)
 
 		var doc map[string]any
@@ -83,7 +88,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 	})
 
 	t.Run("owner/repo shorthand", func(t *testing.T) {
-		raw, err := buildHarnessManifest("opencode", "katanemo/plano", "", "")
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode", repo: "katanemo/plano"})
 		require.NoError(t, err)
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
@@ -93,7 +98,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 	})
 
 	t.Run("codex builds the Codex CLI manifest", func(t *testing.T) {
-		raw, err := buildHarnessManifest("codex", "", "hello world", "")
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "codex", prompt: "hello world"})
 		require.NoError(t, err)
 
 		var doc map[string]any
@@ -113,7 +118,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 	})
 
 	t.Run("codex-agentapi includes openai config and env", func(t *testing.T) {
-		raw, err := buildHarnessManifest("codex-agentapi", "", "hello world", "")
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "codex-agentapi", prompt: "hello world"})
 		require.NoError(t, err)
 
 		var doc map[string]any
@@ -137,7 +142,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 	})
 
 	t.Run("claude-code references ANTHROPIC_API_KEY", func(t *testing.T) {
-		raw, err := buildHarnessManifest("claude-code", "", "", "")
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "claude-code"})
 		require.NoError(t, err)
 
 		var doc map[string]any
@@ -152,7 +157,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 	})
 
 	t.Run("opencode has no injected key requirement", func(t *testing.T) {
-		raw, err := buildHarnessManifest("opencode", "", "", "")
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
 		require.NoError(t, err)
 
 		var doc map[string]any
@@ -493,14 +498,14 @@ func TestPrepareClaudeCodeStart_ValidatesKey(t *testing.T) {
 		return nil
 	}
 
-	raw, err := buildHarnessManifest("claude-code", "", "", "")
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "claude-code"})
 	require.NoError(t, err)
 	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
 	assert.Equal(t, 1, calls)
 	assert.Equal(t, "sk-ant-test", gotKey)
 
 	// A non-claude-code manifest must not trigger validation.
-	raw, err = buildHarnessManifest("opencode", "", "", "")
+	raw, err = buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
 	require.NoError(t, err)
 	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
 	assert.Equal(t, 1, calls, "opencode manifest should not call validateAnthropicAPIKey")
@@ -915,4 +920,18 @@ func TestReadySummaryFor_AutoCreatedConfig(t *testing.T) {
 	noConfig := readySummaryFor(&agentCreationSource{harness: "opencode"},
 		&do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{Name: "demo"}})
 	assert.False(t, noConfig.AutoCreatedConfig)
+}
+
+func TestBuildHarnessManifestPermissions(t *testing.T) {
+	t.Setenv(openAIAPIKeyEnv, "sk-test")
+
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "codex", permission: "ask"})
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), "permissions:")
+	assert.Contains(t, string(raw), "default: ask")
+
+	raw, err = buildHarnessManifest(harnessManifestOpts{harness: "codex"})
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "permissions:",
+		"an unset permission must leave the block out rather than guess")
 }

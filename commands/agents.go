@@ -706,6 +706,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmd, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --from-config.")
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
+	AddStringFlag(cmd, doctl.ArgAgentPermission, "", defaultHarnessPermission, agentPermissionFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 }
@@ -714,6 +715,19 @@ func addAgentCreationFlags(cmd *Command) {
 // one place, because it is spending consent: every command that offers it —
 // create, config start-session, launch, update — has to describe the same
 // scope and the same way to revoke it.
+// defaultHarnessPermission is the tool-permission default written onto a
+// --harness manifest. Omitting the block entirely leaves each adapter on its
+// own template default, which for codex is `untrusted` — every shell command
+// and file write raises an approval request. That is the right default for a
+// policy someone authored deliberately and the wrong one for a manifest doctl
+// generated from a single flag, so --harness states the policy explicitly and
+// --permission is how it is narrowed.
+const defaultHarnessPermission = "allow"
+
+const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
+	"ask (raise an approval request per tool call, resolvable with `doctl harness-runtime approve`), or deny. " +
+	"Written as the manifest's permissions.default. Only valid with --harness; a --spec manifest declares its own."
+
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
 	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
@@ -776,6 +790,21 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	resumeOnTopoff, err := c.Doit.GetBool(c.NS, doctl.ArgAgentResumeOnTopoff)
 	if err != nil {
 		return nil, err
+	}
+	permission, err := c.Doit.GetString(c.NS, doctl.ArgAgentPermission)
+	if err != nil {
+		return nil, err
+	}
+	// Empty means "not supplied" rather than "invalid": the flag's cobra
+	// default only exists on a command that registered it, and callers that
+	// reach here without one still need a policy.
+	permission = strings.TrimSpace(permission)
+	if permission == "" {
+		permission = defaultHarnessPermission
+	}
+	if _, ok := validPermissionDefaults[permission]; !ok {
+		return nil, fmt.Errorf("unsupported --%s %q; supported values: allow, ask, deny",
+			doctl.ArgAgentPermission, permission)
 	}
 
 	harness = strings.TrimSpace(harness)
@@ -844,6 +873,14 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			return nil, err
 		}
 	}
+	// --permission writes a permissions block into a manifest doctl generates.
+	// A manifest supplied by the user already declares its own, and an Agent
+	// Config's lives server-side, so silently ignoring the flag there would
+	// hide a policy the caller believes they set.
+	if c.Doit.IsSet(doctl.ArgAgentPermission) && harness == "" {
+		return nil, fmt.Errorf("--%s only applies with --%s; set the permissions block in the manifest instead",
+			doctl.ArgAgentPermission, doctl.ArgAgentHarness)
+	}
 
 	src := &agentCreationSource{
 		harness:        harness,
@@ -868,7 +905,13 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 
 	var raw []byte
 	if harness != "" {
-		raw, err = buildHarnessManifest(harness, repo, prompt, name)
+		raw, err = buildHarnessManifest(harnessManifestOpts{
+			harness:    harness,
+			repo:       repo,
+			prompt:     prompt,
+			name:       name,
+			permission: permission,
+		})
 		if err != nil {
 			return nil, err
 		}

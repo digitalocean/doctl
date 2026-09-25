@@ -1008,6 +1008,10 @@ const (
 	// manifest at create time. Repeatable; also NAME=@file and NAME=-.
 	ArgAgentSecret = "secret"
 
+	// ArgAgentPermission is the tool-permission default (allow|ask|deny)
+	// written as permissions.default on a --harness manifest.
+	ArgAgentPermission = "permission"
+
 	// ArgAgentDryRun prints the fully-resolved manifest instead of creating a
 	// session.
 	ArgAgentDryRun = "dry-run"
