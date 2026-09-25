@@ -394,29 +394,56 @@ func resolveHarnessAgent(harness string) (string, error) {
 }
 
 type harnessManifest struct {
-	Name    string            `yaml:"name,omitempty"`
-	Agent   string            `yaml:"agent"`
-	Repos   []string          `yaml:"repos,omitempty"`
-	Config  map[string]any    `yaml:"config,omitempty"`
-	Env     map[string]string `yaml:"env,omitempty"`
-	Secrets map[string]string `yaml:"secrets,omitempty"`
+	Name        string              `yaml:"name,omitempty"`
+	Agent       string              `yaml:"agent"`
+	Repos       []string            `yaml:"repos,omitempty"`
+	Config      map[string]any      `yaml:"config,omitempty"`
+	Env         map[string]string   `yaml:"env,omitempty"`
+	Secrets     map[string]string   `yaml:"secrets,omitempty"`
+	Permissions *harnessPermissions `yaml:"permissions,omitempty"`
 }
 
-func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
-	agent, err := resolveHarnessAgent(harness)
+// harnessPermissions is the subset of the manifest permissions block --harness
+// writes. Rules, filesystem and network scoping exist in the schema but belong
+// to a hand-written manifest; the flag only sets the blanket default.
+type harnessPermissions struct {
+	Default string `yaml:"default"`
+}
+
+// harnessManifestOpts is everything --harness needs to synthesize a manifest.
+// A struct rather than positional parameters because permission and inference
+// are independent of each other and of the original four.
+type harnessManifestOpts struct {
+	harness    string
+	repo       string
+	prompt     string
+	name       string
+	permission string
+	// inference is non-nil when no provider key was supplied and the session
+	// should run on DigitalOcean inference instead.
+	inference *doInference
+}
+
+func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
+	agent, err := resolveHarnessAgent(o.harness)
 	if err != nil {
 		return nil, err
 	}
 
 	doc := harnessManifest{Agent: agent}
-	if ref, err := normalizeHarnessRepoRef(repo); err != nil {
+	if ref, err := normalizeHarnessRepoRef(o.repo); err != nil {
 		return nil, err
 	} else if ref != "" {
 		doc.Repos = []string{ref}
 	}
-	if name != "" {
-		doc.Name = name
+	if o.name != "" {
+		doc.Name = o.name
 	}
+	if perm := strings.TrimSpace(o.permission); perm != "" {
+		doc.Permissions = &harnessPermissions{Default: perm}
+	}
+
+	prompt := o.prompt
 
 	switch {
 	case isOpenAISandboxAdapter(agent):
@@ -428,6 +455,21 @@ func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
 			"CODEX_API_KEY": "${OPENAI_API_KEY}",
 		}
 		doc.Config = defaultCodexAgentAPIConfig(prompt)
+	case o.inference != nil:
+		// No provider key was supplied, so the session runs on DigitalOcean
+		// inference. The adapter's native key slot is deliberately left out:
+		// writing `OPENAI_API_KEY: ${OPENAI_API_KEY}` here would expand to
+		// nothing and strand the session on an empty credential, which is the
+		// failure this branch exists to avoid. OHR prefers a native key over
+		// the HARNESS_INFERENCE_* group, so a user who later exports one
+		// overrides this without editing anything.
+		doc.Env = map[string]string{
+			harnessInferenceModelEnv:   o.inference.model,
+			harnessInferenceBaseURLEnv: defaultDOInferenceBaseURL,
+		}
+		doc.Secrets = map[string]string{
+			harnessInferenceAPIKeyEnv: o.inference.apiKey,
+		}
 	case agent == codexAgentName:
 		// The Codex CLI in the coding-codex template resolves its credentials
 		// from the guest env (brightstaff runs with `credentials: backend:

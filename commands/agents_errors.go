@@ -195,6 +195,13 @@ func beautifyAgentError(err error) error {
 	case strings.Contains(lower, "not set locally") || strings.Contains(lower, "environment variable"):
 		title = "Missing environment value"
 		tips = []string{"Set the variable in your shell, or re-run in a terminal to be prompted"}
+	// Ahead of the generic "openai" case below, which this would otherwise
+	// match on the OPENAI_API_KEY it offers as an alternative — and be titled
+	// a failed request that the user should retry. Nothing was requested and
+	// retrying changes nothing; a credential has to be created first.
+	case strings.Contains(lower, "model access key"):
+		title = "Model access key needed"
+		tips = []string{modelAccessKeyConsolePath, "Then set " + harnessInferenceAPIKeyEnv}
 	case strings.Contains(lower, "openai"):
 		title = "OpenAI Agents request failed"
 		tips = []string{"Check $OPENAI_API_KEY", "Retry in a moment"}
