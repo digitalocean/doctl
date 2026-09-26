@@ -113,7 +113,7 @@ type RepositoryV2 struct {
 	Repositories []do.RepositoryV2
 }
 
-var _ Displayable = &Repository{}
+var _ Displayable = &RepositoryV2{}
 
 func (r *RepositoryV2) JSON(out io.Writer) error {
 	return writeJSON(r.Repositories, out)

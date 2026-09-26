@@ -334,6 +334,24 @@ func TestRepositoryListV2(t *testing.T) {
 			assert.False(t, strings.Contains(output, testRepositoryV2NoTags.LatestManifest.Blobs[0].Digest))
 		})
 	})
+
+	t.Run("respects format and no-header flags", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+			tm.registry.EXPECT().ListRepositoriesV2(testRepositoryV2.RegistryName).Return([]do.RepositoryV2{testRepositoryV2}, nil)
+
+			config.NS = "registry.repository.list-v2"
+			config.Doit.Set(config.NS, doctl.ArgFormat, "Name")
+			config.Doit.Set(config.NS, doctl.ArgNoHeader, true)
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			assert.Equal(t, testRepositoryV2.Name+"\n", buf.String())
+		})
+	})
 }
 
 func TestRepositoryListTags(t *testing.T) {
