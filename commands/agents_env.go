@@ -78,6 +78,24 @@ func defaultPromptEnvVarValue(name string) (string, error) {
 	return val, nil
 }
 
+// lookupEnvNonEmpty is os.LookupEnv with the one difference that decides
+// whether a credential gets collected: a variable that exists but holds only
+// whitespace reads as unset.
+//
+// os.LookupEnv answers "is this name in the environment", which is not the
+// question any caller here is asking. `export OPENAI_API_KEY=""` satisfies it,
+// so the blank sails through as a bound value — no prompt, no warning — and
+// surfaces as an auth failure inside the sandbox, several layers from the
+// cause. ensureEnvVar has always trimmed-and-compared for exactly this reason;
+// this is the same rule for the lookup-shaped callers.
+func lookupEnvNonEmpty(name string) (string, bool) {
+	v, ok := os.LookupEnv(name)
+	if !ok || strings.TrimSpace(v) == "" {
+		return "", false
+	}
+	return v, true
+}
+
 // ensureEnvVar returns the value of name from the process environment, or
 // prompts for it (and Setenv's it) when interactive. Empty values are treated
 // as missing so a blank export still triggers progressive collection.
@@ -161,7 +179,7 @@ func expandManifestEnvCollect(manifest []byte, lookup func(string) (string, bool
 				return v, true
 			}
 		}
-		return os.LookupEnv(name)
+		return lookupEnvNonEmpty(name)
 	}
 	return expandManifestEnvLookup(manifest, live)
 }

@@ -330,6 +330,15 @@ func RunAuthSwitch(c *CmdConfig) error {
 	return writeConfig()
 }
 
+// writeConfig persists the config file.
+//
+// It marshals viper's *merged* view, which includes every command flag bound
+// through viper.BindPFlag — so the live values of whichever command is running
+// are in scope, not only the auth settings this is normally called to save.
+// Any command that writes the config mid-run therefore snapshots its own flags,
+// which is how a `--secret NAME=VALUE` typed once got stored in plaintext and
+// then silently refilled that slot for every later session. Credential-bearing
+// command flags are dropped before the write; see stripCredentialFlagValues.
 func writeConfig() error {
 	f, err := cfgFileWriter()
 	if err != nil {
@@ -338,7 +347,7 @@ func writeConfig() error {
 
 	defer f.Close()
 
-	b, err := yaml.Marshal(viper.AllSettings())
+	b, err := yaml.Marshal(stripCredentialFlagValues(viper.AllSettings(), 0))
 	if err != nil {
 		return errors.New("Unable to encode configuration to YAML format.")
 	}
@@ -349,6 +358,65 @@ func writeConfig() error {
 	}
 
 	return nil
+}
+
+// configSubtreesOwnedByDoctl are top-level keys whose contents doctl stores on
+// purpose and must not be filtered. auth-contexts in particular is keyed by
+// user-chosen context names, so name-matching inside it would drop a context
+// called "secret" along with its token.
+var configSubtreesOwnedByDoctl = map[string]bool{
+	"auth-contexts": true,
+}
+
+// credentialFlagNameFragments identify a flag whose value is a credential.
+// Matched against the leaf of a namespaced config key, so a command's
+// `--secret` is caught as harness-runtime.create.secret while the top-level
+// access-token doctl deliberately stores is left alone.
+var credentialFlagNameFragments = []string{
+	"secret", "password", "passwd", "token", "credential", "api-key", "apikey", "private-key",
+}
+
+// stripCredentialFlagValues returns a copy of viper's merged settings with
+// command-flag credentials removed.
+//
+// depth 0 is the top level, where doctl's own persisted settings live
+// (access-token, auth-contexts, context, output). Everything below it comes
+// from BindPFlag on a command's flag set, and a credential that lands there is
+// both plaintext at rest and, worse, indistinguishable at read time from one
+// the user passed on this invocation.
+func stripCredentialFlagValues(in map[string]any, depth int) map[string]any {
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		if depth == 0 && configSubtreesOwnedByDoctl[k] {
+			out[k] = v
+			continue
+		}
+		_, isNamespace := v.(map[string]any)
+		if isCredentialFlagName(k) && (depth > 0 || isNamespace) {
+			// At depth 0 only a namespace is dropped, never a scalar: the
+			// top-level access-token is the one credential doctl stores on
+			// purpose. Dropping the namespace matters because a flag inside it
+			// need not be credential-named to hold one — `doctl secrets
+			// create --value` is stored as secrets.create.value.
+			continue
+		}
+		if child, ok := v.(map[string]any); ok {
+			out[k] = stripCredentialFlagValues(child, depth+1)
+			continue
+		}
+		out[k] = v
+	}
+	return out
+}
+
+func isCredentialFlagName(name string) bool {
+	lower := strings.ToLower(name)
+	for _, frag := range credentialFlagNameFragments {
+		if strings.Contains(lower, frag) {
+			return true
+		}
+	}
+	return false
 }
 
 // defaultConfigFileWriter returns a writer to a newly created config.yaml file in the default config home.
