@@ -35,6 +35,7 @@ const (
 	baseTemplateCodingHermes     = "coding-hermes"
 	baseTemplateLanggraph        = "langgraph"
 	baseTemplateHermesBase       = "hermes-base"
+	baseTemplateLanggraphBase    = "langgraph-base"
 )
 
 // AgentTemplates generates the `doctl harness-runtime template` subtree, which
@@ -306,7 +307,7 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 
 func validateBaseTemplate(base string) error {
 	switch base {
-	case baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateCodingHermes, baseTemplateLanggraph, baseTemplateHermesBase:
+	case baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateCodingHermes, baseTemplateLanggraph, baseTemplateHermesBase, baseTemplateLanggraphBase:
 		return nil
 	default:
 		return fmt.Errorf("base-template must be one of %s, %s, %s, %s, %s",
