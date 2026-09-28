@@ -114,10 +114,13 @@ func RunAuthLogin(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgOAuthNoBrowser)
+	noBrowser, err := oauthNoBrowser(c)
 	if err != nil {
 		return err
 	}
+	// writeConfig persists every viper setting, so a single --no-browser would
+	// otherwise stay true and keep the browser closed on later logins.
+	viper.Set(c.NS+"."+doctl.ArgOAuthNoBrowser, false)
 	timeout, err := c.Doit.GetDuration(c.NS, doctl.ArgOAuthTimeout)
 	if err != nil {
 		return err
@@ -239,6 +242,15 @@ func registerOAuthClient(ctx context.Context, c *CmdConfig, httpClient *http.Cli
 	}
 
 	return client, nil
+}
+
+// oauthNoBrowser reports whether this invocation passed --no-browser.
+// A value left in the config file from an earlier login is ignored.
+func oauthNoBrowser(c *CmdConfig) (bool, error) {
+	if !c.Doit.IsSet(doctl.ArgOAuthNoBrowser) {
+		return false, nil
+	}
+	return c.Doit.GetBool(c.NS, doctl.ArgOAuthNoBrowser)
 }
 
 func authorizationURLPrinter(c *CmdConfig, noBrowser bool) func(string) {

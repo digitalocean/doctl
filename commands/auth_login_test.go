@@ -60,6 +60,7 @@ func TestRunAuthLogin(t *testing.T) {
 	assert.Equal(t, "client-1", capturedOpts.ClientID)
 	assert.Empty(t, capturedOpts.Scopes, "without --scope the authorization screen decides the permissions")
 	assert.Equal(t, server.URL+"/v1/oauth/token", capturedOpts.Metadata.TokenEndpoint)
+	assert.False(t, capturedOpts.NoBrowser)
 
 	client := loadOAuthClientState()
 	require.NotNil(t, client)
@@ -75,6 +76,44 @@ func TestRunAuthLogin(t *testing.T) {
 	assert.Equal(t, "client-1", state.ClientID)
 	assert.Equal(t, server.URL+"/v1/oauth/token", state.TokenEndpoint)
 	assert.False(t, state.ExpiresAt.IsZero())
+}
+
+func TestRunAuthLoginNoBrowserAppliesOnlyToThisInvocation(t *testing.T) {
+	server := newTestAuthorizationServer(t, func() int { return 1 })
+	defer server.Close()
+
+	config, _ := newOAuthTestCmdConfig(t, server.URL)
+	// Left behind by an earlier `doctl auth login --no-browser`, which
+	// writeConfig saves with the rest of the settings.
+	config.Doit.Set(config.NS, doctl.ArgOAuthNoBrowser, true)
+	config.Doit.(*doctl.TestConfig).IsSetMap[doctl.ArgOAuthNoBrowser] = false
+
+	var capturedOpts oauth.LoginOptions
+	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
+		capturedOpts = opts
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+	assert.False(t, capturedOpts.NoBrowser, "a saved --no-browser must not keep the browser closed")
+	assert.Equal(t, false, viper.Get(config.NS+"."+doctl.ArgOAuthNoBrowser))
+}
+
+func TestRunAuthLoginHonorsNoBrowserFlag(t *testing.T) {
+	server := newTestAuthorizationServer(t, func() int { return 1 })
+	defer server.Close()
+
+	config, _ := newOAuthTestCmdConfig(t, server.URL)
+	config.Doit.Set(config.NS, doctl.ArgOAuthNoBrowser, true)
+
+	var capturedOpts oauth.LoginOptions
+	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
+		capturedOpts = opts
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+	assert.True(t, capturedOpts.NoBrowser)
 }
 
 func TestRunAuthLoginRequestsTheGivenScopes(t *testing.T) {
@@ -395,6 +434,8 @@ func resetOAuthConfig(t *testing.T) {
 	previousClient := viper.Get(oauthClientConfigKey)
 	previousTokens := viper.Get(oauthTokensConfigKey)
 	previousViperContext := viper.Get(doctl.ArgContext)
+	noBrowserKey := "test." + doctl.ArgOAuthNoBrowser
+	previousNoBrowser := viper.Get(noBrowserKey)
 
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
 	Context = ""
@@ -408,6 +449,7 @@ func resetOAuthConfig(t *testing.T) {
 		viper.Set(oauthClientConfigKey, previousClient)
 		viper.Set(oauthTokensConfigKey, previousTokens)
 		viper.Set(doctl.ArgContext, previousViperContext)
+		viper.Set(noBrowserKey, previousNoBrowser)
 	})
 }
 
