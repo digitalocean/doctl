@@ -56,6 +56,17 @@ type HostedAgentConfig struct {
 	// by the create methods, only when the server sent the header (teams on the
 	// regional routing rollout); never on the wire.
 	Location string `json:"-"`
+	// Insights is the per-signal telemetry opt-in stored beside the manifest.
+	// nil means no choice was recorded.
+	Insights *HostedAgentInsightsOptIn `json:"insights,omitempty"`
+}
+
+// HostedAgentInsightsOptIn is the per-signal Insights telemetry choice. Each
+// signal is optional: nil records no choice, which is not the same as false.
+type HostedAgentInsightsOptIn struct {
+	Metrics *bool `json:"metrics,omitempty"`
+	Logs    *bool `json:"logs,omitempty"`
+	Traces  *bool `json:"traces,omitempty"`
 }
 
 // HostedAgentConfigSummary is the list view (no manifest / credentials).
@@ -84,8 +95,15 @@ type HostedAgentConfigSummary struct {
 // rejects unknown body fields. The created Environment reports its Region.
 // Prefer HostedEnvironmentCreateRequest; this name remains for compatibility.
 type HostedAgentConfigCreateRequest struct {
-	Name         string `json:"name"`
-	ManifestYAML string `json:"manifest_yaml"`
+	Name         string                    `json:"name"`
+	ManifestYAML string                    `json:"manifest_yaml"`
+	Insights     *HostedAgentInsightsOptIn `json:"insights,omitempty"`
+	// SourceConfigID and ReuseSecrets create a config from an existing one:
+	// each listed tenantSecret slot is copied from that config's stored
+	// credentials instead of carrying a value in ManifestYAML. Set both or
+	// neither; an empty ReuseSecrets is omitted, never sent as [].
+	SourceConfigID string   `json:"source_config_id,omitempty"`
+	ReuseSecrets   []string `json:"reuse_secrets,omitempty"`
 }
 
 // HostedAgentConfigListOptions specifies optional list pagination.
@@ -114,6 +132,7 @@ type (
 	HostedEnvironmentCredentialSlot = HostedAgentConfigCredentialSlot
 	HostedEnvironmentSummary        = HostedAgentConfigSummary
 	HostedEnvironmentCreateRequest  = HostedAgentConfigCreateRequest
+	HostedEnvironmentInsightsOptIn  = HostedAgentInsightsOptIn
 	HostedEnvironmentListOptions    = HostedAgentConfigListOptions
 	HostedEnvironmentsListResponse  = HostedAgentConfigsListResponse
 )
