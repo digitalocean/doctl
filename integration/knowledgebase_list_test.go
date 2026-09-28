@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("gradient/knowledgebase/list", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("knowledgebase/list", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -57,7 +57,6 @@ var _ = suite("gradient/knowledgebase/list", func(t *testing.T, when spec.G, it 
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"gradient",
 					"knowledge-base",
 					alias,
 				)
@@ -68,9 +67,26 @@ var _ = suite("gradient/knowledgebase/list", func(t *testing.T, when spec.G, it 
 			}
 		})
 	})
+
+	when("the deprecated gradient path is used", func() {
+		it("warns and still lists all knowledge bases", func() {
+			cmd = exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"gradient",
+				"knowledge-base",
+				"list",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Contains(string(output), "`doctl gradient knowledge-base` is deprecated")
+			expect.Contains(string(output), strings.TrimSpace(knowledgeBaseListOutput))
+		})
+	})
 })
 
-var _ = suite("gradient/knowledgebase/list-datasource", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("knowledgebase/list-datasource", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -114,7 +130,6 @@ var _ = suite("gradient/knowledgebase/list-datasource", func(t *testing.T, when 
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"gradient",
 					"knowledge-base",
 					alias,
 					"00000000-0000-4000-8000-000000000000",

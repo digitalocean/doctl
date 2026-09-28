@@ -65,12 +65,40 @@ var (
 			TotalBytesIndexed: "1024000",
 		},
 	}
+
+	testAgent = do.Agent{
+		Agent: &godo.Agent{
+			Uuid:      "00000000-0000-4000-8000-000000000000",
+			Name:      "Agent1",
+			Region:    "tor1",
+			ProjectId: "00000000-0000-4000-8000-000000000000",
+			Model: &godo.Model{
+				Uuid: "00000000-0000-4000-8000-000000000000",
+			},
+			Instruction: "You are an agent who thinks deeply about the world",
+		},
+	}
 )
 
 func TestKnowledgeBasesCommand(t *testing.T) {
 	cmd := KnowledgeBaseCmd()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "add-datasource", "attach", "cancel-indexing-job", "create", "delete", "delete-datasource", "detach", "get", "get-indexing-job", "list", "list-datasources", "list-indexing-job-data-sources", "list-indexing-jobs", "update")
+}
+
+func TestDeprecatedKnowledgeBasesCommand(t *testing.T) {
+	cmd := deprecatedKnowledgeBaseCmd()
+	assert.NotNil(t, cmd)
+	assert.True(t, cmd.Hidden)
+	assert.Empty(t, cmd.Commands(), "the old path forwards instead of rebuilding the tree")
+	assert.Contains(t, cmd.Aliases, "kb")
+}
+
+func TestGradientAICommandKeepsDeprecatedKnowledgeBase(t *testing.T) {
+	cmd, _, err := GradientAI().Find([]string{"knowledge-base"})
+	assert.NoError(t, err)
+	assert.Equal(t, "knowledge-base", cmd.Name())
+	assert.True(t, cmd.Hidden)
 }
 
 func TestKnowledgeBaseGet(t *testing.T) {

@@ -394,29 +394,53 @@ func resolveHarnessAgent(harness string) (string, error) {
 }
 
 type harnessManifest struct {
-	Name    string            `yaml:"name,omitempty"`
-	Agent   string            `yaml:"agent"`
-	Repos   []string          `yaml:"repos,omitempty"`
-	Config  map[string]any    `yaml:"config,omitempty"`
-	Env     map[string]string `yaml:"env,omitempty"`
-	Secrets map[string]string `yaml:"secrets,omitempty"`
+	Name        string              `yaml:"name,omitempty"`
+	Agent       string              `yaml:"agent"`
+	Repos       []string            `yaml:"repos,omitempty"`
+	Config      map[string]any      `yaml:"config,omitempty"`
+	Env         map[string]string   `yaml:"env,omitempty"`
+	Secrets     map[string]string   `yaml:"secrets,omitempty"`
+	Permissions *harnessPermissions `yaml:"permissions,omitempty"`
 }
 
-func buildHarnessManifest(harness, repo, prompt, name string) ([]byte, error) {
-	agent, err := resolveHarnessAgent(harness)
+// harnessPermissions is the subset of the manifest permissions block --harness
+// writes. Rules, filesystem and network scoping exist in the schema but belong
+// to a hand-written manifest; the flag only sets the blanket default.
+type harnessPermissions struct {
+	Default string `yaml:"default"`
+}
+
+// harnessManifestOpts is everything --harness needs to synthesize a manifest.
+// A struct rather than positional parameters because permission and inference
+// are independent of each other and of the original four.
+type harnessManifestOpts struct {
+	harness    string
+	repo       string
+	prompt     string
+	name       string
+	permission string
+}
+
+func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
+	agent, err := resolveHarnessAgent(o.harness)
 	if err != nil {
 		return nil, err
 	}
 
 	doc := harnessManifest{Agent: agent}
-	if ref, err := normalizeHarnessRepoRef(repo); err != nil {
+	if ref, err := normalizeHarnessRepoRef(o.repo); err != nil {
 		return nil, err
 	} else if ref != "" {
 		doc.Repos = []string{ref}
 	}
-	if name != "" {
-		doc.Name = name
+	if o.name != "" {
+		doc.Name = o.name
 	}
+	if perm := strings.TrimSpace(o.permission); perm != "" {
+		doc.Permissions = &harnessPermissions{Default: perm}
+	}
+
+	prompt := o.prompt
 
 	switch {
 	case isOpenAISandboxAdapter(agent):
