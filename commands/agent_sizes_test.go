@@ -34,8 +34,8 @@ func TestAgentSizesList(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			ListSandboxSizes().
 			Return([]godo.HostedAgentSandboxSize{
-				{Slug: "mv-1vcpu-2gb", VCPUs: 1, MemoryMB: 2048},
-				{Slug: "mv-2vcpu-4gb", VCPUs: 2, MemoryMB: 4096},
+				{Slug: "mars-1vcpu-1gb", VCPUs: 1, MemoryMB: 1024, PricePerHourUSD: 0.00001, PricePerMonthUSD: 39.804},
+				{Slug: "mars-2vcpu-4gb", VCPUs: 2, MemoryMB: 4096, PricePerHourUSD: 0.00003, PricePerMonthUSD: 93.744},
 			}, nil)
 
 		require.NoError(t, RunAgentsSizesList(config))
