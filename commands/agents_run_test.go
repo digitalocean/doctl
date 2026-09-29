@@ -1288,7 +1288,9 @@ func TestRunAgentsCreate_ManagedHarnessRejectsAgentlessTemplate(t *testing.T) {
 		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "ships no agent")
-		assert.Contains(t, err.Error(), "--harness none")
+		// The remedy is dropping --harness, not writing --harness none: a lone
+		// --template already means the bare sandbox.
+		assert.Contains(t, err.Error(), "drop --harness")
 	})
 }
 
@@ -1366,6 +1368,40 @@ func TestResolveAgentCreationSource_TemplateAloneImpliesBareSandbox(t *testing.T
 		assert.Equal(t, "coding-base", doc["template"])
 		assert.NotContains(t, doc, "permissions",
 			"an implied bare sandbox must not carry an agent's tool policy either")
+	})
+}
+
+// The public spelling has to reach the manifest as the name the API knows, or
+// a --dry-run promoted to a --spec file would create a session on a template
+// the server has never heard of.
+func TestResolveAgentCreationSource_SandboxAliasReachesManifestAsCodingBase(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "sandbox")
+
+		src, err := resolveAgentCreationSource(config)
+		require.NoError(t, err)
+		assert.True(t, src.bareSandbox())
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(src.manifest, &doc))
+		assert.Equal(t, baseTemplateCodingBase, doc["template"])
+	})
+}
+
+// The alias resolves before the agentless check, so pairing it with a managed
+// harness is refused the same way coding-base is — and the error quotes what
+// the caller typed, not the platform name they have never seen.
+func TestResolveAgentCreationSource_SandboxAliasIsStillAgentless(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "codex")
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "sandbox")
+
+		_, err := resolveAgentCreationSource(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--template sandbox ships no agent")
+		assert.NotContains(t, err.Error(), baseTemplateCodingBase)
 	})
 }
 

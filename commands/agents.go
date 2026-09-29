@@ -728,9 +728,14 @@ const defaultHarnessPermission = "allow"
 // agentTemplateFlagDesc names both halves of the template namespace on purpose.
 // The two are not separate settings: a session's template resolves against the
 // team's own templates first and the platform catalogue second, so a team
-// template named coding-base shadows the platform one.
-const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a platform template (coding-base for a bare sandbox, " +
-	"or the template that matches your --harness) or one of your team's own from `doctl harness-runtime template create` — " +
+// template named coding-base shadows the platform one. `sandbox` is the
+// exception, resolved client-side and reserved against exactly that shadowing —
+// see platformTemplateAliases.
+const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a platform template (sandbox for a bare sandbox, " +
+	// No backticks: cobra reads the first back-quoted word in a usage string as
+	// the flag's value placeholder, which rendered as "--template doctl
+	// harness-runtime template create" in help.
+	"or the template that matches your --harness) or one of your team's own from '" + agentCLI + " template create' — " +
 	"a team template of the same name takes precedence. Omit it to get the default for the chosen --harness. " +
 	"On its own it means --harness none: a sandbox with no agent in it. A --spec manifest sets its own top-level template."
 
@@ -876,7 +881,12 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	template = strings.TrimSpace(template)
+	// Resolved here, before any check reads it and before it reaches the
+	// manifest, so the agentless check and the wire agree. templateAsTyped is
+	// kept only for errors: quoting the platform name back at someone who typed
+	// the alias reads as doctl talking about a different template.
+	templateAsTyped := strings.TrimSpace(template)
+	template = resolvePlatformTemplateAlias(templateAsTyped)
 	// Empty means "not supplied" rather than "invalid": the flag's cobra
 	// default only exists on a command that registered it, and callers that
 	// reach here without one still need a policy.
@@ -1021,8 +1031,8 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		// on a template with no agent in it provisions fine and reaches READY, so
 		// nothing looks wrong until the first turn hangs — while the session row
 		// claims an agent kind that billing and every per-kind metric believe.
-		return nil, fmt.Errorf("--%s %s ships no agent, so it cannot run --%s %s; use --%s none for a sandbox you drive with `%s exec`, or name a template that carries the agent",
-			doctl.ArgAgentTemplate, template, doctl.ArgAgentHarness, harness, doctl.ArgAgentHarness, agentCLI)
+		return nil, fmt.Errorf("--%s %s ships no agent, so it cannot run --%s %s; drop --%s for a sandbox you drive with `%s exec`, or name a template that carries the agent",
+			doctl.ArgAgentTemplate, templateAsTyped, doctl.ArgAgentHarness, harness, doctl.ArgAgentHarness, agentCLI)
 	}
 
 	// What reaches here is a --template alongside a manifest that declares its

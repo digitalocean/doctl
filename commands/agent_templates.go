@@ -64,8 +64,10 @@ var (
 		baseTemplateHermesBase,
 		baseTemplateLanggraphBase,
 	}
+	// Advertised under its public alias: what a user types is `sandbox`, and
+	// coding-base stays accepted above so nothing that already works breaks.
 	advertisedBaseTemplates = []string{
-		baseTemplateCodingBase,
+		templateAliasSandbox,
 		baseTemplateCodingClaudeCode,
 		baseTemplateCodingCodex,
 		baseTemplateCodingOpenCode,
@@ -75,13 +77,58 @@ var (
 	}
 )
 
-// agentBaseTemplateFlagDesc documents --base-template. coding-base is called out
+// templateAliasSandbox is what the agentless base is called in public. The
+// platform template is still named coding-base; this is the spelling doctl
+// takes and advertises, resolved to the platform name before anything is sent.
+const templateAliasSandbox = "sandbox"
+
+// platformTemplateAliases maps public template names to the platform names the
+// API knows.
+//
+// Client-side name resolution is normally the wrong thing here: a team template
+// shadows a platform one of the same name, so rewriting a name doctl does not
+// own would silently route a customer to someone else's image. `sandbox` is
+// safe only because it is reserved — `template create --name sandbox` is
+// refused below, so the collision cannot be created in the first place. Do not
+// add an alias without reserving its name too.
+var platformTemplateAliases = map[string]string{
+	templateAliasSandbox: baseTemplateCodingBase,
+}
+
+// resolvePlatformTemplateAlias returns the platform name for what the user
+// typed, and the input unchanged when it is not an alias. Resolving before the
+// value is stored means the wire, a --dry-run manifest, and a --spec file
+// promoted from that manifest all carry the same name.
+func resolvePlatformTemplateAlias(name string) string {
+	name = strings.TrimSpace(name)
+	if canonical, ok := platformTemplateAliases[strings.ToLower(name)]; ok {
+		return canonical
+	}
+	return name
+}
+
+// rejectReservedTemplateName refuses a team template name that an alias already
+// resolves to something else. Without this the alias would make the customer's
+// own template unreachable through --template, which is worse than refusing the
+// name: the session would come up on the platform image with nothing to say so.
+func rejectReservedTemplateName(name string) error {
+	trimmed := strings.ToLower(strings.TrimSpace(name))
+	if canonical, ok := platformTemplateAliases[trimmed]; ok {
+		return fmt.Errorf("%q is reserved: it names the platform template %s, so a team template called that could never be selected with --%s; pick another name",
+			strings.TrimSpace(name), canonical, doctl.ArgAgentTemplate)
+	}
+	return nil
+}
+
+// agentBaseTemplateFlagDesc documents --base-template. sandbox is called out
 // because it is the one base that carries no agent: rebasing onto it is how a
 // customer brings their own tooling for a bare sandbox.
 var agentBaseTemplateFlagDesc = "Platform base to rebase onto (" +
 	strings.Join(advertisedBaseTemplates, ", ") +
-	"). coding-base carries no agent — use it for a bare sandbox with your own tooling, and run it with `" +
-	agentCLI + " create --harness none --template <name>`."
+	// No backticks, for the same reason as agentTemplateFlagDesc: cobra would
+	// read the quoted command as this flag's value placeholder.
+	"). sandbox carries no agent — use it for a bare sandbox with your own tooling, and run it with '" +
+	agentCLI + " create --template <name>'."
 
 // AgentTemplates generates the `doctl harness-runtime template` subtree, which
 // wraps the godo team custom template API (/v2/agents/templates).
@@ -161,10 +208,14 @@ func RunAgentsTemplateCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if err := rejectReservedTemplateName(name); err != nil {
+		return err
+	}
 	base, err := c.Doit.GetString(c.NS, doctl.ArgAgentBaseTemplate)
 	if err != nil {
 		return err
 	}
+	base = resolvePlatformTemplateAlias(base)
 	if err := validateBaseTemplate(base); err != nil {
 		return err
 	}
@@ -257,6 +308,7 @@ func RunAgentsTemplateUpdate(c *CmdConfig) error {
 		return fmt.Errorf("pass --%s and/or --%s", doctl.ArgAgentSourceOCIRef, doctl.ArgAgentBaseTemplate)
 	}
 	if base != "" {
+		base = resolvePlatformTemplateAlias(base)
 		if err := validateBaseTemplate(base); err != nil {
 			return err
 		}
