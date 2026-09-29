@@ -160,7 +160,7 @@ func uploadScenarioSetFile(c *CmdConfig, path string) (*godo.FileUploadDataSourc
 	}
 	defer file.Close()
 
-	if err := putPresignedFile(upload.PresignedURL, file, info.Size()); err != nil {
+	if err := putPresignedFile(upload.PresignedURL, file, info.Size(), ""); err != nil {
 		return nil, err
 	}
 
@@ -172,12 +172,16 @@ func uploadScenarioSetFile(c *CmdConfig, path string) (*godo.FileUploadDataSourc
 }
 
 // putPresignedFile is a variable so that tests can upload without a live URL.
-var putPresignedFile = func(url string, body io.Reader, size int64) error {
+// contentType is optional; when non-empty it is sent as the Content-Type header.
+var putPresignedFile = func(url string, body io.Reader, size int64, contentType string) error {
 	req, err := http.NewRequest(http.MethodPut, url, body)
 	if err != nil {
 		return err
 	}
 	req.ContentLength = size
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -187,7 +191,7 @@ var putPresignedFile = func(url string, body io.Reader, size int64) error {
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		detail, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("uploading the scenario file failed with status %s: %s", resp.Status, strings.TrimSpace(string(detail)))
+		return fmt.Errorf("uploading the file failed with status %s: %s", resp.Status, strings.TrimSpace(string(detail)))
 	}
 
 	return nil

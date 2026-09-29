@@ -30,9 +30,8 @@ func SimulationRunCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "simulation-run",
 			Aliases: []string{"sim", "simulation-runs"},
-			Short:   "Display commands that manage Gradient AI simulation runs.",
-			Long:    "The subcommands of `doctl gradient simulation-run` run scenario sets against an agent and inspect the resulting journeys.",
-			Hidden:  true,
+			Short:   "Display commands that manage evaluation simulation runs.",
+			Long:    "The subcommands of `doctl evaluation simulation-run` run scenario sets against an agent and inspect the resulting journeys.",
 		},
 	}
 
@@ -70,7 +69,7 @@ func SimulationRunCmd() *Command {
 	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationStarMetricName, "", "", "The name of the star metric for the run.")
 	AddFloatFlag(cmdSimulationRunCreate, doctl.ArgSimulationStarMetricSuccessThreshold, "", 0, "The success threshold of the star metric.")
 	cmdSimulationRunCreate.Example = "The following example runs a scenario set against an agent: " +
-		"`doctl gradient simulation-run create --scenario-set-uuid f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --agent-uuid 99a1cbc7-b1b2-4a0d-9c1f-9b9d2b8f9d1e --name nightly-regression`"
+		"`doctl evaluation simulation-run create --scenario-set-uuid f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --agent-uuid 99a1cbc7-b1b2-4a0d-9c1f-9b9d2b8f9d1e --name nightly-regression`"
 
 	cmdSimulationRunList := CmdBuilder(
 		cmd,
@@ -85,7 +84,7 @@ func SimulationRunCmd() *Command {
 	AddStringSliceFlag(cmdSimulationRunList, doctl.ArgGenAIStatuses, "", []string{}, "Filters the results by status. One of: `pending`, `running`, `evaluating`, `succeeded`, `partially_successful`, `failed`, `cancelled`")
 	addGenAIListFlags(cmdSimulationRunList, "`created_at`, `name`, `status`, `updated_at`")
 	cmdSimulationRunList.Example = "The following example lists the simulation runs that are still running: " +
-		"`doctl gradient simulation-run list --statuses running`"
+		"`doctl evaluation simulation-run list --statuses running`"
 
 	cmdSimulationRunGet := CmdBuilder(
 		cmd,
@@ -97,7 +96,7 @@ func SimulationRunCmd() *Command {
 		displayerType(&displayers.SimulationRunDetail{}),
 	)
 	cmdSimulationRunGet.Example = "The following example retrieves a simulation run: " +
-		"`doctl gradient simulation-run get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation simulation-run get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdSimulationRunUpdate := CmdBuilder(
 		cmd,
@@ -110,7 +109,7 @@ func SimulationRunCmd() *Command {
 	)
 	AddStringFlag(cmdSimulationRunUpdate, doctl.ArgGenAIName, "", "", "The new name of the simulation run.", requiredOpt())
 	cmdSimulationRunUpdate.Example = "The following example renames a simulation run: " +
-		"`doctl gradient simulation-run update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name nightly-regression-v2`"
+		"`doctl evaluation simulation-run update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name nightly-regression-v2`"
 
 	cmdSimulationRunCancel := CmdBuilder(
 		cmd,
@@ -123,7 +122,7 @@ func SimulationRunCmd() *Command {
 	)
 	AddBoolFlag(cmdSimulationRunCancel, doctl.ArgForce, doctl.ArgShortForce, false, "Cancels the simulation run without a confirmation prompt")
 	cmdSimulationRunCancel.Example = "The following example cancels a simulation run: " +
-		"`doctl gradient simulation-run cancel f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation simulation-run cancel f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdSimulationRunDelete := CmdBuilder(
 		cmd,
@@ -135,7 +134,7 @@ func SimulationRunCmd() *Command {
 	)
 	AddBoolFlag(cmdSimulationRunDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the simulation run without a confirmation prompt")
 	cmdSimulationRunDelete.Example = "The following example deletes a simulation run: " +
-		"`doctl gradient simulation-run delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation simulation-run delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	journeyDetails := `
 		- The journey UUID
@@ -160,7 +159,7 @@ func SimulationRunCmd() *Command {
 	AddStringSliceFlag(cmdSimulationRunListJourneys, doctl.ArgSimulationJourneyVerdicts, "", []string{}, "Filters the results by verdict. One of: `success`, `failure`, `inconclusive`")
 	addGenAIListFlags(cmdSimulationRunListJourneys, "`scenario`, `created_at`, `status`, `verdict`")
 	cmdSimulationRunListJourneys.Example = "The following example lists the failed journeys of a simulation run: " +
-		"`doctl gradient simulation-run list-journeys f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --verdicts failure`"
+		"`doctl evaluation simulation-run list-journeys f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --verdicts failure`"
 
 	cmdSimulationRunGetJourney := CmdBuilder(
 		cmd,
@@ -172,7 +171,7 @@ func SimulationRunCmd() *Command {
 		displayerType(&displayers.SimulationJourney{}),
 	)
 	cmdSimulationRunGetJourney.Example = "The following example retrieves a journey: " +
-		"`doctl gradient simulation-run get-journey f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8`"
+		"`doctl evaluation simulation-run get-journey f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8`"
 
 	cmdSimulationRunGetTrajectory := CmdBuilder(
 		cmd,
@@ -184,7 +183,7 @@ func SimulationRunCmd() *Command {
 		displayerType(&displayers.SimulationTrajectory{}),
 	)
 	cmdSimulationRunGetTrajectory.Example = "The following example retrieves the trajectory of a journey: " +
-		"`doctl gradient simulation-run get-trajectory f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8 -o json`"
+		"`doctl evaluation simulation-run get-trajectory f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8 -o json`"
 
 	cmdSimulationRunGetTrajectoryURL := CmdBuilder(
 		cmd,
@@ -196,7 +195,7 @@ func SimulationRunCmd() *Command {
 		displayerType(&displayers.GenAIDownloadURL{}),
 	)
 	cmdSimulationRunGetTrajectoryURL.Example = "The following example retrieves a download URL for a journey trajectory: " +
-		"`doctl gradient simulation-run get-trajectory-url f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8`"
+		"`doctl evaluation simulation-run get-trajectory-url f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8`"
 
 	return cmd
 }

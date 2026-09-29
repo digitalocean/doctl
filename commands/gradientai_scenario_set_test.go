@@ -92,7 +92,7 @@ func TestScenarioSetCreateFromFile(t *testing.T) {
 		var uploadedTo string
 		var uploaded []byte
 		originalPut := putPresignedFile
-		putPresignedFile = func(url string, body io.Reader, _ int64) error {
+		putPresignedFile = func(url string, body io.Reader, _ int64, _ string) error {
 			uploadedTo = url
 			var err error
 			uploaded, err = io.ReadAll(body)
@@ -141,7 +141,7 @@ func TestScenarioSetCreateFromFileIncompleteUpload(t *testing.T) {
 
 		uploadAttempted := false
 		originalPut := putPresignedFile
-		putPresignedFile = func(string, io.Reader, int64) error {
+		putPresignedFile = func(string, io.Reader, int64, string) error {
 			uploadAttempted = true
 			return nil
 		}

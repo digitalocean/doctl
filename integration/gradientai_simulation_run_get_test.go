@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("gradient/simulation-run/get", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("evaluation/simulation-run/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -58,7 +58,7 @@ var _ = suite("gradient/simulation-run/get", func(t *testing.T, when spec.G, it 
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"gradient",
+					"evaluation",
 					"simulation-run",
 					alias,
 					"33333333-3333-4333-8333-333333333333",
@@ -76,7 +76,7 @@ var _ = suite("gradient/simulation-run/get", func(t *testing.T, when spec.G, it 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
+				"evaluation",
 				"simulation-run",
 				"get",
 			)
