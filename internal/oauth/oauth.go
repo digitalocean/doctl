@@ -13,7 +13,7 @@ limitations under the License.
 
 // Package oauth implements the client side of DigitalOcean's OAuth 2.1
 // authorization code flow with PKCE (RFC 7636) for native applications
-// (RFC 8252), including dynamic client registration (RFC 7591).
+// (RFC 8252).
 package oauth
 
 import (
@@ -32,173 +32,58 @@ const (
 	// DefaultIssuer is the DigitalOcean authorization server.
 	DefaultIssuer = "https://cloud.digitalocean.com"
 
+	// DefaultClientID identifies the doctl OAuth application registered with
+	// DigitalOcean. doctl is a public client (RFC 8252): it ships to users'
+	// machines, so it holds no client secret and this identifier is not a
+	// secret either. PKCE, not client authentication, is what binds an
+	// authorization code to the doctl process that requested it. Embedding the
+	// client ID in the binary is the same approach the GitHub CLI, gcloud, and
+	// the Azure CLI take.
+	DefaultClientID = "2446a57f71830bf88511fa3e3920d471124084d06b8befc24a4e406eaaeac170"
+
 	// CodeChallengeMethodS256 is the only PKCE code challenge method the
 	// authorization server supports.
 	CodeChallengeMethodS256 = "S256"
-
-	// TokenEndpointAuthMethodNone designates a public client that
-	// authenticates at the token endpoint with PKCE instead of a secret.
-	TokenEndpointAuthMethodNone = "none"
 
 	grantTypeAuthorizationCode = "authorization_code"
 	grantTypeRefreshToken      = "refresh_token"
 	responseTypeCode           = "code"
 
-	metadataPath     = "/.well-known/oauth-authorization-server"
-	authorizePath    = "/v1/oauth/authorize"
-	tokenPath        = "/v1/oauth/token"
-	registrationPath = "/v1/oauth/register"
-	revocationPath   = "/v1/oauth/revoke"
+	authorizePath  = "/v1/oauth/authorize"
+	tokenPath      = "/v1/oauth/token"
+	revocationPath = "/v1/oauth/revoke"
 
 	formContentType = "application/x-www-form-urlencoded"
 )
 
 // ErrInvalidClient is returned when the authorization server rejects the
-// client we are registered as. Callers can use it to discard a stale dynamic
-// registration and register again.
-var ErrInvalidClient = errors.New("the authorization server rejected this client registration")
+// OAuth application doctl signs in as.
+var ErrInvalidClient = errors.New("the authorization server rejected this client")
 
-// ServerMetadata is the subset of the RFC 8414 authorization server metadata
-// document that doctl uses.
+// ServerMetadata describes the authorization server endpoints doctl uses.
 type ServerMetadata struct {
-	Issuer                        string   `json:"issuer"`
-	AuthorizationEndpoint         string   `json:"authorization_endpoint"`
-	TokenEndpoint                 string   `json:"token_endpoint"`
-	RegistrationEndpoint          string   `json:"registration_endpoint"`
-	RevocationEndpoint            string   `json:"revocation_endpoint"`
-	GrantTypesSupported           []string `json:"grant_types_supported"`
-	CodeChallengeMethodsSupported []string `json:"code_challenge_methods_supported"`
+	Issuer                string
+	AuthorizationEndpoint string
+	TokenEndpoint         string
+	RevocationEndpoint    string
 }
 
-// ResolveServerMetadata fetches the authorization server metadata document for
-// issuer. The document is advisory: any endpoint the server does not advertise
-// falls back to its well-known DigitalOcean path, so a server that does not
-// serve the metadata document is still usable.
-func ResolveServerMetadata(ctx context.Context, client *http.Client, issuer string) *ServerMetadata {
+// ServerMetadataFor returns the endpoints for issuer. DigitalOcean's paths are
+// stable and doctl is only ever pointed at a DigitalOcean authorization
+// server, so the endpoints are derived locally rather than discovered over the
+// network: there is no metadata request to make, fail, or have redirected.
+func ServerMetadataFor(issuer string) *ServerMetadata {
 	issuer = strings.TrimSuffix(strings.TrimSpace(issuer), "/")
 	if issuer == "" {
 		issuer = DefaultIssuer
 	}
 
-	md := &ServerMetadata{Issuer: issuer}
-	if discovered, err := discoverServerMetadata(ctx, client, issuer); err == nil {
-		md = discovered
+	return &ServerMetadata{
+		Issuer:                issuer,
+		AuthorizationEndpoint: issuer + authorizePath,
+		TokenEndpoint:         issuer + tokenPath,
+		RevocationEndpoint:    issuer + revocationPath,
 	}
-
-	if md.Issuer == "" {
-		md.Issuer = issuer
-	}
-	if md.AuthorizationEndpoint == "" {
-		md.AuthorizationEndpoint = issuer + authorizePath
-	}
-	if md.TokenEndpoint == "" {
-		md.TokenEndpoint = issuer + tokenPath
-	}
-	if md.RegistrationEndpoint == "" {
-		md.RegistrationEndpoint = issuer + registrationPath
-	}
-	if md.RevocationEndpoint == "" {
-		md.RevocationEndpoint = issuer + revocationPath
-	}
-
-	return md
-}
-
-func discoverServerMetadata(ctx context.Context, client *http.Client, issuer string) (*ServerMetadata, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, issuer+metadataPath, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := doRequest(client, req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("authorization server metadata request returned %s", resp.Status)
-	}
-
-	md := &ServerMetadata{}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(md); err != nil {
-		return nil, err
-	}
-
-	return md, nil
-}
-
-// ClientRegistration is an RFC 7591 client information response for a
-// dynamically registered public client.
-type ClientRegistration struct {
-	ClientID                string   `json:"client_id"`
-	ClientIDIssuedAt        int64    `json:"client_id_issued_at,omitempty"`
-	RedirectURIs            []string `json:"redirect_uris,omitempty"`
-	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method,omitempty"`
-	GrantTypes              []string `json:"grant_types,omitempty"`
-	ResponseTypes           []string `json:"response_types,omitempty"`
-	ClientName              string   `json:"client_name,omitempty"`
-	ClientURI               string   `json:"client_uri,omitempty"`
-	RegistrationAccessToken string   `json:"registration_access_token,omitempty"`
-	RegistrationClientURI   string   `json:"registration_client_uri,omitempty"`
-}
-
-type registerClientRequest struct {
-	RedirectURIs            []string `json:"redirect_uris"`
-	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method"`
-	GrantTypes              []string `json:"grant_types"`
-	ResponseTypes           []string `json:"response_types"`
-	ClientName              string   `json:"client_name,omitempty"`
-	ClientURI               string   `json:"client_uri,omitempty"`
-}
-
-// RegisterClient performs RFC 7591 dynamic client registration against
-// endpoint, registering a public client that authenticates with PKCE. The
-// endpoint is unauthenticated, so no token is required.
-func RegisterClient(ctx context.Context, client *http.Client, endpoint string, redirectURIs []string, name, uri string) (*ClientRegistration, error) {
-	if len(redirectURIs) == 0 {
-		return nil, errors.New("at least one redirect URI is required to register a client")
-	}
-
-	body, err := json.Marshal(&registerClientRequest{
-		RedirectURIs:            redirectURIs,
-		TokenEndpointAuthMethod: TokenEndpointAuthMethodNone,
-		GrantTypes:              []string{grantTypeAuthorizationCode, grantTypeRefreshToken},
-		ResponseTypes:           []string{responseTypeCode},
-		ClientName:              name,
-		ClientURI:               uri,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(body)))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := doRequest(client, req)
-	if err != nil {
-		return nil, fmt.Errorf("registering doctl as an OAuth application: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return nil, responseError(resp, "registering doctl as an OAuth application")
-	}
-
-	registration := &ClientRegistration{}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(registration); err != nil {
-		return nil, fmt.Errorf("decoding client registration response: %w", err)
-	}
-	if registration.ClientID == "" {
-		return nil, errors.New("the authorization server did not return a client ID")
-	}
-
-	return registration, nil
 }
 
 // Token is an access token grant issued by the authorization server.

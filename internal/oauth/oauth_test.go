@@ -25,101 +25,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestResolveServerMetadata(t *testing.T) {
-	t.Run("uses the advertised endpoints", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, metadataPath, r.URL.Path)
-			writeJSON(t, w, http.StatusOK, map[string]any{
-				"issuer":                           "https://cloud.digitalocean.com",
-				"authorization_endpoint":           "https://cloud.digitalocean.com/v1/oauth/authorize",
-				"token_endpoint":                   "https://cloud.digitalocean.com/v1/oauth/token",
-				"registration_endpoint":            "https://cloud.digitalocean.com/v1/oauth/register",
-				"revocation_endpoint":              "https://cloud.digitalocean.com/v1/oauth/revoke",
-				"code_challenge_methods_supported": []string{"S256"},
-			})
-		}))
-		defer server.Close()
+func TestServerMetadataFor(t *testing.T) {
+	t.Run("derives the endpoints from the issuer", func(t *testing.T) {
+		md := ServerMetadataFor("https://cloud.example.com/")
 
-		md := ResolveServerMetadata(context.Background(), server.Client(), server.URL)
-
-		assert.Equal(t, "https://cloud.digitalocean.com", md.Issuer)
-		assert.Equal(t, "https://cloud.digitalocean.com/v1/oauth/token", md.TokenEndpoint)
-		assert.Equal(t, []string{"S256"}, md.CodeChallengeMethodsSupported)
-	})
-
-	t.Run("falls back to the well-known paths", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.NotFound(w, r)
-		}))
-		defer server.Close()
-
-		md := ResolveServerMetadata(context.Background(), server.Client(), server.URL+"/")
-
-		assert.Equal(t, server.URL, md.Issuer)
-		assert.Equal(t, server.URL+authorizePath, md.AuthorizationEndpoint)
-		assert.Equal(t, server.URL+tokenPath, md.TokenEndpoint)
-		assert.Equal(t, server.URL+registrationPath, md.RegistrationEndpoint)
-		assert.Equal(t, server.URL+revocationPath, md.RevocationEndpoint)
+		assert.Equal(t, "https://cloud.example.com", md.Issuer)
+		assert.Equal(t, "https://cloud.example.com"+authorizePath, md.AuthorizationEndpoint)
+		assert.Equal(t, "https://cloud.example.com"+tokenPath, md.TokenEndpoint)
+		assert.Equal(t, "https://cloud.example.com"+revocationPath, md.RevocationEndpoint)
 	})
 
 	t.Run("defaults to the DigitalOcean issuer", func(t *testing.T) {
-		md := ResolveServerMetadata(context.Background(), failingClient(t), "")
+		md := ServerMetadataFor("  ")
 
 		assert.Equal(t, DefaultIssuer, md.Issuer)
 		assert.Equal(t, DefaultIssuer+tokenPath, md.TokenEndpoint)
-	})
-}
-
-func TestRegisterClient(t *testing.T) {
-	t.Run("registers a public client", func(t *testing.T) {
-		var body registerClientRequest
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			writeJSON(t, w, http.StatusCreated, map[string]any{
-				"client_id":                  "client-id",
-				"redirect_uris":              body.RedirectURIs,
-				"registration_access_token":  "registration-token",
-				"registration_client_uri":    "https://cloud.digitalocean.com/v1/oauth/register/client-id",
-				"token_endpoint_auth_method": TokenEndpointAuthMethodNone,
-			})
-		}))
-		defer server.Close()
-
-		registration, err := RegisterClient(
-			context.Background(), server.Client(), server.URL,
-			RegistrationRedirectURIs(), "doctl", "https://example.com",
-		)
-		require.NoError(t, err)
-
-		assert.Equal(t, "client-id", registration.ClientID)
-		assert.Equal(t, "registration-token", registration.RegistrationAccessToken)
-
-		assert.Equal(t, TokenEndpointAuthMethodNone, body.TokenEndpointAuthMethod)
-		assert.Equal(t, []string{grantTypeAuthorizationCode, grantTypeRefreshToken}, body.GrantTypes)
-		assert.Equal(t, []string{responseTypeCode}, body.ResponseTypes)
-		assert.Equal(t, "doctl", body.ClientName)
-		assert.Equal(t, []string{"http://127.0.0.1/callback", "http://localhost/callback"}, body.RedirectURIs)
-	})
-
-	t.Run("surfaces registration errors", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			writeJSON(t, w, http.StatusBadRequest, map[string]any{
-				"error":             "invalid_client_metadata",
-				"error_description": "grant_types must include \"authorization_code\"",
-			})
-		}))
-		defer server.Close()
-
-		_, err := RegisterClient(context.Background(), server.Client(), server.URL, RegistrationRedirectURIs(), "doctl", "")
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid_client_metadata")
-		assert.Contains(t, err.Error(), "grant_types must include")
-	})
-
-	t.Run("requires a redirect URI", func(t *testing.T) {
-		_, err := RegisterClient(context.Background(), failingClient(t), "https://example.com", nil, "doctl", "")
-		assert.Error(t, err)
 	})
 }
 

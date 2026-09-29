@@ -30,17 +30,12 @@ import (
 )
 
 const (
-	// oauthClientConfigKey holds the dynamic client registration doctl shares
-	// across every authentication context on this machine.
-	oauthClientConfigKey = "oauth-client"
 	// oauthTokensConfigKey holds the per-context OAuth session state used to
 	// refresh access tokens.
 	oauthTokensConfigKey = "oauth-tokens"
-
-	// oauthClientName and oauthClientURI identify doctl on the authorization
-	// screen the user is shown.
-	oauthClientName = "doctl"
-	oauthClientURI  = "https://github.com/digitalocean/doctl"
+	// oauthDefaultScopesConfigKey holds the optional default scopes reused on
+	// later logins when the user passed --save-scope.
+	oauthDefaultScopesConfigKey = "oauth-default-scopes"
 
 	// defaultOAuthScopes is empty on purpose: when doctl sends no scope, the
 	// authorization screen decides what the token is granted, which lets the
@@ -59,18 +54,6 @@ const (
 // oauthLogin runs the browser-based authorization code flow. It is a variable
 // so tests can exercise the command without a browser.
 var oauthLogin = oauth.Login
-
-// oauthClientState is the dynamic client registration persisted in the config
-// file. doctl registers itself once per authorization server and reuses the
-// resulting public client for every login.
-type oauthClientState struct {
-	Issuer                  string
-	ClientID                string
-	RedirectURIs            []string
-	RegisteredAt            time.Time
-	RegistrationAccessToken string
-	RegistrationClientURI   string
-}
 
 // oauthTokenState is the per-context OAuth session persisted in the config
 // file. The access token itself lives with the rest of the context's
@@ -102,15 +85,26 @@ func (s *oauthTokenState) needsRefresh(now time.Time) bool {
 func RunAuthLogin(c *CmdConfig) error {
 	authContext := currentAuthContext()
 
-	issuer, err := c.Doit.GetString(c.NS, doctl.ArgOAuthServer)
+	issuer, err := oauthServer(c)
 	if err != nil {
 		return err
 	}
-	scopes, err := c.Doit.GetString(c.NS, doctl.ArgOAuthScopes)
+	clientID, err := oauthClientID(c)
 	if err != nil {
 		return err
 	}
-	port, err := c.Doit.GetInt(c.NS, doctl.ArgOAuthCallbackPort)
+	scopes, err := oauthScopes(c)
+	if err != nil {
+		return err
+	}
+	saveScope, err := oauthSaveScope(c)
+	if err != nil {
+		return err
+	}
+	if saveScope && !c.Doit.IsSet(doctl.ArgOAuthScopes) {
+		return errors.New("--save-scope requires --scope")
+	}
+	port, err := oauthCallbackPort(c)
 	if err != nil {
 		return err
 	}
@@ -118,47 +112,31 @@ func RunAuthLogin(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	// writeConfig persists every viper setting, so a single --no-browser would
-	// otherwise stay true and keep the browser closed on later logins.
-	viper.Set(c.NS+"."+doctl.ArgOAuthNoBrowser, false)
-	timeout, err := c.Doit.GetDuration(c.NS, doctl.ArgOAuthTimeout)
+	timeout, err := oauthTimeout(c)
 	if err != nil {
 		return err
 	}
+	// writeConfig persists every viper setting, so login-only flags from this
+	// invocation must not stick around for later runs.
+	clearEphemeralOAuthLoginFlags(c)
 
 	ctx := context.Background()
 	httpClient := &http.Client{Timeout: oauthHTTPTimeout}
-	metadata := oauth.ResolveServerMetadata(ctx, httpClient, issuer)
+	metadata := oauth.ServerMetadataFor(issuer)
 
-	client, registered, err := ensureOAuthClient(ctx, c, httpClient, metadata)
-	if err != nil {
-		return err
-	}
-
-	opts := oauth.LoginOptions{
+	token, err := oauthLogin(ctx, oauth.LoginOptions{
 		Metadata:           metadata,
-		ClientID:           client.ClientID,
+		ClientID:           clientID,
 		Scopes:             strings.Fields(scopes),
 		Port:               port,
 		Timeout:            timeout,
 		HTTPClient:         httpClient,
 		NoBrowser:          noBrowser,
 		OnAuthorizationURL: authorizationURLPrinter(c, noBrowser),
-	}
-
-	token, err := oauthLogin(ctx, opts)
-	if errors.Is(err, oauth.ErrInvalidClient) && !registered {
-		// The stored registration is no longer valid, which happens when it
-		// was deleted server side. Register again and make one more attempt.
-		template.Render(c.Out, `{{nl}}{{warning "The saved OAuth application is no longer valid."}}{{nl}}`, nil)
-
-		client, err = registerOAuthClient(ctx, c, httpClient, metadata)
-		if err != nil {
-			return err
-		}
-
-		opts.ClientID = client.ClientID
-		token, err = oauthLogin(ctx, opts)
+	})
+	if errors.Is(err, oauth.ErrInvalidClient) {
+		template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
+		return fmt.Errorf("%s rejected the doctl application (client ID %s): %s", metadata.Issuer, clientID, err)
 	}
 	if err != nil {
 		template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
@@ -176,12 +154,15 @@ func RunAuthLogin(c *CmdConfig) error {
 	} else {
 		storeOAuthTokenState(authContext, &oauthTokenState{
 			Issuer:        metadata.Issuer,
-			ClientID:      client.ClientID,
+			ClientID:      clientID,
 			TokenEndpoint: metadata.TokenEndpoint,
 			RefreshToken:  token.RefreshToken,
 			Scope:         token.Scope,
 			ExpiresAt:     token.Expiry,
 		})
+	}
+	if saveScope {
+		storeOAuthDefaultScopes(scopes)
 	}
 
 	if err := writeConfig(); err != nil {
@@ -189,59 +170,70 @@ func RunAuthLogin(c *CmdConfig) error {
 	}
 
 	displayOAuthLoginSummary(c, authContext, token)
+	if saveScope {
+		displayOAuthDefaultScopesSaved(c, scopes)
+	}
 
 	return nil
 }
 
-// ensureOAuthClient returns the dynamic client registration for the
-// authorization server, registering doctl if this machine does not have one
-// yet. The second return value reports whether a new client was registered.
-func ensureOAuthClient(ctx context.Context, c *CmdConfig, httpClient *http.Client, metadata *oauth.ServerMetadata) (*oauthClientState, bool, error) {
-	if existing := loadOAuthClientState(); existing != nil && existing.Issuer == metadata.Issuer {
-		return existing, false, nil
+// oauthServer returns the authorization server for this invocation.
+// A value left in the config file from an earlier login is ignored.
+func oauthServer(c *CmdConfig) (string, error) {
+	if !c.Doit.IsSet(doctl.ArgOAuthServer) {
+		return oauth.DefaultIssuer, nil
 	}
-
-	client, err := registerOAuthClient(ctx, c, httpClient, metadata)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return client, true, nil
+	return c.Doit.GetString(c.NS, doctl.ArgOAuthServer)
 }
 
-func registerOAuthClient(ctx context.Context, c *CmdConfig, httpClient *http.Client, metadata *oauth.ServerMetadata) (*oauthClientState, error) {
-	template.Render(c.Out, `Registering doctl with {{highlight .}}... `, metadata.Issuer)
+// oauthClientID returns the OAuth application doctl signs in as. It is the
+// application DigitalOcean registered for doctl unless --client-id names
+// another one, which is what a non-production authorization server needs.
+func oauthClientID(c *CmdConfig) (string, error) {
+	if !c.Doit.IsSet(doctl.ArgOAuthClientID) {
+		return oauth.DefaultClientID, nil
+	}
 
-	registration, err := oauth.RegisterClient(
-		ctx, httpClient, metadata.RegistrationEndpoint,
-		oauth.RegistrationRedirectURIs(), oauthClientName, oauthClientURI,
-	)
+	clientID, err := c.Doit.GetString(c.NS, doctl.ArgOAuthClientID)
 	if err != nil {
-		template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
-		return nil, err
+		return "", err
+	}
+	if strings.TrimSpace(clientID) == "" {
+		return "", errors.New("--client-id cannot be empty")
 	}
 
-	template.Render(c.Out, `{{success checkmark}}{{nl}}`, nil)
+	return clientID, nil
+}
 
-	client := &oauthClientState{
-		Issuer:                  metadata.Issuer,
-		ClientID:                registration.ClientID,
-		RedirectURIs:            registration.RedirectURIs,
-		RegistrationAccessToken: registration.RegistrationAccessToken,
-		RegistrationClientURI:   registration.RegistrationClientURI,
+// oauthScopes returns the scopes requested for this invocation. An explicit
+// --scope wins; otherwise any default saved with --save-scope is used. A bare
+// --scope value left in the config file from an earlier login is ignored.
+func oauthScopes(c *CmdConfig) (string, error) {
+	if c.Doit.IsSet(doctl.ArgOAuthScopes) {
+		return c.Doit.GetString(c.NS, doctl.ArgOAuthScopes)
 	}
-	if registration.ClientIDIssuedAt > 0 {
-		client.RegisteredAt = time.Unix(registration.ClientIDIssuedAt, 0).UTC()
+	if saved := loadOAuthDefaultScopes(); saved != "" {
+		return saved, nil
 	}
-	storeOAuthClientState(client)
+	return defaultOAuthScopes, nil
+}
 
-	// Persist the registration immediately so an interrupted login does not
-	// leave an orphaned application behind on the next attempt.
-	if err := writeConfig(); err != nil {
-		return nil, err
+// oauthSaveScope reports whether this invocation passed --save-scope.
+// A value left in the config file from an earlier login is ignored.
+func oauthSaveScope(c *CmdConfig) (bool, error) {
+	if !c.Doit.IsSet(doctl.ArgOAuthSaveScope) {
+		return false, nil
 	}
+	return c.Doit.GetBool(c.NS, doctl.ArgOAuthSaveScope)
+}
 
-	return client, nil
+// oauthCallbackPort returns the local callback port for this invocation.
+// A value left in the config file from an earlier login is ignored.
+func oauthCallbackPort(c *CmdConfig) (int, error) {
+	if !c.Doit.IsSet(doctl.ArgOAuthCallbackPort) {
+		return 0, nil
+	}
+	return c.Doit.GetInt(c.NS, doctl.ArgOAuthCallbackPort)
 }
 
 // oauthNoBrowser reports whether this invocation passed --no-browser.
@@ -251,6 +243,42 @@ func oauthNoBrowser(c *CmdConfig) (bool, error) {
 		return false, nil
 	}
 	return c.Doit.GetBool(c.NS, doctl.ArgOAuthNoBrowser)
+}
+
+// oauthTimeout returns how long to wait for browser authorization.
+// A value left in the config file from an earlier login is ignored.
+func oauthTimeout(c *CmdConfig) (time.Duration, error) {
+	if !c.Doit.IsSet(doctl.ArgOAuthTimeout) {
+		return oauth.DefaultLoginTimeout, nil
+	}
+	return c.Doit.GetDuration(c.NS, doctl.ArgOAuthTimeout)
+}
+
+// clearEphemeralOAuthLoginFlags resets login-only flags so writeConfig does
+// not persist them into the doctl configuration file.
+func clearEphemeralOAuthLoginFlags(c *CmdConfig) {
+	viper.Set(c.NS+"."+doctl.ArgOAuthServer, oauth.DefaultIssuer)
+	viper.Set(c.NS+"."+doctl.ArgOAuthClientID, oauth.DefaultClientID)
+	viper.Set(c.NS+"."+doctl.ArgOAuthScopes, defaultOAuthScopes)
+	viper.Set(c.NS+"."+doctl.ArgOAuthSaveScope, false)
+	viper.Set(c.NS+"."+doctl.ArgOAuthCallbackPort, 0)
+	viper.Set(c.NS+"."+doctl.ArgOAuthNoBrowser, false)
+	viper.Set(c.NS+"."+doctl.ArgOAuthTimeout, oauth.DefaultLoginTimeout)
+}
+
+// loadOAuthDefaultScopes returns the scopes saved with --save-scope, if any.
+func loadOAuthDefaultScopes() string {
+	return viper.GetString(oauthDefaultScopesConfigKey)
+}
+
+// storeOAuthDefaultScopes persists the default scopes for later logins. An
+// empty value clears any previously saved default.
+func storeOAuthDefaultScopes(scopes string) {
+	if scopes == "" {
+		viper.Set(oauthDefaultScopesConfigKey, nil)
+		return
+	}
+	viper.Set(oauthDefaultScopesConfigKey, scopes)
 }
 
 func authorizationURLPrinter(c *CmdConfig, noBrowser bool) func(string) {
@@ -286,6 +314,14 @@ func displayOAuthLoginSummary(c *CmdConfig, authContext string, token *oauth.Tok
 	}
 }
 
+func displayOAuthDefaultScopesSaved(c *CmdConfig, scopes string) {
+	if scopes == "" {
+		template.Render(c.Out, `{{muted "Cleared the saved default scopes."}}{{nl}}`, nil)
+		return
+	}
+	template.Render(c.Out, `{{muted "Saved default scopes for later logins:"}} {{highlight .}}{{nl}}`, scopes)
+}
+
 // refreshExpiredOAuthToken renews the current context's access token when it
 // was obtained with doctl auth login and has expired. It is a no-op for
 // contexts authenticated with a personal access token.
@@ -302,7 +338,7 @@ func refreshExpiredOAuthToken(c *CmdConfig) error {
 
 	endpoint := state.TokenEndpoint
 	if endpoint == "" {
-		endpoint = oauth.ResolveServerMetadata(context.Background(), nil, state.Issuer).TokenEndpoint
+		endpoint = oauth.ServerMetadataFor(state.Issuer).TokenEndpoint
 	}
 
 	httpClient := &http.Client{Timeout: oauthHTTPTimeout}
@@ -340,47 +376,6 @@ func currentAuthContext() string {
 	}
 
 	return authContext
-}
-
-func loadOAuthClientState() *oauthClientState {
-	values := viper.GetStringMap(oauthClientConfigKey)
-	if len(values) == 0 {
-		return nil
-	}
-
-	client := &oauthClientState{
-		Issuer:                  configMapString(values, "issuer"),
-		ClientID:                configMapString(values, "client-id"),
-		RedirectURIs:            configMapStringSlice(values, "redirect-uris"),
-		RegistrationAccessToken: configMapString(values, "registration-access-token"),
-		RegistrationClientURI:   configMapString(values, "registration-client-uri"),
-	}
-	if registeredAt := configMapString(values, "registered-at"); registeredAt != "" {
-		if parsed, err := time.Parse(time.RFC3339, registeredAt); err == nil {
-			client.RegisteredAt = parsed
-		}
-	}
-	if client.ClientID == "" || client.Issuer == "" {
-		return nil
-	}
-
-	return client
-}
-
-func storeOAuthClientState(client *oauthClientState) {
-	var registeredAt string
-	if !client.RegisteredAt.IsZero() {
-		registeredAt = client.RegisteredAt.UTC().Format(time.RFC3339)
-	}
-
-	viper.Set(oauthClientConfigKey, map[string]any{
-		"issuer":                    client.Issuer,
-		"client-id":                 client.ClientID,
-		"redirect-uris":             client.RedirectURIs,
-		"registered-at":             registeredAt,
-		"registration-access-token": client.RegistrationAccessToken,
-		"registration-client-uri":   client.RegistrationClientURI,
-	})
 }
 
 func loadOAuthTokenState(authContext string) *oauthTokenState {
@@ -464,26 +459,6 @@ func oauthTokenStates() map[string]any {
 	}
 
 	return states
-}
-
-// configMapStringSlice reads a list of strings, which viper hands back as
-// []any when it comes from the YAML file and as []string when it was set in
-// this process.
-func configMapStringSlice(values map[string]any, key string) []string {
-	switch typed := values[key].(type) {
-	case []string:
-		return typed
-	case []any:
-		items := make([]string, 0, len(typed))
-		for _, item := range typed {
-			if s, ok := item.(string); ok {
-				items = append(items, s)
-			}
-		}
-		return items
-	default:
-		return nil
-	}
 }
 
 func configMapString(values map[string]any, key string) string {

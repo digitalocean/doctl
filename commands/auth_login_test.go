@@ -19,7 +19,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 	"time"
 
@@ -34,11 +33,7 @@ import (
 )
 
 func TestRunAuthLogin(t *testing.T) {
-	var registrations int
-	server := newTestAuthorizationServer(t, func() int { registrations++; return registrations })
-	defer server.Close()
-
-	config, token := newOAuthTestCmdConfig(t, server.URL)
+	config, token := newOAuthTestCmdConfig(t, "https://cloud.example.com")
 
 	var capturedOpts oauth.LoginOptions
 	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
@@ -54,35 +49,99 @@ func TestRunAuthLogin(t *testing.T) {
 
 	require.NoError(t, RunAuthLogin(config))
 
-	assert.Equal(t, 1, registrations)
 	assert.Equal(t, "doo_v1_access", *token)
 
-	assert.Equal(t, "client-1", capturedOpts.ClientID)
+	assert.Equal(t, oauth.DefaultClientID, capturedOpts.ClientID, "doctl signs in as its own published application")
 	assert.Empty(t, capturedOpts.Scopes, "without --scope the authorization screen decides the permissions")
-	assert.Equal(t, server.URL+"/v1/oauth/token", capturedOpts.Metadata.TokenEndpoint)
+	assert.Equal(t, "https://cloud.example.com/v1/oauth/token", capturedOpts.Metadata.TokenEndpoint)
 	assert.False(t, capturedOpts.NoBrowser)
-
-	client := loadOAuthClientState()
-	require.NotNil(t, client)
-	assert.Equal(t, "client-1", client.ClientID)
-	assert.Equal(t, server.URL, client.Issuer)
-	assert.Equal(t, "registration-token-1", client.RegistrationAccessToken)
-	assert.Equal(t, oauth.RegistrationRedirectURIs(), client.RedirectURIs)
-	assert.True(t, testClientIssuedAt.Equal(client.RegisteredAt))
 
 	state := loadOAuthTokenState(doctl.ArgDefaultContext)
 	require.NotNil(t, state)
 	assert.Equal(t, "dor_v1_refresh", state.RefreshToken)
-	assert.Equal(t, "client-1", state.ClientID)
-	assert.Equal(t, server.URL+"/v1/oauth/token", state.TokenEndpoint)
+	assert.Equal(t, oauth.DefaultClientID, state.ClientID)
+	assert.Equal(t, "https://cloud.example.com/v1/oauth/token", state.TokenEndpoint)
 	assert.False(t, state.ExpiresAt.IsZero())
 }
 
-func TestRunAuthLoginNoBrowserAppliesOnlyToThisInvocation(t *testing.T) {
-	server := newTestAuthorizationServer(t, func() int { return 1 })
+func TestRunAuthLoginDoesNotCallTheAuthorizationServerBeforeTheBrowser(t *testing.T) {
+	var requests []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.URL.Path)
+		http.NotFound(w, r)
+	}))
 	defer server.Close()
 
 	config, _ := newOAuthTestCmdConfig(t, server.URL)
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return &oauth.Token{AccessToken: "doo_v1_access"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	assert.Empty(t, requests, "endpoints are derived locally, so no metadata or registration request is made")
+}
+
+func TestRunAuthLoginHonorsClientIDFlag(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	config.Doit.Set(config.NS, doctl.ArgOAuthClientID, "staging-client")
+
+	var capturedOpts oauth.LoginOptions
+	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
+		capturedOpts = opts
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	assert.Equal(t, "staging-client", capturedOpts.ClientID)
+	assert.Equal(t, "staging-client", loadOAuthTokenState(doctl.ArgDefaultContext).ClientID)
+	assert.Equal(t, oauth.DefaultClientID, viper.Get(config.NS+"."+doctl.ArgOAuthClientID))
+}
+
+func TestRunAuthLoginClientIDAppliesOnlyToThisInvocation(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	// Left behind by an earlier `doctl auth login --client-id staging-client`,
+	// which writeConfig saves with the rest of the settings.
+	config.Doit.Set(config.NS, doctl.ArgOAuthClientID, "staging-client")
+	config.Doit.(*doctl.TestConfig).IsSetMap[doctl.ArgOAuthClientID] = false
+
+	var capturedOpts oauth.LoginOptions
+	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
+		capturedOpts = opts
+		return &oauth.Token{AccessToken: "doo_v1_access"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	assert.Equal(t, oauth.DefaultClientID, capturedOpts.ClientID)
+}
+
+func TestRunAuthLoginRejectsAnEmptyClientID(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	config.Doit.Set(config.NS, doctl.ArgOAuthClientID, "")
+
+	err := RunAuthLogin(config)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--client-id cannot be empty")
+}
+
+func TestRunAuthLoginExplainsARejectedClient(t *testing.T) {
+	config, token := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return nil, &oauth.AuthorizationError{Code: "invalid_client"}
+	})
+
+	err := RunAuthLogin(config)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), oauth.DefaultClientID)
+	assert.Empty(t, *token)
+}
+
+func TestRunAuthLoginNoBrowserAppliesOnlyToThisInvocation(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
 	// Left behind by an earlier `doctl auth login --no-browser`, which
 	// writeConfig saves with the rest of the settings.
 	config.Doit.Set(config.NS, doctl.ArgOAuthNoBrowser, true)
@@ -100,10 +159,7 @@ func TestRunAuthLoginNoBrowserAppliesOnlyToThisInvocation(t *testing.T) {
 }
 
 func TestRunAuthLoginHonorsNoBrowserFlag(t *testing.T) {
-	server := newTestAuthorizationServer(t, func() int { return 1 })
-	defer server.Close()
-
-	config, _ := newOAuthTestCmdConfig(t, server.URL)
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
 	config.Doit.Set(config.NS, doctl.ArgOAuthNoBrowser, true)
 
 	var capturedOpts oauth.LoginOptions
@@ -117,10 +173,7 @@ func TestRunAuthLoginHonorsNoBrowserFlag(t *testing.T) {
 }
 
 func TestRunAuthLoginRequestsTheGivenScopes(t *testing.T) {
-	server := newTestAuthorizationServer(t, func() int { return 1 })
-	defer server.Close()
-
-	config, _ := newOAuthTestCmdConfig(t, server.URL)
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
 	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "read write")
 
 	var capturedOpts oauth.LoginOptions
@@ -132,57 +185,97 @@ func TestRunAuthLoginRequestsTheGivenScopes(t *testing.T) {
 	require.NoError(t, RunAuthLogin(config))
 
 	assert.Equal(t, []string{"read", "write"}, capturedOpts.Scopes)
+	assert.Equal(t, defaultOAuthScopes, viper.Get(config.NS+"."+doctl.ArgOAuthScopes))
 }
 
-func TestRunAuthLoginReusesTheRegisteredClient(t *testing.T) {
-	var registrations int
-	server := newTestAuthorizationServer(t, func() int { registrations++; return registrations })
-	defer server.Close()
+func TestRunAuthLoginScopeAppliesOnlyToThisInvocation(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	// Left behind by an earlier `doctl auth login --scope "read write"`, which
+	// writeConfig saves with the rest of the settings.
+	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "read write")
+	config.Doit.(*doctl.TestConfig).IsSetMap[doctl.ArgOAuthScopes] = false
 
-	config, _ := newOAuthTestCmdConfig(t, server.URL)
-	storeOAuthClientState(&oauthClientState{Issuer: server.URL, ClientID: "already-registered"})
-
-	var clientID string
+	var capturedOpts oauth.LoginOptions
 	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
-		clientID = opts.ClientID
+		capturedOpts = opts
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+	assert.Empty(t, capturedOpts.Scopes, "a saved --scope must not be reused on later logins")
+	assert.Equal(t, defaultOAuthScopes, viper.Get(config.NS+"."+doctl.ArgOAuthScopes))
+}
+
+func TestRunAuthLoginSaveScopePersistsDefault(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "read write")
+	config.Doit.Set(config.NS, doctl.ArgOAuthSaveScope, true)
+
+	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
+		assert.Equal(t, []string{"read", "write"}, opts.Scopes)
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+	assert.Equal(t, "read write", loadOAuthDefaultScopes())
+	assert.Equal(t, false, viper.Get(config.NS+"."+doctl.ArgOAuthSaveScope))
+}
+
+func TestRunAuthLoginUsesSavedDefaultScopes(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	storeOAuthDefaultScopes("droplet:read account:read")
+
+	var capturedOpts oauth.LoginOptions
+	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
+		capturedOpts = opts
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+	assert.Equal(t, []string{"droplet:read", "account:read"}, capturedOpts.Scopes)
+}
+
+func TestRunAuthLoginExplicitScopeOverridesSavedDefault(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	storeOAuthDefaultScopes("read write")
+	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "droplet:read")
+
+	var capturedOpts oauth.LoginOptions
+	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
+		capturedOpts = opts
 		return &oauth.Token{AccessToken: "doo_v1_access"}, nil
 	})
 
 	require.NoError(t, RunAuthLogin(config))
-
-	assert.Zero(t, registrations, "an existing registration should be reused")
-	assert.Equal(t, "already-registered", clientID)
+	assert.Equal(t, []string{"droplet:read"}, capturedOpts.Scopes)
+	assert.Equal(t, "read write", loadOAuthDefaultScopes(), "override without --save-scope must leave the default alone")
 }
 
-func TestRunAuthLoginRegistersAgainWhenTheClientIsRejected(t *testing.T) {
-	var registrations int
-	server := newTestAuthorizationServer(t, func() int { registrations++; return registrations })
-	defer server.Close()
+func TestRunAuthLoginSaveScopeClearsDefault(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	storeOAuthDefaultScopes("read write")
+	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "")
+	config.Doit.Set(config.NS, doctl.ArgOAuthSaveScope, true)
 
-	config, token := newOAuthTestCmdConfig(t, server.URL)
-	storeOAuthClientState(&oauthClientState{Issuer: server.URL, ClientID: "deleted-client"})
-
-	var attempts []string
-	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
-		attempts = append(attempts, opts.ClientID)
-		if opts.ClientID == "deleted-client" {
-			return nil, &oauth.AuthorizationError{Code: "invalid_client"}
-		}
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
 		return &oauth.Token{AccessToken: "doo_v1_access"}, nil
 	})
 
 	require.NoError(t, RunAuthLogin(config))
+	assert.Empty(t, loadOAuthDefaultScopes())
+}
 
-	assert.Equal(t, []string{"deleted-client", "client-1"}, attempts)
-	assert.Equal(t, 1, registrations)
-	assert.Equal(t, "doo_v1_access", *token)
+func TestRunAuthLoginSaveScopeRequiresScopeFlag(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	config.Doit.Set(config.NS, doctl.ArgOAuthSaveScope, true)
+
+	err := RunAuthLogin(config)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--save-scope requires --scope")
 }
 
 func TestRunAuthLoginFailure(t *testing.T) {
-	server := newTestAuthorizationServer(t, func() int { return 1 })
-	defer server.Close()
-
-	config, token := newOAuthTestCmdConfig(t, server.URL)
+	config, token := newOAuthTestCmdConfig(t, "https://cloud.example.com")
 	stubOAuthLogin(t, func(_ context.Context, opts oauth.LoginOptions) (*oauth.Token, error) {
 		return nil, &oauth.AuthorizationError{Code: "access_denied"}
 	})
@@ -349,55 +442,6 @@ func TestOAuthTokenStateNeedsRefresh(t *testing.T) {
 	}
 }
 
-// testClientIssuedAt is the registration timestamp the test authorization
-// server reports.
-var testClientIssuedAt = time.Date(2026, time.September, 22, 10, 30, 0, 0, time.UTC)
-
-// newTestAuthorizationServer serves the metadata and dynamic client
-// registration endpoints doctl calls before starting the browser flow.
-func newTestAuthorizationServer(t *testing.T, nextClient func() int) *httptest.Server {
-	t.Helper()
-
-	server := httptest.NewUnstartedServer(nil)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/.well-known/oauth-authorization-server", func(w http.ResponseWriter, r *http.Request) {
-		issuer := "http://" + r.Host
-		writeTestJSON(t, w, http.StatusOK, map[string]any{
-			"issuer":                 issuer,
-			"authorization_endpoint": issuer + "/v1/oauth/authorize",
-			"token_endpoint":         issuer + "/v1/oauth/token",
-			"registration_endpoint":  issuer + "/v1/oauth/register",
-			"revocation_endpoint":    issuer + "/v1/oauth/revoke",
-		})
-	})
-	mux.HandleFunc("/v1/oauth/register", func(w http.ResponseWriter, r *http.Request) {
-		var request struct {
-			RedirectURIs []string `json:"redirect_uris"`
-		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
-
-		id := strconv.Itoa(nextClient())
-		writeTestJSON(t, w, http.StatusCreated, map[string]any{
-			"client_id":                 "client-" + id,
-			"client_id_issued_at":       testClientIssuedAt.Unix(),
-			"redirect_uris":             request.RedirectURIs,
-			"registration_access_token": "registration-token-" + id,
-		})
-	})
-	server.Config.Handler = mux
-	server.Start()
-
-	return server
-}
-
-func writeTestJSON(t *testing.T, w http.ResponseWriter, status int, body any) {
-	t.Helper()
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	require.NoError(t, json.NewEncoder(w).Encode(body))
-}
-
 // newOAuthTestCmdConfig returns a command config wired to an isolated view of
 // the doctl configuration, along with a pointer to the access token the
 // command stores for the current context.
@@ -431,25 +475,38 @@ func resetOAuthConfig(t *testing.T) {
 
 	previousWriter := cfgFileWriter
 	previousContext := Context
-	previousClient := viper.Get(oauthClientConfigKey)
 	previousTokens := viper.Get(oauthTokensConfigKey)
+	previousDefaultScopes := viper.Get(oauthDefaultScopesConfigKey)
 	previousViperContext := viper.Get(doctl.ArgContext)
-	noBrowserKey := "test." + doctl.ArgOAuthNoBrowser
-	previousNoBrowser := viper.Get(noBrowserKey)
+	ephemeralKeys := []string{
+		"test." + doctl.ArgOAuthServer,
+		"test." + doctl.ArgOAuthClientID,
+		"test." + doctl.ArgOAuthScopes,
+		"test." + doctl.ArgOAuthSaveScope,
+		"test." + doctl.ArgOAuthCallbackPort,
+		"test." + doctl.ArgOAuthNoBrowser,
+		"test." + doctl.ArgOAuthTimeout,
+	}
+	previousEphemeral := make(map[string]any, len(ephemeralKeys))
+	for _, key := range ephemeralKeys {
+		previousEphemeral[key] = viper.Get(key)
+	}
 
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
 	Context = ""
 	viper.Set(doctl.ArgContext, doctl.ArgDefaultContext)
-	viper.Set(oauthClientConfigKey, nil)
 	viper.Set(oauthTokensConfigKey, nil)
+	viper.Set(oauthDefaultScopesConfigKey, nil)
 
 	t.Cleanup(func() {
 		cfgFileWriter = previousWriter
 		Context = previousContext
-		viper.Set(oauthClientConfigKey, previousClient)
 		viper.Set(oauthTokensConfigKey, previousTokens)
+		viper.Set(oauthDefaultScopesConfigKey, previousDefaultScopes)
 		viper.Set(doctl.ArgContext, previousViperContext)
-		viper.Set(noBrowserKey, previousNoBrowser)
+		for key, value := range previousEphemeral {
+			viper.Set(key, value)
+		}
 	})
 }
 

@@ -747,8 +747,12 @@ const (
 
 	// ArgOAuthServer is the OAuth authorization server used to sign in.
 	ArgOAuthServer = "oauth-server"
+	// ArgOAuthClientID overrides the OAuth application doctl signs in as.
+	ArgOAuthClientID = "client-id"
 	// ArgOAuthScopes is the space-separated list of scopes requested when signing in.
 	ArgOAuthScopes = "scope"
+	// ArgOAuthSaveScope persists --scope as the default for later logins.
+	ArgOAuthSaveScope = "save-scope"
 	// ArgOAuthCallbackPort is the local port that receives the OAuth redirect.
 	ArgOAuthCallbackPort = "callback-port"
 	// ArgOAuthNoBrowser prints the authorization URL instead of opening a browser.

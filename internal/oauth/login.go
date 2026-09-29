@@ -38,11 +38,11 @@ const callbackPath = "/callback"
 // finish authorizing in their browser.
 const DefaultLoginTimeout = 5 * time.Minute
 
-// RegistrationRedirectURIs are the redirect URIs doctl registers for its
-// dynamic client. Neither carries a port: the authorization server matches
+// RedirectURIs are the redirect URIs the doctl OAuth application registers
+// with DigitalOcean. Neither carries a port: the authorization server matches
 // loopback redirects on any port (RFC 8252 section 7.3), which lets doctl bind
 // an ephemeral port at login time.
-func RegistrationRedirectURIs() []string {
+func RedirectURIs() []string {
 	return []string{
 		"http://127.0.0.1" + callbackPath,
 		"http://localhost" + callbackPath,
@@ -63,8 +63,8 @@ func (e *AuthorizationError) Error() string {
 	return e.Code
 }
 
-// Unwrap reports registration problems as ErrInvalidClient so callers can
-// discard a stale dynamic client registration and try again.
+// Unwrap reports a rejected client as ErrInvalidClient so callers can explain
+// that the doctl application, rather than the user, was turned away.
 func (e *AuthorizationError) Unwrap() error {
 	if isInvalidClientCode(e.Code) {
 		return ErrInvalidClient
