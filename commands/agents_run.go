@@ -918,13 +918,49 @@ func (s *lineSpinner) stopAndClear() {
 	fmt.Fprint(s.out, "\r\x1b[K")
 }
 
-// provisioningHints keep a long PROVISIONING wait feeling alive. Later lines
-// call out that workspace bits may exist while the agent is still starting.
-var provisioningHints = []string{
-	"Allocating sandbox…",
-	"Starting workspace…",
-	"Starting agent runtime…",
-	"Workspace may be up; waiting for agent…",
+// startupWords are the lines a create/wait spinner prints for whatever is
+// starting. A session with `agent: none` has no agent in it, so the agent
+// wording there names a process that never runs — "Starting agent runtime…" in
+// particular describes a step coding-base does not have, which reads as a stall
+// rather than as a stage that does not apply.
+type startupWords struct {
+	waiting string
+	ready   string
+	// hints keep a long PROVISIONING wait feeling alive.
+	hints []string
+}
+
+var agentStartupWords = startupWords{
+	waiting: "Waiting for agent…",
+	ready:   "Agent is ready",
+	hints: []string{
+		"Allocating sandbox…",
+		"Starting workspace…",
+		"Starting agent runtime…",
+		// Calls out that workspace bits may exist while the agent still starts.
+		"Workspace may be up; waiting for agent…",
+	},
+}
+
+var bareSandboxStartupWords = startupWords{
+	waiting: "Waiting for sandbox…",
+	ready:   "Sandbox is ready",
+	hints: []string{
+		"Allocating sandbox…",
+		"Starting workspace…",
+		"Waiting for sandbox…",
+	},
+}
+
+// startupWordsFor reads the noun off the server's own answer rather than off
+// the flags this invocation was given, so it is also right for a session doctl
+// did not create — `port-forward` into someone else's bare sandbox included.
+func startupWordsFor(sess *do.HostedAgentSession) startupWords {
+	if sess != nil && sess.HostedAgentSession != nil &&
+		sess.AgentKind == godo.HostedAgentKindNone {
+		return bareSandboxStartupWords
+	}
+	return agentStartupWords
 }
 
 func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
@@ -949,6 +985,7 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 		if err != nil {
 			return nil, err
 		}
+		words := startupWordsFor(sess)
 
 		if prog != nil && !sawBitsReady {
 			if note := bitsReadyNote(sess); note != "" {
@@ -961,7 +998,7 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 			switch sess.Status {
 			case godo.HostedAgentSessionStatusProvisioning:
 				if prog != nil && !announced {
-					prog.wait("Waiting for agent…")
+					prog.wait(words.waiting)
 					announced = true
 					hintIdx = 0
 					nextHint = creationClock().Add(creationHintInterval)
@@ -972,9 +1009,9 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 				if prog != nil {
 					elapsed := prog.elapsed()
 					if elapsed > 0 {
-						prog.ok(fmt.Sprintf("Agent is ready (%s)", elapsed))
+						prog.ok(fmt.Sprintf("%s (%s)", words.ready, elapsed))
 					} else {
-						prog.ok("Agent is ready")
+						prog.ok(words.ready)
 					}
 				} else if out != nil {
 					fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
@@ -989,11 +1026,11 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 			lastStatus = sess.Status
 		} else if prog != nil &&
 			sess.Status == godo.HostedAgentSessionStatusProvisioning &&
-			hintIdx < len(provisioningHints) &&
+			hintIdx < len(words.hints) &&
 			!creationClock().Before(nextHint) {
-			hint := provisioningHints[hintIdx]
+			hint := words.hints[hintIdx]
 			if sawBitsReady {
-				hint = "Waiting for agent…"
+				hint = words.waiting
 			}
 			prog.wait(hint)
 			hintIdx++

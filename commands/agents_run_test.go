@@ -244,6 +244,57 @@ func TestWaitForSessionReady_ProvisioningHints(t *testing.T) {
 	})
 }
 
+// A bare sandbox runs no agent, so every line of the wait must stop naming one.
+// "Starting agent runtime…" is the one that matters most: coding-base ships no
+// runtime to start, so on a slow provision it reads as a stalled step rather
+// than as a stage that does not apply here. The noun comes off the session's
+// AgentKind, not off this invocation's flags, so it is also right when the
+// caller never saw the create — `port-forward` into someone else's sandbox.
+func TestWaitForSessionReady_BareSandboxSaysSandboxNotAgent(t *testing.T) {
+	prevPoll := sessionReadyPollInterval
+	prevHint := creationHintInterval
+	prevClock := creationClock
+	sessionReadyPollInterval = time.Millisecond
+	creationHintInterval = time.Millisecond
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	creationClock = func() time.Time { return now }
+	t.Cleanup(func() {
+		sessionReadyPollInterval = prevPoll
+		creationHintInterval = prevHint
+		creationClock = prevClock
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		calls := 0
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_bare").
+			DoAndReturn(func(id string) (*do.HostedAgentSession, error) {
+				calls++
+				now = now.Add(2 * time.Millisecond)
+				status := godo.HostedAgentSessionStatusProvisioning
+				if calls >= 4 {
+					status = godo.HostedAgentSessionStatusReady
+				}
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_bare",
+						AgentKind: godo.HostedAgentKindNone,
+						Status:    status,
+					},
+				}, nil
+			}).AnyTimes()
+
+		var out bytes.Buffer
+		prog := newCreationProgress(&out)
+		sess, err := waitForSessionReady(context.Background(), config.HostedAgents(), "sess_bare", prog)
+		require.NoError(t, err)
+		require.NotNil(t, sess)
+		got := out.String()
+		assert.Contains(t, got, "Sandbox is ready")
+		assert.NotContains(t, strings.ToLower(got), "agent")
+	})
+}
+
 func TestWaitForSessionReady_BitsReadyWhileProvisioning(t *testing.T) {
 	prevPoll := sessionReadyPollInterval
 	prevHint := creationHintInterval
@@ -1109,6 +1160,43 @@ func TestRunAgentsCreate_BareSandboxRejectsAgentOnlyFlags(t *testing.T) {
 	}
 }
 
+// The create header prints before a session exists, so it cannot read AgentKind
+// off the server the way the wait lines do — it has to come off the request.
+func TestRunAgentsCreate_BareSandboxHeaderSaysSandbox(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var out bytes.Buffer
+		config.Out = &out
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "eval-01")
+
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_bare",
+					Name:      "eval-01",
+					AgentKind: godo.HostedAgentKindNone,
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil).AnyTimes()
+		tm.hostedAgents.EXPECT().
+			GetSession(gomock.Any()).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_bare",
+					Name:      "eval-01",
+					AgentKind: godo.HostedAgentKindNone,
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil).AnyTimes()
+
+		require.NoError(t, RunAgentsCreate(config))
+		got := out.String()
+		assert.Contains(t, got, "Creating sandbox session")
+		assert.NotContains(t, got, "Creating agent session")
+	})
+}
+
 // Refusing an explicit --permission is not enough on its own: --permission
 // carries a cobra default, so the create path resolves it to "allow" before the
 // bare-sandbox check ever runs. Asserting through resolveAgentCreationSource
@@ -1238,9 +1326,10 @@ func TestResolveAgentCreationSource_TemplateReachesTheManifest(t *testing.T) {
 	}
 }
 
-// Without --harness there is no generated manifest to write the template onto,
-// and the manifest doctl would otherwise discover declares its own. cobra's
-// mutual exclusion cannot catch this one: a discovered ./agents.yaml sets no flag.
+// A lone --template means --harness none, but not when a manifest is already in
+// play: the discovered ./agents.yaml declares its own template, so implying a
+// bare sandbox would silently ignore the file. cobra's mutual exclusion cannot
+// catch this one — a discovered manifest sets no flag to be exclusive with.
 func TestResolveAgentCreationSource_TemplateNeedsHarness(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
@@ -1253,6 +1342,90 @@ func TestResolveAgentCreationSource_TemplateNeedsHarness(t *testing.T) {
 		_, err := resolveAgentCreationSource(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "--template")
+	})
+}
+
+// With nothing else supplying a manifest, --template is enough on its own: the
+// only session that needs an image and no agent is a bare sandbox. The empty
+// working directory is load-bearing — an agents.yaml here would be discovered
+// and the case above would apply instead.
+func TestResolveAgentCreationSource_TemplateAloneImpliesBareSandbox(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "coding-base")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "eval-01")
+
+		src, err := resolveAgentCreationSource(config)
+		require.NoError(t, err)
+		require.NotNil(t, src.manifest)
+		assert.True(t, src.bareSandbox())
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(src.manifest, &doc))
+		assert.Equal(t, bareSandboxAgent, doc["agent"])
+		assert.Equal(t, "coding-base", doc["template"])
+		assert.NotContains(t, doc, "permissions",
+			"an implied bare sandbox must not carry an agent's tool policy either")
+	})
+}
+
+// A team template is passed through rather than matched against the platform
+// catalogue, so the implication cannot be keyed on the name being coding-base.
+func TestResolveAgentCreationSource_TeamTemplateAloneImpliesBareSandbox(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "my-team-image")
+
+		src, err := resolveAgentCreationSource(config)
+		require.NoError(t, err)
+		assert.True(t, src.bareSandbox())
+	})
+}
+
+// Someone who passed an agent-only flag did not mean a bare sandbox, so the
+// implication is reported back as the choice it forced — naming the flag they
+// typed. The explicit --harness none messages would cite a flag absent from the
+// command line, which reads as doctl having invented one.
+func TestResolveAgentCreationSource_ImpliedBareSandboxRejectsAgentOnlyFlags(t *testing.T) {
+	cases := []struct {
+		name  string
+		flag  string
+		value any
+	}{
+		{"prompt", doctl.ArgAgentTriggerPrompt, "do the thing"},
+		{"repo", doctl.ArgAgentRepo, "org/repo"},
+		{"permission", doctl.ArgAgentPermission, "ask"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				t.Chdir(t.TempDir())
+				config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "coding-base")
+				config.Doit.Set(config.NS, tc.flag, tc.value)
+
+				_, err := resolveAgentCreationSource(config)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "--"+tc.flag)
+				assert.Contains(t, err.Error(), "name the agent with --"+doctl.ArgAgentHarness)
+				assert.NotContains(t, err.Error(), "--harness none runs none",
+					"the caller never wrote --harness none")
+			})
+		})
+	}
+}
+
+// Naming a harness still wins over the implication: --template only means
+// "no agent" when no agent was asked for.
+func TestResolveAgentCreationSource_ExplicitHarnessBeatsTemplateImplication(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		t.Chdir(t.TempDir())
+		t.Setenv(openAIAPIKeyEnv, "sk-test")
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "codex")
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "coding-codex")
+
+		src, err := resolveAgentCreationSource(config)
+		require.NoError(t, err)
+		assert.False(t, src.bareSandbox())
 	})
 }
 
