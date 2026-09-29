@@ -237,8 +237,8 @@ func launchNewSession(c *CmdConfig) error {
 	// error. `create` is the same creation path and prints the commands that do
 	// drive it.
 	if src.bareSandbox() {
-		return fmt.Errorf("`%s launch` ends in an interactive chat with the agent, and this session runs none; use `%s create --%s none` and then drive it with `%s exec`, `%s upload`, `%s download` or `%s port-forward`",
-			agentCLI, agentCLI, doctl.ArgAgentHarness, agentCLI, agentCLI, agentCLI, agentCLI)
+		return fmt.Errorf("`%s launch` ends in an interactive chat with the agent, and this session runs none; use `%s create` and then drive it with `%s exec`, `%s upload`, `%s download` or `%s port-forward`",
+			agentCLI, agentCLI, agentCLI, agentCLI, agentCLI, agentCLI)
 	}
 
 	maybePrintAgentPublicPreviewTermsNotice(c)

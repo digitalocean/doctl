@@ -1143,14 +1143,15 @@ func TestRunAgentsCreate_BareSandboxRejectsAgentOnlyFlags(t *testing.T) {
 		value   any
 		wantMsg string
 	}{
-		{"prompt", doctl.ArgAgentTriggerPrompt, "do the thing", "--prompt needs an agent to send it to"},
-		{"repo", doctl.ArgAgentRepo, "org/repo", "--gh-repo is a hint for an agent to act on"},
-		{"permission", doctl.ArgAgentPermission, "ask", "--permission policies the tools an agent may call"},
+		{"prompt", doctl.ArgAgentTriggerPrompt, "do the thing", "--prompt needs one"},
+		{"repo", doctl.ArgAgentRepo, "org/repo", "--gh-repo needs one"},
+		{"permission", doctl.ArgAgentPermission, "ask", "--permission needs one"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				config.Doit.Set(config.NS, doctl.ArgAgentHarness, "none")
+				t.Chdir(t.TempDir())
+				config.Doit.Set(config.NS, doctl.ArgAgentTemplate, templateAliasSandbox)
 				config.Doit.Set(config.NS, tc.flag, tc.value)
 				err := RunAgentsCreate(config)
 				require.Error(t, err)
@@ -1166,7 +1167,8 @@ func TestRunAgentsCreate_BareSandboxHeaderSaysSandbox(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		var out bytes.Buffer
 		config.Out = &out
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "none")
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, templateAliasSandbox)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "eval-01")
 
 		tm.hostedAgents.EXPECT().
@@ -1204,7 +1206,8 @@ func TestRunAgentsCreate_BareSandboxHeaderSaysSandbox(t *testing.T) {
 // permission:"" by construction and cannot see this.
 func TestResolveAgentCreationSource_BareSandboxWritesNoPermissions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "none")
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, templateAliasSandbox)
 
 		src, err := resolveAgentCreationSource(config)
 		require.NoError(t, err)
@@ -1301,10 +1304,10 @@ func TestResolveAgentCreationSource_TemplateReachesTheManifest(t *testing.T) {
 		template string
 	}{
 		// The bare sandbox on a team's own image: the case --template exists for.
-		{"bare sandbox, custom template", "none", "my-eval-image"},
+		{"bare sandbox, custom template", "", "my-eval-image"},
 		// coding-base is redundant here (it is already the default) but naming it
 		// explicitly must not be an error — it is the honest way to write it down.
-		{"bare sandbox, coding-base named explicitly", "none", "coding-base"},
+		{"bare sandbox, coding-base named explicitly", "", "coding-base"},
 		// A managed agent on a custom template is BYOC: the customer's tooling on
 		// top of an agent base, which is what `template create` produces.
 		{"managed agent, custom template", "codex", "my-codex-plus-tools"},
@@ -1312,8 +1315,11 @@ func TestResolveAgentCreationSource_TemplateReachesTheManifest(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				t.Chdir(t.TempDir())
 				t.Setenv(openAIAPIKeyEnv, "sk-test")
-				config.Doit.Set(config.NS, doctl.ArgAgentHarness, tc.harness)
+				if tc.harness != "" {
+					config.Doit.Set(config.NS, doctl.ArgAgentHarness, tc.harness)
+				}
 				config.Doit.Set(config.NS, doctl.ArgAgentTemplate, tc.template)
 
 				src, err := resolveAgentCreationSource(config)
@@ -1416,38 +1422,6 @@ func TestResolveAgentCreationSource_TeamTemplateAloneImpliesBareSandbox(t *testi
 		require.NoError(t, err)
 		assert.True(t, src.bareSandbox())
 	})
-}
-
-// Someone who passed an agent-only flag did not mean a bare sandbox, so the
-// implication is reported back as the choice it forced — naming the flag they
-// typed. The explicit --harness none messages would cite a flag absent from the
-// command line, which reads as doctl having invented one.
-func TestResolveAgentCreationSource_ImpliedBareSandboxRejectsAgentOnlyFlags(t *testing.T) {
-	cases := []struct {
-		name  string
-		flag  string
-		value any
-	}{
-		{"prompt", doctl.ArgAgentTriggerPrompt, "do the thing"},
-		{"repo", doctl.ArgAgentRepo, "org/repo"},
-		{"permission", doctl.ArgAgentPermission, "ask"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				t.Chdir(t.TempDir())
-				config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "coding-base")
-				config.Doit.Set(config.NS, tc.flag, tc.value)
-
-				_, err := resolveAgentCreationSource(config)
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "--"+tc.flag)
-				assert.Contains(t, err.Error(), "name the agent with --"+doctl.ArgAgentHarness)
-				assert.NotContains(t, err.Error(), "--harness none runs none",
-					"the caller never wrote --harness none")
-			})
-		})
-	}
 }
 
 // Naming a harness still wins over the implication: --template only means

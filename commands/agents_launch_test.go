@@ -1163,13 +1163,33 @@ func TestHeadlessEventDetail(t *testing.T) {
 func TestLaunchNewSession_BareSandboxRefusedBeforeCreating(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		stubInteractiveTerminal(t, true)
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "none")
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, templateAliasSandbox)
 
 		err := launchNewSession(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "this session runs none")
 		assert.Contains(t, err.Error(), "exec")
 	})
+}
+
+// `none` is the manifest's word for a session with no agent, not a --harness
+// value. A --spec file saying `agent: none` still works (the test below);
+// typing it as a harness is refused and pointed at the one spelling we teach.
+func TestResolveAgentCreationSource_HarnessNoneIsRefused(t *testing.T) {
+	for _, typed := range []string{"none", "None", " NONE "} {
+		t.Run(typed, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				t.Chdir(t.TempDir())
+				config.Doit.Set(config.NS, doctl.ArgAgentHarness, typed)
+
+				_, err := resolveAgentCreationSource(config)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "is not a harness")
+				assert.Contains(t, err.Error(), "--template "+templateAliasSandbox)
+			})
+		})
+	}
 }
 
 // A manifest naming `agent: none` has to be refused on the same footing as the
