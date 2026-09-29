@@ -299,7 +299,15 @@ func RunAuthSwitch(c *CmdConfig) error {
 	}
 
 	// check that context exists
-	contextsAvail := viper.GetStringMap("auth-contexts")
+	// viper.GetStringMap returns the map backing its configuration, so it must
+	// not be modified in place: the temporary "default" entry added below would
+	// otherwise be serialized back into the config file by writeConfig.
+	// See https://github.com/digitalocean/doctl/issues/1816
+	viperContexts := viper.GetStringMap("auth-contexts")
+	contextsAvail := make(map[string]any, len(viperContexts)+1)
+	for ctx, value := range viperContexts {
+		contextsAvail[ctx] = value
+	}
 	contextsAvail[doctl.ArgDefaultContext] = true
 	keys := make([]string, 0)
 	for ctx := range contextsAvail {
