@@ -69,6 +69,7 @@ See the [full reference documentation](https://www.digitalocean.com/docs/apis-cl
   - [Docker Hub](#docker-hub)
   - [Downloading a Release from GitHub](#downloading-a-release-from-github)
   - [Installing Beta Releases](#installing-beta-releases)
+    - [Private Preview Terms](#private-preview-terms)
   - [Building with Docker](#building-with-docker)
   - [Building the Development Version from Source](#building-the-development-version-from-source)
   - [Dependencies](#dependencies)
@@ -280,6 +281,14 @@ go install github.com/digitalocean/doctl/cmd/doctl@v1.163.0-beta.2
 doctl version
 # doctl version 1.163.0-beta.2-...
 ```
+
+#### Private Preview Terms
+
+Participation in the invite-only Private Preview of the next-generation
+`doctl` experience is governed by the [DigitalOcean Private Preview Terms for
+`doctl`](docs/PREVIEW_TERMS.md), which supplement the DigitalOcean Terms of
+Service Agreement. Preview builds are for evaluation and testing only — not for
+production-critical workloads or automation.
 
 ### Building with Docker
 
