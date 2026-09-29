@@ -698,7 +698,7 @@ const agentSecretFlagDesc = "Tenant secret as NAME=VALUE, injected into the mani
 // commands cannot drift on spelling, defaults, or help text — the drift that
 // made `start` and `run` indistinguishable in the first place.
 func addAgentCreationFlags(cmd *Command) {
-	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Mutually exclusive with --spec and --from-config.")
+	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, none). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. none is a bare sandbox: no agent runs in it and you drive it with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
@@ -707,6 +707,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --from-config.")
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddStringFlag(cmd, doctl.ArgAgentPermission, "", defaultHarnessPermission, agentPermissionFlagDesc)
+	AddStringFlag(cmd, doctl.ArgAgentTemplate, "", "", agentTemplateFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 }
@@ -724,6 +725,15 @@ func addAgentCreationFlags(cmd *Command) {
 // --permission is how it is narrowed.
 const defaultHarnessPermission = "allow"
 
+// agentTemplateFlagDesc names both halves of the template namespace on purpose.
+// The two are not separate settings: a session's template resolves against the
+// team's own templates first and the platform catalogue second, so a team
+// template named coding-base shadows the platform one.
+const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a platform template (coding-base for a bare sandbox, " +
+	"or the template that matches your --harness) or one of your team's own from `doctl harness-runtime template create` — " +
+	"a team template of the same name takes precedence. Omit it to get the default for the chosen --harness. " +
+	"Only valid with --harness; a --spec manifest sets its own top-level template."
+
 const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
 	"ask (raise an approval request per tool call, resolvable with `doctl harness-runtime approve`), or deny. " +
 	"Written as the manifest's permissions.default. Only valid with --harness; a --spec manifest declares its own."
@@ -736,6 +746,13 @@ func markAgentCreationSourcesExclusive(cmd *Command) {
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentFromConfig)
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
+	// --template writes a field into the manifest --harness generates, so it has
+	// nothing to write onto either of the other two sources. Erroring rather than
+	// silently ignoring it: with --spec the file's own `template` would win and
+	// with --from-config the server-side config would, in both cases leaving the
+	// session on a template the caller did not ask for and was not told about.
+	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentTemplate, doctl.ArgAgentSpec)
+	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentTemplate, doctl.ArgAgentFromConfig)
 }
 
 // --- runners ----------------------------------------------------------------
@@ -758,6 +775,52 @@ type agentCreationSource struct {
 	// server takes it as a query parameter precisely so the immutable,
 	// config-shareable agents.yaml cannot carry per-session spending consent.
 	resumeOnTopoff bool
+}
+
+// bareSandbox reports whether this source asks for a session with no agent,
+// whether it came from --harness none or from a manifest declaring
+// `agent: none`. Both have to be caught: a manifest is the more likely way a
+// bare sandbox is created, since it is the only way to set egress or a size.
+//
+// A --from-config source reports false. The agent lives server-side there, so
+// answering would mean a lookup, and the only caller (launch) can afford to be
+// told by the server instead.
+func (s *agentCreationSource) bareSandbox() bool {
+	if s == nil {
+		return false
+	}
+	if isBareSandboxHarness(s.harness) {
+		return true
+	}
+	return manifestAgentIs(s.manifest, bareSandboxAgent)
+}
+
+// manifestAgentIs reports whether the manifest's adapter equals want, reading
+// the flat `agent` key or the legacy `spec.runtime.adapter` path. Unparsable
+// YAML and an absent adapter both report false: the server owns that error, and
+// guessing here would turn a malformed manifest into a confusing local one.
+func manifestAgentIs(manifest []byte, want string) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return false
+	}
+	if agent, ok := doc["agent"].(string); ok {
+		return strings.EqualFold(strings.TrimSpace(agent), want)
+	}
+	// yaml.v2 decodes nested mappings as map[any]any.
+	spec, ok := doc["spec"].(map[any]any)
+	if !ok {
+		return false
+	}
+	runtime, ok := spec["runtime"].(map[any]any)
+	if !ok {
+		return false
+	}
+	adapter, ok := runtime["adapter"].(string)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(adapter), want)
 }
 
 // resolveAgentCreationSource reads and validates the creation flags, resolving
@@ -795,6 +858,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	template, err := c.Doit.GetString(c.NS, doctl.ArgAgentTemplate)
+	if err != nil {
+		return nil, err
+	}
+	template = strings.TrimSpace(template)
 	// Empty means "not supplied" rather than "invalid": the flag's cobra
 	// default only exists on a command that registered it, and callers that
 	// reach here without one still need a policy.
@@ -881,6 +949,47 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		return nil, fmt.Errorf("--%s only applies with --%s; set the permissions block in the manifest instead",
 			doctl.ArgAgentPermission, doctl.ArgAgentHarness)
 	}
+	// A bare sandbox has no agent, so the three flags that only an agent reads
+	// are refused rather than accepted and ignored. Each would otherwise look
+	// like it worked: the prompt is never delivered, the repos list reaches the
+	// guest as HARNESS_WORKSPACE_REPOS but nothing materializes the skill that
+	// surfaces it, and a tool-permission policy is enforced by the agent that
+	// is not there.
+	if isBareSandboxHarness(harness) {
+		switch {
+		case strings.TrimSpace(prompt) != "":
+			return nil, fmt.Errorf("--%s needs an agent to send it to, and --%s none runs none; drive the sandbox with `%s exec` instead",
+				doctl.ArgAgentTriggerPrompt, doctl.ArgAgentHarness, agentCLI)
+		case strings.TrimSpace(repo) != "":
+			return nil, fmt.Errorf("--%s is a hint for an agent to act on, and --%s none runs none; clone it yourself with `%s exec -- git clone …`, or upload it with `%s upload`",
+				doctl.ArgAgentRepo, doctl.ArgAgentHarness, agentCLI, agentCLI)
+		case c.Doit.IsSet(doctl.ArgAgentPermission):
+			return nil, fmt.Errorf("--%s policies the tools an agent may call, and --%s none runs none; a bare sandbox's boundary is its egress policy, set in a manifest",
+				doctl.ArgAgentPermission, doctl.ArgAgentHarness)
+		}
+		// Refusing the flag is only half of it: `permission` already carries the
+		// cobra default, so leaving it set writes permissions.default into a
+		// manifest that declares no agent — and `config create --spec -` would
+		// carry that forward as if the customer had chosen it. The default exists
+		// to keep codex off `untrusted`; there is no adapter here to default.
+		permission = ""
+	} else if harness != "" && isAgentlessTemplate(template) {
+		// The inverse pairing, and the one that fails quietly: a managed harness
+		// on a template with no agent in it provisions fine and reaches READY, so
+		// nothing looks wrong until the first turn hangs — while the session row
+		// claims an agent kind that billing and every per-kind metric believe.
+		return nil, fmt.Errorf("--%s %s ships no agent, so it cannot run --%s %s; use --%s none for a sandbox you drive with `%s exec`, or name a template that carries the agent",
+			doctl.ArgAgentTemplate, template, doctl.ArgAgentHarness, harness, doctl.ArgAgentHarness, agentCLI)
+	}
+
+	// cobra's mutual exclusion covers --spec and --from-config, but not the
+	// implicit source: a discovered ./agents.yaml sets no flag for cobra to
+	// exclude, and that manifest declares its own template. Silently dropping the
+	// flag there would put the session on a different template than asked for.
+	if template != "" && harness == "" {
+		return nil, fmt.Errorf("--%s applies to the manifest --%s generates; set the top-level `template` in your manifest instead",
+			doctl.ArgAgentTemplate, doctl.ArgAgentHarness)
+	}
 
 	src := &agentCreationSource{
 		harness:        harness,
@@ -911,6 +1020,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			prompt:     prompt,
 			name:       name,
 			permission: permission,
+			template:   template,
 		})
 		if err != nil {
 			return nil, err

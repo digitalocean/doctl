@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -29,14 +30,58 @@ import (
 const (
 	templateRefPageSize = 200
 
+	baseTemplateCodingBase       = "coding-base"
 	baseTemplateCodingClaudeCode = "coding-claude-code"
 	baseTemplateCodingCodex      = "coding-codex"
 	baseTemplateCodingOpenCode   = "coding-opencode"
 	baseTemplateCodingHermes     = "coding-hermes"
+	baseTemplateCrewAI           = "crewai"
 	baseTemplateLanggraph        = "langgraph"
 	baseTemplateHermesBase       = "hermes-base"
 	baseTemplateLanggraphBase    = "langgraph-base"
 )
+
+// The two base-template sets mirror the server's: it validates against every
+// allowed key and names only the advertised subset in errors. Keeping the same
+// split here keeps this list auditable against it — doctl accepting a strict
+// subset is the failure that matters, because it blocks a build the API would
+// have taken, with an error that reads as though the base does not exist.
+//
+// Not advertised, deliberately: hermes-base and langgraph-base are the BYOT
+// workload bases, allowed for partners who know about them and hidden until
+// BYOT launches. codex-agentapi is absent from both sets because the server
+// refuses it outright — the agent loop runs at OpenAI, so there is no local
+// runtime to rebase onto.
+var (
+	acceptedBaseTemplates = []string{
+		baseTemplateCodingBase,
+		baseTemplateCodingClaudeCode,
+		baseTemplateCodingCodex,
+		baseTemplateCodingOpenCode,
+		baseTemplateCodingHermes,
+		baseTemplateCrewAI,
+		baseTemplateLanggraph,
+		baseTemplateHermesBase,
+		baseTemplateLanggraphBase,
+	}
+	advertisedBaseTemplates = []string{
+		baseTemplateCodingBase,
+		baseTemplateCodingClaudeCode,
+		baseTemplateCodingCodex,
+		baseTemplateCodingOpenCode,
+		baseTemplateCodingHermes,
+		baseTemplateCrewAI,
+		baseTemplateLanggraph,
+	}
+)
+
+// agentBaseTemplateFlagDesc documents --base-template. coding-base is called out
+// because it is the one base that carries no agent: rebasing onto it is how a
+// customer brings their own tooling for a bare sandbox.
+var agentBaseTemplateFlagDesc = "Platform base to rebase onto (" +
+	strings.Join(advertisedBaseTemplates, ", ") +
+	"). coding-base carries no agent — use it for a bare sandbox with your own tooling, and run it with `" +
+	agentCLI + " create --harness none --template <name>`."
 
 // AgentTemplates generates the `doctl harness-runtime template` subtree, which
 // wraps the godo team custom template API (/v2/agents/templates).
@@ -58,7 +103,7 @@ func AgentTemplates() *Command {
 		Writer, append(ns, aliasOpt("c"),
 			displayerType(&displayers.HostedAgentTemplate{}))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the template", requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgAgentBaseTemplate, "", "", "Platform base to rebase onto (coding-claude-code, coding-codex, coding-opencode, coding-hermes, langgraph)", requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentBaseTemplate, "", "", agentBaseTemplateFlagDesc, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentSourceOCIRef, "", "", "Customer OCI image (registry/repo:tag or digest)", requiredOpt())
 	cmdCreate.Example = `doctl harness-runtime template create --name my-image --base-template coding-opencode --source-oci-ref registry.digitalocean.com/myreg/agent:latest`
 
@@ -83,7 +128,7 @@ func AgentTemplates() *Command {
 		Writer, append(ns, aliasOpt("u"),
 			displayerType(&displayers.HostedAgentTemplate{}))...)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentSourceOCIRef, "", "", "New customer OCI image (registry/repo:tag or digest)")
-	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base (coding-claude-code, coding-codex, coding-opencode, coding-hermes, langgraph)")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base. Same values as on `template create`")
 	cmdUpdate.Example = `doctl harness-runtime template update my-image --source-oci-ref registry.digitalocean.com/myreg/agent:v2`
 
 	CmdBuilder(cmd, RunAgentsTemplateDelete, "delete <template>",
@@ -306,13 +351,10 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 }
 
 func validateBaseTemplate(base string) error {
-	switch base {
-	case baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateCodingHermes, baseTemplateLanggraph, baseTemplateHermesBase, baseTemplateLanggraphBase:
+	if slices.Contains(acceptedBaseTemplates, base) {
 		return nil
-	default:
-		return fmt.Errorf("base-template must be one of %s, %s, %s, %s, %s",
-			baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateCodingHermes, baseTemplateLanggraph)
 	}
+	return fmt.Errorf("base-template must be one of %s", strings.Join(advertisedBaseTemplates, ", "))
 }
 
 func looksLikeTemplateID(ref string) bool {

@@ -215,8 +215,29 @@ func TestValidateBaseTemplate(t *testing.T) {
 	assert.NoError(t, validateBaseTemplate("coding-opencode"))
 	assert.NoError(t, validateBaseTemplate("coding-hermes"))
 	assert.NoError(t, validateBaseTemplate("langgraph"))
-	err := validateBaseTemplate("coding-base")
-	require.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "base-template"))
-	assert.Contains(t, err.Error(), "coding-hermes")
+
+	// coding-base and crewai are accepted by the API's external template-build
+	// policy, which excludes only codex-agentapi. doctl used to reject both, so a
+	// customer rebasing their own tooling onto the agentless base was stopped by
+	// their CLI with an error implying the base did not exist. This test used
+	// coding-base as its invalid exemplar; the exemplar moved to the value the
+	// server actually refuses so the assertion below still proves what it claims.
+	assert.NoError(t, validateBaseTemplate("coding-base"))
+	assert.NoError(t, validateBaseTemplate("crewai"))
+
+	// Allowed but not advertised: partners are told about these directly, and
+	// they should work without appearing in the error message.
+	assert.NoError(t, validateBaseTemplate("hermes-base"))
+	assert.NoError(t, validateBaseTemplate("langgraph-base"))
+	for _, hidden := range []string{"hermes-base", "langgraph-base"} {
+		assert.NotContains(t, validateBaseTemplate("nope").Error(), hidden)
+	}
+
+	for _, invalid := range []string{"codex-agentapi", "nope", "", "Coding-Base"} {
+		err := validateBaseTemplate(invalid)
+		require.Errorf(t, err, "base-template %q", invalid)
+		assert.True(t, strings.Contains(err.Error(), "base-template"))
+		assert.Contains(t, err.Error(), "coding-hermes")
+		assert.Contains(t, err.Error(), "coding-base")
+	}
 }
