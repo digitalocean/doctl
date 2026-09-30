@@ -236,6 +236,16 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 			return "Session run has ended", []string{"doctl harness-runtime remove <session>", "doctl harness-runtime create --harness opencode --name new-session"}
 		case strings.Contains(lower, "already attached") || strings.Contains(lower, "another device"):
 			return "Session already attached elsewhere", []string{"Detach on the other device, then re-run doctl harness-runtime launch"}
+		case strings.Contains(lower, "no agent"):
+			// The server's copy names the three ways in but not the commands
+			// that are them, and this card is where someone lands after
+			// reaching for the one that does not exist here.
+			return "This session runs no agent", []string{
+				agentCLI + " exec <session> -- <command>",
+				agentCLI + " upload <session> --local-file <path> --workspace-path <path>",
+				agentCLI + " download <session> --workspace-path <path> --save-to <path>",
+				agentCLI + " port-forward <session> <port>",
+			}
 		default:
 			return "Conflict", nil
 		}
