@@ -34,8 +34,8 @@ func TestAgentTriggersCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
 		"list", "create", "get", "update", "delete", "pause", "resume",
-		"rotate-secret", "list-executions", "get-execution", "get-by-session",
-		"list-reusable-sessions", "list-providers",
+		"rotate-secret", "list-executions", "get-execution", "cancel-execution",
+		"get-by-session", "list-reusable-sessions", "list-providers",
 	)
 }
 
@@ -694,5 +694,78 @@ func TestAgentTriggersGetExecution_TextMode(t *testing.T) {
 		require.NoError(t, RunAgentTriggersGetExecution(config))
 		assert.Contains(t, stdout.String(), "hello from run", "run output text must appear on stdout in text mode")
 		assert.Contains(t, stdout.String(), "output truncated", "truncation notice must appear on stdout in text mode")
+	})
+}
+
+func TestAgentTriggersCancelExecution_JSONMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Cancel("tr_1", "ex_1", false).
+			Return(&do.HostedAgentTriggerExecution{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID:   "ex_1",
+					Status:        godo.HostedAgentTriggerExecutionStatusFailed,
+					FailureReason: "This run was cancelled by a user.",
+				},
+			}, nil)
+		config.Args = []string{"tr_1", "ex_1"}
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		prev := Output
+		Output = "json"
+		defer func() { Output = prev }()
+
+		require.NoError(t, RunAgentTriggersCancelExecution(config))
+
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal([]byte(stdout.String()), &parsed))
+		assert.Equal(t, "ex_1", parsed["execution_id"])
+		assert.Equal(t, "failed", parsed["status"])
+	})
+}
+
+func TestAgentTriggersCancelExecution_TextMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Cancel("tr_1", "ex_1", false).
+			Return(&do.HostedAgentTriggerExecution{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID:   "ex_1",
+					Status:        godo.HostedAgentTriggerExecutionStatusFailed,
+					FailureReason: "This run was cancelled by a user.",
+				},
+			}, nil)
+		config.Args = []string{"tr_1", "ex_1"}
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		prev := Output
+		Output = "text"
+		defer func() { Output = prev }()
+
+		require.NoError(t, RunAgentTriggersCancelExecution(config))
+		assert.Contains(t, stdout.String(), "This run was cancelled by a user.")
+	})
+}
+
+// TestAgentTriggersCancelExecution_Force pins that --force reaches the
+// service call as true, not just that the flag parses.
+func TestAgentTriggersCancelExecution_Force(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Cancel("tr_1", "ex_1", true).
+			Return(&do.HostedAgentTriggerExecution{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID: "ex_1",
+					Status:      godo.HostedAgentTriggerExecutionStatusFailed,
+				},
+			}, nil)
+		config.Args = []string{"tr_1", "ex_1"}
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+		require.NoError(t, RunAgentTriggersCancelExecution(config))
 	})
 }
