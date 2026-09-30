@@ -30,6 +30,12 @@ import (
 const (
 	templateRefPageSize = 200
 
+	baseTemplateCodexBase      = "codex-base"
+	baseTemplateOpenCodeBase   = "opencode-base"
+	baseTemplateClaudeCodeBase = "claude-code-base"
+	baseTemplateHermesBase     = "hermes-base"
+	baseTemplateLanggraphBase  = "langgraph-base"
+
 	baseTemplateCodingBase       = "coding-base"
 	baseTemplateCodingClaudeCode = "coding-claude-code"
 	baseTemplateCodingCodex      = "coding-codex"
@@ -37,45 +43,51 @@ const (
 	baseTemplateCodingHermes     = "coding-hermes"
 	baseTemplateCrewAI           = "crewai"
 	baseTemplateLanggraph        = "langgraph"
-	baseTemplateHermesBase       = "hermes-base"
-	baseTemplateLanggraphBase    = "langgraph-base"
 )
 
-// The two base-template sets mirror the server's: it validates against every
-// allowed key and names only the advertised subset in errors. Keeping the same
-// split here keeps this list auditable against it — doctl accepting a strict
-// subset is the failure that matters, because it blocks a build the API would
-// have taken, with an error that reads as though the base does not exist.
-//
-// Not advertised, deliberately: hermes-base and langgraph-base are the BYOT
-// workload bases, allowed for partners who know about them and hidden until
-// BYOT launches. codex-agentapi is absent from both sets because the server
-// refuses it outright — the agent loop runs at OpenAI, so there is no local
-// runtime to rebase onto.
-var (
-	acceptedBaseTemplates = []string{
-		baseTemplateCodingBase,
-		baseTemplateCodingClaudeCode,
-		baseTemplateCodingCodex,
-		baseTemplateCodingOpenCode,
-		baseTemplateCodingHermes,
-		baseTemplateCrewAI,
-		baseTemplateLanggraph,
-		baseTemplateHermesBase,
-		baseTemplateLanggraphBase,
-	}
-	// Advertised under its public alias: what a user types is `sandbox`, and
-	// coding-base stays accepted above so nothing that already works breaks.
-	advertisedBaseTemplates = []string{
-		templateAliasSandbox,
-		baseTemplateCodingClaudeCode,
-		baseTemplateCodingCodex,
-		baseTemplateCodingOpenCode,
-		baseTemplateCodingHermes,
-		baseTemplateCrewAI,
-		baseTemplateLanggraph,
-	}
-)
+// baseTemplates are the base templates for new custom templates. sandbox
+// (coding-base) and crewai are current bases too, with their own semantics.
+var baseTemplates = []string{
+	baseTemplateCodexBase,
+	baseTemplateOpenCodeBase,
+	baseTemplateClaudeCodeBase,
+	baseTemplateHermesBase,
+	baseTemplateLanggraphBase,
+	templateAliasSandbox,
+	baseTemplateCrewAI,
+}
+
+// acceptedCurrentBaseTemplates is baseTemplates as sent on the wire, with
+// sandbox resolved to its platform name.
+var acceptedCurrentBaseTemplates = []string{
+	baseTemplateCodexBase,
+	baseTemplateOpenCodeBase,
+	baseTemplateClaudeCodeBase,
+	baseTemplateHermesBase,
+	baseTemplateLanggraphBase,
+	baseTemplateCodingBase,
+	baseTemplateCrewAI,
+}
+
+// deprecatedBaseTemplates are still accepted by the API and will be retired.
+// Each maps to the base that replaces it. codex-agentapi is absent because the
+// server refuses it outright.
+var deprecatedBaseTemplates = map[string]string{
+	baseTemplateCodingCodex:      baseTemplateCodexBase,
+	baseTemplateCodingOpenCode:   baseTemplateOpenCodeBase,
+	baseTemplateCodingClaudeCode: baseTemplateClaudeCodeBase,
+	baseTemplateCodingHermes:     baseTemplateHermesBase,
+	baseTemplateLanggraph:        baseTemplateLanggraphBase,
+}
+
+// deprecatedBaseTemplateNames lists deprecatedBaseTemplates in a stable order.
+var deprecatedBaseTemplateNames = []string{
+	baseTemplateCodingCodex,
+	baseTemplateCodingOpenCode,
+	baseTemplateCodingClaudeCode,
+	baseTemplateCodingHermes,
+	baseTemplateLanggraph,
+}
 
 // templateAliasSandbox is what the agentless base is called in public. The
 // platform template is still named coding-base; this is the spelling doctl
@@ -124,7 +136,7 @@ func rejectReservedTemplateName(name string) error {
 // because it is the one base that carries no agent: rebasing onto it is how a
 // customer brings their own tooling for a bare sandbox.
 var agentBaseTemplateFlagDesc = "Platform base to rebase onto (" +
-	strings.Join(advertisedBaseTemplates, ", ") +
+	strings.Join(baseTemplates, ", ") +
 	// No backticks, for the same reason as agentTemplateFlagDesc: cobra would
 	// read the quoted command as this flag's value placeholder.
 	"). sandbox carries no agent — use it for a bare sandbox with your own tooling, and run it with '" +
@@ -152,7 +164,7 @@ func AgentTemplates() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the template", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentBaseTemplate, "", "", agentBaseTemplateFlagDesc, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentSourceOCIRef, "", "", "Customer OCI image (registry/repo:tag or digest)", requiredOpt())
-	cmdCreate.Example = `doctl harness-runtime template create --name my-image --base-template coding-opencode --source-oci-ref registry.digitalocean.com/myreg/agent:latest`
+	cmdCreate.Example = `doctl harness-runtime template create --name my-image --base-template codex-base --source-oci-ref registry.digitalocean.com/myreg/agent:v1`
 
 	cmdList := CmdBuilder(cmd, RunAgentsTemplateList, "list",
 		"List team custom templates",
@@ -219,6 +231,7 @@ func RunAgentsTemplateCreate(c *CmdConfig) error {
 	if err := validateBaseTemplate(base); err != nil {
 		return err
 	}
+	warnDeprecatedBaseTemplate(os.Stderr, base)
 	src, err := c.Doit.GetString(c.NS, doctl.ArgAgentSourceOCIRef)
 	if err != nil {
 		return err
@@ -312,6 +325,7 @@ func RunAgentsTemplateUpdate(c *CmdConfig) error {
 		if err := validateBaseTemplate(base); err != nil {
 			return err
 		}
+		warnDeprecatedBaseTemplate(os.Stderr, base)
 	}
 	tpl, err := c.HostedAgents().UpdateTemplate(templateID, &godo.HostedAgentTemplateUpdateRequest{
 		SourceOCIRef: src,
@@ -403,10 +417,21 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 }
 
 func validateBaseTemplate(base string) error {
-	if slices.Contains(acceptedBaseTemplates, base) {
+	if slices.Contains(acceptedCurrentBaseTemplates, base) {
 		return nil
 	}
-	return fmt.Errorf("base-template must be one of %s", strings.Join(advertisedBaseTemplates, ", "))
+	if _, ok := deprecatedBaseTemplates[base]; ok {
+		return nil
+	}
+	return fmt.Errorf("base-template must be one of %s (deprecated, still accepted: %s)",
+		strings.Join(baseTemplates, ", "), strings.Join(deprecatedBaseTemplateNames, ", "))
+}
+
+// warnDeprecatedBaseTemplate writes a notice to w when base is deprecated.
+func warnDeprecatedBaseTemplate(w io.Writer, base string) {
+	if replacement, ok := deprecatedBaseTemplates[base]; ok {
+		fmt.Fprintf(w, "Warning: base-template %s is deprecated and will be retired; use %s instead.\n", base, replacement)
+	}
 }
 
 func looksLikeTemplateID(ref string) bool {

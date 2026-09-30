@@ -989,8 +989,9 @@ const (
 	ArgAgentFromConfig = "from-config"
 
 	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
-	// is rebased onto (coding-base | coding-claude-code | coding-codex |
-	// coding-opencode | coding-hermes | crewai | langgraph).
+	// is rebased onto (codex-base | opencode-base | claude-code-base |
+	// hermes-base | langgraph-base | sandbox | crewai, or a deprecated
+	// coding-* / langgraph key).
 	ArgAgentBaseTemplate = "base-template"
 
 	// ArgAgentTemplate selects the sandbox template a session runs on: a

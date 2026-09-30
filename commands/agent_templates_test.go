@@ -38,18 +38,18 @@ func TestAgentTemplateCreate(t *testing.T) {
 			CreateTemplate(gomock.Any()).
 			DoAndReturn(func(req *godo.HostedAgentTemplateCreateRequest) (*godo.HostedAgentTemplate, error) {
 				assert.Equal(t, "my-image", req.Name)
-				assert.Equal(t, "coding-opencode", req.BaseTemplate)
+				assert.Equal(t, "codex-base", req.BaseTemplate)
 				assert.Equal(t, "registry.digitalocean.com/myreg/agent:latest", req.SourceOCIRef)
 				return &godo.HostedAgentTemplate{
 					TemplateID: "01a0tpl-0000-0000-0000-000000000001",
 					Name:       "my-image",
 					Status:     godo.HostedAgentTemplateStatusPending,
-					Spec:       &godo.HostedAgentTemplateSpec{BaseTemplate: "coding-opencode"},
+					Spec:       &godo.HostedAgentTemplateSpec{BaseTemplate: "codex-base"},
 				}, nil
 			})
 
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-image")
-		config.Doit.Set(config.NS, doctl.ArgAgentBaseTemplate, "coding-opencode")
+		config.Doit.Set(config.NS, doctl.ArgAgentBaseTemplate, "codex-base")
 		config.Doit.Set(config.NS, doctl.ArgAgentSourceOCIRef, "registry.digitalocean.com/myreg/agent:latest")
 		require.NoError(t, RunAgentsTemplateCreate(config))
 	})
@@ -242,36 +242,36 @@ func TestRejectReservedTemplateName(t *testing.T) {
 }
 
 func TestValidateBaseTemplate(t *testing.T) {
-	assert.NoError(t, validateBaseTemplate("coding-claude-code"))
-	assert.NoError(t, validateBaseTemplate("coding-codex"))
-	assert.NoError(t, validateBaseTemplate("coding-opencode"))
-	assert.NoError(t, validateBaseTemplate("coding-hermes"))
-	assert.NoError(t, validateBaseTemplate("langgraph"))
-
-	// coding-base and crewai are accepted by the API's external template-build
-	// policy, which excludes only codex-agentapi. doctl used to reject both, so a
-	// customer rebasing their own tooling onto the agentless base was stopped by
-	// their CLI with an error implying the base did not exist. This test used
-	// coding-base as its invalid exemplar; the exemplar moved to the value the
-	// server actually refuses so the assertion below still proves what it claims.
-	assert.NoError(t, validateBaseTemplate("coding-base"))
-	assert.NoError(t, validateBaseTemplate("crewai"))
-
-	// Allowed but not advertised: partners are told about these directly, and
-	// they should work without appearing in the error message.
-	assert.NoError(t, validateBaseTemplate("hermes-base"))
-	assert.NoError(t, validateBaseTemplate("langgraph-base"))
-	for _, hidden := range []string{"hermes-base", "langgraph-base"} {
-		assert.NotContains(t, validateBaseTemplate("nope").Error(), hidden)
+	for _, base := range []string{
+		"codex-base", "opencode-base", "claude-code-base", "hermes-base", "langgraph-base",
+		"coding-base", "coding-claude-code", "coding-codex", "coding-opencode", "coding-hermes", "crewai", "langgraph",
+	} {
+		assert.NoError(t, validateBaseTemplate(base), base)
 	}
 
 	for _, invalid := range []string{"codex-agentapi", "nope", "", "Coding-Base"} {
 		err := validateBaseTemplate(invalid)
 		require.Errorf(t, err, "base-template %q", invalid)
-		assert.True(t, strings.Contains(err.Error(), "base-template"))
+		assert.Contains(t, err.Error(), "base-template")
+		assert.Contains(t, err.Error(), "codex-base")
 		assert.Contains(t, err.Error(), "coding-hermes")
-		// The agentless base is advertised under its public name. coding-base
-		// stays accepted above; it is just no longer the spelling we teach.
+		assert.Contains(t, err.Error(), "deprecated")
+		// coding-base is named under its public alias.
 		assert.Contains(t, err.Error(), templateAliasSandbox)
+		assert.Contains(t, err.Error(), "crewai")
+	}
+}
+
+func TestWarnDeprecatedBaseTemplate(t *testing.T) {
+	for base, replacement := range deprecatedBaseTemplates {
+		var buf bytes.Buffer
+		warnDeprecatedBaseTemplate(&buf, base)
+		assert.Contains(t, buf.String(), base+" is deprecated")
+		assert.Contains(t, buf.String(), "use "+replacement)
+	}
+	for _, base := range acceptedCurrentBaseTemplates {
+		var buf bytes.Buffer
+		warnDeprecatedBaseTemplate(&buf, base)
+		assert.Empty(t, buf.String(), base)
 	}
 }
