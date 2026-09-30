@@ -933,6 +933,9 @@ const (
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 
+	// ArgAgentAuthDisconnect removes the team's provider connection instead of connecting.
+	ArgAgentAuthDisconnect = "disconnect"
+
 	// ArgAgentCheckpointLabel is an optional user label for an explicit checkpoint.
 	ArgAgentCheckpointLabel = "label"
 

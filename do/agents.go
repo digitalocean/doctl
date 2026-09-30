@@ -15,6 +15,8 @@ package do
 
 import (
 	"context"
+	"net/http"
+	"net/url"
 
 	"github.com/digitalocean/godo"
 )
@@ -61,6 +63,10 @@ type HostedAgentsService interface {
 	// PollProviderAuth checks whether a pending connect link has been authorized.
 	// pollURL is the poll_url returned by StartProviderAuth.
 	PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error)
+	// DeleteProviderAuth disconnects an external provider for the caller's
+	// team, so the next StartProviderAuth returns a fresh connect link.
+	// Succeeds when the team was not connected.
+	DeleteProviderAuth(provider string) error
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
 	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
@@ -193,6 +199,18 @@ func (s *hostedAgentsService) StartProviderAuth(provider string) (*godo.HostedAg
 func (s *hostedAgentsService) PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error) {
 	poll, _, err := s.client.HostedAgents.PollProviderAuth(context.TODO(), provider, pollURL)
 	return poll, err
+}
+
+// DeleteProviderAuth issues the request directly because godo has no method for
+// DELETE /v2/agents/auth/{provider} yet.
+func (s *hostedAgentsService) DeleteProviderAuth(provider string) error {
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, "v2/agents/auth/"+url.PathEscape(provider), nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.Do(ctx, req, nil)
+	return err
 }
 
 // StreamSession opens the SSE stream and returns the typed godo iterator. The

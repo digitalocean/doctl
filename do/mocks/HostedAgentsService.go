@@ -206,6 +206,20 @@ func (mr *MockHostedAgentsServiceMockRecorder) DeleteCheckpoint(sessionID, check
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCheckpoint", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteCheckpoint), sessionID, checkpointID)
 }
 
+// DeleteProviderAuth mocks base method.
+func (m *MockHostedAgentsService) DeleteProviderAuth(provider string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProviderAuth", provider)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProviderAuth indicates an expected call of DeleteProviderAuth.
+func (mr *MockHostedAgentsServiceMockRecorder) DeleteProviderAuth(provider any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProviderAuth", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteProviderAuth), provider)
+}
+
 // DeleteTemplate mocks base method.
 func (m *MockHostedAgentsService) DeleteTemplate(templateID string) (*godo.HostedAgentTemplateDeleteResponse, error) {
 	m.ctrl.T.Helper()
