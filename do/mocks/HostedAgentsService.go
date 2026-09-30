@@ -42,6 +42,21 @@ func (m *MockHostedAgentsService) EXPECT() *MockHostedAgentsServiceMockRecorder 
 	return m.recorder
 }
 
+// CancelTurn mocks base method.
+func (m *MockHostedAgentsService) CancelTurn(sessionID, runID string) (do.HostedAgentCancelTurnResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelTurn", sessionID, runID)
+	ret0, _ := ret[0].(do.HostedAgentCancelTurnResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CancelTurn indicates an expected call of CancelTurn.
+func (mr *MockHostedAgentsServiceMockRecorder) CancelTurn(sessionID, runID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelTurn", reflect.TypeOf((*MockHostedAgentsService)(nil).CancelTurn), sessionID, runID)
+}
+
 // CancelWorkspaceTransfer mocks base method.
 func (m *MockHostedAgentsService) CancelWorkspaceTransfer(sessionID, transferID string, input *godo.HostedAgentWorkspaceTransferCancelRequest) (*godo.HostedAgentWorkspaceTransferCancelResponse, error) {
 	m.ctrl.T.Helper()
