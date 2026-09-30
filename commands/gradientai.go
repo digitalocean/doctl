@@ -38,20 +38,6 @@ Public commands moved to:
 	// Public home is now doctl knowledge-base.
 	cmd.AddCommand(deprecatedKnowledgeBaseCmd())
 
-	// Kept under gradient but hidden (same pattern as scenario/simulation cmds).
-	// Public home is now doctl inference.
-	listModels := ListModelsCmd()
-	listModels.Hidden = true
-	cmd.AddCommand(listModels)
-
-	listRegions := ListRegionsCmd()
-	listRegions.Hidden = true
-	cmd.AddCommand(listRegions)
-
-	openaiKey := OpenAIKeyCmd()
-	openaiKey.Hidden = true
-	cmd.AddCommand(openaiKey)
-
 	// Add the scenario set command as a subcommand to Gradient AI
 	cmd.AddCommand(ScenarioSetCmd())
 	// Add the scenario library command as a subcommand to Gradient AI
