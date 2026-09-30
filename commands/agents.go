@@ -642,7 +642,9 @@ func Agents() *Command {
 		Writer, agentsNS()...)
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
-	cmdAuth.Example = `doctl harness-runtime auth github`
+	AddBoolFlag(cmdAuth, doctl.ArgAgentAuthDisconnect, "", false, "Disconnect the provider for your entire team")
+	AddBoolFlag(cmdAuth, doctl.ArgForce, doctl.ArgShortForce, false, "Disconnect without a confirmation prompt")
+	cmdAuth.Example = `doctl harness-runtime auth github; doctl harness-runtime auth github --disconnect`
 
 	cmdFork := CmdBuilder(cmd, RunAgentsFork, "fork <session>",
 		"Fork a session into independent child sessions",
@@ -1946,13 +1948,46 @@ func RunAgentsAuth(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	disconnect, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthDisconnect)
+	if err != nil {
+		return err
+	}
 
 	svc := c.HostedAgents()
+	if disconnect {
+		if noBrowser || noWait {
+			return fmt.Errorf("--%s cannot be combined with --%s or --%s",
+				doctl.ArgAgentAuthDisconnect, doctl.ArgAgentAuthNoBrowser, doctl.ArgAgentAuthNoWait)
+		}
+		return disconnectProviderAuth(c, svc, provider)
+	}
+
 	start, err := svc.StartProviderAuth(provider)
 	if err != nil {
 		return err
 	}
 	return completeProviderAuth(c, svc, provider, start, noBrowser, noWait)
+}
+
+// disconnectProviderAuth removes the team's provider connection after
+// confirming, since it affects every member of the team.
+func disconnectProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider string) error {
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if !force {
+		warn("This disconnects %s for your entire team. Running sessions may lose git access to private repositories.", provider)
+		if AskForConfirm(fmt.Sprintf("disconnect %s?", provider)) != nil {
+			return fmt.Errorf("operation aborted")
+		}
+	}
+	if err := svc.DeleteProviderAuth(provider); err != nil {
+		return err
+	}
+	stylingEnabled = detectStyling()
+	printAgentSuccess(c.Out, fmt.Sprintf("%s disconnected for your team. Run `doctl harness-runtime auth %s` to connect again", provider, provider))
+	return nil
 }
 
 // completeProviderAuth finishes a StartProviderAuth response: success, browser
@@ -1964,6 +1999,7 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	if strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
 		stylingEnabled = detectStyling()
 		printAgentSuccess(c.Out, fmt.Sprintf("%s is already connected for your team", provider))
+		fmt.Fprintln(c.Out, colorize(fmt.Sprintf("To switch accounts or repair a connection revoked on %s, run `doctl harness-runtime auth %s --disconnect` and connect again.", provider, provider), colMuted))
 		return nil
 	}
 	if start.ConnectURL == "" {

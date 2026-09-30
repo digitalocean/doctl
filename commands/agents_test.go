@@ -1134,6 +1134,63 @@ func TestRunAgentsAuth(t *testing.T) {
 		})
 	})
 
+	t.Run("already connected points at disconnect", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+			var buf bytes.Buffer
+			config.Out = &buf
+			config.Args = []string{"github"}
+			assert.NoError(t, RunAgentsAuth(config))
+			assert.Contains(t, buf.String(), "doctl harness-runtime auth github --disconnect")
+		})
+	})
+
+	t.Run("disconnect with force skips the prompt", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().DeleteProviderAuth("github").Return(nil)
+			var buf bytes.Buffer
+			config.Out = &buf
+			config.Args = []string{"GitHub"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthDisconnect, true)
+			config.Doit.Set(config.NS, doctl.ArgForce, true)
+			assert.NoError(t, RunAgentsAuth(config))
+			assert.Contains(t, buf.String(), "github disconnected for your team")
+		})
+	})
+
+	t.Run("disconnect without force needs confirmation", func(t *testing.T) {
+		prevInteractive := Interactive
+		Interactive = false
+		defer func() { Interactive = prevInteractive }()
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthDisconnect, true)
+			assert.EqualError(t, RunAgentsAuth(config), "operation aborted")
+		})
+	})
+
+	t.Run("disconnect rejects connect-only flags", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthDisconnect, true)
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoWait, true)
+			config.Doit.Set(config.NS, doctl.ArgForce, true)
+			assert.ErrorContains(t, RunAgentsAuth(config), "cannot be combined")
+		})
+	})
+
+	t.Run("disconnect surfaces API errors", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().DeleteProviderAuth("github").Return(errors.New("boom"))
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthDisconnect, true)
+			config.Doit.Set(config.NS, doctl.ArgForce, true)
+			assert.EqualError(t, RunAgentsAuth(config), "boom")
+		})
+	})
+
 	t.Run("requires a provider argument", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			config.Args = []string{}

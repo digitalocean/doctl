@@ -197,7 +197,9 @@ The file's bytes pass through unchanged and the guest's exit code becomes doctl'
 
 const agentsAuthHelpMD = `Connect an external provider (e.g. GitHub) so sessions can clone and push to private repositories.
 
-Opens a browser to authorize unless ` + "`--no-browser`" + ` is set. The connection is shared by your team. Use ` + "`--no-wait`" + ` to print the URL and exit without waiting.`
+Opens a browser to authorize unless ` + "`--no-browser`" + ` is set. The connection is shared by your team. Use ` + "`--no-wait`" + ` to print the URL and exit without waiting.
+
+Use ` + "`--disconnect`" + ` to remove the connection for your whole team, for example to switch GitHub accounts. Revoking the authorization on GitHub alone does not disconnect it here: run ` + "`--disconnect`" + `, then connect again.`
 
 const agentsForkHelpMD = `Create up to 4 independent child sessions from a checkpoint, or from the current state if ` + "`--from-checkpoint`" + ` is omitted. Each child can be attached normally.`
 
