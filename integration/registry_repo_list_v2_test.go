@@ -76,6 +76,27 @@ var _ = suite("registry/repository/list-v2", func(t *testing.T, when spec.G, it 
 
 		expect.Equal(strings.TrimSpace(repositoryListV2Output), strings.TrimSpace(string(output)))
 	})
+
+	it("returns list of repositories in registry with custom format including V2 fields", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"registry",
+			"repository",
+			"list-v2",
+			"--format", "Name,ManifestCount,UpdatedAt",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err, "Output: %s", output)
+
+		expectedOutput := `
+Name      Manifest Count    Updated At
+repo-1    82                2021-04-09 23:54:25 +0000 UTC
+repo-2    82                <nil>
+`
+		expect.Equal(strings.TrimSpace(expectedOutput), strings.TrimSpace(string(output)))
+	})
 })
 
 var (
