@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("gradient/knowledgebase/list-indexing-job-data-sources", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("knowledgebase/list-indexing-job-data-sources", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -55,7 +55,6 @@ var _ = suite("gradient/knowledgebase/list-indexing-job-data-sources", func(t *t
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"list-indexing-job-data-sources",
 				"12345678-1234-1234-1234-123456789012",
@@ -72,7 +71,6 @@ var _ = suite("gradient/knowledgebase/list-indexing-job-data-sources", func(t *t
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"list-indexing-job-data-sources",
 				"12345678-1234-1234-1234-123456789012",

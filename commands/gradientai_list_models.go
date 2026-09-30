@@ -12,6 +12,7 @@ The command returns the following details for each model:
 	- The model ID
 	- The model name  
 	- Agreement name
+	- Agreement URL for the model's terms and conditions
 	- The model creation date, in ISO8601 combined date and time format
 	- The model update date, in ISO8601 combined date and time format
 	- Parent ID of the model, this model is based on

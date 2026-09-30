@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("gradient/knowledge-base/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("knowledge-base/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -55,7 +55,6 @@ var _ = suite("gradient/knowledge-base/create", func(t *testing.T, when spec.G, 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"create",
 				"--name", "test-knowledge-base",
@@ -76,7 +75,6 @@ var _ = suite("gradient/knowledge-base/create", func(t *testing.T, when spec.G, 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"create",
 				"--name", "test-knowledge-base",
@@ -98,7 +96,6 @@ var _ = suite("gradient/knowledge-base/create", func(t *testing.T, when spec.G, 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"create",
 				"--region", "tor1",
@@ -116,7 +113,6 @@ var _ = suite("gradient/knowledge-base/create", func(t *testing.T, when spec.G, 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"create",
 				"--name", "test-knowledge-base",
@@ -134,7 +130,6 @@ var _ = suite("gradient/knowledge-base/create", func(t *testing.T, when spec.G, 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"create",
 				"--name", "test-knowledge-base",
@@ -150,7 +145,7 @@ var _ = suite("gradient/knowledge-base/create", func(t *testing.T, when spec.G, 
 	})
 })
 
-var _ = suite("gradient/knowledge-base/add-datasource", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("knowledge-base/add-datasource", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -223,7 +218,6 @@ var _ = suite("gradient/knowledge-base/add-datasource", func(t *testing.T, when 
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
-					"gradient",
 					"knowledge-base",
 					alias,
 					"00000000-0000-4000-8000-000000000000",
@@ -243,7 +237,6 @@ var _ = suite("gradient/knowledge-base/add-datasource", func(t *testing.T, when 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"add-datasource",
 				"00000000-0000-4000-8000-000000000000",
@@ -263,7 +256,6 @@ var _ = suite("gradient/knowledge-base/add-datasource", func(t *testing.T, when 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"add-datasource",
 				"99999999-9999-4999-8999-999999999999",
@@ -283,7 +275,6 @@ var _ = suite("gradient/knowledge-base/add-datasource", func(t *testing.T, when 
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
 				"knowledge-base",
 				"add-datasource",
 				"99999999-9999-4999-8999-999999999998",
