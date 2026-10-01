@@ -906,6 +906,10 @@ const (
 	// started to finish, in seconds.
 	ArgAgentPromptTimeout = "timeout"
 
+	// ArgAgentCancelRunID names the turn `cancel` stops; without it, whichever
+	// turn is in flight.
+	ArgAgentCancelRunID = "run-id"
+
 	// ArgAgentPromptIncludeReasoning also emits the model's reasoning, not
 	// just its answer, from a `prompt` run.
 	ArgAgentPromptIncludeReasoning = "include-reasoning"
