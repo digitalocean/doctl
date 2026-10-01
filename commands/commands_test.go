@@ -292,7 +292,7 @@ type tcMocks struct {
 	oauth                 *domocks.MockOAuthService
 	partnerAttachments    *domocks.MockPartnerAttachmentsService
 	spacesKeys            *domocks.MockSpacesKeysService
-	gradientAI            *domocks.MockGradientAIService
+	agentPlatform            *domocks.MockAgentPlatformService
 	dedicatedInferences   *domocks.MockDedicatedInferenceService
 	inference             *domocks.MockInferenceService
 	nfs                   *domocks.MockNfsService
@@ -372,7 +372,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		oauth:                 domocks.NewMockOAuthService(ctrl),
 		partnerAttachments:    domocks.NewMockPartnerAttachmentsService(ctrl),
 		spacesKeys:            domocks.NewMockSpacesKeysService(ctrl),
-		gradientAI:            domocks.NewMockGradientAIService(ctrl),
+		agentPlatform:            domocks.NewMockAgentPlatformService(ctrl),
 		dedicatedInferences:   domocks.NewMockDedicatedInferenceService(ctrl),
 		inference:             domocks.NewMockInferenceService(ctrl),
 		nfs:                   domocks.NewMockNfsService(ctrl),
@@ -446,7 +446,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OAuth:               func() do.OAuthService { return tm.oauth },
 		PartnerAttachments:  func() do.PartnerAttachmentsService { return tm.partnerAttachments },
 		SpacesKeys:          func() do.SpacesKeysService { return tm.spacesKeys },
-		GradientAI:          func() do.GradientAIService { return tm.gradientAI },
+		AgentPlatform:          func() do.AgentPlatformService { return tm.agentPlatform },
 		DedicatedInferences: func() do.DedicatedInferenceService { return tm.dedicatedInferences },
 		Inference:           func() do.InferenceService { return tm.inference },
 		Nfs:                 func() do.NfsService { return tm.nfs },
