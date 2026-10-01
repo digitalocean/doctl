@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -38,6 +39,16 @@ const (
 	handshakeBodyLimit = 4 << 10
 	// rejectionMessageMax keeps an HTML error page from flooding the terminal.
 	rejectionMessageMax = 300
+)
+
+// Close codes harness-api sends when a tunnel ends
+// (docs/design/port-forward-rfc.md § Public API). The close *reason* on the
+// wire is a fixed, non-diagnostic string by contract, so the text a user can
+// act on has to be built here, keyed on the code alone.
+const (
+	closeCodeSessionEnded = 4001 // session ended or sandbox gone — give up
+	closeCodeDialFailed   = 4002 // guest dial failed (nothing listening)
+	closeCodeInternal     = 4011 // unexpected server error — retryable
 )
 
 // defaultAPIURL mirrors godo's default base URL, which godo does not export.
@@ -344,10 +355,11 @@ func RunAgentsPortForward(c *CmdConfig) error {
 		fmt.Fprintf(c.Out, "Forwarding %s:%d -> port %d in session %s\n",
 			address, localPort, pair.remote, sessionID)
 
+		warner := newTunnelWarner(pair.remote)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			acceptForwardLoop(ctx, ln, wsURL, header, tracer)
+			acceptForwardLoop(ctx, ln, wsURL, header, tracer, warner)
 		}()
 	}
 	fmt.Fprintln(c.Out, "Ready. Press Ctrl-C to stop.")
@@ -360,9 +372,67 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	return nil
 }
 
+// explainTunnelClose says what a failed tunnel means for the port the user
+// asked for. The server's close reason is deliberately terse and says nothing
+// about what to do next, and "websocket: close 4002: guest port unreachable"
+// reads as a platform fault when the usual cause is that the process meant to
+// serve the port was never started.
+func explainTunnelClose(err error, remotePort int) string {
+	var ce *websocket.CloseError
+	if !errors.As(err, &ce) {
+		return fmt.Sprintf("port %d: connection closed: %v", remotePort, err)
+	}
+	switch ce.Code {
+	case closeCodeDialFailed:
+		return fmt.Sprintf("port %d: nothing is listening on that port inside the session — "+
+			"start the process that serves it, then retry", remotePort)
+	case closeCodeSessionEnded:
+		return fmt.Sprintf("port %d: the session ended while forwarding — "+
+			"start it again, then re-run %s port-forward", remotePort, agentCLI)
+	case closeCodeInternal:
+		return fmt.Sprintf("port %d: the tunnel failed inside the service — retry; "+
+			"if it keeps happening, re-run with --trace", remotePort)
+	case websocket.CloseAbnormalClosure:
+		return fmt.Sprintf("port %d: the tunnel dropped without closing cleanly — "+
+			"check your network; new connections still work", remotePort)
+	default:
+		return fmt.Sprintf("port %d: connection closed: %v", remotePort, err)
+	}
+}
+
+// tunnelWarner reports tunnel failures for one forwarded port, printing each
+// distinct message once. One page load opens several connections, so an
+// unstarted server repeats the same warning once per connection otherwise —
+// the second one tells the user nothing the first did not.
+type tunnelWarner struct {
+	remotePort int
+	mu         sync.Mutex
+	seen       map[string]int
+}
+
+func newTunnelWarner(remotePort int) *tunnelWarner {
+	return &tunnelWarner{remotePort: remotePort, seen: map[string]int{}}
+}
+
+func (w *tunnelWarner) report(err error) {
+	msg := explainTunnelClose(err, w.remotePort)
+
+	w.mu.Lock()
+	seen := w.seen[msg]
+	w.seen[msg] = seen + 1
+	w.mu.Unlock()
+
+	switch seen {
+	case 0:
+		warn("%s", msg)
+	case 1:
+		warn("port %d: same failure again; further identical warnings are suppressed", w.remotePort)
+	}
+}
+
 // acceptForwardLoop accepts local connections and bridges each over its own
 // WebSocket. A per-connection failure never kills the listener.
-func acceptForwardLoop(ctx context.Context, ln net.Listener, wsURL string, header http.Header, tracer *wsTracer) {
+func acceptForwardLoop(ctx context.Context, ln net.Listener, wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -371,7 +441,7 @@ func acceptForwardLoop(ctx context.Context, ln net.Listener, wsURL string, heade
 		go func() {
 			defer conn.Close()
 			if err := bridgeLocalConn(ctx, conn, wsURL, header, tracer); err != nil && ctx.Err() == nil {
-				warn("connection closed: %v", err)
+				warner.report(err)
 			}
 		}()
 	}

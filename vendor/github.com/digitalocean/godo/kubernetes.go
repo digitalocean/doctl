@@ -98,6 +98,7 @@ type KubernetesClusterCreateRequest struct {
 	CorednsAutoscaler                 *KubernetesCorednsAutoscaler                 `json:"coredns_autoscaler,omitempty"`
 	SSO                               *KubernetesClusterSSO                        `json:"sso,omitempty"`
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
+	NfsCsiPlugin                      *KubernetesNfsCsiPlugin                      `json:"nfs_csi_plugin,omitempty"`
 	// IsolatedWorkers enables isolated worker nodes. When true, the cluster's VPC
 	// must already have a NAT gateway attached, or the create request fails with a
 	// 422. This can only be set at creation time.
@@ -123,6 +124,7 @@ type KubernetesClusterUpdateRequest struct {
 	CorednsAutoscaler                 *KubernetesCorednsAutoscaler                 `json:"coredns_autoscaler,omitempty"`
 	SSO                               *KubernetesClusterSSO                        `json:"sso,omitempty"`
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
+	NfsCsiPlugin                      *KubernetesNfsCsiPlugin                      `json:"nfs_csi_plugin,omitempty"`
 
 	// Convert cluster to run highly available control plane
 	HA *bool `json:"ha,omitempty"`
@@ -279,6 +281,7 @@ type KubernetesCluster struct {
 	CorednsAutoscaler                 *KubernetesCorednsAutoscaler                 `json:"coredns_autoscaler,omitempty"`
 	SSO                               *KubernetesClusterSSO                        `json:"sso,omitempty"`
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
+	NfsCsiPlugin                      *KubernetesNfsCsiPlugin                      `json:"nfs_csi_plugin,omitempty"`
 	IsolatedWorkers                   bool                                         `json:"isolated_workers,omitempty"`
 
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
@@ -376,6 +379,11 @@ type KubernetesCorednsAutoscaler struct {
 
 // KubernetesP2pOciRegistry represents information about the Peer-to-peer OCI registry cluster plugin.
 type KubernetesP2pOciRegistry struct {
+	Enabled *bool `json:"enabled"`
+}
+
+// KubernetesNfsCsiPlugin represents information about the NFS CSI driver cluster plugin.
+type KubernetesNfsCsiPlugin struct {
 	Enabled *bool `json:"enabled"`
 }
 

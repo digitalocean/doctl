@@ -550,8 +550,8 @@ func Agents() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (low-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
-	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by low-balance`
+	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (zero-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
+	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by zero-balance`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
 		"Show one session",
@@ -666,7 +666,7 @@ func Agents() *Command {
 A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
 		Writer)
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
-	cmdPortForward.Example = `doctl agents port-forward sess_abc123 3000 8080:8000`
+	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`
 
 	cmdBalance := CmdBuilder(cmd, RunAgentsBalance, "balance",
 		"Show your team's prepayment balance and gate status",
@@ -698,7 +698,11 @@ const agentSecretFlagDesc = "Tenant secret as NAME=VALUE, injected into the mani
 // commands cannot drift on spelling, defaults, or help text — the drift that
 // made `start` and `run` indistinguishable in the first place.
 func addAgentCreationFlags(cmd *Command) {
-	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Mutually exclusive with --spec and --from-config.")
+	// `none` is not listed because it is not accepted: it stays the manifest's
+	// word for a session with no agent, and resolveAgentCreationSource refuses
+	// it as a --harness value. There is one way in that we teach, and naming
+	// the absence of an agent as if it were one of the agents taught two.
+	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
@@ -706,6 +710,8 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmd, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --from-config.")
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
+	AddStringFlag(cmd, doctl.ArgAgentPermission, "", defaultHarnessPermission, agentPermissionFlagDesc)
+	AddStringFlag(cmd, doctl.ArgAgentTemplate, "", "", agentTemplateFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 }
@@ -714,6 +720,34 @@ func addAgentCreationFlags(cmd *Command) {
 // one place, because it is spending consent: every command that offers it —
 // create, config start-session, launch, update — has to describe the same
 // scope and the same way to revoke it.
+// defaultHarnessPermission is the tool-permission default written onto a
+// --harness manifest. Omitting the block entirely leaves each adapter on its
+// own template default, which for codex is `untrusted` — every shell command
+// and file write raises an approval request. That is the right default for a
+// policy someone authored deliberately and the wrong one for a manifest doctl
+// generated from a single flag, so --harness states the policy explicitly and
+// --permission is how it is narrowed.
+const defaultHarnessPermission = "allow"
+
+// agentTemplateFlagDesc names both halves of the template namespace on purpose.
+// The two are not separate settings: a session's template resolves against the
+// team's own templates first and the platform catalogue second, so a team
+// template named coding-base shadows the platform one. `sandbox` is the
+// exception, resolved client-side and reserved against exactly that shadowing —
+// see platformTemplateAliases.
+const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a platform template (sandbox for a bare sandbox, " +
+	// No backticks: cobra reads the first back-quoted word in a usage string as
+	// the flag's value placeholder, which rendered as "--template doctl
+	// harness-runtime template create" in help.
+	"or the template that matches your --harness) or one of your team's own from '" + agentCLI + " template create' — " +
+	"a team template of the same name takes precedence. Omit it to get the default for the chosen --harness. " +
+	"Passed without --harness it asks for a sandbox with no agent in it. A --spec manifest sets its own top-level template."
+
+const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
+	// No backticks, for the same reason as agentTemplateFlagDesc.
+	"ask (raise an approval request per tool call, resolvable with '" + agentCLI + " approve'), or deny. " +
+	"Written as the manifest's permissions.default. Only valid with --harness; a --spec manifest declares its own."
+
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
 	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
@@ -722,6 +756,13 @@ func markAgentCreationSourcesExclusive(cmd *Command) {
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentFromConfig)
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
+	// --template writes a field into the manifest --harness generates, so it has
+	// nothing to write onto either of the other two sources. Erroring rather than
+	// silently ignoring it: with --spec the file's own `template` would win and
+	// with --from-config the server-side config would, in both cases leaving the
+	// session on a template the caller did not ask for and was not told about.
+	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentTemplate, doctl.ArgAgentSpec)
+	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentTemplate, doctl.ArgAgentFromConfig)
 }
 
 // --- runners ----------------------------------------------------------------
@@ -744,6 +785,67 @@ type agentCreationSource struct {
 	// server takes it as a query parameter precisely so the immutable,
 	// config-shareable agents.yaml cannot carry per-session spending consent.
 	resumeOnTopoff bool
+}
+
+// bareSandbox reports whether this source asks for a session with no agent,
+// whether that came from the harness the --template implication sets or from a
+// manifest declaring `agent: none`. Both have to be caught: a manifest is the
+// more likely way a bare sandbox is created, since it is the only way to set
+// egress or a size, and it is the one the flag checks never see.
+//
+// A --from-config source reports false. The agent lives server-side there, so
+// answering would mean a lookup, and the only caller (launch) can afford to be
+// told by the server instead.
+func (s *agentCreationSource) bareSandbox() bool {
+	if s == nil {
+		return false
+	}
+	if isBareSandboxHarness(s.harness) {
+		return true
+	}
+	return manifestAgentIs(s.manifest, bareSandboxAgent)
+}
+
+// manifestAgentIs reports whether the manifest's adapter equals want, reading
+// the flat `agent` key or the legacy `spec.runtime.adapter` path. Unparsable
+// YAML and an absent adapter both report false: the server owns that error, and
+// guessing here would turn a malformed manifest into a confusing local one.
+func manifestAgentIs(manifest []byte, want string) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return false
+	}
+	if agent, ok := doc["agent"].(string); ok {
+		return strings.EqualFold(strings.TrimSpace(agent), want)
+	}
+	// yaml.v2 decodes nested mappings as map[any]any.
+	spec, ok := doc["spec"].(map[any]any)
+	if !ok {
+		return false
+	}
+	runtime, ok := spec["runtime"].(map[any]any)
+	if !ok {
+		return false
+	}
+	adapter, ok := runtime["adapter"].(string)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(adapter), want)
+}
+
+// firstAgentOnlyFlag names the first flag in play that only an agent reads, or
+// "" when none is. Ordered to match the switch that rejects them individually.
+func firstAgentOnlyFlag(c *CmdConfig, prompt, repo string) string {
+	switch {
+	case strings.TrimSpace(prompt) != "":
+		return doctl.ArgAgentTriggerPrompt
+	case strings.TrimSpace(repo) != "":
+		return doctl.ArgAgentRepo
+	case c.Doit.IsSet(doctl.ArgAgentPermission):
+		return doctl.ArgAgentPermission
+	}
+	return ""
 }
 
 // resolveAgentCreationSource reads and validates the creation flags, resolving
@@ -777,14 +879,67 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	permission, err := c.Doit.GetString(c.NS, doctl.ArgAgentPermission)
+	if err != nil {
+		return nil, err
+	}
+	template, err := c.Doit.GetString(c.NS, doctl.ArgAgentTemplate)
+	if err != nil {
+		return nil, err
+	}
+	// Resolved here, before any check reads it and before it reaches the
+	// manifest, so the agentless check and the wire agree. templateAsTyped is
+	// kept only for errors: quoting the platform name back at someone who typed
+	// the alias reads as doctl talking about a different template.
+	templateAsTyped := strings.TrimSpace(template)
+	template = resolvePlatformTemplateAlias(templateAsTyped)
+	// Empty means "not supplied" rather than "invalid": the flag's cobra
+	// default only exists on a command that registered it, and callers that
+	// reach here without one still need a policy.
+	permission = strings.TrimSpace(permission)
+	if permission == "" {
+		permission = defaultHarnessPermission
+	}
+	if _, ok := validPermissionDefaults[permission]; !ok {
+		return nil, fmt.Errorf("unsupported --%s %q; supported values: allow, ask, deny",
+			doctl.ArgAgentPermission, permission)
+	}
 
 	harness = strings.TrimSpace(harness)
 	configRef = strings.TrimSpace(configRef)
 	repo = strings.TrimSpace(repo)
 	prompt = strings.TrimSpace(prompt)
 
+	// `none` stays the manifest's word for a session with no agent — a --spec
+	// file saying `agent: none` is valid and unchanged — but it is not a
+	// --harness value. Naming the absence of an agent as if it were one of the
+	// agents is the confusion --template already resolves, and two spellings
+	// for one session is worse than either.
+	if isBareSandboxHarness(harness) {
+		return nil, fmt.Errorf("--%s %s is not a harness; ask for a sandbox with no agent with `--%s %s` and no --%s",
+			doctl.ArgAgentHarness, harness, doctl.ArgAgentTemplate, templateAliasSandbox, doctl.ArgAgentHarness)
+	}
+
 	if len(c.Args) > 0 && (harness != "" || configRef != "") {
 		return nil, fmt.Errorf("a manifest path cannot be combined with --%s or --%s", doctl.ArgAgentHarness, doctl.ArgAgentFromConfig)
+	}
+
+	// `--template` names the image a generated manifest runs on, and the only
+	// session that needs no agent to justify an image is a bare sandbox — so
+	// `--template X` with no --harness is how one is asked for. The manifest
+	// still says `agent: none`; that value is generated here, never typed.
+	//
+	// This has to resolve before source selection, because the harness IS a
+	// source: left empty, a lone --template falls through to manifest discovery
+	// and fails with "no manifest found", which names the wrong problem.
+	//
+	// It is only safe when nothing else supplies a manifest, since a manifest
+	// declares its own template. --spec and --from-config are cobra-exclusive
+	// with --template already; a positional path and a discovered ./agents.yaml
+	// are not, and both still get the refusal below.
+	if template != "" && harness == "" && configRef == "" && len(c.Args) == 0 &&
+		!c.Doit.IsSet(doctl.ArgAgentSpec) && discoverManifestFile() == "" {
+		harness = bareSandboxAgent
 	}
 
 	// Never call GetString(--spec) when another source is selected: a stale
@@ -844,6 +999,51 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			return nil, err
 		}
 	}
+	// --permission writes a permissions block into a manifest doctl generates.
+	// A manifest supplied by the user already declares its own, and an Agent
+	// Config's lives server-side, so silently ignoring the flag there would
+	// hide a policy the caller believes they set.
+	if c.Doit.IsSet(doctl.ArgAgentPermission) && harness == "" {
+		return nil, fmt.Errorf("--%s only applies with --%s; set the permissions block in the manifest instead",
+			doctl.ArgAgentPermission, doctl.ArgAgentHarness)
+	}
+	// A bare sandbox has no agent, so the flags that only an agent reads are
+	// refused rather than accepted and ignored: the prompt is never delivered,
+	// the repos list reaches the guest as HARNESS_WORKSPACE_REPOS but nothing
+	// materializes the skill that surfaces it, and a tool-permission policy is
+	// enforced by the agent that is not there.
+	if isBareSandboxHarness(harness) {
+		// Only --template reaches here now that --harness none is refused
+		// outright, so the error can speak in terms of the flags actually
+		// typed. Each of the three would otherwise look like it worked.
+		if flag := firstAgentOnlyFlag(c, prompt, repo); flag != "" {
+			return nil, fmt.Errorf("--%s with no --%s creates a sandbox with no agent in it, and --%s needs one; name the agent with --%s <adapter>",
+				doctl.ArgAgentTemplate, doctl.ArgAgentHarness, flag, doctl.ArgAgentHarness)
+		}
+		// Refusing the flag is only half of it: `permission` already carries the
+		// cobra default, so leaving it set writes permissions.default into a
+		// manifest that declares no agent — and `config create --spec -` would
+		// carry that forward as if the customer had chosen it. The default exists
+		// to keep codex off `untrusted`; there is no adapter here to default.
+		permission = ""
+	} else if harness != "" && isAgentlessTemplate(template) {
+		// The inverse pairing, and the one that fails quietly: a managed harness
+		// on a template with no agent in it provisions fine and reaches READY, so
+		// nothing looks wrong until the first turn hangs — while the session row
+		// claims an agent kind that billing and every per-kind metric believe.
+		return nil, fmt.Errorf("--%s %s ships no agent, so it cannot run --%s %s; drop --%s for a sandbox you drive with `%s exec`, or name a template that carries the agent",
+			doctl.ArgAgentTemplate, templateAsTyped, doctl.ArgAgentHarness, harness, doctl.ArgAgentHarness, agentCLI)
+	}
+
+	// What reaches here is a --template alongside a manifest that declares its
+	// own: a positional path, or a ./agents.yaml discovered from the working
+	// directory, which sets no flag for cobra to exclude. Silently dropping the
+	// flag would put the session on a different template than asked for, and
+	// silently implying a bare sandbox would ignore the manifest entirely.
+	if template != "" && harness == "" {
+		return nil, fmt.Errorf("--%s applies to the manifest --%s generates, and this create reads one that declares its own; set the top-level `template` there instead",
+			doctl.ArgAgentTemplate, doctl.ArgAgentHarness)
+	}
 
 	src := &agentCreationSource{
 		harness:        harness,
@@ -868,7 +1068,14 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 
 	var raw []byte
 	if harness != "" {
-		raw, err = buildHarnessManifest(harness, repo, prompt, name)
+		raw, err = buildHarnessManifest(harnessManifestOpts{
+			harness:    harness,
+			repo:       repo,
+			prompt:     prompt,
+			name:       name,
+			permission: permission,
+			template:   template,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -891,6 +1098,19 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 	raw = dropEnvKeysCoveredBySecrets(raw)
 	src.manifest = raw
+
+	// A manifest declares its own agent, so `agent: none` arrives here with
+	// harness empty and the check above never sees it — and a manifest is the
+	// likelier way a bare sandbox is created, since it is the only way to set
+	// egress or a size. Left to the API, --prompt is delivered after the
+	// session exists: SendInput 409s and the command reports an error having
+	// already left a live, billable sandbox behind.
+	if src.bareSandbox() {
+		if flag := firstAgentOnlyFlag(c, prompt, repo); flag != "" {
+			return nil, fmt.Errorf("this manifest declares `agent: %s`, so the session runs no agent and --%s needs one; drop --%s and drive the sandbox with `%s exec`, or name an agent in the manifest",
+				bareSandboxAgent, flag, flag, agentCLI)
+		}
+	}
 	return src, nil
 }
 
@@ -974,7 +1194,13 @@ func RunAgentsCreate(c *CmdConfig) error {
 		maybePrintAgentPublicPreviewTermsNotice(c)
 		prog = newCreationProgress(c.Out)
 		defer prog.stop()
-		prog.header("Creating agent session")
+		// The header prints before any session exists, so unlike the wait lines
+		// it has to read the noun off the request rather than off the server.
+		header := "Creating agent session"
+		if src.bareSandbox() {
+			header = "Creating sandbox session"
+		}
+		prog.header(header)
 	}
 
 	createdAt := creationClock()
@@ -3423,7 +3649,7 @@ const (
 // stream goroutine, where a billing round-trip would stall the one message
 // that explains the silence. `doctl harness-runtime balance` has the number.
 func giveUpMessage(pausedBy string) string {
-	if isLowBalancePauseReason(pausedBy) {
+	if isZeroBalancePauseReason(pausedBy) {
 		return msgPausedStoppedWatching
 	}
 	return msgReconnectFailed
@@ -4163,7 +4389,7 @@ func streamWithReconnect(
 		// knows nothing, and must not report a paused session as running again.
 		if pause.observed {
 			pausedBy = pause.reason
-			if !isLowBalancePauseReason(pausedBy) {
+			if !isZeroBalancePauseReason(pausedBy) {
 				// Resumed, or paused for some other reason. Reopen the latch so
 				// a balance pause later in this attach is explained again
 				// rather than treated as the same episode.
@@ -4190,7 +4416,7 @@ func streamWithReconnect(
 		// in another window brings the session back and the stream with it —
 		// but the "Reconnecting..." that follows reads as a connection fault
 		// and leaves the one cause the user can actually fix unmentioned.
-		if isLowBalancePauseReason(pausedBy) && !balanceExplained {
+		if isZeroBalancePauseReason(pausedBy) && !balanceExplained {
 			balanceExplained = true
 			fmt.Fprintf(out, "\n%s\n", colorize(msgPausedStayingAttached, colMuted))
 		}

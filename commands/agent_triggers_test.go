@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestAgentTriggersCommand(t *testing.T) {
@@ -34,8 +35,8 @@ func TestAgentTriggersCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
 		"list", "create", "get", "update", "delete", "pause", "resume",
-		"rotate-secret", "list-executions", "get-execution", "get-by-session",
-		"list-reusable-sessions", "list-providers",
+		"rotate-secret", "list-executions", "get-execution", "cancel-execution",
+		"get-by-session", "list-reusable-sessions", "list-providers",
 	)
 }
 
@@ -128,10 +129,18 @@ func TestAgentTriggersCreate_FromConfigCopiesManifest(t *testing.T) {
 			DoAndReturn(func(req *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
 				assert.Contains(t, req.SessionTemplate, "opencode")
 				assert.Contains(t, req.SessionTemplate, "adamdev/orders-api")
+
 				// The config's own server-held secrets never come back to a
-				// client, so --secret has to supply the value here as well.
-				assert.Contains(t, req.SessionTemplate, "sk-ant-from-ci")
-				assert.Contains(t, req.SessionTemplate, "tenantSecret")
+				// client, so --secret has to supply the value here as well. On a
+				// flat manifest that means a `secrets` mapping keyed by name,
+				// whose bare string value is by definition a write-only
+				// tenantSecret — which is why this no longer looks for the literal
+				// "tenantSecret" the long form spells out.
+				var doc struct {
+					Secrets map[string]string `yaml:"secrets"`
+				}
+				require.NoError(t, yaml.Unmarshal([]byte(req.SessionTemplate), &doc))
+				assert.Equal(t, "sk-ant-from-ci", doc.Secrets["ANTHROPIC_API_KEY"])
 				return &do.HostedAgentTriggerCreateResult{
 					Trigger: &do.HostedAgentTrigger{
 						HostedAgentTrigger: &godo.HostedAgentTrigger{
@@ -694,5 +703,78 @@ func TestAgentTriggersGetExecution_TextMode(t *testing.T) {
 		require.NoError(t, RunAgentTriggersGetExecution(config))
 		assert.Contains(t, stdout.String(), "hello from run", "run output text must appear on stdout in text mode")
 		assert.Contains(t, stdout.String(), "output truncated", "truncation notice must appear on stdout in text mode")
+	})
+}
+
+func TestAgentTriggersCancelExecution_JSONMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Cancel("tr_1", "ex_1", false).
+			Return(&do.HostedAgentTriggerExecution{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID:   "ex_1",
+					Status:        godo.HostedAgentTriggerExecutionStatusFailed,
+					FailureReason: "This run was cancelled by a user.",
+				},
+			}, nil)
+		config.Args = []string{"tr_1", "ex_1"}
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		prev := Output
+		Output = "json"
+		defer func() { Output = prev }()
+
+		require.NoError(t, RunAgentTriggersCancelExecution(config))
+
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal([]byte(stdout.String()), &parsed))
+		assert.Equal(t, "ex_1", parsed["execution_id"])
+		assert.Equal(t, "failed", parsed["status"])
+	})
+}
+
+func TestAgentTriggersCancelExecution_TextMode(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Cancel("tr_1", "ex_1", false).
+			Return(&do.HostedAgentTriggerExecution{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID:   "ex_1",
+					Status:        godo.HostedAgentTriggerExecutionStatusFailed,
+					FailureReason: "This run was cancelled by a user.",
+				},
+			}, nil)
+		config.Args = []string{"tr_1", "ex_1"}
+
+		var stdout bytes.Buffer
+		config.Out = &stdout
+
+		prev := Output
+		Output = "text"
+		defer func() { Output = prev }()
+
+		require.NoError(t, RunAgentTriggersCancelExecution(config))
+		assert.Contains(t, stdout.String(), "This run was cancelled by a user.")
+	})
+}
+
+// TestAgentTriggersCancelExecution_Force pins that --force reaches the
+// service call as true, not just that the flag parses.
+func TestAgentTriggersCancelExecution_Force(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Cancel("tr_1", "ex_1", true).
+			Return(&do.HostedAgentTriggerExecution{
+				HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{
+					ExecutionID: "ex_1",
+					Status:      godo.HostedAgentTriggerExecutionStatusFailed,
+				},
+			}, nil)
+		config.Args = []string{"tr_1", "ex_1"}
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+		require.NoError(t, RunAgentTriggersCancelExecution(config))
 	})
 }

@@ -14,6 +14,7 @@ limitations under the License.
 package displayers
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -527,14 +528,16 @@ func (h *HostedAgentSandboxSize) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSandboxSize) Cols() []string {
-	return []string{"Slug", "VCPUs", "MemoryMB"}
+	return []string{"Slug", "VCPUs", "MemoryMB", "PricePerHourUSD", "PricePerMonthUSD"}
 }
 
 func (h *HostedAgentSandboxSize) ColMap() map[string]string {
 	return map[string]string{
-		"Slug":     "Slug",
-		"VCPUs":    "VCPUs",
-		"MemoryMB": "Memory (MB)",
+		"Slug":             "Slug",
+		"VCPUs":            "VCPUs",
+		"MemoryMB":         "Memory (MB)",
+		"PricePerHourUSD":  "Price/Hour (USD)",
+		"PricePerMonthUSD": "Price/Month (USD)",
 	}
 }
 
@@ -545,9 +548,11 @@ func (h *HostedAgentSandboxSize) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(h.Sizes))
 	for _, s := range h.Sizes {
 		out = append(out, map[string]any{
-			"Slug":     s.Slug,
-			"VCPUs":    s.VCPUs,
-			"MemoryMB": s.MemoryMB,
+			"Slug":             s.Slug,
+			"VCPUs":            s.VCPUs,
+			"MemoryMB":         s.MemoryMB,
+			"PricePerHourUSD":  fmt.Sprintf("%0.5f", s.PricePerHourUSD),
+			"PricePerMonthUSD": fmt.Sprintf("%0.3f", s.PricePerMonthUSD),
 		})
 	}
 	return out

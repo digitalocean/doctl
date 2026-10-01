@@ -72,10 +72,10 @@ var _ = suite("inference/list-models", func(t *testing.T, when spec.G, it spec.S
 
 const (
 	modelsListOutput = `
-ID         Name            Agreement                   Created At                       Updated At                       Is Foundational    Parent ID    Upload Complete    URL                                             Version
-model-1    GPT-4 Turbo     OpenAI Terms of Service     2024-05-01 00:00:00 +0000 UTC    2024-06-01 00:00:00 +0000 UTC    true                            true               https://api.openai.com/v1/models/gpt-4-turbo    4.0.0
-model-2    Claude 3.5      Anthropic Service Terms     2024-05-15 00:00:00 +0000 UTC    2024-06-15 00:00:00 +0000 UTC    true                            true               https://api.anthropic.com/v1/models/claude-3    3.5.0
-model-3    Custom Model    DigitalOcean GenAI Terms    2024-06-20 00:00:00 +0000 UTC    2024-06-24 00:00:00 +0000 UTC    false              model-1      false                                                              1.0.0
+ID         Name            Agreement                   Agreement URL                                     Created At                       Updated At                       Is Foundational    Parent ID    Upload Complete    URL                                             Version
+model-1    GPT-4 Turbo     OpenAI Terms of Service     https://openai.com/policies/terms-of-use          2024-05-01 00:00:00 +0000 UTC    2024-06-01 00:00:00 +0000 UTC    true                            true               https://api.openai.com/v1/models/gpt-4-turbo    4.0.0
+model-2    Claude 3.5      Anthropic Service Terms     https://www.anthropic.com/legal/consumer-terms    2024-05-15 00:00:00 +0000 UTC    2024-06-15 00:00:00 +0000 UTC    true                            true               https://api.anthropic.com/v1/models/claude-3    3.5.0
+model-3    Custom Model    DigitalOcean GenAI Terms    https://www.digitalocean.com/legal/terms          2024-06-20 00:00:00 +0000 UTC    2024-06-24 00:00:00 +0000 UTC    false              model-1      false                                                              1.0.0
 `
 	modelsListResponse = `
 {
@@ -85,7 +85,8 @@ model-3    Custom Model    DigitalOcean GenAI Terms    2024-06-20 00:00:00 +0000
       "name": "GPT-4 Turbo",
       "agreement": {
         "name": "OpenAI Terms of Service",
-        "description": "Standard OpenAI API terms and conditions"
+        "description": "Standard OpenAI API terms and conditions",
+        "url": "https://openai.com/policies/terms-of-use"
       },
       "created_at": "2024-05-01T00:00:00Z",
       "updated_at": "2024-06-01T00:00:00Z",
@@ -106,7 +107,8 @@ model-3    Custom Model    DigitalOcean GenAI Terms    2024-06-20 00:00:00 +0000
       "name": "Claude 3.5",
       "agreement": {
         "name": "Anthropic Service Terms",
-        "description": "Anthropic API service agreement"
+        "description": "Anthropic API service agreement",
+        "url": "https://www.anthropic.com/legal/consumer-terms"
       },
       "created_at": "2024-05-15T00:00:00Z",
       "updated_at": "2024-06-15T00:00:00Z",
@@ -127,7 +129,8 @@ model-3    Custom Model    DigitalOcean GenAI Terms    2024-06-20 00:00:00 +0000
       "name": "Custom Model",
       "agreement": {
         "name": "DigitalOcean GenAI Terms",
-        "description": "DigitalOcean custom model agreement"
+        "description": "DigitalOcean custom model agreement",
+        "url": "https://www.digitalocean.com/legal/terms"
       },
       "created_at": "2024-06-20T00:00:00Z",
       "updated_at": "2024-06-24T00:00:00Z",

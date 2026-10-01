@@ -29,6 +29,8 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/godo"
+	"github.com/fatih/color"
+	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -389,6 +391,74 @@ func TestBridgeLocalConnSurfacesServerMessage(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "502 Bad Gateway")
 	assert.Contains(t, err.Error(), "could not reach guest port")
+}
+
+func TestExplainTunnelClose(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "dial failed names the port and what to do",
+			err:  &websocket.CloseError{Code: 4002, Text: "guest port unreachable"},
+			want: "port 8080: nothing is listening on that port inside the session — start the process that serves it, then retry",
+		},
+		{
+			name: "session ended points at restarting the session",
+			err:  &websocket.CloseError{Code: 4001, Text: "session ended"},
+			want: "port 8080: the session ended while forwarding — start it again, then re-run doctl harness-runtime port-forward",
+		},
+		{
+			name: "server error is retryable",
+			err:  &websocket.CloseError{Code: 4011, Text: "tunnel closed"},
+			want: "port 8080: the tunnel failed inside the service — retry; if it keeps happening, re-run with --trace",
+		},
+		{
+			name: "abnormal closure is a network drop",
+			err:  &websocket.CloseError{Code: websocket.CloseAbnormalClosure, Text: ""},
+			want: "port 8080: the tunnel dropped without closing cleanly — check your network; new connections still work",
+		},
+		{
+			name: "an unknown close code keeps the server's own words",
+			err:  &websocket.CloseError{Code: 4099, Text: "something new"},
+			want: "port 8080: connection closed: websocket: close 4099: something new",
+		},
+		{
+			name: "a non-close error is passed through",
+			err:  errors.New("read tcp: connection reset by peer"),
+			want: "port 8080: connection closed: read tcp: connection reset by peer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, explainTunnelClose(tt.err, 8080))
+		})
+	}
+}
+
+// TestTunnelWarnerSuppressesRepeats covers the case that prompted the message
+// rewrite: one browser page load opens several connections, and an unstarted
+// server made each of them print the same line.
+func TestTunnelWarnerSuppressesRepeats(t *testing.T) {
+	defer func(a io.Writer) { color.Output = a }(color.Output)
+	var buf bytes.Buffer
+	color.Output = &buf
+
+	w := newTunnelWarner(8080)
+	unreachable := &websocket.CloseError{Code: 4002, Text: "guest port unreachable"}
+	for range 4 {
+		w.report(unreachable)
+	}
+
+	out := buf.String()
+	assert.Equal(t, 1, strings.Count(out, "nothing is listening on that port"))
+	assert.Equal(t, 1, strings.Count(out, "further identical warnings are suppressed"))
+
+	// A different failure is different information, so it still prints.
+	w.report(&websocket.CloseError{Code: 4001, Text: "session ended"})
+	assert.Contains(t, buf.String(), "the session ended while forwarding")
 }
 
 // closeTrackingBody records whether the reader was closed.

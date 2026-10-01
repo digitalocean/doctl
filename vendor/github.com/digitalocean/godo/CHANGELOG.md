@@ -1,5 +1,30 @@
 # Change Log
 
+## [1.216.0] - 2026-09-30
+
+- #1134 - @kishlay-singh-DO - Rename the GradientAI client to Agent Platform.
+- #1133 - @tgillam-do - Add Action Gateway SDK
+- #1129 - @sanpj2292 - Add Cancel to HostedAgentTriggersService
+- #1132 - @fumblehool - Update HostedAgentSandboxSize struct to include PricePerHourUSD and PricePerMonthUSD
+
+## [1.215.0] - 2026-09-24
+
+- #1127 - @vrindavinod-do - hosted_agents: add ZeroBalance pause reason, deprecate LowBalance
+
+## [1.214.0] - 2026-09-24
+
+- #1125 - @SSharma-10 - Add Environment aliases for Managed Agents
+- #1123 - @SSharma-10 -  Add post-release checksum verification steps to CONTRIBUTING.md
+
+## [1.213.0] - 2026-09-23
+
+- #1102 - @kgautam676 - Adding nfs_csi_plugin to kubernetes cluster types
+- #1120 - @sgupta832 - microvm: decode http_protocol, checkpoint size, and combined list filters
+
+## [1.212.0] - 2026-09-22
+
+- #1117 - @sgupta832 - MicroVM URN flip + Exec/ConsoleURL (MDROP-392, MDROP-427)
+
 ## [1.211.0] - 2026-09-22
 
 - #1021 - @SSharma-10 - Add OHS endpoints

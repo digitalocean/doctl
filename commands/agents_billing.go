@@ -159,25 +159,36 @@ func reportHITLResolveErr(c *CmdConfig, state *attachState, err error) {
 	fmt.Fprintf(c.Out, "resolve failed: %v\n", err)
 }
 
-// pauseReasonLowBalance is the prepay gate's pause reason. harness-api
+// pauseReasonZeroBalance is the prepay gate's pause reason. harness-api
 // documents pause reasons as an open string set and tells clients to treat
 // unrecognized values as opaque, so this is compared against, never switched
 // on exhaustively. It is kept as a string rather than godo's typed constant
 // because the run-event stream reports the reason as a bare string too, and
 // both sources are normalized through the same path.
-const pauseReasonLowBalance = string(godo.HostedAgentSessionPauseReasonLowBalance)
+const pauseReasonZeroBalance = string(godo.HostedAgentSessionPauseReasonZeroBalance)
 
-// normalizePauseReason folds a reason to its wire spelling. The session model
-// and the run-event stream disagree on case, and the --paused-by flag reads
-// better hyphenated (low-balance) than the underscored value it matches.
+// normalizePauseReason folds a reason to its canonical wire spelling. The
+// session model and the run-event stream disagree on case, and the --paused-by
+// flag reads better hyphenated (zero-balance) than the underscored value it
+// matches. The deprecated "low_balance" spelling is mapped to "zero_balance"
+// so that every comparison site (filter, identity check, dedup) works with a
+// single canonical value.
 func normalizePauseReason(reason string) string {
-	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(reason), "-", "_"))
+	r := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(reason), "-", "_"))
+	switch r {
+	case "low_balance":
+		return "zero_balance"
+	case "low_balance_resuming":
+		return "zero_balance_resuming"
+	}
+	return r
 }
 
-// isLowBalancePauseReason reports whether the prepay gate is what paused a
-// session.
-func isLowBalancePauseReason(reason string) bool {
-	return normalizePauseReason(reason) == pauseReasonLowBalance
+// isZeroBalancePauseReason reports whether the prepay gate is what paused a
+// session. It accepts both "zero_balance" (current) and "low_balance"
+// (deprecated) because normalizePauseReason canonicalizes the old spelling.
+func isZeroBalancePauseReason(reason string) bool {
+	return normalizePauseReason(reason) == pauseReasonZeroBalance
 }
 
 // filterByPauseReason narrows a page of sessions to one pause reason.
@@ -229,7 +240,7 @@ const (
 // reason. The user is looking at one stalled agent, and the run/session
 // distinction that matters to the API is not one they can act on differently.
 func renderPauseNotice(w io.Writer, subject, reason string) {
-	if isLowBalancePauseReason(reason) {
+	if isZeroBalancePauseReason(reason) {
 		fmt.Fprintf(w, "\n%s %s\n", colorize("⏸", colWarning),
 			boldColor("Paused — prepayment balance exhausted", colWarning))
 		fmt.Fprintf(w, "  %s\n", colorize("Your work is saved. Add funds, then send any message to continue.", colMuted))

@@ -258,6 +258,34 @@ func TestFacade_ModelList(t *testing.T) {
 	assert.True(t, list.Data[0].IsDefault)
 }
 
+// Both of these are bootstrap requests codex 0.155 aborts on: the TUI reports
+// "failed during TUI bootstrap" and exits rather than degrading. The asserted
+// JSON is what a real app-server answers with, so the shapes are compared as
+// encoded bytes rather than as Go values.
+func TestFacade_ConfigRequirementsRead(t *testing.T) {
+	f, _, _ := newTestFacade(t)
+
+	result, err := dispatch(t, f, "configRequirements/read", nil)
+	require.NoError(t, err)
+
+	encoded, err := json.Marshal(result)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"requirements":null}`, string(encoded))
+}
+
+func TestFacade_CollaborationModeList(t *testing.T) {
+	f, _, _ := newTestFacade(t)
+
+	result, err := dispatch(t, f, "collaborationMode/list", nil)
+	require.NoError(t, err)
+
+	encoded, err := json.Marshal(result)
+	require.NoError(t, err)
+	assert.JSONEq(t,
+		`{"data":[{"name":"Default","mode":"default","model":null,"reasoning_effort":null}]}`,
+		string(encoded))
+}
+
 func TestFacade_ThreadStart(t *testing.T) {
 	f, _, _ := newTestFacade(t)
 
@@ -293,9 +321,9 @@ func TestFacade_ThreadResume(t *testing.T) {
 	})
 }
 
-// Sessions that can't relay (newTestFacade leaves AgentKind unset) keep the
-// pre-relay answers for these two: method-not-found, and an empty interrupt
-// reply. The relayed behaviour is covered in raw_test.go.
+// A method the facade has no synthesized answer for is refused, and
+// turn/interrupt is acknowledged with an empty reply without stopping the
+// turn — there is no path from this proxy to the agent for a request.
 func TestFacade_UnhandledMethod(t *testing.T) {
 	f, _, _ := newTestFacade(t)
 
@@ -303,7 +331,7 @@ func TestFacade_UnhandledMethod(t *testing.T) {
 	assert.ErrorIs(t, err, agentproxy.ErrMethodNotFound)
 }
 
-func TestFacade_TurnInterrupt_NoOpWithoutRelay(t *testing.T) {
+func TestFacade_TurnInterrupt_NoOp(t *testing.T) {
 	f, _, _ := newTestFacade(t)
 
 	result, err := dispatch(t, f, "turn/interrupt", nil)
