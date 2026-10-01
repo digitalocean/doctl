@@ -151,6 +151,25 @@ func TestLoginReportsAuthorizationErrors(t *testing.T) {
 	}
 }
 
+func TestCallbackPageEscapesServerSuppliedText(t *testing.T) {
+	const payload = `<script>alert('xss')</script>`
+
+	handler := &callbackHandler{state: "the-state", results: make(chan callbackResult, 1)}
+	request := httptest.NewRequest(http.MethodGet, callbackPath+"?"+url.Values{
+		"error":             {payload},
+		"error_description": {`"><img src=x onerror=alert(1)>`},
+		"state":             {"the-state"},
+	}.Encode(), nil)
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	page := recorder.Body.String()
+	assert.NotContains(t, page, "<script>", "error text must not be able to introduce markup")
+	assert.NotContains(t, page, "<img src=x")
+	assert.Contains(t, page, "&lt;script&gt;", "error text is rendered as escaped text instead")
+}
+
 func TestLoginTimesOut(t *testing.T) {
 	_, err := Login(context.Background(), LoginOptions{
 		Metadata: &ServerMetadata{AuthorizationEndpoint: "https://cloud.example.com/v1/oauth/authorize"},
