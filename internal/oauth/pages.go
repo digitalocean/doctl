@@ -14,11 +14,15 @@ limitations under the License.
 package oauth
 
 import (
-	"fmt"
 	"html/template"
+	"strings"
 )
 
-const pageTemplate = `<!DOCTYPE html>
+// pageTemplate renders the page the local callback server shows in the
+// browser. It is an html/template rather than a format string so every field
+// is escaped for the context it appears in: the message repeats text from the
+// authorization server, which doctl does not control.
+var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -57,26 +61,46 @@ const pageTemplate = `<!DOCTYPE html>
 </head>
 <body>
   <main>
-    <div class="mark %s">%s</div>
-    <h1>%s</h1>
-    <p>%s</p>
+    <div class="mark {{.MarkClass}}">{{.Mark}}</div>
+    <h1>{{.Title}}</h1>
+    <p>{{.Message}}</p>
   </main>
 </body>
 </html>
-`
+`))
 
-var successPage = fmt.Sprintf(
-	pageTemplate,
-	"ok", "&#10003;",
-	"You're signed in",
-	"doctl is now authenticated with your DigitalOcean account. You can close this tab and return to your terminal.",
-)
+type pageContent struct {
+	MarkClass string
+	Mark      string
+	Title     string
+	Message   string
+}
+
+func renderPage(content pageContent) string {
+	var page strings.Builder
+	if err := pageTemplate.Execute(&page, content); err != nil {
+		// The template and this struct are both compiled in, so a failure here
+		// is a programming error rather than anything the response can cause.
+		// Fall back to a bare message so the browser is not left with a
+		// half-written page.
+		return "Return to your terminal to continue."
+	}
+
+	return page.String()
+}
+
+var successPage = renderPage(pageContent{
+	MarkClass: "ok",
+	Mark:      "\u2713",
+	Title:     "You're signed in",
+	Message:   "doctl is now authenticated with your DigitalOcean account. You can close this tab and return to your terminal.",
+})
 
 func errorPage(reason string) string {
-	return fmt.Sprintf(
-		pageTemplate,
-		"fail", "&#10005;",
-		"Authorization failed",
-		template.HTMLEscapeString(reason)+" You can close this tab and try again in your terminal.",
-	)
+	return renderPage(pageContent{
+		MarkClass: "fail",
+		Mark:      "\u2717",
+		Title:     "Authorization failed",
+		Message:   reason + " You can close this tab and try again in your terminal.",
+	})
 }
