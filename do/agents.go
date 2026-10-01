@@ -15,6 +15,10 @@ package do
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
 
 	"github.com/digitalocean/godo"
 )
@@ -43,6 +47,13 @@ type HostedAgentsService interface {
 	PauseSession(sessionID string) error
 	ResumeSession(sessionID string) error
 	SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error)
+	// CancelTurn stops the in-flight turn named by runID (the run_id SendInput
+	// returned) without ending the session; an empty runID stops whichever
+	// turn is in flight, and the result names it. The outcome is an answer,
+	// not an error: NoTurn means that turn had already finished (or nothing
+	// was running), Unsupported that the session's agent has no turn-level
+	// interrupt.
+	CancelTurn(sessionID, runID string) (HostedAgentCancelTurnResult, error)
 	// ExecInSandbox runs one command inside the session's sandbox and returns
 	// the buffered result. It takes its own context rather
 	// than the package-wide context.TODO(): the call blocks for as long as the
@@ -162,6 +173,52 @@ func (s *hostedAgentsService) ResumeSession(sessionID string) error {
 func (s *hostedAgentsService) SendInput(sessionID string, input *godo.HostedAgentSendInputRequest) (*godo.HostedAgentSendInputResponse, error) {
 	resp, _, err := s.client.HostedAgents.SendInput(context.TODO(), sessionID, input)
 	return resp, err
+}
+
+// HostedAgentCancelTurnOutcome is the answer to a CancelTurn.
+type HostedAgentCancelTurnOutcome string
+
+const (
+	HostedAgentCancelTurnAcked       HostedAgentCancelTurnOutcome = "acked"
+	HostedAgentCancelTurnNoTurn      HostedAgentCancelTurnOutcome = "no_turn"
+	HostedAgentCancelTurnUnsupported HostedAgentCancelTurnOutcome = "unsupported"
+)
+
+// HostedAgentCancelTurnResult is what a CancelTurn came back as, and which
+// turn it was aimed at: the runID passed in, or the turn the server found in
+// flight when none was. RunID is empty when an unnamed cancel found nothing
+// running.
+type HostedAgentCancelTurnResult struct {
+	Outcome HostedAgentCancelTurnOutcome `json:"outcome"`
+	RunID   string                       `json:"run_id,omitempty"`
+}
+
+// CancelTurn goes through the godo client's generic request path because godo
+// has no method for POST .../cancel yet; auth, retries and error decoding are
+// the same as every typed call.
+func (s *hostedAgentsService) CancelTurn(sessionID, runID string) (HostedAgentCancelTurnResult, error) {
+	if sessionID == "" {
+		return HostedAgentCancelTurnResult{}, errors.New("hosted agents: session id is required")
+	}
+	ctx := context.TODO()
+	path := fmt.Sprintf("/v2/agents/sessions/%s/cancel", url.PathEscape(sessionID))
+	reqBody := struct {
+		RunID string `json:"run_id,omitempty"`
+	}{RunID: runID}
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, reqBody)
+	if err != nil {
+		return HostedAgentCancelTurnResult{}, err
+	}
+	var res HostedAgentCancelTurnResult
+	if _, err := s.client.Do(ctx, req, &res); err != nil {
+		return HostedAgentCancelTurnResult{}, err
+	}
+	if res.RunID == "" {
+		// A server that predates the response field echoes nothing; a named
+		// cancel still knows its own target.
+		res.RunID = runID
+	}
+	return res, nil
 }
 
 func (s *hostedAgentsService) ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {

@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -48,10 +49,28 @@ var promptExit = os.Exit
 // still working" apart from "the agent failed" without parsing stderr.
 const promptTimeoutExit = 124
 
+// promptInterruptExit is the shell's code for a process stopped by SIGINT
+// (128+2), used when Ctrl-C cancelled the run.
+const promptInterruptExit = 130
+
+// promptCancelGrace bounds how long a Ctrl-C keeps waiting for the cancelled
+// run's closing event before giving up locally. The server gives the agent
+// 15s to acknowledge, so this leaves room for that plus the stream.
+const promptCancelGrace = 20 * time.Second
+
+// promptNotify subscribes ch to the signals that interrupt a prompt and
+// returns the unsubscribe. A var so tests can deliver a Ctrl-C without
+// signalling the test process.
+var promptNotify = func(ch chan<- os.Signal) (stop func()) {
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	return func() { signal.Stop(ch) }
+}
+
 // Terminal states reported in the JSON envelope and used to pick an exit code.
 const (
 	promptStatusCompleted  = "completed"
 	promptStatusFailed     = "failed"
+	promptStatusCancelled  = "cancelled"
 	promptStatusTimedOut   = "timed_out"
 	promptStatusIncomplete = "incomplete"
 )
@@ -99,21 +118,6 @@ func RunAgentsPrompt(c *CmdConfig) error {
 		return err
 	}
 
-	// SIGTERM alongside SIGINT so Ctrl-C or a plain `kill` stops the wait
-	// instead of hanging. Giving up locally does not stop the agent: the run
-	// continues server-side and its output stays readable with `logs`.
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-	if timeout > 0 {
-		var cancelTimeout context.CancelFunc
-		ctx, cancelTimeout = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-		defer cancelTimeout()
-	}
-
-	if err := promptResumeIfPaused(ctx, svc, sessionID, quiet); err != nil {
-		return err
-	}
-
 	col := &promptCollector{
 		svc:              svc,
 		sessionID:        sessionID,
@@ -124,6 +128,25 @@ func RunAgentsPrompt(c *CmdConfig) error {
 		cursor:           &eventCursor{},
 		seen:             map[string]bool{},
 		resolved:         map[string]bool{},
+	}
+
+	// Ctrl-C cancels the run and waits for it to end; a second Ctrl-C, a
+	// SIGTERM, or --timeout only stops the wait, leaving the run going
+	// server-side with its output readable through `logs`.
+	ctx, stopWaiting := context.WithCancel(context.Background())
+	defer stopWaiting()
+	if timeout > 0 {
+		var cancelTimeout context.CancelFunc
+		ctx, cancelTimeout = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+		defer cancelTimeout()
+	}
+	sigs := make(chan os.Signal, 2)
+	stopSignals := promptNotify(sigs)
+	defer stopSignals()
+	go col.watchInterrupts(ctx, sigs, stopWaiting)
+
+	if err := promptResumeIfPaused(ctx, svc, sessionID, quiet); err != nil {
+		return err
 	}
 
 	streamErr := runHeadlessStream(ctx, svc, sessionID, col.cursor,
@@ -210,6 +233,86 @@ type promptCollector struct {
 	status  string
 	failure string
 	usage   runCompletedPayload
+
+	// mu guards the fields the interrupt goroutine shares with the stream.
+	mu sync.Mutex
+	// live is the run a Ctrl-C would cancel: set once the prompt is sent,
+	// cleared when that run ends.
+	live string
+	// cancelSent records that a Ctrl-C cancel was acknowledged, which is what
+	// makes a cancelled run exit 130 rather than 1.
+	cancelSent bool
+}
+
+func (p *promptCollector) setLive(runID string) {
+	p.mu.Lock()
+	p.live = runID
+	p.mu.Unlock()
+}
+
+func (p *promptCollector) liveRun() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.live
+}
+
+func (p *promptCollector) sentCancel() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.cancelSent
+}
+
+// watchInterrupts turns the first Ctrl-C into a cancel of the prompt's run and
+// keeps the wait open for up to promptCancelGrace so the run's closing event
+// can be reported. Anything else stops the wait at once: a second Ctrl-C, a
+// SIGTERM (a supervisor stopping doctl is not asking to stop the agent), or a
+// Ctrl-C with no run to cancel.
+func (p *promptCollector) watchInterrupts(ctx context.Context, sigs <-chan os.Signal, stopWaiting context.CancelFunc) {
+	var grace *time.Timer
+	defer func() {
+		if grace != nil {
+			grace.Stop()
+		}
+	}()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case sig := <-sigs:
+			if sig != os.Interrupt || grace != nil || !p.cancelLiveRun() {
+				stopWaiting()
+				return
+			}
+			grace = time.AfterFunc(promptCancelGrace, stopWaiting)
+		}
+	}
+}
+
+// cancelLiveRun asks the server to stop the prompt's run, reporting whether
+// it agreed to. Every answer but an acknowledgement falls back to leaving the
+// run going, and says so when that is not obvious.
+func (p *promptCollector) cancelLiveRun() bool {
+	runID := p.liveRun()
+	if runID == "" {
+		return false
+	}
+	res, err := p.svc.CancelTurn(p.sessionID, runID)
+	switch {
+	case err != nil:
+		fmt.Fprintf(promptStderr, "cancelling run %s failed: %v\n", runID, beautifyAgentError(err))
+		return false
+	case res.Outcome == do.HostedAgentCancelTurnAcked:
+		p.mu.Lock()
+		p.cancelSent = true
+		p.mu.Unlock()
+		p.progress(fmt.Sprintf("cancelling run %s (Ctrl-C again to stop waiting)", runID))
+		return true
+	case res.Outcome == do.HostedAgentCancelTurnUnsupported:
+		fmt.Fprintf(promptStderr, "this agent can't cancel a run; run %s keeps going\n", runID)
+		return false
+	default:
+		return false
+	}
 }
 
 // drain consumes one connection's events, sending the prompt on the first
@@ -226,6 +329,7 @@ func (p *promptCollector) drain(stream *godo.HostedAgentSessionStream) (bool, er
 		}
 		p.sent = true
 		p.runID = resp.RunID
+		p.setLive(resp.RunID)
 		p.progress(fmt.Sprintf("run %s started", p.runID))
 	}
 
@@ -251,6 +355,9 @@ func (p *promptCollector) drain(stream *godo.HostedAgentSessionStream) (bool, er
 		}
 
 		if done, err := p.handle(ev); done || err != nil {
+			if done {
+				p.setLive("")
+			}
 			return done, err
 		}
 	}
@@ -297,14 +404,17 @@ func (p *promptCollector) handle(ev godo.HostedAgentEvent) (bool, error) {
 
 	case godo.HostedAgentEventKindRunFailed:
 		var q runFailedPayload
+		p.status = promptStatusFailed
 		if err := json.Unmarshal(ev.Payload, &q); err == nil {
 			p.failure = q.Message
 			if p.failure == "" {
 				p.failure = fmt.Sprintf("code %d", q.Code)
 			}
+			if q.Code == runFailureCodeCancelled {
+				p.status = promptStatusCancelled
+			}
 		}
 		p.done = true
-		p.status = promptStatusFailed
 		return true, nil
 	}
 	return false, nil
@@ -441,6 +551,8 @@ func (p *promptCollector) summarize() {
 		fmt.Fprintf(promptStderr, "· %s\n", summary)
 	case promptStatusFailed:
 		fmt.Fprintf(promptStderr, "run failed: %s\n", p.failure)
+	case promptStatusCancelled:
+		fmt.Fprintf(promptStderr, "run cancelled: %s\n", p.failure)
 	case promptStatusTimedOut:
 		fmt.Fprintf(promptStderr,
 			"timed out waiting for the run to finish; it is still going and its output stays readable with `%s logs %s`\n",
@@ -461,6 +573,14 @@ func (p *promptCollector) exitFor() error {
 		return nil
 	case promptStatusTimedOut:
 		promptExit(promptTimeoutExit)
+	case promptStatusCancelled:
+		// 130 only for our own Ctrl-C; a run another client cancelled failed
+		// as far as this caller is concerned.
+		if p.sentCancel() {
+			promptExit(promptInterruptExit)
+		} else {
+			promptExit(1)
+		}
 	default:
 		promptExit(1)
 	}
