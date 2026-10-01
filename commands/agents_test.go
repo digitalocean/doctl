@@ -228,6 +228,23 @@ func TestNamedManifestPath(t *testing.T) {
 		})
 	})
 
+	// MARSOHS-1671: a --spec value left in config.yaml from an earlier run must
+	// not count as naming a manifest on this invocation.
+	t.Run("stale config.yaml --spec is ignored", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			viper.Set("agents.create.spec", "poisoned.yaml")
+			t.Cleanup(func() { viper.Set("agents.create.spec", "") })
+
+			config.NS = "agents.create"
+			// LiveConfig reads viper; do not mark the flag as set on this run.
+			config.Doit = &doctl.LiveConfig{}
+
+			path, err := namedManifestPath(config)
+			assert.NoError(t, err)
+			assert.Empty(t, path, "config.yaml must not supply --spec")
+		})
+	})
+
 	t.Run("stale required mark does not block empty spec", func(t *testing.T) {
 		requiredKey := "required.agents.start.spec"
 		viper.Set(requiredKey, true)

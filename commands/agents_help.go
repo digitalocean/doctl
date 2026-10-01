@@ -251,7 +251,7 @@ const agentsConfigStartSessionHelpMD = `Start a new session from a config ID. ` 
 
 const agentsExecHelpMD = `Run one command in a session's sandbox and print its output.
 
-Drives the sandbox directly rather than through its agent, so it works on a bare sandbox started with ` + "`--agent none`" + ` as well as on a managed-agent session.
+Drives the sandbox directly rather than through its agent, so it works on a bare sandbox created with ` + "`--template sandbox`" + ` as well as on a managed-agent session.
 
 Separate the guest command from doctl's own flags with ` + "`--`" + `, or flags meant for the guest (` + "`ls -la`" + `) are parsed as doctl flags.
 
@@ -328,6 +328,8 @@ const agentsTriggersRotateSecretHelpMD = `Issue a new webhook secret (shown once
 const agentsTriggersListExecutionsHelpMD = `List firings for a trigger. Use ` + "`get-execution`" + ` for full payload and output.`
 
 const agentsTriggersGetExecutionHelpMD = `Print one trigger execution, including payload and output when available.`
+
+const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is only paused — the platform has no run-interrupt call today, so the agent's turn may still be in flight even after this returns. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
 
 const agentsTriggersGetBySessionHelpMD = `Find the trigger that created or binds a session.`
 

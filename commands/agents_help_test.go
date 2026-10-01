@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
@@ -21,6 +22,8 @@ import (
 	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestRenderAgentsHelpLongColorizesCodeOnly(t *testing.T) {
@@ -157,6 +160,68 @@ func TestAgentPublicPreviewTermsUserKeyFallsBackToContext(t *testing.T) {
 	agentPublicPreviewAccountUUID = func(*CmdConfig) string { return "" }
 	viper.Set("context", "work")
 	assert.Equal(t, "context:work", agentPublicPreviewTermsUserKey(&CmdConfig{}))
+}
+
+// MARSOHS-1671: writing the public-preview-terms-seen flag must not also
+// persist a bound --spec (or other create/launch inputs) into config.yaml.
+func TestWriteConfigDoesNotPersistAgentCreateSpec(t *testing.T) {
+	prevWriter := cfgFileWriter
+	t.Cleanup(func() {
+		cfgFileWriter = prevWriter
+		viper.Set("agents.create.spec", "")
+		viper.Set(agentPublicPreviewTermsSeenKey, nil)
+	})
+
+	var buf bytes.Buffer
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return &nopWriteCloser{Writer: &buf}, nil
+	}
+
+	viper.Set("agents.create.spec", "simple.yaml")
+	viper.Set("agents.create.prompt", "do the thing")
+	viper.Set("agents.launch.from-config", "cfg_poison")
+	viper.Set(agentPublicPreviewTermsSeenKey, []string{"user:acct"})
+
+	require.NoError(t, writeConfig())
+
+	var written map[string]any
+	require.NoError(t, yaml.Unmarshal(buf.Bytes(), &written))
+
+	assert.Equal(t, []any{"user:acct"}, written[agentPublicPreviewTermsSeenKey])
+	if agents, ok := written["agents"].(map[any]any); ok {
+		_, hasCreate := agents["create"]
+		_, hasLaunch := agents["launch"]
+		assert.False(t, hasCreate, "agents.create must not be written")
+		assert.False(t, hasLaunch, "agents.launch must not be written")
+	}
+}
+
+func TestStripEphemeralAgentFlagsFromConfig(t *testing.T) {
+	settings := map[string]any{
+		"access-token": "tok",
+		"agents": map[string]any{
+			"create": map[string]any{"spec": "simple.yaml", "prompt": "hi"},
+			"launch": map[string]any{"from-config": "cfg_x"},
+			"config": map[string]any{
+				"create": map[string]any{"spec": "cfg.yaml", "name": "n"},
+				"list":   map[string]any{"page-size": 10},
+			},
+		},
+		agentPublicPreviewTermsSeenKey: []string{"user:a"},
+	}
+	stripEphemeralAgentFlagsFromConfig(settings)
+
+	assert.Equal(t, "tok", settings["access-token"])
+	assert.Equal(t, []string{"user:a"}, settings[agentPublicPreviewTermsSeenKey])
+	agents := settings["agents"].(map[string]any)
+	_, hasCreate := agents["create"]
+	_, hasLaunch := agents["launch"]
+	assert.False(t, hasCreate)
+	assert.False(t, hasLaunch)
+	cfg := agents["config"].(map[string]any)
+	_, hasCfgCreate := cfg["create"]
+	assert.False(t, hasCfgCreate)
+	assert.Equal(t, map[string]any{"page-size": 10}, cfg["list"])
 }
 
 func TestAgentsCreateHelpDocumentsFlatName(t *testing.T) {

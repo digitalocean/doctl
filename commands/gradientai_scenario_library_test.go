@@ -31,7 +31,7 @@ func TestScenarioLibraryCommand(t *testing.T) {
 
 func TestScenarioLibraryList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{}).
+		tm.agentPlatform.EXPECT().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{}).
 			Return(do.ScenarioLibraryEntries{testScenarioLibraryEntry}, nil)
 
 		err := RunScenarioLibraryList(config)
@@ -46,7 +46,7 @@ func TestScenarioLibraryListWithFilters(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGenAISortBy, "name")
 		config.Doit.Set(config.NS, doctl.ArgGenAISortDirection, "asc")
 
-		tm.gradientAI.EXPECT().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{
+		tm.agentPlatform.EXPECT().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{
 			Category:      "customer-support",
 			Search:        "refund",
 			SortBy:        godo.ScenarioLibrarySortFieldName,
@@ -62,7 +62,7 @@ func TestScenarioLibraryListScenarios(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testLibraryScenarioUUID)
 
-		tm.gradientAI.EXPECT().ListScenarioLibraryScenarios(testLibraryScenarioUUID, &godo.ScenarioListOptions{}).
+		tm.agentPlatform.EXPECT().ListScenarioLibraryScenarios(testLibraryScenarioUUID, &godo.ScenarioListOptions{}).
 			Return(do.Scenarios{testScenario}, nil)
 
 		err := RunScenarioLibraryListScenarios(config)
@@ -75,7 +75,7 @@ func TestScenarioLibraryCreateScenarioSet(t *testing.T) {
 		config.Args = append(config.Args, testLibraryScenarioUUID)
 		config.Doit.Set(config.NS, doctl.ArgGenAIName, "Support Flows Copy")
 
-		tm.gradientAI.EXPECT().CreateScenarioSetFromLibrary(testLibraryScenarioUUID, &godo.CreateScenarioSetFromLibraryRequest{
+		tm.agentPlatform.EXPECT().CreateScenarioSetFromLibrary(testLibraryScenarioUUID, &godo.CreateScenarioSetFromLibraryRequest{
 			LibraryScenarioUUID: testLibraryScenarioUUID,
 			Name:                "Support Flows Copy",
 		}).Return(&testScenarioSet, nil)

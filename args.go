@@ -167,6 +167,8 @@ const (
 	ArgEnableRoutingAgent = "enable-routing-agent"
 	// ArgEnablePeerToPeerOciRegistryPlugin enables the Peer-to-peer OCI registry cluster plugin.
 	ArgEnablePeerToPeerOciRegistryPlugin = "enable-peer-to-peer-oci-registry-plugin"
+	// ArgEnableNfsCsiPlugin enables the NFS CSI driver cluster plugin.
+	ArgEnableNfsCsiPlugin = "enable-nfs-csi-plugin"
 	// ArgEnableCorednsAutoscaler enables the CoreDNS Autoscaler cluster plugin.
 	ArgEnableCorednsAutoscaler = "enable-coredns-autoscaler"
 	// ArgEnableAmdGpuDevicePlugin enables automatic amd gpu device plugin installation.
@@ -991,9 +993,16 @@ const (
 	ArgAgentFromConfig = "from-config"
 
 	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
-	// is rebased onto (coding-claude-code | coding-codex | coding-opencode |
-	// coding-hermes | langgraph).
+	// is rebased onto (coding-base | coding-claude-code | coding-codex |
+	// coding-opencode | coding-hermes | crewai | langgraph).
 	ArgAgentBaseTemplate = "base-template"
+
+	// ArgAgentTemplate selects the sandbox template a session runs on: a
+	// platform template or one of the team's own, since the two share a
+	// namespace server-side and a team template of the same name wins. Distinct
+	// from ArgAgentBaseTemplate, which is a build input rather than a runtime
+	// selection.
+	ArgAgentTemplate = "template"
 
 	// ArgAgentSourceOCIRef is the customer OCI image used as template input.
 	ArgAgentSourceOCIRef = "source-oci-ref"

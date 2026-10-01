@@ -198,6 +198,28 @@ env:
 	assert.Contains(t, v.Errors[0], "reserved")
 }
 
+// MARSOHS-1627: NBSP-prefixed top-level keys (docs copy-paste) must fail
+// locally with an actionable message, not an opaque API contracts/ hint.
+func TestValidateAgentManifest_TopLevelKeyWhitespace(t *testing.T) {
+	manifest := "agent: opencode\n" + "\u00a0\u00a0HARNESS_INFERENCE_API_KEY: x\n"
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	joined := joinStrings(v.Errors)
+	assert.Contains(t, joined, "HARNESS_INFERENCE_API_KEY")
+	assert.Contains(t, joined, "whitespace")
+	assert.Contains(t, joined, "copy-paste")
+	assert.NotContains(t, joined, "contracts/")
+}
+
+func TestValidateAgentManifest_EnvKeyWhitespace(t *testing.T) {
+	manifest := "agent: opencode\nenv:\n  \u00a0\u00a0HARNESS_INFERENCE_API_KEY: x\n"
+	v := validateAgentManifest([]byte(manifest))
+	require.False(t, v.ok())
+	joined := joinStrings(v.Errors)
+	assert.Contains(t, joined, "env.HARNESS_INFERENCE_API_KEY")
+	assert.Contains(t, joined, "whitespace")
+}
+
 func TestValidateAgentManifest_ModelVsHarnessInferenceWarns(t *testing.T) {
 	const manifest = `agent: opencode
 env:

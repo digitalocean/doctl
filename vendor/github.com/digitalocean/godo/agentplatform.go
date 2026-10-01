@@ -156,10 +156,10 @@ const (
 	EvaluationDatasetTypeModel   EvaluationDatasetType = "EVALUATION_DATASET_TYPE_MODEL"
 )
 
-// GradientAIService is an interface for interfacing with the Gradient AI Agent endpoints
+// AgentPlatformService is an interface for interfacing with the Agent Platform Agent endpoints
 // of the DigitalOcean API.
-// See https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform for more details.
-type GradientAIService interface {
+// See https://docs.digitalocean.com/reference/api/digitalocean/#tag/Agent-Platform-API for more details.
+type AgentPlatformService interface {
 	ListAgents(context.Context, *ListOptions) ([]*Agent, *Response, error)
 	CreateAgent(context.Context, *AgentCreateRequest) (*Agent, *Response, error)
 	ListAgentAPIKeys(context.Context, string, *ListOptions) ([]*ApiKeyInfo, *Response, error)
@@ -261,10 +261,10 @@ type GradientAIService interface {
 	GetSimulationJourneyTrajectory(ctx context.Context, runUUID, journeyUUID string) (*SimulationTrajectory, *Response, error)
 }
 
-var _ GradientAIService = &GradientAIServiceOp{}
+var _ AgentPlatformService = &AgentPlatformServiceOp{}
 
-// GradientAIServiceOp interfaces with the Gradient AI Service endpoints in the DigitalOcean API.
-type GradientAIServiceOp struct {
+// AgentPlatformServiceOp interfaces with the Agent Platform Service endpoints in the DigitalOcean API.
+type AgentPlatformServiceOp struct {
 	client *Client
 }
 
@@ -319,7 +319,7 @@ type openaiAPIKeyRoot struct {
 	OpenAIAPIKey *OpenAiApiKey `json:"api_key_info,omitempty"`
 }
 
-// Agent represents a Gradient AI Agent
+// Agent represents an Agent Platform Agent
 type Agent struct {
 	AnthropicApiKey         *AnthropicApiKeyInfo      `json:"anthropic_api_key,omitempty"`
 	ApiKeyInfos             []*ApiKeyInfo             `json:"api_key_infos,omitempty"`
@@ -364,7 +364,7 @@ type Agent struct {
 	Workspace               Workspace                 `json:"workspace,omitempty"`
 }
 
-// AgentVersion represents a version of a Gradient AI Agent
+// AgentVersion represents a version of an Agent Platform Agent
 type AgentVersion struct {
 	AgentUuid              string                `json:"agent_uuid,omitempty"`
 	AttachedChildAgents    []*AttachedChildAgent `json:"attached_child_agents,omitempty"`
@@ -415,13 +415,13 @@ type AuditHeader struct {
 	UserUUID          string `json:"user_uuid,omitempty"`
 }
 
-// RollbackVersionRequest represents the request to rollback a Gradient AI Agent to a previous version
+// RollbackVersionRequest represents the request to rollback an Agent Platform Agent to a previous version
 type RollbackVersionRequest struct {
 	AgentUuid   string `json:"uuid,omitempty"`
 	VersionHash string `json:"version_hash,omitempty"`
 }
 
-// AgentFunction represents a Gradient AI Agent Function
+// AgentFunction represents an Agent Platform Agent Function
 type AgentFunction struct {
 	ApiKey        string     `json:"api_key,omitempty"`
 	CreatedAt     *Timestamp `json:"created_at,omitempty"`
@@ -436,7 +436,7 @@ type AgentFunction struct {
 	IsDeleted     bool       `json:"is_deleted,omitempty"`
 }
 
-// AgentGuardrail represents a Guardrail attached to Gradient AI Agent
+// AgentGuardrail represents a Guardrail attached to Agent Platform Agent
 type AgentGuardrail struct {
 	AgentUuid       string     `json:"agent_uuid,omitempty"`
 	CreatedAt       *Timestamp `json:"created_at,omitempty"`
@@ -494,7 +494,7 @@ type AgentVisibilityUpdateRequest struct {
 	Visibility string `json:"visibility,omitempty"`
 }
 
-// AgentTemplate represents the template of a Gradient AI Agent
+// AgentTemplate represents the template of an Agent Platform Agent
 type AgentTemplate struct {
 	CreatedAt      *Timestamp       `json:"created_at,omitempty"`
 	Instruction    string           `json:"instruction,omitempty"`
@@ -652,7 +652,7 @@ type StarMetric struct {
 	SuccessThreshold    *float32 `json:"success_threshold,omitempty"`
 }
 
-// KnowledgeBase represents a Gradient AI Knowledge Base
+// KnowledgeBase represents an Agent Platform Knowledge Base
 type KnowledgeBase struct {
 	AddedToAgentAt     *Timestamp       `json:"added_to_agent_at,omitempty"`
 	CreatedAt          *Timestamp       `json:"created_at,omitempty"`
@@ -670,7 +670,7 @@ type KnowledgeBase struct {
 	IsDeleted          bool             `json:"is_deleted,omitempty"`
 }
 
-// LastIndexingJob represents the last indexing job description of a Gradient AI Knowledge Base
+// LastIndexingJob represents the last indexing job description of an Agent Platform Knowledge Base
 type LastIndexingJob struct {
 	CompletedDatasources int        `json:"completed_datasources,omitempty"`
 	CreatedAt            *Timestamp `json:"created_at,omitempty"`
@@ -733,7 +733,7 @@ type AgentChatbotIdentifier struct {
 	AgentChatbotIdentifier string `json:"agent_chatbot_identifier,omitempty"`
 }
 
-// AgentDeployment represents the deployment information of a Gradient AI Agent
+// AgentDeployment represents the deployment information of an Agent Platform Agent
 type AgentDeployment struct {
 	CreatedAt  *Timestamp `json:"created_at,omitempty"`
 	Name       string     `json:"name,omitempty"`
@@ -744,7 +744,7 @@ type AgentDeployment struct {
 	Visibility string     `json:"visibility,omitempty"`
 }
 
-// ChatBot represents the chatbot information of a Gradient AI Agent
+// ChatBot represents the chatbot information of an Agent Platform Agent
 type ChatBot struct {
 	ButtonBackgroundColor string `json:"button_background_color,omitempty"`
 	Logo                  string `json:"logo,omitempty"`
@@ -754,7 +754,7 @@ type ChatBot struct {
 	StartingMessage       string `json:"starting_message,omitempty"`
 }
 
-// Model represents a Gradient AI Model
+// Model represents an Agent Platform Model
 type Model struct {
 	Agreement         *Agreement       `json:"agreement,omitempty"`
 	BenchmarkScore    json.RawMessage  `json:"benchmark_score,omitempty"`
@@ -787,7 +787,7 @@ type ModelModalities struct {
 	Output []string `json:"output,omitempty"`
 }
 
-// Agreement represents the agreement information of a Gradient AI Model
+// Agreement represents the agreement information of an Agent Platform Model
 type Agreement struct {
 	Description string `json:"description,omitempty"`
 	Name        string `json:"name,omitempty"`
@@ -819,7 +819,7 @@ type ModelPricing struct {
 	ImageCacheReadInputPricePerMillion float64 `json:"image_cache_read_input_price_per_million,omitempty"`
 }
 
-// AgentCreateRequest represents the request to create a new Gradient AI Agent
+// AgentCreateRequest represents the request to create a new Agent Platform Agent
 type AgentCreateRequest struct {
 	AnthropicKeyUuid     string   `json:"anthropic_key_uuid,omitempty"`
 	Description          string   `json:"description,omitempty"`
@@ -835,13 +835,13 @@ type AgentCreateRequest struct {
 	WorkspaceUuid        string   `json:"workspace_uuid,omitempty"`
 }
 
-// AgentAPIKeyCreateRequest represents the request to create a new Gradient AI Agent API Key
+// AgentAPIKeyCreateRequest represents the request to create a new Agent Platform Agent API Key
 type AgentAPIKeyCreateRequest struct {
 	AgentUuid string `json:"agent_uuid,omitempty"`
 	Name      string `json:"name,omitempty"`
 }
 
-// AgentUpdateRequest represents the request to update an existing Gradient AI Agent
+// AgentUpdateRequest represents the request to update an existing Agent Platform Agent
 type AgentUpdateRequest struct {
 	AnthropicKeyUuid string   `json:"anthropic_key_uuid,omitempty"`
 	Description      string   `json:"description,omitempty"`
@@ -861,7 +861,7 @@ type AgentUpdateRequest struct {
 	ProvideCitations bool     `json:"provide_citations,omitempty"`
 }
 
-// AgentAPIKeyUpdateRequest represents the request to update an existing Gradient AI Agent API Key
+// AgentAPIKeyUpdateRequest represents the request to update an existing Agent Platform Agent API Key
 type AgentAPIKeyUpdateRequest struct {
 	AgentUuid  string `json:"agent_uuid,omitempty"`
 	APIKeyUuid string `json:"api_key_uuid,omitempty"`
@@ -901,7 +901,7 @@ type KnowledgeBaseCreateRequest struct {
 	VPCUuid            string                    `json:"vpc_uuid"`
 }
 
-// KnowledgeBaseDataSource represents a Gradient AI Knowledge Base Data Source
+// KnowledgeBaseDataSource represents an Agent Platform Knowledge Base Data Source
 type KnowledgeBaseDataSource struct {
 	CreatedAt            *Timestamp            `json:"created_at,omitempty"`
 	FileUploadDataSource *FileUploadDataSource `json:"file_upload_data_source,omitempty"`
@@ -1143,8 +1143,8 @@ type gradientAgentKBRoot struct {
 	Agent *Agent `json:"agent"`
 }
 
-// ListAgents returns a list of Gradient AI Agents
-func (s *GradientAIServiceOp) ListAgents(ctx context.Context, opt *ListOptions) ([]*Agent, *Response, error) {
+// ListAgents returns a list of Agent Platform Agents
+func (s *AgentPlatformServiceOp) ListAgents(ctx context.Context, opt *ListOptions) ([]*Agent, *Response, error) {
 	path, err := addOptions(gradientBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -1169,8 +1169,8 @@ func (s *GradientAIServiceOp) ListAgents(ctx context.Context, opt *ListOptions) 
 	return root.Agents, resp, nil
 }
 
-// CreateAgent creates a new Gradient AI Agent by providing the AgentCreateRequest object
-func (s *GradientAIServiceOp) CreateAgent(ctx context.Context, create *AgentCreateRequest) (*Agent, *Response, error) {
+// CreateAgent creates a new Agent Platform Agent by providing the AgentCreateRequest object
+func (s *AgentPlatformServiceOp) CreateAgent(ctx context.Context, create *AgentCreateRequest) (*Agent, *Response, error) {
 	path := gradientBasePath
 	if create.ProjectId == "" {
 		return nil, nil, fmt.Errorf("Project ID is required")
@@ -1202,8 +1202,8 @@ func (s *GradientAIServiceOp) CreateAgent(ctx context.Context, create *AgentCrea
 	return root.Agent, resp, nil
 }
 
-// ListAgentAPIKeys retrieves list of API Keys associated with the specified Gradient AI agent
-func (s *GradientAIServiceOp) ListAgentAPIKeys(ctx context.Context, agentId string, opt *ListOptions) ([]*ApiKeyInfo, *Response, error) {
+// ListAgentAPIKeys retrieves list of API Keys associated with the specified Agent Platform agent
+func (s *AgentPlatformServiceOp) ListAgentAPIKeys(ctx context.Context, agentId string, opt *ListOptions) ([]*ApiKeyInfo, *Response, error) {
 	path := fmt.Sprintf("%s/%s/api_keys", gradientBasePath, agentId)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -1226,8 +1226,8 @@ func (s *GradientAIServiceOp) ListAgentAPIKeys(ctx context.Context, agentId stri
 	return root.ApiKeys, resp, nil
 }
 
-// CreateAgentAPIKey creates a new API key for the specified Gradient AI agent
-func (s *GradientAIServiceOp) CreateAgentAPIKey(ctx context.Context, agentId string, createRequest *AgentAPIKeyCreateRequest) (*ApiKeyInfo, *Response, error) {
+// CreateAgentAPIKey creates a new API key for the specified Agent Platform agent
+func (s *AgentPlatformServiceOp) CreateAgentAPIKey(ctx context.Context, agentId string, createRequest *AgentAPIKeyCreateRequest) (*ApiKeyInfo, *Response, error) {
 	path := fmt.Sprintf("%s/%s/api_keys", gradientBasePath, agentId)
 
 	createRequest.AgentUuid = agentId
@@ -1246,8 +1246,8 @@ func (s *GradientAIServiceOp) CreateAgentAPIKey(ctx context.Context, agentId str
 	return root.ApiKey, resp, err
 }
 
-// UpdateAgentAPIKey updates an existing API key for the specified Gradient AI agent
-func (s *GradientAIServiceOp) UpdateAgentAPIKey(ctx context.Context, agentId, apiKeyId string, updateRequest *AgentAPIKeyUpdateRequest) (*ApiKeyInfo, *Response, error) {
+// UpdateAgentAPIKey updates an existing API key for the specified Agent Platform agent
+func (s *AgentPlatformServiceOp) UpdateAgentAPIKey(ctx context.Context, agentId, apiKeyId string, updateRequest *AgentAPIKeyUpdateRequest) (*ApiKeyInfo, *Response, error) {
 	path := fmt.Sprintf("%s/%s/api_keys/%s", gradientBasePath, agentId, apiKeyId)
 
 	updateRequest.AgentUuid = agentId
@@ -1266,8 +1266,8 @@ func (s *GradientAIServiceOp) UpdateAgentAPIKey(ctx context.Context, agentId, ap
 	return root.ApiKey, resp, nil
 }
 
-// DeleteAgentAPIKey deletes an existing API key for the specified Gradient AI agent
-func (s *GradientAIServiceOp) DeleteAgentAPIKey(ctx context.Context, agentId, apiKeyId string) (*ApiKeyInfo, *Response, error) {
+// DeleteAgentAPIKey deletes an existing API key for the specified Agent Platform agent
+func (s *AgentPlatformServiceOp) DeleteAgentAPIKey(ctx context.Context, agentId, apiKeyId string) (*ApiKeyInfo, *Response, error) {
 	path := fmt.Sprintf("%s/%s/api_keys/%s", gradientBasePath, agentId, apiKeyId)
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
@@ -1284,8 +1284,8 @@ func (s *GradientAIServiceOp) DeleteAgentAPIKey(ctx context.Context, agentId, ap
 	return root.ApiKey, resp, nil
 }
 
-// RegenerateAgentAPIKey regenerates an API key for the specified Gradient AI agent
-func (s *GradientAIServiceOp) RegenerateAgentAPIKey(ctx context.Context, agentId, apiKeyId string) (*ApiKeyInfo, *Response, error) {
+// RegenerateAgentAPIKey regenerates an API key for the specified Agent Platform agent
+func (s *AgentPlatformServiceOp) RegenerateAgentAPIKey(ctx context.Context, agentId, apiKeyId string) (*ApiKeyInfo, *Response, error) {
 	path := fmt.Sprintf("%s/%s/api_keys/%s/regenerate", gradientBasePath, agentId, apiKeyId)
 
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, nil)
@@ -1302,8 +1302,8 @@ func (s *GradientAIServiceOp) RegenerateAgentAPIKey(ctx context.Context, agentId
 	return root.ApiKey, resp, nil
 }
 
-// GetAgent returns the details of a Gradient AI Agent based on the Agent UUID
-func (s *GradientAIServiceOp) GetAgent(ctx context.Context, id string) (*Agent, *Response, error) {
+// GetAgent returns the details of an Agent Platform Agent based on the Agent UUID
+func (s *AgentPlatformServiceOp) GetAgent(ctx context.Context, id string) (*Agent, *Response, error) {
 	path := fmt.Sprintf("%s/%s", gradientBasePath, id)
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
@@ -1320,8 +1320,8 @@ func (s *GradientAIServiceOp) GetAgent(ctx context.Context, id string) (*Agent, 
 	return root.Agent, resp, nil
 }
 
-// UpdateAgent function updates a Gradient AI Agent properties for the given UUID
-func (s *GradientAIServiceOp) UpdateAgent(ctx context.Context, id string, update *AgentUpdateRequest) (*Agent, *Response, error) {
+// UpdateAgent function updates an Agent Platform Agent properties for the given UUID
+func (s *AgentPlatformServiceOp) UpdateAgent(ctx context.Context, id string, update *AgentUpdateRequest) (*Agent, *Response, error) {
 	path := fmt.Sprintf("%s/%s", gradientBasePath, id)
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, update)
 	if err != nil {
@@ -1337,8 +1337,8 @@ func (s *GradientAIServiceOp) UpdateAgent(ctx context.Context, id string, update
 	return root.Agent, resp, nil
 }
 
-// DeleteAgent function deletes a Gradient AI Agent by its corresponding UUID
-func (s *GradientAIServiceOp) DeleteAgent(ctx context.Context, id string) (*Agent, *Response, error) {
+// DeleteAgent function deletes an Agent Platform Agent by its corresponding UUID
+func (s *AgentPlatformServiceOp) DeleteAgent(ctx context.Context, id string) (*Agent, *Response, error) {
 	path := fmt.Sprintf("%s/%s", gradientBasePath, id)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
@@ -1354,8 +1354,8 @@ func (s *GradientAIServiceOp) DeleteAgent(ctx context.Context, id string) (*Agen
 	return root.Agent, resp, nil
 }
 
-// UpdateAgentVisibility function updates a Gradient AI Agent status by changing visibility to public or private.
-func (s *GradientAIServiceOp) UpdateAgentVisibility(ctx context.Context, id string, update *AgentVisibilityUpdateRequest) (*Agent, *Response, error) {
+// UpdateAgentVisibility function updates an Agent Platform Agent status by changing visibility to public or private.
+func (s *AgentPlatformServiceOp) UpdateAgentVisibility(ctx context.Context, id string, update *AgentVisibilityUpdateRequest) (*Agent, *Response, error) {
 	path := fmt.Sprintf("%s/%s/deployment_visibility", gradientBasePath, id)
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, update)
 	if err != nil {
@@ -1372,7 +1372,7 @@ func (s *GradientAIServiceOp) UpdateAgentVisibility(ctx context.Context, id stri
 }
 
 // List all knowledge bases
-func (s *GradientAIServiceOp) ListKnowledgeBases(ctx context.Context, opt *ListOptions) ([]KnowledgeBase, *Response, error) {
+func (s *AgentPlatformServiceOp) ListKnowledgeBases(ctx context.Context, opt *ListOptions) ([]KnowledgeBase, *Response, error) {
 
 	path := KnowledgeBasePath
 	path, err := addOptions(path, opt)
@@ -1400,7 +1400,7 @@ func (s *GradientAIServiceOp) ListKnowledgeBases(ctx context.Context, opt *ListO
 }
 
 // ListIndexingJobs returns a list of all indexing jobs for knowledge bases
-func (s *GradientAIServiceOp) ListIndexingJobs(ctx context.Context, opt *ListOptions) (*IndexingJobsResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListIndexingJobs(ctx context.Context, opt *ListOptions) (*IndexingJobsResponse, *Response, error) {
 	path := IndexingJobsPath
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -1434,7 +1434,7 @@ func (s *GradientAIServiceOp) ListIndexingJobs(ctx context.Context, opt *ListOpt
 }
 
 // ListIndexingJobDataSources returns the data sources for a specific indexing job
-func (s *GradientAIServiceOp) ListIndexingJobDataSources(ctx context.Context, indexingJobUUID string) (*IndexingJobDataSourcesResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListIndexingJobDataSources(ctx context.Context, indexingJobUUID string) (*IndexingJobDataSourcesResponse, *Response, error) {
 	path := fmt.Sprintf(IndexingJobDataSourcesPath, indexingJobUUID)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -1451,7 +1451,7 @@ func (s *GradientAIServiceOp) ListIndexingJobDataSources(ctx context.Context, in
 }
 
 // GetIndexingJob retrieves the status of a specific indexing job for a knowledge base
-func (s *GradientAIServiceOp) GetIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) GetIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error) {
 	path := fmt.Sprintf(IndexingJobByIDPath, indexingJobUUID)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -1468,7 +1468,7 @@ func (s *GradientAIServiceOp) GetIndexingJob(ctx context.Context, indexingJobUUI
 }
 
 // CancelIndexingJob cancels a specific indexing job for a knowledge base
-func (s *GradientAIServiceOp) CancelIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) CancelIndexingJob(ctx context.Context, indexingJobUUID string) (*IndexingJobResponse, *Response, error) {
 	path := fmt.Sprintf(IndexingJobCancelPath, indexingJobUUID)
 
 	// Create the request payload
@@ -1491,7 +1491,7 @@ func (s *GradientAIServiceOp) CancelIndexingJob(ctx context.Context, indexingJob
 }
 
 // Create a knowledge base
-func (s *GradientAIServiceOp) CreateKnowledgeBase(ctx context.Context, knowledgeBaseCreate *KnowledgeBaseCreateRequest) (*KnowledgeBase, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateKnowledgeBase(ctx context.Context, knowledgeBaseCreate *KnowledgeBaseCreateRequest) (*KnowledgeBase, *Response, error) {
 
 	path := KnowledgeBasePath
 
@@ -1533,7 +1533,7 @@ func (s *GradientAIServiceOp) CreateKnowledgeBase(ctx context.Context, knowledge
 }
 
 // List Data Sources for a Knowledge Base
-func (s *GradientAIServiceOp) ListKnowledgeBaseDataSources(ctx context.Context, knowledgeBaseID string, opt *ListOptions) ([]KnowledgeBaseDataSource, *Response, error) {
+func (s *AgentPlatformServiceOp) ListKnowledgeBaseDataSources(ctx context.Context, knowledgeBaseID string, opt *ListOptions) ([]KnowledgeBaseDataSource, *Response, error) {
 
 	path := fmt.Sprintf(KnowledgeBaseDataSourcesPath, knowledgeBaseID)
 	path, err := addOptions(path, opt)
@@ -1559,7 +1559,7 @@ func (s *GradientAIServiceOp) ListKnowledgeBaseDataSources(ctx context.Context, 
 }
 
 // Add Data Source to a Knowledge Base
-func (s *GradientAIServiceOp) AddKnowledgeBaseDataSource(ctx context.Context, knowledgeBaseID string, addDataSource *AddKnowledgeBaseDataSourceRequest) (*KnowledgeBaseDataSource, *Response, error) {
+func (s *AgentPlatformServiceOp) AddKnowledgeBaseDataSource(ctx context.Context, knowledgeBaseID string, addDataSource *AddKnowledgeBaseDataSourceRequest) (*KnowledgeBaseDataSource, *Response, error) {
 	path := fmt.Sprintf(KnowledgeBaseDataSourcesPath, knowledgeBaseID)
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, addDataSource)
 	if err != nil {
@@ -1574,7 +1574,7 @@ func (s *GradientAIServiceOp) AddKnowledgeBaseDataSource(ctx context.Context, kn
 }
 
 // Deletes data source from a knowledge base
-func (s *GradientAIServiceOp) DeleteKnowledgeBaseDataSource(ctx context.Context, knowledgeBaseID string, dataSourceID string) (string, string, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteKnowledgeBaseDataSource(ctx context.Context, knowledgeBaseID string, dataSourceID string) (string, string, *Response, error) {
 
 	path := fmt.Sprintf(DeleteDataSourcePath, knowledgeBaseID, dataSourceID)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
@@ -1594,7 +1594,7 @@ func (s *GradientAIServiceOp) DeleteKnowledgeBaseDataSource(ctx context.Context,
 
 // Get information about a KnowledgeBase and its Database status
 // Database status can be "CREATING","ONLINE","POWEROFF","REBUILDING","REBALANCING","DECOMMISSIONED","FORKING","MIGRATING","RESIZING","RESTORING","POWERING_ON","UNHEALTHY"
-func (s *GradientAIServiceOp) GetKnowledgeBase(ctx context.Context, knowledgeBaseID string) (*KnowledgeBase, string, *Response, error) {
+func (s *AgentPlatformServiceOp) GetKnowledgeBase(ctx context.Context, knowledgeBaseID string) (*KnowledgeBase, string, *Response, error) {
 	path := fmt.Sprintf(GetKnowledgeBaseByIDPath, knowledgeBaseID)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 
@@ -1611,7 +1611,7 @@ func (s *GradientAIServiceOp) GetKnowledgeBase(ctx context.Context, knowledgeBas
 }
 
 // Update a knowledge base
-func (s *GradientAIServiceOp) UpdateKnowledgeBase(ctx context.Context, knowledgeBaseID string, update *UpdateKnowledgeBaseRequest) (*KnowledgeBase, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateKnowledgeBase(ctx context.Context, knowledgeBaseID string, update *UpdateKnowledgeBaseRequest) (*KnowledgeBase, *Response, error) {
 	path := fmt.Sprintf(UpdateKnowledgeBaseByIDPath, knowledgeBaseID)
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, update)
 	if err != nil {
@@ -1628,7 +1628,7 @@ func (s *GradientAIServiceOp) UpdateKnowledgeBase(ctx context.Context, knowledge
 }
 
 // Deletes a knowledge base by its corresponding UUID and returns the UUID of the deleted knowledge base
-func (s *GradientAIServiceOp) DeleteKnowledgeBase(ctx context.Context, knowledgeBaseID string) (string, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteKnowledgeBase(ctx context.Context, knowledgeBaseID string) (string, *Response, error) {
 
 	path := fmt.Sprintf(DeleteKnowledgeBaseByIDPath, knowledgeBaseID)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
@@ -1646,7 +1646,7 @@ func (s *GradientAIServiceOp) DeleteKnowledgeBase(ctx context.Context, knowledge
 }
 
 // Attach a knowledge base to an agent
-func (s *GradientAIServiceOp) AttachKnowledgeBaseToAgent(ctx context.Context, agentID string, knowledgeBaseID string) (*Agent, *Response, error) {
+func (s *AgentPlatformServiceOp) AttachKnowledgeBaseToAgent(ctx context.Context, agentID string, knowledgeBaseID string) (*Agent, *Response, error) {
 
 	path := fmt.Sprintf(AgentKnowledgeBasePath, agentID, knowledgeBaseID)
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, nil)
@@ -1664,7 +1664,7 @@ func (s *GradientAIServiceOp) AttachKnowledgeBaseToAgent(ctx context.Context, ag
 }
 
 // Detach a knowledge base from an agent
-func (s *GradientAIServiceOp) DetachKnowledgeBaseToAgent(ctx context.Context, agentID string, knowledgeBaseID string) (*Agent, *Response, error) {
+func (s *AgentPlatformServiceOp) DetachKnowledgeBaseToAgent(ctx context.Context, agentID string, knowledgeBaseID string) (*Agent, *Response, error) {
 
 	path := fmt.Sprintf(AgentKnowledgeBasePath, agentID, knowledgeBaseID)
 
@@ -1681,7 +1681,7 @@ func (s *GradientAIServiceOp) DetachKnowledgeBaseToAgent(ctx context.Context, ag
 }
 
 // AddAgentRoute function adds a route between a parent and child agent.
-func (s *GradientAIServiceOp) AddAgentRoute(ctx context.Context, parentId string, childId string, route *AgentRouteCreateRequest) (*AgentRouteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) AddAgentRoute(ctx context.Context, parentId string, childId string, route *AgentRouteCreateRequest) (*AgentRouteResponse, *Response, error) {
 	path := fmt.Sprintf(agentRouteBasePath, parentId, childId)
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, route)
 	if err != nil {
@@ -1698,7 +1698,7 @@ func (s *GradientAIServiceOp) AddAgentRoute(ctx context.Context, parentId string
 }
 
 // UpdateAgentRoute function updates a route between a parent and child agent.
-func (s *GradientAIServiceOp) UpdateAgentRoute(ctx context.Context, parentId string, childId string, route *AgentRouteUpdateRequest) (*AgentRouteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateAgentRoute(ctx context.Context, parentId string, childId string, route *AgentRouteUpdateRequest) (*AgentRouteResponse, *Response, error) {
 	path := fmt.Sprintf(agentRouteBasePath, parentId, childId)
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, route)
 	if err != nil {
@@ -1715,7 +1715,7 @@ func (s *GradientAIServiceOp) UpdateAgentRoute(ctx context.Context, parentId str
 }
 
 // DeleteAgentRoute function deletes a route between a parent and child agent.
-func (s *GradientAIServiceOp) DeleteAgentRoute(ctx context.Context, parentId string, childId string) (*AgentRouteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteAgentRoute(ctx context.Context, parentId string, childId string) (*AgentRouteResponse, *Response, error) {
 	path := fmt.Sprintf(agentRouteBasePath, parentId, childId)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
@@ -1731,8 +1731,8 @@ func (s *GradientAIServiceOp) DeleteAgentRoute(ctx context.Context, parentId str
 	return root, resp, nil
 }
 
-// ListAgentVersions retrieves a list of versions for the specified GradientAI agent
-func (s *GradientAIServiceOp) ListAgentVersions(ctx context.Context, agentId string, opt *ListOptions) ([]*AgentVersion, *Response, error) {
+// ListAgentVersions retrieves a list of versions for the specified Agent Platform agent
+func (s *AgentPlatformServiceOp) ListAgentVersions(ctx context.Context, agentId string, opt *ListOptions) ([]*AgentVersion, *Response, error) {
 	path := fmt.Sprintf("%s/%s/versions", gradientBasePath, agentId)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -1753,7 +1753,7 @@ func (s *GradientAIServiceOp) ListAgentVersions(ctx context.Context, agentId str
 	return root.AgentVersions, resp, nil
 }
 
-func (s *GradientAIServiceOp) RollbackAgentVersion(ctx context.Context, agentId string, versionId string) (string, *Response, error) {
+func (s *AgentPlatformServiceOp) RollbackAgentVersion(ctx context.Context, agentId string, versionId string) (string, *Response, error) {
 	path := fmt.Sprintf("%s/%s/versions", gradientBasePath, agentId)
 	req, err := s.client.NewRequest(ctx, http.MethodPut, path, RollbackVersionRequest{
 		AgentUuid:   agentId,
@@ -1773,7 +1773,7 @@ func (s *GradientAIServiceOp) RollbackAgentVersion(ctx context.Context, agentId 
 }
 
 // ListAnthropicAPIKeys retrieves a list of Anthropic API Keys
-func (s *GradientAIServiceOp) ListAnthropicAPIKeys(ctx context.Context, opt *ListOptions) ([]*AnthropicApiKeyInfo, *Response, error) {
+func (s *AgentPlatformServiceOp) ListAnthropicAPIKeys(ctx context.Context, opt *ListOptions) ([]*AnthropicApiKeyInfo, *Response, error) {
 	path := AnthropicAPIKeysPath
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -1798,7 +1798,7 @@ func (s *GradientAIServiceOp) ListAnthropicAPIKeys(ctx context.Context, opt *Lis
 	return root.AnthropicApiKeys, resp, nil
 }
 
-func (s *GradientAIServiceOp) CreateAnthropicAPIKey(ctx context.Context, anthropicAPIKeyCreate *AnthropicAPIKeyCreateRequest) (*AnthropicApiKeyInfo, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateAnthropicAPIKey(ctx context.Context, anthropicAPIKeyCreate *AnthropicAPIKeyCreateRequest) (*AnthropicApiKeyInfo, *Response, error) {
 	path := AnthropicAPIKeysPath
 
 	if anthropicAPIKeyCreate.Name == "" {
@@ -1822,7 +1822,7 @@ func (s *GradientAIServiceOp) CreateAnthropicAPIKey(ctx context.Context, anthrop
 	return root.AnthropicApiKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) GetAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string) (*AnthropicApiKeyInfo, *Response, error) {
+func (s *AgentPlatformServiceOp) GetAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string) (*AnthropicApiKeyInfo, *Response, error) {
 	path := AnthropicAPIKeysPath + "/" + anthropicApiKeyId
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
@@ -1839,7 +1839,7 @@ func (s *GradientAIServiceOp) GetAnthropicAPIKey(ctx context.Context, anthropicA
 	return root.AnthropicApiKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) UpdateAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string, anthropicAPIKeyUpdate *AnthropicAPIKeyUpdateRequest) (*AnthropicApiKeyInfo, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string, anthropicAPIKeyUpdate *AnthropicAPIKeyUpdateRequest) (*AnthropicApiKeyInfo, *Response, error) {
 	path := AnthropicAPIKeysPath + "/" + anthropicApiKeyId
 
 	if anthropicAPIKeyUpdate.ApiKeyUuid == "" {
@@ -1863,7 +1863,7 @@ func (s *GradientAIServiceOp) UpdateAnthropicAPIKey(ctx context.Context, anthrop
 	return root.AnthropicApiKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) DeleteAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string) (*AnthropicApiKeyInfo, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string) (*AnthropicApiKeyInfo, *Response, error) {
 	path := AnthropicAPIKeysPath + "/" + anthropicApiKeyId
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
@@ -1880,7 +1880,7 @@ func (s *GradientAIServiceOp) DeleteAnthropicAPIKey(ctx context.Context, anthrop
 	return root.AnthropicApiKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) ListAgentsByAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string, opt *ListOptions) ([]*Agent, *Response, error) {
+func (s *AgentPlatformServiceOp) ListAgentsByAnthropicAPIKey(ctx context.Context, anthropicApiKeyId string, opt *ListOptions) ([]*Agent, *Response, error) {
 	path := fmt.Sprintf("%s/%s/agents", AnthropicAPIKeysPath, anthropicApiKeyId)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -1905,7 +1905,7 @@ func (s *GradientAIServiceOp) ListAgentsByAnthropicAPIKey(ctx context.Context, a
 	return root.Agents, resp, nil
 }
 
-func (s *GradientAIServiceOp) ListOpenAIAPIKeys(ctx context.Context, opt *ListOptions) ([]*OpenAiApiKey, *Response, error) {
+func (s *AgentPlatformServiceOp) ListOpenAIAPIKeys(ctx context.Context, opt *ListOptions) ([]*OpenAiApiKey, *Response, error) {
 	path := OpenAIAPIKeysPath
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -1931,7 +1931,7 @@ func (s *GradientAIServiceOp) ListOpenAIAPIKeys(ctx context.Context, opt *ListOp
 	return root.OpenAIApiKeys, resp, nil
 }
 
-func (s *GradientAIServiceOp) CreateOpenAIAPIKey(ctx context.Context, openaiAPIKeyCreate *OpenAIAPIKeyCreateRequest) (*OpenAiApiKey, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateOpenAIAPIKey(ctx context.Context, openaiAPIKeyCreate *OpenAIAPIKeyCreateRequest) (*OpenAiApiKey, *Response, error) {
 	path := OpenAIAPIKeysPath
 
 	if openaiAPIKeyCreate.Name == "" {
@@ -1955,7 +1955,7 @@ func (s *GradientAIServiceOp) CreateOpenAIAPIKey(ctx context.Context, openaiAPIK
 	return root.OpenAIAPIKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) GetOpenAIAPIKey(ctx context.Context, openaiApiKeyId string) (*OpenAiApiKey, *Response, error) {
+func (s *AgentPlatformServiceOp) GetOpenAIAPIKey(ctx context.Context, openaiApiKeyId string) (*OpenAiApiKey, *Response, error) {
 	path := OpenAIAPIKeysPath + "/" + openaiApiKeyId
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
@@ -1972,7 +1972,7 @@ func (s *GradientAIServiceOp) GetOpenAIAPIKey(ctx context.Context, openaiApiKeyI
 	return root.OpenAIAPIKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) UpdateOpenAIAPIKey(ctx context.Context, openaiApiKeyId string, openaiAPIKeyUpdate *OpenAIAPIKeyUpdateRequest) (*OpenAiApiKey, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateOpenAIAPIKey(ctx context.Context, openaiApiKeyId string, openaiAPIKeyUpdate *OpenAIAPIKeyUpdateRequest) (*OpenAiApiKey, *Response, error) {
 	path := OpenAIAPIKeysPath + "/" + openaiApiKeyId
 
 	if openaiAPIKeyUpdate.ApiKeyUuid == "" {
@@ -1996,7 +1996,7 @@ func (s *GradientAIServiceOp) UpdateOpenAIAPIKey(ctx context.Context, openaiApiK
 	return root.OpenAIAPIKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) DeleteOpenAIAPIKey(ctx context.Context, openaiApiKeyId string) (*OpenAiApiKey, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteOpenAIAPIKey(ctx context.Context, openaiApiKeyId string) (*OpenAiApiKey, *Response, error) {
 	path := OpenAIAPIKeysPath + "/" + openaiApiKeyId
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
@@ -2013,7 +2013,7 @@ func (s *GradientAIServiceOp) DeleteOpenAIAPIKey(ctx context.Context, openaiApiK
 	return root.OpenAIAPIKey, resp, nil
 }
 
-func (s *GradientAIServiceOp) ListAgentsByOpenAIAPIKey(ctx context.Context, openaiApiKeyId string, opt *ListOptions) ([]*Agent, *Response, error) {
+func (s *AgentPlatformServiceOp) ListAgentsByOpenAIAPIKey(ctx context.Context, openaiApiKeyId string, opt *ListOptions) ([]*Agent, *Response, error) {
 	path := fmt.Sprintf("%s/%s/agents", OpenAIAPIKeysPath, openaiApiKeyId)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -2039,7 +2039,7 @@ func (s *GradientAIServiceOp) ListAgentsByOpenAIAPIKey(ctx context.Context, open
 }
 
 // Attaches a functionroute to an agent.
-func (g *GradientAIServiceOp) CreateFunctionRoute(ctx context.Context, id string, create *FunctionRouteCreateRequest) (*Agent, *Response, error) {
+func (g *AgentPlatformServiceOp) CreateFunctionRoute(ctx context.Context, id string, create *FunctionRouteCreateRequest) (*Agent, *Response, error) {
 	path := fmt.Sprintf(functionRouteBasePath, id)
 
 	if create.AgentUuid == "" {
@@ -2077,7 +2077,7 @@ func (g *GradientAIServiceOp) CreateFunctionRoute(ctx context.Context, id string
 }
 
 // Deletes a functionroute to an agent.
-func (g *GradientAIServiceOp) DeleteFunctionRoute(ctx context.Context, agent_id string, function_id string) (*Agent, *Response, error) {
+func (g *AgentPlatformServiceOp) DeleteFunctionRoute(ctx context.Context, agent_id string, function_id string) (*Agent, *Response, error) {
 	path := fmt.Sprintf(UpdateFunctionRoutePath, agent_id, function_id)
 	req, err := g.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
@@ -2095,7 +2095,7 @@ func (g *GradientAIServiceOp) DeleteFunctionRoute(ctx context.Context, agent_id 
 }
 
 // Updates a functionroute to an agent.
-func (g *GradientAIServiceOp) UpdateFunctionRoute(ctx context.Context, agent_id string, function_id string, update *FunctionRouteUpdateRequest) (*Agent, *Response, error) {
+func (g *AgentPlatformServiceOp) UpdateFunctionRoute(ctx context.Context, agent_id string, function_id string, update *FunctionRouteUpdateRequest) (*Agent, *Response, error) {
 	path := fmt.Sprintf(UpdateFunctionRoutePath, agent_id, function_id)
 	req, err := g.client.NewRequest(ctx, http.MethodPut, path, update)
 	if err != nil {
@@ -2113,7 +2113,7 @@ func (g *GradientAIServiceOp) UpdateFunctionRoute(ctx context.Context, agent_id 
 }
 
 // ListInferenceRouters returns a page of inference routers.
-func (s *GradientAIServiceOp) ListInferenceRouters(ctx context.Context, opt *ListOptions) ([]*InferenceRouterSummary, *Response, error) {
+func (s *AgentPlatformServiceOp) ListInferenceRouters(ctx context.Context, opt *ListOptions) ([]*InferenceRouterSummary, *Response, error) {
 	path, err := addOptions(inferenceRoutersBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -2140,7 +2140,7 @@ func (s *GradientAIServiceOp) ListInferenceRouters(ctx context.Context, opt *Lis
 }
 
 // ListInferenceRouterTaskPresets returns a page of preset tasks for building inference router policies.
-func (s *GradientAIServiceOp) ListInferenceRouterTaskPresets(ctx context.Context, opt *ListOptions) ([]*InferenceRouterTaskPreset, *Response, error) {
+func (s *AgentPlatformServiceOp) ListInferenceRouterTaskPresets(ctx context.Context, opt *ListOptions) ([]*InferenceRouterTaskPreset, *Response, error) {
 	path, err := addOptions(inferenceRouterTaskPresetsPath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -2167,7 +2167,7 @@ func (s *GradientAIServiceOp) ListInferenceRouterTaskPresets(ctx context.Context
 }
 
 // GetInferenceRouter retrieves an inference router by UUID.
-func (s *GradientAIServiceOp) GetInferenceRouter(ctx context.Context, uuid string) (*InferenceRouter, *Response, error) {
+func (s *AgentPlatformServiceOp) GetInferenceRouter(ctx context.Context, uuid string) (*InferenceRouter, *Response, error) {
 	if uuid == "" {
 		return nil, nil, fmt.Errorf("uuid is required")
 	}
@@ -2188,7 +2188,7 @@ func (s *GradientAIServiceOp) GetInferenceRouter(ctx context.Context, uuid strin
 }
 
 // CreateInferenceRouter creates a new inference router.
-func (s *GradientAIServiceOp) CreateInferenceRouter(ctx context.Context, create *InferenceRouterCreateRequest) (*InferenceRouter, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateInferenceRouter(ctx context.Context, create *InferenceRouterCreateRequest) (*InferenceRouter, *Response, error) {
 	if create == nil {
 		return nil, nil, fmt.Errorf("create request is required")
 	}
@@ -2219,7 +2219,7 @@ func (s *GradientAIServiceOp) CreateInferenceRouter(ctx context.Context, create 
 }
 
 // UpdateInferenceRouter updates an inference router. At least one field in the update request must be set.
-func (s *GradientAIServiceOp) UpdateInferenceRouter(ctx context.Context, uuid string, update *InferenceRouterUpdateRequest) (*InferenceRouter, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateInferenceRouter(ctx context.Context, uuid string, update *InferenceRouterUpdateRequest) (*InferenceRouter, *Response, error) {
 	if uuid == "" {
 		return nil, nil, fmt.Errorf("uuid is required")
 	}
@@ -2246,7 +2246,7 @@ func (s *GradientAIServiceOp) UpdateInferenceRouter(ctx context.Context, uuid st
 }
 
 // DeleteInferenceRouter deletes an inference router by UUID.
-func (s *GradientAIServiceOp) DeleteInferenceRouter(ctx context.Context, uuid string) (*InferenceRouterDeleteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteInferenceRouter(ctx context.Context, uuid string) (*InferenceRouterDeleteResponse, *Response, error) {
 	if uuid == "" {
 		return nil, nil, fmt.Errorf("uuid is required")
 	}
@@ -2269,8 +2269,8 @@ func (s *GradientAIServiceOp) DeleteInferenceRouter(ctx context.Context, uuid st
 	return out, resp, nil
 }
 
-// ListAvailableModels returns a list of available Gradient AI models
-func (g *GradientAIServiceOp) ListAvailableModels(ctx context.Context, opt *ListOptions) ([]*Model, *Response, error) {
+// ListAvailableModels returns a list of available Agent Platform models
+func (g *AgentPlatformServiceOp) ListAvailableModels(ctx context.Context, opt *ListOptions) ([]*Model, *Response, error) {
 	path, err := addOptions(agentModelBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -2294,7 +2294,7 @@ func (g *GradientAIServiceOp) ListAvailableModels(ctx context.Context, opt *List
 }
 
 // MCPSearchModels searches available models by name and returns the list of matching UUIDs.
-func (g *GradientAIServiceOp) SearchModels(ctx context.Context, query string) ([]string, *Response, error) {
+func (g *AgentPlatformServiceOp) SearchModels(ctx context.Context, query string) ([]string, *Response, error) {
 	models, resp, err := g.ListAvailableModels(ctx, nil)
 	if err != nil {
 		return nil, resp, err
@@ -2312,7 +2312,7 @@ func (g *GradientAIServiceOp) SearchModels(ctx context.Context, query string) ([
 }
 
 // MCPSearchModelByUUID searches available models for a specific UUID and returns the model if it exists.
-func (g *GradientAIServiceOp) GetModelByUUID(ctx context.Context, uuid string) (*Model, *Response, error) {
+func (g *AgentPlatformServiceOp) GetModelByUUID(ctx context.Context, uuid string) (*Model, *Response, error) {
 	models, resp, err := g.ListAvailableModels(ctx, nil)
 	if err != nil {
 		return nil, resp, err
@@ -2327,8 +2327,8 @@ func (g *GradientAIServiceOp) GetModelByUUID(ctx context.Context, uuid string) (
 	return nil, resp, nil
 }
 
-// ListDatacenterRegions returns a list of available datacenter regions for Gradient AI services
-func (g *GradientAIServiceOp) ListDatacenterRegions(ctx context.Context, servesInference, servesBatch *bool) ([]*DatacenterRegions, *Response, error) {
+// ListDatacenterRegions returns a list of available datacenter regions for Agent Platform services
+func (g *AgentPlatformServiceOp) ListDatacenterRegions(ctx context.Context, servesInference, servesBatch *bool) ([]*DatacenterRegions, *Response, error) {
 	path := datacenterRegionsPath
 
 	var params []string
@@ -2495,7 +2495,7 @@ type customEvaluationMetricRoot struct {
 }
 
 // ListCustomModels returns the list of custom models for the team.
-func (s *GradientAIServiceOp) ListCustomModels(ctx context.Context, opt *CustomModelListOptions) (*CustomModelListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListCustomModels(ctx context.Context, opt *CustomModelListOptions) (*CustomModelListResponse, *Response, error) {
 	path, err := addOptions(customModelsBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -2521,7 +2521,7 @@ func (s *GradientAIServiceOp) ListCustomModels(ctx context.Context, opt *CustomM
 }
 
 // GetCustomModel retrieves a single custom model by UUID.
-func (s *GradientAIServiceOp) GetCustomModel(ctx context.Context, uuid string) (*CustomModel, *Response, error) {
+func (s *AgentPlatformServiceOp) GetCustomModel(ctx context.Context, uuid string) (*CustomModel, *Response, error) {
 	if uuid == "" {
 		return nil, nil, fmt.Errorf("uuid is required")
 	}
@@ -2541,7 +2541,7 @@ func (s *GradientAIServiceOp) GetCustomModel(ctx context.Context, uuid string) (
 }
 
 // ImportCustomModel imports a new custom model from a supported source (HuggingFace, Spaces, etc.).
-func (s *GradientAIServiceOp) ImportCustomModel(ctx context.Context, importRequest *CustomModelImportRequest) (*CustomModelImportResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ImportCustomModel(ctx context.Context, importRequest *CustomModelImportRequest) (*CustomModelImportResponse, *Response, error) {
 	if importRequest == nil {
 		return nil, nil, fmt.Errorf("import request is required")
 	}
@@ -2566,7 +2566,7 @@ func (s *GradientAIServiceOp) ImportCustomModel(ctx context.Context, importReque
 }
 
 // DeleteCustomModel deletes the custom model with the given UUID.
-func (s *GradientAIServiceOp) DeleteCustomModel(ctx context.Context, uuid string) (*CustomModelDeleteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteCustomModel(ctx context.Context, uuid string) (*CustomModelDeleteResponse, *Response, error) {
 	if uuid == "" {
 		return nil, nil, fmt.Errorf("uuid is required")
 	}
@@ -2640,7 +2640,7 @@ type ModelEvaluationPresetDeleteResponse struct{}
 // The run must be in a terminal status (successful, partially_successful, failed,
 // or cancelled). For runs still in progress, either wait for the run to finish or
 // cancel it, then retry the delete.
-func (s *GradientAIServiceOp) DeleteModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunDeleteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunDeleteResponse, *Response, error) {
 	if evalRunUUID == "" {
 		return nil, nil, fmt.Errorf("eval run uuid is required")
 	}
@@ -2661,7 +2661,7 @@ func (s *GradientAIServiceOp) DeleteModelEvaluationRun(ctx context.Context, eval
 
 // DeleteModelEvaluationPreset deletes the saved model evaluation preset with
 // the given UUID.
-func (s *GradientAIServiceOp) DeleteModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetDeleteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetDeleteResponse, *Response, error) {
 	if evalPresetUUID == "" {
 		return nil, nil, fmt.Errorf("eval preset uuid is required")
 	}
@@ -2685,7 +2685,7 @@ func (s *GradientAIServiceOp) DeleteModelEvaluationPreset(ctx context.Context, e
 // evaluating_results); already-terminal runs return an error. The returned
 // summary's status is `cancelling` while the underlying workflow is being torn
 // down and transitions to `cancelled` once cluster-side teardown completes.
-func (s *GradientAIServiceOp) CancelModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunCancelResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) CancelModelEvaluationRun(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunCancelResponse, *Response, error) {
 	if evalRunUUID == "" {
 		return nil, nil, fmt.Errorf("eval run uuid is required")
 	}
@@ -2711,7 +2711,7 @@ func (s *GradientAIServiceOp) CancelModelEvaluationRun(ctx context.Context, eval
 // UpdateModelEvaluationRun updates mutable fields on an existing model
 // evaluation run identified by its UUID. Currently only the run's display name
 // can be updated.
-func (s *GradientAIServiceOp) UpdateModelEvaluationRun(ctx context.Context, evalRunUUID string, updateRequest *UpdateModelEvaluationRunRequest) (*ModelEvaluationRunUpdateResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateModelEvaluationRun(ctx context.Context, evalRunUUID string, updateRequest *UpdateModelEvaluationRunRequest) (*ModelEvaluationRunUpdateResponse, *Response, error) {
 	if evalRunUUID == "" {
 		return nil, nil, fmt.Errorf("eval run uuid is required")
 	}
@@ -3068,7 +3068,7 @@ type EvaluationDatasetListResponse struct {
 type EvaluationDatasetDeleteResponse struct{}
 
 // CreateModelEvaluationRun creates a new model evaluation run.
-func (s *GradientAIServiceOp) CreateModelEvaluationRun(ctx context.Context, createRequest *CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreateResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateModelEvaluationRun(ctx context.Context, createRequest *CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreateResponse, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, fmt.Errorf("create request is required")
 	}
@@ -3088,7 +3088,7 @@ func (s *GradientAIServiceOp) CreateModelEvaluationRun(ctx context.Context, crea
 
 // CreateModelEvalDatasetUploadPresignedURLs creates presigned URLs that can be
 // used to upload model evaluation dataset files.
-func (s *GradientAIServiceOp) CreateModelEvalDatasetUploadPresignedURLs(ctx context.Context, createRequest *CreateModelEvalDatasetUploadPresignedURLsRequest) (*CreateModelEvalDatasetUploadPresignedURLsResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateModelEvalDatasetUploadPresignedURLs(ctx context.Context, createRequest *CreateModelEvalDatasetUploadPresignedURLsRequest) (*CreateModelEvalDatasetUploadPresignedURLsResponse, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, fmt.Errorf("create request is required")
 	}
@@ -3109,7 +3109,7 @@ func (s *GradientAIServiceOp) CreateModelEvalDatasetUploadPresignedURLs(ctx cont
 // GetModelEvaluationRun retrieves a model evaluation run by UUID. Optional
 // pagination options control the per-prompt results page returned alongside
 // the run detail.
-func (s *GradientAIServiceOp) GetModelEvaluationRun(ctx context.Context, evalRunUUID string, opt *ModelEvaluationRunGetOptions) (*ModelEvaluationRunGetResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) GetModelEvaluationRun(ctx context.Context, evalRunUUID string, opt *ModelEvaluationRunGetOptions) (*ModelEvaluationRunGetResponse, *Response, error) {
 	if evalRunUUID == "" {
 		return nil, nil, fmt.Errorf("eval run uuid is required")
 	}
@@ -3139,7 +3139,7 @@ func (s *GradientAIServiceOp) GetModelEvaluationRun(ctx context.Context, evalRun
 }
 
 // GetModelEvaluationPreset retrieves a saved model evaluation preset by UUID.
-func (s *GradientAIServiceOp) GetModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetGetResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) GetModelEvaluationPreset(ctx context.Context, evalPresetUUID string) (*ModelEvaluationPresetGetResponse, *Response, error) {
 	if evalPresetUUID == "" {
 		return nil, nil, fmt.Errorf("eval preset uuid is required")
 	}
@@ -3160,7 +3160,7 @@ func (s *GradientAIServiceOp) GetModelEvaluationPreset(ctx context.Context, eval
 
 // GetModelEvaluationRunResultsDownloadURL returns a presigned download URL
 // (gzip-compressed JSON) for a model evaluation run's results.
-func (s *GradientAIServiceOp) GetModelEvaluationRunResultsDownloadURL(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunResultsDownloadURLResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) GetModelEvaluationRunResultsDownloadURL(ctx context.Context, evalRunUUID string) (*ModelEvaluationRunResultsDownloadURLResponse, *Response, error) {
 	if evalRunUUID == "" {
 		return nil, nil, fmt.Errorf("eval run uuid is required")
 	}
@@ -3183,7 +3183,7 @@ func (s *GradientAIServiceOp) GetModelEvaluationRunResultsDownloadURL(ctx contex
 // by preset UUID, status (single or multiple), candidate model source types,
 // and a free-text search across run, candidate model, and dataset names. The
 // result set can also be sorted via SortBy / SortDirection.
-func (s *GradientAIServiceOp) ListModelEvaluationRuns(ctx context.Context, opt *ModelEvaluationRunListOptions) (*ModelEvaluationRunListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListModelEvaluationRuns(ctx context.Context, opt *ModelEvaluationRunListOptions) (*ModelEvaluationRunListResponse, *Response, error) {
 	path, err := addOptions(modelEvaluationRunsBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -3209,7 +3209,7 @@ func (s *GradientAIServiceOp) ListModelEvaluationRuns(ctx context.Context, opt *
 }
 
 // ListModelEvaluationPresets lists all saved model evaluation presets.
-func (s *GradientAIServiceOp) ListModelEvaluationPresets(ctx context.Context) (*ModelEvaluationPresetListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListModelEvaluationPresets(ctx context.Context) (*ModelEvaluationPresetListResponse, *Response, error) {
 	req, err := s.client.NewRequest(ctx, http.MethodGet, modelEvaluationPresetsBasePath, nil)
 	if err != nil {
 		return nil, nil, err
@@ -3225,7 +3225,7 @@ func (s *GradientAIServiceOp) ListModelEvaluationPresets(ctx context.Context) (*
 
 // ListModelEvaluationMetrics lists all available metrics that can be selected
 // when creating a model evaluation run.
-func (s *GradientAIServiceOp) ListModelEvaluationMetrics(ctx context.Context) (*ModelEvaluationMetricListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListModelEvaluationMetrics(ctx context.Context) (*ModelEvaluationMetricListResponse, *Response, error) {
 	req, err := s.client.NewRequest(ctx, http.MethodGet, modelEvaluationMetricsBasePath, nil)
 	if err != nil {
 		return nil, nil, err
@@ -3241,7 +3241,7 @@ func (s *GradientAIServiceOp) ListModelEvaluationMetrics(ctx context.Context) (*
 
 // ListEvaluationDatasets lists evaluation datasets. Results can be filtered by
 // dataset type using the provided options.
-func (s *GradientAIServiceOp) ListEvaluationDatasets(ctx context.Context, opt *EvaluationDatasetListOptions) (*EvaluationDatasetListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListEvaluationDatasets(ctx context.Context, opt *EvaluationDatasetListOptions) (*EvaluationDatasetListResponse, *Response, error) {
 	path, err := addOptions(evaluationDatasetsBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -3261,7 +3261,7 @@ func (s *GradientAIServiceOp) ListEvaluationDatasets(ctx context.Context, opt *E
 }
 
 // DeleteEvaluationDataset deletes the evaluation dataset with the given UUID.
-func (s *GradientAIServiceOp) DeleteEvaluationDataset(ctx context.Context, datasetUUID string) (*EvaluationDatasetDeleteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteEvaluationDataset(ctx context.Context, datasetUUID string) (*EvaluationDatasetDeleteResponse, *Response, error) {
 	if datasetUUID == "" {
 		return nil, nil, fmt.Errorf("dataset uuid is required")
 	}
@@ -3281,7 +3281,7 @@ func (s *GradientAIServiceOp) DeleteEvaluationDataset(ctx context.Context, datas
 }
 
 // UpdateCustomModelMetadata updates the metadata of an existing custom model.
-func (s *GradientAIServiceOp) UpdateCustomModelMetadata(ctx context.Context, uuid string, updateRequest *CustomModelMetadataUpdateRequest) (*CustomModel, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateCustomModelMetadata(ctx context.Context, uuid string, updateRequest *CustomModelMetadataUpdateRequest) (*CustomModel, *Response, error) {
 	if uuid == "" {
 		return nil, nil, fmt.Errorf("uuid is required")
 	}
@@ -3304,7 +3304,7 @@ func (s *GradientAIServiceOp) UpdateCustomModelMetadata(ctx context.Context, uui
 }
 
 // CreateCustomEvaluationMetric creates a custom model-evaluation metric.
-func (s *GradientAIServiceOp) CreateCustomEvaluationMetric(ctx context.Context, createRequest *CreateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateCustomEvaluationMetric(ctx context.Context, createRequest *CreateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, fmt.Errorf("create request is required")
 	}
@@ -3323,7 +3323,7 @@ func (s *GradientAIServiceOp) CreateCustomEvaluationMetric(ctx context.Context, 
 }
 
 // UpdateCustomEvaluationMetric updates an existing custom model-evaluation metric.
-func (s *GradientAIServiceOp) UpdateCustomEvaluationMetric(ctx context.Context, metricUUID string, updateRequest *UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateCustomEvaluationMetric(ctx context.Context, metricUUID string, updateRequest *UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, *Response, error) {
 	if metricUUID == "" {
 		return nil, nil, fmt.Errorf("metricUUID is required")
 	}
@@ -3346,7 +3346,7 @@ func (s *GradientAIServiceOp) UpdateCustomEvaluationMetric(ctx context.Context, 
 }
 
 // DeleteCustomEvaluationMetric soft-deletes a custom model-evaluation metric.
-func (s *GradientAIServiceOp) DeleteCustomEvaluationMetric(ctx context.Context, metricUUID string) (*Response, error) {
+func (s *AgentPlatformServiceOp) DeleteCustomEvaluationMetric(ctx context.Context, metricUUID string) (*Response, error) {
 	if metricUUID == "" {
 		return nil, fmt.Errorf("metricUUID is required")
 	}

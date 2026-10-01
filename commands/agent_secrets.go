@@ -292,7 +292,7 @@ func injectManifestSecrets(manifest []byte, secrets map[string]string) ([]byte, 
 		container = spec
 	}
 
-	merged, err := mergeSecretSlots(container["secrets"], secrets)
+	merged, err := mergeSecretSlots(container["secrets"], secrets, legacy)
 	if err != nil {
 		return nil, err
 	}
@@ -312,9 +312,32 @@ func injectManifestSecrets(manifest []byte, secrets map[string]string) ([]byte, 
 // mergeSecretSlots folds secrets into whatever shape the manifest already
 // uses. The map form (`secrets: {NAME: value}` or `NAME: {value, url}`) is
 // preserved when present so we don't rewrite a user's file into a different
-// style; everything else becomes the canonical list of {name, source, value}
-// slots.
-func mergeSecretSlots(existing any, secrets map[string]string) (any, error) {
+// style; an existing list stays a list for the same reason.
+//
+// When the manifest declares no secrets at all there is no style to preserve,
+// and the two formats do not agree on what to write: the legacy envelope's
+// spec.secrets is a LIST of {name, source, value} slots, while a flat manifest's
+// top-level secrets is a MAP keyed by name (agentspec's `map[string]flatSecret`,
+// whose string shorthand means exactly a write-only tenantSecret plaintext).
+// Writing the list into a flat manifest produces bytes the API rejects outright:
+//
+//	cannot unmarshal array into Go struct field .secrets of type
+//	map[string]agentspec.flatSecret
+//
+// which is why `legacy` has to be passed in rather than inferred from `existing`
+// — a nil `existing` says nothing about which format the document is.
+func mergeSecretSlots(existing any, secrets map[string]string, legacy bool) (any, error) {
+	// No declared slots and a flat document: emit the map form. Shorthand string
+	// values rather than long-form objects, because that is what a --secret is —
+	// a tenantSecret plaintext with no other fields to carry.
+	if existing == nil && !legacy {
+		out := make(map[string]any, len(secrets))
+		for name, value := range secrets {
+			out[name] = value
+		}
+		return out, nil
+	}
+
 	if existing != nil && isYAMLMapping(existing) {
 		m, ok := yamlMap(existing)
 		if !ok {
