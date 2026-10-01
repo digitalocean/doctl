@@ -851,27 +851,29 @@ func firstAgentOnlyFlag(c *CmdConfig, prompt, repo string) string {
 // resolveAgentCreationSource reads and validates the creation flags, resolving
 // the manifest bytes (or the Agent Config ID) the caller should create from.
 func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
-	harness, err := c.Doit.GetString(c.NS, doctl.ArgAgentHarness)
+	// Per-invocation inputs only: values remembered in config.yaml must not
+	// act as if the user passed them again (MARSOHS-1671).
+	harness, err := invocationString(c, doctl.ArgAgentHarness)
 	if err != nil {
 		return nil, err
 	}
-	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
+	name, err := invocationString(c, doctl.ArgAgentName)
 	if err != nil {
 		return nil, err
 	}
-	configRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentFromConfig)
+	configRef, err := invocationString(c, doctl.ArgAgentFromConfig)
 	if err != nil {
 		return nil, err
 	}
-	repo, err := c.Doit.GetString(c.NS, doctl.ArgAgentRepo)
+	repo, err := invocationString(c, doctl.ArgAgentRepo)
 	if err != nil {
 		return nil, err
 	}
-	prompt, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerPrompt)
+	prompt, err := invocationString(c, doctl.ArgAgentTriggerPrompt)
 	if err != nil {
 		return nil, err
 	}
-	secretPairs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentSecret)
+	secretPairs, err := invocationStringSlice(c, doctl.ArgAgentSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -879,11 +881,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	permission, err := c.Doit.GetString(c.NS, doctl.ArgAgentPermission)
+	permission, err := invocationString(c, doctl.ArgAgentPermission)
 	if err != nil {
 		return nil, err
 	}
-	template, err := c.Doit.GetString(c.NS, doctl.ArgAgentTemplate)
+	template, err := invocationString(c, doctl.ArgAgentTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -938,7 +940,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// with --template already; a positional path and a discovered ./agents.yaml
 	// are not, and both still get the refusal below.
 	if template != "" && harness == "" && configRef == "" && len(c.Args) == 0 &&
-		!c.Doit.IsSet(doctl.ArgAgentSpec) && discoverManifestFile() == "" {
+		!agentFlagChanged(c, doctl.ArgAgentSpec) && discoverManifestFile() == "" {
 		harness = bareSandboxAgent
 	}
 
@@ -949,11 +951,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	discoveredSpec := false
 	switch {
 	case configRef != "":
-		if c.Doit.IsSet(doctl.ArgAgentSpec) || c.Doit.IsSet(doctl.ArgAgentHarness) {
+		if agentFlagChanged(c, doctl.ArgAgentSpec) || agentFlagChanged(c, doctl.ArgAgentHarness) {
 			return nil, agentSourcesExclusiveErr()
 		}
 	case harness != "":
-		if c.Doit.IsSet(doctl.ArgAgentSpec) {
+		if agentFlagChanged(c, doctl.ArgAgentSpec) {
 			return nil, agentSourcesExclusiveErr()
 		}
 	default:
@@ -1003,7 +1005,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// A manifest supplied by the user already declares its own, and an Agent
 	// Config's lives server-side, so silently ignoring the flag there would
 	// hide a policy the caller believes they set.
-	if c.Doit.IsSet(doctl.ArgAgentPermission) && harness == "" {
+	if agentFlagChanged(c, doctl.ArgAgentPermission) && harness == "" {
 		return nil, fmt.Errorf("--%s only applies with --%s; set the permissions block in the manifest instead",
 			doctl.ArgAgentPermission, doctl.ArgAgentHarness)
 	}
@@ -1539,13 +1541,45 @@ func manifestConfigString(ns, key string) string {
 	return viper.GetString(key)
 }
 
+// agentFlagChanged reports whether name was set on this invocation. Prefer
+// cobra's Changed (covers -f / --file aliases) when a Command is attached;
+// fall back to Doit.IsSet for unit tests that stub flags via TestConfig.Set.
+// Values left in config.yaml by older writeConfig calls must not count
+// (MARSOHS-1671).
+func agentFlagChanged(c *CmdConfig, name string) bool {
+	if c == nil {
+		return false
+	}
+	if c.Command != nil {
+		return c.Command.Flags().Changed(name)
+	}
+	return c.Doit != nil && c.Doit.IsSet(name)
+}
+
+// invocationString returns a string flag only when it was set on this
+// invocation. Stale config.yaml values are ignored.
+func invocationString(c *CmdConfig, key string) (string, error) {
+	if !agentFlagChanged(c, key) {
+		return "", nil
+	}
+	return configStringWithoutRequired(c, key)
+}
+
+// invocationStringSlice is the slice equivalent of invocationString.
+func invocationStringSlice(c *CmdConfig, key string) ([]string, error) {
+	if !agentFlagChanged(c, key) {
+		return nil, nil
+	}
+	return c.Doit.GetStringSlice(c.NS, key)
+}
+
 // namedManifestPath returns the manifest the user named explicitly, either
 // with --spec (also spelled -f / --file) or as a positional path. An empty
 // result means they named none, which leaves the caller free to fall back to
 // discoverManifestFile — but only once it knows no other source (--harness,
 // --from-config) was selected.
 func namedManifestPath(c *CmdConfig) (string, error) {
-	spec, err := configStringWithoutRequired(c, doctl.ArgAgentSpec)
+	spec, err := invocationString(c, doctl.ArgAgentSpec)
 	if err != nil {
 		return "", err
 	}
