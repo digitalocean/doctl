@@ -67,7 +67,7 @@ func genAIEnums[T ~string](prefix string, values []string) []T {
 	return out
 }
 
-// genAIListFilters reads the search and sort flags shared by every Gradient AI
+// genAIListFilters reads the search and sort flags shared by every evaluation
 // simulation list command.
 func genAIListFilters(c *CmdConfig, sortFieldPrefix string) (search string, sortBy string, sortDirection string, err error) {
 	search, err = c.Doit.GetString(c.NS, doctl.ArgGenAISearch)
