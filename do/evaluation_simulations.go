@@ -35,7 +35,7 @@ type ScenarioSet struct {
 // ScenarioSets is a slice of ScenarioSet.
 type ScenarioSets []ScenarioSet
 
-// GenAIDownloadURL is a presigned URL for downloading a Gradient AI file.
+// GenAIDownloadURL is a presigned URL for downloading an evaluation file.
 type GenAIDownloadURL struct {
 	DownloadURL string          `json:"download_url,omitempty"`
 	ExpiresAt   *godo.Timestamp `json:"expires_at,omitempty"`
@@ -81,7 +81,7 @@ type SimulationTrajectory struct {
 	*godo.SimulationTrajectory
 }
 
-// paginateGenAIList fetches every page of a Gradient AI list endpoint and wraps
+// paginateGenAIList fetches every page of an evaluation list endpoint and wraps
 // each item in its do type.
 func paginateGenAIList[T any, W any](fetch func(*godo.ListOptions) ([]*T, *godo.Response, error), wrap func(*T) W) ([]W, error) {
 	si, err := PaginateResp(func(listOpt *godo.ListOptions) ([]any, *godo.Response, error) {

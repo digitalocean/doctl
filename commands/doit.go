@@ -203,6 +203,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Serverless())
 	DoitCmd.AddCommand(Spaces())
 	DoitCmd.AddCommand(GradientAI())
+	DoitCmd.AddCommand(Evaluation())
 	DoitCmd.AddCommand(DedicatedInferenceCmd())
 	DoitCmd.AddCommand(Inference())
 	DoitCmd.AddCommand(Nfs())
