@@ -85,7 +85,7 @@ func KnowledgeBaseCmd() *Command {
 		RunKnowledgeBaseCreate,
 		"create",
 		"Creates a knowledge base",
-		"Creates a knowledge base and returns the following information \n"+knowledgebaseDetails+" \nFor more information about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform/operation/genai_create_knowledge_base)\n",
+		"Creates a knowledge base and returns the following information \n"+knowledgebaseDetails+" \nFor more information about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/reference/agent-platform-api/#genai_create_knowledge_base)\n",
 		Writer, aliasOpt("c"),
 		displayerType(&displayers.KnowledgeBase{}),
 	)
@@ -158,7 +158,7 @@ func KnowledgeBaseCmd() *Command {
 	cmdDataSourceList.Example = "The following example retrieves information about all Data Sources with the Knowledge Base ID " + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		" : `doctl knowledge-base list-datasources f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
-	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid. Add only one Spaces or Webcrawler as a datasource. For more info about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform/operation/genai_create_knowledge_base_data_source)"
+	cmdDataSourcesAddDetail := "Add a datasource for knowledge base by its uuid. Add only one Spaces or Webcrawler as a datasource. For more info about datasources, see the [datasources reference](https://docs.digitalocean.com/reference/api/reference/agent-platform-api/#genai_create_knowledge_base_data_source)"
 	cmdDataSourceAdd := CmdBuilder(
 		cmd,
 		RunKnowledgeBaseAddDataSource,
@@ -291,7 +291,7 @@ func KnowledgeBaseCmd() *Command {
 // RunKnowledgeBaseList lists all knowledge bases for agents.
 func RunKnowledgeBasesList(c *CmdConfig) error {
 
-	knowledgeBases, err := c.GradientAI().ListKnowledgeBases()
+	knowledgeBases, err := c.AgentPlatform().ListKnowledgeBases()
 	if err != nil {
 		return err
 	}
@@ -303,7 +303,7 @@ func RunKnowledgeBaseGet(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	knowledgeBase, err := c.GradientAI().GetKnowledgeBase(c.Args[0])
+	knowledgeBase, err := c.AgentPlatform().GetKnowledgeBase(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -369,7 +369,7 @@ func RunKnowledgeBaseCreate(c *CmdConfig) error {
 		VPCUuid:            vpcUUID,
 	}
 
-	knowledgeBase, err := c.GradientAI().CreateKnowledgeBase(req)
+	knowledgeBase, err := c.AgentPlatform().CreateKnowledgeBase(req)
 	if err != nil {
 		return err
 	}
@@ -419,7 +419,7 @@ func RunKnowledgeBaseUpdate(c *CmdConfig) error {
 		EmbeddingModelUuid: embeddingModelUUID,
 		KnowledgeBaseUUID:  uuid,
 	}
-	knowledgeBase, err := c.GradientAI().UpdateKnowledgeBase(c.Args[0], req)
+	knowledgeBase, err := c.AgentPlatform().UpdateKnowledgeBase(c.Args[0], req)
 	if err != nil {
 		return err
 	}
@@ -439,7 +439,7 @@ func RunKnowledgeBaseDelete(c *CmdConfig) error {
 	}
 
 	if force || AskForConfirmDelete("Knowledge Base", 1) == nil {
-		err := c.GradientAI().DeleteKnowledgeBase(knowledgeBaseId)
+		err := c.AgentPlatform().DeleteKnowledgeBase(knowledgeBaseId)
 		if err != nil {
 			return err
 		}
@@ -455,7 +455,7 @@ func RunKnowledgeBaseListDataSources(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	knowledgeBaseDataSource, err := c.GradientAI().ListKnowledgeBaseDataSources(c.Args[0])
+	knowledgeBaseDataSource, err := c.AgentPlatform().ListKnowledgeBaseDataSources(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -496,7 +496,7 @@ func RunKnowledgeBaseAddDataSource(c *CmdConfig) error {
 		return fmt.Errorf("either --bucket-name and --region or --base-url must be provided")
 	}
 
-	knowledgeBaseDataSource, err := c.GradientAI().AddKnowledgeBaseDataSource(c.Args[0], req)
+	knowledgeBaseDataSource, err := c.AgentPlatform().AddKnowledgeBaseDataSource(c.Args[0], req)
 	if err != nil {
 		return err
 	}
@@ -514,7 +514,7 @@ func RunKnowledgeBaseDeleteDataSource(c *CmdConfig) error {
 	}
 
 	if force || AskForConfirmDelete("DataSource of Knowledge Base", 1) == nil {
-		err := c.GradientAI().DeleteKnowledgeBaseDataSource(c.Args[0], c.Args[1])
+		err := c.AgentPlatform().DeleteKnowledgeBaseDataSource(c.Args[0], c.Args[1])
 		if err != nil {
 			return err
 		}
@@ -531,7 +531,7 @@ func RunAttachKnowledgeBase(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	agent, err := c.GradientAI().AttachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
+	agent, err := c.AgentPlatform().AttachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -549,7 +549,7 @@ func RunDetachKnowledgeBase(c *CmdConfig) error {
 	}
 
 	if force || AskForConfirmDelete("Detach Knowledge Base from an Agent?", 1) == nil {
-		agent, err := c.GradientAI().DetachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
+		agent, err := c.AgentPlatform().DetachKnowledgeBaseToAgent(c.Args[0], c.Args[1])
 		if err != nil {
 			return err
 		}
@@ -562,7 +562,7 @@ func RunDetachKnowledgeBase(c *CmdConfig) error {
 
 // RunKnowledgeBaseListIndexingJobs lists all indexing jobs for knowledge bases.
 func RunKnowledgeBaseListIndexingJobs(c *CmdConfig) error {
-	indexingJobs, err := c.GradientAI().ListIndexingJobs()
+	indexingJobs, err := c.AgentPlatform().ListIndexingJobs()
 	if err != nil {
 		return err
 	}
@@ -574,7 +574,7 @@ func RunKnowledgeBaseGetIndexingJob(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	indexingJob, err := c.GradientAI().GetIndexingJob(c.Args[0])
+	indexingJob, err := c.AgentPlatform().GetIndexingJob(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -586,7 +586,7 @@ func RunKnowledgeBaseCancelIndexingJob(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	indexingJob, err := c.GradientAI().CancelIndexingJob(c.Args[0])
+	indexingJob, err := c.AgentPlatform().CancelIndexingJob(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -598,7 +598,7 @@ func RunKnowledgeBaseListIndexingJobDataSources(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	dataSources, err := c.GradientAI().ListIndexingJobDataSources(c.Args[0])
+	dataSources, err := c.AgentPlatform().ListIndexingJobDataSources(c.Args[0])
 	if err != nil {
 		return err
 	}

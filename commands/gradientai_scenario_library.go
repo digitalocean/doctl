@@ -97,7 +97,7 @@ func RunScenarioLibraryList(c *CmdConfig) error {
 		return err
 	}
 
-	entries, err := c.GradientAI().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{
+	entries, err := c.AgentPlatform().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{
 		Category:      category,
 		Search:        search,
 		SortBy:        godo.ScenarioLibrarySortField(sortBy),
@@ -121,7 +121,7 @@ func RunScenarioLibraryListScenarios(c *CmdConfig) error {
 		return err
 	}
 
-	scenarios, err := c.GradientAI().ListScenarioLibraryScenarios(c.Args[0], opt)
+	scenarios, err := c.AgentPlatform().ListScenarioLibraryScenarios(c.Args[0], opt)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func RunScenarioLibraryCreateScenarioSet(c *CmdConfig) error {
 	}
 
 	libraryScenarioUUID := c.Args[0]
-	scenarioSet, err := c.GradientAI().CreateScenarioSetFromLibrary(libraryScenarioUUID, &godo.CreateScenarioSetFromLibraryRequest{
+	scenarioSet, err := c.AgentPlatform().CreateScenarioSetFromLibrary(libraryScenarioUUID, &godo.CreateScenarioSetFromLibraryRequest{
 		LibraryScenarioUUID: libraryScenarioUUID,
 		Name:                name,
 	})

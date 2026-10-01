@@ -91,7 +91,7 @@ func TestListModelsCommand(t *testing.T) {
 
 func TestRunGradientAIListModels(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListAvailableModels().Return(testModels, nil)
+		tm.agentPlatform.EXPECT().ListAvailableModels().Return(testModels, nil)
 
 		err := RunGradientAIListModels(config)
 		assert.NoError(t, err)
@@ -100,7 +100,7 @@ func TestRunGradientAIListModels(t *testing.T) {
 
 func TestRunGradientAIListModelsError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListAvailableModels().Return(nil, assert.AnError)
+		tm.agentPlatform.EXPECT().ListAvailableModels().Return(nil, assert.AnError)
 
 		err := RunGradientAIListModels(config)
 		assert.Error(t, err)

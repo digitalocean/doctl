@@ -105,7 +105,7 @@ func TestKnowledgeBaseGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"
 		config.Args = append(config.Args, knowledge_base_id)
-		tm.gradientAI.EXPECT().GetKnowledgeBase("00000000-0000-4000-8000-000000000000").Return(&testKnowledgeBase, nil)
+		tm.agentPlatform.EXPECT().GetKnowledgeBase("00000000-0000-4000-8000-000000000000").Return(&testKnowledgeBase, nil)
 		err := RunKnowledgeBaseGet(config)
 		assert.NoError(t, err)
 	})
@@ -113,7 +113,7 @@ func TestKnowledgeBaseGet(t *testing.T) {
 
 func TestKnowledgeBaseList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListKnowledgeBases().Return(do.KnowledgeBases{testKnowledgeBase}, nil)
+		tm.agentPlatform.EXPECT().ListKnowledgeBases().Return(do.KnowledgeBases{testKnowledgeBase}, nil)
 		err := RunKnowledgeBasesList(config)
 		assert.NoError(t, err)
 	})
@@ -128,7 +128,7 @@ func TestKnowledgeBaseCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseEmbeddingModelUUID, "test-embedding-model-uuid")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseDataSource, `[{"web_crawler_data_source":{"base_url":"https://example.com","crawling_option":"Unknown","embed_media":true}}]`)
 
-		tm.gradientAI.EXPECT().CreateKnowledgeBase(&godo.KnowledgeBaseCreateRequest{
+		tm.agentPlatform.EXPECT().CreateKnowledgeBase(&godo.KnowledgeBaseCreateRequest{
 			Name:               "Test Knowledge Base",
 			Region:             "tor1",
 			ProjectID:          "test-project-id",
@@ -154,7 +154,7 @@ func TestKnowledgeBaseDelete(t *testing.T) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"
 		config.Args = append(config.Args, knowledge_base_id)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
-		tm.gradientAI.EXPECT().DeleteKnowledgeBase("00000000-0000-4000-8000-000000000000").Return(nil)
+		tm.agentPlatform.EXPECT().DeleteKnowledgeBase("00000000-0000-4000-8000-000000000000").Return(nil)
 		err := RunKnowledgeBaseDelete(config)
 		assert.NoError(t, err)
 	})
@@ -169,7 +169,7 @@ func TestKnowledgeBaseUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseProjectID, "updated-project-id")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseEmbeddingModelUUID, "updated-embedding-model-uuid")
 
-		tm.gradientAI.EXPECT().UpdateKnowledgeBase("00000000-0000-4000-8000-000000000000", &godo.UpdateKnowledgeBaseRequest{
+		tm.agentPlatform.EXPECT().UpdateKnowledgeBase("00000000-0000-4000-8000-000000000000", &godo.UpdateKnowledgeBaseRequest{
 			Name:               "Updated Knowledge Base",
 			ProjectID:          "updated-project-id",
 			EmbeddingModelUuid: "updated-embedding-model-uuid",
@@ -188,7 +188,7 @@ func TestKnowledgeBaseAddDataSource(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseBaseURL, "https://example.com")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseCrawlingOption, "Unknown")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseEmbedMedia, true)
-		tm.gradientAI.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddKnowledgeBaseDataSourceRequest{
+		tm.agentPlatform.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddKnowledgeBaseDataSourceRequest{
 			KnowledgeBaseUuid: knowledge_base_id,
 			WebCrawlerDataSource: &godo.WebCrawlerDataSource{
 				BaseUrl:        "https://example.com",
@@ -207,7 +207,7 @@ func TestKnowledgeBaseAddDataSource(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseBucketName, "sample-bucket")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseItemPath, "files/test")
 		config.Doit.Set(config.NS, doctl.ArgKnowledgeBaseRegion, "tor1")
-		tm.gradientAI.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddKnowledgeBaseDataSourceRequest{
+		tm.agentPlatform.EXPECT().AddKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", &godo.AddKnowledgeBaseDataSourceRequest{
 			KnowledgeBaseUuid: knowledge_base_id,
 			SpacesDataSource: &godo.SpacesDataSource{
 				BucketName: "sample-bucket",
@@ -228,7 +228,7 @@ func TestKnowledgeBaseDeleteDataSource(t *testing.T) {
 		config.Args = append(config.Args, knowledge_base_id, data_source_id)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DeleteKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", "data-source-id").Return(nil)
+		tm.agentPlatform.EXPECT().DeleteKnowledgeBaseDataSource("00000000-0000-4000-8000-000000000000", "data-source-id").Return(nil)
 
 		err := RunKnowledgeBaseDeleteDataSource(config)
 		assert.NoError(t, err)
@@ -240,7 +240,7 @@ func TestKnowledgeBaseListDataSources(t *testing.T) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"
 		config.Args = append(config.Args, knowledge_base_id)
 
-		tm.gradientAI.EXPECT().ListKnowledgeBaseDataSources("00000000-0000-4000-8000-000000000000").Return(do.KnowledgeBaseDataSources{
+		tm.agentPlatform.EXPECT().ListKnowledgeBaseDataSources("00000000-0000-4000-8000-000000000000").Return(do.KnowledgeBaseDataSources{
 			{
 				KnowledgeBaseDataSource: &godo.KnowledgeBaseDataSource{
 					Uuid: "data-source-id",
@@ -259,7 +259,7 @@ func TestKnowledgeBaseAttach(t *testing.T) {
 		knowledge_base_id := "00000000-0000-4000-8000-000000000000"
 		config.Args = append(config.Args, agent_id, knowledge_base_id)
 
-		tm.gradientAI.EXPECT().AttachKnowledgeBaseToAgent(agent_id, knowledge_base_id).Return(&testAgent, nil)
+		tm.agentPlatform.EXPECT().AttachKnowledgeBaseToAgent(agent_id, knowledge_base_id).Return(&testAgent, nil)
 
 		err := RunAttachKnowledgeBase(config)
 		assert.NoError(t, err)
@@ -273,7 +273,7 @@ func TestKnowledgeBaseDetach(t *testing.T) {
 		config.Args = append(config.Args, agent_id, knowledge_base_id)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DetachKnowledgeBaseToAgent(agent_id, knowledge_base_id).Return(&testAgent, nil)
+		tm.agentPlatform.EXPECT().DetachKnowledgeBaseToAgent(agent_id, knowledge_base_id).Return(&testAgent, nil)
 
 		err := RunDetachKnowledgeBase(config)
 		assert.NoError(t, err)
@@ -282,7 +282,7 @@ func TestKnowledgeBaseDetach(t *testing.T) {
 
 func TestKnowledgeBaseListIndexingJobs(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListIndexingJobs().Return(do.IndexingJobs{testIndexingJob}, nil)
+		tm.agentPlatform.EXPECT().ListIndexingJobs().Return(do.IndexingJobs{testIndexingJob}, nil)
 		err := RunKnowledgeBaseListIndexingJobs(config)
 		assert.NoError(t, err)
 	})
@@ -292,7 +292,7 @@ func TestKnowledgeBaseGetIndexingJob(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		indexing_job_id := "indexing-job-uuid-123"
 		config.Args = append(config.Args, indexing_job_id)
-		tm.gradientAI.EXPECT().GetIndexingJob(indexing_job_id).Return(&testIndexingJob, nil)
+		tm.agentPlatform.EXPECT().GetIndexingJob(indexing_job_id).Return(&testIndexingJob, nil)
 		err := RunKnowledgeBaseGetIndexingJob(config)
 		assert.NoError(t, err)
 	})
@@ -302,7 +302,7 @@ func TestKnowledgeBaseCancelIndexingJob(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		indexing_job_id := "indexing-job-uuid-123"
 		config.Args = append(config.Args, indexing_job_id)
-		tm.gradientAI.EXPECT().CancelIndexingJob(indexing_job_id).Return(&testIndexingJob, nil)
+		tm.agentPlatform.EXPECT().CancelIndexingJob(indexing_job_id).Return(&testIndexingJob, nil)
 		err := RunKnowledgeBaseCancelIndexingJob(config)
 		assert.NoError(t, err)
 	})
@@ -312,7 +312,7 @@ func TestKnowledgeBaseListIndexingJobDataSources(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		indexing_job_id := "indexing-job-uuid-123"
 		config.Args = append(config.Args, indexing_job_id)
-		tm.gradientAI.EXPECT().ListIndexingJobDataSources(indexing_job_id).Return(do.IndexingJobDataSources{testIndexingJobDataSource}, nil)
+		tm.agentPlatform.EXPECT().ListIndexingJobDataSources(indexing_job_id).Return(do.IndexingJobDataSources{testIndexingJobDataSource}, nil)
 		err := RunKnowledgeBaseListIndexingJobDataSources(config)
 		assert.NoError(t, err)
 	})

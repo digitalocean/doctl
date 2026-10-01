@@ -35,7 +35,7 @@ func RunGradientAIListRegions(c *CmdConfig) error {
 		servesBatchPtr = &val
 	}
 
-	DatacenterRegions, err := c.GradientAI().ListDatacenterRegions(servesInferencePtr, servesBatchPtr)
+	DatacenterRegions, err := c.AgentPlatform().ListDatacenterRegions(servesInferencePtr, servesBatchPtr)
 	if err != nil {
 		return err
 	}

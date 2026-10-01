@@ -19,7 +19,9 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"golang.org/x/term"
 )
@@ -29,6 +31,18 @@ import (
 //	METHOD URL: 400 message
 //	METHOD URL: 400 (request "id") message
 var godoErrorLine = regexp.MustCompile(`(?i)^(?:GET|POST|PUT|PATCH|DELETE|HEAD)\s+\S+:\s+\d{3}(?:\s+\(request "[^"]*"\))?\s+(.+)$`)
+
+// unicodeEscapeRE matches JSON-style \uXXXX sequences that APIs embed in
+// error strings (e.g. unknown field "\u00a0\u00a0KEY").
+var unicodeEscapeRE = regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
+
+// unknownFieldQuotedRE captures the quoted field name in agentspec unknown-
+// field errors.
+var unknownFieldQuotedRE = regexp.MustCompile(`unknown field "([^"]*)"`)
+
+// contractsPathHintRE matches internal harness-api contract path hints that
+// customers cannot open (MARSOHS-1627).
+var contractsPathHintRE = regexp.MustCompile(`;?\s*see contracts/[A-Za-z0-9._/-]+`)
 
 // agentPrettyError is a user-facing agent CLI error: human title + reason,
 // without METHOD/URL/status noise from raw godo ErrorResponse strings.
@@ -163,12 +177,12 @@ func beautifyAgentError(err error) error {
 	}
 
 	if msg, status, ok := agentAPIError(err); ok {
-		title, tips := agentErrorTitleAndTips(msg, status)
 		reason := strings.TrimSpace(msg)
 		if reason == "" {
 			reason = strings.TrimSpace(err.Error())
 		}
-		reason = stripGodoTransportNoise(reason)
+		reason = sanitizeAgentAPIMessage(stripGodoTransportNoise(reason))
+		title, tips := agentErrorTitleAndTips(reason, status)
 		return &agentPrettyError{
 			title:  title,
 			reason: reason,
@@ -179,7 +193,7 @@ func beautifyAgentError(err error) error {
 	}
 
 	// Local validation / wrapped copy — still present as a clean card.
-	reason := strings.TrimSpace(stripGodoTransportNoise(err.Error()))
+	reason := sanitizeAgentAPIMessage(strings.TrimSpace(stripGodoTransportNoise(err.Error())))
 	title := "Couldn't complete that request"
 	tips := []string{}
 	lower := strings.ToLower(reason)
@@ -254,6 +268,13 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 	case http.StatusTooManyRequests:
 		return "Rate limited", []string{"Wait a moment and retry"}
 	case http.StatusBadRequest:
+		if strings.Contains(lower, "agentspec") || strings.Contains(lower, "unknown field") ||
+			strings.Contains(lower, "unexpected whitespace") {
+			return "Invalid request", []string{
+				"doctl harness-runtime validate",
+				"Retype keys that may have been copy-pasted from docs (invisible spaces)",
+			}
+		}
 		return "Invalid request", nil
 	case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
 		return "Service temporarily unavailable", []string{"Retry in a moment"}
@@ -281,6 +302,60 @@ func stripGodoTransportNoise(s string) string {
 		}
 	}
 	return s
+}
+
+// sanitizeAgentAPIMessage makes agentspec validation errors actionable for
+// customers (MARSOHS-1627): decode embedded \uXXXX escapes, call out
+// unexpected whitespace in field names, and drop internal contracts/ paths.
+func sanitizeAgentAPIMessage(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	s = unescapeUnicodeEscapes(s)
+	s = rewriteUnknownFieldWhitespace(s)
+	s = contractsPathHintRE.ReplaceAllString(s, "")
+	s = strings.TrimSpace(s)
+	// Collapse "(foo )" leftovers after stripping the contracts clause.
+	s = strings.ReplaceAll(s, " )", ")")
+	s = strings.ReplaceAll(s, "  ", " ")
+	return s
+}
+
+func unescapeUnicodeEscapes(s string) string {
+	return unicodeEscapeRE.ReplaceAllStringFunc(s, func(esc string) string {
+		n, err := strconv.ParseUint(esc[2:], 16, 32)
+		if err != nil {
+			return esc
+		}
+		return string(rune(n))
+	})
+}
+
+func rewriteUnknownFieldWhitespace(s string) string {
+	return unknownFieldQuotedRE.ReplaceAllStringFunc(s, func(full string) string {
+		sub := unknownFieldQuotedRE.FindStringSubmatch(full)
+		if len(sub) != 2 {
+			return full
+		}
+		field := sub[1]
+		trimmed := strings.TrimSpace(field)
+		if trimmed == field && !strings.ContainsFunc(field, isCopyPasteSpace) {
+			return fmt.Sprintf("unknown field %q", field)
+		}
+		if trimmed == "" {
+			return "unknown field (key is only whitespace — often non-breaking spaces from copy-paste)"
+		}
+		return fmt.Sprintf("unknown field %q (has unexpected whitespace — often from docs copy-paste)", trimmed)
+	})
+}
+
+func isCopyPasteSpace(r rune) bool {
+	switch r {
+	case '\u00a0', '\u2007', '\u202f', '\u2009', '\u200a', '\u200b':
+		return true
+	}
+	return unicode.IsSpace(r) && r != ' ' && r != '\t' && r != '\n' && r != '\r'
 }
 
 // displayableError is implemented by agentPrettyError for checkErr.

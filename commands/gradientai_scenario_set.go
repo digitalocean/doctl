@@ -196,7 +196,7 @@ func RunScenarioSetCreate(c *CmdConfig) error {
 		req.Scenarios = scenarios
 	}
 
-	scenarioSet, err := c.GradientAI().CreateScenarioSet(req)
+	scenarioSet, err := c.AgentPlatform().CreateScenarioSet(req)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func RunScenarioSetGenerate(c *CmdConfig) error {
 		return err
 	}
 
-	scenarioSet, err := c.GradientAI().GenerateScenarioSet(&godo.GenerateScenarioSetRequest{
+	scenarioSet, err := c.AgentPlatform().GenerateScenarioSet(&godo.GenerateScenarioSetRequest{
 		Name:               name,
 		GoalDescription:    goalDescription,
 		NumScenarios:       uint32(numScenarios),
@@ -256,7 +256,7 @@ func RunScenarioSetList(c *CmdConfig) error {
 		return err
 	}
 
-	scenarioSets, err := c.GradientAI().ListScenarioSets(&godo.ScenarioSetListOptions{
+	scenarioSets, err := c.AgentPlatform().ListScenarioSets(&godo.ScenarioSetListOptions{
 		Statuses:      genAIEnums[godo.ScenarioSetStatus](scenarioSetStatusPrefix, rawStatuses),
 		SourceKinds:   genAIEnums[godo.ScenarioSetSourceKind](scenarioSetSourceKindPrefix, rawSourceKinds),
 		Search:        search,
@@ -276,7 +276,7 @@ func RunScenarioSetGet(c *CmdConfig) error {
 		return err
 	}
 
-	scenarioSet, err := c.GradientAI().GetScenarioSet(c.Args[0])
+	scenarioSet, err := c.AgentPlatform().GetScenarioSet(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func RunScenarioSetListScenarios(c *CmdConfig) error {
 		return err
 	}
 
-	scenarios, err := c.GradientAI().ListScenarios(c.Args[0], opt)
+	scenarios, err := c.AgentPlatform().ListScenarios(c.Args[0], opt)
 	if err != nil {
 		return err
 	}
@@ -329,7 +329,7 @@ func RunScenarioSetUpdate(c *CmdConfig) error {
 	}
 
 	scenarioSetUUID := c.Args[0]
-	scenarioSet, err := c.GradientAI().UpdateScenarioSet(scenarioSetUUID, &godo.UpdateScenarioSetRequest{
+	scenarioSet, err := c.AgentPlatform().UpdateScenarioSet(scenarioSetUUID, &godo.UpdateScenarioSetRequest{
 		ScenarioSetUUID: scenarioSetUUID,
 		Name:            name,
 		Scenarios:       scenarios,
@@ -356,7 +356,7 @@ func RunScenarioSetDelete(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	if err := c.GradientAI().DeleteScenarioSet(c.Args[0]); err != nil {
+	if err := c.AgentPlatform().DeleteScenarioSet(c.Args[0]); err != nil {
 		return err
 	}
 
@@ -370,7 +370,7 @@ func RunScenarioSetDownloadURL(c *CmdConfig) error {
 		return err
 	}
 
-	downloadURL, err := c.GradientAI().GetScenarioSetDownloadURL(c.Args[0])
+	downloadURL, err := c.AgentPlatform().GetScenarioSetDownloadURL(c.Args[0])
 	if err != nil {
 		return err
 	}
