@@ -71,7 +71,7 @@ func TestListRegionsCommand(t *testing.T) {
 
 func TestRunGradientAIListRegions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListDatacenterRegions(nil, nil).Return(testDatacenterRegions, nil)
+		tm.agentPlatform.EXPECT().ListDatacenterRegions(nil, nil).Return(testDatacenterRegions, nil)
 
 		config.Command = &cobra.Command{}
 
@@ -82,7 +82,7 @@ func TestRunGradientAIListRegions(t *testing.T) {
 
 func TestRunGradientAIListRegionsError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListDatacenterRegions(nil, nil).Return(nil, assert.AnError)
+		tm.agentPlatform.EXPECT().ListDatacenterRegions(nil, nil).Return(nil, assert.AnError)
 
 		config.Command = &cobra.Command{}
 

@@ -28,6 +28,8 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -587,17 +589,24 @@ func TestInjectManifestSecrets(t *testing.T) {
 		assert.Equal(t, string(in), string(out))
 	})
 
-	t.Run("appends a tenantSecret slot to a flat manifest", func(t *testing.T) {
+	// A flat manifest's top-level `secrets` is a MAP keyed by name — agentspec
+	// decodes it as map[string]flatSecret, where a bare string means a write-only
+	// tenantSecret plaintext. The list of {name, source, value} slots asserted
+	// here before is the LEGACY envelope's shape, and sending it on a flat
+	// manifest made the API 400 with "cannot unmarshal array into Go struct field
+	// .secrets". Every `--harness X --secret ...` create hit that whenever the
+	// generated manifest declared no secrets of its own, which is all of them
+	// except codex, claude-code and codex-agentapi.
+	t.Run("adds a tenantSecret entry to a flat manifest as a map", func(t *testing.T) {
 		out, err := injectManifestSecrets([]byte("name: demo\nagent: opencode\n"),
 			map[string]string{"TOKEN": "abc"})
 		require.NoError(t, err)
 
-		list := slots(t, out)
-		require.Len(t, list, 1)
-		slot, _ := yamlMap(list[0])
-		assert.Equal(t, "TOKEN", slot["name"])
-		assert.Equal(t, tenantSecretSource, slot["source"])
-		assert.Equal(t, "abc", slot["value"])
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(out, &doc))
+		secrets, ok := yamlMap(doc["secrets"])
+		require.Truef(t, ok, "flat secrets must be a mapping, got %T: %s", doc["secrets"], out)
+		assert.Equal(t, "abc", secrets["TOKEN"])
 	})
 
 	t.Run("nests under spec on a legacy envelope", func(t *testing.T) {
@@ -647,13 +656,24 @@ secrets:
 		assert.Equal(t, "abc", got["TOKEN"])
 	})
 
-	t.Run("multiple secrets are appended in a stable order", func(t *testing.T) {
+	// Secrets arrive in a Go map, so without a sort the manifest bytes differ run
+	// to run — which shows up as a phantom diff in --dry-run and in anything that
+	// hashes the manifest. Both output shapes have to be stable.
+	t.Run("multiple secrets are written in a stable order, flat", func(t *testing.T) {
 		out, err := injectManifestSecrets([]byte("name: demo\nagent: opencode\n"),
 			map[string]string{"B_TOKEN": "b", "A_TOKEN": "a", "C_TOKEN": "c"})
 		require.NoError(t, err)
 
+		assert.Regexp(t, `(?s)A_TOKEN.*B_TOKEN.*C_TOKEN`, string(out))
+	})
+
+	t.Run("multiple secrets are appended in a stable order, legacy", func(t *testing.T) {
+		out, err := injectManifestSecrets([]byte(sampleManifest),
+			map[string]string{"B_TOKEN": "b", "A_TOKEN": "a", "C_TOKEN": "c"})
+		require.NoError(t, err)
+
 		var names []string
-		for _, slot := range slots(t, out) {
+		for _, slot := range slots(t, out, "spec") {
 			m, _ := yamlMap(slot)
 			names = append(names, m["name"].(string))
 		}
@@ -1135,4 +1155,99 @@ func TestHeadlessEventDetail(t *testing.T) {
 		Kind:    godo.HostedAgentEventKindRunFailed,
 		Payload: json.RawMessage(`{not-json`),
 	}))
+}
+
+// `launch` on a bare sandbox has to refuse before creating anything. The
+// assertion that nothing was created is the substance: attaching is what launch
+// is for, so a refusal that fires after the create call would leave a live,
+// billable sandbox behind on a command that returned an error — and the mock
+// having no CreateSessionFromManifest expectation is what proves it did not.
+func TestLaunchNewSession_BareSandboxRefusedBeforeCreating(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		stubInteractiveTerminal(t, true)
+		t.Chdir(t.TempDir())
+		config.Doit.Set(config.NS, doctl.ArgAgentTemplate, templateAliasSandbox)
+
+		err := launchNewSession(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "this session runs none")
+		assert.Contains(t, err.Error(), "exec")
+	})
+}
+
+// `none` is the manifest's word for a session with no agent, not a --harness
+// value. A --spec file saying `agent: none` still works (the test below);
+// typing it as a harness is refused and pointed at the one spelling we teach.
+// Derived from addAgentCreationFlags rather than hand-listed, so a flag added
+// there and forgotten in the guard fails here instead of being silently
+// dropped on `launch <session>`. --template was missing exactly that way.
+//
+// The exemptions are the whole rule: the three creation sources are routed to
+// create mode by agentCreationFlagSet rather than refused, and
+// --resume-on-topoff is applied to an existing session on purpose by
+// applyLaunchSessionUpdates.
+func TestRejectCreationFlagsForExistingSession_CoversEveryCreationFlag(t *testing.T) {
+	routedToCreateMode := map[string]bool{
+		doctl.ArgAgentHarness:    true,
+		doctl.ArgAgentSpec:       true,
+		doctl.ArgAgentFromConfig: true,
+		"file":                   true, // --spec's alias, same source
+	}
+	appliesToExistingSessions := map[string]bool{
+		doctl.ArgAgentResumeOnTopoff: true,
+	}
+
+	probe := &Command{Command: &cobra.Command{Use: "probe"}}
+	addAgentCreationFlags(probe)
+
+	var checked int
+	probe.Flags().VisitAll(func(f *pflag.Flag) {
+		if routedToCreateMode[f.Name] || appliesToExistingSessions[f.Name] {
+			return
+		}
+		checked++
+		t.Run(f.Name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Doit.Set(config.NS, f.Name, "x")
+
+				err := rejectCreationFlagsForExistingSession(config)
+				require.Error(t, err, "--%s describes how to build a session, so it cannot be silently ignored when one already exists", f.Name)
+				assert.Contains(t, err.Error(), "--"+f.Name)
+				assert.Contains(t, err.Error(), "only applies when creating a new session")
+			})
+		})
+	})
+	require.NotZero(t, checked, "the flag set should not be empty; the guard would assert nothing")
+}
+
+func TestResolveAgentCreationSource_HarnessNoneIsRefused(t *testing.T) {
+	for _, typed := range []string{"none", "None", " NONE "} {
+		t.Run(typed, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				t.Chdir(t.TempDir())
+				config.Doit.Set(config.NS, doctl.ArgAgentHarness, typed)
+
+				_, err := resolveAgentCreationSource(config)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "is not a harness")
+				assert.Contains(t, err.Error(), "--template "+templateAliasSandbox)
+			})
+		})
+	}
+}
+
+// A manifest naming `agent: none` has to be refused on the same footing as the
+// flag — the flag is a convenience, the manifest is the contract.
+func TestLaunchNewSession_BareSandboxManifestRefused(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		stubInteractiveTerminal(t, true)
+		dir := t.TempDir()
+		path := filepath.Join(dir, "agents.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("agent: none\nname: eval-runner\n"), 0o644))
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, path)
+
+		err := launchNewSession(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "this session runs none")
+	})
 }

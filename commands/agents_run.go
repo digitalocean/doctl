@@ -112,6 +112,10 @@ var (
 // DigitalOcean supplies only the sandbox. Collapsing them silently hands
 // --harness codex users the OpenAI-managed adapter, which also differs in what
 // it supports (for example it is excluded from checkpoint/fork/rollback).
+//
+// none is not a harness at all — it is the absence of one. It is accepted here
+// so a bare sandbox is reachable without hand-writing a manifest, which is the
+// whole point of --harness.
 var harnessAgentNames = map[string]string{
 	"opencode":       "opencode",
 	"open-code":      "opencode",
@@ -120,6 +124,41 @@ var harnessAgentNames = map[string]string{
 	"codex":          codexAgentName,
 	"codex-agentapi": openAIAgentsAdapter,
 	"openai-codex":   openAIAgentsAdapter,
+	"none":           bareSandboxAgent,
+}
+
+// bareSandboxAgent is the flat-manifest agent value for a sandbox with no agent
+// in it: the guest runs no agent CLI and no OHR, and the caller drives it over
+// exec, workspace upload/download and port-forward. Sending it input is refused
+// server-side, so every doctl path that would talk to an agent has to be closed
+// off ahead of the call rather than left to fail at it.
+const bareSandboxAgent = "none"
+
+// isBareSandboxHarness reports whether a raw --harness value asks for a sandbox
+// with no agent. Takes the raw flag value (not the resolved agent) so callers
+// can check before resolution.
+func isBareSandboxHarness(harness string) bool {
+	return harnessAgentNames[strings.ToLower(strings.TrimSpace(harness))] == bareSandboxAgent
+}
+
+// agentlessPlatformTemplates are the platform templates that ship no agent
+// runtime. Pairing one with a managed --harness produces a session whose
+// recorded agent kind is a lie: the kind drives billing attribution and every
+// per-kind analytic, while the guest has no agent to drive — the shape an
+// internal workaround used before `--template sandbox` existed, and the reason
+// it has to stop being expressible now that it does.
+//
+// Only platform names are listed, and only the ones known to be agentless. A
+// team's own template is built on some base and doctl cannot tell which without
+// a round trip, so a custom name is passed through and left to the server.
+var agentlessPlatformTemplates = map[string]bool{
+	"coding-base": true,
+}
+
+// isAgentlessTemplate reports whether a --template value names a platform
+// template with no agent in it.
+func isAgentlessTemplate(template string) bool {
+	return agentlessPlatformTemplates[strings.ToLower(strings.TrimSpace(template))]
 }
 
 // harnessDisplayNames maps canonical flat-manifest agent keys (the values of
@@ -130,6 +169,7 @@ var harnessDisplayNames = map[string]string{
 	claudeCodeAgentName: "Claude Code",
 	codexAgentName:      "Codex CLI",
 	openAIAgentsAdapter: "Codex",
+	bareSandboxAgent:    "Bare sandbox",
 }
 
 // prettyHarnessName returns the display name for a raw --harness value or
@@ -190,6 +230,15 @@ func launchNewSession(c *CmdConfig) error {
 	src, err := resolveAgentCreationSource(c)
 	if err != nil {
 		return err
+	}
+	// A bare sandbox has nothing to chat with, so `launch` has no ending. Refuse
+	// before creating anything: creating the session and then failing to attach
+	// would leave a live, billable sandbox behind on a command that reported an
+	// error. `create` is the same creation path and prints the commands that do
+	// drive it.
+	if src.bareSandbox() {
+		return fmt.Errorf("`%s launch` ends in an interactive chat with the agent, and this session runs none; use `%s create` and then drive it with `%s exec`, `%s upload`, `%s download` or `%s port-forward`",
+			agentCLI, agentCLI, agentCLI, agentCLI, agentCLI, agentCLI)
 	}
 
 	maybePrintAgentPublicPreviewTermsNotice(c)
@@ -355,6 +404,11 @@ func rejectCreateOnlyLaunchFlags(c *CmdConfig) error {
 // rejectCreationFlagsForExistingSession guards Mode B: the session already
 // exists, so a flag describing how to build one was either a typo or a
 // misunderstanding, and silently ignoring it would hide that.
+// The list has to cover every flag addAgentCreationFlags registers except the
+// three creation sources — which agentCreationFlagSet routes to create mode
+// instead — and --resume-on-topoff, which applyLaunchSessionUpdates applies to
+// an existing session on purpose. --template and --permission were missing,
+// so `launch <session> --template sandbox` attached and dropped the flag.
 func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 	for _, flag := range []string{
 		doctl.ArgAgentSecret,
@@ -362,6 +416,8 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentRepo,
 		doctl.ArgAgentTriggerPrompt,
 		doctl.ArgAgentWaitTimeout,
+		doctl.ArgAgentTemplate,
+		doctl.ArgAgentPermission,
 	} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
@@ -387,6 +443,10 @@ func resolveHarnessAgent(harness string) (string, error) {
 	}
 	agent, ok := harnessAgentNames[key]
 	if !ok {
+		// `none` is in harnessAgentNames but deliberately absent here: the
+		// --template implication sets it internally, while a user who types it
+		// is refused by resolveAgentCreationSource. Listing it would send them
+		// to a value that answers with a second error.
 		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi",
 			doctl.ArgAgentHarness, harness)
 	}
@@ -396,6 +456,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 type harnessManifest struct {
 	Name        string              `yaml:"name,omitempty"`
 	Agent       string              `yaml:"agent"`
+	Template    string              `yaml:"template,omitempty"`
 	Repos       []string            `yaml:"repos,omitempty"`
 	Config      map[string]any      `yaml:"config,omitempty"`
 	Env         map[string]string   `yaml:"env,omitempty"`
@@ -419,6 +480,7 @@ type harnessManifestOpts struct {
 	prompt     string
 	name       string
 	permission string
+	template   string
 }
 
 func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
@@ -435,6 +497,14 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 	}
 	if o.name != "" {
 		doc.Name = o.name
+	}
+	// Written verbatim, unvalidated beyond the agentless check in
+	// resolveAgentCreationSource. The name resolves server-side against the
+	// team's own templates before the platform catalogue, so doctl cannot know
+	// the valid set without a round trip — and a client-side allow-list would
+	// reject a template the customer built ten seconds ago.
+	if tmpl := strings.TrimSpace(o.template); tmpl != "" {
+		doc.Template = tmpl
 	}
 	if perm := strings.TrimSpace(o.permission); perm != "" {
 		doc.Permissions = &harnessPermissions{Default: perm}
@@ -859,13 +929,49 @@ func (s *lineSpinner) stopAndClear() {
 	fmt.Fprint(s.out, "\r\x1b[K")
 }
 
-// provisioningHints keep a long PROVISIONING wait feeling alive. Later lines
-// call out that workspace bits may exist while the agent is still starting.
-var provisioningHints = []string{
-	"Allocating sandbox…",
-	"Starting workspace…",
-	"Starting agent runtime…",
-	"Workspace may be up; waiting for agent…",
+// startupWords are the lines a create/wait spinner prints for whatever is
+// starting. A session with `agent: none` has no agent in it, so the agent
+// wording there names a process that never runs — "Starting agent runtime…" in
+// particular describes a step coding-base does not have, which reads as a stall
+// rather than as a stage that does not apply.
+type startupWords struct {
+	waiting string
+	ready   string
+	// hints keep a long PROVISIONING wait feeling alive.
+	hints []string
+}
+
+var agentStartupWords = startupWords{
+	waiting: "Waiting for agent…",
+	ready:   "Agent is ready",
+	hints: []string{
+		"Allocating sandbox…",
+		"Starting workspace…",
+		"Starting agent runtime…",
+		// Calls out that workspace bits may exist while the agent still starts.
+		"Workspace may be up; waiting for agent…",
+	},
+}
+
+var bareSandboxStartupWords = startupWords{
+	waiting: "Waiting for sandbox…",
+	ready:   "Sandbox is ready",
+	hints: []string{
+		"Allocating sandbox…",
+		"Starting workspace…",
+		"Waiting for sandbox…",
+	},
+}
+
+// startupWordsFor reads the noun off the server's own answer rather than off
+// the flags this invocation was given, so it is also right for a session doctl
+// did not create — `port-forward` into someone else's bare sandbox included.
+func startupWordsFor(sess *do.HostedAgentSession) startupWords {
+	if sess != nil && sess.HostedAgentSession != nil &&
+		sess.AgentKind == godo.HostedAgentKindNone {
+		return bareSandboxStartupWords
+	}
+	return agentStartupWords
 }
 
 func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
@@ -890,6 +996,7 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 		if err != nil {
 			return nil, err
 		}
+		words := startupWordsFor(sess)
 
 		if prog != nil && !sawBitsReady {
 			if note := bitsReadyNote(sess); note != "" {
@@ -902,7 +1009,7 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 			switch sess.Status {
 			case godo.HostedAgentSessionStatusProvisioning:
 				if prog != nil && !announced {
-					prog.wait("Waiting for agent…")
+					prog.wait(words.waiting)
 					announced = true
 					hintIdx = 0
 					nextHint = creationClock().Add(creationHintInterval)
@@ -913,9 +1020,9 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 				if prog != nil {
 					elapsed := prog.elapsed()
 					if elapsed > 0 {
-						prog.ok(fmt.Sprintf("Agent is ready (%s)", elapsed))
+						prog.ok(fmt.Sprintf("%s (%s)", words.ready, elapsed))
 					} else {
-						prog.ok("Agent is ready")
+						prog.ok(words.ready)
 					}
 				} else if out != nil {
 					fmt.Fprintf(out, "  %s %s\n", runStatusGlyph(sess.Status), colorize(runStatusLabel(sess.Status), colMuted))
@@ -930,11 +1037,11 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 			lastStatus = sess.Status
 		} else if prog != nil &&
 			sess.Status == godo.HostedAgentSessionStatusProvisioning &&
-			hintIdx < len(provisioningHints) &&
+			hintIdx < len(words.hints) &&
 			!creationClock().Before(nextHint) {
-			hint := provisioningHints[hintIdx]
+			hint := words.hints[hintIdx]
 			if sawBitsReady {
-				hint = "Waiting for agent…"
+				hint = words.waiting
 			}
 			prog.wait(hint)
 			hintIdx++
@@ -1092,7 +1199,17 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next step", colMuted))
-	body.WriteString(cardRow("launch", agentCLI+" launch "+ref))
+	// A bare sandbox has no chat to launch into, so the card has to carry the
+	// commands that do drive it — this card is the only place a bare-sandbox
+	// user is told what to do next.
+	if sum.Session != nil && sum.Session.AgentKind == godo.HostedAgentKindNone {
+		body.WriteString(cardRow("exec", agentCLI+" exec "+ref+" -- <command>"))
+		body.WriteString(cardRow("upload", agentCLI+" upload "+ref+" --local-file <path> --workspace-path <path>"))
+		body.WriteString(cardRow("download", agentCLI+" download "+ref+" --workspace-path <path> --save-to <path>"))
+		body.WriteString(cardRow("port-forward", agentCLI+" port-forward "+ref+" <port>"))
+	} else {
+		body.WriteString(cardRow("launch", agentCLI+" launch "+ref))
+	}
 	if sum.AutoCreatedConfig && sum.Session != nil && sum.Session.HostedAgentSession != nil {
 		if cfg := strings.TrimSpace(sum.Session.ConfigID); cfg != "" {
 			body.WriteString(cardRow("reuse", agentCLI+" create --from-config "+cfg+" --name <session>"))

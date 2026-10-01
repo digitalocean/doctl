@@ -136,7 +136,7 @@ func uploadScenarioSetFile(c *CmdConfig, path string) (*godo.FileUploadDataSourc
 	fileName := filepath.Base(path)
 	size := strconv.FormatInt(info.Size(), 10)
 
-	uploads, err := c.GradientAI().CreateScenarioSetUploadPresignedURLs(&godo.CreateScenarioSetUploadPresignedURLsRequest{
+	uploads, err := c.AgentPlatform().CreateScenarioSetUploadPresignedURLs(&godo.CreateScenarioSetUploadPresignedURLsRequest{
 		Files: []*godo.PresignedUrlFile{{
 			FileName: fileName,
 			FileSize: size,

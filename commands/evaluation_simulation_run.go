@@ -280,7 +280,7 @@ func RunSimulationRunCreate(c *CmdConfig) error {
 	}
 	req.EvaluationConfig = evaluationConfig
 
-	run, err := c.GradientAI().CreateSimulationRun(req)
+	run, err := c.AgentPlatform().CreateSimulationRun(req)
 	if err != nil {
 		return err
 	}
@@ -305,7 +305,7 @@ func RunSimulationRunList(c *CmdConfig) error {
 		return err
 	}
 
-	runs, err := c.GradientAI().ListSimulationRuns(&godo.SimulationRunListOptions{
+	runs, err := c.AgentPlatform().ListSimulationRuns(&godo.SimulationRunListOptions{
 		ScenarioSetUUID: scenarioSetUUID,
 		Statuses:        genAIEnums[godo.SimulationRunStatus](simulationRunStatusPrefix, rawStatuses),
 		Search:          search,
@@ -325,7 +325,7 @@ func RunSimulationRunGet(c *CmdConfig) error {
 		return err
 	}
 
-	detail, err := c.GradientAI().GetSimulationRun(c.Args[0])
+	detail, err := c.AgentPlatform().GetSimulationRun(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -345,7 +345,7 @@ func RunSimulationRunUpdate(c *CmdConfig) error {
 	}
 
 	runUUID := c.Args[0]
-	run, err := c.GradientAI().UpdateSimulationRun(runUUID, &godo.UpdateSimulationRunRequest{
+	run, err := c.AgentPlatform().UpdateSimulationRun(runUUID, &godo.UpdateSimulationRunRequest{
 		RunUUID: runUUID,
 		Name:    name,
 	})
@@ -371,7 +371,7 @@ func RunSimulationRunCancel(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	run, err := c.GradientAI().CancelSimulationRun(c.Args[0])
+	run, err := c.AgentPlatform().CancelSimulationRun(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -394,7 +394,7 @@ func RunSimulationRunDelete(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	if err := c.GradientAI().DeleteSimulationRun(c.Args[0]); err != nil {
+	if err := c.AgentPlatform().DeleteSimulationRun(c.Args[0]); err != nil {
 		return err
 	}
 
@@ -428,7 +428,7 @@ func RunSimulationRunListJourneys(c *CmdConfig) error {
 		return err
 	}
 
-	journeys, err := c.GradientAI().ListSimulationJourneys(c.Args[0], &godo.SimulationJourneyListOptions{
+	journeys, err := c.AgentPlatform().ListSimulationJourneys(c.Args[0], &godo.SimulationJourneyListOptions{
 		ScenarioUUID:  scenarioUUID,
 		Statuses:      genAIEnums[godo.SimulationJourneyStatus](journeyStatusPrefix, rawStatuses),
 		Verdicts:      genAIEnums[godo.SimulationJourneyVerdict](journeyVerdictPrefix, rawVerdicts),
@@ -449,7 +449,7 @@ func RunSimulationRunGetJourney(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	journey, err := c.GradientAI().GetSimulationJourney(c.Args[0], c.Args[1])
+	journey, err := c.AgentPlatform().GetSimulationJourney(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func RunSimulationRunGetJourneyTrajectory(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	trajectory, err := c.GradientAI().GetSimulationJourneyTrajectory(c.Args[0], c.Args[1])
+	trajectory, err := c.AgentPlatform().GetSimulationJourneyTrajectory(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -477,7 +477,7 @@ func RunSimulationRunGetJourneyTrajectoryURL(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	trajectoryURL, err := c.GradientAI().GetSimulationJourneyTrajectoryURL(c.Args[0], c.Args[1])
+	trajectoryURL, err := c.AgentPlatform().GetSimulationJourneyTrajectoryURL(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}

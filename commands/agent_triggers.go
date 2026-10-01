@@ -55,7 +55,7 @@ func AgentTriggers() *Command {
 		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTrigger{}))
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerKind, "", "", "Trigger kind (webhook|cron)", requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Unique trigger name for the team (1–64 letters/digits/`-`/`.`/`_`, start and end alphanumeric, not a UUID)", requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Unique trigger name for the team (1–64 characters: letters, digits, hyphen, dot, underscore; starts and ends alphanumeric, not a UUID)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerSessionMode, "", "", "Session mode (fresh|reuse)", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerPrompt, "", "", "Prompt template sent on each fire", requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerOutputMode, "", "none", "Output delivery mode (none|email|slack)")

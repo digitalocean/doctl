@@ -108,8 +108,8 @@ func paginateGenAIList[T any, W any](fetch func(*godo.ListOptions) ([]*T, *godo.
 }
 
 // CreateScenarioSetUploadPresignedURLs creates presigned URLs for uploading scenario set files.
-func (a *gradientAIService) CreateScenarioSetUploadPresignedURLs(req *godo.CreateScenarioSetUploadPresignedURLsRequest) (*ScenarioSetFileUploads, error) {
-	uploads, _, err := a.client.GradientAI.CreateScenarioSetUploadPresignedURLs(context.TODO(), req)
+func (a *agentPlatformService) CreateScenarioSetUploadPresignedURLs(req *godo.CreateScenarioSetUploadPresignedURLsRequest) (*ScenarioSetFileUploads, error) {
+	uploads, _, err := a.client.AgentPlatform.CreateScenarioSetUploadPresignedURLs(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -117,8 +117,8 @@ func (a *gradientAIService) CreateScenarioSetUploadPresignedURLs(req *godo.Creat
 }
 
 // CreateScenarioSet creates a scenario set from inline scenarios or an uploaded file.
-func (a *gradientAIService) CreateScenarioSet(req *godo.CreateScenarioSetRequest) (*ScenarioSet, error) {
-	set, _, err := a.client.GradientAI.CreateScenarioSet(context.TODO(), req)
+func (a *agentPlatformService) CreateScenarioSet(req *godo.CreateScenarioSetRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.CreateScenarioSet(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -126,8 +126,8 @@ func (a *gradientAIService) CreateScenarioSet(req *godo.CreateScenarioSetRequest
 }
 
 // GenerateScenarioSet dispatches goal-driven scenario generation.
-func (a *gradientAIService) GenerateScenarioSet(req *godo.GenerateScenarioSetRequest) (*ScenarioSet, error) {
-	set, _, err := a.client.GradientAI.GenerateScenarioSet(context.TODO(), req)
+func (a *agentPlatformService) GenerateScenarioSet(req *godo.GenerateScenarioSetRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.GenerateScenarioSet(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (a *gradientAIService) GenerateScenarioSet(req *godo.GenerateScenarioSetReq
 }
 
 // ListScenarioSets lists all scenario sets for the team.
-func (a *gradientAIService) ListScenarioSets(opt *godo.ScenarioSetListOptions) (ScenarioSets, error) {
+func (a *agentPlatformService) ListScenarioSets(opt *godo.ScenarioSetListOptions) (ScenarioSets, error) {
 	if opt == nil {
 		opt = &godo.ScenarioSetListOptions{}
 	}
@@ -143,7 +143,7 @@ func (a *gradientAIService) ListScenarioSets(opt *godo.ScenarioSetListOptions) (
 	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.ScenarioSet, *godo.Response, error) {
 		filters := *opt
 		filters.ListOptions = *listOpt
-		res, resp, err := a.client.GradientAI.ListScenarioSets(context.TODO(), &filters)
+		res, resp, err := a.client.AgentPlatform.ListScenarioSets(context.TODO(), &filters)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -154,8 +154,8 @@ func (a *gradientAIService) ListScenarioSets(opt *godo.ScenarioSetListOptions) (
 }
 
 // GetScenarioSet retrieves a scenario set by its UUID.
-func (a *gradientAIService) GetScenarioSet(scenarioSetUUID string) (*ScenarioSet, error) {
-	set, _, err := a.client.GradientAI.GetScenarioSet(context.TODO(), scenarioSetUUID)
+func (a *agentPlatformService) GetScenarioSet(scenarioSetUUID string) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.GetScenarioSet(context.TODO(), scenarioSetUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -163,9 +163,9 @@ func (a *gradientAIService) GetScenarioSet(scenarioSetUUID string) (*ScenarioSet
 }
 
 // ListScenarios lists all scenarios within a scenario set.
-func (a *gradientAIService) ListScenarios(scenarioSetUUID string, opt *godo.ScenarioListOptions) (Scenarios, error) {
+func (a *agentPlatformService) ListScenarios(scenarioSetUUID string, opt *godo.ScenarioListOptions) (Scenarios, error) {
 	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.Scenario, *godo.Response, error) {
-		res, resp, err := a.client.GradientAI.ListScenarios(context.TODO(), scenarioSetUUID, scenarioFilters(opt, listOpt))
+		res, resp, err := a.client.AgentPlatform.ListScenarios(context.TODO(), scenarioSetUUID, scenarioFilters(opt, listOpt))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -174,8 +174,8 @@ func (a *gradientAIService) ListScenarios(scenarioSetUUID string, opt *godo.Scen
 }
 
 // GetScenarioSetDownloadURL returns a presigned download URL for a scenario set's file.
-func (a *gradientAIService) GetScenarioSetDownloadURL(scenarioSetUUID string) (*GenAIDownloadURL, error) {
-	res, _, err := a.client.GradientAI.GetScenarioSetDownloadURL(context.TODO(), scenarioSetUUID)
+func (a *agentPlatformService) GetScenarioSetDownloadURL(scenarioSetUUID string) (*GenAIDownloadURL, error) {
+	res, _, err := a.client.AgentPlatform.GetScenarioSetDownloadURL(context.TODO(), scenarioSetUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,8 +183,8 @@ func (a *gradientAIService) GetScenarioSetDownloadURL(scenarioSetUUID string) (*
 }
 
 // UpdateScenarioSet updates a scenario set by its UUID.
-func (a *gradientAIService) UpdateScenarioSet(scenarioSetUUID string, req *godo.UpdateScenarioSetRequest) (*ScenarioSet, error) {
-	set, _, err := a.client.GradientAI.UpdateScenarioSet(context.TODO(), scenarioSetUUID, req)
+func (a *agentPlatformService) UpdateScenarioSet(scenarioSetUUID string, req *godo.UpdateScenarioSetRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.UpdateScenarioSet(context.TODO(), scenarioSetUUID, req)
 	if err != nil {
 		return nil, err
 	}
@@ -192,13 +192,13 @@ func (a *gradientAIService) UpdateScenarioSet(scenarioSetUUID string, req *godo.
 }
 
 // DeleteScenarioSet deletes a scenario set by its UUID.
-func (a *gradientAIService) DeleteScenarioSet(scenarioSetUUID string) error {
-	_, _, err := a.client.GradientAI.DeleteScenarioSet(context.TODO(), scenarioSetUUID)
+func (a *agentPlatformService) DeleteScenarioSet(scenarioSetUUID string) error {
+	_, _, err := a.client.AgentPlatform.DeleteScenarioSet(context.TODO(), scenarioSetUUID)
 	return err
 }
 
 // ListScenarioLibrary lists all platform-curated scenario library entries.
-func (a *gradientAIService) ListScenarioLibrary(opt *godo.ScenarioLibraryListOptions) (ScenarioLibraryEntries, error) {
+func (a *agentPlatformService) ListScenarioLibrary(opt *godo.ScenarioLibraryListOptions) (ScenarioLibraryEntries, error) {
 	if opt == nil {
 		opt = &godo.ScenarioLibraryListOptions{}
 	}
@@ -206,7 +206,7 @@ func (a *gradientAIService) ListScenarioLibrary(opt *godo.ScenarioLibraryListOpt
 	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.ScenarioLibraryEntry, *godo.Response, error) {
 		filters := *opt
 		filters.ListOptions = *listOpt
-		res, resp, err := a.client.GradientAI.ListScenarioLibrary(context.TODO(), &filters)
+		res, resp, err := a.client.AgentPlatform.ListScenarioLibrary(context.TODO(), &filters)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -217,9 +217,9 @@ func (a *gradientAIService) ListScenarioLibrary(opt *godo.ScenarioLibraryListOpt
 }
 
 // ListScenarioLibraryScenarios lists all scenarios within a scenario library entry.
-func (a *gradientAIService) ListScenarioLibraryScenarios(libraryScenarioUUID string, opt *godo.ScenarioListOptions) (Scenarios, error) {
+func (a *agentPlatformService) ListScenarioLibraryScenarios(libraryScenarioUUID string, opt *godo.ScenarioListOptions) (Scenarios, error) {
 	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.Scenario, *godo.Response, error) {
-		res, resp, err := a.client.GradientAI.ListScenarioLibraryScenarios(context.TODO(), libraryScenarioUUID, scenarioFilters(opt, listOpt))
+		res, resp, err := a.client.AgentPlatform.ListScenarioLibraryScenarios(context.TODO(), libraryScenarioUUID, scenarioFilters(opt, listOpt))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -228,8 +228,8 @@ func (a *gradientAIService) ListScenarioLibraryScenarios(libraryScenarioUUID str
 }
 
 // CreateScenarioSetFromLibrary materializes a library entry into a team-owned scenario set.
-func (a *gradientAIService) CreateScenarioSetFromLibrary(libraryScenarioUUID string, req *godo.CreateScenarioSetFromLibraryRequest) (*ScenarioSet, error) {
-	set, _, err := a.client.GradientAI.CreateScenarioSetFromLibrary(context.TODO(), libraryScenarioUUID, req)
+func (a *agentPlatformService) CreateScenarioSetFromLibrary(libraryScenarioUUID string, req *godo.CreateScenarioSetFromLibraryRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.CreateScenarioSetFromLibrary(context.TODO(), libraryScenarioUUID, req)
 	if err != nil {
 		return nil, err
 	}
@@ -237,8 +237,8 @@ func (a *gradientAIService) CreateScenarioSetFromLibrary(libraryScenarioUUID str
 }
 
 // CreateSimulationRun creates a simulation run.
-func (a *gradientAIService) CreateSimulationRun(req *godo.CreateSimulationRunRequest) (*SimulationRun, error) {
-	run, _, err := a.client.GradientAI.CreateSimulationRun(context.TODO(), req)
+func (a *agentPlatformService) CreateSimulationRun(req *godo.CreateSimulationRunRequest) (*SimulationRun, error) {
+	run, _, err := a.client.AgentPlatform.CreateSimulationRun(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func (a *gradientAIService) CreateSimulationRun(req *godo.CreateSimulationRunReq
 }
 
 // ListSimulationRuns lists all simulation runs for the team.
-func (a *gradientAIService) ListSimulationRuns(opt *godo.SimulationRunListOptions) (SimulationRuns, error) {
+func (a *agentPlatformService) ListSimulationRuns(opt *godo.SimulationRunListOptions) (SimulationRuns, error) {
 	if opt == nil {
 		opt = &godo.SimulationRunListOptions{}
 	}
@@ -254,7 +254,7 @@ func (a *gradientAIService) ListSimulationRuns(opt *godo.SimulationRunListOption
 	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.SimulationRun, *godo.Response, error) {
 		filters := *opt
 		filters.ListOptions = *listOpt
-		res, resp, err := a.client.GradientAI.ListSimulationRuns(context.TODO(), &filters)
+		res, resp, err := a.client.AgentPlatform.ListSimulationRuns(context.TODO(), &filters)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -265,8 +265,8 @@ func (a *gradientAIService) ListSimulationRuns(opt *godo.SimulationRunListOption
 }
 
 // GetSimulationRun retrieves a simulation run by its UUID, including per-scenario results.
-func (a *gradientAIService) GetSimulationRun(runUUID string) (*SimulationRunDetail, error) {
-	res, _, err := a.client.GradientAI.GetSimulationRun(context.TODO(), runUUID)
+func (a *agentPlatformService) GetSimulationRun(runUUID string) (*SimulationRunDetail, error) {
+	res, _, err := a.client.AgentPlatform.GetSimulationRun(context.TODO(), runUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -274,8 +274,8 @@ func (a *gradientAIService) GetSimulationRun(runUUID string) (*SimulationRunDeta
 }
 
 // UpdateSimulationRun updates a simulation run by its UUID.
-func (a *gradientAIService) UpdateSimulationRun(runUUID string, req *godo.UpdateSimulationRunRequest) (*SimulationRun, error) {
-	run, _, err := a.client.GradientAI.UpdateSimulationRun(context.TODO(), runUUID, req)
+func (a *agentPlatformService) UpdateSimulationRun(runUUID string, req *godo.UpdateSimulationRunRequest) (*SimulationRun, error) {
+	run, _, err := a.client.AgentPlatform.UpdateSimulationRun(context.TODO(), runUUID, req)
 	if err != nil {
 		return nil, err
 	}
@@ -283,8 +283,8 @@ func (a *gradientAIService) UpdateSimulationRun(runUUID string, req *godo.Update
 }
 
 // CancelSimulationRun cancels an in-progress simulation run.
-func (a *gradientAIService) CancelSimulationRun(runUUID string) (*SimulationRun, error) {
-	run, _, err := a.client.GradientAI.CancelSimulationRun(context.TODO(), runUUID)
+func (a *agentPlatformService) CancelSimulationRun(runUUID string) (*SimulationRun, error) {
+	run, _, err := a.client.AgentPlatform.CancelSimulationRun(context.TODO(), runUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -292,13 +292,13 @@ func (a *gradientAIService) CancelSimulationRun(runUUID string) (*SimulationRun,
 }
 
 // DeleteSimulationRun deletes a simulation run by its UUID.
-func (a *gradientAIService) DeleteSimulationRun(runUUID string) error {
-	_, _, err := a.client.GradientAI.DeleteSimulationRun(context.TODO(), runUUID)
+func (a *agentPlatformService) DeleteSimulationRun(runUUID string) error {
+	_, _, err := a.client.AgentPlatform.DeleteSimulationRun(context.TODO(), runUUID)
 	return err
 }
 
 // ListSimulationJourneys lists all journeys for a simulation run.
-func (a *gradientAIService) ListSimulationJourneys(runUUID string, opt *godo.SimulationJourneyListOptions) (SimulationJourneys, error) {
+func (a *agentPlatformService) ListSimulationJourneys(runUUID string, opt *godo.SimulationJourneyListOptions) (SimulationJourneys, error) {
 	if opt == nil {
 		opt = &godo.SimulationJourneyListOptions{}
 	}
@@ -306,7 +306,7 @@ func (a *gradientAIService) ListSimulationJourneys(runUUID string, opt *godo.Sim
 	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.SimulationJourney, *godo.Response, error) {
 		filters := *opt
 		filters.ListOptions = *listOpt
-		res, resp, err := a.client.GradientAI.ListSimulationJourneys(context.TODO(), runUUID, &filters)
+		res, resp, err := a.client.AgentPlatform.ListSimulationJourneys(context.TODO(), runUUID, &filters)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -317,8 +317,8 @@ func (a *gradientAIService) ListSimulationJourneys(runUUID string, opt *godo.Sim
 }
 
 // GetSimulationJourney retrieves a single journey within a simulation run.
-func (a *gradientAIService) GetSimulationJourney(runUUID string, journeyUUID string) (*SimulationJourney, error) {
-	journey, _, err := a.client.GradientAI.GetSimulationJourney(context.TODO(), runUUID, journeyUUID)
+func (a *agentPlatformService) GetSimulationJourney(runUUID string, journeyUUID string) (*SimulationJourney, error) {
+	journey, _, err := a.client.AgentPlatform.GetSimulationJourney(context.TODO(), runUUID, journeyUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -326,8 +326,8 @@ func (a *gradientAIService) GetSimulationJourney(runUUID string, journeyUUID str
 }
 
 // GetSimulationJourneyTrajectory retrieves the trajectory of a journey.
-func (a *gradientAIService) GetSimulationJourneyTrajectory(runUUID string, journeyUUID string) (*SimulationTrajectory, error) {
-	trajectory, _, err := a.client.GradientAI.GetSimulationJourneyTrajectory(context.TODO(), runUUID, journeyUUID)
+func (a *agentPlatformService) GetSimulationJourneyTrajectory(runUUID string, journeyUUID string) (*SimulationTrajectory, error) {
+	trajectory, _, err := a.client.AgentPlatform.GetSimulationJourneyTrajectory(context.TODO(), runUUID, journeyUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -335,8 +335,8 @@ func (a *gradientAIService) GetSimulationJourneyTrajectory(runUUID string, journ
 }
 
 // GetSimulationJourneyTrajectoryURL returns a presigned download URL for a journey's trajectory.
-func (a *gradientAIService) GetSimulationJourneyTrajectoryURL(runUUID string, journeyUUID string) (*GenAIDownloadURL, error) {
-	res, _, err := a.client.GradientAI.GetSimulationJourneyTrajectoryURL(context.TODO(), runUUID, journeyUUID)
+func (a *agentPlatformService) GetSimulationJourneyTrajectoryURL(runUUID string, journeyUUID string) (*GenAIDownloadURL, error) {
+	res, _, err := a.client.AgentPlatform.GetSimulationJourneyTrajectoryURL(context.TODO(), runUUID, journeyUUID)
 	if err != nil {
 		return nil, err
 	}

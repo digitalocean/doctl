@@ -41,6 +41,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
 	"custom":           {},
+	"none":             {}, // bare sandbox (AGENT_KIND_NONE): no agent in the guest
 	"codex-cli":        {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
 	"claude-agent-sdk": {},
@@ -171,6 +172,8 @@ func validateAgentManifest(manifest []byte) *agentManifestValidation {
 		validateFlatManifest(doc, out)
 	}
 
+	validateManifestKeysWhitespace(doc, legacy, out)
+
 	adapter := manifestAdapter(doc, legacy)
 	env, secretNames, envPath, secretsPath := extractManifestEnvAndSecrets(doc, legacy)
 	validateManifestEnvAndSecrets(adapter, env, secretNames, envPath, secretsPath, out)
@@ -268,7 +271,7 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, none, …)", path, adapter))
 		return
 	}
 	switch adapter {
@@ -336,6 +339,7 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 	slots := make(map[string]struct{}, len(secretNames))
 	for _, n := range secretNames {
 		slots[n] = struct{}{}
+		reportWhitespaceKey(secretsPath, n, out)
 	}
 
 	keys := make([]string, 0, len(env))
@@ -345,10 +349,11 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 	sort.Strings(keys)
 
 	for _, key := range keys {
+		reportWhitespaceKey(envPath, key, out)
 		val := env[key]
-		ukey := strings.ToUpper(key)
+		ukey := strings.ToUpper(strings.TrimSpace(key))
 		if _, reserved := reservedAgentEnvKeys[ukey]; reserved {
-			out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: reserved platform environment key", envPath, key))
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: reserved platform environment key", envPath, strings.TrimSpace(key)))
 			continue
 		}
 		switch {
@@ -362,6 +367,61 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 	}
 
 	validateAdapterModelEnv(adapter, env, envPath, out)
+}
+
+// validateManifestKeysWhitespace catches keys tainted by copy-paste invisible
+// spaces (especially U+00A0) before they become opaque API 400s (MARSOHS-1627).
+// NBSP used as YAML "indent" is not indentation — the parser treats it as part
+// of a top-level key, which the server then rejects as an unknown field.
+func validateManifestKeysWhitespace(doc map[string]any, legacy bool, out *agentManifestValidation) {
+	keys := make([]string, 0, len(doc))
+	for k := range doc {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		reportWhitespaceKey("", key, out)
+	}
+
+	if !legacy {
+		return
+	}
+	spec, ok := yamlMap(doc["spec"])
+	if !ok {
+		return
+	}
+	specKeys := make([]string, 0, len(spec))
+	for k := range spec {
+		specKeys = append(specKeys, k)
+	}
+	sort.Strings(specKeys)
+	for _, key := range specKeys {
+		reportWhitespaceKey("spec", key, out)
+	}
+}
+
+func reportWhitespaceKey(path, key string, out *agentManifestValidation) {
+	if !keyHasUnexpectedWhitespace(key) {
+		return
+	}
+	trimmed := strings.TrimSpace(key)
+	switch {
+	case trimmed == "" && path == "":
+		out.Errors = append(out.Errors, "a top-level key is only whitespace (often non-breaking spaces from copy-paste) — delete or retype it")
+	case trimmed == "":
+		out.Errors = append(out.Errors, fmt.Sprintf("%s: a key is only whitespace (often non-breaking spaces from copy-paste) — delete or retype it", path))
+	case path == "":
+		out.Errors = append(out.Errors, fmt.Sprintf("top-level key %q has unexpected whitespace (often from docs copy-paste) — retype the key", trimmed))
+	default:
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: key has unexpected whitespace (often from docs copy-paste) — retype the key", path, trimmed))
+	}
+}
+
+func keyHasUnexpectedWhitespace(key string) bool {
+	if strings.TrimSpace(key) != key {
+		return true
+	}
+	return strings.ContainsFunc(key, isCopyPasteSpace)
 }
 
 // validateManifestPermissionsAndSkills mirrors harness-api agentspec rules that
