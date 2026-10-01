@@ -321,6 +321,8 @@ const agentsTriggersListExecutionsHelpMD = `List firings for a trigger. Use ` + 
 
 const agentsTriggersGetExecutionHelpMD = `Print one trigger execution, including payload and output when available.`
 
+const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is only paused — the platform has no run-interrupt call today, so the agent's turn may still be in flight even after this returns. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
+
 const agentsTriggersGetBySessionHelpMD = `Find the trigger that created or binds a session.`
 
 const agentsTriggersListReusableHelpMD = `List paused sessions available for reuse triggers.`
