@@ -209,14 +209,69 @@ func TestTemplateImageRef(t *testing.T) {
 	}))
 }
 
+// The public name for the agentless base resolves to the platform one before
+// anything is validated or sent, and the old spelling keeps working.
+func TestResolvePlatformTemplateAlias(t *testing.T) {
+	for _, in := range []string{"sandbox", "Sandbox", " SANDBOX "} {
+		assert.Equal(t, baseTemplateCodingBase, resolvePlatformTemplateAlias(in), "input %q", in)
+	}
+	// Anything doctl does not own is passed through untouched: a team template
+	// resolves server-side, where it correctly shadows the platform catalogue.
+	for _, in := range []string{"coding-base", "coding-codex", "my-eval-image", ""} {
+		assert.Equal(t, strings.TrimSpace(in), resolvePlatformTemplateAlias(in), "input %q", in)
+	}
+	assert.NoError(t, validateBaseTemplate(resolvePlatformTemplateAlias("sandbox")))
+}
+
+// Reserving the name is what makes the client-side alias safe. Without it a
+// team template called sandbox would be unreachable through --template, and the
+// session would silently come up on the platform image instead.
+func TestRejectReservedTemplateName(t *testing.T) {
+	for _, reserved := range []string{"sandbox", "Sandbox", " sandbox "} {
+		err := rejectReservedTemplateName(reserved)
+		require.Errorf(t, err, "name %q", reserved)
+		assert.Contains(t, err.Error(), "reserved")
+		assert.Contains(t, err.Error(), baseTemplateCodingBase)
+	}
+	// Only alias names are reserved. coding-base itself is not: it collides with
+	// a platform template, but the server resolves that in the team's favour and
+	// doctl does not rewrite the name, so the customer still gets their image.
+	for _, ok := range []string{"coding-base", "my-eval-image", "sandbox-2", "mysandbox"} {
+		assert.NoErrorf(t, rejectReservedTemplateName(ok), "name %q", ok)
+	}
+}
+
 func TestValidateBaseTemplate(t *testing.T) {
 	assert.NoError(t, validateBaseTemplate("coding-claude-code"))
 	assert.NoError(t, validateBaseTemplate("coding-codex"))
 	assert.NoError(t, validateBaseTemplate("coding-opencode"))
 	assert.NoError(t, validateBaseTemplate("coding-hermes"))
 	assert.NoError(t, validateBaseTemplate("langgraph"))
-	err := validateBaseTemplate("coding-base")
-	require.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "base-template"))
-	assert.Contains(t, err.Error(), "coding-hermes")
+
+	// coding-base and crewai are accepted by the API's external template-build
+	// policy, which excludes only codex-agentapi. doctl used to reject both, so a
+	// customer rebasing their own tooling onto the agentless base was stopped by
+	// their CLI with an error implying the base did not exist. This test used
+	// coding-base as its invalid exemplar; the exemplar moved to the value the
+	// server actually refuses so the assertion below still proves what it claims.
+	assert.NoError(t, validateBaseTemplate("coding-base"))
+	assert.NoError(t, validateBaseTemplate("crewai"))
+
+	// Allowed but not advertised: partners are told about these directly, and
+	// they should work without appearing in the error message.
+	assert.NoError(t, validateBaseTemplate("hermes-base"))
+	assert.NoError(t, validateBaseTemplate("langgraph-base"))
+	for _, hidden := range []string{"hermes-base", "langgraph-base"} {
+		assert.NotContains(t, validateBaseTemplate("nope").Error(), hidden)
+	}
+
+	for _, invalid := range []string{"codex-agentapi", "nope", "", "Coding-Base"} {
+		err := validateBaseTemplate(invalid)
+		require.Errorf(t, err, "base-template %q", invalid)
+		assert.True(t, strings.Contains(err.Error(), "base-template"))
+		assert.Contains(t, err.Error(), "coding-hermes")
+		// The agentless base is advertised under its public name. coding-base
+		// stays accepted above; it is just no longer the spelling we teach.
+		assert.Contains(t, err.Error(), templateAliasSandbox)
+	}
 }

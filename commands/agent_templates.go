@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -29,13 +30,105 @@ import (
 const (
 	templateRefPageSize = 200
 
+	baseTemplateCodingBase       = "coding-base"
 	baseTemplateCodingClaudeCode = "coding-claude-code"
 	baseTemplateCodingCodex      = "coding-codex"
 	baseTemplateCodingOpenCode   = "coding-opencode"
 	baseTemplateCodingHermes     = "coding-hermes"
+	baseTemplateCrewAI           = "crewai"
 	baseTemplateLanggraph        = "langgraph"
 	baseTemplateHermesBase       = "hermes-base"
+	baseTemplateLanggraphBase    = "langgraph-base"
 )
+
+// The two base-template sets mirror the server's: it validates against every
+// allowed key and names only the advertised subset in errors. Keeping the same
+// split here keeps this list auditable against it — doctl accepting a strict
+// subset is the failure that matters, because it blocks a build the API would
+// have taken, with an error that reads as though the base does not exist.
+//
+// Not advertised, deliberately: hermes-base and langgraph-base are the BYOT
+// workload bases, allowed for partners who know about them and hidden until
+// BYOT launches. codex-agentapi is absent from both sets because the server
+// refuses it outright — the agent loop runs at OpenAI, so there is no local
+// runtime to rebase onto.
+var (
+	acceptedBaseTemplates = []string{
+		baseTemplateCodingBase,
+		baseTemplateCodingClaudeCode,
+		baseTemplateCodingCodex,
+		baseTemplateCodingOpenCode,
+		baseTemplateCodingHermes,
+		baseTemplateCrewAI,
+		baseTemplateLanggraph,
+		baseTemplateHermesBase,
+		baseTemplateLanggraphBase,
+	}
+	// Advertised under its public alias: what a user types is `sandbox`, and
+	// coding-base stays accepted above so nothing that already works breaks.
+	advertisedBaseTemplates = []string{
+		templateAliasSandbox,
+		baseTemplateCodingClaudeCode,
+		baseTemplateCodingCodex,
+		baseTemplateCodingOpenCode,
+		baseTemplateCodingHermes,
+		baseTemplateCrewAI,
+		baseTemplateLanggraph,
+	}
+)
+
+// templateAliasSandbox is what the agentless base is called in public. The
+// platform template is still named coding-base; this is the spelling doctl
+// takes and advertises, resolved to the platform name before anything is sent.
+const templateAliasSandbox = "sandbox"
+
+// platformTemplateAliases maps public template names to the platform names the
+// API knows.
+//
+// Client-side name resolution is normally the wrong thing here: a team template
+// shadows a platform one of the same name, so rewriting a name doctl does not
+// own would silently route a customer to someone else's image. `sandbox` is
+// safe only because it is reserved — `template create --name sandbox` is
+// refused below, so the collision cannot be created in the first place. Do not
+// add an alias without reserving its name too.
+var platformTemplateAliases = map[string]string{
+	templateAliasSandbox: baseTemplateCodingBase,
+}
+
+// resolvePlatformTemplateAlias returns the platform name for what the user
+// typed, and the input unchanged when it is not an alias. Resolving before the
+// value is stored means the wire, a --dry-run manifest, and a --spec file
+// promoted from that manifest all carry the same name.
+func resolvePlatformTemplateAlias(name string) string {
+	name = strings.TrimSpace(name)
+	if canonical, ok := platformTemplateAliases[strings.ToLower(name)]; ok {
+		return canonical
+	}
+	return name
+}
+
+// rejectReservedTemplateName refuses a team template name that an alias already
+// resolves to something else. Without this the alias would make the customer's
+// own template unreachable through --template, which is worse than refusing the
+// name: the session would come up on the platform image with nothing to say so.
+func rejectReservedTemplateName(name string) error {
+	trimmed := strings.ToLower(strings.TrimSpace(name))
+	if canonical, ok := platformTemplateAliases[trimmed]; ok {
+		return fmt.Errorf("%q is reserved: it names the platform template %s, so a team template called that could never be selected with --%s; pick another name",
+			strings.TrimSpace(name), canonical, doctl.ArgAgentTemplate)
+	}
+	return nil
+}
+
+// agentBaseTemplateFlagDesc documents --base-template. sandbox is called out
+// because it is the one base that carries no agent: rebasing onto it is how a
+// customer brings their own tooling for a bare sandbox.
+var agentBaseTemplateFlagDesc = "Platform base to rebase onto (" +
+	strings.Join(advertisedBaseTemplates, ", ") +
+	// No backticks, for the same reason as agentTemplateFlagDesc: cobra would
+	// read the quoted command as this flag's value placeholder.
+	"). sandbox carries no agent — use it for a bare sandbox with your own tooling, and run it with '" +
+	agentCLI + " create --template <name>'."
 
 // AgentTemplates generates the `doctl harness-runtime template` subtree, which
 // wraps the godo team custom template API (/v2/agents/templates).
@@ -57,7 +150,7 @@ func AgentTemplates() *Command {
 		Writer, append(ns, aliasOpt("c"),
 			displayerType(&displayers.HostedAgentTemplate{}))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the template", requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgAgentBaseTemplate, "", "", "Platform base to rebase onto (coding-claude-code, coding-codex, coding-opencode, coding-hermes, langgraph)", requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgAgentBaseTemplate, "", "", agentBaseTemplateFlagDesc, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgAgentSourceOCIRef, "", "", "Customer OCI image (registry/repo:tag or digest)", requiredOpt())
 	cmdCreate.Example = `doctl harness-runtime template create --name my-image --base-template coding-opencode --source-oci-ref registry.digitalocean.com/myreg/agent:latest`
 
@@ -82,7 +175,7 @@ func AgentTemplates() *Command {
 		Writer, append(ns, aliasOpt("u"),
 			displayerType(&displayers.HostedAgentTemplate{}))...)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentSourceOCIRef, "", "", "New customer OCI image (registry/repo:tag or digest)")
-	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base (coding-claude-code, coding-codex, coding-opencode, coding-hermes, langgraph)")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base. Same values as on 'template create'")
 	cmdUpdate.Example = `doctl harness-runtime template update my-image --source-oci-ref registry.digitalocean.com/myreg/agent:v2`
 
 	CmdBuilder(cmd, RunAgentsTemplateDelete, "delete <template>",
@@ -115,10 +208,14 @@ func RunAgentsTemplateCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if err := rejectReservedTemplateName(name); err != nil {
+		return err
+	}
 	base, err := c.Doit.GetString(c.NS, doctl.ArgAgentBaseTemplate)
 	if err != nil {
 		return err
 	}
+	base = resolvePlatformTemplateAlias(base)
 	if err := validateBaseTemplate(base); err != nil {
 		return err
 	}
@@ -211,6 +308,7 @@ func RunAgentsTemplateUpdate(c *CmdConfig) error {
 		return fmt.Errorf("pass --%s and/or --%s", doctl.ArgAgentSourceOCIRef, doctl.ArgAgentBaseTemplate)
 	}
 	if base != "" {
+		base = resolvePlatformTemplateAlias(base)
 		if err := validateBaseTemplate(base); err != nil {
 			return err
 		}
@@ -305,13 +403,10 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 }
 
 func validateBaseTemplate(base string) error {
-	switch base {
-	case baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateCodingHermes, baseTemplateLanggraph, baseTemplateHermesBase:
+	if slices.Contains(acceptedBaseTemplates, base) {
 		return nil
-	default:
-		return fmt.Errorf("base-template must be one of %s, %s, %s, %s, %s",
-			baseTemplateCodingClaudeCode, baseTemplateCodingCodex, baseTemplateCodingOpenCode, baseTemplateCodingHermes, baseTemplateLanggraph)
 	}
+	return fmt.Errorf("base-template must be one of %s", strings.Join(advertisedBaseTemplates, ", "))
 }
 
 func looksLikeTemplateID(ref string) bool {

@@ -41,6 +41,21 @@ func (m *MockHostedAgentTriggersService) EXPECT() *MockHostedAgentTriggersServic
 	return m.recorder
 }
 
+// Cancel mocks base method.
+func (m *MockHostedAgentTriggersService) Cancel(triggerID, executionID string, force bool) (*do.HostedAgentTriggerExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Cancel", triggerID, executionID, force)
+	ret0, _ := ret[0].(*do.HostedAgentTriggerExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Cancel indicates an expected call of Cancel.
+func (mr *MockHostedAgentTriggersServiceMockRecorder) Cancel(triggerID, executionID, force any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).Cancel), triggerID, executionID, force)
+}
+
 // Create mocks base method.
 func (m *MockHostedAgentTriggersService) Create(arg0 *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
 	m.ctrl.T.Helper()

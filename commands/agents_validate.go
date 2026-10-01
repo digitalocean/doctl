@@ -41,6 +41,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
 	"custom":           {},
+	"none":             {}, // bare sandbox (AGENT_KIND_NONE): no agent in the guest
 	"codex-cli":        {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
 	"claude-agent-sdk": {},
@@ -268,7 +269,7 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, none, …)", path, adapter))
 		return
 	}
 	switch adapter {

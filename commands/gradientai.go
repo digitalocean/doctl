@@ -15,36 +15,28 @@ package commands
 
 import "github.com/spf13/cobra"
 
-// GradientAI creates the gradient command and adds the agent, knowledge base, and simulation subcommands.
+// GradientAI creates the gradient command and adds the knowledge base and simulation subcommands.
 func GradientAI() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "gradient",
 			Aliases: []string{"ai", "genai", "gradientai"},
 			Short:   "Manage Gradient AI resources",
-			Long:    "The subcommands of `doctl gradient` manage your Gradient AI resources.",
+			Long: `doctl gradient is deprecated and hidden from help.
+
+Public commands moved to:
+  doctl knowledge-base
+  doctl inference`,
 			GroupID: manageResourcesGroup,
+			// All public children moved to knowledge-base / inference; keep this
+			// parent only for hidden/deprecated aliases and scenario/simulation cmds.
+			Hidden: true,
 		},
 	}
 
-	// Add the agent command as a subcommand to Gradient AI
-	cmd.AddCommand(AgentCmd())
-	// Add the knowledgebase command as a subcommand to Gradient AI
-	cmd.AddCommand(KnowledgeBaseCmd())
-
 	// Kept under gradient but hidden (same pattern as scenario/simulation cmds).
-	// Public home is now doctl inference.
-	listModels := ListModelsCmd()
-	listModels.Hidden = true
-	cmd.AddCommand(listModels)
-
-	listRegions := ListRegionsCmd()
-	listRegions.Hidden = true
-	cmd.AddCommand(listRegions)
-
-	openaiKey := OpenAIKeyCmd()
-	openaiKey.Hidden = true
-	cmd.AddCommand(openaiKey)
+	// Public home is now doctl knowledge-base.
+	cmd.AddCommand(deprecatedKnowledgeBaseCmd())
 
 	// Add the scenario set command as a subcommand to Gradient AI
 	cmd.AddCommand(ScenarioSetCmd())
