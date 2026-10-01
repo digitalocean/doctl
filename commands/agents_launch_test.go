@@ -28,6 +28,8 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -1176,6 +1178,48 @@ func TestLaunchNewSession_BareSandboxRefusedBeforeCreating(t *testing.T) {
 // `none` is the manifest's word for a session with no agent, not a --harness
 // value. A --spec file saying `agent: none` still works (the test below);
 // typing it as a harness is refused and pointed at the one spelling we teach.
+// Derived from addAgentCreationFlags rather than hand-listed, so a flag added
+// there and forgotten in the guard fails here instead of being silently
+// dropped on `launch <session>`. --template was missing exactly that way.
+//
+// The exemptions are the whole rule: the three creation sources are routed to
+// create mode by agentCreationFlagSet rather than refused, and
+// --resume-on-topoff is applied to an existing session on purpose by
+// applyLaunchSessionUpdates.
+func TestRejectCreationFlagsForExistingSession_CoversEveryCreationFlag(t *testing.T) {
+	routedToCreateMode := map[string]bool{
+		doctl.ArgAgentHarness:    true,
+		doctl.ArgAgentSpec:       true,
+		doctl.ArgAgentFromConfig: true,
+		"file":                   true, // --spec's alias, same source
+	}
+	appliesToExistingSessions := map[string]bool{
+		doctl.ArgAgentResumeOnTopoff: true,
+	}
+
+	probe := &Command{Command: &cobra.Command{Use: "probe"}}
+	addAgentCreationFlags(probe)
+
+	var checked int
+	probe.Flags().VisitAll(func(f *pflag.Flag) {
+		if routedToCreateMode[f.Name] || appliesToExistingSessions[f.Name] {
+			return
+		}
+		checked++
+		t.Run(f.Name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Doit.Set(config.NS, f.Name, "x")
+
+				err := rejectCreationFlagsForExistingSession(config)
+				require.Error(t, err, "--%s describes how to build a session, so it cannot be silently ignored when one already exists", f.Name)
+				assert.Contains(t, err.Error(), "--"+f.Name)
+				assert.Contains(t, err.Error(), "only applies when creating a new session")
+			})
+		})
+	})
+	require.NotZero(t, checked, "the flag set should not be empty; the guard would assert nothing")
+}
+
 func TestResolveAgentCreationSource_HarnessNoneIsRefused(t *testing.T) {
 	for _, typed := range []string{"none", "None", " NONE "} {
 		t.Run(typed, func(t *testing.T) {

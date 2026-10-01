@@ -145,8 +145,8 @@ func isBareSandboxHarness(harness string) bool {
 // runtime. Pairing one with a managed --harness produces a session whose
 // recorded agent kind is a lie: the kind drives billing attribution and every
 // per-kind analytic, while the guest has no agent to drive — the shape an
-// internal workaround used before `--harness none` existed, and the reason it
-// has to stop being expressible now that it does.
+// internal workaround used before `--template sandbox` existed, and the reason
+// it has to stop being expressible now that it does.
 //
 // Only platform names are listed, and only the ones known to be agentless. A
 // team's own template is built on some base and doctl cannot tell which without
@@ -404,6 +404,11 @@ func rejectCreateOnlyLaunchFlags(c *CmdConfig) error {
 // rejectCreationFlagsForExistingSession guards Mode B: the session already
 // exists, so a flag describing how to build one was either a typo or a
 // misunderstanding, and silently ignoring it would hide that.
+// The list has to cover every flag addAgentCreationFlags registers except the
+// three creation sources — which agentCreationFlagSet routes to create mode
+// instead — and --resume-on-topoff, which applyLaunchSessionUpdates applies to
+// an existing session on purpose. --template and --permission were missing,
+// so `launch <session> --template sandbox` attached and dropped the flag.
 func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 	for _, flag := range []string{
 		doctl.ArgAgentSecret,
@@ -411,6 +416,8 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentRepo,
 		doctl.ArgAgentTriggerPrompt,
 		doctl.ArgAgentWaitTimeout,
+		doctl.ArgAgentTemplate,
+		doctl.ArgAgentPermission,
 	} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
@@ -436,7 +443,11 @@ func resolveHarnessAgent(harness string) (string, error) {
 	}
 	agent, ok := harnessAgentNames[key]
 	if !ok {
-		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, none",
+		// `none` is in harnessAgentNames but deliberately absent here: the
+		// --template implication sets it internally, while a user who types it
+		// is refused by resolveAgentCreationSource. Listing it would send them
+		// to a value that answers with a second error.
+		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi",
 			doctl.ArgAgentHarness, harness)
 	}
 	return agent, nil
@@ -1189,7 +1200,7 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	fmt.Fprintln(&body)
 	fmt.Fprintln(&body, colorize("Next step", colMuted))
 	// A bare sandbox has no chat to launch into, so the card has to carry the
-	// commands that do drive it — this card is the only place a `--harness none`
+	// commands that do drive it — this card is the only place a bare-sandbox
 	// user is told what to do next.
 	if sum.Session != nil && sum.Session.AgentKind == godo.HostedAgentKindNone {
 		body.WriteString(cardRow("exec", agentCLI+" exec "+ref+" -- <command>"))

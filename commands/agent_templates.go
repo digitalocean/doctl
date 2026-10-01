@@ -175,7 +175,7 @@ func AgentTemplates() *Command {
 		Writer, append(ns, aliasOpt("u"),
 			displayerType(&displayers.HostedAgentTemplate{}))...)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentSourceOCIRef, "", "", "New customer OCI image (registry/repo:tag or digest)")
-	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base. Same values as on `template create`")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentBaseTemplate, "", "", "New platform base. Same values as on 'template create'")
 	cmdUpdate.Example = `doctl harness-runtime template update my-image --source-oci-ref registry.digitalocean.com/myreg/agent:v2`
 
 	CmdBuilder(cmd, RunAgentsTemplateDelete, "delete <template>",

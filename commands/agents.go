@@ -698,9 +698,10 @@ const agentSecretFlagDesc = "Tenant secret as NAME=VALUE, injected into the mani
 // commands cannot drift on spelling, defaults, or help text — the drift that
 // made `start` and `run` indistinguishable in the first place.
 func addAgentCreationFlags(cmd *Command) {
-	// `none` is accepted and not listed. It is the manifest's word for a
-	// session with no agent, and it still works, but there is one way in that
-	// we teach — `--template sandbox` — and naming both here taught two.
+	// `none` is not listed because it is not accepted: it stays the manifest's
+	// word for a session with no agent, and resolveAgentCreationSource refuses
+	// it as a --harness value. There is one way in that we teach, and naming
+	// the absence of an agent as if it were one of the agents taught two.
 	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
@@ -743,7 +744,8 @@ const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a pl
 	"Passed without --harness it asks for a sandbox with no agent in it. A --spec manifest sets its own top-level template."
 
 const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
-	"ask (raise an approval request per tool call, resolvable with `doctl harness-runtime approve`), or deny. " +
+	// No backticks, for the same reason as agentTemplateFlagDesc.
+	"ask (raise an approval request per tool call, resolvable with '" + agentCLI + " approve'), or deny. " +
 	"Written as the manifest's permissions.default. Only valid with --harness; a --spec manifest declares its own."
 
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
@@ -786,9 +788,10 @@ type agentCreationSource struct {
 }
 
 // bareSandbox reports whether this source asks for a session with no agent,
-// whether it came from --harness none or from a manifest declaring
-// `agent: none`. Both have to be caught: a manifest is the more likely way a
-// bare sandbox is created, since it is the only way to set egress or a size.
+// whether that came from the harness the --template implication sets or from a
+// manifest declaring `agent: none`. Both have to be caught: a manifest is the
+// more likely way a bare sandbox is created, since it is the only way to set
+// egress or a size, and it is the one the flag checks never see.
 //
 // A --from-config source reports false. The agent lives server-side there, so
 // answering would mean a lookup, and the only caller (launch) can afford to be
@@ -1095,6 +1098,19 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 	raw = dropEnvKeysCoveredBySecrets(raw)
 	src.manifest = raw
+
+	// A manifest declares its own agent, so `agent: none` arrives here with
+	// harness empty and the check above never sees it — and a manifest is the
+	// likelier way a bare sandbox is created, since it is the only way to set
+	// egress or a size. Left to the API, --prompt is delivered after the
+	// session exists: SendInput 409s and the command reports an error having
+	// already left a live, billable sandbox behind.
+	if src.bareSandbox() {
+		if flag := firstAgentOnlyFlag(c, prompt, repo); flag != "" {
+			return nil, fmt.Errorf("this manifest declares `agent: %s`, so the session runs no agent and --%s needs one; drop --%s and drive the sandbox with `%s exec`, or name an agent in the manifest",
+				bareSandboxAgent, flag, flag, agentCLI)
+		}
+	}
 	return src, nil
 }
 

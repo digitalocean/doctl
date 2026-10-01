@@ -1007,20 +1007,25 @@ func TestBuildHarnessManifestBareSandbox(t *testing.T) {
 	assert.NotContains(t, doc, "template")
 }
 
-func TestResolveHarnessAgentAcceptsNone(t *testing.T) {
+// `none` resolves but is not offered. The two halves are easy to mistake for a
+// contradiction and are both load-bearing: the --template implication sets the
+// harness to bareSandboxAgent internally, so resolution has to accept it, while
+// a user who types `--harness none` is refused earlier by
+// resolveAgentCreationSource — so advertising it here would route them into a
+// second error.
+func TestResolveHarnessAgentAcceptsNoneInternallyButNeverOffersIt(t *testing.T) {
 	agent, err := resolveHarnessAgent("none")
 	require.NoError(t, err)
 	assert.Equal(t, bareSandboxAgent, agent)
 
 	agent, err = resolveHarnessAgent("NONE")
 	require.NoError(t, err)
-	assert.Equal(t, bareSandboxAgent, agent, "the flag is case-insensitive like every other value")
+	assert.Equal(t, bareSandboxAgent, agent, "casing is normalized like every other value")
 
-	// The list a user is shown when they get it wrong has to include the value
-	// that now works, or they cannot discover it from the error.
 	_, err = resolveHarnessAgent("bogus")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "none")
+	assert.Contains(t, err.Error(), "codex-agentapi", "the real adapters are still listed")
+	assert.NotContains(t, err.Error(), "none", "offering a value that is refused sends the user into a second error")
 }
 
 func TestIsBareSandboxHarness(t *testing.T) {
@@ -1374,6 +1379,55 @@ func TestResolveAgentCreationSource_TemplateAloneImpliesBareSandbox(t *testing.T
 		assert.Equal(t, "coding-base", doc["template"])
 		assert.NotContains(t, doc, "permissions",
 			"an implied bare sandbox must not carry an agent's tool policy either")
+	})
+}
+
+// A manifest is the likelier way a bare sandbox is created, and it reaches
+// resolveAgentCreationSource with the harness empty — so the --harness-side
+// checks never see it. Refused here or not at all: by the time --prompt is
+// delivered the sandbox exists and is billing, so the API's 409 arrives on a
+// command that already cost money.
+func TestResolveAgentCreationSource_BareSandboxManifestRejectsAgentOnlyFlags(t *testing.T) {
+	for _, tc := range []struct {
+		flag  string
+		value string
+	}{
+		{doctl.ArgAgentTriggerPrompt, "summarize the repo"},
+		{doctl.ArgAgentRepo, "owner/repo"},
+	} {
+		t.Run(tc.flag, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				dir := t.TempDir()
+				t.Chdir(dir)
+				path := filepath.Join(dir, "sandbox.yaml")
+				require.NoError(t, os.WriteFile(path, []byte("agent: none\nname: eval-runner\n"), 0o644))
+
+				config.Args = []string{path}
+				config.Doit.Set(config.NS, tc.flag, tc.value)
+
+				_, err := resolveAgentCreationSource(config)
+				require.Error(t, err, "a manifest with no agent must refuse --%s before anything is created", tc.flag)
+				assert.Contains(t, err.Error(), "runs no agent")
+				assert.Contains(t, err.Error(), "--"+tc.flag)
+			})
+		})
+	}
+}
+
+// The same manifest with no agent-only flag is a legitimate bare sandbox and
+// has to keep working — the guard above must refuse the flag, not the manifest.
+func TestResolveAgentCreationSource_BareSandboxManifestAloneIsAccepted(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		t.Chdir(dir)
+		path := filepath.Join(dir, "sandbox.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("agent: none\nname: eval-runner\n"), 0o644))
+
+		config.Args = []string{path}
+
+		src, err := resolveAgentCreationSource(config)
+		require.NoError(t, err)
+		assert.True(t, src.bareSandbox())
 	})
 }
 
