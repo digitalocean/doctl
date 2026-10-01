@@ -990,7 +990,7 @@ const (
 
 	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
 	// is rebased onto (codex-base | opencode-base | claude-code-base |
-	// hermes-base | langgraph-base | sandbox | crewai, or a deprecated
+	// hermes-base | langgraph-base | sandbox | crewai, or a legacy
 	// coding-* / langgraph key).
 	ArgAgentBaseTemplate = "base-template"
 

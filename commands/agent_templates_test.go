@@ -255,23 +255,23 @@ func TestValidateBaseTemplate(t *testing.T) {
 		assert.Contains(t, err.Error(), "base-template")
 		assert.Contains(t, err.Error(), "codex-base")
 		assert.Contains(t, err.Error(), "coding-hermes")
-		assert.Contains(t, err.Error(), "deprecated")
+		assert.Contains(t, err.Error(), "legacy")
 		// coding-base is named under its public alias.
 		assert.Contains(t, err.Error(), templateAliasSandbox)
 		assert.Contains(t, err.Error(), "crewai")
 	}
 }
 
-func TestWarnDeprecatedBaseTemplate(t *testing.T) {
-	for base, replacement := range deprecatedBaseTemplates {
+func TestWarnLegacyBaseTemplate(t *testing.T) {
+	for base, replacement := range legacyBaseTemplates {
 		var buf bytes.Buffer
-		warnDeprecatedBaseTemplate(&buf, base)
-		assert.Contains(t, buf.String(), base+" is deprecated")
+		warnLegacyBaseTemplate(&buf, base)
+		assert.Contains(t, buf.String(), base+" is a legacy base")
 		assert.Contains(t, buf.String(), "use "+replacement)
 	}
 	for _, base := range acceptedCurrentBaseTemplates {
 		var buf bytes.Buffer
-		warnDeprecatedBaseTemplate(&buf, base)
+		warnLegacyBaseTemplate(&buf, base)
 		assert.Empty(t, buf.String(), base)
 	}
 }

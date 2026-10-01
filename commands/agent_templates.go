@@ -69,10 +69,10 @@ var acceptedCurrentBaseTemplates = []string{
 	baseTemplateCrewAI,
 }
 
-// deprecatedBaseTemplates are still accepted by the API and will be retired.
+// legacyBaseTemplates are still accepted by the API and will be retired.
 // Each maps to the base that replaces it. codex-agentapi is absent because the
 // server refuses it outright.
-var deprecatedBaseTemplates = map[string]string{
+var legacyBaseTemplates = map[string]string{
 	baseTemplateCodingCodex:      baseTemplateCodexBase,
 	baseTemplateCodingOpenCode:   baseTemplateOpenCodeBase,
 	baseTemplateCodingClaudeCode: baseTemplateClaudeCodeBase,
@@ -80,8 +80,8 @@ var deprecatedBaseTemplates = map[string]string{
 	baseTemplateLanggraph:        baseTemplateLanggraphBase,
 }
 
-// deprecatedBaseTemplateNames lists deprecatedBaseTemplates in a stable order.
-var deprecatedBaseTemplateNames = []string{
+// legacyBaseTemplateNames lists legacyBaseTemplates in a stable order.
+var legacyBaseTemplateNames = []string{
 	baseTemplateCodingCodex,
 	baseTemplateCodingOpenCode,
 	baseTemplateCodingClaudeCode,
@@ -231,7 +231,7 @@ func RunAgentsTemplateCreate(c *CmdConfig) error {
 	if err := validateBaseTemplate(base); err != nil {
 		return err
 	}
-	warnDeprecatedBaseTemplate(os.Stderr, base)
+	warnLegacyBaseTemplate(os.Stderr, base)
 	src, err := c.Doit.GetString(c.NS, doctl.ArgAgentSourceOCIRef)
 	if err != nil {
 		return err
@@ -325,7 +325,7 @@ func RunAgentsTemplateUpdate(c *CmdConfig) error {
 		if err := validateBaseTemplate(base); err != nil {
 			return err
 		}
-		warnDeprecatedBaseTemplate(os.Stderr, base)
+		warnLegacyBaseTemplate(os.Stderr, base)
 	}
 	tpl, err := c.HostedAgents().UpdateTemplate(templateID, &godo.HostedAgentTemplateUpdateRequest{
 		SourceOCIRef: src,
@@ -420,17 +420,17 @@ func validateBaseTemplate(base string) error {
 	if slices.Contains(acceptedCurrentBaseTemplates, base) {
 		return nil
 	}
-	if _, ok := deprecatedBaseTemplates[base]; ok {
+	if _, ok := legacyBaseTemplates[base]; ok {
 		return nil
 	}
-	return fmt.Errorf("base-template must be one of %s (deprecated, still accepted: %s)",
-		strings.Join(baseTemplates, ", "), strings.Join(deprecatedBaseTemplateNames, ", "))
+	return fmt.Errorf("base-template must be one of %s (legacy, still accepted: %s)",
+		strings.Join(baseTemplates, ", "), strings.Join(legacyBaseTemplateNames, ", "))
 }
 
-// warnDeprecatedBaseTemplate writes a notice to w when base is deprecated.
-func warnDeprecatedBaseTemplate(w io.Writer, base string) {
-	if replacement, ok := deprecatedBaseTemplates[base]; ok {
-		fmt.Fprintf(w, "Warning: base-template %s is deprecated and will be retired; use %s instead.\n", base, replacement)
+// warnLegacyBaseTemplate writes a notice to w when base is a legacy base.
+func warnLegacyBaseTemplate(w io.Writer, base string) {
+	if replacement, ok := legacyBaseTemplates[base]; ok {
+		fmt.Fprintf(w, "Warning: base-template %s is a legacy base and will be retired; use %s instead.\n", base, replacement)
 	}
 }
 

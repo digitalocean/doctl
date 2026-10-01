@@ -265,7 +265,7 @@ A paused session is resumed on the way in. Because nothing here can ask a human,
 
 const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`codex-base`" + `, ` + "`opencode-base`" + `, ` + "`claude-code-base`" + `, ` + "`hermes-base`" + `, ` + "`langgraph-base`" + `). Create and update kick a build; use ` + "`list-builds`" + ` to watch it.
 
-The bases ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `, ` + "`coding-claude-code`" + `, ` + "`coding-hermes`" + ` and ` + "`langgraph`" + ` are deprecated: still accepted, but they will be retired in a future release.
+The legacy bases ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `, ` + "`coding-claude-code`" + `, ` + "`coding-hermes`" + ` and ` + "`langgraph`" + ` are still accepted and will be retired in a future release.
 
 The team is taken from the authenticated principal — never from the request body or query.`
 
