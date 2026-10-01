@@ -593,7 +593,7 @@ type simulationTrajectoryRoot struct {
 
 // CreateScenarioSetUploadPresignedURLs creates presigned URLs for uploading
 // scenario set files.
-func (s *GradientAIServiceOp) CreateScenarioSetUploadPresignedURLs(ctx context.Context, createRequest *CreateScenarioSetUploadPresignedURLsRequest) (*CreateScenarioSetUploadPresignedURLsResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateScenarioSetUploadPresignedURLs(ctx context.Context, createRequest *CreateScenarioSetUploadPresignedURLsRequest) (*CreateScenarioSetUploadPresignedURLsResponse, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, fmt.Errorf("create request is required")
 	}
@@ -621,7 +621,7 @@ func (s *GradientAIServiceOp) CreateScenarioSetUploadPresignedURLs(ctx context.C
 
 // CreateScenarioSet creates a scenario set from inline scenarios or an uploaded
 // file. Exactly one of the two sources must be provided.
-func (s *GradientAIServiceOp) CreateScenarioSet(ctx context.Context, createRequest *CreateScenarioSetRequest) (*ScenarioSet, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateScenarioSet(ctx context.Context, createRequest *CreateScenarioSetRequest) (*ScenarioSet, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, fmt.Errorf("create request is required")
 	}
@@ -648,7 +648,7 @@ func (s *GradientAIServiceOp) CreateScenarioSet(ctx context.Context, createReque
 }
 
 // GenerateScenarioSet dispatches goal-driven scenario generation.
-func (s *GradientAIServiceOp) GenerateScenarioSet(ctx context.Context, generateRequest *GenerateScenarioSetRequest) (*ScenarioSet, *Response, error) {
+func (s *AgentPlatformServiceOp) GenerateScenarioSet(ctx context.Context, generateRequest *GenerateScenarioSetRequest) (*ScenarioSet, *Response, error) {
 	if generateRequest == nil {
 		return nil, nil, fmt.Errorf("generate request is required")
 	}
@@ -673,7 +673,7 @@ func (s *GradientAIServiceOp) GenerateScenarioSet(ctx context.Context, generateR
 }
 
 // ListScenarioSets lists scenario sets for the team.
-func (s *GradientAIServiceOp) ListScenarioSets(ctx context.Context, opt *ScenarioSetListOptions) (*ScenarioSetListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListScenarioSets(ctx context.Context, opt *ScenarioSetListOptions) (*ScenarioSetListResponse, *Response, error) {
 	path, err := addOptions(scenarioSetsBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -699,7 +699,7 @@ func (s *GradientAIServiceOp) ListScenarioSets(ctx context.Context, opt *Scenari
 }
 
 // GetScenarioSet retrieves a scenario set by UUID.
-func (s *GradientAIServiceOp) GetScenarioSet(ctx context.Context, scenarioSetUUID string) (*ScenarioSet, *Response, error) {
+func (s *AgentPlatformServiceOp) GetScenarioSet(ctx context.Context, scenarioSetUUID string) (*ScenarioSet, *Response, error) {
 	if scenarioSetUUID == "" {
 		return nil, nil, fmt.Errorf("scenario set uuid is required")
 	}
@@ -719,7 +719,7 @@ func (s *GradientAIServiceOp) GetScenarioSet(ctx context.Context, scenarioSetUUI
 }
 
 // ListScenarios lists scenarios within a scenario set.
-func (s *GradientAIServiceOp) ListScenarios(ctx context.Context, scenarioSetUUID string, opt *ScenarioListOptions) (*ScenarioListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListScenarios(ctx context.Context, scenarioSetUUID string, opt *ScenarioListOptions) (*ScenarioListResponse, *Response, error) {
 	if scenarioSetUUID == "" {
 		return nil, nil, fmt.Errorf("scenario set uuid is required")
 	}
@@ -750,7 +750,7 @@ func (s *GradientAIServiceOp) ListScenarios(ctx context.Context, scenarioSetUUID
 
 // GetScenarioSetDownloadURL returns a presigned download URL for a scenario set's
 // canonical JSONL file.
-func (s *GradientAIServiceOp) GetScenarioSetDownloadURL(ctx context.Context, scenarioSetUUID string) (*ScenarioSetDownloadURLResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) GetScenarioSetDownloadURL(ctx context.Context, scenarioSetUUID string) (*ScenarioSetDownloadURLResponse, *Response, error) {
 	if scenarioSetUUID == "" {
 		return nil, nil, fmt.Errorf("scenario set uuid is required")
 	}
@@ -770,7 +770,7 @@ func (s *GradientAIServiceOp) GetScenarioSetDownloadURL(ctx context.Context, sce
 }
 
 // UpdateScenarioSet updates a scenario set name and/or replaces its scenarios.
-func (s *GradientAIServiceOp) UpdateScenarioSet(ctx context.Context, scenarioSetUUID string, updateRequest *UpdateScenarioSetRequest) (*ScenarioSet, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateScenarioSet(ctx context.Context, scenarioSetUUID string, updateRequest *UpdateScenarioSetRequest) (*ScenarioSet, *Response, error) {
 	if scenarioSetUUID == "" {
 		return nil, nil, fmt.Errorf("scenario set uuid is required")
 	}
@@ -796,7 +796,7 @@ func (s *GradientAIServiceOp) UpdateScenarioSet(ctx context.Context, scenarioSet
 }
 
 // DeleteScenarioSet deletes a scenario set by UUID.
-func (s *GradientAIServiceOp) DeleteScenarioSet(ctx context.Context, scenarioSetUUID string) (*ScenarioSetDeleteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteScenarioSet(ctx context.Context, scenarioSetUUID string) (*ScenarioSetDeleteResponse, *Response, error) {
 	if scenarioSetUUID == "" {
 		return nil, nil, fmt.Errorf("scenario set uuid is required")
 	}
@@ -816,7 +816,7 @@ func (s *GradientAIServiceOp) DeleteScenarioSet(ctx context.Context, scenarioSet
 }
 
 // ListScenarioLibrary lists platform-curated scenario library entries.
-func (s *GradientAIServiceOp) ListScenarioLibrary(ctx context.Context, opt *ScenarioLibraryListOptions) (*ScenarioLibraryListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListScenarioLibrary(ctx context.Context, opt *ScenarioLibraryListOptions) (*ScenarioLibraryListResponse, *Response, error) {
 	path, err := addOptions(scenarioLibraryBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -842,7 +842,7 @@ func (s *GradientAIServiceOp) ListScenarioLibrary(ctx context.Context, opt *Scen
 }
 
 // ListScenarioLibraryScenarios lists scenarios within a scenario library entry.
-func (s *GradientAIServiceOp) ListScenarioLibraryScenarios(ctx context.Context, libraryScenarioUUID string, opt *ScenarioListOptions) (*ScenarioListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListScenarioLibraryScenarios(ctx context.Context, libraryScenarioUUID string, opt *ScenarioListOptions) (*ScenarioListResponse, *Response, error) {
 	if libraryScenarioUUID == "" {
 		return nil, nil, fmt.Errorf("library scenario uuid is required")
 	}
@@ -873,7 +873,7 @@ func (s *GradientAIServiceOp) ListScenarioLibraryScenarios(ctx context.Context, 
 
 // CreateScenarioSetFromLibrary materializes a library entry into a team-owned
 // scenario set.
-func (s *GradientAIServiceOp) CreateScenarioSetFromLibrary(ctx context.Context, libraryScenarioUUID string, createRequest *CreateScenarioSetFromLibraryRequest) (*ScenarioSet, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateScenarioSetFromLibrary(ctx context.Context, libraryScenarioUUID string, createRequest *CreateScenarioSetFromLibraryRequest) (*ScenarioSet, *Response, error) {
 	if libraryScenarioUUID == "" {
 		return nil, nil, fmt.Errorf("library scenario uuid is required")
 	}
@@ -899,7 +899,7 @@ func (s *GradientAIServiceOp) CreateScenarioSetFromLibrary(ctx context.Context, 
 }
 
 // CreateSimulationRun creates a simulation run.
-func (s *GradientAIServiceOp) CreateSimulationRun(ctx context.Context, createRequest *CreateSimulationRunRequest) (*SimulationRun, *Response, error) {
+func (s *AgentPlatformServiceOp) CreateSimulationRun(ctx context.Context, createRequest *CreateSimulationRunRequest) (*SimulationRun, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, fmt.Errorf("create request is required")
 	}
@@ -924,7 +924,7 @@ func (s *GradientAIServiceOp) CreateSimulationRun(ctx context.Context, createReq
 }
 
 // ListSimulationRuns lists simulation runs for the team.
-func (s *GradientAIServiceOp) ListSimulationRuns(ctx context.Context, opt *SimulationRunListOptions) (*SimulationRunListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListSimulationRuns(ctx context.Context, opt *SimulationRunListOptions) (*SimulationRunListResponse, *Response, error) {
 	path, err := addOptions(simulationRunsBasePath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -951,7 +951,7 @@ func (s *GradientAIServiceOp) ListSimulationRuns(ctx context.Context, opt *Simul
 
 // GetSimulationRun retrieves a simulation run by UUID, including per-scenario
 // result rollups when available.
-func (s *GradientAIServiceOp) GetSimulationRun(ctx context.Context, runUUID string) (*SimulationRunGetResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) GetSimulationRun(ctx context.Context, runUUID string) (*SimulationRunGetResponse, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}
@@ -971,7 +971,7 @@ func (s *GradientAIServiceOp) GetSimulationRun(ctx context.Context, runUUID stri
 }
 
 // UpdateSimulationRun updates mutable fields on a simulation run.
-func (s *GradientAIServiceOp) UpdateSimulationRun(ctx context.Context, runUUID string, updateRequest *UpdateSimulationRunRequest) (*SimulationRun, *Response, error) {
+func (s *AgentPlatformServiceOp) UpdateSimulationRun(ctx context.Context, runUUID string, updateRequest *UpdateSimulationRunRequest) (*SimulationRun, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}
@@ -997,7 +997,7 @@ func (s *GradientAIServiceOp) UpdateSimulationRun(ctx context.Context, runUUID s
 }
 
 // CancelSimulationRun cancels an in-progress simulation run.
-func (s *GradientAIServiceOp) CancelSimulationRun(ctx context.Context, runUUID string) (*SimulationRun, *Response, error) {
+func (s *AgentPlatformServiceOp) CancelSimulationRun(ctx context.Context, runUUID string) (*SimulationRun, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}
@@ -1017,7 +1017,7 @@ func (s *GradientAIServiceOp) CancelSimulationRun(ctx context.Context, runUUID s
 }
 
 // DeleteSimulationRun deletes a simulation run by UUID.
-func (s *GradientAIServiceOp) DeleteSimulationRun(ctx context.Context, runUUID string) (*SimulationRunDeleteResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) DeleteSimulationRun(ctx context.Context, runUUID string) (*SimulationRunDeleteResponse, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}
@@ -1037,7 +1037,7 @@ func (s *GradientAIServiceOp) DeleteSimulationRun(ctx context.Context, runUUID s
 }
 
 // ListSimulationJourneys lists journeys for a simulation run.
-func (s *GradientAIServiceOp) ListSimulationJourneys(ctx context.Context, runUUID string, opt *SimulationJourneyListOptions) (*SimulationJourneyListResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) ListSimulationJourneys(ctx context.Context, runUUID string, opt *SimulationJourneyListOptions) (*SimulationJourneyListResponse, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}
@@ -1067,7 +1067,7 @@ func (s *GradientAIServiceOp) ListSimulationJourneys(ctx context.Context, runUUI
 }
 
 // GetSimulationJourney retrieves a single journey within a simulation run.
-func (s *GradientAIServiceOp) GetSimulationJourney(ctx context.Context, runUUID, journeyUUID string) (*SimulationJourney, *Response, error) {
+func (s *AgentPlatformServiceOp) GetSimulationJourney(ctx context.Context, runUUID, journeyUUID string) (*SimulationJourney, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}
@@ -1091,7 +1091,7 @@ func (s *GradientAIServiceOp) GetSimulationJourney(ctx context.Context, runUUID,
 
 // GetSimulationJourneyTrajectoryURL returns a presigned download URL for a
 // journey's trajectory JSON.
-func (s *GradientAIServiceOp) GetSimulationJourneyTrajectoryURL(ctx context.Context, runUUID, journeyUUID string) (*SimulationJourneyTrajectoryURLResponse, *Response, error) {
+func (s *AgentPlatformServiceOp) GetSimulationJourneyTrajectoryURL(ctx context.Context, runUUID, journeyUUID string) (*SimulationJourneyTrajectoryURLResponse, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}
@@ -1115,7 +1115,7 @@ func (s *GradientAIServiceOp) GetSimulationJourneyTrajectoryURL(ctx context.Cont
 
 // GetSimulationJourneyTrajectory retrieves the parsed trajectory JSON for a
 // journey.
-func (s *GradientAIServiceOp) GetSimulationJourneyTrajectory(ctx context.Context, runUUID, journeyUUID string) (*SimulationTrajectory, *Response, error) {
+func (s *AgentPlatformServiceOp) GetSimulationJourneyTrajectory(ctx context.Context, runUUID, journeyUUID string) (*SimulationTrajectory, *Response, error) {
 	if runUUID == "" {
 		return nil, nil, fmt.Errorf("run uuid is required")
 	}

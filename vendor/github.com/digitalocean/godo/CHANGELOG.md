@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.216.0] - 2026-09-30
+
+- #1134 - @kishlay-singh-DO - Rename the GradientAI client to Agent Platform.
+- #1133 - @tgillam-do - Add Action Gateway SDK
+- #1129 - @sanpj2292 - Add Cancel to HostedAgentTriggersService
+- #1132 - @fumblehool - Update HostedAgentSandboxSize struct to include PricePerHourUSD and PricePerMonthUSD
+
 ## [1.215.0] - 2026-09-24
 
 - #1127 - @vrindavinod-do - hosted_agents: add ZeroBalance pause reason, deprecate LowBalance

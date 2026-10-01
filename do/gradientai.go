@@ -144,7 +144,7 @@ func NewGradientAIService(client *godo.Client) GradientAIService {
 // ListKnowledgeBases lists all knowledge bases for an agent.
 func (a *gradientAIService) ListKnowledgeBases() (KnowledgeBases, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := a.client.GradientAI.ListKnowledgeBases(context.TODO(), opt)
+		list, resp, err := a.client.AgentPlatform.ListKnowledgeBases(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -170,7 +170,7 @@ func (a *gradientAIService) ListKnowledgeBases() (KnowledgeBases, error) {
 }
 
 func (a *gradientAIService) GetKnowledgeBase(knowledgeBaseID string) (*KnowledgeBase, error) {
-	kb, _, _, err := a.client.GradientAI.GetKnowledgeBase(context.TODO(), knowledgeBaseID)
+	kb, _, _, err := a.client.AgentPlatform.GetKnowledgeBase(context.TODO(), knowledgeBaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (a *gradientAIService) GetKnowledgeBase(knowledgeBaseID string) (*Knowledge
 
 func (a *gradientAIService) ListKnowledgeBaseDataSources(knowledgeBaseID string) (KnowledgeBaseDataSources, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := a.client.GradientAI.ListKnowledgeBaseDataSources(context.TODO(), knowledgeBaseID, opt)
+		list, resp, err := a.client.AgentPlatform.ListKnowledgeBaseDataSources(context.TODO(), knowledgeBaseID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -205,7 +205,7 @@ func (a *gradientAIService) ListKnowledgeBaseDataSources(knowledgeBaseID string)
 }
 
 func (a *gradientAIService) CreateKnowledgeBase(req *godo.KnowledgeBaseCreateRequest) (*KnowledgeBase, error) {
-	kb, _, err := a.client.GradientAI.CreateKnowledgeBase(context.TODO(), req)
+	kb, _, err := a.client.AgentPlatform.CreateKnowledgeBase(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (a *gradientAIService) CreateKnowledgeBase(req *godo.KnowledgeBaseCreateReq
 }
 
 func (a *gradientAIService) UpdateKnowledgeBase(knowledgeBaseID string, req *godo.UpdateKnowledgeBaseRequest) (*KnowledgeBase, error) {
-	kb, _, err := a.client.GradientAI.UpdateKnowledgeBase(context.TODO(), knowledgeBaseID, req)
+	kb, _, err := a.client.AgentPlatform.UpdateKnowledgeBase(context.TODO(), knowledgeBaseID, req)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (a *gradientAIService) UpdateKnowledgeBase(knowledgeBaseID string, req *god
 }
 
 func (a *gradientAIService) AddKnowledgeBaseDataSource(knowledgeBaseID string, req *godo.AddKnowledgeBaseDataSourceRequest) (*KnowledgeBaseDataSource, error) {
-	kb, _, err := a.client.GradientAI.AddKnowledgeBaseDataSource(context.TODO(), knowledgeBaseID, req)
+	kb, _, err := a.client.AgentPlatform.AddKnowledgeBaseDataSource(context.TODO(), knowledgeBaseID, req)
 	if err != nil {
 		return nil, err
 	}
@@ -229,17 +229,17 @@ func (a *gradientAIService) AddKnowledgeBaseDataSource(knowledgeBaseID string, r
 }
 
 func (a *gradientAIService) DeleteKnowledgeBaseDataSource(knowledgeBaseID string, dataSourceID string) error {
-	_, _, _, err := a.client.GradientAI.DeleteKnowledgeBaseDataSource(context.TODO(), knowledgeBaseID, dataSourceID)
+	_, _, _, err := a.client.AgentPlatform.DeleteKnowledgeBaseDataSource(context.TODO(), knowledgeBaseID, dataSourceID)
 	return err
 }
 
 func (a *gradientAIService) DeleteKnowledgeBase(knowledgeBaseID string) error {
-	_, _, err := a.client.GradientAI.DeleteKnowledgeBase(context.TODO(), knowledgeBaseID)
+	_, _, err := a.client.AgentPlatform.DeleteKnowledgeBase(context.TODO(), knowledgeBaseID)
 	return err
 }
 
 func (a *gradientAIService) AttachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error) {
-	agent, _, err := a.client.GradientAI.AttachKnowledgeBaseToAgent(context.TODO(), agentId, knowledgeBaseID)
+	agent, _, err := a.client.AgentPlatform.AttachKnowledgeBaseToAgent(context.TODO(), agentId, knowledgeBaseID)
 	if err != nil {
 		return &Agent{}, err
 	}
@@ -247,7 +247,7 @@ func (a *gradientAIService) AttachKnowledgeBaseToAgent(agentId string, knowledge
 }
 
 func (a *gradientAIService) DetachKnowledgeBaseToAgent(agentId string, knowledgeBaseID string) (*Agent, error) {
-	agent, _, err := a.client.GradientAI.DetachKnowledgeBaseToAgent(context.TODO(), agentId, knowledgeBaseID)
+	agent, _, err := a.client.AgentPlatform.DetachKnowledgeBaseToAgent(context.TODO(), agentId, knowledgeBaseID)
 	if err != nil {
 		return &Agent{}, err
 	}
@@ -256,7 +256,7 @@ func (a *gradientAIService) DetachKnowledgeBaseToAgent(agentId string, knowledge
 
 func (a *gradientAIService) ListOpenAIAPIKeys() (OpenAiApiKeys, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := a.client.GradientAI.ListOpenAIAPIKeys(context.TODO(), opt)
+		list, resp, err := a.client.AgentPlatform.ListOpenAIAPIKeys(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -282,7 +282,7 @@ func (a *gradientAIService) ListOpenAIAPIKeys() (OpenAiApiKeys, error) {
 }
 
 func (a *gradientAIService) CreateOpenAIAPIKey(openaiAPIKeyCreate *godo.OpenAIAPIKeyCreateRequest) (*OpenAiApiKey, error) {
-	openaiApiKey, _, err := a.client.GradientAI.CreateOpenAIAPIKey(context.TODO(), openaiAPIKeyCreate)
+	openaiApiKey, _, err := a.client.AgentPlatform.CreateOpenAIAPIKey(context.TODO(), openaiAPIKeyCreate)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +290,7 @@ func (a *gradientAIService) CreateOpenAIAPIKey(openaiAPIKeyCreate *godo.OpenAIAP
 }
 
 func (a *gradientAIService) GetOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKey, error) {
-	openaiApiKey, _, err := a.client.GradientAI.GetOpenAIAPIKey(context.TODO(), openaiApiKeyId)
+	openaiApiKey, _, err := a.client.AgentPlatform.GetOpenAIAPIKey(context.TODO(), openaiApiKeyId)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,7 @@ func (a *gradientAIService) GetOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKe
 }
 
 func (a *gradientAIService) UpdateOpenAIAPIKey(openaiApiKeyId string, openaiAPIKeyUpdate *godo.OpenAIAPIKeyUpdateRequest) (*OpenAiApiKey, error) {
-	openaiApiKey, _, err := a.client.GradientAI.UpdateOpenAIAPIKey(context.TODO(), openaiApiKeyId, openaiAPIKeyUpdate)
+	openaiApiKey, _, err := a.client.AgentPlatform.UpdateOpenAIAPIKey(context.TODO(), openaiApiKeyId, openaiAPIKeyUpdate)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func (a *gradientAIService) UpdateOpenAIAPIKey(openaiApiKeyId string, openaiAPIK
 }
 
 func (a *gradientAIService) DeleteOpenAIAPIKey(openaiApiKeyId string) (*OpenAiApiKey, error) {
-	openaiApiKey, _, err := a.client.GradientAI.DeleteOpenAIAPIKey(context.TODO(), openaiApiKeyId)
+	openaiApiKey, _, err := a.client.AgentPlatform.DeleteOpenAIAPIKey(context.TODO(), openaiApiKeyId)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +315,7 @@ func (a *gradientAIService) DeleteOpenAIAPIKey(openaiApiKeyId string) (*OpenAiAp
 
 func (a *gradientAIService) ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (Agents, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		agents, resp, err := a.client.GradientAI.ListAgentsByOpenAIAPIKey(context.TODO(), openaiApiKeyId, opt)
+		agents, resp, err := a.client.AgentPlatform.ListAgentsByOpenAIAPIKey(context.TODO(), openaiApiKeyId, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -352,7 +352,7 @@ func (a *gradientAIService) ListAgentsByOpenAIAPIKey(openaiApiKeyId string) (Age
 
 func (a *gradientAIService) ListDatacenterRegions(servesInference, servesBatch *bool) (DatacenterRegions, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := a.client.GradientAI.ListDatacenterRegions(context.TODO(), servesInference, servesBatch)
+		list, resp, err := a.client.AgentPlatform.ListDatacenterRegions(context.TODO(), servesInference, servesBatch)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -379,7 +379,7 @@ func (a *gradientAIService) ListDatacenterRegions(servesInference, servesBatch *
 
 func (a *gradientAIService) ListAvailableModels() (Models, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		list, resp, err := a.client.GradientAI.ListAvailableModels(context.TODO(), opt)
+		list, resp, err := a.client.AgentPlatform.ListAvailableModels(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -407,7 +407,7 @@ func (a *gradientAIService) ListAvailableModels() (Models, error) {
 // ListIndexingJobs lists all indexing jobs for knowledge bases.
 func (a *gradientAIService) ListIndexingJobs() (IndexingJobs, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
-		resp, godoResp, err := a.client.GradientAI.ListIndexingJobs(context.TODO(), opt)
+		resp, godoResp, err := a.client.AgentPlatform.ListIndexingJobs(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -434,7 +434,7 @@ func (a *gradientAIService) ListIndexingJobs() (IndexingJobs, error) {
 
 // GetIndexingJob retrieves the status of a specific indexing job.
 func (a *gradientAIService) GetIndexingJob(indexingJobID string) (*IndexingJob, error) {
-	resp, _, err := a.client.GradientAI.GetIndexingJob(context.TODO(), indexingJobID)
+	resp, _, err := a.client.AgentPlatform.GetIndexingJob(context.TODO(), indexingJobID)
 	if err != nil {
 		return nil, err
 	}
@@ -443,7 +443,7 @@ func (a *gradientAIService) GetIndexingJob(indexingJobID string) (*IndexingJob, 
 
 // CancelIndexingJob cancels a specific indexing job.
 func (a *gradientAIService) CancelIndexingJob(indexingJobID string) (*IndexingJob, error) {
-	resp, _, err := a.client.GradientAI.CancelIndexingJob(context.TODO(), indexingJobID)
+	resp, _, err := a.client.AgentPlatform.CancelIndexingJob(context.TODO(), indexingJobID)
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ func (a *gradientAIService) CancelIndexingJob(indexingJobID string) (*IndexingJo
 
 // ListIndexingJobDataSources lists all data sources for a specific indexing job.
 func (a *gradientAIService) ListIndexingJobDataSources(indexingJobID string) (IndexingJobDataSources, error) {
-	resp, _, err := a.client.GradientAI.ListIndexingJobDataSources(context.TODO(), indexingJobID)
+	resp, _, err := a.client.AgentPlatform.ListIndexingJobDataSources(context.TODO(), indexingJobID)
 	if err != nil {
 		return nil, err
 	}

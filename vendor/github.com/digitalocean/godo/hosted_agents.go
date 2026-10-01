@@ -764,11 +764,13 @@ type HostedAgentSandboxExecResponse struct {
 
 // HostedAgentSandboxSize is a customer-selectable sandbox (microVM) size from
 // GET /v2/agents/sessions/sandbox/sizes. Submit Slug as spec.sandbox.sizeSlug
-// on CreateSession; VCPUs and MemoryMB are for display.
+// on CreateSession; VCPUs, MemoryMB, and the price fields are for display.
 type HostedAgentSandboxSize struct {
-	Slug     string `json:"slug,omitempty"`
-	VCPUs    int    `json:"vcpus,omitempty"`
-	MemoryMB int    `json:"memory_mb,omitempty"`
+	Slug             string  `json:"slug,omitempty"`
+	VCPUs            int     `json:"vcpus,omitempty"`
+	MemoryMB         int     `json:"memory_mb,omitempty"`
+	PricePerHourUSD  float64 `json:"price_per_hour_usd,omitempty"`
+	PricePerMonthUSD float64 `json:"price_per_month_usd,omitempty"`
 }
 
 // HostedAgentSandboxSizesResponse is returned by ListSandboxSizes.
