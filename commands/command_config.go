@@ -86,7 +86,7 @@ type CmdConfig struct {
 	OAuth               func() do.OAuthService
 	PartnerAttachments  func() do.PartnerAttachmentsService
 	SpacesKeys          func() do.SpacesKeysService
-	AgentPlatform          func() do.AgentPlatformService
+	AgentPlatform       func() do.AgentPlatformService
 	DedicatedInferences func() do.DedicatedInferenceService
 	Inference           func() do.InferenceService
 	Nfs                 func() do.NfsService
