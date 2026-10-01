@@ -43,7 +43,7 @@ func TestModelEvaluationRunCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSimulationJudgeModelUUID, "judge-model-uuid")
 		config.Doit.Set(config.NS, doctl.ArgSimulationMetricUUIDs, []string{"metric-uuid-1"})
 
-		tm.gradientAI.EXPECT().CreateModelEvaluationRun(&godo.CreateModelEvaluationRunRequest{
+		tm.agentPlatform.EXPECT().CreateModelEvaluationRun(&godo.CreateModelEvaluationRunRequest{
 			Name:               "Nightly Eval",
 			CandidateModelUUID: "candidate-model-uuid",
 			DatasetUUID:        "dataset-uuid",
@@ -58,7 +58,7 @@ func TestModelEvaluationRunCreate(t *testing.T) {
 
 func TestModelEvaluationRunList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListModelEvaluationRuns(&godo.ModelEvaluationRunListOptions{}).
+		tm.agentPlatform.EXPECT().ListModelEvaluationRuns(&godo.ModelEvaluationRunListOptions{}).
 			Return(do.ModelEvaluationRuns{testModelEvaluationRun}, nil)
 
 		err := RunModelEvaluationRunList(config)
@@ -74,7 +74,7 @@ func TestModelEvaluationRunListWithFilters(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGenAISortBy, "created_at")
 		config.Doit.Set(config.NS, doctl.ArgGenAISortDirection, "desc")
 
-		tm.gradientAI.EXPECT().ListModelEvaluationRuns(&godo.ModelEvaluationRunListOptions{
+		tm.agentPlatform.EXPECT().ListModelEvaluationRuns(&godo.ModelEvaluationRunListOptions{
 			EvalPresetUUID: "preset-uuid",
 			Statuses: []godo.ModelEvaluationRunStatus{
 				godo.ModelEvaluationRunQueued,
@@ -94,7 +94,7 @@ func TestModelEvaluationRunGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testModelEvaluationRunUUID)
 
-		tm.gradientAI.EXPECT().GetModelEvaluationRun(testModelEvaluationRunUUID).Return(&do.ModelEvaluationRunDetail{
+		tm.agentPlatform.EXPECT().GetModelEvaluationRun(testModelEvaluationRunUUID).Return(&do.ModelEvaluationRunDetail{
 			ModelEvaluationRunGetResponse: &godo.ModelEvaluationRunGetResponse{
 				Run: &godo.ModelEvaluationRunDetail{
 					EvalRunUuid: testModelEvaluationRunUUID,
@@ -117,7 +117,7 @@ func TestModelEvaluationRunUpdate(t *testing.T) {
 		config.Args = append(config.Args, testModelEvaluationRunUUID)
 		config.Doit.Set(config.NS, doctl.ArgGenAIName, "Nightly Eval v2")
 
-		tm.gradientAI.EXPECT().UpdateModelEvaluationRun(testModelEvaluationRunUUID, &godo.UpdateModelEvaluationRunRequest{
+		tm.agentPlatform.EXPECT().UpdateModelEvaluationRun(testModelEvaluationRunUUID, &godo.UpdateModelEvaluationRunRequest{
 			Name: "Nightly Eval v2",
 		}).Return(&testModelEvaluationRun, nil)
 
@@ -131,7 +131,7 @@ func TestModelEvaluationRunCancel(t *testing.T) {
 		config.Args = append(config.Args, testModelEvaluationRunUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().CancelModelEvaluationRun(testModelEvaluationRunUUID).Return(&testModelEvaluationRun, nil)
+		tm.agentPlatform.EXPECT().CancelModelEvaluationRun(testModelEvaluationRunUUID).Return(&testModelEvaluationRun, nil)
 
 		err := RunModelEvaluationRunCancel(config)
 		assert.NoError(t, err)
@@ -143,7 +143,7 @@ func TestModelEvaluationRunDelete(t *testing.T) {
 		config.Args = append(config.Args, testModelEvaluationRunUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DeleteModelEvaluationRun(testModelEvaluationRunUUID).Return(nil)
+		tm.agentPlatform.EXPECT().DeleteModelEvaluationRun(testModelEvaluationRunUUID).Return(nil)
 
 		err := RunModelEvaluationRunDelete(config)
 		assert.NoError(t, err)
@@ -154,7 +154,7 @@ func TestModelEvaluationRunResultsDownloadURL(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testModelEvaluationRunUUID)
 
-		tm.gradientAI.EXPECT().GetModelEvaluationRunResultsDownloadURL(testModelEvaluationRunUUID).
+		tm.agentPlatform.EXPECT().GetModelEvaluationRunResultsDownloadURL(testModelEvaluationRunUUID).
 			Return(&do.GenAIDownloadURL{DownloadURL: "https://example.com/results"}, nil)
 
 		err := RunModelEvaluationRunResultsDownloadURL(config)

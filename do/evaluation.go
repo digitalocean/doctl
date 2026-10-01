@@ -74,8 +74,8 @@ type EvaluationMetrics []EvaluationMetric
 
 // CreateModelEvalDatasetUploadPresignedURLs creates presigned URLs for uploading
 // model evaluation dataset files.
-func (a *gradientAIService) CreateModelEvalDatasetUploadPresignedURLs(req *godo.CreateModelEvalDatasetUploadPresignedURLsRequest) (*ModelEvalDatasetFileUploads, error) {
-	uploads, _, err := a.client.GradientAI.CreateModelEvalDatasetUploadPresignedURLs(context.TODO(), req)
+func (a *agentPlatformService) CreateModelEvalDatasetUploadPresignedURLs(req *godo.CreateModelEvalDatasetUploadPresignedURLsRequest) (*ModelEvalDatasetFileUploads, error) {
+	uploads, _, err := a.client.AgentPlatform.CreateModelEvalDatasetUploadPresignedURLs(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,8 @@ func (a *gradientAIService) CreateModelEvalDatasetUploadPresignedURLs(req *godo.
 }
 
 // CreateEvaluationDataset registers an evaluation dataset from a previously uploaded file.
-func (a *gradientAIService) CreateEvaluationDataset(req *godo.CreateEvaluationDatasetRequest) (*EvaluationDatasetCreate, error) {
-	res, _, err := a.client.GradientAI.CreateEvaluationDataset(context.TODO(), req)
+func (a *agentPlatformService) CreateEvaluationDataset(req *godo.CreateEvaluationDatasetRequest) (*EvaluationDatasetCreate, error) {
+	res, _, err := a.client.AgentPlatform.CreateEvaluationDataset(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (a *gradientAIService) CreateEvaluationDataset(req *godo.CreateEvaluationDa
 }
 
 // ListEvaluationDatasets lists evaluation datasets for the team.
-func (a *gradientAIService) ListEvaluationDatasets(opt *godo.EvaluationDatasetListOptions) (EvaluationDatasets, error) {
-	res, _, err := a.client.GradientAI.ListEvaluationDatasets(context.TODO(), opt)
+func (a *agentPlatformService) ListEvaluationDatasets(opt *godo.EvaluationDatasetListOptions) (EvaluationDatasets, error) {
+	res, _, err := a.client.AgentPlatform.ListEvaluationDatasets(context.TODO(), opt)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +106,14 @@ func (a *gradientAIService) ListEvaluationDatasets(opt *godo.EvaluationDatasetLi
 }
 
 // DeleteEvaluationDataset deletes an evaluation dataset by its UUID.
-func (a *gradientAIService) DeleteEvaluationDataset(datasetUUID string) error {
-	_, _, err := a.client.GradientAI.DeleteEvaluationDataset(context.TODO(), datasetUUID)
+func (a *agentPlatformService) DeleteEvaluationDataset(datasetUUID string) error {
+	_, _, err := a.client.AgentPlatform.DeleteEvaluationDataset(context.TODO(), datasetUUID)
 	return err
 }
 
 // CreateModelEvaluationRun creates a model evaluation run.
-func (a *gradientAIService) CreateModelEvaluationRun(req *godo.CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreate, error) {
-	res, _, err := a.client.GradientAI.CreateModelEvaluationRun(context.TODO(), req)
+func (a *agentPlatformService) CreateModelEvaluationRun(req *godo.CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreate, error) {
+	res, _, err := a.client.AgentPlatform.CreateModelEvaluationRun(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (a *gradientAIService) CreateModelEvaluationRun(req *godo.CreateModelEvalua
 }
 
 // ListModelEvaluationRuns lists model evaluation runs for the team.
-func (a *gradientAIService) ListModelEvaluationRuns(opt *godo.ModelEvaluationRunListOptions) (ModelEvaluationRuns, error) {
+func (a *agentPlatformService) ListModelEvaluationRuns(opt *godo.ModelEvaluationRunListOptions) (ModelEvaluationRuns, error) {
 	if opt == nil {
 		opt = &godo.ModelEvaluationRunListOptions{}
 	}
@@ -129,7 +129,7 @@ func (a *gradientAIService) ListModelEvaluationRuns(opt *godo.ModelEvaluationRun
 	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.ModelEvaluationRunSummary, *godo.Response, error) {
 		filters := *opt
 		filters.ListOptions = *listOpt
-		res, resp, err := a.client.GradientAI.ListModelEvaluationRuns(context.TODO(), &filters)
+		res, resp, err := a.client.AgentPlatform.ListModelEvaluationRuns(context.TODO(), &filters)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -141,8 +141,8 @@ func (a *gradientAIService) ListModelEvaluationRuns(opt *godo.ModelEvaluationRun
 
 // GetModelEvaluationRun retrieves a model evaluation run by its UUID, including
 // the first page of per-prompt results.
-func (a *gradientAIService) GetModelEvaluationRun(evalRunUUID string) (*ModelEvaluationRunDetail, error) {
-	res, _, err := a.client.GradientAI.GetModelEvaluationRun(context.TODO(), evalRunUUID, nil)
+func (a *agentPlatformService) GetModelEvaluationRun(evalRunUUID string) (*ModelEvaluationRunDetail, error) {
+	res, _, err := a.client.AgentPlatform.GetModelEvaluationRun(context.TODO(), evalRunUUID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +150,8 @@ func (a *gradientAIService) GetModelEvaluationRun(evalRunUUID string) (*ModelEva
 }
 
 // UpdateModelEvaluationRun updates a model evaluation run by its UUID.
-func (a *gradientAIService) UpdateModelEvaluationRun(evalRunUUID string, req *godo.UpdateModelEvaluationRunRequest) (*ModelEvaluationRun, error) {
-	res, _, err := a.client.GradientAI.UpdateModelEvaluationRun(context.TODO(), evalRunUUID, req)
+func (a *agentPlatformService) UpdateModelEvaluationRun(evalRunUUID string, req *godo.UpdateModelEvaluationRunRequest) (*ModelEvaluationRun, error) {
+	res, _, err := a.client.AgentPlatform.UpdateModelEvaluationRun(context.TODO(), evalRunUUID, req)
 	if err != nil {
 		return nil, err
 	}
@@ -162,8 +162,8 @@ func (a *gradientAIService) UpdateModelEvaluationRun(evalRunUUID string, req *go
 }
 
 // CancelModelEvaluationRun cancels an in-progress model evaluation run.
-func (a *gradientAIService) CancelModelEvaluationRun(evalRunUUID string) (*ModelEvaluationRun, error) {
-	res, _, err := a.client.GradientAI.CancelModelEvaluationRun(context.TODO(), evalRunUUID)
+func (a *agentPlatformService) CancelModelEvaluationRun(evalRunUUID string) (*ModelEvaluationRun, error) {
+	res, _, err := a.client.AgentPlatform.CancelModelEvaluationRun(context.TODO(), evalRunUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -174,15 +174,15 @@ func (a *gradientAIService) CancelModelEvaluationRun(evalRunUUID string) (*Model
 }
 
 // DeleteModelEvaluationRun deletes a model evaluation run by its UUID.
-func (a *gradientAIService) DeleteModelEvaluationRun(evalRunUUID string) error {
-	_, _, err := a.client.GradientAI.DeleteModelEvaluationRun(context.TODO(), evalRunUUID)
+func (a *agentPlatformService) DeleteModelEvaluationRun(evalRunUUID string) error {
+	_, _, err := a.client.AgentPlatform.DeleteModelEvaluationRun(context.TODO(), evalRunUUID)
 	return err
 }
 
 // GetModelEvaluationRunResultsDownloadURL returns a presigned download URL for a
 // model evaluation run's results.
-func (a *gradientAIService) GetModelEvaluationRunResultsDownloadURL(evalRunUUID string) (*GenAIDownloadURL, error) {
-	res, _, err := a.client.GradientAI.GetModelEvaluationRunResultsDownloadURL(context.TODO(), evalRunUUID)
+func (a *agentPlatformService) GetModelEvaluationRunResultsDownloadURL(evalRunUUID string) (*GenAIDownloadURL, error) {
+	res, _, err := a.client.AgentPlatform.GetModelEvaluationRunResultsDownloadURL(context.TODO(), evalRunUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +190,8 @@ func (a *gradientAIService) GetModelEvaluationRunResultsDownloadURL(evalRunUUID 
 }
 
 // ListModelEvaluationPresets lists saved model evaluation presets.
-func (a *gradientAIService) ListModelEvaluationPresets() (ModelEvaluationPresets, error) {
-	res, _, err := a.client.GradientAI.ListModelEvaluationPresets(context.TODO())
+func (a *agentPlatformService) ListModelEvaluationPresets() (ModelEvaluationPresets, error) {
+	res, _, err := a.client.AgentPlatform.ListModelEvaluationPresets(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -204,8 +204,8 @@ func (a *gradientAIService) ListModelEvaluationPresets() (ModelEvaluationPresets
 }
 
 // GetModelEvaluationPreset retrieves a saved model evaluation preset by UUID.
-func (a *gradientAIService) GetModelEvaluationPreset(evalPresetUUID string) (*ModelEvaluationPreset, error) {
-	res, _, err := a.client.GradientAI.GetModelEvaluationPreset(context.TODO(), evalPresetUUID)
+func (a *agentPlatformService) GetModelEvaluationPreset(evalPresetUUID string) (*ModelEvaluationPreset, error) {
+	res, _, err := a.client.AgentPlatform.GetModelEvaluationPreset(context.TODO(), evalPresetUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -216,14 +216,14 @@ func (a *gradientAIService) GetModelEvaluationPreset(evalPresetUUID string) (*Mo
 }
 
 // DeleteModelEvaluationPreset deletes a saved model evaluation preset by UUID.
-func (a *gradientAIService) DeleteModelEvaluationPreset(evalPresetUUID string) error {
-	_, _, err := a.client.GradientAI.DeleteModelEvaluationPreset(context.TODO(), evalPresetUUID)
+func (a *agentPlatformService) DeleteModelEvaluationPreset(evalPresetUUID string) error {
+	_, _, err := a.client.AgentPlatform.DeleteModelEvaluationPreset(context.TODO(), evalPresetUUID)
 	return err
 }
 
 // ListModelEvaluationMetrics lists available model evaluation metrics.
-func (a *gradientAIService) ListModelEvaluationMetrics() (EvaluationMetrics, error) {
-	res, _, err := a.client.GradientAI.ListModelEvaluationMetrics(context.TODO())
+func (a *agentPlatformService) ListModelEvaluationMetrics() (EvaluationMetrics, error) {
+	res, _, err := a.client.AgentPlatform.ListModelEvaluationMetrics(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -236,8 +236,8 @@ func (a *gradientAIService) ListModelEvaluationMetrics() (EvaluationMetrics, err
 }
 
 // CreateCustomEvaluationMetric creates a custom model evaluation metric.
-func (a *gradientAIService) CreateCustomEvaluationMetric(req *godo.CreateCustomEvaluationMetricRequest) (*EvaluationMetric, error) {
-	metric, _, err := a.client.GradientAI.CreateCustomEvaluationMetric(context.TODO(), req)
+func (a *agentPlatformService) CreateCustomEvaluationMetric(req *godo.CreateCustomEvaluationMetricRequest) (*EvaluationMetric, error) {
+	metric, _, err := a.client.AgentPlatform.CreateCustomEvaluationMetric(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +245,8 @@ func (a *gradientAIService) CreateCustomEvaluationMetric(req *godo.CreateCustomE
 }
 
 // UpdateCustomEvaluationMetric updates a custom model evaluation metric.
-func (a *gradientAIService) UpdateCustomEvaluationMetric(metricUUID string, req *godo.UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, error) {
-	metric, _, err := a.client.GradientAI.UpdateCustomEvaluationMetric(context.TODO(), metricUUID, req)
+func (a *agentPlatformService) UpdateCustomEvaluationMetric(metricUUID string, req *godo.UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, error) {
+	metric, _, err := a.client.AgentPlatform.UpdateCustomEvaluationMetric(context.TODO(), metricUUID, req)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (a *gradientAIService) UpdateCustomEvaluationMetric(metricUUID string, req 
 }
 
 // DeleteCustomEvaluationMetric deletes a custom model evaluation metric.
-func (a *gradientAIService) DeleteCustomEvaluationMetric(metricUUID string) error {
-	_, err := a.client.GradientAI.DeleteCustomEvaluationMetric(context.TODO(), metricUUID)
+func (a *agentPlatformService) DeleteCustomEvaluationMetric(metricUUID string) error {
+	_, err := a.client.AgentPlatform.DeleteCustomEvaluationMetric(context.TODO(), metricUUID)
 	return err
 }

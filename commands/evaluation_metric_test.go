@@ -29,7 +29,7 @@ func TestModelEvaluationMetricCommand(t *testing.T) {
 
 func TestModelEvaluationMetricList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListModelEvaluationMetrics().
+		tm.agentPlatform.EXPECT().ListModelEvaluationMetrics().
 			Return(do.EvaluationMetrics{testEvaluationMetric}, nil)
 
 		err := RunModelEvaluationMetricList(config)

@@ -31,7 +31,7 @@ func TestModelEvaluationPresetCommand(t *testing.T) {
 
 func TestModelEvaluationPresetList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListModelEvaluationPresets().
+		tm.agentPlatform.EXPECT().ListModelEvaluationPresets().
 			Return(do.ModelEvaluationPresets{testModelEvaluationPreset}, nil)
 
 		err := RunModelEvaluationPresetList(config)
@@ -43,7 +43,7 @@ func TestModelEvaluationPresetGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testModelEvaluationPresetUUID)
 
-		tm.gradientAI.EXPECT().GetModelEvaluationPreset(testModelEvaluationPresetUUID).
+		tm.agentPlatform.EXPECT().GetModelEvaluationPreset(testModelEvaluationPresetUUID).
 			Return(&testModelEvaluationPreset, nil)
 
 		err := RunModelEvaluationPresetGet(config)
@@ -56,7 +56,7 @@ func TestModelEvaluationPresetDelete(t *testing.T) {
 		config.Args = append(config.Args, testModelEvaluationPresetUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DeleteModelEvaluationPreset(testModelEvaluationPresetUUID).Return(nil)
+		tm.agentPlatform.EXPECT().DeleteModelEvaluationPreset(testModelEvaluationPresetUUID).Return(nil)
 
 		err := RunModelEvaluationPresetDelete(config)
 		assert.NoError(t, err)

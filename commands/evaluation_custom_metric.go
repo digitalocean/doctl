@@ -103,7 +103,7 @@ func RunCustomEvaluationMetricCreate(c *CmdConfig) error {
 		return err
 	}
 
-	metric, err := c.GradientAI().CreateCustomEvaluationMetric(&godo.CreateCustomEvaluationMetricRequest{
+	metric, err := c.AgentPlatform().CreateCustomEvaluationMetric(&godo.CreateCustomEvaluationMetricRequest{
 		MetricName:  metricName,
 		Description: description,
 		Config: &godo.CustomEvaluationMetricConfig{
@@ -153,7 +153,7 @@ func RunCustomEvaluationMetricUpdate(c *CmdConfig) error {
 	}
 	req.Config = config
 
-	metric, err := c.GradientAI().UpdateCustomEvaluationMetric(c.Args[0], req)
+	metric, err := c.AgentPlatform().UpdateCustomEvaluationMetric(c.Args[0], req)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func customEvaluationMetricConfigForUpdate(c *CmdConfig, metricUUID, scoringProm
 }
 
 func existingCustomEvaluationMetricConfig(c *CmdConfig, metricUUID string) (*godo.CustomEvaluationMetricConfig, error) {
-	metrics, err := c.GradientAI().ListModelEvaluationMetrics()
+	metrics, err := c.AgentPlatform().ListModelEvaluationMetrics()
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func RunCustomEvaluationMetricDelete(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	if err := c.GradientAI().DeleteCustomEvaluationMetric(c.Args[0]); err != nil {
+	if err := c.AgentPlatform().DeleteCustomEvaluationMetric(c.Args[0]); err != nil {
 		return err
 	}
 

@@ -250,7 +250,7 @@ func RunModelEvaluationRunCreate(c *CmdConfig) error {
 	}
 	req.StarMetric = starMetric
 
-	create, err := c.GradientAI().CreateModelEvaluationRun(req)
+	create, err := c.AgentPlatform().CreateModelEvaluationRun(req)
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func RunModelEvaluationRunList(c *CmdConfig) error {
 		return err
 	}
 
-	runs, err := c.GradientAI().ListModelEvaluationRuns(&godo.ModelEvaluationRunListOptions{
+	runs, err := c.AgentPlatform().ListModelEvaluationRuns(&godo.ModelEvaluationRunListOptions{
 		EvalPresetUUID: evalPresetUUID,
 		Statuses:       genAIEnums[godo.ModelEvaluationRunStatus](modelEvaluationRunStatusPrefix, rawStatuses),
 		CandidateTypes: genAIEnums[godo.CandidateModelSource](candidateModelSourcePrefix, rawCandidateTypes),
@@ -301,7 +301,7 @@ func RunModelEvaluationRunGet(c *CmdConfig) error {
 		return err
 	}
 
-	detail, err := c.GradientAI().GetModelEvaluationRun(c.Args[0])
+	detail, err := c.AgentPlatform().GetModelEvaluationRun(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func RunModelEvaluationRunUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	run, err := c.GradientAI().UpdateModelEvaluationRun(c.Args[0], &godo.UpdateModelEvaluationRunRequest{
+	run, err := c.AgentPlatform().UpdateModelEvaluationRun(c.Args[0], &godo.UpdateModelEvaluationRunRequest{
 		Name: name,
 	})
 	if err != nil {
@@ -345,7 +345,7 @@ func RunModelEvaluationRunCancel(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	run, err := c.GradientAI().CancelModelEvaluationRun(c.Args[0])
+	run, err := c.AgentPlatform().CancelModelEvaluationRun(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,7 @@ func RunModelEvaluationRunDelete(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	if err := c.GradientAI().DeleteModelEvaluationRun(c.Args[0]); err != nil {
+	if err := c.AgentPlatform().DeleteModelEvaluationRun(c.Args[0]); err != nil {
 		return err
 	}
 
@@ -382,7 +382,7 @@ func RunModelEvaluationRunResultsDownloadURL(c *CmdConfig) error {
 		return err
 	}
 
-	downloadURL, err := c.GradientAI().GetModelEvaluationRunResultsDownloadURL(c.Args[0])
+	downloadURL, err := c.AgentPlatform().GetModelEvaluationRunResultsDownloadURL(c.Args[0])
 	if err != nil {
 		return err
 	}

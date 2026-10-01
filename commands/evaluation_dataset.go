@@ -122,7 +122,7 @@ func RunEvaluationDatasetCreate(c *CmdConfig) error {
 		return err
 	}
 
-	create, err := c.GradientAI().CreateEvaluationDataset(&godo.CreateEvaluationDatasetRequest{
+	create, err := c.AgentPlatform().CreateEvaluationDataset(&godo.CreateEvaluationDatasetRequest{
 		Name:              name,
 		DatasetType:       godo.EvaluationDatasetTypeModel,
 		DatasetParadigm:   godo.EvaluationDatasetParadigm(genAIEnumValue(evaluationDatasetParadigmPrefix, rawParadigm)),
@@ -160,7 +160,7 @@ func RunEvaluationDatasetList(c *CmdConfig) error {
 		opt.HasGroundTruth = hasGroundTruth
 	}
 
-	datasets, err := c.GradientAI().ListEvaluationDatasets(opt)
+	datasets, err := c.AgentPlatform().ListEvaluationDatasets(opt)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func RunEvaluationDatasetDelete(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	if err := c.GradientAI().DeleteEvaluationDataset(c.Args[0]); err != nil {
+	if err := c.AgentPlatform().DeleteEvaluationDataset(c.Args[0]); err != nil {
 		return err
 	}
 
@@ -203,7 +203,7 @@ func uploadEvaluationDatasetFile(c *CmdConfig, path string) (*godo.FileUploadDat
 	fileName := filepath.Base(path)
 	size := strconv.FormatInt(info.Size(), 10)
 
-	uploads, err := c.GradientAI().CreateModelEvalDatasetUploadPresignedURLs(&godo.CreateModelEvalDatasetUploadPresignedURLsRequest{
+	uploads, err := c.AgentPlatform().CreateModelEvalDatasetUploadPresignedURLs(&godo.CreateModelEvalDatasetUploadPresignedURLsRequest{
 		Files: []*godo.PresignedUrlFile{{
 			FileName: fileName,
 			FileSize: size,

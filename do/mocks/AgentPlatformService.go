@@ -87,7 +87,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) CancelIndexingJob(indexingJobID 
 }
 
 // CancelModelEvaluationRun mocks base method.
-func (m *MockGradientAIService) CancelModelEvaluationRun(evalRunUUID string) (*do.ModelEvaluationRun, error) {
+func (m *MockAgentPlatformService) CancelModelEvaluationRun(evalRunUUID string) (*do.ModelEvaluationRun, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CancelModelEvaluationRun", evalRunUUID)
 	ret0, _ := ret[0].(*do.ModelEvaluationRun)
@@ -96,9 +96,9 @@ func (m *MockGradientAIService) CancelModelEvaluationRun(evalRunUUID string) (*d
 }
 
 // CancelModelEvaluationRun indicates an expected call of CancelModelEvaluationRun.
-func (mr *MockGradientAIServiceMockRecorder) CancelModelEvaluationRun(evalRunUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CancelModelEvaluationRun(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelModelEvaluationRun", reflect.TypeOf((*MockGradientAIService)(nil).CancelModelEvaluationRun), evalRunUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).CancelModelEvaluationRun), evalRunUUID)
 }
 
 // CancelSimulationRun mocks base method.
@@ -117,7 +117,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) CancelSimulationRun(runUUID any)
 }
 
 // CreateCustomEvaluationMetric mocks base method.
-func (m *MockGradientAIService) CreateCustomEvaluationMetric(req *godo.CreateCustomEvaluationMetricRequest) (*do.EvaluationMetric, error) {
+func (m *MockAgentPlatformService) CreateCustomEvaluationMetric(req *godo.CreateCustomEvaluationMetricRequest) (*do.EvaluationMetric, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateCustomEvaluationMetric", req)
 	ret0, _ := ret[0].(*do.EvaluationMetric)
@@ -126,13 +126,13 @@ func (m *MockGradientAIService) CreateCustomEvaluationMetric(req *godo.CreateCus
 }
 
 // CreateCustomEvaluationMetric indicates an expected call of CreateCustomEvaluationMetric.
-func (mr *MockGradientAIServiceMockRecorder) CreateCustomEvaluationMetric(req any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateCustomEvaluationMetric(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomEvaluationMetric", reflect.TypeOf((*MockGradientAIService)(nil).CreateCustomEvaluationMetric), req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomEvaluationMetric", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateCustomEvaluationMetric), req)
 }
 
 // CreateEvaluationDataset mocks base method.
-func (m *MockGradientAIService) CreateEvaluationDataset(req *godo.CreateEvaluationDatasetRequest) (*do.EvaluationDatasetCreate, error) {
+func (m *MockAgentPlatformService) CreateEvaluationDataset(req *godo.CreateEvaluationDatasetRequest) (*do.EvaluationDatasetCreate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateEvaluationDataset", req)
 	ret0, _ := ret[0].(*do.EvaluationDatasetCreate)
@@ -141,9 +141,9 @@ func (m *MockGradientAIService) CreateEvaluationDataset(req *godo.CreateEvaluati
 }
 
 // CreateEvaluationDataset indicates an expected call of CreateEvaluationDataset.
-func (mr *MockGradientAIServiceMockRecorder) CreateEvaluationDataset(req any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateEvaluationDataset(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluationDataset", reflect.TypeOf((*MockGradientAIService)(nil).CreateEvaluationDataset), req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluationDataset", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateEvaluationDataset), req)
 }
 
 // CreateKnowledgeBase mocks base method.
@@ -162,7 +162,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) CreateKnowledgeBase(req any) *go
 }
 
 // CreateModelEvalDatasetUploadPresignedURLs mocks base method.
-func (m *MockGradientAIService) CreateModelEvalDatasetUploadPresignedURLs(req *godo.CreateModelEvalDatasetUploadPresignedURLsRequest) (*do.ModelEvalDatasetFileUploads, error) {
+func (m *MockAgentPlatformService) CreateModelEvalDatasetUploadPresignedURLs(req *godo.CreateModelEvalDatasetUploadPresignedURLsRequest) (*do.ModelEvalDatasetFileUploads, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateModelEvalDatasetUploadPresignedURLs", req)
 	ret0, _ := ret[0].(*do.ModelEvalDatasetFileUploads)
@@ -171,13 +171,13 @@ func (m *MockGradientAIService) CreateModelEvalDatasetUploadPresignedURLs(req *g
 }
 
 // CreateModelEvalDatasetUploadPresignedURLs indicates an expected call of CreateModelEvalDatasetUploadPresignedURLs.
-func (mr *MockGradientAIServiceMockRecorder) CreateModelEvalDatasetUploadPresignedURLs(req any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateModelEvalDatasetUploadPresignedURLs(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateModelEvalDatasetUploadPresignedURLs", reflect.TypeOf((*MockGradientAIService)(nil).CreateModelEvalDatasetUploadPresignedURLs), req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateModelEvalDatasetUploadPresignedURLs", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateModelEvalDatasetUploadPresignedURLs), req)
 }
 
 // CreateModelEvaluationRun mocks base method.
-func (m *MockGradientAIService) CreateModelEvaluationRun(req *godo.CreateModelEvaluationRunRequest) (*do.ModelEvaluationRunCreate, error) {
+func (m *MockAgentPlatformService) CreateModelEvaluationRun(req *godo.CreateModelEvaluationRunRequest) (*do.ModelEvaluationRunCreate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateModelEvaluationRun", req)
 	ret0, _ := ret[0].(*do.ModelEvaluationRunCreate)
@@ -186,9 +186,9 @@ func (m *MockGradientAIService) CreateModelEvaluationRun(req *godo.CreateModelEv
 }
 
 // CreateModelEvaluationRun indicates an expected call of CreateModelEvaluationRun.
-func (mr *MockGradientAIServiceMockRecorder) CreateModelEvaluationRun(req any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateModelEvaluationRun(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateModelEvaluationRun", reflect.TypeOf((*MockGradientAIService)(nil).CreateModelEvaluationRun), req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateModelEvaluationRun), req)
 }
 
 // CreateOpenAIAPIKey mocks base method.
@@ -267,7 +267,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) CreateSimulationRun(req any) *go
 }
 
 // DeleteCustomEvaluationMetric mocks base method.
-func (m *MockGradientAIService) DeleteCustomEvaluationMetric(metricUUID string) error {
+func (m *MockAgentPlatformService) DeleteCustomEvaluationMetric(metricUUID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteCustomEvaluationMetric", metricUUID)
 	ret0, _ := ret[0].(error)
@@ -275,13 +275,13 @@ func (m *MockGradientAIService) DeleteCustomEvaluationMetric(metricUUID string) 
 }
 
 // DeleteCustomEvaluationMetric indicates an expected call of DeleteCustomEvaluationMetric.
-func (mr *MockGradientAIServiceMockRecorder) DeleteCustomEvaluationMetric(metricUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteCustomEvaluationMetric(metricUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomEvaluationMetric", reflect.TypeOf((*MockGradientAIService)(nil).DeleteCustomEvaluationMetric), metricUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomEvaluationMetric", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteCustomEvaluationMetric), metricUUID)
 }
 
 // DeleteEvaluationDataset mocks base method.
-func (m *MockGradientAIService) DeleteEvaluationDataset(datasetUUID string) error {
+func (m *MockAgentPlatformService) DeleteEvaluationDataset(datasetUUID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteEvaluationDataset", datasetUUID)
 	ret0, _ := ret[0].(error)
@@ -289,9 +289,9 @@ func (m *MockGradientAIService) DeleteEvaluationDataset(datasetUUID string) erro
 }
 
 // DeleteEvaluationDataset indicates an expected call of DeleteEvaluationDataset.
-func (mr *MockGradientAIServiceMockRecorder) DeleteEvaluationDataset(datasetUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteEvaluationDataset(datasetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluationDataset", reflect.TypeOf((*MockGradientAIService)(nil).DeleteEvaluationDataset), datasetUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluationDataset", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteEvaluationDataset), datasetUUID)
 }
 
 // DeleteKnowledgeBase mocks base method.
@@ -323,7 +323,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) DeleteKnowledgeBaseDataSource(kn
 }
 
 // DeleteModelEvaluationPreset mocks base method.
-func (m *MockGradientAIService) DeleteModelEvaluationPreset(evalPresetUUID string) error {
+func (m *MockAgentPlatformService) DeleteModelEvaluationPreset(evalPresetUUID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteModelEvaluationPreset", evalPresetUUID)
 	ret0, _ := ret[0].(error)
@@ -331,13 +331,13 @@ func (m *MockGradientAIService) DeleteModelEvaluationPreset(evalPresetUUID strin
 }
 
 // DeleteModelEvaluationPreset indicates an expected call of DeleteModelEvaluationPreset.
-func (mr *MockGradientAIServiceMockRecorder) DeleteModelEvaluationPreset(evalPresetUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteModelEvaluationPreset(evalPresetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteModelEvaluationPreset", reflect.TypeOf((*MockGradientAIService)(nil).DeleteModelEvaluationPreset), evalPresetUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteModelEvaluationPreset", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteModelEvaluationPreset), evalPresetUUID)
 }
 
 // DeleteModelEvaluationRun mocks base method.
-func (m *MockGradientAIService) DeleteModelEvaluationRun(evalRunUUID string) error {
+func (m *MockAgentPlatformService) DeleteModelEvaluationRun(evalRunUUID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteModelEvaluationRun", evalRunUUID)
 	ret0, _ := ret[0].(error)
@@ -345,9 +345,9 @@ func (m *MockGradientAIService) DeleteModelEvaluationRun(evalRunUUID string) err
 }
 
 // DeleteModelEvaluationRun indicates an expected call of DeleteModelEvaluationRun.
-func (mr *MockGradientAIServiceMockRecorder) DeleteModelEvaluationRun(evalRunUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteModelEvaluationRun(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteModelEvaluationRun", reflect.TypeOf((*MockGradientAIService)(nil).DeleteModelEvaluationRun), evalRunUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteModelEvaluationRun), evalRunUUID)
 }
 
 // DeleteOpenAIAPIKey mocks base method.
@@ -454,7 +454,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) GetKnowledgeBase(knowledgeBaseID
 }
 
 // GetModelEvaluationPreset mocks base method.
-func (m *MockGradientAIService) GetModelEvaluationPreset(evalPresetUUID string) (*do.ModelEvaluationPreset, error) {
+func (m *MockAgentPlatformService) GetModelEvaluationPreset(evalPresetUUID string) (*do.ModelEvaluationPreset, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetModelEvaluationPreset", evalPresetUUID)
 	ret0, _ := ret[0].(*do.ModelEvaluationPreset)
@@ -463,13 +463,13 @@ func (m *MockGradientAIService) GetModelEvaluationPreset(evalPresetUUID string) 
 }
 
 // GetModelEvaluationPreset indicates an expected call of GetModelEvaluationPreset.
-func (mr *MockGradientAIServiceMockRecorder) GetModelEvaluationPreset(evalPresetUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationPreset(evalPresetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationPreset", reflect.TypeOf((*MockGradientAIService)(nil).GetModelEvaluationPreset), evalPresetUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationPreset", reflect.TypeOf((*MockAgentPlatformService)(nil).GetModelEvaluationPreset), evalPresetUUID)
 }
 
 // GetModelEvaluationRun mocks base method.
-func (m *MockGradientAIService) GetModelEvaluationRun(evalRunUUID string) (*do.ModelEvaluationRunDetail, error) {
+func (m *MockAgentPlatformService) GetModelEvaluationRun(evalRunUUID string) (*do.ModelEvaluationRunDetail, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetModelEvaluationRun", evalRunUUID)
 	ret0, _ := ret[0].(*do.ModelEvaluationRunDetail)
@@ -478,13 +478,13 @@ func (m *MockGradientAIService) GetModelEvaluationRun(evalRunUUID string) (*do.M
 }
 
 // GetModelEvaluationRun indicates an expected call of GetModelEvaluationRun.
-func (mr *MockGradientAIServiceMockRecorder) GetModelEvaluationRun(evalRunUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationRun(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationRun", reflect.TypeOf((*MockGradientAIService)(nil).GetModelEvaluationRun), evalRunUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).GetModelEvaluationRun), evalRunUUID)
 }
 
 // GetModelEvaluationRunResultsDownloadURL mocks base method.
-func (m *MockGradientAIService) GetModelEvaluationRunResultsDownloadURL(evalRunUUID string) (*do.GenAIDownloadURL, error) {
+func (m *MockAgentPlatformService) GetModelEvaluationRunResultsDownloadURL(evalRunUUID string) (*do.GenAIDownloadURL, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetModelEvaluationRunResultsDownloadURL", evalRunUUID)
 	ret0, _ := ret[0].(*do.GenAIDownloadURL)
@@ -493,9 +493,9 @@ func (m *MockGradientAIService) GetModelEvaluationRunResultsDownloadURL(evalRunU
 }
 
 // GetModelEvaluationRunResultsDownloadURL indicates an expected call of GetModelEvaluationRunResultsDownloadURL.
-func (mr *MockGradientAIServiceMockRecorder) GetModelEvaluationRunResultsDownloadURL(evalRunUUID any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationRunResultsDownloadURL(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationRunResultsDownloadURL", reflect.TypeOf((*MockGradientAIService)(nil).GetModelEvaluationRunResultsDownloadURL), evalRunUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationRunResultsDownloadURL", reflect.TypeOf((*MockAgentPlatformService)(nil).GetModelEvaluationRunResultsDownloadURL), evalRunUUID)
 }
 
 // GetOpenAIAPIKey mocks base method.
@@ -649,7 +649,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) ListDatacenterRegions(servesInfe
 }
 
 // ListEvaluationDatasets mocks base method.
-func (m *MockGradientAIService) ListEvaluationDatasets(opt *godo.EvaluationDatasetListOptions) (do.EvaluationDatasets, error) {
+func (m *MockAgentPlatformService) ListEvaluationDatasets(opt *godo.EvaluationDatasetListOptions) (do.EvaluationDatasets, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEvaluationDatasets", opt)
 	ret0, _ := ret[0].(do.EvaluationDatasets)
@@ -658,9 +658,9 @@ func (m *MockGradientAIService) ListEvaluationDatasets(opt *godo.EvaluationDatas
 }
 
 // ListEvaluationDatasets indicates an expected call of ListEvaluationDatasets.
-func (mr *MockGradientAIServiceMockRecorder) ListEvaluationDatasets(opt any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListEvaluationDatasets(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationDatasets", reflect.TypeOf((*MockGradientAIService)(nil).ListEvaluationDatasets), opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationDatasets", reflect.TypeOf((*MockAgentPlatformService)(nil).ListEvaluationDatasets), opt)
 }
 
 // ListIndexingJobDataSources mocks base method.
@@ -724,7 +724,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) ListKnowledgeBases() *gomock.Cal
 }
 
 // ListModelEvaluationMetrics mocks base method.
-func (m *MockGradientAIService) ListModelEvaluationMetrics() (do.EvaluationMetrics, error) {
+func (m *MockAgentPlatformService) ListModelEvaluationMetrics() (do.EvaluationMetrics, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListModelEvaluationMetrics")
 	ret0, _ := ret[0].(do.EvaluationMetrics)
@@ -733,13 +733,13 @@ func (m *MockGradientAIService) ListModelEvaluationMetrics() (do.EvaluationMetri
 }
 
 // ListModelEvaluationMetrics indicates an expected call of ListModelEvaluationMetrics.
-func (mr *MockGradientAIServiceMockRecorder) ListModelEvaluationMetrics() *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListModelEvaluationMetrics() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationMetrics", reflect.TypeOf((*MockGradientAIService)(nil).ListModelEvaluationMetrics))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationMetrics", reflect.TypeOf((*MockAgentPlatformService)(nil).ListModelEvaluationMetrics))
 }
 
 // ListModelEvaluationPresets mocks base method.
-func (m *MockGradientAIService) ListModelEvaluationPresets() (do.ModelEvaluationPresets, error) {
+func (m *MockAgentPlatformService) ListModelEvaluationPresets() (do.ModelEvaluationPresets, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListModelEvaluationPresets")
 	ret0, _ := ret[0].(do.ModelEvaluationPresets)
@@ -748,13 +748,13 @@ func (m *MockGradientAIService) ListModelEvaluationPresets() (do.ModelEvaluation
 }
 
 // ListModelEvaluationPresets indicates an expected call of ListModelEvaluationPresets.
-func (mr *MockGradientAIServiceMockRecorder) ListModelEvaluationPresets() *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListModelEvaluationPresets() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationPresets", reflect.TypeOf((*MockGradientAIService)(nil).ListModelEvaluationPresets))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationPresets", reflect.TypeOf((*MockAgentPlatformService)(nil).ListModelEvaluationPresets))
 }
 
 // ListModelEvaluationRuns mocks base method.
-func (m *MockGradientAIService) ListModelEvaluationRuns(opt *godo.ModelEvaluationRunListOptions) (do.ModelEvaluationRuns, error) {
+func (m *MockAgentPlatformService) ListModelEvaluationRuns(opt *godo.ModelEvaluationRunListOptions) (do.ModelEvaluationRuns, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListModelEvaluationRuns", opt)
 	ret0, _ := ret[0].(do.ModelEvaluationRuns)
@@ -763,9 +763,9 @@ func (m *MockGradientAIService) ListModelEvaluationRuns(opt *godo.ModelEvaluatio
 }
 
 // ListModelEvaluationRuns indicates an expected call of ListModelEvaluationRuns.
-func (mr *MockGradientAIServiceMockRecorder) ListModelEvaluationRuns(opt any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListModelEvaluationRuns(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationRuns", reflect.TypeOf((*MockGradientAIService)(nil).ListModelEvaluationRuns), opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationRuns", reflect.TypeOf((*MockAgentPlatformService)(nil).ListModelEvaluationRuns), opt)
 }
 
 // ListOpenAIAPIKeys mocks base method.
@@ -874,7 +874,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) ListSimulationRuns(opt any) *gom
 }
 
 // UpdateCustomEvaluationMetric mocks base method.
-func (m *MockGradientAIService) UpdateCustomEvaluationMetric(metricUUID string, req *godo.UpdateCustomEvaluationMetricRequest) (*do.EvaluationMetric, error) {
+func (m *MockAgentPlatformService) UpdateCustomEvaluationMetric(metricUUID string, req *godo.UpdateCustomEvaluationMetricRequest) (*do.EvaluationMetric, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateCustomEvaluationMetric", metricUUID, req)
 	ret0, _ := ret[0].(*do.EvaluationMetric)
@@ -883,9 +883,9 @@ func (m *MockGradientAIService) UpdateCustomEvaluationMetric(metricUUID string, 
 }
 
 // UpdateCustomEvaluationMetric indicates an expected call of UpdateCustomEvaluationMetric.
-func (mr *MockGradientAIServiceMockRecorder) UpdateCustomEvaluationMetric(metricUUID, req any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) UpdateCustomEvaluationMetric(metricUUID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomEvaluationMetric", reflect.TypeOf((*MockGradientAIService)(nil).UpdateCustomEvaluationMetric), metricUUID, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomEvaluationMetric", reflect.TypeOf((*MockAgentPlatformService)(nil).UpdateCustomEvaluationMetric), metricUUID, req)
 }
 
 // UpdateKnowledgeBase mocks base method.
@@ -904,7 +904,7 @@ func (mr *MockAgentPlatformServiceMockRecorder) UpdateKnowledgeBase(knowledgeBas
 }
 
 // UpdateModelEvaluationRun mocks base method.
-func (m *MockGradientAIService) UpdateModelEvaluationRun(evalRunUUID string, req *godo.UpdateModelEvaluationRunRequest) (*do.ModelEvaluationRun, error) {
+func (m *MockAgentPlatformService) UpdateModelEvaluationRun(evalRunUUID string, req *godo.UpdateModelEvaluationRunRequest) (*do.ModelEvaluationRun, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateModelEvaluationRun", evalRunUUID, req)
 	ret0, _ := ret[0].(*do.ModelEvaluationRun)
@@ -913,9 +913,9 @@ func (m *MockGradientAIService) UpdateModelEvaluationRun(evalRunUUID string, req
 }
 
 // UpdateModelEvaluationRun indicates an expected call of UpdateModelEvaluationRun.
-func (mr *MockGradientAIServiceMockRecorder) UpdateModelEvaluationRun(evalRunUUID, req any) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) UpdateModelEvaluationRun(evalRunUUID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateModelEvaluationRun", reflect.TypeOf((*MockGradientAIService)(nil).UpdateModelEvaluationRun), evalRunUUID, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).UpdateModelEvaluationRun), evalRunUUID, req)
 }
 
 // UpdateOpenAIAPIKey mocks base method.

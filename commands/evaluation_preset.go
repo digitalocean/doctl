@@ -81,7 +81,7 @@ func ModelEvaluationPresetCmd() *Command {
 
 // RunModelEvaluationPresetList lists model evaluation presets.
 func RunModelEvaluationPresetList(c *CmdConfig) error {
-	presets, err := c.GradientAI().ListModelEvaluationPresets()
+	presets, err := c.AgentPlatform().ListModelEvaluationPresets()
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func RunModelEvaluationPresetGet(c *CmdConfig) error {
 		return err
 	}
 
-	preset, err := c.GradientAI().GetModelEvaluationPreset(c.Args[0])
+	preset, err := c.AgentPlatform().GetModelEvaluationPreset(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func RunModelEvaluationPresetDelete(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	if err := c.GradientAI().DeleteModelEvaluationPreset(c.Args[0]); err != nil {
+	if err := c.AgentPlatform().DeleteModelEvaluationPreset(c.Args[0]); err != nil {
 		return err
 	}
 

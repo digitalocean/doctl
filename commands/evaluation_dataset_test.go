@@ -51,7 +51,7 @@ func TestEvaluationDatasetCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgScenarioSetFile, path)
 
 		size := strconv.Itoa(len(contents))
-		tm.gradientAI.EXPECT().CreateModelEvalDatasetUploadPresignedURLs(&godo.CreateModelEvalDatasetUploadPresignedURLsRequest{
+		tm.agentPlatform.EXPECT().CreateModelEvalDatasetUploadPresignedURLs(&godo.CreateModelEvalDatasetUploadPresignedURLsRequest{
 			Files: []*godo.PresignedUrlFile{{
 				FileName: "prompts.csv",
 				FileSize: size,
@@ -82,7 +82,7 @@ func TestEvaluationDatasetCreate(t *testing.T) {
 		}
 		defer func() { putPresignedFile = originalPut }()
 
-		tm.gradientAI.EXPECT().CreateEvaluationDataset(&godo.CreateEvaluationDatasetRequest{
+		tm.agentPlatform.EXPECT().CreateEvaluationDataset(&godo.CreateEvaluationDatasetRequest{
 			Name:            "support-prompts",
 			DatasetType:     godo.EvaluationDatasetTypeModel,
 			DatasetParadigm: godo.EvaluationDatasetParadigmSingleTurn,
@@ -103,7 +103,7 @@ func TestEvaluationDatasetCreate(t *testing.T) {
 
 func TestEvaluationDatasetList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListEvaluationDatasets(&godo.EvaluationDatasetListOptions{}).
+		tm.agentPlatform.EXPECT().ListEvaluationDatasets(&godo.EvaluationDatasetListOptions{}).
 			Return(do.EvaluationDatasets{testEvaluationDataset}, nil)
 
 		err := RunEvaluationDatasetList(config)
@@ -118,7 +118,7 @@ func TestEvaluationDatasetListWithFilters(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEvaluationHasGroundTruth, true)
 
 		hasGroundTruth := true
-		tm.gradientAI.EXPECT().ListEvaluationDatasets(&godo.EvaluationDatasetListOptions{
+		tm.agentPlatform.EXPECT().ListEvaluationDatasets(&godo.EvaluationDatasetListOptions{
 			DatasetType:     godo.EvaluationDatasetTypeModel,
 			DatasetParadigm: godo.EvaluationDatasetParadigmSingleTurn,
 			HasGroundTruth:  &hasGroundTruth,
@@ -134,7 +134,7 @@ func TestEvaluationDatasetDelete(t *testing.T) {
 		config.Args = append(config.Args, testEvaluationDatasetUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DeleteEvaluationDataset(testEvaluationDatasetUUID).Return(nil)
+		tm.agentPlatform.EXPECT().DeleteEvaluationDataset(testEvaluationDatasetUUID).Return(nil)
 
 		err := RunEvaluationDatasetDelete(config)
 		assert.NoError(t, err)

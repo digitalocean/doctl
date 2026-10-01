@@ -22,7 +22,7 @@ func TestCustomEvaluationMetricCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEvaluationDescription, "Measures response helpfulness")
 		config.Doit.Set(config.NS, doctl.ArgEvaluationRequiresGroundTruth, true)
 
-		tm.gradientAI.EXPECT().CreateCustomEvaluationMetric(&godo.CreateCustomEvaluationMetricRequest{
+		tm.agentPlatform.EXPECT().CreateCustomEvaluationMetric(&godo.CreateCustomEvaluationMetricRequest{
 			MetricName:  "helpfulness",
 			Description: "Measures response helpfulness",
 			Config: &godo.CustomEvaluationMetricConfig{
@@ -53,9 +53,9 @@ func TestCustomEvaluationMetricUpdate(t *testing.T) {
 				},
 			},
 		}
-		tm.gradientAI.EXPECT().ListModelEvaluationMetrics().
+		tm.agentPlatform.EXPECT().ListModelEvaluationMetrics().
 			Return(do.EvaluationMetrics{existing}, nil)
-		tm.gradientAI.EXPECT().UpdateCustomEvaluationMetric(testEvaluationMetricUUID, &godo.UpdateCustomEvaluationMetricRequest{
+		tm.agentPlatform.EXPECT().UpdateCustomEvaluationMetric(testEvaluationMetricUUID, &godo.UpdateCustomEvaluationMetricRequest{
 			MetricUUID:  testEvaluationMetricUUID,
 			MetricName:  "helpfulness-v2",
 			Description: "updated by doctl",
@@ -75,7 +75,7 @@ func TestCustomEvaluationMetricDelete(t *testing.T) {
 		config.Args = append(config.Args, testEvaluationMetricUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DeleteCustomEvaluationMetric(testEvaluationMetricUUID).Return(nil)
+		tm.agentPlatform.EXPECT().DeleteCustomEvaluationMetric(testEvaluationMetricUUID).Return(nil)
 
 		err := RunCustomEvaluationMetricDelete(config)
 		assert.NoError(t, err)

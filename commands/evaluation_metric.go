@@ -46,7 +46,7 @@ func ModelEvaluationMetricCmd() *Command {
 
 // RunModelEvaluationMetricList lists model evaluation metrics.
 func RunModelEvaluationMetricList(c *CmdConfig) error {
-	metrics, err := c.GradientAI().ListModelEvaluationMetrics()
+	metrics, err := c.AgentPlatform().ListModelEvaluationMetrics()
 	if err != nil {
 		return err
 	}
