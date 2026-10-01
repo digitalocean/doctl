@@ -26,6 +26,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/input"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/internal/oauth"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -94,11 +95,13 @@ func Auth() *Command {
 		Command: &cobra.Command{
 			Use:   "auth",
 			Short: "Display commands for authenticating doctl with an account",
-			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
+			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account, either by signing in through your browser with OAuth or with tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
-If you work with a just one account, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
+The quickest way to get started is ` + "`" + `doctl auth login` + "`" + `, which uses the OAuth 2.1 authorization code flow with PKCE. It opens your browser so you can approve access, then saves the resulting access token to your authentication context. Tokens issued this way are short-lived; doctl stores a refresh token and renews the access token automatically, so you do not have to return to the control panel when it expires. Use ` + "`" + `--scope` + "`" + ` to request permissions up front, such as ` + "`" + `--scope "read write"` + "`" + `, or omit it to choose them on the authorization screen.
 
-To switch between multiple DigitalOcean accounts, including team accounts, create named contexts using ` + "`" + `doctl auth init --context <name>` + "`" + `, then providing the applicable token when prompted. This saves the token under the name you provide. To switch between contexts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.
+If you prefer a personal access token instead, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
+
+To switch between multiple DigitalOcean accounts, including team accounts, create named contexts using ` + "`" + `doctl auth login --context <name>` + "`" + ` or ` + "`" + `doctl auth init --context <name>` + "`" + `, then providing the applicable credentials when prompted. This saves the credentials under the name you provide. To switch between contexts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.
 
 To remove accounts from the configuration file, run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This removes the token under the name you provide.`,
 			GroupID: configureDoctlGroup,
@@ -116,6 +119,24 @@ If the `+"`"+`--context`+"`"+` flag is not specified, doctl creates a default au
 You can use doctl without initializing it by adding the `+"`"+`--access-token`+"`"+` flag to each command and providing an API token as the argument.`, Writer, false)
 	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
 	cmdAuthInit.Example = `The following example initializes doctl with a token for a single account with the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
+
+	cmdAuthLogin := cmdBuilderWithInit(cmd, RunAuthLogin, "login", "Sign in to DigitalOcean via OAuth 2.1 in your browser", `This command signs doctl in to your DigitalOcean account using your browser, so you do not have to create and paste an API token.
+
+doctl uses the OAuth 2.1 authorization code flow with PKCE. It signs in as the doctl application DigitalOcean publishes, so there is nothing to register first. Signing in opens your browser, and once you approve the request, doctl saves the access token to your authentication context.
+
+Tokens issued this way are short-lived. doctl stores the accompanying refresh token and renews the access token automatically, so you can keep using doctl without returning to the control panel.
+
+By default doctl does not request any particular scopes, so you choose the permissions to grant on the authorization screen. Use `+"`"+`--scope`+"`"+` to request them up front instead: `+"`"+`--scope "read write"`+"`"+` asks for the same access a full-permission API token has, and you can also name individual permissions, such as `+"`"+`--scope "droplet:read account:read"`+"`"+`. Pass `+"`"+`--save-scope`+"`"+` with `+"`"+`--scope`+"`"+` to reuse those scopes on later logins; pass `+"`"+`--scope "" --save-scope`+"`"+` to clear the saved default.
+
+The `+"`"+`--context`+"`"+` flag signs in to a named authentication context instead of the default one, which lets you keep several accounts or teams side by side. To use an API token instead of your browser, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthServer, "", oauth.DefaultIssuer, "The OAuth authorization server to sign in to")
+	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthClientID, "", oauth.DefaultClientID, "The OAuth application to sign in as. Defaults to the doctl application and only needs changing for a non-production authorization server")
+	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthScopes, "", defaultOAuthScopes, "A space-separated list of scopes to request, such as \"read write\" or \"droplet:read account:read\". When omitted, uses any default saved with --save-scope; otherwise you choose the permissions to grant in your browser")
+	AddBoolFlag(cmdAuthLogin, doctl.ArgOAuthSaveScope, "", false, "Save --scope as the default for later logins. Use with --scope \"\" to clear the saved default")
+	AddIntFlag(cmdAuthLogin, doctl.ArgOAuthCallbackPort, "", 0, "The local port to listen on for the authorization redirect. Defaults to an unused port")
+	AddBoolFlag(cmdAuthLogin, doctl.ArgOAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
+	AddDurationFlag(cmdAuthLogin, doctl.ArgOAuthTimeout, "", oauth.DefaultLoginTimeout, "How long to wait for you to authorize doctl in your browser")
+	cmdAuthLogin.Example = `The following example signs in to the context ` + "`" + `your-team` + "`" + `, requests full read and write access, and saves those scopes for later logins: doctl auth login --context your-team --scope "read write" --save-scope`
 
 	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switch between authentication contexts", `This command allows you to switch between authentication contexts you've already created.
 
@@ -175,6 +196,10 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 		}
 
 		c.setContextAccessToken(token)
+		// An explicitly supplied token replaces whatever credential the
+		// context held, including a browser sign-in that would otherwise be
+		// refreshed over the top of it.
+		removeOAuthTokenState(context)
 
 		template.Render(c.Out, `{{nl}}Validating token... `, nil)
 
@@ -212,6 +237,8 @@ func RunAuthRemove(c *CmdConfig) error {
 	if err != nil {
 		return fmt.Errorf("Context not found")
 	}
+
+	removeOAuthTokenState(context)
 
 	fmt.Println("Context deleted successfully")
 
