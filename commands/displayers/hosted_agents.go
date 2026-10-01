@@ -47,7 +47,7 @@ func (h *HostedAgentSession) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentSession) Cols() []string {
-	cols := []string{"SessionID", "Name", "AgentKind", "Status", "ConfigID", "ParentSessionID", "ForkID", "RepoHint", "CreatedAt"}
+	cols := []string{"SessionID", "Name", "AgentKind", "Status", "SizeSlug", "ConfigID", "ParentSessionID", "ForkID", "RepoHint", "CreatedAt"}
 
 	// A pause reason only exists on paused sessions, so the column is carried
 	// only when some session has one — otherwise every list would grow a blank
@@ -74,6 +74,7 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"Name":            "Name",
 		"AgentKind":       "Agent",
 		"Status":          "Status",
+		"SizeSlug":        "Size",
 		"ConfigID":        "Config",
 		"ParentSessionID": "Parent",
 		"ForkID":          "Fork",
@@ -97,6 +98,7 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			"Name":            s.Name,
 			"AgentKind":       s.AgentKind,
 			"Status":          s.Status,
+			"SizeSlug":        s.SizeSlug,
 			"ConfigID":        s.ConfigID,
 			"ParentSessionID": s.ParentSessionID,
 			"ForkID":          s.ForkID,
