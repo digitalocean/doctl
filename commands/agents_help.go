@@ -245,7 +245,7 @@ const agentsConfigStartSessionHelpMD = `Start a new session from a config ID. ` 
 
 const agentsExecHelpMD = `Run one command in a session's sandbox and print its output.
 
-Drives the sandbox directly rather than through its agent, so it works on a bare sandbox started with ` + "`--agent none`" + ` as well as on a managed-agent session.
+Drives the sandbox directly rather than through its agent, so it works on a bare sandbox created with ` + "`--template sandbox`" + ` as well as on a managed-agent session.
 
 Separate the guest command from doctl's own flags with ` + "`--`" + `, or flags meant for the guest (` + "`ls -la`" + `) are parsed as doctl flags.
 

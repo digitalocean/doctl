@@ -77,6 +77,44 @@ func TestBeautifyAgentError_APIResponse(t *testing.T) {
 	assert.NotContains(t, strings.ToLower(display), "error:")
 }
 
+// Sending input to a bare sandbox is the one 409 a user reaches by doing the
+// obvious thing, so it gets a card rather than the HTTP reason phrase. The
+// exact server copy is the fixture: matching on a substring of it is what makes
+// this fragile, and a test that never sees the real string would not notice.
+func TestBeautifyAgentError_NoAgentConflictGetsItsOwnCard(t *testing.T) {
+	er := &godo.ErrorResponse{
+		Response: &http.Response{
+			StatusCode: http.StatusConflict,
+			Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions/x/input", nil),
+		},
+		Message: "this session runs no agent (agent: none); drive it with exec, workspace upload/download, or port-forward instead of sending input",
+	}
+
+	out := beautifyAgentError(er)
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "This session runs no agent", pretty.title)
+	assert.NotEqual(t, "Conflict", pretty.title, "the HTTP reason phrase is not a title")
+	assert.Contains(t, pretty.tips, agentCLI+" exec <session> -- <command>")
+	assert.Contains(t, pretty.tips, agentCLI+" port-forward <session> <port>")
+}
+
+// The narrower 409s are matched before it, so adding the no-agent case must not
+// swallow them — "no agent" is a loose substring and these share a status.
+func TestBeautifyAgentError_NoAgentCardDoesNotSwallowOther409s(t *testing.T) {
+	cases := map[string]string{
+		"team is at the limit of 4 active sessions": "Session limit reached",
+		"run is terminal":             "Session run has ended",
+		"session is already attached": "Session already attached elsewhere",
+	}
+	for msg, wantTitle := range cases {
+		t.Run(wantTitle, func(t *testing.T) {
+			title, _ := agentErrorTitleAndTips(msg, http.StatusConflict)
+			assert.Equal(t, wantTitle, title)
+		})
+	}
+}
+
 func TestBeautifyAgentError_LocalValidation(t *testing.T) {
 	err := errors.New(`POST https://api.digitalocean.com/v2/x: 400 --harness and --config-id are mutually exclusive`)
 	out := beautifyAgentError(err)

@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestAgentTriggersCommand(t *testing.T) {
@@ -128,10 +129,18 @@ func TestAgentTriggersCreate_FromConfigCopiesManifest(t *testing.T) {
 			DoAndReturn(func(req *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
 				assert.Contains(t, req.SessionTemplate, "opencode")
 				assert.Contains(t, req.SessionTemplate, "adamdev/orders-api")
+
 				// The config's own server-held secrets never come back to a
-				// client, so --secret has to supply the value here as well.
-				assert.Contains(t, req.SessionTemplate, "sk-ant-from-ci")
-				assert.Contains(t, req.SessionTemplate, "tenantSecret")
+				// client, so --secret has to supply the value here as well. On a
+				// flat manifest that means a `secrets` mapping keyed by name,
+				// whose bare string value is by definition a write-only
+				// tenantSecret — which is why this no longer looks for the literal
+				// "tenantSecret" the long form spells out.
+				var doc struct {
+					Secrets map[string]string `yaml:"secrets"`
+				}
+				require.NoError(t, yaml.Unmarshal([]byte(req.SessionTemplate), &doc))
+				assert.Equal(t, "sk-ant-from-ci", doc.Secrets["ANTHROPIC_API_KEY"])
 				return &do.HostedAgentTriggerCreateResult{
 					Trigger: &do.HostedAgentTrigger{
 						HostedAgentTrigger: &godo.HostedAgentTrigger{
