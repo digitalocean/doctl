@@ -163,6 +163,49 @@ func TestAuthForcesLowercase(t *testing.T) {
 	})
 }
 
+// RunAuthSwitch validates the requested context by temporarily adding the
+// "default" context to the set of available contexts. That temporary entry must
+// not be persisted into the config file, otherwise `default` is written into
+// auth-contexts as "true" and shadows the top-level access-token.
+// https://github.com/digitalocean/doctl/issues/1816
+func TestAuthSwitchDoesNotPersistDefaultContext(t *testing.T) {
+	cfw := cfgFileWriter
+	prevContext := Context
+	prevContexts := viper.Get("auth-contexts")
+	prevViperContext := viper.Get("context")
+	defer func() {
+		cfgFileWriter = cfw
+		Context = prevContext
+		viper.Set("auth-contexts", prevContexts)
+		viper.Set("context", prevViperContext)
+	}()
+
+	var buf bytes.Buffer
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return &nopWriteCloser{Writer: &buf}, nil
+	}
+
+	viper.Set("auth-contexts", map[string]any{"teamadf": "dop_v1_token"})
+	Context = doctl.ArgDefaultContext
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunAuthSwitch(config)
+		assert.NoError(t, err)
+
+		var configFile testConfig
+		err = yaml.Unmarshal(buf.Bytes(), &configFile)
+		assert.NoError(t, err)
+
+		contexts, ok := configFile["auth-contexts"].(map[any]any)
+		assert.True(t, ok, "expected auth-contexts to be written, got %v", configFile["auth-contexts"])
+
+		_, hasDefault := contexts[doctl.ArgDefaultContext]
+		assert.False(t, hasDefault, "the temporary default context must not be persisted: %v", contexts)
+
+		assert.Equal(t, "dop_v1_token", contexts["teamadf"], "existing contexts must be preserved")
+	})
+}
+
 func TestAuthList(t *testing.T) {
 	buf := &bytes.Buffer{}
 	config := &CmdConfig{Out: buf}
