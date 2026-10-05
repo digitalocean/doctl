@@ -20,7 +20,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 )
 
-// ScenarioSet displays Gradient AI scenario sets.
+// ScenarioSet displays evaluation scenario sets.
 type ScenarioSet struct {
 	ScenarioSets do.ScenarioSets
 }
@@ -176,7 +176,7 @@ func (v *ScenarioLibraryEntry) KV() []map[string]any {
 	return out
 }
 
-// GenAIDownloadURL displays a presigned download URL for a Gradient AI file,
+// GenAIDownloadURL displays a presigned download URL for an evaluation file,
 // such as a scenario set file or a journey trajectory.
 type GenAIDownloadURL struct {
 	DownloadURL *do.GenAIDownloadURL
@@ -212,7 +212,7 @@ func (v *GenAIDownloadURL) KV() []map[string]any {
 	}}
 }
 
-// SimulationRun displays Gradient AI simulation runs.
+// SimulationRun displays evaluation simulation runs.
 type SimulationRun struct {
 	SimulationRuns do.SimulationRuns
 }
