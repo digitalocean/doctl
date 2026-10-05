@@ -668,20 +668,6 @@ func TestRenderWelcomeOmitsAccountWhenLookupSkipped(t *testing.T) {
 	assert.Contains(t, out, "doctl compute droplet list")
 }
 
-func TestWriterIsTerminalRejectsPipesAndBuffers(t *testing.T) {
-	var buf bytes.Buffer
-	assert.False(t, writerIsTerminal(&buf))
-
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		r.Close()
-		w.Close()
-	})
-
-	assert.False(t, writerIsTerminal(w))
-}
-
 func TestGatherWelcomeReportsNewerRelease(t *testing.T) {
 	defer withStubConfig(t, map[string]any{"context": "default", "access-token": "token"})()
 	defer withContext(t, "")()

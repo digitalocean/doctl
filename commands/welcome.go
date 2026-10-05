@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -217,10 +216,11 @@ func runWelcome(cmd *cobra.Command, args []string) {
 	out := cmd.OutOrStdout()
 	env := resolveUIEnv(out)
 
-	// Live lookups exist for a person watching a screen. A pipe is a script,
-	// and scripts that run bare `doctl` as a health check used to be instant
-	// and fully offline; keep them that way.
-	onScreen := writerIsTerminal(out)
+	// Live lookups exist for a person watching a screen. DataTTY is the same
+	// gate cards and boxed tables use: a pipe, CI, or machine output is a
+	// script, and scripts that run bare `doctl` as a health check used to be
+	// instant and fully offline; keep them that way.
+	onScreen := env.DataTTY
 
 	w := gatherWelcome(welcomeDeps{
 		latest:       defaultLatestVersioner(),
@@ -619,17 +619,6 @@ func defaultLatestVersioner() doctl.LatestVersioner {
 	return &doctl.GithubLatestVersioner{
 		Client: &http.Client{Timeout: updateCheckTimeout},
 	}
-}
-
-// writerIsTerminal reports whether w is an attached terminal. A bytes.Buffer,
-// a pipe, or a redirected file is not, which is the whole point of asking.
-func writerIsTerminal(w io.Writer) bool {
-	f, ok := w.(*os.File)
-	if !ok {
-		return false
-	}
-
-	return isTerminal(f)
 }
 
 type updateCheckCache struct {
