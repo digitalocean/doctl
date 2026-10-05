@@ -140,7 +140,7 @@ const agentsLaunchHelpMD = `Open an interactive chat on a session, creating it f
 ` + agentCLI + ` launch --from-config reviewer --name my-session
 ` + "```\n\n" + `**How the positional argument is read.** One rule: *does a readable file exist at that path?* If yes it is a manifest and a new session is created; if no it is treated as a session name or ID. An argument that is neither reports both possibilities. Naming a creation flag settles it without consulting the filesystem.
 
-Type messages and press Enter; Ctrl-D (or Ctrl-C) detaches without removing the session — reattach later, or run ` + "`" + agentCLI + " remove`" + ` to tear it down. If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
+Type messages and press Enter. Ctrl-C cancels the turn in progress and leaves the session ready for the next message; so does Esc on an empty prompt (Esc with text typed clears the text first). Agents that cannot cancel a turn say so. Ctrl-D detaches without removing the session, and so does Ctrl-C when no turn is running or once a cancel has been sent — reattach later, or run ` + "`" + agentCLI + " remove`" + ` to tear it down. If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 
 When approval is required: ` + "`y`" + `/` + "`a`" + ` approve, ` + "`n`" + `/` + "`r`" + ` reject, ` + "`d`" + ` defer. Type ` + "`/help`" + ` for slash commands. To resolve approvals with no human at all, see ` + "`" + agentCLI + " create --on-hitl`" + `.
 
@@ -159,6 +159,12 @@ const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox
 const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`" + agentCLI + " resume`" + `.`
 
 const agentsResumeHelpMD = `Resume a previously paused session.`
+
+const agentsCancelHelpMD = `Stop the turn a session's agent is running and leave the session up and ready for the next prompt — what Ctrl-C does in ` + "`" + agentCLI + " attach`" + ` and ` + "`" + agentCLI + " prompt`" + `, from any terminal.
+
+Without ` + "`--run-id`" + `, cancels whichever turn is running when the request arrives and prints its run id. With ` + "`--run-id`" + `, cancels only that turn: if it already finished, nothing is stopped — in particular not a turn someone started after it — so pass it when you have it.
+
+Nothing running is not an error: the command says so and exits 0, so it is safe to run unconditionally. With ` + "`-o json`" + ` it prints ` + "`{\"session_id\", \"run_id\", \"outcome\"}`" + `, where ` + "`outcome`" + ` is ` + "`acked`" + `, ` + "`no_turn`" + ` or ` + "`unsupported`" + ` and ` + "`run_id`" + ` is absent when nothing was running. An agent that cannot cancel a turn is an error, since the turn keeps running. Cancel undoes nothing the turn already did; a half-written file stays half-written. It never pauses the session — use ` + "`" + agentCLI + " pause`" + ` for that.`
 
 const agentsUpdateHelpMD = `Change settings on a session that already exists. Only flags you pass are changed; everything else is left alone. This never edits the agent manifest — configs are immutable, so create a new one to change how the agent runs.
 
@@ -259,11 +265,15 @@ The prompt is everything after the session, so it need not be quoted. Pass ` + "
 
 Only the agent's answer goes to stdout, so it can be captured directly (` + "`ANSWER=$(" + agentCLI + " prompt my-session 'What changed?')`" + `). Progress, tool calls, and the closing token and cost summary go to stderr, where they stay visible on a terminal without corrupting a pipe. Add ` + "`--include-reasoning`" + ` to also emit the model's thinking on stderr, or ` + "`--quiet`" + ` to silence stderr entirely. With ` + "`-o json`" + ` the answer, run ID, status, and usage are emitted as one object instead.
 
-The exit code reports the run: 0 when it completed, 1 when it failed, and 124 when ` + "`--timeout`" + ` expired, so this composes in ` + "`&&`" + ` chains and ` + "`if`" + ` tests. A timeout stops waiting locally and does not stop the agent — the run continues and its output stays readable with ` + "`" + agentCLI + " logs`" + `.
+The exit code reports the run: 0 when it completed, 1 when it failed (including a cancel sent from elsewhere, which ` + "`-o json`" + ` reports as status ` + "`cancelled`" + `), 130 when this command's Ctrl-C cancelled it, and 124 when ` + "`--timeout`" + ` expired, so this composes in ` + "`&&`" + ` chains and ` + "`if`" + ` tests.
+
+Ctrl-C cancels the run — the session stays up for the next prompt — and waits for it to stop, reporting status ` + "`cancelled`" + `. Press Ctrl-C again to stop waiting at once. Agents that cannot cancel a run say so, and the run keeps going. A timeout, a second Ctrl-C, or SIGTERM only stop waiting locally and do not stop the agent — the run continues and its output stays readable with ` + "`" + agentCLI + " logs`" + `.
 
 A paused session is resumed on the way in. Because nothing here can ask a human, an approval request stops the command unless ` + "`--on-hitl`" + ` says how to answer.`
 
-const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`coding-claude-code`" + `, ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `, ` + "`coding-hermes`" + `, ` + "`langgraph`" + `). Create and update kick a build; use ` + "`list-builds`" + ` to watch it.
+const agentsTemplatesRootHelpMD = `Team custom sandbox templates. Create a template from your own OCI image rebased onto a platform base (` + "`codex-base`" + `, ` + "`opencode-base`" + `, ` + "`claude-code-base`" + `, ` + "`hermes-base`" + `, ` + "`langgraph-base`" + `). Create and update kick a build; use ` + "`list-builds`" + ` to watch it.
+
+The legacy bases ` + "`coding-codex`" + `, ` + "`coding-opencode`" + `, ` + "`coding-claude-code`" + `, ` + "`coding-hermes`" + ` and ` + "`langgraph`" + ` are still accepted and will be retired in a future release.
 
 The team is taken from the authenticated principal — never from the request body or query.`
 

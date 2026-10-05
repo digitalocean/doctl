@@ -906,6 +906,10 @@ const (
 	// started to finish, in seconds.
 	ArgAgentPromptTimeout = "timeout"
 
+	// ArgAgentCancelRunID names the turn `cancel` stops; without it, whichever
+	// turn is in flight.
+	ArgAgentCancelRunID = "run-id"
+
 	// ArgAgentPromptIncludeReasoning also emits the model's reasoning, not
 	// just its answer, from a `prompt` run.
 	ArgAgentPromptIncludeReasoning = "include-reasoning"
@@ -989,8 +993,9 @@ const (
 	ArgAgentFromConfig = "from-config"
 
 	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
-	// is rebased onto (coding-base | coding-claude-code | coding-codex |
-	// coding-opencode | coding-hermes | crewai | langgraph).
+	// is rebased onto (codex-base | opencode-base | claude-code-base |
+	// hermes-base | langgraph-base | sandbox | crewai, or a legacy
+	// coding-* / langgraph key).
 	ArgAgentBaseTemplate = "base-template"
 
 	// ArgAgentTemplate selects the sandbox template a session runs on: a
