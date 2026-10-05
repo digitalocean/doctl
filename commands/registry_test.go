@@ -839,6 +839,101 @@ func TestGarbageCollectionStart(t *testing.T) {
 	}
 }
 
+func TestRegistriesGarbageCollectionStart(t *testing.T) {
+	defaultStartGCRequest := &godo.StartGarbageCollectionRequest{
+		Type: godo.GCTypeUnreferencedBlobsOnly,
+	}
+	tests := []struct {
+		name      string
+		extraArgs []string
+
+		expect      func(m *mocks.MockRegistriesService, config *CmdConfig)
+		expectError error
+	}{
+		{
+			name:        "without registry name arg",
+			expectError: fmt.Errorf("(test) command is missing required arguments"),
+		},
+		{
+			name: "with registry name arg",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistriesService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				m.EXPECT().StartGarbageCollection(testRegistryName, defaultStartGCRequest).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "include untagged manifests",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistriesService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, true)
+				m.EXPECT().StartGarbageCollection(testRegistryName, &godo.StartGarbageCollectionRequest{
+					Type: godo.GCTypeUntaggedManifestsAndUnreferencedBlobs,
+				}).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "include untagged manifests, exclude unreferenced blobs",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistriesService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, true)
+				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, true)
+				m.EXPECT().StartGarbageCollection(testRegistryName, &godo.StartGarbageCollectionRequest{
+					Type: godo.GCTypeUntaggedManifestsOnly,
+				}).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			// Asking to exclude unreferenced blobs without asking for untagged
+			// manifests leaves nothing to collect, so no destructive request may
+			// be sent.
+			name: "exclude unreferenced blobs without include untagged manifests",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistriesService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, true)
+			},
+			expectError: fmt.Errorf("incompatible combination of include-untagged-manifests and exclude-unreferenced-blobs flags"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Registries = func() do.RegistriesService {
+					return tm.registries
+				}
+
+				if test.expect != nil {
+					test.expect(tm.registries, config)
+				}
+
+				if test.extraArgs != nil {
+					config.Args = append(config.Args, test.extraArgs...)
+				}
+
+				err := RunRegistriesStartGarbageCollection(config)
+
+				if test.expectError != nil {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectError.Error(), err.Error())
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
 func TestGarbageCollectionGetActive(t *testing.T) {
 	tests := []struct {
 		name        string

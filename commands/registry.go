@@ -1904,6 +1904,18 @@ func RunRegistriesStartGarbageCollection(c *CmdConfig) error {
 		return err
 	}
 
+	var gcType godo.GarbageCollectionType
+	switch {
+	case includeUntaggedManifests && excludeUnreferencedBlobs:
+		gcType = godo.GCTypeUntaggedManifestsOnly
+	case !includeUntaggedManifests && !excludeUnreferencedBlobs:
+		gcType = godo.GCTypeUnreferencedBlobsOnly
+	case includeUntaggedManifests && !excludeUnreferencedBlobs:
+		gcType = godo.GCTypeUntaggedManifestsAndUnreferencedBlobs
+	default:
+		return fmt.Errorf("incompatible combination of include-untagged-manifests and exclude-unreferenced-blobs flags")
+	}
+
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
@@ -1914,16 +1926,6 @@ func RunRegistriesStartGarbageCollection(c *CmdConfig) error {
 		if err := AskForConfirm(confirmation); err != nil {
 			return err
 		}
-	}
-
-	var gcType godo.GarbageCollectionType
-	switch {
-	case includeUntaggedManifests && excludeUnreferencedBlobs:
-		gcType = godo.GCTypeUntaggedManifestsOnly
-	case !includeUntaggedManifests && !excludeUnreferencedBlobs:
-		gcType = godo.GCTypeUnreferencedBlobsOnly
-	default:
-		gcType = godo.GCTypeUntaggedManifestsAndUnreferencedBlobs
 	}
 
 	req := &godo.StartGarbageCollectionRequest{
