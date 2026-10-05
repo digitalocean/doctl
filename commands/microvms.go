@@ -529,11 +529,17 @@ func RunMicroVMConsole(c *CmdConfig) error {
 	}
 	id := c.Args[0]
 
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return fmt.Errorf("console requires an interactive terminal (stdin is not a TTY)")
+	}
+
 	opt := &godo.MicroVMConsoleOptions{}
 	if size := terminalSize(); size != nil {
 		opt.Rows = uint32(size.Height)
 		opt.Cols = uint32(size.Width)
 	}
+
+	fmt.Fprintf(os.Stderr, "Connecting to MicroVM %s...\n", id)
 
 	wsURL, err := c.MicroVMs().ConsoleURL(id, opt)
 	if err != nil {
@@ -561,9 +567,9 @@ func RunMicroVMConsole(c *CmdConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	term := c.Doit.Terminal()
+	termIO := c.Doit.Terminal()
 	stdinCh := make(chan string)
-	restoreTerminal, err := term.ReadRawStdin(ctx, stdinCh)
+	restoreTerminal, err := termIO.ReadRawStdin(ctx, stdinCh)
 	if err != nil {
 		return err
 	}
@@ -573,7 +579,7 @@ func RunMicroVMConsole(c *CmdConfig) error {
 	grp, ctx := errgroup.WithContext(ctx)
 
 	grp.Go(func() error {
-		return term.MonitorResizeEvents(ctx, resizeEvents)
+		return termIO.MonitorResizeEvents(ctx, resizeEvents)
 	})
 
 	grp.Go(func() error {
@@ -619,7 +625,7 @@ func RunMicroVMConsole(c *CmdConfig) error {
 					continue
 				}
 				if ctrl.Error != nil {
-					return fmt.Errorf("console error (%s): %s", ctrl.Error.Code, ctrl.Error.Message)
+					return consoleControlError(ctrl.Error.Code, ctrl.Error.Message)
 				}
 				if ctrl.Exit != nil {
 					if ctrl.Exit.Code != 0 {
@@ -627,12 +633,40 @@ func RunMicroVMConsole(c *CmdConfig) error {
 					}
 					return nil
 				}
-				// status frames (e.g. resuming) are informational; keep the session open
+				if ctrl.Status != nil {
+					switch ctrl.Status.State {
+					case "resuming":
+						fmt.Fprintln(os.Stderr, "MicroVM is paused; resuming...")
+					case "connected":
+						fmt.Fprintln(os.Stderr, "Connected. Type exit or press Ctrl-D to leave.")
+					}
+				}
 			}
 		}
 	})
 
 	return grp.Wait()
+}
+
+// consoleControlError maps server console error codes to friendly messages.
+// Idle and max-duration closes are treated as normal exits (nil) so doctl
+// returns 0 when the server ends a quiet session on purpose.
+func consoleControlError(code, message string) error {
+	switch code {
+	case "idle_timeout":
+		fmt.Fprintln(os.Stderr, "console closed: no activity for 30 minutes")
+		return nil
+	case "session_max_duration":
+		fmt.Fprintln(os.Stderr, "console closed: 4 hour session limit")
+		return nil
+	case "client_unresponsive":
+		return fmt.Errorf("console closed: connection stopped responding")
+	default:
+		if message != "" {
+			return fmt.Errorf("console error (%s): %s", code, message)
+		}
+		return fmt.Errorf("console error (%s)", code)
+	}
 }
 
 func terminalSize() *terminal.TerminalSize {
