@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -171,6 +172,11 @@ type welcome struct {
 	// upgradeCmd updates doctl for the way this binary was installed, or "" when
 	// the install method is unknown.
 	upgradeCmd string
+
+	// omitAccount drops the Account and Team rows. It is set when a token is
+	// configured but the greeting did not ask the API about it, so there is
+	// nothing true to put on those lines.
+	omitAccount bool
 }
 
 // identity is who a token belongs to, as reported by the API. Both fields are
@@ -197,6 +203,11 @@ type welcomeDeps struct {
 	// what the greeting does is a property of its arguments and not of
 	// whichever CI provider happens to be running.
 	checkUpdates bool
+
+	// checkAccount reports whether the token may be validated against the
+	// API. A pipe or redirected stdout is not a person reading the greeting,
+	// so the caller turns this off and the lookup never happens.
+	checkAccount bool
 }
 
 // runWelcome greets the user when doctl is invoked with no arguments. Cobra
@@ -206,11 +217,17 @@ func runWelcome(cmd *cobra.Command, args []string) {
 	out := cmd.OutOrStdout()
 	env := resolveUIEnv(out)
 
+	// Live lookups exist for a person watching a screen. A pipe is a script,
+	// and scripts that run bare `doctl` as a health check used to be instant
+	// and fully offline; keep them that way.
+	onScreen := writerIsTerminal(out)
+
 	w := gatherWelcome(welcomeDeps{
 		latest:       defaultLatestVersioner(),
 		verify:       verifyTokenWithAPI,
 		cachePath:    updateCheckCachePath(),
-		checkUpdates: updateCheckEnabled(ui.IsCI()),
+		checkUpdates: onScreen && updateCheckEnabled(ui.IsCI()),
+		checkAccount: onScreen,
 	})
 
 	if env.Machine {
@@ -256,11 +273,19 @@ func gatherWelcome(deps welcomeDeps) welcome {
 		latest string
 	)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		who, state = deps.verify(token)
-	}()
+	if deps.checkAccount {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			who, state = deps.verify(token)
+		}()
+	} else {
+		// The token is configured but was not asked of the API: validity is
+		// unknown, and the Account row is omitted rather than implying a
+		// failed check.
+		state = authStateUnverified
+		w.omitAccount = true
+	}
 
 	if deps.checkUpdates {
 		wg.Add(1)
@@ -415,22 +440,24 @@ func renderWelcome(env ui.Env, w welcome) string {
 
 	fmt.Fprintf(&b, "  %s %s\n", dim(pad("Version", 9)), w.version)
 
-	glyph, glyphColor, summary := authSummary(env, w)
-	fmt.Fprintf(&b, "  %s %s %s", dim(pad("Account", 9)), paint(glyph, glyphColor), summary)
+	if !w.omitAccount {
+		glyph, glyphColor, summary := authSummary(env, w)
+		fmt.Fprintf(&b, "  %s %s %s", dim(pad("Account", 9)), paint(glyph, glyphColor), summary)
 
-	// Only a token that outranks the saved one is worth annotating, and it
-	// qualifies the account named on this row rather than standing alone,
-	// including when that "account" is a rejected token the user has to find.
-	if w.tokenSource != tokenSourceConfigFile {
-		fmt.Fprintf(&b, " %s", dim("(from "+w.tokenSource.label()+")"))
-	}
+		// Only a token that outranks the saved one is worth annotating, and it
+		// qualifies the account named on this row rather than standing alone,
+		// including when that "account" is a rejected token the user has to find.
+		if w.tokenSource != tokenSourceConfigFile {
+			fmt.Fprintf(&b, " %s", dim("(from "+w.tokenSource.label()+")"))
+		}
 
-	fmt.Fprintln(&b)
+		fmt.Fprintln(&b)
 
-	// Only shown when the API named a team, since a token that is not scoped
-	// to one has no team to report and a blank row would just raise questions.
-	if w.team != "" {
-		fmt.Fprintf(&b, "  %s %s\n", dim(pad("Team", 9)), w.team)
+		// Only shown when the API named a team, since a token that is not scoped
+		// to one has no team to report and a blank row would just raise questions.
+		if w.team != "" {
+			fmt.Fprintf(&b, "  %s %s\n", dim(pad("Team", 9)), w.team)
+		}
 	}
 
 	fmt.Fprintf(&b, "  %s %s\n", dim(pad("Context", 9)), w.context)
@@ -592,6 +619,17 @@ func defaultLatestVersioner() doctl.LatestVersioner {
 	return &doctl.GithubLatestVersioner{
 		Client: &http.Client{Timeout: updateCheckTimeout},
 	}
+}
+
+// writerIsTerminal reports whether w is an attached terminal. A bytes.Buffer,
+// a pipe, or a redirected file is not, which is the whole point of asking.
+func writerIsTerminal(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+
+	return isTerminal(f)
 }
 
 type updateCheckCache struct {

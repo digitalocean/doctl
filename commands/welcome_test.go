@@ -427,6 +427,7 @@ func TestGatherWelcomeResolvesContextAndToken(t *testing.T) {
 				latest:       lv,
 				verify:       verifier.verify,
 				checkUpdates: true,
+				checkAccount: true,
 				// An empty cache path keeps the release lookup off disk.
 				cachePath: "",
 			})
@@ -544,8 +545,9 @@ func TestGatherWelcomeCarriesVerifierVerdict(t *testing.T) {
 			verifier := &stubVerifier{state: state}
 
 			w := gatherWelcome(welcomeDeps{
-				latest: &stubVersioner{err: errors.New("offline")},
-				verify: verifier.verify,
+				latest:       &stubVersioner{err: errors.New("offline")},
+				verify:       verifier.verify,
+				checkAccount: true,
 			})
 
 			assert.Equal(t, state, w.auth)
@@ -567,6 +569,7 @@ func TestGatherWelcomeContactsNothingWithoutAToken(t *testing.T) {
 		latest:       lv,
 		verify:       verifier.verify,
 		checkUpdates: true,
+		checkAccount: true,
 		cachePath:    filepath.Join(t.TempDir(), "cache.json"),
 	})
 
@@ -589,6 +592,7 @@ func TestGatherWelcomeToleratesFailedUpdateCheck(t *testing.T) {
 		latest:       &stubVersioner{err: errors.New("offline")},
 		verify:       (&stubVerifier{state: authStateValid}).verify,
 		checkUpdates: true,
+		checkAccount: true,
 		cachePath:    filepath.Join(t.TempDir(), "cache.json"),
 	})
 
@@ -607,11 +611,75 @@ func TestGatherWelcomeSkipsUpdateCheckWhenDisabled(t *testing.T) {
 		latest:       lv,
 		verify:       (&stubVerifier{}).verify,
 		checkUpdates: false,
+		checkAccount: true,
 		cachePath:    filepath.Join(t.TempDir(), "cache.json"),
 	})
 
 	assert.Zero(t, lv.calls)
 	assert.Empty(t, w.latest)
+}
+
+// Piped stdout is a script, not a person reading the greeting, so neither
+// the API nor GitHub is contacted even when a token is configured.
+func TestGatherWelcomeSkipsLookupsWhenAccountCheckDisabled(t *testing.T) {
+	defer withStubConfig(t, map[string]any{"context": "default", "access-token": "token"})()
+	defer withContext(t, "")()
+
+	lv := &stubVersioner{version: "999.0.0"}
+	verifier := &stubVerifier{state: authStateValid, who: identity{account: "sammy@example.com"}}
+
+	w := gatherWelcome(welcomeDeps{
+		latest:       lv,
+		verify:       verifier.verify,
+		checkUpdates: false,
+		checkAccount: false,
+		cachePath:    filepath.Join(t.TempDir(), "cache.json"),
+	})
+
+	assert.Empty(t, verifier.tokens, "a pipe must not trigger an account lookup")
+	assert.Zero(t, lv.calls, "a pipe must not contact GitHub")
+	assert.Equal(t, authStateUnverified, w.auth)
+	assert.True(t, w.omitAccount)
+	assert.Empty(t, w.account)
+	assert.Empty(t, w.latest)
+}
+
+// A skipped lookup must not be presented as a failed one. Version and
+// context are still local knowledge; account and team are not.
+func TestRenderWelcomeOmitsAccountWhenLookupSkipped(t *testing.T) {
+	var buf bytes.Buffer
+	env := ui.Plain(&buf, &buf)
+
+	out := renderWelcome(env, welcome{
+		version:     "1.2.3",
+		context:     "work",
+		auth:        authStateUnverified,
+		omitAccount: true,
+		tokenSource: tokenSourceEnvVar,
+		team:        "should-not-appear",
+	})
+
+	assert.Contains(t, out, "1.2.3")
+	assert.Regexp(t, `Context\s+work`, out)
+	assert.NotContains(t, out, "Account")
+	assert.NotContains(t, out, "Team")
+	assert.NotContains(t, out, "could not be verified")
+	assert.NotContains(t, out, "(from")
+	assert.Contains(t, out, "doctl compute droplet list")
+}
+
+func TestWriterIsTerminalRejectsPipesAndBuffers(t *testing.T) {
+	var buf bytes.Buffer
+	assert.False(t, writerIsTerminal(&buf))
+
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		r.Close()
+		w.Close()
+	})
+
+	assert.False(t, writerIsTerminal(w))
 }
 
 func TestGatherWelcomeReportsNewerRelease(t *testing.T) {
@@ -623,6 +691,7 @@ func TestGatherWelcomeReportsNewerRelease(t *testing.T) {
 		latest:       lv,
 		verify:       (&stubVerifier{}).verify,
 		checkUpdates: true,
+		checkAccount: true,
 		cachePath:    filepath.Join(t.TempDir(), "cache.json"),
 	})
 
