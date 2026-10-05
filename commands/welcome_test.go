@@ -668,6 +668,29 @@ func TestRenderWelcomeOmitsAccountWhenLookupSkipped(t *testing.T) {
 	assert.Contains(t, out, "doctl compute droplet list")
 }
 
+// Machine output stays offline with the same gate as a pipe, so JSON must not
+// report unverified / authenticated: false for a lookup that never ran.
+func TestWelcomeJSONOmitsAuthWhenLookupSkipped(t *testing.T) {
+	got := welcomeJSON(welcome{
+		version:     "1.2.3",
+		context:     "work",
+		auth:        authStateUnverified,
+		omitAccount: true,
+		tokenSource: tokenSourceEnvVar,
+		account:     "should-not-appear",
+		team:        "should-not-appear",
+	})
+
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got), &payload))
+
+	assert.Equal(t, map[string]any{
+		"version":     "1.2.3",
+		"context":     "work",
+		"tokenSource": "environment",
+	}, payload)
+}
+
 func TestGatherWelcomeReportsNewerRelease(t *testing.T) {
 	defer withStubConfig(t, map[string]any{"context": "default", "access-token": "token"})()
 	defer withContext(t, "")()

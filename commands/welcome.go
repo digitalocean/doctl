@@ -548,8 +548,8 @@ func welcomeJSON(w welcome) string {
 	payload := struct {
 		Version       string `json:"version"`
 		Context       string `json:"context"`
-		Authenticated bool   `json:"authenticated"`
-		AuthStatus    string `json:"authStatus"`
+		Authenticated *bool  `json:"authenticated,omitempty"`
+		AuthStatus    string `json:"authStatus,omitempty"`
 		TokenSource   string `json:"tokenSource"`
 		Account       string `json:"account,omitempty"`
 		Team          string `json:"team,omitempty"`
@@ -558,13 +558,20 @@ func welcomeJSON(w welcome) string {
 	}{
 		Version:       w.version,
 		Context:       w.context,
-		Authenticated: w.auth == authStateValid,
-		AuthStatus:    w.auth.String(),
 		TokenSource:   w.tokenSource.String(),
-		Account:       w.account,
-		Team:          w.team,
 		LatestRelease: w.latest,
 		UpdateCommand: w.upgradeCmd,
+	}
+
+	// A skipped lookup is not a verdict. authenticated: false / unverified
+	// would read as "we asked and could not tell", which is the JSON form of
+	// the Account row the text greeting already omits.
+	if !w.omitAccount {
+		authenticated := w.auth == authStateValid
+		payload.Authenticated = &authenticated
+		payload.AuthStatus = w.auth.String()
+		payload.Account = w.account
+		payload.Team = w.team
 	}
 
 	// The payload is strings and a bool, so marshalling cannot fail.
