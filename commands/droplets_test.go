@@ -15,14 +15,17 @@ package commands
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 var (
@@ -114,6 +117,63 @@ func TestDropletCreate(t *testing.T) {
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)
+	})
+}
+
+// TestDropletCreateMultipleNames covers the fan-out in RunDropletCreate, where
+// one goroutine per requested name records its droplet in a shared list. Those
+// appends have to be synchronized: run under -race, unsynchronized appends are
+// reported as a data race, and a lost append silently drops a droplet the API
+// already created.
+func TestDropletCreateMultipleNames(t *testing.T) {
+	const numDroplets = 16
+
+	prev := Output
+	Output = "json"
+	t.Cleanup(func() { Output = prev })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		names := make([]string, 0, numDroplets)
+		for i := 0; i < numDroplets; i++ {
+			names = append(names, fmt.Sprintf("droplet-%d", i))
+		}
+
+		// Hold every Create call until all numDroplets goroutines are in
+		// flight, then release them together so the appends that follow
+		// contend. gomock invokes actions outside its own lock, so parking
+		// here does not serialize the callers.
+		var arrived sync.WaitGroup
+		arrived.Add(numDroplets)
+		release := make(chan struct{})
+
+		tm.droplets.EXPECT().Create(gomock.Any(), false).
+			DoAndReturn(func(dcr *godo.DropletCreateRequest, _ bool) (*do.Droplet, error) {
+				arrived.Done()
+				<-release
+				return &do.Droplet{Droplet: &godo.Droplet{Name: dcr.Name}}, nil
+			}).
+			Times(numDroplets)
+
+		go func() {
+			arrived.Wait()
+			close(release)
+		}()
+
+		buf := &bytes.Buffer{}
+		config.Out = buf
+		config.Args = append(config.Args, names...)
+
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
+		config.Doit.Set(config.NS, doctl.ArgImage, "image")
+
+		err := RunDropletCreate(config)
+		assert.NoError(t, err)
+
+		// Every requested droplet has to be reported back to the user.
+		for _, name := range names {
+			assert.Contains(t, buf.String(), fmt.Sprintf("%q", name))
+		}
 	})
 }
 

@@ -314,6 +314,7 @@ func RunDropletCreate(c *CmdConfig) error {
 
 	var wg sync.WaitGroup
 	var createdList do.Droplets
+	var createdListMu sync.Mutex
 	errs := make(chan error, len(c.Args))
 	for _, name := range c.Args {
 		dcr := &godo.DropletCreateRequest{
@@ -348,7 +349,12 @@ func RunDropletCreate(c *CmdConfig) error {
 				return
 			}
 
+			// One goroutine per name appends here, so the shared slice needs
+			// the lock: without it the appends race and a lost append drops a
+			// droplet the API already created.
+			createdListMu.Lock()
 			createdList = append(createdList, *d)
+			createdListMu.Unlock()
 		}()
 	}
 
