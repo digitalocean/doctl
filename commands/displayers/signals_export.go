@@ -15,6 +15,7 @@ package displayers
 
 import (
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/digitalocean/doctl/do"
@@ -33,10 +34,10 @@ func (d *SignalsExport) JSON(out io.Writer) error {
 
 func (d *SignalsExport) Cols() []string {
 	return []string{
-		"ID",
+		"ExportID",
 		"AgentID",
 		"Status",
-		"SignalTypes",
+		"SignalType",
 		"CreatedAt",
 		"CompletedAt",
 	}
@@ -44,10 +45,10 @@ func (d *SignalsExport) Cols() []string {
 
 func (d *SignalsExport) ColMap() map[string]string {
 	return map[string]string{
-		"ID":          "ID",
+		"ExportID":    "Export ID",
 		"AgentID":     "Agent ID",
 		"Status":      "Status",
-		"SignalTypes": "Signal Types",
+		"SignalType":  "Signal Type",
 		"CreatedAt":   "Created At",
 		"CompletedAt": "Completed At",
 	}
@@ -56,17 +57,118 @@ func (d *SignalsExport) ColMap() map[string]string {
 func (d *SignalsExport) KV() []map[string]any {
 	out := make([]map[string]any, len(d.Exports))
 	for i, e := range d.Exports {
+		agentID := ""
+		if e.AgentID != nil {
+			agentID = *e.AgentID
+		}
 		completedAt := ""
 		if e.CompletedAt != nil {
-			completedAt = *e.CompletedAt
+			completedAt = strconv.FormatInt(*e.CompletedAt, 10)
 		}
 		out[i] = map[string]any{
-			"ID":          e.ID,
-			"AgentID":     e.AgentID,
+			"ExportID":    e.ExportID,
+			"AgentID":     agentID,
 			"Status":      e.Status,
-			"SignalTypes": strings.Join(e.SignalTypes, ", "),
+			"SignalType":  strings.Join(e.Filters.SignalType, ", "),
 			"CreatedAt":   e.CreatedAt,
 			"CompletedAt": completedAt,
+		}
+	}
+	return out
+}
+
+// SignalsExportDownload displays a pre-signed download URL.
+type SignalsExportDownload struct {
+	Download do.SignalsExportDownload
+}
+
+var _ Displayable = &SignalsExportDownload{}
+
+func (d *SignalsExportDownload) JSON(out io.Writer) error {
+	return writeJSON(d.Download, out)
+}
+
+func (d *SignalsExportDownload) Cols() []string {
+	return []string{"DownloadURL", "ExpiresAt"}
+}
+
+func (d *SignalsExportDownload) ColMap() map[string]string {
+	return map[string]string{
+		"DownloadURL": "Download URL",
+		"ExpiresAt":   "Expires At",
+	}
+}
+
+func (d *SignalsExportDownload) KV() []map[string]any {
+	return []map[string]any{{
+		"DownloadURL": d.Download.DownloadURL,
+		"ExpiresAt":   d.Download.ExpiresAt,
+	}}
+}
+
+// SignalsExportOptions displays GET /exports/options.
+type SignalsExportOptions struct {
+	Options do.SignalsExportOptions
+}
+
+var _ Displayable = &SignalsExportOptions{}
+
+func (d *SignalsExportOptions) JSON(out io.Writer) error {
+	return writeJSON(d.Options, out)
+}
+
+func (d *SignalsExportOptions) Cols() []string {
+	return []string{"SignalType"}
+}
+
+func (d *SignalsExportOptions) ColMap() map[string]string {
+	return map[string]string{"SignalType": "Signal Type"}
+}
+
+func (d *SignalsExportOptions) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(d.Options.Filters.SignalType))
+	for _, t := range d.Options.Filters.SignalType {
+		out = append(out, map[string]any{"SignalType": t})
+	}
+	return out
+}
+
+// SignalsExportTrigger displays the weekly trigger.
+type SignalsExportTrigger struct {
+	Triggers []do.SignalsExportTrigger
+}
+
+var _ Displayable = &SignalsExportTrigger{}
+
+func (d *SignalsExportTrigger) JSON(out io.Writer) error {
+	return writeJSON(d.Triggers, out)
+}
+
+func (d *SignalsExportTrigger) Cols() []string {
+	return []string{"Enabled", "Cadence", "SignalTypes", "UpdatedAt"}
+}
+
+func (d *SignalsExportTrigger) ColMap() map[string]string {
+	return map[string]string{
+		"Enabled":     "Enabled",
+		"Cadence":     "Cadence",
+		"SignalTypes": "Signal Types",
+		"UpdatedAt":   "Updated At",
+	}
+}
+
+func (d *SignalsExportTrigger) KV() []map[string]any {
+	out := make([]map[string]any, len(d.Triggers))
+	for i, t := range d.Triggers {
+		updated := ""
+		if t.UpdatedAt != nil {
+			updated = strconv.FormatInt(*t.UpdatedAt, 10)
+		}
+		out[i] = map[string]any{
+			"Enabled":     strconv.FormatBool(t.Enabled),
+			"Cadence":     t.Cadence,
+			"SignalTypes": strings.Join(t.SignalTypes, ", "),
+			"UpdatedAt":   updated,
 		}
 	}
 	return out

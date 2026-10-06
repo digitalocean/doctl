@@ -1195,12 +1195,30 @@ const (
 	// ArgSignalsExportAfter is an opaque pagination cursor.
 	ArgSignalsExportAfter = "after"
 
-	// ArgSignalsExportSignalTypes is a comma-separated list of signal types to export.
-	ArgSignalsExportSignalTypes = "signal-types"
+	// ArgSignalsExportSignalType is POST /exports signal_type (repeatable).
+	ArgSignalsExportSignalType = "signal-type"
+
+	// ArgSignalsExportSessionIDs is an optional session cohort filter.
+	ArgSignalsExportSessionIDs = "session-ids"
 
 	// ArgSignalsExportStartTime is the start time filter (Unix epoch seconds).
 	ArgSignalsExportStartTime = "start-time"
 
 	// ArgSignalsExportEndTime is the end time filter (Unix epoch seconds).
 	ArgSignalsExportEndTime = "end-time"
+
+	// ArgSignalsExportConcerning limits the export to concerning segments.
+	ArgSignalsExportConcerning = "concerning"
+
+	// ArgSignalsExportSignalCategory is an optional signal category filter.
+	ArgSignalsExportSignalCategory = "signal-category"
+
+	// ArgSignalsExportSignalLayer is an optional signal layer filter.
+	ArgSignalsExportSignalLayer = "signal-layer"
+
+	// ArgSignalsExportTriggerSignalTypes is PUT /export-trigger signal_types.
+	ArgSignalsExportTriggerSignalTypes = "signal-types"
+
+	// ArgSignalsExportCadence is the weekly trigger cadence.
+	ArgSignalsExportCadence = "cadence"
 )
