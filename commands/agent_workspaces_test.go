@@ -58,15 +58,11 @@ func TestAgentWorkspacesCommand(t *testing.T) {
 	assert.Equal(t, "list", found.Name())
 }
 
-// The server rejects a manifest that names a workspace, so the session-create
-// wire fields have to stay where the server reads them: the body for a config,
-// the query string for a manifest.
+// The session-create wire fields have to stay where the server reads them: the
+// request body when creating from a config, and the session's own field when
+// reading one back.
 func TestWorkspaceWireNames(t *testing.T) {
-	f, ok := reflect.TypeOf(godo.HostedAgentManifestCreateOptions{}).FieldByName("WorkspaceID")
-	require.True(t, ok)
-	assert.Equal(t, "workspace_id,omitempty", f.Tag.Get("url"))
-
-	f, ok = reflect.TypeOf(godo.HostedAgentSessionFromConfigRequest{}).FieldByName("WorkspaceID")
+	f, ok := reflect.TypeOf(godo.HostedAgentSessionFromConfigRequest{}).FieldByName("WorkspaceID")
 	require.True(t, ok)
 	assert.Equal(t, "workspace_id,omitempty", f.Tag.Get("json"))
 
@@ -355,30 +351,100 @@ func TestRunAgentsCreate_FromConfig_SendsWorkspaceInBody(t *testing.T) {
 	})
 }
 
-// The workspace is per session, so it rides the query string and never the
-// manifest the server would reject.
-func TestRunAgentsCreate_Spec_SendsWorkspaceAsQueryOption(t *testing.T) {
+// A workspace attaches only to a session made from a saved config. Every other
+// source is refused before any request, and the message names the config
+// command that saves a manifest.
+func TestRunAgentsCreate_WorkspaceNeedsConfig(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
 	require.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.NotContains(t, string(manifest), "workspace")
-				require.NotNil(t, opt)
-				assert.Equal(t, "ws_abc123", opt.WorkspaceID)
-				return nil, assertCalledErr
-			})
+	cases := map[string]func(config *CmdConfig){
+		"spec": func(config *CmdConfig) {
+			config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		},
+		"positional manifest": func(config *CmdConfig) {
+			config.Args = []string{specPath}
+		},
+		"harness": func(config *CmdConfig) {
+			config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		},
+		"template": func(config *CmdConfig) {
+			config.Doit.Set(config.NS, doctl.ArgAgentTemplate, "sandbox")
+		},
+		"discovered agents.yaml": func(config *CmdConfig) {
+			require.NoError(t, os.WriteFile("agents.yaml", []byte(sampleManifest), 0o644))
+		},
+	}
+	for name, setup := range cases {
+		t.Run(name, func(t *testing.T) {
+			// An empty working directory, so nothing is discovered by accident.
+			t.Chdir(t.TempDir())
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				// No expectations: gomock fails the test on any API call.
+				setup(config)
+				config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
 
-		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+				err := RunAgentsCreate(config)
+				require.Error(t, err)
+				assert.Equal(t, workspaceNeedsConfigMessage, err.Error())
+			})
+		})
+	}
+}
+
+const workspaceNeedsConfigMessage = "--workspace needs --from-config: save the manifest as an Agent Config first " +
+	"(`doctl harness-runtime config create --spec <file> --name <name>`), then create the session from it"
+
+func TestRunAgentsLaunch_WorkspaceNeedsConfig(t *testing.T) {
+	stubInteractiveTerminal(t, true)
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
+
+	cases := map[string]func(config *CmdConfig){
+		"spec": func(config *CmdConfig) {
+			config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		},
+		"positional manifest": func(config *CmdConfig) {
+			config.Args = []string{specPath}
+		},
+		"harness": func(config *CmdConfig) {
+			config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		},
+	}
+	for name, setup := range cases {
+		t.Run(name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				setup(config)
+				config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+
+				err := RunAgentsLaunch(config)
+				require.Error(t, err)
+				assert.Equal(t, workspaceNeedsConfigMessage, err.Error())
+			})
+		})
+	}
+}
+
+// Attaching to an existing session cannot take a workspace; the refusal comes
+// before the session is even looked up.
+func TestRunAgentsLaunch_ExistingSessionRefusesWorkspace(t *testing.T) {
+	stubInteractiveTerminal(t, true)
+	t.Chdir(t.TempDir())
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"my-session"}
 		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
-		require.ErrorIs(t, RunAgentsCreate(config), assertCalledErr)
+
+		err := RunAgentsLaunch(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--workspace only applies when creating a new session from a saved config")
+		assert.Contains(t, err.Error(), "create --from-config <config> --workspace <workspace-id>")
 	})
 }
 
-// Without the flag nothing about the create changes: no options object at all.
+// Without the flag nothing about a manifest create changes: no options object.
 func TestRunAgentsCreate_Spec_NoWorkspaceNoOptions(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
@@ -391,34 +457,6 @@ func TestRunAgentsCreate_Spec_NoWorkspaceNoOptions(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		require.ErrorIs(t, RunAgentsCreate(config), assertCalledErr)
-	})
-}
-
-func TestRunAgentsCreate_HarnessRefusesWorkspace(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		// No create expectations: nothing may reach the API.
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
-		err := RunAgentsCreate(config)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--workspace needs --spec or --from-config")
-	})
-}
-
-func TestRunAgentsLaunch_Spec_SendsWorkspace(t *testing.T) {
-	stubInteractiveTerminal(t, true)
-	dir := t.TempDir()
-	specPath := filepath.Join(dir, "agent.yaml")
-	require.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), &godo.HostedAgentManifestCreateOptions{WorkspaceID: "ws_abc123"}).
-			Return(nil, assertCalledErr)
-
-		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
-		require.ErrorIs(t, RunAgentsLaunch(config), assertCalledErr)
 	})
 }
 
@@ -441,60 +479,29 @@ func TestRunAgentsLaunch_FromConfig_SendsWorkspace(t *testing.T) {
 	})
 }
 
-func TestRunAgentsLaunch_HarnessRefusesWorkspace(t *testing.T) {
-	stubInteractiveTerminal(t, true)
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
-		err := RunAgentsLaunch(config)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--workspace needs --spec or --from-config")
-	})
-}
-
 // A 409 on create with --workspace carries the server's message and the
 // retry hint. It is decided by status code: the message here says nothing about
 // workspaces.
 func TestRunAgentsCreate_WorkspaceConflictAddsHint(t *testing.T) {
 	const serverMsg = "that is not available right now"
-	dir := t.TempDir()
-	specPath := filepath.Join(dir, "agent.yaml")
-	require.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromConfig(gomock.Any()).
+			Return(nil, godoStatusErr(http.StatusConflict, serverMsg))
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
 
-	cases := map[string]func(config *CmdConfig, tm *tcMocks){
-		"manifest": func(config *CmdConfig, tm *tcMocks) {
-			tm.hostedAgents.EXPECT().
-				CreateSessionFromManifest(gomock.Any(), gomock.Any()).
-				Return(nil, godoStatusErr(http.StatusConflict, serverMsg))
-			config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		},
-		"config": func(config *CmdConfig, tm *tcMocks) {
-			tm.hostedAgents.EXPECT().
-				CreateSessionFromConfig(gomock.Any()).
-				Return(nil, godoStatusErr(http.StatusConflict, serverMsg))
-			config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
-			config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
-		},
-	}
-	for name, setup := range cases {
-		t.Run(name, func(t *testing.T) {
-			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				setup(config, tm)
-				config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+		err := RunAgentsCreate(config)
+		require.Error(t, err)
 
-				err := RunAgentsCreate(config)
-				require.Error(t, err)
-
-				var pretty *agentPrettyError
-				require.True(t, errors.As(beautifyAgentError(err), &pretty))
-				assert.Equal(t, serverMsg, pretty.reason)
-				assert.Equal(t, http.StatusConflict, pretty.status)
-				assert.Contains(t, pretty.tips, workspaceSavingHint)
-				assert.Contains(t, pretty.DisplayError(), "still being saved")
-			})
-		})
-	}
+		var pretty *agentPrettyError
+		require.True(t, errors.As(beautifyAgentError(err), &pretty))
+		assert.Equal(t, serverMsg, pretty.reason)
+		assert.Equal(t, http.StatusConflict, pretty.status)
+		assert.Contains(t, pretty.tips, workspaceSavingHint)
+		assert.Contains(t, pretty.DisplayError(), "still being saved")
+	})
 }
 
 func TestRunAgentsCreate_ConflictWithoutWorkspaceHasNoHint(t *testing.T) {
@@ -550,4 +557,26 @@ func TestPrintSessionShowCard_Workspace(t *testing.T) {
 	assert.Contains(t, with.String(), "Workspace")
 	assert.Contains(t, with.String(), "ws_abc123")
 	assert.NotContains(t, without.String(), "Workspace", "the row only appears when a workspace is attached")
+}
+
+// Help must say --workspace works with --from-config only, and must not show
+// it beside a manifest.
+func TestWorkspaceHelpSaysFromConfigOnly(t *testing.T) {
+	_, afterHeading, found := strings.Cut(agentsCreateHelpMD, "**Keeping files between sessions.**")
+	require.True(t, found)
+	createParagraph, _, _ := strings.Cut(afterHeading, "\n\nCreating from a manifest")
+
+	for name, text := range map[string]string{
+		"create help paragraph": createParagraph,
+		"workspace help":        agentsWorkspaceRootHelpMD,
+		"flag":                  agentWorkspaceFlagDesc,
+	} {
+		assert.Contains(t, text, "--from-config", name)
+		assert.NotContains(t, text, "--spec agents.yaml --workspace", name)
+		for _, banned := range []string{"disk", "volume", "device", "layer", "slot"} {
+			assert.NotContains(t, strings.ToLower(text), banned, name)
+		}
+	}
+	assert.Contains(t, agentsWorkspaceRootHelpMD, "create --from-config reviewer --name review-2 --workspace <workspace-id>")
+	assert.NotContains(t, agentsCreateHelpMD, "--spec agents.yaml --workspace")
 }

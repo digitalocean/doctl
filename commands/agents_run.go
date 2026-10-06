@@ -420,6 +420,10 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentPermission,
 		doctl.ArgAgentWorkspace,
 	} {
+		if flag == doctl.ArgAgentWorkspace && c.Doit.IsSet(flag) {
+			return fmt.Errorf("--%s only applies when creating a new session from a saved config: `%s create --%s <config> --%s <workspace-id>`",
+				flag, agentCLI, doctl.ArgAgentFromConfig, doctl.ArgAgentWorkspace)
+		}
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
 		}
@@ -643,7 +647,7 @@ func manifestIncludesPrompt(manifest []byte, prompt string) bool {
 
 // startSessionFromRawManifest uploads a manifest and creates a hosted session.
 // When prog is non-nil it prints Plano-style lifecycle steps around each phase.
-func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, workspaceID string, prog *creationProgress) (*do.HostedAgentSession, error) {
+func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if prog != nil {
 		prog.step("Validating configuration…")
 	}
@@ -686,11 +690,10 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	}
 
 	var createOpt *godo.HostedAgentManifestCreateOptions
-	if openaiSessionID != "" || resumeOnTopoff || workspaceID != "" {
+	if openaiSessionID != "" || resumeOnTopoff {
 		createOpt = &godo.HostedAgentManifestCreateOptions{
 			OpenAISessionID: openaiSessionID,
 			ResumeOnTopoff:  resumeOnTopoff,
-			WorkspaceID:     workspaceID,
 		}
 	}
 
@@ -702,9 +705,6 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
 			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl harness-runtime list` to find a session ID, then `doctl harness-runtime remove SESSION_ID`", strings.TrimRight(msg, "."))
-		}
-		if workspaceID != "" {
-			err = withWorkspaceConflictHint(err)
 		}
 		return nil, err
 	}

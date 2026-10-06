@@ -365,7 +365,7 @@ func printWorkspaceCard(w io.Writer, ws *godo.HostedAgentWorkspace, created bool
 	if created && strings.TrimSpace(ws.WorkspaceID) != "" {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Next step", colMuted))
-		body.WriteString(cardRow("create", agentCLI+" create --spec agents.yaml --workspace "+ws.WorkspaceID))
+		body.WriteString(cardRow("create", agentCLI+" create --from-config <config> --workspace "+ws.WorkspaceID))
 	}
 	renderAgentCard(w, body.String())
 }

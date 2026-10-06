@@ -31,6 +31,13 @@ import (
 // workspace: the session that last held it is still being saved.
 const workspaceSavingHint = "The previous session is still being saved; try again in a minute"
 
+// errWorkspaceNeedsConfig is returned when --workspace is used without
+// --from-config, before any request is made.
+func errWorkspaceNeedsConfig() error {
+	return fmt.Errorf("--%s needs --%s: save the manifest as an Agent Config first (`%s config create --%s <file> --%s <name>`), then create the session from it",
+		doctl.ArgAgentWorkspace, doctl.ArgAgentFromConfig, agentCLI, doctl.ArgAgentSpec, doctl.ArgAgentName)
+}
+
 // AgentWorkspaces generates the `doctl harness-runtime workspace` subtree.
 func AgentWorkspaces() *Command {
 	cmd := &Command{

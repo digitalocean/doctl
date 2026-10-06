@@ -503,7 +503,7 @@ func Agents() *Command {
 	AddBoolFlag(cmdCreate, doctl.ArgAgentDryRun, "", false, "Print the fully-resolved manifest (secrets redacted) and exit without creating anything")
 	AddStringFlag(cmdCreate, doctl.ArgAgentOnHITL, "", "", "Stay attached headlessly and resolve every approval request this way (approve|reject|defer), until the run finishes. For unattended automation; no TUI, no keyboard input.")
 	markAgentCreationSourcesExclusive(cmdCreate)
-	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --harness opencode --dry-run`
+	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --from-config my-config --name my-session --workspace ws_abc123; ` + agentCLI + ` create --harness opencode --dry-run`
 
 	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate [<manifest>]",
 		"Validate an agent manifest",
@@ -528,7 +528,7 @@ func Agents() *Command {
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentDryRun)
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentOnHITL)
 	markAgentCreationSourcesExclusive(cmdLaunch)
-	cmdLaunch.Example = agentCLI + ` launch my-session; ` + agentCLI + ` launch; ` + agentCLI + ` launch agent-spec.yaml; ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` launch --from-config my-config --name my-session`
+	cmdLaunch.Example = agentCLI + ` launch my-session; ` + agentCLI + ` launch; ` + agentCLI + ` launch agent-spec.yaml; ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` launch --from-config my-config --name my-session --workspace ws_abc123`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Bridge the Codex CLI to a hosted session",
@@ -760,8 +760,8 @@ const agentPermissionFlagDesc = "Tool-permission default for a --harness session
 
 // No backticks, for the same reason as agentTemplateFlagDesc.
 const agentWorkspaceFlagDesc = "ID of a persistent workspace to keep this session's /workspace files in (see '" + agentCLI + " workspace create'). " +
-	"Per-session: it is never part of an agents.yaml manifest, so pass it on each create. " +
-	"Works with --spec and --from-config, not --harness. A workspace is held by one session at a time."
+	"Only valid with --from-config: save the manifest as an Agent Config first. " +
+	"Per-session, so pass it on each create. A workspace is held by one session at a time."
 
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
@@ -800,8 +800,8 @@ type agentCreationSource struct {
 	// server takes it as a query parameter precisely so the immutable,
 	// config-shareable agents.yaml cannot carry per-session spending consent.
 	resumeOnTopoff bool
-	// workspaceID travels beside the manifest for the same reason: the server
-	// takes it as a query parameter, and rejects a manifest that names one.
+	// workspaceID is the persistent workspace to attach. Only valid with
+	// --from-config, where it is sent in the create request body.
 	workspaceID string
 }
 
@@ -1069,12 +1069,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			doctl.ArgAgentTemplate, doctl.ArgAgentHarness)
 	}
 
-	// A --harness manifest is built here and has no workspace to carry, so the
-	// flag would be dropped; fail instead of creating a session without it.
+	// Only a session created from a saved Agent Config can attach a workspace.
+	// Any other source would drop the flag, so fail before any API call.
 	workspaceID = strings.TrimSpace(workspaceID)
-	if workspaceID != "" && harness != "" {
-		return nil, fmt.Errorf("--%s needs --%s or --%s: a --%s session cannot attach a persistent workspace",
-			doctl.ArgAgentWorkspace, doctl.ArgAgentSpec, doctl.ArgAgentFromConfig, doctl.ArgAgentHarness)
+	if workspaceID != "" && configRef == "" {
+		return nil, errWorkspaceNeedsConfig()
 	}
 
 	src := &agentCreationSource{
@@ -1169,7 +1168,7 @@ func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationPr
 	if err := rejectRedactedSecrets(src.manifest); err != nil {
 		return nil, err
 	}
-	return startSessionFromRawManifest(c, src.manifest, src.resumeOnTopoff, src.workspaceID, prog)
+	return startSessionFromRawManifest(c, src.manifest, src.resumeOnTopoff, prog)
 }
 
 // readySummaryFor describes the created session for the ready card.
@@ -1344,11 +1343,6 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	if src.resumeOnTopoff {
 		notice("--%s is sent as a request parameter, not written into the manifest, so it does not appear below and does not survive being piped elsewhere; pass it again on the command that creates the session",
 			doctl.ArgAgentResumeOnTopoff)
-	}
-
-	if src.workspaceID != "" {
-		notice("--%s is sent as a request parameter, not written into the manifest, so it does not appear below; pass it again on the command that creates the session",
-			doctl.ArgAgentWorkspace)
 	}
 
 	out := redactManifestSecrets(manifest)

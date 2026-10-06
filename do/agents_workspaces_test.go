@@ -105,8 +105,8 @@ func TestHostedAgentsService_WorkspaceErrorsKeepTheirStatus(t *testing.T) {
 	}
 }
 
-// The session-create paths name the workspace per session: a query parameter
-// for a manifest, a body field for a config.
+// Creating from a config names the workspace in the request body. A manifest
+// create sends no workspace_id query parameter.
 func TestHostedAgentsService_SessionCreateCarriesWorkspace(t *testing.T) {
 	var manifestQuery string
 	var configBody map[string]any
@@ -114,19 +114,19 @@ func TestHostedAgentsService_SessionCreateCarriesWorkspace(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		// Both create paths POST to the same route; the manifest one is YAML.
 		if r.Header.Get("Content-Type") == "application/x-yaml" {
-			manifestQuery = r.URL.Query().Get("workspace_id")
+			manifestQuery = r.URL.RawQuery
 		} else {
 			_ = json.NewDecoder(r.Body).Decode(&configBody)
 		}
 		_, _ = w.Write([]byte(`{"session":{"session_id":"sess_1","workspace_id":"ws_1"}}`))
 	})
 
-	sess, err := svc.CreateSessionFromManifest([]byte("agent: opencode\n"), &godo.HostedAgentManifestCreateOptions{WorkspaceID: "ws_1"})
+	_, err := svc.CreateSessionFromManifest([]byte("agent: opencode\n"), nil)
 	require.NoError(t, err)
-	assert.Equal(t, "ws_1", manifestQuery)
-	assert.Equal(t, "ws_1", sess.WorkspaceID)
+	assert.NotContains(t, manifestQuery, "workspace_id")
 
-	_, err = svc.CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{Name: "demo", ConfigID: "cfg_1", WorkspaceID: "ws_1"})
+	sess, err := svc.CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{Name: "demo", ConfigID: "cfg_1", WorkspaceID: "ws_1"})
 	require.NoError(t, err)
 	assert.Equal(t, "ws_1", configBody["workspace_id"])
+	assert.Equal(t, "ws_1", sess.WorkspaceID)
 }
