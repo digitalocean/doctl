@@ -54,10 +54,17 @@ func AgentConfigs() *Command {
 		agentsConfigCreateHelpMD,
 		Writer, append(ns, aliasOpt("c"),
 			displayerType(&displayers.HostedAgentConfig{}))...)
-	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-config\nagent: opencode". Set to "-" to read from stdin. ${VAR} references are resolved from the local environment.`, requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
+	// --spec and --name are required on the flag path only: on a terminal
+	// without --spec, create opens the create-from TUI, which asks for both.
+	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + agent), e.g. "name: my-config\nagent: opencode". Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Omit on a terminal to pick a config and create a new one from it.`)
+	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config (required with --spec)")
 	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
-	cmdCreate.Example = agentCLI + ` config create --spec agent-spec.yaml --name my-config; ` + agentCLI + ` config create --spec agent-spec.yaml --name my-config --secret ANTHROPIC_API_KEY=@~/.secrets/anthropic.key`
+	AddStringFlag(cmdCreate, doctl.ArgAgentFrom, "", "", "Create from this existing config ID. On a terminal without --spec, opens an interactive view of it.")
+	AddStringSliceFlag(cmdCreate, doctl.ArgAgentReuseSecret, "", nil, "Secret slot whose stored value is copied from --from instead of set in --spec (repeatable; required with --from and --spec)")
+	cmdCreate.Example = agentCLI + ` config create --spec agent-spec.yaml --name my-config; ` +
+		agentCLI + ` config create --spec agent-spec.yaml --name my-config --secret ANTHROPIC_API_KEY=@~/.secrets/anthropic.key; ` +
+		agentCLI + ` config create  # on a terminal: pick a config and create a new one from it; ` +
+		agentCLI + ` config create --from <config-id> --spec v2.yaml --name my-config-v2 --reuse-secret OPENAI_API_KEY`
 
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
 		"List agent configs",
@@ -103,7 +110,9 @@ func AgentConfigs() *Command {
 	return cmd
 }
 
-// RunAgentsConfigCreate creates an immutable Agent Config from a manifest file.
+// RunAgentsConfigCreate creates an immutable Agent Config from a manifest file,
+// or — on a terminal without --spec — from an existing config through the
+// create-from TUI (agent_configs_create_from.go).
 func RunAgentsConfigCreate(c *CmdConfig) error {
 	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
@@ -116,6 +125,23 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	secretPairs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentSecret)
 	if err != nil {
 		return err
+	}
+	from, err := c.Doit.GetString(c.NS, doctl.ArgAgentFrom)
+	if err != nil {
+		return err
+	}
+	reuse, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentReuseSecret)
+	if err != nil {
+		return err
+	}
+	if specPath == "" && len(secretPairs) == 0 && canPromptForEnv() {
+		return runAgentsConfigCreateFrom(c, from)
+	}
+	if specPath == "" || name == "" {
+		return fmt.Errorf("--spec and --name are required (or run on a terminal without --spec to pick a config to create from)")
+	}
+	if (from == "") != (len(reuse) == 0) {
+		return fmt.Errorf("--from and --reuse-secret go together: name at least one --reuse-secret to copy from --from")
 	}
 	if err := rejectStdinSecretWithStdinManifest(specPath, secretPairs); err != nil {
 		return err
@@ -147,13 +173,29 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err := reportDurableAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 		return err
 	}
-	cfg, err := c.HostedAgents().CreateAgentConfig(&godo.HostedAgentConfigCreateRequest{
-		Name:         name,
-		ManifestYAML: string(manifest),
-	})
+	req := &godo.HostedAgentConfigCreateRequest{Name: name, ManifestYAML: string(manifest)}
+	if from != "" {
+		if slot := reusedSlotWithValue(manifest, reuse); slot != "" {
+			return fmt.Errorf("%s is listed in --reuse-secret and also has a value in --spec or --secret; remove one", slot)
+		}
+		// Insights live beside the manifest, so the spec file cannot carry
+		// them; copy them from the config being created from.
+		src, err := c.HostedAgents().GetAgentConfig(from)
+		if err != nil {
+			return err
+		}
+		req.Insights, req.SourceConfigID, req.ReuseSecrets = src.Insights, from, reuse
+	}
+	cfg, err := c.HostedAgents().CreateAgentConfig(req)
 	if err != nil {
 		return err
 	}
+	return printCreatedAgentConfig(c, cfg)
+}
+
+// printCreatedAgentConfig is the create display shared by the flag path and
+// the create-from TUI: the config card (or structured output) plus warnings.
+func printCreatedAgentConfig(c *CmdConfig, cfg *godo.HostedAgentConfig) error {
 	if agentStructuredOutput(c) {
 		if err := c.Display(&displayers.HostedAgentConfig{Configs: []godo.HostedAgentConfig{*cfg}, Single: true}); err != nil {
 			return err

@@ -868,6 +868,10 @@ const (
 
 	// ArgAgentSpec is the path to an agent spec file.
 	ArgAgentSpec = "spec"
+	// ArgAgentFrom is the agent config a new config is created from.
+	ArgAgentFrom = "from"
+	// ArgAgentReuseSecret names a secret slot whose value is copied from --from.
+	ArgAgentReuseSecret = "reuse-secret"
 
 	// ArgAgentPageSize is the maximum number of sessions to return per page.
 	ArgAgentPageSize = "page-size"
