@@ -210,6 +210,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Security())
 	DoitCmd.AddCommand(Agents())
 	DoitCmd.AddCommand(Secrets())
+	DoitCmd.AddCommand(Signals())
 }
 
 func computeCmd() *Command {

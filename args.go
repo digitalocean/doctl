@@ -1175,4 +1175,32 @@ const (
 
 	// ArgEvaluationCandidateTypes filters model evaluation runs by candidate model source.
 	ArgEvaluationCandidateTypes = "candidate-types"
+
+	// Signals consent args
+
+	// ArgSignalsAgentID is the agent ID for Signals consent and export commands.
+	ArgSignalsAgentID = "agent-id"
+
+	// ArgSignalsEnabled sets consent enabled (true) or disabled (false).
+	ArgSignalsEnabled = "enabled"
+
+	// Signals export args
+
+	// ArgSignalsExportID is the export job ID.
+	ArgSignalsExportID = "export-id"
+
+	// ArgSignalsExportLimit is the maximum number of exports to return.
+	ArgSignalsExportLimit = "limit"
+
+	// ArgSignalsExportAfter is an opaque pagination cursor.
+	ArgSignalsExportAfter = "after"
+
+	// ArgSignalsExportSignalTypes is a comma-separated list of signal types to export.
+	ArgSignalsExportSignalTypes = "signal-types"
+
+	// ArgSignalsExportStartTime is the start time filter (Unix epoch seconds).
+	ArgSignalsExportStartTime = "start-time"
+
+	// ArgSignalsExportEndTime is the end time filter (Unix epoch seconds).
+	ArgSignalsExportEndTime = "end-time"
 )
