@@ -17,7 +17,7 @@ var (
 		TeamID:      42,
 		AgentID:     "agt-1",
 		Status:      "completed",
-		SignalTypes:  []string{"hallucination", "toxicity"},
+		SignalTypes: []string{"hallucination", "toxicity"},
 		CreatedAt:   testExportTime,
 		UpdatedAt:   testExportTime,
 	}

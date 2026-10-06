@@ -47,7 +47,7 @@ func (d *SignalsExport) ColMap() map[string]string {
 		"ID":          "ID",
 		"AgentID":     "Agent ID",
 		"Status":      "Status",
-		"SignalTypes":  "Signal Types",
+		"SignalTypes": "Signal Types",
 		"CreatedAt":   "Created At",
 		"CompletedAt": "Completed At",
 	}
@@ -64,7 +64,7 @@ func (d *SignalsExport) KV() []map[string]any {
 			"ID":          e.ID,
 			"AgentID":     e.AgentID,
 			"Status":      e.Status,
-			"SignalTypes":  strings.Join(e.SignalTypes, ", "),
+			"SignalTypes": strings.Join(e.SignalTypes, ", "),
 			"CreatedAt":   e.CreatedAt,
 			"CompletedAt": completedAt,
 		}
