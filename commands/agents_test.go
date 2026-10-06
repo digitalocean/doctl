@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "workspace", "triggers", "config", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier

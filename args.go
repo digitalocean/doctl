@@ -1043,6 +1043,17 @@ const (
 	// create, or changed later on an existing session with `agents update`.
 	ArgAgentResumeOnTopoff = "resume-on-topoff"
 
+	// ArgAgentWorkspace names the persistent workspace a new session attaches.
+	// Per-session: never part of an agents.yaml manifest.
+	ArgAgentWorkspace = "workspace"
+
+	// ArgAgentWorkspaceSizeGiB is the size, in GiB, of a new persistent workspace.
+	ArgAgentWorkspaceSizeGiB = "size-gib"
+
+	// ArgAgentIdempotencyKey makes a repeated `workspace create` return the
+	// first workspace instead of creating another.
+	ArgAgentIdempotencyKey = "idempotency-key"
+
 	// Gradient AI simulation args
 
 	// ArgGenAISearch filters a Gradient AI list by a free-text search term.

@@ -684,6 +684,7 @@ A paused session is resumed automatically before the tunnel opens, same as `+"`"
 	cmdBalance.Example = `doctl harness-runtime balance; doctl harness-runtime balance -o json`
 
 	cmd.AddCommand(AgentCheckpoints())
+	cmd.AddCommand(AgentWorkspaces())
 	cmd.AddCommand(AgentTriggers())
 	cmd.AddCommand(AgentConfigs())
 	cmd.AddCommand(AgentSizes())
@@ -722,6 +723,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentTemplate, "", "", agentTemplateFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
+	AddStringFlag(cmd, doctl.ArgAgentWorkspace, "", "", agentWorkspaceFlagDesc)
 }
 
 // agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
@@ -755,6 +757,11 @@ const agentPermissionFlagDesc = "Tool-permission default for a --harness session
 	// No backticks, for the same reason as agentTemplateFlagDesc.
 	"ask (raise an approval request per tool call, resolvable with '" + agentCLI + " approve'), or deny. " +
 	"Written as the manifest's permissions.default. Only valid with --harness; a --spec manifest declares its own."
+
+// No backticks, for the same reason as agentTemplateFlagDesc.
+const agentWorkspaceFlagDesc = "ID of a persistent workspace to keep this session's /workspace files in (see '" + agentCLI + " workspace create'). " +
+	"Per-session: it is never part of an agents.yaml manifest, so pass it on each create. " +
+	"Works with --spec and --from-config, not --harness. A workspace is held by one session at a time."
 
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
@@ -793,6 +800,9 @@ type agentCreationSource struct {
 	// server takes it as a query parameter precisely so the immutable,
 	// config-shareable agents.yaml cannot carry per-session spending consent.
 	resumeOnTopoff bool
+	// workspaceID travels beside the manifest for the same reason: the server
+	// takes it as a query parameter, and rejects a manifest that names one.
+	workspaceID string
 }
 
 // bareSandbox reports whether this source asks for a session with no agent,
@@ -886,6 +896,10 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		return nil, err
 	}
 	resumeOnTopoff, err := c.Doit.GetBool(c.NS, doctl.ArgAgentResumeOnTopoff)
+	if err != nil {
+		return nil, err
+	}
+	workspaceID, err := invocationString(c, doctl.ArgAgentWorkspace)
 	if err != nil {
 		return nil, err
 	}
@@ -1055,12 +1069,21 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			doctl.ArgAgentTemplate, doctl.ArgAgentHarness)
 	}
 
+	// A --harness manifest is built here and has no workspace to carry, so the
+	// flag would be dropped; fail instead of creating a session without it.
+	workspaceID = strings.TrimSpace(workspaceID)
+	if workspaceID != "" && harness != "" {
+		return nil, fmt.Errorf("--%s needs --%s or --%s: a --%s session cannot attach a persistent workspace",
+			doctl.ArgAgentWorkspace, doctl.ArgAgentSpec, doctl.ArgAgentFromConfig, doctl.ArgAgentHarness)
+	}
+
 	src := &agentCreationSource{
 		harness:        harness,
 		repo:           repo,
 		prompt:         prompt,
 		name:           name,
 		resumeOnTopoff: resumeOnTopoff,
+		workspaceID:    workspaceID,
 	}
 
 	if configRef != "" {
@@ -1139,14 +1162,14 @@ func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationPr
 		}
 	}
 	if src.configID != "" {
-		return createSessionFromConfig(c, src.configID, src.name, src.resumeOnTopoff, prog)
+		return createSessionFromConfig(c, src.configID, src.name, src.resumeOnTopoff, src.workspaceID, prog)
 	}
 	// Checked here rather than at resolution time so --dry-run, which stores
 	// nothing, can still re-print a manifest it already redacted.
 	if err := rejectRedactedSecrets(src.manifest); err != nil {
 		return nil, err
 	}
-	return startSessionFromRawManifest(c, src.manifest, src.resumeOnTopoff, prog)
+	return startSessionFromRawManifest(c, src.manifest, src.resumeOnTopoff, src.workspaceID, prog)
 }
 
 // readySummaryFor describes the created session for the ready card.
@@ -1323,6 +1346,11 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 			doctl.ArgAgentResumeOnTopoff)
 	}
 
+	if src.workspaceID != "" {
+		notice("--%s is sent as a request parameter, not written into the manifest, so it does not appear below; pass it again on the command that creates the session",
+			doctl.ArgAgentWorkspace)
+	}
+
 	out := redactManifestSecrets(manifest)
 	if !bytes.HasSuffix(out, []byte("\n")) {
 		out = append(out, '\n')
@@ -1368,7 +1396,7 @@ func sendInitialPrompt(c *CmdConfig, sessionID string, src *agentCreationSource)
 
 // createSessionFromConfig creates a session from an Agent Config ID. Shared by
 // `create --from-config` and `launch --from-config`.
-func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
+func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff bool, workspaceID string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if name == "" {
 		return nil, fmt.Errorf("--%s is required when creating from --%s", doctl.ArgAgentName, doctl.ArgAgentFromConfig)
 	}
@@ -1382,11 +1410,15 @@ func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff
 		Name:           name,
 		ConfigID:       configID,
 		ResumeOnTopoff: resumeOnTopoff,
+		WorkspaceID:    workspaceID,
 	})
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
 			return nil, fmt.Errorf("%s. Free a slot by removing one: run `%s list` to find a session ID, then `%s remove SESSION_ID`", strings.TrimRight(msg, "."), agentCLI, agentCLI)
+		}
+		if workspaceID != "" {
+			err = withWorkspaceConflictHint(err)
 		}
 		return nil, err
 	}

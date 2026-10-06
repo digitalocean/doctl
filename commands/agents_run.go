@@ -418,6 +418,7 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentWaitTimeout,
 		doctl.ArgAgentTemplate,
 		doctl.ArgAgentPermission,
+		doctl.ArgAgentWorkspace,
 	} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
@@ -642,7 +643,7 @@ func manifestIncludesPrompt(manifest []byte, prompt string) bool {
 
 // startSessionFromRawManifest uploads a manifest and creates a hosted session.
 // When prog is non-nil it prints Plano-style lifecycle steps around each phase.
-func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
+func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, workspaceID string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if prog != nil {
 		prog.step("Validating configuration…")
 	}
@@ -685,10 +686,11 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	}
 
 	var createOpt *godo.HostedAgentManifestCreateOptions
-	if openaiSessionID != "" || resumeOnTopoff {
+	if openaiSessionID != "" || resumeOnTopoff || workspaceID != "" {
 		createOpt = &godo.HostedAgentManifestCreateOptions{
 			OpenAISessionID: openaiSessionID,
 			ResumeOnTopoff:  resumeOnTopoff,
+			WorkspaceID:     workspaceID,
 		}
 	}
 
@@ -700,6 +702,9 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
 			return nil, fmt.Errorf("%s. Free a slot by removing one: run `doctl harness-runtime list` to find a session ID, then `doctl harness-runtime remove SESSION_ID`", strings.TrimRight(msg, "."))
+		}
+		if workspaceID != "" {
+			err = withWorkspaceConflictHint(err)
 		}
 		return nil, err
 	}
@@ -1314,6 +1319,9 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	// "Resume on top-off: no" row on every session would be noise.
 	if sess.ResumeOnTopoff {
 		body.WriteString(cardRow("Resume on top-off", "enabled"))
+	}
+	if ws := strings.TrimSpace(sess.WorkspaceID); ws != "" {
+		body.WriteString(cardRow("Workspace", colorize(ws, colMuted)))
 	}
 	if !sess.CreatedAt.Time.IsZero() {
 		body.WriteString(cardRow("Created", colorize(formatCreatedAt(sess.CreatedAt.Time), colMuted)))

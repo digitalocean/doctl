@@ -287,6 +287,116 @@ func colorizeCheckpointStatus(status godo.HostedAgentCheckpointStatus) string {
 	}
 }
 
+// --- workspaces -------------------------------------------------------------
+
+func printWorkspacesList(w io.Writer, workspaces []godo.HostedAgentWorkspace) {
+	if len(workspaces) == 0 {
+		fmt.Fprintln(w, colorize("No workspaces", colMuted))
+		return
+	}
+	noun := "workspaces"
+	if len(workspaces) == 1 {
+		noun = "workspace"
+	}
+	fmt.Fprintln(w, boldColor(fmt.Sprintf("%d %s", len(workspaces), noun), colHighlight))
+	fmt.Fprintln(w)
+
+	for i, ws := range workspaces {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		printWorkspaceListItem(w, &ws)
+	}
+}
+
+func printWorkspaceListItem(w io.Writer, ws *godo.HostedAgentWorkspace) {
+	if ws == nil {
+		return
+	}
+	title := strings.TrimSpace(ws.Name)
+	if title == "" {
+		title = ws.WorkspaceID
+	}
+	fmt.Fprintf(w, "%s %s\n", workspaceStateGlyph(ws.State), boldColor(title, colHighlight))
+	meta := []string{colorizeWorkspaceState(ws.State), colorize(fmt.Sprintf("%d GiB", ws.SizeGibibytes), colMuted)}
+	if ws.BytesUsed > 0 {
+		meta = append(meta, colorize(humanBytes(uint64(ws.BytesUsed))+" used", colMuted))
+	}
+	if !ws.CreatedAt.Time.IsZero() {
+		meta = append(meta, colorize(createdAgo(ws.CreatedAt.Time), colMuted))
+	}
+	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+	if id := strings.TrimSpace(ws.WorkspaceID); id != "" && id != title {
+		fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
+	}
+}
+
+func printWorkspaceCard(w io.Writer, ws *godo.HostedAgentWorkspace, created bool) {
+	if ws == nil {
+		fmt.Fprintln(w, colorize("No workspace", colMuted))
+		return
+	}
+	var body strings.Builder
+	if created {
+		fmt.Fprintf(&body, "%s\n\n", boldColor("Workspace created", colSuccess))
+	}
+	title := strings.TrimSpace(ws.Name)
+	if title == "" {
+		title = ws.WorkspaceID
+	}
+	body.WriteString(cardRow("Name", title))
+	if id := strings.TrimSpace(ws.WorkspaceID); id != "" && id != title {
+		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+	}
+	body.WriteString(cardRow("State", workspaceStateGlyph(ws.State)+" "+colorizeWorkspaceState(ws.State)))
+	body.WriteString(cardRow("Size", colorize(fmt.Sprintf("%d GiB", ws.SizeGibibytes), colMuted)))
+	if ws.BytesUsed > 0 {
+		body.WriteString(cardRow("Used", colorize(humanBytes(uint64(ws.BytesUsed)), colMuted)))
+	}
+	if sess := strings.TrimSpace(ws.AttachedSessionID); sess != "" {
+		body.WriteString(cardRow("Session", colorize(sess, colMuted)))
+	}
+	if ws.LastSavedAt != nil && !ws.LastSavedAt.Time.IsZero() {
+		body.WriteString(cardRow("Last saved", colorize(formatCreatedAt(ws.LastSavedAt.Time), colMuted)))
+	}
+	if !ws.CreatedAt.Time.IsZero() {
+		body.WriteString(cardRow("Created", colorize(formatCreatedAt(ws.CreatedAt.Time), colMuted)))
+	}
+	if created && strings.TrimSpace(ws.WorkspaceID) != "" {
+		fmt.Fprintln(&body)
+		fmt.Fprintln(&body, colorize("Next step", colMuted))
+		body.WriteString(cardRow("create", agentCLI+" create --spec agents.yaml --workspace "+ws.WorkspaceID))
+	}
+	renderAgentCard(w, body.String())
+}
+
+func workspaceStateGlyph(state godo.HostedAgentWorkspaceState) string {
+	switch state {
+	case godo.HostedAgentWorkspaceStateAvailable, godo.HostedAgentWorkspaceStateAttached:
+		return colorize("●", colSuccess)
+	case godo.HostedAgentWorkspaceStateAttaching, godo.HostedAgentWorkspaceStateReleasing:
+		return colorize("…", colWarning)
+	case godo.HostedAgentWorkspaceStateFailed:
+		return colorize("✗", colError)
+	default:
+		return colorize("·", colMuted)
+	}
+}
+
+func colorizeWorkspaceState(state godo.HostedAgentWorkspaceState) string {
+	label := strings.ToLower(string(state))
+	switch state {
+	case godo.HostedAgentWorkspaceStateAvailable, godo.HostedAgentWorkspaceStateAttached:
+		return colorize(label, colSuccess)
+	case godo.HostedAgentWorkspaceStateAttaching, godo.HostedAgentWorkspaceStateReleasing:
+		return colorize(label, colWarning)
+	case godo.HostedAgentWorkspaceStateFailed:
+		return colorize(label, colError)
+	default:
+		return colorize(label, colMuted)
+	}
+}
+
 // --- triggers ---------------------------------------------------------------
 
 func printTriggersList(w io.Writer, triggers []do.HostedAgentTrigger) {

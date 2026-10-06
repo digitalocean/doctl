@@ -276,6 +276,9 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 			}
 		}
 		return "Invalid request", nil
+	case http.StatusNotImplemented:
+		// Permanent for now, so no retry advice.
+		return "Not available yet", nil
 	case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
 		return "Service temporarily unavailable", []string{"Retry in a moment"}
 	default:

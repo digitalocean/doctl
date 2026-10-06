@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
@@ -247,4 +248,117 @@ func TestHostedAgentTemplateJSON_GetSingleItem(t *testing.T) {
 	var out map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out), "Single=true must be a bare JSON object")
 	assert.Equal(t, "tpl-1", out["template_id"])
+}
+
+// --- HostedAgentSession workspace ----------------------------------------------
+
+func TestHostedAgentSessionJSON_CarriesWorkspaceID(t *testing.T) {
+	var buf bytes.Buffer
+	d := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1", WorkspaceID: "ws_1"}},
+		},
+		Single: true,
+	}
+	require.NoError(t, d.JSON(&buf))
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, "ws_1", out["workspace_id"])
+
+	buf.Reset()
+	d.Sessions[0].WorkspaceID = ""
+	require.NoError(t, d.JSON(&buf))
+	out = nil
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.NotContains(t, out, "workspace_id")
+}
+
+// Like the pause reason, the column only appears when a session has one.
+func TestHostedAgentSessionCols_WorkspaceIsConditional(t *testing.T) {
+	plain := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"}}},
+	}
+	assert.NotContains(t, plain.Cols(), "WorkspaceID")
+
+	held := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"}},
+			{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_2", WorkspaceID: "ws_1"}},
+		},
+	}
+	assert.Contains(t, held.Cols(), "WorkspaceID")
+	assert.Contains(t, (&HostedAgentSession{}).Cols(), "WorkspaceID", "still discoverable in --format help")
+	assert.Equal(t, "Workspace", plain.ColMap()["WorkspaceID"])
+
+	kv := held.KV()
+	require.Len(t, kv, 2)
+	assert.Equal(t, "", kv[0]["WorkspaceID"])
+	assert.Equal(t, "ws_1", kv[1]["WorkspaceID"])
+}
+
+// --- HostedAgentWorkspace -----------------------------------------------------
+
+func TestHostedAgentWorkspaceJSON(t *testing.T) {
+	ws := godo.HostedAgentWorkspace{WorkspaceID: "ws_1", Name: "notes", State: godo.HostedAgentWorkspaceStateAvailable, SizeGibibytes: 10}
+
+	var buf bytes.Buffer
+	require.NoError(t, (&HostedAgentWorkspace{Workspaces: []godo.HostedAgentWorkspace{ws}}).JSON(&buf))
+	var list []map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &list), "list with 1 item must still be a JSON array")
+	require.Len(t, list, 1)
+	assert.Equal(t, "ws_1", list[0]["workspace_id"])
+
+	buf.Reset()
+	require.NoError(t, (&HostedAgentWorkspace{Workspaces: []godo.HostedAgentWorkspace{ws}, Single: true}).JSON(&buf))
+	var one map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &one), "get/create must be a bare object")
+	assert.Equal(t, "AVAILABLE", one["state"])
+	assert.NotContains(t, one, "attached_session_id")
+	assert.NotContains(t, one, "last_saved_at")
+
+	buf.Reset()
+	require.NoError(t, (&HostedAgentWorkspace{}).JSON(&buf))
+	assert.JSONEq(t, "[]", buf.String(), "an empty list is an array, not null")
+}
+
+func TestHostedAgentWorkspaceColsAndKV(t *testing.T) {
+	d := &HostedAgentWorkspace{}
+	assert.Equal(t,
+		[]string{"ID", "Name", "State", "Size (GiB)", "Used", "Attached Session", "Last Saved", "Created"},
+		func() []string {
+			var out []string
+			for _, c := range d.Cols() {
+				out = append(out, d.ColMap()[c])
+			}
+			return out
+		}())
+
+	saved := godo.Timestamp{Time: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
+	d.Workspaces = []godo.HostedAgentWorkspace{
+		{
+			WorkspaceID:       "ws_1",
+			Name:              "notes",
+			State:             godo.HostedAgentWorkspaceStateAttached,
+			AttachedSessionID: "sess_1",
+			SizeGibibytes:     10,
+			BytesUsed:         3 * 1024 * 1024,
+			LastSavedAt:       &saved,
+			CreatedAt:         godo.Timestamp{Time: time.Date(2026, 10, 1, 8, 30, 0, 0, time.UTC)},
+		},
+		// Never saved, nothing attached.
+		{WorkspaceID: "ws_2", State: godo.HostedAgentWorkspaceStateAvailable, SizeGibibytes: 1},
+	}
+	kv := d.KV()
+	require.Len(t, kv, 2)
+	assert.Equal(t, "ws_1", kv[0]["WorkspaceID"])
+	assert.Equal(t, "ATTACHED", kv[0]["State"])
+	assert.Equal(t, int32(10), kv[0]["SizeGibibytes"])
+	assert.Equal(t, "3.00 MiB", kv[0]["BytesUsed"])
+	assert.Equal(t, "sess_1", kv[0]["AttachedSessionID"])
+	assert.Equal(t, "2026-10-05T12:00:00Z", kv[0]["LastSavedAt"])
+	assert.Equal(t, "2026-10-01T08:30:00Z", kv[0]["CreatedAt"])
+
+	assert.Equal(t, "", kv[1]["LastSavedAt"], "not saved yet is blank, not a zero time")
+	assert.Equal(t, "", kv[1]["AttachedSessionID"])
+	assert.Equal(t, "0 B", kv[1]["BytesUsed"])
 }
