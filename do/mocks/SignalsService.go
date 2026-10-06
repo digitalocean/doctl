@@ -44,7 +44,7 @@ func (m *MockSignalsService) CreateExport(req *do.SignalsCreateExportRequest) (*
 }
 
 // CreateExport indicates an expected call of CreateExport.
-func (mr *MockSignalsServiceMockRecorder) CreateExport(req interface{}) *gomock.Call {
+func (mr *MockSignalsServiceMockRecorder) CreateExport(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExport", reflect.TypeOf((*MockSignalsService)(nil).CreateExport), req)
 }
@@ -59,7 +59,7 @@ func (m *MockSignalsService) GetConsent(agentID string) (*do.SignalsConsent, err
 }
 
 // GetConsent indicates an expected call of GetConsent.
-func (mr *MockSignalsServiceMockRecorder) GetConsent(agentID interface{}) *gomock.Call {
+func (mr *MockSignalsServiceMockRecorder) GetConsent(agentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsent", reflect.TypeOf((*MockSignalsService)(nil).GetConsent), agentID)
 }
@@ -74,7 +74,7 @@ func (m *MockSignalsService) GetExport(exportID string) (*do.SignalsExport, erro
 }
 
 // GetExport indicates an expected call of GetExport.
-func (mr *MockSignalsServiceMockRecorder) GetExport(exportID interface{}) *gomock.Call {
+func (mr *MockSignalsServiceMockRecorder) GetExport(exportID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExport", reflect.TypeOf((*MockSignalsService)(nil).GetExport), exportID)
 }
@@ -89,7 +89,7 @@ func (m *MockSignalsService) GetExportDownload(exportID string) (*do.SignalsExpo
 }
 
 // GetExportDownload indicates an expected call of GetExportDownload.
-func (mr *MockSignalsServiceMockRecorder) GetExportDownload(exportID interface{}) *gomock.Call {
+func (mr *MockSignalsServiceMockRecorder) GetExportDownload(exportID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExportDownload", reflect.TypeOf((*MockSignalsService)(nil).GetExportDownload), exportID)
 }
@@ -149,7 +149,7 @@ func (m *MockSignalsService) ListExports(opts *do.SignalsExportListOptions) (do.
 }
 
 // ListExports indicates an expected call of ListExports.
-func (mr *MockSignalsServiceMockRecorder) ListExports(opts interface{}) *gomock.Call {
+func (mr *MockSignalsServiceMockRecorder) ListExports(opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExports", reflect.TypeOf((*MockSignalsService)(nil).ListExports), opts)
 }
@@ -164,7 +164,7 @@ func (m *MockSignalsService) SetConsent(agentID string, enabled bool) (*do.Signa
 }
 
 // SetConsent indicates an expected call of SetConsent.
-func (mr *MockSignalsServiceMockRecorder) SetConsent(agentID, enabled interface{}) *gomock.Call {
+func (mr *MockSignalsServiceMockRecorder) SetConsent(agentID, enabled any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConsent", reflect.TypeOf((*MockSignalsService)(nil).SetConsent), agentID, enabled)
 }
@@ -179,7 +179,7 @@ func (m *MockSignalsService) UpsertExportTrigger(req *do.SignalsExportTriggerUps
 }
 
 // UpsertExportTrigger indicates an expected call of UpsertExportTrigger.
-func (mr *MockSignalsServiceMockRecorder) UpsertExportTrigger(req interface{}) *gomock.Call {
+func (mr *MockSignalsServiceMockRecorder) UpsertExportTrigger(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertExportTrigger", reflect.TypeOf((*MockSignalsService)(nil).UpsertExportTrigger), req)
 }
