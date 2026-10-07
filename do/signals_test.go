@@ -47,10 +47,9 @@ func TestCreateExport_SendsSignalTypeNotSignalTypes(t *testing.T) {
 		_, _ = w.Write([]byte(liveExportJobJSON))
 	})
 
-	job, err := svc.CreateExport(&SignalsCreateExportRequest{
+	job, err := svc.CreateExport(&godo.SignalsCreateExportRequest{
 		AgentID:    "a1b2c3d4-e29b-41d4-a716-446655440000",
 		SignalType: []string{"MisalignmentCorrection"},
-		SessionIDs: []string{"sess-1"},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", job.ExportID)
@@ -68,7 +67,10 @@ func TestListExports_ReadsEdgesNotExports(t *testing.T) {
 		_, _ = w.Write([]byte(`{"edges":[{"cursor":"c1","node":` + liveExportJobJSON + `}],"page_info":{"has_next_page":true,"end_cursor":"c1"}}`))
 	})
 
-	jobs, err := svc.ListExports(&SignalsExportListOptions{AgentID: "agt", Limit: 20})
+	jobs, err := svc.ListExports(&godo.SignalsListExportsOptions{
+		SignalsCursorPageOptions: godo.SignalsCursorPageOptions{Limit: 20},
+		AgentID:                 "agt",
+	})
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
 	assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", jobs[0].ExportID)
@@ -122,6 +124,6 @@ func TestSetConsentUnwrapsConsentEnvelope(t *testing.T) {
 	})
 	c, err := svc.SetConsent("agt-1", true)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(1), c.ID)
+	assert.Equal(t, int64(1), c.ID)
 	assert.True(t, c.Enabled)
 }
