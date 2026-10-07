@@ -19,6 +19,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
@@ -63,9 +64,7 @@ func SignalsExport() *Command {
 
 Optional filters match signals-api POST /v1/signals/exports:
 - --signal-type (repeatable) filters instances in the artifact; JSON field is signal_type, not signal_types
-- --session-ids limits the cohort
 - --start-time / --end-time are Unix epoch seconds (inclusive / exclusive)
-- --concerning, --signal-category, --signal-layer
 
 Cohorts over 2000 segments are rejected. Empty cohorts are allowed.
 Use GET .../download after status is complete; the job JSON has no download_url.`,
@@ -74,12 +73,8 @@ Use GET .../download after status is complete; the job JSON has no download_url.
 	)
 	AddStringFlag(cmdExportCreate, doctl.ArgSignalsAgentID, "", "", "The agent UUID to export data for.", requiredOpt())
 	AddStringSliceFlag(cmdExportCreate, doctl.ArgSignalsExportSignalType, "", []string{}, "Signal types to include (JSON: signal_type). Repeatable. Catalog: doctl signals export options.")
-	AddStringSliceFlag(cmdExportCreate, doctl.ArgSignalsExportSessionIDs, "", []string{}, "Optional session IDs to include (OR). Omit for all sessions.")
 	AddIntFlag(cmdExportCreate, doctl.ArgSignalsExportStartTime, "", 0, "Start time filter (Unix epoch seconds, inclusive).")
 	AddIntFlag(cmdExportCreate, doctl.ArgSignalsExportEndTime, "", 0, "End time filter (Unix epoch seconds, exclusive).")
-	AddBoolFlag(cmdExportCreate, doctl.ArgSignalsExportConcerning, "", false, "If set, only export concerning segments.")
-	AddStringFlag(cmdExportCreate, doctl.ArgSignalsExportSignalCategory, "", "", "Optional signal category filter.")
-	AddStringFlag(cmdExportCreate, doctl.ArgSignalsExportSignalLayer, "", "", "Optional signal layer filter.")
 
 	CmdBuilder(
 		cmd,
@@ -165,10 +160,12 @@ func RunSignalsExportList(c *CmdConfig) error {
 		return err
 	}
 
-	exports, err := c.Signals().ListExports(&do.SignalsExportListOptions{
+	exports, err := c.Signals().ListExports(&godo.SignalsListExportsOptions{
+		SignalsCursorPageOptions: godo.SignalsCursorPageOptions{
+			Limit: limit,
+			After: after,
+		},
 		AgentID: agentID,
-		Limit:   limit,
-		After:   after,
 	})
 	if err != nil {
 		return err
@@ -189,10 +186,6 @@ func RunSignalsExportCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	sessionIDs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSignalsExportSessionIDs)
-	if err != nil {
-		return err
-	}
 	startTime, err := c.Doit.GetInt(c.NS, doctl.ArgSignalsExportStartTime)
 	if err != nil {
 		return err
@@ -201,23 +194,10 @@ func RunSignalsExportCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	concerning, err := c.Doit.GetBool(c.NS, doctl.ArgSignalsExportConcerning)
-	if err != nil {
-		return err
-	}
-	category, err := c.Doit.GetString(c.NS, doctl.ArgSignalsExportSignalCategory)
-	if err != nil {
-		return err
-	}
-	layer, err := c.Doit.GetString(c.NS, doctl.ArgSignalsExportSignalLayer)
-	if err != nil {
-		return err
-	}
 
-	req := &do.SignalsCreateExportRequest{
+	req := &godo.SignalsCreateExportRequest{
 		AgentID:    agentID,
 		SignalType: signalType,
-		SessionIDs: sessionIDs,
 	}
 	if startTime > 0 {
 		st := int64(startTime)
@@ -226,15 +206,6 @@ func RunSignalsExportCreate(c *CmdConfig) error {
 	if endTime > 0 {
 		et := int64(endTime)
 		req.EndTime = &et
-	}
-	if concerning {
-		req.Concerning = &concerning
-	}
-	if category != "" {
-		req.SignalCategory = &category
-	}
-	if layer != "" {
-		req.SignalLayer = &layer
 	}
 
 	export, err := c.Signals().CreateExport(req)

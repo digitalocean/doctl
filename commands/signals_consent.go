@@ -72,7 +72,7 @@ func SignalsConsent() *Command {
 		"Get Signals consent for an agent",
 		"Retrieves the current Signals collection consent status for one agent.",
 		Writer, aliasOpt("g"),
-		displayerType(&displayers.SignalsConsent{}),
+		displayerType(&displayers.SignalsAgentConsent{}),
 	)
 	AddStringFlag(cmdConsentGet, doctl.ArgSignalsAgentID, "", "", "The agent ID to query consent for.", requiredOpt())
 
@@ -86,7 +86,7 @@ func SignalsConsent() *Command {
 		displayerType(&displayers.SignalsConsent{}),
 	)
 	AddStringFlag(cmdConsentSet, doctl.ArgSignalsAgentID, "", "", "The agent ID to set consent for.", requiredOpt())
-	AddBoolFlag(cmdConsentSet, doctl.ArgSignalsEnabled, "", true, "Enable (true) or disable (false) Signals collection.")
+	AddBoolFlag(cmdConsentSet, doctl.ArgSignalsEnabled, "", false, "Enable (true) or disable (false) Signals collection.", requiredOpt())
 
 	return cmd
 }
@@ -111,7 +111,7 @@ func RunSignalsConsentGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.SignalsConsent{Consents: do.SignalsConsents{*consent}})
+	return c.Display(&displayers.SignalsAgentConsent{Consents: []do.SignalsAgentConsent{*consent}})
 }
 
 // RunSignalsConsentSet enables or disables Signals consent for one agent.

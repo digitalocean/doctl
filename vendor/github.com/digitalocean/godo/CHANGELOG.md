@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.217.0] - 2026-10-01
+
+- #1130 - @aguan-hue - Syncing Model Evaluation fields from gen-ai Public API
+
 ## [1.216.0] - 2026-09-30
 
 - #1134 - @kishlay-singh-DO - Rename the GradientAI client to Agent Platform.

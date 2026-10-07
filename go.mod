@@ -150,3 +150,5 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
+
+replace github.com/digitalocean/godo => github.com/sauravk-digitalocean/godo v1.215.1-0.20261007070009-fa6dbeb2cdf3

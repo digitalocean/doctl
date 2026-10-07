@@ -57,17 +57,13 @@ func (d *SignalsExport) ColMap() map[string]string {
 func (d *SignalsExport) KV() []map[string]any {
 	out := make([]map[string]any, len(d.Exports))
 	for i, e := range d.Exports {
-		agentID := ""
-		if e.AgentID != nil {
-			agentID = *e.AgentID
-		}
 		completedAt := ""
 		if e.CompletedAt != nil {
 			completedAt = strconv.FormatInt(*e.CompletedAt, 10)
 		}
 		out[i] = map[string]any{
 			"ExportID":    e.ExportID,
-			"AgentID":     agentID,
+			"AgentID":     e.AgentID,
 			"Status":      e.Status,
 			"SignalType":  strings.Join(e.Filters.SignalType, ", "),
 			"CreatedAt":   e.CreatedAt,

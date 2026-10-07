@@ -20,7 +20,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 )
 
-// SignalsConsent displays Signals consent records.
+// SignalsConsent displays Signals consent records (from list/set).
 type SignalsConsent struct {
 	Consents do.SignalsConsents
 }
@@ -59,6 +59,54 @@ func (d *SignalsConsent) KV() []map[string]any {
 			"TeamID":    c.TeamID,
 			"AgentID":   c.AgentID,
 			"Enabled":   strconv.FormatBool(c.Enabled),
+			"UpdatedAt": c.UpdatedAt,
+		}
+	}
+	return out
+}
+
+// SignalsAgentConsent displays a single agent consent record (from get).
+type SignalsAgentConsent struct {
+	Consents []do.SignalsAgentConsent
+}
+
+var _ Displayable = &SignalsAgentConsent{}
+
+func (d *SignalsAgentConsent) JSON(out io.Writer) error {
+	return writeJSON(d.Consents, out)
+}
+
+func (d *SignalsAgentConsent) Cols() []string {
+	return []string{
+		"ID",
+		"TeamID",
+		"AgentID",
+		"Enabled",
+		"Allowed",
+		"UpdatedAt",
+	}
+}
+
+func (d *SignalsAgentConsent) ColMap() map[string]string {
+	return map[string]string{
+		"ID":        "ID",
+		"TeamID":    "Team ID",
+		"AgentID":   "Agent ID",
+		"Enabled":   "Enabled",
+		"Allowed":   "Allowed",
+		"UpdatedAt": "Updated At",
+	}
+}
+
+func (d *SignalsAgentConsent) KV() []map[string]any {
+	out := make([]map[string]any, len(d.Consents))
+	for i, c := range d.Consents {
+		out[i] = map[string]any{
+			"ID":        c.ID,
+			"TeamID":    c.TeamID,
+			"AgentID":   c.AgentID,
+			"Enabled":   strconv.FormatBool(c.Enabled),
+			"Allowed":   strconv.FormatBool(c.Allowed),
 			"UpdatedAt": c.UpdatedAt,
 		}
 	}

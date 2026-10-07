@@ -16,95 +16,48 @@ package do
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"time"
+	"net/http"
 
 	"github.com/digitalocean/godo"
 )
 
 const (
-	signalsConsentBasePath       = "/v1/consent"
-	signalsExportsBasePath       = "/v1/signals/exports"
-	signalsExportTriggerBasePath = "/v1/signals/export-trigger"
+	signalsExportTriggerBasePath = "v1/signals/export-trigger"
 )
 
-// SignalsConsent is one (team, agent) collection-consent row from
-// consent-gateway GET/PUT /v1/consent.
+// SignalsConsent wraps a godo.SignalsConsentRecord.
 type SignalsConsent struct {
-	ID        uint64    `json:"id,omitempty"`
-	TeamID    uint64    `json:"team_id"`
-	AgentID   string    `json:"agent_id"`
-	Enabled   bool      `json:"enabled"`
-	Allowed   *bool     `json:"allowed,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	*godo.SignalsConsentRecord
 }
 
 // SignalsConsents is a slice of SignalsConsent.
 type SignalsConsents []SignalsConsent
 
-// SignalsExport is signals-api ExportJob. Timestamps are Unix seconds.
-// Status: queued, running, complete, failed, expired.
-type SignalsExport struct {
-	ExportID     string               `json:"export_id"`
-	AgentID      *string              `json:"agent_id,omitempty"`
-	Status       string               `json:"status"`
-	Filters      SignalsExportFilters `json:"filters"`
-	CreatedAt    int64                `json:"created_at"`
-	CompletedAt  *int64               `json:"completed_at"`
-	ExpiresAt    *int64               `json:"expires_at"`
-	ErrorMessage *string              `json:"error_message"`
+// SignalsAgentConsent wraps a godo.SignalsAgentConsent.
+type SignalsAgentConsent struct {
+	*godo.SignalsAgentConsent
 }
 
-// SignalsExportFilters is the create-time filter snapshot. JSON key is
-// signal_type (singular), matching POST /v1/signals/exports.
-type SignalsExportFilters struct {
-	SessionIDs     []string `json:"session_ids,omitempty"`
-	SignalType     []string `json:"signal_type,omitempty"`
-	SignalCategory *string  `json:"signal_category,omitempty"`
-	SignalLayer    *string  `json:"signal_layer,omitempty"`
-	Concerning     *bool    `json:"concerning,omitempty"`
-	StartTime      *int64   `json:"start_time,omitempty"`
-	EndTime        *int64   `json:"end_time,omitempty"`
+// SignalsExport wraps a godo.SignalsExportJob.
+type SignalsExport struct {
+	*godo.SignalsExportJob
 }
 
 // SignalsExports is a slice of SignalsExport.
 type SignalsExports []SignalsExport
 
-// SignalsExportListOptions holds filters for listing exports.
-type SignalsExportListOptions struct {
-	AgentID string
-	Limit   int
-	After   string
-}
-
-// SignalsCreateExportRequest is POST /v1/signals/exports.
-// Do not send signal_types — the API rejects unknown fields.
-type SignalsCreateExportRequest struct {
-	AgentID        string   `json:"agent_id"`
-	SessionIDs     []string `json:"session_ids,omitempty"`
-	SignalType     []string `json:"signal_type,omitempty"`
-	SignalCategory *string  `json:"signal_category,omitempty"`
-	SignalLayer    *string  `json:"signal_layer,omitempty"`
-	Concerning     *bool    `json:"concerning,omitempty"`
-	StartTime      *int64   `json:"start_time,omitempty"`
-	EndTime        *int64   `json:"end_time,omitempty"`
-}
-
-// SignalsExportDownload is GET /v1/signals/exports/{id}/download.
+// SignalsExportDownload wraps a godo.SignalsExportDownload.
 type SignalsExportDownload struct {
-	DownloadURL string `json:"download_url"`
-	ExpiresAt   int64  `json:"expires_at"`
+	*godo.SignalsExportDownload
 }
 
-// SignalsExportOptions is GET /v1/signals/exports/options.
+// SignalsExportOptions wraps a godo.SignalsExportOptions.
 type SignalsExportOptions struct {
-	Filters struct {
-		SignalType []string `json:"signal_type"`
-	} `json:"filters"`
+	*godo.SignalsExportOptions
 }
 
 // SignalsExportTrigger is GET/PUT /v1/signals/export-trigger.
-// This is the only export API that uses signal_types (plural).
+// Not yet in godo; hand-rolled for now.
 type SignalsExportTrigger struct {
 	Enabled     bool     `json:"enabled"`
 	Cadence     string   `json:"cadence"`
@@ -119,15 +72,14 @@ type SignalsExportTriggerUpsertRequest struct {
 	SignalTypes []string `json:"signal_types,omitempty"`
 }
 
-// SignalsService talks to consent-gateway and signals-api over the public
-// Oceanus paths (same as Cloud UI).
+// SignalsService talks to consent-gateway and signals-api via godo.
 type SignalsService interface {
 	ListConsents() (SignalsConsents, error)
-	GetConsent(agentID string) (*SignalsConsent, error)
+	GetConsent(agentID string) (*SignalsAgentConsent, error)
 	SetConsent(agentID string, enabled bool) (*SignalsConsent, error)
 
-	ListExports(opts *SignalsExportListOptions) (SignalsExports, error)
-	CreateExport(req *SignalsCreateExportRequest) (*SignalsExport, error)
+	ListExports(opts *godo.SignalsListExportsOptions) (SignalsExports, error)
+	CreateExport(req *godo.SignalsCreateExportRequest) (*SignalsExport, error)
 	GetExport(exportID string) (*SignalsExport, error)
 	GetExportDownload(exportID string) (*SignalsExportDownload, error)
 	GetExportOptions() (*SignalsExportOptions, error)
@@ -147,175 +99,84 @@ func NewSignalsService(client *godo.Client) SignalsService {
 	return &signalsService{client: client}
 }
 
-type listConsentsResponse struct {
-	TeamID   uint64           `json:"team_id"`
-	Consents []SignalsConsent `json:"consents"`
-}
-
 func (s *signalsService) ListConsents() (SignalsConsents, error) {
-	req, err := s.client.NewRequest(context.TODO(), "GET", signalsConsentBasePath, nil)
+	resp, _, err := s.client.Signals.ListConsents(context.TODO())
 	if err != nil {
 		return nil, err
 	}
-	var resp listConsentsResponse
-	_, err = s.client.Do(context.TODO(), req, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return resp.Consents, nil
-}
-
-func (s *signalsService) GetConsent(agentID string) (*SignalsConsent, error) {
-	if agentID == "" {
-		return nil, fmt.Errorf("agent-id is required")
-	}
-	path := fmt.Sprintf("%s/%s", signalsConsentBasePath, url.PathEscape(agentID))
-	req, err := s.client.NewRequest(context.TODO(), "GET", path, nil)
-	if err != nil {
-		return nil, err
-	}
-	var consent SignalsConsent
-	_, err = s.client.Do(context.TODO(), req, &consent)
-	if err != nil {
-		return nil, err
-	}
-	return &consent, nil
-}
-
-type setConsentRequest struct {
-	Enabled bool `json:"enabled"`
-}
-
-type setConsentResponse struct {
-	Consent SignalsConsent `json:"consent"`
-}
-
-func (s *signalsService) SetConsent(agentID string, enabled bool) (*SignalsConsent, error) {
-	if agentID == "" {
-		return nil, fmt.Errorf("agent-id is required")
-	}
-	path := fmt.Sprintf("%s/%s", signalsConsentBasePath, url.PathEscape(agentID))
-	req, err := s.client.NewRequest(context.TODO(), "PUT", path, &setConsentRequest{Enabled: enabled})
-	if err != nil {
-		return nil, err
-	}
-	var resp setConsentResponse
-	_, err = s.client.Do(context.TODO(), req, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp.Consent, nil
-}
-
-type listExportsResponse struct {
-	Edges []struct {
-		Cursor string        `json:"cursor"`
-		Node   SignalsExport `json:"node"`
-	} `json:"edges"`
-	PageInfo struct {
-		HasNextPage bool    `json:"has_next_page"`
-		EndCursor   *string `json:"end_cursor,omitempty"`
-	} `json:"page_info"`
-}
-
-func (s *signalsService) ListExports(opts *SignalsExportListOptions) (SignalsExports, error) {
-	path := signalsExportsBasePath
-	if opts != nil {
-		q := url.Values{}
-		if opts.AgentID != "" {
-			q.Set("agent_id", opts.AgentID)
-		}
-		if opts.Limit > 0 {
-			q.Set("limit", fmt.Sprintf("%d", opts.Limit))
-		}
-		if opts.After != "" {
-			q.Set("after", opts.After)
-		}
-		if encoded := q.Encode(); encoded != "" {
-			path += "?" + encoded
-		}
-	}
-	req, err := s.client.NewRequest(context.TODO(), "GET", path, nil)
-	if err != nil {
-		return nil, err
-	}
-	var resp listExportsResponse
-	_, err = s.client.Do(context.TODO(), req, &resp)
-	if err != nil {
-		return nil, err
-	}
-	out := make(SignalsExports, 0, len(resp.Edges))
-	for _, e := range resp.Edges {
-		out = append(out, e.Node)
+	out := make(SignalsConsents, len(resp.Consents))
+	for i := range resp.Consents {
+		out[i] = SignalsConsent{SignalsConsentRecord: &resp.Consents[i]}
 	}
 	return out, nil
 }
 
-func (s *signalsService) CreateExport(createReq *SignalsCreateExportRequest) (*SignalsExport, error) {
-	if createReq == nil || createReq.AgentID == "" {
-		return nil, fmt.Errorf("agent-id is required")
-	}
-	req, err := s.client.NewRequest(context.TODO(), "POST", signalsExportsBasePath, createReq)
+func (s *signalsService) GetConsent(agentID string) (*SignalsAgentConsent, error) {
+	consent, _, err := s.client.Signals.GetAgentConsent(context.TODO(), agentID)
 	if err != nil {
 		return nil, err
 	}
-	var export SignalsExport
-	_, err = s.client.Do(context.TODO(), req, &export)
+	return &SignalsAgentConsent{SignalsAgentConsent: consent}, nil
+}
+
+func (s *signalsService) SetConsent(agentID string, enabled bool) (*SignalsConsent, error) {
+	record, _, err := s.client.Signals.SetAgentConsent(context.TODO(), agentID, enabled)
 	if err != nil {
 		return nil, err
 	}
-	return &export, nil
+	return &SignalsConsent{SignalsConsentRecord: record}, nil
+}
+
+func (s *signalsService) ListExports(opts *godo.SignalsListExportsOptions) (SignalsExports, error) {
+	resp, _, err := s.client.Signals.ListExports(context.TODO(), opts)
+	if err != nil {
+		return nil, err
+	}
+	out := make(SignalsExports, len(resp.Edges))
+	for i, e := range resp.Edges {
+		node := e.Node
+		out[i] = SignalsExport{SignalsExportJob: &node}
+	}
+	return out, nil
+}
+
+func (s *signalsService) CreateExport(req *godo.SignalsCreateExportRequest) (*SignalsExport, error) {
+	job, _, err := s.client.Signals.CreateExport(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &SignalsExport{SignalsExportJob: job}, nil
 }
 
 func (s *signalsService) GetExport(exportID string) (*SignalsExport, error) {
-	if exportID == "" {
-		return nil, fmt.Errorf("export-id is required")
-	}
-	path := fmt.Sprintf("%s/%s", signalsExportsBasePath, url.PathEscape(exportID))
-	req, err := s.client.NewRequest(context.TODO(), "GET", path, nil)
+	job, _, err := s.client.Signals.GetExport(context.TODO(), exportID)
 	if err != nil {
 		return nil, err
 	}
-	var export SignalsExport
-	_, err = s.client.Do(context.TODO(), req, &export)
-	if err != nil {
-		return nil, err
-	}
-	return &export, nil
+	return &SignalsExport{SignalsExportJob: job}, nil
 }
 
 func (s *signalsService) GetExportDownload(exportID string) (*SignalsExportDownload, error) {
-	if exportID == "" {
-		return nil, fmt.Errorf("export-id is required")
-	}
-	path := fmt.Sprintf("%s/%s/download", signalsExportsBasePath, url.PathEscape(exportID))
-	req, err := s.client.NewRequest(context.TODO(), "GET", path, nil)
+	dl, _, err := s.client.Signals.GetExportDownload(context.TODO(), exportID)
 	if err != nil {
 		return nil, err
 	}
-	var dl SignalsExportDownload
-	_, err = s.client.Do(context.TODO(), req, &dl)
-	if err != nil {
-		return nil, err
-	}
-	return &dl, nil
+	return &SignalsExportDownload{SignalsExportDownload: dl}, nil
 }
 
 func (s *signalsService) GetExportOptions() (*SignalsExportOptions, error) {
-	req, err := s.client.NewRequest(context.TODO(), "GET", signalsExportsBasePath+"/options", nil)
+	opts, _, err := s.client.Signals.GetExportOptions(context.TODO())
 	if err != nil {
 		return nil, err
 	}
-	var opts SignalsExportOptions
-	_, err = s.client.Do(context.TODO(), req, &opts)
-	if err != nil {
-		return nil, err
-	}
-	return &opts, nil
+	return &SignalsExportOptions{SignalsExportOptions: opts}, nil
 }
 
+// GetExportTrigger and UpsertExportTrigger are not yet in godo SignalsService.
+// These use hand-rolled HTTP until godo adds them.
+
 func (s *signalsService) GetExportTrigger() (*SignalsExportTrigger, error) {
-	req, err := s.client.NewRequest(context.TODO(), "GET", signalsExportTriggerBasePath, nil)
+	req, err := s.client.NewRequest(context.TODO(), http.MethodGet, signalsExportTriggerBasePath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +192,7 @@ func (s *signalsService) UpsertExportTrigger(in *SignalsExportTriggerUpsertReque
 	if in == nil {
 		return nil, fmt.Errorf("export trigger request is required")
 	}
-	req, err := s.client.NewRequest(context.TODO(), "PUT", signalsExportTriggerBasePath, in)
+	req, err := s.client.NewRequest(context.TODO(), http.MethodPut, signalsExportTriggerBasePath, in)
 	if err != nil {
 		return nil, err
 	}
