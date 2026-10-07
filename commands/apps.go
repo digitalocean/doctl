@@ -875,21 +875,15 @@ func RunAppsGetLogs(c *CmdConfig) error {
 			if err != nil {
 				return nil, err
 			}
-			r := strings.NewReader(data.Data)
-
+			content := data.Data
 			if noPrefixFlag {
-				content, err := io.ReadAll(r)
-				if err != nil {
-					return nil, err
-				}
-				logParts := strings.SplitN(string(content), " ", 3)
+				logParts := strings.SplitN(content, " ", 3)
 				if len(logParts) > 2 {
-					jsonLog := logParts[2]
-					return strings.NewReader(jsonLog), nil
+					content = logParts[2]
 				}
 			}
 
-			return r, nil
+			return strings.NewReader(content), nil
 		}
 
 		token := url.Query().Get("token")
