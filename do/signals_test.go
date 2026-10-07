@@ -69,7 +69,7 @@ func TestListExports_ReadsEdgesNotExports(t *testing.T) {
 
 	jobs, err := svc.ListExports(&godo.SignalsListExportsOptions{
 		SignalsCursorPageOptions: godo.SignalsCursorPageOptions{Limit: 20},
-		AgentID:                 "agt",
+		AgentID:                  "agt",
 	})
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
