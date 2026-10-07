@@ -79,7 +79,7 @@ Use GET .../download after status is complete; the job JSON has no download_url.
 	CmdBuilder(
 		cmd,
 		RunSignalsExportGet,
-		"get",
+		"get <export-id>",
 		"Get a Signals export",
 		"Retrieves a Signals export job by ID. Poll until status is complete, then run `download`. The job body does not include a download URL.",
 		Writer, aliasOpt("g"),
@@ -89,7 +89,7 @@ Use GET .../download after status is complete; the job JSON has no download_url.
 	CmdBuilder(
 		cmd,
 		RunSignalsExportDownload,
-		"download",
+		"download <export-id>",
 		"Get a Signals export download URL",
 		"Mints a ~15 minute pre-signed URL for a completed export. 404 if not complete; 410 if the artifact expired.",
 		Writer, aliasOpt("dl"),
