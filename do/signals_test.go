@@ -76,21 +76,13 @@ func TestListExports_ReadsEdgesNotExports(t *testing.T) {
 	assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", jobs[0].ExportID)
 }
 
-func TestGetExportDownloadAndOptionsAndTrigger(t *testing.T) {
+func TestGetExportDownloadAndOptions(t *testing.T) {
 	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/v1/signals/exports/exp-1/download":
 			_, _ = w.Write([]byte(`{"download_url":"https://x","expires_at":9}`))
 		case r.URL.Path == "/v1/signals/exports/options":
 			_, _ = w.Write([]byte(`{"filters":{"signal_type":["A"]}}`))
-		case r.URL.Path == "/v1/signals/export-trigger" && r.Method == http.MethodGet:
-			_, _ = w.Write([]byte(`{"enabled":false,"cadence":"weekly","signal_types":[]}`))
-		case r.URL.Path == "/v1/signals/export-trigger" && r.Method == http.MethodPut:
-			var body SignalsExportTriggerUpsertRequest
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			assert.True(t, body.Enabled)
-			assert.Equal(t, []string{"A"}, body.SignalTypes)
-			_, _ = w.Write([]byte(`{"enabled":true,"cadence":"weekly","signal_types":["A"],"updated_at":1}`))
 		default:
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -103,17 +95,6 @@ func TestGetExportDownloadAndOptionsAndTrigger(t *testing.T) {
 	opts, err := svc.GetExportOptions()
 	require.NoError(t, err)
 	assert.Equal(t, []string{"A"}, opts.Filters.SignalType)
-
-	trig, err := svc.GetExportTrigger()
-	require.NoError(t, err)
-	assert.False(t, trig.Enabled)
-
-	up, err := svc.UpsertExportTrigger(&SignalsExportTriggerUpsertRequest{
-		Enabled:     true,
-		SignalTypes: []string{"A"},
-	})
-	require.NoError(t, err)
-	assert.True(t, up.Enabled)
 }
 
 func TestSetConsentUnwrapsConsentEnvelope(t *testing.T) {
@@ -126,4 +107,37 @@ func TestSetConsentUnwrapsConsentEnvelope(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), c.ID)
 	assert.True(t, c.Enabled)
+}
+
+func TestListAgentSessions(t *testing.T) {
+	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v1/signals/agents/agt-1/sessions", r.URL.Path)
+		assert.Equal(t, "10", r.URL.Query().Get("limit"))
+		_, _ = w.Write([]byte(`{"edges":[{"cursor":"c1","node":{"session_id":"sess-1","total_turns":5,"started_at":"2026-01-01T00:00:00Z","duration_seconds":300,"signal_count":2}}],"page_info":{"has_next_page":false}}`))
+	})
+
+	sessions, err := svc.ListAgentSessions("agt-1", &godo.SignalsListAgentSessionsOptions{
+		SignalsCursorPageOptions: godo.SignalsCursorPageOptions{Limit: 10},
+	})
+	require.NoError(t, err)
+	require.Len(t, sessions, 1)
+	assert.Equal(t, "sess-1", sessions[0].SessionID)
+	assert.Equal(t, 5, sessions[0].TotalTurns)
+	assert.Equal(t, 2, sessions[0].SignalCount)
+}
+
+func TestListSessionDialogues(t *testing.T) {
+	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v1/signals/sessions/sess-1/dialogues", r.URL.Path)
+		_, _ = w.Write([]byte(`{"session_id":"sess-1","edges":[{"cursor":"c1","node":{"id":1,"run_id":"run-1","created_at":"2026-01-01T00:00:00Z","sequence":1,"user_message":"hello","steps":[],"run_status":"complete","segment_id":"seg-1","segment_seq":0,"signals":[]}}],"page_info":{"has_next_page":false}}`))
+	})
+
+	dialogues, err := svc.ListSessionDialogues("sess-1", &godo.SignalsListDialoguesOptions{
+		SignalsCursorPageOptions: godo.SignalsCursorPageOptions{Limit: 10},
+	})
+	require.NoError(t, err)
+	require.Len(t, dialogues, 1)
+	assert.Equal(t, int64(1), dialogues[0].ID)
+	assert.Equal(t, "hello", dialogues[0].UserMessage)
+	assert.Equal(t, "seg-1", dialogues[0].SegmentID)
 }

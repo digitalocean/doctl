@@ -101,46 +101,10 @@ Use GET .../download after status is complete; the job JSON has no download_url.
 		RunSignalsExportOptions,
 		"options",
 		"List Signals export filter options",
-		"Returns the static signal_type catalog used by create and by weekly export-trigger.",
+		"Returns the static signal_type catalog used by create.",
 		Writer,
 		displayerType(&displayers.SignalsExportOptions{}),
 	)
-
-	return cmd
-}
-
-// SignalsExportTrigger creates `doctl signals export-trigger`.
-func SignalsExportTrigger() *Command {
-	cmd := &Command{
-		Command: &cobra.Command{
-			Use:   "export-trigger",
-			Short: "Manage weekly Signals scheduled exports",
-			Long:  "Team-level weekly export opt-in (GET/PUT /v1/signals/export-trigger). Separate from per-agent collection consent. This API uses signal_types (plural).",
-		},
-	}
-
-	CmdBuilder(
-		cmd,
-		RunSignalsExportTriggerGet,
-		"get",
-		"Get the team's weekly export trigger",
-		"Returns the stored trigger, or a synthetic disabled trigger if none has been saved.",
-		Writer, aliasOpt("g"),
-		displayerType(&displayers.SignalsExportTrigger{}),
-	)
-
-	cmdSet := CmdBuilder(
-		cmd,
-		RunSignalsExportTriggerSet,
-		"set",
-		"Create or update the team's weekly export trigger",
-		"Upserts the weekly trigger. enabled=true requires at least one catalog signal type (this request or previously stored). enabled=false with empty signal-types preserves stored types.",
-		Writer, aliasOpt("s"),
-		displayerType(&displayers.SignalsExportTrigger{}),
-	)
-	AddBoolFlag(cmdSet, doctl.ArgSignalsEnabled, "", false, "Enable (true) or disable (false) weekly scheduled exports.", requiredOpt())
-	AddStringSliceFlag(cmdSet, doctl.ArgSignalsExportTriggerSignalTypes, "", []string{}, "Signal types for the weekly cron (JSON: signal_types). Catalog: doctl signals export options.")
-	AddStringFlag(cmdSet, doctl.ArgSignalsExportCadence, "", "weekly", "Cadence. Only weekly is accepted.")
 
 	return cmd
 }
@@ -246,39 +210,4 @@ func RunSignalsExportOptions(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.SignalsExportOptions{Options: *opts})
-}
-
-// RunSignalsExportTriggerGet fetches the weekly trigger.
-func RunSignalsExportTriggerGet(c *CmdConfig) error {
-	trig, err := c.Signals().GetExportTrigger()
-	if err != nil {
-		return err
-	}
-	return c.Display(&displayers.SignalsExportTrigger{Triggers: []do.SignalsExportTrigger{*trig}})
-}
-
-// RunSignalsExportTriggerSet upserts the weekly trigger.
-func RunSignalsExportTriggerSet(c *CmdConfig) error {
-	enabled, err := c.Doit.GetBool(c.NS, doctl.ArgSignalsEnabled)
-	if err != nil {
-		return err
-	}
-	types, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSignalsExportTriggerSignalTypes)
-	if err != nil {
-		return err
-	}
-	cadence, err := c.Doit.GetString(c.NS, doctl.ArgSignalsExportCadence)
-	if err != nil {
-		return err
-	}
-
-	trig, err := c.Signals().UpsertExportTrigger(&do.SignalsExportTriggerUpsertRequest{
-		Enabled:     enabled,
-		Cadence:     cadence,
-		SignalTypes: types,
-	})
-	if err != nil {
-		return err
-	}
-	return c.Display(&displayers.SignalsExportTrigger{Triggers: []do.SignalsExportTrigger{*trig}})
 }

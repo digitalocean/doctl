@@ -1216,9 +1216,6 @@ const (
 	// ArgSignalsExportSignalLayer is an optional signal layer filter.
 	ArgSignalsExportSignalLayer = "signal-layer"
 
-	// ArgSignalsExportTriggerSignalTypes is PUT /export-trigger signal_types.
-	ArgSignalsExportTriggerSignalTypes = "signal-types"
-
-	// ArgSignalsExportCadence is the weekly trigger cadence.
-	ArgSignalsExportCadence = "cadence"
+	// ArgSignalsSessionID is the session ID for Signals session commands.
+	ArgSignalsSessionID = "session-id"
 )

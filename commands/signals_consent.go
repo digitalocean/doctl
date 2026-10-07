@@ -31,8 +31,8 @@ func Signals() *Command {
 	}
 
 	cmd.AddCommand(SignalsConsent())
+	cmd.AddCommand(SignalsSession())
 	cmd.AddCommand(SignalsExport())
-	cmd.AddCommand(SignalsExportTrigger())
 
 	return cmd
 }

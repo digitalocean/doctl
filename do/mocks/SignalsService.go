@@ -116,19 +116,19 @@ func (mr *MockSignalsServiceMockRecorder) GetExportOptions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExportOptions", reflect.TypeOf((*MockSignalsService)(nil).GetExportOptions))
 }
 
-// GetExportTrigger mocks base method.
-func (m *MockSignalsService) GetExportTrigger() (*do.SignalsExportTrigger, error) {
+// ListAgentSessions mocks base method.
+func (m *MockSignalsService) ListAgentSessions(agentID string, opts *godo.SignalsListAgentSessionsOptions) (do.SignalsSessions, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExportTrigger")
-	ret0, _ := ret[0].(*do.SignalsExportTrigger)
+	ret := m.ctrl.Call(m, "ListAgentSessions", agentID, opts)
+	ret0, _ := ret[0].(do.SignalsSessions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetExportTrigger indicates an expected call of GetExportTrigger.
-func (mr *MockSignalsServiceMockRecorder) GetExportTrigger() *gomock.Call {
+// ListAgentSessions indicates an expected call of ListAgentSessions.
+func (mr *MockSignalsServiceMockRecorder) ListAgentSessions(agentID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExportTrigger", reflect.TypeOf((*MockSignalsService)(nil).GetExportTrigger))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgentSessions", reflect.TypeOf((*MockSignalsService)(nil).ListAgentSessions), agentID, opts)
 }
 
 // ListConsents mocks base method.
@@ -161,6 +161,21 @@ func (mr *MockSignalsServiceMockRecorder) ListExports(opts any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExports", reflect.TypeOf((*MockSignalsService)(nil).ListExports), opts)
 }
 
+// ListSessionDialogues mocks base method.
+func (m *MockSignalsService) ListSessionDialogues(sessionID string, opts *godo.SignalsListDialoguesOptions) (do.SignalsSessionDialogues, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSessionDialogues", sessionID, opts)
+	ret0, _ := ret[0].(do.SignalsSessionDialogues)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSessionDialogues indicates an expected call of ListSessionDialogues.
+func (mr *MockSignalsServiceMockRecorder) ListSessionDialogues(sessionID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSessionDialogues", reflect.TypeOf((*MockSignalsService)(nil).ListSessionDialogues), sessionID, opts)
+}
+
 // SetConsent mocks base method.
 func (m *MockSignalsService) SetConsent(agentID string, enabled bool) (*do.SignalsConsent, error) {
 	m.ctrl.T.Helper()
@@ -174,19 +189,4 @@ func (m *MockSignalsService) SetConsent(agentID string, enabled bool) (*do.Signa
 func (mr *MockSignalsServiceMockRecorder) SetConsent(agentID, enabled any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConsent", reflect.TypeOf((*MockSignalsService)(nil).SetConsent), agentID, enabled)
-}
-
-// UpsertExportTrigger mocks base method.
-func (m *MockSignalsService) UpsertExportTrigger(req *do.SignalsExportTriggerUpsertRequest) (*do.SignalsExportTrigger, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertExportTrigger", req)
-	ret0, _ := ret[0].(*do.SignalsExportTrigger)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpsertExportTrigger indicates an expected call of UpsertExportTrigger.
-func (mr *MockSignalsServiceMockRecorder) UpsertExportTrigger(req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertExportTrigger", reflect.TypeOf((*MockSignalsService)(nil).UpsertExportTrigger), req)
 }

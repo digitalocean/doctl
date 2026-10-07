@@ -15,14 +15,8 @@ package do
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 
 	"github.com/digitalocean/godo"
-)
-
-const (
-	signalsExportTriggerBasePath = "v1/signals/export-trigger"
 )
 
 // SignalsConsent wraps a godo.SignalsConsentRecord.
@@ -37,6 +31,22 @@ type SignalsConsents []SignalsConsent
 type SignalsAgentConsent struct {
 	*godo.SignalsAgentConsent
 }
+
+// SignalsSession wraps a godo.SignalsSession.
+type SignalsSession struct {
+	*godo.SignalsSession
+}
+
+// SignalsSessions is a slice of SignalsSession.
+type SignalsSessions []SignalsSession
+
+// SignalsSessionDialogue wraps a godo.SignalsSessionDialogue.
+type SignalsSessionDialogue struct {
+	*godo.SignalsSessionDialogue
+}
+
+// SignalsSessionDialogues is a slice of SignalsSessionDialogue.
+type SignalsSessionDialogues []SignalsSessionDialogue
 
 // SignalsExport wraps a godo.SignalsExportJob.
 type SignalsExport struct {
@@ -56,36 +66,20 @@ type SignalsExportOptions struct {
 	*godo.SignalsExportOptions
 }
 
-// SignalsExportTrigger is GET/PUT /v1/signals/export-trigger.
-// Not yet in godo; hand-rolled for now.
-type SignalsExportTrigger struct {
-	Enabled     bool     `json:"enabled"`
-	Cadence     string   `json:"cadence"`
-	SignalTypes []string `json:"signal_types"`
-	UpdatedAt   *int64   `json:"updated_at,omitempty"`
-}
-
-// SignalsExportTriggerUpsertRequest is PUT /v1/signals/export-trigger.
-type SignalsExportTriggerUpsertRequest struct {
-	Enabled     bool     `json:"enabled"`
-	Cadence     string   `json:"cadence,omitempty"`
-	SignalTypes []string `json:"signal_types,omitempty"`
-}
-
 // SignalsService talks to consent-gateway and signals-api via godo.
 type SignalsService interface {
 	ListConsents() (SignalsConsents, error)
 	GetConsent(agentID string) (*SignalsAgentConsent, error)
 	SetConsent(agentID string, enabled bool) (*SignalsConsent, error)
 
+	ListAgentSessions(agentID string, opts *godo.SignalsListAgentSessionsOptions) (SignalsSessions, error)
+	ListSessionDialogues(sessionID string, opts *godo.SignalsListDialoguesOptions) (SignalsSessionDialogues, error)
+
 	ListExports(opts *godo.SignalsListExportsOptions) (SignalsExports, error)
 	CreateExport(req *godo.SignalsCreateExportRequest) (*SignalsExport, error)
 	GetExport(exportID string) (*SignalsExport, error)
 	GetExportDownload(exportID string) (*SignalsExportDownload, error)
 	GetExportOptions() (*SignalsExportOptions, error)
-
-	GetExportTrigger() (*SignalsExportTrigger, error)
-	UpsertExportTrigger(req *SignalsExportTriggerUpsertRequest) (*SignalsExportTrigger, error)
 }
 
 var _ SignalsService = &signalsService{}
@@ -125,6 +119,32 @@ func (s *signalsService) SetConsent(agentID string, enabled bool) (*SignalsConse
 		return nil, err
 	}
 	return &SignalsConsent{SignalsConsentRecord: record}, nil
+}
+
+func (s *signalsService) ListAgentSessions(agentID string, opts *godo.SignalsListAgentSessionsOptions) (SignalsSessions, error) {
+	resp, _, err := s.client.Signals.ListAgentSessions(context.TODO(), agentID, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := make(SignalsSessions, len(resp.Edges))
+	for i, e := range resp.Edges {
+		node := e.Node
+		out[i] = SignalsSession{SignalsSession: &node}
+	}
+	return out, nil
+}
+
+func (s *signalsService) ListSessionDialogues(sessionID string, opts *godo.SignalsListDialoguesOptions) (SignalsSessionDialogues, error) {
+	resp, _, err := s.client.Signals.ListSessionDialogues(context.TODO(), sessionID, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := make(SignalsSessionDialogues, len(resp.Edges))
+	for i, e := range resp.Edges {
+		node := e.Node
+		out[i] = SignalsSessionDialogue{SignalsSessionDialogue: &node}
+	}
+	return out, nil
 }
 
 func (s *signalsService) ListExports(opts *godo.SignalsListExportsOptions) (SignalsExports, error) {
@@ -170,36 +190,4 @@ func (s *signalsService) GetExportOptions() (*SignalsExportOptions, error) {
 		return nil, err
 	}
 	return &SignalsExportOptions{SignalsExportOptions: opts}, nil
-}
-
-// GetExportTrigger and UpsertExportTrigger are not yet in godo SignalsService.
-// These use hand-rolled HTTP until godo adds them.
-
-func (s *signalsService) GetExportTrigger() (*SignalsExportTrigger, error) {
-	req, err := s.client.NewRequest(context.TODO(), http.MethodGet, signalsExportTriggerBasePath, nil)
-	if err != nil {
-		return nil, err
-	}
-	var trig SignalsExportTrigger
-	_, err = s.client.Do(context.TODO(), req, &trig)
-	if err != nil {
-		return nil, err
-	}
-	return &trig, nil
-}
-
-func (s *signalsService) UpsertExportTrigger(in *SignalsExportTriggerUpsertRequest) (*SignalsExportTrigger, error) {
-	if in == nil {
-		return nil, fmt.Errorf("export trigger request is required")
-	}
-	req, err := s.client.NewRequest(context.TODO(), http.MethodPut, signalsExportTriggerBasePath, in)
-	if err != nil {
-		return nil, err
-	}
-	var trig SignalsExportTrigger
-	_, err = s.client.Do(context.TODO(), req, &trig)
-	if err != nil {
-		return nil, err
-	}
-	return &trig, nil
 }

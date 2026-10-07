@@ -38,13 +38,19 @@ func int64Ptr(v int64) *int64 { return &v }
 func TestSignalsCommand(t *testing.T) {
 	cmd := Signals()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "consent", "export", "export-trigger")
+	assertCommandNames(t, cmd, "consent", "export", "session")
 }
 
 func TestSignalsExportCommand(t *testing.T) {
 	cmd := SignalsExport()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "create", "download", "get", "list", "options")
+}
+
+func TestSignalsSessionCommand(t *testing.T) {
+	cmd := SignalsSession()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "dialogues", "list")
 }
 
 func TestSignalsExportList(t *testing.T) {
@@ -152,34 +158,54 @@ func TestSignalsExportOptions(t *testing.T) {
 	})
 }
 
-func TestSignalsExportTriggerGet(t *testing.T) {
+func TestSignalsSessionList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.signals.EXPECT().GetExportTrigger().Return(&do.SignalsExportTrigger{
-			Enabled: false,
-			Cadence: "weekly",
-		}, nil)
-		err := RunSignalsExportTriggerGet(config)
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsExportLimit, 20)
+
+		testSession := do.SignalsSession{
+			SignalsSession: &godo.SignalsSession{
+				SessionID:       "sess-1",
+				TotalTurns:      5,
+				StartedAt:       "2026-01-01T00:00:00Z",
+				DurationSeconds: 300,
+				SignalCount:     2,
+			},
+		}
+
+		tm.signals.EXPECT().ListAgentSessions("agt-1", &godo.SignalsListAgentSessionsOptions{
+			SignalsCursorPageOptions: godo.SignalsCursorPageOptions{Limit: 20},
+		}).Return(do.SignalsSessions{testSession}, nil)
+
+		err := RunSignalsSessionList(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestSignalsExportTriggerSet(t *testing.T) {
+func TestSignalsSessionDialogueList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgSignalsEnabled, true)
-		config.Doit.Set(config.NS, doctl.ArgSignalsExportTriggerSignalTypes, []string{"MisalignmentCorrection"})
-		config.Doit.Set(config.NS, doctl.ArgSignalsExportCadence, "weekly")
+		config.Doit.Set(config.NS, doctl.ArgSignalsSessionID, "sess-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsExportLimit, 20)
 
-		tm.signals.EXPECT().UpsertExportTrigger(&do.SignalsExportTriggerUpsertRequest{
-			Enabled:     true,
-			Cadence:     "weekly",
-			SignalTypes: []string{"MisalignmentCorrection"},
-		}).Return(&do.SignalsExportTrigger{
-			Enabled:     true,
-			Cadence:     "weekly",
-			SignalTypes: []string{"MisalignmentCorrection"},
-		}, nil)
+		testDialogue := do.SignalsSessionDialogue{
+			SignalsSessionDialogue: &godo.SignalsSessionDialogue{
+				SignalsDialogue: godo.SignalsDialogue{
+					ID:          1,
+					RunID:       "run-1",
+					Sequence:    1,
+					UserMessage: "hello",
+					RunStatus:   "complete",
+				},
+				SegmentID:  "seg-1",
+				SegmentSeq: 0,
+			},
+		}
 
-		err := RunSignalsExportTriggerSet(config)
+		tm.signals.EXPECT().ListSessionDialogues("sess-1", &godo.SignalsListDialoguesOptions{
+			SignalsCursorPageOptions: godo.SignalsCursorPageOptions{Limit: 20},
+		}).Return(do.SignalsSessionDialogues{testDialogue}, nil)
+
+		err := RunSignalsSessionDialogueList(config)
 		assert.NoError(t, err)
 	})
 }
