@@ -14,10 +14,8 @@ limitations under the License.
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"math"
-	"net/http"
 	"os"
 
 	"github.com/digitalocean/doctl"
@@ -26,10 +24,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
-
-// workspaceSavingHint is the next step for a 409 on a create that named a
-// workspace: the session that last held it is still being saved.
-const workspaceSavingHint = "The previous session is still being saved; try again in a minute"
 
 // errWorkspaceNeedsConfig is returned when --workspace is used without
 // --from-config, before any request is made.
@@ -79,7 +73,7 @@ func AgentWorkspaces() *Command {
 		agentsWorkspaceDeleteHelpMD,
 		Writer, agentPrettyErrors(), aliasOpt("rm"))
 	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete without confirmation")
-	cmdDelete.Example = `doctl harness-runtime workspace delete ws_abc123`
+	cmdDelete.Example = `doctl harness-runtime workspace delete 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f`
 
 	requireAgentSubcommand(cmd)
 	return cmd
@@ -197,19 +191,4 @@ func RunAgentsWorkspaceDelete(c *CmdConfig) error {
 	stylingEnabled = detectStyling()
 	printAgentSuccess(c.Out, fmt.Sprintf("Deleted workspace %s", c.Args[0]))
 	return nil
-}
-
-// withWorkspaceConflictHint adds the retry hint to a 409 returned by a session
-// create that named a workspace. It goes by status code alone: the server's
-// message is shown as sent.
-func withWorkspaceConflictHint(err error) error {
-	if _, status, ok := agentAPIError(err); !ok || status != http.StatusConflict {
-		return err
-	}
-	pretty := beautifyAgentError(err)
-	var ape *agentPrettyError
-	if errors.As(pretty, &ape) {
-		ape.tips = append(ape.tips, workspaceSavingHint)
-	}
-	return pretty
 }

@@ -503,7 +503,7 @@ func Agents() *Command {
 	AddBoolFlag(cmdCreate, doctl.ArgAgentDryRun, "", false, "Print the fully-resolved manifest (secrets redacted) and exit without creating anything")
 	AddStringFlag(cmdCreate, doctl.ArgAgentOnHITL, "", "", "Stay attached headlessly and resolve every approval request this way (approve|reject|defer), until the run finishes. For unattended automation; no TUI, no keyboard input.")
 	markAgentCreationSourcesExclusive(cmdCreate)
-	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --from-config my-config --name my-session --workspace ws_abc123; ` + agentCLI + ` create --harness opencode --dry-run`
+	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --from-config my-config --name my-session --workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f; ` + agentCLI + ` create --harness opencode --dry-run`
 
 	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate [<manifest>]",
 		"Validate an agent manifest",
@@ -528,7 +528,7 @@ func Agents() *Command {
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentDryRun)
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentOnHITL)
 	markAgentCreationSourcesExclusive(cmdLaunch)
-	cmdLaunch.Example = agentCLI + ` launch my-session; ` + agentCLI + ` launch; ` + agentCLI + ` launch agent-spec.yaml; ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` launch --from-config my-config --name my-session --workspace ws_abc123`
+	cmdLaunch.Example = agentCLI + ` launch my-session; ` + agentCLI + ` launch; ` + agentCLI + ` launch agent-spec.yaml; ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` launch --from-config my-config --name my-session --workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Bridge the Codex CLI to a hosted session",
@@ -1410,9 +1410,6 @@ func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
 			return nil, fmt.Errorf("%s. Free a slot by removing one: run `%s list` to find a session ID, then `%s remove SESSION_ID`", strings.TrimRight(msg, "."), agentCLI, agentCLI)
-		}
-		if workspaceID != "" {
-			err = withWorkspaceConflictHint(err)
 		}
 		return nil, err
 	}

@@ -37,7 +37,7 @@ import (
 
 func testWorkspace() godo.HostedAgentWorkspace {
 	return godo.HostedAgentWorkspace{
-		WorkspaceID:       "ws_abc123",
+		WorkspaceID:       "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f",
 		Name:              "notes",
 		State:             godo.HostedAgentWorkspaceStateAttached,
 		AttachedSessionID: "sess_abc123",
@@ -163,7 +163,7 @@ func TestRunAgentsWorkspaceCreate_GeneratesOneKeyPerInvocation(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgAgentName, "notes")
 			require.NoError(t, RunAgentsWorkspaceCreate(config))
 			assert.Contains(t, buf.String(), "Workspace created")
-			assert.Contains(t, buf.String(), "ws_abc123")
+			assert.Contains(t, buf.String(), "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 		})
 	}
 	require.Len(t, keys, 2)
@@ -240,7 +240,7 @@ func TestRunAgentsWorkspaceList_FormatSelectsColumns(t *testing.T) {
 		lines := strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")
 		require.Len(t, lines, 2)
 		assert.Equal(t, []string{"ID", "State", "Size", "(GiB)", "Used", "Last", "Saved"}, strings.Fields(lines[0]))
-		assert.Equal(t, []string{"ws_abc123", "ATTACHED", "10", "3.00", "MiB", "2026-10-05T12:00:00Z"}, strings.Fields(lines[1]))
+		assert.Equal(t, []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f", "ATTACHED", "10", "3.00", "MiB", "2026-10-05T12:00:00Z"}, strings.Fields(lines[1]))
 	})
 }
 
@@ -249,11 +249,11 @@ func TestRunAgentsWorkspaceGet(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		ws := testWorkspace()
-		tm.hostedAgents.EXPECT().GetWorkspace("ws_abc123").Return(&ws, nil)
+		tm.hostedAgents.EXPECT().GetWorkspace("018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f").Return(&ws, nil)
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		config.Args = []string{"ws_abc123"}
+		config.Args = []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f"}
 		require.NoError(t, RunAgentsWorkspaceGet(config))
 		assert.Contains(t, buf.String(), "notes")
 		assert.Contains(t, buf.String(), "10 GiB")
@@ -275,14 +275,14 @@ func TestRunAgentsWorkspaceGetAndDelete_ArgValidation(t *testing.T) {
 
 func TestRunAgentsWorkspaceDelete_ForceSkipsConfirmation(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().DeleteWorkspace("ws_abc123").Return(nil)
+		tm.hostedAgents.EXPECT().DeleteWorkspace("018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f").Return(nil)
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		config.Args = []string{"ws_abc123"}
+		config.Args = []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f"}
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 		require.NoError(t, RunAgentsWorkspaceDelete(config))
-		assert.Contains(t, buf.String(), "Deleted workspace ws_abc123")
+		assert.Contains(t, buf.String(), "Deleted workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 	})
 }
 
@@ -294,7 +294,7 @@ func TestRunAgentsWorkspaceDelete_RequiresConfirmation(t *testing.T) {
 	t.Cleanup(func() { Interactive = prev })
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = []string{"ws_abc123"}
+		config.Args = []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f"}
 		err := RunAgentsWorkspaceDelete(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "operation aborted")
@@ -307,10 +307,10 @@ func TestRunAgentsWorkspaceDelete_ConflictShowsServerMessage(t *testing.T) {
 	const serverMsg = "workspace is attached to a session"
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			DeleteWorkspace("ws_abc123").
+			DeleteWorkspace("018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f").
 			Return(godoStatusErr(http.StatusConflict, serverMsg))
 
-		config.Args = []string{"ws_abc123"}
+		config.Args = []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f"}
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 		err := RunAgentsWorkspaceDelete(config)
 		require.Error(t, err)
@@ -319,7 +319,6 @@ func TestRunAgentsWorkspaceDelete_ConflictShowsServerMessage(t *testing.T) {
 		require.True(t, errors.As(beautifyAgentError(err), &pretty))
 		assert.Equal(t, serverMsg, pretty.reason)
 		assert.Equal(t, http.StatusConflict, pretty.status)
-		assert.NotContains(t, pretty.tips, workspaceSavingHint, "the saving hint is for session create")
 	})
 }
 
@@ -340,13 +339,13 @@ func TestRunAgentsCreate_FromConfig_SendsWorkspaceInBody(t *testing.T) {
 			CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 				Name:        "demo",
 				ConfigID:    "cfg_abc123",
-				WorkspaceID: "ws_abc123",
+				WorkspaceID: "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f",
 			}).
 			Return(nil, assertCalledErr)
 
 		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 		require.ErrorIs(t, RunAgentsCreate(config), assertCalledErr)
 	})
 }
@@ -383,7 +382,7 @@ func TestRunAgentsCreate_WorkspaceNeedsConfig(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				// No expectations: gomock fails the test on any API call.
 				setup(config)
-				config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+				config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 
 				err := RunAgentsCreate(config)
 				require.Error(t, err)
@@ -417,7 +416,7 @@ func TestRunAgentsLaunch_WorkspaceNeedsConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				setup(config)
-				config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+				config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 
 				err := RunAgentsLaunch(config)
 				require.Error(t, err)
@@ -435,7 +434,7 @@ func TestRunAgentsLaunch_ExistingSessionRefusesWorkspace(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = []string{"my-session"}
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 
 		err := RunAgentsLaunch(config)
 		require.Error(t, err)
@@ -468,29 +467,29 @@ func TestRunAgentsLaunch_FromConfig_SendsWorkspace(t *testing.T) {
 			CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 				Name:        "demo",
 				ConfigID:    "cfg_abc123",
-				WorkspaceID: "ws_abc123",
+				WorkspaceID: "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f",
 			}).
 			Return(nil, assertCalledErr)
 
 		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 		require.ErrorIs(t, RunAgentsLaunch(config), assertCalledErr)
 	})
 }
 
-// A 409 on create with --workspace carries the server's message and the
-// retry hint. It is decided by status code: the message here says nothing about
-// workspaces.
-func TestRunAgentsCreate_WorkspaceConflictAddsHint(t *testing.T) {
-	const serverMsg = "that is not available right now"
+// A 409 on create with --workspace shows the server's message as sent and adds
+// no advice of its own: the server words each conflict for what the caller can
+// do, and a retry is wrong for some of them.
+func TestRunAgentsCreate_WorkspaceConflictShowsServerMessage(t *testing.T) {
+	const serverMsg = "the workspace is attached to another session; remove that session first"
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromConfig(gomock.Any()).
 			Return(nil, godoStatusErr(http.StatusConflict, serverMsg))
 		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo")
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "ws_abc123")
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspace, "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 
 		err := RunAgentsCreate(config)
 		require.Error(t, err)
@@ -499,38 +498,8 @@ func TestRunAgentsCreate_WorkspaceConflictAddsHint(t *testing.T) {
 		require.True(t, errors.As(beautifyAgentError(err), &pretty))
 		assert.Equal(t, serverMsg, pretty.reason)
 		assert.Equal(t, http.StatusConflict, pretty.status)
-		assert.Contains(t, pretty.tips, workspaceSavingHint)
-		assert.Contains(t, pretty.DisplayError(), "still being saved")
+		assert.Empty(t, pretty.tips)
 	})
-}
-
-func TestRunAgentsCreate_ConflictWithoutWorkspaceHasNoHint(t *testing.T) {
-	dir := t.TempDir()
-	specPath := filepath.Join(dir, "agent.yaml")
-	require.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
-			Return(nil, godoStatusErr(http.StatusConflict, "name already in use"))
-
-		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
-		err := RunAgentsCreate(config)
-		require.Error(t, err)
-
-		var pretty *agentPrettyError
-		require.True(t, errors.As(beautifyAgentError(err), &pretty))
-		assert.NotContains(t, pretty.tips, workspaceSavingHint)
-	})
-}
-
-// Only a 409 gets the hint; any other failure keeps its own message.
-func TestWithWorkspaceConflictHint_OnlyForConflict(t *testing.T) {
-	other := godoStatusErr(http.StatusNotFound, "workspace not found")
-	assert.Same(t, other, withWorkspaceConflictHint(other))
-
-	plain := errors.New("connection reset")
-	assert.Same(t, plain, withWorkspaceConflictHint(plain))
 }
 
 func TestAgentCreationFlagsIncludeWorkspace(t *testing.T) {
@@ -548,14 +517,14 @@ func TestPrintSessionShowCard_Workspace(t *testing.T) {
 	printSessionShowCard(&with, &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
 		SessionID:   "sess_1",
 		Status:      godo.HostedAgentSessionStatusReady,
-		WorkspaceID: "ws_abc123",
+		WorkspaceID: "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f",
 	}})
 	printSessionShowCard(&without, &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
 		SessionID: "sess_1",
 		Status:    godo.HostedAgentSessionStatusReady,
 	}})
 	assert.Contains(t, with.String(), "Workspace")
-	assert.Contains(t, with.String(), "ws_abc123")
+	assert.Contains(t, with.String(), "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 	assert.NotContains(t, without.String(), "Workspace", "the row only appears when a workspace is attached")
 }
 
