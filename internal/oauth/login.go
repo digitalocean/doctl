@@ -101,7 +101,10 @@ type LoginOptions struct {
 
 // Login runs the OAuth 2.1 authorization code flow with PKCE against the
 // configured authorization server and returns the resulting token grant.
-func Login(ctx context.Context, opts LoginOptions) (*Token, error) {
+// It is a variable so tests can run the command without opening a browser.
+var Login = login
+
+func login(ctx context.Context, opts LoginOptions) (*Token, error) {
 	if opts.Metadata == nil {
 		return nil, errors.New("authorization server metadata is required")
 	}

@@ -513,7 +513,7 @@ func resetOAuthConfig(t *testing.T) {
 func stubOAuthLogin(t *testing.T, login func(context.Context, oauth.LoginOptions) (*oauth.Token, error)) {
 	t.Helper()
 
-	previous := oauthLogin
-	oauthLogin = login
-	t.Cleanup(func() { oauthLogin = previous })
+	original := oauth.Login
+	oauth.Login = login
+	t.Cleanup(func() { oauth.Login = original })
 }

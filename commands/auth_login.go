@@ -51,10 +51,6 @@ const (
 	oauthHTTPTimeout = 30 * time.Second
 )
 
-// oauthLogin runs the browser-based authorization code flow. It is a variable
-// so tests can exercise the command without a browser.
-var oauthLogin = oauth.Login
-
 // oauthTokenState is the per-context OAuth session persisted in the config
 // file. The access token itself lives with the rest of the context's
 // credentials; only what is needed to renew it is kept here.
@@ -124,7 +120,7 @@ func RunAuthLogin(c *CmdConfig) error {
 	httpClient := &http.Client{Timeout: oauthHTTPTimeout}
 	metadata := oauth.ServerMetadataFor(issuer)
 
-	token, err := oauthLogin(ctx, oauth.LoginOptions{
+	token, err := oauth.Login(ctx, oauth.LoginOptions{
 		Metadata:           metadata,
 		ClientID:           clientID,
 		Scopes:             strings.Fields(scopes),
@@ -310,7 +306,8 @@ func displayOAuthLoginSummary(c *CmdConfig, authContext string, token *oauth.Tok
 	template.Render(c.Out, `Saved to the {{highlight .}} authentication context.{{nl}}`, authContext)
 
 	if token.RefreshToken != "" {
-		template.Render(c.Out, `{{nl}}{{muted "doctl renews this token automatically; run doctl auth login again if the session is revoked."}}{{nl}}`, nil)
+		template.Render(c.Out, `{{nl}}{{muted "doctl renews this token automatically."}}{{nl}}`, nil)
+		template.Render(c.Out, `{{muted "Run doctl auth login again to change its scopes, or if the session is revoked."}}{{nl}}`, nil)
 	}
 }
 
