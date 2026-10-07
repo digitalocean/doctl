@@ -27,9 +27,8 @@ func ScenarioLibraryCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "scenario-library",
 			Aliases: []string{"sl"},
-			Short:   "Display commands that browse the Gradient AI scenario library.",
-			Long:    "The subcommands of `doctl gradient scenario-library` browse the curated scenarios that DigitalOcean publishes and copy them into your own scenario sets.",
-			Hidden:  true,
+			Short:   "Display commands that browse the evaluation scenario library.",
+			Long:    "The subcommands of `doctl evaluation scenario-library` browse the curated scenarios that DigitalOcean publishes and copy them into your own scenario sets.",
 		},
 	}
 
@@ -54,7 +53,7 @@ func ScenarioLibraryCmd() *Command {
 	AddStringFlag(cmdScenarioLibraryList, doctl.ArgScenarioLibraryCategory, "", "", "Filters the results by category.")
 	addGenAIListFlags(cmdScenarioLibraryList, "`name`, `created_at`")
 	cmdScenarioLibraryList.Example = "The following example lists the scenario library: " +
-		"`doctl gradient scenario-library list`"
+		"`doctl evaluation scenario-library list`"
 
 	cmdScenarioLibraryListScenarios := CmdBuilder(
 		cmd,
@@ -67,7 +66,7 @@ func ScenarioLibraryCmd() *Command {
 	)
 	addGenAIListFlags(cmdScenarioLibraryListScenarios, "`file_order`, `name`, `description`")
 	cmdScenarioLibraryListScenarios.Example = "The following example lists the scenarios in a library entry: " +
-		"`doctl gradient scenario-library list-scenarios f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation scenario-library list-scenarios f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdScenarioLibraryCreateScenarioSet := CmdBuilder(
 		cmd,
@@ -80,7 +79,7 @@ func ScenarioLibraryCmd() *Command {
 	)
 	AddStringFlag(cmdScenarioLibraryCreateScenarioSet, doctl.ArgGenAIName, "", "", "The name of the new scenario set.")
 	cmdScenarioLibraryCreateScenarioSet.Example = "The following example copies a library entry into a scenario set: " +
-		"`doctl gradient scenario-library create-scenario-set f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name support-flows`"
+		"`doctl evaluation scenario-library create-scenario-set f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name support-flows`"
 
 	return cmd
 }
@@ -97,7 +96,7 @@ func RunScenarioLibraryList(c *CmdConfig) error {
 		return err
 	}
 
-	entries, err := c.GradientAI().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{
+	entries, err := c.AgentPlatform().ListScenarioLibrary(&godo.ScenarioLibraryListOptions{
 		Category:      category,
 		Search:        search,
 		SortBy:        godo.ScenarioLibrarySortField(sortBy),
@@ -121,7 +120,7 @@ func RunScenarioLibraryListScenarios(c *CmdConfig) error {
 		return err
 	}
 
-	scenarios, err := c.GradientAI().ListScenarioLibraryScenarios(c.Args[0], opt)
+	scenarios, err := c.AgentPlatform().ListScenarioLibraryScenarios(c.Args[0], opt)
 	if err != nil {
 		return err
 	}
@@ -141,7 +140,7 @@ func RunScenarioLibraryCreateScenarioSet(c *CmdConfig) error {
 	}
 
 	libraryScenarioUUID := c.Args[0]
-	scenarioSet, err := c.GradientAI().CreateScenarioSetFromLibrary(libraryScenarioUUID, &godo.CreateScenarioSetFromLibraryRequest{
+	scenarioSet, err := c.AgentPlatform().CreateScenarioSetFromLibrary(libraryScenarioUUID, &godo.CreateScenarioSetFromLibraryRequest{
 		LibraryScenarioUUID: libraryScenarioUUID,
 		Name:                name,
 	})

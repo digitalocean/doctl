@@ -101,7 +101,7 @@ func OpenAIKeyCmd() *Command {
 }
 
 func RunOpenAIKeyList(c *CmdConfig) error {
-	openAIApiKeys, err := c.GradientAI().ListOpenAIAPIKeys()
+	openAIApiKeys, err := c.AgentPlatform().ListOpenAIAPIKeys()
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func RunOpenAIKeyGet(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	openAIApiKey, err := c.GradientAI().GetOpenAIAPIKey(c.Args[0])
+	openAIApiKey, err := c.AgentPlatform().GetOpenAIAPIKey(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func RunOpenAIKeyGetAgents(c *CmdConfig) error {
 	}
 
 	openAIApiKeyID := c.Args[0]
-	agents, err := c.GradientAI().ListAgentsByOpenAIAPIKey(openAIApiKeyID)
+	agents, err := c.AgentPlatform().ListAgentsByOpenAIAPIKey(openAIApiKeyID)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func RunOpenAIKeyCreate(c *CmdConfig) error {
 		ApiKey: apiKey,
 	}
 
-	openAIApiKey, err := c.GradientAI().CreateOpenAIAPIKey(openAIApiKeyCreate)
+	openAIApiKey, err := c.AgentPlatform().CreateOpenAIAPIKey(openAIApiKeyCreate)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func RunOpenAIKeyUpdate(c *CmdConfig) error {
 		ApiKeyUuid: openAIApiKeyID,
 	}
 
-	openAIApiKey, err := c.GradientAI().UpdateOpenAIAPIKey(openAIApiKeyID, openAIApiKeyUpdate)
+	openAIApiKey, err := c.AgentPlatform().UpdateOpenAIAPIKey(openAIApiKeyID, openAIApiKeyUpdate)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func RunOpenAIKeyDelete(c *CmdConfig) error {
 		return err
 	}
 	if force || AskForConfirmDelete("OpenAI API Key", 1) == nil {
-		_, err := c.GradientAI().DeleteOpenAIAPIKey(openAIApiKeyID)
+		_, err := c.AgentPlatform().DeleteOpenAIAPIKey(openAIApiKeyID)
 		if err != nil {
 			return err
 		}

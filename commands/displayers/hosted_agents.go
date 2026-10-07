@@ -327,6 +327,44 @@ func (h *HostedAgentPrompt) KV() []map[string]any {
 	return out
 }
 
+// HostedAgentCancel renders the result of `doctl harness-runtime cancel`: the
+// outcome and the turn it was aimed at, which the server resolves when no run
+// id was given. RunID is empty when an unnamed cancel found nothing running.
+type HostedAgentCancel struct {
+	SessionID string `json:"session_id"`
+	RunID     string `json:"run_id,omitempty"`
+	Outcome   string `json:"outcome"`
+}
+
+var _ Displayable = &HostedAgentCancel{}
+
+func (h *HostedAgentCancel) JSON(out io.Writer) error {
+	return writeJSON(h, out)
+}
+
+func (h *HostedAgentCancel) Cols() []string {
+	return []string{"SessionID", "RunID", "Outcome"}
+}
+
+func (h *HostedAgentCancel) ColMap() map[string]string {
+	return map[string]string{
+		"SessionID": "Session ID",
+		"RunID":     "Run ID",
+		"Outcome":   "Outcome",
+	}
+}
+
+func (h *HostedAgentCancel) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	return []map[string]any{{
+		"SessionID": h.SessionID,
+		"RunID":     h.RunID,
+		"Outcome":   h.Outcome,
+	}}
+}
+
 // HostedAgentWorkspaceEntryItem is one directory entry in a workspace listing.
 // The listing is assembled client-side from a sandbox exec, so there is no godo
 // wire type to wrap.

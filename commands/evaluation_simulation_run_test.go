@@ -56,7 +56,7 @@ func TestSimulationRunCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSimulationExplorationBudget, 3)
 		config.Doit.Set(config.NS, doctl.ArgSimulationMaxTurns, 10)
 
-		tm.gradientAI.EXPECT().CreateSimulationRun(&godo.CreateSimulationRunRequest{
+		tm.agentPlatform.EXPECT().CreateSimulationRun(&godo.CreateSimulationRunRequest{
 			ScenarioSetUUID: testScenarioSetUUID,
 			Name:            "Nightly Regression",
 			AgentConfig: &godo.CandidateAgentConfig{
@@ -84,7 +84,7 @@ func TestSimulationRunCreateWithEvaluationConfig(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSimulationStarMetricSuccessThreshold, 0.8)
 
 		successThreshold := float32(0.8)
-		tm.gradientAI.EXPECT().CreateSimulationRun(&godo.CreateSimulationRunRequest{
+		tm.agentPlatform.EXPECT().CreateSimulationRun(&godo.CreateSimulationRunRequest{
 			ScenarioSetUUID: testScenarioSetUUID,
 			AgentConfig: &godo.CandidateAgentConfig{
 				AgentUUID: "agent-uuid",
@@ -107,7 +107,7 @@ func TestSimulationRunCreateWithEvaluationConfig(t *testing.T) {
 
 func TestSimulationRunList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListSimulationRuns(&godo.SimulationRunListOptions{}).
+		tm.agentPlatform.EXPECT().ListSimulationRuns(&godo.SimulationRunListOptions{}).
 			Return(do.SimulationRuns{testSimulationRun}, nil)
 
 		err := RunSimulationRunList(config)
@@ -122,7 +122,7 @@ func TestSimulationRunListWithFilters(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGenAISortBy, "status")
 		config.Doit.Set(config.NS, doctl.ArgGenAISortDirection, "asc")
 
-		tm.gradientAI.EXPECT().ListSimulationRuns(&godo.SimulationRunListOptions{
+		tm.agentPlatform.EXPECT().ListSimulationRuns(&godo.SimulationRunListOptions{
 			ScenarioSetUUID: testScenarioSetUUID,
 			Statuses: []godo.SimulationRunStatus{
 				godo.SimulationRunStatusRunning,
@@ -141,7 +141,7 @@ func TestSimulationRunGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testSimulationRunUUID)
 
-		tm.gradientAI.EXPECT().GetSimulationRun(testSimulationRunUUID).Return(&do.SimulationRunDetail{
+		tm.agentPlatform.EXPECT().GetSimulationRun(testSimulationRunUUID).Return(&do.SimulationRunDetail{
 			SimulationRunGetResponse: &godo.SimulationRunGetResponse{
 				SimulationRun: testSimulationRun.SimulationRun,
 				ScenarioResults: []*godo.SimulationScenarioResult{{
@@ -161,7 +161,7 @@ func TestSimulationRunUpdate(t *testing.T) {
 		config.Args = append(config.Args, testSimulationRunUUID)
 		config.Doit.Set(config.NS, doctl.ArgGenAIName, "Nightly Regression v2")
 
-		tm.gradientAI.EXPECT().UpdateSimulationRun(testSimulationRunUUID, &godo.UpdateSimulationRunRequest{
+		tm.agentPlatform.EXPECT().UpdateSimulationRun(testSimulationRunUUID, &godo.UpdateSimulationRunRequest{
 			RunUUID: testSimulationRunUUID,
 			Name:    "Nightly Regression v2",
 		}).Return(&testSimulationRun, nil)
@@ -176,7 +176,7 @@ func TestSimulationRunCancel(t *testing.T) {
 		config.Args = append(config.Args, testSimulationRunUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().CancelSimulationRun(testSimulationRunUUID).Return(&testSimulationRun, nil)
+		tm.agentPlatform.EXPECT().CancelSimulationRun(testSimulationRunUUID).Return(&testSimulationRun, nil)
 
 		err := RunSimulationRunCancel(config)
 		assert.NoError(t, err)
@@ -188,7 +188,7 @@ func TestSimulationRunDelete(t *testing.T) {
 		config.Args = append(config.Args, testSimulationRunUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DeleteSimulationRun(testSimulationRunUUID).Return(nil)
+		tm.agentPlatform.EXPECT().DeleteSimulationRun(testSimulationRunUUID).Return(nil)
 
 		err := RunSimulationRunDelete(config)
 		assert.NoError(t, err)
@@ -202,7 +202,7 @@ func TestSimulationRunListJourneys(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGenAIStatuses, []string{"finished"})
 		config.Doit.Set(config.NS, doctl.ArgSimulationJourneyVerdicts, []string{"failure"})
 
-		tm.gradientAI.EXPECT().ListSimulationJourneys(testSimulationRunUUID, &godo.SimulationJourneyListOptions{
+		tm.agentPlatform.EXPECT().ListSimulationJourneys(testSimulationRunUUID, &godo.SimulationJourneyListOptions{
 			ScenarioUUID: testScenario.ScenarioUUID,
 			Statuses:     []godo.SimulationJourneyStatus{godo.SimulationJourneyStatusFinished},
 			Verdicts:     []godo.SimulationJourneyVerdict{godo.SimulationJourneyVerdictFailure},
@@ -217,7 +217,7 @@ func TestSimulationRunGetJourney(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testSimulationRunUUID, testSimulationJourneyUUID)
 
-		tm.gradientAI.EXPECT().GetSimulationJourney(testSimulationRunUUID, testSimulationJourneyUUID).
+		tm.agentPlatform.EXPECT().GetSimulationJourney(testSimulationRunUUID, testSimulationJourneyUUID).
 			Return(&testSimulationJourney, nil)
 
 		err := RunSimulationRunGetJourney(config)
@@ -238,7 +238,7 @@ func TestSimulationRunGetJourneyTrajectory(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testSimulationRunUUID, testSimulationJourneyUUID)
 
-		tm.gradientAI.EXPECT().GetSimulationJourneyTrajectory(testSimulationRunUUID, testSimulationJourneyUUID).
+		tm.agentPlatform.EXPECT().GetSimulationJourneyTrajectory(testSimulationRunUUID, testSimulationJourneyUUID).
 			Return(&do.SimulationTrajectory{
 				SimulationTrajectory: &godo.SimulationTrajectory{
 					JourneyUUID: testSimulationJourneyUUID,
@@ -258,7 +258,7 @@ func TestSimulationRunGetJourneyTrajectoryURL(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testSimulationRunUUID, testSimulationJourneyUUID)
 
-		tm.gradientAI.EXPECT().GetSimulationJourneyTrajectoryURL(testSimulationRunUUID, testSimulationJourneyUUID).
+		tm.agentPlatform.EXPECT().GetSimulationJourneyTrajectoryURL(testSimulationRunUUID, testSimulationJourneyUUID).
 			Return(&do.GenAIDownloadURL{DownloadURL: "https://example.com/trajectory"}, nil)
 
 		err := RunSimulationRunGetJourneyTrajectoryURL(config)

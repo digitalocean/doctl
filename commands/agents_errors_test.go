@@ -167,3 +167,36 @@ func TestBeautifyAgentError_Idempotent(t *testing.T) {
 func TestBeautifyAgentError_SilentExitPassthrough(t *testing.T) {
 	assert.Equal(t, ErrExitSilently, beautifyAgentError(ErrExitSilently))
 }
+
+// MARSOHS-1627: agentspec unknown-field errors must not show raw \u00a0 escapes
+// or an internal contracts/ path customers cannot open.
+func TestSanitizeAgentAPIMessage_UnknownFieldWhitespace(t *testing.T) {
+	in := `agentspec: unknown field "\u00a0\u00a0HARNESS_INFERENCE_API_KEY" (unknown or misspelled fields are rejected; see contracts/agent.flat.yaml)`
+	got := sanitizeAgentAPIMessage(in)
+	assert.Contains(t, got, `unknown field "HARNESS_INFERENCE_API_KEY"`)
+	assert.Contains(t, got, "unexpected whitespace")
+	assert.Contains(t, got, "copy-paste")
+	assert.NotContains(t, got, `\u00a0`)
+	assert.NotContains(t, got, "contracts/")
+	assert.Contains(t, got, "unknown or misspelled fields are rejected")
+}
+
+func TestBeautifyAgentError_AgentspecUnknownField(t *testing.T) {
+	er := harnessAPIErr(http.StatusBadRequest,
+		`agentspec: unknown field "\u00a0\u00a0HARNESS_INFERENCE_API_KEY" (unknown or misspelled fields are rejected; see contracts/agent.flat.yaml)`)
+
+	out := beautifyAgentError(er)
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Invalid request", pretty.title)
+	assert.Contains(t, pretty.reason, `unknown field "HARNESS_INFERENCE_API_KEY"`)
+	assert.Contains(t, pretty.reason, "unexpected whitespace")
+	assert.NotContains(t, pretty.reason, `\u00a0`)
+	assert.NotContains(t, pretty.reason, "contracts/")
+	assert.Contains(t, pretty.tips, "doctl harness-runtime validate")
+
+	display := pretty.DisplayError()
+	assert.Contains(t, display, "HARNESS_INFERENCE_API_KEY")
+	assert.NotContains(t, display, "contracts/")
+	assert.NotContains(t, display, `\u00a0`)
+}

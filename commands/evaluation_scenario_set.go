@@ -29,9 +29,8 @@ func ScenarioSetCmd() *Command {
 		Command: &cobra.Command{
 			Use:     "scenario-set",
 			Aliases: []string{"ss", "scenario-sets"},
-			Short:   "Display commands that manage Gradient AI scenario sets.",
-			Long:    "The subcommands of `doctl gradient scenario-set` manage the scenario sets that Gradient AI simulations run against.",
-			Hidden:  true,
+			Short:   "Display commands that manage evaluation scenario sets.",
+			Long:    "The subcommands of `doctl evaluation scenario-set` manage the scenario sets that agent simulations run against.",
 		},
 	}
 
@@ -57,7 +56,7 @@ func ScenarioSetCmd() *Command {
 	AddStringFlag(cmdScenarioSetCreate, doctl.ArgScenarioSetFile, "", "", "The path to a local scenario file to upload. Mutually exclusive with `--scenarios`.")
 	AddStringFlag(cmdScenarioSetCreate, doctl.ArgScenarioSetScenarios, "", "", "A JSON array of scenario objects. Mutually exclusive with `--file`.")
 	cmdScenarioSetCreate.Example = "The following example creates a scenario set from a local file: " +
-		"`doctl gradient scenario-set create --name support-flows --file ./scenarios.jsonl`"
+		"`doctl evaluation scenario-set create --name support-flows --file ./scenarios.jsonl`"
 
 	cmdScenarioSetGenerate := CmdBuilder(
 		cmd,
@@ -73,7 +72,7 @@ func ScenarioSetCmd() *Command {
 	AddIntFlag(cmdScenarioSetGenerate, doctl.ArgScenarioSetNumScenarios, "", 0, "The number of scenarios to generate.")
 	AddStringFlag(cmdScenarioSetGenerate, doctl.ArgScenarioSetGeneratorModelUUID, "", "", "The UUID of the model used to generate the scenarios.")
 	cmdScenarioSetGenerate.Example = "The following example generates ten scenarios from a goal: " +
-		"`doctl gradient scenario-set generate --name refund-flows --goal-description \"Customers asking for refunds\" --num-scenarios 10`"
+		"`doctl evaluation scenario-set generate --name refund-flows --goal-description \"Customers asking for refunds\" --num-scenarios 10`"
 
 	cmdScenarioSetList := CmdBuilder(
 		cmd,
@@ -88,7 +87,7 @@ func ScenarioSetCmd() *Command {
 	AddStringSliceFlag(cmdScenarioSetList, doctl.ArgScenarioSetSourceKinds, "", []string{}, "Filters the results by source kind. One of: `user_upload`, `goal_generated`, `library`, `signal_generated`")
 	addGenAIListFlags(cmdScenarioSetList, "`created_at`, `name`, `status`, `scenario_count`, `updated_at`")
 	cmdScenarioSetList.Example = "The following example lists every scenario set that is ready to run: " +
-		"`doctl gradient scenario-set list --statuses ready`"
+		"`doctl evaluation scenario-set list --statuses ready`"
 
 	cmdScenarioSetGet := CmdBuilder(
 		cmd,
@@ -100,7 +99,7 @@ func ScenarioSetCmd() *Command {
 		displayerType(&displayers.ScenarioSet{}),
 	)
 	cmdScenarioSetGet.Example = "The following example retrieves a scenario set: " +
-		"`doctl gradient scenario-set get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation scenario-set get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdScenarioSetListScenarios := CmdBuilder(
 		cmd,
@@ -113,7 +112,7 @@ func ScenarioSetCmd() *Command {
 	)
 	addGenAIListFlags(cmdScenarioSetListScenarios, "`file_order`, `name`, `description`")
 	cmdScenarioSetListScenarios.Example = "The following example lists the scenarios in a scenario set: " +
-		"`doctl gradient scenario-set list-scenarios f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation scenario-set list-scenarios f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdScenarioSetUpdate := CmdBuilder(
 		cmd,
@@ -127,7 +126,7 @@ func ScenarioSetCmd() *Command {
 	AddStringFlag(cmdScenarioSetUpdate, doctl.ArgGenAIName, "", "", "The new name of the scenario set.")
 	AddStringFlag(cmdScenarioSetUpdate, doctl.ArgScenarioSetScenarios, "", "", "A JSON array of scenario objects that replaces the existing scenarios.")
 	cmdScenarioSetUpdate.Example = "The following example renames a scenario set: " +
-		"`doctl gradient scenario-set update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name support-flows-v2`"
+		"`doctl evaluation scenario-set update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name support-flows-v2`"
 
 	cmdScenarioSetDelete := CmdBuilder(
 		cmd,
@@ -139,7 +138,7 @@ func ScenarioSetCmd() *Command {
 	)
 	AddBoolFlag(cmdScenarioSetDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the scenario set without a confirmation prompt")
 	cmdScenarioSetDelete.Example = "The following example deletes a scenario set: " +
-		"`doctl gradient scenario-set delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation scenario-set delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	cmdScenarioSetDownloadURL := CmdBuilder(
 		cmd,
@@ -151,7 +150,7 @@ func ScenarioSetCmd() *Command {
 		displayerType(&displayers.GenAIDownloadURL{}),
 	)
 	cmdScenarioSetDownloadURL.Example = "The following example retrieves a download URL for a scenario set: " +
-		"`doctl gradient scenario-set download-url f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
+		"`doctl evaluation scenario-set download-url f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	return cmd
 }
@@ -196,7 +195,7 @@ func RunScenarioSetCreate(c *CmdConfig) error {
 		req.Scenarios = scenarios
 	}
 
-	scenarioSet, err := c.GradientAI().CreateScenarioSet(req)
+	scenarioSet, err := c.AgentPlatform().CreateScenarioSet(req)
 	if err != nil {
 		return err
 	}
@@ -226,7 +225,7 @@ func RunScenarioSetGenerate(c *CmdConfig) error {
 		return err
 	}
 
-	scenarioSet, err := c.GradientAI().GenerateScenarioSet(&godo.GenerateScenarioSetRequest{
+	scenarioSet, err := c.AgentPlatform().GenerateScenarioSet(&godo.GenerateScenarioSetRequest{
 		Name:               name,
 		GoalDescription:    goalDescription,
 		NumScenarios:       uint32(numScenarios),
@@ -256,7 +255,7 @@ func RunScenarioSetList(c *CmdConfig) error {
 		return err
 	}
 
-	scenarioSets, err := c.GradientAI().ListScenarioSets(&godo.ScenarioSetListOptions{
+	scenarioSets, err := c.AgentPlatform().ListScenarioSets(&godo.ScenarioSetListOptions{
 		Statuses:      genAIEnums[godo.ScenarioSetStatus](scenarioSetStatusPrefix, rawStatuses),
 		SourceKinds:   genAIEnums[godo.ScenarioSetSourceKind](scenarioSetSourceKindPrefix, rawSourceKinds),
 		Search:        search,
@@ -276,7 +275,7 @@ func RunScenarioSetGet(c *CmdConfig) error {
 		return err
 	}
 
-	scenarioSet, err := c.GradientAI().GetScenarioSet(c.Args[0])
+	scenarioSet, err := c.AgentPlatform().GetScenarioSet(c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -295,7 +294,7 @@ func RunScenarioSetListScenarios(c *CmdConfig) error {
 		return err
 	}
 
-	scenarios, err := c.GradientAI().ListScenarios(c.Args[0], opt)
+	scenarios, err := c.AgentPlatform().ListScenarios(c.Args[0], opt)
 	if err != nil {
 		return err
 	}
@@ -329,7 +328,7 @@ func RunScenarioSetUpdate(c *CmdConfig) error {
 	}
 
 	scenarioSetUUID := c.Args[0]
-	scenarioSet, err := c.GradientAI().UpdateScenarioSet(scenarioSetUUID, &godo.UpdateScenarioSetRequest{
+	scenarioSet, err := c.AgentPlatform().UpdateScenarioSet(scenarioSetUUID, &godo.UpdateScenarioSetRequest{
 		ScenarioSetUUID: scenarioSetUUID,
 		Name:            name,
 		Scenarios:       scenarios,
@@ -356,7 +355,7 @@ func RunScenarioSetDelete(c *CmdConfig) error {
 		return errOperationAborted
 	}
 
-	if err := c.GradientAI().DeleteScenarioSet(c.Args[0]); err != nil {
+	if err := c.AgentPlatform().DeleteScenarioSet(c.Args[0]); err != nil {
 		return err
 	}
 
@@ -370,7 +369,7 @@ func RunScenarioSetDownloadURL(c *CmdConfig) error {
 		return err
 	}
 
-	downloadURL, err := c.GradientAI().GetScenarioSetDownloadURL(c.Args[0])
+	downloadURL, err := c.AgentPlatform().GetScenarioSetDownloadURL(c.Args[0])
 	if err != nil {
 		return err
 	}

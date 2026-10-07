@@ -167,6 +167,8 @@ const (
 	ArgEnableRoutingAgent = "enable-routing-agent"
 	// ArgEnablePeerToPeerOciRegistryPlugin enables the Peer-to-peer OCI registry cluster plugin.
 	ArgEnablePeerToPeerOciRegistryPlugin = "enable-peer-to-peer-oci-registry-plugin"
+	// ArgEnableNfsCsiPlugin enables the NFS CSI driver cluster plugin.
+	ArgEnableNfsCsiPlugin = "enable-nfs-csi-plugin"
 	// ArgEnableCorednsAutoscaler enables the CoreDNS Autoscaler cluster plugin.
 	ArgEnableCorednsAutoscaler = "enable-coredns-autoscaler"
 	// ArgEnableAmdGpuDevicePlugin enables automatic amd gpu device plugin installation.
@@ -919,6 +921,10 @@ const (
 	// started to finish, in seconds.
 	ArgAgentPromptTimeout = "timeout"
 
+	// ArgAgentCancelRunID names the turn `cancel` stops; without it, whichever
+	// turn is in flight.
+	ArgAgentCancelRunID = "run-id"
+
 	// ArgAgentPromptIncludeReasoning also emits the model's reasoning, not
 	// just its answer, from a `prompt` run.
 	ArgAgentPromptIncludeReasoning = "include-reasoning"
@@ -1002,8 +1008,9 @@ const (
 	ArgAgentFromConfig = "from-config"
 
 	// ArgAgentBaseTemplate is the platform base key a custom sandbox template
-	// is rebased onto (coding-base | coding-claude-code | coding-codex |
-	// coding-opencode | coding-hermes | crewai | langgraph).
+	// is rebased onto (codex-base | opencode-base | claude-code-base |
+	// hermes-base | langgraph-base | sandbox | crewai, or a legacy
+	// coding-* / langgraph key).
 	ArgAgentBaseTemplate = "base-template"
 
 	// ArgAgentTemplate selects the sandbox template a session runs on: a
@@ -1133,4 +1140,54 @@ const (
 
 	// ArgSimulationJourneyVerdicts filters simulation journeys by verdict.
 	ArgSimulationJourneyVerdicts = "verdicts"
+
+	// Model evaluation args
+
+	// ArgEvaluationCandidateModelUUID is the UUID of the candidate model under evaluation.
+	ArgEvaluationCandidateModelUUID = "candidate-model-uuid"
+
+	// ArgEvaluationCandidateModelName is the display name of the candidate model.
+	ArgEvaluationCandidateModelName = "candidate-model-name"
+
+	// ArgEvaluationCandidateModelSource is the source type of the candidate model.
+	ArgEvaluationCandidateModelSource = "candidate-model-source"
+
+	// ArgEvaluationCandidateInferenceConfig is a JSON object of candidate inference settings.
+	ArgEvaluationCandidateInferenceConfig = "candidate-inference-config"
+
+	// ArgEvaluationDatasetUUID is the UUID of the evaluation dataset.
+	ArgEvaluationDatasetUUID = "dataset-uuid"
+
+	// ArgEvaluationDatasetType filters or sets the evaluation dataset type.
+	ArgEvaluationDatasetType = "dataset-type"
+
+	// ArgEvaluationDatasetParadigm filters or sets the evaluation dataset paradigm.
+	ArgEvaluationDatasetParadigm = "dataset-paradigm"
+
+	// ArgEvaluationHasGroundTruth filters datasets by whether they include ground truth.
+	ArgEvaluationHasGroundTruth = "has-ground-truth"
+
+	// ArgEvaluationEvalPresetUUID is the UUID of a saved model evaluation preset.
+	ArgEvaluationEvalPresetUUID = "eval-preset-uuid"
+
+	// ArgEvaluationPresetName is the name used when saving a new evaluation preset.
+	ArgEvaluationPresetName = "preset-name"
+
+	// ArgEvaluationPresetSaveSections controls which sections are saved into a new preset.
+	ArgEvaluationPresetSaveSections = "preset-save-sections"
+
+	// ArgEvaluationEpochs is the number of times to evaluate each dataset row.
+	ArgEvaluationEpochs = "epochs"
+
+	// ArgEvaluationScoringPrompt is the LLM-as-judge scoring prompt for a custom metric.
+	ArgEvaluationScoringPrompt = "scoring-prompt"
+
+	// ArgEvaluationRequiresGroundTruth indicates whether a custom metric needs ground truth.
+	ArgEvaluationRequiresGroundTruth = "requires-ground-truth"
+
+	// ArgEvaluationDescription is a free-text description for a custom metric.
+	ArgEvaluationDescription = "description"
+
+	// ArgEvaluationCandidateTypes filters model evaluation runs by candidate model source.
+	ArgEvaluationCandidateTypes = "candidate-types"
 )

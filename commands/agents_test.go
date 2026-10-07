@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -225,6 +225,23 @@ func TestNamedManifestPath(t *testing.T) {
 			path, err := namedManifestPath(config)
 			assert.NoError(t, err)
 			assert.Empty(t, path)
+		})
+	})
+
+	// MARSOHS-1671: a --spec value left in config.yaml from an earlier run must
+	// not count as naming a manifest on this invocation.
+	t.Run("stale config.yaml --spec is ignored", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			viper.Set("agents.create.spec", "poisoned.yaml")
+			t.Cleanup(func() { viper.Set("agents.create.spec", "") })
+
+			config.NS = "agents.create"
+			// LiveConfig reads viper; do not mark the flag as set on this run.
+			config.Doit = &doctl.LiveConfig{}
+
+			path, err := namedManifestPath(config)
+			assert.NoError(t, err)
+			assert.Empty(t, path, "config.yaml must not supply --spec")
 		})
 	})
 
@@ -1711,6 +1728,8 @@ func TestRenderEvent(t *testing.T) {
 		{"run completed no cost", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":133328,"total_tokens_out":5414,"run_cost_micros":0}`, "\n✓ run complete · 133328 in / 5414 out tokens\n" + runSeparator + "\n"},
 		{"run completed no usage", godo.HostedAgentEventKindRunCompleted, "", `{"total_tokens_in":0,"total_tokens_out":0,"run_cost_micros":0}`, "\n✓ run complete\n" + runSeparator + "\n"},
 		{"run failed", godo.HostedAgentEventKindRunFailed, "", `{"code":5,"message":"hitl rejected"}`, "\n✗ run failed: hitl rejected (code 5)\n" + runSeparator + "\n"},
+		{"run cancelled", godo.HostedAgentEventKindRunFailed, "", `{"code":7,"message":"turn cancelled by demo@acme.com"}`, "\n■ turn cancelled by demo@acme.com\n" + runSeparator + "\n"},
+		{"run cancelled no message", godo.HostedAgentEventKindRunFailed, "", `{"code":7}`, "\n■ turn cancelled\n" + runSeparator + "\n"},
 		{"hitl resolved", godo.HostedAgentEventKindHITLResolved, "", `{"hitl_id":"hitl_1","outcome":1}`, "\nhitl_1 approve\n"},
 		{"session updated", godo.HostedAgentEventKindSessionUpdated, "", `{}`, "\n• session updated\n"},
 	}

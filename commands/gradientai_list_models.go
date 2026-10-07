@@ -27,7 +27,7 @@ The command returns the following details for each model:
 }
 
 func RunGradientAIListModels(c *CmdConfig) error {
-	models, err := c.GradientAI().ListAvailableModels()
+	models, err := c.AgentPlatform().ListAvailableModels()
 	if err != nil {
 		return err
 	}

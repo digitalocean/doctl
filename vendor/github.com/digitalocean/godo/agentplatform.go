@@ -116,14 +116,15 @@ const (
 	ModelEvaluationRunFailed              ModelEvaluationRunStatus = "MODEL_EVALUATION_RUN_FAILED"
 )
 
-// CandidateModelSource indicates whether evaluation inference runs against the
-// serverless platform, a dedicated deployment, or a model router.
+// CandidateModelSource indicates whether the evaluation candidate is a served
+// model (serverless, dedicated, or router) or an OHS-hosted agent config.
 type CandidateModelSource string
 
 const (
 	CandidateModelSourceServerless CandidateModelSource = "CANDIDATE_MODEL_SOURCE_SERVERLESS"
 	CandidateModelSourceDedicated  CandidateModelSource = "CANDIDATE_MODEL_SOURCE_DEDICATED"
 	CandidateModelSourceRouter     CandidateModelSource = "CANDIDATE_MODEL_SOURCE_ROUTER"
+	CandidateModelSourceAgent      CandidateModelSource = "CANDIDATE_MODEL_SOURCE_AGENT"
 )
 
 // ModelEvaluationRunSortField is the field used to sort model evaluation run
@@ -154,6 +155,30 @@ const (
 	EvaluationDatasetTypeADK     EvaluationDatasetType = "EVALUATION_DATASET_TYPE_ADK"
 	EvaluationDatasetTypeNonADK  EvaluationDatasetType = "EVALUATION_DATASET_TYPE_NON_ADK"
 	EvaluationDatasetTypeModel   EvaluationDatasetType = "EVALUATION_DATASET_TYPE_MODEL"
+)
+
+// EvaluationDatasetParadigm is the row/content shape of a dataset, orthogonal
+// to EvaluationDatasetType (e.g. a model dataset can be single- or multi-turn).
+type EvaluationDatasetParadigm string
+
+const (
+	EvaluationDatasetParadigmSingleTurn EvaluationDatasetParadigm = "EVALUATION_DATASET_PARADIGM_SINGLE_TURN"
+	EvaluationDatasetParadigmMultiTurn  EvaluationDatasetParadigm = "EVALUATION_DATASET_PARADIGM_MULTI_TURN"
+	EvaluationDatasetParadigmCoding     EvaluationDatasetParadigm = "EVALUATION_DATASET_PARADIGM_CODING"
+	EvaluationDatasetParadigmNPlus1     EvaluationDatasetParadigm = "EVALUATION_DATASET_PARADIGM_N_PLUS_1"
+)
+
+// PresetSaveSection names a self-contained group of fields that can be
+// persisted when creating a model evaluation run as a reusable preset.
+type PresetSaveSection string
+
+const (
+	PresetSaveSectionUnspecified  PresetSaveSection = "PRESET_SAVE_SECTION_UNSPECIFIED"
+	PresetSaveSectionCandidate    PresetSaveSection = "PRESET_SAVE_SECTION_CANDIDATE"
+	PresetSaveSectionMetrics      PresetSaveSection = "PRESET_SAVE_SECTION_METRICS"
+	PresetSaveSectionJudge        PresetSaveSection = "PRESET_SAVE_SECTION_JUDGE"
+	PresetSaveSectionDataset      PresetSaveSection = "PRESET_SAVE_SECTION_DATASET"
+	PresetSaveSectionSystemPrompt PresetSaveSection = "PRESET_SAVE_SECTION_SYSTEM_PROMPT"
 )
 
 // AgentPlatformService is an interface for interfacing with the Agent Platform Agent endpoints
@@ -236,6 +261,7 @@ type AgentPlatformService interface {
 	ListModelEvaluationPresets(ctx context.Context) (*ModelEvaluationPresetListResponse, *Response, error)
 	ListModelEvaluationMetrics(ctx context.Context) (*ModelEvaluationMetricListResponse, *Response, error)
 	ListEvaluationDatasets(ctx context.Context, opt *EvaluationDatasetListOptions) (*EvaluationDatasetListResponse, *Response, error)
+	CreateEvaluationDataset(ctx context.Context, createRequest *CreateEvaluationDatasetRequest) (*CreateEvaluationDatasetResponse, *Response, error)
 	DeleteEvaluationDataset(ctx context.Context, datasetUUID string) (*EvaluationDatasetDeleteResponse, *Response, error)
 	CreateScenarioSetUploadPresignedURLs(ctx context.Context, createRequest *CreateScenarioSetUploadPresignedURLsRequest) (*CreateScenarioSetUploadPresignedURLsResponse, *Response, error)
 	CreateScenarioSet(ctx context.Context, createRequest *CreateScenarioSetRequest) (*ScenarioSet, *Response, error)
@@ -517,6 +543,8 @@ const (
 	MetricTypeUnspecified    EvaluationMetricType = "METRIC_TYPE_UNSPECIFIED"
 	MetricTypeGeneralQuality EvaluationMetricType = "METRIC_TYPE_GENERAL_QUALITY"
 	MetricTypeRAGAndTool     EvaluationMetricType = "METRIC_TYPE_RAG_AND_TOOL"
+	MetricTypeModelQuality   EvaluationMetricType = "METRIC_TYPE_MODEL_QUALITY"
+	MetricTypeModelSafety    EvaluationMetricType = "METRIC_TYPE_MODEL_SAFETY"
 )
 
 // EvaluationMetricValueType represents the value type of an evaluation metric.
@@ -539,6 +567,7 @@ const (
 	MetricCategorySafetyAndSecurity EvaluationMetricCategory = "METRIC_CATEGORY_SAFETY_AND_SECURITY"
 	MetricCategoryContextQuality    EvaluationMetricCategory = "METRIC_CATEGORY_CONTEXT_QUALITY"
 	MetricCategoryModelFit          EvaluationMetricCategory = "METRIC_CATEGORY_MODEL_FIT"
+	MetricCategoryConversational    EvaluationMetricCategory = "METRIC_CATEGORY_CONVERSATIONAL"
 )
 
 // EvaluationMetricSource distinguishes platform catalog metrics from user-defined LLM-as-judge metrics.
@@ -636,12 +665,14 @@ type UpdateCustomEvaluationMetricRequest struct {
 
 // EvaluationDataset represents the dataset information for an evaluation.
 type EvaluationDataset struct {
-	DatasetUUID    string     `json:"dataset_uuid,omitempty"`
-	DatasetName    string     `json:"dataset_name,omitempty"`
-	RowCount       uint32     `json:"row_count,omitempty"`
-	HasGroundTruth bool       `json:"has_ground_truth,omitempty"`
-	FileSize       uint64     `json:"file_size,omitempty"`
-	CreatedAt      *Timestamp `json:"created_at,omitempty"`
+	DatasetUUID     string                    `json:"dataset_uuid,omitempty"`
+	DatasetName     string                    `json:"dataset_name,omitempty"`
+	RowCount        uint32                    `json:"row_count,omitempty"`
+	HasGroundTruth  bool                      `json:"has_ground_truth,omitempty"`
+	FileSize        uint64                    `json:"file_size,omitempty"`
+	DatasetType     EvaluationDatasetType     `json:"dataset_type,omitempty"`
+	DatasetParadigm EvaluationDatasetParadigm `json:"dataset_paradigm,omitempty"`
+	CreatedAt       *Timestamp                `json:"created_at,omitempty"`
 }
 
 // StarMetric represents a star metric configuration.
@@ -2736,10 +2767,11 @@ func (s *AgentPlatformServiceOp) UpdateModelEvaluationRun(ctx context.Context, e
 // CandidateInferenceConfig is the inference configuration applied to the
 // candidate model when running a model evaluation run.
 type CandidateInferenceConfig struct {
-	MaxTokens    int64   `json:"max_tokens,omitempty"`
-	StopToken    string  `json:"stop_token,omitempty"`
-	SystemPrompt string  `json:"system_prompt,omitempty"`
-	Temperature  float32 `json:"temperature,omitempty"`
+	MaxTokens       int64   `json:"max_tokens,omitempty"`
+	ReasoningEffort string  `json:"reasoning_effort,omitempty"`
+	StopToken       string  `json:"stop_token,omitempty"`
+	SystemPrompt    string  `json:"system_prompt,omitempty"`
+	Temperature     float32 `json:"temperature,omitempty"`
 }
 
 // PresignedUrlFile describes a single file for which a presigned upload URL is
@@ -2779,13 +2811,20 @@ type CreateModelEvaluationRunRequest struct {
 	CandidateModelSource     CandidateModelSource      `json:"candidate_model_source,omitempty"`
 	CandidateModelUUID       string                    `json:"candidate_model_uuid,omitempty"`
 	DatasetUUID              string                    `json:"dataset_uuid,omitempty"`
-	EvalPresetUUID           string                    `json:"eval_preset_uuid,omitempty"`
-	JudgeModelUUID           string                    `json:"judge_model_uuid,omitempty"`
-	MetricUUIDs              []string                  `json:"metric_uuids,omitempty"`
-	Name                     string                    `json:"name,omitempty"`
-	PresetName               string                    `json:"preset_name,omitempty"`
-	Source                   string                    `json:"source,omitempty"`
-	StarMetric               *StarMetric               `json:"star_metric,omitempty"`
+	// Epochs is the number of times to evaluate each dataset row (n-pass).
+	// Defaults to 1 when unset. Capped at 3 by the API today.
+	Epochs         uint32   `json:"epochs,omitempty"`
+	EvalPresetUUID string   `json:"eval_preset_uuid,omitempty"`
+	JudgeModelUUID string   `json:"judge_model_uuid,omitempty"`
+	MetricUUIDs    []string `json:"metric_uuids,omitempty"`
+	Name           string   `json:"name,omitempty"`
+	PresetName     string   `json:"preset_name,omitempty"`
+	// PresetSaveSections controls which sections of the resolved configuration
+	// are persisted as a new reusable preset. Empty means do not save a preset.
+	// Ignored when EvalPresetUUID is set.
+	PresetSaveSections []PresetSaveSection `json:"preset_save_sections,omitempty"`
+	Source             string              `json:"source,omitempty"`
+	StarMetric         *StarMetric         `json:"star_metric,omitempty"`
 }
 
 // ModelEvaluationRunCreateResponse is the response returned by
@@ -2797,25 +2836,38 @@ type ModelEvaluationRunCreateResponse struct {
 // ModelEvaluationPreset is a saved, reusable configuration for model
 // evaluation runs.
 type ModelEvaluationPreset struct {
-	CreatedAt      *Timestamp          `json:"created_at,omitempty"`
-	DatasetName    string              `json:"dataset_name,omitempty"`
-	DatasetUuid    string              `json:"dataset_uuid,omitempty"`
-	EvalPresetUuid string              `json:"eval_preset_uuid,omitempty"`
-	JudgeModelName string              `json:"judge_model_name,omitempty"`
-	JudgeModelUuid string              `json:"judge_model_uuid,omitempty"`
-	Metrics        []*EvaluationMetric `json:"metrics,omitempty"`
-	Name           string              `json:"name,omitempty"`
-	StarMetric     *StarMetric         `json:"star_metric,omitempty"`
+	CandidateInferenceConfig *CandidateInferenceConfig `json:"candidate_inference_config,omitempty"`
+	CandidateModelName       string                    `json:"candidate_model_name,omitempty"`
+	CandidateModelSource     CandidateModelSource      `json:"candidate_model_source,omitempty"`
+	CandidateModelUuid       string                    `json:"candidate_model_uuid,omitempty"`
+	CandidateSystemPrompt    string                    `json:"candidate_system_prompt,omitempty"`
+	CreatedAt                *Timestamp                `json:"created_at,omitempty"`
+	DatasetName              string                    `json:"dataset_name,omitempty"`
+	DatasetUuid              string                    `json:"dataset_uuid,omitempty"`
+	EvalPresetUuid           string                    `json:"eval_preset_uuid,omitempty"`
+	JudgeModelName           string                    `json:"judge_model_name,omitempty"`
+	JudgeModelUuid           string                    `json:"judge_model_uuid,omitempty"`
+	Metrics                  []*EvaluationMetric       `json:"metrics,omitempty"`
+	Name                     string                    `json:"name,omitempty"`
+	SavedSections            []PresetSaveSection       `json:"saved_sections,omitempty"`
+	StarMetric               *StarMetric               `json:"star_metric,omitempty"`
 }
 
 // MetricResultSummary represents per-metric aggregated pass/fail statistics
 // across all prompts in an evaluation run.
 type MetricResultSummary struct {
-	Description string  `json:"description,omitempty"`
-	FailPercent float64 `json:"fail_percent,omitempty"`
-	MetricName  string  `json:"metric_name,omitempty"`
-	MetricUuid  string  `json:"metric_uuid,omitempty"`
-	PassPercent float64 `json:"pass_percent,omitempty"`
+	AvgAtKPercent  float64 `json:"avg_at_k_percent,omitempty"`
+	ConsAtKPercent float64 `json:"cons_at_k_percent,omitempty"`
+	Description    string  `json:"description,omitempty"`
+	FailCount      uint32  `json:"fail_count,omitempty"`
+	FailPercent    float64 `json:"fail_percent,omitempty"`
+	MetricName     string  `json:"metric_name,omitempty"`
+	MetricUuid     string  `json:"metric_uuid,omitempty"`
+	PassAtKPercent float64 `json:"pass_at_k_percent,omitempty"`
+	PassCount      uint32  `json:"pass_count,omitempty"`
+	PassPercent    float64 `json:"pass_percent,omitempty"`
+	SkipPercent    float64 `json:"skip_percent,omitempty"`
+	SkippedCount   uint32  `json:"skipped_count,omitempty"`
 }
 
 // LatencyMetrics contains latency metrics for candidate model invocations,
@@ -2894,13 +2946,51 @@ type PerModelResultSummaries struct {
 	Summaries []*PerModelResultSummary `json:"summaries,omitempty"`
 }
 
+// PerTaskResultSummary is the aggregated evaluation results for a single
+// routing task category in a router evaluation run.
+type PerTaskResultSummary struct {
+	MetricSummaries    []*MetricResultSummary `json:"metric_summaries,omitempty"`
+	PerformanceMetrics *PerformanceMetrics    `json:"performance_metrics,omitempty"`
+	PromptCount        int64                  `json:"prompt_count,omitempty"`
+	TaskName           string                 `json:"task_name,omitempty"`
+}
+
+// PerTaskResultSummaries wraps the per-task summaries used inside a
+// ModelEvaluationRunResultSummary.
+type PerTaskResultSummaries struct {
+	Summaries []*PerTaskResultSummary `json:"summaries,omitempty"`
+}
+
+// PerEpochResultSummary is one epoch's standalone score for a multi-epoch run.
+type PerEpochResultSummary struct {
+	Epoch               uint32  `json:"epoch,omitempty"`
+	OverallScorePercent float64 `json:"overall_score_percent,omitempty"`
+	RowsScored          uint32  `json:"rows_scored,omitempty"`
+}
+
+// EpochResultSummary aggregates avg@k/pass@k/cons@k across epochs when a run
+// repeats each dataset row k times. Only populated when epochs > 1.
+type EpochResultSummary struct {
+	AvgAtKPercent      float64                  `json:"avg_at_k_percent,omitempty"`
+	ConsAtKPercent     float64                  `json:"cons_at_k_percent,omitempty"`
+	Epochs             uint32                   `json:"epochs,omitempty"`
+	PassAtKPercent     float64                  `json:"pass_at_k_percent,omitempty"`
+	PerEpoch           []*PerEpochResultSummary `json:"per_epoch,omitempty"`
+	RowsExcluded       uint32                   `json:"rows_excluded,omitempty"`
+	RowsScored         uint32                   `json:"rows_scored,omitempty"`
+	ScoreStddevPercent float64                  `json:"score_stddev_percent,omitempty"`
+}
+
 // ModelEvaluationRunResultSummary contains the aggregated result summary for
 // a completed model evaluation run.
 type ModelEvaluationRunResultSummary struct {
 	EndTime              *Timestamp               `json:"end_time,omitempty"`
+	EpochSummary         *EpochResultSummary      `json:"epoch_summary,omitempty"`
+	Epochs               uint32                   `json:"epochs,omitempty"`
 	MetricSummaries      []*MetricResultSummary   `json:"metric_summaries,omitempty"`
 	OverallScorePercent  float64                  `json:"overall_score_percent,omitempty"`
 	PerModelSummaries    *PerModelResultSummaries `json:"per_model_summaries,omitempty"`
+	PerTaskSummaries     *PerTaskResultSummaries  `json:"per_task_summaries,omitempty"`
 	PerformanceMetrics   *PerformanceMetrics      `json:"performance_metrics,omitempty"`
 	Pricing              *EvaluationPricing       `json:"pricing,omitempty"`
 	StarMetricSummary    *StarMetricSummary       `json:"star_metric_summary,omitempty"`
@@ -2937,6 +3027,7 @@ type ModelEvaluationRunDetail struct {
 	CreatedAt                *Timestamp                       `json:"created_at,omitempty"`
 	DatasetName              string                           `json:"dataset_name,omitempty"`
 	DatasetUuid              string                           `json:"dataset_uuid,omitempty"`
+	Epochs                   uint32                           `json:"epochs,omitempty"`
 	ErrorDescription         string                           `json:"error_description,omitempty"`
 	EvalPresetName           string                           `json:"eval_preset_name,omitempty"`
 	EvalPresetUuid           string                           `json:"eval_preset_uuid,omitempty"`
@@ -2955,23 +3046,37 @@ type ModelEvaluationRunDetail struct {
 // ModelEvaluationMetricResult represents the per-metric score and judge
 // reasoning for a single prompt in an evaluation run.
 type ModelEvaluationMetricResult struct {
-	ErrorDescription string                    `json:"error_description,omitempty"`
-	MetricName       string                    `json:"metric_name,omitempty"`
-	MetricValueType  EvaluationMetricValueType `json:"metric_value_type,omitempty"`
-	NumberValue      float64                   `json:"number_value,omitempty"`
-	Reasoning        string                    `json:"reasoning,omitempty"`
-	StringValue      string                    `json:"string_value,omitempty"`
+	ErrorDescription string                       `json:"error_description,omitempty"`
+	MetricName       string                       `json:"metric_name,omitempty"`
+	MetricUUID       string                       `json:"metric_uuid,omitempty"`
+	MetricValueType  EvaluationMetricValueType    `json:"metric_value_type,omitempty"`
+	NumberValue      float64                      `json:"number_value,omitempty"`
+	Reasoning        string                       `json:"reasoning,omitempty"`
+	Status           EvaluationMetricResultStatus `json:"status,omitempty"`
+	StringValue      string                       `json:"string_value,omitempty"`
+}
+
+// ModelEvaluationEpochAttempt is one epoch's attempt at a dataset row, nested
+// under ModelEvaluationResult.EpochResults for multi-epoch runs.
+type ModelEvaluationEpochAttempt struct {
+	CandidateRoutedTask string                         `json:"candidate_routed_task,omitempty"`
+	MetricResults       []*ModelEvaluationMetricResult `json:"metric_results,omitempty"`
+	Output              string                         `json:"output,omitempty"`
 }
 
 // ModelEvaluationResult represents the per-prompt result for a model
 // evaluation run.
 type ModelEvaluationResult struct {
-	CandidateModelName string                         `json:"candidate_model_name,omitempty"`
-	CandidateModelUuid string                         `json:"candidate_model_uuid,omitempty"`
-	GroundTruth        string                         `json:"ground_truth,omitempty"`
-	Input              string                         `json:"input,omitempty"`
-	MetricResults      []*ModelEvaluationMetricResult `json:"metric_results,omitempty"`
-	Output             string                         `json:"output,omitempty"`
+	CandidateModelName  string                                  `json:"candidate_model_name,omitempty"`
+	CandidateModelUuid  string                                  `json:"candidate_model_uuid,omitempty"`
+	CandidateRoutedTask string                                  `json:"candidate_routed_task,omitempty"`
+	Epoch               uint32                                  `json:"epoch,omitempty"`
+	EpochResults        map[string]*ModelEvaluationEpochAttempt `json:"epoch_results,omitempty"`
+	GroundTruth         string                                  `json:"ground_truth,omitempty"`
+	Input               string                                  `json:"input,omitempty"`
+	MetricResults       []*ModelEvaluationMetricResult          `json:"metric_results,omitempty"`
+	Output              string                                  `json:"output,omitempty"`
+	RowNumber           uint32                                  `json:"row_number,omitempty"`
 }
 
 // ModelEvaluationRunGetOptions specifies optional pagination parameters for
@@ -3021,9 +3126,11 @@ type ModelEvaluationRunListOptions struct {
 // ModelEvaluationRunListResponse is the response returned by
 // ListModelEvaluationRuns.
 type ModelEvaluationRunListResponse struct {
-	Runs  []*ModelEvaluationRunSummary `json:"runs,omitempty"`
-	Links *Links                       `json:"links,omitempty"`
-	Meta  *Meta                        `json:"meta,omitempty"`
+	AvailableCandidateTypes []CandidateModelSource       `json:"available_candidate_types,omitempty"`
+	AvailableStatuses       []ModelEvaluationRunStatus   `json:"available_statuses,omitempty"`
+	Runs                    []*ModelEvaluationRunSummary `json:"runs,omitempty"`
+	Links                   *Links                       `json:"links,omitempty"`
+	Meta                    *Meta                        `json:"meta,omitempty"`
 }
 
 // ModelEvaluationPresetListResponse is the response returned by
@@ -3043,18 +3150,23 @@ type ModelEvaluationMetricListResponse struct {
 type EvaluationDatasetListOptions struct {
 	// DatasetType filters the results by evaluation dataset type.
 	DatasetType EvaluationDatasetType `url:"dataset_type,omitempty"`
+	// DatasetParadigm filters by row/content shape.
+	DatasetParadigm EvaluationDatasetParadigm `url:"dataset_paradigm,omitempty"`
+	// HasGroundTruth filters by whether the dataset includes ground-truth values.
+	HasGroundTruth *bool `url:"has_ground_truth,omitempty"`
 }
 
 // EvaluationDatasetInfo represents an evaluation dataset returned by
 // ListEvaluationDatasets.
 type EvaluationDatasetInfo struct {
-	CreatedAt      *Timestamp            `json:"created_at,omitempty"`
-	DatasetName    string                `json:"dataset_name,omitempty"`
-	DatasetType    EvaluationDatasetType `json:"dataset_type,omitempty"`
-	DatasetUUID    string                `json:"dataset_uuid,omitempty"`
-	FileSize       string                `json:"file_size,omitempty"`
-	HasGroundTruth bool                  `json:"has_ground_truth,omitempty"`
-	RowCount       int64                 `json:"row_count,omitempty"`
+	CreatedAt       *Timestamp                `json:"created_at,omitempty"`
+	DatasetName     string                    `json:"dataset_name,omitempty"`
+	DatasetParadigm EvaluationDatasetParadigm `json:"dataset_paradigm,omitempty"`
+	DatasetType     EvaluationDatasetType     `json:"dataset_type,omitempty"`
+	DatasetUUID     string                    `json:"dataset_uuid,omitempty"`
+	FileSize        string                    `json:"file_size,omitempty"`
+	HasGroundTruth  bool                      `json:"has_ground_truth,omitempty"`
+	RowCount        int64                     `json:"row_count,omitempty"`
 }
 
 // EvaluationDatasetListResponse is the response returned by
@@ -3066,6 +3178,41 @@ type EvaluationDatasetListResponse struct {
 // EvaluationDatasetDeleteResponse is the response returned by
 // DeleteEvaluationDataset.
 type EvaluationDatasetDeleteResponse struct{}
+
+// CreateEvaluationDatasetRequest is the request body for creating an
+// evaluation dataset from a previously uploaded file.
+type CreateEvaluationDatasetRequest struct {
+	Name              string                    `json:"name,omitempty"`
+	DatasetType       EvaluationDatasetType     `json:"dataset_type,omitempty"`
+	DatasetParadigm   EvaluationDatasetParadigm `json:"dataset_paradigm,omitempty"`
+	FileUploadDataset *FileUploadDataSource     `json:"file_upload_dataset,omitempty"`
+}
+
+// CreateEvaluationDatasetResponse is the response returned by
+// CreateEvaluationDataset.
+type CreateEvaluationDatasetResponse struct {
+	EvaluationDatasetUUID string `json:"evaluation_dataset_uuid,omitempty"`
+}
+
+// CreateEvaluationDataset registers an evaluation dataset from a file that was
+// previously uploaded via CreateModelEvalDatasetUploadPresignedURLs.
+func (s *AgentPlatformServiceOp) CreateEvaluationDataset(ctx context.Context, createRequest *CreateEvaluationDatasetRequest) (*CreateEvaluationDatasetResponse, *Response, error) {
+	if createRequest == nil {
+		return nil, nil, fmt.Errorf("create request is required")
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, evaluationDatasetsBasePath, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(CreateEvaluationDatasetResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
 
 // CreateModelEvaluationRun creates a new model evaluation run.
 func (s *AgentPlatformServiceOp) CreateModelEvaluationRun(ctx context.Context, createRequest *CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreateResponse, *Response, error) {

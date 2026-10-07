@@ -50,7 +50,7 @@ func TestScenarioSetCreateFromScenarios(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGenAIName, "Test Scenario Set")
 		config.Doit.Set(config.NS, doctl.ArgScenarioSetScenarios, `[{"name":"Test Scenario","description":"A customer asks for a refund","max_turns":10}]`)
 
-		tm.gradientAI.EXPECT().CreateScenarioSet(&godo.CreateScenarioSetRequest{
+		tm.agentPlatform.EXPECT().CreateScenarioSet(&godo.CreateScenarioSetRequest{
 			Name: "Test Scenario Set",
 			Scenarios: []*godo.Scenario{{
 				Name:        "Test Scenario",
@@ -74,7 +74,7 @@ func TestScenarioSetCreateFromFile(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgScenarioSetFile, path)
 
 		size := strconv.Itoa(len(contents))
-		tm.gradientAI.EXPECT().CreateScenarioSetUploadPresignedURLs(&godo.CreateScenarioSetUploadPresignedURLsRequest{
+		tm.agentPlatform.EXPECT().CreateScenarioSetUploadPresignedURLs(&godo.CreateScenarioSetUploadPresignedURLsRequest{
 			Files: []*godo.PresignedUrlFile{{
 				FileName: "scenarios.jsonl",
 				FileSize: size,
@@ -92,7 +92,7 @@ func TestScenarioSetCreateFromFile(t *testing.T) {
 		var uploadedTo string
 		var uploaded []byte
 		originalPut := putPresignedFile
-		putPresignedFile = func(url string, body io.Reader, _ int64) error {
+		putPresignedFile = func(url string, body io.Reader, _ int64, _ string) error {
 			uploadedTo = url
 			var err error
 			uploaded, err = io.ReadAll(body)
@@ -100,7 +100,7 @@ func TestScenarioSetCreateFromFile(t *testing.T) {
 		}
 		defer func() { putPresignedFile = originalPut }()
 
-		tm.gradientAI.EXPECT().CreateScenarioSet(&godo.CreateScenarioSetRequest{
+		tm.agentPlatform.EXPECT().CreateScenarioSet(&godo.CreateScenarioSetRequest{
 			Name: "Test Scenario Set",
 			FileUploadScenarioSet: &godo.FileUploadDataSource{
 				OriginalFileName: "scenarios.jsonl",
@@ -125,7 +125,7 @@ func TestScenarioSetCreateFromFileIncompleteUpload(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGenAIName, "Test Scenario Set")
 		config.Doit.Set(config.NS, doctl.ArgScenarioSetFile, path)
 
-		tm.gradientAI.EXPECT().CreateScenarioSetUploadPresignedURLs(&godo.CreateScenarioSetUploadPresignedURLsRequest{
+		tm.agentPlatform.EXPECT().CreateScenarioSetUploadPresignedURLs(&godo.CreateScenarioSetUploadPresignedURLsRequest{
 			Files: []*godo.PresignedUrlFile{{
 				FileName: "scenarios.jsonl",
 				FileSize: strconv.Itoa(len(contents)),
@@ -141,7 +141,7 @@ func TestScenarioSetCreateFromFileIncompleteUpload(t *testing.T) {
 
 		uploadAttempted := false
 		originalPut := putPresignedFile
-		putPresignedFile = func(string, io.Reader, int64) error {
+		putPresignedFile = func(string, io.Reader, int64, string) error {
 			uploadAttempted = true
 			return nil
 		}
@@ -180,7 +180,7 @@ func TestScenarioSetGenerate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgScenarioSetNumScenarios, 10)
 		config.Doit.Set(config.NS, doctl.ArgScenarioSetGeneratorModelUUID, "generator-model-uuid")
 
-		tm.gradientAI.EXPECT().GenerateScenarioSet(&godo.GenerateScenarioSetRequest{
+		tm.agentPlatform.EXPECT().GenerateScenarioSet(&godo.GenerateScenarioSetRequest{
 			Name:               "Test Scenario Set",
 			GoalDescription:    "Customers asking for refunds",
 			NumScenarios:       10,
@@ -194,7 +194,7 @@ func TestScenarioSetGenerate(t *testing.T) {
 
 func TestScenarioSetList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListScenarioSets(&godo.ScenarioSetListOptions{}).Return(do.ScenarioSets{testScenarioSet}, nil)
+		tm.agentPlatform.EXPECT().ListScenarioSets(&godo.ScenarioSetListOptions{}).Return(do.ScenarioSets{testScenarioSet}, nil)
 
 		err := RunScenarioSetList(config)
 		assert.NoError(t, err)
@@ -209,7 +209,7 @@ func TestScenarioSetListWithFilters(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGenAISortBy, "created-at")
 		config.Doit.Set(config.NS, doctl.ArgGenAISortDirection, "desc")
 
-		tm.gradientAI.EXPECT().ListScenarioSets(&godo.ScenarioSetListOptions{
+		tm.agentPlatform.EXPECT().ListScenarioSets(&godo.ScenarioSetListOptions{
 			Statuses:      []godo.ScenarioSetStatus{godo.ScenarioSetStatusReady, godo.ScenarioSetStatusFailed},
 			SourceKinds:   []godo.ScenarioSetSourceKind{godo.ScenarioSetSourceKindUserUpload},
 			Search:        "refund",
@@ -225,7 +225,7 @@ func TestScenarioSetListWithFilters(t *testing.T) {
 func TestScenarioSetGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testScenarioSetUUID)
-		tm.gradientAI.EXPECT().GetScenarioSet(testScenarioSetUUID).Return(&testScenarioSet, nil)
+		tm.agentPlatform.EXPECT().GetScenarioSet(testScenarioSetUUID).Return(&testScenarioSet, nil)
 
 		err := RunScenarioSetGet(config)
 		assert.NoError(t, err)
@@ -244,7 +244,7 @@ func TestScenarioSetListScenarios(t *testing.T) {
 		config.Args = append(config.Args, testScenarioSetUUID)
 		config.Doit.Set(config.NS, doctl.ArgGenAISortBy, "name")
 
-		tm.gradientAI.EXPECT().ListScenarios(testScenarioSetUUID, &godo.ScenarioListOptions{
+		tm.agentPlatform.EXPECT().ListScenarios(testScenarioSetUUID, &godo.ScenarioListOptions{
 			SortBy: godo.ScenarioSortFieldName,
 		}).Return(do.Scenarios{testScenario}, nil)
 
@@ -258,7 +258,7 @@ func TestScenarioSetUpdate(t *testing.T) {
 		config.Args = append(config.Args, testScenarioSetUUID)
 		config.Doit.Set(config.NS, doctl.ArgGenAIName, "Updated Scenario Set")
 
-		tm.gradientAI.EXPECT().UpdateScenarioSet(testScenarioSetUUID, &godo.UpdateScenarioSetRequest{
+		tm.agentPlatform.EXPECT().UpdateScenarioSet(testScenarioSetUUID, &godo.UpdateScenarioSetRequest{
 			ScenarioSetUUID: testScenarioSetUUID,
 			Name:            "Updated Scenario Set",
 		}).Return(&testScenarioSet, nil)
@@ -282,7 +282,7 @@ func TestScenarioSetDelete(t *testing.T) {
 		config.Args = append(config.Args, testScenarioSetUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		tm.gradientAI.EXPECT().DeleteScenarioSet(testScenarioSetUUID).Return(nil)
+		tm.agentPlatform.EXPECT().DeleteScenarioSet(testScenarioSetUUID).Return(nil)
 
 		err := RunScenarioSetDelete(config)
 		assert.NoError(t, err)
@@ -293,7 +293,7 @@ func TestScenarioSetDownloadURL(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testScenarioSetUUID)
 
-		tm.gradientAI.EXPECT().GetScenarioSetDownloadURL(testScenarioSetUUID).
+		tm.agentPlatform.EXPECT().GetScenarioSetDownloadURL(testScenarioSetUUID).
 			Return(&do.GenAIDownloadURL{DownloadURL: "https://example.com/download"}, nil)
 
 		err := RunScenarioSetDownloadURL(config)

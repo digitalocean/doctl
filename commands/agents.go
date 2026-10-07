@@ -583,6 +583,14 @@ func Agents() *Command {
 		Writer, agentsNS()...)
 	cmdPause.Example = `doctl harness-runtime pause sess_abc123`
 
+	cmdCancel := CmdBuilder(cmd, RunAgentsCancel, "cancel <session>",
+		"Stop the turn a session's agent is running",
+		agentsCancelHelpMD,
+		Writer, agentsNS(aliasOpt("stop"),
+			displayerType(&displayers.HostedAgentCancel{}))...)
+	AddStringFlag(cmdCancel, doctl.ArgAgentCancelRunID, "", "", "Cancel only this turn (the run id prompt or run.started reported); without it, whichever turn is running")
+	cmdCancel.Example = `doctl harness-runtime cancel my-session; doctl harness-runtime cancel sess_abc123 --run-id 01a0f0a9-3b32-7694-a1c9-16c3af792b76`
+
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
 		"Resume a paused session",
 		agentsResumeHelpMD,
@@ -631,7 +639,7 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("ask"),
 			displayerType(&displayers.HostedAgentPrompt{}))...)
 	AddStringFlag(cmdPrompt, doctl.ArgAgentOnHITL, "", "", "Resolve every approval request this way (approve|reject|defer). Without it, an approval request stops the command, since nothing here can ask a human.")
-	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds to wait for the run to finish, exiting 124 if it does not (0 waits indefinitely). The agent keeps going either way.")
+	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds to wait for the run to finish, exiting 124 if it does not (0 waits indefinitely). A timeout does not stop the agent; Ctrl-C does.")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptIncludeReasoning, "", false, "Also print the model's reasoning to stderr, not just its answer")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptQuiet, "q", false, "Suppress progress on stderr; stdout still carries the answer")
 	cmdPrompt.Example = agentCLI + ` prompt my-session What is the capital of France?; ` + agentCLI + ` prompt sess_abc123 "Summarize the README" --timeout 300; ` + agentCLI + ` prompt my-session "Fix the failing test" --on-hitl approve; cat task.md | ` + agentCLI + ` prompt my-session -`
@@ -851,27 +859,29 @@ func firstAgentOnlyFlag(c *CmdConfig, prompt, repo string) string {
 // resolveAgentCreationSource reads and validates the creation flags, resolving
 // the manifest bytes (or the Agent Config ID) the caller should create from.
 func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
-	harness, err := c.Doit.GetString(c.NS, doctl.ArgAgentHarness)
+	// Per-invocation inputs only: values remembered in config.yaml must not
+	// act as if the user passed them again (MARSOHS-1671).
+	harness, err := invocationString(c, doctl.ArgAgentHarness)
 	if err != nil {
 		return nil, err
 	}
-	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
+	name, err := invocationString(c, doctl.ArgAgentName)
 	if err != nil {
 		return nil, err
 	}
-	configRef, err := c.Doit.GetString(c.NS, doctl.ArgAgentFromConfig)
+	configRef, err := invocationString(c, doctl.ArgAgentFromConfig)
 	if err != nil {
 		return nil, err
 	}
-	repo, err := c.Doit.GetString(c.NS, doctl.ArgAgentRepo)
+	repo, err := invocationString(c, doctl.ArgAgentRepo)
 	if err != nil {
 		return nil, err
 	}
-	prompt, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerPrompt)
+	prompt, err := invocationString(c, doctl.ArgAgentTriggerPrompt)
 	if err != nil {
 		return nil, err
 	}
-	secretPairs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAgentSecret)
+	secretPairs, err := invocationStringSlice(c, doctl.ArgAgentSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -879,11 +889,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	permission, err := c.Doit.GetString(c.NS, doctl.ArgAgentPermission)
+	permission, err := invocationString(c, doctl.ArgAgentPermission)
 	if err != nil {
 		return nil, err
 	}
-	template, err := c.Doit.GetString(c.NS, doctl.ArgAgentTemplate)
+	template, err := invocationString(c, doctl.ArgAgentTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -938,7 +948,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// with --template already; a positional path and a discovered ./agents.yaml
 	// are not, and both still get the refusal below.
 	if template != "" && harness == "" && configRef == "" && len(c.Args) == 0 &&
-		!c.Doit.IsSet(doctl.ArgAgentSpec) && discoverManifestFile() == "" {
+		!agentFlagChanged(c, doctl.ArgAgentSpec) && discoverManifestFile() == "" {
 		harness = bareSandboxAgent
 	}
 
@@ -949,11 +959,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	discoveredSpec := false
 	switch {
 	case configRef != "":
-		if c.Doit.IsSet(doctl.ArgAgentSpec) || c.Doit.IsSet(doctl.ArgAgentHarness) {
+		if agentFlagChanged(c, doctl.ArgAgentSpec) || agentFlagChanged(c, doctl.ArgAgentHarness) {
 			return nil, agentSourcesExclusiveErr()
 		}
 	case harness != "":
-		if c.Doit.IsSet(doctl.ArgAgentSpec) {
+		if agentFlagChanged(c, doctl.ArgAgentSpec) {
 			return nil, agentSourcesExclusiveErr()
 		}
 	default:
@@ -1003,7 +1013,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// A manifest supplied by the user already declares its own, and an Agent
 	// Config's lives server-side, so silently ignoring the flag there would
 	// hide a policy the caller believes they set.
-	if c.Doit.IsSet(doctl.ArgAgentPermission) && harness == "" {
+	if agentFlagChanged(c, doctl.ArgAgentPermission) && harness == "" {
 		return nil, fmt.Errorf("--%s only applies with --%s; set the permissions block in the manifest instead",
 			doctl.ArgAgentPermission, doctl.ArgAgentHarness)
 	}
@@ -1539,13 +1549,45 @@ func manifestConfigString(ns, key string) string {
 	return viper.GetString(key)
 }
 
+// agentFlagChanged reports whether name was set on this invocation. Prefer
+// cobra's Changed (covers -f / --file aliases) when a Command is attached;
+// fall back to Doit.IsSet for unit tests that stub flags via TestConfig.Set.
+// Values left in config.yaml by older writeConfig calls must not count
+// (MARSOHS-1671).
+func agentFlagChanged(c *CmdConfig, name string) bool {
+	if c == nil {
+		return false
+	}
+	if c.Command != nil {
+		return c.Command.Flags().Changed(name)
+	}
+	return c.Doit != nil && c.Doit.IsSet(name)
+}
+
+// invocationString returns a string flag only when it was set on this
+// invocation. Stale config.yaml values are ignored.
+func invocationString(c *CmdConfig, key string) (string, error) {
+	if !agentFlagChanged(c, key) {
+		return "", nil
+	}
+	return configStringWithoutRequired(c, key)
+}
+
+// invocationStringSlice is the slice equivalent of invocationString.
+func invocationStringSlice(c *CmdConfig, key string) ([]string, error) {
+	if !agentFlagChanged(c, key) {
+		return nil, nil
+	}
+	return c.Doit.GetStringSlice(c.NS, key)
+}
+
 // namedManifestPath returns the manifest the user named explicitly, either
 // with --spec (also spelled -f / --file) or as a positional path. An empty
 // result means they named none, which leaves the caller free to fall back to
 // discoverManifestFile — but only once it knows no other source (--harness,
 // --from-config) was selected.
 func namedManifestPath(c *CmdConfig) (string, error) {
-	spec, err := configStringWithoutRequired(c, doctl.ArgAgentSpec)
+	spec, err := invocationString(c, doctl.ArgAgentSpec)
 	if err != nil {
 		return "", err
 	}
@@ -2020,6 +2062,56 @@ func RunAgentsPause(c *CmdConfig) error {
 	stylingEnabled = detectStyling()
 	printAgentSuccess(c.Out, fmt.Sprintf("Session %s paused", sessionID))
 	return nil
+}
+
+// RunAgentsCancel stops the turn a session's agent is running, leaving the
+// session up for the next prompt. Nothing running is an answer, not a
+// failure, so a script can cancel unconditionally; an agent that cannot
+// cancel is a failure, because the turn it was asked to stop keeps going.
+func RunAgentsCancel(c *CmdConfig) error {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
+		return err
+	}
+	runID, err := c.Doit.GetString(c.NS, doctl.ArgAgentCancelRunID)
+	if err != nil {
+		return err
+	}
+	runID = strings.TrimSpace(runID)
+	res, err := c.HostedAgents().CancelTurn(sessionID, runID)
+	if err != nil {
+		return beautifyAgentError(err)
+	}
+	if agentStructuredOutput(c) {
+		if err := c.Display(&displayers.HostedAgentCancel{
+			SessionID: sessionID,
+			RunID:     res.RunID,
+			Outcome:   string(res.Outcome),
+		}); err != nil {
+			return err
+		}
+		if res.Outcome == do.HostedAgentCancelTurnUnsupported {
+			return fmt.Errorf("this session's agent can't cancel a turn; it keeps running")
+		}
+		return nil
+	}
+	stylingEnabled = detectStyling()
+	switch res.Outcome {
+	case do.HostedAgentCancelTurnAcked:
+		printAgentSuccess(c.Out, fmt.Sprintf("Cancelled run %s on session %s; the session is ready for the next prompt", res.RunID, sessionID))
+		return nil
+	case do.HostedAgentCancelTurnNoTurn:
+		if runID != "" {
+			fmt.Fprintf(c.Out, "Run %s is not running on session %s; nothing to cancel\n", runID, sessionID)
+		} else {
+			fmt.Fprintf(c.Out, "Nothing is running on session %s; nothing to cancel\n", sessionID)
+		}
+		return nil
+	case do.HostedAgentCancelTurnUnsupported:
+		return fmt.Errorf("this session's agent can't cancel a turn; it keeps running (`%s pause %s` stops the microVM instead)", agentCLI, sessionID)
+	default:
+		return fmt.Errorf("unexpected cancel outcome %q", res.Outcome)
+	}
 }
 
 // RunAgentsResume resumes a paused session.
@@ -3721,9 +3813,20 @@ type thinkingState struct {
 	out         io.Writer
 	active      bool
 	turnRunning bool
-	cancel      context.CancelFunc
-	done        chan struct{}
-	label       string
+	// turnRunID is the run_id of the open turn, taken from its RunStarted;
+	// empty when no turn is open or the opening event carried none. It is
+	// what an Esc cancel names, so it is only ever set from the stream: a
+	// SendInput's run_id may belong to a turn queued behind the running one.
+	turnRunID string
+	// cancelRequested is the turnRunID an Esc has already been sent for, so a
+	// repeated Esc does not send again and the spinner can say so.
+	cancelRequested string
+	// cancelUnsupported latches once the server says this session's agent
+	// cannot cancel a turn, which retires the Esc hint for the attach.
+	cancelUnsupported bool
+	cancel            context.CancelFunc
+	done              chan struct{}
+	label             string
 }
 
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
@@ -3737,7 +3840,84 @@ func newThinkingState(out io.Writer) *thinkingState {
 func (s *thinkingState) setTurnRunning(v bool) {
 	s.mu.Lock()
 	s.turnRunning = v
+	if !v {
+		s.turnRunID = ""
+		s.cancelRequested = ""
+	}
 	s.mu.Unlock()
+}
+
+// startTurn records a RunStarted: a turn is open and runID names it.
+func (s *thinkingState) startTurn(runID string) {
+	s.mu.Lock()
+	s.turnRunning = true
+	s.turnRunID = runID
+	s.cancelRequested = ""
+	s.mu.Unlock()
+}
+
+// claimTurnCancel returns the open turn's run_id and marks a cancel as sent
+// for it, or "" when there is nothing to cancel: no open turn, no run_id to
+// name it by, a cancel already sent for it, or an agent known not to support
+// one.
+func (s *thinkingState) claimTurnCancel() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.turnRunning || s.turnRunID == "" || s.cancelUnsupported || s.cancelRequested == s.turnRunID {
+		return ""
+	}
+	s.cancelRequested = s.turnRunID
+	return s.turnRunID
+}
+
+// releaseTurnCancel undoes claimTurnCancel after a cancel that could not be
+// delivered, so Esc can try again.
+func (s *thinkingState) releaseTurnCancel(runID string) {
+	s.mu.Lock()
+	if s.cancelRequested == runID {
+		s.cancelRequested = ""
+	}
+	s.mu.Unlock()
+}
+
+// markCancelUnsupported records that this session's agent has no turn-level
+// cancel.
+func (s *thinkingState) markCancelUnsupported() {
+	s.mu.Lock()
+	s.cancelUnsupported = true
+	s.cancelRequested = ""
+	s.mu.Unlock()
+}
+
+const (
+	cancelTurnHint    = "ctrl-c to cancel"
+	cancellingTurnTag = "cancelling… ctrl-c again detaches"
+)
+
+// frameLabel is what the interactive spinner row shows: the caption plus how
+// to cancel the turn, or that a cancel is on its way. Ctrl-C cancels only
+// while a turn is open and detaches otherwise, so a key whose meaning depends
+// on state the prompt does not show is at least announced where the user is
+// looking.
+func (s *thinkingState) frameLabel() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	label := s.label
+	if label == "" {
+		label = defaultThinkingLabel
+	}
+	return s.decorateLocked(label)
+}
+
+func (s *thinkingState) decorateLocked(label string) string {
+	switch {
+	case !s.turnRunning || s.turnRunID == "" || s.cancelUnsupported:
+		return label
+	case s.cancelRequested == s.turnRunID:
+		return label + " · " + cancellingTurnTag
+	default:
+		return label + " · " + cancelTurnHint
+	}
 }
 
 // isTurnRunning reports whether a run is currently open — used by the input
@@ -3785,7 +3965,7 @@ func (s *thinkingState) startWithLabel(label string) {
 	// Reserve the spinner line and draw its first frame atomically so no
 	// redraw or token can slip in between and shift the line the animator
 	// (and stop) expect one row above the prompt.
-	display.spinnerInit(spinnerFrames[0], frameLabel)
+	display.spinnerInit(spinnerFrames[0], s.decorateLocked(frameLabel))
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	s.cancel = cancel
@@ -3829,7 +4009,7 @@ func (s *thinkingState) animate(ctx context.Context, d *promptDisplay, done chan
 			return
 		case <-t.C:
 			ix = (ix + 1) % len(spinnerFrames)
-			d.spinnerFrame(spinnerFrames[ix], s.currentLabel())
+			d.spinnerFrame(spinnerFrames[ix], s.frameLabel())
 		}
 	}
 }
@@ -4622,7 +4802,11 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 			// reopen the latch or a second pause later in this attach would be
 			// suppressed as a duplicate of the first.
 			paused.clear()
-			thinking.setTurnRunning(true)
+			if ev.Kind == godo.HostedAgentEventKindRunStarted {
+				thinking.startTurn(ev.RunID)
+			} else {
+				thinking.setTurnRunning(true)
+			}
 			reasoning.end()
 			thinking.stop()
 			acc.flush(out)
@@ -5339,6 +5523,11 @@ type attachState struct {
 	// dispatch, when set, runs a blocking API request off the input loop; see
 	// call. attachLoopTTY installs it. Set once before the loop starts.
 	dispatch func(func() (detach bool))
+	// cancelTurn, when set, is what Ctrl-C and a lone Esc on an empty prompt
+	// do: ask the server to stop the open turn. It reports whether a cancel
+	// was sent. attachLoopTTY installs it; without it Esc only ever clears the
+	// line and Ctrl-C always detaches.
+	cancelTurn func() bool
 }
 
 type largePasteConfirmation struct {
@@ -5688,7 +5877,10 @@ func (s *attachState) cancelInputLine() bool {
 }
 
 // handlePendingEscTimeout treats a lone ESC (no follow-up within ~50ms) as
-// cancel-input, matching common terminal/readline behavior.
+// cancel-input, matching common terminal/readline behavior. With nothing to
+// clear it cancels the open turn instead, so a draft is never lost to a
+// cancel and a second Esc stops the turn. Not while an approval is pending:
+// that prompt has its own reject, and a cancel would strand the request.
 func (s *attachState) handlePendingEscTimeout() bool {
 	if len(s.escSeq) != 1 || s.escSeq[0] != 0x1b {
 		return false
@@ -5698,7 +5890,25 @@ func (s *attachState) handlePendingEscTimeout() bool {
 		s.display.redraw()
 		return true
 	}
+	if s.cancelTurn != nil && s.pending.len() == 0 {
+		return s.cancelTurn()
+	}
 	return false
+}
+
+// requestTurnCancel asks the server to stop the turn runID names. An acked
+// cancel prints nothing here: the turn's own run.failed is the confirmation,
+// and it renders from the stream like any other end of turn.
+func requestTurnCancel(out io.Writer, svc do.HostedAgentsService, sessionID, runID string, thinking *thinkingState) {
+	res, err := svc.CancelTurn(sessionID, runID)
+	switch {
+	case err != nil:
+		thinking.releaseTurnCancel(runID)
+		fmt.Fprintf(out, "cancel failed: %v\n", err)
+	case res.Outcome == do.HostedAgentCancelTurnUnsupported:
+		thinking.markCancelUnsupported()
+		fmt.Fprintln(out, colorize("This agent can't cancel a turn; it keeps running. Ctrl-C or Ctrl-D detaches.", colMuted))
+	}
 }
 
 // tryDetachAttachPrompt closes the local attach connection when the prompt is
@@ -6766,6 +6976,18 @@ func attachLoopTTY(c *CmdConfig, svc do.HostedAgentsService, sessionID string, f
 		}
 	}()
 	state.dispatch = func(fn func() (detach bool)) { work <- fn }
+	state.cancelTurn = func() bool {
+		runID := thinking.claimTurnCancel()
+		if runID == "" {
+			return false
+		}
+		state.call(func() bool {
+			requestTurnCancel(c.Out, svc, sessionID, runID, thinking)
+			state.display.redraw()
+			return false
+		})
+		return true
+	}
 
 	// 50ms ticker so HITL arrival reflows the prompt even when the user idles.
 	ticker := time.NewTicker(50 * time.Millisecond)
@@ -6962,6 +7184,11 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		}
 		return false, nil
 	case 0x03: // Ctrl-C
+		// Cancel the open turn first; the claim holds until the turn ends, so
+		// a second Ctrl-C finds nothing to cancel and detaches.
+		if state.cancelTurn != nil && state.cancelTurn() {
+			return false, nil
+		}
 		state.display.echo([]byte("\r\n"))
 		printDetachNotice(c.Out, state.sessionRef)
 		return true, nil
@@ -7579,6 +7806,10 @@ type runFailedPayload struct {
 	Message string `json:"message,omitempty"`
 }
 
+// runFailureCodeCancelled is RUN_FAILURE_CODE_CANCELLED: the turn was stopped
+// on request (Esc, or another client's cancel), not by a fault.
+const runFailureCodeCancelled = 7
+
 // runPausedPayload carries why a run stopped. The server documents the reason
 // as an open string, so it is rendered rather than switched on exhaustively.
 type runPausedPayload struct {
@@ -7713,6 +7944,16 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 	case godo.HostedAgentEventKindRunFailed:
 		var p runFailedPayload
 		if err := json.Unmarshal(ev.Payload, &p); err == nil {
+			if p.Code == runFailureCodeCancelled {
+				// Asked for, not broken: muted rather than the error glyph.
+				msg := p.Message
+				if msg == "" {
+					msg = "turn cancelled"
+				}
+				fmt.Fprintf(w, "\n%s %s\n", colorize("■", colMuted), colorize(msg, colMuted))
+				fmt.Fprintln(w, colorize(runSeparator, colMuted))
+				return
+			}
 			msg := fmt.Sprintf("run failed: code %d", p.Code)
 			if p.Message != "" {
 				msg = fmt.Sprintf("run failed: %s (code %d)", p.Message, p.Code)
@@ -7886,8 +8127,13 @@ func printAttachHelp(w io.Writer) {
 	var body strings.Builder
 	fmt.Fprintf(&body, "%s\n\n", boldColor("Attach help", colHighlight))
 
+	writeHelpSection(&body, "Turn in progress", []helpRow{
+		{"Ctrl-C, Esc on an empty prompt", "cancel the turn; the session stays ready"},
+	})
+	fmt.Fprintln(&body)
 	writeHelpSection(&body, "Detach (session keeps running)", []helpRow{
-		{"Ctrl-D, Ctrl-C, /exit", "close the local connection"},
+		{"Ctrl-D, /exit", "close the local connection"},
+		{"Ctrl-C", "same, when no turn is running or a cancel is already sent"},
 	})
 	fmt.Fprintln(&body)
 	writeHelpSection(&body, "Session controls", []helpRow{
