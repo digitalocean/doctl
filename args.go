@@ -1050,6 +1050,9 @@ const (
 	// ArgAgentWorkspaceSizeGiB is the size, in GiB, of a new persistent workspace.
 	ArgAgentWorkspaceSizeGiB = "size-gib"
 
+	// ArgAgentWorkspaceState filters `workspace list` to one workspace state.
+	ArgAgentWorkspaceState = "state"
+
 	// ArgAgentIdempotencyKey makes a repeated `workspace create` return the
 	// first workspace instead of creating another.
 	ArgAgentIdempotencyKey = "idempotency-key"

@@ -221,6 +221,75 @@ func TestRunAgentsWorkspaceList_Empty(t *testing.T) {
 	})
 }
 
+func TestRunAgentsWorkspaceList_SendsState(t *testing.T) {
+	textOutput(t)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListWorkspaces(&godo.HostedAgentWorkspaceListOptions{State: godo.HostedAgentWorkspaceStateAvailable, PageSize: 2, PageToken: "tok1"}).
+			Return([]godo.HostedAgentWorkspace{testWorkspace()}, "", nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceState, "AVAILABLE")
+		config.Doit.Set(config.NS, doctl.ArgAgentPageSize, 2)
+		config.Doit.Set(config.NS, doctl.ArgAgentPageToken, "tok1")
+		require.NoError(t, RunAgentsWorkspaceList(config))
+		assert.Contains(t, buf.String(), "notes")
+		assert.NotContains(t, buf.String(), "Next page token:")
+	})
+}
+
+func TestRunAgentsWorkspaceList_StateIsLeftToTheServer(t *testing.T) {
+	textOutput(t)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListWorkspaces(&godo.HostedAgentWorkspaceListOptions{State: "busy"}).
+			Return(nil, "", godoStatusErr(http.StatusBadRequest, "state must be one of AVAILABLE, ATTACHING, ATTACHED, RELEASING, FAILED"))
+
+		config.Out = &bytes.Buffer{}
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceState, "busy")
+		err := RunAgentsWorkspaceList(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "state must be one of")
+	})
+}
+
+func TestRunAgentsWorkspaceList_EmptyPageWithMoreToCome(t *testing.T) {
+	textOutput(t)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ListWorkspaces(&godo.HostedAgentWorkspaceListOptions{State: godo.HostedAgentWorkspaceStateFailed}).
+			Return(nil, "tok9", nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceState, "FAILED")
+		require.NoError(t, RunAgentsWorkspaceList(config))
+		assert.Contains(t, buf.String(), "No workspaces on this page")
+		assert.Contains(t, buf.String(), "tok9")
+	})
+}
+
+func TestAgentWorkspaceListFlags(t *testing.T) {
+	var list *Command
+	for _, c := range AgentWorkspaces().ChildCommands() {
+		if c.Name() == "list" {
+			list = c
+		}
+	}
+	require.NotNil(t, list)
+	for _, name := range []string{doctl.ArgAgentWorkspaceState, doctl.ArgAgentPageSize, doctl.ArgAgentPageToken} {
+		assert.NotNil(t, list.Flags().Lookup(name), "workspace list needs --%s", name)
+	}
+	assert.Equal(t, "state", doctl.ArgAgentWorkspaceState)
+	for _, state := range []string{"AVAILABLE", "ATTACHING", "ATTACHED", "RELEASING", "FAILED"} {
+		assert.Contains(t, agentsWorkspaceListHelpMD, state)
+	}
+}
+
 func TestRunAgentsWorkspaceList_FormatSelectsColumns(t *testing.T) {
 	textOutput(t)
 

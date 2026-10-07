@@ -323,7 +323,9 @@ const agentsWorkspaceCreateHelpMD = `Create a persistent workspace. ` + "`--size
 
 **Safe to retry.** Each run sends one idempotency key, so a request that doctl repeats within the run cannot create a second workspace. doctl makes up a key unless you pass ` + "`--idempotency-key`" + `. A script that re-runs the whole command must pass its own key: without one, every run is a new workspace. Within 24 hours the same key with the same size and name returns the first workspace; the same key with different values is rejected.`
 
-const agentsWorkspaceListHelpMD = `List persistent workspaces, newest first. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
+const agentsWorkspaceListHelpMD = `List persistent workspaces, newest first. Show only one state with ` + "`--state`" + ` (AVAILABLE, ATTACHING, ATTACHED, RELEASING or FAILED); use ` + "`--state AVAILABLE`" + ` to see the workspaces a new session can use. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.
+
+A page can hold fewer workspaces than ` + "`--page-size`" + `, even none, while a next page token is printed. Keep listing with that token until none is printed.`
 
 const agentsWorkspaceGetHelpMD = `Print details for one persistent workspace: its state, size, how much is used, the session that holds it, and when it was last saved.`
 

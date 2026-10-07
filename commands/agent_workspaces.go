@@ -58,9 +58,10 @@ func AgentWorkspaces() *Command {
 		agentsWorkspaceListHelpMD,
 		Writer, agentPrettyErrors(), aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentWorkspace{}))
+	AddStringFlag(cmdList, doctl.ArgAgentWorkspaceState, "", "", "Only list workspaces in this state: AVAILABLE, ATTACHING, ATTACHED, RELEASING or FAILED")
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of workspaces to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
-	cmdList.Example = `doctl harness-runtime workspace list --page-size 10`
+	cmdList.Example = `doctl harness-runtime workspace list --page-size 10; doctl harness-runtime workspace list --state AVAILABLE`
 
 	CmdBuilder(cmd, RunAgentsWorkspaceGet, "get <workspace-id>",
 		"Get a persistent workspace",
@@ -136,6 +137,11 @@ func RunAgentsWorkspaceList(c *CmdConfig) error {
 		return err
 	}
 	opt.PageToken = pageToken
+	state, err := c.Doit.GetString(c.NS, doctl.ArgAgentWorkspaceState)
+	if err != nil {
+		return err
+	}
+	opt.State = godo.HostedAgentWorkspaceState(state)
 
 	workspaces, next, err := c.HostedAgents().ListWorkspaces(opt)
 	if err != nil {
@@ -151,7 +157,13 @@ func RunAgentsWorkspaceList(c *CmdConfig) error {
 		return nil
 	}
 	stylingEnabled = detectStyling()
-	printWorkspacesList(c.Out, workspaces)
+	if len(workspaces) == 0 && next != "" {
+		// A page can be empty while more follow, for example when a state filter
+		// skips every workspace the server looked at.
+		fmt.Fprintln(c.Out, colorize("No workspaces on this page", colMuted))
+	} else {
+		printWorkspacesList(c.Out, workspaces)
+	}
 	printAgentNextPage(c.Out, next)
 	return nil
 }
