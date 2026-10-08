@@ -16,6 +16,7 @@ package displayers
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/digitalocean/doctl/do"
@@ -695,6 +696,64 @@ func (h *HostedAgentTemplateBuild) KV() []map[string]any {
 			"Name":       b.Name,
 			"Status":     b.Status,
 			"CreatedAt":  created,
+		})
+	}
+	return out
+}
+
+// HostedAgentConnection renders external-provider connections for
+// `doctl harness-runtime connections`. Actor leads the table because the actor
+// is what a manifest secret slot binds to; no token is ever shown.
+type HostedAgentConnection struct {
+	Connections []godo.HostedAgentConnection
+	Single      bool
+}
+
+var _ Displayable = &HostedAgentConnection{}
+
+func (h *HostedAgentConnection) JSON(out io.Writer) error {
+	if h.Single && len(h.Connections) == 1 {
+		return writeJSON(h.Connections[0], out)
+	}
+	return writeJSON(h.Connections, out)
+}
+
+func (h *HostedAgentConnection) Cols() []string {
+	return []string{"Actor", "ID", "Provider", "Status", "Scopes", "CreatedAt"}
+}
+
+func (h *HostedAgentConnection) ColMap() map[string]string {
+	return map[string]string{
+		"Actor":     "Actor",
+		"ID":        "ID",
+		"Provider":  "Provider",
+		"Status":    "Status",
+		"Scopes":    "Scopes",
+		"CreatedAt": "Created",
+	}
+}
+
+func (h *HostedAgentConnection) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Connections))
+	for _, c := range h.Connections {
+		created := ""
+		if c.CreatedAt != nil && !c.CreatedAt.Time.IsZero() {
+			created = c.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
+		}
+		scopes := ""
+		if c.OAuth != nil {
+			scopes = strings.Join(c.OAuth.Scopes, ",")
+		}
+		out = append(out, map[string]any{
+			"Actor":     c.ActorID,
+			"ID":        c.ID,
+			"Provider":  c.Provider,
+			"Status":    c.Status,
+			"Scopes":    scopes,
+			"CreatedAt": created,
 		})
 	}
 	return out
