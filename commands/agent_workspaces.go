@@ -58,7 +58,7 @@ func AgentWorkspaces() *Command {
 		agentsWorkspaceListHelpMD,
 		Writer, agentPrettyErrors(), aliasOpt("ls"),
 		displayerType(&displayers.HostedAgentWorkspace{}))
-	AddStringFlag(cmdList, doctl.ArgAgentWorkspaceState, "", "", "Only list workspaces in this state: AVAILABLE, ATTACHING, ATTACHED, RELEASING or FAILED")
+	AddStringFlag(cmdList, doctl.ArgAgentWorkspaceState, "", "", "Only list workspaces in this state: AVAILABLE, ATTACHING, ATTACHED, RELEASING, FAILED or DELETING")
 	AddIntFlag(cmdList, doctl.ArgAgentPageSize, "", 0, "Maximum number of workspaces to return per page")
 	AddStringFlag(cmdList, doctl.ArgAgentPageToken, "", "", "Pagination cursor from a previous list response")
 	cmdList.Example = `doctl harness-runtime workspace list --page-size 10; doctl harness-runtime workspace list --state AVAILABLE`

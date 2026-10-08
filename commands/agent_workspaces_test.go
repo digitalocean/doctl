@@ -246,7 +246,7 @@ func TestRunAgentsWorkspaceList_StateIsLeftToTheServer(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ListWorkspaces(&godo.HostedAgentWorkspaceListOptions{State: "busy"}).
-			Return(nil, "", godoStatusErr(http.StatusBadRequest, "state must be one of AVAILABLE, ATTACHING, ATTACHED, RELEASING, FAILED"))
+			Return(nil, "", godoStatusErr(http.StatusBadRequest, "state must be one of AVAILABLE, ATTACHING, ATTACHED, RELEASING, FAILED, DELETING"))
 
 		config.Out = &bytes.Buffer{}
 		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceState, "busy")
@@ -285,7 +285,7 @@ func TestAgentWorkspaceListFlags(t *testing.T) {
 		assert.NotNil(t, list.Flags().Lookup(name), "workspace list needs --%s", name)
 	}
 	assert.Equal(t, "state", doctl.ArgAgentWorkspaceState)
-	for _, state := range []string{"AVAILABLE", "ATTACHING", "ATTACHED", "RELEASING", "FAILED"} {
+	for _, state := range []string{"AVAILABLE", "ATTACHING", "ATTACHED", "RELEASING", "FAILED", "DELETING"} {
 		assert.Contains(t, agentsWorkspaceListHelpMD, state)
 	}
 }
