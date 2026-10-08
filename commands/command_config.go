@@ -95,6 +95,7 @@ type CmdConfig struct {
 	HostedAgents        func() do.HostedAgentsService
 	HostedAgentTriggers func() do.HostedAgentTriggersService
 	Secrets             func() do.SecretsService
+	Signals             func() do.SignalsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -180,6 +181,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return do.NewHostedAgentTriggersService(godoClient)
 			}
 			c.Secrets = func() do.SecretsService { return do.NewSecretsService(godoClient) }
+			c.Signals = func() do.SignalsService { return do.NewSignalsService(godoClient) }
 			return nil
 		},
 

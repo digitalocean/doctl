@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.217.0"
+	libraryVersion = "1.218.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -74,6 +74,7 @@ type Client struct {
 	Functions           FunctionsService
 	Images              ImagesService
 	ImageActions        ImageActionsService
+	Insights            InsightsService
 	Invoices            InvoicesService
 	Keys                KeysService
 	Kubernetes          KubernetesService
@@ -110,6 +111,7 @@ type Client struct {
 	HostedAgentTriggers HostedAgentTriggersService
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
+	Signals             SignalsService
 	BYOIPPrefixes       BYOIPPrefixesService
 
 	// Serverless Inference resources at https://inference.do-ai.run.
@@ -334,6 +336,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Functions = &FunctionsServiceOp{client: c}
 	c.Images = &ImagesServiceOp{client: c}
 	c.ImageActions = &ImageActionsServiceOp{client: c}
+	c.Insights = &InsightsServiceOp{client: c}
 	c.Invoices = &InvoicesServiceOp{client: c}
 	c.Keys = &KeysServiceOp{client: c}
 	c.Kubernetes = &KubernetesServiceOp{client: c}
@@ -373,6 +376,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
+	c.Signals = &SignalsServiceOp{client: c}
 	serverlessInferenceURL, _ := url.Parse(defaultServerlessInferenceBaseURL)
 	t := newInferenceTransport(c, serverlessInferenceURL)
 	c.Chat = &ChatService{Completions: &ChatCompletionService{inferenceTransport: t}}
