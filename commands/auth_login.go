@@ -161,6 +161,10 @@ func RunAuthLogin(c *CmdConfig) error {
 		storeOAuthDefaultScopes(scopes)
 	}
 
+	// The context just signed in to is the one later commands should use,
+	// including a named context passed with --context.
+	viper.Set(doctl.ArgContext, authContext)
+
 	if err := writeConfig(); err != nil {
 		return err
 	}
@@ -303,7 +307,7 @@ func displayOAuthLoginSummary(c *CmdConfig, authContext string, token *oauth.Tok
 		template.Render(c.Out, `Team: {{highlight .}}{{nl}}`, token.Info.TeamName)
 	}
 
-	template.Render(c.Out, `Saved to the {{highlight .}} authentication context.{{nl}}`, authContext)
+	template.Render(c.Out, `Saved to the {{highlight .}} authentication context. Later commands will use it.{{nl}}`, authContext)
 
 	if token.RefreshToken != "" {
 		template.Render(c.Out, `{{nl}}{{muted "doctl renews this token automatically."}}{{nl}}`, nil)

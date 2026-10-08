@@ -1,7 +1,7 @@
 package integration
 
 import (
-	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -428,46 +428,65 @@ func environmentWithoutDigitalOceanAuth() []string {
 // startLoginAndCaptureURL runs the login command and returns the captured
 // output along with the authorization URL doctl printed for the browser. The
 // command is still running when this returns: it is waiting on its callback.
+//
+// Output is collected in the writer the command prints to, rather than from a
+// pipe read after Wait. Wait closes a StdoutPipe, which can discard the error
+// line doctl writes as it exits.
 func startLoginAndCaptureURL(t *testing.T, expect *require.Assertions, cmd *exec.Cmd) (*safeBuffer, string) {
 	t.Helper()
 
-	stdout, err := cmd.StdoutPipe()
-	expect.NoError(err)
-	cmd.Stderr = cmd.Stdout
-
 	output := &safeBuffer{}
-	urls := make(chan string, 1)
+	catcher := &urlCatcher{buf: output, urls: make(chan string, 1)}
+	cmd.Stdout = catcher
+	cmd.Stderr = catcher
 
 	expect.NoError(cmd.Start())
 
-	go func() {
-		defer close(urls)
-
-		scanner := bufio.NewScanner(io.TeeReader(stdout, output))
-		for scanner.Scan() {
-			line := strings.TrimSpace(ansiEscape.ReplaceAllString(scanner.Text(), ""))
-			if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
-				select {
-				case urls <- line:
-				default:
-				}
-			}
-		}
-
-		// The pipe closes when the command exits, which is the normal end of
-		// this loop rather than a failure worth reporting.
-		_ = scanner.Err()
-	}()
-
 	select {
-	case authURL, ok := <-urls:
-		expect.True(ok, "doctl did not print an authorization URL: %s", output.String())
+	case authURL := <-catcher.urls:
 		return output, authURL
 	case <-time.After(30 * time.Second):
 		_ = cmd.Process.Kill()
 		t.Fatalf("timed out waiting for the authorization URL: %s", output.String())
 		return output, ""
 	}
+}
+
+// urlCatcher records command output and reports the first line that is an
+// authorization URL. Writes are complete before the process exits, so the
+// recorded output is complete once Wait returns.
+type urlCatcher struct {
+	mu   sync.Mutex
+	buf  *safeBuffer
+	urls chan string
+	rest []byte
+}
+
+func (c *urlCatcher) Write(p []byte) (int, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, err := c.buf.Write(p); err != nil {
+		return 0, err
+	}
+
+	c.rest = append(c.rest, p...)
+	for {
+		newline := bytes.IndexByte(c.rest, '\n')
+		if newline < 0 {
+			break
+		}
+		line := strings.TrimSpace(ansiEscape.ReplaceAllString(string(c.rest[:newline]), ""))
+		c.rest = c.rest[newline+1:]
+		if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
+			select {
+			case c.urls <- line:
+			default:
+			}
+		}
+	}
+
+	return len(p), nil
 }
 
 // visitAuthorizationURL acts as the user's browser. The authorization server

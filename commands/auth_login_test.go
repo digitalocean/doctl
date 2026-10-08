@@ -62,6 +62,23 @@ func TestRunAuthLogin(t *testing.T) {
 	assert.Equal(t, oauth.DefaultClientID, state.ClientID)
 	assert.Equal(t, "https://cloud.example.com/v1/oauth/token", state.TokenEndpoint)
 	assert.False(t, state.ExpiresAt.IsZero())
+	assert.Equal(t, doctl.ArgDefaultContext, viper.GetString(doctl.ArgContext))
+}
+
+func TestRunAuthLoginSwitchesToTheNamedContext(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	Context = "your-team"
+
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	assert.Equal(t, "your-team", viper.GetString(doctl.ArgContext))
+	require.NotNil(t, loadOAuthTokenState("your-team"))
+	assert.Equal(t, "dor_v1_refresh", loadOAuthTokenState("your-team").RefreshToken)
+	assert.Nil(t, loadOAuthTokenState(doctl.ArgDefaultContext))
 }
 
 func TestRunAuthLoginDoesNotCallTheAuthorizationServerBeforeTheBrowser(t *testing.T) {
