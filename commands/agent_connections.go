@@ -80,17 +80,20 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 	AddBoolFlag(cmdCreate, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
 	cmdCreate.Example = agentCLI + ` connections create --actor alice; ` + agentCLI + ` connections create --actor alice --scopes repo,read:org`
 
-	CmdBuilder(cmd, RunAgentsConnectionsGet, "get <connection-id>",
+	cmdGet := CmdBuilder(cmd, RunAgentsConnectionsGet, "get <connection-id>",
 		"Get one connection",
 		`Read one connection by id. Useful to check a pending connection's status.`,
 		Writer, append(ns, aliasOpt("show"),
 			displayerType(&displayers.HostedAgentConnection{}))...)
+	AddStringFlag(cmdGet, doctl.ArgAgentConnProvider, "", "github", "External provider")
+	cmdGet.Example = agentCLI + ` connections get ` + "`<connection-id>`"
 
 	cmdRevoke := CmdBuilder(cmd, RunAgentsConnectionsRevoke, "revoke <connection-id>",
 		"Revoke a connection",
 		`Revoke one connection by id. Agents referencing its actor can no longer act through it.`,
 		Writer, append(ns, aliasOpt("delete", "rm"))...)
-	cmdRevoke.Example = agentCLI + ` connections revoke conn_abc123`
+	AddStringFlag(cmdRevoke, doctl.ArgAgentConnProvider, "", "github", "External provider")
+	cmdRevoke.Example = agentCLI + ` connections revoke ` + "`<connection-id>`"
 
 	requireAgentSubcommand(cmd)
 	return cmd
