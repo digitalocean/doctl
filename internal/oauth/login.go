@@ -209,11 +209,17 @@ func (h *callbackHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := r.URL.Query()
-	result, page, status := h.resultFor(query)
+	result, content, status := h.resultFor(query)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	_, _ = w.Write([]byte(page))
+	// Execute the html/template onto the response so text from the
+	// authorization server is escaped for the HTML context it appears in.
+	// Rendering to a string and writing those bytes would hide that escaping
+	// from the response path.
+	if err := pageTemplate.Execute(w, content); err != nil {
+		_, _ = w.Write([]byte("Return to your terminal to continue."))
+	}
 
 	select {
 	case h.results <- result:
@@ -221,26 +227,26 @@ func (h *callbackHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *callbackHandler) resultFor(query url.Values) (callbackResult, string, int) {
+func (h *callbackHandler) resultFor(query url.Values) (callbackResult, pageContent, int) {
 	// The state check comes first: a mismatched state means the redirect did
 	// not originate from the authorization request we started.
 	if subtle.ConstantTimeCompare([]byte(query.Get("state")), []byte(h.state)) != 1 {
 		err := errors.New("the authorization response state did not match the request; the login attempt may have been forged")
-		return callbackResult{err: err}, errorPage(err.Error()), http.StatusBadRequest
+		return callbackResult{err: err}, errorContent(err.Error()), http.StatusBadRequest
 	}
 
 	if code := query.Get("error"); code != "" {
 		err := &AuthorizationError{Code: code, Description: query.Get("error_description")}
-		return callbackResult{err: err}, errorPage(err.Error()), http.StatusBadRequest
+		return callbackResult{err: err}, errorContent(err.Error()), http.StatusBadRequest
 	}
 
 	code := query.Get("code")
 	if code == "" {
 		err := errors.New("the authorization response did not include an authorization code")
-		return callbackResult{err: err}, errorPage(err.Error()), http.StatusBadRequest
+		return callbackResult{err: err}, errorContent(err.Error()), http.StatusBadRequest
 	}
 
-	return callbackResult{code: code}, successPage, http.StatusOK
+	return callbackResult{code: code}, successContent, http.StatusOK
 }
 
 // generateCodeVerifier returns a PKCE code verifier: 32 random bytes encoded

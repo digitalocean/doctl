@@ -13,10 +13,7 @@ limitations under the License.
 
 package oauth
 
-import (
-	"html/template"
-	"strings"
-)
+import "html/template"
 
 // pageTemplate renders the page the local callback server shows in the
 // browser. It is an html/template rather than a format string so every field
@@ -76,31 +73,18 @@ type pageContent struct {
 	Message   string
 }
 
-func renderPage(content pageContent) string {
-	var page strings.Builder
-	if err := pageTemplate.Execute(&page, content); err != nil {
-		// The template and this struct are both compiled in, so a failure here
-		// is a programming error rather than anything the response can cause.
-		// Fall back to a bare message so the browser is not left with a
-		// half-written page.
-		return "Return to your terminal to continue."
-	}
-
-	return page.String()
-}
-
-var successPage = renderPage(pageContent{
+var successContent = pageContent{
 	MarkClass: "ok",
 	Mark:      "\u2713",
 	Title:     "You're signed in",
 	Message:   "doctl is now authenticated with your DigitalOcean account. You can close this tab and return to your terminal.",
-})
+}
 
-func errorPage(reason string) string {
-	return renderPage(pageContent{
+func errorContent(reason string) pageContent {
+	return pageContent{
 		MarkClass: "fail",
 		Mark:      "\u2717",
 		Title:     "Authorization failed",
 		Message:   reason + " You can close this tab and try again in your terminal.",
-	})
+	}
 }
