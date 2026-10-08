@@ -303,6 +303,7 @@ type tcMocks struct {
 	hostedAgentTriggers   *domocks.MockHostedAgentTriggersService
 	secrets               *domocks.MockSecretsService
 	vectorDBs             *domocks.MockVectorDBsService
+	signals               *domocks.MockSignalsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -383,6 +384,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		hostedAgentTriggers:   domocks.NewMockHostedAgentTriggersService(ctrl),
 		secrets:               domocks.NewMockSecretsService(ctrl),
 		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
+		signals:               domocks.NewMockSignalsService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -457,6 +459,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		HostedAgentTriggers: func() do.HostedAgentTriggersService { return tm.hostedAgentTriggers },
 		Secrets:             func() do.SecretsService { return tm.secrets },
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
+		Signals:             func() do.SignalsService { return tm.signals },
 	}
 
 	tFn(config, tm)
