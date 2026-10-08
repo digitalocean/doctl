@@ -20,9 +20,33 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+// Every connections subcommand resolves --provider at runtime, so each must
+// register the flag. get/revoke once relied on it without registering it,
+// which only a real command-tree assertion (not a direct Doit.Set) catches.
+func TestAgentConnectionsProviderFlagRegistered(t *testing.T) {
+	root := AgentConnections()
+	for _, name := range []string{"list", "create", "get", "revoke"} {
+		var sub *cobra.Command
+		for _, c := range root.Commands() {
+			if c.Name() == name {
+				sub = c
+				break
+			}
+		}
+		if !assert.NotNilf(t, sub, "subcommand %q not found", name) {
+			continue
+		}
+		f := sub.Flags().Lookup(doctl.ArgAgentConnProvider)
+		if assert.NotNilf(t, f, "%q is missing the --%s flag", name, doctl.ArgAgentConnProvider) {
+			assert.Equalf(t, "github", f.DefValue, "%q --%s default", name, doctl.ArgAgentConnProvider)
+		}
+	}
+}
 
 func TestRunAgentsConnectionsList(t *testing.T) {
 	t.Run("forwards actor/status/paging filters", func(t *testing.T) {
