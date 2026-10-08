@@ -939,6 +939,21 @@ const (
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 
+	// ArgAgentConnProvider is the external provider for a connection (e.g. github).
+	ArgAgentConnProvider = "provider"
+
+	// ArgAgentConnActor is the actor a connection acts for (user_id on the wire).
+	ArgAgentConnActor = "actor"
+
+	// ArgAgentConnScopes optionally narrows the OAuth scopes a connection requests.
+	ArgAgentConnScopes = "scopes"
+
+	// ArgAgentConnPage is the 1-based page number for connection list.
+	ArgAgentConnPage = "page"
+
+	// ArgAgentConnPerPage is the connection list page size.
+	ArgAgentConnPerPage = "per-page"
+
 	// ArgAgentCheckpointLabel is an optional user label for an explicit checkpoint.
 	ArgAgentCheckpointLabel = "label"
 
