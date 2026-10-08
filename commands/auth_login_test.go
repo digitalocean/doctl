@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -65,8 +66,26 @@ func TestRunAuthLogin(t *testing.T) {
 	assert.Equal(t, doctl.ArgDefaultContext, viper.GetString(doctl.ArgContext))
 }
 
+func TestRunAuthLoginWarnsThatTheCurrentContextIsReplaced(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	var out bytes.Buffer
+	config.Out = &out
+
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	assert.Contains(t, out.String(), "Credentials saved there will be replaced")
+	assert.Contains(t, out.String(), doctl.ArgDefaultContext)
+	assert.Contains(t, out.String(), "doctl auth login --context <name>")
+}
+
 func TestRunAuthLoginSwitchesToTheNamedContext(t *testing.T) {
 	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	var out bytes.Buffer
+	config.Out = &out
 	Context = "your-team"
 
 	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
@@ -74,6 +93,8 @@ func TestRunAuthLoginSwitchesToTheNamedContext(t *testing.T) {
 	})
 
 	require.NoError(t, RunAuthLogin(config))
+
+	assert.NotContains(t, out.String(), "Credentials saved there will be replaced")
 
 	assert.Equal(t, "your-team", viper.GetString(doctl.ArgContext))
 	require.NotNil(t, loadOAuthTokenState("your-team"))

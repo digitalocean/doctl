@@ -120,15 +120,17 @@ You can use doctl without initializing it by adding the `+"`"+`--access-token`+"
 	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
 	cmdAuthInit.Example = `The following example initializes doctl with a token for a single account with the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
 
-	cmdAuthLogin := cmdBuilderWithInit(cmd, RunAuthLogin, "login", "Sign in to DigitalOcean via OAuth 2.1 in your browser", `This command signs doctl in to your DigitalOcean account using your browser, so you do not have to create and paste an API token.
+	cmdAuthLogin := cmdBuilderWithInit(cmd, RunAuthLogin, "login", "Sign in to DigitalOcean via OAuth 2.1 in your browser", `This command signs doctl in to your DigitalOcean account in the browser. You approve access there instead of creating and pasting an API token.
 
-doctl uses the OAuth 2.1 authorization code flow with PKCE. It signs in as the doctl application DigitalOcean publishes, so there is nothing to register first. Signing in opens your browser, and once you approve the request, doctl saves the access token to your authentication context.
+doctl signs in as the doctl application DigitalOcean publishes, so there is nothing to register first. It opens your browser, and after you approve the request it saves the access token and uses that authentication context for later commands.
 
-Tokens issued this way are short-lived. doctl stores the accompanying refresh token and renews the access token automatically, so you can keep using doctl without returning to the control panel.
+The access token is short-lived. doctl stores a refresh token alongside it and renews the access token the next time you run a command.
 
-By default doctl does not request any particular scopes, so you choose the permissions to grant on the authorization screen. Use `+"`"+`--scope`+"`"+` to request them up front instead: `+"`"+`--scope "read write"`+"`"+` asks for the same access a full-permission API token has, and you can also name individual permissions, such as `+"`"+`--scope "droplet:read account:read"`+"`"+`. Pass `+"`"+`--save-scope`+"`"+` with `+"`"+`--scope`+"`"+` to reuse those scopes on later logins; pass `+"`"+`--scope "" --save-scope`+"`"+` to clear the saved default.
+With no `+"`"+`--scope`+"`"+`, you choose the permissions on the authorization screen. `+"`"+`--scope "read write"`+"`"+` requests the same access as a full-permission API token. You can also name individual permissions, such as `+"`"+`--scope "droplet:read account:read"`+"`"+`. Add `+"`"+`--save-scope`+"`"+` to reuse those scopes on later logins. `+"`"+`--scope "" --save-scope`+"`"+` clears the saved default.
 
-The `+"`"+`--context`+"`"+` flag signs in to a named authentication context and makes it the one later commands use, which lets you keep several accounts or teams side by side. To use an API token instead of your browser, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+`+"`"+`--context <name>`+"`"+` signs in to that context, creating it when needed, and later commands use it. This keeps several accounts or teams side by side. Without `+"`"+`--context`+"`"+`, the sign-in replaces the credentials in the current context. doctl names that context before it opens the browser.
+
+To sign in with an API token instead, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
 	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthServer, "", oauth.DefaultIssuer, "The OAuth authorization server to sign in to")
 	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthClientID, "", oauth.DefaultClientID, "The OAuth application to sign in as. Defaults to the doctl application and only needs changing for a non-production authorization server")
 	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthScopes, "", defaultOAuthScopes, "A space-separated list of scopes to request, such as \"read write\" or \"droplet:read account:read\". When omitted, uses any default saved with --save-scope; otherwise you choose the permissions to grant in your browser")

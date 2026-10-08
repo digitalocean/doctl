@@ -120,6 +120,13 @@ func RunAuthLogin(c *CmdConfig) error {
 	httpClient := &http.Client{Timeout: oauthHTTPTimeout}
 	metadata := oauth.ServerMetadataFor(issuer)
 
+	// --context names the context to update. Without it, login replaces the
+	// credentials in whatever context is already selected.
+	if strings.TrimSpace(Context) == "" {
+		template.Render(c.Out, `{{nl}}Updating the {{highlight .}} context. Credentials saved there will be replaced.{{nl}}`, authContext)
+		template.Render(c.Out, `{{muted "To keep them, cancel and run"}} {{highlight "doctl auth login --context <name>"}}{{nl}}{{nl}}`, nil)
+	}
+
 	token, err := oauth.Login(ctx, oauth.LoginOptions{
 		Metadata:           metadata,
 		ClientID:           clientID,
@@ -307,11 +314,11 @@ func displayOAuthLoginSummary(c *CmdConfig, authContext string, token *oauth.Tok
 		template.Render(c.Out, `Team: {{highlight .}}{{nl}}`, token.Info.TeamName)
 	}
 
-	template.Render(c.Out, `Saved to the {{highlight .}} authentication context. Later commands will use it.{{nl}}`, authContext)
+	template.Render(c.Out, `Saved to the {{highlight .}} context. Later commands will use it.{{nl}}`, authContext)
 
 	if token.RefreshToken != "" {
-		template.Render(c.Out, `{{nl}}{{muted "doctl renews this token automatically."}}{{nl}}`, nil)
-		template.Render(c.Out, `{{muted "Run doctl auth login again to change its scopes, or if the session is revoked."}}{{nl}}`, nil)
+		template.Render(c.Out, `{{nl}}{{muted "This token renews automatically."}}{{nl}}`, nil)
+		template.Render(c.Out, `{{muted "Run"}} {{highlight "doctl auth login"}} {{muted "again to change its scopes, or if the session is revoked."}}{{nl}}`, nil)
 	}
 }
 
