@@ -42,7 +42,6 @@ func MicroVM() *Command {
 			Long: `The subcommands under ` + "`" + `doctl compute microvm` + "`" + ` manage MicroVMs — lightweight ` +
 				`microVM sandboxes that pause when idle and resume on demand. Use these commands to ` +
 				`create, inspect, pause, resume, delete, exec into, and console into MicroVMs, and to manage their checkpoints.`,
-			Hidden: true, // public preview: keep out of --help and generated docs until GA
 		},
 	}
 
