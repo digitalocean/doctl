@@ -47,8 +47,8 @@ Status values: queued, running, complete, failed. If a job ends as failed, the d
 
 	deletionDetails := `
 - The deletion job ID
-- The type (managed_agent or inference)
-- The agent ID (managed_agent only)
+- The type (agent or inference)
+- The agent ID (agent only)
 - The status (queued, running, complete, failed)
 - Created / started / completed timestamps (Unix seconds)
 
@@ -62,7 +62,7 @@ Extra columns are available with --format: TeamID, ErrorMessage.
 		"Permanently delete Signals data",
 		`Starts an asynchronous, permanent deletion of Signals data. This cannot be undone.
 
-- --type managed_agent --agent-id <uuid>: deletes all Signals data for one managed agent and turns off collection for it.
+- --type agent --agent-id <uuid>: deletes all Signals data for one managed agent and turns off collection for it.
 - --type inference: deletes all Signals inference data for your whole team. No --agent-id is allowed.
 
 The data is hidden immediately and deleted in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete.
@@ -79,8 +79,8 @@ Each job contains:`+deletionDetails,
 		Writer, aliasOpt("c"),
 		displayerType(&displayers.SignalsDeletion{}),
 	)
-	AddStringFlag(cmdCreate, doctl.ArgSignalsDeletionType, "", "", `What to delete: "managed_agent" or "inference".`, requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "The managed agent UUID. Required for --type managed_agent; must not be set for inference.")
+	AddStringFlag(cmdCreate, doctl.ArgSignalsDeletionType, "", "", `What to delete: "agent" or "inference".`, requiredOpt())
+	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "The managed agent UUID. Required for --type agent; must not be set for inference.")
 	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID. Auto-detected when omitted.")
 	AddBoolFlag(cmdCreate, doctl.ArgForce, doctl.ArgShortForce, false, "Skip the confirmation prompt")
 
@@ -133,9 +133,9 @@ func RunSignalsDeletionCreate(c *CmdConfig) error {
 	agentID = strings.TrimSpace(agentID)
 
 	switch typ {
-	case godo.SignalsDeletionTypeManagedAgent:
+	case godo.SignalsDeletionTypeAgent:
 		if agentID == "" {
-			return fmt.Errorf("--agent-id is required when --type is managed_agent")
+			return fmt.Errorf("--agent-id is required when --type is agent")
 		}
 		parsed, err := uuid.Parse(agentID)
 		if err != nil {
@@ -149,7 +149,7 @@ func RunSignalsDeletionCreate(c *CmdConfig) error {
 			return fmt.Errorf("--agent-id must not be set when --type is inference")
 		}
 	default:
-		return fmt.Errorf(`--type must be "managed_agent" or "inference"`)
+		return fmt.Errorf(`--type must be "agent" or "inference"`)
 	}
 	if teamID < 0 {
 		return fmt.Errorf("--team-id must not be negative")
@@ -188,7 +188,7 @@ func RunSignalsDeletionCreate(c *CmdConfig) error {
 // "Are you sure you want to " prefix and the trailing "?", so the message must
 // start with a verb and must not end with a question mark.
 func signalsDeletionConfirmMessage(typ, agentID string, teamID int64) string {
-	if typ == godo.SignalsDeletionTypeManagedAgent {
+	if typ == godo.SignalsDeletionTypeAgent {
 		return fmt.Sprintf("permanently delete all Signals data for agent %s (team %d) and turn off collection for it (this cannot be undone)", agentID, teamID)
 	}
 	return fmt.Sprintf("permanently delete all Signals inference data for the whole team %d (this cannot be undone)", teamID)

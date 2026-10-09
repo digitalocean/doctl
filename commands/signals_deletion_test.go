@@ -20,7 +20,7 @@ var (
 		SignalsDeletionJob: &godo.SignalsDeletionJob{
 			TeamID:     42,
 			DeletionID: testDeletionID,
-			Type:       godo.SignalsDeletionTypeManagedAgent,
+			Type:       godo.SignalsDeletionTypeAgent,
 			AgentID:    testAgentUUID,
 			Status:     godo.SignalsDeletionStatusQueued,
 			CreatedAt:  1754049600,
@@ -45,7 +45,7 @@ func TestSignalsDeletionCommand(t *testing.T) {
 
 func TestSignalsDeletionConfirmMessage(t *testing.T) {
 	for _, msg := range []string{
-		signalsDeletionConfirmMessage("managed_agent", testAgentUUID, 42),
+		signalsDeletionConfirmMessage("agent", testAgentUUID, 42),
 		signalsDeletionConfirmMessage("inference", "", 42),
 	} {
 		assert.True(t, strings.HasPrefix(msg, "permanently delete"), msg)
@@ -53,7 +53,7 @@ func TestSignalsDeletionConfirmMessage(t *testing.T) {
 		assert.Contains(t, msg, "42")
 		assert.Contains(t, msg, "cannot be undone")
 	}
-	assert.Contains(t, signalsDeletionConfirmMessage("managed_agent", testAgentUUID, 42), testAgentUUID)
+	assert.Contains(t, signalsDeletionConfirmMessage("agent", testAgentUUID, 42), testAgentUUID)
 	assert.Contains(t, signalsDeletionConfirmMessage("inference", "", 42), "whole team")
 }
 
@@ -65,12 +65,12 @@ func TestSignalsDeletionCreate_Success(t *testing.T) {
 		{
 			name: "managed agent with explicit team id does not look up the team",
 			setup: func(config *CmdConfig, tm *tcMocks) {
-				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "managed_agent")
+				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
 				config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
 				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
 				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				tm.signals.EXPECT().CreateDeletion(&godo.SignalsCreateDeletionRequest{
-					Type: "managed_agent", TeamID: 42, AgentID: testAgentUUID,
+					Type: "agent", TeamID: 42, AgentID: testAgentUUID,
 				}).Return(&testDeletionJob, false, nil)
 			},
 		},
@@ -88,12 +88,12 @@ func TestSignalsDeletionCreate_Success(t *testing.T) {
 		{
 			name: "team id is auto-detected when not given",
 			setup: func(config *CmdConfig, tm *tcMocks) {
-				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "managed_agent")
+				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
 				config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
 				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				tm.signals.EXPECT().GetTeamID().Return(int64(42), nil)
 				tm.signals.EXPECT().CreateDeletion(&godo.SignalsCreateDeletionRequest{
-					Type: "managed_agent", TeamID: 42, AgentID: testAgentUUID,
+					Type: "agent", TeamID: 42, AgentID: testAgentUUID,
 				}).Return(&testDeletionJob, false, nil)
 			},
 		},
@@ -109,24 +109,24 @@ func TestSignalsDeletionCreate_Success(t *testing.T) {
 		{
 			name: "agent id with surrounding spaces is trimmed",
 			setup: func(config *CmdConfig, tm *tcMocks) {
-				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, " managed_agent ")
+				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, " agent ")
 				config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "  "+testAgentUUID+" ")
 				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
 				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				tm.signals.EXPECT().CreateDeletion(&godo.SignalsCreateDeletionRequest{
-					Type: "managed_agent", TeamID: 42, AgentID: testAgentUUID,
+					Type: "agent", TeamID: 42, AgentID: testAgentUUID,
 				}).Return(&testDeletionJob, false, nil)
 			},
 		},
 		{
 			name: "agent id is sent in canonical lowercase form",
 			setup: func(config *CmdConfig, tm *tcMocks) {
-				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "managed_agent")
+				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
 				config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, strings.ToUpper(testAgentUUID))
 				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
 				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				tm.signals.EXPECT().CreateDeletion(&godo.SignalsCreateDeletionRequest{
-					Type: "managed_agent", TeamID: 42, AgentID: testAgentUUID,
+					Type: "agent", TeamID: 42, AgentID: testAgentUUID,
 				}).Return(&testDeletionJob, false, nil)
 			},
 		},
@@ -164,12 +164,12 @@ func TestSignalsDeletionCreate_InputErrors(t *testing.T) {
 		teamID  int
 		wantErr string
 	}{
-		{name: "missing type", typ: "", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "managed_agent" or "inference"`},
-		{name: "unknown type", typ: "agent", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "managed_agent" or "inference"`},
-		{name: "wrong case type", typ: "Managed_Agent", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "managed_agent" or "inference"`},
-		{name: "managed agent without agent id", typ: "managed_agent", teamID: 42, wantErr: "--agent-id is required"},
-		{name: "managed agent with spaces-only agent id", typ: "managed_agent", agentID: "  ", teamID: 42, wantErr: "--agent-id is required"},
-		{name: "managed agent with non-uuid agent id", typ: "managed_agent", agentID: "not-a-uuid", teamID: 42, wantErr: "--agent-id must be a valid UUID"},
+		{name: "missing type", typ: "", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "agent" or "inference"`},
+		{name: "unknown type", typ: "bogus", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "agent" or "inference"`},
+		{name: "wrong case type", typ: "Agent", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "agent" or "inference"`},
+		{name: "managed agent without agent id", typ: "agent", teamID: 42, wantErr: "--agent-id is required"},
+		{name: "managed agent with spaces-only agent id", typ: "agent", agentID: "  ", teamID: 42, wantErr: "--agent-id is required"},
+		{name: "managed agent with non-uuid agent id", typ: "agent", agentID: "not-a-uuid", teamID: 42, wantErr: "--agent-id must be a valid UUID"},
 		{name: "inference with agent id", typ: "inference", agentID: testAgentUUID, teamID: 42, wantErr: "--agent-id must not be set when --type is inference"},
 		{name: "negative team id", typ: "inference", teamID: -1, wantErr: "--team-id must not be negative"},
 	}
@@ -214,7 +214,7 @@ func TestSignalsDeletionCreate_ServiceErrorPassedThrough(t *testing.T) {
 	for _, msg := range []string{"403 forbidden", "404 agent not found", "429 too many active deletion jobs", "500 internal"} {
 		t.Run(msg, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "managed_agent")
+				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
 				config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
 				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
 				config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -233,11 +233,11 @@ func TestSignalsDeletionCreate_NoForceNonInteractiveRefuses(t *testing.T) {
 	Interactive = false
 	t.Cleanup(func() { Interactive = prev })
 
-	for _, typ := range []string{"managed_agent", "inference"} {
+	for _, typ := range []string{"agent", "inference"} {
 		t.Run(typ, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, typ)
-				if typ == "managed_agent" {
+				if typ == "agent" {
 					config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
 				}
 				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
