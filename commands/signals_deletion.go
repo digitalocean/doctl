@@ -73,7 +73,7 @@ If an active deletion for the same target already exists, the API returns HTTP 2
 
 Other API errors you may see: 400 (bad type/agent_id), 403 (team_id mismatch), 404 (unknown managed agent), 429 (too many active deletion jobs for the team).
 
-Your team ID is detected automatically (this needs permission to read Signals consents). If you lack that permission, pass --team-id.
+--type is required (the API also requires it; omitting type is HTTP 400). Your team ID is detected automatically (this needs permission to read Signals consents). If you lack that permission, pass --team-id.
 
 Each job contains:`+deletionDetails,
 		Writer, aliasOpt("c"),
