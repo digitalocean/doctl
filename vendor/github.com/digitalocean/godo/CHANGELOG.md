@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.219.0] - 2026-10-08
+
+- #1143 - @jkosanam - hosted agents: add external-provider connection management methods
+- #1141 - @dmamidala-glitch - COBS-1352: Add Insights logs query support
+
 ## [1.218.0] - 2026-10-07
 
 - #1140 - @sauravk-digitalocean - feat(FI-610): add Signals consent and export client
