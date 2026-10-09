@@ -38,7 +38,7 @@ func int64Ptr(v int64) *int64 { return &v }
 func TestSignalsCommand(t *testing.T) {
 	cmd := Signals()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "consent", "export", "session")
+	assertCommandNames(t, cmd, "consent", "deletion", "export", "session")
 }
 
 func TestSignalsExportCommand(t *testing.T) {

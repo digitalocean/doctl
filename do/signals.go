@@ -15,6 +15,8 @@ package do
 
 import (
 	"context"
+	"errors"
+	"net/http"
 
 	"github.com/digitalocean/godo"
 )
@@ -66,6 +68,14 @@ type SignalsExportOptions struct {
 	*godo.SignalsExportOptions
 }
 
+// SignalsDeletion wraps a godo.SignalsDeletionJob.
+type SignalsDeletion struct {
+	*godo.SignalsDeletionJob
+}
+
+// SignalsDeletions is a slice of SignalsDeletion.
+type SignalsDeletions []SignalsDeletion
+
 // SignalsService talks to consent-gateway and signals-api via godo.
 type SignalsService interface {
 	ListConsents() (SignalsConsents, error)
@@ -80,6 +90,16 @@ type SignalsService interface {
 	GetExport(exportID string) (*SignalsExport, error)
 	GetExportDownload(exportID string) (*SignalsExportDownload, error)
 	GetExportOptions() (*SignalsExportOptions, error)
+
+	// CreateDeletion starts a data deletion. The bool is true when an active job
+	// for the same target already existed (HTTP 200) instead of a new one (202).
+	CreateDeletion(req *godo.SignalsCreateDeletionRequest) (*SignalsDeletion, bool, error)
+	GetDeletion(deletionID string) (*SignalsDeletion, error)
+	// ListDeletions returns one page of jobs and the next-page cursor ("" when
+	// there is no next page).
+	ListDeletions(opts *godo.SignalsListDeletionsOptions) (SignalsDeletions, string, error)
+	// GetTeamID returns the numeric team id of the authenticated team.
+	GetTeamID() (int64, error)
 }
 
 var _ SignalsService = &signalsService{}
@@ -190,4 +210,51 @@ func (s *signalsService) GetExportOptions() (*SignalsExportOptions, error) {
 		return nil, err
 	}
 	return &SignalsExportOptions{SignalsExportOptions: opts}, nil
+}
+
+func (s *signalsService) CreateDeletion(req *godo.SignalsCreateDeletionRequest) (*SignalsDeletion, bool, error) {
+	job, resp, err := s.client.Signals.CreateDeletion(context.TODO(), req)
+	if err != nil {
+		return nil, false, err
+	}
+	existing := resp != nil && resp.StatusCode == http.StatusOK
+	return &SignalsDeletion{SignalsDeletionJob: job}, existing, nil
+}
+
+func (s *signalsService) GetDeletion(deletionID string) (*SignalsDeletion, error) {
+	job, _, err := s.client.Signals.GetDeletion(context.TODO(), deletionID)
+	if err != nil {
+		return nil, err
+	}
+	return &SignalsDeletion{SignalsDeletionJob: job}, nil
+}
+
+func (s *signalsService) ListDeletions(opts *godo.SignalsListDeletionsOptions) (SignalsDeletions, string, error) {
+	resp, _, err := s.client.Signals.ListDeletions(context.TODO(), opts)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make(SignalsDeletions, len(resp.Edges))
+	for i, e := range resp.Edges {
+		node := e.Node
+		out[i] = SignalsDeletion{SignalsDeletionJob: &node}
+	}
+	next := ""
+	if resp.PageInfo.HasNextPage {
+		next = resp.PageInfo.EndCursor
+	}
+	return out, next, nil
+}
+
+// GetTeamID asks consent-gateway for the numeric team id. GET /v1/consent
+// returns team_id even when the consent list is empty.
+func (s *signalsService) GetTeamID() (int64, error) {
+	resp, _, err := s.client.Signals.ListConsents(context.TODO())
+	if err != nil {
+		return 0, err
+	}
+	if resp == nil || resp.TeamID <= 0 {
+		return 0, errors.New("the server did not return a team id")
+	}
+	return resp.TeamID, nil
 }

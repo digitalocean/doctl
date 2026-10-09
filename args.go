@@ -1219,6 +1219,12 @@ const (
 	// ArgSignalsExportSignalLayer is an optional signal layer filter.
 	ArgSignalsExportSignalLayer = "signal-layer"
 
+	// ArgSignalsDeletionType is the deletion type: agent or inference.
+	ArgSignalsDeletionType = "type"
+
+	// ArgSignalsTeamID is the numeric team id for deletion requests (optional; auto-detected).
+	ArgSignalsTeamID = "team-id"
+
 	// ArgSignalsSessionID is the session ID for Signals session commands.
 	ArgSignalsSessionID = "session-id"
 )

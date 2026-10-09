@@ -25,14 +25,15 @@ func Signals() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "signals",
-			Short: "Display commands for Signals consent and export management",
-			Long:  "The subcommands of `doctl signals` manage Signals collection consent and bulk data exports.",
+			Short: "Display commands for Signals consent, export, and data deletion management",
+			Long:  "The subcommands of `doctl signals` manage Signals collection consent, bulk data exports, and data deletion.",
 		},
 	}
 
 	cmd.AddCommand(SignalsConsent())
 	cmd.AddCommand(SignalsSession())
 	cmd.AddCommand(SignalsExport())
+	cmd.AddCommand(SignalsDeletion())
 
 	return cmd
 }
