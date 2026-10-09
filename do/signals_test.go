@@ -109,6 +109,62 @@ func TestSetConsentUnwrapsConsentEnvelope(t *testing.T) {
 	assert.True(t, c.Enabled)
 }
 
+func TestListConsentsBySource_AddsSourceQuery(t *testing.T) {
+	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/v1/consent", r.URL.Path)
+		assert.Equal(t, "inference", r.URL.Query().Get("source"))
+		_, _ = w.Write([]byte(`{"team_id":42,"source":"inference","consents":[{"id":7,"team_id":42,"source":"inference","agent_id":"","enabled":true,"updated_at":"2026-10-09T13:28:22Z"}]}`))
+	})
+	consents, err := svc.ListConsentsBySource("inference")
+	require.NoError(t, err)
+	require.Len(t, consents, 1)
+	assert.Equal(t, "inference", consents[0].Source)
+	assert.Equal(t, "", consents[0].AgentID)
+}
+
+func TestListConsents_NoSourceQuery(t *testing.T) {
+	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v1/consent", r.URL.Path)
+		assert.Empty(t, r.URL.RawQuery)
+		_, _ = w.Write([]byte(`{"team_id":42,"consents":[]}`))
+	})
+	consents, err := svc.ListConsents()
+	require.NoError(t, err)
+	assert.Len(t, consents, 0)
+}
+
+func TestSetInferenceConsent_UsesSourceQueryAndUnwrapsEnvelope(t *testing.T) {
+	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPut, r.Method)
+		assert.Equal(t, "/v1/consent", r.URL.Path)
+		assert.Equal(t, "inference", r.URL.Query().Get("source"))
+		var raw map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		assert.Equal(t, true, raw["enabled"])
+		_, _ = w.Write([]byte(`{"consent":{"id":7,"team_id":42,"source":"inference","agent_id":"","enabled":true,"updated_at":"2026-10-09T13:28:22Z"}}`))
+	})
+	c, err := svc.SetInferenceConsent(true)
+	require.NoError(t, err)
+	assert.Equal(t, int64(7), c.ID)
+	assert.Equal(t, "inference", c.Source)
+	assert.True(t, c.Enabled)
+}
+
+func TestGetInferenceConsent_DefaultDenyWhenNoRow(t *testing.T) {
+	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v1/consent", r.URL.Path)
+		assert.Equal(t, "inference", r.URL.Query().Get("source"))
+		_, _ = w.Write([]byte(`{"team_id":42,"source":"inference","consents":[]}`))
+	})
+	c, err := svc.GetInferenceConsent()
+	require.NoError(t, err)
+	assert.Equal(t, int64(42), c.TeamID)
+	assert.Equal(t, "inference", c.Source)
+	assert.False(t, c.Enabled)
+	assert.Equal(t, int64(0), c.ID)
+}
+
 func TestListAgentSessions(t *testing.T) {
 	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/v1/signals/agents/agt-1/sessions", r.URL.Path)

@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.223.0] - 2026-10-09
+
+- #1157 - @rvdfox - signals: add team-level inference consent (source=inference) to SignalsService
+
 ## [1.222.0] - 2026-10-09
 
 - #1153 - @sauravk-digitalocean - Remove GetSegment and GetSegmentSignalReport from SignalsService

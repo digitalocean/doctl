@@ -1187,6 +1187,10 @@ const (
 	// ArgSignalsEnabled sets consent enabled (true) or disabled (false).
 	ArgSignalsEnabled = "enabled"
 
+	// ArgSignalsConsentSource selects the consent source: agent (per agent) or
+	// inference (team-level, serverless inference).
+	ArgSignalsConsentSource = "source"
+
 	// Signals export args
 
 	// ArgSignalsExportID is the export job ID.
