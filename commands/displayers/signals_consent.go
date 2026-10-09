@@ -82,7 +82,6 @@ func (d *SignalsAgentConsent) Cols() []string {
 		"TeamID",
 		"AgentID",
 		"Enabled",
-		"Allowed",
 		"UpdatedAt",
 	}
 }
@@ -93,7 +92,6 @@ func (d *SignalsAgentConsent) ColMap() map[string]string {
 		"TeamID":    "Team ID",
 		"AgentID":   "Agent ID",
 		"Enabled":   "Enabled",
-		"Allowed":   "Allowed",
 		"UpdatedAt": "Updated At",
 	}
 }
@@ -106,7 +104,6 @@ func (d *SignalsAgentConsent) KV() []map[string]any {
 			"TeamID":    c.TeamID,
 			"AgentID":   c.AgentID,
 			"Enabled":   strconv.FormatBool(c.Enabled),
-			"Allowed":   strconv.FormatBool(c.Allowed),
 			"UpdatedAt": c.UpdatedAt,
 		}
 	}
