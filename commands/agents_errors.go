@@ -206,6 +206,11 @@ func beautifyAgentError(err error) error {
 		tips = []string{"doctl harness-runtime config list-sessions <config-id>", "doctl harness-runtime remove <session>"}
 	case strings.Contains(lower, "mutually exclusive") || strings.Contains(lower, "is required") || strings.Contains(lower, "invalid --"):
 		title = "Invalid arguments"
+	case lower == "operation aborted":
+		// A delete the user did not confirm, or one that must ask and has no terminal to ask
+		// on. Nothing was sent to the API.
+		title = "Not confirmed"
+		tips = []string{"Nothing was deleted", "Re-run with --force to delete without being asked"}
 	case strings.Contains(lower, "not set locally") || strings.Contains(lower, "environment variable"):
 		title = "Missing environment value"
 		tips = []string{"Set the variable in your shell, or re-run in a terminal to be prompted"}

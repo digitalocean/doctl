@@ -355,18 +355,20 @@ func TestRunAgentsWorkspaceDelete_ForceSkipsConfirmation(t *testing.T) {
 	})
 }
 
-// Without --force a delete must ask first; with nobody to ask it must not go
-// ahead. No DeleteWorkspace expectation, so a call fails the test.
-func TestRunAgentsWorkspaceDelete_RequiresConfirmation(t *testing.T) {
+// With no terminal there is nobody to ask, so the delete goes ahead without --force.
+func TestRunAgentsWorkspaceDelete_NoTerminalDeletesWithoutForce(t *testing.T) {
 	prev := Interactive
 	Interactive = false
 	t.Cleanup(func() { Interactive = prev })
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().DeleteWorkspace("018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f").Return(nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
 		config.Args = []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f"}
-		err := RunAgentsWorkspaceDelete(config)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "operation aborted")
+		require.NoError(t, RunAgentsWorkspaceDelete(config))
+		assert.Contains(t, buf.String(), "Deleted workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 	})
 }
 

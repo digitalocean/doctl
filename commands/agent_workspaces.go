@@ -73,7 +73,7 @@ func AgentWorkspaces() *Command {
 		"Permanently delete a persistent workspace",
 		agentsWorkspaceDeleteHelpMD,
 		Writer, agentPrettyErrors(), aliasOpt("rm"))
-	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete without confirmation")
+	AddBoolFlag(cmdDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete without asking first (a terminal asks by default; with no terminal it never asks)")
 	cmdDelete.Example = `doctl harness-runtime workspace delete 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f`
 
 	requireAgentSubcommand(cmd)
@@ -194,7 +194,10 @@ func RunAgentsWorkspaceDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if !(force || AskForConfirm("permanently delete this workspace and everything saved in it?") == nil) {
+	// A terminal asks first, since the files cannot be brought back. With no terminal
+	// (a script, --interactive=false) there is nobody to ask, and the workspace id was
+	// given explicitly, so the delete goes ahead without --force.
+	if !force && Interactive && AskForConfirm("permanently delete this workspace and everything saved in it?") != nil {
 		return fmt.Errorf("operation aborted")
 	}
 	if err := c.HostedAgents().DeleteWorkspace(c.Args[0]); err != nil {
