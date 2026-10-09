@@ -1178,7 +1178,7 @@ const (
 
 	// Signals consent args
 
-	// ArgSignalsType selects the Signals session source: agent or inference.
+	// ArgSignalsType selects the Signals source for session list / export create: agent or inference.
 	ArgSignalsType = "type"
 
 	// ArgSignalsAgentID is the agent ID for Signals consent and export commands.
