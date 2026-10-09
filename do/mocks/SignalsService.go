@@ -41,6 +41,22 @@ func (m *MockSignalsService) EXPECT() *MockSignalsServiceMockRecorder {
 	return m.recorder
 }
 
+// CreateDeletion mocks base method.
+func (m *MockSignalsService) CreateDeletion(req *godo.SignalsCreateDeletionRequest) (*do.SignalsDeletion, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDeletion", req)
+	ret0, _ := ret[0].(*do.SignalsDeletion)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateDeletion indicates an expected call of CreateDeletion.
+func (mr *MockSignalsServiceMockRecorder) CreateDeletion(req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDeletion", reflect.TypeOf((*MockSignalsService)(nil).CreateDeletion), req)
+}
+
 // CreateExport mocks base method.
 func (m *MockSignalsService) CreateExport(req *godo.SignalsCreateExportRequest) (*do.SignalsExport, error) {
 	m.ctrl.T.Helper()
@@ -69,6 +85,21 @@ func (m *MockSignalsService) GetConsent(agentID string) (*do.SignalsAgentConsent
 func (mr *MockSignalsServiceMockRecorder) GetConsent(agentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsent", reflect.TypeOf((*MockSignalsService)(nil).GetConsent), agentID)
+}
+
+// GetDeletion mocks base method.
+func (m *MockSignalsService) GetDeletion(deletionID string) (*do.SignalsDeletion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeletion", deletionID)
+	ret0, _ := ret[0].(*do.SignalsDeletion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeletion indicates an expected call of GetDeletion.
+func (mr *MockSignalsServiceMockRecorder) GetDeletion(deletionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeletion", reflect.TypeOf((*MockSignalsService)(nil).GetDeletion), deletionID)
 }
 
 // GetExport mocks base method.
@@ -116,6 +147,21 @@ func (mr *MockSignalsServiceMockRecorder) GetExportOptions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExportOptions", reflect.TypeOf((*MockSignalsService)(nil).GetExportOptions))
 }
 
+// GetTeamID mocks base method.
+func (m *MockSignalsService) GetTeamID() (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTeamID")
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTeamID indicates an expected call of GetTeamID.
+func (mr *MockSignalsServiceMockRecorder) GetTeamID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTeamID", reflect.TypeOf((*MockSignalsService)(nil).GetTeamID))
+}
+
 // ListAgentSessions mocks base method.
 func (m *MockSignalsService) ListAgentSessions(agentID string, opts *godo.SignalsListAgentSessionsOptions) (do.SignalsSessions, error) {
 	m.ctrl.T.Helper()
@@ -144,6 +190,22 @@ func (m *MockSignalsService) ListConsents() (do.SignalsConsents, error) {
 func (mr *MockSignalsServiceMockRecorder) ListConsents() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConsents", reflect.TypeOf((*MockSignalsService)(nil).ListConsents))
+}
+
+// ListDeletions mocks base method.
+func (m *MockSignalsService) ListDeletions(opts *godo.SignalsListDeletionsOptions) (do.SignalsDeletions, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeletions", opts)
+	ret0, _ := ret[0].(do.SignalsDeletions)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListDeletions indicates an expected call of ListDeletions.
+func (mr *MockSignalsServiceMockRecorder) ListDeletions(opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeletions", reflect.TypeOf((*MockSignalsService)(nil).ListDeletions), opts)
 }
 
 // ListExports mocks base method.
