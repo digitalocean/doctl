@@ -129,7 +129,7 @@ func TestListAgentSessions(t *testing.T) {
 func TestListSessionDialogues(t *testing.T) {
 	svc, _ := newTestSignalsService(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/v1/signals/sessions/sess-1/dialogues", r.URL.Path)
-		_, _ = w.Write([]byte(`{"session_id":"sess-1","edges":[{"cursor":"c1","node":{"id":1,"run_id":"run-1","created_at":"2026-01-01T00:00:00Z","sequence":1,"user_message":"hello","steps":[],"run_status":"complete","segment_id":"seg-1","segment_seq":0,"signals":[]}}],"page_info":{"has_next_page":false}}`))
+		_, _ = w.Write([]byte(`{"session_id":"sess-1","edges":[{"cursor":"c1","node":{"id":1,"run_id":"run-1","created_at":"2026-01-01T00:00:00Z","sequence":1,"user_message":"hello","steps":[],"run_status":"complete","signals":[]}}],"page_info":{"has_next_page":false}}`))
 	})
 
 	dialogues, err := svc.ListSessionDialogues("sess-1", &godo.SignalsListDialoguesOptions{
@@ -139,7 +139,6 @@ func TestListSessionDialogues(t *testing.T) {
 	require.Len(t, dialogues, 1)
 	assert.Equal(t, int64(1), dialogues[0].ID)
 	assert.Equal(t, "hello", dialogues[0].UserMessage)
-	assert.Equal(t, "seg-1", dialogues[0].SegmentID)
 }
 
 const deletionJobJSON = `{
