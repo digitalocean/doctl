@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.222.0] - 2026-10-09
+
+- #1153 - @sauravk-digitalocean - Remove GetSegment and GetSegmentSignalReport from SignalsService
+- #1152 - @aupadhyay-shark - signals: rename deletion type managed_agent → agent
+- #1151 - @smirdha-source - Add SessionIDs to SignalsCreateExportRequest
+
 ## [1.221.0] - 2026-10-09
 
 - #1149 - @sauravk-digitalocean - Remove Allowed from SignalsAgentConsent
