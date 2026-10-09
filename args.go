@@ -747,6 +747,21 @@ const (
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
 
+	// ArgOAuthServer is the OAuth authorization server used to sign in.
+	ArgOAuthServer = "oauth-server"
+	// ArgOAuthClientID overrides the OAuth application doctl signs in as.
+	ArgOAuthClientID = "client-id"
+	// ArgOAuthScopes is the space-separated list of scopes requested when signing in.
+	ArgOAuthScopes = "scopes"
+	// ArgOAuthSaveScope persists --scopes as the default for later logins.
+	ArgOAuthSaveScope = "save-scope"
+	// ArgOAuthCallbackPort is the local port that receives the OAuth redirect.
+	ArgOAuthCallbackPort = "callback-port"
+	// ArgOAuthNoBrowser prints the authorization URL instead of opening a browser.
+	ArgOAuthNoBrowser = "no-browser"
+	// ArgOAuthTimeout bounds how long to wait for browser authorization, in seconds.
+	ArgOAuthTimeout = "timeout"
+
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
 

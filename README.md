@@ -73,6 +73,8 @@ See the [full reference documentation](https://www.digitalocean.com/docs/apis-cl
   - [Building the Development Version from Source](#building-the-development-version-from-source)
   - [Dependencies](#dependencies)
 - [Authenticating with DigitalOcean](#authenticating-with-digitalocean)
+  - [Signing in with your browser](#signing-in-with-your-browser)
+  - [Using an API token](#using-an-api-token)
   - [Logging into multiple DigitalOcean accounts](#logging-into-multiple-digitalocean-accounts)
 - [Configuring Default Values](#configuring-default-values)
   - [Environment Variables](#environment-variables)
@@ -320,11 +322,37 @@ stable.
 
 ## Authenticating with DigitalOcean
 
-To use `doctl`, you need to authenticate with DigitalOcean by providing an access token, which can be created from the [Applications & API](https://cloud.digitalocean.com/account/api/tokens) section of the Control Panel. You can learn how to generate a token by following the [DigitalOcean API guide](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2).
+`doctl` can authenticate in two ways: sign in through your browser with `doctl auth login`, or paste an API token with `doctl auth init`. Either way, the credentials are saved to an authentication context in the `doctl` configuration file.
 
 Docker users will have to use the `DIGITALOCEAN_ACCESS_TOKEN` environmental variable to authenticate, as explained in the Installation section of this document.
 
-If you're not using Docker to run `doctl`, authenticate with the `auth init` command.
+### Signing in with your browser
+
+`doctl auth login` signs you in without creating or pasting a token. It uses the OAuth 2.1 authorization code flow with PKCE, signing in as the `doctl` application DigitalOcean publishes, so there is nothing to register first.
+
+```
+doctl auth login
+```
+
+`doctl` opens your browser and waits while you approve the request. The authorization link is valid for 5 minutes; change that with `--timeout`. If the browser does not open, `doctl` prints the link so you can visit it yourself. On a machine with no browser, use `--no-browser` to print the link instead of opening one.
+
+By default you choose the permissions to grant on the authorization screen. To request them up front, pass `--scopes`:
+
+```
+doctl auth login --scopes "read write"
+```
+
+`--scopes "read write"` requests the same access a full-permission API token has. You can also name individual permissions, such as `--scopes "droplet:read account:read"`. Add `--save-scope` to reuse those scopes on later sign-ins, and `--scopes "" --save-scope` to clear the saved default.
+
+Access tokens issued this way are short-lived. `doctl` saves a refresh token alongside the access token and renews it automatically when you run a command, so you do not have to sign in again when the access token expires. Sign in again to change the granted scopes, or if the session is revoked.
+
+Without `--context`, signing in replaces the credentials in the `default` context and selects it. Pass `--context <name>` to sign in to a named context instead, leaving the context you were using unchanged.
+
+### Using an API token
+
+To authenticate with an API token instead, create one from the [Applications & API](https://cloud.digitalocean.com/account/api/tokens) section of the Control Panel. You can learn how to generate a token by following the [DigitalOcean API guide](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2).
+
+Authenticate with the `auth init` command.
 
 ```
 doctl auth init
@@ -348,7 +376,7 @@ This will create the necessary directory structure and configuration file to sto
 
 `doctl` allows you to log in to multiple DigitalOcean accounts at the same time and easily switch between them with the use of authentication contexts.
 
-By default, a context named `default` is used. To create a new context, run `doctl auth init --context <new-context-name>`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` [environment variable](#environment-variables). You will be prompted for your API access token which will be associated with the new context.
+By default, a context named `default` is used. To create a new context, run `doctl auth login --context <new-context-name>` to sign in through your browser, or `doctl auth init --context <new-context-name>` to be prompted for an API token. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` [environment variable](#environment-variables). The credentials are associated with the new context, and `doctl auth login` also selects it.
 
 To use a non-default context, pass the context name to any `doctl` command. For example:
 
@@ -356,7 +384,7 @@ To use a non-default context, pass the context name to any `doctl` command. For 
 doctl compute droplet list --context <new-context-name>
 ```
 
-To set a new default context, run `doctl auth switch --context <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified.
+To set a new default context, run `doctl auth switch --context <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified. To see the contexts you have, run `doctl auth list`; the selected one is marked `(current)`.
 
 The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` [environment variable](#environment-variables) are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
 
