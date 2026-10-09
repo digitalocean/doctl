@@ -206,6 +206,11 @@ func beautifyAgentError(err error) error {
 		tips = []string{"doctl harness-runtime config list-sessions <config-id>", "doctl harness-runtime remove <session>"}
 	case strings.Contains(lower, "mutually exclusive") || strings.Contains(lower, "is required") || strings.Contains(lower, "invalid --"):
 		title = "Invalid arguments"
+	case lower == "operation aborted":
+		// A delete the user did not confirm, or one that must ask and has no terminal to ask
+		// on. Nothing was sent to the API.
+		title = "Not confirmed"
+		tips = []string{"Nothing was deleted", "Re-run with --force to delete without being asked"}
 	case strings.Contains(lower, "not set locally") || strings.Contains(lower, "environment variable"):
 		title = "Missing environment value"
 		tips = []string{"Set the variable in your shell, or re-run in a terminal to be prompted"}
@@ -276,6 +281,9 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 			}
 		}
 		return "Invalid request", nil
+	case http.StatusNotImplemented:
+		// Permanent for now, so no retry advice.
+		return "Not available yet", nil
 	case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
 		return "Service temporarily unavailable", []string{"Retry in a moment"}
 	default:

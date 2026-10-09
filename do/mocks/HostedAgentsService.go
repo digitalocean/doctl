@@ -162,6 +162,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) CreateTemplate(create any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTemplate", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateTemplate), create)
 }
 
+// CreateWorkspace mocks base method.
+func (m *MockHostedAgentsService) CreateWorkspace(create *godo.HostedAgentWorkspaceCreateRequest) (*godo.HostedAgentWorkspace, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWorkspace", create)
+	ret0, _ := ret[0].(*godo.HostedAgentWorkspace)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateWorkspace indicates an expected call of CreateWorkspace.
+func (mr *MockHostedAgentsServiceMockRecorder) CreateWorkspace(create any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkspace", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateWorkspace), create)
+}
+
 // CreateWorkspaceTransfer mocks base method.
 func (m *MockHostedAgentsService) CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
 	m.ctrl.T.Helper()
@@ -234,6 +249,20 @@ func (m *MockHostedAgentsService) DeleteTemplate(templateID string) (*godo.Hoste
 func (mr *MockHostedAgentsServiceMockRecorder) DeleteTemplate(templateID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTemplate", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteTemplate), templateID)
+}
+
+// DeleteWorkspace mocks base method.
+func (m *MockHostedAgentsService) DeleteWorkspace(workspaceID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkspace", workspaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWorkspace indicates an expected call of DeleteWorkspace.
+func (mr *MockHostedAgentsServiceMockRecorder) DeleteWorkspace(workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspace", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteWorkspace), workspaceID)
 }
 
 // DestroySession mocks base method.
@@ -353,6 +382,21 @@ func (m *MockHostedAgentsService) GetTemplateBuild(templateID, buildID string) (
 func (mr *MockHostedAgentsServiceMockRecorder) GetTemplateBuild(templateID, buildID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateBuild", reflect.TypeOf((*MockHostedAgentsService)(nil).GetTemplateBuild), templateID, buildID)
+}
+
+// GetWorkspace mocks base method.
+func (m *MockHostedAgentsService) GetWorkspace(workspaceID string) (*godo.HostedAgentWorkspace, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkspace", workspaceID)
+	ret0, _ := ret[0].(*godo.HostedAgentWorkspace)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkspace indicates an expected call of GetWorkspace.
+func (mr *MockHostedAgentsServiceMockRecorder) GetWorkspace(workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkspace", reflect.TypeOf((*MockHostedAgentsService)(nil).GetWorkspace), workspaceID)
 }
 
 // GetWorkspaceTransfer mocks base method.
@@ -479,6 +523,22 @@ func (m *MockHostedAgentsService) ListTemplates(opt *godo.HostedAgentTemplateLis
 func (mr *MockHostedAgentsServiceMockRecorder) ListTemplates(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplates", reflect.TypeOf((*MockHostedAgentsService)(nil).ListTemplates), opt)
+}
+
+// ListWorkspaces mocks base method.
+func (m *MockHostedAgentsService) ListWorkspaces(opt *godo.HostedAgentWorkspaceListOptions) ([]godo.HostedAgentWorkspace, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkspaces", opt)
+	ret0, _ := ret[0].([]godo.HostedAgentWorkspace)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListWorkspaces indicates an expected call of ListWorkspaces.
+func (mr *MockHostedAgentsServiceMockRecorder) ListWorkspaces(opt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkspaces", reflect.TypeOf((*MockHostedAgentsService)(nil).ListWorkspaces), opt)
 }
 
 // PauseSession mocks base method.

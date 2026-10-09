@@ -88,6 +88,14 @@ type HostedAgentsService interface {
 	ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]HostedAgentSession, error)
 	RollbackToCheckpoint(sessionID, checkpointID string) (*HostedAgentSession, error)
 
+	// Persistent workspaces (/v2/agents/workspaces): saved files that outlive
+	// sessions and attach to one session at a time. Not the session
+	// /workspace transfer APIs above.
+	CreateWorkspace(create *godo.HostedAgentWorkspaceCreateRequest) (*godo.HostedAgentWorkspace, error)
+	ListWorkspaces(opt *godo.HostedAgentWorkspaceListOptions) ([]godo.HostedAgentWorkspace, string, error)
+	GetWorkspace(workspaceID string) (*godo.HostedAgentWorkspace, error)
+	DeleteWorkspace(workspaceID string) error
+
 	// Agent Configs: immutable, team-scoped agent manifests plus config-backed
 	// session creation.
 	CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error)
@@ -327,6 +335,29 @@ func (s *hostedAgentsService) RollbackToCheckpoint(sessionID, checkpointID strin
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) CreateWorkspace(create *godo.HostedAgentWorkspaceCreateRequest) (*godo.HostedAgentWorkspace, error) {
+	ws, _, err := s.client.HostedAgents.CreateWorkspace(context.TODO(), create)
+	return ws, err
+}
+
+func (s *hostedAgentsService) ListWorkspaces(opt *godo.HostedAgentWorkspaceListOptions) ([]godo.HostedAgentWorkspace, string, error) {
+	resp, _, err := s.client.HostedAgents.ListWorkspaces(context.TODO(), opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Workspaces, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetWorkspace(workspaceID string) (*godo.HostedAgentWorkspace, error) {
+	ws, _, err := s.client.HostedAgents.GetWorkspace(context.TODO(), workspaceID)
+	return ws, err
+}
+
+func (s *hostedAgentsService) DeleteWorkspace(workspaceID string) error {
+	_, err := s.client.HostedAgents.DeleteWorkspace(context.TODO(), workspaceID)
+	return err
 }
 
 func (s *hostedAgentsService) CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error) {

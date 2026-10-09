@@ -418,7 +418,12 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentWaitTimeout,
 		doctl.ArgAgentTemplate,
 		doctl.ArgAgentPermission,
+		doctl.ArgAgentWorkspace,
 	} {
+		if flag == doctl.ArgAgentWorkspace && c.Doit.IsSet(flag) {
+			return fmt.Errorf("--%s only applies when creating a new session from a saved config: `%s create --%s <config> --%s <workspace-id>`",
+				flag, agentCLI, doctl.ArgAgentFromConfig, doctl.ArgAgentWorkspace)
+		}
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
 		}
@@ -1314,6 +1319,9 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	// "Resume on top-off: no" row on every session would be noise.
 	if sess.ResumeOnTopoff {
 		body.WriteString(cardRow("Resume on top-off", "enabled"))
+	}
+	if ws := strings.TrimSpace(sess.WorkspaceID); ws != "" {
+		body.WriteString(cardRow("Workspace", colorize(ws, colMuted)))
 	}
 	if !sess.CreatedAt.Time.IsZero() {
 		body.WriteString(cardRow("Created", colorize(formatCreatedAt(sess.CreatedAt.Time), colMuted)))
