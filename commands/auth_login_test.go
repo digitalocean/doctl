@@ -53,7 +53,7 @@ func TestRunAuthLogin(t *testing.T) {
 	assert.Equal(t, "doo_v1_access", *token)
 
 	assert.Equal(t, oauth.DefaultClientID, capturedOpts.ClientID, "doctl signs in as its own published application")
-	assert.Empty(t, capturedOpts.Scopes, "without --scope the authorization screen decides the permissions")
+	assert.Empty(t, capturedOpts.Scopes, "without --scopes the authorization screen decides the permissions")
 	assert.Equal(t, "https://cloud.example.com/v1/oauth/token", capturedOpts.Metadata.TokenEndpoint)
 	assert.False(t, capturedOpts.NoBrowser)
 
@@ -80,6 +80,37 @@ func TestRunAuthLoginWarnsThatTheCurrentContextIsReplaced(t *testing.T) {
 	assert.Contains(t, out.String(), "Credentials saved there will be replaced")
 	assert.Contains(t, out.String(), doctl.ArgDefaultContext)
 	assert.Contains(t, out.String(), "doctl auth login --context <name>")
+	assert.Equal(t, doctl.ArgDefaultContext, viper.GetString(doctl.ArgContext))
+}
+
+func TestRunAuthLoginWithoutContextLeavesTheWorkingContextAlone(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	viper.Set(doctl.ArgContext, "your-team")
+	storeOAuthTokenState("your-team", &oauthTokenState{RefreshToken: "keep-me"})
+
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	assert.Equal(t, doctl.ArgDefaultContext, viper.GetString(doctl.ArgContext))
+	require.NotNil(t, loadOAuthTokenState(doctl.ArgDefaultContext))
+	assert.Equal(t, "dor_v1_refresh", loadOAuthTokenState(doctl.ArgDefaultContext).RefreshToken)
+	require.NotNil(t, loadOAuthTokenState("your-team"))
+	assert.Equal(t, "keep-me", loadOAuthTokenState("your-team").RefreshToken)
+}
+
+func TestAuthorizationPromptIncludesTheTimeout(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	var out bytes.Buffer
+	config.Out = &out
+
+	authorizationURLPrinter(config, false, 5*time.Minute)("https://example.com/authorize")
+
+	assert.Contains(t, out.String(), "The link below expires after")
+	assert.Contains(t, out.String(), "5 minutes")
+	assert.Contains(t, out.String(), "https://example.com/authorize")
 }
 
 func TestRunAuthLoginSwitchesToTheNamedContext(t *testing.T) {
@@ -228,7 +259,7 @@ func TestRunAuthLoginRequestsTheGivenScopes(t *testing.T) {
 
 func TestRunAuthLoginScopeAppliesOnlyToThisInvocation(t *testing.T) {
 	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
-	// Left behind by an earlier `doctl auth login --scope "read write"`, which
+	// Left behind by an earlier `doctl auth login --scopes "read write"`, which
 	// writeConfig saves with the rest of the settings.
 	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "read write")
 	config.Doit.(*doctl.TestConfig).IsSetMap[doctl.ArgOAuthScopes] = false
@@ -240,7 +271,7 @@ func TestRunAuthLoginScopeAppliesOnlyToThisInvocation(t *testing.T) {
 	})
 
 	require.NoError(t, RunAuthLogin(config))
-	assert.Empty(t, capturedOpts.Scopes, "a saved --scope must not be reused on later logins")
+	assert.Empty(t, capturedOpts.Scopes, "a saved --scopes must not be reused on later logins")
 	assert.Equal(t, defaultOAuthScopes, viper.Get(config.NS+"."+doctl.ArgOAuthScopes))
 }
 
@@ -309,7 +340,7 @@ func TestRunAuthLoginSaveScopeRequiresScopeFlag(t *testing.T) {
 
 	err := RunAuthLogin(config)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--save-scope requires --scope")
+	assert.Contains(t, err.Error(), "--save-scope requires --scopes")
 }
 
 func TestRunAuthLoginFailure(t *testing.T) {

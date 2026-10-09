@@ -77,9 +77,19 @@ func (s *oauthTokenState) needsRefresh(now time.Time) bool {
 }
 
 // RunAuthLogin authenticates doctl using the OAuth 2.1 authorization code flow
-// with PKCE, storing the resulting access token in the current context.
+// with PKCE. Without --context, the access token replaces the one in the
+// default context and later commands use that context.
 func RunAuthLogin(c *CmdConfig) error {
-	authContext := currentAuthContext()
+	namedContext := strings.TrimSpace(Context) != ""
+	authContext := doctl.ArgDefaultContext
+	if namedContext {
+		authContext = currentAuthContext()
+	} else {
+		// setContextAccessToken follows the global --context flag, then the
+		// selected context. Pin the flag to default so this login does not
+		// replace the context the user is working in.
+		Context = doctl.ArgDefaultContext
+	}
 
 	issuer, err := oauthServer(c)
 	if err != nil {
@@ -98,7 +108,7 @@ func RunAuthLogin(c *CmdConfig) error {
 		return err
 	}
 	if saveScope && !c.Doit.IsSet(doctl.ArgOAuthScopes) {
-		return errors.New("--save-scope requires --scope")
+		return errors.New("--save-scope requires --scopes")
 	}
 	port, err := oauthCallbackPort(c)
 	if err != nil {
@@ -121,10 +131,10 @@ func RunAuthLogin(c *CmdConfig) error {
 	metadata := oauth.ServerMetadataFor(issuer)
 
 	// --context names the context to update. Without it, login replaces the
-	// credentials in whatever context is already selected.
-	if strings.TrimSpace(Context) == "" {
-		template.Render(c.Out, `{{nl}}Updating the {{highlight .}} context. Credentials saved there will be replaced.{{nl}}`, authContext)
-		template.Render(c.Out, `{{muted "To keep them, cancel and run"}} {{highlight "doctl auth login --context <name>"}}{{nl}}{{nl}}`, nil)
+	// credentials in the default context and switches to it.
+	if !namedContext {
+		template.Render(c.Out, `{{nl}}Signing in to the {{highlight .}} context. Credentials saved there will be replaced.{{nl}}`, authContext)
+		template.Render(c.Out, `{{muted "Later commands will use it. To sign in to another context, cancel and run"}} {{highlight "doctl auth login --context <name>"}}{{nl}}{{nl}}`, nil)
 	}
 
 	token, err := oauth.Login(ctx, oauth.LoginOptions{
@@ -135,7 +145,7 @@ func RunAuthLogin(c *CmdConfig) error {
 		Timeout:            timeout,
 		HTTPClient:         httpClient,
 		NoBrowser:          noBrowser,
-		OnAuthorizationURL: authorizationURLPrinter(c, noBrowser),
+		OnAuthorizationURL: authorizationURLPrinter(c, noBrowser, timeout),
 	})
 	if errors.Is(err, oauth.ErrInvalidClient) {
 		template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
@@ -213,8 +223,8 @@ func oauthClientID(c *CmdConfig) (string, error) {
 }
 
 // oauthScopes returns the scopes requested for this invocation. An explicit
-// --scope wins; otherwise any default saved with --save-scope is used. A bare
-// --scope value left in the config file from an earlier login is ignored.
+// --scopes wins; otherwise any default saved with --save-scope is used. A bare
+// --scopes value left in the config file from an earlier login is ignored.
 func oauthScopes(c *CmdConfig) (string, error) {
 	if c.Doit.IsSet(doctl.ArgOAuthScopes) {
 		return c.Doit.GetString(c.NS, doctl.ArgOAuthScopes)
@@ -288,18 +298,42 @@ func storeOAuthDefaultScopes(scopes string) {
 	viper.Set(oauthDefaultScopesConfigKey, scopes)
 }
 
-func authorizationURLPrinter(c *CmdConfig, noBrowser bool) func(string) {
+func authorizationURLPrinter(c *CmdConfig, noBrowser bool, timeout time.Duration) func(string) {
 	return func(authURL string) {
+		prompt := authorizationPrompt{URL: authURL, Timeout: formatLoginTimeout(timeout)}
 		if noBrowser {
-			template.Render(c.Out, `{{nl}}Visit the following URL to authorize doctl:{{nl}}{{nl}}  {{underline .}}{{nl}}{{nl}}Waiting for authorization... `, authURL)
+			template.Render(c.Out, `{{nl}}Visit the link below to authorize doctl.{{nl}}{{nl}}The link below expires after {{highlight .Timeout}}.{{nl}}{{nl}}  {{underline .URL}}{{nl}}{{nl}}Waiting for authorization... `, prompt)
 			return
 		}
 
 		template.Render(c.Out,
-			`{{nl}}Opening your browser to authorize doctl. If it does not open, visit:{{nl}}{{nl}}  {{underline .}}{{nl}}{{nl}}Waiting for authorization... `,
-			authURL,
+			`{{nl}}Opening your browser to authorize doctl. If it does not open, visit the link below.{{nl}}{{nl}}The link below expires after {{highlight .Timeout}}.{{nl}}{{nl}}  {{underline .URL}}{{nl}}{{nl}}Waiting for authorization... `,
+			prompt,
 		)
 	}
+}
+
+type authorizationPrompt struct {
+	URL     string
+	Timeout string
+}
+
+// formatLoginTimeout renders a wait as words, such as "5 minutes".
+func formatLoginTimeout(d time.Duration) string {
+	d = d.Truncate(time.Second)
+	if d > 0 && d%time.Minute == 0 {
+		minutes := int(d / time.Minute)
+		if minutes == 1 {
+			return "1 minute"
+		}
+		return fmt.Sprintf("%d minutes", minutes)
+	}
+
+	seconds := int(d / time.Second)
+	if seconds == 1 {
+		return "1 second"
+	}
+	return fmt.Sprintf("%d seconds", seconds)
 }
 
 func displayOAuthLoginSummary(c *CmdConfig, authContext string, token *oauth.Token) {

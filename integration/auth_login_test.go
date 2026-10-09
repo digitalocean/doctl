@@ -144,7 +144,7 @@ var _ = suite("auth/login", func(t *testing.T, when spec.G, it spec.S) {
 				"auth", "login",
 				"--oauth-server", as.URL,
 				"--client-id", "doctl-e2e-client",
-				"--scope", "read write",
+				"--scopes", "read write",
 				"--no-browser",
 				"--timeout", "30s",
 			)
