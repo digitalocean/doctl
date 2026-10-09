@@ -14,10 +14,21 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
+)
+
+const (
+	signalsSessionTypeAgent     = "agent"
+	signalsSessionTypeInference = "inference"
+
+	// signalsInferencePlaceholderAgentID is the nil agent UUID stamped on
+	// serverless-inference Signals data (no Mars Agent Config).
+	signalsInferencePlaceholderAgentID = "00000000-0000-0000-0000-000000000000"
 )
 
 // SignalsSession creates the `doctl signals session` subcommand group.
@@ -34,12 +45,17 @@ func SignalsSession() *Command {
 		cmd,
 		RunSignalsSessionList,
 		"list",
-		"List sessions for an agent",
-		"Lists Signals sessions for the given agent, including session ID, total turns, started-at time, duration, and signal count.",
+		"List Signals sessions",
+		`Lists Signals sessions, including session ID, total turns, started-at time, duration, and signal count.
+
+Use --type to select the session source:
+- agent (default): list sessions for --agent-id (required)
+- inference: list team serverless-inference sessions (uses the nil agent UUID; do not pass --agent-id)`,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.SignalsSession{}),
 	)
-	AddStringFlag(cmdSessionList, doctl.ArgSignalsAgentID, "", "", "The agent ID to list sessions for.", requiredOpt())
+	AddStringFlag(cmdSessionList, doctl.ArgSignalsType, "", signalsSessionTypeAgent, "Session source: agent or inference.")
+	AddStringFlag(cmdSessionList, doctl.ArgSignalsAgentID, "", "", "The agent ID to list sessions for (required when --type=agent).")
 	AddIntFlag(cmdSessionList, doctl.ArgSignalsExportLimit, "", 20, "Maximum number of sessions to return.")
 	AddStringFlag(cmdSessionList, doctl.ArgSignalsExportAfter, "", "", "Opaque pagination cursor.")
 	AddIntFlag(cmdSessionList, doctl.ArgSignalsExportStartTime, "", 0, "Start time filter (Unix epoch seconds).")
@@ -65,9 +81,17 @@ func SignalsSession() *Command {
 	return cmd
 }
 
-// RunSignalsSessionList lists sessions for an agent.
+// RunSignalsSessionList lists sessions for an agent or inference.
 func RunSignalsSessionList(c *CmdConfig) error {
+	sessionType, err := c.Doit.GetString(c.NS, doctl.ArgSignalsType)
+	if err != nil {
+		return err
+	}
 	agentID, err := c.Doit.GetString(c.NS, doctl.ArgSignalsAgentID)
+	if err != nil {
+		return err
+	}
+	agentID, err = resolveSignalsSessionListAgentID(sessionType, agentID)
 	if err != nil {
 		return err
 	}
@@ -113,6 +137,23 @@ func RunSignalsSessionList(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.SignalsSession{Sessions: sessions})
+}
+
+func resolveSignalsSessionListAgentID(sessionType, agentID string) (string, error) {
+	switch sessionType {
+	case "", signalsSessionTypeAgent:
+		if agentID == "" {
+			return "", fmt.Errorf("--agent-id is required when --type=%s", signalsSessionTypeAgent)
+		}
+		return agentID, nil
+	case signalsSessionTypeInference:
+		if agentID != "" {
+			return "", fmt.Errorf("--agent-id must not be set when --type=%s", signalsSessionTypeInference)
+		}
+		return signalsInferencePlaceholderAgentID, nil
+	default:
+		return "", fmt.Errorf("invalid --type %q: must be %s or %s", sessionType, signalsSessionTypeAgent, signalsSessionTypeInference)
+	}
 }
 
 // RunSignalsSessionDialogueList lists dialogues for a session.
