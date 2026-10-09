@@ -79,8 +79,11 @@ type SignalsDeletions []SignalsDeletion
 // SignalsService talks to consent-gateway and signals-api via godo.
 type SignalsService interface {
 	ListConsents() (SignalsConsents, error)
+	ListConsentsBySource(source string) (SignalsConsents, error)
 	GetConsent(agentID string) (*SignalsAgentConsent, error)
 	SetConsent(agentID string, enabled bool) (*SignalsConsent, error)
+	GetInferenceConsent() (*SignalsConsent, error)
+	SetInferenceConsent(enabled bool) (*SignalsConsent, error)
 
 	ListAgentSessions(agentID string, opts *godo.SignalsListAgentSessionsOptions) (SignalsSessions, error)
 	ListSessionDialogues(sessionID string, opts *godo.SignalsListDialoguesOptions) (SignalsSessionDialogues, error)
@@ -114,7 +117,15 @@ func NewSignalsService(client *godo.Client) SignalsService {
 }
 
 func (s *signalsService) ListConsents() (SignalsConsents, error) {
-	resp, _, err := s.client.Signals.ListConsents(context.TODO())
+	return s.ListConsentsBySource("")
+}
+
+func (s *signalsService) ListConsentsBySource(source string) (SignalsConsents, error) {
+	var opts *godo.SignalsListConsentsOptions
+	if source != "" {
+		opts = &godo.SignalsListConsentsOptions{Source: source}
+	}
+	resp, _, err := s.client.Signals.ListConsentsWithOptions(context.TODO(), opts)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +134,22 @@ func (s *signalsService) ListConsents() (SignalsConsents, error) {
 		out[i] = SignalsConsent{SignalsConsentRecord: &resp.Consents[i]}
 	}
 	return out, nil
+}
+
+func (s *signalsService) GetInferenceConsent() (*SignalsConsent, error) {
+	record, _, err := s.client.Signals.GetInferenceConsent(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	return &SignalsConsent{SignalsConsentRecord: record}, nil
+}
+
+func (s *signalsService) SetInferenceConsent(enabled bool) (*SignalsConsent, error) {
+	record, _, err := s.client.Signals.SetInferenceConsent(context.TODO(), enabled)
+	if err != nil {
+		return nil, err
+	}
+	return &SignalsConsent{SignalsConsentRecord: record}, nil
 }
 
 func (s *signalsService) GetConsent(agentID string) (*SignalsAgentConsent, error) {

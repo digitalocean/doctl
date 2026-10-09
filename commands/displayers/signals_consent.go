@@ -18,9 +18,20 @@ import (
 	"strconv"
 
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 )
 
-// SignalsConsent displays Signals consent records (from list/set).
+// consentSource renders an empty source (older gateways) as "agent", which
+// is what an unlabelled row has always meant.
+func consentSource(source string) string {
+	if source == "" {
+		return godo.SignalsConsentSourceAgent
+	}
+	return source
+}
+
+// SignalsConsent displays Signals consent records (from list/set, and from
+// get for team-level inference consent).
 type SignalsConsent struct {
 	Consents do.SignalsConsents
 }
@@ -35,6 +46,7 @@ func (d *SignalsConsent) Cols() []string {
 	return []string{
 		"ID",
 		"TeamID",
+		"Source",
 		"AgentID",
 		"Enabled",
 		"UpdatedAt",
@@ -45,6 +57,7 @@ func (d *SignalsConsent) ColMap() map[string]string {
 	return map[string]string{
 		"ID":        "ID",
 		"TeamID":    "Team ID",
+		"Source":    "Source",
 		"AgentID":   "Agent ID",
 		"Enabled":   "Enabled",
 		"UpdatedAt": "Updated At",
@@ -57,6 +70,7 @@ func (d *SignalsConsent) KV() []map[string]any {
 		out[i] = map[string]any{
 			"ID":        c.ID,
 			"TeamID":    c.TeamID,
+			"Source":    consentSource(c.Source),
 			"AgentID":   c.AgentID,
 			"Enabled":   strconv.FormatBool(c.Enabled),
 			"UpdatedAt": c.UpdatedAt,
@@ -80,6 +94,7 @@ func (d *SignalsAgentConsent) Cols() []string {
 	return []string{
 		"ID",
 		"TeamID",
+		"Source",
 		"AgentID",
 		"Enabled",
 		"UpdatedAt",
@@ -90,6 +105,7 @@ func (d *SignalsAgentConsent) ColMap() map[string]string {
 	return map[string]string{
 		"ID":        "ID",
 		"TeamID":    "Team ID",
+		"Source":    "Source",
 		"AgentID":   "Agent ID",
 		"Enabled":   "Enabled",
 		"UpdatedAt": "Updated At",
@@ -102,6 +118,7 @@ func (d *SignalsAgentConsent) KV() []map[string]any {
 		out[i] = map[string]any{
 			"ID":        c.ID,
 			"TeamID":    c.TeamID,
+			"Source":    consentSource(c.Source),
 			"AgentID":   c.AgentID,
 			"Enabled":   strconv.FormatBool(c.Enabled),
 			"UpdatedAt": c.UpdatedAt,

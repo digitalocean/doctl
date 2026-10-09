@@ -19,8 +19,11 @@ const (
 // deletion jobs on /v1/signals/deletions.
 type SignalsService interface {
 	ListConsents(context.Context) (*SignalsListConsentsResponse, *Response, error)
+	ListConsentsWithOptions(context.Context, *SignalsListConsentsOptions) (*SignalsListConsentsResponse, *Response, error)
 	GetAgentConsent(context.Context, string) (*SignalsAgentConsent, *Response, error)
 	SetAgentConsent(context.Context, string, bool) (*SignalsConsentRecord, *Response, error)
+	GetInferenceConsent(context.Context) (*SignalsConsentRecord, *Response, error)
+	SetInferenceConsent(context.Context, bool) (*SignalsConsentRecord, *Response, error)
 	ListAgentSessions(context.Context, string, *SignalsListAgentSessionsOptions) (*SignalsListAgentSessionsResponse, *Response, error)
 	ListSessionDialogues(context.Context, string, *SignalsListDialoguesOptions) (*SignalsSessionDialoguesResponse, *Response, error)
 	CreateExport(context.Context, *SignalsCreateExportRequest) (*SignalsExportJob, *Response, error)
@@ -32,6 +35,16 @@ type SignalsService interface {
 	GetDeletion(context.Context, string) (*SignalsDeletionJob, *Response, error)
 	ListDeletions(context.Context, *SignalsListDeletionsOptions) (*SignalsListDeletionsResponse, *Response, error)
 }
+
+// Consent sources. A consent row is keyed by (team, source, agent_id):
+// agent rows carry an agent_id; inference consent is team-wide and has an
+// empty agent_id.
+const (
+	// SignalsConsentSourceAgent is per-agent consent (default).
+	SignalsConsentSourceAgent = "agent"
+	// SignalsConsentSourceInference is team-level consent for serverless inference traffic.
+	SignalsConsentSourceInference = "inference"
+)
 
 // Deletion types and job statuses used by the Signals deletion API.
 const (
@@ -102,16 +115,20 @@ type SignalsPageInfo struct {
 // check-endpoint concept and is not returned on this public route.
 type SignalsAgentConsent struct {
 	TeamID    int64  `json:"team_id"`
+	Source    string `json:"source,omitempty"`
 	AgentID   string `json:"agent_id"`
 	Enabled   bool   `json:"enabled"`
 	ID        int64  `json:"id,omitempty"`
 	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
-// SignalsConsentRecord is the consents row returned by PUT /v1/consent/{agent_id}.
+// SignalsConsentRecord is a consents row as returned by PUT /v1/consent/{agent_id}
+// and PUT /v1/consent?source=inference. Source is "agent" or "inference";
+// AgentID is empty for inference (team-level) rows.
 type SignalsConsentRecord struct {
 	ID        int64  `json:"id"`
 	TeamID    int64  `json:"team_id"`
+	Source    string `json:"source,omitempty"`
 	AgentID   string `json:"agent_id"`
 	Enabled   bool   `json:"enabled"`
 	UpdatedAt string `json:"updated_at,omitempty"`
@@ -125,9 +142,18 @@ type signalsSetConsentRoot struct {
 	Consent *SignalsConsentRecord `json:"consent"`
 }
 
+// SignalsListConsentsOptions filters GET /v1/consent.
+type SignalsListConsentsOptions struct {
+	// Source restricts the listing to one consent source ("agent" or
+	// "inference"). Empty returns all sources.
+	Source string `url:"source,omitempty"`
+}
+
 // SignalsListConsentsResponse is GET /v1/consent (consent-gateway).
+// Source is echoed back when the listing was filtered by source.
 type SignalsListConsentsResponse struct {
 	TeamID   int64                  `json:"team_id"`
+	Source   string                 `json:"source,omitempty"`
 	Consents []SignalsConsentRecord `json:"consents"`
 }
 
@@ -314,15 +340,66 @@ func (s *SignalsServiceOp) get(ctx context.Context, path string, out interface{}
 	return s.client.Do(ctx, req, out)
 }
 
-// ListConsents returns all consent records for the authenticated team.
-// Uses GET /v1/consent on consent-gateway.
+// ListConsents returns all consent records (every source) for the
+// authenticated team. Uses GET /v1/consent on consent-gateway.
 func (s *SignalsServiceOp) ListConsents(ctx context.Context) (*SignalsListConsentsResponse, *Response, error) {
+	return s.ListConsentsWithOptions(ctx, nil)
+}
+
+// ListConsentsWithOptions returns consent records for the authenticated team,
+// optionally filtered by source. Uses GET /v1/consent[?source=...].
+func (s *SignalsServiceOp) ListConsentsWithOptions(ctx context.Context, opts *SignalsListConsentsOptions) (*SignalsListConsentsResponse, *Response, error) {
+	path, err := addOptions(consentBasePath, opts)
+	if err != nil {
+		return nil, nil, err
+	}
 	root := new(SignalsListConsentsResponse)
-	resp, err := s.get(ctx, consentBasePath, root)
+	resp, err := s.get(ctx, path, root)
 	if err != nil {
 		return nil, resp, err
 	}
 	return root, resp, nil
+}
+
+// GetInferenceConsent returns the team-level consent for serverless inference
+// traffic. There is at most one such row per team; when none exists the
+// returned record has Enabled=false and ID=0 (default deny), mirroring
+// GetAgentConsent. Uses GET /v1/consent?source=inference.
+func (s *SignalsServiceOp) GetInferenceConsent(ctx context.Context) (*SignalsConsentRecord, *Response, error) {
+	list, resp, err := s.ListConsentsWithOptions(ctx, &SignalsListConsentsOptions{Source: SignalsConsentSourceInference})
+	if err != nil {
+		return nil, resp, err
+	}
+	for i := range list.Consents {
+		if list.Consents[i].AgentID == "" {
+			return &list.Consents[i], resp, nil
+		}
+	}
+	return &SignalsConsentRecord{
+		TeamID:  list.TeamID,
+		Source:  SignalsConsentSourceInference,
+		Enabled: false,
+	}, resp, nil
+}
+
+// SetInferenceConsent enables or disables Signals collection for all
+// serverless inference traffic of the authenticated team
+// (PUT /v1/consent?source=inference). Requires IAM signals:update.
+func (s *SignalsServiceOp) SetInferenceConsent(ctx context.Context, enabled bool) (*SignalsConsentRecord, *Response, error) {
+	path, err := addOptions(consentBasePath, &SignalsListConsentsOptions{Source: SignalsConsentSourceInference})
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodPut, path, &signalsSetConsentRequest{Enabled: enabled})
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(signalsSetConsentRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Consent, resp, nil
 }
 
 // GetAgentConsent returns collection consent for one agent (default deny if no row).
