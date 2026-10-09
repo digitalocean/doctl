@@ -69,7 +69,9 @@ The data is hidden immediately and deleted in the background. Poll `+"`doctl sig
 
 You are asked to confirm unless you pass --force. Without a terminal, --force is required.
 
-If an active deletion for the same target already exists, that job is returned instead of creating a duplicate, so it is safe to run this command again while the first job is still queued or running (for example after a network timeout). If the first job already finished, a new job is created.
+If an active deletion for the same target already exists, the API returns HTTP 200 with that job (doctl prints a note on stderr); a new job is HTTP 202. Safe to retry while queued/running. After the first job finishes, create starts a new one.
+
+Other API errors you may see: 400 (bad type/agent_id), 403 (team_id mismatch), 404 (unknown managed agent), 429 (too many active deletion jobs for the team).
 
 Your team ID is detected automatically (this needs permission to read Signals consents). If you lack that permission, pass --team-id.
 
@@ -101,8 +103,8 @@ Each job contains:`+deletionDetails,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.SignalsDeletion{}),
 	)
-	AddIntFlag(cmdList, doctl.ArgSignalsExportLimit, "", 20, "Maximum number of jobs to return (1-100).")
-	AddStringFlag(cmdList, doctl.ArgSignalsExportAfter, "", "", "Opaque pagination cursor from a previous page (printed as the next page token).")
+	AddIntFlag(cmdList, doctl.ArgSignalsExportLimit, "", 20, "Maximum number of jobs to return (1-100). Server default is also 20 when omitted.")
+	AddStringFlag(cmdList, doctl.ArgSignalsExportAfter, "", "", "Opaque pagination cursor from page_info.end_cursor of a previous page (printed as the next page token on stderr).")
 
 	return cmd
 }
