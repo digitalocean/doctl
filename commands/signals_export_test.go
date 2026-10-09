@@ -108,6 +108,21 @@ func TestSignalsExportCreate(t *testing.T) {
 	})
 }
 
+func TestSignalsExportCreateWithSessionIDs(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+		config.Doit.Set(config.NS, doctl.ArgSignalsExportSessionIDs, []string{"sess-1", "sess-2"})
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			AgentID:    testAgentUUID,
+			SessionIDs: []string{"sess-1", "sess-2"},
+		}).Return(&testExport, nil)
+
+		err := RunSignalsExportCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestSignalsExportCreateAgentType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
@@ -244,8 +259,6 @@ func TestSignalsSessionDialogueList(t *testing.T) {
 					UserMessage: "hello",
 					RunStatus:   "complete",
 				},
-				SegmentID:  "seg-1",
-				SegmentSeq: 0,
 			},
 		}
 

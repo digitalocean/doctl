@@ -67,6 +67,7 @@ Use --type to select the export source:
 - inference: export team serverless-inference data (uses the nil agent UUID; do not pass --agent-id)
 
 Optional filters match signals-api POST /v1/signals/exports:
+- --session-ids (repeatable) narrows the cohort to those sessions (OR); omit for all team sessions
 - --signal-type (repeatable) filters instances in the artifact; JSON field is signal_type, not signal_types
 - --start-time / --end-time are Unix epoch seconds (inclusive / exclusive)
 
@@ -77,6 +78,7 @@ Use GET .../download after status is complete; the job JSON has no download_url.
 	)
 	AddStringFlag(cmdExportCreate, doctl.ArgSignalsType, "", signalsSessionTypeAgent, "Export source: agent or inference.")
 	AddStringFlag(cmdExportCreate, doctl.ArgSignalsAgentID, "", "", "The agent UUID to export data for (required when --type=agent).")
+	AddStringSliceFlag(cmdExportCreate, doctl.ArgSignalsExportSessionIDs, "", []string{}, "Session IDs to export (JSON: session_ids). Repeatable. Omit for all team sessions.")
 	AddStringSliceFlag(cmdExportCreate, doctl.ArgSignalsExportSignalType, "", []string{}, "Signal types to include (JSON: signal_type). Repeatable. Catalog: doctl signals export options.")
 	AddIntFlag(cmdExportCreate, doctl.ArgSignalsExportStartTime, "", 0, "Start time filter (Unix epoch seconds, inclusive).")
 	AddIntFlag(cmdExportCreate, doctl.ArgSignalsExportEndTime, "", 0, "End time filter (Unix epoch seconds, exclusive).")
@@ -159,6 +161,10 @@ func RunSignalsExportCreate(c *CmdConfig) error {
 	if _, err := uuid.Parse(agentID); err != nil {
 		return fmt.Errorf("agent-id must be a valid UUID: %w", err)
 	}
+	sessionIDs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSignalsExportSessionIDs)
+	if err != nil {
+		return err
+	}
 	signalType, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSignalsExportSignalType)
 	if err != nil {
 		return err
@@ -174,6 +180,7 @@ func RunSignalsExportCreate(c *CmdConfig) error {
 
 	req := &godo.SignalsCreateExportRequest{
 		AgentID:    agentID,
+		SessionIDs: sessionIDs,
 		SignalType: signalType,
 	}
 	if startTime > 0 {
