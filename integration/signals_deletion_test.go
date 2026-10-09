@@ -19,7 +19,7 @@ const (
 	deletionAgentUUID = "a1b2c3d4-e29b-41d4-a716-446655440000"
 	deletionID        = "01J9ZX0N5Q7M2K3R4S5T6V7W8X"
 
-	deletionManagedJSON = `{"team_id":42,"deletion_id":"` + deletionID + `","type":"managed_agent","agent_id":"` + deletionAgentUUID + `","status":"queued","error_message":null,"created_at":1754049600,"started_at":null,"completed_at":null}`
+	deletionManagedJSON = `{"team_id":42,"deletion_id":"` + deletionID + `","type":"agent","agent_id":"` + deletionAgentUUID + `","status":"queued","error_message":null,"created_at":1754049600,"started_at":null,"completed_at":null}`
 	deletionInferJSON   = `{"team_id":42,"deletion_id":"01K","type":"inference","status":"queued","created_at":1754049600}`
 )
 
@@ -124,13 +124,13 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 
 	when("deleting a managed agent", func() {
 		it("sends the exact request body and prints the job", func() {
-			stdout, _, err := runDoctl(append(base, "--type", "managed_agent", "--agent-id", deletionAgentUUID, "--team-id", "42", "--force")...)
+			stdout, _, err := runDoctl(append(base, "--type", "agent", "--agent-id", deletionAgentUUID, "--team-id", "42", "--force")...)
 			expect.NoError(err)
 
 			posts := server.posts()
 			expect.Len(posts, 1)
 			expect.Equal("/v1/signals/deletions", posts[0].Path)
-			expect.JSONEq(`{"type":"managed_agent","team_id":42,"agent_id":"`+deletionAgentUUID+`"}`, posts[0].Body)
+			expect.JSONEq(`{"type":"agent","team_id":42,"agent_id":"`+deletionAgentUUID+`"}`, posts[0].Body)
 			expect.Contains(stdout, deletionID)
 			expect.Contains(stdout, "queued")
 		})
@@ -150,7 +150,7 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 
 	when("--team-id is not given", func() {
 		it("looks up the team id first, then uses it", func() {
-			_, _, err := runDoctl(append(base, "--type", "managed_agent", "--agent-id", deletionAgentUUID, "--force")...)
+			_, _, err := runDoctl(append(base, "--type", "agent", "--agent-id", deletionAgentUUID, "--force")...)
 			expect.NoError(err)
 
 			reqs := server.recorded()
@@ -158,7 +158,7 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 			expect.Equal("GET", reqs[0].Method)
 			expect.Equal("/v1/consent", reqs[0].Path)
 			expect.Equal("POST", reqs[1].Method)
-			expect.JSONEq(`{"type":"managed_agent","team_id":42,"agent_id":"`+deletionAgentUUID+`"}`, reqs[1].Body)
+			expect.JSONEq(`{"type":"agent","team_id":42,"agent_id":"`+deletionAgentUUID+`"}`, reqs[1].Body)
 		})
 	})
 
@@ -177,7 +177,7 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 	when("the server reuses an active job (200)", func() {
 		it("shows the job, exits 0 and keeps stdout valid JSON", func() {
 			server.setCreate(http.StatusOK, "")
-			stdout, stderr, err := runDoctl(append(base, "-o", "json", "--type", "managed_agent", "--agent-id", deletionAgentUUID, "--team-id", "42", "--force")...)
+			stdout, stderr, err := runDoctl(append(base, "-o", "json", "--type", "agent", "--agent-id", deletionAgentUUID, "--team-id", "42", "--force")...)
 			expect.NoError(err)
 			expect.Contains(stderr, "already exists")
 
@@ -217,7 +217,7 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 		})
 
 		it("rejects a non-UUID agent id without calling the server", func() {
-			_, stderr, err := runDoctl(append(base, "--type", "managed_agent", "--agent-id", "nope", "--team-id", "42", "--force")...)
+			_, stderr, err := runDoctl(append(base, "--type", "agent", "--agent-id", "nope", "--team-id", "42", "--force")...)
 			expect.Error(err)
 			expect.Contains(stderr, "valid UUID")
 			expect.Empty(server.recorded())
@@ -245,7 +245,7 @@ var _ = suite("signals/deletion/get", func(t *testing.T, when spec.G, it spec.S)
 		expect.NoError(err)
 		expect.Contains(stdout, "Deletion ID")
 		expect.Contains(stdout, deletionID)
-		expect.Contains(stdout, "managed_agent")
+		expect.Contains(stdout, "agent")
 	})
 
 	it("prints valid JSON with -o json", func() {

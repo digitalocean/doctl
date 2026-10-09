@@ -32,7 +32,7 @@ func TestSignalsDeletion_KV_NullFields(t *testing.T) {
 func TestSignalsDeletion_KV_AllFields(t *testing.T) {
 	d := &SignalsDeletion{Deletions: do.SignalsDeletions{{
 		SignalsDeletionJob: &godo.SignalsDeletionJob{
-			TeamID: 42, DeletionID: "01J", Type: "managed_agent", AgentID: "agent-1",
+			TeamID: 42, DeletionID: "01J", Type: "agent", AgentID: "agent-1",
 			Status: "failed", ErrorMessage: strPtr("worker timeout"),
 			CreatedAt: 100, StartedAt: i64Ptr(110), CompletedAt: i64Ptr(120),
 		},
@@ -42,7 +42,7 @@ func TestSignalsDeletion_KV_AllFields(t *testing.T) {
 	require.Len(t, kv, 1)
 	assert.Equal(t, "01J", kv[0]["DeletionID"])
 	assert.Equal(t, int64(42), kv[0]["TeamID"])
-	assert.Equal(t, "managed_agent", kv[0]["Type"])
+	assert.Equal(t, "agent", kv[0]["Type"])
 	assert.Equal(t, "agent-1", kv[0]["AgentID"])
 	assert.Equal(t, "failed", kv[0]["Status"])
 	assert.Equal(t, "worker timeout", kv[0]["ErrorMessage"])
@@ -63,7 +63,7 @@ func TestSignalsDeletion_ColsAreInColMap(t *testing.T) {
 
 func TestSignalsDeletion_JSON(t *testing.T) {
 	d := &SignalsDeletion{Deletions: do.SignalsDeletions{
-		{SignalsDeletionJob: &godo.SignalsDeletionJob{DeletionID: "01J", Type: "managed_agent", AgentID: "agent-1", Status: "queued"}},
+		{SignalsDeletionJob: &godo.SignalsDeletionJob{DeletionID: "01J", Type: "agent", AgentID: "agent-1", Status: "queued"}},
 		{SignalsDeletionJob: &godo.SignalsDeletionJob{DeletionID: "01K", Type: "inference", Status: "queued"}},
 	}}
 

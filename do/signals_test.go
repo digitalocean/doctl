@@ -145,7 +145,7 @@ func TestListSessionDialogues(t *testing.T) {
 const deletionJobJSON = `{
 	"team_id": 42,
 	"deletion_id": "01J9ZX0N5Q7M2K3R4S5T6V7W8X",
-	"type": "managed_agent",
+	"type": "agent",
 	"agent_id": "a1b2c3d4-e29b-41d4-a716-446655440000",
 	"status": "queued",
 	"error_message": null,
@@ -171,7 +171,7 @@ func TestCreateDeletion_StatusCodeSetsExisting(t *testing.T) {
 		})
 
 		job, existing, err := svc.CreateDeletion(&godo.SignalsCreateDeletionRequest{
-			Type: "managed_agent", TeamID: 42, AgentID: "a1b2c3d4-e29b-41d4-a716-446655440000",
+			Type: "agent", TeamID: 42, AgentID: "a1b2c3d4-e29b-41d4-a716-446655440000",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, tt.wantExisting, existing, "status %d", tt.status)
