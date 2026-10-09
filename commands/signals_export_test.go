@@ -259,8 +259,6 @@ func TestSignalsSessionDialogueList(t *testing.T) {
 					UserMessage: "hello",
 					RunStatus:   "complete",
 				},
-				SegmentID:  "seg-1",
-				SegmentSeq: 0,
 			},
 		}
 

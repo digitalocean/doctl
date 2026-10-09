@@ -1,5 +1,25 @@
 # Change Log
 
+## [1.222.0] - 2026-10-09
+
+- #1153 - @sauravk-digitalocean - Remove GetSegment and GetSegmentSignalReport from SignalsService
+- #1152 - @aupadhyay-shark - signals: rename deletion type managed_agent → agent
+- #1151 - @smirdha-source - Add SessionIDs to SignalsCreateExportRequest
+
+## [1.221.0] - 2026-10-09
+
+- #1149 - @sauravk-digitalocean - Remove Allowed from SignalsAgentConsent
+- #1144 - @satyambhalla - feat(FI-609): add data deletion methods to SignalsService
+
+## [1.220.0] - 2026-10-08
+
+- #1138 - @sanpj2292 - feat(MARSOHS-1935): add persistent workspaces to the hosted agents client
+
+## [1.219.0] - 2026-10-08
+
+- #1143 - @jkosanam - hosted agents: add external-provider connection management methods
+- #1141 - @dmamidala-glitch - COBS-1352: Add Insights logs query support
+
 ## [1.218.0] - 2026-10-07
 
 - #1140 - @sauravk-digitalocean - feat(FI-610): add Signals consent and export client

@@ -139,5 +139,4 @@ func TestListSessionDialogues(t *testing.T) {
 	require.Len(t, dialogues, 1)
 	assert.Equal(t, int64(1), dialogues[0].ID)
 	assert.Equal(t, "hello", dialogues[0].UserMessage)
-	assert.Equal(t, "seg-1", dialogues[0].SegmentID)
 }
