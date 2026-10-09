@@ -87,6 +87,7 @@ agent: opencode
 ` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
 
 - ` + "`egress: unrestricted`" + `
+- ` + "`egress: none`" + ` — deny all outbound traffic. An allowlist written empty (` + "`egress: []`, `allow_hosts: []`, `allow_ips: []`" + `) means the same; it cannot be combined with ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + ` or URL-bound credentials
 - host allowlist: ` + "`egress: [api.github.com, pypi.org]`" + `
 - object: ` + "`allow_hosts`" + `, ` + "`allow_ips`" + ` (exact IPv4/IPv6 literals — not CIDRs), and optional ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + ` (` + "`subnet_uuid`" + ` requires ` + "`vpc_uuid`" + `; VPC attachment is create-time immutable)
 
@@ -117,7 +118,7 @@ Use ` + "`-o json`" + ` for machine-readable create output without waiting. Comb
 
 const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
 
-Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
+Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`, `none`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
 
 Name the manifest as a positional path or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin); with none of these, ` + "`./agents.yaml`" + ` is used when it exists.
 
