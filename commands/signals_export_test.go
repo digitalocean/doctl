@@ -108,6 +108,54 @@ func TestSignalsExportCreate(t *testing.T) {
 	})
 }
 
+func TestSignalsExportCreateAgentType(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			AgentID: testAgentUUID,
+		}).Return(&testExport, nil)
+
+		err := RunSignalsExportCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsExportCreateAgentMissingAgentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
+
+		err := RunSignalsExportCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--agent-id is required")
+	})
+}
+
+func TestSignalsExportCreateInference(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "inference")
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			AgentID: signalsInferencePlaceholderAgentID,
+		}).Return(&testExport, nil)
+
+		err := RunSignalsExportCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsExportCreateInferenceWithAgentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "inference")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+
+		err := RunSignalsExportCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--agent-id must not be set")
+	})
+}
+
 func TestSignalsExportCreateInvalidAgentID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "not-a-uuid")
