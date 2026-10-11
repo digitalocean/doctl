@@ -24,14 +24,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// SimulationRunCmd handles operations on simulation runs and their journeys.
+// SimulationRunCmd handles operations on simulation runs and their episodes.
 func SimulationRunCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "simulation-run",
 			Aliases: []string{"sim", "simulation-runs"},
 			Short:   "Display commands that manage evaluation simulation runs.",
-			Long:    "The subcommands of `doctl evaluation simulation-run` run scenario sets against an agent and inspect the resulting journeys.",
+			Long:    "The subcommands of `doctl evaluation simulation-run` run scenario sets against an agent and inspect the resulting episodes.",
 		},
 	}
 
@@ -41,7 +41,7 @@ func SimulationRunCmd() *Command {
 		- The simulation run status
 		- The UUID of the scenario set being run
 		- The UUID of the candidate agent under test
-		- The total number of journeys and how many have finished
+		- The total number of episodes and how many have finished
 		- The simulation run creation timestamp
 	`
 
@@ -60,10 +60,10 @@ func SimulationRunCmd() *Command {
 	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationAgentDeploymentUUID, "", "", "The deployment UUID of the agent under test.")
 	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationAgentName, "", "", "The display name of the agent under test.")
 	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationUserSimulatorModelUUID, "", "", "The UUID of the model that simulates the user.")
-	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationJudgeModelUUID, "", "", "The UUID of the model that judges each journey.")
+	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationJudgeModelUUID, "", "", "The UUID of the model that judges each episode.")
 	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationUserSimulatorConfig, "", "", "A JSON object of user simulator settings.")
-	AddIntFlag(cmdSimulationRunCreate, doctl.ArgSimulationExplorationBudget, "", 0, "The number of journeys to run per scenario.")
-	AddIntFlag(cmdSimulationRunCreate, doctl.ArgSimulationMaxTurns, "", 0, "The maximum number of conversation turns per journey.")
+	AddIntFlag(cmdSimulationRunCreate, doctl.ArgSimulationExplorationBudget, "", 0, "The number of episodes to run per scenario.")
+	AddIntFlag(cmdSimulationRunCreate, doctl.ArgSimulationMaxTurns, "", 0, "The maximum number of conversation turns per episode.")
 	AddStringSliceFlag(cmdSimulationRunCreate, doctl.ArgSimulationMetricUUIDs, "", []string{}, "The UUIDs of evaluation metrics to score the run with.")
 	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationStarMetricUUID, "", "", "The UUID of the star metric for the run.")
 	AddStringFlag(cmdSimulationRunCreate, doctl.ArgSimulationStarMetricName, "", "", "The name of the star metric for the run.")
@@ -136,65 +136,65 @@ func SimulationRunCmd() *Command {
 	cmdSimulationRunDelete.Example = "The following example deletes a simulation run: " +
 		"`doctl evaluation simulation-run delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
-	journeyDetails := `
-		- The journey UUID
-		- The UUID of the scenario the journey exercises
-		- The journey index within the scenario
-		- The journey status and judge verdict
-		- The journey duration in seconds
-		- The journey creation timestamp
+	episodeDetails := `
+		- The episode UUID
+		- The UUID of the scenario the episode exercises
+		- The episode index within the scenario
+		- The episode status and judge verdict
+		- The episode duration in seconds
+		- The episode creation timestamp
 	`
 
-	cmdSimulationRunListJourneys := CmdBuilder(
+	cmdSimulationRunListEpisodes := CmdBuilder(
 		cmd,
-		RunSimulationRunListJourneys,
-		"list-journeys <run-uuid>",
-		"List the journeys in a simulation run",
-		"Retrieves the journeys of a simulation run, where each journey contains:"+journeyDetails,
+		RunSimulationRunListEpisodes,
+		"list-episodes <run-uuid>",
+		"List the episodes in a simulation run",
+		"Retrieves the episodes of a simulation run, where each episode contains:"+episodeDetails,
 		Writer, aliasOpt("ls-j"),
-		displayerType(&displayers.SimulationJourney{}),
+		displayerType(&displayers.SimulationEpisode{}),
 	)
-	AddStringFlag(cmdSimulationRunListJourneys, doctl.ArgSimulationScenarioUUID, "", "", "Filters the results by scenario UUID.")
-	AddStringSliceFlag(cmdSimulationRunListJourneys, doctl.ArgGenAIStatuses, "", []string{}, "Filters the results by status. One of: `preparing`, `running`, `finished`, `failed`")
-	AddStringSliceFlag(cmdSimulationRunListJourneys, doctl.ArgSimulationJourneyVerdicts, "", []string{}, "Filters the results by verdict. One of: `success`, `failure`, `inconclusive`")
-	addGenAIListFlags(cmdSimulationRunListJourneys, "`scenario`, `created_at`, `status`, `verdict`")
-	cmdSimulationRunListJourneys.Example = "The following example lists the failed journeys of a simulation run: " +
-		"`doctl evaluation simulation-run list-journeys f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --verdicts failure`"
+	AddStringFlag(cmdSimulationRunListEpisodes, doctl.ArgSimulationScenarioUUID, "", "", "Filters the results by scenario UUID.")
+	AddStringSliceFlag(cmdSimulationRunListEpisodes, doctl.ArgGenAIStatuses, "", []string{}, "Filters the results by status. One of: `preparing`, `running`, `finished`, `failed`")
+	AddStringSliceFlag(cmdSimulationRunListEpisodes, doctl.ArgSimulationEpisodeVerdicts, "", []string{}, "Filters the results by verdict. One of: `success`, `failure`, `inconclusive`")
+	addGenAIListFlags(cmdSimulationRunListEpisodes, "`scenario`, `created_at`, `status`, `verdict`")
+	cmdSimulationRunListEpisodes.Example = "The following example lists the failed episodes of a simulation run: " +
+		"`doctl evaluation simulation-run list-episodes f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --verdicts failure`"
 
-	cmdSimulationRunGetJourney := CmdBuilder(
+	cmdSimulationRunGetEpisode := CmdBuilder(
 		cmd,
-		RunSimulationRunGetJourney,
-		"get-journey <run-uuid> <journey-uuid>",
-		"Retrieve a journey in a simulation run",
-		"Retrieves a single journey of a simulation run, including:"+journeyDetails,
+		RunSimulationRunGetEpisode,
+		"get-episode <run-uuid> <episode-uuid>",
+		"Retrieve an episode in a simulation run",
+		"Retrieves a single episode of a simulation run, including:"+episodeDetails,
 		Writer, aliasOpt("g-j"),
-		displayerType(&displayers.SimulationJourney{}),
+		displayerType(&displayers.SimulationEpisode{}),
 	)
-	cmdSimulationRunGetJourney.Example = "The following example retrieves a journey: " +
-		"`doctl evaluation simulation-run get-journey f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8`"
+	cmdSimulationRunGetEpisode.Example = "The following example retrieves an episode: " +
+		"`doctl evaluation simulation-run get-episode f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8`"
 
 	cmdSimulationRunGetTrajectory := CmdBuilder(
 		cmd,
-		RunSimulationRunGetJourneyTrajectory,
-		"get-trajectory <run-uuid> <journey-uuid>",
-		"Retrieve the trajectory of a journey",
-		"Retrieves the trajectory of a journey, which records the full conversation, the tool calls the agent made, and the judge's reasoning. Use `-o json` to see the messages and evaluation metrics.",
+		RunSimulationRunGetEpisodeTrajectory,
+		"get-trajectory <run-uuid> <episode-uuid>",
+		"Retrieve the trajectory of an episode",
+		"Retrieves the trajectory of an episode, which records the full conversation, the tool calls the agent made, and the judge's reasoning. Use `-o json` to see the messages and evaluation metrics.",
 		Writer, aliasOpt("g-t"),
 		displayerType(&displayers.SimulationTrajectory{}),
 	)
-	cmdSimulationRunGetTrajectory.Example = "The following example retrieves the trajectory of a journey: " +
+	cmdSimulationRunGetTrajectory.Example = "The following example retrieves the trajectory of an episode: " +
 		"`doctl evaluation simulation-run get-trajectory f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8 -o json`"
 
 	cmdSimulationRunGetTrajectoryURL := CmdBuilder(
 		cmd,
-		RunSimulationRunGetJourneyTrajectoryURL,
-		"get-trajectory-url <run-uuid> <journey-uuid>",
-		"Retrieve a download URL for a journey trajectory",
-		"Retrieves a temporary presigned URL for downloading the trajectory file of a journey.",
+		RunSimulationRunGetEpisodeTrajectoryURL,
+		"get-trajectory-url <run-uuid> <episode-uuid>",
+		"Retrieve a download URL for an episode trajectory",
+		"Retrieves a temporary presigned URL for downloading the trajectory file of an episode.",
 		Writer, aliasOpt("g-t-url"),
 		displayerType(&displayers.GenAIDownloadURL{}),
 	)
-	cmdSimulationRunGetTrajectoryURL.Example = "The following example retrieves a download URL for a journey trajectory: " +
+	cmdSimulationRunGetTrajectoryURL.Example = "The following example retrieves a download URL for an episode trajectory: " +
 		"`doctl evaluation simulation-run get-trajectory-url f81d4fae-7dec-11d0-a765-00a0c91e6bf6 6ba7b810-9dad-11d1-80b4-00c04fd430c8`"
 
 	return cmd
@@ -402,8 +402,8 @@ func RunSimulationRunDelete(c *CmdConfig) error {
 	return nil
 }
 
-// RunSimulationRunListJourneys lists the journeys of a simulation run.
-func RunSimulationRunListJourneys(c *CmdConfig) error {
+// RunSimulationRunListEpisodes lists the episodes of a simulation run.
+func RunSimulationRunListEpisodes(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
@@ -418,52 +418,52 @@ func RunSimulationRunListJourneys(c *CmdConfig) error {
 		return err
 	}
 
-	rawVerdicts, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSimulationJourneyVerdicts)
+	rawVerdicts, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSimulationEpisodeVerdicts)
 	if err != nil {
 		return err
 	}
 
-	search, sortBy, sortDirection, err := genAIListFilters(c, journeySortFieldPrefix)
+	search, sortBy, sortDirection, err := genAIListFilters(c, episodeSortFieldPrefix)
 	if err != nil {
 		return err
 	}
 
-	journeys, err := c.AgentPlatform().ListSimulationJourneys(c.Args[0], &godo.SimulationJourneyListOptions{
+	episodes, err := c.AgentPlatform().ListSimulationEpisodes(c.Args[0], &godo.SimulationEpisodeListOptions{
 		ScenarioUUID:  scenarioUUID,
-		Statuses:      genAIEnums[godo.SimulationJourneyStatus](journeyStatusPrefix, rawStatuses),
-		Verdicts:      genAIEnums[godo.SimulationJourneyVerdict](journeyVerdictPrefix, rawVerdicts),
+		Statuses:      genAIEnums[godo.SimulationEpisodeStatus](episodeStatusPrefix, rawStatuses),
+		Verdicts:      genAIEnums[godo.SimulationEpisodeVerdict](episodeVerdictPrefix, rawVerdicts),
 		Search:        search,
-		SortBy:        godo.SimulationJourneySortField(sortBy),
+		SortBy:        godo.SimulationEpisodeSortField(sortBy),
 		SortDirection: godo.GenAISortDirection(sortDirection),
 	})
 	if err != nil {
 		return err
 	}
 
-	return c.Display(&displayers.SimulationJourney{Journeys: journeys})
+	return c.Display(&displayers.SimulationEpisode{Episodes: episodes})
 }
 
-// RunSimulationRunGetJourney retrieves a single journey of a simulation run.
-func RunSimulationRunGetJourney(c *CmdConfig) error {
+// RunSimulationRunGetEpisode retrieves a single episode of a simulation run.
+func RunSimulationRunGetEpisode(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	journey, err := c.AgentPlatform().GetSimulationJourney(c.Args[0], c.Args[1])
+	episode, err := c.AgentPlatform().GetSimulationEpisode(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}
 
-	return c.Display(&displayers.SimulationJourney{Journeys: do.SimulationJourneys{*journey}})
+	return c.Display(&displayers.SimulationEpisode{Episodes: do.SimulationEpisodes{*episode}})
 }
 
-// RunSimulationRunGetJourneyTrajectory retrieves the trajectory of a journey.
-func RunSimulationRunGetJourneyTrajectory(c *CmdConfig) error {
+// RunSimulationRunGetEpisodeTrajectory retrieves the trajectory of an episode.
+func RunSimulationRunGetEpisodeTrajectory(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	trajectory, err := c.AgentPlatform().GetSimulationJourneyTrajectory(c.Args[0], c.Args[1])
+	trajectory, err := c.AgentPlatform().GetSimulationEpisodeTrajectory(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -471,13 +471,13 @@ func RunSimulationRunGetJourneyTrajectory(c *CmdConfig) error {
 	return c.Display(&displayers.SimulationTrajectory{Trajectory: trajectory})
 }
 
-// RunSimulationRunGetJourneyTrajectoryURL retrieves a download URL for a journey trajectory.
-func RunSimulationRunGetJourneyTrajectoryURL(c *CmdConfig) error {
+// RunSimulationRunGetEpisodeTrajectoryURL retrieves a download URL for an episode trajectory.
+func RunSimulationRunGetEpisodeTrajectoryURL(c *CmdConfig) error {
 	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	trajectoryURL, err := c.AgentPlatform().GetSimulationJourneyTrajectoryURL(c.Args[0], c.Args[1])
+	trajectoryURL, err := c.AgentPlatform().GetSimulationEpisodeTrajectoryURL(c.Args[0], c.Args[1])
 	if err != nil {
 		return err
 	}
