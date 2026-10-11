@@ -37,15 +37,17 @@ func SignalsDeletion() *Command {
 			Use:     "deletion",
 			Aliases: []string{"deletions"},
 			Short:   "Display commands for Signals data deletion",
-			Long: `The subcommands of ` + "`doctl signals deletion`" + ` permanently delete Signals data on demand.
+			Long: `The subcommands of ` + "`doctl signals deletion`" + ` permanently delete Signals conversation data on demand.
 
-Deletion cannot be undone. When you create a deletion for a Harness Runtime agent (` + "`--type agent`" + `) or for your team's Serverless Inference data (` + "`--type inference`" + `), Signals turns collection off for that scope immediately, hides those conversations from Signals reads immediately, and deletes the underlying data asynchronously in the background. Poll ` + "`doctl signals deletion get <deletion-id>`" + ` until the status is ` + "`complete`" + `.
+Deletion cannot be undone. When you create a deletion for a Harness Runtime agent (` + "`--type agent`" + `) or for Serverless Inference (` + "`--type inference`" + `), Signals turns collection off for that scope immediately, hides matching conversations from Signals reads immediately, and deletes that conversation data asynchronously in the background. Poll ` + "`doctl signals deletion get <deletion-id>`" + ` until the status is ` + "`complete`" + `.
 
-For ` + "`--type agent`" + `, pass the agent's Environment Config ID as ` + "`--agent-id`" + ` (this is the agent UUID). For ` + "`--type inference`" + `, Signals deletes **all** Serverless Inference Signals data for your **entire team** — there is no per-endpoint or per-model filter.
+For ` + "`--type agent`" + `, set ` + "`--agent-id`" + ` to the agent's Environment Config ID (the agent UUID). For ` + "`--type inference`" + `, Signals deletes Serverless Inference conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request. Do not pass ` + "`--agent-id`" + ` for inference.
 
-Status values: queued, running, complete, failed. DigitalOcean may retry transient processing errors while a job is still active. If a job ends as ` + "`failed`" + `, the conversations stay hidden and collection stays off; run ` + "`create`" + ` again to retry, and use ` + "`--format DeletionID,Status,ErrorMessage`" + ` to see why it failed.
+For an agent deletion, wait until the job is ` + "`complete`" + ` before enabling Signals for that agent again. Earlier export files are not deleted and remain available until they expire.
 
-Note: Deletion removes the conversation data Signals collected for that scope. Aggregated Insights or metrics charts may still show historical summary datapoints after deletion; those summaries are not the same as recoverable conversation content.`,
+Status values: queued, running, complete, failed. DigitalOcean may retry transient processing errors while a job is still active. If a job ends as ` + "`failed`" + `, matching conversations stay hidden and collection stays off; run ` + "`create`" + ` again to retry, and use ` + "`--format DeletionID,Status,ErrorMessage`" + ` to see why it failed.
+
+Note: Deletion removes Signals conversation data for the requested scope. Aggregated Insights or metrics charts may still show historical summary datapoints after deletion. Those summaries are not the same as recoverable conversation content.`,
 		},
 	}
 
@@ -64,18 +66,18 @@ Extra columns are available with --format: TeamID, ErrorMessage.
 		RunSignalsDeletionCreate,
 		"create",
 		"Permanently delete Signals data",
-		`Starts an asynchronous, permanent deletion of Signals data. This cannot be undone.
+		`Starts an asynchronous, permanent deletion of Signals conversation data. This cannot be undone.
 
-- --type agent --agent-id <environment-config-id>: deletes all Signals conversations for one Harness Runtime agent and turns off collection for that agent. --agent-id is the agent's Environment Config ID (the agent UUID).
-- --type inference: deletes all Serverless Inference Signals conversations for your entire team (team-wide) and turns off team inference collection. No --agent-id is allowed.
+- --type agent --agent-id <environment-config-id>: deletes Signals conversations for one Harness Runtime agent and turns off collection for that agent. --agent-id is the agent's Environment Config ID (the agent UUID).
+- --type inference: deletes Serverless Inference Signals conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request, and turns off team inference collection. Do not pass --agent-id.
 
-On create, those conversations are hidden from Signals reads immediately and collection for that scope is turned off; purge continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. Wait until an agent deletion is complete before enabling Signals for that agent again.
+On create, matching conversations are hidden from Signals reads immediately and collection for that scope is turned off; deletion continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. For an agent deletion, wait until the job is complete before enabling Signals for that agent again.
 
 You are asked to confirm unless you pass --force. Without a terminal, --force is required.
 
-If an active deletion for the same target already exists, the API returns HTTP 200 with that job (doctl prints a note on stderr); a new job is HTTP 202. Safe to retry while queued/running. After the first job finishes, create starts a new one. Export files created earlier are not deleted.
+If an active deletion for the same target already exists, the API returns HTTP 200 with that job (doctl prints a note on stderr); a new job is HTTP 202. Safe to retry while queued or running. After the first job finishes, create starts a new one. Earlier export files are not deleted and remain available until they expire.
 
-Note: Aggregated Insights or metrics charts may still show historical summary datapoints after deletion.
+Note: Aggregated Insights or metrics charts may still show historical summary datapoints after deletion. Those summaries are not the same as recoverable conversation content.
 
 Other API errors you may see: 400 (bad type/agent_id), 403 (team_id mismatch), 404 (unknown agent), 429 (too many active deletion jobs for the team).
 
@@ -86,7 +88,7 @@ Each job contains:`+deletionDetails,
 		displayerType(&displayers.SignalsDeletion{}),
 	)
 	AddStringFlag(cmdCreate, doctl.ArgSignalsDeletionType, "", "", `What to delete: "agent" or "inference".`, requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "Harness Runtime Environment Config ID (this is the agent_id / agent UUID). Required for --type agent; must not be set for inference.")
+	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "Harness Runtime Environment Config ID (agent UUID / agent_id). Required for --type agent; must not be set for inference.")
 	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID. Auto-detected when omitted.")
 	AddBoolFlag(cmdCreate, doctl.ArgForce, doctl.ArgShortForce, false, "Skip the confirmation prompt")
 
