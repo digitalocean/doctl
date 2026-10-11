@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.224.0] - 2026-10-11
+
+- #1159 - @venkatranabothu - Rename simulation journeys to episodes in the Agent Platform client
+
 ## [1.223.0] - 2026-10-09
 
 - #1157 - @rvdfox - signals: add team-level inference consent (source=inference) to SignalsService

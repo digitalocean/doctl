@@ -281,10 +281,10 @@ type AgentPlatformService interface {
 	UpdateSimulationRun(ctx context.Context, runUUID string, updateRequest *UpdateSimulationRunRequest) (*SimulationRun, *Response, error)
 	CancelSimulationRun(ctx context.Context, runUUID string) (*SimulationRun, *Response, error)
 	DeleteSimulationRun(ctx context.Context, runUUID string) (*SimulationRunDeleteResponse, *Response, error)
-	ListSimulationJourneys(ctx context.Context, runUUID string, opt *SimulationJourneyListOptions) (*SimulationJourneyListResponse, *Response, error)
-	GetSimulationJourney(ctx context.Context, runUUID, journeyUUID string) (*SimulationJourney, *Response, error)
-	GetSimulationJourneyTrajectoryURL(ctx context.Context, runUUID, journeyUUID string) (*SimulationJourneyTrajectoryURLResponse, *Response, error)
-	GetSimulationJourneyTrajectory(ctx context.Context, runUUID, journeyUUID string) (*SimulationTrajectory, *Response, error)
+	ListSimulationEpisodes(ctx context.Context, runUUID string, opt *SimulationEpisodeListOptions) (*SimulationEpisodeListResponse, *Response, error)
+	GetSimulationEpisode(ctx context.Context, runUUID, episodeUUID string) (*SimulationEpisode, *Response, error)
+	GetSimulationEpisodeTrajectoryURL(ctx context.Context, runUUID, episodeUUID string) (*SimulationEpisodeTrajectoryURLResponse, *Response, error)
+	GetSimulationEpisodeTrajectory(ctx context.Context, runUUID, episodeUUID string) (*SimulationTrajectory, *Response, error)
 }
 
 var _ AgentPlatformService = &AgentPlatformServiceOp{}

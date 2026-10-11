@@ -68,13 +68,13 @@ type SimulationRunDetail struct {
 	*godo.SimulationRunGetResponse
 }
 
-// SimulationJourney wraps a godo.SimulationJourney.
-type SimulationJourney struct {
-	*godo.SimulationJourney
+// SimulationEpisode wraps a godo.SimulationEpisode.
+type SimulationEpisode struct {
+	*godo.SimulationEpisode
 }
 
-// SimulationJourneys is a slice of SimulationJourney.
-type SimulationJourneys []SimulationJourney
+// SimulationEpisodes is a slice of SimulationEpisode.
+type SimulationEpisodes []SimulationEpisode
 
 // SimulationTrajectory wraps a godo.SimulationTrajectory.
 type SimulationTrajectory struct {
@@ -297,46 +297,46 @@ func (a *agentPlatformService) DeleteSimulationRun(runUUID string) error {
 	return err
 }
 
-// ListSimulationJourneys lists all journeys for a simulation run.
-func (a *agentPlatformService) ListSimulationJourneys(runUUID string, opt *godo.SimulationJourneyListOptions) (SimulationJourneys, error) {
+// ListSimulationEpisodes lists all episodes for a simulation run.
+func (a *agentPlatformService) ListSimulationEpisodes(runUUID string, opt *godo.SimulationEpisodeListOptions) (SimulationEpisodes, error) {
 	if opt == nil {
-		opt = &godo.SimulationJourneyListOptions{}
+		opt = &godo.SimulationEpisodeListOptions{}
 	}
 
-	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.SimulationJourney, *godo.Response, error) {
+	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.SimulationEpisode, *godo.Response, error) {
 		filters := *opt
 		filters.ListOptions = *listOpt
-		res, resp, err := a.client.AgentPlatform.ListSimulationJourneys(context.TODO(), runUUID, &filters)
+		res, resp, err := a.client.AgentPlatform.ListSimulationEpisodes(context.TODO(), runUUID, &filters)
 		if err != nil {
 			return nil, nil, err
 		}
-		return res.Journeys, resp, nil
-	}, func(journey *godo.SimulationJourney) SimulationJourney {
-		return SimulationJourney{SimulationJourney: journey}
+		return res.Episodes, resp, nil
+	}, func(episode *godo.SimulationEpisode) SimulationEpisode {
+		return SimulationEpisode{SimulationEpisode: episode}
 	})
 }
 
-// GetSimulationJourney retrieves a single journey within a simulation run.
-func (a *agentPlatformService) GetSimulationJourney(runUUID string, journeyUUID string) (*SimulationJourney, error) {
-	journey, _, err := a.client.AgentPlatform.GetSimulationJourney(context.TODO(), runUUID, journeyUUID)
+// GetSimulationEpisode retrieves a single episode within a simulation run.
+func (a *agentPlatformService) GetSimulationEpisode(runUUID string, episodeUUID string) (*SimulationEpisode, error) {
+	episode, _, err := a.client.AgentPlatform.GetSimulationEpisode(context.TODO(), runUUID, episodeUUID)
 	if err != nil {
 		return nil, err
 	}
-	return &SimulationJourney{SimulationJourney: journey}, nil
+	return &SimulationEpisode{SimulationEpisode: episode}, nil
 }
 
-// GetSimulationJourneyTrajectory retrieves the trajectory of a journey.
-func (a *agentPlatformService) GetSimulationJourneyTrajectory(runUUID string, journeyUUID string) (*SimulationTrajectory, error) {
-	trajectory, _, err := a.client.AgentPlatform.GetSimulationJourneyTrajectory(context.TODO(), runUUID, journeyUUID)
+// GetSimulationEpisodeTrajectory retrieves the trajectory of an episode.
+func (a *agentPlatformService) GetSimulationEpisodeTrajectory(runUUID string, episodeUUID string) (*SimulationTrajectory, error) {
+	trajectory, _, err := a.client.AgentPlatform.GetSimulationEpisodeTrajectory(context.TODO(), runUUID, episodeUUID)
 	if err != nil {
 		return nil, err
 	}
 	return &SimulationTrajectory{SimulationTrajectory: trajectory}, nil
 }
 
-// GetSimulationJourneyTrajectoryURL returns a presigned download URL for a journey's trajectory.
-func (a *agentPlatformService) GetSimulationJourneyTrajectoryURL(runUUID string, journeyUUID string) (*GenAIDownloadURL, error) {
-	res, _, err := a.client.AgentPlatform.GetSimulationJourneyTrajectoryURL(context.TODO(), runUUID, journeyUUID)
+// GetSimulationEpisodeTrajectoryURL returns a presigned download URL for an episode's trajectory.
+func (a *agentPlatformService) GetSimulationEpisodeTrajectoryURL(runUUID string, episodeUUID string) (*GenAIDownloadURL, error) {
+	res, _, err := a.client.AgentPlatform.GetSimulationEpisodeTrajectoryURL(context.TODO(), runUUID, episodeUUID)
 	if err != nil {
 		return nil, err
 	}
