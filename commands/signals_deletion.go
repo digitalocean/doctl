@@ -39,11 +39,13 @@ func SignalsDeletion() *Command {
 			Short:   "Display commands for Signals data deletion",
 			Long: `The subcommands of ` + "`doctl signals deletion`" + ` permanently delete Signals data on demand.
 
-Deletion cannot be undone. When you create a deletion for a Harness Runtime agent (` + "`--type agent`" + `) or for Serverless Inference (` + "`--type inference`" + `), Signals turns collection off for that scope immediately, hides in-scope sessions, dialogues, and signal reports from Signals reads immediately, and deletes the underlying data asynchronously in the background. Poll ` + "`doctl signals deletion get <deletion-id>`" + ` until the status is ` + "`complete`" + `.
+Deletion cannot be undone. When you create a deletion for a Harness Runtime agent (` + "`--type agent`" + `) or for your team's Serverless Inference data (` + "`--type inference`" + `), Signals turns collection off for that scope immediately, hides those conversations from Signals reads immediately, and deletes the underlying data asynchronously in the background. Poll ` + "`doctl signals deletion get <deletion-id>`" + ` until the status is ` + "`complete`" + `.
 
-Status values: queued, running, complete, failed. DigitalOcean may retry transient processing errors while a job is still active. If a job ends as ` + "`failed`" + `, in-scope data stays hidden and collection stays off; run ` + "`create`" + ` again to retry, and use ` + "`--format DeletionID,Status,ErrorMessage`" + ` to see why it failed.
+For ` + "`--type agent`" + `, pass the agent's Environment Config ID as ` + "`--agent-id`" + ` (this is the agent UUID). For ` + "`--type inference`" + `, Signals deletes **all** Serverless Inference Signals data for your **entire team** — there is no per-endpoint or per-model filter.
 
-Note: Deletion removes session, dialogue, and related Signals event data for the requested scope. Aggregated Insights or metrics charts may still show historical summary datapoints after deletion; those aggregates are not the same as recoverable session or dialogue content.`,
+Status values: queued, running, complete, failed. DigitalOcean may retry transient processing errors while a job is still active. If a job ends as ` + "`failed`" + `, the conversations stay hidden and collection stays off; run ` + "`create`" + ` again to retry, and use ` + "`--format DeletionID,Status,ErrorMessage`" + ` to see why it failed.
+
+Note: Deletion removes the conversation data Signals collected for that scope. Aggregated Insights or metrics charts may still show historical summary datapoints after deletion; those summaries are not the same as recoverable conversation content.`,
 		},
 	}
 
@@ -64,10 +66,10 @@ Extra columns are available with --format: TeamID, ErrorMessage.
 		"Permanently delete Signals data",
 		`Starts an asynchronous, permanent deletion of Signals data. This cannot be undone.
 
-- --type agent --agent-id <uuid>: deletes Signals data for one Harness Runtime agent and turns off collection for that agent.
-- --type inference: deletes Signals data for your team's Serverless Inference usage and turns off team inference collection. No --agent-id is allowed.
+- --type agent --agent-id <environment-config-id>: deletes all Signals conversations for one Harness Runtime agent and turns off collection for that agent. --agent-id is the agent's Environment Config ID (the agent UUID).
+- --type inference: deletes all Serverless Inference Signals conversations for your entire team (team-wide) and turns off team inference collection. No --agent-id is allowed.
 
-On create, in-scope data is hidden from Signals reads immediately and collection for that scope is turned off; purge continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. Wait until an agent deletion is complete before enabling Signals for that agent again.
+On create, those conversations are hidden from Signals reads immediately and collection for that scope is turned off; purge continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. Wait until an agent deletion is complete before enabling Signals for that agent again.
 
 You are asked to confirm unless you pass --force. Without a terminal, --force is required.
 
@@ -84,7 +86,7 @@ Each job contains:`+deletionDetails,
 		displayerType(&displayers.SignalsDeletion{}),
 	)
 	AddStringFlag(cmdCreate, doctl.ArgSignalsDeletionType, "", "", `What to delete: "agent" or "inference".`, requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "The Harness Runtime agent UUID (Environment Config ID). Required for --type agent; must not be set for inference.")
+	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "Harness Runtime Environment Config ID (this is the agent_id / agent UUID). Required for --type agent; must not be set for inference.")
 	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID. Auto-detected when omitted.")
 	AddBoolFlag(cmdCreate, doctl.ArgForce, doctl.ArgShortForce, false, "Skip the confirmation prompt")
 
