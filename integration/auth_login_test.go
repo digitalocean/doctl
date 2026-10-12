@@ -334,6 +334,87 @@ var _ = suite("auth/login/refresh", func(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 
+	when("the command that triggered the refresh was given flags", func() {
+		it("saves the renewed credentials without persisting those flags", func() {
+			var (
+				mu       sync.Mutex
+				listPath string
+			)
+
+			mux := http.NewServeMux()
+
+			mux.HandleFunc("/v1/oauth/token", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]any{
+					"access_token":  "doo_v1_renewed",
+					"refresh_token": "dor_v1_rotated",
+					"token_type":    "Bearer",
+					"expires_in":    3600,
+				})
+			})
+
+			mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
+				mu.Lock()
+				listPath = r.URL.RequestURI()
+				mu.Unlock()
+
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]any{"droplets": []any{}})
+			})
+
+			server := httptest.NewServer(mux)
+			defer server.Close()
+
+			tmpDir := t.TempDir()
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+
+			expired := time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+			expect.NoError(os.WriteFile(testConfig, []byte(strings.Join([]string{
+				"access-token: doo_v1_expired",
+				"context: default",
+				"oauth-tokens:",
+				"  default:",
+				"    issuer: " + server.URL,
+				"    client-id: doctl-e2e-client",
+				"    token-endpoint: " + server.URL + "/v1/oauth/token",
+				"    refresh-token: dor_v1_stored",
+				"    scope: read write",
+				"    expires-at: " + expired,
+				"",
+			}, "\n")), 0600))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"compute", "droplet", "list",
+				"--region", "nyc1",
+				"--tag-name", "prod",
+				"-o", "json",
+			)
+			cmd.Env = environmentWithoutDigitalOceanAuth()
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, string(output))
+
+			mu.Lock()
+			path := listPath
+			mu.Unlock()
+			expect.Contains(path, "tag_name=prod", "the flags must still apply to this invocation")
+
+			config := readConfigFile(t, expect, testConfig)
+			expect.Contains(config, "access-token: doo_v1_renewed")
+			expect.Contains(config, "refresh-token: dor_v1_rotated")
+
+			// A refresh runs inside whatever command the user typed. Writing
+			// everything viper holds would turn that command's flags into
+			// defaults for every later run.
+			expect.NotContains(config, "tag-name", "a command flag must not become a saved default")
+			expect.NotContains(config, "nyc1", "a command flag must not become a saved default")
+			expect.NotContains(config, "api-url", "a command flag must not become a saved default")
+			expect.NotContains(config, "required:", "flag metadata must not reach the config file")
+		})
+	})
+
 	when("the stored access token is still valid", func() {
 		it("uses it without contacting the token endpoint", func() {
 			var (

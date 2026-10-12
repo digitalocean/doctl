@@ -20,6 +20,8 @@ const (
 	ArgContext = "context"
 	// ArgDefaultContext is the default auth context
 	ArgDefaultContext = "default"
+	// ArgAuthContexts is the auth contexts
+	ArgAuthContexts = "auth-contexts"
 	// ArgActionID is an action id argument.
 	ArgActionID = "action-id"
 	// ArgActionAfter is an action after argument.

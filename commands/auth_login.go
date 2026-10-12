@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
@@ -397,7 +398,79 @@ func refreshExpiredOAuthToken(c *CmdConfig) error {
 	}
 	storeOAuthTokenState(authContext, state)
 
-	return writeConfig()
+	return writeRefreshedCredentials()
+}
+
+// refreshedCredentialKeys are the only config keys a refresh can change: the
+// renewed access token for the active context, and the rotated refresh token
+// with its new expiry.
+var refreshedCredentialKeys = []string{
+	doctl.ArgAccessToken,
+	doctl.ArgAuthContexts,
+	oauthTokensConfigKey,
+}
+
+// writeRefreshedCredentials saves the renewed session without going through
+// writeConfig. writeConfig serializes viper.AllSettings(), which holds every
+// flag in the CLI because each one is bound with BindPFlag at init. A refresh
+// runs inside whatever command the user happened to type, so writing all of
+// that would turn that command's flags into defaults for every later run.
+func writeRefreshedCredentials() error {
+	settings, err := configFileSettings()
+	if err != nil {
+		return err
+	}
+
+	for _, key := range refreshedCredentialKeys {
+		if value := viper.Get(key); value != nil {
+			settings[key] = value
+		}
+	}
+
+	b, err := yaml.Marshal(settings)
+	if err != nil {
+		return errors.New("Unable to encode configuration to YAML format.")
+	}
+
+	f, err := cfgFileWriter()
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := f.Write(b); err != nil {
+		return errors.New("Unable to write configuration.")
+	}
+
+	return nil
+}
+
+// configFileSettings reads config.yaml as it is on disk so a refresh can
+// rewrite the credentials and leave every other setting the user put there
+// untouched.
+func configFileSettings() (map[string]any, error) {
+	path := viper.GetString("config")
+	if path == "" {
+		return map[string]any{}, nil
+	}
+
+	contents, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return map[string]any{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	settings := map[string]any{}
+	if err := yaml.Unmarshal(contents, &settings); err != nil {
+		return nil, errors.New("Unable to read the existing configuration.")
+	}
+	if settings == nil {
+		settings = map[string]any{}
+	}
+
+	return settings, nil
 }
 
 // accessTokenOverridden reports whether the user supplied a token for this
