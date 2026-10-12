@@ -584,6 +584,7 @@ type DatabaseFirewallRule struct {
 	ClusterUUID string    `json:"cluster_uuid"`
 	Type        string    `json:"type"`
 	Value       string    `json:"value"`
+	Description string    `json:"description,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
