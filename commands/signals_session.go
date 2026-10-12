@@ -91,7 +91,7 @@ func RunSignalsSessionList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	agentID, err = resolveSignalsSessionListAgentID(sessionType, agentID)
+	agentID, err = resolveSignalsAgentID(sessionType, agentID)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,9 @@ func RunSignalsSessionList(c *CmdConfig) error {
 	return c.Display(&displayers.SignalsSession{Sessions: sessions})
 }
 
-func resolveSignalsSessionListAgentID(sessionType, agentID string) (string, error) {
+// resolveSignalsAgentID maps --type / --agent-id to the agent UUID used by
+// Signals APIs. Inference traffic is stamped with the nil agent UUID.
+func resolveSignalsAgentID(sessionType, agentID string) (string, error) {
 	switch sessionType {
 	case "", signalsSessionTypeAgent:
 		if agentID == "" {

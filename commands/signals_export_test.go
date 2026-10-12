@@ -38,7 +38,7 @@ func int64Ptr(v int64) *int64 { return &v }
 func TestSignalsCommand(t *testing.T) {
 	cmd := Signals()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "consent", "export", "session")
+	assertCommandNames(t, cmd, "consent", "deletion", "export", "session")
 }
 
 func TestSignalsExportCommand(t *testing.T) {
@@ -105,6 +105,69 @@ func TestSignalsExportCreate(t *testing.T) {
 
 		err := RunSignalsExportCreate(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsExportCreateWithSessionIDs(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+		config.Doit.Set(config.NS, doctl.ArgSignalsExportSessionIDs, []string{"sess-1", "sess-2"})
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			AgentID:    testAgentUUID,
+			SessionIDs: []string{"sess-1", "sess-2"},
+		}).Return(&testExport, nil)
+
+		err := RunSignalsExportCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsExportCreateAgentType(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			AgentID: testAgentUUID,
+		}).Return(&testExport, nil)
+
+		err := RunSignalsExportCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsExportCreateAgentMissingAgentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
+
+		err := RunSignalsExportCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--agent-id is required")
+	})
+}
+
+func TestSignalsExportCreateInference(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "inference")
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			AgentID: signalsInferencePlaceholderAgentID,
+		}).Return(&testExport, nil)
+
+		err := RunSignalsExportCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsExportCreateInferenceWithAgentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "inference")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+
+		err := RunSignalsExportCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--agent-id must not be set")
 	})
 }
 
@@ -196,8 +259,6 @@ func TestSignalsSessionDialogueList(t *testing.T) {
 					UserMessage: "hello",
 					RunStatus:   "complete",
 				},
-				SegmentID:  "seg-1",
-				SegmentSeq: 0,
 			},
 		}
 

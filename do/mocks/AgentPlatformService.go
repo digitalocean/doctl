@@ -543,49 +543,49 @@ func (mr *MockAgentPlatformServiceMockRecorder) GetScenarioSetDownloadURL(scenar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScenarioSetDownloadURL", reflect.TypeOf((*MockAgentPlatformService)(nil).GetScenarioSetDownloadURL), scenarioSetUUID)
 }
 
-// GetSimulationJourney mocks base method.
-func (m *MockAgentPlatformService) GetSimulationJourney(runUUID, journeyUUID string) (*do.SimulationJourney, error) {
+// GetSimulationEpisode mocks base method.
+func (m *MockAgentPlatformService) GetSimulationEpisode(runUUID, episodeUUID string) (*do.SimulationEpisode, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSimulationJourney", runUUID, journeyUUID)
-	ret0, _ := ret[0].(*do.SimulationJourney)
+	ret := m.ctrl.Call(m, "GetSimulationEpisode", runUUID, episodeUUID)
+	ret0, _ := ret[0].(*do.SimulationEpisode)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSimulationJourney indicates an expected call of GetSimulationJourney.
-func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationJourney(runUUID, journeyUUID any) *gomock.Call {
+// GetSimulationEpisode indicates an expected call of GetSimulationEpisode.
+func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisode(runUUID, episodeUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationJourney", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationJourney), runUUID, journeyUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationEpisode", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationEpisode), runUUID, episodeUUID)
 }
 
-// GetSimulationJourneyTrajectory mocks base method.
-func (m *MockAgentPlatformService) GetSimulationJourneyTrajectory(runUUID, journeyUUID string) (*do.SimulationTrajectory, error) {
+// GetSimulationEpisodeTrajectory mocks base method.
+func (m *MockAgentPlatformService) GetSimulationEpisodeTrajectory(runUUID, episodeUUID string) (*do.SimulationTrajectory, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSimulationJourneyTrajectory", runUUID, journeyUUID)
+	ret := m.ctrl.Call(m, "GetSimulationEpisodeTrajectory", runUUID, episodeUUID)
 	ret0, _ := ret[0].(*do.SimulationTrajectory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSimulationJourneyTrajectory indicates an expected call of GetSimulationJourneyTrajectory.
-func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationJourneyTrajectory(runUUID, journeyUUID any) *gomock.Call {
+// GetSimulationEpisodeTrajectory indicates an expected call of GetSimulationEpisodeTrajectory.
+func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisodeTrajectory(runUUID, episodeUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationJourneyTrajectory", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationJourneyTrajectory), runUUID, journeyUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationEpisodeTrajectory", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationEpisodeTrajectory), runUUID, episodeUUID)
 }
 
-// GetSimulationJourneyTrajectoryURL mocks base method.
-func (m *MockAgentPlatformService) GetSimulationJourneyTrajectoryURL(runUUID, journeyUUID string) (*do.GenAIDownloadURL, error) {
+// GetSimulationEpisodeTrajectoryURL mocks base method.
+func (m *MockAgentPlatformService) GetSimulationEpisodeTrajectoryURL(runUUID, episodeUUID string) (*do.GenAIDownloadURL, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSimulationJourneyTrajectoryURL", runUUID, journeyUUID)
+	ret := m.ctrl.Call(m, "GetSimulationEpisodeTrajectoryURL", runUUID, episodeUUID)
 	ret0, _ := ret[0].(*do.GenAIDownloadURL)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSimulationJourneyTrajectoryURL indicates an expected call of GetSimulationJourneyTrajectoryURL.
-func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationJourneyTrajectoryURL(runUUID, journeyUUID any) *gomock.Call {
+// GetSimulationEpisodeTrajectoryURL indicates an expected call of GetSimulationEpisodeTrajectoryURL.
+func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisodeTrajectoryURL(runUUID, episodeUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationJourneyTrajectoryURL", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationJourneyTrajectoryURL), runUUID, journeyUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationEpisodeTrajectoryURL", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationEpisodeTrajectoryURL), runUUID, episodeUUID)
 }
 
 // GetSimulationRun mocks base method.
@@ -843,19 +843,19 @@ func (mr *MockAgentPlatformServiceMockRecorder) ListScenarios(scenarioSetUUID, o
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListScenarios", reflect.TypeOf((*MockAgentPlatformService)(nil).ListScenarios), scenarioSetUUID, opt)
 }
 
-// ListSimulationJourneys mocks base method.
-func (m *MockAgentPlatformService) ListSimulationJourneys(runUUID string, opt *godo.SimulationJourneyListOptions) (do.SimulationJourneys, error) {
+// ListSimulationEpisodes mocks base method.
+func (m *MockAgentPlatformService) ListSimulationEpisodes(runUUID string, opt *godo.SimulationEpisodeListOptions) (do.SimulationEpisodes, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListSimulationJourneys", runUUID, opt)
-	ret0, _ := ret[0].(do.SimulationJourneys)
+	ret := m.ctrl.Call(m, "ListSimulationEpisodes", runUUID, opt)
+	ret0, _ := ret[0].(do.SimulationEpisodes)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListSimulationJourneys indicates an expected call of ListSimulationJourneys.
-func (mr *MockAgentPlatformServiceMockRecorder) ListSimulationJourneys(runUUID, opt any) *gomock.Call {
+// ListSimulationEpisodes indicates an expected call of ListSimulationEpisodes.
+func (mr *MockAgentPlatformServiceMockRecorder) ListSimulationEpisodes(runUUID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSimulationJourneys", reflect.TypeOf((*MockAgentPlatformService)(nil).ListSimulationJourneys), runUUID, opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSimulationEpisodes", reflect.TypeOf((*MockAgentPlatformService)(nil).ListSimulationEpisodes), runUUID, opt)
 }
 
 // ListSimulationRuns mocks base method.

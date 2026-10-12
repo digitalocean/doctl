@@ -177,7 +177,7 @@ func (v *ScenarioLibraryEntry) KV() []map[string]any {
 }
 
 // GenAIDownloadURL displays a presigned download URL for an evaluation file,
-// such as a scenario set file or a journey trajectory.
+// such as a scenario set file or an episode trajectory.
 type GenAIDownloadURL struct {
 	DownloadURL *do.GenAIDownloadURL
 }
@@ -230,8 +230,8 @@ func (v *SimulationRun) Cols() []string {
 		"Status",
 		"ScenarioSetUUID",
 		"AgentUUID",
-		"TotalJourneys",
-		"JourneysFinished",
+		"TotalEpisodes",
+		"EpisodesFinished",
 		"CreatedAt",
 	}
 }
@@ -243,8 +243,8 @@ func (v *SimulationRun) ColMap() map[string]string {
 		"Status":           "Status",
 		"ScenarioSetUUID":  "Scenario Set UUID",
 		"AgentUUID":        "Agent UUID",
-		"TotalJourneys":    "Total Journeys",
-		"JourneysFinished": "Journeys Finished",
+		"TotalEpisodes":    "Total Episodes",
+		"EpisodesFinished": "Episodes Finished",
 		"CreatedAt":        "Created At",
 	}
 }
@@ -265,8 +265,8 @@ func (v *SimulationRun) KV() []map[string]any {
 			"Status":           run.Status,
 			"ScenarioSetUUID":  run.ScenarioSetUUID,
 			"AgentUUID":        agentUUID,
-			"TotalJourneys":    run.TotalJourneys,
-			"JourneysFinished": run.JourneysFinished,
+			"TotalEpisodes":    run.TotalEpisodes,
+			"EpisodesFinished": run.EpisodesFinished,
 			"CreatedAt":        run.CreatedAt,
 		})
 	}
@@ -329,22 +329,22 @@ func (v *SimulationRunDetail) KV() []map[string]any {
 	return []map[string]any{kv}
 }
 
-// SimulationJourney displays journeys within a simulation run.
-type SimulationJourney struct {
-	Journeys do.SimulationJourneys
+// SimulationEpisode displays episodes within a simulation run.
+type SimulationEpisode struct {
+	Episodes do.SimulationEpisodes
 }
 
-var _ Displayable = &SimulationJourney{}
+var _ Displayable = &SimulationEpisode{}
 
-func (v *SimulationJourney) JSON(out io.Writer) error {
-	return writeJSON(v.Journeys, out)
+func (v *SimulationEpisode) JSON(out io.Writer) error {
+	return writeJSON(v.Episodes, out)
 }
 
-func (v *SimulationJourney) Cols() []string {
+func (v *SimulationEpisode) Cols() []string {
 	return []string{
 		"UUID",
 		"ScenarioUUID",
-		"JourneyIndex",
+		"EpisodeIndex",
 		"Status",
 		"Verdict",
 		"DurationSec",
@@ -352,11 +352,11 @@ func (v *SimulationJourney) Cols() []string {
 	}
 }
 
-func (v *SimulationJourney) ColMap() map[string]string {
+func (v *SimulationEpisode) ColMap() map[string]string {
 	return map[string]string{
 		"UUID":         "UUID",
 		"ScenarioUUID": "Scenario UUID",
-		"JourneyIndex": "Journey Index",
+		"EpisodeIndex": "Episode Index",
 		"Status":       "Status",
 		"Verdict":      "Verdict",
 		"DurationSec":  "Duration (s)",
@@ -364,26 +364,26 @@ func (v *SimulationJourney) ColMap() map[string]string {
 	}
 }
 
-func (v *SimulationJourney) KV() []map[string]any {
-	if v == nil || v.Journeys == nil {
+func (v *SimulationEpisode) KV() []map[string]any {
+	if v == nil || v.Episodes == nil {
 		return []map[string]any{}
 	}
-	out := make([]map[string]any, 0, len(v.Journeys))
-	for _, journey := range v.Journeys {
+	out := make([]map[string]any, 0, len(v.Episodes))
+	for _, episode := range v.Episodes {
 		out = append(out, map[string]any{
-			"UUID":         journey.JourneyUUID,
-			"ScenarioUUID": journey.ScenarioUUID,
-			"JourneyIndex": journey.JourneyIndex,
-			"Status":       journey.Status,
-			"Verdict":      journey.Verdict,
-			"DurationSec":  journey.DurationSec,
-			"CreatedAt":    journey.CreatedAt,
+			"UUID":         episode.EpisodeUUID,
+			"ScenarioUUID": episode.ScenarioUUID,
+			"EpisodeIndex": episode.EpisodeIndex,
+			"Status":       episode.Status,
+			"Verdict":      episode.Verdict,
+			"DurationSec":  episode.DurationSec,
+			"CreatedAt":    episode.CreatedAt,
 		})
 	}
 	return out
 }
 
-// SimulationTrajectory displays the trajectory of a single journey. The full
+// SimulationTrajectory displays the trajectory of a single episode. The full
 // message history is only included in the JSON output.
 type SimulationTrajectory struct {
 	Trajectory *do.SimulationTrajectory
@@ -397,7 +397,7 @@ func (v *SimulationTrajectory) JSON(out io.Writer) error {
 
 func (v *SimulationTrajectory) Cols() []string {
 	return []string{
-		"JourneyUUID",
+		"EpisodeUUID",
 		"Status",
 		"Verdict",
 		"TurnCount",
@@ -409,7 +409,7 @@ func (v *SimulationTrajectory) Cols() []string {
 
 func (v *SimulationTrajectory) ColMap() map[string]string {
 	return map[string]string{
-		"JourneyUUID":    "Journey UUID",
+		"EpisodeUUID":    "Episode UUID",
 		"Status":         "Status",
 		"Verdict":        "Verdict",
 		"TurnCount":      "Turn Count",
@@ -436,7 +436,7 @@ func (v *SimulationTrajectory) KV() []map[string]any {
 	}
 
 	return []map[string]any{{
-		"JourneyUUID":    trajectory.JourneyUUID,
+		"EpisodeUUID":    trajectory.EpisodeUUID,
 		"Status":         trajectory.Status,
 		"Verdict":        trajectory.Verdict,
 		"TurnCount":      trajectory.TurnCount,

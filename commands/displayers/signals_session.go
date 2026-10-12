@@ -80,7 +80,6 @@ func (d *SignalsSessionDialogue) JSON(out io.Writer) error {
 func (d *SignalsSessionDialogue) Cols() []string {
 	return []string{
 		"ID",
-		"SegmentID",
 		"Sequence",
 		"RunStatus",
 		"UserMessage",
@@ -91,7 +90,6 @@ func (d *SignalsSessionDialogue) Cols() []string {
 func (d *SignalsSessionDialogue) ColMap() map[string]string {
 	return map[string]string{
 		"ID":          "ID",
-		"SegmentID":   "Segment ID",
 		"Sequence":    "Sequence",
 		"RunStatus":   "Run Status",
 		"UserMessage": "User Message",
@@ -112,7 +110,6 @@ func (d *SignalsSessionDialogue) KV() []map[string]any {
 		}
 		out[i] = map[string]any{
 			"ID":          strconv.FormatInt(dl.ID, 10),
-			"SegmentID":   dl.SegmentID,
 			"Sequence":    dl.Sequence,
 			"RunStatus":   dl.RunStatus,
 			"UserMessage": msg,
