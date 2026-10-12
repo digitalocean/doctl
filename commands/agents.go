@@ -7562,6 +7562,45 @@ type tokenChunkPayload struct {
 
 type runStartedPayload struct {
 	Agent string `json:"agent"`
+	// Actor names who sent the turn. Absent when the server did not say, which
+	// is every event from before the field existed and any turn whose sender
+	// could not be identified.
+	Actor *runActor `json:"actor,omitempty"`
+}
+
+// runActor is the sender of a turn, as carried on run.started's data.actor.
+// Kind is "user", "trigger" or "system"; email and display_name appear only when
+// the deployment includes them.
+type runActor struct {
+	Kind        string `json:"kind"`
+	ID          string `json:"id"`
+	Email       string `json:"email"`
+	DisplayName string `json:"display_name"`
+}
+
+// label is the most human-readable name the event offers: a display name, then
+// an email, then the id. A trigger or the platform itself reads as that, not as
+// a person. It returns "" when the event names nobody, so the caller can leave
+// the marker unchanged instead of printing a blank.
+func (a *runActor) label() string {
+	if a == nil {
+		return ""
+	}
+	switch a.Kind {
+	case "system":
+		return "system"
+	case "trigger":
+		if a.ID != "" {
+			return "trigger " + a.ID
+		}
+		return "trigger"
+	}
+	for _, s := range []string{a.DisplayName, a.Email, a.ID} {
+		if s = strings.TrimSpace(s); s != "" {
+			return s
+		}
+	}
+	return ""
 }
 
 type toolCallStartedPayload struct {
@@ -7878,8 +7917,17 @@ func renderEvent(w io.Writer, ev godo.HostedAgentEvent) {
 		}
 	case godo.HostedAgentEventKindRunStarted:
 		// The server sometimes echoes the prompt in `agent`, so don't render it;
-		// keep the marker clean and let the spinner convey activity.
-		fmt.Fprintf(w, "\n%s\n", colorize("▶ run started", colMuted))
+		// keep the marker clean and let the spinner convey activity. The sender
+		// is the exception: in a session several people share, who sent the turn
+		// is the one thing the marker can usefully add.
+		marker := "▶ run started"
+		var p runStartedPayload
+		if err := json.Unmarshal(ev.Payload, &p); err == nil {
+			if who := p.Actor.label(); who != "" {
+				marker += " by " + who
+			}
+		}
+		fmt.Fprintf(w, "\n%s\n", colorize(marker, colMuted))
 	case godo.HostedAgentEventKindRunLog:
 		// Only `agents logs` reaches this: the attach loop handles run.log in its
 		// own arm and never falls through, because printing between token chunks

@@ -1113,7 +1113,7 @@ const (
 	// ArgSimulationUserSimulatorModelUUID is the model that simulates the user.
 	ArgSimulationUserSimulatorModelUUID = "user-simulator-model-uuid"
 
-	// ArgSimulationJudgeModelUUID is the model that judges each journey.
+	// ArgSimulationJudgeModelUUID is the model that judges each episode.
 	ArgSimulationJudgeModelUUID = "judge-model-uuid"
 
 	// ArgSimulationUserSimulatorConfig is a JSON object of user simulator settings.
@@ -1122,7 +1122,7 @@ const (
 	// ArgSimulationExplorationBudget is the exploration budget for the run.
 	ArgSimulationExplorationBudget = "exploration-budget"
 
-	// ArgSimulationMaxTurns is the maximum number of turns per journey.
+	// ArgSimulationMaxTurns is the maximum number of turns per episode.
 	ArgSimulationMaxTurns = "max-turns"
 
 	// ArgSimulationMetricUUIDs are the evaluation metrics attached to the run.
@@ -1137,11 +1137,11 @@ const (
 	// ArgSimulationStarMetricSuccessThreshold is the success threshold of the star metric.
 	ArgSimulationStarMetricSuccessThreshold = "star-metric-success-threshold"
 
-	// ArgSimulationScenarioUUID filters simulation journeys by scenario UUID.
+	// ArgSimulationScenarioUUID filters simulation episodes by scenario UUID.
 	ArgSimulationScenarioUUID = "scenario-uuid"
 
-	// ArgSimulationJourneyVerdicts filters simulation journeys by verdict.
-	ArgSimulationJourneyVerdicts = "verdicts"
+	// ArgSimulationEpisodeVerdicts filters simulation episodes by verdict.
+	ArgSimulationEpisodeVerdicts = "verdicts"
 
 	// Model evaluation args
 
@@ -1195,11 +1195,18 @@ const (
 
 	// Signals consent args
 
+	// ArgSignalsType selects the Signals source for session list / export create: agent or inference.
+	ArgSignalsType = "type"
+
 	// ArgSignalsAgentID is the agent ID for Signals consent and export commands.
 	ArgSignalsAgentID = "agent-id"
 
 	// ArgSignalsEnabled sets consent enabled (true) or disabled (false).
 	ArgSignalsEnabled = "enabled"
+
+	// ArgSignalsConsentSource selects the consent source: agent (per agent) or
+	// inference (team-level, serverless inference).
+	ArgSignalsConsentSource = "source"
 
 	// Signals export args
 
@@ -1232,6 +1239,12 @@ const (
 
 	// ArgSignalsExportSignalLayer is an optional signal layer filter.
 	ArgSignalsExportSignalLayer = "signal-layer"
+
+	// ArgSignalsDeletionType is the deletion type: agent or inference.
+	ArgSignalsDeletionType = "type"
+
+	// ArgSignalsTeamID is the numeric team id for deletion requests (optional; auto-detected).
+	ArgSignalsTeamID = "team-id"
 
 	// ArgSignalsSessionID is the session ID for Signals session commands.
 	ArgSignalsSessionID = "session-id"
