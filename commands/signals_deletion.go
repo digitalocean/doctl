@@ -71,6 +71,8 @@ Extra columns are available with --format: TeamID, ErrorMessage.
 - --type agent --agent-id <environment-config-id>: deletes Signals conversations for one Harness Runtime agent and turns off collection for that agent. --agent-id is the agent's Environment Config ID (the agent UUID).
 - --type inference: deletes Serverless Inference Signals conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request, and turns off team inference collection. Do not pass --agent-id.
 
+The API always requires team_id in the JSON body (for both agent and inference). Your access token selects the team you act as; team_id must be that team's numeric ID. When you omit --team-id, doctl looks it up using your token (via Signals consents) and sends it for you. Pass --team-id explicitly if auto-detection fails or you lack consent-read permission.
+
 On create, matching conversations are hidden from Signals reads immediately and collection for that scope is turned off; deletion continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. For an agent deletion, wait until the job is complete before enabling Signals for that agent again.
 
 You are asked to confirm unless you pass --force. Without a terminal, --force is required.
@@ -79,9 +81,9 @@ If an active deletion for the same target already exists, the API returns HTTP 2
 
 Note: Aggregated Insights or metrics charts may still show historical summary datapoints after deletion. Those summaries are not the same as recoverable conversation content.
 
-Other API errors you may see: 400 (bad type/agent_id), 403 (team_id mismatch), 404 (unknown agent), 429 (too many active deletion jobs for the team).
+Other API errors you may see: 400 (bad type/agent_id/missing team_id), 403 (team_id mismatch), 404 (unknown agent), 429 (too many active deletion jobs for the team).
 
---type is required (the API also requires it; omitting type is HTTP 400). Your team ID is detected automatically (this needs permission to read Signals consents). If you lack that permission, pass --team-id.
+--type is required (the API also requires it; omitting type is HTTP 400).
 
 Each job contains:`+deletionDetails,
 		Writer, aliasOpt("c"),
@@ -89,7 +91,7 @@ Each job contains:`+deletionDetails,
 	)
 	AddStringFlag(cmdCreate, doctl.ArgSignalsDeletionType, "", "", `What to delete: "agent" or "inference".`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "Harness Runtime Environment Config ID (agent UUID / agent_id). Required for --type agent; must not be set for inference.")
-	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID. Auto-detected when omitted.")
+	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID required by the API (must match your token's team). Auto-detected from your token when omitted.")
 	AddBoolFlag(cmdCreate, doctl.ArgForce, doctl.ArgShortForce, false, "Skip the confirmation prompt")
 
 	CmdBuilder(
