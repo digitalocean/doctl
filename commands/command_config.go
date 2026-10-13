@@ -82,6 +82,7 @@ type CmdConfig struct {
 	OneClicks           func() do.OneClickService
 	Apps                func() do.AppsService
 	Monitoring          func() do.MonitoringService
+	Insights            func() do.InsightsService
 	Serverless          func() do.ServerlessService
 	OAuth               func() do.OAuthService
 	PartnerAttachments  func() do.PartnerAttachmentsService
@@ -153,6 +154,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
 			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
+			c.Insights = func() do.InsightsService { return do.NewInsightsService(godoClient) }
 			c.Serverless = func() do.ServerlessService {
 				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
 			}
