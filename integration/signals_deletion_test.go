@@ -167,10 +167,9 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 			stdout, stderr, err := runDoctl(append(base, "--type", "inference", "--team-id", "42")...)
 			expect.Error(err)
 			expect.Empty(server.posts())
-			// AskForConfirm warns on stdout and returns ErrExitSilently, so there is
-			// no trailing "Error: Operation aborted." line (that one comes from other
-			// delete commands).
-			expect.Equal("Warning: Requires confirmation. Use the `--force` flag to continue without confirmation.", strings.TrimSpace(stdout+stderr))
+			// Non-interactive confirmation refusal is a real error so checkErr
+			// renders it once (and --output json gets a parseable envelope).
+			expect.Equal(confirmNonInteractiveOutput, strings.TrimSpace(stdout+stderr))
 		})
 	})
 
@@ -204,7 +203,7 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 		it("requires --type", func() {
 			_, stderr, err := runDoctl(append(base, "--team-id", "42", "--force")...)
 			expect.Error(err)
-			expect.Contains(stderr, "missing required arguments")
+			expect.Contains(stderr, "Missing required flag for doctl signals deletion create")
 			expect.Contains(stderr, "type")
 			expect.Empty(server.recorded())
 		})
