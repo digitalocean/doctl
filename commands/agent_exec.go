@@ -43,6 +43,9 @@ var execExit = os.Exit
 // result locally: guest stdout and stderr are passed through unchanged and the
 // guest's exit code becomes doctl's, so the command composes in a pipeline or an
 // `&&` chain.
+//
+// Default (text) output streams as the guest produces it. `-o json` still uses
+// the buffered API response so scripts that parse the document stay stable.
 func RunAgentsExec(c *CmdConfig) error {
 	// args[0] is the session; everything after it is the guest command. Callers
 	// separate the two with `--`, without which cobra would try to parse the
@@ -77,19 +80,18 @@ func RunAgentsExec(c *CmdConfig) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	resp, err := c.HostedAgents().ExecInSandbox(ctx, sessionID, &godo.HostedAgentSandboxExecRequest{
+	req := &godo.HostedAgentSandboxExecRequest{
 		Argv:           argv,
 		Workdir:        workdir,
 		TimeoutSeconds: int64(timeout),
-	})
-	if err != nil {
-		return err
 	}
 
-	// Passing the guest's bytes through is the default, but not when the caller
-	// asked for a document or for columns: those name what they want back, and
-	// the exit code still carries the guest's status either way.
+	// Structured output needs the full document; keep the buffered call.
 	if agentStructuredOutput(c) {
+		resp, err := c.HostedAgents().ExecInSandbox(ctx, sessionID, req)
+		if err != nil {
+			return err
+		}
 		if err := c.Display(&displayers.HostedAgentSandboxExec{
 			Execs:  []*godo.HostedAgentSandboxExecResponse{resp},
 			Single: true,
@@ -99,15 +101,34 @@ func RunAgentsExec(c *CmdConfig) error {
 		return exitWithGuestStatus(resp.ExitCode)
 	}
 
-	// Verbatim, and with no added newline: the guest's bytes are the output
-	// contract, so anything appended here would corrupt a piped payload.
-	if _, err := io.WriteString(c.Out, resp.Stdout); err != nil {
+	var (
+		exitCode int
+		sawExit  bool
+	)
+	err = c.HostedAgents().StreamExecInSandbox(ctx, sessionID, req, func(ev do.SandboxExecEvent) error {
+		if len(ev.Stdout) > 0 {
+			if _, werr := c.Out.Write(ev.Stdout); werr != nil {
+				return werr
+			}
+		}
+		if len(ev.Stderr) > 0 {
+			if _, werr := execStderr.Write(ev.Stderr); werr != nil {
+				return werr
+			}
+		}
+		if ev.ExitCode != nil {
+			exitCode = *ev.ExitCode
+			sawExit = true
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
-	if _, err := io.WriteString(execStderr, resp.Stderr); err != nil {
-		return err
+	if !sawExit {
+		return fmt.Errorf("exec stream ended without an exit status")
 	}
-	return exitWithGuestStatus(resp.ExitCode)
+	return exitWithGuestStatus(exitCode)
 }
 
 // disableRetriesForExec swaps in a client that does not retry, following the

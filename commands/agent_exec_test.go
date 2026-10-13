@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -81,12 +82,14 @@ func TestAgentsExec(t *testing.T) {
 		stdout, stderr, exitCode := captureExec(t, config)
 
 		tm.hostedAgents.EXPECT().
-			ExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any()).
-			DoAndReturn(func(_ context.Context, _ string, req *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {
+			StreamExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, req *godo.HostedAgentSandboxExecRequest, emit func(do.SandboxExecEvent) error) error {
 				assert.Equal(t, []string{"ls", "-la"}, req.Argv, "everything after the session is the guest command")
 				assert.Equal(t, "/workspace/src", req.Workdir)
 				assert.Equal(t, int64(30), req.TimeoutSeconds)
-				return &godo.HostedAgentSandboxExecResponse{Stdout: "total 0\n"}, nil
+				require.NoError(t, emit(do.SandboxExecEvent{Stdout: []byte("total 0\n")}))
+				code := 0
+				return emit(do.SandboxExecEvent{ExitCode: &code})
 			})
 
 		config.Args = []string{testExecSessionID, "ls", "-la"}
@@ -107,11 +110,13 @@ func TestAgentsExecPassesOutputThroughVerbatim(t *testing.T) {
 		stdout, stderr, _ := captureExec(t, config)
 
 		tm.hostedAgents.EXPECT().
-			ExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any()).
-			Return(&godo.HostedAgentSandboxExecResponse{
-				Stdout: "no trailing newline",
-				Stderr: "warning: careful\n",
-			}, nil)
+			StreamExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, _ *godo.HostedAgentSandboxExecRequest, emit func(do.SandboxExecEvent) error) error {
+				require.NoError(t, emit(do.SandboxExecEvent{Stdout: []byte("no trailing newline")}))
+				require.NoError(t, emit(do.SandboxExecEvent{Stderr: []byte("warning: careful\n")}))
+				code := 0
+				return emit(do.SandboxExecEvent{ExitCode: &code})
+			})
 
 		config.Args = []string{testExecSessionID, "echo", "-n", "no trailing newline"}
 		require.NoError(t, RunAgentsExec(config))
@@ -129,12 +134,13 @@ func TestAgentsExecPropagatesGuestExitCode(t *testing.T) {
 		stdout, stderr, exitCode := captureExec(t, config)
 
 		tm.hostedAgents.EXPECT().
-			ExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any()).
-			Return(&godo.HostedAgentSandboxExecResponse{
-				ExitCode: 2,
-				Stdout:   "partial work\n",
-				Stderr:   "make: *** Error 2\n",
-			}, nil)
+			StreamExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, _ *godo.HostedAgentSandboxExecRequest, emit func(do.SandboxExecEvent) error) error {
+				require.NoError(t, emit(do.SandboxExecEvent{Stdout: []byte("partial work\n")}))
+				require.NoError(t, emit(do.SandboxExecEvent{Stderr: []byte("make: *** Error 2\n")}))
+				code := 2
+				return emit(do.SandboxExecEvent{ExitCode: &code})
+			})
 
 		config.Args = []string{testExecSessionID, "make"}
 		err := RunAgentsExec(config)
@@ -216,8 +222,8 @@ func TestAgentsExecSurfacesTransportErrors(t *testing.T) {
 		_, _, exitCode := captureExec(t, config)
 
 		tm.hostedAgents.EXPECT().
-			ExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any()).
-			Return(nil, errors.New("session is not operable"))
+			StreamExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any(), gomock.Any()).
+			Return(errors.New("session is not operable"))
 
 		config.Args = []string{testExecSessionID, "true"}
 		err := RunAgentsExec(config)
@@ -227,6 +233,24 @@ func TestAgentsExecSurfacesTransportErrors(t *testing.T) {
 		// non-zero guest exit.
 		assert.Contains(t, err.Error(), "session is not operable")
 		assert.NotErrorIs(t, err, ErrExitSilently)
+		assert.Equal(t, noExit, *exitCode)
+	})
+}
+
+func TestAgentsExecSurfacesTimeoutError(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		_, _, exitCode := captureExec(t, config)
+
+		tm.hostedAgents.EXPECT().
+			StreamExecInSandbox(gomock.Any(), testExecSessionID, gomock.Any(), gomock.Any()).
+			Return(errors.New("exec timed out after 3s (requested)"))
+
+		config.Args = []string{testExecSessionID, "sleep", "120"}
+		config.Doit.Set(config.NS, doctl.ArgAgentExecTimeout, 3)
+		err := RunAgentsExec(config)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "timed out after 3s (requested)")
 		assert.Equal(t, noExit, *exitCode)
 	})
 }
