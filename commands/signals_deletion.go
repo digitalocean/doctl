@@ -43,7 +43,7 @@ Deletion cannot be undone. When you create a deletion for a Harness Runtime agen
 
 For ` + "`--type agent`" + `, set ` + "`--agent-id`" + ` to the agent's Environment Config ID (the agent UUID). For ` + "`--type inference`" + `, Signals deletes Serverless Inference conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request. Do not pass ` + "`--agent-id`" + ` for inference.
 
-For an agent deletion, wait until the job is ` + "`complete`" + ` before enabling Signals for that agent again. Earlier export files are not deleted and remain available until they expire.
+We recommend waiting until the job is ` + "`complete`" + ` before enabling Signals again for that scope (agent or inference). You can re-enable earlier if you need to: new conversations after re-enable are kept, and deletion continues only for data from before that re-enable. Earlier export files are not deleted and remain available until they expire.
 
 Status values: queued, running, complete, failed. DigitalOcean may retry transient processing errors while a job is still active. If a job ends as ` + "`failed`" + `, matching conversations stay hidden and collection stays off; run ` + "`create`" + ` again to retry, and use ` + "`--format DeletionID,Status,ErrorMessage`" + ` to see why it failed.
 
@@ -71,7 +71,9 @@ Extra columns are available with --format: TeamID, ErrorMessage.
 - --type agent --agent-id <environment-config-id>: deletes Signals conversations for one Harness Runtime agent and turns off collection for that agent. --agent-id is the agent's Environment Config ID (the agent UUID).
 - --type inference: deletes Serverless Inference Signals conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request, and turns off team inference collection. Do not pass --agent-id.
 
-On create, matching conversations are hidden from Signals reads immediately and collection for that scope is turned off; deletion continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. For an agent deletion, wait until the job is complete before enabling Signals for that agent again.
+`+"`team_id`"+` is optional for both agent and inference. When omitted, the API (and doctl) use the team from your access token. When set, it must match that team. Pass --team-id only if you need to override auto-detection.
+
+On create, matching conversations are hidden from Signals reads immediately and collection for that scope is turned off; deletion continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. We recommend waiting until the job is complete before enabling Signals again; you can re-enable mid-job if needed (new post-re-enable data is kept).
 
 You are asked to confirm unless you pass --force. Without a terminal, --force is required.
 
@@ -81,7 +83,7 @@ Note: Aggregated Insights or metrics charts may still show historical summary da
 
 Other API errors you may see: 400 (bad type/agent_id), 403 (team_id mismatch), 404 (unknown agent), 429 (too many active deletion jobs for the team).
 
---type is required (the API also requires it; omitting type is HTTP 400). Your team ID is detected automatically (this needs permission to read Signals consents). If you lack that permission, pass --team-id.
+--type is required (the API also requires it; omitting type is HTTP 400).
 
 Each job contains:`+deletionDetails,
 		Writer, aliasOpt("c"),
@@ -89,7 +91,7 @@ Each job contains:`+deletionDetails,
 	)
 	AddStringFlag(cmdCreate, doctl.ArgSignalsDeletionType, "", "", `What to delete: "agent" or "inference".`, requiredOpt())
 	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "Harness Runtime Environment Config ID (agent UUID / agent_id). Required for --type agent; must not be set for inference.")
-	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID. Auto-detected when omitted.")
+	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID. Optional — defaults to the team from your access token when omitted.")
 	AddBoolFlag(cmdCreate, doctl.ArgForce, doctl.ArgShortForce, false, "Skip the confirmation prompt")
 
 	CmdBuilder(
