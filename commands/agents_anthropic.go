@@ -18,15 +18,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
+	"net/url"
 	"strings"
 	"time"
 )
 
 const (
 	defaultAnthropicAPIBase = "https://api.anthropic.com"
-	// anthropicBaseURLEnv mirrors the Anthropic SDKs' own override, so a key
-	// pointed at a proxy/gateway validates against that proxy too.
+	// anthropicBaseURLEnv is read from the manifest env, the value the guest
+	// will actually use, never from the local shell.
 	anthropicBaseURLEnv    = "ANTHROPIC_BASE_URL"
 	anthropicAPIVersion    = "2023-06-01"
 	anthropicModelsPath    = "/v1/models"
@@ -51,15 +51,19 @@ type httpAnthropicClient struct {
 func newHTTPAnthropicClient() *httpAnthropicClient {
 	return &httpAnthropicClient{
 		httpClient: &http.Client{Timeout: 15 * time.Second},
-		baseURL:    resolveAnthropicBaseURL(),
+		baseURL:    defaultAnthropicAPIBase,
 	}
 }
 
-func resolveAnthropicBaseURL() string {
-	if v := strings.TrimRight(strings.TrimSpace(os.Getenv(anthropicBaseURLEnv)), "/"); v != "" {
-		return v
+// isAnthropicAPIBaseURL reports whether baseURL targets Anthropic's own API.
+// Anything unparsable counts as non-Anthropic so no key is sent to it.
+func isAnthropicAPIBaseURL(baseURL string) bool {
+	u, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil {
+		return false
 	}
-	return defaultAnthropicAPIBase
+	def, _ := url.Parse(defaultAnthropicAPIBase)
+	return strings.EqualFold(u.Hostname(), def.Hostname())
 }
 
 // checkAPIKey confirms apiKey is accepted by Anthropic before doctl ever

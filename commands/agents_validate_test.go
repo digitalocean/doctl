@@ -253,6 +253,36 @@ spec:
 	assert.Contains(t, joined, "MODEL")
 }
 
+func TestValidateAgentManifest_ClaudeCodeHarnessInferenceModel(t *testing.T) {
+	t.Run("harness group selected: no warning", func(t *testing.T) {
+		const manifest = `agent: claude-code
+env:
+  HARNESS_INFERENCE_BASE_URL: https://inference.example.com/v1
+  HARNESS_INFERENCE_MODEL: router:software-engineering
+secrets:
+  HARNESS_INFERENCE_API_KEY: do-inference-key
+`
+		v := validateAgentManifest([]byte(manifest))
+		assert.True(t, v.ok(), "errors=%v", v.Errors)
+		assert.NotContains(t, joinStrings(v.Warnings), "HARNESS_INFERENCE_MODEL")
+	})
+
+	t.Run("native key selected: HARNESS_INFERENCE_MODEL is ignored", func(t *testing.T) {
+		const manifest = `agent: claude-code
+env:
+  HARNESS_INFERENCE_MODEL: router:software-engineering
+secrets:
+  ANTHROPIC_API_KEY: sk-ant-key
+  HARNESS_INFERENCE_API_KEY: do-inference-key
+`
+		v := validateAgentManifest([]byte(manifest))
+		assert.True(t, v.ok(), "errors=%v", v.Errors)
+		joined := joinStrings(v.Warnings)
+		assert.Contains(t, joined, "HARNESS_INFERENCE_MODEL")
+		assert.Contains(t, joined, "ANTHROPIC_MODEL")
+	})
+}
+
 func TestValidateAgentManifest_InvalidPermissionsDefault(t *testing.T) {
 	const manifest = `name: validate-bug-test
 agent: codex
