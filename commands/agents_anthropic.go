@@ -57,7 +57,7 @@ func newHTTPAnthropicClient() *httpAnthropicClient {
 }
 
 // isAnthropicAPIBaseURL reports whether baseURL targets Anthropic's own API.
-// Anything unparseable counts as non-Anthropic so no key is sent to it.
+// Anything unparsable counts as non-Anthropic so no key is sent to it.
 func isAnthropicAPIBaseURL(baseURL string) bool {
 	u, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil {
