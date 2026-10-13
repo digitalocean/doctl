@@ -25,7 +25,6 @@ import (
 
 const (
 	defaultAnthropicAPIBase = "https://api.anthropic.com"
-	anthropicAPIHost        = "api.anthropic.com"
 	// anthropicBaseURLEnv is read from the manifest env, the value the guest
 	// will actually use, never from the local shell.
 	anthropicBaseURLEnv    = "ANTHROPIC_BASE_URL"
@@ -63,7 +62,8 @@ func isAnthropicAPIBaseURL(baseURL string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.EqualFold(u.Hostname(), anthropicAPIHost)
+	def, _ := url.Parse(defaultAnthropicAPIBase)
+	return strings.EqualFold(u.Hostname(), def.Hostname())
 }
 
 // checkAPIKey confirms apiKey is accepted by Anthropic before doctl ever
