@@ -301,6 +301,9 @@ func collectHelpFlags(fs *pflag.FlagSet) []helpFlag {
 		if hint == "" {
 			hint = extractHintFromUsage(usage)
 		}
+		if hint == "" {
+			hint = defaultFlagHints[f.Name]
+		}
 		// When purpose is a shortened usage and the full usage was only that
 		// sentence, avoid repeating a near-identical line under the flag.
 		hf.purpose = purpose
@@ -400,14 +403,110 @@ func defaultFlagValue(f *pflag.Flag) string {
 
 func writeHelpExample(b *strings.Builder, p helpPainter, cmd *cobra.Command) {
 	ex := strings.TrimSpace(cmd.Example)
-	if ex == "" {
+	lookups := collectLookups(cmd)
+	if ex == "" && len(lookups) == 0 {
 		return
 	}
 	fmt.Fprintf(b, "%s\n", p.section("EXAMPLES"))
-	for _, line := range strings.Split(ex, "\n") {
-		fmt.Fprintf(b, "%s\n", formatExampleLine(p, line))
+	writeLookups(b, p, lookups)
+	if ex != "" {
+		if len(lookups) > 0 {
+			b.WriteByte('\n')
+		}
+		for _, line := range strings.Split(ex, "\n") {
+			fmt.Fprintf(b, "%s\n", formatExampleLine(p, line))
+		}
 	}
 	b.WriteByte('\n')
+}
+
+// lookup is a command that lists the valid values of one or more flags.
+type lookup struct {
+	command string
+	flags   []string
+}
+
+// collectLookups gathers the discovery commands named by the command's flag
+// hints, so the values an example needs can be found without leaving help.
+// Required flags come first, being the ones a first run cannot do without,
+// then the flags the examples use; flags sharing a command share its line.
+func collectLookups(cmd *cobra.Command) []lookup {
+	if !cmd.Runnable() {
+		return nil
+	}
+
+	rank := func(hf helpFlag) int {
+		switch {
+		case hf.required:
+			return 0
+		case strings.Contains(cmd.Example, "--"+hf.flag.Name+" ") || strings.Contains(cmd.Example, "--"+hf.flag.Name+"="):
+			return 1
+		default:
+			return 2
+		}
+	}
+
+	flags := collectHelpFlags(cmd.LocalFlags())
+	sort.SliceStable(flags, func(i, j int) bool {
+		return rank(flags[i]) < rank(flags[j])
+	})
+
+	var out []lookup
+	index := make(map[string]int)
+	for _, hf := range flags {
+		command, ok := lookupCommand(hf.hint)
+		if !ok {
+			continue
+		}
+
+		name := "--" + hf.flag.Name
+		if i, seen := index[command]; seen {
+			out[i].flags = append(out[i].flags, name)
+			continue
+		}
+		index[command] = len(out)
+		out = append(out, lookup{command: command, flags: []string{name}})
+	}
+
+	return out
+}
+
+// lookupCommand extracts the doctl command from a "run doctl ..." hint. Hints
+// that are advice rather than a command, like "use either --a or --b", are not
+// lookups.
+func lookupCommand(hint string) (string, bool) {
+	if len(hint) < len("run ") || !strings.EqualFold(hint[:len("run ")], "run ") {
+		return "", false
+	}
+
+	command := strings.TrimSpace(hint[len("run "):])
+	if !strings.HasPrefix(command, "doctl ") {
+		return "", false
+	}
+
+	return command, true
+}
+
+// writeLookups lists each discovery command beside the flags it finds values
+// for, commands aligned so they can be scanned and copied.
+func writeLookups(b *strings.Builder, p helpPainter, lookups []lookup) {
+	if len(lookups) == 0 {
+		return
+	}
+
+	pad := 0
+	for _, l := range lookups {
+		if n := utf8.RuneCountInString(l.command); n > pad {
+			pad = n
+		}
+	}
+
+	fmt.Fprintf(b, "%s\n", p.dim("Find valid values for this command's flags:"))
+	for _, l := range lookups {
+		fill := strings.Repeat(" ", pad-utf8.RuneCountInString(l.command))
+		fmt.Fprintf(b, "  %s%s  %s\n", p.successBadge(l.command), fill,
+			p.dim("# "+strings.Join(l.flags, ", ")))
+	}
 }
 
 // formatExampleLine highlights every real doctl invocation on the line, whether

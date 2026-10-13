@@ -8,6 +8,7 @@ import (
 	"testing"
 	"text/tabwriter"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
 
@@ -200,9 +201,10 @@ func TestDisplayTextRecordsListEveryField(t *testing.T) {
 }
 
 // TestDisplayTextRecordsHeadlineTheIdentifiers covers what a record is read
-// by: its ID and its name lead it and carry the accent, every other field sits
-// beneath in the muted run, and the ID of some other resource is a field like
-// any other rather than part of this record's heading.
+// by: its name and its ID lead it, the name alone carrying the accent so it
+// stands apart from the ID, every other field sits beneath as a labeled pair,
+// and the ID of some other resource is a field like any other rather than part
+// of this record's heading.
 func TestDisplayTextRecordsHeadlineTheIdentifiers(t *testing.T) {
 	item := &testDisplayable{
 		cols: []string{"id", "vpcid", "name", "status"},
@@ -221,10 +223,16 @@ func TestDisplayTextRecordsHeadlineTheIdentifiers(t *testing.T) {
 	require.NoError(t, DisplayText(item, &out, false, nil, env))
 	rendered := out.String()
 
-	for _, identifier := range []string{"504211456", "web", "504211457", "db"} {
-		assert.Contains(t, rendered, env.SprintTone(ui.ToneIdentifier, identifier),
-			"%q names the resource, so it should carry the accent", identifier)
+	for _, name := range []string{"web", "db"} {
+		assert.Contains(t, rendered, env.SprintTone(ui.ToneIdentifier, name),
+			"%q names the resource, so it should carry the accent", name)
 	}
+	for _, id := range []string{"504211456", "504211457"} {
+		assert.NotContains(t, rendered, env.SprintTone(ui.ToneIdentifier, id),
+			"%q follows the name, so it is left unaccented", id)
+	}
+	assert.Contains(t, rendered, env.Sprint(labelStyle(env), "vpc id "),
+		"a label is drawn in the label color")
 	assert.NotContains(t, rendered, env.SprintTone(ui.ToneIdentifier, "9f1c2e"),
 		"another resource's ID is a field, not part of the heading")
 
@@ -654,6 +662,22 @@ func detailItem() *testDisplayable {
 	return &item
 }
 
+// TestDisplayTextFrameIsNeutral guards the rules of a boxed table against a
+// tone's color: a green or red frame would claim a state for every row in it.
+func TestDisplayTextFrameIsNeutral(t *testing.T) {
+	var out, errOut bytes.Buffer
+	env := terminalEnv(&out, &errOut, ui.WithProfile(termenv.TrueColor))
+
+	require.NoError(t, DisplayText(stateTable(), &out, false, nil, env))
+
+	top := strings.SplitN(out.String(), "\n", 2)[0]
+	assert.Equal(t, env.Sprint(env.NewStyle().Foreground(ui.ColorFrame), ansi.Strip(top)), top,
+		"a table's rules are drawn in the frame color")
+	for _, tone := range []lipgloss.Color{ui.ColorSuccess, ui.ColorWarning, ui.ColorError, ui.ColorInfo} {
+		assert.NotEqual(t, tone, ui.ColorFrame, "the frame color must not be a tone's")
+	}
+}
+
 // TestDisplayTextCardsASingleResource covers the layout a get command is given
 // on a terminal, where a row with more fields than the window has columns is
 // turned on its side instead of being wrapped.
@@ -671,7 +695,7 @@ func TestDisplayTextCardsASingleResource(t *testing.T) {
 	// The top rule is painted as one span, so it is compared whole rather than
 	// by its corner, which keeps the assertion free of the card's width.
 	top := strings.SplitN(rendered, "\n", 2)[0]
-	assert.Equal(t, env.Sprint(env.NewStyle().Foreground(ui.ColorSuccess), ansi.Strip(top)), top,
+	assert.Equal(t, env.Sprint(env.NewStyle().Foreground(ui.ColorFrame), ansi.Strip(top)), top,
 		"a card's rules are drawn in the frame color")
 
 	// Values keep the tones they carry in a table, so the identifier and the

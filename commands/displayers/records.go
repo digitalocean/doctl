@@ -41,15 +41,16 @@ func (r renderer) records(headers []string, rows [][]string, tones toneTable) {
 
 		row = withPlaceholders(row, count, none)
 		r.headline(row, headline, tones.rowTone(i))
-		// The label already reads as secondary (labelStyle), so an
-		// unclassified value is left in the default foreground: a value
-		// muted to match its label rendered the two indistinguishably.
+		// The label carries its own color (labelStyle), so an unclassified
+		// value is left in the default foreground: a value muted to match
+		// its label rendered the two indistinguishably.
 		r.fields(headers, row, headline, tones.painter(i, ui.ToneNone))
 	}
 }
 
 // headline writes the line that opens a record: a glyph carrying the resource's
-// state, then the values that name it, accented so the eye can find them.
+// state, then the values that name it. Only the first is accented, so the name
+// a reader scans for stands apart from the ID beside it.
 func (r renderer) headline(row []string, headline []int, tone ui.Tone) {
 	// A record with no state still needs its glyph, and muted claims nothing.
 	if tone == ui.ToneNone {
@@ -57,9 +58,15 @@ func (r renderer) headline(row []string, headline []int, tone ui.Tone) {
 	}
 
 	named := make([]string, 0, len(headline))
-	for _, col := range headline {
-		if col < len(row) {
+	for i, col := range headline {
+		if col >= len(row) {
+			continue
+		}
+
+		if i == 0 {
 			named = append(named, r.env.SprintTone(ui.ToneIdentifier, row[col]))
+		} else {
+			named = append(named, row[col])
 		}
 	}
 
@@ -273,17 +280,17 @@ func headlineColumns(headers []string) []int {
 	return headline
 }
 
-// labelStyle draws a field's label muted, so it recedes behind the value that
-// follows it. It used to add Faint on top of the muted color; stacking the
-// two attributes reduced most terminals' intensity twice over, leaving
-// labels unreadable on a dark background.
+// labelStyle draws a field's label in the label color, tinted apart from the
+// value after it so the two read as a pair rather than as one run of text.
+// A darker muted gray was tried first and was unreadable on a dark background.
 func labelStyle(env ui.Env) lipgloss.Style {
-	return env.NewStyle().Foreground(ui.ColorMuted)
+	return env.NewStyle().Foreground(ui.ColorLabel)
 }
 
-// fieldSeparator divides the fields sharing a line, drawn as a label is.
+// fieldSeparator divides the fields sharing a line, drawn as a frame is: it is
+// structure, and should recede behind the labels and values it separates.
 func fieldSeparator(env ui.Env) string {
-	return env.Sprint(labelStyle(env), " "+env.Glyphs().Separator+" ")
+	return env.Sprint(env.NewStyle().Foreground(ui.ColorFrame), " "+env.Glyphs().Separator+" ")
 }
 
 // withPlaceholders fills a row out to count cells, glyphing the fields with no value.
