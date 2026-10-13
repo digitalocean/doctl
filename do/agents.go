@@ -72,6 +72,16 @@ type HostedAgentsService interface {
 	// PollProviderAuth checks whether a pending connect link has been authorized.
 	// pollURL is the poll_url returned by StartProviderAuth.
 	PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error)
+	// ListConnections lists the team's external-provider connections. The whole
+	// response is returned so callers can render pagination (page/per_page/total).
+	ListConnections(provider string, opt *godo.HostedAgentConnectionListOptions) (*godo.HostedAgentConnectionsListResponse, error)
+	// CreateConnection creates (or resumes) a connection binding an actor to the
+	// provider. A pending connection comes back with an Authorization to complete.
+	CreateConnection(provider string, body *godo.HostedAgentConnectionCreateRequest) (*godo.HostedAgentConnectionEnvelope, error)
+	// GetConnection reads one connection by id, used to poll a pending authorization.
+	GetConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error)
+	// DeleteConnection revokes one connection by id and returns its final state.
+	DeleteConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error)
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
 	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
@@ -250,6 +260,26 @@ func (s *hostedAgentsService) StartProviderAuth(provider string) (*godo.HostedAg
 func (s *hostedAgentsService) PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error) {
 	poll, _, err := s.client.HostedAgents.PollProviderAuth(context.TODO(), provider, pollURL)
 	return poll, err
+}
+
+func (s *hostedAgentsService) ListConnections(provider string, opt *godo.HostedAgentConnectionListOptions) (*godo.HostedAgentConnectionsListResponse, error) {
+	list, _, err := s.client.HostedAgents.ListConnections(context.TODO(), provider, opt)
+	return list, err
+}
+
+func (s *hostedAgentsService) CreateConnection(provider string, body *godo.HostedAgentConnectionCreateRequest) (*godo.HostedAgentConnectionEnvelope, error) {
+	env, _, err := s.client.HostedAgents.CreateConnection(context.TODO(), provider, body)
+	return env, err
+}
+
+func (s *hostedAgentsService) GetConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	env, _, err := s.client.HostedAgents.GetConnection(context.TODO(), provider, id)
+	return env, err
+}
+
+func (s *hostedAgentsService) DeleteConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	env, _, err := s.client.HostedAgents.DeleteConnection(context.TODO(), provider, id)
+	return env, err
 }
 
 // StreamSession opens the SSE stream and returns the typed godo iterator. The
