@@ -71,6 +71,50 @@ func TestRenderStyledHelp_GroupsRequiredOptionsAndHints(t *testing.T) {
 	require.Greater(t, outIdx, optIdx)
 }
 
+func TestRenderStyledHelp_ExamplesListLookupCommands(t *testing.T) {
+	root := &cobra.Command{Use: "doctl"}
+	parent := &Command{Command: root}
+	cmd := CmdBuilder(parent, func(*CmdConfig) error { return nil }, "create", "Create a Droplet", "Creates a new Droplet on your account.", Writer)
+	AddStringFlag(cmd, "size", "", "", "size desc", requiredOpt(), flagHint("run doctl compute size list"))
+	AddStringFlag(cmd, "node-size", "", "", "node size desc", flagHint("run doctl compute size list"))
+	AddStringFlag(cmd, "region", "", "", "region desc", flagHint("run doctl compute region list"))
+	AddStringFlag(cmd, "image", "", "", "Use the `doctl compute image list-distribution` command for a list.")
+	AddStringFlag(cmd, doctl.ArgProjectID, "", "", "project desc")
+	AddStringFlag(cmd, "user-data", "", "", "user data", flagHint("Use either --user-data or --user-data-file, not both"))
+	cmd.Example = "doctl compute droplet create example --size s-1vcpu-1gb --region nyc1"
+
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	require.NoError(t, renderStyledHelp(cmd.Command, &buf, env, false))
+	out := buf.String()
+
+	examples := out[strings.Index(out, "EXAMPLES"):]
+	assert.Equal(t, "EXAMPLES\n"+
+		"Find valid values for this command's flags:\n"+
+		"  doctl compute size list                # --size, --node-size\n"+
+		"  doctl compute region list              # --region\n"+
+		"  doctl compute image list-distribution  # --image\n"+
+		"  doctl projects list                    # --project-id\n"+
+		"\n"+
+		"doctl compute droplet create example --size s-1vcpu-1gb --region nyc1\n"+
+		"\n", examples,
+		"required flags lead, then those the example uses; advice hints are not lookups")
+}
+
+func TestRenderStyledHelp_LookupsWithoutExample(t *testing.T) {
+	root := &cobra.Command{Use: "doctl"}
+	parent := &Command{Command: root}
+	cmd := CmdBuilder(parent, func(*CmdConfig) error { return nil }, "create", "Create a VPC", "Creates a VPC.", Writer)
+	AddStringFlag(cmd, "region", "", "", "region desc", flagHint("run doctl compute region list"))
+
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	require.NoError(t, renderStyledHelp(cmd.Command, &buf, env, false))
+
+	assert.Contains(t, buf.String(), "EXAMPLES\nFind valid values for this command's flags:\n"+
+		"  doctl compute region list  # --region\n\n")
+}
+
 func TestRenderStyledHelp_RootListsCommandGroups(t *testing.T) {
 	var buf bytes.Buffer
 	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))

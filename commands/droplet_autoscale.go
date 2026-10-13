@@ -49,9 +49,9 @@ You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale 
 		AddIntFlag(c, doctl.ArgAutoscaleCooldownMinutes, "", 0, "Cooldown duration")
 		AddIntFlag(c, doctl.ArgAutoscaleTargetInstances, "", 0, "Target number of members")
 
-		AddStringFlag(c, doctl.ArgSizeSlug, "", "", "Droplet size")
-		AddStringFlag(c, doctl.ArgRegionSlug, "", "", "Droplet region")
-		AddStringFlag(c, doctl.ArgImage, "", "", "Droplet image")
+		AddStringFlag(c, doctl.ArgSizeSlug, "", "", "Droplet size", flagHint("run doctl compute size list"))
+		AddStringFlag(c, doctl.ArgRegionSlug, "", "", "Droplet region", flagHint("run doctl compute region list"))
+		AddStringFlag(c, doctl.ArgImage, "", "", "Droplet image", flagHint("run doctl compute image list-distribution"))
 		AddStringSliceFlag(c, doctl.ArgTag, "", []string{}, "Droplet tags")
 		AddStringSliceFlag(c, doctl.ArgSSHKeys, "", []string{}, "Droplet SSH keys")
 		AddStringFlag(c, doctl.ArgVPCUUID, "", "", "Droplet VPC UUID")

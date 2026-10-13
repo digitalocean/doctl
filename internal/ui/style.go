@@ -34,6 +34,14 @@ const (
 	ColorInfo lipgloss.Color = "#2ea0f9"
 	// ColorMuted is xterm 241, dim enough to recede behind a value.
 	ColorMuted lipgloss.Color = "241"
+	// ColorFrame is the neutral gray that rules and separators are drawn in.
+	// No tone maps to it, so a frame says nothing about the state of what it
+	// holds. xterm 244 sits midway, readable on light and dark backgrounds.
+	ColorFrame lipgloss.Color = "244"
+	// ColorLabel names a field. It is a slate gray, tinted only enough to set
+	// a label apart from its value, so it reads as structure rather than state
+	// and stays legible on either background.
+	ColorLabel lipgloss.Color = "#8a9ab0"
 )
 
 // Style is a presentation helper bound to an Env, for chrome written to Err.

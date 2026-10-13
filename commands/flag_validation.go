@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -234,7 +235,21 @@ func enrichFlagIssue(f *pflag.Flag, issue FlagIssue) FlagIssue {
 			issue.Hint = hint
 		}
 	}
+	if issue.Hint == "" {
+		issue.Hint = defaultFlagHints[f.Name]
+	}
 	return issue
+}
+
+// defaultFlagHints are the discovery commands for flags that name the same
+// kind of resource on every command that takes them. A flag whose values
+// depend on the product, such as --region or --size, is hinted where it is
+// declared instead.
+var defaultFlagHints = map[string]string{
+	doctl.ArgProjectID:          "run doctl projects list",
+	doctl.ArgVPCUUID:            "run doctl vpcs list",
+	doctl.ArgPrivateNetworkUUID: "run doctl vpcs list",
+	doctl.ArgSSHKeys:            "run doctl compute ssh-key list",
 }
 
 func cleanFlagUsage(usage string) string {

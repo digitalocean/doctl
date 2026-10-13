@@ -58,7 +58,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`")
+		"The load balancer's region, e.g.: `nyc1`", flagHint("run doctl compute region list"))
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSizeSlug, "", "",
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgSizeUnit, "", 0,
@@ -79,7 +79,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgTagName, "", "", "The name of a tag. All Droplets with this tag applied will be assigned to the load balancer.")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDropletIDs, "", []string{},
-		"A comma-separated list of Droplet IDs to add to the load balancer, e.g.: `12,33`")
+		"A comma-separated list of Droplet IDs to add to the load balancer, e.g.: `12,33`",
+		flagHint("run doctl compute droplet list"))
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgStickySessions, "", "",
 		"A comma-separated list of key-value pairs representing a list of active sessions, e.g.: `type:cookies, cookie_name:DO-LB, cookie_ttl_seconds:5`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgHealthCheck, "", "",

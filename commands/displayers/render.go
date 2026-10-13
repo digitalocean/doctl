@@ -52,10 +52,11 @@ func borderFor(env ui.Env) lipgloss.Border {
 	return lipgloss.RoundedBorder()
 }
 
-// frameStyle paints the rules a table or card is drawn in. The frame takes the
-// success color whatever state the resource is in; the status field keeps its own.
+// frameStyle paints the rules a table or card is drawn in. The frame is
+// neutral whatever state the resource is in, so that color in a table always
+// comes from a value; a frame in a tone's color would claim a state.
 func frameStyle(env ui.Env) lipgloss.Style {
-	return env.NewStyle().Foreground(ui.ColorSuccess)
+	return env.NewStyle().Foreground(ui.ColorFrame)
 }
 
 // vertical is the painted rule closing either side of a framed row.
