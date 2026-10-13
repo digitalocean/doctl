@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.210.0"
+	libraryVersion = "1.224.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -74,6 +74,7 @@ type Client struct {
 	Functions           FunctionsService
 	Images              ImagesService
 	ImageActions        ImageActionsService
+	Insights            InsightsService
 	Invoices            InvoicesService
 	Keys                KeysService
 	Kubernetes          KubernetesService
@@ -104,9 +105,13 @@ type Client struct {
 	VPCs                VPCsService
 	Routes              RoutesService
 	PartnerAttachment   PartnerAttachmentService
-	GradientAI          GradientAIService
+	AgentPlatform       AgentPlatformService
+	ActionGateway       *ActionGatewayService
+	HostedAgents        HostedAgentsService
+	HostedAgentTriggers HostedAgentTriggersService
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
+	Signals             SignalsService
 	BYOIPPrefixes       BYOIPPrefixesService
 
 	// Serverless Inference resources at https://inference.do-ai.run.
@@ -125,6 +130,8 @@ type Client struct {
 
 	// Optional rate limiter to ensure QoS.
 	rateLimiter *rate.Limiter
+	// Optional Action Gateway MCP origin override for development and testing.
+	actionGatewayMCPBaseURL *url.URL
 
 	// Optional retry values. Setting the RetryConfig.RetryMax value enables automatically retrying requests
 	// that fail with 429 or 500-level response codes using the go-retryablehttp client
@@ -222,6 +229,16 @@ type ErrorResponse struct {
 
 	// Attempts is the number of times the request was attempted when retries are enabled.
 	Attempts int
+
+	// NestedError captures the alternate {"error":{"code":...,"message":...}}
+	// envelope returned by some DigitalOcean services (e.g. the hosted-agents
+	// harness-api) instead of the top-level {"message":...} shape. When the
+	// top-level Message is empty, Error() falls back to this message so callers
+	// see the server's reason rather than a bare status code.
+	NestedError *struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
 }
 
 // Rate contains the rate limit for the current client.
@@ -319,6 +336,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Functions = &FunctionsServiceOp{client: c}
 	c.Images = &ImagesServiceOp{client: c}
 	c.ImageActions = &ImageActionsServiceOp{client: c}
+	c.Insights = &InsightsServiceOp{client: c}
 	c.Invoices = &InvoicesServiceOp{client: c}
 	c.Keys = &KeysServiceOp{client: c}
 	c.Kubernetes = &KubernetesServiceOp{client: c}
@@ -351,10 +369,14 @@ func NewClient(httpClient *http.Client) *Client {
 	c.VPCs = &VPCsServiceOp{client: c}
 	c.Routes = &RoutesServiceOp{client: c}
 	c.PartnerAttachment = &PartnerAttachmentServiceOp{client: c}
-	c.GradientAI = &GradientAIServiceOp{client: c}
+	c.AgentPlatform = &AgentPlatformServiceOp{client: c}
+	c.ActionGateway = newActionGatewayService(c)
+	c.HostedAgents = &HostedAgentsServiceOp{client: c}
+	c.HostedAgentTriggers = &HostedAgentTriggersServiceOp{client: c}
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
+	c.Signals = &SignalsServiceOp{client: c}
 	serverlessInferenceURL, _ := url.Parse(defaultServerlessInferenceBaseURL)
 	t := newInferenceTransport(c, serverlessInferenceURL)
 	c.Chat = &ChatService{Completions: &ChatCompletionService{inferenceTransport: t}}
@@ -686,12 +708,17 @@ func (r *ErrorResponse) Error() string {
 		attempted = fmt.Sprintf("; giving up after %d attempt(s)", r.Attempts)
 	}
 
+	message := r.Message
+	if message == "" && r.NestedError != nil {
+		message = r.NestedError.Message
+	}
+
 	if r.RequestID != "" {
 		return fmt.Sprintf("%v %v: %d (request %q) %v%s",
-			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message, attempted)
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, message, attempted)
 	}
 	return fmt.Sprintf("%v %v: %d %v%s",
-		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message, attempted)
+		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, message, attempted)
 }
 
 // CheckResponse checks the API response for errors, and returns them if present. A response is considered an

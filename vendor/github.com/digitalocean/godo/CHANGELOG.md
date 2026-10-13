@@ -1,5 +1,72 @@
 # Change Log
 
+## [1.224.0] - 2026-10-11
+
+- #1159 - @venkatranabothu - Rename simulation journeys to episodes in the Agent Platform client
+
+## [1.223.0] - 2026-10-09
+
+- #1157 - @rvdfox - signals: add team-level inference consent (source=inference) to SignalsService
+
+## [1.222.0] - 2026-10-09
+
+- #1153 - @sauravk-digitalocean - Remove GetSegment and GetSegmentSignalReport from SignalsService
+- #1152 - @aupadhyay-shark - signals: rename deletion type managed_agent → agent
+- #1151 - @smirdha-source - Add SessionIDs to SignalsCreateExportRequest
+
+## [1.221.0] - 2026-10-09
+
+- #1149 - @sauravk-digitalocean - Remove Allowed from SignalsAgentConsent
+- #1144 - @satyambhalla - feat(FI-609): add data deletion methods to SignalsService
+
+## [1.220.0] - 2026-10-08
+
+- #1138 - @sanpj2292 - feat(MARSOHS-1935): add persistent workspaces to the hosted agents client
+
+## [1.219.0] - 2026-10-08
+
+- #1143 - @jkosanam - hosted agents: add external-provider connection management methods
+- #1141 - @dmamidala-glitch - COBS-1352: Add Insights logs query support
+
+## [1.218.0] - 2026-10-07
+
+- #1140 - @sauravk-digitalocean - feat(FI-610): add Signals consent and export client
+- #1139 - @smirdha-source - Add Signals client for investigation GETs and consent enable/disable
+- #1137 - @kishlay-singh-DO - Add an Insights client for channels, alert rules, instances, and PromQL.
+
+## [1.217.0] - 2026-10-01
+
+- #1130 - @aguan-hue - Syncing Model Evaluation fields from gen-ai Public API
+
+## [1.216.0] - 2026-09-30
+
+- #1134 - @kishlay-singh-DO - Rename the GradientAI client to Agent Platform.
+- #1133 - @tgillam-do - Add Action Gateway SDK
+- #1129 - @sanpj2292 - Add Cancel to HostedAgentTriggersService
+- #1132 - @fumblehool - Update HostedAgentSandboxSize struct to include PricePerHourUSD and PricePerMonthUSD
+
+## [1.215.0] - 2026-09-24
+
+- #1127 - @vrindavinod-do - hosted_agents: add ZeroBalance pause reason, deprecate LowBalance
+
+## [1.214.0] - 2026-09-24
+
+- #1125 - @SSharma-10 - Add Environment aliases for Managed Agents
+- #1123 - @SSharma-10 -  Add post-release checksum verification steps to CONTRIBUTING.md
+
+## [1.213.0] - 2026-09-23
+
+- #1102 - @kgautam676 - Adding nfs_csi_plugin to kubernetes cluster types
+- #1120 - @sgupta832 - microvm: decode http_protocol, checkpoint size, and combined list filters
+
+## [1.212.0] - 2026-09-22
+
+- #1117 - @sgupta832 - MicroVM URN flip + Exec/ConsoleURL (MDROP-392, MDROP-427)
+
+## [1.211.0] - 2026-09-22
+
+- #1021 - @SSharma-10 - Add OHS endpoints
+
 ## [1.210.0] - 2026-09-18
 
 - #1110 - @kwadhwa-source - Mdrop 391/create options sizes

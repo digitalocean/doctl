@@ -32,7 +32,7 @@ import (
 func TestAuthCommand(t *testing.T) {
 	cmd := Auth()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "init", "list", "remove", "switch", "token")
+	assertCommandNames(t, cmd, "init", "list", "login", "remove", "switch", "token")
 }
 
 func TestAuthInit(t *testing.T) {
@@ -347,6 +347,16 @@ func TestTokenInputValidator(t *testing.T) {
 }
 
 type testConfig map[string]any
+
+type nopWriteCloser struct {
+	io.Writer
+}
+
+var _ io.WriteCloser = (*nopWriteCloser)(nil)
+
+func (d *nopWriteCloser) Close() error {
+	return nil
+}
 
 // stubConfigFile stands in for the config file on disk. Writes are visible to
 // later reads, as they would be through a real file, so a test can run one

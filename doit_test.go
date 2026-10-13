@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 )
 
@@ -130,6 +131,54 @@ type stubLatestRelease struct {
 
 func (slr stubLatestRelease) LatestVersion() (string, error) {
 	return slr.version, nil
+}
+
+// TestGetGodoClientBaseURL pins the precedence that lets a caller-supplied
+// base URL act as a default while --api-url (DIGITALOCEAN_API_URL) still wins.
+func TestGetGodoClientBaseURL(t *testing.T) {
+	const customDefault = "https://agents.example.test/"
+	cases := []struct {
+		name   string
+		apiURL string
+		opts   []godo.ClientOpt
+		want   string
+	}{
+		{
+			name: "no options and no api-url leaves godo's default",
+			want: "https://api.digitalocean.com/",
+		},
+		{
+			name: "caller-supplied base URL applies",
+			opts: []godo.ClientOpt{godo.SetBaseURL(customDefault)},
+			want: customDefault,
+		},
+		{
+			name:   "api-url wins over a caller-supplied base URL",
+			apiURL: "https://ohr-agent.do-ai-test.run/",
+			opts:   []godo.ClientOpt{godo.SetBaseURL(customDefault)},
+			want:   "https://ohr-agent.do-ai-test.run/",
+		},
+		{
+			name:   "api-url applies with no caller options",
+			apiURL: "https://example.test/",
+			want:   "https://example.test/",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			viper.Set("api-url", c.apiURL)
+			t.Cleanup(func() { viper.Set("api-url", "") })
+
+			client, err := (&LiveConfig{}).GetGodoClient(false, false, "fake-token", c.opts...)
+			if err != nil {
+				t.Fatalf("GetGodoClient() unexpected error: %v", err)
+			}
+			if got := client.BaseURL.String(); got != c.want {
+				t.Errorf("BaseURL = %q; want %q", got, c.want)
+			}
+		})
+	}
 }
 
 func TestResolvedAPIURL(t *testing.T) {

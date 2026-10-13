@@ -90,3 +90,19 @@ func Test_Pagination_lastPage(t *testing.T) {
 		}
 	}
 }
+
+func Test_PaginateResp_emptyListWithZeroLastPage(t *testing.T) {
+	// Regression test for https://github.com/digitalocean/doctl/issues/1888:
+	// a Last page link whose page param parses to 0 (as with an empty
+	// collection) made lastPage return 0, so set(1, ...) panicked indexing
+	// a zero-length page list. lastPage clamps such values to 1.
+	resp := &godo.Response{Links: &godo.Links{Pages: &godo.Pages{Last: "http://example.com/?page=0"}}}
+
+	gen := func(*godo.ListOptions) ([]any, *godo.Response, error) {
+		return []any{}, resp, nil
+	}
+
+	list, err := PaginateResp(gen)
+	assert.NoError(t, err)
+	assert.Empty(t, list)
+}

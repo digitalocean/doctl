@@ -3,6 +3,7 @@ package confirm
 import (
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/erikgeiser/promptkit"
 	"github.com/erikgeiser/promptkit/confirmation"
 )
 
@@ -114,6 +115,10 @@ var resultTemplate = `
 // Prompt renders the prompt on the screen.
 func (p *Prompt) Prompt() (Choice, error) {
 	input := confirmation.New(p.text, fromChoice(p.choice))
+	// confirmation.New defaults to Truncate, which silently clips long prompts
+	// mid-sentence on typical 80-col terminals (see MARSOHS-1396). Word-wrap
+	// keeps the full question visible.
+	input.WrapMode = promptkit.WordWrap
 	tfs := template.Funcs(charm.Colors)
 	tfs["RenderResult"] = func(choice bool) bool {
 		switch p.persistPrompt {

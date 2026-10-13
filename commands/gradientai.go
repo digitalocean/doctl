@@ -7,7 +7,7 @@ You may obtain a copy of the License at
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+    10|See the License for the specific language governing permissions and
 limitations under the License.
 */
 
@@ -15,34 +15,35 @@ package commands
 
 import "github.com/spf13/cobra"
 
-// GradientAI creates the gradient command and adds the agent, knowledge base, model, region, and OpenAI key subcommands.
+// GradientAI creates the gradient command and adds the knowledge base and
+// deprecated simulation aliases.
 func GradientAI() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "gradient",
 			Aliases: []string{"ai", "genai", "gradientai"},
 			Short:   "Manage Gradient AI resources",
-			Long:    "The subcommands of `doctl gradient` manage your Gradient AI resources.",
+			Long: `doctl gradient is deprecated and hidden from help.
+
+Public commands moved to:
+  doctl knowledge-base
+  doctl inference
+  doctl evaluation`,
 			GroupID: manageResourcesGroup,
+			// All public children moved to knowledge-base / inference / evaluation;
+			// keep this parent only for hidden/deprecated aliases.
+			Hidden: true,
 		},
 	}
 
-	// Add the agent command as a subcommand to Gradient AI
-	cmd.AddCommand(AgentCmd())
-	// Add the knowledgebase command as a subcommand to Gradient AI
-	cmd.AddCommand(KnowledgeBaseCmd())
-	// Add the model command as a subcommand to Gradient AI
-	cmd.AddCommand(ListModelsCmd())
-	// Add the region command as a subcommand to Gradient AI
-	cmd.AddCommand(ListRegionsCmd())
-	// Add the OpenAI keys command as a subcommand to Gradient AI
-	cmd.AddCommand(OpenAIKeyCmd())
-	// Add the scenario set command as a subcommand to Gradient AI
-	cmd.AddCommand(ScenarioSetCmd())
-	// Add the scenario library command as a subcommand to Gradient AI
-	cmd.AddCommand(ScenarioLibraryCmd())
-	// Add the simulation run command as a subcommand to Gradient AI
-	cmd.AddCommand(SimulationRunCmd())
+	// Kept under gradient but hidden (same pattern as scenario/simulation cmds).
+	// Public home is now doctl knowledge-base.
+	cmd.AddCommand(deprecatedKnowledgeBaseCmd())
+
+	// Simulation APIs moved to doctl evaluation; keep hidden deprecated aliases.
+	cmd.AddCommand(deprecatedEvaluationSubcommand("scenario-set", "ss", "scenario-sets"))
+	cmd.AddCommand(deprecatedEvaluationSubcommand("scenario-library", "sl"))
+	cmd.AddCommand(deprecatedEvaluationSubcommand("simulation-run", "sim", "simulation-runs"))
 
 	return cmd
 }

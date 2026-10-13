@@ -42,6 +42,10 @@ type Command struct {
 
 	// noDefaultSuccess opts out of the default closing line.
 	noDefaultSuccess bool
+
+	// prettyAgentErrors enables styled agent error cards instead of raw
+	// godo "METHOD URL: status message" dumps.
+	prettyAgentErrors bool
 }
 
 // AddCommand adds child commands and adds child commands for cobra as well.
@@ -164,6 +168,7 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 	}
 
 	// Defined after the options are applied so their changes are visible here.
+	prettyAgentErrors := c.prettyAgentErrors
 	c.Command.Run = func(cmd *cobra.Command, args []string) {
 		// Recorded so checkErr can suggest `<command> --help` as the default
 		// next step without threading cmd through every call site.
@@ -193,6 +198,9 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 		reportedOutcome = false
 
 		err = cr(cfg)
+		if prettyAgentErrors {
+			err = beautifyAgentErrorFor(cfg, err)
+		}
 		checkErr(err)
 
 		if c.owesClosingLine(reported.wrote.Load(), uiEnv()) {

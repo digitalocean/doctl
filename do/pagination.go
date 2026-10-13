@@ -135,5 +135,9 @@ func lastPage(resp *godo.Response) (int, error) {
 		return 0, fmt.Errorf("could not find page param: %v", err)
 	}
 
-	return page, err
+	if page < 1 {
+		return 1, nil
+	}
+
+	return page, nil
 }

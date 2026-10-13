@@ -40,6 +40,7 @@ var (
 			Agreement: &godo.Agreement{
 				Name:        "OpenAI Terms of Service",
 				Description: "Standard OpenAI API terms and conditions",
+				Url:         "https://openai.com/policies/terms-of-use",
 			},
 			Version: &godo.ModelVersion{
 				Major: 4,
@@ -65,6 +66,7 @@ var (
 			Agreement: &godo.Agreement{
 				Name:        "Anthropic Service Terms",
 				Description: "Anthropic API service agreement",
+				Url:         "https://www.anthropic.com/legal/consumer-terms",
 			},
 			Version: &godo.ModelVersion{
 				Major: 3,
@@ -81,15 +83,15 @@ func TestListModelsCommand(t *testing.T) {
 	cmd := ListModelsCmd()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "list-models", cmd.Use)
-	assert.Contains(t, cmd.Aliases, "models")
+	assert.NotContains(t, cmd.Aliases, "models")
 	assert.Contains(t, cmd.Aliases, "lm")
-	assert.Equal(t, "List Gradient AI models", cmd.Short)
-	assert.Contains(t, cmd.Long, "doctl gradient list-models")
+	assert.Equal(t, "List available models", cmd.Short)
+	assert.Contains(t, cmd.Long, "doctl inference list-models")
 }
 
 func TestRunGradientAIListModels(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListAvailableModels().Return(testModels, nil)
+		tm.agentPlatform.EXPECT().ListAvailableModels().Return(testModels, nil)
 
 		err := RunGradientAIListModels(config)
 		assert.NoError(t, err)
@@ -98,7 +100,7 @@ func TestRunGradientAIListModels(t *testing.T) {
 
 func TestRunGradientAIListModelsError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.gradientAI.EXPECT().ListAvailableModels().Return(nil, assert.AnError)
+		tm.agentPlatform.EXPECT().ListAvailableModels().Return(nil, assert.AnError)
 
 		err := RunGradientAIListModels(config)
 		assert.Error(t, err)

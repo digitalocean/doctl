@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("gradient/openai-key/list", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("inference/openai-key/list", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -53,7 +53,7 @@ var _ = suite("gradient/openai-key/list", func(t *testing.T, when spec.G, it spe
 			cmd = exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
-				"gradient",
+				"inference",
 				"openai-key",
 				"list",
 			)

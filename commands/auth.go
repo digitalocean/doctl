@@ -26,10 +26,12 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/input"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/internal/oauth"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -93,24 +95,24 @@ func Auth() *Command {
 		Command: &cobra.Command{
 			Use:   "auth",
 			Short: "Display commands for authenticating doctl with an account",
-			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
+			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account, either by signing in through your browser with OAuth or with tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
-If you work with just one account, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
+The quickest way to get started is ` + "`" + `doctl auth login` + "`" + `, which uses the OAuth 2.1 authorization code flow with PKCE. It opens your browser so you can approve access, then saves the access token to the ` + "`" + `default` + "`" + ` authentication context. Tokens issued this way are short-lived; doctl stores a refresh token and renews the access token automatically, so you do not have to return to the control panel when it expires. Use ` + "`" + `--scopes` + "`" + ` to request permissions up front, such as ` + "`" + `--scopes "read write"` + "`" + `, or omit it to choose them on the authorization screen.
 
-To switch between multiple DigitalOcean accounts, including team accounts, create named contexts using ` + "`" + `doctl auth init --context <name>` + "`" + `, then provide the applicable token when prompted. This saves the token under the name you provide. To switch between contexts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.
+If you prefer a personal access token instead, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
 
-To remove accounts from the configuration file, run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This removes the token under the name you provide.
+To use multiple DigitalOcean accounts, including team accounts, create a named context with ` + "`" + `doctl auth login --context <name>` + "`" + ` or ` + "`" + `doctl auth init --context <name>` + "`" + `. The credentials are saved under the name you provide. To change which context later commands use, run ` + "`" + `doctl auth switch --context <name>` + "`" + `.
 
-A token from the ` + "`" + `--access-token` + "`" + ` flag or the ` + "`" + `DIGITALOCEAN_ACCESS_TOKEN` + "`" + ` environment variable outranks the one saved for the ` + "`" + `default` + "`" + ` context, and applies only to the command you run: doctl does not write it to your configuration file. The exception is ` + "`" + `doctl auth init` + "`" + `, which saves the token it validates. Run ` + "`" + `doctl` + "`" + ` with no arguments to see which account is active and where its token came from.`,
+To remove an account from the configuration file, run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This deletes the credentials saved under the name you provide.`,
 			GroupID: configureDoctlGroup,
 		},
 	}
 
-	cmdAuthInit := cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "Initialize doctl to use a specific account", `This command allows you to initialize doctl with a token that allows it to query and manage your account details and resources.
+	cmdAuthInit := cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "Initialize doctl to use a specific account", `This command initializes doctl with an API token, allowing it to query and manage your account details and resources.
 
-The command requires an API token to authenticate, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
+The command requires an API token to authenticate, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/tokens. To sign in through your browser instead, see the help for `+"`"+`doctl auth login`+"`"+`.
 
-The `+"`"+`--context`+"`"+` flag allows you to add authentication for multiple accounts and then switch between them as needed. Provide a name for the context and then enter the API token you want to use for that context when prompted. Context names are not case-sensitive, and doctl stores them in lowercase. Adding a context does not start using it: run `+"`"+`doctl auth switch --context <name>`+"`"+` to make it the default. You can also provide the `+"`"+`--context`+"`"+` flag when using any doctl command to specify the auth context for that command. This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
+The `+"`"+`--context`+"`"+` flag allows you to add authentication for multiple accounts and then switch between them as needed. Provide a case-sensitive name for the context and then enter the API token you want to use for that context when prompted. You can switch authentication contexts using `+"`"+`doctl auth switch`+"`"+`, which re-initializes doctl. You can also provide the `+"`"+`--context`+"`"+` flag when using any doctl command to specify the auth context for that command. This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
 
 If the `+"`"+`--context`+"`"+` flag is not specified, doctl creates a default authentication context named `+"`"+`default`+"`"+`.
 
@@ -120,38 +122,54 @@ You can use doctl without initializing it by adding the `+"`"+`--access-token`+"
 	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
 	cmdAuthInit.Example = `The following example saves a token under the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
 
-	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switch between authentication contexts", `This command allows you to switch between authentication contexts you've already created.
+	cmdAuthLogin := cmdBuilderWithInit(cmd, RunAuthLogin, "login", "Sign in to DigitalOcean via OAuth 2.1 in your browser", `This command signs doctl in to your DigitalOcean account in the browser. You approve access there instead of creating and pasting an API token.
+
+doctl signs in as the doctl application DigitalOcean publishes, so there is nothing to register first. It opens your browser, and after you approve the request it saves the access token and uses that authentication context for later commands.
+
+The access token is short-lived. doctl stores a refresh token alongside it and renews the access token the next time you run a command.
+
+With no `+"`"+`--scopes`+"`"+`, you choose the permissions on the authorization screen. `+"`"+`--scopes "read write"`+"`"+` requests the same access as a full-permission API token. You can also name individual permissions, such as `+"`"+`--scopes "droplet:read account:read"`+"`"+`. Add `+"`"+`--save-scope`+"`"+` to reuse those scopes on later logins. `+"`"+`--scopes "" --save-scope`+"`"+` clears the saved default.
+
+`+"`"+`--context <name>`+"`"+` signs in to that context, creating it when needed, and later commands use it. This keeps several accounts or teams side by side. Without `+"`"+`--context`+"`"+`, the sign-in replaces the credentials in the `+"`"+`default`+"`"+` context and switches to it. The context you were using is left unchanged.
+
+To sign in with an API token instead, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthServer, "", oauth.DefaultIssuer, "The OAuth authorization server to sign in to")
+	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthClientID, "", oauth.DefaultClientID, "The OAuth application to sign in as. Defaults to the doctl application and only needs changing for a non-production authorization server")
+	AddStringFlag(cmdAuthLogin, doctl.ArgOAuthScopes, "", defaultOAuthScopes, "A space-separated list of scopes to request, such as \"read write\" or \"droplet:read account:read\". When omitted, uses any default saved with --save-scope; otherwise you choose the permissions to grant in your browser")
+	AddBoolFlag(cmdAuthLogin, doctl.ArgOAuthSaveScope, "", false, "Save --scopes as the default for later logins. Use with --scopes \"\" to clear the saved default")
+	AddIntFlag(cmdAuthLogin, doctl.ArgOAuthCallbackPort, "", 0, "The local port to listen on for the authorization redirect. Defaults to an unused port")
+	AddBoolFlag(cmdAuthLogin, doctl.ArgOAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
+	AddDurationFlag(cmdAuthLogin, doctl.ArgOAuthTimeout, "", oauth.DefaultLoginTimeout, "How long the authorization link stays valid while doctl waits for you to approve the request in your browser")
+	cmdAuthLogin.Example = `The following example signs in to the context ` + "`" + `your-team` + "`" + `, requests full read and write access, and saves those scopes for later logins: doctl auth login --context your-team --scopes "read write" --save-scope`
+
+	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switch between authentication contexts", `This command changes which authentication context later commands use. The context must already exist.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
-For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+To create a context, see the help for `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
 	cmdAuthSwitch.AddValidArgsFunc(authContextListValidArgsFunc)
 	cmdAuthSwitch.Example = `The following example switches to the context ` + "`" + `your-team` + "`" + `: doctl auth switch --context your-team`
 
-	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove --context <name>", "Remove authentication contexts", `This command allows you to remove authentication contexts you've already created.
+	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove --context <name>", "Remove authentication contexts", `This command removes an authentication context, deleting the credentials saved under that name. Removing a context does not change which context is selected.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
-For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+To create a context, see the help for `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
 	cmdAuthRemove.AddValidArgsFunc(authContextListValidArgsFunc)
 	cmdAuthRemove.Example = `The following example removes the context ` + "`" + `your-team` + "`" + `: doctl auth remove --context your-team`
 
-	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "List available authentication contexts", `List named authentication contexts that you created with `+"`"+`doctl auth init`+"`"+`.
+	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "List available authentication contexts", `This command lists the authentication contexts you created with `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`. The context later commands use is marked `+"`"+`(current)`+"`"+`.
 
-To switch between the contexts use `+"`"+`doctl auth switch --context <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts listed.
-
-To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false, aliasOpt("ls"))
+To change which context is used, run `+"`"+`doctl auth switch --context <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts listed.`, Writer, false, aliasOpt("ls"))
 	// The command runner expects that any command named "list" accepts a
 	// format flag, so we include here despite only supporting text output for
 	// this command.
 	AddStringFlag(cmdAuthList, doctl.ArgFormat, "", "", "Columns for output in a comma-separated list. Possible values: `text`")
-	cmdAuthList.Example = `The following example lists the available contexts with the ` + "`" + `--format` + "`" + ` flag: doctl auth list`
+	cmdAuthList.Example = `The following example lists the available authentication contexts: doctl auth list`
 
-	cmdAuthToken := cmdBuilderWithInit(cmd, RunAuthToken, "token", "Display current authentication context API token", `Display the current authentication context's token that you created with `+"`"+`doctl auth init`+"`"+`.
+	cmdAuthToken := cmdBuilderWithInit(cmd, RunAuthToken, "token", "Display current authentication context API token", `This command prints the access token for the current authentication context, whether it came from `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`. Treat it like a password: anyone holding it can act on your account.
 
-To switch between the contexts use `+"`"+`doctl auth switch --context <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts from: `+"`"+`doctl auth list`+"`"+`
-
-To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false, aliasOpt("t"))
+To print the token for a different context, add `+"`"+`--context <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts from `+"`"+`doctl auth list`+"`"+`.`, Writer, false, aliasOpt("t"))
 	cmdAuthToken.Example = `The following example displays the token of the current context: doctl auth token`
 
 	return cmd
@@ -178,6 +196,10 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 		}
 
 		c.setContextAccessToken(token)
+		// An explicitly supplied token replaces whatever credential the
+		// context held, including a browser sign-in that would otherwise be
+		// refreshed over the top of it.
+		removeOAuthTokenState(context)
 
 		template.Render(c.Out, `{{nl}}Validating token... `, nil)
 
@@ -229,6 +251,8 @@ func RunAuthRemove(c *CmdConfig) error {
 	if err := cfg.removeContext(context); err != nil {
 		return err
 	}
+
+	removeOAuthTokenState(context)
 
 	notice("Context deleted successfully")
 
@@ -330,6 +354,63 @@ func RunAuthSwitch(c *CmdConfig) error {
 	return cfg.write()
 }
 
+func writeConfig() error {
+	f, err := cfgFileWriter()
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	settings := viper.AllSettings()
+	// Bound CLI flags live in viper for the duration of a command. Dumping
+	// AllSettings() into config.yaml would otherwise persist per-invocation
+	// inputs (notably agents create --spec) and silently reuse them later
+	// (MARSOHS-1671). Strip those before writing; also clears already-poisoned keys.
+	stripEphemeralAgentFlagsFromConfig(settings)
+
+	b, err := yaml.Marshal(settings)
+	if err != nil {
+		return errors.New("Unable to encode configuration to YAML format.")
+	}
+
+	_, err = f.Write(b)
+	if err != nil {
+		return errors.New("Unable to write configuration.")
+	}
+
+	return nil
+}
+
+// ephemeralAgentConfigCommands are agents.* subtrees whose flags are per-run
+// inputs (paths, prompts, secrets, names). None of them belong in the global
+// config file — relative paths especially, which resolve differently by cwd.
+var ephemeralAgentConfigCommands = []string{"create", "launch", "validate", "start", "run", "deploy"}
+
+// stripEphemeralAgentFlagsFromConfig removes per-invocation agent command
+// flags from a viper AllSettings map so writeConfig cannot persist them.
+func stripEphemeralAgentFlagsFromConfig(settings map[string]any) {
+	if settings == nil {
+		return
+	}
+	agents, ok := settings["agents"].(map[string]any)
+	if !ok {
+		return
+	}
+	for _, cmd := range ephemeralAgentConfigCommands {
+		delete(agents, cmd)
+	}
+	if cfg, ok := agents["config"].(map[string]any); ok {
+		delete(cfg, "create")
+		if len(cfg) == 0 {
+			delete(agents, "config")
+		}
+	}
+	if len(agents) == 0 {
+		delete(settings, "agents")
+	}
+}
+
 // defaultConfigFileWriter returns a writer to a newly created config.yaml file in the default config home.
 // When using the default config file path the default config home directory will be created; Otherwise
 // the custom config home directory must exist and be writable to the user issuing the auth command.
@@ -337,7 +418,9 @@ func defaultConfigFileWriter() (io.WriteCloser, error) {
 	cfgFile := viper.GetString("config")
 
 	defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
-	if cfgFile == defaultCfgFile {
+	if cfgFile == "" || cfgFile == defaultCfgFile {
+		cfgFile = defaultCfgFile
+		viper.Set("config", cfgFile)
 		configHome()
 	}
 
