@@ -53,7 +53,8 @@ Use the `+"`"+`doctl compute volume-action attach <volume-id> <droplet-id>`+"`"+
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
 		requiredOpt())
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeDesc, "", "", "A description of the volume")
-	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "The volume's region. Not compatible with the `--snapshot` flag")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "The volume's region. Not compatible with the `--snapshot` flag",
+		flagHint("run doctl compute region list"))
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSnapshot, "", "", "Creates a volume from the specified snapshot ID. Not compatible with the `--region` flag")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "The volume's filesystem type: ext4 or xfs. If not specified, the volume is left unformatted")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "The volume's filesystem label")
