@@ -94,6 +94,8 @@ const (
 	claudeCodeAgentName = "claude-code"
 	codexAgentName      = "codex"
 	anthropicAPIKeyEnv  = "ANTHROPIC_API_KEY"
+
+	harnessInferenceAPIKeyEnv = "HARNESS_INFERENCE_API_KEY"
 )
 
 var (
@@ -713,17 +715,41 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 }
 
 // prepareClaudeCodeStart mirrors prepareOpenAISandboxStart for claude-code:
-// it resolves ANTHROPIC_API_KEY (prompting on a TTY if missing, exactly like
-// ensureEnvVar already did) and then confirms Anthropic actually accepts it
-// with a real, free API call — closing the gap where a bogus (but non-empty)
-// key used to sail through to CreateSessionFromManifest and only fail deep
-// inside the hosted sandbox. No-ops for every other harness.
+// when the manifest sends inference to Anthropic, it resolves
+// ANTHROPIC_API_KEY (prompting on a TTY if missing, exactly like ensureEnvVar
+// already did) and then confirms Anthropic actually accepts it with a real,
+// free API call — closing the gap where a bogus (but non-empty) key used to
+// sail through to CreateSessionFromManifest and only fail deep inside the
+// hosted sandbox. No-ops for every other harness.
+//
+// A key is only ever sent to the host the manifest pairs it with. Manifests
+// that select the harness inference group, or point ANTHROPIC_BASE_URL at a
+// non-Anthropic gateway, skip the check, and never pick up an
+// ANTHROPIC_API_KEY from the local shell.
 func prepareClaudeCodeStart(ctx context.Context, raw []byte, prog *creationProgress) error {
 	doc, err := parseAgentManifest(raw)
 	if err != nil {
 		return err
 	}
 	if doc.adapter() != claudeCodeAgentName {
+		return nil
+	}
+
+	env := manifestEnvValues(raw)
+	secrets := manifestSecretValues(raw)
+	hasNativeKey := secrets[anthropicAPIKeyEnv] != "" || strings.TrimSpace(env[anthropicAPIKeyEnv]) != ""
+	hasHarnessKey := secrets[harnessInferenceAPIKeyEnv] != "" || strings.TrimSpace(env[harnessInferenceAPIKeyEnv]) != ""
+
+	// The guest prefers a native ANTHROPIC_API_KEY and only falls back to the
+	// harness inference group when none is set.
+	if !hasNativeKey && hasHarnessKey {
+		return nil
+	}
+	if baseURL := strings.TrimSpace(os.ExpandEnv(env[anthropicBaseURLEnv])); baseURL != "" && !isAnthropicAPIBaseURL(baseURL) {
+		if !hasNativeKey {
+			return fmt.Errorf("%s points at %s, so %s must be declared in the manifest (under secrets, or --%s %s=- / NAME=@path); doctl won't forward one from your shell to a non-Anthropic host",
+				anthropicBaseURLEnv, baseURL, anthropicAPIKeyEnv, doctl.ArgAgentSecret, anthropicAPIKeyEnv)
+		}
 		return nil
 	}
 

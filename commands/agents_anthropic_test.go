@@ -67,14 +67,21 @@ func TestHTTPAnthropicClient_CheckAPIKey(t *testing.T) {
 	})
 }
 
-func TestResolveAnthropicBaseURL(t *testing.T) {
-	t.Run("defaults to the public API", func(t *testing.T) {
-		t.Setenv(anthropicBaseURLEnv, "")
-		assert.Equal(t, defaultAnthropicAPIBase, resolveAnthropicBaseURL())
-	})
+func TestNewHTTPAnthropicClient_IgnoresShellBaseURL(t *testing.T) {
+	t.Setenv(anthropicBaseURLEnv, "https://proxy.example.com/anthropic")
+	assert.Equal(t, defaultAnthropicAPIBase, newHTTPAnthropicClient().baseURL)
+}
 
-	t.Run("honors an override, trimming trailing slashes", func(t *testing.T) {
-		t.Setenv(anthropicBaseURLEnv, "https://proxy.example.com/anthropic/")
-		assert.Equal(t, "https://proxy.example.com/anthropic", resolveAnthropicBaseURL())
-	})
+func TestIsAnthropicAPIBaseURL(t *testing.T) {
+	for in, want := range map[string]bool{
+		"https://api.anthropic.com":         true,
+		"https://API.Anthropic.com/":        true,
+		"https://api.anthropic.com:443/v1":  true,
+		"https://inference.example.com":     false,
+		"https://api.anthropic.com.evil.io": false,
+		"https://evil.io/api.anthropic.com": false,
+		"::not a url":                       false,
+	} {
+		assert.Equal(t, want, isAnthropicAPIBaseURL(in), in)
+	}
 }

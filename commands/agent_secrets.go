@@ -173,6 +173,27 @@ func secretSlotValueString(slot any) (string, bool) {
 	return "", false
 }
 
+// manifestEnvValues returns the manifest's env map (flat `env` or legacy
+// `spec.env`) as written, with ${VAR} placeholders left unexpanded.
+func manifestEnvValues(manifest []byte) map[string]string {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return nil
+	}
+
+	container := doc
+	if _, legacy := doc["apiVersion"]; legacy {
+		spec, ok := yamlMap(doc["spec"])
+		if !ok {
+			return nil
+		}
+		container = spec
+	}
+
+	env, _ := yamlStringMap(container["env"])
+	return env
+}
+
 func resolvedManifestSecretValues(manifest []byte) map[string]string {
 	vals := manifestSecretValues(manifest)
 	if len(vals) == 0 {
