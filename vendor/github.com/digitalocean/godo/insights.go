@@ -126,9 +126,8 @@ const (
 	InsightsLogsSortDirectionDescending = "SORT_DIRECTION_DESC"
 )
 
-// Insights spans filter node types.
-// Deprecated: filter nodes are selected by setting Condition, And, Or, Not, or
-// TextSearch on SpansFilterExpression.
+// Insights spans filter node types. These select which fields of a
+// SpansFilterExpression are used.
 const (
 	InsightsSpansFilterTypeCondition  = "condition"
 	InsightsSpansFilterTypeAnd        = "and"
@@ -139,27 +138,21 @@ const (
 
 // Insights spans filter condition operators.
 const (
-	InsightsSpansFilterOperatorEqual              = "FILTER_OPERATOR_EQ"
-	InsightsSpansFilterOperatorNotEqual           = "FILTER_OPERATOR_NEQ"
-	InsightsSpansFilterOperatorGreaterThanOrEqual = "FILTER_OPERATOR_GTE"
-	InsightsSpansFilterOperatorLessThanOrEqual    = "FILTER_OPERATOR_LTE"
-	InsightsSpansFilterOperatorIn                 = "FILTER_OPERATOR_IN"
-	InsightsSpansFilterOperatorExists             = "FILTER_OPERATOR_EXISTS"
+	InsightsSpansFilterOperatorEqual              = "eq"
+	InsightsSpansFilterOperatorNotEqual           = "neq"
+	InsightsSpansFilterOperatorGreaterThan        = "gt"
+	InsightsSpansFilterOperatorGreaterThanOrEqual = "gte"
+	InsightsSpansFilterOperatorLessThan           = "lt"
+	InsightsSpansFilterOperatorLessThanOrEqual    = "lte"
+	InsightsSpansFilterOperatorIn                 = "in"
+	InsightsSpansFilterOperatorExists             = "exists"
 )
-
-// InsightsSpansFilterOperatorGreaterThan is retained for source compatibility.
-// Deprecated: the spans API does not support a strict greater-than operator.
-const InsightsSpansFilterOperatorGreaterThan = "gt"
-
-// InsightsSpansFilterOperatorLessThan is retained for source compatibility.
-// Deprecated: the spans API does not support a strict less-than operator.
-const InsightsSpansFilterOperatorLessThan = "lt"
 
 // Insights spans field scopes. Omit the scope for well-known span fields or to
 // search both attribute maps.
 const (
-	InsightsSpansFieldScopeResource   = "FIELD_SCOPE_RESOURCE"
-	InsightsSpansFieldScopeAttributes = "FIELD_SCOPE_ATTRIBUTES"
+	InsightsSpansFieldScopeResource   = "resource"
+	InsightsSpansFieldScopeAttributes = "attributes"
 )
 
 // Insights spans sort directions.
@@ -168,20 +161,17 @@ const (
 	InsightsSpansSortDirectionDescending = "desc"
 )
 
-// Insights spans filter value types.
-// Deprecated: these identify the pre-COBS-1725 typed-wrapper representation
-// accepted only by SpansFilterValue.UnmarshalJSON.
+// Insights spans filter value types, used in the typed-wrapper encoding of a
+// SpansFilterValue.
 const (
 	InsightsSpansValueTypeString      = "string"
 	InsightsSpansValueTypeNumber      = "number"
 	InsightsSpansValueTypeBool        = "bool"
 	InsightsSpansValueTypeStringArray = "string_array"
-	InsightsSpansValueTypeNumberArray = "number_array"
 )
 
-// Insights traces filter node types.
-// Deprecated: filter nodes are selected by setting Condition, And, Or, Not, or
-// TextSearch on TracesFilterExpression.
+// Insights traces filter node types. These select which fields of a
+// TracesFilterExpression are used.
 const (
 	InsightsTracesFilterTypeCondition  = "condition"
 	InsightsTracesFilterTypeAnd        = "and"
@@ -192,27 +182,21 @@ const (
 
 // Insights traces filter condition operators.
 const (
-	InsightsTracesFilterOperatorEqual              = "FILTER_OPERATOR_EQ"
-	InsightsTracesFilterOperatorNotEqual           = "FILTER_OPERATOR_NEQ"
-	InsightsTracesFilterOperatorGreaterThanOrEqual = "FILTER_OPERATOR_GTE"
-	InsightsTracesFilterOperatorLessThanOrEqual    = "FILTER_OPERATOR_LTE"
-	InsightsTracesFilterOperatorIn                 = "FILTER_OPERATOR_IN"
-	InsightsTracesFilterOperatorExists             = "FILTER_OPERATOR_EXISTS"
+	InsightsTracesFilterOperatorEqual              = "eq"
+	InsightsTracesFilterOperatorNotEqual           = "neq"
+	InsightsTracesFilterOperatorGreaterThan        = "gt"
+	InsightsTracesFilterOperatorGreaterThanOrEqual = "gte"
+	InsightsTracesFilterOperatorLessThan           = "lt"
+	InsightsTracesFilterOperatorLessThanOrEqual    = "lte"
+	InsightsTracesFilterOperatorIn                 = "in"
+	InsightsTracesFilterOperatorExists             = "exists"
 )
-
-// InsightsTracesFilterOperatorGreaterThan is retained for source compatibility.
-// Deprecated: the traces API does not support a strict greater-than operator.
-const InsightsTracesFilterOperatorGreaterThan = "gt"
-
-// InsightsTracesFilterOperatorLessThan is retained for source compatibility.
-// Deprecated: the traces API does not support a strict less-than operator.
-const InsightsTracesFilterOperatorLessThan = "lt"
 
 // Insights traces field scopes. Omit the scope for well-known span fields or to
 // look up a span attribute with a resource attribute fallback.
 const (
-	InsightsTracesFieldScopeResource   = "FIELD_SCOPE_RESOURCE"
-	InsightsTracesFieldScopeAttributes = "FIELD_SCOPE_ATTRIBUTES"
+	InsightsTracesFieldScopeResource   = "resource"
+	InsightsTracesFieldScopeAttributes = "attributes"
 )
 
 // Insights traces sort directions.
@@ -221,15 +205,13 @@ const (
 	InsightsTracesSortDirectionDescending = "desc"
 )
 
-// Insights traces filter value types.
-// Deprecated: these identify the pre-COBS-1725 typed-wrapper representation
-// accepted only by TracesFilterValue.UnmarshalJSON.
+// Insights traces filter value types, used in the typed-wrapper encoding of a
+// TracesFilterValue.
 const (
 	InsightsTracesValueTypeString      = "string"
 	InsightsTracesValueTypeNumber      = "number"
 	InsightsTracesValueTypeBool        = "bool"
 	InsightsTracesValueTypeStringArray = "string_array"
-	InsightsTracesValueTypeNumberArray = "number_array"
 )
 
 // Insights trace statuses, rolled up from the status codes of a trace's spans.
@@ -239,8 +221,7 @@ const (
 )
 
 // InsightsService manages Insights notification channels, alert rules, alert
-// instances, PromQL queries, logs searches, spans searches, traces queries,
-// and per-resource telemetry signal enablement.
+// instances, PromQL queries, logs searches, spans searches, and traces queries.
 type InsightsService interface {
 	ListNotificationChannels(context.Context, *ListOptions) ([]NotificationChannel, *Response, error)
 	GetNotificationChannel(context.Context, string) (*NotificationChannel, *Response, error)
@@ -275,10 +256,6 @@ type InsightsService interface {
 
 	SearchTraces(context.Context, string, *TracesSearchRequest) (*TracesSearchResponse, *Response, error)
 	GetTrace(context.Context, string, string, *TraceGetOptions) (*Trace, *Response, error)
-
-	ListResources(context.Context, *InsightsResourceListOptions) (*InsightsResourceList, *Response, error)
-	GetResource(context.Context, string) (*InsightsResource, *Response, error)
-	UpdateResourceSignals(context.Context, string, *InsightsResourceSignalsRequest) (*InsightsResource, *Response, error)
 }
 
 // InsightsServiceOp handles communication with Insights methods of the DigitalOcean API.
@@ -1092,9 +1069,9 @@ func setListPaging(resp *Response, links *Links, meta *Meta) {
 // SpansSearchRequest describes an Insights spans search. TimeRange must not
 // exceed seven days.
 type SpansSearchRequest struct {
-	TimeRange  SpansTimeRange          `json:"time_range"`
+	TimeRange  SpansTimeRange          `json:"timeRange"`
 	Filter     *SpansFilterExpression  `json:"filter,omitempty"`
-	OrderBy    []SpansOrderBy          `json:"order_by,omitempty"`
+	OrderBy    []SpansOrderBy          `json:"orderBy,omitempty"`
 	Pagination *SpansPaginationRequest `json:"pagination,omitempty"`
 }
 
@@ -1113,79 +1090,35 @@ type SpansTimeBound struct {
 	Absolute string `json:"absolute,omitempty"`
 }
 
-// SpansFilterExpression is a boolean filter tree. Set exactly one expression
-// node.
+// SpansFilterExpression is a type-discriminated boolean filter tree. Set Type
+// to select the node kind: a condition node sets Field, Operator, and Value;
+// and/or/not nodes set Expressions; a text_search node sets Query.
 type SpansFilterExpression struct {
-	Condition  *SpansFilterCondition  `json:"condition,omitempty"`
-	And        *SpansFilterGroup      `json:"and,omitempty"`
-	Or         *SpansFilterGroup      `json:"or,omitempty"`
-	Not        *SpansFilterExpression `json:"not,omitempty"`
-	TextSearch *SpansTextSearch       `json:"text_search,omitempty"`
-
-	// Deprecated: use Condition, And, Or, Not, or TextSearch. These fields are
-	// retained as source-compatible inputs and are never emitted directly.
-	Type        string                  `json:"-"`
-	Field       *SpansFilterField       `json:"-"`
-	Operator    string                  `json:"-"`
-	Value       *SpansFilterValue       `json:"-"`
-	Expressions []SpansFilterExpression `json:"-"`
-	Query       string                  `json:"-"`
-}
-
-// SpansFilterGroup combines nested spans filter expressions.
-type SpansFilterGroup struct {
-	Expressions []SpansFilterExpression `json:"expressions"`
-}
-
-// SpansTextSearch searches span text fields.
-type SpansTextSearch struct {
-	Query string `json:"query"`
-}
-
-// SpansFilterCondition is a single span field comparison.
-type SpansFilterCondition struct {
-	Field    SpansFilterField  `json:"field"`
-	Operator string            `json:"operator"`
-	Value    *SpansFilterValue `json:"value,omitempty"`
+	Type        string                  `json:"type"`
+	Field       *SpansFilterField       `json:"field,omitempty"`
+	Operator    string                  `json:"operator,omitempty"`
+	Value       *SpansFilterValue       `json:"value,omitempty"`
+	Expressions []SpansFilterExpression `json:"expressions,omitempty"`
+	Query       string                  `json:"query,omitempty"`
 }
 
 // SpansFilterField references a searchable span field. Name may be a well-known
-// field such as "service_name" or "status_code", or an attribute key. Scope is
-// optional: use an InsightsSpansFieldScope* value to target one attribute map,
-// or leave it empty for well-known fields and to search both maps.
+// field such as "serviceName" or "statusCode", or an attribute key. Scope is
+// optional: "resource" or "attributes" to target one attribute map, or empty
+// for well-known fields and to search both maps.
 type SpansFilterField struct {
 	Name  string `json:"name"`
 	Scope string `json:"scope,omitempty"`
 }
 
-// SpansFilterValue is a typed filter literal. Set exactly one value.
+// SpansFilterValue is a filter comparison value. Set exactly one field; it is
+// encoded as the API's typed wrapper, for example {"type":"string","value":"x"}.
+// Scalar fields use pointers so zero, false, and an empty string can be sent.
 type SpansFilterValue struct {
-	StringValue *string  `json:"string_value,omitempty"`
-	NumberValue *float64 `json:"number_value,omitempty"`
-
-	// NumberValueInt64 emits number_value without float64 precision loss. Use
-	// it for Unix timestamps represented as integer seconds through nanoseconds.
-	NumberValueInt64 *int64                 `json:"-"`
-	StringArrayValue *SpansStringArrayValue `json:"string_array_value,omitempty"`
-	NumberArrayValue *SpansNumberArrayValue `json:"number_array_value,omitempty"`
-
-	// Deprecated: use the corresponding *Value field. Bool is retained only
-	// for source compatibility; the spans API does not support boolean values.
-	String      *string   `json:"-"`
-	Number      *float64  `json:"-"`
-	Bool        *bool     `json:"-"`
-	StringArray []string  `json:"-"`
-	NumberArray []float64 `json:"-"`
-}
-
-// SpansStringArrayValue is a string-list filter value.
-type SpansStringArrayValue struct {
-	Values []string `json:"values"`
-}
-
-// SpansNumberArrayValue is a number-list filter value.
-type SpansNumberArrayValue struct {
-	Values []float64 `json:"values"`
+	String      *string
+	Number      *float64
+	Bool        *bool
+	StringArray []string
 }
 
 // SpansOrderBy is a spans search sort clause.
@@ -1195,7 +1128,7 @@ type SpansOrderBy struct {
 }
 
 // SpansPaginationRequest limits the number of spans returned. Limit defaults to
-// 100 and must be between 1 and 1000.
+// 100 and is clamped to 1000 by the API.
 type SpansPaginationRequest struct {
 	Limit int `json:"limit,omitempty"`
 }
@@ -1208,17 +1141,17 @@ type SpansSearchResponse struct {
 
 // SpanRecord is a single span returned by a spans search.
 type SpanRecord struct {
-	TraceID       string            `json:"trace_id,omitempty"`
-	SpanID        string            `json:"span_id,omitempty"`
-	ParentSpanID  string            `json:"parent_span_id,omitempty"`
-	StartTime     time.Time         `json:"start_time"`
-	EndTime       time.Time         `json:"end_time"`
-	DurationNs    int64             `json:"duration_ns,omitempty"`
+	TraceID       string            `json:"traceId,omitempty"`
+	SpanID        string            `json:"spanId,omitempty"`
+	ParentSpanID  string            `json:"parentSpanId,omitempty"`
+	StartTime     time.Time         `json:"startTime"`
+	EndTime       time.Time         `json:"endTime"`
+	DurationNs    int64             `json:"durationNs,omitempty"`
 	Name          string            `json:"name,omitempty"`
 	Kind          string            `json:"kind,omitempty"`
-	StatusCode    string            `json:"status_code,omitempty"`
-	StatusMessage string            `json:"status_message,omitempty"`
-	ServiceName   string            `json:"service_name,omitempty"`
+	StatusCode    string            `json:"statusCode,omitempty"`
+	StatusMessage string            `json:"statusMessage,omitempty"`
+	ServiceName   string            `json:"serviceName,omitempty"`
 	Resource      map[string]string `json:"resource,omitempty"`
 	Attributes    map[string]string `json:"attributes,omitempty"`
 	Region        string            `json:"region,omitempty"`
@@ -1227,238 +1160,118 @@ type SpanRecord struct {
 // SpansPaginationResponse describes whether more spans matched than were
 // returned. Cursor-based continuation is not yet supported.
 type SpansPaginationResponse struct {
-	HasMore bool `json:"has_more"`
+	HasMore bool `json:"hasMore"`
 }
 
-// MarshalJSON emits the logs-style typed value and translates deprecated
-// fields for source compatibility.
+type spansFilterValueWire struct {
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
+}
+
+// MarshalJSON encodes a SpansFilterValue as the API's typed wrapper. Exactly
+// one field must be set.
 func (v SpansFilterValue) MarshalJSON() ([]byte, error) {
-	type wire SpansFilterValue
-	canonical := countSet(v.StringValue != nil, v.NumberValue != nil, v.NumberValueInt64 != nil, v.StringArrayValue != nil, v.NumberArrayValue != nil)
-	legacy := countSet(v.String != nil, v.Number != nil, v.Bool != nil, v.StringArray != nil, v.NumberArray != nil)
-	if canonical > 0 && legacy > 0 {
-		return nil, fmt.Errorf("godo: SpansFilterValue mixes current and deprecated fields")
+	var (
+		typ string
+		val interface{}
+	)
+	n := 0
+	if v.String != nil {
+		typ, val = InsightsSpansValueTypeString, *v.String
+		n++
 	}
-	if canonical == 1 && v.NumberValueInt64 != nil {
-		return json.Marshal(struct {
-			NumberValue int64 `json:"number_value"`
-		}{NumberValue: *v.NumberValueInt64})
-	}
-	if canonical == 1 {
-		return json.Marshal(wire(v))
-	}
-	if canonical != 0 || legacy != 1 {
-		return nil, fmt.Errorf("godo: SpansFilterValue must set exactly one field")
+	if v.Number != nil {
+		typ, val = InsightsSpansValueTypeNumber, *v.Number
+		n++
 	}
 	if v.Bool != nil {
-		return nil, fmt.Errorf("godo: SpansFilterValue boolean values are not supported")
-	}
-	translated := SpansFilterValue{
-		StringValue: v.String,
-		NumberValue: v.Number,
+		typ, val = InsightsSpansValueTypeBool, *v.Bool
+		n++
 	}
 	if v.StringArray != nil {
-		translated.StringArrayValue = &SpansStringArrayValue{Values: v.StringArray}
+		typ, val = InsightsSpansValueTypeStringArray, v.StringArray
+		n++
 	}
-	if v.NumberArray != nil {
-		translated.NumberArrayValue = &SpansNumberArrayValue{Values: v.NumberArray}
+	if n != 1 {
+		return nil, fmt.Errorf("godo: SpansFilterValue must set exactly one field, got %d", n)
 	}
-	return json.Marshal(wire(translated))
+	return json.Marshal(spansFilterValueWire{Type: typ, Value: val})
 }
 
-// UnmarshalJSON accepts the logs-style typed value.
+// UnmarshalJSON accepts both the typed wrapper {"type":...,"value":...} and a
+// bare scalar or string array.
 func (v *SpansFilterValue) UnmarshalJSON(data []byte) error {
 	*v = SpansFilterValue{}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(data, &keys); err == nil {
-		if keys["bool_value"] != nil {
-			return fmt.Errorf("godo: SpansFilterValue boolean values are not supported")
-		}
-		current := countSet(keys["string_value"] != nil, keys["number_value"] != nil, keys["string_array_value"] != nil, keys["number_array_value"] != nil)
-		deprecated := keys["type"] != nil || keys["value"] != nil
-		if current > 0 && deprecated {
-			return fmt.Errorf("godo: SpansFilterValue mixes current and deprecated wire shapes")
-		}
-		if deprecated {
-			var old struct {
-				Type  string          `json:"type"`
-				Value json.RawMessage `json:"value"`
-			}
-			if err := json.Unmarshal(data, &old); err != nil {
-				return err
-			}
-			return v.setDeprecated(old.Type, old.Value)
-		}
-		if current == 1 && keys["number_value"] != nil {
-			var exact int64
-			if err := json.Unmarshal(keys["number_value"], &exact); err == nil {
-				v.NumberValueInt64 = &exact
-				return nil
-			}
-		}
-	}
-	type wire SpansFilterValue
-	var decoded wire
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return v.setDeprecatedBare(data)
-	}
-	*v = SpansFilterValue(decoded)
-	if countSet(v.StringValue != nil, v.NumberValue != nil, v.StringArrayValue != nil, v.NumberArrayValue != nil) != 1 {
-		return v.setDeprecatedBare(data)
-	}
-	return nil
-}
 
-func (v *SpansFilterValue) setDeprecated(typ string, raw json.RawMessage) error {
-	switch typ {
-	case InsightsSpansValueTypeString:
-		return json.Unmarshal(raw, &v.String)
-	case InsightsSpansValueTypeNumber:
-		return json.Unmarshal(raw, &v.Number)
-	case InsightsSpansValueTypeBool:
-		return json.Unmarshal(raw, &v.Bool)
-	case InsightsSpansValueTypeStringArray:
-		return json.Unmarshal(raw, &v.StringArray)
-	case InsightsSpansValueTypeNumberArray:
-		return json.Unmarshal(raw, &v.NumberArray)
-	default:
-		return fmt.Errorf("godo: unknown deprecated SpansFilterValue type %q", typ)
+	// Typed wrapper: a JSON object carrying a non-empty "type".
+	var wire struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
 	}
-}
+	if err := json.Unmarshal(data, &wire); err == nil && wire.Type != "" {
+		return v.setFromWire(wire.Type, wire.Value)
+	}
 
-func (v *SpansFilterValue) setDeprecatedBare(data []byte) error {
+	// Bare form.
 	var raw interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	switch value := raw.(type) {
+	switch val := raw.(type) {
+	case nil:
+		return nil
 	case string:
-		v.String = &value
+		v.String = &val
 	case float64:
-		v.Number = &value
+		v.Number = &val
 	case bool:
-		v.Bool = &value
+		v.Bool = &val
 	case []interface{}:
-		strings := make([]string, len(value))
-		numbers := make([]float64, len(value))
-		allStrings, allNumbers := true, true
-		for i, element := range value {
-			var ok bool
-			strings[i], ok = element.(string)
-			allStrings = allStrings && ok
-			numbers[i], ok = element.(float64)
-			allNumbers = allNumbers && ok
+		arr := make([]string, len(val))
+		for i, e := range val {
+			s, ok := e.(string)
+			if !ok {
+				return fmt.Errorf("godo: SpansFilterValue array element %d is not a string", i)
+			}
+			arr[i] = s
 		}
-		switch {
-		case allStrings:
-			v.StringArray = strings
-		case allNumbers:
-			v.NumberArray = numbers
-		default:
-			return fmt.Errorf("godo: deprecated SpansFilterValue array mixes element types")
-		}
+		v.StringArray = arr
 	default:
-		return fmt.Errorf("godo: unsupported deprecated SpansFilterValue")
+		return fmt.Errorf("godo: unsupported SpansFilterValue %T", raw)
 	}
 	return nil
 }
 
-// MarshalJSON emits a logs-style expression and translates the deprecated
-// flat AST for source compatibility.
-func (e SpansFilterExpression) MarshalJSON() ([]byte, error) {
-	type wire SpansFilterExpression
-	canonical := countSet(e.Condition != nil, e.And != nil, e.Or != nil, e.Not != nil, e.TextSearch != nil)
-	legacy := e.Type != "" || e.Field != nil || e.Operator != "" || e.Value != nil || e.Expressions != nil || e.Query != ""
-	if canonical > 0 && legacy {
-		return nil, fmt.Errorf("godo: SpansFilterExpression mixes current and deprecated fields")
-	}
-	if canonical == 1 {
-		return json.Marshal(wire(e))
-	}
-	if canonical != 0 || !legacy {
-		return nil, fmt.Errorf("godo: SpansFilterExpression must set exactly one node")
-	}
-	translated, err := e.fromDeprecated()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(wire(translated))
-}
-
-// UnmarshalJSON accepts the current expression shape and the deprecated flat
-// shape. Deprecated input is retained in the deprecated fields and marshals
-// back using the current shape.
-func (e *SpansFilterExpression) UnmarshalJSON(data []byte) error {
-	*e = SpansFilterExpression{}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(data, &keys); err != nil {
-		return err
-	}
-	hasCurrent := keys["condition"] != nil || keys["and"] != nil || keys["or"] != nil || keys["not"] != nil || keys["text_search"] != nil
-	hasDeprecated := keys["type"] != nil || keys["field"] != nil || keys["operator"] != nil || keys["value"] != nil || keys["expressions"] != nil || keys["query"] != nil
-	if hasCurrent && hasDeprecated {
-		return fmt.Errorf("godo: SpansFilterExpression mixes current and deprecated wire shapes")
-	}
-	if hasCurrent {
-		type wire SpansFilterExpression
-		var decoded wire
-		if err := json.Unmarshal(data, &decoded); err != nil {
+func (v *SpansFilterValue) setFromWire(typ string, raw json.RawMessage) error {
+	switch typ {
+	case InsightsSpansValueTypeString:
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
 			return err
 		}
-		*e = SpansFilterExpression(decoded)
-		if countSet(e.Condition != nil, e.And != nil, e.Or != nil, e.Not != nil, e.TextSearch != nil) != 1 {
-			return fmt.Errorf("godo: SpansFilterExpression must contain exactly one node")
+		v.String = &s
+	case InsightsSpansValueTypeNumber:
+		var n float64
+		if err := json.Unmarshal(raw, &n); err != nil {
+			return err
 		}
-		return nil
-	}
-	var deprecated struct {
-		Type        string                  `json:"type"`
-		Field       *SpansFilterField       `json:"field"`
-		Operator    string                  `json:"operator"`
-		Value       *SpansFilterValue       `json:"value"`
-		Expressions []SpansFilterExpression `json:"expressions"`
-		Query       string                  `json:"query"`
-	}
-	if err := json.Unmarshal(data, &deprecated); err != nil {
-		return err
-	}
-	e.Type, e.Field, e.Operator, e.Value = deprecated.Type, deprecated.Field, deprecated.Operator, deprecated.Value
-	e.Expressions, e.Query = deprecated.Expressions, deprecated.Query
-	_, err := e.fromDeprecated()
-	return err
-}
-
-func (e SpansFilterExpression) fromDeprecated() (SpansFilterExpression, error) {
-	switch e.Type {
-	case "", InsightsSpansFilterTypeCondition:
-		if e.Field == nil {
-			return SpansFilterExpression{}, fmt.Errorf("godo: deprecated spans condition requires Field")
+		v.Number = &n
+	case InsightsSpansValueTypeBool:
+		var b bool
+		if err := json.Unmarshal(raw, &b); err != nil {
+			return err
 		}
-		return SpansFilterExpression{Condition: &SpansFilterCondition{Field: *e.Field, Operator: e.Operator, Value: e.Value}}, nil
-	case InsightsSpansFilterTypeAnd:
-		return SpansFilterExpression{And: &SpansFilterGroup{Expressions: e.Expressions}}, nil
-	case InsightsSpansFilterTypeOr:
-		return SpansFilterExpression{Or: &SpansFilterGroup{Expressions: e.Expressions}}, nil
-	case InsightsSpansFilterTypeNot:
-		if len(e.Expressions) != 1 {
-			return SpansFilterExpression{}, fmt.Errorf("godo: deprecated spans not node requires one expression")
+		v.Bool = &b
+	case InsightsSpansValueTypeStringArray:
+		var arr []string
+		if err := json.Unmarshal(raw, &arr); err != nil {
+			return err
 		}
-		return SpansFilterExpression{Not: &e.Expressions[0]}, nil
-	case InsightsSpansFilterTypeTextSearch:
-		return SpansFilterExpression{TextSearch: &SpansTextSearch{Query: e.Query}}, nil
+		v.StringArray = arr
 	default:
-		return SpansFilterExpression{}, fmt.Errorf("godo: unknown deprecated spans filter type %q", e.Type)
+		return fmt.Errorf("godo: unknown SpansFilterValue type %q", typ)
 	}
-}
-
-func countSet(values ...bool) int {
-	n := 0
-	for _, value := range values {
-		if value {
-			n++
-		}
-	}
-	return n
+	return nil
 }
 
 // SearchSpans searches tracing spans in a region. The request time range must
@@ -1483,9 +1296,9 @@ func (s *InsightsServiceOp) SearchSpans(ctx context.Context, region string, sear
 // TracesSearchRequest describes an Insights traces search. TimeRange must not
 // exceed seven days.
 type TracesSearchRequest struct {
-	TimeRange  TracesTimeRange          `json:"time_range"`
+	TimeRange  TracesTimeRange          `json:"timeRange"`
 	Filter     *TracesFilterExpression  `json:"filter,omitempty"`
-	OrderBy    []TracesOrderBy          `json:"order_by,omitempty"`
+	OrderBy    []TracesOrderBy          `json:"orderBy,omitempty"`
 	Pagination *TracesPaginationRequest `json:"pagination,omitempty"`
 }
 
@@ -1504,80 +1317,38 @@ type TracesTimeBound struct {
 	Absolute string `json:"absolute,omitempty"`
 }
 
-// TracesFilterExpression is a boolean filter tree. Set exactly one expression
-// node. A trace matches when at least one of its spans matches the filter.
+// TracesFilterExpression is a type-discriminated boolean filter tree. Set Type
+// to select the node kind: a condition node sets Field, Operator, and Value;
+// and/or/not nodes set Expressions; a text_search node sets Query. An empty
+// Type is treated as a condition. A trace matches when at least one of its
+// spans matches the filter.
 type TracesFilterExpression struct {
-	Condition  *TracesFilterCondition  `json:"condition,omitempty"`
-	And        *TracesFilterGroup      `json:"and,omitempty"`
-	Or         *TracesFilterGroup      `json:"or,omitempty"`
-	Not        *TracesFilterExpression `json:"not,omitempty"`
-	TextSearch *TracesTextSearch       `json:"text_search,omitempty"`
-
-	// Deprecated: use Condition, And, Or, Not, or TextSearch. These fields are
-	// retained as source-compatible inputs and are never emitted directly.
-	Type        string                   `json:"-"`
-	Field       *TracesFilterField       `json:"-"`
-	Operator    string                   `json:"-"`
-	Value       *TracesFilterValue       `json:"-"`
-	Expressions []TracesFilterExpression `json:"-"`
-	Query       string                   `json:"-"`
-}
-
-// TracesFilterGroup combines nested traces filter expressions.
-type TracesFilterGroup struct {
-	Expressions []TracesFilterExpression `json:"expressions"`
-}
-
-// TracesTextSearch searches span text fields within traces.
-type TracesTextSearch struct {
-	Query string `json:"query"`
-}
-
-// TracesFilterCondition is a single span field comparison.
-type TracesFilterCondition struct {
-	Field    TracesFilterField  `json:"field"`
-	Operator string             `json:"operator"`
-	Value    *TracesFilterValue `json:"value,omitempty"`
+	Type        string                   `json:"type,omitempty"`
+	Field       *TracesFilterField       `json:"field,omitempty"`
+	Operator    string                   `json:"operator,omitempty"`
+	Value       *TracesFilterValue       `json:"value,omitempty"`
+	Expressions []TracesFilterExpression `json:"expressions,omitempty"`
+	Query       string                   `json:"query,omitempty"`
 }
 
 // TracesFilterField references a span field. In filters, Name may be a
-// well-known span field such as "service_name" or "status_code", or an attribute
-// key; Scope optionally uses an InsightsTracesFieldScope* value to restrict the
-// lookup. In OrderBy, Name must be a trace-level field such as "started" or
-// "duration_ns" and Scope is ignored.
+// well-known span field such as "serviceName" or "statusCode", or an attribute
+// key; Scope optionally restricts the lookup to "resource" or "attributes". In
+// OrderBy, Name must be a trace-level field such as "started" or "durationNs"
+// and Scope is ignored.
 type TracesFilterField struct {
 	Name  string `json:"name"`
 	Scope string `json:"scope,omitempty"`
 }
 
-// TracesFilterValue is a typed filter literal. Set exactly one value.
+// TracesFilterValue is a filter comparison value. Set exactly one field; it is
+// encoded as the API's typed wrapper, for example {"type":"string","value":"x"}.
+// Scalar fields use pointers so zero, false, and an empty string can be sent.
 type TracesFilterValue struct {
-	StringValue *string  `json:"string_value,omitempty"`
-	NumberValue *float64 `json:"number_value,omitempty"`
-
-	// NumberValueInt64 emits number_value without float64 precision loss. Use
-	// it for Unix timestamps represented as integer seconds through nanoseconds.
-	NumberValueInt64 *int64                  `json:"-"`
-	StringArrayValue *TracesStringArrayValue `json:"string_array_value,omitempty"`
-	NumberArrayValue *TracesNumberArrayValue `json:"number_array_value,omitempty"`
-
-	// Deprecated: use the corresponding *Value field. Bool is retained only
-	// for source compatibility; the traces API does not support boolean values.
-	String      *string   `json:"-"`
-	Number      *float64  `json:"-"`
-	Bool        *bool     `json:"-"`
-	StringArray []string  `json:"-"`
-	NumberArray []float64 `json:"-"`
-}
-
-// TracesStringArrayValue is a string-list filter value.
-type TracesStringArrayValue struct {
-	Values []string `json:"values"`
-}
-
-// TracesNumberArrayValue is a number-list filter value.
-type TracesNumberArrayValue struct {
-	Values []float64 `json:"values"`
+	String      *string
+	Number      *float64
+	Bool        *bool
+	StringArray []string
 }
 
 // TracesOrderBy is a traces search sort clause. Only sorting by "started" is
@@ -1602,20 +1373,20 @@ type TracesSearchResponse struct {
 // TraceSummary is a single trace returned by a traces search, aggregated from
 // its spans.
 type TraceSummary struct {
-	TraceID     string    `json:"trace_id"`
+	TraceID     string    `json:"traceId"`
 	Started     time.Time `json:"started"`
-	ServiceName string    `json:"service_name,omitempty"`
-	DurationNs  int64     `json:"duration_ns,omitempty"`
-	SpanCount   int       `json:"span_count,omitempty"`
-	ErrorCount  int       `json:"error_count,omitempty"`
+	ServiceName string    `json:"serviceName,omitempty"`
+	DurationNs  int64     `json:"durationNs,omitempty"`
+	SpanCount   int       `json:"spanCount,omitempty"`
+	ErrorCount  int       `json:"errorCount,omitempty"`
 	Status      string    `json:"status,omitempty"`
-	SpanNames   []string  `json:"span_names,omitempty"`
+	SpanNames   []string  `json:"spanNames,omitempty"`
 }
 
 // TracesPaginationResponse describes whether more traces matched than were
 // returned. There is no cursor; narrow the time range or filter to see more.
 type TracesPaginationResponse struct {
-	HasMore bool `json:"has_more"`
+	HasMore bool `json:"hasMore"`
 }
 
 // TraceGetOptions narrows the lookup window for GetTrace. Both bounds accept
@@ -1628,246 +1399,135 @@ type TraceGetOptions struct {
 
 // Trace is a single trace and its spans, ordered by start time.
 type Trace struct {
-	TraceID   string      `json:"trace_id"`
+	TraceID   string      `json:"traceId"`
 	Spans     []TraceSpan `json:"spans,omitempty"`
 	Truncated bool        `json:"truncated,omitempty"`
 }
 
 // TraceSpan is a single span belonging to a Trace.
 type TraceSpan struct {
-	TraceID       string            `json:"trace_id"`
-	SpanID        string            `json:"span_id"`
-	ParentSpanID  string            `json:"parent_span_id,omitempty"`
-	StartTime     time.Time         `json:"start_time"`
-	EndTime       time.Time         `json:"end_time"`
-	DurationNs    int64             `json:"duration_ns,omitempty"`
+	TraceID       string            `json:"traceId"`
+	SpanID        string            `json:"spanId"`
+	ParentSpanID  string            `json:"parentSpanId,omitempty"`
+	StartTime     time.Time         `json:"startTime"`
+	EndTime       time.Time         `json:"endTime"`
+	DurationNs    int64             `json:"durationNs,omitempty"`
 	Name          string            `json:"name,omitempty"`
 	Kind          string            `json:"kind,omitempty"`
-	StatusCode    string            `json:"status_code,omitempty"`
-	StatusMessage string            `json:"status_message,omitempty"`
-	ServiceName   string            `json:"service_name,omitempty"`
+	StatusCode    string            `json:"statusCode,omitempty"`
+	StatusMessage string            `json:"statusMessage,omitempty"`
+	ServiceName   string            `json:"serviceName,omitempty"`
 	Resource      map[string]string `json:"resource,omitempty"`
 	Attributes    map[string]string `json:"attributes,omitempty"`
 }
 
-// MarshalJSON emits the logs-style typed value and translates deprecated
-// fields for source compatibility.
+type tracesFilterValueWire struct {
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
+}
+
+// MarshalJSON encodes a TracesFilterValue as the API's typed wrapper. Exactly
+// one field must be set.
 func (v TracesFilterValue) MarshalJSON() ([]byte, error) {
-	type wire TracesFilterValue
-	canonical := countSet(v.StringValue != nil, v.NumberValue != nil, v.NumberValueInt64 != nil, v.StringArrayValue != nil, v.NumberArrayValue != nil)
-	legacy := countSet(v.String != nil, v.Number != nil, v.Bool != nil, v.StringArray != nil, v.NumberArray != nil)
-	if canonical > 0 && legacy > 0 {
-		return nil, fmt.Errorf("godo: TracesFilterValue mixes current and deprecated fields")
+	var (
+		typ string
+		val interface{}
+	)
+	n := 0
+	if v.String != nil {
+		typ, val = InsightsTracesValueTypeString, *v.String
+		n++
 	}
-	if canonical == 1 && v.NumberValueInt64 != nil {
-		return json.Marshal(struct {
-			NumberValue int64 `json:"number_value"`
-		}{NumberValue: *v.NumberValueInt64})
-	}
-	if canonical == 1 {
-		return json.Marshal(wire(v))
-	}
-	if canonical != 0 || legacy != 1 {
-		return nil, fmt.Errorf("godo: TracesFilterValue must set exactly one field")
+	if v.Number != nil {
+		typ, val = InsightsTracesValueTypeNumber, *v.Number
+		n++
 	}
 	if v.Bool != nil {
-		return nil, fmt.Errorf("godo: TracesFilterValue boolean values are not supported")
-	}
-	translated := TracesFilterValue{
-		StringValue: v.String,
-		NumberValue: v.Number,
+		typ, val = InsightsTracesValueTypeBool, *v.Bool
+		n++
 	}
 	if v.StringArray != nil {
-		translated.StringArrayValue = &TracesStringArrayValue{Values: v.StringArray}
+		typ, val = InsightsTracesValueTypeStringArray, v.StringArray
+		n++
 	}
-	if v.NumberArray != nil {
-		translated.NumberArrayValue = &TracesNumberArrayValue{Values: v.NumberArray}
+	if n != 1 {
+		return nil, fmt.Errorf("godo: TracesFilterValue must set exactly one field, got %d", n)
 	}
-	return json.Marshal(wire(translated))
+	return json.Marshal(tracesFilterValueWire{Type: typ, Value: val})
 }
 
-// UnmarshalJSON accepts the logs-style typed value.
+// UnmarshalJSON accepts both the typed wrapper {"type":...,"value":...} and a
+// bare scalar or string array.
 func (v *TracesFilterValue) UnmarshalJSON(data []byte) error {
 	*v = TracesFilterValue{}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(data, &keys); err == nil {
-		if keys["bool_value"] != nil {
-			return fmt.Errorf("godo: TracesFilterValue boolean values are not supported")
-		}
-		current := countSet(keys["string_value"] != nil, keys["number_value"] != nil, keys["string_array_value"] != nil, keys["number_array_value"] != nil)
-		deprecated := keys["type"] != nil || keys["value"] != nil
-		if current > 0 && deprecated {
-			return fmt.Errorf("godo: TracesFilterValue mixes current and deprecated wire shapes")
-		}
-		if deprecated {
-			var old struct {
-				Type  string          `json:"type"`
-				Value json.RawMessage `json:"value"`
-			}
-			if err := json.Unmarshal(data, &old); err != nil {
-				return err
-			}
-			return v.setDeprecated(old.Type, old.Value)
-		}
-		if current == 1 && keys["number_value"] != nil {
-			var exact int64
-			if err := json.Unmarshal(keys["number_value"], &exact); err == nil {
-				v.NumberValueInt64 = &exact
-				return nil
-			}
-		}
-	}
-	type wire TracesFilterValue
-	var decoded wire
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return v.setDeprecatedBare(data)
-	}
-	*v = TracesFilterValue(decoded)
-	if countSet(v.StringValue != nil, v.NumberValue != nil, v.StringArrayValue != nil, v.NumberArrayValue != nil) != 1 {
-		return v.setDeprecatedBare(data)
-	}
-	return nil
-}
 
-func (v *TracesFilterValue) setDeprecated(typ string, raw json.RawMessage) error {
-	switch typ {
-	case InsightsTracesValueTypeString:
-		return json.Unmarshal(raw, &v.String)
-	case InsightsTracesValueTypeNumber:
-		return json.Unmarshal(raw, &v.Number)
-	case InsightsTracesValueTypeBool:
-		return json.Unmarshal(raw, &v.Bool)
-	case InsightsTracesValueTypeStringArray:
-		return json.Unmarshal(raw, &v.StringArray)
-	case InsightsTracesValueTypeNumberArray:
-		return json.Unmarshal(raw, &v.NumberArray)
-	default:
-		return fmt.Errorf("godo: unknown deprecated TracesFilterValue type %q", typ)
+	var wire struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
 	}
-}
+	if err := json.Unmarshal(data, &wire); err == nil && wire.Type != "" {
+		return v.setFromWire(wire.Type, wire.Value)
+	}
 
-func (v *TracesFilterValue) setDeprecatedBare(data []byte) error {
 	var raw interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	switch value := raw.(type) {
+	switch val := raw.(type) {
+	case nil:
+		return nil
 	case string:
-		v.String = &value
+		v.String = &val
 	case float64:
-		v.Number = &value
+		v.Number = &val
 	case bool:
-		v.Bool = &value
+		v.Bool = &val
 	case []interface{}:
-		strings := make([]string, len(value))
-		numbers := make([]float64, len(value))
-		allStrings, allNumbers := true, true
-		for i, element := range value {
-			var ok bool
-			strings[i], ok = element.(string)
-			allStrings = allStrings && ok
-			numbers[i], ok = element.(float64)
-			allNumbers = allNumbers && ok
+		arr := make([]string, len(val))
+		for i, e := range val {
+			s, ok := e.(string)
+			if !ok {
+				return fmt.Errorf("godo: TracesFilterValue array element %d is not a string", i)
+			}
+			arr[i] = s
 		}
-		switch {
-		case allStrings:
-			v.StringArray = strings
-		case allNumbers:
-			v.NumberArray = numbers
-		default:
-			return fmt.Errorf("godo: deprecated TracesFilterValue array mixes element types")
-		}
+		v.StringArray = arr
 	default:
-		return fmt.Errorf("godo: unsupported deprecated TracesFilterValue")
+		return fmt.Errorf("godo: unsupported TracesFilterValue %T", raw)
 	}
 	return nil
 }
 
-// MarshalJSON emits a logs-style expression and translates the deprecated
-// flat AST for source compatibility.
-func (e TracesFilterExpression) MarshalJSON() ([]byte, error) {
-	type wire TracesFilterExpression
-	canonical := countSet(e.Condition != nil, e.And != nil, e.Or != nil, e.Not != nil, e.TextSearch != nil)
-	legacy := e.Type != "" || e.Field != nil || e.Operator != "" || e.Value != nil || e.Expressions != nil || e.Query != ""
-	if canonical > 0 && legacy {
-		return nil, fmt.Errorf("godo: TracesFilterExpression mixes current and deprecated fields")
-	}
-	if canonical == 1 {
-		return json.Marshal(wire(e))
-	}
-	if canonical != 0 || !legacy {
-		return nil, fmt.Errorf("godo: TracesFilterExpression must set exactly one node")
-	}
-	translated, err := e.fromDeprecated()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(wire(translated))
-}
-
-// UnmarshalJSON accepts the current expression shape and the deprecated flat
-// shape.
-func (e *TracesFilterExpression) UnmarshalJSON(data []byte) error {
-	*e = TracesFilterExpression{}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(data, &keys); err != nil {
-		return err
-	}
-	hasCurrent := keys["condition"] != nil || keys["and"] != nil || keys["or"] != nil || keys["not"] != nil || keys["text_search"] != nil
-	hasDeprecated := keys["type"] != nil || keys["field"] != nil || keys["operator"] != nil || keys["value"] != nil || keys["expressions"] != nil || keys["query"] != nil
-	if hasCurrent && hasDeprecated {
-		return fmt.Errorf("godo: TracesFilterExpression mixes current and deprecated wire shapes")
-	}
-	if hasCurrent {
-		type wire TracesFilterExpression
-		var decoded wire
-		if err := json.Unmarshal(data, &decoded); err != nil {
+func (v *TracesFilterValue) setFromWire(typ string, raw json.RawMessage) error {
+	switch typ {
+	case InsightsTracesValueTypeString:
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
 			return err
 		}
-		*e = TracesFilterExpression(decoded)
-		if countSet(e.Condition != nil, e.And != nil, e.Or != nil, e.Not != nil, e.TextSearch != nil) != 1 {
-			return fmt.Errorf("godo: TracesFilterExpression must contain exactly one node")
+		v.String = &s
+	case InsightsTracesValueTypeNumber:
+		var n float64
+		if err := json.Unmarshal(raw, &n); err != nil {
+			return err
 		}
-		return nil
-	}
-	var deprecated struct {
-		Type        string                   `json:"type"`
-		Field       *TracesFilterField       `json:"field"`
-		Operator    string                   `json:"operator"`
-		Value       *TracesFilterValue       `json:"value"`
-		Expressions []TracesFilterExpression `json:"expressions"`
-		Query       string                   `json:"query"`
-	}
-	if err := json.Unmarshal(data, &deprecated); err != nil {
-		return err
-	}
-	e.Type, e.Field, e.Operator, e.Value = deprecated.Type, deprecated.Field, deprecated.Operator, deprecated.Value
-	e.Expressions, e.Query = deprecated.Expressions, deprecated.Query
-	_, err := e.fromDeprecated()
-	return err
-}
-
-func (e TracesFilterExpression) fromDeprecated() (TracesFilterExpression, error) {
-	switch e.Type {
-	case "", InsightsTracesFilterTypeCondition:
-		if e.Field == nil {
-			return TracesFilterExpression{}, fmt.Errorf("godo: deprecated traces condition requires Field")
+		v.Number = &n
+	case InsightsTracesValueTypeBool:
+		var b bool
+		if err := json.Unmarshal(raw, &b); err != nil {
+			return err
 		}
-		return TracesFilterExpression{Condition: &TracesFilterCondition{Field: *e.Field, Operator: e.Operator, Value: e.Value}}, nil
-	case InsightsTracesFilterTypeAnd:
-		return TracesFilterExpression{And: &TracesFilterGroup{Expressions: e.Expressions}}, nil
-	case InsightsTracesFilterTypeOr:
-		return TracesFilterExpression{Or: &TracesFilterGroup{Expressions: e.Expressions}}, nil
-	case InsightsTracesFilterTypeNot:
-		if len(e.Expressions) != 1 {
-			return TracesFilterExpression{}, fmt.Errorf("godo: deprecated traces not node requires one expression")
+		v.Bool = &b
+	case InsightsTracesValueTypeStringArray:
+		var arr []string
+		if err := json.Unmarshal(raw, &arr); err != nil {
+			return err
 		}
-		return TracesFilterExpression{Not: &e.Expressions[0]}, nil
-	case InsightsTracesFilterTypeTextSearch:
-		return TracesFilterExpression{TextSearch: &TracesTextSearch{Query: e.Query}}, nil
+		v.StringArray = arr
 	default:
-		return TracesFilterExpression{}, fmt.Errorf("godo: unknown deprecated traces filter type %q", e.Type)
+		return fmt.Errorf("godo: unknown TracesFilterValue type %q", typ)
 	}
+	return nil
 }
 
 // SearchTraces searches traces in a region. Each result aggregates one trace's
@@ -1910,118 +1570,4 @@ func (s *InsightsServiceOp) GetTrace(ctx context.Context, region, traceID string
 		return nil, resp, err
 	}
 	return result, resp, nil
-}
-
-// InsightsResourceListOptions are filters and pagination for listing resource
-// signal enablement. PerPage defaults to 20 and is capped at 200 by the API.
-type InsightsResourceListOptions struct {
-	ProductTypes []string `url:"filter.product_types,omitempty"`
-	Regions      []string `url:"filter.regions,omitempty"`
-	Page         int      `url:"pagination.page,omitempty"`
-	PerPage      int      `url:"pagination.per_page,omitempty"`
-	// Sort is one of the InsightsResourceSort* constants. Defaults to resource_urn.
-	Sort string `url:"pagination.sort,omitempty"`
-	// SortDirection is "asc" or "desc". Defaults to asc.
-	SortDirection string `url:"pagination.sort_direction,omitempty"`
-}
-
-// InsightsResourceSignalState is the enablement state of one telemetry signal
-// (metrics, logs, or traces) for a resource.
-type InsightsResourceSignalState struct {
-	Enabled     bool      `json:"enabled"`
-	EffectiveAt time.Time `json:"effective_at"`
-}
-
-// InsightsResource is the current telemetry signal enablement for a resource.
-// A signal is nil when no explicit enablement has ever been recorded for it.
-type InsightsResource struct {
-	ResourceURN string                       `json:"resource_urn"`
-	ProductType string                       `json:"product_type"`
-	Region      string                       `json:"region,omitempty"`
-	Metrics     *InsightsResourceSignalState `json:"metrics,omitempty"`
-	Logs        *InsightsResourceSignalState `json:"logs,omitempty"`
-	Traces      *InsightsResourceSignalState `json:"traces,omitempty"`
-}
-
-// InsightsResourcesPagination is page-based pagination metadata for a
-// resources list.
-type InsightsResourcesPagination struct {
-	Page    int `json:"page"`
-	Pages   int `json:"pages"`
-	PerPage int `json:"per_page"`
-	Total   int `json:"total"`
-}
-
-// InsightsResourceList is a page of resources and their signal enablement.
-type InsightsResourceList struct {
-	Resources  []InsightsResource           `json:"resources,omitempty"`
-	Pagination *InsightsResourcesPagination `json:"pagination,omitempty"`
-}
-
-// InsightsResourceSignalsRequest is the body for updating a resource's signal
-// enablement. Set at least one of Metrics, Logs, or Traces (use godo.Bool);
-// nil signals are left unchanged. Region is only used when the resource has
-// no existing enablement and cannot be changed afterwards.
-type InsightsResourceSignalsRequest struct {
-	Region  string `json:"region,omitempty"`
-	Metrics *bool  `json:"metrics,omitempty"`
-	Logs    *bool  `json:"logs,omitempty"`
-	Traces  *bool  `json:"traces,omitempty"`
-}
-
-type insightsResourceRoot struct {
-	Resource *InsightsResource `json:"resource"`
-}
-
-// ListResources lists resources with recorded telemetry signal enablement.
-func (s *InsightsServiceOp) ListResources(ctx context.Context, opt *InsightsResourceListOptions) (*InsightsResourceList, *Response, error) {
-	path, err := addOptions(insightsResourcesPath, opt)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	result := new(InsightsResourceList)
-	resp, err := s.client.Do(ctx, req, result)
-	if err != nil {
-		return nil, resp, err
-	}
-	return result, resp, nil
-}
-
-// GetResource retrieves the signal enablement for a resource by URN. The API
-// returns 404 when no enablement has been recorded for the resource.
-func (s *InsightsServiceOp) GetResource(ctx context.Context, resourceURN string) (*InsightsResource, *Response, error) {
-	req, err := s.client.NewRequest(ctx, http.MethodGet, insightsResourcePath(insightsResourcesPath, resourceURN), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	root := new(insightsResourceRoot)
-	resp, err := s.client.Do(ctx, req, root)
-	if err != nil {
-		return nil, resp, err
-	}
-	return root.Resource, resp, nil
-}
-
-// UpdateResourceSignals enables or disables telemetry signals for a resource.
-// Signals left nil in the request are unchanged.
-func (s *InsightsServiceOp) UpdateResourceSignals(ctx context.Context, resourceURN string, update *InsightsResourceSignalsRequest) (*InsightsResource, *Response, error) {
-	path := insightsResourcePath(insightsResourcesPath, resourceURN) + "/signals"
-	req, err := s.client.NewRequest(ctx, http.MethodPut, path, update)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	root := new(insightsResourceRoot)
-	resp, err := s.client.Do(ctx, req, root)
-	if err != nil {
-		return nil, resp, err
-	}
-	return root.Resource, resp, nil
 }
