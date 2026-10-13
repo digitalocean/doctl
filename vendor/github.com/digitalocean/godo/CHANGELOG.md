@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.225.0] - 2026-10-12
+
+- #1162 - @srajputdo - COBS-1350: Add Insights traces query support
+- #1156 - @adityasingh-beep - COBS-1351: Add Insights spans query support
+- #1161 - @aupadhyay-shark - docs(FI-609): clarify Signals CreateDeletion godoc
+
 ## [1.224.0] - 2026-10-11
 
 - #1159 - @venkatranabothu - Rename simulation journeys to episodes in the Agent Platform client

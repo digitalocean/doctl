@@ -113,8 +113,102 @@ const (
 	InsightsLogsSortDirectionDescending = "SORT_DIRECTION_DESC"
 )
 
+// Insights spans filter node types. These select which fields of a
+// SpansFilterExpression are used.
+const (
+	InsightsSpansFilterTypeCondition  = "condition"
+	InsightsSpansFilterTypeAnd        = "and"
+	InsightsSpansFilterTypeOr         = "or"
+	InsightsSpansFilterTypeNot        = "not"
+	InsightsSpansFilterTypeTextSearch = "text_search"
+)
+
+// Insights spans filter condition operators.
+const (
+	InsightsSpansFilterOperatorEqual              = "eq"
+	InsightsSpansFilterOperatorNotEqual           = "neq"
+	InsightsSpansFilterOperatorGreaterThan        = "gt"
+	InsightsSpansFilterOperatorGreaterThanOrEqual = "gte"
+	InsightsSpansFilterOperatorLessThan           = "lt"
+	InsightsSpansFilterOperatorLessThanOrEqual    = "lte"
+	InsightsSpansFilterOperatorIn                 = "in"
+	InsightsSpansFilterOperatorExists             = "exists"
+)
+
+// Insights spans field scopes. Omit the scope for well-known span fields or to
+// search both attribute maps.
+const (
+	InsightsSpansFieldScopeResource   = "resource"
+	InsightsSpansFieldScopeAttributes = "attributes"
+)
+
+// Insights spans sort directions.
+const (
+	InsightsSpansSortDirectionAscending  = "asc"
+	InsightsSpansSortDirectionDescending = "desc"
+)
+
+// Insights spans filter value types, used in the typed-wrapper encoding of a
+// SpansFilterValue.
+const (
+	InsightsSpansValueTypeString      = "string"
+	InsightsSpansValueTypeNumber      = "number"
+	InsightsSpansValueTypeBool        = "bool"
+	InsightsSpansValueTypeStringArray = "string_array"
+)
+
+// Insights traces filter node types. These select which fields of a
+// TracesFilterExpression are used.
+const (
+	InsightsTracesFilterTypeCondition  = "condition"
+	InsightsTracesFilterTypeAnd        = "and"
+	InsightsTracesFilterTypeOr         = "or"
+	InsightsTracesFilterTypeNot        = "not"
+	InsightsTracesFilterTypeTextSearch = "text_search"
+)
+
+// Insights traces filter condition operators.
+const (
+	InsightsTracesFilterOperatorEqual              = "eq"
+	InsightsTracesFilterOperatorNotEqual           = "neq"
+	InsightsTracesFilterOperatorGreaterThan        = "gt"
+	InsightsTracesFilterOperatorGreaterThanOrEqual = "gte"
+	InsightsTracesFilterOperatorLessThan           = "lt"
+	InsightsTracesFilterOperatorLessThanOrEqual    = "lte"
+	InsightsTracesFilterOperatorIn                 = "in"
+	InsightsTracesFilterOperatorExists             = "exists"
+)
+
+// Insights traces field scopes. Omit the scope for well-known span fields or to
+// look up a span attribute with a resource attribute fallback.
+const (
+	InsightsTracesFieldScopeResource   = "resource"
+	InsightsTracesFieldScopeAttributes = "attributes"
+)
+
+// Insights traces sort directions.
+const (
+	InsightsTracesSortDirectionAscending  = "asc"
+	InsightsTracesSortDirectionDescending = "desc"
+)
+
+// Insights traces filter value types, used in the typed-wrapper encoding of a
+// TracesFilterValue.
+const (
+	InsightsTracesValueTypeString      = "string"
+	InsightsTracesValueTypeNumber      = "number"
+	InsightsTracesValueTypeBool        = "bool"
+	InsightsTracesValueTypeStringArray = "string_array"
+)
+
+// Insights trace statuses, rolled up from the status codes of a trace's spans.
+const (
+	InsightsTraceStatusOk    = "Ok"
+	InsightsTraceStatusError = "Error"
+)
+
 // InsightsService manages Insights notification channels, alert rules, alert
-// instances, PromQL queries, and logs searches.
+// instances, PromQL queries, logs searches, spans searches, and traces queries.
 type InsightsService interface {
 	ListNotificationChannels(context.Context, *ListOptions) ([]NotificationChannel, *Response, error)
 	GetNotificationChannel(context.Context, string) (*NotificationChannel, *Response, error)
@@ -144,6 +238,11 @@ type InsightsService interface {
 	LabelValues(context.Context, string, string, *PromSelectorOptions) (*PromLabelsResponse, *Response, error)
 
 	SearchLogs(context.Context, string, *LogsSearchRequest) (*LogsSearchResponse, *Response, error)
+
+	SearchSpans(context.Context, string, *SpansSearchRequest) (*SpansSearchResponse, *Response, error)
+
+	SearchTraces(context.Context, string, *TracesSearchRequest) (*TracesSearchResponse, *Response, error)
+	GetTrace(context.Context, string, string, *TraceGetOptions) (*Trace, *Response, error)
 }
 
 // InsightsServiceOp handles communication with Insights methods of the DigitalOcean API.
@@ -952,4 +1051,510 @@ func setListPaging(resp *Response, links *Links, meta *Meta) {
 	if meta != nil {
 		resp.Meta = meta
 	}
+}
+
+// SpansSearchRequest describes an Insights spans search. TimeRange must not
+// exceed seven days.
+type SpansSearchRequest struct {
+	TimeRange  SpansTimeRange          `json:"timeRange"`
+	Filter     *SpansFilterExpression  `json:"filter,omitempty"`
+	OrderBy    []SpansOrderBy          `json:"orderBy,omitempty"`
+	Pagination *SpansPaginationRequest `json:"pagination,omitempty"`
+}
+
+// SpansTimeRange is an inclusive spans query time window.
+type SpansTimeRange struct {
+	From SpansTimeBound `json:"from"`
+	To   SpansTimeBound `json:"to"`
+}
+
+// SpansTimeBound is a single time bound. Set exactly one of Relative or
+// Absolute. Relative accepts "now", a bare lookback duration such as "1h" or
+// "7d", or an offset such as "now-15m". Absolute accepts an RFC3339 string or a
+// Unix timestamp encoded as a decimal string.
+type SpansTimeBound struct {
+	Relative string `json:"relative,omitempty"`
+	Absolute string `json:"absolute,omitempty"`
+}
+
+// SpansFilterExpression is a type-discriminated boolean filter tree. Set Type
+// to select the node kind: a condition node sets Field, Operator, and Value;
+// and/or/not nodes set Expressions; a text_search node sets Query.
+type SpansFilterExpression struct {
+	Type        string                  `json:"type"`
+	Field       *SpansFilterField       `json:"field,omitempty"`
+	Operator    string                  `json:"operator,omitempty"`
+	Value       *SpansFilterValue       `json:"value,omitempty"`
+	Expressions []SpansFilterExpression `json:"expressions,omitempty"`
+	Query       string                  `json:"query,omitempty"`
+}
+
+// SpansFilterField references a searchable span field. Name may be a well-known
+// field such as "serviceName" or "statusCode", or an attribute key. Scope is
+// optional: "resource" or "attributes" to target one attribute map, or empty
+// for well-known fields and to search both maps.
+type SpansFilterField struct {
+	Name  string `json:"name"`
+	Scope string `json:"scope,omitempty"`
+}
+
+// SpansFilterValue is a filter comparison value. Set exactly one field; it is
+// encoded as the API's typed wrapper, for example {"type":"string","value":"x"}.
+// Scalar fields use pointers so zero, false, and an empty string can be sent.
+type SpansFilterValue struct {
+	String      *string
+	Number      *float64
+	Bool        *bool
+	StringArray []string
+}
+
+// SpansOrderBy is a spans search sort clause.
+type SpansOrderBy struct {
+	Field     SpansFilterField `json:"field"`
+	Direction string           `json:"direction,omitempty"`
+}
+
+// SpansPaginationRequest limits the number of spans returned. Limit defaults to
+// 100 and is clamped to 1000 by the API.
+type SpansPaginationRequest struct {
+	Limit int `json:"limit,omitempty"`
+}
+
+// SpansSearchResponse contains matching spans and pagination state.
+type SpansSearchResponse struct {
+	Data       []SpanRecord             `json:"data,omitempty"`
+	Pagination *SpansPaginationResponse `json:"pagination,omitempty"`
+}
+
+// SpanRecord is a single span returned by a spans search.
+type SpanRecord struct {
+	TraceID       string            `json:"traceId,omitempty"`
+	SpanID        string            `json:"spanId,omitempty"`
+	ParentSpanID  string            `json:"parentSpanId,omitempty"`
+	StartTime     time.Time         `json:"startTime"`
+	EndTime       time.Time         `json:"endTime"`
+	DurationNs    int64             `json:"durationNs,omitempty"`
+	Name          string            `json:"name,omitempty"`
+	Kind          string            `json:"kind,omitempty"`
+	StatusCode    string            `json:"statusCode,omitempty"`
+	StatusMessage string            `json:"statusMessage,omitempty"`
+	ServiceName   string            `json:"serviceName,omitempty"`
+	Resource      map[string]string `json:"resource,omitempty"`
+	Attributes    map[string]string `json:"attributes,omitempty"`
+	Region        string            `json:"region,omitempty"`
+}
+
+// SpansPaginationResponse describes whether more spans matched than were
+// returned. Cursor-based continuation is not yet supported.
+type SpansPaginationResponse struct {
+	HasMore bool `json:"hasMore"`
+}
+
+type spansFilterValueWire struct {
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
+}
+
+// MarshalJSON encodes a SpansFilterValue as the API's typed wrapper. Exactly
+// one field must be set.
+func (v SpansFilterValue) MarshalJSON() ([]byte, error) {
+	var (
+		typ string
+		val interface{}
+	)
+	n := 0
+	if v.String != nil {
+		typ, val = InsightsSpansValueTypeString, *v.String
+		n++
+	}
+	if v.Number != nil {
+		typ, val = InsightsSpansValueTypeNumber, *v.Number
+		n++
+	}
+	if v.Bool != nil {
+		typ, val = InsightsSpansValueTypeBool, *v.Bool
+		n++
+	}
+	if v.StringArray != nil {
+		typ, val = InsightsSpansValueTypeStringArray, v.StringArray
+		n++
+	}
+	if n != 1 {
+		return nil, fmt.Errorf("godo: SpansFilterValue must set exactly one field, got %d", n)
+	}
+	return json.Marshal(spansFilterValueWire{Type: typ, Value: val})
+}
+
+// UnmarshalJSON accepts both the typed wrapper {"type":...,"value":...} and a
+// bare scalar or string array.
+func (v *SpansFilterValue) UnmarshalJSON(data []byte) error {
+	*v = SpansFilterValue{}
+
+	// Typed wrapper: a JSON object carrying a non-empty "type".
+	var wire struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &wire); err == nil && wire.Type != "" {
+		return v.setFromWire(wire.Type, wire.Value)
+	}
+
+	// Bare form.
+	var raw interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch val := raw.(type) {
+	case nil:
+		return nil
+	case string:
+		v.String = &val
+	case float64:
+		v.Number = &val
+	case bool:
+		v.Bool = &val
+	case []interface{}:
+		arr := make([]string, len(val))
+		for i, e := range val {
+			s, ok := e.(string)
+			if !ok {
+				return fmt.Errorf("godo: SpansFilterValue array element %d is not a string", i)
+			}
+			arr[i] = s
+		}
+		v.StringArray = arr
+	default:
+		return fmt.Errorf("godo: unsupported SpansFilterValue %T", raw)
+	}
+	return nil
+}
+
+func (v *SpansFilterValue) setFromWire(typ string, raw json.RawMessage) error {
+	switch typ {
+	case InsightsSpansValueTypeString:
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return err
+		}
+		v.String = &s
+	case InsightsSpansValueTypeNumber:
+		var n float64
+		if err := json.Unmarshal(raw, &n); err != nil {
+			return err
+		}
+		v.Number = &n
+	case InsightsSpansValueTypeBool:
+		var b bool
+		if err := json.Unmarshal(raw, &b); err != nil {
+			return err
+		}
+		v.Bool = &b
+	case InsightsSpansValueTypeStringArray:
+		var arr []string
+		if err := json.Unmarshal(raw, &arr); err != nil {
+			return err
+		}
+		v.StringArray = arr
+	default:
+		return fmt.Errorf("godo: unknown SpansFilterValue type %q", typ)
+	}
+	return nil
+}
+
+// SearchSpans searches tracing spans in a region. The request time range must
+// not exceed seven days. Results are ordered by start time descending unless
+// OrderBy overrides it. Cursor pagination is not yet supported; the response
+// Pagination.HasMore reports whether more spans matched than were returned.
+func (s *InsightsServiceOp) SearchSpans(ctx context.Context, region string, search *SpansSearchRequest) (*SpansSearchResponse, *Response, error) {
+	path := "/v2/insights/query/" + url.PathEscape(region) + "/spans/search"
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, search)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(SpansSearchResponse)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+	return result, resp, nil
+}
+
+// TracesSearchRequest describes an Insights traces search. TimeRange must not
+// exceed seven days.
+type TracesSearchRequest struct {
+	TimeRange  TracesTimeRange          `json:"timeRange"`
+	Filter     *TracesFilterExpression  `json:"filter,omitempty"`
+	OrderBy    []TracesOrderBy          `json:"orderBy,omitempty"`
+	Pagination *TracesPaginationRequest `json:"pagination,omitempty"`
+}
+
+// TracesTimeRange is an inclusive traces query time window.
+type TracesTimeRange struct {
+	From TracesTimeBound `json:"from"`
+	To   TracesTimeBound `json:"to"`
+}
+
+// TracesTimeBound is a single time bound. Set Relative or Absolute; if both are
+// set, Absolute is used. Relative accepts "now", a bare lookback duration such
+// as "1h" or "7d", or an offset such as "now-15m". Absolute accepts an RFC3339
+// string or a Unix timestamp encoded as a decimal string.
+type TracesTimeBound struct {
+	Relative string `json:"relative,omitempty"`
+	Absolute string `json:"absolute,omitempty"`
+}
+
+// TracesFilterExpression is a type-discriminated boolean filter tree. Set Type
+// to select the node kind: a condition node sets Field, Operator, and Value;
+// and/or/not nodes set Expressions; a text_search node sets Query. An empty
+// Type is treated as a condition. A trace matches when at least one of its
+// spans matches the filter.
+type TracesFilterExpression struct {
+	Type        string                   `json:"type,omitempty"`
+	Field       *TracesFilterField       `json:"field,omitempty"`
+	Operator    string                   `json:"operator,omitempty"`
+	Value       *TracesFilterValue       `json:"value,omitempty"`
+	Expressions []TracesFilterExpression `json:"expressions,omitempty"`
+	Query       string                   `json:"query,omitempty"`
+}
+
+// TracesFilterField references a span field. In filters, Name may be a
+// well-known span field such as "serviceName" or "statusCode", or an attribute
+// key; Scope optionally restricts the lookup to "resource" or "attributes". In
+// OrderBy, Name must be a trace-level field such as "started" or "durationNs"
+// and Scope is ignored.
+type TracesFilterField struct {
+	Name  string `json:"name"`
+	Scope string `json:"scope,omitempty"`
+}
+
+// TracesFilterValue is a filter comparison value. Set exactly one field; it is
+// encoded as the API's typed wrapper, for example {"type":"string","value":"x"}.
+// Scalar fields use pointers so zero, false, and an empty string can be sent.
+type TracesFilterValue struct {
+	String      *string
+	Number      *float64
+	Bool        *bool
+	StringArray []string
+}
+
+// TracesOrderBy is a traces search sort clause. Only sorting by "started" is
+// exact; other fields sort the most recent matching traces up to the limit.
+type TracesOrderBy struct {
+	Field     TracesFilterField `json:"field"`
+	Direction string            `json:"direction,omitempty"`
+}
+
+// TracesPaginationRequest limits the number of traces returned. Limit defaults
+// to 100 and must not exceed 1000.
+type TracesPaginationRequest struct {
+	Limit int `json:"limit,omitempty"`
+}
+
+// TracesSearchResponse contains matching traces and pagination state.
+type TracesSearchResponse struct {
+	Data       []TraceSummary            `json:"data,omitempty"`
+	Pagination *TracesPaginationResponse `json:"pagination,omitempty"`
+}
+
+// TraceSummary is a single trace returned by a traces search, aggregated from
+// its spans.
+type TraceSummary struct {
+	TraceID     string    `json:"traceId"`
+	Started     time.Time `json:"started"`
+	ServiceName string    `json:"serviceName,omitempty"`
+	DurationNs  int64     `json:"durationNs,omitempty"`
+	SpanCount   int       `json:"spanCount,omitempty"`
+	ErrorCount  int       `json:"errorCount,omitempty"`
+	Status      string    `json:"status,omitempty"`
+	SpanNames   []string  `json:"spanNames,omitempty"`
+}
+
+// TracesPaginationResponse describes whether more traces matched than were
+// returned. There is no cursor; narrow the time range or filter to see more.
+type TracesPaginationResponse struct {
+	HasMore bool `json:"hasMore"`
+}
+
+// TraceGetOptions narrows the lookup window for GetTrace. Both bounds accept
+// the same relative and absolute formats as TracesTimeBound. The window
+// defaults to the last seven days and must not exceed seven days.
+type TraceGetOptions struct {
+	From string `url:"from,omitempty"`
+	To   string `url:"to,omitempty"`
+}
+
+// Trace is a single trace and its spans, ordered by start time.
+type Trace struct {
+	TraceID   string      `json:"traceId"`
+	Spans     []TraceSpan `json:"spans,omitempty"`
+	Truncated bool        `json:"truncated,omitempty"`
+}
+
+// TraceSpan is a single span belonging to a Trace.
+type TraceSpan struct {
+	TraceID       string            `json:"traceId"`
+	SpanID        string            `json:"spanId"`
+	ParentSpanID  string            `json:"parentSpanId,omitempty"`
+	StartTime     time.Time         `json:"startTime"`
+	EndTime       time.Time         `json:"endTime"`
+	DurationNs    int64             `json:"durationNs,omitempty"`
+	Name          string            `json:"name,omitempty"`
+	Kind          string            `json:"kind,omitempty"`
+	StatusCode    string            `json:"statusCode,omitempty"`
+	StatusMessage string            `json:"statusMessage,omitempty"`
+	ServiceName   string            `json:"serviceName,omitempty"`
+	Resource      map[string]string `json:"resource,omitempty"`
+	Attributes    map[string]string `json:"attributes,omitempty"`
+}
+
+type tracesFilterValueWire struct {
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
+}
+
+// MarshalJSON encodes a TracesFilterValue as the API's typed wrapper. Exactly
+// one field must be set.
+func (v TracesFilterValue) MarshalJSON() ([]byte, error) {
+	var (
+		typ string
+		val interface{}
+	)
+	n := 0
+	if v.String != nil {
+		typ, val = InsightsTracesValueTypeString, *v.String
+		n++
+	}
+	if v.Number != nil {
+		typ, val = InsightsTracesValueTypeNumber, *v.Number
+		n++
+	}
+	if v.Bool != nil {
+		typ, val = InsightsTracesValueTypeBool, *v.Bool
+		n++
+	}
+	if v.StringArray != nil {
+		typ, val = InsightsTracesValueTypeStringArray, v.StringArray
+		n++
+	}
+	if n != 1 {
+		return nil, fmt.Errorf("godo: TracesFilterValue must set exactly one field, got %d", n)
+	}
+	return json.Marshal(tracesFilterValueWire{Type: typ, Value: val})
+}
+
+// UnmarshalJSON accepts both the typed wrapper {"type":...,"value":...} and a
+// bare scalar or string array.
+func (v *TracesFilterValue) UnmarshalJSON(data []byte) error {
+	*v = TracesFilterValue{}
+
+	var wire struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &wire); err == nil && wire.Type != "" {
+		return v.setFromWire(wire.Type, wire.Value)
+	}
+
+	var raw interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch val := raw.(type) {
+	case nil:
+		return nil
+	case string:
+		v.String = &val
+	case float64:
+		v.Number = &val
+	case bool:
+		v.Bool = &val
+	case []interface{}:
+		arr := make([]string, len(val))
+		for i, e := range val {
+			s, ok := e.(string)
+			if !ok {
+				return fmt.Errorf("godo: TracesFilterValue array element %d is not a string", i)
+			}
+			arr[i] = s
+		}
+		v.StringArray = arr
+	default:
+		return fmt.Errorf("godo: unsupported TracesFilterValue %T", raw)
+	}
+	return nil
+}
+
+func (v *TracesFilterValue) setFromWire(typ string, raw json.RawMessage) error {
+	switch typ {
+	case InsightsTracesValueTypeString:
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return err
+		}
+		v.String = &s
+	case InsightsTracesValueTypeNumber:
+		var n float64
+		if err := json.Unmarshal(raw, &n); err != nil {
+			return err
+		}
+		v.Number = &n
+	case InsightsTracesValueTypeBool:
+		var b bool
+		if err := json.Unmarshal(raw, &b); err != nil {
+			return err
+		}
+		v.Bool = &b
+	case InsightsTracesValueTypeStringArray:
+		var arr []string
+		if err := json.Unmarshal(raw, &arr); err != nil {
+			return err
+		}
+		v.StringArray = arr
+	default:
+		return fmt.Errorf("godo: unknown TracesFilterValue type %q", typ)
+	}
+	return nil
+}
+
+// SearchTraces searches traces in a region. Each result aggregates one trace's
+// spans; a trace is included when at least one of its spans matches the
+// filter. The request time range must not exceed seven days. Results are
+// ordered by start time descending unless OrderBy overrides it.
+func (s *InsightsServiceOp) SearchTraces(ctx context.Context, region string, search *TracesSearchRequest) (*TracesSearchResponse, *Response, error) {
+	path := "/v2/insights/query/" + url.PathEscape(region) + "/traces/search"
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, search)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(TracesSearchResponse)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+	return result, resp, nil
+}
+
+// GetTrace retrieves a trace and its spans by trace ID. A trace is only
+// resolvable in the region that ingested it, and only spans that started within
+// the lookup window are returned. Trace.Truncated reports whether the trace has
+// more spans than were returned.
+func (s *InsightsServiceOp) GetTrace(ctx context.Context, region, traceID string, opt *TraceGetOptions) (*Trace, *Response, error) {
+	path := "/v2/insights/query/" + url.PathEscape(region) + "/traces/" + url.PathEscape(traceID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(Trace)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+	return result, resp, nil
 }
