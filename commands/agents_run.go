@@ -735,7 +735,11 @@ func prepareClaudeCodeStart(ctx context.Context, raw []byte, prog *creationProgr
 		return nil
 	}
 
-	env := manifestEnvValues(raw)
+	var generic map[string]any
+	if err := yaml.Unmarshal(raw, &generic); err != nil {
+		return fmt.Errorf("parsing agent manifest: %w", err)
+	}
+	env, _, _, _ := extractManifestEnvAndSecrets(generic, hasYAMLKey(generic, "apiVersion"))
 	secrets := manifestSecretValues(raw)
 	hasNativeKey := secrets[anthropicAPIKeyEnv] != "" || strings.TrimSpace(env[anthropicAPIKeyEnv]) != ""
 	hasHarnessKey := secrets[harnessInferenceAPIKeyEnv] != "" || strings.TrimSpace(env[harnessInferenceAPIKeyEnv]) != ""
