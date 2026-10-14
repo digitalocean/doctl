@@ -631,7 +631,7 @@ func Agents() *Command {
 			displayerType(&displayers.HostedAgentSandboxExec{}))...)
 	AddStringFlag(cmdExec, doctl.ArgAgentExecWorkdir, "", "", "Absolute guest directory to run in (defaults to the workspace root)")
 	AddIntFlag(cmdExec, doctl.ArgAgentExecTimeout, "", 0, "Maximum seconds the command may run (0 uses the server default)")
-	cmdExec.Example = `doctl harness-runtime exec sess_abc123 -- ls -la; doctl harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
+	cmdExec.Example = `doctl harness-runtime exec sess_abc123 -- ls -la; doctl harness-runtime exec my-session --workdir /workspace/src -- go test ./...; doctl harness-runtime exec my-session --timeout 30 -- make build`
 
 	cmdPrompt := CmdBuilder(cmd, RunAgentsPrompt, "prompt <session> <prompt>...",
 		"Send one prompt to a session and print the answer",

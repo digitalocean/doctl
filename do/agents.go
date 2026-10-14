@@ -60,6 +60,12 @@ type HostedAgentsService interface {
 	// guest command runs, so the caller needs to be able to give up. A non-zero
 	// ExitCode is a successful call — only transport failure is an error.
 	ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error)
+	// StreamExecInSandbox runs the same guest command as ExecInSandbox but
+	// delivers stdout/stderr as they arrive (SSE). emit is called for each
+	// frame; a terminal exit frame carries ExitCode. Against a server that
+	// does not yet speak SSE, the call falls back to the buffered JSON body
+	// and synthesizes the same frames so callers stay compatible.
+	StreamExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest, emit func(SandboxExecEvent) error) error
 	// ListSandboxSizes returns the customer-selectable sandbox size catalog.
 	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
 	// smallest-to-largest; no pagination.
