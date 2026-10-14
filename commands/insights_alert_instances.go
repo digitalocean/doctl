@@ -39,11 +39,11 @@ An alert instance is a read-only record of an alert rule firing against a resour
 	cmdList := CmdBuilder(cmd, RunInsightsAlertInstanceList, "list", "List alert instances",
 		`Lists alert instances in your account, newest trigger first. By default, all pages are retrieved. Use `+"`"+`--page`+"`"+` to retrieve a single page.`,
 		Writer, aliasOpt("ls"), displayerType(&displayers.InsightsAlertInstances{}))
-	AddStringFlag(cmdList, doctl.ArgInsightsAlertInstanceStatus, "", "", "Filter by status. Possible values: `active` or `resolved`")
+	AddStringFlag(cmdList, doctl.ArgInsightsAlertInstanceStatus, "", "", "Filter by status. Possible values: active or resolved")
 	AddStringFlag(cmdList, doctl.ArgInsightsAlertRuleID, "", "", "Filter by the ID of the alert rule that fired")
-	AddStringFlag(cmdList, doctl.ArgInsightsAlertInstanceResourceURN, "", "", "Filter by the URN of the resource the alert fired against, for example `do:droplet:12345`")
+	AddStringFlag(cmdList, doctl.ArgInsightsAlertInstanceResourceURN, "", "", "Filter by the `urn` of the resource the alert fired against, for example do:droplet:12345")
 	AddIntFlag(cmdList, doctl.ArgInsightsAlertInstancePage, "", 0, "Retrieve only this page of results (1-based)")
-	AddIntFlag(cmdList, doctl.ArgInsightsAlertInstancePerPage, "", 0, "Number of results per page when `--page` is set")
+	AddIntFlag(cmdList, doctl.ArgInsightsAlertInstancePerPage, "", 0, "Number of results per page when --page is set")
 	cmdList.Example = `The following example lists active alert instances for an alert rule: doctl insights alert-instance list --status active --rule-id 4b6f2a7e-1c2d-4e5f-8a9b-0c1d2e3f4a5b`
 
 	cmdGet := CmdBuilder(cmd, RunInsightsAlertInstanceGet, "get <alert-instance-id>", "Retrieve an alert instance",

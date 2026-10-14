@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	insightsTimeHelp     = "RFC3339 timestamp or Unix timestamp in seconds, for example `2026-09-01T00:00:00Z` or `1756684800`"
-	insightsDurationHelp = "Prometheus duration or number of seconds, for example `30s`, `5m`, or `1h30m`"
+	insightsTimeHelp     = "RFC3339 timestamp or Unix timestamp in seconds, for example 2026-09-01T00:00:00Z or 1756684800"
+	insightsDurationHelp = "Prometheus duration or number of seconds, for example 30s, 5m, or 1h30m"
 )
 
 func insightsMetrics() *Command {
@@ -89,11 +89,11 @@ Text output shows one row per sample or series. JSON output (` + "`" + `--output
 }
 
 func addInsightsRegionFlag(cmd *Command) {
-	AddStringFlag(cmd, doctl.ArgRegionSlug, "", "", "The region slug to query, for example `nyc3`", requiredOpt())
+	AddStringFlag(cmd, doctl.ArgRegionSlug, "", "", "The region slug to query, for example nyc3", requiredOpt())
 }
 
 func addInsightsSelectorFlags(cmd *Command, matchRequired bool) {
-	desc := "A series selector, for example `up{job=\"api\"}`. Repeat the flag to pass several selectors"
+	desc := "A series `selector`, for example up{job=\"api\"}. Repeat the flag to pass several selectors"
 	if matchRequired {
 		desc += " (required)"
 	}

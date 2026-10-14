@@ -63,13 +63,13 @@ Build the search with flags, or pass a complete request body with `+"`"+`--reque
 Results are returned one page at a time. Cursor pagination is only available when ordering by `+"`"+`timestamp`+"`"+` alone; when more results are available, the next cursor is printed to stderr in text output and returned in `+"`"+`pagination.next_cursor`+"`"+` in JSON output.`,
 		Writer, displayerType(&displayers.InsightsLogs{}))
 	addInsightsRegionFlag(cmdSearch)
-	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFrom, "", "", "Start of the time range. Defaults to `"+insightsLogsDefaultFrom+"`")
-	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsTo, "", "", "End of the time range. Defaults to `"+insightsLogsDefaultTo+"`")
+	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFrom, "", "", "Start of the time range. Defaults to "+insightsLogsDefaultFrom)
+	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsTo, "", "", "End of the time range. Defaults to "+insightsLogsDefaultTo)
 	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsText, "", "", "Search for a substring across the log body, service name, and resource URN")
 	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFilter, "", "", "A JSON filter expression")
-	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFilterFile, "", "", "Path to a JSON filter expression, or `-` to read from stdin")
-	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsRequestFile, "", "", "Path to a complete JSON logs search request, or `-` to read from stdin")
-	AddStringSliceFlag(cmdSearch, doctl.ArgInsightsLogsOrderBy, "", nil, "Sort clause in the form `field[:asc|desc]`, for example `timestamp:desc`. Repeat the flag to sort by several fields")
+	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFilterFile, "", "", "Read a JSON filter expression from `path`, or - to read from stdin")
+	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsRequestFile, "", "", "Read a complete JSON logs search request from `path`, or - to read from stdin")
+	AddStringSliceFlag(cmdSearch, doctl.ArgInsightsLogsOrderBy, "", nil, "Sort clause in the form `field[:asc|desc]`, for example timestamp:desc. Repeat the flag to sort by several fields")
 	AddIntFlag(cmdSearch, doctl.ArgInsightsLogsLimit, "", 0, fmt.Sprintf("Maximum number of records to return, up to %d. The server defaults to 100", insightsLogsMaxLimit))
 	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsCursor, "", "", "Cursor from a previous search to retrieve the next page")
 	cmdSearch.Example = `The following example searches the last 15 minutes of logs in ` + "`" + `nyc3` + "`" + ` for "timeout", newest first: doctl insights logs search --region nyc3 --from 15m --text timeout --order-by timestamp:desc`
