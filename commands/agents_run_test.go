@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -442,14 +441,6 @@ func TestRunAgentsCreate_ClaudeCodeSecretSatisfiesKey(t *testing.T) {
 		_ = os.Unsetenv(anthropicAPIKeyEnv)
 	})
 
-	orig := validateAnthropicAPIKey
-	t.Cleanup(func() { validateAnthropicAPIKey = orig })
-	var gotKey string
-	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
-		gotKey = apiKey
-		return nil
-	}
-
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -482,7 +473,6 @@ func TestRunAgentsCreate_ClaudeCodeSecretSatisfiesKey(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=sk-ant-from-secret"})
 
 		require.NoError(t, RunAgentsCreate(config))
-		assert.Equal(t, "sk-ant-from-secret", gotKey)
 	})
 }
 
@@ -531,161 +521,6 @@ secrets:
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, spec)
 		require.NoError(t, RunAgentsCreate(config))
-	})
-}
-
-// TestPrepareClaudeCodeStart_ValidatesKey confirms the key resolved via
-// ensureEnvVar is the one handed to validateAnthropicAPIKey, and that
-// non-claude-code manifests skip validation entirely (no network call).
-func TestPrepareClaudeCodeStart_ValidatesKey(t *testing.T) {
-	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
-	orig := validateAnthropicAPIKey
-	t.Cleanup(func() { validateAnthropicAPIKey = orig })
-
-	var gotKey string
-	calls := 0
-	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
-		calls++
-		gotKey = apiKey
-		return nil
-	}
-
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "claude-code"})
-	require.NoError(t, err)
-	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
-	assert.Equal(t, 1, calls)
-	assert.Equal(t, "sk-ant-test", gotKey)
-
-	// A non-claude-code manifest must not trigger validation.
-	raw, err = buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
-	require.NoError(t, err)
-	require.NoError(t, prepareClaudeCodeStart(context.Background(), raw, nil))
-	assert.Equal(t, 1, calls, "opencode manifest should not call validateAnthropicAPIKey")
-}
-
-// TestPrepareClaudeCodeStart_InferenceRouting confirms a key is only checked
-// against Anthropic when the manifest sends inference there, and that a key
-// from the local shell is never picked up for a non-Anthropic host.
-func TestPrepareClaudeCodeStart_InferenceRouting(t *testing.T) {
-	tests := []struct {
-		name      string
-		manifest  string
-		wantCalls int
-		wantKey   string
-		wantErr   string
-	}{
-		{
-			name: "harness inference group skips the check",
-			manifest: `agent: claude-code
-env:
-  HARNESS_INFERENCE_BASE_URL: https://inference.example.com/v1
-  HARNESS_INFERENCE_MODEL: router:software-engineering
-secrets:
-  HARNESS_INFERENCE_API_KEY: do-inference-key
-`,
-		},
-		{
-			name: "legacy envelope with harness inference group skips the check",
-			manifest: `apiVersion: agents.digitalocean.com/v1alpha1
-kind: Agent
-spec:
-  runtime:
-    adapter: claude-code
-  env:
-    HARNESS_INFERENCE_MODEL: router:software-engineering
-  secrets:
-    HARNESS_INFERENCE_API_KEY: do-inference-key
-`,
-		},
-		{
-			name: "non-Anthropic base URL with a declared key skips the check",
-			manifest: `agent: claude-code
-env:
-  ANTHROPIC_BASE_URL: https://inference.example.com
-  ANTHROPIC_MODEL: router:software-engineering
-secrets:
-  ANTHROPIC_API_KEY: do-inference-key
-`,
-		},
-		{
-			name: "non-Anthropic base URL without a declared key fails instead of using the shell key",
-			manifest: `agent: claude-code
-env:
-  ANTHROPIC_BASE_URL: https://inference.example.com
-`,
-			wantErr: "won't forward one from your shell",
-		},
-		{
-			name: "native key wins over the harness group",
-			manifest: `agent: claude-code
-secrets:
-  ANTHROPIC_API_KEY: sk-ant-manifest
-  HARNESS_INFERENCE_API_KEY: do-inference-key
-`,
-			wantCalls: 1,
-			wantKey:   "sk-ant-manifest",
-		},
-		{
-			name: "explicit Anthropic base URL keeps the check",
-			manifest: `agent: claude-code
-env:
-  ANTHROPIC_BASE_URL: https://api.anthropic.com
-secrets:
-  ANTHROPIC_API_KEY: sk-ant-manifest
-`,
-			wantCalls: 1,
-			wantKey:   "sk-ant-manifest",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(anthropicAPIKeyEnv, "sk-ant-from-shell")
-			orig := validateAnthropicAPIKey
-			t.Cleanup(func() { validateAnthropicAPIKey = orig })
-
-			calls := 0
-			var gotKey string
-			validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
-				calls++
-				gotKey = apiKey
-				return nil
-			}
-
-			err := prepareClaudeCodeStart(context.Background(), []byte(tt.manifest), nil)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-			assert.Equal(t, tt.wantCalls, calls)
-			assert.Equal(t, tt.wantKey, gotKey)
-		})
-	}
-}
-
-// TestRunAgentsCreate_ClaudeCodeBogusAnthropicKey ensures a present-but-invalid
-// ANTHROPIC_API_KEY is caught locally too — not just a missing one. No
-// CreateSessionFromManifest expectation is set below, so gomock fails the
-// test if the bogus key is not rejected before that call.
-func TestRunAgentsCreate_ClaudeCodeBogusAnthropicKey(t *testing.T) {
-	t.Setenv(anthropicAPIKeyEnv, "sk-ant-bogus")
-	orig := validateAnthropicAPIKey
-	t.Cleanup(func() { validateAnthropicAPIKey = orig })
-	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error {
-		return fmt.Errorf("%s was rejected by Anthropic (HTTP 401): invalid x-api-key", anthropicAPIKeyEnv)
-	}
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		var buf bytes.Buffer
-		config.Out = &buf
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
-		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
-
-		err := RunAgentsCreate(config)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "rejected by Anthropic")
 	})
 }
 

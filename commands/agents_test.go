@@ -612,9 +612,6 @@ func TestRunAgentsCreate(t *testing.T) {
 
 func TestRunAgentsCreate_FromHarness(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
-	origValidate := validateAnthropicAPIKey
-	t.Cleanup(func() { validateAnthropicAPIKey = origValidate })
-	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error { return nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().

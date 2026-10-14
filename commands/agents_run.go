@@ -94,8 +94,6 @@ const (
 	claudeCodeAgentName = "claude-code"
 	codexAgentName      = "codex"
 	anthropicAPIKeyEnv  = "ANTHROPIC_API_KEY"
-
-	harnessInferenceAPIKeyEnv = "HARNESS_INFERENCE_API_KEY"
 )
 
 var (
@@ -543,12 +541,8 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 	case agent == claudeCodeAgentName:
 		// Claude Code needs its own inference key just like Codex needs
 		// OPENAI_API_KEY. Referencing it here (rather than baking in a
-		// literal) still routes through expandManifestEnvCollect/ensureEnvVar
-		// so a missing key is prompted for on a TTY, but a present-but-bogus
-		// key is caught too: prepareClaudeCodeStart validates it against
-		// Anthropic's API before doctl ever calls CreateSessionFromManifest,
-		// instead of failing deep into a hosted session that was never going
-		// to work.
+		// literal) routes through expandManifestEnvCollect/ensureEnvVar so a
+		// missing key is prompted for on a TTY.
 		doc.Secrets = map[string]string{
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
@@ -673,10 +667,6 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 
 	raw = dropEnvKeysCoveredBySecrets(raw)
 
-	if err := prepareClaudeCodeStart(context.Background(), raw, prog); err != nil {
-		return nil, err
-	}
-
 	lookup := envLookupWithOverlay(withServerProvidedOverlay(resolvedManifestSecretValues(raw), envOverlay))
 	manifest, err := expandManifestEnvCollect(raw, lookup)
 	if err != nil {
@@ -712,71 +702,6 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		printSessionCreateWarnings(sess.Warnings)
 	}
 	return sess, nil
-}
-
-// prepareClaudeCodeStart mirrors prepareOpenAISandboxStart for claude-code:
-// when the manifest sends inference to Anthropic, it resolves
-// ANTHROPIC_API_KEY (prompting on a TTY if missing, exactly like ensureEnvVar
-// already did) and then confirms Anthropic actually accepts it with a real,
-// free API call — closing the gap where a bogus (but non-empty) key used to
-// sail through to CreateSessionFromManifest and only fail deep inside the
-// hosted sandbox. No-ops for every other harness.
-//
-// A key is only ever sent to the host the manifest pairs it with. Manifests
-// that select the harness inference group, or point ANTHROPIC_BASE_URL at a
-// non-Anthropic gateway, skip the check, and never pick up an
-// ANTHROPIC_API_KEY from the local shell.
-func prepareClaudeCodeStart(ctx context.Context, raw []byte, prog *creationProgress) error {
-	doc, err := parseAgentManifest(raw)
-	if err != nil {
-		return err
-	}
-	if doc.adapter() != claudeCodeAgentName {
-		return nil
-	}
-
-	var generic map[string]any
-	if err := yaml.Unmarshal(raw, &generic); err != nil {
-		return fmt.Errorf("parsing agent manifest: %w", err)
-	}
-	env, _, _, _ := extractManifestEnvAndSecrets(generic, hasYAMLKey(generic, "apiVersion"))
-	secrets := manifestSecretValues(raw)
-	hasNativeKey := secrets[anthropicAPIKeyEnv] != "" || strings.TrimSpace(env[anthropicAPIKeyEnv]) != ""
-	hasHarnessKey := secrets[harnessInferenceAPIKeyEnv] != "" || strings.TrimSpace(env[harnessInferenceAPIKeyEnv]) != ""
-
-	// The guest prefers a native ANTHROPIC_API_KEY and only falls back to the
-	// harness inference group when none is set.
-	if !hasNativeKey && hasHarnessKey {
-		return nil
-	}
-	if baseURL := strings.TrimSpace(os.ExpandEnv(env[anthropicBaseURLEnv])); baseURL != "" && !isAnthropicAPIBaseURL(baseURL) {
-		if !hasNativeKey {
-			return fmt.Errorf("%s points at %s, so %s must be declared in the manifest (under secrets, or --%s %s=- / NAME=@path); doctl won't forward one from your shell to a non-Anthropic host",
-				anthropicBaseURLEnv, baseURL, anthropicAPIKeyEnv, doctl.ArgAgentSecret, anthropicAPIKeyEnv)
-		}
-		return nil
-	}
-
-	apiKey := strings.TrimSpace(resolvedManifestSecretValues(raw)[anthropicAPIKeyEnv])
-	if apiKey == "" {
-		var err error
-		apiKey, err = ensureEnvVar(anthropicAPIKeyEnv)
-		if err != nil {
-			return fmt.Errorf("%s is required to start a %s session (set the environment variable, or pass --%s %s=- / NAME=@path): %w",
-				anthropicAPIKeyEnv, claudeCodeAgentName, doctl.ArgAgentSecret, anthropicAPIKeyEnv, err)
-		}
-	}
-
-	if prog != nil {
-		prog.wait(anthropicKeyCheckLabel)
-	}
-	if err := validateAnthropicAPIKey(ctx, apiKey); err != nil {
-		return err
-	}
-	if prog != nil {
-		prog.ok("Anthropic API key OK")
-	}
-	return nil
 }
 
 func manifestNeedsOpenAIPrepare(raw []byte) (bool, error) {
