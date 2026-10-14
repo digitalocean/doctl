@@ -1074,6 +1074,14 @@ const (
 	// create, or changed later on an existing session with `agents update`.
 	ArgAgentResumeOnTopoff = "resume-on-topoff"
 
+	// ArgAgentInsightsMetrics, ArgAgentInsightsLogs and ArgAgentInsightsTraces
+	// set the per-signal DigitalOcean Insights opt-in for a session created from
+	// a manifest. Each is a request parameter, not a manifest field. Left unset,
+	// the platform applies its default (metrics on, logs and traces off).
+	ArgAgentInsightsMetrics = "insights-metrics"
+	ArgAgentInsightsLogs    = "insights-logs"
+	ArgAgentInsightsTraces  = "insights-traces"
+
 	// Gradient AI simulation args
 
 	// ArgGenAISearch filters a Gradient AI list by a free-text search term.
