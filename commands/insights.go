@@ -28,6 +28,9 @@ func Insights() *Command {
 
 	cmd.AddCommand(InsightsNotificationChannel())
 	cmd.AddCommand(InsightsAlertRule())
+	cmd.AddCommand(insightsAlertInstances())
+	cmd.AddCommand(insightsMetrics())
+	cmd.AddCommand(insightsLogs())
 
 	return cmd
 }
