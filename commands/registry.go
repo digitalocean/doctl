@@ -437,8 +437,8 @@ func RunRegistryDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if !force && AskForConfirm("delete registry") != nil {
-		return fmt.Errorf("operation aborted")
+	if err := confirmAction(force, "delete registry"); err != nil {
+		return err
 	}
 
 	return c.Registry().Delete()
@@ -476,7 +476,7 @@ func RunRegistryLogin(c *CmdConfig) error {
 		regCredReq.ExpirySeconds = nil
 	}
 
-	fmt.Printf("Logging Docker in to %s\n", c.Registry().Endpoint())
+	fmt.Fprintf(c.Out, "Logging Docker in to %s\n", c.Registry().Endpoint())
 	creds, err := c.Registry().DockerCredentials(&regCredReq)
 	if err != nil {
 		return err
@@ -630,7 +630,7 @@ func RunRegistryLogout(c *CmdConfig) error {
 	}
 
 	server := c.Registry().Endpoint()
-	fmt.Printf("Removing login credentials for %s\n", server)
+	fmt.Fprintf(c.Out, "Removing login credentials for %s\n", server)
 
 	cf := dockerconf.LoadDefaultConfigFile(os.Stderr)
 	dockerCreds := cf.GetCredentialsStore(server)
@@ -744,8 +744,8 @@ func RunRepositoryDeleteTag(c *CmdConfig) error {
 	repository := c.Args[0]
 	tags := c.Args[1:]
 
-	if !force && AskForConfirm(fmt.Sprintf("delete %d repository tag(s)", len(tags))) != nil {
-		return fmt.Errorf("operation aborted")
+	if err := confirmAction(force, fmt.Sprintf("delete %d repository tag(s)", len(tags))); err != nil {
+		return err
 	}
 
 	var errors []string
@@ -781,8 +781,8 @@ func RunRepositoryDeleteManifest(c *CmdConfig) error {
 	repository := c.Args[0]
 	digests := c.Args[1:]
 
-	if !force && AskForConfirm(fmt.Sprintf("delete %d repository manifest(s) by digest (including associated tags)", len(digests))) != nil {
-		return fmt.Errorf("operation aborted")
+	if err := confirmAction(force, fmt.Sprintf("delete %d repository manifest(s) by digest (including associated tags)", len(digests))); err != nil {
+		return err
 	}
 
 	var errors []string
@@ -959,8 +959,8 @@ func RunStartGarbageCollection(c *CmdConfig) error {
 
 	msg := "run garbage collection -- this will put your registry in read-only mode until it finishes"
 
-	if !force && AskForConfirm(msg) != nil {
-		return errOperationAborted
+	if err := confirmAction(force, msg); err != nil {
+		return err
 	}
 
 	gc, err := c.Registry().StartGarbageCollection(registryName, gcStartRequest)
@@ -1300,8 +1300,8 @@ func RunRegistriesDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if !force && AskForConfirm("delete this registry") != nil {
-		return fmt.Errorf("operation aborted")
+	if err := confirmAction(force, "delete this registry"); err != nil {
+		return err
 	}
 
 	return c.Registries().Delete(name)
@@ -1379,7 +1379,7 @@ func RunRegistriesLogin(c *CmdConfig) error {
 		return err
 	}
 
-	fmt.Printf("Logging Docker in to %s\n", reg.Endpoint())
+	fmt.Fprintf(c.Out, "Logging Docker in to %s\n", reg.Endpoint())
 	creds, err := c.Registries().DockerCredentials(registryName, &regCredReq)
 	if err != nil {
 		return err
@@ -1455,7 +1455,7 @@ func RunRegistriesLogout(c *CmdConfig) error {
 	}
 
 	server := reg.Endpoint()
-	fmt.Printf("Removing login credentials for %s\n", server)
+	fmt.Fprintf(c.Out, "Removing login credentials for %s\n", server)
 
 	// Use the base hostname for credential lookup (same as single registry)
 	// Docker credentials are stored under registry.digitalocean.com, not registry.digitalocean.com/registry-name

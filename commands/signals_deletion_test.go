@@ -244,7 +244,7 @@ func TestSignalsDeletionCreate_NoForceNonInteractiveRefuses(t *testing.T) {
 				// No CreateDeletion expectation: calling it fails the test.
 
 				err := RunSignalsDeletionCreate(config)
-				assert.ErrorIs(t, err, ErrExitSilently)
+				assert.ErrorIs(t, err, errConfirmationRequired)
 			})
 		})
 	}

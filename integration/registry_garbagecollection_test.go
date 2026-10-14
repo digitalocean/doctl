@@ -219,7 +219,7 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 		output, err := cmd.CombinedOutput()
 		// NOTE(13/09/2025) this expected message was changed to have the "registry" prefix because now
 		// the sub-commands for "registry" and "registries" are distinguished by using overrideNS (override name space)
-		expectMsg := "Error: (registry.garbage-collection.cancel) command is missing required arguments"
+		expectMsg := "Error: (registry.garbage-collection.cancel) command is missing required arguments\n→ run doctl registry garbage-collection cancel --help"
 		expect.Equal(strings.TrimSpace(expectMsg), strings.TrimSpace(string(output)))
 		expect.Error(err)
 	})
@@ -234,7 +234,7 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 			"invalid-gc-uuid",
 		)
 		output, err := cmd.CombinedOutput()
-		expectMsg := "Error: PUT " + server.URL + "/v2/registry/" + validRegistryName + "/garbage-collection/" + invalidGCUUID + ": 404"
+		expectMsg := "Error: Not Found\nthe requested resource does not exist, or not in this account/context\nstatus 404"
 		expect.Equal(strings.TrimSpace(expectMsg), strings.TrimSpace(string(output)))
 		expect.Error(err)
 	})
@@ -250,7 +250,7 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 			validGCUUID,
 		)
 		output, err := cmd.CombinedOutput()
-		expectMsg := "Error: PUT " + server.URL + "/v2/registry/" + invalidRegistryName + "/garbage-collection/" + validGCUUID + ": 404"
+		expectMsg := "Error: Not Found\nthe requested resource does not exist, or not in this account/context\nstatus 404"
 		expect.Equal(strings.TrimSpace(expectMsg), strings.TrimSpace(string(output)))
 		expect.Error(err)
 	})

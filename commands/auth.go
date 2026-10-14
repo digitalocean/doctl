@@ -116,9 +116,11 @@ The `+"`"+`--context`+"`"+` flag allows you to add authentication for multiple a
 
 If the `+"`"+`--context`+"`"+` flag is not specified, doctl creates a default authentication context named `+"`"+`default`+"`"+`.
 
+When the `+"`"+`--access-token`+"`"+` flag or the `+"`"+`DIGITALOCEAN_ACCESS_TOKEN`+"`"+` environment variable is set, doctl validates and saves that token instead of prompting you for one, replacing any token already saved. Both apply only to the `+"`"+`default`+"`"+` context; set a token for a named context by entering it at the prompt.
+
 You can use doctl without initializing it by adding the `+"`"+`--access-token`+"`"+` flag to each command and providing an API token as the argument.`, Writer, false)
 	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
-	cmdAuthInit.Example = `The following example initializes doctl with a token for a single account with the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
+	cmdAuthInit.Example = `The following example saves a token under the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
 
 	cmdAuthLogin := cmdBuilderWithInit(cmd, RunAuthLogin, "login", "Sign in to DigitalOcean via OAuth 2.1 in your browser", `This command signs doctl in to your DigitalOcean account in the browser. You approve access there instead of creating and pasting an API token.
 
@@ -203,7 +205,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		// need to initial the godo client since we've changed the configuration.
 		if err := c.initServices(c); err != nil {
-			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
+			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %w", err)
 		}
 
 		server, err := c.Doit.GetString(c.NS, doctl.ArgTokenValidationServer)
@@ -213,12 +215,23 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		if _, err := c.OAuth().TokenInfo(server); err != nil {
 			template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
-			return fmt.Errorf("Unable to use supplied token to access API: %s", err)
+			return fmt.Errorf("Unable to use supplied token to access API: %w", err)
 		}
 
 		template.Render(c.Out, `{{success checkmark}}{{nl}}{{nl}}`, nil)
 
-		return writeConfig()
+		cfg, err := loadConfigFile()
+		if err != nil {
+			return err
+		}
+
+		// Saving a token is the whole job of init, so it saves the one it just
+		// validated whatever its source: the prompt, --access-token, or
+		// DIGITALOCEAN_ACCESS_TOKEN. The latter two only ever reach the
+		// default context. Every other command leaves the credentials alone.
+		cfg.setToken(context, token)
+
+		return cfg.write()
 	}
 }
 
@@ -230,17 +243,20 @@ func RunAuthRemove(c *CmdConfig) error {
 		return fmt.Errorf("You must provide a context name")
 	}
 
-	err := c.removeContext(context)
-
+	cfg, err := loadConfigFile()
 	if err != nil {
-		return fmt.Errorf("Context not found")
+		return err
+	}
+
+	if err := cfg.removeContext(context); err != nil {
+		return err
 	}
 
 	removeOAuthTokenState(context)
 
-	fmt.Println("Context deleted successfully")
+	notice("Context deleted successfully")
 
-	return writeConfig()
+	return cfg.write()
 }
 
 // RunAuthList lists all available auth contexts from the user's doctl config.
@@ -263,7 +279,7 @@ func RunAuthList(c *CmdConfig) error {
 // RunAuthToken displays the current context token from the user's doctl config.
 func RunAuthToken(c *CmdConfig) error {
 	accessToken := c.getContextAccessToken()
-	fmt.Println(accessToken)
+	fmt.Fprintln(c.Out, accessToken)
 	return nil
 }
 
@@ -323,36 +339,19 @@ func RunAuthSwitch(c *CmdConfig) error {
 		context = strings.ToLower(viper.GetString("context"))
 	}
 
-	// check that context exists
-	contextsAvail := viper.GetStringMap("auth-contexts")
-	contextsAvail[doctl.ArgDefaultContext] = true
-	keys := make([]string, 0)
-	for ctx := range contextsAvail {
-		keys = append(keys, ctx)
+	cfg, err := loadConfigFile()
+	if err != nil {
+		return err
 	}
 
-	var contextExists bool
-	for _, ctx := range keys {
-		if ctx == context {
-			contextExists = true
-		}
+	if !cfg.hasContext(context) {
+		return errUnknownAuthContext
 	}
 
-	if !contextExists {
-		return errors.New("context does not exist")
-	}
+	cfg.setCurrentContext(context)
 
-	// The two lines below aren't required for doctl specific functionality,
-	// but somehow magically fixes an issue
-	// (https://github.com/digitalocean/doctl/issues/996) where auth-contexts
-	// are mangled when running this command.
-	contexts := viper.GetStringMapString("auth-contexts")
-	viper.Set("auth-contexts", contexts)
-
-	viper.Set("context", context)
-
-	fmt.Printf("Now using context [%s] by default\n", context)
-	return writeConfig()
+	notice("Now using context [%s] by default", context)
+	return cfg.write()
 }
 
 func writeConfig() error {

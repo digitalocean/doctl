@@ -107,7 +107,6 @@ github.com/davecgh/go-spew/spew
 ## explicit; go 1.23.0
 github.com/digitalocean/godo
 github.com/digitalocean/godo/metrics
-github.com/digitalocean/godo/util
 # github.com/distribution/reference v0.6.0
 ## explicit; go 1.20
 github.com/distribution/reference
@@ -407,9 +406,6 @@ github.com/sahilm/fuzzy
 ## explicit
 github.com/sclevine/spec
 github.com/sclevine/spec/report
-# github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
-## explicit
-github.com/shiena/ansicolor
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus

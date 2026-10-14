@@ -100,21 +100,21 @@ var _ = suite("projects/create", func(t *testing.T, when spec.G, it spec.S) {
 			"create",
 		}
 
-		baseErr := `Error: (projects.create%s) command is missing required arguments`
-
 		cases := []struct {
-			desc string
-			err  string
-			args []string
+			desc  string
+			err   string
+			flags []string
+			args  []string
 		}{
-			{desc: "missing all", err: fmt.Sprintf(baseErr, ".name"), args: base},
-			{desc: "missing only name", err: fmt.Sprintf(baseErr, ".name"), args: append(base, []string{"--purpose", "not missing"}...)},
-			{desc: "missing only purpose", err: fmt.Sprintf(baseErr, ".purpose"), args: append(base, []string{"--name", "where are you purpose"}...)},
+			{desc: "missing all", err: "Missing 2 required flags for doctl projects create", flags: []string{"--name", "--purpose"}, args: base},
+			{desc: "missing only name", err: "Missing required flag for doctl projects create", flags: []string{"--name"}, args: append(base, []string{"--purpose", "not missing"}...)},
+			{desc: "missing only purpose", err: "Missing required flag for doctl projects create", flags: []string{"--purpose"}, args: append(base, []string{"--name", "where are you purpose"}...)},
 		}
 
 		for _, c := range cases {
 			commandArgs := c.args
 			expectedErr := c.err
+			expectedFlags := c.flags
 
 			when(c.desc, func() {
 				it("returns an error", func() {
@@ -122,7 +122,11 @@ var _ = suite("projects/create", func(t *testing.T, when spec.G, it spec.S) {
 
 					output, err := cmd.CombinedOutput()
 					expect.Error(err)
-					expect.Contains(string(output), expectedErr)
+					out := string(output)
+					expect.Contains(out, expectedErr)
+					for _, flag := range expectedFlags {
+						expect.Contains(out, flag)
+					}
 				})
 			})
 		}

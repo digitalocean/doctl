@@ -136,7 +136,7 @@ func (s *attachState) clearPrepayBlocked() {
 	s.mu.Unlock()
 }
 
-// printPrepayBlocked renders the add-funds card inline and leaves the session
+// printPrepayBlocked renders the add-funds error inline and leaves the session
 // attached. The work is intact and the next prompt succeeds once funds land —
 // harness-api resumes implicitly on the next send — so tearing the attach down
 // would discard a recoverable state for a condition the user can fix from
@@ -145,7 +145,8 @@ func printPrepayBlocked(c *CmdConfig, state *attachState, cause error) {
 	if !state.notePrepayBlocked() {
 		return
 	}
-	fmt.Fprintf(c.Out, "\n%s\n", newPrepayBlockedError(c, cause).DisplayError())
+	env := resolveUIEnv(c.Out)
+	fmt.Fprintf(c.Out, "\n%s", formatStructuredError(env, newPrepayBlockedError(c, cause)))
 }
 
 // reportHITLResolveErr renders a failed approval resolution. Resolving an
