@@ -4664,7 +4664,7 @@ func classifyStreamError(err error) (string, bool) {
 			if reason := strings.TrimSpace(msg); reason != "" {
 				ape.reason = reason
 			}
-			return "\n" + ape.DisplayError(), true
+			return "\n" + strings.TrimRight(formatStructuredError(uiEnv(), ape), "\n"), true
 		}
 		return "\n" + strings.TrimSpace(err.Error()), true
 	}

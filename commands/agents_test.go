@@ -4033,9 +4033,9 @@ func TestRunAgentsLaunch_AttachAuthFailure(t *testing.T) {
 		require.True(t, errors.As(err, &pretty))
 		assert.Equal(t, "Authentication failed", pretty.title)
 		assert.Contains(t, pretty.tips, "doctl auth init")
-		display := pretty.DisplayError()
-		assert.Contains(t, display, "Authentication failed")
-		assert.NotContains(t, display, "GET http://")
+		assert.Equal(t, "Authentication failed", pretty.Title())
+		assert.NotContains(t, pretty.Reason(), "GET http://")
+		assert.NotContains(t, pretty.Error(), "GET http://")
 	})
 }
 

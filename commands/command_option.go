@@ -63,7 +63,8 @@ func noDefaultSuccess() cmdOption {
 	}
 }
 
-// agentPrettyErrors enables styled error cards for agent subcommands.
+// agentPrettyErrors opts a command into agentPrettyError enrichment before
+// the shared checkErr formatter runs.
 func agentPrettyErrors() cmdOption {
 	return func(c *Command) {
 		c.prettyAgentErrors = true
@@ -77,7 +78,7 @@ func agentsNS(opts ...cmdOption) []cmdOption {
 }
 
 // agentSubNS is for nested agent groups (config / triggers / checkpoint) that
-// need both pretty errors and a custom viper namespace.
+// need agent error enrichment and a custom viper namespace.
 func agentSubNS(ns string, opts ...cmdOption) []cmdOption {
 	return append([]cmdOption{agentPrettyErrors(), overrideCmdNS(ns)}, opts...)
 }

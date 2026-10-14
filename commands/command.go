@@ -43,8 +43,9 @@ type Command struct {
 	// noDefaultSuccess opts out of the default closing line.
 	noDefaultSuccess bool
 
-	// prettyAgentErrors enables styled agent error cards instead of raw
-	// godo "METHOD URL: status message" dumps.
+	// prettyAgentErrors rewrites agent API/local failures into
+	// agentPrettyError (title/reason/tips) before checkErr renders them with
+	// the shared structured layout.
 	prettyAgentErrors bool
 }
 

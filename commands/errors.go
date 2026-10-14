@@ -380,33 +380,7 @@ func checkErr(err error) {
 			return
 		}
 
-		// Every failure carries the same label, whatever produced it, so
-		// that a validation error and an API error read as one voice. Title
-		// falls back to the raw error text, which is what keeps a plain
-		// error's rendering exactly as it always was.
-		style := ui.NewStyle(env)
-		title := se.Title()
-		if title == "" {
-			title = err.Error()
-		}
-		fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.ErrorLabel(), title)
-
-		if reason := se.Reason(); reason != "" {
-			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Dim(reason))
-		}
-		// The label is dimmed to recede behind the value that names the actual
-		// status or request. The value is painted in ColorInfo rather than
-		// left in the default foreground, which read too close to the bold
-		// default-colored command path in the hint below it.
-		if status := se.Status(); status != 0 {
-			fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.Dim("status"), paintValue(env, fmt.Sprintf("%d", status)))
-		}
-		if reqID := se.RequestID(); reqID != "" {
-			fmt.Fprintf(env.ErrWriter(), "%s %s\n", style.Dim("request"), paintValue(env, reqID))
-		}
-		if step := se.NextStep(); step != "" {
-			fmt.Fprintf(env.ErrWriter(), "%s\n", style.Hint(step))
-		}
+		fmt.Fprint(env.ErrWriter(), formatStructuredError(env, err))
 	case "json":
 		// Always keep the stable {"errors":[{"detail":...}]} envelope so
 		// automation parsing --output json is not broken by richer flag
@@ -431,6 +405,38 @@ func checkErr(err error) {
 	}
 
 	errAction()
+}
+
+// formatStructuredError renders err in the shared Title/Reason/status/request/
+// next-step shape checkErr uses for text output. Agent and generic failures
+// both go through here so hosted-agent copy does not keep a parallel card.
+func formatStructuredError(env ui.Env, err error) string {
+	se := resolveStructured(err)
+	style := ui.NewStyle(env)
+
+	var b strings.Builder
+	title := se.Title()
+	if title == "" {
+		title = err.Error()
+	}
+	fmt.Fprintf(&b, "%s %s\n", style.ErrorLabel(), title)
+
+	if reason := se.Reason(); reason != "" {
+		fmt.Fprintf(&b, "%s\n", style.Dim(reason))
+	}
+	// The label is dimmed to recede behind the value that names the actual
+	// status or request. The value is painted quieter than an identifier so it
+	// still reads apart from the bold command path in the hint below it.
+	if status := se.Status(); status != 0 {
+		fmt.Fprintf(&b, "%s %s\n", style.Dim("status"), paintValue(env, fmt.Sprintf("%d", status)))
+	}
+	if reqID := se.RequestID(); reqID != "" {
+		fmt.Fprintf(&b, "%s %s\n", style.Dim("request"), paintValue(env, reqID))
+	}
+	if step := se.NextStep(); step != "" {
+		fmt.Fprintf(&b, "%s\n", style.Hint(step))
+	}
+	return b.String()
 }
 
 // errorValueColor is a light neutral grey for a status/request value: lighter
