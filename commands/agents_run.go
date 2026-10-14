@@ -418,6 +418,9 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentWaitTimeout,
 		doctl.ArgAgentTemplate,
 		doctl.ArgAgentPermission,
+		doctl.ArgAgentInsightsMetrics,
+		doctl.ArgAgentInsightsLogs,
+		doctl.ArgAgentInsightsTraces,
 	} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
@@ -636,6 +639,33 @@ func manifestIncludesPrompt(manifest []byte, prompt string) bool {
 	return strings.Contains(string(manifest), prompt)
 }
 
+// insightsOptInFromFlags reads the per-signal DigitalOcean Insights opt-in
+// flags. Each result is nil unless the user explicitly set the flag, so an
+// unset signal is left out of the request and the server applies its default
+// rather than reading a doctl-supplied false.
+func insightsOptInFromFlags(c *CmdConfig) (metrics, logs, traces *bool, err error) {
+	read := func(flag string) (*bool, error) {
+		if !c.Doit.IsSet(flag) {
+			return nil, nil
+		}
+		v, err := c.Doit.GetBool(c.NS, flag)
+		if err != nil {
+			return nil, err
+		}
+		return &v, nil
+	}
+	if metrics, err = read(doctl.ArgAgentInsightsMetrics); err != nil {
+		return nil, nil, nil, err
+	}
+	if logs, err = read(doctl.ArgAgentInsightsLogs); err != nil {
+		return nil, nil, nil, err
+	}
+	if traces, err = read(doctl.ArgAgentInsightsTraces); err != nil {
+		return nil, nil, nil, err
+	}
+	return metrics, logs, traces, nil
+}
+
 // startSessionFromRawManifest uploads a manifest and creates a hosted session.
 // When prog is non-nil it prints Plano-style lifecycle steps around each phase.
 func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
@@ -676,11 +706,19 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		return nil, err
 	}
 
+	insightsMetrics, insightsLogs, insightsTraces, err := insightsOptInFromFlags(c)
+	if err != nil {
+		return nil, err
+	}
 	var createOpt *godo.HostedAgentManifestCreateOptions
-	if openaiSessionID != "" || resumeOnTopoff {
+	if openaiSessionID != "" || resumeOnTopoff ||
+		insightsMetrics != nil || insightsLogs != nil || insightsTraces != nil {
 		createOpt = &godo.HostedAgentManifestCreateOptions{
 			OpenAISessionID: openaiSessionID,
 			ResumeOnTopoff:  resumeOnTopoff,
+			InsightsMetrics: insightsMetrics,
+			InsightsLogs:    insightsLogs,
+			InsightsTraces:  insightsTraces,
 		}
 	}
 

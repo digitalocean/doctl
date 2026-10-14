@@ -723,6 +723,9 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentTemplate, "", "", agentTemplateFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
+	AddBoolFlag(cmd, doctl.ArgAgentInsightsMetrics, "", false, agentInsightsMetricsFlagDesc)
+	AddBoolFlag(cmd, doctl.ArgAgentInsightsLogs, "", false, agentInsightsLogsFlagDesc)
+	AddBoolFlag(cmd, doctl.ArgAgentInsightsTraces, "", false, agentInsightsTracesFlagDesc)
 }
 
 // agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
@@ -760,6 +763,21 @@ const agentPermissionFlagDesc = "Tool-permission default for a --harness session
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
 	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
+
+// agentInsights*FlagDesc document the per-signal DigitalOcean Insights opt-in.
+// Each is a request parameter, not a manifest field, so it is passed on the
+// command that creates the session and does not survive the printed YAML being
+// piped elsewhere. Left unset, the platform applies its default: metrics on,
+// logs and traces off. Set a value with = (e.g. --insights-logs=true), since a
+// boolean flag reads a following bare word as the next argument, not its value.
+const agentInsightsMetricsFlagDesc = "Send this session's metrics to DigitalOcean Insights. On by default; turn it off with --insights-metrics=false. " +
+	"A request parameter, not a manifest field — pass it on the command that creates the session."
+
+const agentInsightsLogsFlagDesc = "Send this session's logs to DigitalOcean Insights. Off by default; turn it on with --insights-logs=true. " +
+	"A request parameter, not a manifest field — pass it on the command that creates the session."
+
+const agentInsightsTracesFlagDesc = "Send this session's traces to DigitalOcean Insights. Off by default; turn it on with --insights-traces=true. " +
+	"A request parameter, not a manifest field — pass it on the command that creates the session."
 
 func markAgentCreationSourcesExclusive(cmd *Command) {
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
