@@ -471,6 +471,16 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return out, nil
 }
 
+// GetStringArray returns a string array without splitting values on commas.
+func (c *LiveConfig) GetStringArray(ns, key string) ([]string, error) {
+	nskey := nskey(ns, key)
+	val := viper.GetStringSlice(nskey)
+	if isRequired(nskey) && emptyStringSlice(val) {
+		return nil, NewMissingArgsErr(nskey)
+	}
+	return val, nil
+}
+
 // GetStringSliceIsFlagSet returns a config value as a string slice and a bool representing the existence of the flag.
 func (c *LiveConfig) GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error) {
 	if !c.IsSet(key) {
@@ -628,6 +638,13 @@ func (c *TestConfig) GetFloat64(ns, key string) (float64, error) {
 // namespace. Because this is a mock implementation, and error will never be
 // returned.
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
+	nskey := nskey(ns, key)
+	return c.v.GetStringSlice(nskey), nil
+}
+
+// GetStringArray returns the string array value for the key without splitting
+// individual values on commas.
+func (c *TestConfig) GetStringArray(ns, key string) ([]string, error) {
 	nskey := nskey(ns, key)
 	return c.v.GetStringSlice(nskey), nil
 }
