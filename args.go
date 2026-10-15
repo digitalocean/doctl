@@ -1061,6 +1061,11 @@ const (
 	// session.
 	ArgAgentDryRun = "dry-run"
 
+	// ArgAgentPresence opens the session presence socket during attach: who
+	// else has the session open, and who is typing. Hidden and opt-in while
+	// the server side is preview-only (MARSOHS-2255).
+	ArgAgentPresence = "presence"
+
 	// ArgAgentOnHITL is the fixed outcome (approve|reject|defer) applied to
 	// every approval request during an unattended `agents create`.
 	ArgAgentOnHITL = "on-hitl"

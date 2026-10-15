@@ -54,6 +54,7 @@ import (
 	"github.com/digitalocean/doctl/internal/agentproxy"
 	"github.com/digitalocean/doctl/internal/agentproxy/codex"
 	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
+	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/godo"
 	"github.com/muesli/termenv"
 	"github.com/pkg/browser"
@@ -527,6 +528,8 @@ func Agents() *Command {
 	AddStringFlag(cmdLaunch, doctl.ArgAgentOnHITL, "", "", "Create-only; use "+agentCLI+" create --on-hitl")
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentDryRun)
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentOnHITL)
+	AddBoolFlag(cmdLaunch, doctl.ArgAgentPresence, "", false, "Show who else is in the session and who is typing (preview; or set "+presenceEnv+"=1)")
+	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentPresence)
 	markAgentCreationSourcesExclusive(cmdLaunch)
 	cmdLaunch.Example = agentCLI + ` launch my-session; ` + agentCLI + ` launch; ` + agentCLI + ` launch agent-spec.yaml; ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` launch --from-config my-config --name my-session`
 
@@ -2883,7 +2886,29 @@ func attachToSession(c *CmdConfig, sess *do.HostedAgentSession) error {
 
 	go streamWithReconnect(ctx, svc, sessionID, c.Out, pending, cursor, thinking, warmup)
 
+	if flag, _ := c.Doit.GetBool(c.NS, doctl.ArgAgentPresence); presenceRequested(flag) {
+		startAttachPresence(ctx, c, sessionID, state)
+	}
+
 	return runAttach(c, svc, sessionID, os.Stdin, state, warmup, thinking)
+}
+
+// startAttachPresence opens the presence socket for an attach. A bad URL is
+// reported and attach carries on without presence: it is an addition to the
+// session, never a reason to refuse one.
+func startAttachPresence(ctx context.Context, c *CmdConfig, sessionID string, state *attachState) {
+	wsURL, err := hostedAgentsPresenceURL(sessionID)
+	if err != nil {
+		fmt.Fprintf(c.Out, "presence unavailable: %v\n", err)
+		return
+	}
+	out := c.Out
+	p := newPresenceSession(wsURL, tunnelHeader(c.getContextAccessToken(), deviceid.Get()),
+		func(notice string) { fmt.Fprintln(out, colorize("· "+notice, colMuted)) },
+		state.display.redraw,
+	)
+	state.presence = p
+	go p.run(ctx)
 }
 
 // replayHistoryBeforeAttach reads a session's stored event history to
@@ -5529,6 +5554,24 @@ type attachState struct {
 	// was sent. attachLoopTTY installs it; without it Esc only ever clears the
 	// line and Ctrl-C always detaches.
 	cancelTurn func() bool
+	// presence, when set (--presence), is the session presence socket: it
+	// prefixes the prompt with who else is here or typing, and is told when
+	// this user types. Set once before the input loop starts.
+	presence *presenceSession
+}
+
+// notePresenceTyping tells the presence socket this user added input.
+func (s *attachState) notePresenceTyping() {
+	if s.presence != nil {
+		s.presence.noteTyping()
+	}
+}
+
+// stopPresenceTyping tells the presence socket the input was sent or cleared.
+func (s *attachState) stopPresenceTyping() {
+	if s.presence != nil {
+		s.presence.stopTyping()
+	}
 }
 
 type largePasteConfirmation struct {
@@ -5597,6 +5640,9 @@ func (s *attachState) promptString() string {
 	}
 	n := s.pending.len()
 	if n == 0 {
+		if s.presence != nil {
+			return s.presence.roster.prefix(time.Now()) + "> "
+		}
 		return "> "
 	}
 	return hitlMenuPrompt(sel, n)
@@ -5874,6 +5920,7 @@ func (s *attachState) cancelInputLine() bool {
 	}
 	s.lineBuf = s.lineBuf[:0]
 	s.cursor = 0
+	s.stopPresenceTyping()
 	return true
 }
 
@@ -6078,6 +6125,7 @@ func appendBufferedInput(state *attachState, chunk []byte) bool {
 			}
 		}
 	}
+	state.notePresenceTyping()
 	return true
 }
 
@@ -7149,6 +7197,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 		visual := displayInputBuffer(state.lineBuf)
 		state.mu.Unlock()
 		line := readSubmittedInput(state)
+		state.stopPresenceTyping()
 		echoAttachSubmitNewline(state.display, visual)
 		if line != "" {
 			if n, ok := needsLargePasteConfirmation(line); ok {
@@ -7172,7 +7221,11 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			i := state.cursor - 1
 			state.lineBuf = append(state.lineBuf[:i], state.lineBuf[i+1:]...)
 			state.cursor = i
+			emptied := len(state.lineBuf) == 0
 			state.mu.Unlock()
+			if emptied {
+				state.stopPresenceTyping()
+			}
 			if warmup.isBannerVisible() {
 				state.display.redraw()
 			} else if atEnd {
@@ -7211,6 +7264,7 @@ func handleAttachByte(c *CmdConfig, svc do.HostedAgentsService, sessionID string
 			}
 			state.cursor++
 			state.mu.Unlock()
+			state.notePresenceTyping()
 			warmup.noteQueued()
 			if warmup.isBannerVisible() {
 				state.display.redraw()
