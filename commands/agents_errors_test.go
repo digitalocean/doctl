@@ -81,22 +81,28 @@ func TestBeautifyAgentError_APIResponse(t *testing.T) {
 // obvious thing, so it gets a card rather than the HTTP reason phrase. The
 // exact server copy is the fixture: matching on a substring of it is what makes
 // this fragile, and a test that never sees the real string would not notice.
+// Both server copies are fixtures: servers that predate the `sandbox` rename
+// still say `agent: none`.
 func TestBeautifyAgentError_NoAgentConflictGetsItsOwnCard(t *testing.T) {
-	er := &godo.ErrorResponse{
-		Response: &http.Response{
-			StatusCode: http.StatusConflict,
-			Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions/x/input", nil),
-		},
-		Message: "this session runs no agent (agent: none); drive it with exec, workspace upload/download, or port-forward instead of sending input",
-	}
+	for _, spelling := range []string{"sandbox", "none"} {
+		t.Run(spelling, func(t *testing.T) {
+			er := &godo.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions/x/input", nil),
+				},
+				Message: "this session runs no agent (agent: " + spelling + "); drive it with exec, workspace upload/download, or port-forward instead of sending input",
+			}
 
-	out := beautifyAgentError(er)
-	var pretty *agentPrettyError
-	require.True(t, errors.As(out, &pretty))
-	assert.Equal(t, "This session runs no agent", pretty.title)
-	assert.NotEqual(t, "Conflict", pretty.title, "the HTTP reason phrase is not a title")
-	assert.Contains(t, pretty.tips, agentCLI+" exec <session> -- <command>")
-	assert.Contains(t, pretty.tips, agentCLI+" port-forward <session> <port>")
+			out := beautifyAgentError(er)
+			var pretty *agentPrettyError
+			require.True(t, errors.As(out, &pretty))
+			assert.Equal(t, "This session runs no agent", pretty.title)
+			assert.NotEqual(t, "Conflict", pretty.title, "the HTTP reason phrase is not a title")
+			assert.Contains(t, pretty.tips, agentCLI+" exec <session> -- <command>")
+			assert.Contains(t, pretty.tips, agentCLI+" port-forward <session> <port>")
+		})
+	}
 }
 
 // The narrower 409s are matched before it, so adding the no-agent case must not

@@ -798,7 +798,7 @@ type agentCreationSource struct {
 
 // bareSandbox reports whether this source asks for a session with no agent,
 // whether that came from the harness the --template implication sets or from a
-// manifest declaring `agent: none`. Both have to be caught: a manifest is the
+// manifest declaring `agent: sandbox` (or `none`). Both have to be caught: a manifest is the
 // more likely way a bare sandbox is created, since it is the only way to set
 // egress or a size, and it is the one the flag checks never see.
 //
@@ -812,7 +812,8 @@ func (s *agentCreationSource) bareSandbox() bool {
 	if isBareSandboxHarness(s.harness) {
 		return true
 	}
-	return manifestAgentIs(s.manifest, bareSandboxAgent)
+	return manifestAgentIs(s.manifest, bareSandboxAgent) ||
+		manifestAgentIs(s.manifest, bareSandboxAgentDeprecated)
 }
 
 // manifestAgentIs reports whether the manifest's adapter equals want, reading
@@ -921,9 +922,9 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	repo = strings.TrimSpace(repo)
 	prompt = strings.TrimSpace(prompt)
 
-	// `none` stays the manifest's word for a session with no agent — a --spec
-	// file saying `agent: none` is valid and unchanged — but it is not a
-	// --harness value. Naming the absence of an agent as if it were one of the
+	// `sandbox` is the manifest's word for a session with no agent — a --spec
+	// file saying `agent: sandbox` (or the deprecated `none`) is valid — but it
+	// is not a --harness value. Naming the absence of an agent as if it were one of the
 	// agents is the confusion --template already resolves, and two spellings
 	// for one session is worse than either.
 	if isBareSandboxHarness(harness) {
@@ -938,7 +939,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// `--template` names the image a generated manifest runs on, and the only
 	// session that needs no agent to justify an image is a bare sandbox — so
 	// `--template X` with no --harness is how one is asked for. The manifest
-	// still says `agent: none`; that value is generated here, never typed.
+	// says `agent: sandbox`; that value is generated here, never typed.
 	//
 	// This has to resolve before source selection, because the harness IS a
 	// source: left empty, a lone --template falls through to manifest discovery
@@ -1024,7 +1025,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// materializes the skill that surfaces it, and a tool-permission policy is
 	// enforced by the agent that is not there.
 	if isBareSandboxHarness(harness) {
-		// Only --template reaches here now that --harness none is refused
+		// Only --template reaches here now that --harness sandbox is refused
 		// outright, so the error can speak in terms of the flags actually
 		// typed. Each of the three would otherwise look like it worked.
 		if flag := firstAgentOnlyFlag(c, prompt, repo); flag != "" {
@@ -1110,7 +1111,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	raw = dropEnvKeysCoveredBySecrets(raw)
 	src.manifest = raw
 
-	// A manifest declares its own agent, so `agent: none` arrives here with
+	// A manifest declares its own agent, so `agent: sandbox` arrives here with
 	// harness empty and the check above never sees it — and a manifest is the
 	// likelier way a bare sandbox is created, since it is the only way to set
 	// egress or a size. Left to the API, --prompt is delivered after the
@@ -8244,7 +8245,8 @@ var agentKindDisplayNames = map[godo.HostedAgentKind]string{
 	godo.HostedAgentKindCursorCLI:   "Cursor CLI",
 	godo.HostedAgentKindOpenAICodex: "Codex",
 	godo.HostedAgentKindCustom:      "Custom",
-	godo.HostedAgentKindNone:        "None",
+	godo.HostedAgentKindNone:        "Sandbox",
+	hostedAgentKindSandbox:          "Sandbox",
 }
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into the friendly "OpenCode"

@@ -925,16 +925,16 @@ func TestBuildHarnessManifestPermissions(t *testing.T) {
 		"an unset permission must leave the block out rather than guess")
 }
 
-// A bare sandbox's manifest is just `agent: none`: no secrets slot (nothing in
+// A bare sandbox's manifest is just `agent: sandbox`: no secrets slot (nothing in
 // the guest reads a model key on its own), no config, no framework. The customer
 // adds their own secrets and egress by writing a manifest.
 func TestBuildHarnessManifestBareSandbox(t *testing.T) {
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "none", name: "eval-runner"})
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent, name: "eval-runner"})
 	require.NoError(t, err)
 
 	var doc map[string]any
 	require.NoError(t, yaml.Unmarshal(raw, &doc))
-	assert.Equal(t, bareSandboxAgent, doc["agent"])
+	assert.Equal(t, "sandbox", doc["agent"], "doctl generates the canonical spelling, never the deprecated none")
 	assert.Equal(t, "eval-runner", doc["name"])
 	assert.NotContains(t, doc, "secrets")
 	assert.NotContains(t, doc, "config")
@@ -944,29 +944,28 @@ func TestBuildHarnessManifestBareSandbox(t *testing.T) {
 	assert.NotContains(t, doc, "template")
 }
 
-// `none` resolves but is not offered. The two halves are easy to mistake for a
-// contradiction and are both load-bearing: the --template implication sets the
-// harness to bareSandboxAgent internally, so resolution has to accept it, while
-// a user who types `--harness none` is refused earlier by
-// resolveAgentCreationSource — so advertising it here would route them into a
-// second error.
-func TestResolveHarnessAgentAcceptsNoneInternallyButNeverOffersIt(t *testing.T) {
-	agent, err := resolveHarnessAgent("none")
-	require.NoError(t, err)
-	assert.Equal(t, bareSandboxAgent, agent)
+// `sandbox` (and its deprecated spelling `none`) resolves but is not offered.
+// The two halves are easy to mistake for a contradiction and are both
+// load-bearing: the --template implication sets the harness to bareSandboxAgent
+// internally, so resolution has to accept it, while a user who types
+// `--harness sandbox` is refused earlier by resolveAgentCreationSource — so
+// advertising it here would route them into a second error.
+func TestResolveHarnessAgentAcceptsSandboxInternallyButNeverOffersIt(t *testing.T) {
+	for _, typed := range []string{"sandbox", "SANDBOX", "none", "NONE"} {
+		agent, err := resolveHarnessAgent(typed)
+		require.NoErrorf(t, err, "%q", typed)
+		assert.Equalf(t, bareSandboxAgent, agent, "%q resolves to the canonical spelling", typed)
+	}
 
-	agent, err = resolveHarnessAgent("NONE")
-	require.NoError(t, err)
-	assert.Equal(t, bareSandboxAgent, agent, "casing is normalized like every other value")
-
-	_, err = resolveHarnessAgent("bogus")
+	_, err := resolveHarnessAgent("bogus")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "codex-agentapi", "the real adapters are still listed")
 	assert.NotContains(t, err.Error(), "none", "offering a value that is refused sends the user into a second error")
+	assert.NotContains(t, err.Error(), "sandbox", "offering a value that is refused sends the user into a second error")
 }
 
 func TestIsBareSandboxHarness(t *testing.T) {
-	for _, h := range []string{"none", "None", " none ", "NONE"} {
+	for _, h := range []string{"sandbox", "Sandbox", " sandbox ", "none", "None", " none ", "NONE"} {
 		assert.Truef(t, isBareSandboxHarness(h), "%q should be a bare sandbox", h)
 	}
 	for _, h := range []string{"", "opencode", "codex", "claude-code", "codex-agentapi", "custom"} {
@@ -984,21 +983,26 @@ func TestAgentCreationSourceBareSandbox(t *testing.T) {
 		src  agentCreationSource
 		want bool
 	}{
-		{"harness flag", agentCreationSource{harness: "none"}, true},
-		{"flat manifest", agentCreationSource{manifest: []byte("agent: none\n")}, true},
-		{"flat manifest, mixed case", agentCreationSource{manifest: []byte("agent: None\n")}, true},
+		{"harness flag", agentCreationSource{harness: "sandbox"}, true},
+		{"harness flag, deprecated none", agentCreationSource{harness: "none"}, true},
+		{"flat manifest", agentCreationSource{manifest: []byte("agent: sandbox\n")}, true},
+		{"flat manifest, mixed case", agentCreationSource{manifest: []byte("agent: Sandbox\n")}, true},
+		{"flat manifest, deprecated none", agentCreationSource{manifest: []byte("agent: none\n")}, true},
 		{"legacy envelope", agentCreationSource{manifest: []byte(
+			"apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: sandbox\n")}, true},
+		{"legacy envelope, deprecated none", agentCreationSource{manifest: []byte(
 			"apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: none\n")}, true},
 		{"managed agent flag", agentCreationSource{harness: "opencode"}, false},
 		{"managed agent manifest", agentCreationSource{manifest: []byte("agent: opencode\n")}, false},
 		{"legacy envelope, managed agent", agentCreationSource{manifest: []byte(
 			"apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: codex\n")}, false},
-		// An adapter that merely starts with "none" is a different adapter.
-		{"prefix is not a match", agentCreationSource{manifest: []byte("agent: nonesuch\n")}, false},
+		// An adapter that merely starts with the name is a different adapter.
+		{"prefix is not a match", agentCreationSource{manifest: []byte("agent: sandboxed\n")}, false},
+		{"deprecated prefix is not a match", agentCreationSource{manifest: []byte("agent: nonesuch\n")}, false},
 		{"empty", agentCreationSource{}, false},
 		// The server owns the error for a malformed manifest; guessing here
 		// would turn it into a confusing local one.
-		{"unparsable manifest", agentCreationSource{manifest: []byte("\tagent: none")}, false},
+		{"unparsable manifest", agentCreationSource{manifest: []byte("\tagent: sandbox")}, false},
 		// A config's agent lives server-side, so this path reports false and
 		// lets the server answer.
 		{"from config", agentCreationSource{configID: "cfg-1"}, false},
@@ -1013,10 +1017,27 @@ func TestAgentCreationSourceBareSandbox(t *testing.T) {
 	assert.False(t, nilSrc.bareSandbox())
 }
 
-// The ready card is the only place a `--harness none` user is told what to do
+func TestIsBareSandboxKind(t *testing.T) {
+	assert.True(t, isBareSandboxKind(godo.HostedAgentKindNone), "sessions created before the rename")
+	assert.True(t, isBareSandboxKind(hostedAgentKindSandbox))
+	for _, k := range []godo.HostedAgentKind{"", "AGENT_KIND_CODEX", "AGENT_KIND_OPENCODE", "AGENT_KIND_UNSPECIFIED"} {
+		assert.Falsef(t, isBareSandboxKind(k), "%q", k)
+	}
+}
+
+// The ready card is the only place a bare-sandbox user is told what to do
 // next, so it must carry the commands that drive a sandbox and must NOT offer
-// `launch`, which cannot work without an agent.
+// `launch`, which cannot work without an agent. Both wire kinds get the card:
+// the server reports NONE today and SANDBOX once its writer flips.
 func TestPrintRunReadySummary_BareSandboxNextSteps(t *testing.T) {
+	for _, kind := range []godo.HostedAgentKind{godo.HostedAgentKindNone, hostedAgentKindSandbox} {
+		t.Run(string(kind), func(t *testing.T) {
+			testPrintRunReadySummaryBareSandbox(t, kind)
+		})
+	}
+}
+
+func testPrintRunReadySummaryBareSandbox(t *testing.T, kind godo.HostedAgentKind) {
 	prev := stylingEnabled
 	stylingEnabled = false
 	t.Cleanup(func() { stylingEnabled = prev })
@@ -1025,9 +1046,8 @@ func TestPrintRunReadySummary_BareSandboxNextSteps(t *testing.T) {
 	printRunReadySummary(&buf, runReadySummary{
 		Session: &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
 			Name:      "eval-runner",
-			AgentKind: godo.HostedAgentKindNone,
+			AgentKind: kind,
 		}},
-		Harness: "none",
 	})
 	got := buf.String()
 	for _, want := range []string{
@@ -1191,7 +1211,7 @@ func TestRunAgentsCreate_ManagedAgentStillAcceptsPrompt(t *testing.T) {
 }
 
 func TestBuildHarnessManifestTemplate(t *testing.T) {
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "none", template: "my-eval-image"})
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent, template: "my-eval-image"})
 	require.NoError(t, err)
 
 	var doc map[string]any
@@ -1200,7 +1220,7 @@ func TestBuildHarnessManifestTemplate(t *testing.T) {
 
 	// Omitted rather than emitted empty: the server derives the template from the
 	// agent kind, and a blank `template` key is not the same as no key.
-	raw, err = buildHarnessManifest(harnessManifestOpts{harness: "none"})
+	raw, err = buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent})
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "template")
 }
@@ -1233,7 +1253,7 @@ func TestRunAgentsCreate_ManagedHarnessRejectsAgentlessTemplate(t *testing.T) {
 		err := RunAgentsCreate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "ships no agent")
-		// The remedy is dropping --harness, not writing --harness none: a lone
+		// The remedy is dropping --harness, not writing --harness sandbox: a lone
 		// --template already means the bare sandbox.
 		assert.Contains(t, err.Error(), "drop --harness")
 	})
@@ -1276,7 +1296,7 @@ func TestResolveAgentCreationSource_TemplateReachesTheManifest(t *testing.T) {
 	}
 }
 
-// A lone --template means --harness none, but not when a manifest is already in
+// A lone --template means --harness sandbox, but not when a manifest is already in
 // play: the discovered ./agents.yaml declares its own template, so implying a
 // bare sandbox would silently ignore the file. cobra's mutual exclusion cannot
 // catch this one — a discovered manifest sets no flag to be exclusive with.
@@ -1337,7 +1357,7 @@ func TestResolveAgentCreationSource_BareSandboxManifestRejectsAgentOnlyFlags(t *
 				dir := t.TempDir()
 				t.Chdir(dir)
 				path := filepath.Join(dir, "sandbox.yaml")
-				require.NoError(t, os.WriteFile(path, []byte("agent: none\nname: eval-runner\n"), 0o644))
+				require.NoError(t, os.WriteFile(path, []byte("agent: sandbox\nname: eval-runner\n"), 0o644))
 
 				config.Args = []string{path}
 				config.Doit.Set(config.NS, tc.flag, tc.value)
@@ -1354,18 +1374,22 @@ func TestResolveAgentCreationSource_BareSandboxManifestRejectsAgentOnlyFlags(t *
 // The same manifest with no agent-only flag is a legitimate bare sandbox and
 // has to keep working — the guard above must refuse the flag, not the manifest.
 func TestResolveAgentCreationSource_BareSandboxManifestAloneIsAccepted(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dir := t.TempDir()
-		t.Chdir(dir)
-		path := filepath.Join(dir, "sandbox.yaml")
-		require.NoError(t, os.WriteFile(path, []byte("agent: none\nname: eval-runner\n"), 0o644))
+	for _, agent := range []string{"sandbox", "none"} {
+		t.Run(agent, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				dir := t.TempDir()
+				t.Chdir(dir)
+				path := filepath.Join(dir, "sandbox.yaml")
+				require.NoError(t, os.WriteFile(path, []byte("agent: "+agent+"\nname: eval-runner\n"), 0o644))
 
-		config.Args = []string{path}
+				config.Args = []string{path}
 
-		src, err := resolveAgentCreationSource(config)
-		require.NoError(t, err)
-		assert.True(t, src.bareSandbox())
-	})
+				src, err := resolveAgentCreationSource(config)
+				require.NoError(t, err)
+				assert.True(t, src.bareSandbox())
+			})
+		})
+	}
 }
 
 // The public spelling has to reach the manifest as the name the API knows, or
@@ -1437,19 +1461,30 @@ func TestResolveAgentCreationSource_ExplicitHarnessBeatsTemplateImplication(t *t
 // resolveAgentCreationSource can catch that — validation runs after both — so
 // this asserts the generated bytes against the validator directly.
 func TestValidateAgentManifest_BareSandboxGeneratedManifestIsValid(t *testing.T) {
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "none", name: "eval-runner"})
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent, name: "eval-runner"})
 	require.NoError(t, err)
 
 	out := validateAgentManifest(raw)
 	assert.Empty(t, out.Errors, "doctl must accept the manifest it generated itself")
+	assert.Empty(t, out.Warnings, "doctl must not generate a spelling it then warns about")
 }
 
-func TestValidateAdapter_None(t *testing.T) {
+func TestValidateAdapter_Sandbox(t *testing.T) {
+	var out agentManifestValidation
+	validateAdapter("sandbox", "agent", &out)
+	assert.Empty(t, out.Errors)
+	assert.Empty(t, out.Warnings,
+		"sandbox is supported, not merely declared, so it must not warn like openai-agents does")
+}
+
+// `none` is the pre-rename spelling: still accepted, so existing manifests keep
+// creating sessions, but warned the same way codex-cli is.
+func TestValidateAdapter_NoneIsDeprecated(t *testing.T) {
 	var out agentManifestValidation
 	validateAdapter("none", "agent", &out)
 	assert.Empty(t, out.Errors)
-	assert.Empty(t, out.Warnings,
-		"none is supported, not merely declared, so it must not warn like openai-agents does")
+	require.Len(t, out.Warnings, 1)
+	assert.Contains(t, out.Warnings[0], `"none" is deprecated; use "sandbox"`)
 }
 
 // Every --harness shape has to survive --secret. The two manifest formats
@@ -1461,7 +1496,7 @@ func TestValidateAdapter_None(t *testing.T) {
 // the generated manifest declares no secrets of its own, which is every harness
 // except codex, claude-code and codex-agentapi.
 func TestInjectManifestSecrets_GeneratedManifestsStayFlatShaped(t *testing.T) {
-	for _, harness := range []string{"opencode", "codex", "claude-code", "none"} {
+	for _, harness := range []string{"opencode", "codex", "claude-code", "sandbox"} {
 		t.Run(harness, func(t *testing.T) {
 			t.Setenv(openAIAPIKeyEnv, "sk-test")
 			t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
