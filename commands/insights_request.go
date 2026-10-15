@@ -19,8 +19,17 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
+	"strings"
 
 	"sigs.k8s.io/yaml"
+)
+
+var (
+	insightsStdin  io.Reader = os.Stdin
+	insightsStderr io.Writer = os.Stderr
+
+	insightsRelativeTimeRE = regexp.MustCompile(`^(now([+-]\d+[smhdw])?|\d+[smhdw])$`)
 )
 
 type stringArrayConfig interface {
@@ -32,6 +41,20 @@ func getInsightsStringArray(c *CmdConfig, key string) ([]string, error) {
 		return config.GetStringArray(c.NS, key)
 	}
 	return c.Doit.GetStringSlice(c.NS, key)
+}
+
+func insightsTrimmedString(c *CmdConfig, name string) (string, error) {
+	value, err := c.Doit.GetString(c.NS, name)
+	return strings.TrimSpace(value), err
+}
+
+func decodeInsightsJSON(r io.Reader, value any) error {
+	decoder := json.NewDecoder(r)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(value); err != nil {
+		return err
+	}
+	return ensureJSONEOF(decoder)
 }
 
 func readInsightsRequest[T any](stdin io.Reader, path string) (*T, error) {

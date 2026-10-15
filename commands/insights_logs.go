@@ -14,11 +14,7 @@ limitations under the License.
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"os"
-	"regexp"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -33,21 +29,14 @@ const (
 	insightsLogsMaxLimit    = 1000
 )
 
-var (
-	insightsStdin  io.Reader = os.Stdin
-	insightsStderr io.Writer = os.Stderr
-
-	insightsRelativeTimeRE = regexp.MustCompile(`^(now([+-]\d+[smhdw])?|\d+[smhdw])$`)
-
-	insightsLogsRequestFlags = []string{
-		doctl.ArgInsightsLogsFrom,
-		doctl.ArgInsightsLogsTo,
-		doctl.ArgInsightsLogsText,
-		doctl.ArgInsightsLogsFilter,
-		doctl.ArgInsightsLogsFilterFile,
-		doctl.ArgInsightsLogsOrderBy,
-	}
-)
+var insightsLogsRequestFlags = []string{
+	doctl.ArgInsightsLogsFrom,
+	doctl.ArgInsightsLogsTo,
+	doctl.ArgInsightsLogsText,
+	doctl.ArgInsightsLogsFilter,
+	doctl.ArgInsightsLogsFilterFile,
+	doctl.ArgInsightsLogsOrderBy,
+}
 
 func insightsLogs() *Command {
 	cmd := &Command{
@@ -237,11 +226,6 @@ func buildInsightsLogsSearchRequest(c *CmdConfig) (*godo.LogsSearchRequest, erro
 	return req, nil
 }
 
-func insightsTrimmedString(c *CmdConfig, name string) (string, error) {
-	val, err := c.Doit.GetString(c.NS, name)
-	return strings.TrimSpace(val), err
-}
-
 // parseInsightsLogsTime maps a CLI time value onto the logs API time
 // instant. Anything that is not a relative expression is sent as an absolute
 // time, which the API accepts as RFC3339 or Unix seconds/nanoseconds.
@@ -277,10 +261,4 @@ func parseInsightsLogsOrderBy(clause string) (godo.LogsOrderBy, error) {
 
 func insightsLogsOrderedByTimestampOnly(orderBy []godo.LogsOrderBy) bool {
 	return len(orderBy) == 0 || (len(orderBy) == 1 && orderBy[0].Field.Name == "timestamp")
-}
-
-func decodeInsightsJSON(r io.Reader, v any) error {
-	dec := json.NewDecoder(r)
-	dec.DisallowUnknownFields()
-	return dec.Decode(v)
 }
