@@ -1343,4 +1343,37 @@ const (
 
 	// ArgSignalsSessionID is the session ID for Signals session commands.
 	ArgSignalsSessionID = "session-id"
+
+	// ArgInsightsAlertRuleID filters alert instances by alert rule ID.
+	ArgInsightsAlertRuleID = "rule-id"
+
+	// ArgInsightsQuery is a PromQL expression.
+	ArgInsightsQuery = "query"
+	// ArgInsightsTime is the evaluation time of an instant PromQL query.
+	ArgInsightsTime = "time"
+	// ArgInsightsStart is the start of a PromQL time range.
+	ArgInsightsStart = "start"
+	// ArgInsightsEnd is the end of a PromQL time range.
+	ArgInsightsEnd = "end"
+	// ArgInsightsStep is the resolution step of a PromQL range query.
+	ArgInsightsStep = "step"
+	// ArgInsightsMatch is a repeatable PromQL series selector.
+	ArgInsightsMatch = "match"
+
+	// ArgInsightsLogsFrom is the start of a logs search time range.
+	ArgInsightsLogsFrom = "from"
+	// ArgInsightsLogsTo is the end of a logs search time range.
+	ArgInsightsLogsTo = "to"
+	// ArgInsightsLogsFilter is an inline JSON logs filter expression.
+	ArgInsightsLogsFilter = "filter"
+	// ArgInsightsLogsFilterFile is a path to a JSON logs filter expression.
+	ArgInsightsLogsFilterFile = "filter-file"
+	// ArgInsightsLogsText is a substring searched across log records.
+	ArgInsightsLogsText = "text"
+	// ArgInsightsLogsOrderBy is a repeatable logs sort clause.
+	ArgInsightsLogsOrderBy = "order-by"
+	// ArgInsightsLogsLimit is the maximum number of log records to return.
+	ArgInsightsLogsLimit = "limit"
+	// ArgInsightsLogsCursor is a pagination cursor from a previous logs search.
+	ArgInsightsLogsCursor = "cursor"
 )
