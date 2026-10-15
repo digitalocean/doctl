@@ -62,9 +62,9 @@ func TestInsightsAlertInstanceCommand(t *testing.T) {
 func TestRunInsightsAlertInstanceListAllPages(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := withInsightsOutput(t, config, "text")
-		config.Doit.Set(config.NS, doctl.ArgInsightsAlertInstanceStatus, "Active")
+		config.Doit.Set(config.NS, doctl.ArgInsightsStatus, "Active")
 		config.Doit.Set(config.NS, doctl.ArgInsightsAlertRuleID, testInsightsAlertInstance.RuleID)
-		config.Doit.Set(config.NS, doctl.ArgInsightsAlertInstanceResourceURN, testInsightsAlertInstance.ResourceURN)
+		config.Doit.Set(config.NS, doctl.ArgInsightsResourceURN, testInsightsAlertInstance.ResourceURN)
 
 		second := testInsightsAlertInstance
 		second.ID = "second-instance"
@@ -98,8 +98,8 @@ func TestRunInsightsAlertInstanceListAllPages(t *testing.T) {
 func TestRunInsightsAlertInstanceListSinglePage(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := withInsightsOutput(t, config, "json")
-		config.Doit.Set(config.NS, doctl.ArgInsightsAlertInstancePage, 3)
-		config.Doit.Set(config.NS, doctl.ArgInsightsAlertInstancePerPage, 25)
+		config.Doit.Set(config.NS, doctl.ArgInsightsPage, 3)
+		config.Doit.Set(config.NS, doctl.ArgInsightsPerPage, 25)
 
 		tm.insights.EXPECT().ListAlertInstances(&godo.AlertInstanceListOptions{Page: 3, PerPage: 25}).
 			Return([]godo.AlertInstance{testInsightsAlertInstance}, &godo.Response{}, nil)
@@ -115,7 +115,7 @@ func TestRunInsightsAlertInstanceListSinglePage(t *testing.T) {
 func TestRunInsightsAlertInstanceListEmptyJSON(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := withInsightsOutput(t, config, "json")
-		config.Doit.Set(config.NS, doctl.ArgInsightsAlertInstancePage, 1)
+		config.Doit.Set(config.NS, doctl.ArgInsightsPage, 1)
 
 		tm.insights.EXPECT().ListAlertInstances(&godo.AlertInstanceListOptions{Page: 1}).Return(nil, &godo.Response{}, nil)
 
@@ -131,9 +131,9 @@ func TestRunInsightsAlertInstanceListValidation(t *testing.T) {
 		value   any
 		wantErr string
 	}{
-		{name: "invalid status", key: doctl.ArgInsightsAlertInstanceStatus, value: "firing", wantErr: `invalid --status "firing"`},
-		{name: "negative page", key: doctl.ArgInsightsAlertInstancePage, value: -1, wantErr: "must not be negative"},
-		{name: "negative per page", key: doctl.ArgInsightsAlertInstancePerPage, value: -5, wantErr: "must not be negative"},
+		{name: "invalid status", key: doctl.ArgInsightsStatus, value: "firing", wantErr: `invalid --status "firing"`},
+		{name: "negative page", key: doctl.ArgInsightsPage, value: -1, wantErr: "must not be negative"},
+		{name: "negative per page", key: doctl.ArgInsightsPerPage, value: -5, wantErr: "must not be negative"},
 	}
 
 	for _, tt := range tests {
@@ -150,7 +150,7 @@ func TestRunInsightsAlertInstanceListValidation(t *testing.T) {
 
 func TestRunInsightsAlertInstanceListError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgInsightsAlertInstancePage, 1)
+		config.Doit.Set(config.NS, doctl.ArgInsightsPage, 1)
 		tm.insights.EXPECT().ListAlertInstances(&godo.AlertInstanceListOptions{Page: 1}).Return(nil, nil, errors.New("boom"))
 
 		assert.EqualError(t, RunInsightsAlertInstanceList(config), "boom")

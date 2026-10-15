@@ -180,7 +180,7 @@ func TestRunInsightsLogsSearchRequestFile(t *testing.T) {
 			"pagination": {"limit": 10}
 		}`
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
-		config.Doit.Set(config.NS, doctl.ArgInsightsLogsRequestFile, writeInsightsTestFile(t, body))
+		config.Doit.Set(config.NS, doctl.ArgInsightsRequestFile, writeInsightsTestFile(t, body))
 		config.Doit.Set(config.NS, doctl.ArgInsightsLogsCursor, "next-page")
 
 		filter := testLogsServiceFilter()
@@ -212,7 +212,7 @@ func TestRunInsightsLogsSearchRequestFileFromStdin(t *testing.T) {
 		t.Cleanup(func() { insightsStdin = prev })
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
-		config.Doit.Set(config.NS, doctl.ArgInsightsLogsRequestFile, "-")
+		config.Doit.Set(config.NS, doctl.ArgInsightsRequestFile, "-")
 
 		tm.insights.EXPECT().SearchLogs("nyc3", &godo.LogsSearchRequest{
 			TimeRange: godo.LogsTimeRange{
@@ -258,7 +258,7 @@ func TestRunInsightsLogsSearchValidation(t *testing.T) {
 			files:   map[string]string{doctl.ArgInsightsLogsFilterFile: testLogsServiceFilterJSON},
 			wantErr: "--filter and --filter-file cannot be combined",
 		},
-		{name: "missing filter file", flags: map[string]any{doctl.ArgInsightsLogsFilterFile: "/does/not/exist.json"}, wantErr: "reading --filter-file"},
+		{name: "missing filter file", flags: map[string]any{doctl.ArgInsightsLogsFilterFile: "/does/not/exist.json"}, wantErr: "--filter-file: reading request file"},
 		{name: "invalid order by direction", flags: map[string]any{doctl.ArgInsightsLogsOrderBy: []string{"timestamp:newest"}}, wantErr: "direction must be `asc` or `desc`"},
 		{name: "empty order by field", flags: map[string]any{doctl.ArgInsightsLogsOrderBy: []string{":desc"}}, wantErr: "a field name is required"},
 		{
@@ -269,23 +269,23 @@ func TestRunInsightsLogsSearchValidation(t *testing.T) {
 		{
 			name:    "request file with text",
 			flags:   map[string]any{doctl.ArgInsightsLogsText: "timeout"},
-			files:   map[string]string{doctl.ArgInsightsLogsRequestFile: validRequestFile},
-			wantErr: "--text cannot be combined with --request-file",
+			files:   map[string]string{doctl.ArgInsightsRequestFile: validRequestFile},
+			wantErr: "--request-file cannot be combined with --text",
 		},
 		{
 			name:    "request file with from",
 			flags:   map[string]any{doctl.ArgInsightsLogsFrom: "1h"},
-			files:   map[string]string{doctl.ArgInsightsLogsRequestFile: validRequestFile},
-			wantErr: "--from cannot be combined with --request-file",
+			files:   map[string]string{doctl.ArgInsightsRequestFile: validRequestFile},
+			wantErr: "--request-file cannot be combined with --from",
 		},
 		{
 			name:    "request file without time range",
-			files:   map[string]string{doctl.ArgInsightsLogsRequestFile: `{"pagination":{"limit":5}}`},
+			files:   map[string]string{doctl.ArgInsightsRequestFile: `{"pagination":{"limit":5}}`},
 			wantErr: "--request-file must set time_range.from and time_range.to",
 		},
 		{
 			name:    "request file with unknown field",
-			files:   map[string]string{doctl.ArgInsightsLogsRequestFile: `{"time_range":{"from":{"relative":"1h"},"to":{"relative":"now"}},"limit":5}`},
+			files:   map[string]string{doctl.ArgInsightsRequestFile: `{"time_range":{"from":{"relative":"1h"},"to":{"relative":"now"}},"limit":5}`},
 			wantErr: `unknown field "limit"`,
 		},
 	}

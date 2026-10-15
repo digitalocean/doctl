@@ -1344,16 +1344,8 @@ const (
 	// ArgSignalsSessionID is the session ID for Signals session commands.
 	ArgSignalsSessionID = "session-id"
 
-	// ArgInsightsAlertInstanceStatus filters alert instances by status.
-	ArgInsightsAlertInstanceStatus = "status"
 	// ArgInsightsAlertRuleID filters alert instances by alert rule ID.
 	ArgInsightsAlertRuleID = "rule-id"
-	// ArgInsightsAlertInstanceResourceURN filters alert instances by resource URN.
-	ArgInsightsAlertInstanceResourceURN = "resource-urn"
-	// ArgInsightsAlertInstancePage is the page number for listing alert instances.
-	ArgInsightsAlertInstancePage = "page"
-	// ArgInsightsAlertInstancePerPage is the page size for listing alert instances.
-	ArgInsightsAlertInstancePerPage = "per-page"
 
 	// ArgInsightsQuery is a PromQL expression.
 	ArgInsightsQuery = "query"
@@ -1376,8 +1368,6 @@ const (
 	ArgInsightsLogsFilter = "filter"
 	// ArgInsightsLogsFilterFile is a path to a JSON logs filter expression.
 	ArgInsightsLogsFilterFile = "filter-file"
-	// ArgInsightsLogsRequestFile is a path to a full JSON logs search request.
-	ArgInsightsLogsRequestFile = "request-file"
 	// ArgInsightsLogsText is a substring searched across log records.
 	ArgInsightsLogsText = "text"
 	// ArgInsightsLogsOrderBy is a repeatable logs sort clause.

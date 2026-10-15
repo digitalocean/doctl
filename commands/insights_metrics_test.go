@@ -264,7 +264,7 @@ func TestRunInsightsMetricsError(t *testing.T) {
 	})
 }
 
-func TestInsightsMatchersReadsRawFlagValues(t *testing.T) {
+func TestInsightsMatchFlagPreservesCommasAndQuotes(t *testing.T) {
 	series, _, err := insightsMetrics().Find([]string{"series"})
 	require.NoError(t, err)
 	require.NoError(t, series.ParseFlags([]string{
@@ -272,13 +272,9 @@ func TestInsightsMatchersReadsRawFlagValues(t *testing.T) {
 		"--match", `node_load1`,
 	}))
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Command = series
-
-		got, err := insightsMatchers(config)
-		require.NoError(t, err)
-		assert.Equal(t, []string{`up{job="api",instance="a,b"}`, "node_load1"}, got)
-	})
+	got, err := series.Flags().GetStringArray(doctl.ArgInsightsMatch)
+	require.NoError(t, err)
+	assert.Equal(t, []string{`up{job="api",instance="a,b"}`, "node_load1"}, got)
 }
 
 func TestParsePromDuration(t *testing.T) {

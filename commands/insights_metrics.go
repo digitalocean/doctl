@@ -97,7 +97,7 @@ func addInsightsSelectorFlags(cmd *Command, matchRequired bool) {
 	if matchRequired {
 		desc += " (required)"
 	}
-	cmd.Flags().StringArray(doctl.ArgInsightsMatch, nil, desc)
+	AddStringArrayFlag(cmd, doctl.ArgInsightsMatch, "", nil, desc)
 	AddStringFlag(cmd, doctl.ArgInsightsStart, "", "", "Only consider series with samples after this time. "+insightsTimeHelp)
 	AddStringFlag(cmd, doctl.ArgInsightsEnd, "", "", "Only consider series with samples before this time. "+insightsTimeHelp)
 }
@@ -332,23 +332,10 @@ func insightsSelectorOptions(c *CmdConfig, matchRequired bool) (*godo.PromSelect
 	return &godo.PromSelectorOptions{Match: matchers, Start: start, End: end}, nil
 }
 
-// insightsMatchers reads the repeatable --match flag. Selectors routinely
-// contain commas and quotes, so the value is read from the cobra flag set
-// rather than through viper, which would split it as CSV.
 func insightsMatchers(c *CmdConfig) ([]string, error) {
-	var raw []string
-	if c.Command != nil && c.Command.Flags().Lookup(doctl.ArgInsightsMatch) != nil {
-		vals, err := c.Command.Flags().GetStringArray(doctl.ArgInsightsMatch)
-		if err != nil {
-			return nil, err
-		}
-		raw = vals
-	} else {
-		vals, err := c.Doit.GetStringSlice(c.NS, doctl.ArgInsightsMatch)
-		if err != nil {
-			return nil, err
-		}
-		raw = vals
+	raw, err := getInsightsStringArray(c, doctl.ArgInsightsMatch)
+	if err != nil {
+		return nil, err
 	}
 
 	matchers := make([]string, 0, len(raw))

@@ -39,11 +39,11 @@ An alert instance is a read-only record of an alert rule firing against a resour
 	cmdList := CmdBuilder(cmd, RunInsightsAlertInstanceList, "list", "List alert instances",
 		`Lists alert instances in your account, newest trigger first. By default, all pages are retrieved. Use `+"`"+`--page`+"`"+` to retrieve a single page.`,
 		Writer, aliasOpt("ls"), displayerType(&displayers.InsightsAlertInstances{}))
-	AddStringFlag(cmdList, doctl.ArgInsightsAlertInstanceStatus, "", "", "Filter by status. Possible values: active or resolved")
+	AddStringFlag(cmdList, doctl.ArgInsightsStatus, "", "", "Filter by status. Possible values: active or resolved")
 	AddStringFlag(cmdList, doctl.ArgInsightsAlertRuleID, "", "", "Filter by the ID of the alert rule that fired")
-	AddStringFlag(cmdList, doctl.ArgInsightsAlertInstanceResourceURN, "", "", "Filter by the `urn` of the resource the alert fired against, for example do:droplet:12345")
-	AddIntFlag(cmdList, doctl.ArgInsightsAlertInstancePage, "", 0, "Retrieve only this page of results (1-based)")
-	AddIntFlag(cmdList, doctl.ArgInsightsAlertInstancePerPage, "", 0, "Number of results per page when --page is set")
+	AddStringFlag(cmdList, doctl.ArgInsightsResourceURN, "", "", "Filter by the `urn` of the resource the alert fired against, for example do:droplet:12345")
+	AddIntFlag(cmdList, doctl.ArgInsightsPage, "", 0, "Retrieve only this page of results (1-based)")
+	AddIntFlag(cmdList, doctl.ArgInsightsPerPage, "", 0, "Number of results per page when --page is set")
 	cmdList.Example = `The following example lists active alert instances for an alert rule: doctl insights alert-instance list --status active --rule-id 4b6f2a7e-1c2d-4e5f-8a9b-0c1d2e3f4a5b`
 
 	cmdGet := CmdBuilder(cmd, RunInsightsAlertInstanceGet, "get <alert-instance-id>", "Retrieve an alert instance",
@@ -56,13 +56,13 @@ An alert instance is a read-only record of an alert rule firing against a resour
 
 // RunInsightsAlertInstanceList lists alert instances.
 func RunInsightsAlertInstanceList(c *CmdConfig) error {
-	status, err := c.Doit.GetString(c.NS, doctl.ArgInsightsAlertInstanceStatus)
+	status, err := c.Doit.GetString(c.NS, doctl.ArgInsightsStatus)
 	if err != nil {
 		return err
 	}
 	status = strings.ToLower(strings.TrimSpace(status))
 	if status != "" && status != godo.InsightsAlertInstanceStatusActive && status != godo.InsightsAlertInstanceStatusResolved {
-		return fmt.Errorf("invalid --%s %q: must be %q or %q", doctl.ArgInsightsAlertInstanceStatus, status,
+		return fmt.Errorf("invalid --%s %q: must be %q or %q", doctl.ArgInsightsStatus, status,
 			godo.InsightsAlertInstanceStatusActive, godo.InsightsAlertInstanceStatusResolved)
 	}
 
@@ -70,20 +70,20 @@ func RunInsightsAlertInstanceList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	resourceURN, err := c.Doit.GetString(c.NS, doctl.ArgInsightsAlertInstanceResourceURN)
+	resourceURN, err := c.Doit.GetString(c.NS, doctl.ArgInsightsResourceURN)
 	if err != nil {
 		return err
 	}
-	page, err := c.Doit.GetInt(c.NS, doctl.ArgInsightsAlertInstancePage)
+	page, err := c.Doit.GetInt(c.NS, doctl.ArgInsightsPage)
 	if err != nil {
 		return err
 	}
-	perPage, err := c.Doit.GetInt(c.NS, doctl.ArgInsightsAlertInstancePerPage)
+	perPage, err := c.Doit.GetInt(c.NS, doctl.ArgInsightsPerPage)
 	if err != nil {
 		return err
 	}
 	if page < 0 || perPage < 0 {
-		return fmt.Errorf("--%s and --%s must not be negative", doctl.ArgInsightsAlertInstancePage, doctl.ArgInsightsAlertInstancePerPage)
+		return fmt.Errorf("--%s and --%s must not be negative", doctl.ArgInsightsPage, doctl.ArgInsightsPerPage)
 	}
 
 	opt := godo.AlertInstanceListOptions{

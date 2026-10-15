@@ -61,8 +61,8 @@ func (a *InsightsAlertInstances) KV() []map[string]any {
 			"Status":          ai.Status,
 			"ResourceURN":     ai.ResourceURN,
 			"Value":           strconv.FormatFloat(ai.Value, 'f', -1, 64),
-			"TriggeredAt":     formatInsightsOptionalTime(&ai.TriggeredAt),
-			"LastTriggeredAt": formatInsightsOptionalTime(&ai.LastTriggeredAt),
+			"TriggeredAt":     formatInsightsTime(ai.TriggeredAt),
+			"LastTriggeredAt": formatInsightsTime(ai.LastTriggeredAt),
 			"ResolvedAt":      formatInsightsOptionalTime(ai.ResolvedAt),
 			"LastNotifiedAt":  formatInsightsOptionalTime(ai.LastNotifiedAt),
 		})
@@ -71,8 +71,8 @@ func (a *InsightsAlertInstances) KV() []map[string]any {
 }
 
 func formatInsightsOptionalTime(t *time.Time) string {
-	if t == nil || t.IsZero() {
+	if t == nil {
 		return ""
 	}
-	return t.UTC().Format(time.RFC3339)
+	return formatInsightsTime(*t)
 }

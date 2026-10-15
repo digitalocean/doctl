@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,6 +38,15 @@ var (
 	insightsStderr io.Writer = os.Stderr
 
 	insightsRelativeTimeRE = regexp.MustCompile(`^(now([+-]\d+[smhdw])?|\d+[smhdw])$`)
+
+	insightsLogsRequestFlags = []string{
+		doctl.ArgInsightsLogsFrom,
+		doctl.ArgInsightsLogsTo,
+		doctl.ArgInsightsLogsText,
+		doctl.ArgInsightsLogsFilter,
+		doctl.ArgInsightsLogsFilterFile,
+		doctl.ArgInsightsLogsOrderBy,
+	}
 )
 
 func insightsLogs() *Command {
@@ -54,7 +62,7 @@ func insightsLogs() *Command {
 	cmdSearch := CmdBuilder(cmd, RunInsightsLogsSearch, "search", "Search log records",
 		`Searches log records in a region.
 
-Build the search with flags, or pass a complete request body with `+"`"+`--request-file`+"`"+`. The request file uses the JSON body of the public logs search API. When using a request file, `+"`"+`--limit`+"`"+` and `+"`"+`--cursor`+"`"+` override the file's pagination so you can page through results.
+Build the search with flags, or pass a complete request body with `+"`"+`--request-file`+"`"+`. The request file uses the JSON body of the public logs search API, as JSON or YAML. When using a request file, `+"`"+`--limit`+"`"+` and `+"`"+`--cursor`+"`"+` override the file's pagination so you can page through results.
 
 `+"`"+`--from`+"`"+` and `+"`"+`--to`+"`"+` accept an RFC3339 timestamp, a Unix timestamp, `+"`"+`now`+"`"+`, a look-back duration such as `+"`"+`15m`+"`"+` or `+"`"+`7d`+"`"+`, or an offset such as `+"`"+`now-1h`+"`"+`.
 
@@ -67,8 +75,8 @@ Results are returned one page at a time. Cursor pagination is only available whe
 	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsTo, "", "", "End of the time range. Defaults to "+insightsLogsDefaultTo)
 	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsText, "", "", "Search for a substring across the log body, service name, and resource URN")
 	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFilter, "", "", "A JSON filter expression")
-	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFilterFile, "", "", "Read a JSON filter expression from `path`, or - to read from stdin")
-	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsRequestFile, "", "", "Read a complete JSON logs search request from `path`, or - to read from stdin")
+	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsFilterFile, "", "", "Read a JSON or YAML filter expression from `path`, or - to read from stdin")
+	AddStringFlag(cmdSearch, doctl.ArgInsightsRequestFile, "", "", "Read a complete JSON or YAML logs search request from `path`, or - to read from stdin")
 	AddStringSliceFlag(cmdSearch, doctl.ArgInsightsLogsOrderBy, "", nil, "Sort clause in the form `field[:asc|desc]`, for example timestamp:desc. Repeat the flag to sort by several fields")
 	AddIntFlag(cmdSearch, doctl.ArgInsightsLogsLimit, "", 0, fmt.Sprintf("Maximum number of records to return, up to %d. The server defaults to 100", insightsLogsMaxLimit))
 	AddStringFlag(cmdSearch, doctl.ArgInsightsLogsCursor, "", "", "Cursor from a previous search to retrieve the next page")
@@ -106,7 +114,7 @@ func RunInsightsLogsSearch(c *CmdConfig) error {
 }
 
 func buildInsightsLogsSearchRequest(c *CmdConfig) (*godo.LogsSearchRequest, error) {
-	requestFile, err := insightsTrimmedString(c, doctl.ArgInsightsLogsRequestFile)
+	requestFile, err := insightsTrimmedString(c, doctl.ArgInsightsRequestFile)
 	if err != nil {
 		return nil, err
 	}
@@ -149,26 +157,16 @@ func buildInsightsLogsSearchRequest(c *CmdConfig) (*godo.LogsSearchRequest, erro
 
 	req := &godo.LogsSearchRequest{}
 	if requestFile != "" {
-		conflicts := map[string]bool{
-			doctl.ArgInsightsLogsFrom:       from != "",
-			doctl.ArgInsightsLogsTo:         to != "",
-			doctl.ArgInsightsLogsText:       text != "",
-			doctl.ArgInsightsLogsFilter:     filter != "",
-			doctl.ArgInsightsLogsFilterFile: filterFile != "",
-			doctl.ArgInsightsLogsOrderBy:    len(orderBy) > 0,
-		}
-		for _, name := range []string{doctl.ArgInsightsLogsFrom, doctl.ArgInsightsLogsTo, doctl.ArgInsightsLogsText,
-			doctl.ArgInsightsLogsFilter, doctl.ArgInsightsLogsFilterFile, doctl.ArgInsightsLogsOrderBy} {
-			if conflicts[name] {
-				return nil, fmt.Errorf("--%s cannot be combined with --%s", name, doctl.ArgInsightsLogsRequestFile)
-			}
+		if err := rejectRequestFileFlagMix(c, requestFile, insightsLogsRequestFlags...); err != nil {
+			return nil, err
 		}
 
-		if err := readInsightsJSON(requestFile, req); err != nil {
-			return nil, fmt.Errorf("reading --%s: %w", doctl.ArgInsightsLogsRequestFile, err)
+		req, err = readInsightsRequest[godo.LogsSearchRequest](insightsStdin, requestFile)
+		if err != nil {
+			return nil, err
 		}
 		if req.TimeRange.From == (godo.LogsTimeInstant{}) || req.TimeRange.To == (godo.LogsTimeInstant{}) {
-			return nil, fmt.Errorf("--%s must set time_range.from and time_range.to", doctl.ArgInsightsLogsRequestFile)
+			return nil, fmt.Errorf("--%s must set time_range.from and time_range.to", doctl.ArgInsightsRequestFile)
 		}
 	} else {
 		if from == "" {
@@ -193,9 +191,9 @@ func buildInsightsLogsSearchRequest(c *CmdConfig) (*godo.LogsSearchRequest, erro
 				return nil, fmt.Errorf("parsing --%s: %w", doctl.ArgInsightsLogsFilter, err)
 			}
 		case filterFile != "":
-			expr = &godo.LogsFilterExpression{}
-			if err := readInsightsJSON(filterFile, expr); err != nil {
-				return nil, fmt.Errorf("reading --%s: %w", doctl.ArgInsightsLogsFilterFile, err)
+			expr, err = readInsightsRequest[godo.LogsFilterExpression](insightsStdin, filterFile)
+			if err != nil {
+				return nil, fmt.Errorf("--%s: %w", doctl.ArgInsightsLogsFilterFile, err)
 			}
 		}
 
@@ -279,17 +277,6 @@ func parseInsightsLogsOrderBy(clause string) (godo.LogsOrderBy, error) {
 
 func insightsLogsOrderedByTimestampOnly(orderBy []godo.LogsOrderBy) bool {
 	return len(orderBy) == 0 || (len(orderBy) == 1 && orderBy[0].Field.Name == "timestamp")
-}
-
-func readInsightsJSON(path string, v any) error {
-	if path == "-" {
-		return decodeInsightsJSON(insightsStdin, v)
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return decodeInsightsJSON(bytes.NewReader(b), v)
 }
 
 func decodeInsightsJSON(r io.Reader, v any) error {
