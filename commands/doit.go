@@ -374,6 +374,18 @@ func AddStringSliceFlag(cmd *Command, name, shorthand string, def []string, desc
 	}
 }
 
+// AddStringArrayFlag adds a repeatable string flag that preserves commas
+// within each value.
+func AddStringArrayFlag(cmd *Command, name, shorthand string, def []string, desc string, opts ...flagOpt) {
+	fn := flagName(cmd, name)
+	cmd.Flags().StringArrayP(name, shorthand, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
+}
+
 // AddStringMapStringFlag adds a map of strings by strings flag to a command.
 func AddStringMapStringFlag(cmd *Command, name, shorthand string, def map[string]string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)

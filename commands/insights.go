@@ -17,7 +17,7 @@ import "github.com/spf13/cobra"
 
 // Insights creates the top-level command group for Insights.
 func Insights() *Command {
-	return &Command{
+	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "insights",
 			Short:   "Display commands for managing Insights",
@@ -25,4 +25,9 @@ func Insights() *Command {
 			GroupID: manageResourcesGroup,
 		},
 	}
+
+	cmd.AddCommand(InsightsNotificationChannel())
+	cmd.AddCommand(InsightsAlertRule())
+
+	return cmd
 }

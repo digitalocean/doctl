@@ -721,6 +721,86 @@ const (
 	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
 	ArgAlertPolicySlackURLs = "slack-urls"
 
+	// Insights Args
+
+	// ArgInsightsName is the name of an Insights resource.
+	ArgInsightsName = "name"
+
+	// ArgInsightsType selects an Insights resource type.
+	ArgInsightsType = "type"
+
+	// ArgInsightsRequestFile is a complete JSON or YAML API request.
+	ArgInsightsRequestFile = "request-file"
+
+	// ArgInsightsEmails is a list of notification email addresses.
+	ArgInsightsEmails = "emails"
+
+	// ArgInsightsSlackChannel is a Slack channel name.
+	ArgInsightsSlackChannel = "slack-channel"
+
+	// ArgInsightsSlackWebhookURL is a Slack incoming webhook URL.
+	ArgInsightsSlackWebhookURL = "slack-webhook-url"
+
+	// ArgInsightsWebhookURL is an HTTPS webhook destination.
+	ArgInsightsWebhookURL = "webhook-url"
+
+	// ArgInsightsWebhookHeader is a webhook header in key=value form.
+	ArgInsightsWebhookHeader = "webhook-header"
+
+	// ArgInsightsWebhookBasicAuthUsername is a webhook basic-auth username.
+	ArgInsightsWebhookBasicAuthUsername = "webhook-basic-auth-username"
+
+	// ArgInsightsWebhookBasicAuthPassword is a webhook basic-auth password.
+	ArgInsightsWebhookBasicAuthPassword = "webhook-basic-auth-password"
+
+	// ArgInsightsWebhookBearerToken is a webhook bearer token.
+	ArgInsightsWebhookBearerToken = "webhook-bearer-token"
+
+	// ArgInsightsWebhookSigningSecret is a webhook HMAC signing secret.
+	ArgInsightsWebhookSigningSecret = "webhook-signing-secret"
+
+	// ArgInsightsMetric is the metric evaluated by an alert rule.
+	ArgInsightsMetric = "metric"
+
+	// ArgInsightsResourceURN filters or scopes Insights resources.
+	ArgInsightsResourceURN = "resource-urn"
+
+	// ArgInsightsTag is a resource tag used by an alert rule.
+	ArgInsightsTag = "tag"
+
+	// ArgInsightsFilter is an alert query filter in field,operator,value form.
+	ArgInsightsFilter = "filter"
+
+	// ArgInsightsWindow is an alert evaluation window.
+	ArgInsightsWindow = "window"
+
+	// ArgInsightsOperator is an alert threshold operator.
+	ArgInsightsOperator = "operator"
+
+	// ArgInsightsWarningThreshold is an alert warning threshold.
+	ArgInsightsWarningThreshold = "warning-threshold"
+
+	// ArgInsightsCriticalThreshold is an alert critical threshold.
+	ArgInsightsCriticalThreshold = "critical-threshold"
+
+	// ArgInsightsNotificationChannel is a notification channel ID.
+	ArgInsightsNotificationChannel = "notification-channel"
+
+	// ArgInsightsNotifyOn is an alert severity that triggers notification.
+	ArgInsightsNotifyOn = "notify-on"
+
+	// ArgInsightsReAlertDuration controls repeated alert notifications.
+	ArgInsightsReAlertDuration = "re-alert-duration"
+
+	// ArgInsightsStatus is an alert rule status.
+	ArgInsightsStatus = "status"
+
+	// ArgInsightsPage is the page number for an Insights list operation.
+	ArgInsightsPage = "page"
+
+	// ArgInsightsPerPage is the page size for an Insights list operation.
+	ArgInsightsPerPage = "per-page"
+
 	// Security Args
 
 	// ArgSecurityScanResources are the resources to scan.
