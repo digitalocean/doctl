@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"os"
@@ -371,40 +372,102 @@ func (p *presenceSession) setConnected(on bool) {
 	p.mu.Unlock()
 }
 
-// run keeps the socket open until ctx ends, reconnecting with backoff. A
-// policy close (1008) means the server will keep refusing; it stops there.
+// Server close codes from the mars.presence.v1 contract.
+const (
+	presenceCloseReauthorize  = 4001
+	presenceCloseSessionEnded = 4004
+)
+
+// presenceRetry is what to do after a connection attempt ends.
+type presenceRetry struct {
+	stop   bool          // do not reconnect
+	reason string        // told to the user when stopping
+	wait   time.Duration // delay before the next attempt
+	grow   bool          // double the backoff afterwards
+}
+
+// nextPresenceRetry decides how to follow a connection that ended with err
+// (resp is the handshake response, when the handshake was refused). backoff
+// is the current base delay; jitter returns a random duration in [0, n).
+func nextPresenceRetry(err error, resp *http.Response, backoff time.Duration, jitter func(time.Duration) time.Duration) presenceRetry {
+	var ce *websocket.CloseError
+	if errors.As(err, &ce) {
+		switch ce.Code {
+		case websocket.ClosePolicyViolation:
+			return presenceRetry{stop: true, reason: "presence stopped: " + ce.Text}
+		case presenceCloseSessionEnded:
+			return presenceRetry{stop: true, reason: "presence stopped: the session ended"}
+		case presenceCloseReauthorize:
+			// Expected churn: the server bounds a socket's lifetime so the
+			// reconnect is authorized afresh. Come straight back, spread out
+			// so a fleet of clients closed together does not return together.
+			return presenceRetry{wait: jitter(2 * time.Second)}
+		}
+	}
+	if resp != nil {
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			// No such session, or not yours: retrying cannot change that.
+			return presenceRetry{stop: true, reason: "presence unavailable for this session"}
+		case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+			if secs, perr := strconv.Atoi(strings.TrimSpace(resp.Header.Get("Retry-After"))); perr == nil && secs > 0 {
+				d := time.Duration(secs) * time.Second
+				return presenceRetry{wait: d + jitter(d/2), grow: true}
+			}
+		}
+	}
+	// Equal jitter: half the backoff is fixed, half random, so a rollout's
+	// 1001 to every client does not bring them back in lockstep.
+	return presenceRetry{wait: backoff/2 + jitter(backoff/2), grow: true}
+}
+
+// run keeps the socket open until ctx ends, reconnecting as nextPresenceRetry
+// says, and stops (telling the user why) when the server says not to return.
 func (p *presenceSession) run(ctx context.Context) {
 	backoff := time.Second
+	jitter := func(n time.Duration) time.Duration {
+		if n <= 0 {
+			return 0
+		}
+		return time.Duration(rand.Int64N(int64(n)))
+	}
 	for ctx.Err() == nil {
 		started := p.now()
-		err := p.connectOnce(ctx)
+		resp, err := p.connectOnce(ctx)
 		if ctx.Err() != nil {
-			return
-		}
-		var ce *websocket.CloseError
-		if errors.As(err, &ce) && ce.Code == websocket.ClosePolicyViolation {
-			p.notify("presence stopped: " + ce.Text)
 			return
 		}
 		if p.now().Sub(started) > presenceHealthy {
 			backoff = time.Second
 		}
+		next := nextPresenceRetry(err, resp, backoff, jitter)
+		if next.stop {
+			p.notify(next.reason)
+			return
+		}
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(backoff):
+		case <-time.After(next.wait):
 		}
-		if backoff *= 2; backoff > presenceMaxBackoff {
-			backoff = presenceMaxBackoff
+		if next.grow {
+			if backoff *= 2; backoff > presenceMaxBackoff {
+				backoff = presenceMaxBackoff
+			}
 		}
 	}
 }
 
-func (p *presenceSession) connectOnce(ctx context.Context) error {
+// connectOnce runs one connection to its end. resp is set only when the
+// handshake itself was refused, so the caller can read its status.
+func (p *presenceSession) connectOnce(ctx context.Context) (*http.Response, error) {
 	d := websocket.Dialer{Subprotocols: []string{presenceSubprotocol}, HandshakeTimeout: 15 * time.Second, Proxy: http.ProxyFromEnvironment}
-	ws, _, err := d.DialContext(ctx, p.url, p.header)
+	ws, resp, err := d.DialContext(ctx, p.url, p.header)
 	if err != nil {
-		return err
+		if errors.Is(err, websocket.ErrBadHandshake) {
+			return resp, err
+		}
+		return nil, err
 	}
 	defer ws.Close()
 
@@ -440,7 +503,7 @@ func (p *presenceSession) connectOnce(ctx context.Context) error {
 	for {
 		_, data, err := ws.ReadMessage()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		var f presenceFrame
 		if json.Unmarshal(data, &f) != nil {

@@ -46,6 +46,61 @@ func TestHostedAgentsPresenceURL(t *testing.T) {
 	}
 }
 
+func TestNextPresenceRetry(t *testing.T) {
+	maxJitter := func(n time.Duration) time.Duration { return n - 1 } // the top of every jitter range
+	noJitter := func(time.Duration) time.Duration { return 0 }
+	refused := func(status int, retryAfter string) *http.Response {
+		h := http.Header{}
+		if retryAfter != "" {
+			h.Set("Retry-After", retryAfter)
+		}
+		return &http.Response{StatusCode: status, Header: h}
+	}
+	closed := func(code int) error { return &websocket.CloseError{Code: code, Text: "x"} }
+
+	tests := []struct {
+		name     string
+		err      error
+		resp     *http.Response
+		wantStop bool
+		minWait  time.Duration
+		maxWait  time.Duration
+		wantGrow bool
+	}{
+		{name: "lifetime close reconnects at once, jittered, backoff unchanged", err: closed(presenceCloseReauthorize), maxWait: 2 * time.Second},
+		{name: "session ended stops", err: closed(presenceCloseSessionEnded), wantStop: true},
+		{name: "policy close stops", err: closed(websocket.ClosePolicyViolation), wantStop: true},
+		{name: "a 404 handshake stops", err: websocket.ErrBadHandshake, resp: refused(http.StatusNotFound, ""), wantStop: true},
+		{name: "429 honours Retry-After", err: websocket.ErrBadHandshake, resp: refused(http.StatusTooManyRequests, "5"), minWait: 5 * time.Second, maxWait: 8 * time.Second, wantGrow: true},
+		{name: "503 honours Retry-After", err: websocket.ErrBadHandshake, resp: refused(http.StatusServiceUnavailable, "2"), minWait: 2 * time.Second, maxWait: 3 * time.Second, wantGrow: true},
+		{name: "503 without Retry-After falls back to jittered backoff", err: websocket.ErrBadHandshake, resp: refused(http.StatusServiceUnavailable, ""), minWait: 2 * time.Second, maxWait: 4 * time.Second, wantGrow: true},
+		{name: "server going away uses jittered backoff", err: closed(websocket.CloseGoingAway), minWait: 2 * time.Second, maxWait: 4 * time.Second, wantGrow: true},
+		{name: "a network error uses jittered backoff", err: context.DeadlineExceeded, minWait: 2 * time.Second, maxWait: 4 * time.Second, wantGrow: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, j := range []func(time.Duration) time.Duration{noJitter, maxJitter} {
+				got := nextPresenceRetry(tt.err, tt.resp, 4*time.Second, j)
+				if got.stop != tt.wantStop {
+					t.Fatalf("stop = %v, want %v", got.stop, tt.wantStop)
+				}
+				if tt.wantStop {
+					if got.reason == "" {
+						t.Fatal("stopping without telling the user why")
+					}
+					continue
+				}
+				if got.wait < tt.minWait || got.wait > tt.maxWait {
+					t.Fatalf("wait = %s, want within [%s, %s]", got.wait, tt.minWait, tt.maxWait)
+				}
+				if got.grow != tt.wantGrow {
+					t.Fatalf("grow = %v, want %v", got.grow, tt.wantGrow)
+				}
+			}
+		})
+	}
+}
+
 func TestPresenceRequested(t *testing.T) {
 	tests := []struct {
 		name string
