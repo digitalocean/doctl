@@ -62,6 +62,7 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"NvidiaGpuDraDriver",
 		"AmdGpuDraDriver",
 		"RDMASharedDevicePlugin",
+		"GPUOperatorReady",
 	}
 }
 
@@ -106,6 +107,7 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		"NvidiaGpuDraDriver":                "NVIDIA GPU DRA Driver",
 		"AmdGpuDraDriver":                   "AMD GPU DRA Driver",
 		"RDMASharedDevicePlugin":            "RDMA Shared Device Plugin",
+		"GPUOperatorReady":                  "GPU Operator Ready",
 	}
 }
 
@@ -151,6 +153,7 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 			"NvidiaGpuDraDriver":                cluster.NvidiaGpuDraDriver != nil && *cluster.NvidiaGpuDraDriver.Enabled,
 			"AmdGpuDraDriver":                   cluster.AmdGpuDraDriver != nil && *cluster.AmdGpuDraDriver.Enabled,
 			"RDMASharedDevicePlugin":            cluster.RdmaSharedDevicePlugin != nil && *cluster.RdmaSharedDevicePlugin.Enabled,
+			"GPUOperatorReady":                  cluster.GPUOperatorReady,
 		}
 
 		if cfg := cluster.ClusterAutoscalerConfiguration; cfg != nil {
