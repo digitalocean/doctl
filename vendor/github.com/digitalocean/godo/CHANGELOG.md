@@ -1,5 +1,19 @@
 # Change Log
 
+## [1.227.0] - 2026-10-16
+
+- #1168 - @SSharma-10 - Expand serverless inference for server-side tools, VLMs, TTS, and video
+
+## [1.226.0] - 2026-10-15
+
+- #1167 - @m3co-code - INFERNO-152 map new gpu_operator_ready cluster property
+
+## [1.225.0] - 2026-10-12
+
+- #1162 - @srajputdo - COBS-1350: Add Insights traces query support
+- #1156 - @adityasingh-beep - COBS-1351: Add Insights spans query support
+- #1161 - @aupadhyay-shark - docs(FI-609): clarify Signals CreateDeletion godoc
+
 ## [1.224.0] - 2026-10-11
 
 - #1159 - @venkatranabothu - Rename simulation journeys to episodes in the Agent Platform client

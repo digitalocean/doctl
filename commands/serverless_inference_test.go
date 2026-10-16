@@ -19,13 +19,9 @@ func TestRunServerlessInferenceChatCompletionCreate_NonStreaming(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgInferenceModel, "openai-gpt-oss-20b")
 		config.Doit.Set(config.NS, doctl.ArgInferenceMessage, "hi")
 
-		content := "hello back"
 		expected := &godo.ChatCompletion{
 			Choices: []godo.ChatCompletionChoice{{
-				Message: godo.ChatCompletionMessage{
-					Role:    "assistant",
-					Content: &content,
-				},
+				Message: godo.AssistantMessage("hello back"),
 			}},
 		}
 
@@ -35,7 +31,7 @@ func TestRunServerlessInferenceChatCompletionCreate_NonStreaming(t *testing.T) {
 				assert.Equal(t, "openai-gpt-oss-20b", params.Model)
 				require.Len(t, params.Messages, 1)
 				require.NotNil(t, params.Messages[0].Content)
-				assert.Equal(t, "hi", *params.Messages[0].Content)
+				assert.Equal(t, "hi", params.Messages[0].Content.Text())
 				return expected, nil
 			})
 
@@ -74,15 +70,14 @@ func TestServerlessInferenceChatCompletionParams_FromRequestFile(t *testing.T) {
 		assert.Equal(t, "m", params.Model)
 		require.Len(t, params.Messages, 1)
 		require.NotNil(t, params.Messages[0].Content)
-		assert.Equal(t, "from file", *params.Messages[0].Content)
+		assert.Equal(t, "from file", params.Messages[0].Content.Text())
 	})
 }
 
 func TestServerlessInferenceChatCompletionText(t *testing.T) {
-	content := "answer"
 	c := &godo.ChatCompletion{
 		Choices: []godo.ChatCompletionChoice{{
-			Message: godo.ChatCompletionMessage{Content: &content},
+			Message: godo.AssistantMessage("answer"),
 		}},
 	}
 	assert.Equal(t, "answer", serverlessInferenceChatCompletionText(c))

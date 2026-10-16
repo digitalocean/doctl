@@ -314,6 +314,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgIsolatedWorkers, "", false, "Enables isolated workers for the cluster. Defaults to `false`, To enable isolated workers for the cluster, supply `--isolated-workers=true`. NAT GW must be available in the vpc when this option is enabled.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgGPUOperatorReady, "", false,
+		"Launches GPU nodes in the cluster with images without GPU drivers, allowing GPU operators to manage drivers. Defaults to `false`. To enable it, supply `--gpu-operator-ready=true`. Mutually exclusive with other GPU-related cluster options.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --ha to enable, --ha=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
@@ -398,6 +400,8 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Indicates whether the cluster automatically upgrades to new patch releases during its maintenance window. To enable automatic upgrade, use `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSurgeUpgrade, "", false,
 		"Enables surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgGPUOperatorReady, "", false,
+		"Launches GPU nodes in the cluster with images without GPU drivers, allowing GPU operators to manage drivers. To enable it, supply `--gpu-operator-ready=true`; to disable it, supply `--gpu-operator-ready=false`. Mutually exclusive with other GPU-related cluster options.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Enables the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", false,
@@ -1851,6 +1855,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.IsolatedWorkers = isolatedWorkers
 
+	gpuOperatorReady, err := c.Doit.GetBool(c.NS, doctl.ArgGPUOperatorReady)
+	if err != nil {
+		return err
+	}
+	r.GPUOperatorReady = gpuOperatorReady
+
 	ha, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgHA)
 	if err != nil {
 		return err
@@ -2127,6 +2137,12 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.HA = ha
+
+	gpuOperatorReady, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgGPUOperatorReady)
+	if err != nil {
+		return err
+	}
+	r.GPUOperatorReady = gpuOperatorReady
 
 	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
 	if err != nil {
