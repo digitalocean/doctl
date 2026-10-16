@@ -31,6 +31,8 @@ func Insights() *Command {
 	cmd.AddCommand(insightsAlertInstances())
 	cmd.AddCommand(insightsMetrics())
 	cmd.AddCommand(insightsLogs())
+	cmd.AddCommand(insightsSpans())
+	cmd.AddCommand(insightsTraces())
 
 	return cmd
 }
