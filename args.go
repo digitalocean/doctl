@@ -155,6 +155,8 @@ const (
 	ArgHA = "ha"
 	// ArgIsolatedWorkers is a cluster's isolated workers argument.
 	ArgIsolatedWorkers = "isolated-workers"
+	// ArgGPUOperatorReady is a cluster's GPU operator ready argument.
+	ArgGPUOperatorReady = "gpu-operator-ready"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
