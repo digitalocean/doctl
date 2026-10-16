@@ -4687,6 +4687,57 @@ func TestVisualRows(t *testing.T) {
 	assert.Equal(t, 2, visualRows(strings.Repeat("a", 81), 80), "soft-wrap adds a row")
 }
 
+// TestStreamedDraftReplaceLeavesNoGhostRows is MARSOHS-1742: a token chunk that
+// arrives mid-line and ends in a newline (".\n\n" closing a paragraph) must not
+// get the discrete-event separator. That extra row is not in the raw draft, so
+// replaceStreamed walks back one row short per paragraph break and the top of
+// the draft stays on screen above the markdown render — the answer's first
+// sentence appears twice, the second copy indented.
+func TestStreamedDraftReplaceLeavesNoGhostRows(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = true
+	defer func() { stylingEnabled = prev }()
+
+	scr := newFakeScreen(30, 40)
+	state := newAttachState(scr, &pendingHITL{})
+	state.display.termCols = 40
+	state.display.setRaw(true)
+
+	acc := &msgAccumulator{}
+	for _, chunk := range []string{
+		"Alpha sentence that wraps past forty columns on screen", ".\n\n",
+		"Bravo paragraph", ".\n\n",
+		"Charlie closes it.",
+	} {
+		require.True(t, acc.streamLive(state.display, chunk))
+	}
+	acc.flush(state.display)
+
+	assert.Equal(t, 1, scr.countLines("Alpha"), "draft row left above the render:\n%s",
+		strings.Join(scr.lines(), "\n"))
+	assert.Equal(t, 1, scr.countLines("Bravo"), strings.Join(scr.lines(), "\n"))
+}
+
+// TestPromptDisplayStreamChunkGetsNoSeparator pins the two halves of the
+// MARSOHS-1742 fix at the byte level: a paragraph-closing answer chunk
+// continues its line, while a discrete event line arriving mid-line still gets
+// the separator that keeps it off the token stream.
+func TestPromptDisplayStreamChunkGetsNoSeparator(t *testing.T) {
+	var buf bytes.Buffer
+	state := newAttachState(&buf, &pendingHITL{})
+	state.display.setRaw(true)
+
+	state.display.writeStream("isolation")
+	state.display.writeStream(".\n\n")
+	assert.Contains(t, buf.String(), "isolation.\r\n\r\n")
+
+	buf.Reset()
+	state.display.writeStream("mid-line")
+	_, err := state.display.Write([]byte("(event)\n"))
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "mid-line\r\n(event)\r\n")
+}
+
 // recordingStreamReplacer captures live echoes and replaceStreamed calls for tests.
 type recordingStreamReplacer struct {
 	live         strings.Builder
