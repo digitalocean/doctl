@@ -42,7 +42,8 @@ var knownAgentAdapters = map[string]struct{}{
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
 	"openhands":        {}, // runnable (AGENT_KIND_OPENHANDS): OpenHands Agent Server in the openhands template
 	"custom":           {},
-	"none":             {}, // bare sandbox (AGENT_KIND_NONE): no agent in the guest
+	"none":             {}, // bare sandbox: no agent in the guest
+	"sandbox":          {}, // equal spelling of none
 	"codex-cli":        {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
 	"claude-agent-sdk": {},

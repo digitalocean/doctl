@@ -117,9 +117,9 @@ var (
 // --harness codex users the OpenAI-managed adapter, which also differs in what
 // it supports (for example it is excluded from checkpoint/fork/rollback).
 //
-// none is not a harness at all — it is the absence of one. It is accepted here
-// so a bare sandbox is reachable without hand-writing a manifest, which is the
-// whole point of --harness.
+// none (and its equal spelling sandbox) is not a harness at all — it is the
+// absence of one. It is listed here only so isBareSandboxHarness can refuse it
+// with a pointer to `--template sandbox`.
 var harnessAgentNames = map[string]string{
 	"opencode":       "opencode",
 	"open-code":      "opencode",
@@ -131,6 +131,7 @@ var harnessAgentNames = map[string]string{
 	"openhands":      openHandsAgentName,
 	"open-hands":     openHandsAgentName,
 	"none":           bareSandboxAgent,
+	"sandbox":        bareSandboxAgent,
 }
 
 // bareSandboxAgent is the flat-manifest agent value for a sandbox with no agent
@@ -139,6 +140,21 @@ var harnessAgentNames = map[string]string{
 // server-side, so every doctl path that would talk to an agent has to be closed
 // off ahead of the call rather than left to fail at it.
 const bareSandboxAgent = "none"
+
+// bareSandboxAgentAlt is the API's equal spelling of bareSandboxAgent. doctl
+// never generates it, but a manifest that says it is a bare sandbox too.
+const bareSandboxAgentAlt = "sandbox"
+
+// hostedAgentKindSandbox is the agent kind the API writes for a new bare
+// sandbox, replacing godo.HostedAgentKindNone. godo does not declare it yet.
+const hostedAgentKindSandbox godo.HostedAgentKind = "AGENT_KIND_SANDBOX"
+
+// isBareSandboxKind reports whether a session's agent kind means no agent runs
+// in it. Sessions created before AGENT_KIND_SANDBOX existed keep
+// AGENT_KIND_NONE, so both count.
+func isBareSandboxKind(k godo.HostedAgentKind) bool {
+	return k == godo.HostedAgentKindNone || k == hostedAgentKindSandbox
+}
 
 // isBareSandboxHarness reports whether a raw --harness value asks for a sandbox
 // with no agent. Takes the raw flag value (not the resolved agent) so callers
@@ -946,7 +962,7 @@ var bareSandboxStartupWords = startupWords{
 // did not create — `port-forward` into someone else's bare sandbox included.
 func startupWordsFor(sess *do.HostedAgentSession) startupWords {
 	if sess != nil && sess.HostedAgentSession != nil &&
-		sess.AgentKind == godo.HostedAgentKindNone {
+		isBareSandboxKind(sess.AgentKind) {
 		return bareSandboxStartupWords
 	}
 	return agentStartupWords
@@ -1180,7 +1196,7 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	// A bare sandbox has no chat to launch into, so the card has to carry the
 	// commands that do drive it — this card is the only place a bare-sandbox
 	// user is told what to do next.
-	if sum.Session != nil && sum.Session.AgentKind == godo.HostedAgentKindNone {
+	if sum.Session != nil && sum.Session.HostedAgentSession != nil && isBareSandboxKind(sum.Session.AgentKind) {
 		body.WriteString(cardRow("exec", agentCLI+" exec "+ref+" -- <command>"))
 		body.WriteString(cardRow("upload", agentCLI+" upload "+ref+" --local-file <path> --workspace-path <path>"))
 		body.WriteString(cardRow("download", agentCLI+" download "+ref+" --workspace-path <path> --save-to <path>"))
