@@ -81,10 +81,9 @@ func TestBeautifyAgentError_APIResponse(t *testing.T) {
 // obvious thing, so it gets a card rather than the HTTP reason phrase. The
 // exact server copy is the fixture: matching on a substring of it is what makes
 // this fragile, and a test that never sees the real string would not notice.
-// Both server copies are fixtures: servers that predate the `sandbox` rename
-// still say `agent: none`.
+// Both manifest spellings are fixtures, since either may appear in the copy.
 func TestBeautifyAgentError_NoAgentConflictGetsItsOwnCard(t *testing.T) {
-	for _, spelling := range []string{"sandbox", "none"} {
+	for _, spelling := range []string{"none", "sandbox"} {
 		t.Run(spelling, func(t *testing.T) {
 			er := &godo.ErrorResponse{
 				Response: &http.Response{

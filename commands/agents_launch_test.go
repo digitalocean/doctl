@@ -1217,12 +1217,12 @@ func TestRejectCreationFlagsForExistingSession_CoversEveryCreationFlag(t *testin
 	require.NotZero(t, checked, "the flag set should not be empty; the guard would assert nothing")
 }
 
-// `sandbox` (and its deprecated spelling `none`) is the manifest's word for a
-// session with no agent, not a --harness value. A --spec file saying
-// `agent: sandbox` still works; typing it as a harness is refused and pointed
-// at the one spelling we teach.
-func TestResolveAgentCreationSource_HarnessSandboxIsRefused(t *testing.T) {
-	for _, typed := range []string{"sandbox", "Sandbox", "none", "None", " NONE "} {
+// `none` (or its equal spelling `sandbox`) is the manifest's word for a session
+// with no agent, not a --harness value. A --spec file saying `agent: none`
+// still works; typing it as a harness is refused and pointed at the one
+// spelling we teach.
+func TestResolveAgentCreationSource_HarnessNoneIsRefused(t *testing.T) {
+	for _, typed := range []string{"none", "None", " NONE ", "sandbox", "Sandbox"} {
 		t.Run(typed, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				t.Chdir(t.TempDir())
@@ -1237,10 +1237,10 @@ func TestResolveAgentCreationSource_HarnessSandboxIsRefused(t *testing.T) {
 	}
 }
 
-// A manifest naming `agent: sandbox` has to be refused on the same footing as
-// the flag — the flag is a convenience, the manifest is the contract.
+// A manifest naming `agent: none` has to be refused on the same footing as the
+// flag — the flag is a convenience, the manifest is the contract.
 func TestLaunchNewSession_BareSandboxManifestRefused(t *testing.T) {
-	for _, agent := range []string{"sandbox", "none"} {
+	for _, agent := range []string{"none", "sandbox"} {
 		t.Run(agent, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				stubInteractiveTerminal(t, true)

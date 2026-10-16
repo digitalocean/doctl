@@ -113,9 +113,9 @@ var (
 // --harness codex users the OpenAI-managed adapter, which also differs in what
 // it supports (for example it is excluded from checkpoint/fork/rollback).
 //
-// sandbox (and its deprecated spelling none) is not a harness at all — it is
-// the absence of one. It is listed here only so isBareSandboxHarness can refuse
-// it with a pointer to `--template sandbox`.
+// none (and its equal spelling sandbox) is not a harness at all — it is the
+// absence of one. It is listed here only so isBareSandboxHarness can refuse it
+// with a pointer to `--template sandbox`.
 var harnessAgentNames = map[string]string{
 	"opencode":       "opencode",
 	"open-code":      "opencode",
@@ -124,8 +124,8 @@ var harnessAgentNames = map[string]string{
 	"codex":          codexAgentName,
 	"codex-agentapi": openAIAgentsAdapter,
 	"openai-codex":   openAIAgentsAdapter,
-	"sandbox":        bareSandboxAgent,
 	"none":           bareSandboxAgent,
+	"sandbox":        bareSandboxAgent,
 }
 
 // bareSandboxAgent is the flat-manifest agent value for a sandbox with no agent
@@ -133,19 +133,19 @@ var harnessAgentNames = map[string]string{
 // exec, workspace upload/download and port-forward. Sending it input is refused
 // server-side, so every doctl path that would talk to an agent has to be closed
 // off ahead of the call rather than left to fail at it.
-const bareSandboxAgent = "sandbox"
+const bareSandboxAgent = "none"
 
-// bareSandboxAgentDeprecated is the original spelling of bareSandboxAgent. The
-// API still accepts it with a deprecation warning, so manifests that say it are
-// bare sandboxes too.
-const bareSandboxAgentDeprecated = "none"
+// bareSandboxAgentAlt is the API's equal spelling of bareSandboxAgent. doctl
+// never generates it, but a manifest that says it is a bare sandbox too.
+const bareSandboxAgentAlt = "sandbox"
 
-// hostedAgentKindSandbox is the successor to godo.HostedAgentKindNone. godo
-// does not declare it yet.
+// hostedAgentKindSandbox is the agent kind the API writes for a new bare
+// sandbox, replacing godo.HostedAgentKindNone. godo does not declare it yet.
 const hostedAgentKindSandbox godo.HostedAgentKind = "AGENT_KIND_SANDBOX"
 
 // isBareSandboxKind reports whether a session's agent kind means no agent runs
-// in it. Sessions created before the rename keep AGENT_KIND_NONE, so both count.
+// in it. Sessions created before AGENT_KIND_SANDBOX existed keep
+// AGENT_KIND_NONE, so both count.
 func isBareSandboxKind(k godo.HostedAgentKind) bool {
 	return k == godo.HostedAgentKindNone || k == hostedAgentKindSandbox
 }
@@ -901,7 +901,7 @@ func (s *lineSpinner) stopAndClear() {
 }
 
 // startupWords are the lines a create/wait spinner prints for whatever is
-// starting. A session with `agent: sandbox` has no agent in it, so the agent
+// starting. A session with `agent: none` has no agent in it, so the agent
 // wording there names a process that never runs — "Starting agent runtime…" in
 // particular describes a step coding-base does not have, which reads as a stall
 // rather than as a stage that does not apply.
