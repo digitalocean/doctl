@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.227.0] - 2026-10-16
+
+- #1168 - @SSharma-10 - Expand serverless inference for server-side tools, VLMs, TTS, and video
+
 ## [1.226.0] - 2026-10-15
 
 - #1167 - @m3co-code - INFERNO-152 map new gpu_operator_ready cluster property
