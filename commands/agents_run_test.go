@@ -58,12 +58,27 @@ func TestResolveHarnessAgent(t *testing.T) {
 		}
 	})
 
+	t.Run("openhands aliases", func(t *testing.T) {
+		for _, in := range []string{"openhands", "open-hands", "OpenHands"} {
+			got, err := resolveHarnessAgent(in)
+			require.NoError(t, err)
+			assert.Equal(t, openHandsAgentName, got)
+		}
+		assert.Equal(t, "OpenHands", prettyHarnessName("openhands"))
+	})
+
 	t.Run("unknown harness", func(t *testing.T) {
 		_, err := resolveHarnessAgent("not-a-harness")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported")
 		assert.Contains(t, err.Error(), "codex-agentapi")
+		assert.Contains(t, err.Error(), "openhands")
 	})
+}
+
+func TestPrettyAgentKind_OpenHands(t *testing.T) {
+	assert.Equal(t, "OpenHands", prettyAgentKind(hostedAgentKindOpenHands))
+	assert.Equal(t, "OpenHands", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_OPENHANDS")))
 }
 
 func TestBuildHarnessManifest(t *testing.T) {
@@ -163,6 +178,31 @@ func TestBuildHarnessManifest(t *testing.T) {
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
 		assert.NotContains(t, doc, "env")
+		assert.NotContains(t, doc, "keep_warm")
+	})
+
+	t.Run("openhands pins its template, opts out of keep_warm, needs no key", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "openhands", permission: "ask"})
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "openhands", doc["agent"])
+		assert.Equal(t, "openhands", doc["template"])
+		assert.Equal(t, false, doc["keep_warm"])
+		assert.NotContains(t, doc, "secrets")
+		assert.NotContains(t, doc, "env")
+		perms, ok := doc["permissions"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, "ask", perms["default"])
+	})
+
+	t.Run("openhands keeps a user-named template", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "openhands", template: "my-openhands"})
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "my-openhands", doc["template"])
 	})
 }
 

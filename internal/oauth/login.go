@@ -34,6 +34,10 @@ import (
 // the registered redirect URIs, so it must stay stable across releases.
 const callbackPath = "/callback"
 
+// callbackDrainTimeout bounds how long Login waits for the callback page to
+// finish writing to the browser after the result is in.
+const callbackDrainTimeout = 2 * time.Second
+
 // DefaultLoginTimeout bounds how long the login flow waits for the user to
 // finish authorizing in their browser.
 const DefaultLoginTimeout = 5 * time.Minute
@@ -141,7 +145,20 @@ func login(ctx context.Context, opts LoginOptions) (*Token, error) {
 
 	results := make(chan callbackResult, 1)
 	server := &http.Server{Handler: &callbackHandler{state: state, results: results}}
-	defer server.Close()
+	// Shut down gracefully, not Close(): the handler hands its result over
+	// before its response has reached the browser, and on the error path this
+	// function returns at once. Close() tears the connection down under the
+	// half-written page, so the browser (and the integration test standing in
+	// for it) sees an EOF instead of "Return to your terminal". Shutdown waits
+	// for the in-flight response, bounded so a stalled client cannot hold the
+	// command open.
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), callbackDrainTimeout)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			_ = server.Close()
+		}
+	}()
 
 	go func() { _ = server.Serve(listener) }()
 

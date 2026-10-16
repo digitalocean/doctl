@@ -711,7 +711,7 @@ func addAgentCreationFlags(cmd *Command) {
 	// word for a session with no agent, and resolveAgentCreationSource refuses
 	// it as a --harness value. There is one way in that we teach, and naming
 	// the absence of an agent as if it were one of the agents taught two.
-	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
+	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, openhands). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
@@ -8243,9 +8243,15 @@ var agentKindDisplayNames = map[godo.HostedAgentKind]string{
 	godo.HostedAgentKindCodexCLI:    "Codex CLI",
 	godo.HostedAgentKindCursorCLI:   "Cursor CLI",
 	godo.HostedAgentKindOpenAICodex: "Codex",
+	hostedAgentKindOpenHands:        "OpenHands",
 	godo.HostedAgentKindCustom:      "Custom",
 	godo.HostedAgentKindNone:        "None",
 }
+
+// hostedAgentKindOpenHands is the agent kind harness-api reports for sessions
+// running the OpenHands Agent Server (template `openhands`). Declared here
+// until godo adds the constant; the wire value is the one harness-api emits.
+const hostedAgentKindOpenHands godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into the friendly "OpenCode"
 // label. Falls back to the sentinel "agent" for unspecified or unrecognized
