@@ -8147,9 +8147,16 @@ func hitlOutcomeLabel(code int32) string {
 // cardRow formats a label/value line for agent summary cards. Labels are padded
 // before color codes are applied so columns stay aligned in the terminal.
 func cardRow(label, value string) string {
+	return cardRowWidth(label, value, 8)
+}
+
+// cardRowWidth is cardRow with an explicit label column, for a card whose
+// longest label does not fit the default 8 (e.g. "Protected"). Every row of
+// such a card has to pass the same width or the values step out of line.
+func cardRowWidth(label, value string, width int) string {
 	padded := label
-	if len(padded) < 8 {
-		padded += strings.Repeat(" ", 8-len(padded))
+	if len(padded) < width {
+		padded += strings.Repeat(" ", width-len(padded))
 	}
 	return fmt.Sprintf("  %s %s\n", boldColor(padded, colHighlight), value)
 }
