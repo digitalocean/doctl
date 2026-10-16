@@ -1377,4 +1377,17 @@ const (
 	ArgInsightsLogsLimit = "limit"
 	// ArgInsightsLogsCursor is a pagination cursor from a previous logs search.
 	ArgInsightsLogsCursor = "cursor"
+
+	// ArgInsightsTracingFrom is the start of a spans or traces search time range.
+	ArgInsightsTracingFrom = "from"
+	// ArgInsightsTracingTo is the end of a spans or traces search time range.
+	ArgInsightsTracingTo = "to"
+	// ArgInsightsTracingFilter is an inline JSON spans or traces filter expression.
+	ArgInsightsTracingFilter = "filter"
+	// ArgInsightsTracingFilterFile is a path to a JSON or YAML filter expression.
+	ArgInsightsTracingFilterFile = "filter-file"
+	// ArgInsightsTracingOrderBy is a repeatable spans or traces sort clause.
+	ArgInsightsTracingOrderBy = "order-by"
+	// ArgInsightsTracingLimit is the maximum number of spans or traces to return.
+	ArgInsightsTracingLimit = "limit"
 )

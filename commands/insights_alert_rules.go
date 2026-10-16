@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -543,7 +544,7 @@ func validAlertThresholdOperator(value string) bool {
 		godo.InsightsThresholdOperatorLessThan, godo.InsightsThresholdOperatorLessThanOrEqual,
 		godo.InsightsThresholdOperatorGreaterThan, godo.InsightsThresholdOperatorGreaterThanOrEqual,
 	}
-	return stringInSlice(value, valid)
+	return slices.Contains(valid, value)
 }
 
 func validAlertFilterOperator(value string) bool {
@@ -552,25 +553,16 @@ func validAlertFilterOperator(value string) bool {
 		godo.InsightsFilterOperatorLessThan, godo.InsightsFilterOperatorLessThanOrEqual,
 		godo.InsightsFilterOperatorGreaterThan, godo.InsightsFilterOperatorGreaterThanOrEqual,
 	}
-	return stringInSlice(value, valid)
+	return slices.Contains(valid, value)
 }
 
 func validAlertReAlertDuration(value string) bool {
-	return stringInSlice(value, []string{
+	return slices.Contains([]string{
 		godo.InsightsReAlertDuration30m, godo.InsightsReAlertDuration1h,
 		godo.InsightsReAlertDuration4h, godo.InsightsReAlertDurationNever,
-	})
+	}, value)
 }
 
 func validAlertRuleStatus(value string) bool {
 	return value == godo.InsightsAlertRuleStatusActive || value == godo.InsightsAlertRuleStatusPaused
-}
-
-func stringInSlice(value string, values []string) bool {
-	for _, candidate := range values {
-		if value == candidate {
-			return true
-		}
-	}
-	return false
 }
