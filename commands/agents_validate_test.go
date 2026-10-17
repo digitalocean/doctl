@@ -72,6 +72,20 @@ func TestValidateAgentManifest_RemovedAdaptersRejected(t *testing.T) {
 	}
 }
 
+func TestValidateAgentManifest_OpenHandsAccepted(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: openhands\ntemplate: openhands\nkeep_warm: false\n"))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+	for _, w := range v.Warnings {
+		assert.NotContains(t, w, "not yet supported")
+	}
+}
+
+func TestValidateAgentManifest_UnknownAdapterErrorNamesOpenHands(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: not-a-real-adapter\n"))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "openhands")
+}
+
 func TestValidateAgentManifest_HermesAccepted(t *testing.T) {
 	const manifest = `name: hermes-smoke
 agent: hermes
@@ -251,6 +265,36 @@ spec:
 	joined := joinStrings(v.Warnings)
 	assert.Contains(t, joined, "ANTHROPIC_MODEL")
 	assert.Contains(t, joined, "MODEL")
+}
+
+func TestValidateAgentManifest_ClaudeCodeHarnessInferenceModel(t *testing.T) {
+	t.Run("harness group selected: no warning", func(t *testing.T) {
+		const manifest = `agent: claude-code
+env:
+  HARNESS_INFERENCE_BASE_URL: https://inference.example.com/v1
+  HARNESS_INFERENCE_MODEL: router:software-engineering
+secrets:
+  HARNESS_INFERENCE_API_KEY: do-inference-key
+`
+		v := validateAgentManifest([]byte(manifest))
+		assert.True(t, v.ok(), "errors=%v", v.Errors)
+		assert.NotContains(t, joinStrings(v.Warnings), "HARNESS_INFERENCE_MODEL")
+	})
+
+	t.Run("native key selected: HARNESS_INFERENCE_MODEL is ignored", func(t *testing.T) {
+		const manifest = `agent: claude-code
+env:
+  HARNESS_INFERENCE_MODEL: router:software-engineering
+secrets:
+  ANTHROPIC_API_KEY: sk-ant-key
+  HARNESS_INFERENCE_API_KEY: do-inference-key
+`
+		v := validateAgentManifest([]byte(manifest))
+		assert.True(t, v.ok(), "errors=%v", v.Errors)
+		joined := joinStrings(v.Warnings)
+		assert.Contains(t, joined, "HARNESS_INFERENCE_MODEL")
+		assert.Contains(t, joined, "ANTHROPIC_MODEL")
+	})
 }
 
 func TestValidateAgentManifest_InvalidPermissionsDefault(t *testing.T) {

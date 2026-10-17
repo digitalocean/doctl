@@ -49,9 +49,9 @@ You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale 
 		AddIntFlag(c, doctl.ArgAutoscaleCooldownMinutes, "", 0, "Cooldown duration")
 		AddIntFlag(c, doctl.ArgAutoscaleTargetInstances, "", 0, "Target number of members")
 
-		AddStringFlag(c, doctl.ArgSizeSlug, "", "", "Droplet size")
-		AddStringFlag(c, doctl.ArgRegionSlug, "", "", "Droplet region")
-		AddStringFlag(c, doctl.ArgImage, "", "", "Droplet image")
+		AddStringFlag(c, doctl.ArgSizeSlug, "", "", "Droplet size", flagHint("run doctl compute size list"))
+		AddStringFlag(c, doctl.ArgRegionSlug, "", "", "Droplet region", flagHint("run doctl compute region list"))
+		AddStringFlag(c, doctl.ArgImage, "", "", "Droplet image", flagHint("run doctl compute image list-distribution"))
 		AddStringSliceFlag(c, doctl.ArgTag, "", []string{}, "Droplet tags")
 		AddStringSliceFlag(c, doctl.ArgSSHKeys, "", []string{}, "Droplet SSH keys")
 		AddStringFlag(c, doctl.ArgVPCUUID, "", "", "Droplet VPC UUID")
@@ -358,14 +358,10 @@ func RunDropletAutoscaleDelete(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("droplet autoscale pool", 1) == nil {
-		if err = c.DropletAutoscale().Delete(id); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "droplet autoscale pool", 1); err != nil {
+		return err
 	}
-	return nil
+	return c.DropletAutoscale().Delete(id)
 }
 
 // RunDropletAutoscaleDeleteDangerous deletes an autoscale pool and all underlying members
@@ -379,12 +375,8 @@ func RunDropletAutoscaleDeleteDangerous(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("droplet autoscale pool", 1) == nil {
-		if err = c.DropletAutoscale().DeleteDangerous(id); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "droplet autoscale pool", 1); err != nil {
+		return err
 	}
-	return nil
+	return c.DropletAutoscale().DeleteDangerous(id)
 }

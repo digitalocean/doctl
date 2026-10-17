@@ -63,7 +63,7 @@ var (
 func TestMicroVMCommand(t *testing.T) {
 	cmd := MicroVM()
 	assert.NotNil(t, cmd)
-	assert.True(t, cmd.Hidden)
+	assert.False(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
 		"checkpoint", "console", "create", "delete", "exec", "get", "list", "options", "pause", "resume",
 	)
