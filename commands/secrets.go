@@ -65,7 +65,7 @@ func secretsPromptsEnabled() bool {
 }
 
 func secretNotice(msg string, args ...any) {
-	fmt.Fprintf(os.Stderr, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
+	notice(msg, args...)
 }
 
 // Secrets creates the secrets command hierarchy.
@@ -98,7 +98,6 @@ To print the key-value pairs in an .env file-style format, set the --kvs flag. N
 		aliasOpt("g"), displayerType(&displayers.Secret{}))
 	AddStringFlag(cmdGet, doctl.ArgRegionSlug, "", "", secretRegionFlagDesc)
 	AddStringFlag(cmdGet, doctl.ArgKey, "", "", "Return only the value for this key.")
-	AddBoolFlag(cmdGet, doctl.ArgSecretShow, "", false, "Reveal secret values instead of masking them.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretShowKV, "", false, "Reveal secret values instead of masking them, displayed as KEY=VALUE pairs.")
 	AddBoolFlag(cmdGet, doctl.ArgSecretRaw, "", false, "Write the value for --key to stdout with no formatting.")
 	cmdGet.Example = `The following example retrieves a secret: doctl secrets get ` + exampleSecretName + ` --region nyc3 --key ` + exampleSecretKey + ` --raw`
@@ -198,11 +197,6 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		return err
 	}
 
-	show, err := c.Doit.GetBool(c.NS, doctl.ArgSecretShow)
-	if err != nil {
-		return err
-	}
-
 	raw, err := c.Doit.GetBool(c.NS, doctl.ArgSecretRaw)
 	if err != nil {
 		return err
@@ -255,7 +249,7 @@ func RunCmdSecretsGet(c *CmdConfig) error {
 		displaySecret.Values = map[string]string{key: value}
 	}
 
-	if !show {
+	if c.UI.Mask {
 		displaySecret = maskSecretValues(displaySecret)
 	}
 
@@ -409,11 +403,11 @@ func RunCmdSecretsDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("secret", 1) == nil {
-		return c.Secrets().Delete(name, region)
+	if err := confirmDelete(force, "secret", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	return c.Secrets().Delete(name, region)
 }
 
 // RunCmdSecretsRestore restores a secret container scheduled for deletion.
@@ -542,19 +536,9 @@ func confirmSecretKeysRemoved(c *CmdConfig, name string, keys []string) error {
 	if err != nil {
 		return err
 	}
-	if force {
-		return nil
-	}
 
 	message := fmt.Sprintf("remove keys %s from %q", strings.Join(keys, ", "), name)
-	if err := AskForConfirm(message); err != nil {
-		if err == ErrExitSilently {
-			return err
-		}
-		return errOperationAborted
-	}
-
-	return nil
+	return confirmAction(force, message)
 }
 
 func writeSecret(c *CmdConfig, name, region string, values map[string]string, version int) error {

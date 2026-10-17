@@ -126,7 +126,7 @@ var _ = suite("knowledge-base/delete", func(t *testing.T, when spec.G, it spec.S
 			// Since we can't easily provide interactive input, the command should abort
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "operation aborted")
+			expect.Contains(string(output), confirmNonInteractiveOutput)
 		})
 	})
 
@@ -285,7 +285,7 @@ var _ = suite("knowledge-base/delete-datasource", func(t *testing.T, when spec.G
 			// Since we can't easily provide interactive input, the command should abort
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "operation aborted")
+			expect.Contains(string(output), confirmNonInteractiveOutput)
 		})
 	})
 

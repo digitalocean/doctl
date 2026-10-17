@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -612,9 +612,6 @@ func TestRunAgentsCreate(t *testing.T) {
 
 func TestRunAgentsCreate_FromHarness(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
-	origValidate := validateAnthropicAPIKey
-	t.Cleanup(func() { validateAnthropicAPIKey = origValidate })
-	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error { return nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
@@ -1716,6 +1713,13 @@ func TestRenderEvent(t *testing.T) {
 		{"token chunk", godo.HostedAgentEventKindTokenChunk, "", `{"text":"Paris"}`, "Paris"},
 		{"run started", godo.HostedAgentEventKindRunStarted, "run-1", `{"agent":"codex"}`, "\n▶ run started\n"},
 		{"run started no agent", godo.HostedAgentEventKindRunStarted, "run-2", `{}`, "\n▶ run started\n"},
+		{"run started by email", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user","id":"u-1","email":"priya@example.com"}}`, "\n▶ run started by priya@example.com\n"},
+		{"run started display name wins", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user","id":"u-1","email":"priya@example.com","display_name":"Priya"}}`, "\n▶ run started by Priya\n"},
+		{"run started id only", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user","id":"u-1"}}`, "\n▶ run started by u-1\n"},
+		{"run started by trigger", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"trigger","id":"nightly-lint"}}`, "\n▶ run started by trigger nightly-lint\n"},
+		{"run started by system", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"system"}}`, "\n▶ run started by system\n"},
+		{"run started actor names nobody", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user"}}`, "\n▶ run started\n"},
+		{"run started malformed payload", godo.HostedAgentEventKindRunStarted, "run-3", `"codex"`, "\n▶ run started\n"},
 		{"tool call started", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"bash"}`, "\n▸ bash\n"},
 		{"tool call started file change", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"file_change","arguments":{"path":"index.html","operation":"add"}}`, "\n▸ file_change index.html (add)\n"},
 		{"tool call started file change no operation", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"file_change","arguments":{"path":"index.html"}}`, "\n▸ file_change index.html\n"},
@@ -4026,9 +4030,9 @@ func TestRunAgentsLaunch_AttachAuthFailure(t *testing.T) {
 		require.True(t, errors.As(err, &pretty))
 		assert.Equal(t, "Authentication failed", pretty.title)
 		assert.Contains(t, pretty.tips, "doctl auth init")
-		display := pretty.DisplayError()
-		assert.Contains(t, display, "Authentication failed")
-		assert.NotContains(t, display, "GET http://")
+		assert.Equal(t, "Authentication failed", pretty.Title())
+		assert.NotContains(t, pretty.Reason(), "GET http://")
+		assert.NotContains(t, pretty.Error(), "GET http://")
 	})
 }
 

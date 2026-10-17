@@ -1,0 +1,373 @@
+package ui
+
+import (
+	"bytes"
+	"io"
+	"runtime"
+	"testing"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/creack/pty"
+	"github.com/muesli/termenv"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// clearEnv neutralises the ambient variables that capability detection reads,
+// so results do not depend on the machine running the tests.
+func clearEnv(t *testing.T) {
+	t.Helper()
+
+	t.Setenv("COLUMNS", "")
+	t.Setenv("DOCTL_ASCII", "")
+	for _, name := range ciVariables {
+		t.Setenv(name, "")
+	}
+}
+
+func TestPlain(t *testing.T) {
+	var out, errOut bytes.Buffer
+
+	env := Plain(&out, &errOut)
+
+	assert.False(t, env.Style)
+	assert.False(t, env.ErrStyle)
+	assert.False(t, env.Anim)
+	assert.False(t, env.Machine)
+	assert.False(t, env.Mask, "Plain is for deterministic output, not a masked screen")
+	assert.Zero(t, env.Width)
+}
+
+func TestDetectNonTerminal(t *testing.T) {
+	clearEnv(t)
+
+	var out, errOut bytes.Buffer
+	env := Detect(&out, &errOut)
+
+	assert.False(t, env.Style, "a buffer is never color-capable")
+	assert.False(t, env.ErrStyle)
+	assert.False(t, env.Anim, "a buffer is never animatable")
+	assert.Zero(t, env.Width)
+}
+
+func TestDetectMachineOutput(t *testing.T) {
+	clearEnv(t)
+
+	var out, errOut bytes.Buffer
+	env := Detect(&out, &errOut,
+		WithMachineOutput(true),
+		// Machine output must win even when styling and animation are forced.
+		WithProfile(termenv.TrueColor),
+		WithAnimation(true),
+	)
+
+	assert.True(t, env.Machine)
+	assert.False(t, env.Style)
+	assert.False(t, env.ErrStyle)
+	assert.False(t, env.Anim)
+	assert.True(t, env.Mask, "machine output still masks: a script asked for JSON, not a leak into a log")
+}
+
+func TestDetectProfile(t *testing.T) {
+	clearEnv(t)
+
+	var out, errOut bytes.Buffer
+
+	t.Run("a color profile enables styling", func(t *testing.T) {
+		env := Detect(&out, &errOut, WithProfile(termenv.TrueColor))
+		assert.True(t, env.Style)
+		assert.True(t, env.ErrStyle)
+	})
+
+	t.Run("an ascii profile disables styling", func(t *testing.T) {
+		env := Detect(&out, &errOut, WithProfile(termenv.Ascii))
+		assert.False(t, env.Style)
+		assert.False(t, env.ErrStyle)
+	})
+}
+
+// TestDetectCIForcesPlainOutput covers that CI gets the same plain,
+// uncolored, uncarded output it always did, even on a runner whose streams
+// would otherwise pass every terminal capability check. Where a real pty is
+// available, out and err are ptys rather than buffers so isTerminal alone
+// would say yes to both; only the CI check in Detect stops cards, boxing,
+// and color from reaching them. Windows has no pty, so those cases skip and
+// the WithProfile-under-CI case below still runs against buffers.
+func TestDetectCIForcesPlainOutput(t *testing.T) {
+	clearEnv(t)
+
+	t.Run("CI: an explicit profile still reaches the stream", func(t *testing.T) {
+		t.Setenv("GITHUB_ACTIONS", "true")
+
+		var out, errOut bytes.Buffer
+		env := Detect(&out, &errOut, WithProfile(termenv.TrueColor))
+
+		assert.True(t, env.Style, "WithProfile is how tests pin a palette under CI")
+		assert.True(t, env.ErrStyle)
+		assert.False(t, env.DataTTY, "CI still does not get cards or boxed tables")
+		assert.False(t, env.ErrTTY, "CI still does not get glyphs")
+	})
+
+	ptmx, tty, err := pty.Open()
+	if err != nil {
+		t.Skipf("pty not available on %s: %v", runtime.GOOS, err)
+	}
+	defer ptmx.Close()
+	defer tty.Close()
+
+	// Confirm the fixture is actually a terminal before trusting the
+	// assertions below to be exercising the CI path, not a fallback.
+	require.True(t, isTerminal(tty), "test fixture must itself pass isTerminal")
+
+	t.Run("no CI: a real terminal gets full capability", func(t *testing.T) {
+		env := Detect(tty, tty, WithProfile(termenv.TrueColor))
+		assert.True(t, env.Style)
+		assert.True(t, env.DataTTY)
+		assert.True(t, env.ErrTTY)
+	})
+
+	t.Run("CI: the same terminal is forced plain", func(t *testing.T) {
+		t.Setenv("GITHUB_ACTIONS", "true")
+
+		env := Detect(tty, tty)
+
+		assert.False(t, env.Style, "CI must not receive color on stdout")
+		assert.False(t, env.ErrStyle, "CI must not receive color on stderr")
+		assert.False(t, env.DataTTY, "CI must not receive cards, boxed tables, or the records fallback")
+		assert.False(t, env.ErrTTY, "CI must not receive glyphs or other screen-only chrome")
+		assert.Equal(t, termenv.Ascii, env.Profile())
+		assert.Equal(t, termenv.Ascii, env.DataProfile())
+	})
+}
+
+func TestDetectAnimation(t *testing.T) {
+	clearEnv(t)
+
+	var out, errOut bytes.Buffer
+
+	t.Run("forced on", func(t *testing.T) {
+		assert.True(t, Detect(&out, &errOut, WithAnimation(true)).Anim)
+	})
+
+	t.Run("forced off", func(t *testing.T) {
+		assert.False(t, Detect(&out, &errOut, WithAnimation(false)).Anim)
+	})
+
+	t.Run("non-interactive disables animation", func(t *testing.T) {
+		assert.False(t, Detect(&out, &errOut, WithInteractive(false)).Anim)
+	})
+
+	t.Run("CI disables animation", func(t *testing.T) {
+		t.Setenv("GITHUB_ACTIONS", "true")
+		assert.False(t, Detect(&out, &errOut).Anim)
+	})
+}
+
+func TestDetectMask(t *testing.T) {
+	var out, errOut bytes.Buffer
+
+	tests := []struct {
+		name    string
+		ci      bool
+		show    bool
+		machine bool
+		want    bool
+	}{
+		{name: "masks by default outside CI", want: true},
+		{name: "CI reveals values scripts need", ci: true, want: false},
+		{name: "--show reveals values outside CI", show: true, want: false},
+		{name: "--show still wins inside CI", ci: true, show: true, want: false},
+		{name: "machine output still masks", machine: true, want: true},
+		{name: "machine output plus CI still reveals", machine: true, ci: true, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clearEnv(t)
+			if tt.ci {
+				t.Setenv("CI", "true")
+			}
+
+			env := Detect(&out, &errOut,
+				WithMachineOutput(tt.machine),
+				WithShow(tt.show),
+			)
+
+			assert.Equal(t, tt.want, env.Mask)
+		})
+	}
+}
+
+func TestDetectWidth(t *testing.T) {
+	clearEnv(t)
+
+	var out, errOut bytes.Buffer
+
+	t.Run("explicit width wins", func(t *testing.T) {
+		env := Detect(&out, &errOut, WithWidth(120))
+		assert.Equal(t, 120, env.Width)
+		assert.Equal(t, 120, env.DataWidth, "an explicit width applies to data too")
+	})
+
+	t.Run("zero width is honored as unconstrained", func(t *testing.T) {
+		env := Detect(&out, &errOut, WithWidth(0))
+		assert.Zero(t, env.Width)
+		assert.Zero(t, env.DataWidth)
+	})
+
+	t.Run("data is unconstrained without a terminal on out", func(t *testing.T) {
+		assert.Zero(t, Detect(&out, &errOut).DataWidth)
+	})
+
+	// A redirected stream must not be reflowed because the shell happens to
+	// export COLUMNS; that would truncate piped output.
+	t.Run("COLUMNS is ignored without a terminal", func(t *testing.T) {
+		t.Setenv("COLUMNS", "97")
+		assert.Zero(t, Detect(&out, &errOut).Width)
+	})
+
+	t.Run("malformed COLUMNS is ignored", func(t *testing.T) {
+		t.Setenv("COLUMNS", "not-a-number")
+		assert.Zero(t, Detect(&out, &errOut).Width)
+	})
+}
+
+func TestDetectASCII(t *testing.T) {
+	clearEnv(t)
+
+	var out, errOut bytes.Buffer
+
+	t.Run("defaults to unicode", func(t *testing.T) {
+		assert.False(t, Detect(&out, &errOut).ASCII)
+	})
+
+	t.Run("DOCTL_ASCII opts in", func(t *testing.T) {
+		t.Setenv("DOCTL_ASCII", "1")
+		assert.True(t, Detect(&out, &errOut).ASCII)
+	})
+
+	t.Run("explicit option overrides the environment", func(t *testing.T) {
+		t.Setenv("DOCTL_ASCII", "1")
+		assert.False(t, Detect(&out, &errOut, WithASCII(false)).ASCII)
+	})
+}
+
+func TestIsCI(t *testing.T) {
+	clearEnv(t)
+
+	assert.False(t, IsCI(), "no CI variables set")
+
+	t.Run("a set provider variable is detected", func(t *testing.T) {
+		t.Setenv("GITHUB_ACTIONS", "true")
+		assert.True(t, IsCI())
+	})
+
+	t.Run("an explicitly false variable is not CI", func(t *testing.T) {
+		t.Setenv("CI", "false")
+		assert.False(t, IsCI())
+	})
+}
+
+func TestSprint(t *testing.T) {
+	clearEnv(t)
+
+	bold := lipgloss.NewStyle().Bold(true)
+
+	t.Run("styling is applied when the profile permits it", func(t *testing.T) {
+		var out, errOut bytes.Buffer
+		env := Detect(&out, &errOut, WithProfile(termenv.TrueColor))
+
+		assert.Contains(t, env.Sprint(bold, "hi"), "\x1b[")
+		assert.Contains(t, env.SprintErr(bold, "hi"), "\x1b[")
+	})
+
+	t.Run("styling is skipped when it is not", func(t *testing.T) {
+		var out, errOut bytes.Buffer
+		env := Detect(&out, &errOut, WithProfile(termenv.Ascii))
+
+		assert.Equal(t, "hi", env.Sprint(bold, "hi"))
+		assert.Equal(t, "hi", env.SprintErr(bold, "hi"))
+	})
+
+	t.Run("streams are gated independently", func(t *testing.T) {
+		env := Env{
+			Style:       false,
+			ErrStyle:    true,
+			renderer:    newRenderer(io.Discard, termenv.TrueColor),
+			errRenderer: newRenderer(io.Discard, termenv.TrueColor),
+		}
+
+		assert.Equal(t, "hi", env.Sprint(bold, "hi"))
+		assert.Contains(t, env.SprintErr(bold, "hi"), "\x1b[")
+	})
+}
+
+// TestProfiles covers the case a process-wide styling stack gets wrong: a
+// terminal on one stream and a redirect on the other. Each profile has to
+// answer for its own stream, or `doctl ... > data` writes escape sequences
+// into the file because stderr happened to be a terminal.
+func TestProfiles(t *testing.T) {
+	clearEnv(t)
+
+	env := Env{
+		Style:       false,
+		ErrStyle:    true,
+		renderer:    newRenderer(io.Discard, termenv.TrueColor),
+		errRenderer: newRenderer(io.Discard, termenv.TrueColor),
+	}
+
+	assert.Equal(t, termenv.Ascii, env.DataProfile(), "a redirected Out stays plain")
+	assert.Equal(t, termenv.TrueColor, env.Profile(), "a terminal on Err keeps color")
+}
+
+func TestGlyphs(t *testing.T) {
+	t.Run("unicode by default", func(t *testing.T) {
+		assert.Equal(t, "✓", Env{}.Glyphs().Success)
+	})
+
+	t.Run("ascii fallback", func(t *testing.T) {
+		assert.Equal(t, "OK", Env{ASCII: true}.Glyphs().Success)
+		assert.Equal(t, "X", Env{ASCII: true}.Glyphs().Failure)
+	})
+
+	t.Run("glyphs that are already ascii need no fallback", func(t *testing.T) {
+		for _, g := range []struct {
+			name    string
+			unicode string
+			ascii   string
+		}{
+			{"warning", unicodeGlyphs.Warning, asciiGlyphs.Warning},
+			{"info", unicodeGlyphs.Info, asciiGlyphs.Info},
+		} {
+			assert.Equal(t, g.unicode, g.ascii, "%s should not differ between the sets", g.name)
+		}
+	})
+
+	t.Run("spinner frames share a display width", func(t *testing.T) {
+		for _, set := range []Glyphs{unicodeGlyphs, asciiGlyphs} {
+			width := lipgloss.Width(set.Spinner[0])
+			for _, frame := range set.Spinner {
+				assert.Equal(t, width, lipgloss.Width(frame), "frame %q jitters the line", frame)
+			}
+		}
+	})
+}
+
+func TestWriterDefaults(t *testing.T) {
+	assert.NotNil(t, Env{}.Writer())
+	assert.NotNil(t, Env{}.ErrWriter())
+
+	var out bytes.Buffer
+	assert.Equal(t, &out, Env{Out: &out}.Writer())
+	assert.Equal(t, &out, Env{Err: &out}.ErrWriter())
+}
+
+func TestTruthy(t *testing.T) {
+	for _, v := range []string{"", "0", "false", "no", "off", " FALSE "} {
+		assert.False(t, truthy(v), "expected %q to be falsey", v)
+	}
+
+	for _, v := range []string{"1", "true", "yes", "on", "anything"} {
+		assert.True(t, truthy(v), "expected %q to be truthy", v)
+	}
+}

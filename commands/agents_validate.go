@@ -40,6 +40,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"codex-agentapi":   {},
 	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
+	"openhands":        {}, // runnable (AGENT_KIND_OPENHANDS): OpenHands Agent Server in the openhands template
 	"custom":           {},
 	"none":             {}, // bare sandbox (AGENT_KIND_NONE): no agent in the guest
 	"codex-cli":        {}, // deprecated alias
@@ -271,7 +272,7 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, none, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, openhands, custom, none, …)", path, adapter))
 		return
 	}
 	switch adapter {
@@ -366,7 +367,7 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 		}
 	}
 
-	validateAdapterModelEnv(adapter, env, envPath, out)
+	validateAdapterModelEnv(adapter, env, slots, envPath, out)
 }
 
 // validateManifestKeysWhitespace catches keys tainted by copy-paste invisible
@@ -791,7 +792,7 @@ func firstValue(m map[string]any, keys ...string) any {
 // validateAdapterModelEnv warns on known silent-failure env key footguns from
 // production incidents (wrong model/key names still create a session, then the
 // agent appears "not logged in" or never streams).
-func validateAdapterModelEnv(adapter string, env map[string]string, envPath string, out *agentManifestValidation) {
+func validateAdapterModelEnv(adapter string, env map[string]string, secretSlots map[string]struct{}, envPath string, out *agentManifestValidation) {
 	_, hasModel := env["MODEL"]
 	_, hasHarnessModel := env["HARNESS_INFERENCE_MODEL"]
 	_, hasHarnessBase := env["HARNESS_INFERENCE_BASE_URL"]
@@ -813,8 +814,12 @@ func validateAdapterModelEnv(adapter string, env map[string]string, envPath stri
 		if hasModel && !hasAnthropicModel {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; claude-code expects ANTHROPIC_MODEL (sessions may fail with \"Not logged in\")", envPath, envPath))
 		}
-		if hasHarnessModel && !hasAnthropicModel {
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.HARNESS_INFERENCE_MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; prefer ANTHROPIC_MODEL + ANTHROPIC_API_KEY (or declare the key under secrets)", envPath, envPath))
+		// claude-code honors HARNESS_INFERENCE_MODEL only when the harness
+		// inference group is selected, i.e. no native ANTHROPIC_API_KEY is set.
+		nativeKey := hasAnthropicKey || hasStringKey(secretSlots, "ANTHROPIC_API_KEY")
+		harnessKey := hasHarnessKey || hasStringKey(secretSlots, "HARNESS_INFERENCE_API_KEY")
+		if hasHarnessModel && !hasAnthropicModel && (nativeKey || !harnessKey) {
+			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.HARNESS_INFERENCE_MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; HARNESS_INFERENCE_MODEL is only used with HARNESS_INFERENCE_API_KEY (declared under secrets) and no ANTHROPIC_API_KEY; otherwise set ANTHROPIC_MODEL", envPath, envPath))
 		}
 		if hasAnthropicKey && !hasAnthropicModel && (hasModel || hasHarnessModel) {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.ANTHROPIC_API_KEY: set without %s.ANTHROPIC_MODEL; set ANTHROPIC_MODEL explicitly for claude-code", envPath, envPath))
