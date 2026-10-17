@@ -93,7 +93,11 @@ const (
 
 	claudeCodeAgentName = "claude-code"
 	codexAgentName      = "codex"
-	anthropicAPIKeyEnv  = "ANTHROPIC_API_KEY"
+	// openHandsAgentName is the OpenHands Agent Server, run by OHR in the
+	// `openhands` template (the agent is an always-on server there, not a CLI
+	// spawned per run). Same agent Agent Canvas creates sessions with.
+	openHandsAgentName = "openhands"
+	anthropicAPIKeyEnv = "ANTHROPIC_API_KEY"
 )
 
 var (
@@ -124,6 +128,8 @@ var harnessAgentNames = map[string]string{
 	"codex":          codexAgentName,
 	"codex-agentapi": openAIAgentsAdapter,
 	"openai-codex":   openAIAgentsAdapter,
+	"openhands":      openHandsAgentName,
+	"open-hands":     openHandsAgentName,
 	"none":           bareSandboxAgent,
 }
 
@@ -169,6 +175,7 @@ var harnessDisplayNames = map[string]string{
 	claudeCodeAgentName: "Claude Code",
 	codexAgentName:      "Codex CLI",
 	openAIAgentsAdapter: "Codex",
+	openHandsAgentName:  "OpenHands",
 	bareSandboxAgent:    "Bare sandbox",
 }
 
@@ -447,7 +454,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 		// --template implication sets it internally, while a user who types it
 		// is refused by resolveAgentCreationSource. Listing it would send them
 		// to a value that answers with a second error.
-		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi",
+		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands",
 			doctl.ArgAgentHarness, harness)
 	}
 	return agent, nil
@@ -462,6 +469,11 @@ type harnessManifest struct {
 	Env         map[string]string   `yaml:"env,omitempty"`
 	Secrets     map[string]string   `yaml:"secrets,omitempty"`
 	Permissions *harnessPermissions `yaml:"permissions,omitempty"`
+	// KeepWarm is only ever written as false, and only for openhands: that
+	// adapter's server-side default is keep_warm, which bills until the
+	// session is destroyed and makes harness-api refuse every pause. Agent
+	// Canvas writes the same field for the same reason.
+	KeepWarm *bool `yaml:"keep_warm,omitempty"`
 }
 
 // harnessPermissions is the subset of the manifest permissions block --harness
@@ -541,15 +553,22 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 	case agent == claudeCodeAgentName:
 		// Claude Code needs its own inference key just like Codex needs
 		// OPENAI_API_KEY. Referencing it here (rather than baking in a
-		// literal) still routes through expandManifestEnvCollect/ensureEnvVar
-		// so a missing key is prompted for on a TTY, but a present-but-bogus
-		// key is caught too: prepareClaudeCodeStart validates it against
-		// Anthropic's API before doctl ever calls CreateSessionFromManifest,
-		// instead of failing deep into a hosted session that was never going
-		// to work.
+		// literal) routes through expandManifestEnvCollect/ensureEnvVar so a
+		// missing key is prompted for on a TTY.
 		doc.Secrets = map[string]string{
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
+	case agent == openHandsAgentName:
+		// No key slot: OHR hands the agent-server the harness's resolved
+		// inference credentials (DigitalOcean Inference by default) when it
+		// creates the conversation, so there is nothing for the user to
+		// supply here. Pin the template the agent lives in unless the user
+		// named one, and opt out of keep_warm (see harnessManifest.KeepWarm).
+		if doc.Template == "" {
+			doc.Template = openHandsAgentName
+		}
+		keepWarm := false
+		doc.KeepWarm = &keepWarm
 	}
 
 	out, err := yaml.Marshal(doc)
@@ -671,10 +690,6 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 
 	raw = dropEnvKeysCoveredBySecrets(raw)
 
-	if err := prepareClaudeCodeStart(context.Background(), raw, prog); err != nil {
-		return nil, err
-	}
-
 	lookup := envLookupWithOverlay(withServerProvidedOverlay(resolvedManifestSecretValues(raw), envOverlay))
 	manifest, err := expandManifestEnvCollect(raw, lookup)
 	if err != nil {
@@ -710,43 +725,6 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		printSessionCreateWarnings(sess.Warnings)
 	}
 	return sess, nil
-}
-
-// prepareClaudeCodeStart mirrors prepareOpenAISandboxStart for claude-code:
-// it resolves ANTHROPIC_API_KEY (prompting on a TTY if missing, exactly like
-// ensureEnvVar already did) and then confirms Anthropic actually accepts it
-// with a real, free API call — closing the gap where a bogus (but non-empty)
-// key used to sail through to CreateSessionFromManifest and only fail deep
-// inside the hosted sandbox. No-ops for every other harness.
-func prepareClaudeCodeStart(ctx context.Context, raw []byte, prog *creationProgress) error {
-	doc, err := parseAgentManifest(raw)
-	if err != nil {
-		return err
-	}
-	if doc.adapter() != claudeCodeAgentName {
-		return nil
-	}
-
-	apiKey := strings.TrimSpace(resolvedManifestSecretValues(raw)[anthropicAPIKeyEnv])
-	if apiKey == "" {
-		var err error
-		apiKey, err = ensureEnvVar(anthropicAPIKeyEnv)
-		if err != nil {
-			return fmt.Errorf("%s is required to start a %s session (set the environment variable, or pass --%s %s=- / NAME=@path): %w",
-				anthropicAPIKeyEnv, claudeCodeAgentName, doctl.ArgAgentSecret, anthropicAPIKeyEnv, err)
-		}
-	}
-
-	if prog != nil {
-		prog.wait(anthropicKeyCheckLabel)
-	}
-	if err := validateAnthropicAPIKey(ctx, apiKey); err != nil {
-		return err
-	}
-	if prog != nil {
-		prog.ok("Anthropic API key OK")
-	}
-	return nil
 }
 
 func manifestNeedsOpenAIPrepare(raw []byte) (bool, error) {

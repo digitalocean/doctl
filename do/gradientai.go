@@ -122,10 +122,28 @@ type AgentPlatformService interface {
 	UpdateSimulationRun(runUUID string, req *godo.UpdateSimulationRunRequest) (*SimulationRun, error)
 	CancelSimulationRun(runUUID string) (*SimulationRun, error)
 	DeleteSimulationRun(runUUID string) error
-	ListSimulationJourneys(runUUID string, opt *godo.SimulationJourneyListOptions) (SimulationJourneys, error)
-	GetSimulationJourney(runUUID string, journeyUUID string) (*SimulationJourney, error)
-	GetSimulationJourneyTrajectory(runUUID string, journeyUUID string) (*SimulationTrajectory, error)
-	GetSimulationJourneyTrajectoryURL(runUUID string, journeyUUID string) (*GenAIDownloadURL, error)
+	ListSimulationEpisodes(runUUID string, opt *godo.SimulationEpisodeListOptions) (SimulationEpisodes, error)
+	GetSimulationEpisode(runUUID string, episodeUUID string) (*SimulationEpisode, error)
+	GetSimulationEpisodeTrajectory(runUUID string, episodeUUID string) (*SimulationTrajectory, error)
+	GetSimulationEpisodeTrajectoryURL(runUUID string, episodeUUID string) (*GenAIDownloadURL, error)
+	CreateModelEvalDatasetUploadPresignedURLs(req *godo.CreateModelEvalDatasetUploadPresignedURLsRequest) (*ModelEvalDatasetFileUploads, error)
+	CreateEvaluationDataset(req *godo.CreateEvaluationDatasetRequest) (*EvaluationDatasetCreate, error)
+	ListEvaluationDatasets(opt *godo.EvaluationDatasetListOptions) (EvaluationDatasets, error)
+	DeleteEvaluationDataset(datasetUUID string) error
+	CreateModelEvaluationRun(req *godo.CreateModelEvaluationRunRequest) (*ModelEvaluationRunCreate, error)
+	ListModelEvaluationRuns(opt *godo.ModelEvaluationRunListOptions) (ModelEvaluationRuns, error)
+	GetModelEvaluationRun(evalRunUUID string) (*ModelEvaluationRunDetail, error)
+	UpdateModelEvaluationRun(evalRunUUID string, req *godo.UpdateModelEvaluationRunRequest) (*ModelEvaluationRun, error)
+	CancelModelEvaluationRun(evalRunUUID string) (*ModelEvaluationRun, error)
+	DeleteModelEvaluationRun(evalRunUUID string) error
+	GetModelEvaluationRunResultsDownloadURL(evalRunUUID string) (*GenAIDownloadURL, error)
+	ListModelEvaluationPresets() (ModelEvaluationPresets, error)
+	GetModelEvaluationPreset(evalPresetUUID string) (*ModelEvaluationPreset, error)
+	DeleteModelEvaluationPreset(evalPresetUUID string) error
+	ListModelEvaluationMetrics() (EvaluationMetrics, error)
+	CreateCustomEvaluationMetric(req *godo.CreateCustomEvaluationMetricRequest) (*EvaluationMetric, error)
+	UpdateCustomEvaluationMetric(metricUUID string, req *godo.UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, error)
+	DeleteCustomEvaluationMetric(metricUUID string) error
 }
 
 var _ AgentPlatformService = &agentPlatformService{}

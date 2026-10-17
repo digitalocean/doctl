@@ -28,8 +28,8 @@ import (
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/deviceid"
+	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/digitalocean/godo"
-	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -442,9 +442,8 @@ func TestExplainTunnelClose(t *testing.T) {
 // rewrite: one browser page load opens several connections, and an unstarted
 // server made each of them print the same line.
 func TestTunnelWarnerSuppressesRepeats(t *testing.T) {
-	defer func(a io.Writer) { color.Output = a }(color.Output)
 	var buf bytes.Buffer
-	color.Output = &buf
+	withUIEnv(t, ui.Plain(&buf, &buf))
 
 	w := newTunnelWarner(8080)
 	unreachable := &websocket.CloseError{Code: 4002, Text: "guest port unreachable"}

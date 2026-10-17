@@ -20,6 +20,8 @@ const (
 	ArgContext = "context"
 	// ArgDefaultContext is the default auth context
 	ArgDefaultContext = "default"
+	// ArgAuthContexts is the auth contexts
+	ArgAuthContexts = "auth-contexts"
 	// ArgActionID is an action id argument.
 	ArgActionID = "action-id"
 	// ArgActionAfter is an action after argument.
@@ -153,6 +155,8 @@ const (
 	ArgHA = "ha"
 	// ArgIsolatedWorkers is a cluster's isolated workers argument.
 	ArgIsolatedWorkers = "isolated-workers"
+	// ArgGPUOperatorReady is a cluster's GPU operator ready argument.
+	ArgGPUOperatorReady = "gpu-operator-ready"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
@@ -201,6 +205,8 @@ const (
 	ArgCommandUpdateSources = "update-sources"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
+	// ArgWaitTimeout bounds how long --wait polls before giving up.
+	ArgWaitTimeout = "wait-timeout"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
 	ArgSetCurrentContext = "set-current-context"
 	// ArgDropletID is a droplet id argument.
@@ -229,6 +235,8 @@ const (
 	ArgImageSlug = "image-slug"
 	// ArgInteractive is the argument to enable an interactive CLI.
 	ArgInteractive = "interactive"
+	// ArgShow reveals masked values, such as secrets, instead of hiding them.
+	ArgShow = "show"
 	// ArgIPAddress is an IP address argument.
 	ArgIPAddress = "ip-address"
 	// ArgDropletName is a droplet name argument.
@@ -732,12 +740,7 @@ const (
 	ArgSecretFromEnvFile = "from-env-file"
 	// ArgSecretVersion is the current version of a secret for update operations.
 	ArgSecretVersion = "version"
-	// ArgSecretShow reveals secret values instead of masking them on get.
-	ArgSecretShow = "show"
-	// ArgSecretShowKV reveals secret values instead of masking them on get,
-	// formatted as:
-	//
-	//	KEY=VALUE
+	// ArgSecretShowKV prints secret values as KEY=VALUE pairs on get.
 	ArgSecretShowKV = "kvs"
 	// ArgSecretRaw writes a single secret value to stdout with no formatting.
 	ArgSecretRaw = "raw"
@@ -746,6 +749,21 @@ const (
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
+
+	// ArgOAuthServer is the OAuth authorization server used to sign in.
+	ArgOAuthServer = "oauth-server"
+	// ArgOAuthClientID overrides the OAuth application doctl signs in as.
+	ArgOAuthClientID = "client-id"
+	// ArgOAuthScopes is the space-separated list of scopes requested when signing in.
+	ArgOAuthScopes = "scopes"
+	// ArgOAuthSaveScope persists --scopes as the default for later logins.
+	ArgOAuthSaveScope = "save-scope"
+	// ArgOAuthCallbackPort is the local port that receives the OAuth redirect.
+	ArgOAuthCallbackPort = "callback-port"
+	// ArgOAuthNoBrowser prints the authorization URL instead of opening a browser.
+	ArgOAuthNoBrowser = "no-browser"
+	// ArgOAuthTimeout bounds how long to wait for browser authorization, in seconds.
+	ArgOAuthTimeout = "timeout"
 
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
@@ -939,6 +957,21 @@ const (
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 
+	// ArgAgentConnProvider is the external provider for a connection (e.g. github).
+	ArgAgentConnProvider = "provider"
+
+	// ArgAgentConnActor is the actor a connection acts for (user_id on the wire).
+	ArgAgentConnActor = "actor"
+
+	// ArgAgentConnScopes optionally narrows the OAuth scopes a connection requests.
+	ArgAgentConnScopes = "scopes"
+
+	// ArgAgentConnPage is the 1-based page number for connection list.
+	ArgAgentConnPage = "page"
+
+	// ArgAgentConnPerPage is the connection list page size.
+	ArgAgentConnPerPage = "per-page"
+
 	// ArgAgentCheckpointLabel is an optional user label for an explicit checkpoint.
 	ArgAgentCheckpointLabel = "label"
 
@@ -1096,7 +1129,7 @@ const (
 	// ArgSimulationUserSimulatorModelUUID is the model that simulates the user.
 	ArgSimulationUserSimulatorModelUUID = "user-simulator-model-uuid"
 
-	// ArgSimulationJudgeModelUUID is the model that judges each journey.
+	// ArgSimulationJudgeModelUUID is the model that judges each episode.
 	ArgSimulationJudgeModelUUID = "judge-model-uuid"
 
 	// ArgSimulationUserSimulatorConfig is a JSON object of user simulator settings.
@@ -1105,7 +1138,7 @@ const (
 	// ArgSimulationExplorationBudget is the exploration budget for the run.
 	ArgSimulationExplorationBudget = "exploration-budget"
 
-	// ArgSimulationMaxTurns is the maximum number of turns per journey.
+	// ArgSimulationMaxTurns is the maximum number of turns per episode.
 	ArgSimulationMaxTurns = "max-turns"
 
 	// ArgSimulationMetricUUIDs are the evaluation metrics attached to the run.
@@ -1120,9 +1153,115 @@ const (
 	// ArgSimulationStarMetricSuccessThreshold is the success threshold of the star metric.
 	ArgSimulationStarMetricSuccessThreshold = "star-metric-success-threshold"
 
-	// ArgSimulationScenarioUUID filters simulation journeys by scenario UUID.
+	// ArgSimulationScenarioUUID filters simulation episodes by scenario UUID.
 	ArgSimulationScenarioUUID = "scenario-uuid"
 
-	// ArgSimulationJourneyVerdicts filters simulation journeys by verdict.
-	ArgSimulationJourneyVerdicts = "verdicts"
+	// ArgSimulationEpisodeVerdicts filters simulation episodes by verdict.
+	ArgSimulationEpisodeVerdicts = "verdicts"
+
+	// Model evaluation args
+
+	// ArgEvaluationCandidateModelUUID is the UUID of the candidate model under evaluation.
+	ArgEvaluationCandidateModelUUID = "candidate-model-uuid"
+
+	// ArgEvaluationCandidateModelName is the display name of the candidate model.
+	ArgEvaluationCandidateModelName = "candidate-model-name"
+
+	// ArgEvaluationCandidateModelSource is the source type of the candidate model.
+	ArgEvaluationCandidateModelSource = "candidate-model-source"
+
+	// ArgEvaluationCandidateInferenceConfig is a JSON object of candidate inference settings.
+	ArgEvaluationCandidateInferenceConfig = "candidate-inference-config"
+
+	// ArgEvaluationDatasetUUID is the UUID of the evaluation dataset.
+	ArgEvaluationDatasetUUID = "dataset-uuid"
+
+	// ArgEvaluationDatasetType filters or sets the evaluation dataset type.
+	ArgEvaluationDatasetType = "dataset-type"
+
+	// ArgEvaluationDatasetParadigm filters or sets the evaluation dataset paradigm.
+	ArgEvaluationDatasetParadigm = "dataset-paradigm"
+
+	// ArgEvaluationHasGroundTruth filters datasets by whether they include ground truth.
+	ArgEvaluationHasGroundTruth = "has-ground-truth"
+
+	// ArgEvaluationEvalPresetUUID is the UUID of a saved model evaluation preset.
+	ArgEvaluationEvalPresetUUID = "eval-preset-uuid"
+
+	// ArgEvaluationPresetName is the name used when saving a new evaluation preset.
+	ArgEvaluationPresetName = "preset-name"
+
+	// ArgEvaluationPresetSaveSections controls which sections are saved into a new preset.
+	ArgEvaluationPresetSaveSections = "preset-save-sections"
+
+	// ArgEvaluationEpochs is the number of times to evaluate each dataset row.
+	ArgEvaluationEpochs = "epochs"
+
+	// ArgEvaluationScoringPrompt is the LLM-as-judge scoring prompt for a custom metric.
+	ArgEvaluationScoringPrompt = "scoring-prompt"
+
+	// ArgEvaluationRequiresGroundTruth indicates whether a custom metric needs ground truth.
+	ArgEvaluationRequiresGroundTruth = "requires-ground-truth"
+
+	// ArgEvaluationDescription is a free-text description for a custom metric.
+	ArgEvaluationDescription = "description"
+
+	// ArgEvaluationCandidateTypes filters model evaluation runs by candidate model source.
+	ArgEvaluationCandidateTypes = "candidate-types"
+
+	// Signals consent args
+
+	// ArgSignalsType selects the Signals source for session list / export create: agent or inference.
+	ArgSignalsType = "type"
+
+	// ArgSignalsAgentID is the agent ID for Signals consent and export commands.
+	ArgSignalsAgentID = "agent-id"
+
+	// ArgSignalsEnabled sets consent enabled (true) or disabled (false).
+	ArgSignalsEnabled = "enabled"
+
+	// ArgSignalsConsentSource selects the consent source: agent (per agent) or
+	// inference (team-level, serverless inference).
+	ArgSignalsConsentSource = "source"
+
+	// Signals export args
+
+	// ArgSignalsExportID is the export job ID.
+	ArgSignalsExportID = "export-id"
+
+	// ArgSignalsExportLimit is the maximum number of exports to return.
+	ArgSignalsExportLimit = "limit"
+
+	// ArgSignalsExportAfter is an opaque pagination cursor.
+	ArgSignalsExportAfter = "after"
+
+	// ArgSignalsExportSignalType is POST /exports signal_type (repeatable).
+	ArgSignalsExportSignalType = "signal-type"
+
+	// ArgSignalsExportSessionIDs is an optional session cohort filter.
+	ArgSignalsExportSessionIDs = "session-ids"
+
+	// ArgSignalsExportStartTime is the start time filter (Unix epoch seconds).
+	ArgSignalsExportStartTime = "start-time"
+
+	// ArgSignalsExportEndTime is the end time filter (Unix epoch seconds).
+	ArgSignalsExportEndTime = "end-time"
+
+	// ArgSignalsExportConcerning limits the export to concerning segments.
+	ArgSignalsExportConcerning = "concerning"
+
+	// ArgSignalsExportSignalCategory is an optional signal category filter.
+	ArgSignalsExportSignalCategory = "signal-category"
+
+	// ArgSignalsExportSignalLayer is an optional signal layer filter.
+	ArgSignalsExportSignalLayer = "signal-layer"
+
+	// ArgSignalsDeletionType is the deletion type: agent or inference.
+	ArgSignalsDeletionType = "type"
+
+	// ArgSignalsTeamID is the numeric team id for deletion requests (optional; auto-detected).
+	ArgSignalsTeamID = "team-id"
+
+	// ArgSignalsSessionID is the session ID for Signals session commands.
+	ArgSignalsSessionID = "session-id"
 )

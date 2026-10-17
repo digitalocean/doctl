@@ -774,7 +774,8 @@ func TestKubernetesCreate(t *testing.T) {
 				Enabled:  true,
 				Required: false,
 			},
-			IsolatedWorkers: true,
+			IsolatedWorkers:  true,
+			GPUOperatorReady: true,
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -812,6 +813,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgIsolatedWorkers, true)
+		config.Doit.Set(config.NS, doctl.ArgGPUOperatorReady, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesRequireSSO, false)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesSSOIssuerURL, "https://issuer.example")
@@ -985,8 +987,9 @@ func TestKubernetesUpdate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
-			AutoUpgrade: boolPtr(false),
-			HA:          boolPtr(true),
+			AutoUpgrade:      boolPtr(false),
+			HA:               boolPtr(true),
+			GPUOperatorReady: boolPtr(true),
 			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
@@ -1042,6 +1045,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 		config.Doit.Set(config.NS, doctl.ArgHA, true)
+		config.Doit.Set(config.NS, doctl.ArgGPUOperatorReady, true)
 		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
@@ -1933,7 +1937,7 @@ func (n *nilCluster) Get(clusterID string) (*do.KubernetesCluster, error) {
 }
 
 func Test_waitForClusterRunningDoesntPanicWithNilGet(t *testing.T) {
-	cluster, err := waitForClusterRunning(&nilCluster{}, "123")
+	cluster, err := waitForClusterRunning(newTestWaiter(), &nilCluster{}, "123")
 	require.Nil(t, cluster)
 	require.EqualError(t, err, "can't find 123")
 }

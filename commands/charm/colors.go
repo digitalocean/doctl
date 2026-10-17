@@ -1,6 +1,9 @@
 package charm
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+	"github.com/digitalocean/doctl/internal/ui"
+)
 
 // ColorScheme describes a color scheme.
 type ColorScheme struct {
@@ -15,21 +18,17 @@ type ColorScheme struct {
 var Colors = DefaultColorScheme()
 
 // DefaultColorScheme returns doctl's default color scheme.
+//
+// internal/ui owns the palette; this is only the charm-shaped view of it, so
+// interactive charm chrome and CLI error styling cannot drift apart. Whether
+// these colors are emitted at all is decided by the process-wide lipgloss
+// profile, which doctl points at the resolved ui.Env at startup.
 func DefaultColorScheme() ColorScheme {
-	var (
-		// TODO: adapt to light/dark color schemes.
-		green  = lipgloss.Color("#04b575")
-		yellow = lipgloss.Color("#ffd866")
-		red    = lipgloss.Color("#ff6188")
-		blue   = lipgloss.Color("#2ea0f9")
-		muted  = lipgloss.Color("241")
-	)
-
 	return ColorScheme{
-		Success:   green,
-		Warning:   yellow,
-		Error:     red,
-		Highlight: blue,
-		Muted:     muted,
+		Success:   ui.ColorSuccess,
+		Warning:   ui.ColorWarning,
+		Error:     ui.ColorError,
+		Highlight: ui.ColorInfo,
+		Muted:     ui.ColorMuted,
 	}
 }

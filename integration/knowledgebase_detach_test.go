@@ -95,7 +95,7 @@ var _ = suite("knowledge-base/detach", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "operation aborted")
+			expect.Contains(string(output), confirmNonInteractiveOutput)
 		})
 	})
 

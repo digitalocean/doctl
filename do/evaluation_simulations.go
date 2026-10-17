@@ -1,0 +1,357 @@
+/*
+Copyright 2018 The Doctl Authors All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+	http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package do
+
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
+
+// Scenario wraps a godo.Scenario.
+type Scenario struct {
+	*godo.Scenario
+}
+
+// Scenarios is a slice of Scenario.
+type Scenarios []Scenario
+
+// ScenarioSet wraps a godo.ScenarioSet.
+type ScenarioSet struct {
+	*godo.ScenarioSet
+}
+
+// ScenarioSets is a slice of ScenarioSet.
+type ScenarioSets []ScenarioSet
+
+// GenAIDownloadURL is a presigned URL for downloading an evaluation file.
+type GenAIDownloadURL struct {
+	DownloadURL string          `json:"download_url,omitempty"`
+	ExpiresAt   *godo.Timestamp `json:"expires_at,omitempty"`
+}
+
+// ScenarioSetFileUploads wraps a godo.CreateScenarioSetUploadPresignedURLsResponse.
+type ScenarioSetFileUploads struct {
+	*godo.CreateScenarioSetUploadPresignedURLsResponse
+}
+
+// ScenarioLibraryEntry wraps a godo.ScenarioLibraryEntry.
+type ScenarioLibraryEntry struct {
+	*godo.ScenarioLibraryEntry
+}
+
+// ScenarioLibraryEntries is a slice of ScenarioLibraryEntry.
+type ScenarioLibraryEntries []ScenarioLibraryEntry
+
+// SimulationRun wraps a godo.SimulationRun.
+type SimulationRun struct {
+	*godo.SimulationRun
+}
+
+// SimulationRuns is a slice of SimulationRun.
+type SimulationRuns []SimulationRun
+
+// SimulationRunDetail wraps a godo.SimulationRunGetResponse, which carries a
+// simulation run together with its per-scenario result rollups.
+type SimulationRunDetail struct {
+	*godo.SimulationRunGetResponse
+}
+
+// SimulationEpisode wraps a godo.SimulationEpisode.
+type SimulationEpisode struct {
+	*godo.SimulationEpisode
+}
+
+// SimulationEpisodes is a slice of SimulationEpisode.
+type SimulationEpisodes []SimulationEpisode
+
+// SimulationTrajectory wraps a godo.SimulationTrajectory.
+type SimulationTrajectory struct {
+	*godo.SimulationTrajectory
+}
+
+// paginateGenAIList fetches every page of an evaluation list endpoint and wraps
+// each item in its do type.
+func paginateGenAIList[T any, W any](fetch func(*godo.ListOptions) ([]*T, *godo.Response, error), wrap func(*T) W) ([]W, error) {
+	si, err := PaginateResp(func(listOpt *godo.ListOptions) ([]any, *godo.Response, error) {
+		items, resp, err := fetch(listOpt)
+		if err != nil {
+			return nil, nil, err
+		}
+		out := make([]any, len(items))
+		for i := range items {
+			out[i] = items[i]
+		}
+		return out, resp, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]W, len(si))
+	for i := range si {
+		list[i] = wrap(si[i].(*T))
+	}
+
+	return list, nil
+}
+
+// CreateScenarioSetUploadPresignedURLs creates presigned URLs for uploading scenario set files.
+func (a *agentPlatformService) CreateScenarioSetUploadPresignedURLs(req *godo.CreateScenarioSetUploadPresignedURLsRequest) (*ScenarioSetFileUploads, error) {
+	uploads, _, err := a.client.AgentPlatform.CreateScenarioSetUploadPresignedURLs(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &ScenarioSetFileUploads{CreateScenarioSetUploadPresignedURLsResponse: uploads}, nil
+}
+
+// CreateScenarioSet creates a scenario set from inline scenarios or an uploaded file.
+func (a *agentPlatformService) CreateScenarioSet(req *godo.CreateScenarioSetRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.CreateScenarioSet(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &ScenarioSet{ScenarioSet: set}, nil
+}
+
+// GenerateScenarioSet dispatches goal-driven scenario generation.
+func (a *agentPlatformService) GenerateScenarioSet(req *godo.GenerateScenarioSetRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.GenerateScenarioSet(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &ScenarioSet{ScenarioSet: set}, nil
+}
+
+// ListScenarioSets lists all scenario sets for the team.
+func (a *agentPlatformService) ListScenarioSets(opt *godo.ScenarioSetListOptions) (ScenarioSets, error) {
+	if opt == nil {
+		opt = &godo.ScenarioSetListOptions{}
+	}
+
+	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.ScenarioSet, *godo.Response, error) {
+		filters := *opt
+		filters.ListOptions = *listOpt
+		res, resp, err := a.client.AgentPlatform.ListScenarioSets(context.TODO(), &filters)
+		if err != nil {
+			return nil, nil, err
+		}
+		return res.ScenarioSets, resp, nil
+	}, func(set *godo.ScenarioSet) ScenarioSet {
+		return ScenarioSet{ScenarioSet: set}
+	})
+}
+
+// GetScenarioSet retrieves a scenario set by its UUID.
+func (a *agentPlatformService) GetScenarioSet(scenarioSetUUID string) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.GetScenarioSet(context.TODO(), scenarioSetUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &ScenarioSet{ScenarioSet: set}, nil
+}
+
+// ListScenarios lists all scenarios within a scenario set.
+func (a *agentPlatformService) ListScenarios(scenarioSetUUID string, opt *godo.ScenarioListOptions) (Scenarios, error) {
+	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.Scenario, *godo.Response, error) {
+		res, resp, err := a.client.AgentPlatform.ListScenarios(context.TODO(), scenarioSetUUID, scenarioFilters(opt, listOpt))
+		if err != nil {
+			return nil, nil, err
+		}
+		return res.Scenarios, resp, nil
+	}, wrapScenario)
+}
+
+// GetScenarioSetDownloadURL returns a presigned download URL for a scenario set's file.
+func (a *agentPlatformService) GetScenarioSetDownloadURL(scenarioSetUUID string) (*GenAIDownloadURL, error) {
+	res, _, err := a.client.AgentPlatform.GetScenarioSetDownloadURL(context.TODO(), scenarioSetUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &GenAIDownloadURL{DownloadURL: res.DownloadURL, ExpiresAt: res.ExpiresAt}, nil
+}
+
+// UpdateScenarioSet updates a scenario set by its UUID.
+func (a *agentPlatformService) UpdateScenarioSet(scenarioSetUUID string, req *godo.UpdateScenarioSetRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.UpdateScenarioSet(context.TODO(), scenarioSetUUID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &ScenarioSet{ScenarioSet: set}, nil
+}
+
+// DeleteScenarioSet deletes a scenario set by its UUID.
+func (a *agentPlatformService) DeleteScenarioSet(scenarioSetUUID string) error {
+	_, _, err := a.client.AgentPlatform.DeleteScenarioSet(context.TODO(), scenarioSetUUID)
+	return err
+}
+
+// ListScenarioLibrary lists all platform-curated scenario library entries.
+func (a *agentPlatformService) ListScenarioLibrary(opt *godo.ScenarioLibraryListOptions) (ScenarioLibraryEntries, error) {
+	if opt == nil {
+		opt = &godo.ScenarioLibraryListOptions{}
+	}
+
+	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.ScenarioLibraryEntry, *godo.Response, error) {
+		filters := *opt
+		filters.ListOptions = *listOpt
+		res, resp, err := a.client.AgentPlatform.ListScenarioLibrary(context.TODO(), &filters)
+		if err != nil {
+			return nil, nil, err
+		}
+		return res.Scenarios, resp, nil
+	}, func(entry *godo.ScenarioLibraryEntry) ScenarioLibraryEntry {
+		return ScenarioLibraryEntry{ScenarioLibraryEntry: entry}
+	})
+}
+
+// ListScenarioLibraryScenarios lists all scenarios within a scenario library entry.
+func (a *agentPlatformService) ListScenarioLibraryScenarios(libraryScenarioUUID string, opt *godo.ScenarioListOptions) (Scenarios, error) {
+	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.Scenario, *godo.Response, error) {
+		res, resp, err := a.client.AgentPlatform.ListScenarioLibraryScenarios(context.TODO(), libraryScenarioUUID, scenarioFilters(opt, listOpt))
+		if err != nil {
+			return nil, nil, err
+		}
+		return res.Scenarios, resp, nil
+	}, wrapScenario)
+}
+
+// CreateScenarioSetFromLibrary materializes a library entry into a team-owned scenario set.
+func (a *agentPlatformService) CreateScenarioSetFromLibrary(libraryScenarioUUID string, req *godo.CreateScenarioSetFromLibraryRequest) (*ScenarioSet, error) {
+	set, _, err := a.client.AgentPlatform.CreateScenarioSetFromLibrary(context.TODO(), libraryScenarioUUID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &ScenarioSet{ScenarioSet: set}, nil
+}
+
+// CreateSimulationRun creates a simulation run.
+func (a *agentPlatformService) CreateSimulationRun(req *godo.CreateSimulationRunRequest) (*SimulationRun, error) {
+	run, _, err := a.client.AgentPlatform.CreateSimulationRun(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &SimulationRun{SimulationRun: run}, nil
+}
+
+// ListSimulationRuns lists all simulation runs for the team.
+func (a *agentPlatformService) ListSimulationRuns(opt *godo.SimulationRunListOptions) (SimulationRuns, error) {
+	if opt == nil {
+		opt = &godo.SimulationRunListOptions{}
+	}
+
+	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.SimulationRun, *godo.Response, error) {
+		filters := *opt
+		filters.ListOptions = *listOpt
+		res, resp, err := a.client.AgentPlatform.ListSimulationRuns(context.TODO(), &filters)
+		if err != nil {
+			return nil, nil, err
+		}
+		return res.SimulationRuns, resp, nil
+	}, func(run *godo.SimulationRun) SimulationRun {
+		return SimulationRun{SimulationRun: run}
+	})
+}
+
+// GetSimulationRun retrieves a simulation run by its UUID, including per-scenario results.
+func (a *agentPlatformService) GetSimulationRun(runUUID string) (*SimulationRunDetail, error) {
+	res, _, err := a.client.AgentPlatform.GetSimulationRun(context.TODO(), runUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &SimulationRunDetail{SimulationRunGetResponse: res}, nil
+}
+
+// UpdateSimulationRun updates a simulation run by its UUID.
+func (a *agentPlatformService) UpdateSimulationRun(runUUID string, req *godo.UpdateSimulationRunRequest) (*SimulationRun, error) {
+	run, _, err := a.client.AgentPlatform.UpdateSimulationRun(context.TODO(), runUUID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &SimulationRun{SimulationRun: run}, nil
+}
+
+// CancelSimulationRun cancels an in-progress simulation run.
+func (a *agentPlatformService) CancelSimulationRun(runUUID string) (*SimulationRun, error) {
+	run, _, err := a.client.AgentPlatform.CancelSimulationRun(context.TODO(), runUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &SimulationRun{SimulationRun: run}, nil
+}
+
+// DeleteSimulationRun deletes a simulation run by its UUID.
+func (a *agentPlatformService) DeleteSimulationRun(runUUID string) error {
+	_, _, err := a.client.AgentPlatform.DeleteSimulationRun(context.TODO(), runUUID)
+	return err
+}
+
+// ListSimulationEpisodes lists all episodes for a simulation run.
+func (a *agentPlatformService) ListSimulationEpisodes(runUUID string, opt *godo.SimulationEpisodeListOptions) (SimulationEpisodes, error) {
+	if opt == nil {
+		opt = &godo.SimulationEpisodeListOptions{}
+	}
+
+	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.SimulationEpisode, *godo.Response, error) {
+		filters := *opt
+		filters.ListOptions = *listOpt
+		res, resp, err := a.client.AgentPlatform.ListSimulationEpisodes(context.TODO(), runUUID, &filters)
+		if err != nil {
+			return nil, nil, err
+		}
+		return res.Episodes, resp, nil
+	}, func(episode *godo.SimulationEpisode) SimulationEpisode {
+		return SimulationEpisode{SimulationEpisode: episode}
+	})
+}
+
+// GetSimulationEpisode retrieves a single episode within a simulation run.
+func (a *agentPlatformService) GetSimulationEpisode(runUUID string, episodeUUID string) (*SimulationEpisode, error) {
+	episode, _, err := a.client.AgentPlatform.GetSimulationEpisode(context.TODO(), runUUID, episodeUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &SimulationEpisode{SimulationEpisode: episode}, nil
+}
+
+// GetSimulationEpisodeTrajectory retrieves the trajectory of an episode.
+func (a *agentPlatformService) GetSimulationEpisodeTrajectory(runUUID string, episodeUUID string) (*SimulationTrajectory, error) {
+	trajectory, _, err := a.client.AgentPlatform.GetSimulationEpisodeTrajectory(context.TODO(), runUUID, episodeUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &SimulationTrajectory{SimulationTrajectory: trajectory}, nil
+}
+
+// GetSimulationEpisodeTrajectoryURL returns a presigned download URL for an episode's trajectory.
+func (a *agentPlatformService) GetSimulationEpisodeTrajectoryURL(runUUID string, episodeUUID string) (*GenAIDownloadURL, error) {
+	res, _, err := a.client.AgentPlatform.GetSimulationEpisodeTrajectoryURL(context.TODO(), runUUID, episodeUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &GenAIDownloadURL{DownloadURL: res.DownloadURL, ExpiresAt: res.ExpiresAt}, nil
+}
+
+func scenarioFilters(opt *godo.ScenarioListOptions, listOpt *godo.ListOptions) *godo.ScenarioListOptions {
+	filters := godo.ScenarioListOptions{}
+	if opt != nil {
+		filters = *opt
+	}
+	filters.ListOptions = *listOpt
+	return &filters
+}
+
+func wrapScenario(scenario *godo.Scenario) Scenario {
+	return Scenario{Scenario: scenario}
+}

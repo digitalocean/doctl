@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.216.0"
+	libraryVersion = "1.227.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -74,6 +74,7 @@ type Client struct {
 	Functions           FunctionsService
 	Images              ImagesService
 	ImageActions        ImageActionsService
+	Insights            InsightsService
 	Invoices            InvoicesService
 	Keys                KeysService
 	Kubernetes          KubernetesService
@@ -110,6 +111,7 @@ type Client struct {
 	HostedAgentTriggers HostedAgentTriggersService
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
+	Signals             SignalsService
 	BYOIPPrefixes       BYOIPPrefixesService
 
 	// Serverless Inference resources at https://inference.do-ai.run.
@@ -120,6 +122,8 @@ type Client struct {
 	Models           *ModelService
 	Responses        *ResponseService
 	AsyncInvocations *AsyncInvocationService
+	Audio            *AudioService
+	Video            *VideoService
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
 
@@ -334,6 +338,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Functions = &FunctionsServiceOp{client: c}
 	c.Images = &ImagesServiceOp{client: c}
 	c.ImageActions = &ImageActionsServiceOp{client: c}
+	c.Insights = &InsightsServiceOp{client: c}
 	c.Invoices = &InvoicesServiceOp{client: c}
 	c.Keys = &KeysServiceOp{client: c}
 	c.Kubernetes = &KubernetesServiceOp{client: c}
@@ -373,6 +378,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
+	c.Signals = &SignalsServiceOp{client: c}
 	serverlessInferenceURL, _ := url.Parse(defaultServerlessInferenceBaseURL)
 	t := newInferenceTransport(c, serverlessInferenceURL)
 	c.Chat = &ChatService{Completions: &ChatCompletionService{inferenceTransport: t}}
@@ -382,6 +388,8 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Models = &ModelService{inferenceTransport: t}
 	c.Responses = &ResponseService{inferenceTransport: t}
 	c.AsyncInvocations = &AsyncInvocationService{inferenceTransport: t}
+	c.Audio = &AudioService{Speech: &SpeechService{inferenceTransport: t}}
+	c.Video = &VideoService{Generations: &VideoGenerationService{inferenceTransport: t}}
 
 	c.headers = make(map[string]string)
 

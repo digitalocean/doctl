@@ -181,7 +181,7 @@ func TestNewPrepayBlockedError_Enrichment(t *testing.T) {
 
 		assert.Equal(t, []string{"Ask your Team Owner or Biller to add funds"}, pretty.tips)
 		// The caller cannot open the billing page, so it must not be offered.
-		assert.NotContains(t, pretty.DisplayError(), prepayTopUpURL)
+		assert.NotContains(t, pretty.NextStep(), prepayTopUpURL)
 	})
 
 	t.Run("a billing failure falls back to the plain card", func(t *testing.T) {
@@ -191,7 +191,8 @@ func TestNewPrepayBlockedError_Enrichment(t *testing.T) {
 		assert.Equal(t, prepayBlockedTitle, pretty.title)
 		assert.Contains(t, pretty.tips, fmt.Sprintf("Add funds at %s", prepayTopUpURL))
 		// A billing lookup must never turn a clean 402 into a double error.
-		assert.NotContains(t, pretty.DisplayError(), "billing is down")
+		assert.NotContains(t, pretty.Reason(), "billing is down")
+		assert.NotContains(t, pretty.NextStep(), "billing is down")
 	})
 
 	t.Run("an uninitialized config still renders", func(t *testing.T) {

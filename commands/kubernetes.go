@@ -50,6 +50,10 @@ const (
 	maxAPIFailures            = 5
 	timeoutFetchingKubeconfig = 30 * time.Second
 
+	// clusterPollInterval is how often a cluster is re-read while it
+	// provisions, which takes several minutes.
+	clusterPollInterval = 5 * time.Second
+
 	defaultKubernetesNodeSize      = "s-1vcpu-2gb-intel"
 	defaultKubernetesNodeCount     = 3
 	defaultKubernetesRegion        = "nyc1"
@@ -310,6 +314,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgIsolatedWorkers, "", false, "Enables isolated workers for the cluster. Defaults to `false`, To enable isolated workers for the cluster, supply `--isolated-workers=true`. NAT GW must be available in the vpc when this option is enabled.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgGPUOperatorReady, "", false,
+		"Launches GPU nodes in the cluster with images without GPU drivers, allowing GPU operators to manage drivers. Defaults to `false`. To enable it, supply `--gpu-operator-ready=true`. Mutually exclusive with other GPU-related cluster options.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --ha to enable, --ha=false to disable.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
@@ -375,7 +381,7 @@ Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=ke
 
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
 		"Adds a configuration context for the new cluster to your kubectl")
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true,
+	AddWaitFlags(cmdKubeClusterCreate, true,
 		"Instructs the terminal to wait for the action to complete before returning control to the user")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
 		"Sets the current kubectl context to that of the new cluster")
@@ -394,6 +400,8 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Indicates whether the cluster automatically upgrades to new patch releases during its maintenance window. To enable automatic upgrade, use `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSurgeUpgrade, "", false,
 		"Enables surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgGPUOperatorReady, "", false,
+		"Launches GPU nodes in the cluster with images without GPU drivers, allowing GPU operators to manage drivers. To enable it, supply `--gpu-operator-ready=true`; to disable it, supply `--gpu-operator-ready=false`. Mutually exclusive with other GPU-related cluster options.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Enables the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", false,
@@ -859,8 +867,12 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 		}
 
 		if wait {
-			notice("Cluster is provisioning, waiting for cluster to be running")
-			cluster, err = waitForClusterRunning(kube, cluster.ID)
+			w, err := newWaiter(c)
+			if err != nil {
+				return err
+			}
+
+			cluster, err = waitForClusterRunning(w, kube, cluster.ID)
 			if err != nil {
 				warn("Cluster couldn't enter `running` state: %v", err)
 			}
@@ -995,12 +1007,12 @@ func getUpgradeVersionOrLatest(c *CmdConfig, clusterID string) (string, bool, er
 
 	cluster, err := c.Kubernetes().Get(clusterID)
 	if err != nil {
-		return "", false, fmt.Errorf("Unable to look up cluster to find the latest version from the API: %v", err)
+		return "", false, fmt.Errorf("Unable to look up cluster to find the latest version from the API: %w", err)
 	}
 
 	versions, err := c.Kubernetes().GetUpgrades(clusterID)
 	if err != nil {
-		return "", false, fmt.Errorf("Unable to look up the latest version from the API: %v", err)
+		return "", false, fmt.Errorf("Unable to look up the latest version from the API: %w", err)
 	}
 	if len(versions) == 0 {
 		return "", false, nil
@@ -1080,10 +1092,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 			return err
 		}
 
-		if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
-			// continue
-		} else {
-			return fmt.Errorf("Operation aborted")
+		if err := confirmDelete(force, "Kubernetes cluster", 1); err != nil {
+			return err
 		}
 
 		var kubeconfig []byte
@@ -1153,10 +1163,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		return err
 	}
 
-	if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
-		// continue
-	} else {
-		return fmt.Errorf("Operation aborted")
+	if err := confirmDelete(force, "Kubernetes cluster", 1); err != nil {
+		return err
 	}
 
 	kube := c.Kubernetes()
@@ -1660,15 +1668,10 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolDelete(c *CmdConfig) err
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirmDelete("Kubernetes node pool", 1) == nil {
-		kube := c.Kubernetes()
-		if err := kube.DeleteNodePool(clusterID, poolID); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "Kubernetes node pool", 1); err != nil {
+		return err
 	}
-	return nil
+	return c.Kubernetes().DeleteNodePool(clusterID, poolID)
 }
 
 // RunKubernetesNodeDelete deletes a Kubernetes Node
@@ -1705,8 +1708,8 @@ func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
 		msg = "replace this Kubernetes node?"
 	}
 
-	if !(force || AskForConfirm(msg) == nil) {
-		return errOperationAborted
+	if err := confirmAction(force, msg); err != nil {
+		return err
 	}
 
 	skipDrain, err := c.Doit.GetBool(c.NS, "skip-drain")
@@ -1851,6 +1854,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		return err
 	}
 	r.IsolatedWorkers = isolatedWorkers
+
+	gpuOperatorReady, err := c.Doit.GetBool(c.NS, doctl.ArgGPUOperatorReady)
+	if err != nil {
+		return err
+	}
+	r.GPUOperatorReady = gpuOperatorReady
 
 	ha, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgHA)
 	if err != nil {
@@ -2128,6 +2137,12 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.HA = ha
+
+	gpuOperatorReady, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgGPUOperatorReady)
+	if err != nil {
+		return err
+	}
+	r.GPUOperatorReady = gpuOperatorReady
 
 	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
 	if err != nil {
@@ -2678,41 +2693,53 @@ func removeKubeconfig(remote, local *clientcmdapi.Config) error {
 }
 
 // waitForClusterRunning waits for a cluster to be running.
-func waitForClusterRunning(kube do.KubernetesService, clusterID string) (*do.KubernetesCluster, error) {
-	failCount := 0
-	printNewLineSet := false
-	for i := 0; ; i++ {
-		if i != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
+//
+// The cluster last read is returned however the wait ends, so that a caller
+// reporting a wait that did not reach `running` can still say what state the
+// cluster is actually in. Returning nil there would have the caller announce
+// that the cluster had vanished when it is merely still provisioning.
+func waitForClusterRunning(w waiter, kube do.KubernetesService, clusterID string) (*do.KubernetesCluster, error) {
+	var (
+		last     *do.KubernetesCluster
+		failures int
+	)
+
+	err := w.wait(waitOp{
+		Activity: fmt.Sprintf("Creating cluster (%s)", clusterID),
+		Subject:  fmt.Sprintf("cluster (%s) to start running", clusterID),
+		Success:  fmt.Sprintf("Cluster (%s) is running", clusterID),
+		Interval: clusterPollInterval,
+	}, func() (bool, string, error) {
 		cluster, err := kube.Get(clusterID)
 		if err == nil {
-			failCount = 0
+			failures = 0
 		} else {
-			// Allow for transient API failures
-			failCount++
-			if failCount >= maxAPIFailures {
-				return nil, err
+			// Provisioning outlives the odd 5xx, so a handful of consecutive
+			// API failures is tolerated before the wait is abandoned.
+			failures++
+			if failures >= maxAPIFailures {
+				return false, "", err
 			}
 		}
 
 		if cluster == nil || cluster.Status == nil {
-			time.Sleep(1 * time.Second)
-			continue
+			return false, "", nil
 		}
-		switch cluster.Status.State {
+
+		last = cluster
+
+		state := cluster.Status.State
+		switch state {
 		case godo.KubernetesClusterStatusRunning:
-			return cluster, nil
+			return true, string(state), nil
 		case godo.KubernetesClusterStatusProvisioning:
-			time.Sleep(5 * time.Second)
+			return false, string(state), nil
 		default:
-			return cluster, fmt.Errorf("Unknown status: [%s]", cluster.Status.State)
+			return false, "", fmt.Errorf("Unknown status: [%s]", state)
 		}
-	}
+	})
+
+	return last, err
 }
 
 func displayClusters(c *CmdConfig, short bool, clusters ...do.KubernetesCluster) error {
@@ -2979,7 +3006,7 @@ func getVersionOrLatest(c *CmdConfig) (string, error) {
 	}
 	versions, err := c.Kubernetes().GetVersions()
 	if err != nil {
-		return "", fmt.Errorf("No version flag provided. Unable to lookup the latest version from the API: %v", err)
+		return "", fmt.Errorf("No version flag provided. Unable to lookup the latest version from the API: %w", err)
 	}
 	if len(versions) > 0 {
 		return versions[0].Slug, nil

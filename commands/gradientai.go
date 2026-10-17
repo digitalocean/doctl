@@ -7,7 +7,7 @@ You may obtain a copy of the License at
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+    10|See the License for the specific language governing permissions and
 limitations under the License.
 */
 
@@ -15,7 +15,8 @@ package commands
 
 import "github.com/spf13/cobra"
 
-// GradientAI creates the gradient command and adds the knowledge base and simulation subcommands.
+// GradientAI creates the gradient command and adds the knowledge base and
+// deprecated simulation aliases.
 func GradientAI() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -26,10 +27,11 @@ func GradientAI() *Command {
 
 Public commands moved to:
   doctl knowledge-base
-  doctl inference`,
+  doctl inference
+  doctl evaluation`,
 			GroupID: manageResourcesGroup,
-			// All public children moved to knowledge-base / inference; keep this
-			// parent only for hidden/deprecated aliases and scenario/simulation cmds.
+			// All public children moved to knowledge-base / inference / evaluation;
+			// keep this parent only for hidden/deprecated aliases.
 			Hidden: true,
 		},
 	}
@@ -38,12 +40,10 @@ Public commands moved to:
 	// Public home is now doctl knowledge-base.
 	cmd.AddCommand(deprecatedKnowledgeBaseCmd())
 
-	// Add the scenario set command as a subcommand to Gradient AI
-	cmd.AddCommand(ScenarioSetCmd())
-	// Add the scenario library command as a subcommand to Gradient AI
-	cmd.AddCommand(ScenarioLibraryCmd())
-	// Add the simulation run command as a subcommand to Gradient AI
-	cmd.AddCommand(SimulationRunCmd())
+	// Simulation APIs moved to doctl evaluation; keep hidden deprecated aliases.
+	cmd.AddCommand(deprecatedEvaluationSubcommand("scenario-set", "ss", "scenario-sets"))
+	cmd.AddCommand(deprecatedEvaluationSubcommand("scenario-library", "sl"))
+	cmd.AddCommand(deprecatedEvaluationSubcommand("simulation-run", "sim", "simulation-runs"))
 
 	return cmd
 }
