@@ -173,3 +173,22 @@ func Test_extractHostInfo(t *testing.T) {
 		assert.Equal(t, c.e, i)
 	}
 }
+func TestSSH_HostArgWithPort(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.sshRunner.EXPECT().Run().Return(nil)
+
+		tc := config.Doit.(*doctl.TestConfig)
+		tc.SSHFn = func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
+			assert.Equal(t, 2222, port)
+			return tm.sshRunner
+		}
+
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
+
+		// A port given as part of the user@host:port argument must be used.
+		config.Args = append(config.Args, "root@"+testDroplet.Name+":2222")
+
+		err := RunSSH(config)
+		assert.NoError(t, err)
+	})
+}
