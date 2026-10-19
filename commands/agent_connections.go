@@ -32,9 +32,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// connectionStatusActive is the terminal status harness-api reports once a
-// connection's authorization has completed.
-const connectionStatusActive = "active"
+// Connection statuses harness-api reports. active is reached once authorization
+// completes; expired (the flow lapsed unauthorized) and revoked can never
+// become active, so a wait ends on either.
+const (
+	connectionStatusActive  = "active"
+	connectionStatusExpired = "expired"
+	connectionStatusRevoked = "revoked"
+)
 
 // AgentConnections generates the `doctl harness-runtime connections` subtree,
 // which manages external-provider connections (the newer actor-scoped auth
@@ -71,7 +76,7 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsConnectionsCreate, "create",
 		"Create (or resume) a connection for an actor",
-		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.`,
+		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.`,
 		Writer, append(ns, aliasOpt("c"))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnActor, "", "", "Actor id the connection acts for", requiredOpt())
@@ -279,11 +284,17 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx, cancelDeadline := context.WithDeadline(ctx, authWaitDeadline(auth.ExpiresAt, time.Now()))
+	defer cancelDeadline()
 
 	fmt.Fprintln(c.Out, "Waiting for authorization to complete... (Ctrl-C to stop)")
 	for {
 		select {
 		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("authorization was not completed before it expired; run `%s connections get %s` to check it, or `%s connections create --actor %s` for a new link",
+					agentCLI, env.Connection.ID, agentCLI, env.Connection.ActorID)
+			}
 			return fmt.Errorf("stopped waiting; run `%s connections get %s` to check the connection later", agentCLI, env.Connection.ID)
 		case <-time.After(agentsAuthPollInterval):
 		}
@@ -292,9 +303,13 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 		if err != nil {
 			return err
 		}
-		if strings.EqualFold(got.Connection.Status, connectionStatusActive) {
+		switch status := strings.ToLower(got.Connection.Status); status {
+		case connectionStatusActive:
 			printAgentSuccess(c.Out, fmt.Sprintf("%s connection active for %s", provider, got.Connection.ActorID))
 			return nil
+		case connectionStatusExpired, connectionStatusRevoked:
+			return fmt.Errorf("%s connection for %s is %s; authorization was not completed. Run `%s connections create --actor %s` to start a new one",
+				provider, got.Connection.ActorID, status, agentCLI, got.Connection.ActorID)
 		}
 	}
 }

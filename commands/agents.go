@@ -2203,6 +2203,30 @@ const agentProviderAuthStatusSuccess = "success"
 // shorten it.
 var agentsAuthPollInterval = 2 * time.Second
 
+// agentsAuthExpiryGrace extends an authorization wait past the server's
+// expires_at. It absorbs client/server clock skew and gives the poll after
+// expiry the chance to report the server's own terminal status.
+var agentsAuthExpiryGrace = 30 * time.Second
+
+// agentsAuthMaxWait bounds an authorization wait when the server sent no
+// expires_at.
+var agentsAuthMaxWait = 15 * time.Minute
+
+// authWaitDeadline bounds an authorization wait by the server's expires_at plus
+// agentsAuthExpiryGrace, or by agentsAuthMaxWait when the server sent none. An
+// expiry already in the past (e.g. a skewed client clock) still leaves the grace
+// to poll in.
+func authWaitDeadline(expiresAt *godo.Timestamp, now time.Time) time.Time {
+	if expiresAt == nil || expiresAt.IsZero() {
+		return now.Add(agentsAuthMaxWait)
+	}
+	end := expiresAt.Time
+	if end.Before(now) {
+		end = now
+	}
+	return end.Add(agentsAuthExpiryGrace)
+}
+
 // RunAgentsAuth connects an external provider (e.g. github) for the caller's
 // team via the harness-api connect flow. It starts (or resumes) the flow, opens
 // the browser authorization URL, then polls until the handle is authorized.
@@ -2269,11 +2293,16 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	// manager or plain `kill`, not only on Ctrl-C.
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx, cancelDeadline := context.WithDeadline(ctx, authWaitDeadline(start.ExpiresAt, time.Now()))
+	defer cancelDeadline()
 
 	fmt.Fprintln(c.Out, "Waiting for authorization to complete... (Ctrl-C to stop)")
 	for {
 		select {
 		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("authorization was not completed before it expired; re-run `doctl harness-runtime auth %s` to start again", provider)
+			}
 			return fmt.Errorf("stopped waiting; re-run `doctl harness-runtime auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
