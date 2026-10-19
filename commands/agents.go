@@ -344,7 +344,11 @@ func (m *msgAccumulator) streamLive(out io.Writer, s string) bool {
 	}
 	m.add(s)
 	if _, ok := out.(streamReplacer); ok && stylingEnabled {
-		fmt.Fprint(out, s)
+		if w, ok := out.(streamWriter); ok {
+			w.writeStream(s)
+		} else {
+			fmt.Fprint(out, s)
+		}
 		m.streamed = true
 		return true
 	}
@@ -406,6 +410,13 @@ func (m *msgAccumulator) flush(out io.Writer) {
 // for interactive attach; plain writers (pipes, tests) do not.
 type streamReplacer interface {
 	replaceStreamed(raw, replacement string)
+}
+
+// streamWriter echoes a live answer draft so that it occupies exactly the rows
+// replaceStreamed will later erase. *promptDisplay implements this; a plain
+// writer gets the chunk through Write.
+type streamWriter interface {
+	writeStream(s string)
 }
 
 // trimTailRunes keeps only the last n runes of s, respecting UTF-8
@@ -6541,6 +6552,22 @@ func (p *promptDisplay) appendClearPromptRows(b *strings.Builder) {
 func (p *promptDisplay) Write(b []byte) (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	return p.writeLocked(b, true)
+}
+
+// writeStream echoes a chunk of the streaming answer draft. It is Write minus
+// the discrete-event separator: a chunk that closes a paragraph (".\n\n")
+// continues the line the previous chunk left open. Separating it would paint a
+// row that is not in the draft, and replaceStreamed — which counts the draft's
+// rows to erase it — would leave the top of the draft on screen above the
+// markdown render (MARSOHS-1742). Implements streamWriter.
+func (p *promptDisplay) writeStream(s string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	_, _ = p.writeLocked([]byte(s), false)
+}
+
+func (p *promptDisplay) writeLocked(b []byte, separate bool) (int, error) {
 	if !p.raw {
 		return p.out.Write(b)
 	}
@@ -6564,7 +6591,7 @@ func (p *promptDisplay) Write(b []byte) (int, error) {
 	if p.midLine {
 		// Inject a separator only for discrete events that don't already
 		// start with \n — so "(thinking...)" doesn't glue onto a token stream.
-		if !startsWithNL && endsWithNL {
+		if separate && !startsWithNL && endsWithNL {
 			fmt.Fprint(p.out, "\r\n")
 		}
 	} else {
