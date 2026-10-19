@@ -1154,6 +1154,52 @@ func TestRunAgentsAuth(t *testing.T) {
 			assert.Error(t, RunAgentsAuth(config))
 		})
 	})
+
+	t.Run("deadline from expires_at stops waiting", func(t *testing.T) {
+		prevGrace := agentsAuthExpiryGrace
+		agentsAuthExpiryGrace = 20 * time.Millisecond
+		defer func() { agentsAuthExpiryGrace = prevGrace }()
+
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&godo.HostedAgentProviderAuthStart{
+					Provider:   "github",
+					Status:     "pending",
+					ConnectURL: "https://example.com/connect",
+					PollURL:    "https://example.com/poll",
+					ExpiresAt:  &godo.Timestamp{Time: time.Now().Add(-time.Hour)},
+				}, nil)
+			tm.hostedAgents.EXPECT().
+				PollProviderAuth("github", "https://example.com/poll").
+				Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "pending"}, nil).
+				AnyTimes()
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			err := RunAgentsAuth(config)
+			assert.ErrorContains(t, err, "not completed before it expired")
+			assert.ErrorContains(t, err, "re-run `doctl harness-runtime auth github`")
+		})
+	})
+}
+
+func TestAuthWaitDeadline(t *testing.T) {
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name      string
+		expiresAt *godo.Timestamp
+		want      time.Time
+	}{
+		{"nil falls back to max wait", nil, now.Add(agentsAuthMaxWait)},
+		{"zero falls back to max wait", &godo.Timestamp{}, now.Add(agentsAuthMaxWait)},
+		{"future expiry plus grace", &godo.Timestamp{Time: now.Add(10 * time.Minute)}, now.Add(10*time.Minute + agentsAuthExpiryGrace)},
+		{"past expiry clamps to now plus grace", &godo.Timestamp{Time: now.Add(-time.Hour)}, now.Add(agentsAuthExpiryGrace)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, authWaitDeadline(tt.expiresAt, now))
+		})
+	}
 }
 
 func TestResolveSessionRef(t *testing.T) {
