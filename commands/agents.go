@@ -798,7 +798,7 @@ type agentCreationSource struct {
 
 // bareSandbox reports whether this source asks for a session with no agent,
 // whether that came from the harness the --template implication sets or from a
-// manifest declaring `agent: none` (or `sandbox`). Both have to be caught: a manifest is the
+// manifest declaring `harness: none` (or `sandbox`). Both have to be caught: a manifest is the
 // more likely way a bare sandbox is created, since it is the only way to set
 // egress or a size, and it is the one the flag checks never see.
 //
@@ -817,7 +817,8 @@ func (s *agentCreationSource) bareSandbox() bool {
 }
 
 // manifestAgentIs reports whether the manifest's adapter equals want, reading
-// the flat `agent` key or the legacy `spec.runtime.adapter` path. Unparsable
+// the flat `harness` key (or `agent`, its original name) or the legacy
+// `spec.runtime.adapter` path. Unparsable
 // YAML and an absent adapter both report false: the server owns that error, and
 // guessing here would turn a malformed manifest into a confusing local one.
 func manifestAgentIs(manifest []byte, want string) bool {
@@ -825,8 +826,9 @@ func manifestAgentIs(manifest []byte, want string) bool {
 	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
 		return false
 	}
-	if agent, ok := doc["agent"].(string); ok {
-		return strings.EqualFold(strings.TrimSpace(agent), want)
+	if hasYAMLKey(doc, "harness") || hasYAMLKey(doc, "agent") {
+		adapter, _, _ := flatManifestAdapter(doc)
+		return strings.EqualFold(adapter, want)
 	}
 	// yaml.v2 decodes nested mappings as map[any]any.
 	spec, ok := doc["spec"].(map[any]any)
@@ -923,7 +925,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	prompt = strings.TrimSpace(prompt)
 
 	// `none` stays the manifest's word for a session with no agent — a --spec
-	// file saying `agent: none` (or `agent: sandbox`) is valid — but it is not a
+	// file saying `harness: none` (or `sandbox`) is valid — but it is not a
 	// --harness value. Naming the absence of an agent as if it were one of the
 	// agents is the confusion --template already resolves, and two spellings
 	// for one session is worse than either.
@@ -1111,7 +1113,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	raw = dropEnvKeysCoveredBySecrets(raw)
 	src.manifest = raw
 
-	// A manifest declares its own agent, so `agent: none` arrives here with
+	// A manifest declares its own agent, so `harness: none` arrives here with
 	// harness empty and the check above never sees it — and a manifest is the
 	// likelier way a bare sandbox is created, since it is the only way to set
 	// egress or a size. Left to the API, --prompt is delivered after the
@@ -1119,7 +1121,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// already left a live, billable sandbox behind.
 	if src.bareSandbox() {
 		if flag := firstAgentOnlyFlag(c, prompt, repo); flag != "" {
-			return nil, fmt.Errorf("this manifest declares `agent: %s`, so the session runs no agent and --%s needs one; drop --%s and drive the sandbox with `%s exec`, or name an agent in the manifest",
+			return nil, fmt.Errorf("this manifest declares a bare sandbox (`harness: %s`), so the session runs no agent and --%s needs one; drop --%s and drive the sandbox with `%s exec`, or name an agent in the manifest",
 				bareSandboxAgent, flag, flag, agentCLI)
 		}
 	}

@@ -471,7 +471,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 
 type harnessManifest struct {
 	Name        string              `yaml:"name,omitempty"`
-	Agent       string              `yaml:"agent"`
+	Agent       string              `yaml:"agent"` // not harness: an API from before that key rejects it as unknown
 	Template    string              `yaml:"template,omitempty"`
 	Repos       []string            `yaml:"repos,omitempty"`
 	Config      map[string]any      `yaml:"config,omitempty"`
