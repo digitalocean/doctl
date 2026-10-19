@@ -45,7 +45,7 @@ func (m *MockAgentPlatformService) AddKnowledgeBaseDataSource(knowledgeBaseID st
 }
 
 // AddKnowledgeBaseDataSource indicates an expected call of AddKnowledgeBaseDataSource.
-func (mr *MockAgentPlatformServiceMockRecorder) AddKnowledgeBaseDataSource(knowledgeBaseID, req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) AddKnowledgeBaseDataSource(knowledgeBaseID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddKnowledgeBaseDataSource", reflect.TypeOf((*MockAgentPlatformService)(nil).AddKnowledgeBaseDataSource), knowledgeBaseID, req)
 }
@@ -60,7 +60,7 @@ func (m *MockAgentPlatformService) AttachKnowledgeBaseToAgent(agentId, knowledge
 }
 
 // AttachKnowledgeBaseToAgent indicates an expected call of AttachKnowledgeBaseToAgent.
-func (mr *MockAgentPlatformServiceMockRecorder) AttachKnowledgeBaseToAgent(agentId, knowledgeBaseID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) AttachKnowledgeBaseToAgent(agentId, knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachKnowledgeBaseToAgent", reflect.TypeOf((*MockAgentPlatformService)(nil).AttachKnowledgeBaseToAgent), agentId, knowledgeBaseID)
 }
@@ -75,7 +75,7 @@ func (m *MockAgentPlatformService) CancelIndexingJob(indexingJobID string) (*do.
 }
 
 // CancelIndexingJob indicates an expected call of CancelIndexingJob.
-func (mr *MockAgentPlatformServiceMockRecorder) CancelIndexingJob(indexingJobID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CancelIndexingJob(indexingJobID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelIndexingJob", reflect.TypeOf((*MockAgentPlatformService)(nil).CancelIndexingJob), indexingJobID)
 }
@@ -90,7 +90,7 @@ func (m *MockAgentPlatformService) CancelModelEvaluationRun(evalRunUUID string) 
 }
 
 // CancelModelEvaluationRun indicates an expected call of CancelModelEvaluationRun.
-func (mr *MockAgentPlatformServiceMockRecorder) CancelModelEvaluationRun(evalRunUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CancelModelEvaluationRun(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).CancelModelEvaluationRun), evalRunUUID)
 }
@@ -105,7 +105,7 @@ func (m *MockAgentPlatformService) CreateCustomEvaluationMetric(req *godo.Create
 }
 
 // CreateCustomEvaluationMetric indicates an expected call of CreateCustomEvaluationMetric.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateCustomEvaluationMetric(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateCustomEvaluationMetric(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomEvaluationMetric", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateCustomEvaluationMetric), req)
 }
@@ -120,7 +120,7 @@ func (m *MockAgentPlatformService) CreateEvaluationDataset(req *godo.CreateEvalu
 }
 
 // CreateEvaluationDataset indicates an expected call of CreateEvaluationDataset.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateEvaluationDataset(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateEvaluationDataset(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluationDataset", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateEvaluationDataset), req)
 }
@@ -135,7 +135,7 @@ func (m *MockAgentPlatformService) CreateKnowledgeBase(req *godo.KnowledgeBaseCr
 }
 
 // CreateKnowledgeBase indicates an expected call of CreateKnowledgeBase.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateKnowledgeBase(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateKnowledgeBase(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKnowledgeBase", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateKnowledgeBase), req)
 }
@@ -150,7 +150,7 @@ func (m *MockAgentPlatformService) CreateModelEvalDatasetUploadPresignedURLs(req
 }
 
 // CreateModelEvalDatasetUploadPresignedURLs indicates an expected call of CreateModelEvalDatasetUploadPresignedURLs.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateModelEvalDatasetUploadPresignedURLs(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateModelEvalDatasetUploadPresignedURLs(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateModelEvalDatasetUploadPresignedURLs", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateModelEvalDatasetUploadPresignedURLs), req)
 }
@@ -165,7 +165,7 @@ func (m *MockAgentPlatformService) CreateModelEvaluationRun(req *godo.CreateMode
 }
 
 // CreateModelEvaluationRun indicates an expected call of CreateModelEvaluationRun.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateModelEvaluationRun(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateModelEvaluationRun(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateModelEvaluationRun), req)
 }
@@ -180,7 +180,7 @@ func (m *MockAgentPlatformService) CreateOpenAIAPIKey(openaiAPIKeyCreate *godo.O
 }
 
 // CreateOpenAIAPIKey indicates an expected call of CreateOpenAIAPIKey.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateOpenAIAPIKey(openaiAPIKeyCreate interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateOpenAIAPIKey(openaiAPIKeyCreate any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOpenAIAPIKey", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateOpenAIAPIKey), openaiAPIKeyCreate)
 }
@@ -195,7 +195,7 @@ func (m *MockAgentPlatformService) CreateScenarioSet(req *godo.CreateScenarioSet
 }
 
 // CreateScenarioSet indicates an expected call of CreateScenarioSet.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateScenarioSet(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateScenarioSet(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScenarioSet", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateScenarioSet), req)
 }
@@ -210,7 +210,7 @@ func (m *MockAgentPlatformService) CreateScenarioSetFromLibrary(libraryScenarioU
 }
 
 // CreateScenarioSetFromLibrary indicates an expected call of CreateScenarioSetFromLibrary.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateScenarioSetFromLibrary(libraryScenarioUUID, req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateScenarioSetFromLibrary(libraryScenarioUUID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScenarioSetFromLibrary", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateScenarioSetFromLibrary), libraryScenarioUUID, req)
 }
@@ -225,7 +225,7 @@ func (m *MockAgentPlatformService) CreateScenarioSetUploadPresignedURLs(req *god
 }
 
 // CreateScenarioSetUploadPresignedURLs indicates an expected call of CreateScenarioSetUploadPresignedURLs.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateScenarioSetUploadPresignedURLs(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateScenarioSetUploadPresignedURLs(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScenarioSetUploadPresignedURLs", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateScenarioSetUploadPresignedURLs), req)
 }
@@ -240,7 +240,7 @@ func (m *MockAgentPlatformService) CreateSimulationRun(req *godo.CreateSimulatio
 }
 
 // CreateSimulationRun indicates an expected call of CreateSimulationRun.
-func (mr *MockAgentPlatformServiceMockRecorder) CreateSimulationRun(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) CreateSimulationRun(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSimulationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).CreateSimulationRun), req)
 }
@@ -254,7 +254,7 @@ func (m *MockAgentPlatformService) DeleteCustomEvaluationMetric(metricUUID strin
 }
 
 // DeleteCustomEvaluationMetric indicates an expected call of DeleteCustomEvaluationMetric.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteCustomEvaluationMetric(metricUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteCustomEvaluationMetric(metricUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomEvaluationMetric", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteCustomEvaluationMetric), metricUUID)
 }
@@ -268,7 +268,7 @@ func (m *MockAgentPlatformService) DeleteEvaluationDataset(datasetUUID string) e
 }
 
 // DeleteEvaluationDataset indicates an expected call of DeleteEvaluationDataset.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteEvaluationDataset(datasetUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteEvaluationDataset(datasetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluationDataset", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteEvaluationDataset), datasetUUID)
 }
@@ -282,7 +282,7 @@ func (m *MockAgentPlatformService) DeleteKnowledgeBase(knowledgeBaseID string) e
 }
 
 // DeleteKnowledgeBase indicates an expected call of DeleteKnowledgeBase.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteKnowledgeBase(knowledgeBaseID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteKnowledgeBase(knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKnowledgeBase", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteKnowledgeBase), knowledgeBaseID)
 }
@@ -296,7 +296,7 @@ func (m *MockAgentPlatformService) DeleteKnowledgeBaseDataSource(knowledgeBaseID
 }
 
 // DeleteKnowledgeBaseDataSource indicates an expected call of DeleteKnowledgeBaseDataSource.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteKnowledgeBaseDataSource(knowledgeBaseID, dataSourceID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteKnowledgeBaseDataSource(knowledgeBaseID, dataSourceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKnowledgeBaseDataSource", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteKnowledgeBaseDataSource), knowledgeBaseID, dataSourceID)
 }
@@ -310,7 +310,7 @@ func (m *MockAgentPlatformService) DeleteModelEvaluationPreset(evalPresetUUID st
 }
 
 // DeleteModelEvaluationPreset indicates an expected call of DeleteModelEvaluationPreset.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteModelEvaluationPreset(evalPresetUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteModelEvaluationPreset(evalPresetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteModelEvaluationPreset", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteModelEvaluationPreset), evalPresetUUID)
 }
@@ -324,7 +324,7 @@ func (m *MockAgentPlatformService) DeleteModelEvaluationRun(evalRunUUID string) 
 }
 
 // DeleteModelEvaluationRun indicates an expected call of DeleteModelEvaluationRun.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteModelEvaluationRun(evalRunUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteModelEvaluationRun(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteModelEvaluationRun), evalRunUUID)
 }
@@ -339,7 +339,7 @@ func (m *MockAgentPlatformService) DeleteOpenAIAPIKey(openaiApiKeyId string) (*d
 }
 
 // DeleteOpenAIAPIKey indicates an expected call of DeleteOpenAIAPIKey.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteOpenAIAPIKey(openaiApiKeyId interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteOpenAIAPIKey(openaiApiKeyId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOpenAIAPIKey", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteOpenAIAPIKey), openaiApiKeyId)
 }
@@ -353,7 +353,7 @@ func (m *MockAgentPlatformService) DeleteScenarioSet(scenarioSetUUID string) err
 }
 
 // DeleteScenarioSet indicates an expected call of DeleteScenarioSet.
-func (mr *MockAgentPlatformServiceMockRecorder) DeleteScenarioSet(scenarioSetUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DeleteScenarioSet(scenarioSetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteScenarioSet", reflect.TypeOf((*MockAgentPlatformService)(nil).DeleteScenarioSet), scenarioSetUUID)
 }
@@ -368,7 +368,7 @@ func (m *MockAgentPlatformService) DetachKnowledgeBaseToAgent(agentId, knowledge
 }
 
 // DetachKnowledgeBaseToAgent indicates an expected call of DetachKnowledgeBaseToAgent.
-func (mr *MockAgentPlatformServiceMockRecorder) DetachKnowledgeBaseToAgent(agentId, knowledgeBaseID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) DetachKnowledgeBaseToAgent(agentId, knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachKnowledgeBaseToAgent", reflect.TypeOf((*MockAgentPlatformService)(nil).DetachKnowledgeBaseToAgent), agentId, knowledgeBaseID)
 }
@@ -383,7 +383,7 @@ func (m *MockAgentPlatformService) GenerateScenarioSet(req *godo.GenerateScenari
 }
 
 // GenerateScenarioSet indicates an expected call of GenerateScenarioSet.
-func (mr *MockAgentPlatformServiceMockRecorder) GenerateScenarioSet(req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GenerateScenarioSet(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateScenarioSet", reflect.TypeOf((*MockAgentPlatformService)(nil).GenerateScenarioSet), req)
 }
@@ -398,7 +398,7 @@ func (m *MockAgentPlatformService) GetIndexingJob(indexingJobID string) (*do.Ind
 }
 
 // GetIndexingJob indicates an expected call of GetIndexingJob.
-func (mr *MockAgentPlatformServiceMockRecorder) GetIndexingJob(indexingJobID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetIndexingJob(indexingJobID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndexingJob", reflect.TypeOf((*MockAgentPlatformService)(nil).GetIndexingJob), indexingJobID)
 }
@@ -413,7 +413,7 @@ func (m *MockAgentPlatformService) GetKnowledgeBase(knowledgeBaseID string) (*do
 }
 
 // GetKnowledgeBase indicates an expected call of GetKnowledgeBase.
-func (mr *MockAgentPlatformServiceMockRecorder) GetKnowledgeBase(knowledgeBaseID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetKnowledgeBase(knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKnowledgeBase", reflect.TypeOf((*MockAgentPlatformService)(nil).GetKnowledgeBase), knowledgeBaseID)
 }
@@ -428,7 +428,7 @@ func (m *MockAgentPlatformService) GetModelEvaluationPreset(evalPresetUUID strin
 }
 
 // GetModelEvaluationPreset indicates an expected call of GetModelEvaluationPreset.
-func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationPreset(evalPresetUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationPreset(evalPresetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationPreset", reflect.TypeOf((*MockAgentPlatformService)(nil).GetModelEvaluationPreset), evalPresetUUID)
 }
@@ -443,7 +443,7 @@ func (m *MockAgentPlatformService) GetModelEvaluationRun(evalRunUUID string) (*d
 }
 
 // GetModelEvaluationRun indicates an expected call of GetModelEvaluationRun.
-func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationRun(evalRunUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationRun(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).GetModelEvaluationRun), evalRunUUID)
 }
@@ -458,7 +458,7 @@ func (m *MockAgentPlatformService) GetModelEvaluationRunResultsDownloadURL(evalR
 }
 
 // GetModelEvaluationRunResultsDownloadURL indicates an expected call of GetModelEvaluationRunResultsDownloadURL.
-func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationRunResultsDownloadURL(evalRunUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetModelEvaluationRunResultsDownloadURL(evalRunUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelEvaluationRunResultsDownloadURL", reflect.TypeOf((*MockAgentPlatformService)(nil).GetModelEvaluationRunResultsDownloadURL), evalRunUUID)
 }
@@ -473,7 +473,7 @@ func (m *MockAgentPlatformService) GetOpenAIAPIKey(openaiApiKeyId string) (*do.O
 }
 
 // GetOpenAIAPIKey indicates an expected call of GetOpenAIAPIKey.
-func (mr *MockAgentPlatformServiceMockRecorder) GetOpenAIAPIKey(openaiApiKeyId interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetOpenAIAPIKey(openaiApiKeyId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenAIAPIKey", reflect.TypeOf((*MockAgentPlatformService)(nil).GetOpenAIAPIKey), openaiApiKeyId)
 }
@@ -488,7 +488,7 @@ func (m *MockAgentPlatformService) GetScenarioSet(scenarioSetUUID string) (*do.S
 }
 
 // GetScenarioSet indicates an expected call of GetScenarioSet.
-func (mr *MockAgentPlatformServiceMockRecorder) GetScenarioSet(scenarioSetUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetScenarioSet(scenarioSetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScenarioSet", reflect.TypeOf((*MockAgentPlatformService)(nil).GetScenarioSet), scenarioSetUUID)
 }
@@ -503,7 +503,7 @@ func (m *MockAgentPlatformService) GetScenarioSetDownloadURL(scenarioSetUUID str
 }
 
 // GetScenarioSetDownloadURL indicates an expected call of GetScenarioSetDownloadURL.
-func (mr *MockAgentPlatformServiceMockRecorder) GetScenarioSetDownloadURL(scenarioSetUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetScenarioSetDownloadURL(scenarioSetUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScenarioSetDownloadURL", reflect.TypeOf((*MockAgentPlatformService)(nil).GetScenarioSetDownloadURL), scenarioSetUUID)
 }
@@ -518,7 +518,7 @@ func (m *MockAgentPlatformService) GetSimulationEpisode(runUUID, episodeUUID str
 }
 
 // GetSimulationEpisode indicates an expected call of GetSimulationEpisode.
-func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisode(runUUID, episodeUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisode(runUUID, episodeUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationEpisode", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationEpisode), runUUID, episodeUUID)
 }
@@ -533,7 +533,7 @@ func (m *MockAgentPlatformService) GetSimulationEpisodeTrajectory(runUUID, episo
 }
 
 // GetSimulationEpisodeTrajectory indicates an expected call of GetSimulationEpisodeTrajectory.
-func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisodeTrajectory(runUUID, episodeUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisodeTrajectory(runUUID, episodeUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationEpisodeTrajectory", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationEpisodeTrajectory), runUUID, episodeUUID)
 }
@@ -548,7 +548,7 @@ func (m *MockAgentPlatformService) GetSimulationEpisodeTrajectoryURL(runUUID, ep
 }
 
 // GetSimulationEpisodeTrajectoryURL indicates an expected call of GetSimulationEpisodeTrajectoryURL.
-func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisodeTrajectoryURL(runUUID, episodeUUID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) GetSimulationEpisodeTrajectoryURL(runUUID, episodeUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSimulationEpisodeTrajectoryURL", reflect.TypeOf((*MockAgentPlatformService)(nil).GetSimulationEpisodeTrajectoryURL), runUUID, episodeUUID)
 }
@@ -563,7 +563,7 @@ func (m *MockAgentPlatformService) ListAgentsByOpenAIAPIKey(openaiApiKeyId strin
 }
 
 // ListAgentsByOpenAIAPIKey indicates an expected call of ListAgentsByOpenAIAPIKey.
-func (mr *MockAgentPlatformServiceMockRecorder) ListAgentsByOpenAIAPIKey(openaiApiKeyId interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListAgentsByOpenAIAPIKey(openaiApiKeyId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAgentsByOpenAIAPIKey", reflect.TypeOf((*MockAgentPlatformService)(nil).ListAgentsByOpenAIAPIKey), openaiApiKeyId)
 }
@@ -593,7 +593,7 @@ func (m *MockAgentPlatformService) ListDatacenterRegions(servesInference, serves
 }
 
 // ListDatacenterRegions indicates an expected call of ListDatacenterRegions.
-func (mr *MockAgentPlatformServiceMockRecorder) ListDatacenterRegions(servesInference, servesBatch interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListDatacenterRegions(servesInference, servesBatch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatacenterRegions", reflect.TypeOf((*MockAgentPlatformService)(nil).ListDatacenterRegions), servesInference, servesBatch)
 }
@@ -608,7 +608,7 @@ func (m *MockAgentPlatformService) ListEvaluationDatasets(opt *godo.EvaluationDa
 }
 
 // ListEvaluationDatasets indicates an expected call of ListEvaluationDatasets.
-func (mr *MockAgentPlatformServiceMockRecorder) ListEvaluationDatasets(opt interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListEvaluationDatasets(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationDatasets", reflect.TypeOf((*MockAgentPlatformService)(nil).ListEvaluationDatasets), opt)
 }
@@ -623,7 +623,7 @@ func (m *MockAgentPlatformService) ListIndexingJobDataSources(indexingJobID stri
 }
 
 // ListIndexingJobDataSources indicates an expected call of ListIndexingJobDataSources.
-func (mr *MockAgentPlatformServiceMockRecorder) ListIndexingJobDataSources(indexingJobID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListIndexingJobDataSources(indexingJobID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexingJobDataSources", reflect.TypeOf((*MockAgentPlatformService)(nil).ListIndexingJobDataSources), indexingJobID)
 }
@@ -653,7 +653,7 @@ func (m *MockAgentPlatformService) ListKnowledgeBaseDataSources(knowledgeBaseID 
 }
 
 // ListKnowledgeBaseDataSources indicates an expected call of ListKnowledgeBaseDataSources.
-func (mr *MockAgentPlatformServiceMockRecorder) ListKnowledgeBaseDataSources(knowledgeBaseID interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListKnowledgeBaseDataSources(knowledgeBaseID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKnowledgeBaseDataSources", reflect.TypeOf((*MockAgentPlatformService)(nil).ListKnowledgeBaseDataSources), knowledgeBaseID)
 }
@@ -713,7 +713,7 @@ func (m *MockAgentPlatformService) ListModelEvaluationRuns(opt *godo.ModelEvalua
 }
 
 // ListModelEvaluationRuns indicates an expected call of ListModelEvaluationRuns.
-func (mr *MockAgentPlatformServiceMockRecorder) ListModelEvaluationRuns(opt interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListModelEvaluationRuns(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationRuns", reflect.TypeOf((*MockAgentPlatformService)(nil).ListModelEvaluationRuns), opt)
 }
@@ -743,7 +743,7 @@ func (m *MockAgentPlatformService) ListScenarioLibrary(opt *godo.ScenarioLibrary
 }
 
 // ListScenarioLibrary indicates an expected call of ListScenarioLibrary.
-func (mr *MockAgentPlatformServiceMockRecorder) ListScenarioLibrary(opt interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListScenarioLibrary(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListScenarioLibrary", reflect.TypeOf((*MockAgentPlatformService)(nil).ListScenarioLibrary), opt)
 }
@@ -758,7 +758,7 @@ func (m *MockAgentPlatformService) ListScenarioLibraryScenarios(libraryScenarioU
 }
 
 // ListScenarioLibraryScenarios indicates an expected call of ListScenarioLibraryScenarios.
-func (mr *MockAgentPlatformServiceMockRecorder) ListScenarioLibraryScenarios(libraryScenarioUUID, opt interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListScenarioLibraryScenarios(libraryScenarioUUID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListScenarioLibraryScenarios", reflect.TypeOf((*MockAgentPlatformService)(nil).ListScenarioLibraryScenarios), libraryScenarioUUID, opt)
 }
@@ -773,7 +773,7 @@ func (m *MockAgentPlatformService) ListScenarioSets(opt *godo.ScenarioSetListOpt
 }
 
 // ListScenarioSets indicates an expected call of ListScenarioSets.
-func (mr *MockAgentPlatformServiceMockRecorder) ListScenarioSets(opt interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListScenarioSets(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListScenarioSets", reflect.TypeOf((*MockAgentPlatformService)(nil).ListScenarioSets), opt)
 }
@@ -788,7 +788,7 @@ func (m *MockAgentPlatformService) ListScenarios(scenarioSetUUID string, opt *go
 }
 
 // ListScenarios indicates an expected call of ListScenarios.
-func (mr *MockAgentPlatformServiceMockRecorder) ListScenarios(scenarioSetUUID, opt interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListScenarios(scenarioSetUUID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListScenarios", reflect.TypeOf((*MockAgentPlatformService)(nil).ListScenarios), scenarioSetUUID, opt)
 }
@@ -803,7 +803,7 @@ func (m *MockAgentPlatformService) ListSimulationEpisodes(runUUID string, opt *g
 }
 
 // ListSimulationEpisodes indicates an expected call of ListSimulationEpisodes.
-func (mr *MockAgentPlatformServiceMockRecorder) ListSimulationEpisodes(runUUID, opt interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListSimulationEpisodes(runUUID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSimulationEpisodes", reflect.TypeOf((*MockAgentPlatformService)(nil).ListSimulationEpisodes), runUUID, opt)
 }
@@ -818,7 +818,7 @@ func (m *MockAgentPlatformService) UpdateCustomEvaluationMetric(metricUUID strin
 }
 
 // UpdateCustomEvaluationMetric indicates an expected call of UpdateCustomEvaluationMetric.
-func (mr *MockAgentPlatformServiceMockRecorder) UpdateCustomEvaluationMetric(metricUUID, req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) UpdateCustomEvaluationMetric(metricUUID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomEvaluationMetric", reflect.TypeOf((*MockAgentPlatformService)(nil).UpdateCustomEvaluationMetric), metricUUID, req)
 }
@@ -833,7 +833,7 @@ func (m *MockAgentPlatformService) UpdateKnowledgeBase(knowledgeBaseID string, r
 }
 
 // UpdateKnowledgeBase indicates an expected call of UpdateKnowledgeBase.
-func (mr *MockAgentPlatformServiceMockRecorder) UpdateKnowledgeBase(knowledgeBaseID, req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) UpdateKnowledgeBase(knowledgeBaseID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateKnowledgeBase", reflect.TypeOf((*MockAgentPlatformService)(nil).UpdateKnowledgeBase), knowledgeBaseID, req)
 }
@@ -848,7 +848,7 @@ func (m *MockAgentPlatformService) UpdateModelEvaluationRun(evalRunUUID string, 
 }
 
 // UpdateModelEvaluationRun indicates an expected call of UpdateModelEvaluationRun.
-func (mr *MockAgentPlatformServiceMockRecorder) UpdateModelEvaluationRun(evalRunUUID, req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) UpdateModelEvaluationRun(evalRunUUID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateModelEvaluationRun", reflect.TypeOf((*MockAgentPlatformService)(nil).UpdateModelEvaluationRun), evalRunUUID, req)
 }
@@ -863,7 +863,7 @@ func (m *MockAgentPlatformService) UpdateOpenAIAPIKey(openaiApiKeyId string, ope
 }
 
 // UpdateOpenAIAPIKey indicates an expected call of UpdateOpenAIAPIKey.
-func (mr *MockAgentPlatformServiceMockRecorder) UpdateOpenAIAPIKey(openaiApiKeyId, openaiAPIKeyUpdate interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) UpdateOpenAIAPIKey(openaiApiKeyId, openaiAPIKeyUpdate any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOpenAIAPIKey", reflect.TypeOf((*MockAgentPlatformService)(nil).UpdateOpenAIAPIKey), openaiApiKeyId, openaiAPIKeyUpdate)
 }
@@ -878,7 +878,7 @@ func (m *MockAgentPlatformService) UpdateScenarioSet(scenarioSetUUID string, req
 }
 
 // UpdateScenarioSet indicates an expected call of UpdateScenarioSet.
-func (mr *MockAgentPlatformServiceMockRecorder) UpdateScenarioSet(scenarioSetUUID, req interface{}) *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) UpdateScenarioSet(scenarioSetUUID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateScenarioSet", reflect.TypeOf((*MockAgentPlatformService)(nil).UpdateScenarioSet), scenarioSetUUID, req)
 }
