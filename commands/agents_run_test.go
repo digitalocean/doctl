@@ -181,7 +181,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 		assert.NotContains(t, doc, "keep_warm")
 	})
 
-	t.Run("openhands pins its template, opts out of keep_warm, needs no key", func(t *testing.T) {
+	t.Run("openhands pins its template, opts out of keep_warm, needs no key, runs on a DO model", func(t *testing.T) {
 		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "openhands", permission: "ask"})
 		require.NoError(t, err)
 
@@ -190,11 +190,49 @@ func TestBuildHarnessManifest(t *testing.T) {
 		assert.Equal(t, "openhands", doc["agent"])
 		assert.Equal(t, "openhands", doc["template"])
 		assert.Equal(t, false, doc["keep_warm"])
-		assert.NotContains(t, doc, "secrets")
-		assert.NotContains(t, doc, "env")
+		assert.NotContains(t, doc, "secrets", "the key is minted by harness-api, not asked of the user")
+		// The adapter's own fallback model is not a DO catalogue id, so the
+		// manifest has to name one.
+		env, ok := doc["env"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, defaultOpenHandsModel, env[harnessInferenceModelEnv])
 		perms, ok := doc["permissions"].(map[any]any)
 		require.True(t, ok)
 		assert.Equal(t, "ask", perms["default"])
+	})
+
+	t.Run("--model overrides the openhands default", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "openhands", model: " anthropic-claude-4.5-sonnet "})
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		env := doc["env"].(map[any]any)
+		assert.Equal(t, "anthropic-claude-4.5-sonnet", env[harnessInferenceModelEnv])
+	})
+
+	t.Run("--model is written for any harness, and only when given", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode", model: "openai-gpt-5.5"})
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		env := doc["env"].(map[any]any)
+		assert.Equal(t, "openai-gpt-5.5", env[harnessInferenceModelEnv])
+
+		raw, err = buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
+		require.NoError(t, err)
+		doc = nil
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.NotContains(t, doc, "env")
+
+		// codex-agentapi already carries env; the model joins it rather than
+		// replacing it.
+		raw, err = buildHarnessManifest(harnessManifestOpts{harness: "codex-agentapi", model: "openai-gpt-5.5"})
+		require.NoError(t, err)
+		doc = nil
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		env = doc["env"].(map[any]any)
+		assert.Equal(t, "openai-gpt-5.5", env[harnessInferenceModelEnv])
+		assert.Equal(t, "${ENV_ID}", env["CODEX_ENVIRONMENT_ID"])
 	})
 
 	t.Run("openhands keeps a user-named template", func(t *testing.T) {
@@ -379,6 +417,106 @@ func TestWaitForSessionReady_BitsReadyWhileProvisioning(t *testing.T) {
 		assert.Contains(t, got, "Environment ready · waiting for agent")
 		assert.Contains(t, got, "Agent is ready")
 		assert.NotContains(t, got, "openai_environment_id=")
+	})
+}
+
+// An openhands create goes out with the managed-key opt-in and a DO model in
+// the manifest: without the first the agent-server has no inference key, and
+// without the second it asks the DO gateway for a model it does not serve.
+func TestRunAgentsCreate_OpenHandsAsksForAManagedKeyAndADOModel(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "agent: openhands")
+				assert.Contains(t, string(manifest), "template: openhands")
+				assert.Contains(t, string(manifest), "keep_warm: false")
+				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultOpenHandsModel)
+				assert.NotContains(t, string(manifest), "HARNESS_INFERENCE_API_KEY")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_oh_1",
+						Name:      "oh",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_oh_1").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_oh_1",
+					Name:      "oh",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "openhands")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "oh")
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.Contains(t, buf.String(), "Session created")
+	})
+}
+
+// A --spec manifest that says `agent: openhands` gets the same key: the
+// decision is read off the manifest, not the --harness flag.
+func TestRunAgentsCreate_OpenHandsSpecAlsoAsksForAManagedKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		spec := filepath.Join(dir, "agents.yaml")
+		require.NoError(t, os.WriteFile(spec, []byte("name: oh\nagent: openhands\ntemplate: openhands\nkeep_warm: false\nenv:\n  HARNESS_INFERENCE_MODEL: openai-gpt-5.5\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_oh_2",
+					Name:      "oh",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_oh_2").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_oh_2",
+					Name:      "oh",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil).AnyTimes()
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, spec)
+
+		require.NoError(t, RunAgentsCreate(config))
+	})
+}
+
+// --model is a field of the manifest --harness writes; with any other source
+// it has nowhere to go and must say so rather than be dropped.
+func TestRunAgentsCreate_ModelRequiresHarness(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		spec := filepath.Join(dir, "agents.yaml")
+		require.NoError(t, os.WriteFile(spec, []byte("name: x\nagent: opencode\n"), 0o600))
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, spec)
+		config.Doit.Set(config.NS, doctl.ArgInferenceModel, "openai-gpt-5.5")
+
+		err := RunAgentsCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--model applies to the manifest --harness generates")
 	})
 }
 

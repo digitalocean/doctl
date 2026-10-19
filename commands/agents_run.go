@@ -425,6 +425,7 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentWaitTimeout,
 		doctl.ArgAgentTemplate,
 		doctl.ArgAgentPermission,
+		doctl.ArgInferenceModel,
 	} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session; did you mean `%s create --%s`?", flag, agentCLI, flag)
@@ -493,7 +494,24 @@ type harnessManifestOpts struct {
 	name       string
 	permission string
 	template   string
+	// model is the DigitalOcean Inference model id written as the manifest's
+	// env HARNESS_INFERENCE_MODEL. Empty leaves the key out, except for
+	// openhands, which gets defaultOpenHandsModel.
+	model string
 }
+
+// defaultOpenHandsModel is the DigitalOcean Inference model an openhands
+// session runs on when --model is not given. It has to be a DO catalogue id:
+// the adapter's own fallback is the agent-server's `gpt-5.5`, which the DO
+// gateway does not serve, so a session created without a model answered its
+// first turn with "model not found" (seen on the first preview smoke). The
+// other harnesses read the user's own vendor key and need no default here.
+const defaultOpenHandsModel = "openai-gpt-5.5"
+
+// harnessInferenceModelEnv is the guest env var the harness inference driver
+// reads the model id from; one of the two HARNESS_INFERENCE_* keys harness-api
+// still lets a manifest set.
+const harnessInferenceModelEnv = "HARNESS_INFERENCE_MODEL"
 
 func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 	agent, err := resolveHarnessAgent(o.harness)
@@ -559,16 +577,32 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
 	case agent == openHandsAgentName:
-		// No key slot: OHR hands the agent-server the harness's resolved
-		// inference credentials (DigitalOcean Inference by default) when it
-		// creates the conversation, so there is nothing for the user to
-		// supply here. Pin the template the agent lives in unless the user
-		// named one, and opt out of keep_warm (see harnessManifest.KeepWarm).
+		// No key slot: OpenHands runs on DigitalOcean Inference. The create
+		// asks harness-api to mint the session's key
+		// (startSessionFromRawManifest sends ?manage_model_access_key=true for
+		// this agent), OHR hands it to the agent-server with the conversation,
+		// and a user who wants their own key passes --secret
+		// HARNESS_INFERENCE_API_KEY=..., which the server keeps instead of
+		// minting. What the manifest does need is the model, since the
+		// adapter's fallback is not a DO catalogue id (see
+		// defaultOpenHandsModel). Pin the template the agent lives in unless
+		// the user named one, and opt out of keep_warm (see
+		// harnessManifest.KeepWarm).
 		if doc.Template == "" {
 			doc.Template = openHandsAgentName
 		}
 		keepWarm := false
 		doc.KeepWarm = &keepWarm
+		if strings.TrimSpace(o.model) == "" {
+			o.model = defaultOpenHandsModel
+		}
+	}
+
+	if model := strings.TrimSpace(o.model); model != "" {
+		if doc.Env == nil {
+			doc.Env = map[string]string{}
+		}
+		doc.Env[harnessInferenceModelEnv] = model
 	}
 
 	out, err := yaml.Marshal(doc)
@@ -710,7 +744,18 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	if prog != nil {
 		prog.wait("Creating hosted session…")
 	}
-	sess, err := c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
+	var sess *do.HostedAgentSession
+	if manifestAgentIs(manifest, openHandsAgentName) {
+		// OpenHands runs on DigitalOcean Inference and has no vendor key of
+		// its own to ask for, so the session's key is minted by harness-api.
+		// Decided off the manifest, not the --harness flag, so a --spec file
+		// that says `agent: openhands` gets the same key. A manifest that
+		// supplies HARNESS_INFERENCE_API_KEY itself keeps it: the server
+		// skips the mint for a bring-your-own key.
+		sess, err = c.HostedAgents().CreateSessionFromManifestWithManagedKey(manifest, createOpt)
+	} else {
+		sess, err = c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
+	}
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)

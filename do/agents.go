@@ -14,6 +14,7 @@ limitations under the License.
 package do
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -38,6 +39,15 @@ type HostedAgentsService interface {
 	// OpenAISessionID in opt so harness-api persists openai_session_id
 	// (?openai_session_id=). opt may be nil.
 	CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
+	// CreateSessionFromManifestWithManagedKey is CreateSessionFromManifest
+	// with ?manage_model_access_key=true: harness-api mints a DigitalOcean
+	// Inference key for the new session and delivers it to the guest as
+	// HARNESS_INFERENCE_API_KEY. A manifest that already supplies that secret
+	// keeps its own key; the server skips the mint. Only the agents.yaml form
+	// takes the parameter, which is why it is not on CreateSessionFromConfig.
+	// godo (through v1.229.0) has no field for it, so the request is built
+	// here; fold it into opt once it does.
+	CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
 	// UpdateSession patches session-scoped settings (never the agent manifest
@@ -134,6 +144,51 @@ func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte, opt *go
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+// manageModelAccessKeyParam is harness-api's opt-in to mint the session's
+// DigitalOcean Inference key. See CreateSessionFromManifestWithManagedKey.
+const manageModelAccessKeyParam = "manage_model_access_key"
+
+func (s *hostedAgentsService) CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error) {
+	if len(bytes.TrimSpace(manifest)) == 0 {
+		return nil, errors.New("hosted agents: manifest is required")
+	}
+	// The same query godo would have sent for opt, plus the one parameter it
+	// has no field for.
+	q := url.Values{}
+	if opt != nil {
+		if opt.OpenAISessionID != "" {
+			q.Set("openai_session_id", opt.OpenAISessionID)
+		}
+		if opt.ResumeOnTopoff {
+			q.Set("resume_on_topoff", "true")
+		}
+	}
+	q.Set(manageModelAccessKeyParam, "true")
+	u, err := s.client.BaseURL.Parse("v2/agents/sessions?" + q.Encode())
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, u.String(), bytes.NewReader(manifest))
+	if err != nil {
+		return nil, err
+	}
+	// What godo's own manifest create sends: the YAML media type the server
+	// keys the agents.yaml form on, and JSON back.
+	req.Header.Set("Content-Type", "application/x-yaml")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", s.client.UserAgent)
+	var root struct {
+		Session *godo.HostedAgentSession `json:"session"`
+	}
+	if _, err := s.client.Do(context.TODO(), req, &root); err != nil {
+		return nil, err
+	}
+	if root.Session == nil {
+		return nil, errors.New("hosted agents: create session returned no session")
+	}
+	return &HostedAgentSession{HostedAgentSession: root.Session}, nil
 }
 
 func (s *hostedAgentsService) ListSessions(opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error) {
