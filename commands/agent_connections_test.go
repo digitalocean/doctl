@@ -15,6 +15,8 @@ package commands
 
 import (
 	"net/http"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +48,36 @@ func TestAgentConnectionsProviderFlagRegistered(t *testing.T) {
 			assert.Equalf(t, "github", f.DefValue, "%q --%s default", name, doctl.ArgAgentConnProvider)
 		}
 	}
+}
+
+// The API accepts --status revoked, but tenant list reads always omit revoked
+// connections, even when that is the filter (AR-2546; see the status field of
+// ListConnectionsRequest in tool-registry.proto). So revoked must not be
+// advertised as a filter value, and the help must say why it is missing:
+// otherwise the empty result reads as "no revoked connections" (MARSOHS-2175).
+func TestAgentConnectionsListStatusFlagUsage(t *testing.T) {
+	var list *cobra.Command
+	for _, c := range AgentConnections().Commands() {
+		if c.Name() == "list" {
+			list = c
+			break
+		}
+	}
+	if !assert.NotNil(t, list, "list subcommand not found") {
+		return
+	}
+	f := list.Flags().Lookup(doctl.ArgAgentStatus)
+	if !assert.NotNilf(t, f, "list is missing the --%s flag", doctl.ArgAgentStatus) {
+		return
+	}
+
+	m := regexp.MustCompile(`\(([a-z|]+)\)`).FindStringSubmatch(f.Usage)
+	if assert.Lenf(t, m, 2, "--%s usage should list its values as (a|b|c): %q", doctl.ArgAgentStatus, f.Usage) {
+		assert.ElementsMatch(t, []string{"active", "pending", "expired"}, strings.Split(m[1], "|"),
+			"advertised --%s values", doctl.ArgAgentStatus)
+	}
+	assert.Containsf(t, strings.ToLower(f.Usage), "revoked",
+		"--%s usage should explain that revoked connections are never listed", doctl.ArgAgentStatus)
 }
 
 func TestRunAgentsConnectionsList(t *testing.T) {

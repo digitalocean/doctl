@@ -64,12 +64,12 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 
 	cmdList := CmdBuilder(cmd, RunAgentsConnectionsList, "list",
 		"List external-provider connections",
-		`List the team's external-provider connections. Filter by `+"`--actor`"+` or `+"`--status`"+`.`,
+		`List the team's external-provider connections. Filter by `+"`--actor`"+` or `+"`--status`"+`. Revoked connections are never listed.`,
 		Writer, append(ns, aliasOpt("ls"),
 			displayerType(&displayers.HostedAgentConnection{}))...)
 	AddStringFlag(cmdList, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	AddStringFlag(cmdList, doctl.ArgAgentConnActor, "", "", "Filter to a single actor id")
-	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by connection status (active|pending|expired)")
+	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by connection status (active|pending|expired); revoked connections are never listed")
 	AddIntFlag(cmdList, doctl.ArgAgentConnPage, "", 0, "Page number (1-based)")
 	AddIntFlag(cmdList, doctl.ArgAgentConnPerPage, "", 0, "Connections per page (server defaults to 20, max 100)")
 	cmdList.Example = agentCLI + ` connections list --provider github; ` + agentCLI + ` connections list --actor alice`
