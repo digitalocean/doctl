@@ -71,6 +71,72 @@ func TestResumeOnTopoffWireNames(t *testing.T) {
 	})
 }
 
+// TestInsightsOptInWireNames pins the query-parameter spellings the server
+// parses for the per-signal Insights opt-in. Each field is a pointer so an
+// unset signal stays off the wire (server default) instead of arriving as an
+// explicit false.
+func TestInsightsOptInWireNames(t *testing.T) {
+	for _, tc := range []struct {
+		field string
+		param string
+	}{
+		{"InsightsMetrics", "insights_metrics,omitempty"},
+		{"InsightsLogs", "insights_logs,omitempty"},
+		{"InsightsTraces", "insights_traces,omitempty"},
+	} {
+		f, ok := reflect.TypeOf(godo.HostedAgentManifestCreateOptions{}).FieldByName(tc.field)
+		require.True(t, ok, tc.field)
+		assert.Equal(t, tc.param, f.Tag.Get("url"))
+		assert.Equal(t, reflect.Ptr, f.Type.Kind(),
+			"each signal must be a pointer to distinguish unset from an explicit false")
+	}
+}
+
+// A set signal reaches the manifest create path as a query parameter; an unset
+// one is left out so the server applies its default.
+func TestRunAgentsCreate_InsightsOptIn(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "agent.yaml")
+	require.NoError(t, os.WriteFile(specPath, []byte(sampleManifest), 0o644))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		logsOn, metricsOff := true, false
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(
+				[]byte(sampleManifest),
+				&godo.HostedAgentManifestCreateOptions{
+					InsightsMetrics: &metricsOff,
+					InsightsLogs:    &logsOn,
+				},
+			).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_insights",
+					AgentKind: godo.HostedAgentKindOpenCode,
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_insights").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_insights",
+					AgentKind: godo.HostedAgentKindOpenCode,
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentInsightsLogs, true)
+		config.Doit.Set(config.NS, doctl.ArgAgentInsightsMetrics, false)
+		require.NoError(t, RunAgentsCreate(config))
+	})
+}
+
 func TestRunAgentsCreate_ResumeOnTopoff(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")

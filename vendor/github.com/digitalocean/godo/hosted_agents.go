@@ -640,6 +640,18 @@ type HostedAgentManifestCreateOptions struct {
 	// immutable and shared through Agent Configs, while spending consent has to
 	// stay per-session. Omitted when false (the server default).
 	ResumeOnTopoff bool `url:"resume_on_topoff,omitempty"`
+	// InsightsMetrics, InsightsLogs and InsightsTraces carry the per-signal
+	// DigitalOcean Insights opt-in choice. They are query parameters rather than
+	// agents.yaml fields because the choice is an instruction to the platform,
+	// not agent configuration. Each is tri-state: a nil pointer leaves the
+	// signal unset, so the server applies its default (metrics on, logs and
+	// traces off); a non-nil pointer sends an explicit true/false. The YAML
+	// create form is the only one that accepts these; sending them with the
+	// config_id (JSON) form is rejected, since that session inherits the
+	// referenced Environment's stored choice.
+	InsightsMetrics *bool `url:"insights_metrics,omitempty"`
+	InsightsLogs    *bool `url:"insights_logs,omitempty"`
+	InsightsTraces  *bool `url:"insights_traces,omitempty"`
 }
 
 // HostedAgentSessionListOptions specifies optional list filters.
