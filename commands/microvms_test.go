@@ -65,8 +65,14 @@ func TestMicroVMCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.False(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
-		"checkpoint", "console", "create", "delete", "exec", "get", "list", "options", "pause", "resume",
+		"checkpoint", "console", "create", "delete", "exec", "get", "list", "options", "pause", "resume", "url",
 	)
+}
+
+func TestMicroVMURLCommand(t *testing.T) {
+	cmd := microVMURLs()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "add", "list", "remove")
 }
 
 func TestMicroVMCheckpointCommand(t *testing.T) {
@@ -248,6 +254,90 @@ func TestMicroVMCreate_disablesAutoPauseAndResume(t *testing.T) {
 
 		err := RunMicroVMCreate(config)
 		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMCreate_noIngress(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		ingress := false
+		expected := &godo.MicroVMCreateRequest{
+			Name:    "sammy-microvm",
+			Region:  "nyc1",
+			Size:    &godo.MicroVMSizeRequest{CPU: 2, Memory: 4096},
+			Source:  &godo.MicroVMSource{OCIRef: "docker.io/library/nginx:1.27"},
+			Ingress: &ingress,
+		}
+		tm.microVMs.EXPECT().Create(expected).Return(&testMicroVM, nil)
+
+		config.Args = append(config.Args, "sammy-microvm")
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, "cpu", 2)
+		config.Doit.Set(config.NS, "memory", 4096)
+		config.Doit.Set(config.NS, "oci-ref", "docker.io/library/nginx:1.27")
+		config.Doit.Set(config.NS, "ingress", false)
+
+		err := RunMicroVMCreate(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMURLList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().Get(testMicroVMID).Return(&testMicroVM, nil)
+		config.Args = append(config.Args, testMicroVMID)
+		err := RunMicroVMURLList(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMURLAdd(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().AddURL(testMicroVMID, &godo.MicroVMURLCreateRequest{Port: 9090}).Return(
+			&godo.MicroVMURL{ID: "url-1", Hostname: "added.example.com", Port: 9090, Status: godo.MicroVMURLStatusPending}, nil,
+		)
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "port", 9090)
+		err := RunMicroVMURLAdd(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMURLAdd_defaultPort(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().AddURL(testMicroVMID, &godo.MicroVMURLCreateRequest{}).Return(
+			&godo.MicroVMURL{ID: "url-2", Status: godo.MicroVMURLStatusActive}, nil,
+		)
+		config.Args = append(config.Args, testMicroVMID)
+		err := RunMicroVMURLAdd(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMURLAdd_badPort(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "port", 70000)
+		err := RunMicroVMURLAdd(config)
+		require.Error(t, err)
+	})
+}
+
+func TestMicroVMURLRemove(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().RemoveURL(testMicroVMID, "url-1").Return(nil)
+		config.Args = append(config.Args, testMicroVMID, "url-1")
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		err := RunMicroVMURLRemove(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMURLRemove_missingArg(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		err := RunMicroVMURLRemove(config)
+		require.Error(t, err)
 	})
 }
 
