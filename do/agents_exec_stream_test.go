@@ -151,3 +151,28 @@ func TestStreamExecInSandbox_SSE(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "live\n", stdout.String())
 }
+
+// Pre-header failures (504 timeout, 429 capacity) must surface as typed API
+// errors rather than being misread as a buffered JSON body.
+func TestStreamExecInSandbox_Non2xx(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.Header.Get("Accept"), "text/event-stream")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusGatewayTimeout)
+		_, _ = io.WriteString(w, `{"id":"req","message":"exec timed out after 3s (requested)"}`)
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := godo.New(server.Client(), godo.SetBaseURL(server.URL+"/"))
+	require.NoError(t, err)
+	svc := NewHostedAgentsService(client).(*hostedAgentsService)
+
+	err = svc.StreamExecInSandbox(context.Background(), "sess-1", &godo.HostedAgentSandboxExecRequest{
+		Argv: []string{"sleep", "120"},
+	}, func(SandboxExecEvent) error { return nil })
+	require.Error(t, err)
+	var er *godo.ErrorResponse
+	require.ErrorAs(t, err, &er)
+	assert.Equal(t, http.StatusGatewayTimeout, er.Response.StatusCode)
+	assert.Contains(t, er.Message, "exec timed out after 3s (requested)")
+}
