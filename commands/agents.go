@@ -491,6 +491,10 @@ func Agents() *Command {
 		},
 	}
 
+	// Persistent, so every subcommand accepts it either side of the subcommand
+	// name. See agents_region.go for what it selects.
+	addAgentRegionFlag(cmd)
+
 	// start/run are kept as aliases so scripts written against earlier betas
 	// (and the partner guide that still says start) keep working; create is
 	// the canonical verb.
@@ -1857,6 +1861,10 @@ func RunAgentsList(c *CmdConfig) error {
 	}
 
 	stylingEnabled = detectStyling()
+	// A list is single-region: it shows the rows held by the region it was
+	// addressed to, and never merges regions. Saying which one is the
+	// difference between "no sessions" and "no sessions here".
+	fmt.Fprintln(c.Out, colorize("Region: "+resolvedAgentRegion(), colMuted))
 	printSessionsList(c.Out, sessions)
 	if nextPageToken != "" {
 		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), nextPageToken)

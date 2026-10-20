@@ -120,7 +120,17 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 
 			accessToken := c.getContextAccessToken()
-			godoClient, err := c.Doit.GetGodoClient(Trace, true, accessToken)
+
+			// Regional routing: the harness-runtime group's --region selects an
+			// API host (agents_region.go). No other group registers the flag,
+			// so this is nil everywhere else, and GetGodoClient applies it
+			// before --api-url so an explicit host still wins.
+			regionOpts, err := agentRegionClientOpts()
+			if err != nil {
+				return err
+			}
+
+			godoClient, err := c.Doit.GetGodoClient(Trace, true, accessToken, regionOpts...)
 			if err != nil {
 				return fmt.Errorf("Unable to initialize DigitalOcean API client: %w", err)
 			}

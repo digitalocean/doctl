@@ -22,7 +22,6 @@ import (
 	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/godo"
 	"github.com/gorilla/websocket"
-	"github.com/spf13/viper"
 )
 
 // doctl agents port-forward — POC client for the port-forward WebSocket API
@@ -91,11 +90,14 @@ func parseForwardPair(arg string) (forwardPair, error) {
 }
 
 // hostedAgentsWSURL builds the WebSocket URL for one remote port, honoring the
-// --api-url / DIGITALOCEAN_API_URL override the HTTP client also uses.
+// --api-url / DIGITALOCEAN_API_URL override the HTTP client also uses, and the
+// same --region host selection. This URL is built here rather than by the godo
+// client, so without the region it would keep dialing the default region and
+// 404 on every session held elsewhere.
 func hostedAgentsWSURL(sessionID string, remotePort int) (string, error) {
-	raw := viper.GetString("api-url")
-	if raw == "" {
-		raw = defaultAPIURL
+	raw, err := agentRegionBaseURL()
+	if err != nil {
+		return "", err
 	}
 	u, err := url.Parse(raw)
 	if err != nil {
