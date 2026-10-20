@@ -619,7 +619,7 @@ func TestRunAgentsCreate_FromHarness(t *testing.T) {
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
-				assert.Equal(t, "claude-code", doc["agent"])
+				assert.Equal(t, "claude-code", doc["harness"])
 				_, hasEnv := doc["env"]
 				assert.False(t, hasEnv)
 				secrets, ok := doc["secrets"].(map[any]any)

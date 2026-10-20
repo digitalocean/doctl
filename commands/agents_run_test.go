@@ -93,7 +93,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, "opencode", doc["agent"])
+		assert.Equal(t, "opencode", doc["harness"])
 		assert.Equal(t, "demo", doc["name"])
 		repos, ok := doc["repos"].([]any)
 		require.True(t, ok)
@@ -118,7 +118,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, codexAgentName, doc["agent"])
+		assert.Equal(t, codexAgentName, doc["harness"])
 		secrets, ok := doc["secrets"].(map[any]any)
 		require.True(t, ok)
 		assert.Equal(t, "${OPENAI_API_KEY}", secrets["OPENAI_API_KEY"])
@@ -138,7 +138,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, openAIAgentsAdapter, doc["agent"])
+		assert.Equal(t, openAIAgentsAdapter, doc["harness"])
 		env, ok := doc["env"].(map[any]any)
 		require.True(t, ok)
 		assert.Equal(t, "${ENV_ID}", env["CODEX_ENVIRONMENT_ID"])
@@ -162,7 +162,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, "claude-code", doc["agent"])
+		assert.Equal(t, "claude-code", doc["harness"])
 		_, hasEnv := doc["env"]
 		assert.False(t, hasEnv)
 		secrets, ok := doc["secrets"].(map[any]any)
@@ -187,7 +187,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, "openhands", doc["agent"])
+		assert.Equal(t, "openhands", doc["harness"])
 		assert.Equal(t, "openhands", doc["template"])
 		assert.Equal(t, false, doc["keep_warm"])
 		assert.NotContains(t, doc, "secrets", "the key is minted by harness-api, not asked of the user")
@@ -428,7 +428,7 @@ func TestRunAgentsCreate_OpenHandsAsksForAManagedKeyAndADOModel(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.Contains(t, string(manifest), "agent: openhands")
+				assert.Contains(t, string(manifest), "harness: openhands")
 				assert.Contains(t, string(manifest), "template: openhands")
 				assert.Contains(t, string(manifest), "keep_warm: false")
 				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultOpenHandsModel)
@@ -525,7 +525,7 @@ func TestRunAgentsCreate_Harness(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.Contains(t, string(manifest), "agent: opencode")
+				assert.Contains(t, string(manifest), "harness: opencode")
 				assert.Contains(t, string(manifest), "repos:")
 				assert.Contains(t, string(manifest), "katanemo/plano")
 				assert.Contains(t, string(manifest), "name: demo")
@@ -1112,7 +1112,8 @@ func TestBuildHarnessManifestBareSandbox(t *testing.T) {
 
 	var doc map[string]any
 	require.NoError(t, yaml.Unmarshal(raw, &doc))
-	assert.Equal(t, "none", doc["agent"], "doctl generates the spelling the docs lead with")
+	assert.Equal(t, "none", doc["harness"], "doctl generates the spelling the docs lead with")
+	assert.NotContains(t, doc, "agent", "a generated manifest sets one key, never both")
 	assert.Equal(t, "eval-runner", doc["name"])
 	assert.NotContains(t, doc, "secrets")
 	assert.NotContains(t, doc, "config")
@@ -1356,7 +1357,7 @@ func TestResolveAgentCreationSource_BareSandboxWritesNoPermissions(t *testing.T)
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(src.manifest, &doc))
-		assert.Equal(t, bareSandboxAgent, doc["agent"])
+		assert.Equal(t, bareSandboxAgent, doc["harness"])
 		assert.NotContains(t, doc, "permissions",
 			"a manifest declaring no agent must not carry an agent's tool policy")
 	})
@@ -1511,7 +1512,7 @@ func TestResolveAgentCreationSource_TemplateAloneImpliesBareSandbox(t *testing.T
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(src.manifest, &doc))
-		assert.Equal(t, bareSandboxAgent, doc["agent"])
+		assert.Equal(t, bareSandboxAgent, doc["harness"])
 		assert.Equal(t, "coding-base", doc["template"])
 		assert.NotContains(t, doc, "permissions",
 			"an implied bare sandbox must not carry an agent's tool policy either")

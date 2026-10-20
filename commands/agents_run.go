@@ -479,7 +479,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 
 type harnessManifest struct {
 	Name        string              `yaml:"name,omitempty"`
-	Agent       string              `yaml:"agent"` // not harness: an API from before that key rejects it as unknown
+	Harness     string              `yaml:"harness"`
 	Template    string              `yaml:"template,omitempty"`
 	Repos       []string            `yaml:"repos,omitempty"`
 	Config      map[string]any      `yaml:"config,omitempty"`
@@ -535,7 +535,7 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		return nil, err
 	}
 
-	doc := harnessManifest{Agent: agent}
+	doc := harnessManifest{Harness: agent}
 	if ref, err := normalizeHarnessRepoRef(o.repo); err != nil {
 		return nil, err
 	} else if ref != "" {
@@ -765,7 +765,7 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		// OpenHands runs on DigitalOcean Inference and has no vendor key of
 		// its own to ask for, so the session's key is minted by harness-api.
 		// Decided off the manifest, not the --harness flag, so a --spec file
-		// that says `agent: openhands` gets the same key. A manifest that
+		// that says `harness: openhands` gets the same key. A manifest that
 		// supplies HARNESS_INFERENCE_API_KEY itself keeps it: the server
 		// skips the mint for a bring-your-own key.
 		sess, err = c.HostedAgents().CreateSessionFromManifestWithManagedKey(manifest, createOpt)
@@ -969,7 +969,7 @@ func (s *lineSpinner) stopAndClear() {
 }
 
 // startupWords are the lines a create/wait spinner prints for whatever is
-// starting. A session with `agent: none` has no agent in it, so the agent
+// starting. A session with `harness: none` has no agent in it, so the agent
 // wording there names a process that never runs — "Starting agent runtime…" in
 // particular describes a step coding-base does not have, which reads as a stall
 // rather than as a stage that does not apply.

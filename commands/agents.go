@@ -712,7 +712,7 @@ func addAgentCreationFlags(cmd *Command) {
 	// it as a --harness value. There is one way in that we teach, and naming
 	// the absence of an agent as if it were one of the agents taught two.
 	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, openhands). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
-	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
+	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + harness), e.g. "name: my-session\nharness: opencode"; agent is the original name of harness and still works. Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
 	AddStringFlag(cmd, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
@@ -963,7 +963,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// `--template` names the image a generated manifest runs on, and the only
 	// session that needs no agent to justify an image is a bare sandbox — so
 	// `--template X` with no --harness is how one is asked for. The manifest
-	// still says `agent: none`; that value is generated here, never typed.
+	// still says `harness: none`; that value is generated here, never typed.
 	//
 	// This has to resolve before source selection, because the harness IS a
 	// source: left empty, a lone --template falls through to manifest discovery
