@@ -34,20 +34,6 @@ import (
 // every subcommand accepts it either side of the subcommand name
 // (`doctl harness-runtime --region mem1 create` and
 // `doctl harness-runtime create --region mem1` are the same command).
-//
-// Three parts of the regional contract are not here, each waiting on something
-// outside this repo:
-//
-//   - The create body carries no region. godo's session and config create
-//     requests have no region field, so there is nothing to set and the host
-//     is the only signal doctl sends (MARSOHS-2085).
-//   - A create response's Location header is not followed for the wait and
-//     attach that come after it. harness-api does not send one yet, and the
-//     service layer in do/agents.go drops the response that would carry it
-//     (MARSOHS-2078).
-//   - A session id is not read for a region prefix. Whether ids outside the
-//     default region carry one is an open question in the design, so a
-//     follow-up command takes --region or the default region.
 
 const (
 	// defaultAgentRegion serves the region-less API host, so omitting --region
