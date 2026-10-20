@@ -40,6 +40,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"codex-agentapi":   {},
 	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
+	"openhands":        {}, // runnable (AGENT_KIND_OPENHANDS): OpenHands Agent Server in the openhands template
 	"custom":           {},
 	"none":             {}, // bare sandbox: no agent in the guest
 	"sandbox":          {}, // equal spelling of none
@@ -287,7 +288,7 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, none, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, openhands, custom, none, …)", path, adapter))
 		return
 	}
 	switch adapter {

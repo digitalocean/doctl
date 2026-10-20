@@ -54,6 +54,9 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				if strings.Contains(string(reqBody), "some-non-ha-cluster") {
 					matchedRequest = kubeClustersCreateNonHAJSONReq
 				}
+				if strings.Contains(string(reqBody), "some-gpu-operator-cluster") {
+					matchedRequest = kubeClustersCreateGPUOperatorReadyJSONReq
+				}
 				// When --ha is omitted, request has no "ha" field; API applies version-specific default
 				if strings.Contains(string(reqBody), "some-cluster-name") && !strings.Contains(string(reqBody), `"ha"`) {
 					matchedRequest = kubeClustersCreateJSONReqOmitHA
@@ -169,6 +172,33 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				"--region", "mars",
 				"--version", "some-kube-version",
 				"--ha=false",
+			)
+
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("KUBECONFIG=%s", f.Name()),
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+		})
+
+		it("creates a kube cluster with GPU operator ready when --gpu-operator-ready", func() {
+			f, err := os.CreateTemp(t.TempDir(), "fake-kube-config")
+			expect.NoError(err)
+
+			err = f.Close()
+			expect.NoError(err)
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"kubernetes",
+				"clusters",
+				"create",
+				"some-gpu-operator-cluster",
+				"--region", "mars",
+				"--version", "some-kube-version",
+				"--gpu-operator-ready",
 			)
 
 			cmd.Env = append(os.Environ(),
@@ -342,6 +372,28 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
       "size": "s-1vcpu-2gb-intel",
       "count": 3,
       "name": "some-non-ha-cluster-default-pool"
+    }
+  ]
+}
+`
+	kubeClustersCreateGPUOperatorReadyJSONReq = `
+{
+  "name": "some-gpu-operator-cluster",
+  "region": "mars",
+  "version": "some-kube-version",
+  "auto_upgrade": false,
+  "surge_upgrade": true,
+  "gpu_operator_ready": true,
+  "maintenance_policy": {
+    "day": "any",
+    "duration": "",
+    "start_time": "00:00"
+  },
+  "node_pools": [
+    {
+      "size": "s-1vcpu-2gb-intel",
+      "count": 3,
+      "name": "some-gpu-operator-cluster-default-pool"
     }
   ]
 }

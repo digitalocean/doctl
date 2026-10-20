@@ -15,6 +15,8 @@ package commands
 
 import (
 	"net/http"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +48,36 @@ func TestAgentConnectionsProviderFlagRegistered(t *testing.T) {
 			assert.Equalf(t, "github", f.DefValue, "%q --%s default", name, doctl.ArgAgentConnProvider)
 		}
 	}
+}
+
+// The API accepts --status revoked, but tenant list reads always omit revoked
+// connections, even when that is the filter (AR-2546; see the status field of
+// ListConnectionsRequest in tool-registry.proto). So revoked must not be
+// advertised as a filter value, and the help must say why it is missing:
+// otherwise the empty result reads as "no revoked connections" (MARSOHS-2175).
+func TestAgentConnectionsListStatusFlagUsage(t *testing.T) {
+	var list *cobra.Command
+	for _, c := range AgentConnections().Commands() {
+		if c.Name() == "list" {
+			list = c
+			break
+		}
+	}
+	if !assert.NotNil(t, list, "list subcommand not found") {
+		return
+	}
+	f := list.Flags().Lookup(doctl.ArgAgentStatus)
+	if !assert.NotNilf(t, f, "list is missing the --%s flag", doctl.ArgAgentStatus) {
+		return
+	}
+
+	m := regexp.MustCompile(`\(([a-z|]+)\)`).FindStringSubmatch(f.Usage)
+	if assert.Lenf(t, m, 2, "--%s usage should list its values as (a|b|c): %q", doctl.ArgAgentStatus, f.Usage) {
+		assert.ElementsMatch(t, []string{"active", "pending", "expired"}, strings.Split(m[1], "|"),
+			"advertised --%s values", doctl.ArgAgentStatus)
+	}
+	assert.Containsf(t, strings.ToLower(f.Usage), "revoked",
+		"--%s usage should explain that revoked connections are never listed", doctl.ArgAgentStatus)
 }
 
 func TestRunAgentsConnectionsList(t *testing.T) {
@@ -150,6 +182,115 @@ func TestRunAgentsConnectionsCreate(t *testing.T) {
 			assert.Error(t, RunAgentsConnectionsCreate(config))
 		})
 	})
+
+	// harness-api reports expired once an abandoned flow lapses, and revoked if
+	// the connection is revoked mid-wait. Neither can become active, so the wait
+	// must end on the first such poll instead of running forever (MARSOHS-2174).
+	for _, status := range []string{"expired", "revoked"} {
+		t.Run(status+" connection stops waiting", func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().
+					CreateConnection("github", gomock.Any()).
+					Return(pendingConnectionEnvelope(futureTimestamp()), nil)
+				tm.hostedAgents.EXPECT().
+					GetConnection("github", "conn_1").
+					Return(&godo.HostedAgentConnectionEnvelope{
+						Connection: godo.HostedAgentConnection{ID: "conn_1", Provider: "github", ActorID: "alice", Status: status},
+					}, nil)
+
+				config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+				config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+				config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+				err := RunAgentsConnectionsCreate(config)
+				assert.ErrorContains(t, err, "connection for alice is "+status)
+				assert.ErrorContains(t, err, "connections create --actor alice")
+			})
+		})
+	}
+
+	t.Run("unrecognized status keeps polling", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				CreateConnection("github", gomock.Any()).
+				Return(pendingConnectionEnvelope(futureTimestamp()), nil)
+			gomock.InOrder(
+				tm.hostedAgents.EXPECT().
+					GetConnection("github", "conn_1").
+					Return(&godo.HostedAgentConnectionEnvelope{
+						Connection: godo.HostedAgentConnection{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "authorizing"},
+					}, nil),
+				tm.hostedAgents.EXPECT().
+					GetConnection("github", "conn_1").
+					Return(&godo.HostedAgentConnectionEnvelope{
+						Connection: godo.HostedAgentConnection{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"},
+					}, nil),
+			)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			assert.NoError(t, RunAgentsConnectionsCreate(config))
+		})
+	})
+
+	t.Run("deadline from expires_at stops waiting", func(t *testing.T) {
+		prevGrace := agentsAuthExpiryGrace
+		agentsAuthExpiryGrace = 20 * time.Millisecond
+		defer func() { agentsAuthExpiryGrace = prevGrace }()
+
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				CreateConnection("github", gomock.Any()).
+				Return(pendingConnectionEnvelope(&godo.Timestamp{Time: time.Now().Add(-time.Hour)}), nil)
+			tm.hostedAgents.EXPECT().
+				GetConnection("github", "conn_1").
+				Return(pendingConnectionEnvelope(nil), nil).
+				AnyTimes()
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			err := RunAgentsConnectionsCreate(config)
+			assert.ErrorContains(t, err, "not completed before it expired")
+			assert.ErrorContains(t, err, "connections get conn_1")
+		})
+	})
+
+	t.Run("no expires_at falls back to the max wait", func(t *testing.T) {
+		prevMax := agentsAuthMaxWait
+		agentsAuthMaxWait = 20 * time.Millisecond
+		defer func() { agentsAuthMaxWait = prevMax }()
+
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				CreateConnection("github", gomock.Any()).
+				Return(pendingConnectionEnvelope(nil), nil)
+			tm.hostedAgents.EXPECT().
+				GetConnection("github", "conn_1").
+				Return(pendingConnectionEnvelope(nil), nil).
+				AnyTimes()
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			assert.ErrorContains(t, RunAgentsConnectionsCreate(config), "connections get conn_1")
+		})
+	})
+}
+
+func pendingConnectionEnvelope(expiresAt *godo.Timestamp) *godo.HostedAgentConnectionEnvelope {
+	return &godo.HostedAgentConnectionEnvelope{
+		Connection: godo.HostedAgentConnection{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "pending"},
+		Authorization: &godo.HostedAgentConnectionAuthorization{
+			Status:     "pending",
+			ConnectURL: "https://example.com/connect",
+			ExpiresAt:  expiresAt,
+		},
+	}
+}
+
+func futureTimestamp() *godo.Timestamp {
+	return &godo.Timestamp{Time: time.Now().Add(time.Hour)}
 }
 
 func TestRunAgentsConnectionsGet(t *testing.T) {

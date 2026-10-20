@@ -503,7 +503,7 @@ func Agents() *Command {
 	AddBoolFlag(cmdCreate, doctl.ArgAgentDryRun, "", false, "Print the fully-resolved manifest (secrets redacted) and exit without creating anything")
 	AddStringFlag(cmdCreate, doctl.ArgAgentOnHITL, "", "", "Stay attached headlessly and resolve every approval request this way (approve|reject|defer), until the run finishes. For unattended automation; no TUI, no keyboard input.")
 	markAgentCreationSourcesExclusive(cmdCreate)
-	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --harness opencode --dry-run`
+	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --harness openhands --model anthropic-claude-4.5-sonnet; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --harness opencode --dry-run`
 
 	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate [<manifest>]",
 		"Validate an agent manifest",
@@ -631,7 +631,7 @@ func Agents() *Command {
 			displayerType(&displayers.HostedAgentSandboxExec{}))...)
 	AddStringFlag(cmdExec, doctl.ArgAgentExecWorkdir, "", "", "Absolute guest directory to run in (defaults to the workspace root)")
 	AddIntFlag(cmdExec, doctl.ArgAgentExecTimeout, "", 0, "Maximum seconds the command may run (0 uses the server default)")
-	cmdExec.Example = `doctl harness-runtime exec sess_abc123 -- ls -la; doctl harness-runtime exec my-session --workdir /workspace/src -- go test ./...`
+	cmdExec.Example = `doctl harness-runtime exec sess_abc123 -- ls -la; doctl harness-runtime exec my-session --workdir /workspace/src -- go test ./...; doctl harness-runtime exec my-session --timeout 30 -- make build`
 
 	cmdPrompt := CmdBuilder(cmd, RunAgentsPrompt, "prompt <session> <prompt>...",
 		"Send one prompt to a session and print the answer",
@@ -711,7 +711,7 @@ func addAgentCreationFlags(cmd *Command) {
 	// word for a session with no agent, and resolveAgentCreationSource refuses
 	// it as a --harness value. There is one way in that we teach, and naming
 	// the absence of an agent as if it were one of the agents taught two.
-	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
+	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, openhands). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + agent), e.g. "name: my-session\nagent: opencode". Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
@@ -721,6 +721,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddStringFlag(cmd, doctl.ArgAgentPermission, "", defaultHarnessPermission, agentPermissionFlagDesc)
 	AddStringFlag(cmd, doctl.ArgAgentTemplate, "", "", agentTemplateFlagDesc)
+	AddStringFlag(cmd, doctl.ArgInferenceModel, "", "", agentModelFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 }
@@ -751,6 +752,15 @@ const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a pl
 	"or the template that matches your --harness) or one of your team's own from '" + agentCLI + " template create' — " +
 	"a team template of the same name takes precedence. Omit it to get the default for the chosen --harness. " +
 	"Passed without --harness it asks for a sandbox with no agent in it. A --spec manifest sets its own top-level template."
+
+// agentModelFlagDesc: the model is manifest env rather than a query
+// parameter because it is agent configuration, shareable through an Agent
+// Config, unlike the per-session spending consent --resume-on-topoff carries.
+const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness session, written as the manifest's env " +
+	harnessInferenceModelEnv + " (for example " + defaultOpenHandsModel + " or anthropic-claude-4.5-sonnet). " +
+	"--harness openhands runs on DigitalOcean Inference and defaults to " + defaultOpenHandsModel + "; " +
+	"the other harnesses use their own vendor key and leave it unset unless given. " +
+	"Only valid with --harness; a --spec manifest declares its own."
 
 const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
 	// No backticks, for the same reason as agentTemplateFlagDesc.
@@ -901,6 +911,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	model, err := invocationString(c, doctl.ArgInferenceModel)
+	if err != nil {
+		return nil, err
+	}
+	model = strings.TrimSpace(model)
 	// Resolved here, before any check reads it and before it reaches the
 	// manifest, so the agentless check and the wire agree. templateAsTyped is
 	// kept only for errors: quoting the platform name back at someone who typed
@@ -936,6 +951,13 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 
 	if len(c.Args) > 0 && (harness != "" || configRef != "") {
 		return nil, fmt.Errorf("a manifest path cannot be combined with --%s or --%s", doctl.ArgAgentHarness, doctl.ArgAgentFromConfig)
+	}
+	// --model writes a field into the manifest --harness generates; every
+	// other source declares its own env, and silently dropping the flag would
+	// run the session on a different model than asked for.
+	if model != "" && harness == "" {
+		return nil, fmt.Errorf("--%s applies to the manifest --%s generates; set env.%s in the manifest instead",
+			doctl.ArgInferenceModel, doctl.ArgAgentHarness, harnessInferenceModelEnv)
 	}
 
 	// `--template` names the image a generated manifest runs on, and the only
@@ -1089,6 +1111,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			name:       name,
 			permission: permission,
 			template:   template,
+			model:      model,
 		})
 		if err != nil {
 			return nil, err
@@ -2206,6 +2229,30 @@ const agentProviderAuthStatusSuccess = "success"
 // shorten it.
 var agentsAuthPollInterval = 2 * time.Second
 
+// agentsAuthExpiryGrace extends an authorization wait past the server's
+// expires_at. It absorbs client/server clock skew and gives the poll after
+// expiry the chance to report the server's own terminal status.
+var agentsAuthExpiryGrace = 30 * time.Second
+
+// agentsAuthMaxWait bounds an authorization wait when the server sent no
+// expires_at.
+var agentsAuthMaxWait = 15 * time.Minute
+
+// authWaitDeadline bounds an authorization wait by the server's expires_at plus
+// agentsAuthExpiryGrace, or by agentsAuthMaxWait when the server sent none. An
+// expiry already in the past (e.g. a skewed client clock) still leaves the grace
+// to poll in.
+func authWaitDeadline(expiresAt *godo.Timestamp, now time.Time) time.Time {
+	if expiresAt == nil || expiresAt.IsZero() {
+		return now.Add(agentsAuthMaxWait)
+	}
+	end := expiresAt.Time
+	if end.Before(now) {
+		end = now
+	}
+	return end.Add(agentsAuthExpiryGrace)
+}
+
 // RunAgentsAuth connects an external provider (e.g. github) for the caller's
 // team via the harness-api connect flow. It starts (or resumes) the flow, opens
 // the browser authorization URL, then polls until the handle is authorized.
@@ -2272,11 +2319,16 @@ func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider str
 	// manager or plain `kill`, not only on Ctrl-C.
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx, cancelDeadline := context.WithDeadline(ctx, authWaitDeadline(start.ExpiresAt, time.Now()))
+	defer cancelDeadline()
 
 	fmt.Fprintln(c.Out, "Waiting for authorization to complete... (Ctrl-C to stop)")
 	for {
 		select {
 		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("authorization was not completed before it expired; re-run `doctl harness-runtime auth %s` to start again", provider)
+			}
 			return fmt.Errorf("stopped waiting; re-run `doctl harness-runtime auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
@@ -8246,10 +8298,16 @@ var agentKindDisplayNames = map[godo.HostedAgentKind]string{
 	godo.HostedAgentKindCodexCLI:    "Codex CLI",
 	godo.HostedAgentKindCursorCLI:   "Cursor CLI",
 	godo.HostedAgentKindOpenAICodex: "Codex",
+	hostedAgentKindOpenHands:        "OpenHands",
 	godo.HostedAgentKindCustom:      "Custom",
 	godo.HostedAgentKindNone:        "None",
 	hostedAgentKindSandbox:          "None",
 }
+
+// hostedAgentKindOpenHands is the agent kind harness-api reports for sessions
+// running the OpenHands Agent Server (template `openhands`). Declared here
+// until godo adds the constant; the wire value is the one harness-api emits.
+const hostedAgentKindOpenHands godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into the friendly "OpenCode"
 // label. Falls back to the sentinel "agent" for unspecified or unrecognized

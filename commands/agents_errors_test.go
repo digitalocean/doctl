@@ -206,3 +206,36 @@ func TestBeautifyAgentError_AgentspecUnknownField(t *testing.T) {
 	assert.NotContains(t, display, "contracts/")
 	assert.NotContains(t, display, `\u00a0`)
 }
+
+// EX15 returns HTTP 504 with an applied-budget reason. That must not look like
+// a generic "Service temporarily unavailable" retry tip.
+func TestBeautifyAgentError_ExecTimeout504(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusGatewayTimeout, "exec timed out after 3s (requested)"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec timed out", pretty.title)
+	assert.Equal(t, "exec timed out after 3s (requested)", pretty.reason)
+	assert.Equal(t, http.StatusGatewayTimeout, pretty.status)
+	assert.Contains(t, pretty.tips, "Pass a larger --timeout")
+	assert.NotContains(t, pretty.tips, "Retry in a moment")
+}
+
+func TestBeautifyAgentError_ExecStreamCapacity429(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusTooManyRequests, "sandbox exec stream capacity exhausted, retry later"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec stream capacity exhausted", pretty.title)
+	assert.Contains(t, pretty.tips, "Wait a moment and retry")
+}
+
+func TestBeautifyAgentError_SSEExecTimeoutMessage(t *testing.T) {
+	out := beautifyAgentError(errors.New("exec timed out after 900s (default)"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec timed out", pretty.title)
+	assert.Contains(t, pretty.tips, "Pass a larger --timeout")
+	assert.NotContains(t, pretty.tips, "--wait-timeout")
+}
