@@ -206,6 +206,9 @@ func beautifyAgentError(err error) error {
 	case strings.Contains(lower, "openai"):
 		title = "OpenAI Agents request failed"
 		tips = []string{"Check $OPENAI_API_KEY", "Retry in a moment"}
+	case strings.Contains(lower, "exec timed out"):
+		title = "Exec timed out"
+		tips = []string{"Pass a larger --timeout", "Or omit --timeout to use the server default"}
 	case strings.Contains(lower, "timed out"):
 		title = "Timed out"
 		tips = []string{"Retry with a longer --wait-timeout", "doctl harness-runtime show <session>"}
@@ -260,6 +263,9 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 	case http.StatusPaymentRequired:
 		return prepayBlockedTitle, []string{fmt.Sprintf("Add funds at %s", prepayTopUpURL), prepayBalanceCmd}
 	case http.StatusTooManyRequests:
+		if strings.Contains(lower, "exec stream") || strings.Contains(lower, "capacity exhausted") {
+			return "Exec stream capacity exhausted", []string{"Wait a moment and retry"}
+		}
 		return "Rate limited", []string{"Wait a moment and retry"}
 	case http.StatusBadRequest:
 		if strings.Contains(lower, "agentspec") || strings.Contains(lower, "unknown field") ||
@@ -270,7 +276,15 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 			}
 		}
 		return "Invalid request", nil
-	case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+	case http.StatusGatewayTimeout:
+		if strings.Contains(lower, "exec timed out") {
+			return "Exec timed out", []string{
+				"Pass a larger --timeout",
+				"Or omit --timeout to use the server default",
+			}
+		}
+		return "Service temporarily unavailable", []string{"Retry in a moment"}
+	case http.StatusBadGateway, http.StatusServiceUnavailable:
 		return "Service temporarily unavailable", []string{"Retry in a moment"}
 	default:
 		if status >= 500 {
