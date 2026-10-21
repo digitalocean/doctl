@@ -38,8 +38,8 @@ func TestInsightsTraces(t *testing.T) {
 	var out bytes.Buffer
 	require.NoError(t, displayer.JSON(&out))
 	assert.JSONEq(t, `{
-		"data":[{"traceId":"trace-1","started":"0001-01-01T00:00:00Z","spanNames":["root","child"],"durationNs":2000000000}],
-		"pagination":{"hasMore":false}
+		"data":[{"trace_id":"trace-1","started":"0001-01-01T00:00:00Z","span_names":["root","child"],"duration_ns":2000000000}],
+		"pagination":{"has_more":false}
 	}`, out.String())
 }
 
@@ -59,8 +59,8 @@ func TestInsightsTrace(t *testing.T) {
 	var out bytes.Buffer
 	require.NoError(t, displayer.JSON(&out))
 	assert.JSONEq(t, `{
-		"traceId":"trace-1",
-		"spans":[{"traceId":"trace-1","spanId":"span-1","startTime":"0001-01-01T00:00:00Z","endTime":"0001-01-01T00:00:00Z","durationNs":750000}],
+		"trace_id":"trace-1",
+		"spans":[{"trace_id":"trace-1","span_id":"span-1","start_time":"0001-01-01T00:00:00Z","end_time":"0001-01-01T00:00:00Z","duration_ns":750000}],
 		"truncated":true
 	}`, out.String())
 }
@@ -68,5 +68,5 @@ func TestInsightsTrace(t *testing.T) {
 func TestInsightsTraceEmptySpansJSON(t *testing.T) {
 	var out bytes.Buffer
 	require.NoError(t, (&InsightsTrace{Trace: &godo.Trace{TraceID: "trace-1"}}).JSON(&out))
-	assert.JSONEq(t, `{"traceId":"trace-1","spans":[]}`, out.String())
+	assert.JSONEq(t, `{"trace_id":"trace-1","spans":[]}`, out.String())
 }

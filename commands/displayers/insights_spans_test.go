@@ -42,8 +42,8 @@ func TestInsightsSpans(t *testing.T) {
 	var out bytes.Buffer
 	require.NoError(t, displayer.JSON(&out))
 	assert.JSONEq(t, `{
-		"data":[{"traceId":"trace-1","spanId":"span-1","startTime":"2026-09-01T01:02:03.4Z","endTime":"0001-01-01T00:00:00Z","durationNs":1500000,"name":"GET /","kind":"server","statusCode":"OK","serviceName":"api"}],
-		"pagination":{"hasMore":true}
+		"data":[{"trace_id":"trace-1","span_id":"span-1","start_time":"2026-09-01T01:02:03.4Z","end_time":"0001-01-01T00:00:00Z","duration_ns":1500000,"name":"GET /","kind":"server","status_code":"OK","service_name":"api"}],
+		"pagination":{"has_more":true}
 	}`, out.String())
 }
 

@@ -87,7 +87,7 @@ var _ Displayable = &InsightsTrace{}
 
 func (d *InsightsTrace) JSON(out io.Writer) error {
 	trace := struct {
-		TraceID   string           `json:"traceId"`
+		TraceID   string           `json:"trace_id"`
 		Spans     []godo.TraceSpan `json:"spans"`
 		Truncated bool             `json:"truncated,omitempty"`
 	}{Spans: []godo.TraceSpan{}}
