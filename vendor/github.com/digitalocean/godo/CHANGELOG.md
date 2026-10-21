@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.229.0] - 2026-10-19
+
+- #1173 - @potturu-vamsi - agent platform: remove MaxTokens from CandidateInferenceConfig
+
 ## [1.228.0] - 2026-10-19
 
 - #1166 - @kishlay-singh-DO - Add Insights enablement endpoints

@@ -14,6 +14,8 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -22,15 +24,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testTracesFilterJSON = `{"type":"condition","field":{"name":"serviceName"},"operator":"eq","value":{"type":"string","value":"api"}}`
+const testTracesFilterJSON = `{"condition":{"field":{"name":"service_name"},"operator":"FILTER_OPERATOR_EQ","value":{"string_value":"api"}}}`
 
 func testTracesFilter() godo.TracesFilterExpression {
 	api := "api"
 	return godo.TracesFilterExpression{
-		Type:     "condition",
-		Field:    &godo.TracesFilterField{Name: "serviceName"},
-		Operator: "eq",
-		Value:    &godo.TracesFilterValue{String: &api},
+		Condition: &godo.TracesFilterCondition{
+			Field:    godo.TracesFilterField{Name: "service_name"},
+			Operator: godo.InsightsTracesFilterOperatorEqual,
+			Value:    &godo.TracesFilterValue{StringValue: &api},
+		},
 	}
 }
 
@@ -38,6 +41,32 @@ func TestInsightsTracesCommand(t *testing.T) {
 	cmd := insightsTraces()
 	assert.Equal(t, "traces", cmd.Name())
 	assertCommandNames(t, cmd, "search", "get")
+}
+
+func TestTracesFilterContract(t *testing.T) {
+	filters := []string{
+		`{"condition":{"field":{"name":"service_name"},"operator":"FILTER_OPERATOR_EQ","value":{"string_value":"api"}}}`,
+		`{"and":{"expressions":[{"condition":{"field":{"name":"http.method","scope":"FIELD_SCOPE_ATTRIBUTES"},"operator":"FILTER_OPERATOR_EQ","value":{"string_value":"GET"}}},{"condition":{"field":{"name":"duration_ns"},"operator":"FILTER_OPERATOR_GTE","value":{"number_value":10}}},{"text_search":{"query":"failed"}}]}}`,
+		`{"or":{"expressions":[{"condition":{"field":{"name":"name"},"operator":"FILTER_OPERATOR_IN","value":{"string_array_value":{"values":["GET","POST"]}}}},{"condition":{"field":{"name":"duration_ns"},"operator":"FILTER_OPERATOR_IN","value":{"number_array_value":{"values":[10,20]}}}}]}}`,
+		`{"not":{"condition":{"field":{"name":"status_code"},"operator":"FILTER_OPERATOR_EXISTS"}}}`,
+		`{"text_search":{"query":"timeout"}}`,
+	}
+	for _, filterJSON := range filters {
+		var filter godo.TracesFilterExpression
+		require.NoError(t, decodeInsightsJSON(strings.NewReader(filterJSON), &filter))
+		require.NoError(t, validateTracesFilterExpression(&filter))
+	}
+}
+
+func TestTracesFilterGodoCompatibilityInput(t *testing.T) {
+	const legacy = `{"type":"condition","field":{"name":"service_name"},"operator":"FILTER_OPERATOR_EQ","value":{"type":"string","value":"api"}}`
+	var filter godo.TracesFilterExpression
+	require.NoError(t, decodeInsightsJSON(strings.NewReader(legacy), &filter))
+	require.NoError(t, validateTracesFilterExpression(&filter))
+
+	encoded, err := json.Marshal(filter)
+	require.NoError(t, err)
+	assert.JSONEq(t, testTracesFilterJSON, string(encoded))
 }
 
 func TestRunInsightsTracesSearchFromFlags(t *testing.T) {
@@ -74,11 +103,15 @@ func TestRunInsightsTracesSearchRequestFileYAML(t *testing.T) {
 		withInsightsOutput(t, config, "json")
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
 		config.Doit.Set(config.NS, doctl.ArgInsightsRequestFile, writeInsightsTestFile(t, `
-timeRange:
+time_range:
   from:
     relative: 1h
   to:
     relative: now
+order_by:
+  - field:
+      name: started
+    direction: desc
 pagination:
   limit: 10
 `))
@@ -89,6 +122,7 @@ pagination:
 				From: godo.TracesTimeBound{Relative: "1h"},
 				To:   godo.TracesTimeBound{Relative: "now"},
 			},
+			OrderBy:    []godo.TracesOrderBy{{Field: godo.TracesFilterField{Name: "started"}, Direction: "desc"}},
 			Pagination: &godo.TracesPaginationRequest{Limit: 20},
 		}).Return(&godo.TracesSearchResponse{}, nil)
 
@@ -117,7 +151,7 @@ func TestRunInsightsTracesSearchFilterFile(t *testing.T) {
 }
 
 func TestRunInsightsTracesSearchValidation(t *testing.T) {
-	validRequest := `{"timeRange":{"from":{"relative":"1h"},"to":{"relative":"now"}}}`
+	validRequest := `{"time_range":{"from":{"relative":"1h"},"to":{"relative":"now"}}}`
 	tests := []struct {
 		name    string
 		flags   map[string]any
@@ -127,8 +161,10 @@ func TestRunInsightsTracesSearchValidation(t *testing.T) {
 		{name: "missing region", flags: map[string]any{doctl.ArgRegionSlug: ""}, wantErr: "--region is required"},
 		{name: "zero limit", flags: map[string]any{doctl.ArgInsightsTracingLimit: 0}, wantErr: "--limit must be between 1 and 1000"},
 		{name: "limit too large", flags: map[string]any{doctl.ArgInsightsTracingLimit: 1001}, wantErr: "--limit must be between 1 and 1000"},
-		{name: "invalid filter", flags: map[string]any{doctl.ArgInsightsTracingFilter: `{"field":{"name":"serviceName"},"operator":"eq"}`}, wantErr: "value is required"},
-		{name: "unknown filter field", flags: map[string]any{doctl.ArgInsightsTracingFilter: `{"condition":{}}`}, wantErr: `unknown field "condition"`},
+		{name: "invalid filter", flags: map[string]any{doctl.ArgInsightsTracingFilter: `{"condition":{"field":{"name":"service_name"},"operator":"FILTER_OPERATOR_EQ"}}`}, wantErr: "value is required"},
+		{name: "deprecated operator", flags: map[string]any{doctl.ArgInsightsTracingFilter: `{"condition":{"field":{"name":"service_name"},"operator":"eq","value":{"string_value":"api"}}}`}, wantErr: `invalid condition operator "eq"`},
+		{name: "deprecated scope", flags: map[string]any{doctl.ArgInsightsTracingFilter: `{"condition":{"field":{"name":"service.name","scope":"resource"},"operator":"FILTER_OPERATOR_EQ","value":{"string_value":"api"}}}`}, wantErr: `invalid field scope "resource"`},
+		{name: "multiple filter nodes", flags: map[string]any{doctl.ArgInsightsTracingFilter: `{"condition":{},"text_search":{"query":"api"}}`}, wantErr: "must contain exactly one node"},
 		{name: "invalid order", flags: map[string]any{doctl.ArgInsightsTracingOrderBy: []string{"started:newest"}}, wantErr: "direction must be `asc` or `desc`"},
 		{name: "from after to", flags: map[string]any{doctl.ArgInsightsTracingFrom: "2026-09-02T00:00:00Z", doctl.ArgInsightsTracingTo: "2026-09-01T00:00:00Z"}, wantErr: "must not be after"},
 		{name: "range over seven days", flags: map[string]any{doctl.ArgInsightsTracingFrom: "2026-09-01T00:00:00Z", doctl.ArgInsightsTracingTo: "2026-09-09T00:00:00Z"}, wantErr: "must not exceed 7 days"},
@@ -146,13 +182,13 @@ func TestRunInsightsTracesSearchValidation(t *testing.T) {
 		},
 		{
 			name:    "request with zero limit",
-			files:   map[string]string{doctl.ArgInsightsRequestFile: `{"timeRange":{"from":{"relative":"1h"},"to":{"relative":"now"}},"pagination":{"limit":0}}`},
+			files:   map[string]string{doctl.ArgInsightsRequestFile: `{"time_range":{"from":{"relative":"1h"},"to":{"relative":"now"}},"pagination":{"limit":0}}`},
 			wantErr: "--limit must be between 1 and 1000",
 		},
 		{
-			name:    "request with unknown field",
-			files:   map[string]string{doctl.ArgInsightsRequestFile: `{"timeRange":{"from":{"relative":"1h"},"to":{"relative":"now"}},"cursor":"x"}`},
-			wantErr: `unknown field "cursor"`,
+			name:    "request with camel case field",
+			files:   map[string]string{doctl.ArgInsightsRequestFile: `{"timeRange":{"from":{"relative":"1h"},"to":{"relative":"now"}}}`},
+			wantErr: `unknown field "timeRange"`,
 		},
 	}
 
