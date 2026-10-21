@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"net/http"
 	"regexp"
 	"strings"
@@ -24,6 +25,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -337,4 +339,59 @@ func TestRunAgentsConnectionsRevoke(t *testing.T) {
 			assert.Error(t, RunAgentsConnectionsRevoke(config))
 		})
 	})
+}
+
+// --- deletion protection in the styled output (MARSOHS-2173) ----------------
+//
+// printConnectionCard / printConnectionsList take an io.Writer, so they can be
+// asserted directly; withTestClient wires Out to io.Discard and cannot see
+// rendered output. stylingEnabled stays false in tests, so output is plain.
+
+func TestPrintConnectionCard_ShowsProtection(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		protected bool
+		want      string
+	}{
+		{"protected", true, "Protected yes"},
+		{"unprotected", false, "Protected no"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			printConnectionCard(&buf, &godo.HostedAgentConnectionEnvelope{
+				Connection: godo.HostedAgentConnection{
+					ID:                "conn_1",
+					Provider:          "github",
+					ActorID:           "alice",
+					Status:            "active",
+					DeletionProtected: tc.protected,
+				},
+			}, false)
+
+			out := buf.String()
+			assert.Contains(t, out, tc.want)
+			// "Protected" is 9 characters, one wider than the shared card
+			// label column, so every row of this card has to use the wider
+			// one or the values step out of line.
+			assert.Contains(t, out, "  Status    active")
+		})
+	}
+}
+
+// The list stays compact: only a protected connection carries the marker.
+func TestPrintConnectionsList_MarksProtected(t *testing.T) {
+	var buf bytes.Buffer
+	printConnectionsList(&buf, []godo.HostedAgentConnection{
+		{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active", DeletionProtected: true},
+		{ID: "conn_2", Provider: "github", ActorID: "bob", Status: "active"},
+	})
+
+	out := buf.String()
+	assert.Equal(t, 1, strings.Count(out, "protected"),
+		"exactly the protected connection should be marked:\n%s", out)
+
+	alice, bob, found := strings.Cut(out, "bob")
+	require.True(t, found, "both connections should be listed:\n%s", out)
+	assert.Contains(t, alice, "protected")
+	assert.NotContains(t, bob, "protected")
 }
