@@ -99,7 +99,15 @@ type SignalsListDialoguesOptions struct {
 // SignalsListExportsOptions are query params for GET /exports.
 type SignalsListExportsOptions struct {
 	SignalsCursorPageOptions
-	AgentID string `url:"agent_id,omitempty"`
+	AgentID       string `url:"agent_id,omitempty"`
+	EnvironmentID string `url:"-"`
+}
+
+func (o *SignalsListExportsOptions) resolveAgentID() (string, error) {
+	if o == nil {
+		return "", nil
+	}
+	return resolveSignalsAgentID(o.AgentID, o.EnvironmentID)
 }
 
 // SignalsPageInfo is Relay-style cursor paging from signals-api.
@@ -114,24 +122,26 @@ type SignalsPageInfo struct {
 // enabled is the only customer-facing consent toggle; allowed is an internal
 // check-endpoint concept and is not returned on this public route.
 type SignalsAgentConsent struct {
-	TeamID    int64  `json:"team_id"`
-	Source    string `json:"source,omitempty"`
-	AgentID   string `json:"agent_id"`
-	Enabled   bool   `json:"enabled"`
-	ID        int64  `json:"id,omitempty"`
-	UpdatedAt string `json:"updated_at,omitempty"`
+	TeamID        int64  `json:"team_id"`
+	Source        string `json:"source,omitempty"`
+	AgentID       string `json:"agent_id"`
+	EnvironmentID string `json:"environment_id,omitempty"`
+	Enabled       bool   `json:"enabled"`
+	ID            int64  `json:"id,omitempty"`
+	UpdatedAt     string `json:"updated_at,omitempty"`
 }
 
 // SignalsConsentRecord is a consents row as returned by PUT /v1/consent/{agent_id}
 // and PUT /v1/consent?source=inference. Source is "agent" or "inference";
 // AgentID is empty for inference (team-level) rows.
 type SignalsConsentRecord struct {
-	ID        int64  `json:"id"`
-	TeamID    int64  `json:"team_id"`
-	Source    string `json:"source,omitempty"`
-	AgentID   string `json:"agent_id"`
-	Enabled   bool   `json:"enabled"`
-	UpdatedAt string `json:"updated_at,omitempty"`
+	ID            int64  `json:"id"`
+	TeamID        int64  `json:"team_id"`
+	Source        string `json:"source,omitempty"`
+	AgentID       string `json:"agent_id"`
+	EnvironmentID string `json:"environment_id,omitempty"`
+	Enabled       bool   `json:"enabled"`
+	UpdatedAt     string `json:"updated_at,omitempty"`
 }
 
 type signalsSetConsentRequest struct {
@@ -159,13 +169,21 @@ type SignalsListConsentsResponse struct {
 
 // SignalsCreateExportRequest is the body for POST /v1/signals/exports.
 type SignalsCreateExportRequest struct {
-	AgentID string `json:"agent_id"`
+	AgentID       string `json:"agent_id"`
+	EnvironmentID string `json:"environment_id,omitempty"`
 	// SessionIDs optionally narrows the export to a session cohort (OR within
 	// the list). Omit or leave empty to export all sessions owned by the team.
 	SessionIDs []string `json:"session_ids,omitempty"`
 	SignalType []string `json:"signal_type,omitempty"`
 	StartTime  *int64   `json:"start_time,omitempty"`
 	EndTime    *int64   `json:"end_time,omitempty"`
+}
+
+func (r *SignalsCreateExportRequest) resolveAgentID() (string, error) {
+	if r == nil {
+		return "", nil
+	}
+	return resolveSignalsAgentID(r.AgentID, r.EnvironmentID)
 }
 
 // SignalsCreateDeletionRequest is the body for POST /v1/signals/deletions.
@@ -181,7 +199,15 @@ type SignalsCreateDeletionRequest struct {
 	// AgentID is the Harness Runtime Environment Config ID (agent UUID).
 	// Required for agent and must be empty for inference (team-wide only).
 	// Omitted from the JSON body when empty.
-	AgentID string `json:"agent_id,omitempty"`
+	AgentID       string `json:"agent_id,omitempty"`
+	EnvironmentID string `json:"environment_id,omitempty"`
+}
+
+func (r *SignalsCreateDeletionRequest) resolveAgentID() (string, error) {
+	if r == nil {
+		return "", nil
+	}
+	return resolveSignalsAgentID(r.AgentID, r.EnvironmentID)
 }
 
 // SignalsDeletionJob is one deletion job (POST/GET /v1/signals/deletions...).
@@ -190,15 +216,16 @@ type SignalsCreateDeletionRequest struct {
 // completed_at. Timestamps are Unix seconds UTC. Status/Type are plain strings
 // so new server-side values keep decoding.
 type SignalsDeletionJob struct {
-	TeamID       int64   `json:"team_id"`
-	DeletionID   string  `json:"deletion_id"`
-	Type         string  `json:"type"`
-	AgentID      string  `json:"agent_id,omitempty"`
-	Status       string  `json:"status"`
-	ErrorMessage *string `json:"error_message"`
-	CreatedAt    int64   `json:"created_at"`
-	StartedAt    *int64  `json:"started_at"`
-	CompletedAt  *int64  `json:"completed_at"`
+	TeamID        int64   `json:"team_id"`
+	DeletionID    string  `json:"deletion_id"`
+	Type          string  `json:"type"`
+	AgentID       string  `json:"agent_id,omitempty"`
+	EnvironmentID string  `json:"environment_id,omitempty"`
+	Status        string  `json:"status"`
+	ErrorMessage  *string `json:"error_message"`
+	CreatedAt     int64   `json:"created_at"`
+	StartedAt     *int64  `json:"started_at"`
+	CompletedAt   *int64  `json:"completed_at"`
 }
 
 // SignalsListDeletionsOptions are query params for GET /v1/signals/deletions.
@@ -295,14 +322,28 @@ type SignalsExportFilters struct {
 
 // SignalsExportJob is GET /exports/{export_id} (and list nodes).
 type SignalsExportJob struct {
-	ExportID     string               `json:"export_id"`
-	AgentID      string               `json:"agent_id,omitempty"`
-	Status       string               `json:"status"`
-	Filters      SignalsExportFilters `json:"filters"`
-	CreatedAt    int64                `json:"created_at"`
-	CompletedAt  *int64               `json:"completed_at,omitempty"`
-	ErrorMessage *string              `json:"error_message,omitempty"`
-	ExpiresAt    *int64               `json:"expires_at,omitempty"`
+	ExportID      string               `json:"export_id"`
+	AgentID       string               `json:"agent_id,omitempty"`
+	EnvironmentID string               `json:"environment_id,omitempty"`
+	Status        string               `json:"status"`
+	Filters       SignalsExportFilters `json:"filters"`
+	CreatedAt     int64                `json:"created_at"`
+	CompletedAt   *int64               `json:"completed_at,omitempty"`
+	ErrorMessage  *string              `json:"error_message,omitempty"`
+	ExpiresAt     *int64               `json:"expires_at,omitempty"`
+}
+
+func resolveSignalsAgentID(agentID, environmentID string) (string, error) {
+	a := strings.TrimSpace(agentID)
+	e := strings.TrimSpace(environmentID)
+	switch {
+	case a != "" && e != "" && a != e:
+		return "", fmt.Errorf("signals: agent_id and environment_id must match when both are set")
+	case a != "":
+		return a, nil
+	default:
+		return e, nil
+	}
 }
 
 // SignalsExportEdge is one edge in an export list.
@@ -468,10 +509,17 @@ func (s *SignalsServiceOp) CreateExport(ctx context.Context, body *SignalsCreate
 	if body == nil {
 		return nil, nil, fmt.Errorf("signals: create export request is required")
 	}
-	if body.AgentID == "" {
+	agentID, err := body.resolveAgentID()
+	if err != nil {
+		return nil, nil, err
+	}
+	if agentID == "" {
 		return nil, nil, fmt.Errorf("signals: agent_id is required")
 	}
-	req, err := s.client.NewRequest(ctx, http.MethodPost, signalsBasePath+"/exports", body)
+	reqBody := *body
+	reqBody.AgentID = agentID
+	reqBody.EnvironmentID = ""
+	req, err := s.client.NewRequest(ctx, http.MethodPost, signalsBasePath+"/exports", &reqBody)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -485,7 +533,18 @@ func (s *SignalsServiceOp) CreateExport(ctx context.Context, body *SignalsCreate
 
 // ListExports lists export jobs (no download URLs).
 func (s *SignalsServiceOp) ListExports(ctx context.Context, opts *SignalsListExportsOptions) (*SignalsListExportsResponse, *Response, error) {
-	path, err := addOptions(signalsBasePath+"/exports", opts)
+	var wireOpts *SignalsListExportsOptions
+	if opts != nil {
+		agentID, err := opts.resolveAgentID()
+		if err != nil {
+			return nil, nil, err
+		}
+		cp := *opts
+		cp.AgentID = agentID
+		cp.EnvironmentID = ""
+		wireOpts = &cp
+	}
+	path, err := addOptions(signalsBasePath+"/exports", wireOpts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -572,7 +631,10 @@ func (s *SignalsServiceOp) CreateDeletion(ctx context.Context, body *SignalsCrea
 		return nil, nil, fmt.Errorf("signals: team_id is required")
 	}
 	typ := strings.TrimSpace(body.Type)
-	agentID := strings.TrimSpace(body.AgentID)
+	agentID, err := body.resolveAgentID()
+	if err != nil {
+		return nil, nil, err
+	}
 	switch typ {
 	case SignalsDeletionTypeAgent:
 		if agentID == "" {

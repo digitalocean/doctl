@@ -15,12 +15,48 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
+
+const signalsAgentIDDeprecationWarning = "Warning: --agent-id is deprecated, use --environment-id."
+
+type signalsIDFlags struct {
+	AgentID       string
+	EnvironmentID string
+}
+
+func (f signalsIDFlags) value() string {
+	if f.EnvironmentID != "" {
+		return f.EnvironmentID
+	}
+	return f.AgentID
+}
+
+func resolveSignalsIDFlags(c *CmdConfig) (signalsIDFlags, error) {
+	agentID, err := c.Doit.GetString(c.NS, doctl.ArgSignalsAgentID)
+	if err != nil {
+		return signalsIDFlags{}, err
+	}
+	environmentID, err := c.Doit.GetString(c.NS, doctl.ArgSignalsEnvironmentID)
+	if err != nil {
+		return signalsIDFlags{}, err
+	}
+	agentID = strings.TrimSpace(agentID)
+	environmentID = strings.TrimSpace(environmentID)
+	if agentID != "" {
+		fmt.Fprintln(os.Stderr, signalsAgentIDDeprecationWarning)
+	}
+	if agentID != "" && environmentID != "" && agentID != environmentID {
+		return signalsIDFlags{}, fmt.Errorf("--%s and --%s must match when both are set", doctl.ArgSignalsEnvironmentID, doctl.ArgSignalsAgentID)
+	}
+	return signalsIDFlags{AgentID: agentID, EnvironmentID: environmentID}, nil
+}
 
 const (
 	signalsSessionTypeAgent     = "agent"
@@ -49,13 +85,14 @@ func SignalsSession() *Command {
 		`Lists Signals sessions, including session ID, total turns, started-at time, duration, and signal count.
 
 Use --type to select the session source:
-- agent (default): list sessions for --agent-id (required)
-- inference: list team serverless-inference sessions (uses the nil agent UUID; do not pass --agent-id)`,
+- agent (default): list sessions for --environment-id (required)
+- inference: list team serverless-inference sessions (uses the nil agent UUID; do not pass --environment-id)`,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.SignalsSession{}),
 	)
 	AddStringFlag(cmdSessionList, doctl.ArgSignalsType, "", signalsSessionTypeAgent, "Session source: agent or inference.")
-	AddStringFlag(cmdSessionList, doctl.ArgSignalsAgentID, "", "", "The agent ID to list sessions for (required when --type=agent).")
+	AddStringFlag(cmdSessionList, doctl.ArgSignalsEnvironmentID, "", "", "The environment ID to list sessions for (required when --type=agent).")
+	AddStringFlag(cmdSessionList, doctl.ArgSignalsAgentID, "", "", "Deprecated: use --environment-id.")
 	AddIntFlag(cmdSessionList, doctl.ArgSignalsExportLimit, "", 20, "Maximum number of sessions to return.")
 	AddStringFlag(cmdSessionList, doctl.ArgSignalsExportAfter, "", "", "Opaque pagination cursor.")
 	AddIntFlag(cmdSessionList, doctl.ArgSignalsExportStartTime, "", 0, "Start time filter (Unix epoch seconds).")
@@ -87,11 +124,11 @@ func RunSignalsSessionList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	agentID, err := c.Doit.GetString(c.NS, doctl.ArgSignalsAgentID)
+	idFlags, err := resolveSignalsIDFlags(c)
 	if err != nil {
 		return err
 	}
-	agentID, err = resolveSignalsAgentID(sessionType, agentID)
+	agentID, err := resolveSignalsAgentID(sessionType, idFlags.value())
 	if err != nil {
 		return err
 	}
@@ -139,18 +176,18 @@ func RunSignalsSessionList(c *CmdConfig) error {
 	return c.Display(&displayers.SignalsSession{Sessions: sessions})
 }
 
-// resolveSignalsAgentID maps --type / --agent-id to the agent UUID used by
-// Signals APIs. Inference traffic is stamped with the nil agent UUID.
+// resolveSignalsAgentID maps --type / resolved environment id to the agent
+// UUID used by Signals APIs. Inference traffic is stamped with the nil agent UUID.
 func resolveSignalsAgentID(sessionType, agentID string) (string, error) {
 	switch sessionType {
 	case "", signalsSessionTypeAgent:
 		if agentID == "" {
-			return "", fmt.Errorf("--agent-id is required when --type=%s", signalsSessionTypeAgent)
+			return "", fmt.Errorf("--environment-id is required when --type=%s (deprecated: --agent-id)", signalsSessionTypeAgent)
 		}
 		return agentID, nil
 	case signalsSessionTypeInference:
 		if agentID != "" {
-			return "", fmt.Errorf("--agent-id must not be set when --type=%s", signalsSessionTypeInference)
+			return "", fmt.Errorf("--environment-id and --agent-id must not be set when --type=%s", signalsSessionTypeInference)
 		}
 		return signalsInferencePlaceholderAgentID, nil
 	default:
