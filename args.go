@@ -1390,4 +1390,19 @@ const (
 	ArgInsightsTracingOrderBy = "order-by"
 	// ArgInsightsTracingLimit is the maximum number of spans or traces to return.
 	ArgInsightsTracingLimit = "limit"
+
+	// ArgInsightsResourceProductType filters Insights resources by product type.
+	ArgInsightsResourceProductType = "product-type"
+	// ArgInsightsResourceRegion filters or initializes an Insights resource's region.
+	ArgInsightsResourceRegion = "region"
+	// ArgInsightsResourceSort selects the field used to sort Insights resources.
+	ArgInsightsResourceSort = "sort"
+	// ArgInsightsResourceSortDirection selects the Insights resource sort direction.
+	ArgInsightsResourceSortDirection = "sort-direction"
+	// ArgInsightsResourceMetrics changes metrics enablement for an Insights resource.
+	ArgInsightsResourceMetrics = "metrics"
+	// ArgInsightsResourceLogs changes logs enablement for an Insights resource.
+	ArgInsightsResourceLogs = "logs"
+	// ArgInsightsResourceTraces changes traces enablement for an Insights resource.
+	ArgInsightsResourceTraces = "traces"
 )

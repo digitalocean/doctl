@@ -24,7 +24,7 @@ func TestInsightsCommand(t *testing.T) {
 
 	assert.Equal(t, "insights", cmd.Name())
 	assert.Equal(t, manageResourcesGroup, cmd.GroupID)
-	assertCommandNames(t, cmd, "notification-channel", "alert-rule", "alert-instance", "metrics", "logs", "spans", "traces")
+	assertCommandNames(t, cmd, "notification-channel", "alert-rule", "alert-instance", "metrics", "logs", "spans", "traces", "resource")
 }
 
 func TestInsightsCommandRegistered(t *testing.T) {

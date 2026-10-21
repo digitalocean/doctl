@@ -50,6 +50,10 @@ type InsightsService interface {
 	SearchSpans(string, *godo.SpansSearchRequest) (*godo.SpansSearchResponse, error)
 	SearchTraces(string, *godo.TracesSearchRequest) (*godo.TracesSearchResponse, error)
 	GetTrace(string, string, *godo.TraceGetOptions) (*godo.Trace, error)
+
+	ListResources(*godo.InsightsResourceListOptions) (*godo.InsightsResourceList, error)
+	GetResource(string) (*godo.InsightsResource, error)
+	UpdateResourceSignals(string, *godo.InsightsResourceSignalsRequest) (*godo.InsightsResource, error)
 }
 
 type insightsService struct {
@@ -182,5 +186,20 @@ func (s *insightsService) SearchTraces(region string, req *godo.TracesSearchRequ
 
 func (s *insightsService) GetTrace(region, traceID string, opt *godo.TraceGetOptions) (*godo.Trace, error) {
 	result, _, err := s.client.Insights.GetTrace(context.TODO(), region, traceID, opt)
+	return result, err
+}
+
+func (s *insightsService) ListResources(opt *godo.InsightsResourceListOptions) (*godo.InsightsResourceList, error) {
+	result, _, err := s.client.Insights.ListResources(context.TODO(), opt)
+	return result, err
+}
+
+func (s *insightsService) GetResource(resourceURN string) (*godo.InsightsResource, error) {
+	result, _, err := s.client.Insights.GetResource(context.TODO(), resourceURN)
+	return result, err
+}
+
+func (s *insightsService) UpdateResourceSignals(resourceURN string, request *godo.InsightsResourceSignalsRequest) (*godo.InsightsResource, error) {
+	result, _, err := s.client.Insights.UpdateResourceSignals(context.TODO(), resourceURN, request)
 	return result, err
 }
