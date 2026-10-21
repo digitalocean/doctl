@@ -800,7 +800,10 @@ type HostedAgentProviderAuthPoll struct {
 // harness-api's connection-management proxy. ActorID (user_id on the wire) is
 // the actor identifier a manifest's secret `actor:` binds to — not a DO user
 // id. OwningUserID is the DO user that created the connection. No token or
-// authorization handle is ever exposed on this surface.
+// authorization handle is ever exposed on this surface. DeletionProtected
+// reports that an agent environment depends on the connection, so an
+// ordinary DeleteConnection will be refused; the API sends it on every
+// connection, protected or not.
 type HostedAgentConnection struct {
 	ID                  string                      `json:"id"`
 	Provider            string                      `json:"provider"`
@@ -808,6 +811,7 @@ type HostedAgentConnection struct {
 	ActorID             string                      `json:"user_id"`
 	Status              string                      `json:"status"`
 	OwningUserID        string                      `json:"owning_user_id,omitempty"`
+	DeletionProtected   bool                        `json:"deletion_protected"`
 	CreatedAt           *Timestamp                  `json:"created_at,omitempty"`
 	UpdatedAt           *Timestamp                  `json:"updated_at,omitempty"`
 	OAuth               *HostedAgentConnectionOAuth `json:"oauth,omitempty"`
