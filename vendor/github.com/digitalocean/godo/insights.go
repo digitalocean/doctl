@@ -17,6 +17,19 @@ const (
 	insightsNotificationChannelsPath = "/v2/insights/notification-channels"
 	insightsAlertRulesPath           = "/v2/insights/alert-rules"
 	insightsAlertInstancesPath       = "/v2/insights/alert-instances"
+	insightsResourcesPath            = "/v2/insights/resources"
+)
+
+// Insights resource list sort fields.
+const (
+	InsightsResourceSortResourceURN = "resource_urn"
+	InsightsResourceSortEffectiveAt = "effective_at"
+)
+
+// Insights resource list sort directions.
+const (
+	InsightsResourceSortAscending  = "asc"
+	InsightsResourceSortDescending = "desc"
 )
 
 // Insights notification channel types. These are the protobuf enum values the
@@ -208,7 +221,8 @@ const (
 )
 
 // InsightsService manages Insights notification channels, alert rules, alert
-// instances, PromQL queries, logs searches, spans searches, and traces queries.
+// instances, PromQL queries, logs searches, spans searches, traces queries,
+// and per-resource telemetry signal enablement.
 type InsightsService interface {
 	ListNotificationChannels(context.Context, *ListOptions) ([]NotificationChannel, *Response, error)
 	GetNotificationChannel(context.Context, string) (*NotificationChannel, *Response, error)
@@ -243,6 +257,10 @@ type InsightsService interface {
 
 	SearchTraces(context.Context, string, *TracesSearchRequest) (*TracesSearchResponse, *Response, error)
 	GetTrace(context.Context, string, string, *TraceGetOptions) (*Trace, *Response, error)
+
+	ListResources(context.Context, *InsightsResourceListOptions) (*InsightsResourceList, *Response, error)
+	GetResource(context.Context, string) (*InsightsResource, *Response, error)
+	UpdateResourceSignals(context.Context, string, *InsightsResourceSignalsRequest) (*InsightsResource, *Response, error)
 }
 
 // InsightsServiceOp handles communication with Insights methods of the DigitalOcean API.
@@ -1557,4 +1575,118 @@ func (s *InsightsServiceOp) GetTrace(ctx context.Context, region, traceID string
 		return nil, resp, err
 	}
 	return result, resp, nil
+}
+
+// InsightsResourceListOptions are filters and pagination for listing resource
+// signal enablement. PerPage defaults to 20 and is capped at 200 by the API.
+type InsightsResourceListOptions struct {
+	ProductTypes []string `url:"filter.product_types,omitempty"`
+	Regions      []string `url:"filter.regions,omitempty"`
+	Page         int      `url:"pagination.page,omitempty"`
+	PerPage      int      `url:"pagination.per_page,omitempty"`
+	// Sort is one of the InsightsResourceSort* constants. Defaults to resource_urn.
+	Sort string `url:"pagination.sort,omitempty"`
+	// SortDirection is "asc" or "desc". Defaults to asc.
+	SortDirection string `url:"pagination.sort_direction,omitempty"`
+}
+
+// InsightsResourceSignalState is the enablement state of one telemetry signal
+// (metrics, logs, or traces) for a resource.
+type InsightsResourceSignalState struct {
+	Enabled     bool      `json:"enabled"`
+	EffectiveAt time.Time `json:"effective_at"`
+}
+
+// InsightsResource is the current telemetry signal enablement for a resource.
+// A signal is nil when no explicit enablement has ever been recorded for it.
+type InsightsResource struct {
+	ResourceURN string                       `json:"resource_urn"`
+	ProductType string                       `json:"product_type"`
+	Region      string                       `json:"region,omitempty"`
+	Metrics     *InsightsResourceSignalState `json:"metrics,omitempty"`
+	Logs        *InsightsResourceSignalState `json:"logs,omitempty"`
+	Traces      *InsightsResourceSignalState `json:"traces,omitempty"`
+}
+
+// InsightsResourcesPagination is page-based pagination metadata for a
+// resources list.
+type InsightsResourcesPagination struct {
+	Page    int `json:"page"`
+	Pages   int `json:"pages"`
+	PerPage int `json:"per_page"`
+	Total   int `json:"total"`
+}
+
+// InsightsResourceList is a page of resources and their signal enablement.
+type InsightsResourceList struct {
+	Resources  []InsightsResource           `json:"resources,omitempty"`
+	Pagination *InsightsResourcesPagination `json:"pagination,omitempty"`
+}
+
+// InsightsResourceSignalsRequest is the body for updating a resource's signal
+// enablement. Set at least one of Metrics, Logs, or Traces (use godo.Bool);
+// nil signals are left unchanged. Region is only used when the resource has
+// no existing enablement and cannot be changed afterwards.
+type InsightsResourceSignalsRequest struct {
+	Region  string `json:"region,omitempty"`
+	Metrics *bool  `json:"metrics,omitempty"`
+	Logs    *bool  `json:"logs,omitempty"`
+	Traces  *bool  `json:"traces,omitempty"`
+}
+
+type insightsResourceRoot struct {
+	Resource *InsightsResource `json:"resource"`
+}
+
+// ListResources lists resources with recorded telemetry signal enablement.
+func (s *InsightsServiceOp) ListResources(ctx context.Context, opt *InsightsResourceListOptions) (*InsightsResourceList, *Response, error) {
+	path, err := addOptions(insightsResourcesPath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(InsightsResourceList)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+	return result, resp, nil
+}
+
+// GetResource retrieves the signal enablement for a resource by URN. The API
+// returns 404 when no enablement has been recorded for the resource.
+func (s *InsightsServiceOp) GetResource(ctx context.Context, resourceURN string) (*InsightsResource, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, insightsResourcePath(insightsResourcesPath, resourceURN), nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(insightsResourceRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Resource, resp, nil
+}
+
+// UpdateResourceSignals enables or disables telemetry signals for a resource.
+// Signals left nil in the request are unchanged.
+func (s *InsightsServiceOp) UpdateResourceSignals(ctx context.Context, resourceURN string, update *InsightsResourceSignalsRequest) (*InsightsResource, *Response, error) {
+	path := insightsResourcePath(insightsResourcesPath, resourceURN) + "/signals"
+	req, err := s.client.NewRequest(ctx, http.MethodPut, path, update)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(insightsResourceRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Resource, resp, nil
 }

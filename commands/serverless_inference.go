@@ -314,7 +314,7 @@ func serverlessInferenceChatCompletionText(completion *godo.ChatCompletion) stri
 	var b strings.Builder
 	for _, choice := range completion.Choices {
 		if choice.Message.Content != nil {
-			b.WriteString(*choice.Message.Content)
+			b.WriteString(choice.Message.Content.Text())
 		}
 	}
 	return b.String()

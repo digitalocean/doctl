@@ -143,6 +143,21 @@ func (mr *MockInsightsServiceMockRecorder) GetNotificationChannel(arg0 any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNotificationChannel", reflect.TypeOf((*MockInsightsService)(nil).GetNotificationChannel), arg0)
 }
 
+// GetResource mocks base method.
+func (m *MockInsightsService) GetResource(arg0 string) (*godo.InsightsResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetResource", arg0)
+	ret0, _ := ret[0].(*godo.InsightsResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetResource indicates an expected call of GetResource.
+func (mr *MockInsightsServiceMockRecorder) GetResource(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResource", reflect.TypeOf((*MockInsightsService)(nil).GetResource), arg0)
+}
+
 // GetTrace mocks base method.
 func (m *MockInsightsService) GetTrace(arg0, arg1 string, arg2 *godo.TraceGetOptions) (*godo.Trace, error) {
 	m.ctrl.T.Helper()
@@ -234,6 +249,21 @@ func (m *MockInsightsService) ListNotificationChannels(arg0 *godo.ListOptions) (
 func (mr *MockInsightsServiceMockRecorder) ListNotificationChannels(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationChannels", reflect.TypeOf((*MockInsightsService)(nil).ListNotificationChannels), arg0)
+}
+
+// ListResources mocks base method.
+func (m *MockInsightsService) ListResources(arg0 *godo.InsightsResourceListOptions) (*godo.InsightsResourceList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResources", arg0)
+	ret0, _ := ret[0].(*godo.InsightsResourceList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResources indicates an expected call of ListResources.
+func (mr *MockInsightsServiceMockRecorder) ListResources(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResources", reflect.TypeOf((*MockInsightsService)(nil).ListResources), arg0)
 }
 
 // PostLabels mocks base method.
@@ -414,4 +444,19 @@ func (m *MockInsightsService) UpdateNotificationChannel(arg0 string, arg1 *godo.
 func (mr *MockInsightsServiceMockRecorder) UpdateNotificationChannel(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNotificationChannel", reflect.TypeOf((*MockInsightsService)(nil).UpdateNotificationChannel), arg0, arg1)
+}
+
+// UpdateResourceSignals mocks base method.
+func (m *MockInsightsService) UpdateResourceSignals(arg0 string, arg1 *godo.InsightsResourceSignalsRequest) (*godo.InsightsResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateResourceSignals", arg0, arg1)
+	ret0, _ := ret[0].(*godo.InsightsResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateResourceSignals indicates an expected call of UpdateResourceSignals.
+func (mr *MockInsightsServiceMockRecorder) UpdateResourceSignals(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResourceSignals", reflect.TypeOf((*MockInsightsService)(nil).UpdateResourceSignals), arg0, arg1)
 }
