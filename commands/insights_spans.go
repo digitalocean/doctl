@@ -38,14 +38,16 @@ func insightsSpans() *Command {
 	search := CmdBuilder(cmd, RunInsightsSpansSearch, "search", "Search spans",
 		`Searches tracing spans in a region.
 
-Build the search with flags, or pass the complete camelCase public API request as JSON or YAML with `+"`"+`--request-file`+"`"+`. `+"`"+`--limit`+"`"+` overrides pagination from a request file.
+Build the search with flags, or pass the complete snake_case public API request as JSON or YAML with `+"`"+`--request-file`+"`"+`. Request files use `+"`"+`time_range`+"`"+` and `+"`"+`order_by`+"`"+`; `+"`"+`--limit`+"`"+` overrides pagination from a request file.
+
+The `+"`"+`--filter`+"`"+` and `+"`"+`--filter-file`+"`"+` values use logs-style expressions with exactly one of `+"`"+`condition`+"`"+`, `+"`"+`and`+"`"+`, `+"`"+`or`+"`"+`, `+"`"+`not`+"`"+`, or `+"`"+`text_search`+"`"+`. Condition values are typed with `+"`"+`string_value`+"`"+`, `+"`"+`number_value`+"`"+`, `+"`"+`string_array_value`+"`"+`, or `+"`"+`number_array_value`+"`"+`.
 
 Time ranges must not exceed seven days. Results are returned one page at a time; spans pagination reports whether more results matched but does not provide a cursor.`,
 		Writer, displayerType(&displayers.InsightsSpans{}))
 	search.Args = cobra.NoArgs
 	addInsightsRegionFlag(search)
 	addInsightsTracingSearchFlags(search)
-	search.Example = `The following example searches the last hour of spans in ` + "`" + `nyc3` + "`" + `: doctl insights spans search --region nyc3 --from 1h --order-by startTime:desc`
+	search.Example = `The following example searches the last hour of spans in ` + "`" + `nyc3` + "`" + `: doctl insights spans search --region nyc3 --from 1h --order-by start_time:desc --filter '{"condition":{"field":{"name":"service_name"},"operator":"FILTER_OPERATOR_EQ","value":{"string_value":"api"}}}'`
 
 	return cmd
 }
@@ -153,11 +155,11 @@ func validateSpansSearchRequest(request *godo.SpansSearchRequest) error {
 	}
 	from, err := insightsSearchTimeValue(request.TimeRange.From.Relative, request.TimeRange.From.Absolute)
 	if err != nil {
-		return fmt.Errorf("invalid spans timeRange.from: %w", err)
+		return fmt.Errorf("invalid spans time_range.from: %w", err)
 	}
 	to, err := insightsSearchTimeValue(request.TimeRange.To.Relative, request.TimeRange.To.Absolute)
 	if err != nil {
-		return fmt.Errorf("invalid spans timeRange.to: %w", err)
+		return fmt.Errorf("invalid spans time_range.to: %w", err)
 	}
 	if err := validateInsightsTracingTimeRange(from, to); err != nil {
 		return err
@@ -169,15 +171,15 @@ func validateSpansSearchRequest(request *godo.SpansSearchRequest) error {
 	}
 	for _, order := range request.OrderBy {
 		if strings.TrimSpace(order.Field.Name) == "" {
-			return fmt.Errorf("invalid spans orderBy: field name is required")
+			return fmt.Errorf("invalid spans order_by: field name is required")
 		}
 		if !validInsightsFieldScope(order.Field.Scope) {
-			return fmt.Errorf("invalid spans orderBy field scope %q", order.Field.Scope)
+			return fmt.Errorf("invalid spans order_by field scope %q", order.Field.Scope)
 		}
 		if order.Direction != "" &&
 			order.Direction != godo.InsightsSpansSortDirectionAscending &&
 			order.Direction != godo.InsightsSpansSortDirectionDescending {
-			return fmt.Errorf("invalid spans orderBy direction %q", order.Direction)
+			return fmt.Errorf("invalid spans order_by direction %q", order.Direction)
 		}
 	}
 	if request.Pagination != nil {
@@ -192,54 +194,71 @@ func validateSpansFilterExpression(expression *godo.SpansFilterExpression) error
 	if expression == nil {
 		return fmt.Errorf("expression is required")
 	}
-	switch expression.Type {
-	case godo.InsightsSpansFilterTypeCondition:
-		if expression.Field == nil || strings.TrimSpace(expression.Field.Name) == "" {
+	encoded, err := json.Marshal(expression)
+	if err != nil {
+		return err
+	}
+	var canonical godo.SpansFilterExpression
+	if err := json.Unmarshal(encoded, &canonical); err != nil {
+		return err
+	}
+	return validateCanonicalSpansFilterExpression(&canonical)
+}
+
+func validateCanonicalSpansFilterExpression(expression *godo.SpansFilterExpression) error {
+	switch {
+	case expression.Condition != nil:
+		condition := expression.Condition
+		if strings.TrimSpace(condition.Field.Name) == "" {
 			return fmt.Errorf("condition field is required")
 		}
-		if !validInsightsFieldScope(expression.Field.Scope) {
-			return fmt.Errorf("invalid field scope %q", expression.Field.Scope)
+		if !validInsightsFieldScope(condition.Field.Scope) {
+			return fmt.Errorf("invalid field scope %q", condition.Field.Scope)
 		}
 		if !slices.Contains([]string{
 			godo.InsightsSpansFilterOperatorEqual,
 			godo.InsightsSpansFilterOperatorNotEqual,
-			godo.InsightsSpansFilterOperatorGreaterThan,
 			godo.InsightsSpansFilterOperatorGreaterThanOrEqual,
-			godo.InsightsSpansFilterOperatorLessThan,
 			godo.InsightsSpansFilterOperatorLessThanOrEqual,
 			godo.InsightsSpansFilterOperatorIn,
 			godo.InsightsSpansFilterOperatorExists,
-		}, expression.Operator) {
-			return fmt.Errorf("invalid condition operator %q", expression.Operator)
+		}, condition.Operator) {
+			return fmt.Errorf("invalid condition operator %q", condition.Operator)
 		}
-		if expression.Operator != godo.InsightsSpansFilterOperatorExists {
-			if expression.Value == nil {
+		if condition.Operator != godo.InsightsSpansFilterOperatorExists {
+			if condition.Value == nil {
 				return fmt.Errorf("condition value is required")
 			}
-			if _, err := json.Marshal(expression.Value); err != nil {
+			if _, err := json.Marshal(condition.Value); err != nil {
 				return err
 			}
 		}
-	case godo.InsightsSpansFilterTypeAnd, godo.InsightsSpansFilterTypeOr:
-		if len(expression.Expressions) == 0 {
-			return fmt.Errorf("%s expression must contain child expressions", expression.Type)
+	case expression.And != nil:
+		if len(expression.And.Expressions) == 0 {
+			return fmt.Errorf("and expression must contain child expressions")
 		}
-		for i := range expression.Expressions {
-			if err := validateSpansFilterExpression(&expression.Expressions[i]); err != nil {
+		for i := range expression.And.Expressions {
+			if err := validateCanonicalSpansFilterExpression(&expression.And.Expressions[i]); err != nil {
 				return err
 			}
 		}
-	case godo.InsightsSpansFilterTypeNot:
-		if len(expression.Expressions) != 1 {
-			return fmt.Errorf("not expression must contain exactly one child expression")
+	case expression.Or != nil:
+		if len(expression.Or.Expressions) == 0 {
+			return fmt.Errorf("or expression must contain child expressions")
 		}
-		return validateSpansFilterExpression(&expression.Expressions[0])
-	case godo.InsightsSpansFilterTypeTextSearch:
-		if strings.TrimSpace(expression.Query) == "" {
+		for i := range expression.Or.Expressions {
+			if err := validateCanonicalSpansFilterExpression(&expression.Or.Expressions[i]); err != nil {
+				return err
+			}
+		}
+	case expression.Not != nil:
+		return validateCanonicalSpansFilterExpression(expression.Not)
+	case expression.TextSearch != nil:
+		if strings.TrimSpace(expression.TextSearch.Query) == "" {
 			return fmt.Errorf("text_search query is required")
 		}
 	default:
-		return fmt.Errorf("unknown expression type %q", expression.Type)
+		return fmt.Errorf("expression must contain exactly one node")
 	}
 	return nil
 }

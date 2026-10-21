@@ -46,7 +46,7 @@ var (
 func addInsightsTracingSearchFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgInsightsTracingFrom, "", "", "Start of the time range. Defaults to "+insightsTracingDefaultFrom)
 	AddStringFlag(cmd, doctl.ArgInsightsTracingTo, "", "", "End of the time range. Defaults to "+insightsTracingDefaultTo)
-	AddStringFlag(cmd, doctl.ArgInsightsTracingFilter, "", "", "A JSON filter expression for this command's public API schema")
+	AddStringFlag(cmd, doctl.ArgInsightsTracingFilter, "", "", "A JSON logs-style filter expression using condition, and, or, not, or text_search")
 	AddStringFlag(cmd, doctl.ArgInsightsTracingFilterFile, "", "", "Read a JSON or YAML filter expression from `path`, or - to read from stdin")
 	AddStringArrayFlag(cmd, doctl.ArgInsightsTracingOrderBy, "", nil, "Sort clause in the form `field[:asc|desc]`; repeat to sort by several fields")
 	AddIntFlag(cmd, doctl.ArgInsightsTracingLimit, "", 0, fmt.Sprintf("Maximum number of results to return, from 1 to %d", insightsTracingMaxLimit))
@@ -224,5 +224,7 @@ func insightsSearchTimeValue(relative, absolute string) (string, error) {
 }
 
 func validInsightsFieldScope(scope string) bool {
-	return scope == "" || scope == "resource" || scope == "attributes"
+	return scope == "" ||
+		scope == "FIELD_SCOPE_RESOURCE" ||
+		scope == "FIELD_SCOPE_ATTRIBUTES"
 }
