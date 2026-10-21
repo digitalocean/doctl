@@ -99,8 +99,10 @@ type SignalsListDialoguesOptions struct {
 // SignalsListExportsOptions are query params for GET /exports.
 type SignalsListExportsOptions struct {
 	SignalsCursorPageOptions
-	AgentID       string `url:"agent_id,omitempty"`
-	EnvironmentID string `url:"-"`
+	// AgentID is a deprecated alias for EnvironmentID. Accepted on the client;
+	// list requests send environment_id on the wire.
+	AgentID       string `url:"-"`
+	EnvironmentID string `url:"environment_id,omitempty"`
 }
 
 func (o *SignalsListExportsOptions) resolveAgentID() (string, error) {
@@ -168,8 +170,10 @@ type SignalsListConsentsResponse struct {
 }
 
 // SignalsCreateExportRequest is the body for POST /v1/signals/exports.
+// AgentID is a deprecated alias for EnvironmentID. Create requests send
+// environment_id on the wire after resolving either field.
 type SignalsCreateExportRequest struct {
-	AgentID       string `json:"agent_id"`
+	AgentID       string `json:"agent_id,omitempty"`
 	EnvironmentID string `json:"environment_id,omitempty"`
 	// SessionIDs optionally narrows the export to a session cohort (OR within
 	// the list). Omit or leave empty to export all sessions owned by the team.
@@ -188,18 +192,20 @@ func (r *SignalsCreateExportRequest) resolveAgentID() (string, error) {
 
 // SignalsCreateDeletionRequest is the body for POST /v1/signals/deletions.
 // JSON keys match CreateDeletionRequest in signals-api OpenAPI:
-// required type + team_id; agent_id only for agent (omit for inference).
+// required type + team_id; environment_id only for agent (omit for inference).
+// AgentID is a deprecated alias; create requests send environment_id on the wire.
 type SignalsCreateDeletionRequest struct {
 	// Type is SignalsDeletionTypeAgent or SignalsDeletionTypeInference.
 	// Required by the server (omitting type is 400). godo also requires it so a
-	// missing AgentID can never be mistaken for a team-wide inference deletion.
+	// missing EnvironmentID can never be mistaken for a team-wide inference deletion.
 	Type string `json:"type"`
 	// TeamID is the numeric team id; it must match the authenticated team.
 	TeamID int64 `json:"team_id"`
-	// AgentID is the Harness Runtime Environment Config ID (agent UUID).
+	// AgentID is a deprecated alias for EnvironmentID.
+	AgentID string `json:"agent_id,omitempty"`
+	// EnvironmentID is the Harness Runtime Environment Config ID.
 	// Required for agent and must be empty for inference (team-wide only).
 	// Omitted from the JSON body when empty.
-	AgentID       string `json:"agent_id,omitempty"`
 	EnvironmentID string `json:"environment_id,omitempty"`
 }
 
@@ -517,8 +523,8 @@ func (s *SignalsServiceOp) CreateExport(ctx context.Context, body *SignalsCreate
 		return nil, nil, fmt.Errorf("signals: environment_id is required")
 	}
 	reqBody := *body
-	reqBody.AgentID = agentID
-	reqBody.EnvironmentID = ""
+	reqBody.EnvironmentID = agentID
+	reqBody.AgentID = ""
 	req, err := s.client.NewRequest(ctx, http.MethodPost, signalsBasePath+"/exports", &reqBody)
 	if err != nil {
 		return nil, nil, err
@@ -540,8 +546,8 @@ func (s *SignalsServiceOp) ListExports(ctx context.Context, opts *SignalsListExp
 			return nil, nil, err
 		}
 		cp := *opts
-		cp.AgentID = agentID
-		cp.EnvironmentID = ""
+		cp.EnvironmentID = agentID
+		cp.AgentID = ""
 		wireOpts = &cp
 	}
 	path, err := addOptions(signalsBasePath+"/exports", wireOpts)
@@ -596,27 +602,27 @@ func (s *SignalsServiceOp) GetExportOptions(ctx context.Context) (*SignalsExport
 // team-wide inference consent for SignalsDeletionTypeInference). Inference
 // deletions remove Serverless Inference Signals conversations for the whole
 // team that were collected at or before the deletion request. For agent
-// deletions, AgentID is the Harness Runtime Environment Config ID (agent
-// UUID). Deletion continues asynchronously. Earlier export files are not
-// deleted. Aggregated Insights/metrics summaries may still remain and are
-// not the same as recoverable conversation content.
+// deletions, EnvironmentID is the Harness Runtime Environment Config ID.
+// Deletion continues asynchronously. Earlier export files are not deleted.
+// Aggregated Insights/metrics summaries may still remain and are not the same
+// as recoverable conversation content.
 //
 // For agent deletions, wait until the job is complete before enabling Signals
-// for that agent again.
+// for that environment again.
 //
 // Status codes from the server:
 //   - 202 — new job created (queued)
 //   - 200 — active job for the same fingerprint reused (queued/running)
-//   - 400 — invalid body (type/agent_id rules, unknown fields, bad UUID)
+//   - 400 — invalid body (type/environment_id rules, unknown fields, bad UUID)
 //   - 401 — missing team auth
 //   - 403 — body team_id does not match authenticated team
-//   - 404 — agent unknown for this team
+//   - 404 — environment unknown for this team
 //   - 429 — too many active deletion jobs for this team (inflight cap)
 //   - 500 — internal error
 //
 // Check Response.StatusCode to tell 200 vs 202 apart. For
-// SignalsDeletionTypeAgent AgentID is required; for
-// SignalsDeletionTypeInference it must be empty (and is omitted from JSON).
+// SignalsDeletionTypeAgent EnvironmentID (or deprecated AgentID) is required;
+// for SignalsDeletionTypeInference it must be empty (and is omitted from JSON).
 //
 // If the client retries requests (for example one built with
 // WithRetryAndBackoffs), a repeated POST while the first job is still active
@@ -642,15 +648,15 @@ func (s *SignalsServiceOp) CreateDeletion(ctx context.Context, body *SignalsCrea
 		}
 	case SignalsDeletionTypeInference:
 		if agentID != "" {
-			return nil, nil, fmt.Errorf("signals: agent_id must not be set for inference")
+			return nil, nil, fmt.Errorf("signals: environment_id must not be set for inference")
 		}
 	default:
 		return nil, nil, fmt.Errorf("signals: type must be agent or inference")
 	}
 	reqBody := &SignalsCreateDeletionRequest{
-		Type:    typ,
-		TeamID:  body.TeamID,
-		AgentID: agentID,
+		Type:          typ,
+		TeamID:        body.TeamID,
+		EnvironmentID: agentID,
 	}
 	req, err := s.client.NewRequest(ctx, http.MethodPost, signalsBasePath+"/deletions", reqBody)
 	if err != nil {

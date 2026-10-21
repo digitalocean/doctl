@@ -54,7 +54,7 @@ Note: Deletion removes Signals conversation data for the requested scope. Aggreg
 	deletionDetails := `
 - The deletion job ID
 - The type (agent or inference)
-- The environment ID (agent only)
+- The environment ID (environment only)
 - The status (queued, running, complete, failed)
 - Created / started / completed timestamps (Unix seconds)
 
