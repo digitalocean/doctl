@@ -36,7 +36,7 @@ func SignalsExport() *Command {
 
 	exportDetails := `
 - The export job ID
-- The agent ID
+- The environment ID
 - The export status (queued, running, complete, failed, expired)
 - Stored filters (signal_type, session_ids, time window, …)
 - Created / completed / expires timestamps (Unix seconds)

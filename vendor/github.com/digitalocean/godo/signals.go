@@ -514,7 +514,7 @@ func (s *SignalsServiceOp) CreateExport(ctx context.Context, body *SignalsCreate
 		return nil, nil, err
 	}
 	if agentID == "" {
-		return nil, nil, fmt.Errorf("signals: agent_id is required")
+		return nil, nil, fmt.Errorf("signals: environment_id is required")
 	}
 	reqBody := *body
 	reqBody.AgentID = agentID
@@ -638,7 +638,7 @@ func (s *SignalsServiceOp) CreateDeletion(ctx context.Context, body *SignalsCrea
 	switch typ {
 	case SignalsDeletionTypeAgent:
 		if agentID == "" {
-			return nil, nil, fmt.Errorf("signals: agent_id is required for agent")
+			return nil, nil, fmt.Errorf("signals: environment_id is required for agent")
 		}
 	case SignalsDeletionTypeInference:
 		if agentID != "" {
