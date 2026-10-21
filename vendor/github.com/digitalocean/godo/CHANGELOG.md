@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.230.0] - 2026-10-21
+
+- #1179 - @dmamidala-glitch - COBS-1696: Align Insights tracing wire contract
+- #1174 - @schakraborty-do - microvms: add URL add/remove and ingress opt-out
+
 ## [1.229.0] - 2026-10-19
 
 - #1173 - @potturu-vamsi - agent platform: remove MaxTokens from CandidateInferenceConfig

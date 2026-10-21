@@ -7,6 +7,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -94,8 +95,50 @@ func TestSignalsConsentGet(t *testing.T) {
 		tm.signals.EXPECT().GetConsent("agt-1").
 			Return(&testAgentConsent, nil)
 
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsConsentGet(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsConsentGetEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
+
+		tm.signals.EXPECT().GetConsent("agt-1").
+			Return(&testAgentConsent, nil)
+
 		err := RunSignalsConsentGet(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsConsentGetBothIDsEqual(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
+
+		tm.signals.EXPECT().GetConsent("agt-1").
+			Return(&testAgentConsent, nil)
+
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsConsentGet(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsConsentGetBothIDsDifferent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-2")
+
+		err := RunSignalsConsentGet(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "must match")
 	})
 }
 
@@ -114,7 +157,7 @@ func TestSignalsConsentGetInference(t *testing.T) {
 func TestSignalsConsentGetAgentRequiresAgentID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunSignalsConsentGet(config)
-		assert.ErrorContains(t, err, "--agent-id is required")
+		assert.ErrorContains(t, err, "--environment-id is required")
 	})
 }
 
@@ -128,9 +171,35 @@ func TestSignalsConsentGetInferenceRejectsAgentID(t *testing.T) {
 	})
 }
 
+func TestSignalsConsentGetInferenceRejectsEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsConsentSource, "inference")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
+
+		err := RunSignalsConsentGet(config)
+		assert.ErrorContains(t, err, "must not be set")
+	})
+}
+
 func TestSignalsConsentSet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnabled, true)
+
+		tm.signals.EXPECT().SetConsent("agt-1", true).
+			Return(&testConsent, nil)
+
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsConsentSet(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsConsentSetEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
 		config.Doit.Set(config.NS, doctl.ArgSignalsEnabled, true)
 
 		tm.signals.EXPECT().SetConsent("agt-1", true).
