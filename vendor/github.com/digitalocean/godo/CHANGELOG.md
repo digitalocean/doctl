@@ -1,5 +1,19 @@
 # Change Log
 
+## [1.230.0] - 2026-10-21
+
+- #1179 - @dmamidala-glitch - COBS-1696: Align Insights tracing wire contract
+- #1174 - @schakraborty-do - microvms: add URL add/remove and ingress opt-out
+
+## [1.229.0] - 2026-10-19
+
+- #1173 - @potturu-vamsi - agent platform: remove MaxTokens from CandidateInferenceConfig
+
+## [1.228.0] - 2026-10-19
+
+- #1166 - @kishlay-singh-DO - Add Insights enablement endpoints
+- #1171 - @BadhriDO - hosted agents: carry deletion_protected on connections (MARSOHS-2173)
+
 ## [1.227.0] - 2026-10-16
 
 - #1168 - @SSharma-10 - Expand serverless inference for server-side tools, VLMs, TTS, and video

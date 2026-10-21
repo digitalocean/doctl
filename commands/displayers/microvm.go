@@ -78,6 +78,44 @@ func (m *MicroVM) KV() []map[string]any {
 	return out
 }
 
+type MicroVMURL struct {
+	URLs []godo.MicroVMURL
+}
+
+var _ Displayable = &MicroVMURL{}
+
+func (u *MicroVMURL) JSON(out io.Writer) error {
+	return writeJSON(u.URLs, out)
+}
+
+func (u *MicroVMURL) Cols() []string {
+	return []string{"ID", "Hostname", "Port", "Default", "Status"}
+}
+
+func (u *MicroVMURL) ColMap() map[string]string {
+	return map[string]string{
+		"ID":       "ID",
+		"Hostname": "Hostname",
+		"Port":     "Port",
+		"Default":  "Default",
+		"Status":   "Status",
+	}
+}
+
+func (u *MicroVMURL) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(u.URLs))
+	for _, url := range u.URLs {
+		out = append(out, map[string]any{
+			"ID":       url.ID,
+			"Hostname": url.Hostname,
+			"Port":     url.Port,
+			"Default":  url.Default,
+			"Status":   string(url.Status),
+		})
+	}
+	return out
+}
+
 type MicroVMCheckpoint struct {
 	Checkpoints do.MicroVMCheckpoints
 }
