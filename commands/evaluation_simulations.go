@@ -35,9 +35,9 @@ const (
 	scenarioLibrarySortFieldPrefix = "SCENARIO_LIBRARY_SORT_FIELD_"
 	simulationRunStatusPrefix      = "SIMULATION_RUN_STATUS_"
 	simulationRunSortFieldPrefix   = "SIMULATION_RUN_SORT_FIELD_"
-	journeyStatusPrefix            = "SIMULATION_JOURNEY_STATUS_"
-	journeyVerdictPrefix           = "SIMULATION_JOURNEY_VERDICT_"
-	journeySortFieldPrefix         = "SIMULATION_JOURNEY_SORT_FIELD_"
+	episodeStatusPrefix            = "SIMULATION_EPISODE_STATUS_"
+	episodeVerdictPrefix           = "SIMULATION_EPISODE_VERDICT_"
+	episodeSortFieldPrefix         = "SIMULATION_EPISODE_SORT_FIELD_"
 	sortDirectionPrefix            = "SORT_DIRECTION_"
 )
 

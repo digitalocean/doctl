@@ -14,12 +14,13 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,12 +70,11 @@ func TestBeautifyAgentError_APIResponse(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, pretty.status)
 	assert.Contains(t, pretty.tips, "doctl harness-runtime list")
 
-	display := pretty.DisplayError()
-	assert.Contains(t, display, "Session limit reached")
+	display := formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty)
+	assert.Contains(t, display, "Error: Session limit reached")
 	assert.Contains(t, display, "team is at the limit of 4 active sessions")
 	assert.Contains(t, display, "409")
 	assert.NotContains(t, display, "POST https://")
-	assert.NotContains(t, strings.ToLower(display), "error:")
 }
 
 // Sending input to a bare sandbox is the one 409 a user reaches by doing the
@@ -122,7 +122,7 @@ func TestBeautifyAgentError_LocalValidation(t *testing.T) {
 	require.True(t, errors.As(out, &pretty))
 	assert.Equal(t, "Invalid arguments", pretty.title)
 	assert.Equal(t, "--harness and --config-id are mutually exclusive", pretty.reason)
-	assert.NotContains(t, pretty.DisplayError(), "POST https://")
+	assert.NotContains(t, formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty), "POST https://")
 }
 
 // A delete that was not confirmed sends no request, so its card must not say a request
@@ -133,8 +133,10 @@ func TestBeautifyAgentError_UnconfirmedDelete(t *testing.T) {
 	require.True(t, errors.As(out, &pretty))
 	assert.Equal(t, "Not confirmed", pretty.title)
 	assert.Equal(t, "operation aborted", pretty.reason)
-	assert.NotContains(t, pretty.DisplayError(), "Couldn't complete that request")
-	assert.Contains(t, pretty.DisplayError(), "--force")
+
+	display := formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty)
+	assert.NotContains(t, display, "Couldn't complete that request")
+	assert.Contains(t, display, "--force")
 }
 
 // A prepay 402 must never fall through to the generic "Request failed" card,
@@ -147,7 +149,8 @@ func TestBeautifyAgentError_PrepayBlocked(t *testing.T) {
 	assert.Equal(t, prepayBlockedTitle, pretty.title)
 	assert.Equal(t, http.StatusPaymentRequired, pretty.status)
 
-	display := pretty.DisplayError()
+	display := formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty)
+	assert.Contains(t, display, "Error: "+prepayBlockedTitle)
 	assert.Contains(t, display, "402")
 	assert.Contains(t, display, prepayTopUpURL)
 	assert.Contains(t, display, prepayBalanceCmd)
@@ -164,10 +167,10 @@ func TestBeautifyAgentError_PrepayUnknown(t *testing.T) {
 	require.True(t, errors.As(out, &pretty))
 	assert.Equal(t, prepayUnknownTitle, pretty.title)
 
-	display := pretty.DisplayError()
+	display := formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty)
 	assert.Contains(t, display, "503")
 	assert.Contains(t, display, "Retry in a moment")
-	assert.NotContains(t, strings.ToLower(display), "add funds")
+	assert.NotContains(t, display, "Add funds")
 }
 
 func TestBeautifyAgentError_Idempotent(t *testing.T) {
@@ -207,8 +210,41 @@ func TestBeautifyAgentError_AgentspecUnknownField(t *testing.T) {
 	assert.NotContains(t, pretty.reason, "contracts/")
 	assert.Contains(t, pretty.tips, "doctl harness-runtime validate")
 
-	display := pretty.DisplayError()
+	display := formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty)
 	assert.Contains(t, display, "HARNESS_INFERENCE_API_KEY")
 	assert.NotContains(t, display, "contracts/")
 	assert.NotContains(t, display, `\u00a0`)
+}
+
+// EX15 returns HTTP 504 with an applied-budget reason. That must not look like
+// a generic "Service temporarily unavailable" retry tip.
+func TestBeautifyAgentError_ExecTimeout504(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusGatewayTimeout, "exec timed out after 3s (requested)"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec timed out", pretty.title)
+	assert.Equal(t, "exec timed out after 3s (requested)", pretty.reason)
+	assert.Equal(t, http.StatusGatewayTimeout, pretty.status)
+	assert.Contains(t, pretty.tips, "Pass a larger --timeout")
+	assert.NotContains(t, pretty.tips, "Retry in a moment")
+}
+
+func TestBeautifyAgentError_ExecStreamCapacity429(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusTooManyRequests, "sandbox exec stream capacity exhausted, retry later"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec stream capacity exhausted", pretty.title)
+	assert.Contains(t, pretty.tips, "Wait a moment and retry")
+}
+
+func TestBeautifyAgentError_SSEExecTimeoutMessage(t *testing.T) {
+	out := beautifyAgentError(errors.New("exec timed out after 900s (default)"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec timed out", pretty.title)
+	assert.Contains(t, pretty.tips, "Pass a larger --timeout")
+	assert.NotContains(t, pretty.tips, "--wait-timeout")
 }

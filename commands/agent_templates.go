@@ -35,6 +35,7 @@ const (
 	baseTemplateClaudeCodeBase = "claude-code-base"
 	baseTemplateHermesBase     = "hermes-base"
 	baseTemplateLanggraphBase  = "langgraph-base"
+	baseTemplateHermesBYOABase = "hermes-byoa-base"
 
 	baseTemplateCodingBase       = "coding-base"
 	baseTemplateCodingClaudeCode = "coding-claude-code"
@@ -67,6 +68,12 @@ var acceptedCurrentBaseTemplates = []string{
 	baseTemplateLanggraphBase,
 	baseTemplateCodingBase,
 	baseTemplateCrewAI,
+}
+
+// hiddenBaseTemplates are accepted but never listed in help or errors: they
+// work for callers who know the name, ahead of a general release.
+var hiddenBaseTemplates = []string{
+	baseTemplateHermesBYOABase,
 }
 
 // legacyBaseTemplates are still accepted by the API and will be retired.
@@ -417,7 +424,7 @@ func RunAgentsTemplateGetBuild(c *CmdConfig) error {
 }
 
 func validateBaseTemplate(base string) error {
-	if slices.Contains(acceptedCurrentBaseTemplates, base) {
+	if slices.Contains(acceptedCurrentBaseTemplates, base) || slices.Contains(hiddenBaseTemplates, base) {
 		return nil
 	}
 	if _, ok := legacyBaseTemplates[base]; ok {

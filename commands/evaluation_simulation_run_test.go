@@ -11,7 +11,7 @@ import (
 
 var (
 	testSimulationRunUUID     = "33333333-3333-4333-8333-333333333333"
-	testSimulationJourneyUUID = "44444444-4444-4444-8444-444444444444"
+	testSimulationEpisodeUUID = "44444444-4444-4444-8444-444444444444"
 
 	testSimulationRun = do.SimulationRun{
 		SimulationRun: &godo.SimulationRun{
@@ -22,19 +22,19 @@ var (
 			AgentConfig: &godo.CandidateAgentConfig{
 				AgentUUID: "agent-uuid",
 			},
-			TotalJourneys:    6,
-			JourneysFinished: 2,
+			TotalEpisodes:    6,
+			EpisodesFinished: 2,
 		},
 	}
 
-	testSimulationJourney = do.SimulationJourney{
-		SimulationJourney: &godo.SimulationJourney{
-			JourneyUUID:  testSimulationJourneyUUID,
+	testSimulationEpisode = do.SimulationEpisode{
+		SimulationEpisode: &godo.SimulationEpisode{
+			EpisodeUUID:  testSimulationEpisodeUUID,
 			RunUUID:      testSimulationRunUUID,
 			ScenarioUUID: testScenario.ScenarioUUID,
-			JourneyIndex: 1,
-			Status:       godo.SimulationJourneyStatusFinished,
-			Verdict:      godo.SimulationJourneyVerdictSuccess,
+			EpisodeIndex: 1,
+			Status:       godo.SimulationEpisodeStatusFinished,
+			Verdict:      godo.SimulationEpisodeVerdictSuccess,
 			DurationSec:  "42",
 		},
 	}
@@ -43,7 +43,7 @@ var (
 func TestSimulationRunCommand(t *testing.T) {
 	cmd := SimulationRunCmd()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "update", "cancel", "delete", "list-journeys", "get-journey", "get-trajectory", "get-trajectory-url")
+	assertCommandNames(t, cmd, "create", "list", "get", "update", "cancel", "delete", "list-episodes", "get-episode", "get-trajectory", "get-trajectory-url")
 }
 
 func TestSimulationRunCreate(t *testing.T) {
@@ -146,7 +146,7 @@ func TestSimulationRunGet(t *testing.T) {
 				SimulationRun: testSimulationRun.SimulationRun,
 				ScenarioResults: []*godo.SimulationScenarioResult{{
 					ScenarioUUID:  testScenario.ScenarioUUID,
-					TotalJourneys: 3,
+					TotalEpisodes: 3,
 				}},
 			},
 		}, nil)
@@ -195,73 +195,73 @@ func TestSimulationRunDelete(t *testing.T) {
 	})
 }
 
-func TestSimulationRunListJourneys(t *testing.T) {
+func TestSimulationRunListEpisodes(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testSimulationRunUUID)
 		config.Doit.Set(config.NS, doctl.ArgSimulationScenarioUUID, testScenario.ScenarioUUID)
 		config.Doit.Set(config.NS, doctl.ArgGenAIStatuses, []string{"finished"})
-		config.Doit.Set(config.NS, doctl.ArgSimulationJourneyVerdicts, []string{"failure"})
+		config.Doit.Set(config.NS, doctl.ArgSimulationEpisodeVerdicts, []string{"failure"})
 
-		tm.agentPlatform.EXPECT().ListSimulationJourneys(testSimulationRunUUID, &godo.SimulationJourneyListOptions{
+		tm.agentPlatform.EXPECT().ListSimulationEpisodes(testSimulationRunUUID, &godo.SimulationEpisodeListOptions{
 			ScenarioUUID: testScenario.ScenarioUUID,
-			Statuses:     []godo.SimulationJourneyStatus{godo.SimulationJourneyStatusFinished},
-			Verdicts:     []godo.SimulationJourneyVerdict{godo.SimulationJourneyVerdictFailure},
-		}).Return(do.SimulationJourneys{testSimulationJourney}, nil)
+			Statuses:     []godo.SimulationEpisodeStatus{godo.SimulationEpisodeStatusFinished},
+			Verdicts:     []godo.SimulationEpisodeVerdict{godo.SimulationEpisodeVerdictFailure},
+		}).Return(do.SimulationEpisodes{testSimulationEpisode}, nil)
 
-		err := RunSimulationRunListJourneys(config)
+		err := RunSimulationRunListEpisodes(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestSimulationRunGetJourney(t *testing.T) {
+func TestSimulationRunGetEpisode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testSimulationRunUUID, testSimulationJourneyUUID)
+		config.Args = append(config.Args, testSimulationRunUUID, testSimulationEpisodeUUID)
 
-		tm.agentPlatform.EXPECT().GetSimulationJourney(testSimulationRunUUID, testSimulationJourneyUUID).
-			Return(&testSimulationJourney, nil)
+		tm.agentPlatform.EXPECT().GetSimulationEpisode(testSimulationRunUUID, testSimulationEpisodeUUID).
+			Return(&testSimulationEpisode, nil)
 
-		err := RunSimulationRunGetJourney(config)
+		err := RunSimulationRunGetEpisode(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestSimulationRunGetJourneyRequiresTwoArgs(t *testing.T) {
+func TestSimulationRunGetEpisodeRequiresTwoArgs(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testSimulationRunUUID)
 
-		err := RunSimulationRunGetJourney(config)
+		err := RunSimulationRunGetEpisode(config)
 		assert.Error(t, err)
 	})
 }
 
-func TestSimulationRunGetJourneyTrajectory(t *testing.T) {
+func TestSimulationRunGetEpisodeTrajectory(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testSimulationRunUUID, testSimulationJourneyUUID)
+		config.Args = append(config.Args, testSimulationRunUUID, testSimulationEpisodeUUID)
 
-		tm.agentPlatform.EXPECT().GetSimulationJourneyTrajectory(testSimulationRunUUID, testSimulationJourneyUUID).
+		tm.agentPlatform.EXPECT().GetSimulationEpisodeTrajectory(testSimulationRunUUID, testSimulationEpisodeUUID).
 			Return(&do.SimulationTrajectory{
 				SimulationTrajectory: &godo.SimulationTrajectory{
-					JourneyUUID: testSimulationJourneyUUID,
+					EpisodeUUID: testSimulationEpisodeUUID,
 					RunUUID:     testSimulationRunUUID,
 					Status:      godo.SimulationTrajectoryStatusCompleted,
-					Verdict:     godo.SimulationJourneyVerdictSuccess,
+					Verdict:     godo.SimulationEpisodeVerdictSuccess,
 					TurnCount:   4,
 				},
 			}, nil)
 
-		err := RunSimulationRunGetJourneyTrajectory(config)
+		err := RunSimulationRunGetEpisodeTrajectory(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestSimulationRunGetJourneyTrajectoryURL(t *testing.T) {
+func TestSimulationRunGetEpisodeTrajectoryURL(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testSimulationRunUUID, testSimulationJourneyUUID)
+		config.Args = append(config.Args, testSimulationRunUUID, testSimulationEpisodeUUID)
 
-		tm.agentPlatform.EXPECT().GetSimulationJourneyTrajectoryURL(testSimulationRunUUID, testSimulationJourneyUUID).
+		tm.agentPlatform.EXPECT().GetSimulationEpisodeTrajectoryURL(testSimulationRunUUID, testSimulationEpisodeUUID).
 			Return(&do.GenAIDownloadURL{DownloadURL: "https://example.com/trajectory"}, nil)
 
-		err := RunSimulationRunGetJourneyTrajectoryURL(config)
+		err := RunSimulationRunGetEpisodeTrajectoryURL(config)
 		assert.NoError(t, err)
 	})
 }

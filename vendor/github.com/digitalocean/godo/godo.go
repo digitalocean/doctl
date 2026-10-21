@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.220.0"
+	libraryVersion = "1.227.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -122,6 +122,8 @@ type Client struct {
 	Models           *ModelService
 	Responses        *ResponseService
 	AsyncInvocations *AsyncInvocationService
+	Audio            *AudioService
+	Video            *VideoService
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
 
@@ -386,6 +388,8 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Models = &ModelService{inferenceTransport: t}
 	c.Responses = &ResponseService{inferenceTransport: t}
 	c.AsyncInvocations = &AsyncInvocationService{inferenceTransport: t}
+	c.Audio = &AudioService{Speech: &SpeechService{inferenceTransport: t}}
+	c.Video = &VideoService{Generations: &VideoGenerationService{inferenceTransport: t}}
 
 	c.headers = make(map[string]string)
 

@@ -26,7 +26,7 @@ func Evaluation() *Command {
 			Long: `The subcommands of ` + "`" + `doctl evaluation` + "`" + ` manage GenAI model evaluations and agent simulations.
 
 Model evaluations score candidate models against datasets with an LLM judge.
-Simulations run multi-turn scenario sets against agents and inspect journeys.`,
+Simulations run multi-turn scenario sets against agents and inspect episodes.`,
 			GroupID: manageResourcesGroup,
 		},
 	}

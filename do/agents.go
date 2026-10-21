@@ -14,6 +14,7 @@ limitations under the License.
 package do
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -38,6 +39,15 @@ type HostedAgentsService interface {
 	// OpenAISessionID in opt so harness-api persists openai_session_id
 	// (?openai_session_id=). opt may be nil.
 	CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
+	// CreateSessionFromManifestWithManagedKey is CreateSessionFromManifest
+	// with ?manage_model_access_key=true: harness-api mints a DigitalOcean
+	// Inference key for the new session and delivers it to the guest as
+	// HARNESS_INFERENCE_API_KEY. A manifest that already supplies that secret
+	// keeps its own key; the server skips the mint. Only the agents.yaml form
+	// takes the parameter, which is why it is not on CreateSessionFromConfig.
+	// godo (through v1.229.0) has no field for it, so the request is built
+	// here; fold it into opt once it does.
+	CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
 	// UpdateSession patches session-scoped settings (never the agent manifest
@@ -60,6 +70,12 @@ type HostedAgentsService interface {
 	// guest command runs, so the caller needs to be able to give up. A non-zero
 	// ExitCode is a successful call — only transport failure is an error.
 	ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error)
+	// StreamExecInSandbox runs the same guest command as ExecInSandbox but
+	// delivers stdout/stderr as they arrive (SSE). emit is called for each
+	// frame; a terminal exit frame carries ExitCode. Against a server that
+	// does not yet speak SSE, the call falls back to the buffered JSON body
+	// and synthesizes the same frames so callers stay compatible.
+	StreamExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest, emit func(SandboxExecEvent) error) error
 	// ListSandboxSizes returns the customer-selectable sandbox size catalog.
 	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
 	// smallest-to-largest; no pagination.
@@ -72,6 +88,16 @@ type HostedAgentsService interface {
 	// PollProviderAuth checks whether a pending connect link has been authorized.
 	// pollURL is the poll_url returned by StartProviderAuth.
 	PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error)
+	// ListConnections lists the team's external-provider connections. The whole
+	// response is returned so callers can render pagination (page/per_page/total).
+	ListConnections(provider string, opt *godo.HostedAgentConnectionListOptions) (*godo.HostedAgentConnectionsListResponse, error)
+	// CreateConnection creates (or resumes) a connection binding an actor to the
+	// provider. A pending connection comes back with an Authorization to complete.
+	CreateConnection(provider string, body *godo.HostedAgentConnectionCreateRequest) (*godo.HostedAgentConnectionEnvelope, error)
+	// GetConnection reads one connection by id, used to poll a pending authorization.
+	GetConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error)
+	// DeleteConnection revokes one connection by id and returns its final state.
+	DeleteConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error)
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
 	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
@@ -132,6 +158,51 @@ func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte, opt *go
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+// manageModelAccessKeyParam is harness-api's opt-in to mint the session's
+// DigitalOcean Inference key. See CreateSessionFromManifestWithManagedKey.
+const manageModelAccessKeyParam = "manage_model_access_key"
+
+func (s *hostedAgentsService) CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error) {
+	if len(bytes.TrimSpace(manifest)) == 0 {
+		return nil, errors.New("hosted agents: manifest is required")
+	}
+	// The same query godo would have sent for opt, plus the one parameter it
+	// has no field for.
+	q := url.Values{}
+	if opt != nil {
+		if opt.OpenAISessionID != "" {
+			q.Set("openai_session_id", opt.OpenAISessionID)
+		}
+		if opt.ResumeOnTopoff {
+			q.Set("resume_on_topoff", "true")
+		}
+	}
+	q.Set(manageModelAccessKeyParam, "true")
+	u, err := s.client.BaseURL.Parse("v2/agents/sessions?" + q.Encode())
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, u.String(), bytes.NewReader(manifest))
+	if err != nil {
+		return nil, err
+	}
+	// What godo's own manifest create sends: the YAML media type the server
+	// keys the agents.yaml form on, and JSON back.
+	req.Header.Set("Content-Type", "application/x-yaml")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", s.client.UserAgent)
+	var root struct {
+		Session *godo.HostedAgentSession `json:"session"`
+	}
+	if _, err := s.client.Do(context.TODO(), req, &root); err != nil {
+		return nil, err
+	}
+	if root.Session == nil {
+		return nil, errors.New("hosted agents: create session returned no session")
+	}
+	return &HostedAgentSession{HostedAgentSession: root.Session}, nil
 }
 
 func (s *hostedAgentsService) ListSessions(opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error) {
@@ -258,6 +329,26 @@ func (s *hostedAgentsService) StartProviderAuth(provider string) (*godo.HostedAg
 func (s *hostedAgentsService) PollProviderAuth(provider, pollURL string) (*godo.HostedAgentProviderAuthPoll, error) {
 	poll, _, err := s.client.HostedAgents.PollProviderAuth(context.TODO(), provider, pollURL)
 	return poll, err
+}
+
+func (s *hostedAgentsService) ListConnections(provider string, opt *godo.HostedAgentConnectionListOptions) (*godo.HostedAgentConnectionsListResponse, error) {
+	list, _, err := s.client.HostedAgents.ListConnections(context.TODO(), provider, opt)
+	return list, err
+}
+
+func (s *hostedAgentsService) CreateConnection(provider string, body *godo.HostedAgentConnectionCreateRequest) (*godo.HostedAgentConnectionEnvelope, error) {
+	env, _, err := s.client.HostedAgents.CreateConnection(context.TODO(), provider, body)
+	return env, err
+}
+
+func (s *hostedAgentsService) GetConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	env, _, err := s.client.HostedAgents.GetConnection(context.TODO(), provider, id)
+	return env, err
+}
+
+func (s *hostedAgentsService) DeleteConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	env, _, err := s.client.HostedAgents.DeleteConnection(context.TODO(), provider, id)
+	return env, err
 }
 
 // StreamSession opens the SSE stream and returns the typed godo iterator. The

@@ -41,6 +41,22 @@ func (m *MockSignalsService) EXPECT() *MockSignalsServiceMockRecorder {
 	return m.recorder
 }
 
+// CreateDeletion mocks base method.
+func (m *MockSignalsService) CreateDeletion(req *godo.SignalsCreateDeletionRequest) (*do.SignalsDeletion, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDeletion", req)
+	ret0, _ := ret[0].(*do.SignalsDeletion)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateDeletion indicates an expected call of CreateDeletion.
+func (mr *MockSignalsServiceMockRecorder) CreateDeletion(req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDeletion", reflect.TypeOf((*MockSignalsService)(nil).CreateDeletion), req)
+}
+
 // CreateExport mocks base method.
 func (m *MockSignalsService) CreateExport(req *godo.SignalsCreateExportRequest) (*do.SignalsExport, error) {
 	m.ctrl.T.Helper()
@@ -69,6 +85,21 @@ func (m *MockSignalsService) GetConsent(agentID string) (*do.SignalsAgentConsent
 func (mr *MockSignalsServiceMockRecorder) GetConsent(agentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsent", reflect.TypeOf((*MockSignalsService)(nil).GetConsent), agentID)
+}
+
+// GetDeletion mocks base method.
+func (m *MockSignalsService) GetDeletion(deletionID string) (*do.SignalsDeletion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeletion", deletionID)
+	ret0, _ := ret[0].(*do.SignalsDeletion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeletion indicates an expected call of GetDeletion.
+func (mr *MockSignalsServiceMockRecorder) GetDeletion(deletionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeletion", reflect.TypeOf((*MockSignalsService)(nil).GetDeletion), deletionID)
 }
 
 // GetExport mocks base method.
@@ -116,6 +147,36 @@ func (mr *MockSignalsServiceMockRecorder) GetExportOptions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExportOptions", reflect.TypeOf((*MockSignalsService)(nil).GetExportOptions))
 }
 
+// GetInferenceConsent mocks base method.
+func (m *MockSignalsService) GetInferenceConsent() (*do.SignalsConsent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInferenceConsent")
+	ret0, _ := ret[0].(*do.SignalsConsent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInferenceConsent indicates an expected call of GetInferenceConsent.
+func (mr *MockSignalsServiceMockRecorder) GetInferenceConsent() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInferenceConsent", reflect.TypeOf((*MockSignalsService)(nil).GetInferenceConsent))
+}
+
+// GetTeamID mocks base method.
+func (m *MockSignalsService) GetTeamID() (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTeamID")
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTeamID indicates an expected call of GetTeamID.
+func (mr *MockSignalsServiceMockRecorder) GetTeamID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTeamID", reflect.TypeOf((*MockSignalsService)(nil).GetTeamID))
+}
+
 // ListAgentSessions mocks base method.
 func (m *MockSignalsService) ListAgentSessions(agentID string, opts *godo.SignalsListAgentSessionsOptions) (do.SignalsSessions, error) {
 	m.ctrl.T.Helper()
@@ -144,6 +205,37 @@ func (m *MockSignalsService) ListConsents() (do.SignalsConsents, error) {
 func (mr *MockSignalsServiceMockRecorder) ListConsents() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConsents", reflect.TypeOf((*MockSignalsService)(nil).ListConsents))
+}
+
+// ListConsentsBySource mocks base method.
+func (m *MockSignalsService) ListConsentsBySource(source string) (do.SignalsConsents, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConsentsBySource", source)
+	ret0, _ := ret[0].(do.SignalsConsents)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListConsentsBySource indicates an expected call of ListConsentsBySource.
+func (mr *MockSignalsServiceMockRecorder) ListConsentsBySource(source any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConsentsBySource", reflect.TypeOf((*MockSignalsService)(nil).ListConsentsBySource), source)
+}
+
+// ListDeletions mocks base method.
+func (m *MockSignalsService) ListDeletions(opts *godo.SignalsListDeletionsOptions) (do.SignalsDeletions, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeletions", opts)
+	ret0, _ := ret[0].(do.SignalsDeletions)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListDeletions indicates an expected call of ListDeletions.
+func (mr *MockSignalsServiceMockRecorder) ListDeletions(opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeletions", reflect.TypeOf((*MockSignalsService)(nil).ListDeletions), opts)
 }
 
 // ListExports mocks base method.
@@ -189,4 +281,19 @@ func (m *MockSignalsService) SetConsent(agentID string, enabled bool) (*do.Signa
 func (mr *MockSignalsServiceMockRecorder) SetConsent(agentID, enabled any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConsent", reflect.TypeOf((*MockSignalsService)(nil).SetConsent), agentID, enabled)
+}
+
+// SetInferenceConsent mocks base method.
+func (m *MockSignalsService) SetInferenceConsent(enabled bool) (*do.SignalsConsent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetInferenceConsent", enabled)
+	ret0, _ := ret[0].(*do.SignalsConsent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetInferenceConsent indicates an expected call of SetInferenceConsent.
+func (mr *MockSignalsServiceMockRecorder) SetInferenceConsent(enabled any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetInferenceConsent", reflect.TypeOf((*MockSignalsService)(nil).SetInferenceConsent), enabled)
 }
