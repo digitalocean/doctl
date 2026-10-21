@@ -41,7 +41,7 @@ func insightsTraces() *Command {
 
 Build the search with flags, or pass the complete snake_case public API request as JSON or YAML with `+"`"+`--request-file`+"`"+`. Request files use `+"`"+`time_range`+"`"+` and `+"`"+`order_by`+"`"+`; `+"`"+`--limit`+"`"+` overrides pagination from a request file.
 
-The `+"`"+`--filter`+"`"+` and `+"`"+`--filter-file`+"`"+` values use logs-style expressions with exactly one of `+"`"+`condition`+"`"+`, `+"`"+`and`+"`"+`, `+"`"+`or`+"`"+`, `+"`"+`not`+"`"+`, or `+"`"+`text_search`+"`"+`. Condition values are typed with `+"`"+`string_value`+"`"+`, `+"`"+`number_value`+"`"+`, `+"`"+`bool_value`+"`"+`, `+"`"+`string_array_value`+"`"+`, or `+"`"+`number_array_value`+"`"+`.
+The `+"`"+`--filter`+"`"+` and `+"`"+`--filter-file`+"`"+` values use logs-style expressions with exactly one of `+"`"+`condition`+"`"+`, `+"`"+`and`+"`"+`, `+"`"+`or`+"`"+`, `+"`"+`not`+"`"+`, or `+"`"+`text_search`+"`"+`. Condition values are typed with `+"`"+`string_value`+"`"+`, `+"`"+`number_value`+"`"+`, `+"`"+`string_array_value`+"`"+`, or `+"`"+`number_array_value`+"`"+`.
 
 Time ranges must not exceed seven days. Results are returned one page at a time; traces pagination reports whether more results matched but does not provide a cursor.`,
 		Writer, displayerType(&displayers.InsightsTraces{}))
