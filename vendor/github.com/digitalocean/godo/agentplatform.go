@@ -2767,7 +2767,6 @@ func (s *AgentPlatformServiceOp) UpdateModelEvaluationRun(ctx context.Context, e
 // CandidateInferenceConfig is the inference configuration applied to the
 // candidate model when running a model evaluation run.
 type CandidateInferenceConfig struct {
-	MaxTokens       int64   `json:"max_tokens,omitempty"`
 	ReasoningEffort string  `json:"reasoning_effort,omitempty"`
 	StopToken       string  `json:"stop_token,omitempty"`
 	SystemPrompt    string  `json:"system_prompt,omitempty"`
