@@ -97,6 +97,8 @@ func MicroVM() *Command {
 		"Environment variables to inject, in `KEY=VALUE` form. Repeatable.")
 	AddStringSliceFlag(cmdMicroVMCreate, doctl.ArgTag, "", []string{},
 		"Tags to apply to the MicroVM. Repeatable.")
+	AddBoolFlag(cmdMicroVMCreate, "ingress", "", true,
+		"Whether to create the MicroVM with a default public URL. Pass `--ingress=false` to create it without one; URLs can be added later with `doctl compute microvm url add`.")
 
 	CmdBuilder(cmd, RunMicroVMPause, "pause <microvm-id>",
 		"Pause a running MicroVM",
@@ -136,6 +138,44 @@ func MicroVM() *Command {
 		Writer)
 
 	cmd.AddCommand(microVMCheckpoints())
+	cmd.AddCommand(microVMURLs())
+
+	return cmd
+}
+
+func microVMURLs() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "url",
+			Aliases: []string{"urls"},
+			Short:   "Manage MicroVM ingress URLs",
+			Long: `The subcommands under ` + "`" + `doctl compute microvm url` + "`" + ` manage a ` +
+				`MicroVM's public ingress URLs — the system default URL and any you add. ` +
+				`A MicroVM can have at most 10 URLs.`,
+		},
+	}
+
+	CmdBuilder(cmd, RunMicroVMURLList, "list <microvm-id>",
+		"List a MicroVM's ingress URLs",
+		"Lists the public ingress URLs attached to a MicroVM, the system default URL included.",
+		Writer, aliasOpt("ls"), displayerType(&displayers.MicroVMURL{}))
+
+	cmdAdd := CmdBuilder(cmd, RunMicroVMURLAdd, "add <microvm-id>",
+		"Add an ingress URL to a MicroVM",
+		"Adds a public ingress URL to a running or paused MicroVM. The URL routes to `--port`, "+
+			"which must be one of the MicroVM's ports; when omitted it defaults to the MicroVM's HTTP port. "+
+			"A MicroVM can have at most 10 URLs.",
+		Writer, aliasOpt("a"), displayerType(&displayers.MicroVMURL{}))
+	AddIntFlag(cmdAdd, "port", "", 0,
+		"Guest port the URL routes to. Must be one of the MicroVM's ports. Defaults to the MicroVM's HTTP port when omitted.")
+
+	cmdRemove := CmdBuilder(cmd, RunMicroVMURLRemove, "remove <microvm-id> <url-id>",
+		"Remove an ingress URL from a MicroVM",
+		"Removes a public ingress URL from a running or paused MicroVM, the system default URL included. "+
+			"The hostname stops resolving and is not reused.",
+		Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdRemove, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Remove the URL without a confirmation prompt")
 
 	return cmd
 }
@@ -290,6 +330,10 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	ingress, err := c.Doit.GetBoolPtr(c.NS, "ingress")
+	if err != nil {
+		return err
+	}
 
 	req := &godo.MicroVMCreateRequest{Name: name}
 	if ociRef != "" {
@@ -358,6 +402,11 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if len(tags) > 0 {
 		req.Tags = tags
 	}
+	// Omit ingress unless the caller set it: nil keeps the API default (a
+	// default URL is created). --ingress=false opts out.
+	if ingress != nil {
+		req.Ingress = ingress
+	}
 
 	md, err := c.MicroVMs().Create(req)
 	if err != nil {
@@ -388,6 +437,57 @@ func RunMicroVMResume(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.MicroVM{MicroVMs: do.MicroVMs{*md}})
+}
+
+// RunMicroVMURLList lists a MicroVM's ingress URLs.
+func RunMicroVMURLList(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	md, err := c.MicroVMs().Get(c.Args[0])
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMURL{URLs: md.URLs})
+}
+
+// RunMicroVMURLAdd adds an ingress URL to a MicroVM.
+func RunMicroVMURLAdd(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	port, err := c.Doit.GetInt(c.NS, "port")
+	if err != nil {
+		return err
+	}
+	req := &godo.MicroVMURLCreateRequest{}
+	if port != 0 {
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("invalid --port %d: expected an integer 1-65535", port)
+		}
+		req.Port = port
+	}
+
+	u, err := c.MicroVMs().AddURL(c.Args[0], req)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMURL{URLs: []godo.MicroVMURL{*u}})
+}
+
+// RunMicroVMURLRemove removes an ingress URL from a MicroVM.
+func RunMicroVMURLRemove(c *CmdConfig) error {
+	if len(c.Args) != 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if !(force || AskForConfirmDelete("MicroVM URL", 1) == nil) {
+		return errOperationAborted
+	}
+	return c.MicroVMs().RemoveURL(c.Args[0], c.Args[1])
 }
 
 // RunMicroVMDelete deletes one or more MicroVMs by UUID.
