@@ -1080,8 +1080,8 @@ const (
 	// Per-session: never part of an agents.yaml manifest.
 	ArgAgentWorkspace = "workspace"
 
-	// ArgAgentWorkspaceSizeGiB is the size, in GiB, of a new persistent workspace.
-	ArgAgentWorkspaceSizeGiB = "size-gib"
+	// ArgAgentWorkspaceSizeLimitGiB is the size, in GiB, of a new persistent workspace.
+	ArgAgentWorkspaceSizeLimitGiB = "size-limit-gib"
 
 	// ArgAgentWorkspaceState filters `workspace list` to one workspace state.
 	ArgAgentWorkspaceState = "state"

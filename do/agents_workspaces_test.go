@@ -44,15 +44,15 @@ func TestHostedAgentsService_CreateWorkspace(t *testing.T) {
 		_ = json.NewDecoder(r.Body).Decode(&gotBody)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"workspace":{"workspace_id":"ws_1","name":"notes","state":"AVAILABLE","size_gibibytes":10}}`))
+		_, _ = w.Write([]byte(`{"workspace":{"workspace_id":"ws_1","name":"notes","state":"AVAILABLE","size_limit_gib":10}}`))
 	})
 
-	ws, err := svc.CreateWorkspace(&godo.HostedAgentWorkspaceCreateRequest{SizeGibibytes: 10, Name: "notes", IdempotencyKey: "key-1"})
+	ws, err := svc.CreateWorkspace(&godo.HostedAgentWorkspaceCreateRequest{SizeLimitGiB: 10, Name: "notes", IdempotencyKey: "key-1"})
 	require.NoError(t, err)
 	assert.Equal(t, http.MethodPost, gotMethod)
 	assert.Equal(t, "/v2/agents/workspaces", gotPath)
 	assert.Equal(t, "key-1", gotKey, "the key travels as a header")
-	assert.Equal(t, map[string]any{"size_gibibytes": float64(10), "name": "notes"}, gotBody, "and never in the body")
+	assert.Equal(t, map[string]any{"size_limit_gib": float64(10), "name": "notes"}, gotBody, "and never in the body")
 	assert.Equal(t, "ws_1", ws.WorkspaceID)
 	assert.Equal(t, godo.HostedAgentWorkspaceStateAvailable, ws.State)
 }

@@ -311,17 +311,17 @@ const agentsCheckpointDeleteHelpMD = `Delete a checkpoint.`
 const agentsWorkspaceRootHelpMD = `Persistent workspaces: a saved set of files that outlives your sessions. Inside a session it is the ` + "`/workspace`" + ` folder.
 
 Create one, then give it to a new session with ` + "`--workspace <id>`" + ` on ` + "`" + agentCLI + " create --from-config`" + ` or ` + "`" + agentCLI + " launch --from-config`" + `. A workspace can only be attached to a session created from a saved Agent Config. Removing a session never deletes its workspace: the files are saved, and the next session can pick them up.
-` + "```bash\n" + agentCLI + ` workspace create --size-gib 10 --name notes
+` + "```bash\n" + agentCLI + ` workspace create --size-limit-gib 10 --name notes
 ` + agentCLI + ` config create --spec agents.yaml --name reviewer
 ` + agentCLI + ` create --from-config reviewer --name review-2 --workspace <workspace-id>
 ` + "```\n\n" + `Limits in this beta:
 
 - One session holds a workspace at a time.
 - A workspace is attached when a session is created, not afterwards.
-- The size is fixed when the workspace is created.
+- The size limit is fixed when the workspace is created.
 - Fork and rollback are not available for a session that has a workspace.`
 
-const agentsWorkspaceCreateHelpMD = `Create a persistent workspace. ` + "`--size-gib`" + ` is required: a whole number from 1 to 100, and your team's limit may be lower. The size cannot be changed later. ` + "`--name`" + ` is an optional label and is not unique.
+const agentsWorkspaceCreateHelpMD = `Create a persistent workspace. ` + "`--size-limit-gib`" + ` is required: the size limit of the workspace in GiB, a whole number from 1 to 100, and your team's limit may be lower. The size limit cannot be changed later. ` + "`--name`" + ` is an optional label and is not unique.
 
 **Safe to retry.** Each run sends one idempotency key, so a request that doctl repeats within the run cannot create a second workspace. doctl makes up a key unless you pass ` + "`--idempotency-key`" + `. A script that re-runs the whole command must pass its own key: without one, every run is a new workspace. Within 24 hours the same key with the same size and name returns the first workspace; the same key with different values is rejected. If the workspace that key created is being deleted, the retry is refused with a conflict; try again in a moment and the key then creates a new workspace.`
 

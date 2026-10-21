@@ -41,7 +41,7 @@ func testWorkspace() godo.HostedAgentWorkspace {
 		Name:              "notes",
 		State:             godo.HostedAgentWorkspaceStateAttached,
 		AttachedSessionID: "sess_abc123",
-		SizeGibibytes:     10,
+		SizeLimitGiB:      10,
 		BytesUsed:         3 * 1024 * 1024,
 	}
 }
@@ -79,10 +79,10 @@ func TestAgentWorkspaceCreateFlags(t *testing.T) {
 		}
 	}
 	require.NotNil(t, create)
-	for _, name := range []string{doctl.ArgAgentWorkspaceSizeGiB, doctl.ArgAgentName, doctl.ArgAgentIdempotencyKey} {
+	for _, name := range []string{doctl.ArgAgentWorkspaceSizeLimitGiB, doctl.ArgAgentName, doctl.ArgAgentIdempotencyKey} {
 		assert.NotNil(t, create.Flags().Lookup(name), "workspace create needs --%s", name)
 	}
-	assert.Equal(t, "size-gib", doctl.ArgAgentWorkspaceSizeGiB)
+	assert.Equal(t, "size-limit-gib", doctl.ArgAgentWorkspaceSizeLimitGiB)
 	assert.Equal(t, "idempotency-key", doctl.ArgAgentIdempotencyKey)
 }
 
@@ -109,17 +109,17 @@ func TestRunAgentsWorkspaceCreate_SizeIsRequired(t *testing.T) {
 		// No CreateWorkspace expectation: gomock fails the test if it is called.
 		err := RunAgentsWorkspaceCreate(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--size-gib is required")
+		assert.Contains(t, err.Error(), "--size-limit-gib is required")
 	})
 }
 
 func TestRunAgentsWorkspaceCreate_RefusesInvalidSize(t *testing.T) {
 	for _, size := range []int{0, -1, -100, math.MaxInt32 + 1} {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeGiB, size)
+			config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeLimitGiB, size)
 			err := RunAgentsWorkspaceCreate(config)
 			require.Error(t, err, "size %d", size)
-			assert.Contains(t, err.Error(), "invalid --size-gib")
+			assert.Contains(t, err.Error(), "invalid --size-limit-gib")
 			assert.Contains(t, err.Error(), "whole number from 1 to 100")
 		})
 	}
@@ -130,12 +130,12 @@ func TestRunAgentsWorkspaceCreate_LeavesUpperBoundToServer(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateWorkspace(gomock.Any()).
-			Return(nil, godoStatusErr(http.StatusUnprocessableEntity, "size_gibibytes must be between 1 and 100"))
+			Return(nil, godoStatusErr(http.StatusUnprocessableEntity, "size_limit_gib must be between 1 and 100"))
 
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeGiB, 500)
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeLimitGiB, 500)
 		err := RunAgentsWorkspaceCreate(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "size_gibibytes must be between 1 and 100")
+		assert.Contains(t, err.Error(), "size_limit_gib must be between 1 and 100")
 	})
 }
 
@@ -148,7 +148,7 @@ func TestRunAgentsWorkspaceCreate_GeneratesOneKeyPerInvocation(t *testing.T) {
 			tm.hostedAgents.EXPECT().
 				CreateWorkspace(gomock.Any()).
 				DoAndReturn(func(req *godo.HostedAgentWorkspaceCreateRequest) (*godo.HostedAgentWorkspace, error) {
-					assert.Equal(t, int32(10), req.SizeGibibytes)
+					assert.Equal(t, int32(10), req.SizeLimitGiB)
 					assert.Equal(t, "notes", req.Name)
 					_, err := uuid.Parse(req.IdempotencyKey)
 					assert.NoError(t, err, "a missing --idempotency-key is replaced by a UUID")
@@ -159,7 +159,7 @@ func TestRunAgentsWorkspaceCreate_GeneratesOneKeyPerInvocation(t *testing.T) {
 
 			var buf bytes.Buffer
 			config.Out = &buf
-			config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeGiB, 10)
+			config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeLimitGiB, 10)
 			config.Doit.Set(config.NS, doctl.ArgAgentName, "notes")
 			require.NoError(t, RunAgentsWorkspaceCreate(config))
 			assert.Contains(t, buf.String(), "Workspace created")
@@ -174,12 +174,12 @@ func TestRunAgentsWorkspaceCreate_HonoursGivenKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateWorkspace(&godo.HostedAgentWorkspaceCreateRequest{
-				SizeGibibytes:  5,
+				SizeLimitGiB:   5,
 				IdempotencyKey: "nightly-1",
 			}).
-			Return(&godo.HostedAgentWorkspace{WorkspaceID: "ws_1", SizeGibibytes: 5}, nil)
+			Return(&godo.HostedAgentWorkspace{WorkspaceID: "ws_1", SizeLimitGiB: 5}, nil)
 
-		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeGiB, 5)
+		config.Doit.Set(config.NS, doctl.ArgAgentWorkspaceSizeLimitGiB, 5)
 		config.Doit.Set(config.NS, doctl.ArgAgentIdempotencyKey, "nightly-1")
 		require.NoError(t, RunAgentsWorkspaceCreate(config))
 	})
@@ -303,12 +303,12 @@ func TestRunAgentsWorkspaceList_FormatSelectsColumns(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		config.Doit.Set(config.NS, doctl.ArgFormat, "WorkspaceID,State,SizeGibibytes,BytesUsed,LastSavedAt")
+		config.Doit.Set(config.NS, doctl.ArgFormat, "WorkspaceID,State,SizeLimitGiB,BytesUsed,LastSavedAt")
 		require.NoError(t, RunAgentsWorkspaceList(config))
 
 		lines := strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")
 		require.Len(t, lines, 2)
-		assert.Equal(t, []string{"ID", "State", "Size", "(GiB)", "Used", "Last", "Saved"}, strings.Fields(lines[0]))
+		assert.Equal(t, []string{"ID", "State", "Size", "Limit", "(GiB)", "Used", "Last", "Saved"}, strings.Fields(lines[0]))
 		assert.Equal(t, []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f", "ATTACHED", "10", "3.00", "MiB", "2026-10-05T12:00:00Z"}, strings.Fields(lines[1]))
 	})
 }

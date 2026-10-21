@@ -299,7 +299,7 @@ func TestHostedAgentSessionCols_WorkspaceIsConditional(t *testing.T) {
 // --- HostedAgentWorkspace -----------------------------------------------------
 
 func TestHostedAgentWorkspaceJSON(t *testing.T) {
-	ws := godo.HostedAgentWorkspace{WorkspaceID: "ws_1", Name: "notes", State: godo.HostedAgentWorkspaceStateAvailable, SizeGibibytes: 10}
+	ws := godo.HostedAgentWorkspace{WorkspaceID: "ws_1", Name: "notes", State: godo.HostedAgentWorkspaceStateAvailable, SizeLimitGiB: 10}
 
 	var buf bytes.Buffer
 	require.NoError(t, (&HostedAgentWorkspace{Workspaces: []godo.HostedAgentWorkspace{ws}}).JSON(&buf))
@@ -324,7 +324,7 @@ func TestHostedAgentWorkspaceJSON(t *testing.T) {
 func TestHostedAgentWorkspaceColsAndKV(t *testing.T) {
 	d := &HostedAgentWorkspace{}
 	assert.Equal(t,
-		[]string{"ID", "Name", "State", "Size (GiB)", "Used", "Attached Session", "Last Saved", "Created"},
+		[]string{"ID", "Name", "State", "Size Limit (GiB)", "Used", "Attached Session", "Last Saved", "Created"},
 		func() []string {
 			var out []string
 			for _, c := range d.Cols() {
@@ -340,19 +340,19 @@ func TestHostedAgentWorkspaceColsAndKV(t *testing.T) {
 			Name:              "notes",
 			State:             godo.HostedAgentWorkspaceStateAttached,
 			AttachedSessionID: "sess_1",
-			SizeGibibytes:     10,
+			SizeLimitGiB:      10,
 			BytesUsed:         3 * 1024 * 1024,
 			LastSavedAt:       &saved,
 			CreatedAt:         godo.Timestamp{Time: time.Date(2026, 10, 1, 8, 30, 0, 0, time.UTC)},
 		},
 		// Never saved, nothing attached.
-		{WorkspaceID: "ws_2", State: godo.HostedAgentWorkspaceStateAvailable, SizeGibibytes: 1},
+		{WorkspaceID: "ws_2", State: godo.HostedAgentWorkspaceStateAvailable, SizeLimitGiB: 1},
 	}
 	kv := d.KV()
 	require.Len(t, kv, 2)
 	assert.Equal(t, "ws_1", kv[0]["WorkspaceID"])
 	assert.Equal(t, "ATTACHED", kv[0]["State"])
-	assert.Equal(t, int32(10), kv[0]["SizeGibibytes"])
+	assert.Equal(t, int32(10), kv[0]["SizeLimitGiB"])
 	assert.Equal(t, "3.00 MiB", kv[0]["BytesUsed"])
 	assert.Equal(t, "sess_1", kv[0]["AttachedSessionID"])
 	assert.Equal(t, "2026-10-05T12:00:00Z", kv[0]["LastSavedAt"])

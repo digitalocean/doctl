@@ -198,7 +198,7 @@ func (h *HostedAgentWorkspace) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentWorkspace) Cols() []string {
-	return []string{"WorkspaceID", "Name", "State", "SizeGibibytes", "BytesUsed", "AttachedSessionID", "LastSavedAt", "CreatedAt"}
+	return []string{"WorkspaceID", "Name", "State", "SizeLimitGiB", "BytesUsed", "AttachedSessionID", "LastSavedAt", "CreatedAt"}
 }
 
 func (h *HostedAgentWorkspace) ColMap() map[string]string {
@@ -206,7 +206,7 @@ func (h *HostedAgentWorkspace) ColMap() map[string]string {
 		"WorkspaceID":       "ID",
 		"Name":              "Name",
 		"State":             "State",
-		"SizeGibibytes":     "Size (GiB)",
+		"SizeLimitGiB":      "Size Limit (GiB)",
 		"BytesUsed":         "Used",
 		"AttachedSessionID": "Attached Session",
 		"LastSavedAt":       "Last Saved",
@@ -233,7 +233,7 @@ func (h *HostedAgentWorkspace) KV() []map[string]any {
 			"WorkspaceID":       w.WorkspaceID,
 			"Name":              w.Name,
 			"State":             string(w.State),
-			"SizeGibibytes":     w.SizeGibibytes,
+			"SizeLimitGiB":      w.SizeLimitGiB,
 			"BytesUsed":         BytesToHumanReadableUnitBinary(used),
 			"AttachedSessionID": w.AttachedSessionID,
 			"LastSavedAt":       lastSaved,

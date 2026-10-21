@@ -45,7 +45,7 @@ type HostedAgentWorkspace struct {
 	// AttachedSessionID is the session that holds the workspace; omitted when no
 	// session does.
 	AttachedSessionID string `json:"attached_session_id,omitempty"`
-	SizeGibibytes     int32  `json:"size_gibibytes"`
+	SizeLimitGiB      int32  `json:"size_limit_gib"`
 	BytesUsed         int64  `json:"bytes_used"`
 	// LastSavedAt is when the workspace contents were last saved; omitted until
 	// the first save.
@@ -65,9 +65,9 @@ type HostedAgentWorkspace struct {
 
 // HostedAgentWorkspaceCreateRequest is the body for CreateWorkspace.
 type HostedAgentWorkspaceCreateRequest struct {
-	// SizeGibibytes is the size in GiB, from 1 to 100. The server validates it, and
-	// a team limit can lower the maximum.
-	SizeGibibytes int32 `json:"size_gibibytes"`
+	// SizeLimitGiB is the upper limit of the workspace disk in GiB, from 1 to 100.
+	// The server validates it, and a team limit can lower the maximum.
+	SizeLimitGiB int32 `json:"size_limit_gib"`
 	// Name is an optional label. It is not unique.
 	Name string `json:"name,omitempty"`
 	// IdempotencyKey makes a retried create safe. It is sent as the

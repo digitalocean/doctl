@@ -48,10 +48,10 @@ func AgentWorkspaces() *Command {
 		agentsWorkspaceCreateHelpMD,
 		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentWorkspace{}))
-	AddIntFlag(cmdCreate, doctl.ArgAgentWorkspaceSizeGiB, "", 0, "Size of the workspace in GiB, a whole number from 1 to 100 (required). Cannot be changed later.")
+	AddIntFlag(cmdCreate, doctl.ArgAgentWorkspaceSizeLimitGiB, "", 0, "Size limit of the workspace in GiB, a whole number from 1 to 100 (required). Cannot be changed later.")
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Optional label for the workspace. Not unique.")
 	AddStringFlag(cmdCreate, doctl.ArgAgentIdempotencyKey, "", "", "Key that makes a repeated create return the first workspace. Generated for you when omitted; pass your own when a script may re-run this command.")
-	cmdCreate.Example = `doctl harness-runtime workspace create --size-gib 10 --name notes; doctl harness-runtime workspace create --size-gib 10 --idempotency-key nightly-notes-1`
+	cmdCreate.Example = `doctl harness-runtime workspace create --size-limit-gib 10 --name notes; doctl harness-runtime workspace create --size-limit-gib 10 --idempotency-key nightly-notes-1`
 
 	cmdList := CmdBuilder(cmd, RunAgentsWorkspaceList, "list",
 		"List persistent workspaces",
@@ -82,17 +82,17 @@ func AgentWorkspaces() *Command {
 
 // RunAgentsWorkspaceCreate creates a persistent workspace.
 func RunAgentsWorkspaceCreate(c *CmdConfig) error {
-	if !agentFlagChanged(c, doctl.ArgAgentWorkspaceSizeGiB) {
-		return fmt.Errorf("--%s is required: the workspace size in GiB, a whole number from 1 to 100", doctl.ArgAgentWorkspaceSizeGiB)
+	if !agentFlagChanged(c, doctl.ArgAgentWorkspaceSizeLimitGiB) {
+		return fmt.Errorf("--%s is required: the size limit of the workspace in GiB, a whole number from 1 to 100", doctl.ArgAgentWorkspaceSizeLimitGiB)
 	}
-	size, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWorkspaceSizeGiB)
+	size, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWorkspaceSizeLimitGiB)
 	if err != nil {
 		return err
 	}
 	// The server owns the upper bound, which a team limit can lower. This only
 	// refuses what can never be valid, and what would not fit the wire type.
 	if size < 1 || size > math.MaxInt32 {
-		return fmt.Errorf("invalid --%s %d: use a whole number from 1 to 100", doctl.ArgAgentWorkspaceSizeGiB, size)
+		return fmt.Errorf("invalid --%s %d: use a whole number from 1 to 100", doctl.ArgAgentWorkspaceSizeLimitGiB, size)
 	}
 	name, err := c.Doit.GetString(c.NS, doctl.ArgAgentName)
 	if err != nil {
@@ -109,7 +109,7 @@ func RunAgentsWorkspaceCreate(c *CmdConfig) error {
 	}
 
 	ws, err := c.HostedAgents().CreateWorkspace(&godo.HostedAgentWorkspaceCreateRequest{
-		SizeGibibytes:  int32(size),
+		SizeLimitGiB:   int32(size),
 		Name:           name,
 		IdempotencyKey: key,
 	})

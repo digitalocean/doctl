@@ -318,7 +318,7 @@ func printWorkspaceListItem(w io.Writer, ws *godo.HostedAgentWorkspace) {
 		title = ws.WorkspaceID
 	}
 	fmt.Fprintf(w, "%s %s\n", workspaceStateGlyph(ws.State), boldColor(title, colHighlight))
-	meta := []string{colorizeWorkspaceState(ws.State), colorize(fmt.Sprintf("%d GiB", ws.SizeGibibytes), colMuted)}
+	meta := []string{colorizeWorkspaceState(ws.State), colorize(fmt.Sprintf("%d GiB", ws.SizeLimitGiB), colMuted)}
 	if ws.BytesUsed > 0 {
 		meta = append(meta, colorize(humanBytes(uint64(ws.BytesUsed))+" used", colMuted))
 	}
@@ -349,7 +349,7 @@ func printWorkspaceCard(w io.Writer, ws *godo.HostedAgentWorkspace, created bool
 		body.WriteString(cardRow("ID", colorize(id, colMuted)))
 	}
 	body.WriteString(cardRow("State", workspaceStateGlyph(ws.State)+" "+colorizeWorkspaceState(ws.State)))
-	body.WriteString(cardRow("Size", colorize(fmt.Sprintf("%d GiB", ws.SizeGibibytes), colMuted)))
+	body.WriteString(cardRow("Size limit", colorize(fmt.Sprintf("%d GiB", ws.SizeLimitGiB), colMuted)))
 	if ws.BytesUsed > 0 {
 		body.WriteString(cardRow("Used", colorize(humanBytes(uint64(ws.BytesUsed)), colMuted)))
 	}
