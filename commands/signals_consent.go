@@ -49,7 +49,7 @@ func SignalsConsent() *Command {
 			Use:   "consent",
 			Short: "Display commands for Signals collection consent",
 			Long: "The subcommands of `doctl signals consent` manage Signals collection consent.\n\n" +
-				"Consent has a source: `agent` (per Gradient managed agent, identified by `--environment-id`) " +
+				"Consent has a source: `agent` (per Harness Runtime environment, identified by `--environment-id`) " +
 				"or `inference` (team-level, covers all serverless inference traffic for the team).",
 		},
 	}
@@ -58,7 +58,7 @@ func SignalsConsent() *Command {
 		- The consent record ID
 		- The team ID
 		- The consent source (agent or inference)
-		- The agent ID (empty for inference)
+		- The environment ID (empty for inference)
 		- Whether consent is enabled
 		- When the consent was last updated
 	`
@@ -78,8 +78,8 @@ func SignalsConsent() *Command {
 		cmd,
 		RunSignalsConsentGet,
 		"get",
-		"Get Signals consent for an agent or for serverless inference",
-		"Retrieves the current Signals collection consent status for one agent (`--source agent --environment-id <id>`) "+
+		"Get Signals consent for an environment or for serverless inference",
+		"Retrieves the current Signals collection consent status for one environment (`--source agent --environment-id <id>`) "+
 			"or the team-level serverless inference consent (`--source inference`). Missing consent is reported as disabled.",
 		Writer, aliasOpt("g"),
 		displayerType(&displayers.SignalsConsent{}),
@@ -92,8 +92,8 @@ func SignalsConsent() *Command {
 		cmd,
 		RunSignalsConsentSet,
 		"set",
-		"Set Signals consent for an agent or for serverless inference",
-		"Enables or disables Signals collection for one agent (`--source agent --environment-id <id>`) "+
+		"Set Signals consent for an environment or for serverless inference",
+		"Enables or disables Signals collection for one environment (`--source agent --environment-id <id>`) "+
 			"or for all serverless inference traffic of your team (`--source inference`). Idempotent.",
 		Writer, aliasOpt("s"),
 		displayerType(&displayers.SignalsConsent{}),
@@ -159,7 +159,7 @@ func RunSignalsConsentList(c *CmdConfig) error {
 	return c.Display(&displayers.SignalsConsent{Consents: consents})
 }
 
-// RunSignalsConsentGet retrieves Signals consent for one agent or for inference.
+// RunSignalsConsentGet retrieves Signals consent for one environment or for inference.
 func RunSignalsConsentGet(c *CmdConfig) error {
 	source, agentID, err := consentTarget(c)
 	if err != nil {
@@ -181,7 +181,7 @@ func RunSignalsConsentGet(c *CmdConfig) error {
 	return c.Display(&displayers.SignalsAgentConsent{Consents: []do.SignalsAgentConsent{*consent}})
 }
 
-// RunSignalsConsentSet enables or disables Signals consent for one agent or for inference.
+// RunSignalsConsentSet enables or disables Signals consent for one environment or for inference.
 func RunSignalsConsentSet(c *CmdConfig) error {
 	source, agentID, err := consentTarget(c)
 	if err != nil {

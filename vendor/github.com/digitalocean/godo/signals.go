@@ -118,7 +118,7 @@ type SignalsPageInfo struct {
 	EndCursor   string `json:"end_cursor,omitempty"`
 }
 
-// SignalsAgentConsent is GET /v1/consent/{agent_id} (consent-gateway).
+// SignalsAgentConsent is GET /v1/consent/{environment_id} (consent-gateway).
 // enabled is the only customer-facing consent toggle; allowed is an internal
 // check-endpoint concept and is not returned on this public route.
 type SignalsAgentConsent struct {
@@ -131,7 +131,7 @@ type SignalsAgentConsent struct {
 	UpdatedAt     string `json:"updated_at,omitempty"`
 }
 
-// SignalsConsentRecord is a consents row as returned by PUT /v1/consent/{agent_id}
+// SignalsConsentRecord is a consents row as returned by PUT /v1/consent/{environment_id}
 // and PUT /v1/consent?source=inference. Source is "agent" or "inference";
 // AgentID is empty for inference (team-level) rows.
 type SignalsConsentRecord struct {
@@ -260,7 +260,7 @@ type SignalsSessionEdge struct {
 	Node   SignalsSession `json:"node"`
 }
 
-// SignalsListAgentSessionsResponse is GET /agents/{agent_id}/sessions.
+// SignalsListAgentSessionsResponse is GET /agents/{environment_id}/sessions.
 type SignalsListAgentSessionsResponse struct {
 	Edges    []SignalsSessionEdge `json:"edges"`
 	PageInfo SignalsPageInfo      `json:"page_info"`
@@ -338,7 +338,7 @@ func resolveSignalsAgentID(agentID, environmentID string) (string, error) {
 	e := strings.TrimSpace(environmentID)
 	switch {
 	case a != "" && e != "" && a != e:
-		return "", fmt.Errorf("signals: agent_id and environment_id must match when both are set")
+		return "", fmt.Errorf("signals: environment_id and agent_id must match when both are set")
 	case a != "":
 		return a, nil
 	default:
@@ -444,8 +444,8 @@ func (s *SignalsServiceOp) SetInferenceConsent(ctx context.Context, enabled bool
 	return root.Consent, resp, nil
 }
 
-// GetAgentConsent returns collection consent for one agent (default deny if no row).
-// Uses GET /v1/consent/{agent_id} on consent-gateway (same public path as Cloud UI / SetAgentConsent).
+// GetAgentConsent returns collection consent for one environment (default deny if no row).
+// Uses GET /v1/consent/{environment_id} on consent-gateway (same public path as Cloud UI / SetAgentConsent).
 func (s *SignalsServiceOp) GetAgentConsent(ctx context.Context, agentID string) (*SignalsAgentConsent, *Response, error) {
 	path := fmt.Sprintf("%s/%s", consentBasePath, agentID)
 	root := new(SignalsAgentConsent)
