@@ -720,6 +720,7 @@ Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` po
 	cmd.AddCommand(AgentRegions())
 	cmd.AddCommand(AgentTemplates())
 	cmd.AddCommand(AgentFiles())
+	cmd.AddCommand(AgentMarketplace())
 
 	requireAgentSubcommand(cmd)
 	cmd.Command.SetHelpFunc(agentsStyledHelpFunc)
