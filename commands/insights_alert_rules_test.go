@@ -53,7 +53,14 @@ func testAlertRule() godo.AlertRule {
 }
 
 func TestInsightsAlertRuleCommand(t *testing.T) {
-	assertCommandNames(t, InsightsAlertRule(), "create", "get", "list", "update", "delete")
+	command := InsightsAlertRule()
+	assertCommandNames(t, command, "create", "get", "list", "update", "delete")
+
+	deleteCommand, _, err := command.Find([]string{"delete"})
+	require.NoError(t, err)
+	forceFlag := deleteCommand.Flags().Lookup(doctl.ArgForce)
+	require.NotNil(t, forceFlag)
+	assert.Equal(t, doctl.ArgShortForce, forceFlag.Shorthand)
 }
 
 func TestInsightsAlertRuleFilterFlagPreservesCommas(t *testing.T) {
@@ -152,8 +159,17 @@ func TestRunInsightsAlertRuleDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.insights.EXPECT().DeleteAlertRule("rule-id").Return(nil)
 		config.Args = []string{"rule-id"}
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		require.NoError(t, RunInsightsAlertRuleDelete(config))
+	})
+}
+
+func TestRunInsightsAlertRuleDeleteRequiresConfirmation(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		config.Args = []string{"rule-id"}
+
+		require.ErrorIs(t, RunInsightsAlertRuleDelete(config), errConfirmationRequired)
 	})
 }
 

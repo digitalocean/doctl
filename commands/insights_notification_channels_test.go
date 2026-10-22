@@ -30,7 +30,14 @@ var testInsightsNotificationChannel = godo.NotificationChannel{
 }
 
 func TestInsightsNotificationChannelCommand(t *testing.T) {
-	assertCommandNames(t, InsightsNotificationChannel(), "create", "get", "list", "update", "delete")
+	command := InsightsNotificationChannel()
+	assertCommandNames(t, command, "create", "get", "list", "update", "delete")
+
+	deleteCommand, _, err := command.Find([]string{"delete"})
+	require.NoError(t, err)
+	forceFlag := deleteCommand.Flags().Lookup(doctl.ArgForce)
+	require.NotNil(t, forceFlag)
+	assert.Equal(t, doctl.ArgShortForce, forceFlag.Shorthand)
 }
 
 func TestRunInsightsNotificationChannelCreate(t *testing.T) {
@@ -105,8 +112,17 @@ func TestRunInsightsNotificationChannelDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.insights.EXPECT().DeleteNotificationChannel("channel-id").Return(nil)
 		config.Args = []string{"channel-id"}
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		require.NoError(t, RunInsightsNotificationChannelDelete(config))
+	})
+}
+
+func TestRunInsightsNotificationChannelDeleteRequiresConfirmation(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+		config.Args = []string{"channel-id"}
+
+		require.ErrorIs(t, RunInsightsNotificationChannelDelete(config), errConfirmationRequired)
 	})
 }
 

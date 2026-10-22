@@ -84,6 +84,7 @@ func InsightsAlertRule() *Command {
 		"Deletes an Insights alert rule.", Writer,
 		aliasOpt("d", "del", "rm"))
 	deleteCmd.Args = cobra.ExactArgs(1)
+	AddBoolFlag(deleteCmd, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the alert rule without a confirmation prompt")
 
 	return cmd
 }
@@ -195,6 +196,13 @@ func RunInsightsAlertRuleUpdate(c *CmdConfig) error {
 func RunInsightsAlertRuleDelete(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if err := confirmDelete(force, "Insights alert rule", 1); err != nil {
+		return err
 	}
 	return c.Insights().DeleteAlertRule(c.Args[0])
 }

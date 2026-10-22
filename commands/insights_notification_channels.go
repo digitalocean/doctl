@@ -81,6 +81,7 @@ func InsightsNotificationChannel() *Command {
 		"Deletes an Insights notification channel. Channels referenced by alert rules cannot be deleted.", Writer,
 		aliasOpt("d", "del", "rm"))
 	deleteCmd.Args = cobra.ExactArgs(1)
+	AddBoolFlag(deleteCmd, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the notification channel without a confirmation prompt")
 
 	return cmd
 }
@@ -181,6 +182,13 @@ func RunInsightsNotificationChannelUpdate(c *CmdConfig) error {
 func RunInsightsNotificationChannelDelete(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if err := confirmDelete(force, "Insights notification channel", 1); err != nil {
+		return err
 	}
 	return c.Insights().DeleteNotificationChannel(c.Args[0])
 }
