@@ -251,7 +251,7 @@ func TestRunInsightsLogsSearchValidation(t *testing.T) {
 		{name: "limit too large", flags: map[string]any{doctl.ArgInsightsLogsLimit: 1001}, wantErr: "--limit must be between 1 and 1000"},
 		{name: "negative limit", flags: map[string]any{doctl.ArgInsightsLogsLimit: -1}, wantErr: "--limit must be between 1 and 1000"},
 		{name: "invalid filter json", flags: map[string]any{doctl.ArgInsightsLogsFilter: `{"condition":`}, wantErr: "parsing --filter"},
-		{name: "unknown filter field", flags: map[string]any{doctl.ArgInsightsLogsFilter: `{"conditon":{}}`}, wantErr: `unknown field "conditon"`},
+		{name: "unknown filter field", flags: map[string]any{doctl.ArgInsightsLogsFilter: `{"unknown_key":{}}`}, wantErr: `unknown field "unknown_key"`},
 		{
 			name:    "filter and filter file",
 			flags:   map[string]any{doctl.ArgInsightsLogsFilter: testLogsServiceFilterJSON},
