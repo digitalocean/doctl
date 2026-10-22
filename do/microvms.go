@@ -55,6 +55,9 @@ type MicroVMsService interface {
 	Resume(id string) (*MicroVM, error)
 	Delete(id string) error
 
+	AddURL(microVMID string, req *godo.MicroVMURLCreateRequest) (*godo.MicroVMURL, error)
+	RemoveURL(microVMID, urlID string) error
+
 	ListCheckpoints(microVMID string) (MicroVMCheckpoints, error)
 	CreateCheckpoint(microVMID string, req *godo.MicroVMCheckpointCreateRequest) (*MicroVMCheckpoint, error)
 	GetCheckpoint(id string) (*MicroVMCheckpoint, error)
@@ -149,6 +152,19 @@ func (s *microVMsService) Resume(id string) (*MicroVM, error) {
 
 func (s *microVMsService) Delete(id string) error {
 	_, err := s.client.MicroVMs.Delete(context.TODO(), id)
+	return err
+}
+
+func (s *microVMsService) AddURL(microVMID string, req *godo.MicroVMURLCreateRequest) (*godo.MicroVMURL, error) {
+	u, _, err := s.client.MicroVMs.AddURL(context.TODO(), microVMID, req)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func (s *microVMsService) RemoveURL(microVMID, urlID string) error {
+	_, err := s.client.MicroVMs.RemoveURL(context.TODO(), microVMID, urlID)
 	return err
 }
 

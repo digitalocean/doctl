@@ -65,8 +65,8 @@ type HostedAgentWorkspace struct {
 
 // HostedAgentWorkspaceCreateRequest is the body for CreateWorkspace.
 type HostedAgentWorkspaceCreateRequest struct {
-	// SizeLimitGiB is the upper limit of the workspace disk in GiB, from 1 to 100.
-	// The server validates it, and a team limit can lower the maximum.
+	// SizeLimitGiB is the size limit of the workspace in GiB, from 1 to 100. The
+	// server validates it, and a team limit can lower the maximum.
 	SizeLimitGiB int32 `json:"size_limit_gib"`
 	// Name is an optional label. It is not unique.
 	Name string `json:"name,omitempty"`
