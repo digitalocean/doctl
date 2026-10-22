@@ -81,6 +81,13 @@ func TestPrettyAgentKind_OpenHands(t *testing.T) {
 	assert.Equal(t, "OpenHands", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_OPENHANDS")))
 }
 
+func TestPrettyAgentKind_GatewayAndFrameworkKinds(t *testing.T) {
+	assert.Equal(t, "Hermes", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_HERMES")))
+	assert.Equal(t, "LangGraph", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_LANGGRAPH")))
+	assert.Equal(t, "CrewAI", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_CREWAI")))
+	assert.Equal(t, "agent", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_NOT_A_KIND")), "an unrecognized kind keeps the sentinel")
+}
+
 func TestBuildHarnessManifest(t *testing.T) {
 	t.Run("opencode with repo and prompt", func(t *testing.T) {
 		raw, err := buildHarnessManifest(harnessManifestOpts{

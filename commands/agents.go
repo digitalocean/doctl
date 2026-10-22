@@ -8319,14 +8319,24 @@ var agentKindDisplayNames = map[godo.HostedAgentKind]string{
 	godo.HostedAgentKindCursorCLI:   "Cursor CLI",
 	godo.HostedAgentKindOpenAICodex: "Codex",
 	hostedAgentKindOpenHands:        "OpenHands",
+	hostedAgentKindHermes:           "Hermes",
+	hostedAgentKindLangGraph:        "LangGraph",
+	hostedAgentKindCrewAI:           "CrewAI",
 	godo.HostedAgentKindCustom:      "Custom",
 	godo.HostedAgentKindNone:        "None",
 }
 
-// hostedAgentKindOpenHands is the agent kind harness-api reports for sessions
-// running the OpenHands Agent Server (template `openhands`). Declared here
-// until godo adds the constant; the wire value is the one harness-api emits.
-const hostedAgentKindOpenHands godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
+// The agent kinds harness-api reports for sessions that godo has no constant
+// for yet: the OpenHands Agent Server (template `openhands`), the Hermes
+// gateway (template `coding-hermes`), and the LangGraph and CrewAI framework
+// adapters. Declared here until godo adds them; the wire values are the ones
+// harness-api emits.
+const (
+	hostedAgentKindOpenHands godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
+	hostedAgentKindHermes    godo.HostedAgentKind = "AGENT_KIND_HERMES"
+	hostedAgentKindLangGraph godo.HostedAgentKind = "AGENT_KIND_LANGGRAPH"
+	hostedAgentKindCrewAI    godo.HostedAgentKind = "AGENT_KIND_CREWAI"
+)
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into the friendly "OpenCode"
 // label. Falls back to the sentinel "agent" for unspecified or unrecognized

@@ -51,6 +51,7 @@ mockgen -source partner_network_connect.go  -package=mocks PartnerAttachmentsSer
 mockgen -source spaces_keys.go -package=mocks SpacesKeysService > mocks/SpacesKeysService.go
 mockgen -source gradientai.go -package=mocks AgentPlatformService > mocks/AgentPlatformService.go
 mockgen -source inference.go -package=mocks InferenceService > mocks/InferenceService.go
+mockgen -source insights.go -package=mocks InsightsService > mocks/InsightsService.go
 mockgen -source nfs.go -package=mocks NfsService > mocks/NfsService.go
 mockgen -source nfs_actions.go -package=mocks NfsActionsService > mocks/NfsActionsService.go
 mockgen -source microvms.go -package=mocks MicroVMsService > mocks/MicroVMsService.go
