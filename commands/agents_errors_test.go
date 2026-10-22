@@ -125,6 +125,20 @@ func TestBeautifyAgentError_LocalValidation(t *testing.T) {
 	assert.NotContains(t, formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty), "POST https://")
 }
 
+// A delete that was not confirmed sends no request, so its card must not say a request
+// failed, and must name the flag that skips the question.
+func TestBeautifyAgentError_UnconfirmedDelete(t *testing.T) {
+	out := beautifyAgentError(errors.New("operation aborted"))
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Not confirmed", pretty.title)
+	assert.Equal(t, "operation aborted", pretty.reason)
+
+	display := formatStructuredError(ui.Plain(&bytes.Buffer{}, &bytes.Buffer{}), pretty)
+	assert.NotContains(t, display, "Couldn't complete that request")
+	assert.Contains(t, display, "--force")
+}
+
 // A prepay 402 must never fall through to the generic "Request failed" card,
 // and must name the one thing that resolves it.
 func TestBeautifyAgentError_PrepayBlocked(t *testing.T) {

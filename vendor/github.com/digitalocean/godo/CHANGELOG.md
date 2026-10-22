@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.231.0] - 2026-10-22
+
+- #1178 - @sanpj2292 - feat(MARSOHS-2336): rename the workspace size to SizeLimitGiB (size_limit_gib)
+
 ## [1.230.0] - 2026-10-21
 
 - #1179 - @dmamidala-glitch - COBS-1696: Align Insights tracing wire contract
