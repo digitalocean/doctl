@@ -338,11 +338,13 @@ func truncateForErr(b []byte) string {
 
 // agentManifestDoc is the subset of agents.yaml we need for OpenAI
 // orchestration, covering both manifest formats: the flat format reads
-// top-level `agent` and `config`; the deprecated v1alpha1 envelope reads
+// top-level `harness` (or `agent`, its original name) and `config`; the deprecated v1alpha1 envelope reads
 // `spec.runtime.adapter`, `spec.runtime.config`, and legacy `spec.openai`.
 type agentManifestDoc struct {
-	// Agent is the flat format's adapter selector.
-	Agent string `yaml:"agent"`
+	// Harness is the flat format's adapter selector; Agent is its original
+	// name.
+	Harness string `yaml:"harness"`
+	Agent   string `yaml:"agent"`
 	// Config holds the flat format's OpenAI create-session body
 	// (agent/environment/input).
 	Config any `yaml:"config"`
@@ -362,6 +364,9 @@ type agentManifestDoc struct {
 
 // adapter returns the manifest's agent selector regardless of format.
 func (d *agentManifestDoc) adapter() string {
+	if h := strings.TrimSpace(d.Harness); h != "" {
+		return h
+	}
 	if a := strings.TrimSpace(d.Agent); a != "" {
 		return a
 	}

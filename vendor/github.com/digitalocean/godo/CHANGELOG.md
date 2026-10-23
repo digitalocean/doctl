@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.232.0] - 2026-10-23
+
+- #1184 - @sauravk-digitalocean - fix(FI-649): change SignalsDialogue.ID from int64 to string
+
 ## [1.231.0] - 2026-10-22
 
 - #1178 - @sanpj2292 - feat(MARSOHS-2336): rename the workspace size to SizeLimitGiB (size_limit_gib)

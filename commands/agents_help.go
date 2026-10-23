@@ -83,7 +83,7 @@ These four are equivalent:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"
 ` + "```\n\n" + `Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
 ` + "```yaml\n" + `name: my-session
-agent: opencode
+harness: opencode
 ` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
 
 - ` + "`egress: unrestricted`" + `
@@ -117,7 +117,7 @@ Use ` + "`-o json`" + ` for machine-readable create output without waiting. Comb
 
 const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
 
-Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
+Catches a missing ` + "`harness`" + ` (or its original name ` + "`agent`" + `, or legacy ` + "`spec.runtime.adapter`" + `), unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
 
 Name the manifest as a positional path or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin); with none of these, ` + "`./agents.yaml`" + ` is used when it exists.
 
