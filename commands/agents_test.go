@@ -100,6 +100,7 @@ func TestAgentsLaunchAliases(t *testing.T) {
 func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
 	cmd := Agents()
 	assert.Equal(t, agentCmdName, cmd.Name())
+	assert.Contains(t, cmd.Aliases, "hr")
 	assert.Contains(t, cmd.Aliases, "agent")
 	assert.Contains(t, cmd.Aliases, "agents")
 	assert.Contains(t, cmd.Aliases, "ohr")
