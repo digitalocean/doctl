@@ -51,6 +51,14 @@ func TestTransport_StampsHeaderInAgentsScope(t *testing.T) {
 		"/v2/agents/sessions/sess_abc/hitl/req_xyz", // HITL resolve
 		"/v2/agents/sessions/sess_abc/sandbox/exec", // sandbox exec
 		"/v2/agents/templates",                      // any future hosted-agents sub-resource
+
+		"/v2/harness-runtime",                                // bare root, new prefix
+		"/v2/harness-runtime/",                               // trailing slash
+		"/v2/harness-runtime/sessions",                       // POST create / GET list
+		"/v2/harness-runtime/sessions/sess_abc",              // GET / DELETE single
+		"/v2/harness-runtime/sessions/sess_abc/events",       // SSE
+		"/v2/harness-runtime/sessions/sess_abc/sandbox/exec", // sandbox exec
+		"/v2/harness-runtime/triggers",                       // triggers
 	}
 	for _, p := range cases {
 		t.Run(strings.TrimPrefix(p, "/"), func(t *testing.T) {
@@ -72,11 +80,14 @@ func TestTransport_OmitsHeaderOutOfScope(t *testing.T) {
 		"/v2/droplets",
 		"/v2/kubernetes/clusters",
 		"/v2/registry",
-		"/v2/gen-ai/agents",     // GradientAI agents, a different feature — must NOT leak
-		"/v2/gen-ai/agents/abc", //
-		"/v2/agentsfoo",         // prefix-only match — must NOT match base
-		"/v2/agentsfoo/",        //
-		"/",                     // root
+		"/v2/gen-ai/agents",          // GradientAI agents, a different feature — must NOT leak
+		"/v2/gen-ai/agents/abc",      //
+		"/v2/agentsfoo",              // prefix-only match — must NOT match base
+		"/v2/agentsfoo/",             //
+		"/v2/harness-runtimefoo",     // prefix-only match on the new base — must NOT match
+		"/v2/harness-runtimefoo/",    //
+		"/v2/gen-ai/harness-runtime", // nested under another product — must NOT match
+		"/",                          // root
 	}
 	for _, p := range cases {
 		t.Run(strings.TrimPrefix(p, "/"), func(t *testing.T) {

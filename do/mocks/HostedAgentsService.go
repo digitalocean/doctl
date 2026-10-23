@@ -310,20 +310,6 @@ func (mr *MockHostedAgentsServiceMockRecorder) ExecInSandbox(ctx, sessionID, bod
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecInSandbox", reflect.TypeOf((*MockHostedAgentsService)(nil).ExecInSandbox), ctx, sessionID, body)
 }
 
-// StreamExecInSandbox mocks base method.
-func (m *MockHostedAgentsService) StreamExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest, emit func(do.SandboxExecEvent) error) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamExecInSandbox", ctx, sessionID, body, emit)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StreamExecInSandbox indicates an expected call of StreamExecInSandbox.
-func (mr *MockHostedAgentsServiceMockRecorder) StreamExecInSandbox(ctx, sessionID, body, emit any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamExecInSandbox", reflect.TypeOf((*MockHostedAgentsService)(nil).StreamExecInSandbox), ctx, sessionID, body, emit)
-}
-
 // ForkSession mocks base method.
 func (m *MockHostedAgentsService) ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]do.HostedAgentSession, error) {
 	m.ctrl.T.Helper()
@@ -670,6 +656,20 @@ func (m *MockHostedAgentsService) StartProviderAuth(provider string) (*godo.Host
 func (mr *MockHostedAgentsServiceMockRecorder) StartProviderAuth(provider any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartProviderAuth", reflect.TypeOf((*MockHostedAgentsService)(nil).StartProviderAuth), provider)
+}
+
+// StreamExecInSandbox mocks base method.
+func (m *MockHostedAgentsService) StreamExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest, emit func(do.SandboxExecEvent) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamExecInSandbox", ctx, sessionID, body, emit)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StreamExecInSandbox indicates an expected call of StreamExecInSandbox.
+func (mr *MockHostedAgentsServiceMockRecorder) StreamExecInSandbox(ctx, sessionID, body, emit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamExecInSandbox", reflect.TypeOf((*MockHostedAgentsService)(nil).StreamExecInSandbox), ctx, sessionID, body, emit)
 }
 
 // StreamSession mocks base method.
