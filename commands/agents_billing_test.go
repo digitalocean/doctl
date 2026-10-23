@@ -44,7 +44,7 @@ func harnessAPIErr(status int, message string) error {
 	return godo.CheckResponse(&http.Response{
 		StatusCode: status,
 		Header:     http.Header{},
-		Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions", nil),
+		Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/harness-runtime/sessions", nil),
 		Body:       io.NopCloser(strings.NewReader(body)),
 	})
 }

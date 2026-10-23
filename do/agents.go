@@ -123,7 +123,7 @@ type HostedAgentsService interface {
 	DeleteAgentConfig(configID string) error
 	ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 
-	// Team custom sandbox templates (/v2/agents/templates).
+	// Team custom sandbox templates (/v2/harness-runtime/templates).
 	ListTemplates(opt *godo.HostedAgentTemplateListOptions) ([]godo.HostedAgentTemplate, string, error)
 	CreateTemplate(create *godo.HostedAgentTemplateCreateRequest) (*godo.HostedAgentTemplate, error)
 	GetTemplate(templateID string) (*godo.HostedAgentTemplate, error)
@@ -172,7 +172,7 @@ func (s *hostedAgentsService) CreateSessionFromManifestWithManagedKey(manifest [
 		}
 	}
 	q.Set(manageModelAccessKeyParam, "true")
-	u, err := s.client.BaseURL.Parse("v2/agents/sessions?" + q.Encode())
+	u, err := s.client.BaseURL.Parse("v2/harness-runtime/sessions?" + q.Encode())
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (s *hostedAgentsService) CancelTurn(sessionID, runID string) (HostedAgentCa
 		return HostedAgentCancelTurnResult{}, errors.New("hosted agents: session id is required")
 	}
 	ctx := context.TODO()
-	path := fmt.Sprintf("/v2/agents/sessions/%s/cancel", url.PathEscape(sessionID))
+	path := fmt.Sprintf("/v2/harness-runtime/sessions/%s/cancel", url.PathEscape(sessionID))
 	reqBody := struct {
 		RunID string `json:"run_id,omitempty"`
 	}{RunID: runID}

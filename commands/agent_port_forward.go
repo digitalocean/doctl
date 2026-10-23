@@ -28,7 +28,7 @@ import (
 // doctl agents port-forward — POC client for the port-forward WebSocket API
 // (docs/design/port-forward-rfc.md § User experience). One local TCP listener
 // per requested pair; each accepted connection dials its own WebSocket to
-// GET /v2/agents/sessions/{session_id}/port-forward/{port} and pumps binary
+// GET /v2/harness-runtime/sessions/{session_id}/port-forward/{port} and pumps binary
 // frames as an opaque byte stream.
 
 const portForwardCopyBuf = 32 << 10
@@ -110,7 +110,7 @@ func hostedAgentsWSURL(sessionID string, remotePort int) (string, error) {
 		return "", fmt.Errorf("unsupported API URL scheme %q", u.Scheme)
 	}
 	u.Path = strings.TrimSuffix(u.Path, "/") +
-		fmt.Sprintf("/v2/agents/sessions/%s/port-forward/%d", sessionID, remotePort)
+		fmt.Sprintf("/v2/harness-runtime/sessions/%s/port-forward/%d", sessionID, remotePort)
 	return u.String(), nil
 }
 
@@ -246,7 +246,7 @@ func redactDeviceID(id string) string {
 // injected rather than read here so this stays testable: deviceid.Get caches
 // its lookup in a sync.Once.
 //
-// The device id is what the deviceid transport stamps on every /v2/agents
+// The device id is what the deviceid transport stamps on every /v2/harness-runtime
 // request, but that transport wraps godo's RoundTripper and gorilla dials its
 // own connection. Without it the tunnel is the one agents call harness-api's
 // device middleware logs with an empty id, and it is also the one that opens

@@ -29,7 +29,7 @@ import (
 // sandboxExecPath is the harness-api route for one-shot / streaming exec.
 // Kept local so streaming does not need a godo bump; matches godo's
 // hostedAgentSessionSandboxExecPath.
-const sandboxExecPath = "/v2/agents/sessions/%s/sandbox/exec"
+const sandboxExecPath = "/v2/harness-runtime/sessions/%s/sandbox/exec"
 
 // SandboxExecEvent is one frame from StreamExecInSandbox. At most one of
 // Stdout, Stderr, ExitCode, or ErrMessage is set.

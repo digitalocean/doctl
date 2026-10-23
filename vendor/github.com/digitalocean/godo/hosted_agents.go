@@ -20,7 +20,12 @@ const (
 	hostedAgentManifestMediaType  = "application/x-yaml"
 	hostedAgentWorkspaceMediaType = "application/octet-stream"
 
-	hostedAgentsSessionsBasePath                    = "/v2/agents/sessions"
+	// hostedAgentsAPIPrefix is the public path prefix of the Harness Runtime API.
+	// It was previously /v2/agents, which the edge still serves with identical
+	// behaviour.
+	hostedAgentsAPIPrefix = "/v2/harness-runtime"
+
+	hostedAgentsSessionsBasePath                    = hostedAgentsAPIPrefix + "/sessions"
 	hostedAgentPolicyValidatePath                   = hostedAgentsSessionsBasePath + "/policy/validate"
 	hostedAgentSessionByIDPath                      = hostedAgentsSessionsBasePath + "/%s"
 	hostedAgentSessionEventsPath                    = hostedAgentSessionByIDPath + "/events"
@@ -40,11 +45,11 @@ const (
 	hostedAgentSessionWorkspaceTransferCancelPath   = hostedAgentSessionWorkspaceTransferByIDPath + "/cancel"
 
 	// Team-scoped external-provider (e.g. GitHub) OAuth connect flow.
-	hostedAgentProviderAuthPath     = "/v2/agents/auth/%s"
+	hostedAgentProviderAuthPath     = hostedAgentsAPIPrefix + "/auth/%s"
 	hostedAgentProviderAuthPollPath = hostedAgentProviderAuthPath + "/poll"
 
 	// Team-scoped external-provider connection management (harness-api's proxy
-	// of Action Gateway / tool-registry). Shares the /v2/agents/auth/{provider}
+	// of Action Gateway / tool-registry). Shares the /v2/harness-runtime/auth/{provider}
 	// prefix with the connect flow above. The by-id path takes provider then id.
 	hostedAgentProviderConnectionsPath    = hostedAgentProviderAuthPath + "/connections"
 	hostedAgentProviderConnectionByIDPath = hostedAgentProviderConnectionsPath + "/%s"
@@ -55,7 +60,7 @@ const (
 	hostedAgentSessionForkPath               = hostedAgentSessionByIDPath + "/fork"
 
 	// Persistent workspaces: team-scoped sets of files that outlive sessions.
-	hostedAgentWorkspacesBasePath = "/v2/agents/workspaces"
+	hostedAgentWorkspacesBasePath = hostedAgentsAPIPrefix + "/workspaces"
 	hostedAgentWorkspaceByIDPath  = hostedAgentWorkspacesBasePath + "/%s"
 
 	// HostedAgentForkMaxCount is the v1 cap on children created by one fork call.
@@ -77,7 +82,7 @@ const (
 )
 
 // HostedAgentsService exposes the DigitalOcean Hosted Agents session API
-// (HarnessAPI from harness.proto). Routes live under /v2/agents/sessions.
+// (HarnessAPI from harness.proto). Routes live under /v2/harness-runtime/sessions.
 type HostedAgentsService interface {
 	// CreateSession provisions a session using the legacy JSON body (agent_kind,
 	// repo_hint, idle_timeout_seconds). Prefer CreateSessionFromManifest for
@@ -145,7 +150,7 @@ type HostedAgentsService interface {
 	DeleteConnection(context.Context, string, string) (*HostedAgentConnectionEnvelope, *Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
 	// ListSandboxSizes returns the customer-selectable sandbox (microVM) size
-	// catalog (GET /v2/agents/sessions/sandbox/sizes). Every slug is accepted by
+	// catalog (GET /v2/harness-runtime/sessions/sandbox/sizes). Every slug is accepted by
 	// CreateSession as spec.sandbox.sizeSlug. Ordered smallest-to-largest; no
 	// pagination.
 	ListSandboxSizes(context.Context) (*HostedAgentSandboxSizesResponse, *Response, error)
@@ -169,7 +174,7 @@ type HostedAgentsService interface {
 	RollbackToCheckpoint(context.Context, string, string) (*HostedAgentSession, *Response, error)
 
 	// Persistent workspaces (separate sets of files that outlive sessions, attached to a
-	// session at create time). Routes live under /v2/agents/workspaces. These are
+	// session at create time). Routes live under /v2/harness-runtime/workspaces. These are
 	// distinct from the session /workspace file transfer APIs above.
 	CreateWorkspace(context.Context, *HostedAgentWorkspaceCreateRequest) (*HostedAgentWorkspace, *Response, error)
 	ListWorkspaces(context.Context, *HostedAgentWorkspaceListOptions) (*HostedAgentWorkspacesListResponse, *Response, error)
@@ -177,7 +182,7 @@ type HostedAgentsService interface {
 	DeleteWorkspace(context.Context, string) (*Response, error)
 
 	// Environments (immutable team-scoped environment definitions). Routes
-	// live under /v2/agents/configs. Prefer the Environment* methods; the
+	// live under /v2/harness-runtime/configs. Prefer the Environment* methods; the
 	// AgentConfig* names remain as compatible aliases.
 	ListEnvironments(context.Context, *HostedEnvironmentListOptions) (*HostedEnvironmentsListResponse, *Response, error)
 	GetEnvironment(context.Context, string) (*HostedEnvironment, *Response, error)
@@ -192,7 +197,7 @@ type HostedAgentsService interface {
 	DeleteAgentConfig(context.Context, string) (*Response, error)
 	ListAgentConfigSessions(context.Context, string, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 
-	// Team custom templates (BYOA). Routes live under /v2/agents/templates.
+	// Team custom templates (BYOA). Routes live under /v2/harness-runtime/templates.
 	ListTemplates(context.Context, *HostedAgentTemplateListOptions) (*HostedAgentTemplatesListResponse, *Response, error)
 	CreateTemplate(context.Context, *HostedAgentTemplateCreateRequest) (*HostedAgentTemplate, *Response, error)
 	GetTemplate(context.Context, string) (*HostedAgentTemplate, *Response, error)
@@ -565,7 +570,7 @@ func (e *HostedAgentEvent) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// HostedAgentSessionCreateRequest is the body for POST /v2/agents/sessions.
+// HostedAgentSessionCreateRequest is the body for POST /v2/harness-runtime/sessions.
 type HostedAgentSessionCreateRequest struct {
 	AgentKind          HostedAgentKind `json:"agent_kind"`
 	RepoHint           string          `json:"repo_hint,omitempty"`
@@ -576,7 +581,7 @@ type HostedAgentSessionCreateRequest struct {
 }
 
 // HostedAgentSessionFromConfigRequest creates a session from an existing
-// immutable Environment (POST /v2/agents/sessions with a JSON body). Name is
+// immutable Environment (POST /v2/harness-runtime/sessions with a JSON body). Name is
 // required and becomes the new session name; ConfigID must be the UUID of an
 // Environment owned by the caller's team.
 // Prefer HostedAgentSessionFromEnvironmentRequest; this name remains for
@@ -604,7 +609,7 @@ type HostedAgentSessionFromConfigRequest struct {
 type HostedAgentSessionFromEnvironmentRequest = HostedAgentSessionFromConfigRequest
 
 // HostedAgentSessionUpdateRequest is the body for PATCH
-// /v2/agents/sessions/{session_id}: an allowlisted subset of session-scoped
+// /v2/harness-runtime/sessions/{session_id}: an allowlisted subset of session-scoped
 // settings, never an agents.yaml or Agent Config mutation. The server rejects
 // unknown top-level keys, and rejects an empty object, so every field is a
 // pointer: nil omits it and leaves the server-side value untouched.
@@ -652,7 +657,7 @@ type HostedAgentSessionListOptions struct {
 	ParentSessionID string `url:"parent_session_id,omitempty"`
 }
 
-// HostedAgentSessionsListResponse is returned by GET /v2/agents/sessions.
+// HostedAgentSessionsListResponse is returned by GET /v2/harness-runtime/sessions.
 type HostedAgentSessionsListResponse struct {
 	Sessions      []HostedAgentSession `json:"sessions"`
 	NextPageToken string               `json:"next_page_token"`
@@ -771,7 +776,7 @@ type HostedAgentResolveHITLRequest struct {
 	Content map[string]any `json:"content,omitempty"`
 }
 
-// HostedAgentProviderAuthStart is returned by POST /v2/agents/auth/{provider}.
+// HostedAgentProviderAuthStart is returned by POST /v2/harness-runtime/auth/{provider}.
 // Status is "pending" when the user must still authorize in a browser
 // (ConnectURL/PollURL/VerificationCode are set), or "success" when the team is
 // already connected (those fields are empty). It is a free-form connect-flow
@@ -788,7 +793,7 @@ type HostedAgentProviderAuthStart struct {
 }
 
 // HostedAgentProviderAuthPoll is returned by GET
-// /v2/agents/auth/{provider}/poll. It reports only whether authorization has
+// /v2/harness-runtime/auth/{provider}/poll. It reports only whether authorization has
 // completed ("pending" or "success"); no secret is returned.
 type HostedAgentProviderAuthPoll struct {
 	Provider  string     `json:"provider"`
@@ -889,7 +894,7 @@ type HostedAgentSandboxExecResponse struct {
 }
 
 // HostedAgentSandboxSize is a customer-selectable sandbox (microVM) size from
-// GET /v2/agents/sessions/sandbox/sizes. Submit Slug as spec.sandbox.sizeSlug
+// GET /v2/harness-runtime/sessions/sandbox/sizes. Submit Slug as spec.sandbox.sizeSlug
 // on CreateSession; VCPUs, MemoryMB, and the price fields are for display.
 type HostedAgentSandboxSize struct {
 	Slug             string  `json:"slug,omitempty"`

@@ -109,27 +109,27 @@ func TestHostedAgentsWSURL(t *testing.T) {
 			// the joined path.
 			name:   "default api host",
 			apiURL: "",
-			want:   "wss://api.digitalocean.com/v2/agents/sessions/sess-1/port-forward/9119",
+			want:   "wss://api.digitalocean.com/v2/harness-runtime/sessions/sess-1/port-forward/9119",
 		},
 		{
 			name:   "preview host via --api-url",
 			apiURL: "https://ohr-agent.do-ai-test.run",
-			want:   "wss://ohr-agent.do-ai-test.run/v2/agents/sessions/sess-1/port-forward/9119",
+			want:   "wss://ohr-agent.do-ai-test.run/v2/harness-runtime/sessions/sess-1/port-forward/9119",
 		},
 		{
 			name:   "https upgrades to wss",
 			apiURL: "https://api.example.com/",
-			want:   "wss://api.example.com/v2/agents/sessions/sess-1/port-forward/9119",
+			want:   "wss://api.example.com/v2/harness-runtime/sessions/sess-1/port-forward/9119",
 		},
 		{
 			name:   "http downgrades to ws for a local dev stack",
 			apiURL: "http://127.0.0.1:8080",
-			want:   "ws://127.0.0.1:8080/v2/agents/sessions/sess-1/port-forward/9119",
+			want:   "ws://127.0.0.1:8080/v2/harness-runtime/sessions/sess-1/port-forward/9119",
 		},
 		{
 			name:   "base path prefix is preserved",
 			apiURL: "https://api.example.com/edge/",
-			want:   "wss://api.example.com/edge/v2/agents/sessions/sess-1/port-forward/9119",
+			want:   "wss://api.example.com/edge/v2/harness-runtime/sessions/sess-1/port-forward/9119",
 		},
 	}
 	for _, tt := range tests {
@@ -350,7 +350,7 @@ func TestBridgeLocalConnSendsDeviceHeader(t *testing.T) {
 	defer srv.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") +
-		"/v2/agents/sessions/sess-1/port-forward/9119"
+		"/v2/harness-runtime/sessions/sess-1/port-forward/9119"
 
 	local, remote := net.Pipe()
 	defer local.Close()
@@ -380,7 +380,7 @@ func TestBridgeLocalConnSurfacesServerMessage(t *testing.T) {
 	defer srv.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") +
-		"/v2/agents/sessions/sess-1/port-forward/9119"
+		"/v2/harness-runtime/sessions/sess-1/port-forward/9119"
 
 	local, remote := net.Pipe()
 	defer local.Close()

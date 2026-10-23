@@ -259,7 +259,7 @@ func TestInvalidateHistoryDoesNotBlockOnInFlightFetch(t *testing.T) {
 
 	// Release the gate so the fetch completes; its result must NOT be cached
 	// (the invalidation superseded it), so the next read replays fresh.
-	resp, err := http.Post(h.Server.URL+"/v2/agents/sessions/"+testSessionID+"/hitl/gate-1",
+	resp, err := http.Post(h.Server.URL+"/v2/harness-runtime/sessions/"+testSessionID+"/hitl/gate-1",
 		"application/json", strings.NewReader(`{"outcome":"HITL_OUTCOME_APPROVE"}`))
 	require.NoError(t, err)
 	resp.Body.Close()

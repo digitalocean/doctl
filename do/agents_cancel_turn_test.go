@@ -89,7 +89,7 @@ func TestHostedAgentsService_CancelTurn(t *testing.T) {
 			got, err := do.NewHostedAgentsService(client).CancelTurn("sess_x", tc.runID)
 
 			assert.Equal(t, http.MethodPost, gotMethod)
-			assert.Equal(t, "/v2/agents/sessions/sess_x/cancel", gotPath)
+			assert.Equal(t, "/v2/harness-runtime/sessions/sess_x/cancel", gotPath)
 			assert.Equal(t, tc.wantBody, gotBody, "an unnamed cancel sends no run_id key at all")
 			if tc.wantErr != "" {
 				require.Error(t, err)
