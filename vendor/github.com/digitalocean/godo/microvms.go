@@ -87,6 +87,9 @@ type MicroVMsService interface {
 	Resume(ctx context.Context, id string) (*MicroVM, *Response, error)
 	Delete(ctx context.Context, id string) (*Response, error)
 
+	AddURL(ctx context.Context, microVMID string, createRequest *MicroVMURLCreateRequest) (*MicroVMURL, *Response, error)
+	RemoveURL(ctx context.Context, microVMID, urlID string) (*Response, error)
+
 	ListCheckpoints(ctx context.Context, opt *ListMicroVMCheckpointsOptions) ([]MicroVMCheckpoint, *Response, error)
 	CreateCheckpoint(ctx context.Context, microVMID string, createRequest *MicroVMCheckpointCreateRequest) (*MicroVMCheckpoint, *Response, error)
 	GetCheckpoint(ctx context.Context, id string) (*MicroVMCheckpoint, *Response, error)
@@ -129,10 +132,21 @@ type MicroVMSource struct {
 
 // MicroVMURL is one ingress URL attached to a MicroVM.
 type MicroVMURL struct {
+	// ID is the stable identifier of the URL. Use it to remove the URL with
+	// MicroVMsService.RemoveURL.
+	ID       string           `json:"id,omitempty"`
 	Hostname string           `json:"hostname,omitempty"`
 	Port     int              `json:"port,omitempty"`
 	Default  bool             `json:"default,omitempty"`
 	Status   MicroVMURLStatus `json:"status,omitempty"`
+}
+
+// MicroVMURLCreateRequest is the payload for adding a URL to a MicroVM.
+type MicroVMURLCreateRequest struct {
+	// Port is the guest port the URL routes to. It must be one of the
+	// MicroVM's Ports. When zero, the API defaults it to the MicroVM's
+	// HTTPPort.
+	Port int `json:"port,omitempty"`
 }
 
 // MicroVM represents a DigitalOcean MicroVM.
@@ -196,6 +210,11 @@ type MicroVMCreateRequest struct {
 	Ports        []uint32            `json:"ports,omitempty"`
 	Environment  map[string]string   `json:"environment,omitempty"`
 	Tags         []string            `json:"tags,omitempty"`
+	// Ingress controls whether the MicroVM is created with a default public
+	// URL. It defaults to true when omitted (nil). Set it to false to create
+	// the MicroVM without a default URL; URLs can be added later with
+	// MicroVMsService.AddURL.
+	Ingress *bool `json:"ingress,omitempty"`
 }
 
 // MicroVMCheckpointCreateRequest represents a request to create a checkpoint.
@@ -330,6 +349,10 @@ func (r MicroVMCreateRequest) String() string {
 
 type microVMRoot struct {
 	MicroVM *MicroVM `json:"microvm"`
+}
+
+type microVMURLRoot struct {
+	URL *MicroVMURL `json:"url"`
 }
 
 type microVMsRoot struct {
@@ -521,6 +544,58 @@ func (s *MicroVMsServiceOp) Delete(ctx context.Context, id string) (*Response, e
 	}
 
 	path := fmt.Sprintf("%s/%s", microVMBasePath, id)
+
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Do(ctx, req, nil)
+}
+
+// AddURL mints a new public ingress URL for a running or paused MicroVM. The
+// URL routes to createRequest.Port, which must be one of the MicroVM's Ports;
+// when Port is zero the API defaults it to the MicroVM's HTTPPort. The call
+// returns once the URL is recorded; its Status is PENDING until the route is
+// published. A MicroVM can have at most 10 URLs, the default one included.
+// createRequest may be nil to add a URL on the default port.
+func (s *MicroVMsServiceOp) AddURL(ctx context.Context, microVMID string, createRequest *MicroVMURLCreateRequest) (*MicroVMURL, *Response, error) {
+	if microVMID == "" {
+		return nil, nil, NewArgError("microVMID", "cannot be empty")
+	}
+	if createRequest == nil {
+		createRequest = &MicroVMURLCreateRequest{}
+	}
+
+	path := fmt.Sprintf("%s/%s/urls", microVMBasePath, microVMID)
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(microVMURLRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.URL, resp, nil
+}
+
+// RemoveURL removes a URL from a running or paused MicroVM, the default one
+// included. The hostname stops resolving and is not reused. Removing the last
+// URL leaves the MicroVM as if it had been created with Ingress set to false.
+// The DigitalOcean API returns a 204 on success with no response body.
+func (s *MicroVMsServiceOp) RemoveURL(ctx context.Context, microVMID, urlID string) (*Response, error) {
+	if microVMID == "" {
+		return nil, NewArgError("microVMID", "cannot be empty")
+	}
+	if urlID == "" {
+		return nil, NewArgError("urlID", "cannot be empty")
+	}
+
+	path := fmt.Sprintf("%s/%s/urls/%s", microVMBasePath, microVMID, urlID)
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
