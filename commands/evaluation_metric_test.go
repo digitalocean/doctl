@@ -3,6 +3,7 @@ package commands
 import (
 	"testing"
 
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -17,6 +18,7 @@ var (
 			MetricName: "Task Success",
 			Source:     godo.EvaluationMetricSourceBuiltin,
 			Category:   godo.MetricCategoryCorrectness,
+			TurnType:   godo.EvaluationMetricTurnTypeSingleTurn,
 		},
 	}
 )
@@ -29,8 +31,21 @@ func TestModelEvaluationMetricCommand(t *testing.T) {
 
 func TestModelEvaluationMetricList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.agentPlatform.EXPECT().ListModelEvaluationMetrics().
+		tm.agentPlatform.EXPECT().ListModelEvaluationMetrics(nil).
 			Return(do.EvaluationMetrics{testEvaluationMetric}, nil)
+
+		err := RunModelEvaluationMetricList(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestModelEvaluationMetricListTurnTypeFilter(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgEvaluationTurnType, "multi_turn")
+
+		tm.agentPlatform.EXPECT().ListModelEvaluationMetrics(&godo.ModelEvaluationMetricListOptions{
+			TurnType: godo.EvaluationMetricTurnTypeMultiTurn,
+		}).Return(do.EvaluationMetrics{testEvaluationMetric}, nil)
 
 		err := RunModelEvaluationMetricList(config)
 		assert.NoError(t, err)

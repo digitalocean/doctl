@@ -39,7 +39,7 @@ func CustomEvaluationMetricCmd() *Command {
 		RunCustomEvaluationMetricCreate,
 		"create",
 		"Create a custom evaluation metric",
-		"Creates a custom LLM-as-judge evaluation metric.",
+		"Creates a custom LLM-as-judge evaluation metric. When --turn-type is omitted, the metric defaults to single_turn. multi_turn cannot be combined with --requires-ground-truth.",
 		Writer, aliasOpt("c"),
 		displayerType(&displayers.EvaluationMetric{}),
 	)
@@ -47,15 +47,16 @@ func CustomEvaluationMetricCmd() *Command {
 	AddStringFlag(cmdCustomMetricCreate, doctl.ArgEvaluationScoringPrompt, "", "", "The scoring prompt used by the judge model.", requiredOpt())
 	AddStringFlag(cmdCustomMetricCreate, doctl.ArgEvaluationDescription, "", "", "A description of the custom metric.")
 	AddBoolFlag(cmdCustomMetricCreate, doctl.ArgEvaluationRequiresGroundTruth, "", false, "Whether the custom metric requires ground-truth values.")
+	AddStringFlag(cmdCustomMetricCreate, doctl.ArgEvaluationTurnType, "", "", "Whether the metric applies to single-turn or multi-turn inputs. One of: `single_turn`, `multi_turn`. Defaults to single_turn when omitted.")
 	cmdCustomMetricCreate.Example = "The following example creates a custom evaluation metric: " +
-		"`doctl evaluation custom-metric create --name helpfulness --scoring-prompt \"Score helpfulness from 0 to 1\" --description \"Measures response helpfulness\"`"
+		"`doctl evaluation custom-metric create --name helpfulness --scoring-prompt \"Score helpfulness from 0 to 1\" --description \"Measures response helpfulness\" --turn-type single_turn`"
 
 	cmdCustomMetricUpdate := CmdBuilder(
 		cmd,
 		RunCustomEvaluationMetricUpdate,
 		"update <metric-uuid>",
 		"Update a custom evaluation metric",
-		"Updates a custom LLM-as-judge evaluation metric.",
+		"Updates a custom LLM-as-judge evaluation metric. Turn type is immutable after create and cannot be changed.",
 		Writer, aliasOpt("u"),
 		displayerType(&displayers.EvaluationMetric{}),
 	)
@@ -103,13 +104,23 @@ func RunCustomEvaluationMetricCreate(c *CmdConfig) error {
 		return err
 	}
 
+	rawTurnType, err := c.Doit.GetString(c.NS, doctl.ArgEvaluationTurnType)
+	if err != nil {
+		return err
+	}
+
+	config := &godo.CustomEvaluationMetricConfig{
+		ScoringPrompt:       scoringPrompt,
+		RequiresGroundTruth: requiresGroundTruth,
+	}
+	if rawTurnType != "" {
+		config.TurnType = godo.EvaluationMetricTurnType(genAIEnumValue(evaluationMetricTurnTypePrefix, rawTurnType))
+	}
+
 	metric, err := c.AgentPlatform().CreateCustomEvaluationMetric(&godo.CreateCustomEvaluationMetricRequest{
 		MetricName:  metricName,
 		Description: description,
-		Config: &godo.CustomEvaluationMetricConfig{
-			ScoringPrompt:       scoringPrompt,
-			RequiresGroundTruth: requiresGroundTruth,
-		},
+		Config:      config,
 	})
 	if err != nil {
 		return err
@@ -164,7 +175,9 @@ func RunCustomEvaluationMetricUpdate(c *CmdConfig) error {
 // customEvaluationMetricConfigForUpdate builds the config payload required by
 // UpdateCustomEvaluationMetric. When --scoring-prompt is set, that value is
 // used; otherwise the existing metric's config is loaded so name/description
-// updates do not clear the prompt.
+// updates do not clear the prompt. Turn type is immutable, so the early-return
+// path that rebuilds config from flags leaves TurnType empty and the API keeps
+// the stored value; the reuse path copies TurnType from the existing metric.
 func customEvaluationMetricConfigForUpdate(c *CmdConfig, metricUUID, scoringPrompt string) (*godo.CustomEvaluationMetricConfig, error) {
 	requiresGroundTruthSet := c.Doit.IsSet(doctl.ArgEvaluationRequiresGroundTruth)
 	requiresGroundTruth := false
@@ -198,7 +211,7 @@ func customEvaluationMetricConfigForUpdate(c *CmdConfig, metricUUID, scoringProm
 }
 
 func existingCustomEvaluationMetricConfig(c *CmdConfig, metricUUID string) (*godo.CustomEvaluationMetricConfig, error) {
-	metrics, err := c.AgentPlatform().ListModelEvaluationMetrics()
+	metrics, err := c.AgentPlatform().ListModelEvaluationMetrics(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -210,9 +223,14 @@ func existingCustomEvaluationMetricConfig(c *CmdConfig, metricUUID string) (*god
 		if metric.CustomEvalConfig == nil {
 			return nil, fmt.Errorf("custom metric %s has no scoring config to reuse; pass --%s", metricUUID, doctl.ArgEvaluationScoringPrompt)
 		}
+		turnType := metric.CustomEvalConfig.TurnType
+		if turnType == "" {
+			turnType = metric.TurnType
+		}
 		return &godo.CustomEvaluationMetricConfig{
 			ScoringPrompt:       metric.CustomEvalConfig.ScoringPrompt,
 			RequiresGroundTruth: metric.CustomEvalConfig.RequiresGroundTruth,
+			TurnType:            turnType,
 		}, nil
 	}
 

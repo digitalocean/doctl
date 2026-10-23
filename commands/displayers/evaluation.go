@@ -313,6 +313,7 @@ func (v *EvaluationMetric) Cols() []string {
 		"Name",
 		"Source",
 		"Category",
+		"TurnType",
 		"ValueType",
 		"Description",
 	}
@@ -324,6 +325,7 @@ func (v *EvaluationMetric) ColMap() map[string]string {
 		"Name":        "Name",
 		"Source":      "Source",
 		"Category":    "Category",
+		"TurnType":    "Turn Type",
 		"ValueType":   "Value Type",
 		"Description": "Description",
 	}
@@ -340,6 +342,7 @@ func (v *EvaluationMetric) KV() []map[string]any {
 			"Name":        metric.MetricName,
 			"Source":      metric.Source,
 			"Category":    metric.Category,
+			"TurnType":    metric.TurnType,
 			"ValueType":   metric.MetricValueType,
 			"Description": metric.Description,
 		})
