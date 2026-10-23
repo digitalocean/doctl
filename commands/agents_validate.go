@@ -42,7 +42,8 @@ var knownAgentAdapters = map[string]struct{}{
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
 	"openhands":        {}, // runnable (AGENT_KIND_OPENHANDS): OpenHands Agent Server in the openhands template
 	"custom":           {},
-	"none":             {}, // bare sandbox (AGENT_KIND_NONE): no agent in the guest
+	"none":             {}, // bare sandbox: no agent in the guest
+	"sandbox":          {}, // equal spelling of none
 	"codex-cli":        {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
 	"claude-agent-sdk": {},
@@ -197,8 +198,21 @@ func manifestAdapter(doc map[string]any, legacy bool) string {
 		}
 		return ""
 	}
-	agent, _ := yamlString(doc["agent"])
-	return strings.TrimSpace(agent)
+	adapter, _, _ := flatManifestAdapter(doc)
+	return adapter
+}
+
+// flatManifestAdapter returns a flat manifest's adapter and the key it was
+// declared under: harness, or agent, its original name. both reports a
+// document that sets the two, which the API refuses; callers that only route
+// on the value read harness.
+func flatManifestAdapter(doc map[string]any) (adapter, key string, both bool) {
+	both = hasYAMLKey(doc, "harness") && hasYAMLKey(doc, "agent")
+	if h, _ := yamlString(doc["harness"]); strings.TrimSpace(h) != "" || !hasYAMLKey(doc, "agent") {
+		return strings.TrimSpace(h), "harness", both
+	}
+	a, _ := yamlString(doc["agent"])
+	return strings.TrimSpace(a), "agent", both
 }
 
 func bytesTrimSpace(b []byte) []byte {
@@ -211,12 +225,14 @@ func hasYAMLKey(doc map[string]any, key string) bool {
 }
 
 func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
-	agent, _ := yamlString(doc["agent"])
-	agent = strings.TrimSpace(agent)
-	if agent == "" {
-		out.Errors = append(out.Errors, `flat manifest requires top-level "agent" (e.g. agent: opencode)`)
-	} else {
-		validateAdapter(agent, "agent", out)
+	adapter, key, both := flatManifestAdapter(doc)
+	switch {
+	case both:
+		out.Errors = append(out.Errors, `set "harness" or "agent", not both; they are the same key ("agent" is its original name)`)
+	case adapter == "":
+		out.Errors = append(out.Errors, `flat manifest requires top-level "harness" (e.g. harness: opencode)`)
+	default:
+		validateAdapter(adapter, key, out)
 	}
 
 	if name, ok := yamlString(doc["name"]); ok && strings.TrimSpace(name) != "" {
@@ -1086,7 +1102,7 @@ func looksLikeFieldPath(s string) bool {
 		strings.HasPrefix(s, "permissions."), strings.HasPrefix(s, "skills["),
 		strings.HasPrefix(s, "egress"), strings.HasPrefix(s, "sandbox.egress"),
 		strings.HasPrefix(s, "spec.sandbox.egress"), strings.HasPrefix(s, "spec.egress"),
-		s == "agent", s == "name", s == "apiVersion", s == "kind", s == "spec.runtime",
+		s == "harness", s == "agent", s == "name", s == "apiVersion", s == "kind", s == "spec.runtime",
 		strings.HasPrefix(s, "spec.runtime"):
 		return true
 	default:

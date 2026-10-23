@@ -226,7 +226,7 @@ func TestStripEphemeralAgentFlagsFromConfig(t *testing.T) {
 
 func TestAgentsCreateHelpDocumentsFlatName(t *testing.T) {
 	assert.Contains(t, agentsCreateHelpMD, "name: my-session")
-	assert.Contains(t, agentsCreateHelpMD, "agent: opencode")
+	assert.Contains(t, agentsCreateHelpMD, "harness: opencode")
 	assert.Contains(t, agentsCreateHelpMD, "--name")
 }
 
