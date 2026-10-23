@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	hostedAgentsConfigsBasePath   = "/v2/agents/configs"
+	hostedAgentsConfigsBasePath   = hostedAgentsAPIPrefix + "/configs"
 	hostedAgentConfigByIDPath     = hostedAgentsConfigsBasePath + "/%s"
 	hostedAgentConfigSessionsPath = hostedAgentConfigByIDPath + "/sessions"
 )
@@ -57,7 +57,7 @@ type HostedAgentConfigSummary struct {
 	UpdatedAt              Timestamp `json:"updated_at"`
 }
 
-// HostedAgentConfigCreateRequest is the body for POST /v2/agents/configs.
+// HostedAgentConfigCreateRequest is the body for POST /v2/harness-runtime/configs.
 // Credentials are not request fields: every secret is declared in the manifest
 // under secrets (Environment Spec) or the legacy agents.yaml shape, and a
 // tenantSecret slot carries its plaintext in a write-only value that is
@@ -76,7 +76,7 @@ type HostedAgentConfigListOptions struct {
 	PageSize  int    `url:"page_size,omitempty"`
 }
 
-// HostedAgentConfigsListResponse is returned by GET /v2/agents/configs.
+// HostedAgentConfigsListResponse is returned by GET /v2/harness-runtime/configs.
 // The JSON field remains "configs" on the wire. Prefer
 // HostedEnvironmentsListResponse; this name remains for compatibility.
 type HostedAgentConfigsListResponse struct {

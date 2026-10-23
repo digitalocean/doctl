@@ -32,11 +32,11 @@ func TestStripGodoTransportNoise(t *testing.T) {
 		want string
 	}{
 		{
-			in:   `POST https://api.digitalocean.com/v2/agents/sessions: 400 invalid harness`,
+			in:   `POST https://api.digitalocean.com/v2/harness-runtime/sessions: 400 invalid harness`,
 			want: "invalid harness",
 		},
 		{
-			in:   `GET https://api.digitalocean.com/v2/agents/sessions/sess_x: 404 (request "abc-123") session not found`,
+			in:   `GET https://api.digitalocean.com/v2/harness-runtime/sessions/sess_x: 404 (request "abc-123") session not found`,
 			want: "session not found",
 		},
 		{
@@ -57,7 +57,7 @@ func TestBeautifyAgentError_APIResponse(t *testing.T) {
 	er := &godo.ErrorResponse{
 		Response: &http.Response{
 			StatusCode: http.StatusConflict,
-			Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions", nil),
+			Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/harness-runtime/sessions", nil),
 		},
 		Message: "team is at the limit of 4 active sessions",
 	}
@@ -88,7 +88,7 @@ func TestBeautifyAgentError_NoAgentConflictGetsItsOwnCard(t *testing.T) {
 			er := &godo.ErrorResponse{
 				Response: &http.Response{
 					StatusCode: http.StatusConflict,
-					Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions/x/input", nil),
+					Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/harness-runtime/sessions/x/input", nil),
 				},
 				Message: "this session runs no agent (agent: " + spelling + "); drive it with exec, workspace upload/download, or port-forward instead of sending input",
 			}

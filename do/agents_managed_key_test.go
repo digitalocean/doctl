@@ -80,7 +80,7 @@ func TestHostedAgentsService_CreateSessionFromManifestWithManagedKey(t *testing.
 			require.NoError(t, err)
 
 			assert.Equal(t, http.MethodPost, gotMethod)
-			assert.Equal(t, "/v2/agents/sessions", gotPath)
+			assert.Equal(t, "/v2/harness-runtime/sessions", gotPath)
 			assert.Equal(t, "application/x-yaml", gotContentType)
 			assert.Equal(t, "application/json", gotAccept)
 			assert.Equal(t, tc.wantQuery, gotQuery)

@@ -1804,7 +1804,7 @@ func TestErrorResponseSurfacesNestedMessage(t *testing.T) {
 	er := &godo.ErrorResponse{
 		Response: &http.Response{
 			StatusCode: http.StatusBadRequest,
-			Request:    httptest.NewRequest(http.MethodPost, "http://harness/v2/agents/sessions/sess_x/input", nil),
+			Request:    httptest.NewRequest(http.MethodPost, "http://harness/v2/harness-runtime/sessions/sess_x/input", nil),
 		},
 	}
 	assert.NoError(t, json.Unmarshal([]byte(body), er))
@@ -1826,7 +1826,7 @@ func TestRunAgentsCreate_SkillsEnvSizeCapError(t *testing.T) {
 	er := &godo.ErrorResponse{
 		Response: &http.Response{
 			StatusCode: http.StatusBadRequest,
-			Request:    httptest.NewRequest(http.MethodPost, "http://harness/v2/agents/sessions", nil),
+			Request:    httptest.NewRequest(http.MethodPost, "http://harness/v2/harness-runtime/sessions", nil),
 		},
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), er))
@@ -4064,7 +4064,7 @@ func TestRunAgentsLaunch_AttachAuthFailure(t *testing.T) {
 		authErr := &godo.ErrorResponse{
 			Response: &http.Response{
 				StatusCode: http.StatusUnauthorized,
-				Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/sessions/sess_x", nil),
+				Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/harness-runtime/sessions/sess_x", nil),
 			},
 			Message: "Unable to authenticate you",
 		}
@@ -4131,7 +4131,7 @@ func TestClassifyStreamError(t *testing.T) {
 		return &godo.ErrorResponse{
 			Response: &http.Response{
 				StatusCode: status,
-				Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/sessions/sess_x/stream", nil),
+				Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/harness-runtime/sessions/sess_x/stream", nil),
 			},
 			Message: message,
 		}
@@ -4415,7 +4415,7 @@ func terminalStreamErr() *godo.ErrorResponse {
 	return &godo.ErrorResponse{
 		Response: &http.Response{
 			StatusCode: http.StatusNotFound,
-			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/sessions/sess_x/stream", nil),
+			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/harness-runtime/sessions/sess_x/stream", nil),
 		},
 		Message: "session not found",
 	}
@@ -5106,7 +5106,7 @@ func TestStreamWithReconnect_terminalErrorNoRetry(t *testing.T) {
 	authErr := &godo.ErrorResponse{
 		Response: &http.Response{
 			StatusCode: http.StatusUnauthorized,
-			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/sessions/sess_x/stream", nil),
+			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/harness-runtime/sessions/sess_x/stream", nil),
 		},
 		Message: "token expired",
 	}

@@ -220,7 +220,7 @@ func godoStatusErr(status int, message string) error {
 	return &godo.ErrorResponse{
 		Response: &http.Response{
 			StatusCode: status,
-			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/agents/configs/cfg_1", nil),
+			Request:    httptest.NewRequest(http.MethodGet, "http://harness/v2/harness-runtime/configs/cfg_1", nil),
 		},
 		Message: message,
 	}

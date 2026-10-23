@@ -150,7 +150,7 @@ var agentBaseTemplateFlagDesc = "Platform base to rebase onto (" +
 	agentCLI + " create --template <name>'."
 
 // AgentTemplates generates the `doctl harness-runtime template` subtree, which
-// wraps the godo team custom template API (/v2/agents/templates).
+// wraps the godo team custom template API (/v2/harness-runtime/templates).
 func AgentTemplates() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

@@ -88,7 +88,7 @@ func TestAgentTriggersCreateWebhook(t *testing.T) {
 							Kind:      godo.HostedAgentTriggerKindWebhook,
 							Webhook: &godo.HostedAgentWebhookConfig{
 								Provider:   godo.HostedAgentWebhookProviderGitHub,
-								WebhookURL: "https://api.digitalocean.com/v2/agents/triggers/tr_new/webhook",
+								WebhookURL: "https://api.digitalocean.com/v2/harness-runtime/triggers/tr_new/webhook",
 							},
 						},
 					},
@@ -107,7 +107,7 @@ func TestAgentTriggersCreateWebhook(t *testing.T) {
 		config.Out = &buf
 		require.NoError(t, RunAgentTriggersCreate(config))
 		assert.Contains(t, buf.String(), "sec_once")
-		assert.Contains(t, buf.String(), "https://api.digitalocean.com/v2/agents/triggers/tr_new/webhook")
+		assert.Contains(t, buf.String(), "https://api.digitalocean.com/v2/harness-runtime/triggers/tr_new/webhook")
 		assert.Contains(t, buf.String(), "Trigger created")
 	})
 }
@@ -462,7 +462,7 @@ func TestAgentTriggersCreateWebhook_JSONMode(t *testing.T) {
 						Name:      "gh-ci",
 						Kind:      godo.HostedAgentTriggerKindWebhook,
 						Webhook: &godo.HostedAgentWebhookConfig{
-							WebhookURL: "https://api.digitalocean.com/v2/agents/triggers/tr_new/webhook",
+							WebhookURL: "https://api.digitalocean.com/v2/harness-runtime/triggers/tr_new/webhook",
 						},
 					},
 				},
