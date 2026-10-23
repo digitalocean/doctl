@@ -67,8 +67,10 @@ type flag struct {
 }
 
 func main() {
-	// Cobra adds `doctl completion` only when the command runs.
+	// Cobra adds `doctl completion`, `doctl help` and the --help flags only
+	// when the command runs.
 	commands.DoitCmd.InitDefaultCompletionCmd()
+	commands.DoitCmd.InitDefaultHelpCmd()
 
 	t := tree{
 		Version: doctl.DoitVersion.String(),
@@ -84,6 +86,8 @@ func main() {
 }
 
 func export(c *cobra.Command) command {
+	c.InitDefaultHelpFlag()
+
 	// Cobra merges inherited flags into a command lazily, and the usage line
 	// depends on them, so they are merged before anything else is read.
 	inherited := flags(c.InheritedFlags())
