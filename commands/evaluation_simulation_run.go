@@ -24,14 +24,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// SimulationRunCmd handles operations on simulation runs and their episodes.
+// SimulationRunCmd handles creating simulation runs and inspecting their episodes.
+// List, get, rename, cancel, and delete for runs go through `doctl evaluation model-run`.
 func SimulationRunCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "simulation-run",
 			Aliases: []string{"sim", "simulation-runs"},
-			Short:   "Display commands that manage evaluation simulation runs.",
-			Long:    "The subcommands of `doctl evaluation simulation-run` run scenario sets against an agent and inspect the resulting episodes.",
+			Short:   "Display commands that create evaluation simulation runs and inspect episodes.",
+			Long: "The subcommands of `doctl evaluation simulation-run` start a scenario-set simulation against an agent and inspect the resulting episodes. " +
+				"To list, get, rename, cancel, or delete a run, use `doctl evaluation model-run` with the evaluation run UUID.",
 		},
 	}
 
@@ -70,71 +72,6 @@ func SimulationRunCmd() *Command {
 	AddFloatFlag(cmdSimulationRunCreate, doctl.ArgSimulationStarMetricSuccessThreshold, "", 0, "The success threshold of the star metric.")
 	cmdSimulationRunCreate.Example = "The following example runs a scenario set against an agent: " +
 		"`doctl evaluation simulation-run create --scenario-set-uuid f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --agent-uuid 99a1cbc7-b1b2-4a0d-9c1f-9b9d2b8f9d1e --name nightly-regression`"
-
-	cmdSimulationRunList := CmdBuilder(
-		cmd,
-		RunSimulationRunList,
-		"list",
-		"List all simulation runs",
-		"Retrieves a list of simulation runs, where each run contains:"+simulationRunDetails,
-		Writer, aliasOpt("ls"),
-		displayerType(&displayers.SimulationRun{}),
-	)
-	AddStringFlag(cmdSimulationRunList, doctl.ArgSimulationScenarioSetUUID, "", "", "Filters the results by scenario set UUID.")
-	AddStringSliceFlag(cmdSimulationRunList, doctl.ArgGenAIStatuses, "", []string{}, "Filters the results by status. One of: `pending`, `running`, `evaluating`, `succeeded`, `partially_successful`, `failed`, `cancelled`")
-	addGenAIListFlags(cmdSimulationRunList, "`created_at`, `name`, `status`, `updated_at`")
-	cmdSimulationRunList.Example = "The following example lists the simulation runs that are still running: " +
-		"`doctl evaluation simulation-run list --statuses running`"
-
-	cmdSimulationRunGet := CmdBuilder(
-		cmd,
-		RunSimulationRunGet,
-		"get <run-uuid>",
-		"Retrieve a simulation run",
-		"Retrieves a simulation run along with its verdict counts. Use `-o json` to also see the per-scenario results.",
-		Writer, aliasOpt("g"),
-		displayerType(&displayers.SimulationRunDetail{}),
-	)
-	cmdSimulationRunGet.Example = "The following example retrieves a simulation run: " +
-		"`doctl evaluation simulation-run get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
-
-	cmdSimulationRunUpdate := CmdBuilder(
-		cmd,
-		RunSimulationRunUpdate,
-		"update <run-uuid>",
-		"Update a simulation run",
-		"Renames a simulation run.",
-		Writer, aliasOpt("u"),
-		displayerType(&displayers.SimulationRun{}),
-	)
-	AddStringFlag(cmdSimulationRunUpdate, doctl.ArgGenAIName, "", "", "The new name of the simulation run.", requiredOpt())
-	cmdSimulationRunUpdate.Example = "The following example renames a simulation run: " +
-		"`doctl evaluation simulation-run update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name nightly-regression-v2`"
-
-	cmdSimulationRunCancel := CmdBuilder(
-		cmd,
-		RunSimulationRunCancel,
-		"cancel <run-uuid>",
-		"Cancel a simulation run",
-		"Cancels a simulation run that is still in progress.",
-		Writer,
-		displayerType(&displayers.SimulationRun{}),
-	)
-	AddBoolFlag(cmdSimulationRunCancel, doctl.ArgForce, doctl.ArgShortForce, false, "Cancels the simulation run without a confirmation prompt")
-	cmdSimulationRunCancel.Example = "The following example cancels a simulation run: " +
-		"`doctl evaluation simulation-run cancel f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
-
-	cmdSimulationRunDelete := CmdBuilder(
-		cmd,
-		RunSimulationRunDelete,
-		"delete <run-uuid>",
-		"Delete a simulation run",
-		"Deletes a simulation run by its UUID.",
-		Writer, aliasOpt("del", "rm"),
-	)
-	AddBoolFlag(cmdSimulationRunDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the simulation run without a confirmation prompt")
-	cmdSimulationRunDelete.Example = "The following example deletes a simulation run: " +
-		"`doctl evaluation simulation-run delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`"
 
 	episodeDetails := `
 		- The episode UUID
@@ -286,120 +223,6 @@ func RunSimulationRunCreate(c *CmdConfig) error {
 	}
 
 	return c.Display(&displayers.SimulationRun{SimulationRuns: do.SimulationRuns{*run}})
-}
-
-// RunSimulationRunList lists simulation runs.
-func RunSimulationRunList(c *CmdConfig) error {
-	scenarioSetUUID, err := c.Doit.GetString(c.NS, doctl.ArgSimulationScenarioSetUUID)
-	if err != nil {
-		return err
-	}
-
-	rawStatuses, err := c.Doit.GetStringSlice(c.NS, doctl.ArgGenAIStatuses)
-	if err != nil {
-		return err
-	}
-
-	search, sortBy, sortDirection, err := genAIListFilters(c, simulationRunSortFieldPrefix)
-	if err != nil {
-		return err
-	}
-
-	runs, err := c.AgentPlatform().ListSimulationRuns(&godo.SimulationRunListOptions{
-		ScenarioSetUUID: scenarioSetUUID,
-		Statuses:        genAIEnums[godo.SimulationRunStatus](simulationRunStatusPrefix, rawStatuses),
-		Search:          search,
-		SortBy:          godo.SimulationRunSortField(sortBy),
-		SortDirection:   godo.GenAISortDirection(sortDirection),
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Display(&displayers.SimulationRun{SimulationRuns: runs})
-}
-
-// RunSimulationRunGet retrieves a simulation run by its UUID.
-func RunSimulationRunGet(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
-		return err
-	}
-
-	detail, err := c.AgentPlatform().GetSimulationRun(c.Args[0])
-	if err != nil {
-		return err
-	}
-
-	return c.Display(&displayers.SimulationRunDetail{Detail: detail})
-}
-
-// RunSimulationRunUpdate updates a simulation run.
-func RunSimulationRunUpdate(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
-		return err
-	}
-
-	name, err := c.Doit.GetString(c.NS, doctl.ArgGenAIName)
-	if err != nil {
-		return err
-	}
-
-	runUUID := c.Args[0]
-	run, err := c.AgentPlatform().UpdateSimulationRun(runUUID, &godo.UpdateSimulationRunRequest{
-		RunUUID: runUUID,
-		Name:    name,
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Display(&displayers.SimulationRun{SimulationRuns: do.SimulationRuns{*run}})
-}
-
-// RunSimulationRunCancel cancels an in-progress simulation run.
-func RunSimulationRunCancel(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
-		return err
-	}
-
-	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
-	if err != nil {
-		return err
-	}
-
-	if err := confirmAction(force, "cancel this simulation run"); err != nil {
-		return err
-	}
-
-	run, err := c.AgentPlatform().CancelSimulationRun(c.Args[0])
-	if err != nil {
-		return err
-	}
-
-	return c.Display(&displayers.SimulationRun{SimulationRuns: do.SimulationRuns{*run}})
-}
-
-// RunSimulationRunDelete deletes a simulation run by its UUID.
-func RunSimulationRunDelete(c *CmdConfig) error {
-	if err := ensureOneArg(c); err != nil {
-		return err
-	}
-
-	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
-	if err != nil {
-		return err
-	}
-
-	if err := confirmDelete(force, "simulation run", 1); err != nil {
-		return err
-	}
-
-	if err := c.AgentPlatform().DeleteSimulationRun(c.Args[0]); err != nil {
-		return err
-	}
-
-	notice("Simulation run deleted successfully")
-	return nil
 }
 
 // RunSimulationRunListEpisodes lists the episodes of a simulation run.

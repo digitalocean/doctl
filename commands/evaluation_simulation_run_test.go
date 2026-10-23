@@ -43,7 +43,7 @@ var (
 func TestSimulationRunCommand(t *testing.T) {
 	cmd := SimulationRunCmd()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "update", "cancel", "delete", "list-episodes", "get-episode", "get-trajectory", "get-trajectory-url")
+	assertCommandNames(t, cmd, "create", "list-episodes", "get-episode", "get-trajectory", "get-trajectory-url")
 }
 
 func TestSimulationRunCreate(t *testing.T) {
@@ -101,96 +101,6 @@ func TestSimulationRunCreateWithEvaluationConfig(t *testing.T) {
 		}).Return(&testSimulationRun, nil)
 
 		err := RunSimulationRunCreate(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestSimulationRunList(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.agentPlatform.EXPECT().ListSimulationRuns(&godo.SimulationRunListOptions{}).
-			Return(do.SimulationRuns{testSimulationRun}, nil)
-
-		err := RunSimulationRunList(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestSimulationRunListWithFilters(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set(config.NS, doctl.ArgSimulationScenarioSetUUID, testScenarioSetUUID)
-		config.Doit.Set(config.NS, doctl.ArgGenAIStatuses, []string{"running", "partially_successful"})
-		config.Doit.Set(config.NS, doctl.ArgGenAISortBy, "status")
-		config.Doit.Set(config.NS, doctl.ArgGenAISortDirection, "asc")
-
-		tm.agentPlatform.EXPECT().ListSimulationRuns(&godo.SimulationRunListOptions{
-			ScenarioSetUUID: testScenarioSetUUID,
-			Statuses: []godo.SimulationRunStatus{
-				godo.SimulationRunStatusRunning,
-				godo.SimulationRunStatusPartiallySuccessful,
-			},
-			SortBy:        godo.SimulationRunSortFieldStatus,
-			SortDirection: godo.GenAISortDirectionAsc,
-		}).Return(do.SimulationRuns{testSimulationRun}, nil)
-
-		err := RunSimulationRunList(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestSimulationRunGet(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testSimulationRunUUID)
-
-		tm.agentPlatform.EXPECT().GetSimulationRun(testSimulationRunUUID).Return(&do.SimulationRunDetail{
-			SimulationRunGetResponse: &godo.SimulationRunGetResponse{
-				SimulationRun: testSimulationRun.SimulationRun,
-				ScenarioResults: []*godo.SimulationScenarioResult{{
-					ScenarioUUID:  testScenario.ScenarioUUID,
-					TotalEpisodes: 3,
-				}},
-			},
-		}, nil)
-
-		err := RunSimulationRunGet(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestSimulationRunUpdate(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testSimulationRunUUID)
-		config.Doit.Set(config.NS, doctl.ArgGenAIName, "Nightly Regression v2")
-
-		tm.agentPlatform.EXPECT().UpdateSimulationRun(testSimulationRunUUID, &godo.UpdateSimulationRunRequest{
-			RunUUID: testSimulationRunUUID,
-			Name:    "Nightly Regression v2",
-		}).Return(&testSimulationRun, nil)
-
-		err := RunSimulationRunUpdate(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestSimulationRunCancel(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testSimulationRunUUID)
-		config.Doit.Set(config.NS, doctl.ArgForce, true)
-
-		tm.agentPlatform.EXPECT().CancelSimulationRun(testSimulationRunUUID).Return(&testSimulationRun, nil)
-
-		err := RunSimulationRunCancel(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestSimulationRunDelete(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Args = append(config.Args, testSimulationRunUUID)
-		config.Doit.Set(config.NS, doctl.ArgForce, true)
-
-		tm.agentPlatform.EXPECT().DeleteSimulationRun(testSimulationRunUUID).Return(nil)
-
-		err := RunSimulationRunDelete(config)
 		assert.NoError(t, err)
 	})
 }

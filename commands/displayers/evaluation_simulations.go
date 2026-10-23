@@ -273,62 +273,6 @@ func (v *SimulationRun) KV() []map[string]any {
 	return out
 }
 
-// SimulationRunDetail displays a simulation run alongside its verdict rollups.
-// The per-scenario results are only included in the JSON output.
-type SimulationRunDetail struct {
-	Detail *do.SimulationRunDetail
-}
-
-var _ Displayable = &SimulationRunDetail{}
-
-func (v *SimulationRunDetail) JSON(out io.Writer) error {
-	return writeJSON(v.Detail, out)
-}
-
-// verdictCols are the columns, in display order, that a single run adds on top
-// of the list columns.
-var verdictCols = []struct {
-	col   string
-	label string
-}{
-	{"Success", "Success"},
-	{"Failure", "Failure"},
-	{"Inconclusive", "Inconclusive"},
-}
-
-func (v *SimulationRunDetail) Cols() []string {
-	cols := (&SimulationRun{}).Cols()
-	for _, verdict := range verdictCols {
-		cols = append(cols, verdict.col)
-	}
-	return cols
-}
-
-func (v *SimulationRunDetail) ColMap() map[string]string {
-	colMap := (&SimulationRun{}).ColMap()
-	for _, verdict := range verdictCols {
-		colMap[verdict.col] = verdict.label
-	}
-	return colMap
-}
-
-func (v *SimulationRunDetail) KV() []map[string]any {
-	if v == nil || v.Detail == nil || v.Detail.SimulationRunGetResponse == nil || v.Detail.SimulationRun == nil {
-		return []map[string]any{}
-	}
-	run := v.Detail.SimulationRun
-
-	kv := (&SimulationRun{SimulationRuns: do.SimulationRuns{{SimulationRun: run}}}).KV()[0]
-	kv["Success"], kv["Failure"], kv["Inconclusive"] = uint32(0), uint32(0), uint32(0)
-	if run.ResultSummary != nil && run.ResultSummary.VerdictCounts != nil {
-		kv["Success"] = run.ResultSummary.VerdictCounts.SuccessCount
-		kv["Failure"] = run.ResultSummary.VerdictCounts.FailureCount
-		kv["Inconclusive"] = run.ResultSummary.VerdictCounts.InconclusiveCount
-	}
-
-	return []map[string]any{kv}
-}
-
 // SimulationEpisode displays episodes within a simulation run.
 type SimulationEpisode struct {
 	Episodes do.SimulationEpisodes
