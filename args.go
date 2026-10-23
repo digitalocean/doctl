@@ -1283,6 +1283,9 @@ const (
 	// ArgEvaluationRequiresGroundTruth indicates whether a custom metric needs ground truth.
 	ArgEvaluationRequiresGroundTruth = "requires-ground-truth"
 
+	// ArgEvaluationTurnType is the single-turn vs multi-turn applicability of a metric.
+	ArgEvaluationTurnType = "turn-type"
+
 	// ArgEvaluationDescription is a free-text description for a custom metric.
 	ArgEvaluationDescription = "description"
 
