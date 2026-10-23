@@ -241,7 +241,7 @@ type SignalsListAgentSessionsResponse struct {
 
 // SignalsDialogue is one user/assistant turn.
 type SignalsDialogue struct {
-	ID          int64             `json:"id"`
+	ID          string            `json:"id"`
 	RunID       string            `json:"run_id"`
 	CreatedAt   string            `json:"created_at"`
 	Sequence    int               `json:"sequence"`
