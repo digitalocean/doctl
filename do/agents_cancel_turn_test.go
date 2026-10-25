@@ -102,6 +102,50 @@ func TestHostedAgentsService_CancelTurn(t *testing.T) {
 	}
 }
 
+func TestHostedAgentsService_RestartAgent(t *testing.T) {
+	cases := []struct {
+		name    string
+		resume  bool
+		status  int
+		body    string
+		wantErr string
+	}{
+		{name: "resume", resume: true, status: http.StatusAccepted},
+		{name: "fresh", resume: false, status: http.StatusAccepted},
+		{name: "not enabled", resume: true, status: http.StatusForbidden, body: `{"id":"forbidden","message":"agent restart is not enabled for this team"}`, wantErr: "403"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotMethod, gotPath string
+			var gotBody map[string]any
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotMethod, gotPath = r.Method, r.URL.Path
+				_ = json.NewDecoder(r.Body).Decode(&gotBody)
+				if tc.body != "" {
+					w.Header().Set("Content-Type", "application/json")
+				}
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			t.Cleanup(srv.Close)
+			client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+			require.NoError(t, err)
+
+			err = do.NewHostedAgentsService(client).RestartAgent("sess_x", tc.resume)
+
+			assert.Equal(t, http.MethodPost, gotMethod)
+			assert.Equal(t, "/v2/agents/sessions/sess_x/restart", gotPath)
+			assert.Equal(t, map[string]any{"resume": tc.resume}, gotBody, "resume is always sent, false included")
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestHostedAgentsService_CancelTurnRequiresSessionID(t *testing.T) {
 	client, err := godo.New(nil)
 	require.NoError(t, err)

@@ -64,6 +64,12 @@ type HostedAgentsService interface {
 	// was running), Unsupported that the session's agent has no turn-level
 	// interrupt.
 	CancelTurn(sessionID, runID string) (HostedAgentCancelTurnResult, error)
+	// RestartAgent restarts the agent process behind a session, keeping the
+	// session, its microVM and its workspace. With resume the agent continues
+	// its prior conversation (including one carried in the workspace from
+	// another session); without it the agent starts a new one. A nil error
+	// means the restart was accepted, not that the agent is back.
+	RestartAgent(sessionID string, resume bool) error
 	// ExecInSandbox runs one command inside the session's sandbox and returns
 	// the buffered result. It takes its own context rather
 	// than the package-wide context.TODO(): the call blocks for as long as the
@@ -290,6 +296,25 @@ func (s *hostedAgentsService) CancelTurn(sessionID, runID string) (HostedAgentCa
 		res.RunID = runID
 	}
 	return res, nil
+}
+
+// RestartAgent goes through the godo client's generic request path because
+// godo has no method for POST .../restart yet, the same as CancelTurn.
+func (s *hostedAgentsService) RestartAgent(sessionID string, resume bool) error {
+	if sessionID == "" {
+		return errors.New("hosted agents: session id is required")
+	}
+	ctx := context.TODO()
+	path := fmt.Sprintf("/v2/agents/sessions/%s/restart", url.PathEscape(sessionID))
+	reqBody := struct {
+		Resume bool `json:"resume"`
+	}{Resume: resume}
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, reqBody)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.Do(ctx, req, nil)
+	return err
 }
 
 func (s *hostedAgentsService) ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {

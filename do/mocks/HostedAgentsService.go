@@ -599,6 +599,20 @@ func (mr *MockHostedAgentsServiceMockRecorder) ResolveHITL(sessionID, requestID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveHITL", reflect.TypeOf((*MockHostedAgentsService)(nil).ResolveHITL), sessionID, requestID, body)
 }
 
+// RestartAgent mocks base method.
+func (m *MockHostedAgentsService) RestartAgent(sessionID string, resume bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestartAgent", sessionID, resume)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestartAgent indicates an expected call of RestartAgent.
+func (mr *MockHostedAgentsServiceMockRecorder) RestartAgent(sessionID, resume any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestartAgent", reflect.TypeOf((*MockHostedAgentsService)(nil).RestartAgent), sessionID, resume)
+}
+
 // ResumeSession mocks base method.
 func (m *MockHostedAgentsService) ResumeSession(sessionID string) error {
 	m.ctrl.T.Helper()

@@ -166,6 +166,12 @@ Without ` + "`--run-id`" + `, cancels whichever turn is running when the request
 
 Nothing running is not an error: the command says so and exits 0, so it is safe to run unconditionally. With ` + "`-o json`" + ` it prints ` + "`{\"session_id\", \"run_id\", \"outcome\"}`" + `, where ` + "`outcome`" + ` is ` + "`acked`" + `, ` + "`no_turn`" + ` or ` + "`unsupported`" + ` and ` + "`run_id`" + ` is absent when nothing was running. An agent that cannot cancel a turn is an error, since the turn keeps running. Cancel undoes nothing the turn already did; a half-written file stays half-written. It never pauses the session — use ` + "`" + agentCLI + " pause`" + ` for that.`
 
+const agentsRestartAgentHelpMD = `Restart the agent behind a session. The session, its sandbox and its workspace stay up; only the agent process restarts. A turn in flight is abandoned, not replayed.
+
+By default the agent continues its previous conversation. That is the conversation this session already had, or, when the session's workspace was uploaded from another session's download, the conversation that session had: the agent records its conversation under ` + "`.mars/agent-state/`" + ` in the workspace after every turn. Supported for Claude Code, Codex, OpenCode and OpenHands. With ` + "`--fresh`" + `, the agent starts a new conversation.
+
+The command returns once the restart is accepted. The agent is back when the session goes idle again; ` + "`" + agentCLI + " attach`" + ` shows it.`
+
 const agentsUpdateHelpMD = `Change settings on a session that already exists. Only flags you pass are changed; everything else is left alone. This never edits the agent manifest — configs are immutable, so create a new one to change how the agent runs.
 
 Today the one setting is ` + "`--resume-on-topoff`" + `, the consent to be resumed automatically after a low-balance pause:
