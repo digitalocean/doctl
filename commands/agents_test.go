@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "restart-agent", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -1082,6 +1082,35 @@ func TestRunAgentsPause(t *testing.T) {
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsPause(config))
 	})
+}
+
+func TestRunAgentsRestartAgent(t *testing.T) {
+	cases := []struct {
+		name       string
+		fresh      *bool
+		wantResume bool
+		wantOut    string
+	}{
+		{"default resumes", nil, true, "with its previous conversation"},
+		{"fresh", boolPtr(true), false, "with a new conversation"},
+		{"fresh=false resumes", boolPtr(false), true, "with its previous conversation"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().RestartAgent("sess_test", tc.wantResume).Return(nil)
+				config.Args = []string{"sess_test"}
+				if tc.fresh != nil {
+					config.Doit.Set(config.NS, doctl.ArgAgentRestartFresh, *tc.fresh)
+				}
+				var out bytes.Buffer
+				config.Out = &out
+				require.NoError(t, RunAgentsRestartAgent(config))
+				assert.Contains(t, out.String(), tc.wantOut)
+				assert.Contains(t, out.String(), "sess_test")
+			})
+		})
+	}
 }
 
 func TestRunAgentsResume(t *testing.T) {

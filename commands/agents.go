@@ -594,6 +594,13 @@ func Agents() *Command {
 	AddStringFlag(cmdCancel, doctl.ArgAgentCancelRunID, "", "", "Cancel only this turn (the run id prompt or run.started reported); without it, whichever turn is running")
 	cmdCancel.Example = `doctl harness-runtime cancel my-session; doctl harness-runtime cancel sess_abc123 --run-id 01a0f0a9-3b32-7694-a1c9-16c3af792b76`
 
+	cmdRestartAgent := CmdBuilder(cmd, RunAgentsRestartAgent, "restart-agent <session>",
+		"Restart the agent behind a session, resuming its conversation",
+		agentsRestartAgentHelpMD,
+		Writer, agentsNS()...)
+	AddBoolFlag(cmdRestartAgent, doctl.ArgAgentRestartFresh, "", false, "Start a new conversation instead of continuing the previous one")
+	cmdRestartAgent.Example = agentCLI + ` restart-agent my-session; ` + agentCLI + ` restart-agent sess_abc123 --fresh`
+
 	cmdResume := CmdBuilder(cmd, RunAgentsResume, "resume <session>",
 		"Resume a paused session",
 		agentsResumeHelpMD,
@@ -2142,6 +2149,31 @@ func RunAgentsCancel(c *CmdConfig) error {
 	default:
 		return fmt.Errorf("unexpected cancel outcome %q", res.Outcome)
 	}
+}
+
+// RunAgentsRestartAgent restarts the agent process behind a session, with or
+// without its prior conversation. The server accepts the restart and returns;
+// the agent is back once the session goes idle again.
+func RunAgentsRestartAgent(c *CmdConfig) error {
+	sessionID, err := sessionIDArg(c)
+	if err != nil {
+		return err
+	}
+	fresh, err := c.Doit.GetBool(c.NS, doctl.ArgAgentRestartFresh)
+	if err != nil {
+		return err
+	}
+	resume := !fresh
+	if err := c.HostedAgents().RestartAgent(sessionID, resume); err != nil {
+		return beautifyAgentError(err)
+	}
+	stylingEnabled = detectStyling()
+	if resume {
+		printAgentSuccess(c.Out, fmt.Sprintf("Restarting the agent on session %s with its previous conversation", sessionID))
+	} else {
+		printAgentSuccess(c.Out, fmt.Sprintf("Restarting the agent on session %s with a new conversation", sessionID))
+	}
+	return nil
 }
 
 // RunAgentsResume resumes a paused session.

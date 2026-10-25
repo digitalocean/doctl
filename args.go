@@ -1008,6 +1008,10 @@ const (
 	// turn is in flight.
 	ArgAgentCancelRunID = "run-id"
 
+	// ArgAgentRestartFresh makes `restart-agent` start a new conversation
+	// instead of continuing the agent's prior one.
+	ArgAgentRestartFresh = "fresh"
+
 	// ArgAgentPromptIncludeReasoning also emits the model's reasoning, not
 	// just its answer, from a `prompt` run.
 	ArgAgentPromptIncludeReasoning = "include-reasoning"
