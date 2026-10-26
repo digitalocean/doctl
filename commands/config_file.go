@@ -130,18 +130,7 @@ func (c *configFile) write() error {
 		return errors.New("Unable to encode configuration to YAML format.")
 	}
 
-	f, err := cfgFileWriter()
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	if _, err := f.Write(b); err != nil {
-		return errors.New("Unable to write configuration.")
-	}
-
-	return nil
+	return writeConfigBytes(b)
 }
 
 // contexts returns the named contexts, normalised to a map this code can write

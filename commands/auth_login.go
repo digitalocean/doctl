@@ -432,17 +432,7 @@ func writeRefreshedCredentials() error {
 		return errors.New("Unable to encode configuration to YAML format.")
 	}
 
-	f, err := cfgFileWriter()
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if _, err := f.Write(b); err != nil {
-		return errors.New("Unable to write configuration.")
-	}
-
-	return nil
+	return writeConfigBytes(b)
 }
 
 // configFileSettings reads config.yaml as it is on disk so a refresh can

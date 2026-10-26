@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -355,13 +356,6 @@ func RunAuthSwitch(c *CmdConfig) error {
 }
 
 func writeConfig() error {
-	f, err := cfgFileWriter()
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
 	settings := viper.AllSettings()
 	// Bound CLI flags live in viper for the duration of a command. Dumping
 	// AllSettings() into config.yaml would otherwise persist per-invocation
@@ -374,9 +368,24 @@ func writeConfig() error {
 		return errors.New("Unable to encode configuration to YAML format.")
 	}
 
-	_, err = f.Write(b)
+	return writeConfigBytes(b)
+}
+
+// writeConfigBytes writes an encoded configuration through cfgFileWriter. The
+// default writer only writes the file on Close, so its error is reported too.
+func writeConfigBytes(b []byte) error {
+	f, err := cfgFileWriter()
 	if err != nil {
+		return err
+	}
+
+	if _, err := f.Write(b); err != nil {
+		f.Close()
 		return errors.New("Unable to write configuration.")
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("Unable to write configuration: %w", err)
 	}
 
 	return nil
@@ -424,15 +433,91 @@ func defaultConfigFileWriter() (io.WriteCloser, error) {
 		configHome()
 	}
 
-	f, err := os.Create(cfgFile)
-	if err != nil {
-		return nil, err
-	}
-	if err := os.Chmod(cfgFile, 0600); err != nil {
-		return nil, err
+	return &configFileWriter{path: cfgFile}, nil
+}
+
+// renameConfigFile is os.Rename; tests replace it to simulate a file that
+// cannot be replaced.
+var renameConfigFile = os.Rename
+
+// configFileWriter buffers the configuration and writes it on Close.
+type configFileWriter struct {
+	path string
+	buf  bytes.Buffer
+}
+
+func (w *configFileWriter) Write(b []byte) (int, error) {
+	return w.buf.Write(b)
+}
+
+func (w *configFileWriter) Close() error {
+	return replaceConfigFile(w.path, w.buf.Bytes())
+}
+
+// replaceConfigFile writes data to a temporary file next to path and renames
+// it over path, so that another doctl process reading the configuration at
+// the same time sees either the old or the new file, never a partially
+// written one. The temporary file is created with mode 0600, so the token is
+// never readable by others, even briefly.
+//
+// Where a file cannot be replaced, for example a configuration file
+// bind-mounted into a container or one in a directory the user cannot write
+// to, it falls back to writing the file in place, as doctl always has.
+func replaceConfigFile(path string, data []byte) error {
+	target := path
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		// Replace the file the link points to and keep the link. A dangling
+		// link is written through, which creates its target.
+		resolved, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			return writeConfigFileInPlace(path, data)
+		}
+		target = resolved
 	}
 
-	return f, nil
+	tmp, err := os.CreateTemp(filepath.Dir(target), "."+filepath.Base(target)+".*")
+	if err != nil {
+		return writeConfigFileInPlace(target, data)
+	}
+
+	_, err = tmp.Write(data)
+	if err == nil {
+		err = tmp.Sync()
+	}
+	if closeErr := tmp.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+
+	if err := renameConfigFile(tmp.Name(), target); err != nil {
+		os.Remove(tmp.Name())
+		return writeConfigFileInPlace(target, data)
+	}
+
+	return nil
+}
+
+// writeConfigFileInPlace rewrites path. The mode is set before the file is
+// truncated, so a file that cannot be made private is left as it was.
+func writeConfigFileInPlace(path string, data []byte) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	err = f.Chmod(0600)
+	if err == nil {
+		err = f.Truncate(0)
+	}
+	if err == nil {
+		_, err = f.Write(data)
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	return err
 }
 
 func getAuthContextList() []string {
