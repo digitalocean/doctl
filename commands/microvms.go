@@ -15,10 +15,13 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -136,6 +139,34 @@ func MicroVM() *Command {
 		"Opens an interactive PTY console to the MicroVM's workload container over WebSocket. "+
 			"Requires the `exec_pty` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
 		Writer)
+
+	cmdMicroVMUpload := CmdBuilder(cmd, RunMicroVMUpload, "upload <microvm-id>",
+		"Upload a file into a MicroVM",
+		"Uploads a single local file (at most 64 MiB) into the MicroVM's workload container at `--path`, "+
+			"replacing any existing file. The parent directory must already exist. "+
+			"Requires the `file_transfer` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
+		Writer, displayerType(&displayers.MicroVMFile{}))
+	AddStringFlag(cmdMicroVMUpload, "local-file", "", "",
+		"Path of the local file to upload", requiredOpt())
+	AddStringFlag(cmdMicroVMUpload, "path", "", "",
+		"Absolute destination path inside the workload container, such as `/app/config.json`", requiredOpt())
+	AddStringFlag(cmdMicroVMUpload, "mode", "", "",
+		"Octal permission `mode` for the file, such as 0600 (defaults to 0644)")
+	AddIntFlag(cmdMicroVMUpload, "uid", "", 0,
+		"Owner user `id` for the file, set together with --gid (defaults to the container's user)")
+	AddIntFlag(cmdMicroVMUpload, "gid", "", 0,
+		"Owner group `id` for the file, set together with --uid (defaults to the container's group)")
+
+	cmdMicroVMDownload := CmdBuilder(cmd, RunMicroVMDownload, "download <microvm-id>",
+		"Download a file from a MicroVM",
+		"Downloads a single regular file (at most 64 MiB) from the MicroVM's workload container and saves it locally. "+
+			"The content is verified against the server's SHA-256 digest. "+
+			"Requires the `file_transfer` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
+		Writer)
+	AddStringFlag(cmdMicroVMDownload, "path", "", "",
+		"Absolute path of the file inside the workload container", requiredOpt())
+	AddStringFlag(cmdMicroVMDownload, "save-to", "", "",
+		"Local path to write the file to. An existing file is overwritten", requiredOpt())
 
 	cmd.AddCommand(microVMCheckpoints())
 	cmd.AddCommand(microVMURLs())
@@ -618,6 +649,126 @@ func RunMicroVMExec(c *CmdConfig) error {
 	if result.ExitCode != 0 {
 		return fmt.Errorf("command exited with code %d", result.ExitCode)
 	}
+	return nil
+}
+
+// RunMicroVMUpload uploads a local file into a MicroVM workload container.
+func RunMicroVMUpload(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	id := c.Args[0]
+
+	localFile, err := c.Doit.GetString(c.NS, "local-file")
+	if err != nil {
+		return err
+	}
+	remotePath, err := c.Doit.GetString(c.NS, "path")
+	if err != nil {
+		return err
+	}
+	mode, err := c.Doit.GetString(c.NS, "mode")
+	if err != nil {
+		return err
+	}
+	uid, err := c.Doit.GetIntPtr(c.NS, "uid")
+	if err != nil {
+		return err
+	}
+	gid, err := c.Doit.GetIntPtr(c.NS, "gid")
+	if err != nil {
+		return err
+	}
+	if (uid == nil) != (gid == nil) {
+		return errors.New("--uid and --gid must be set together")
+	}
+	if uid != nil && (*uid < 0 || *gid < 0) {
+		return errors.New("--uid and --gid must not be negative")
+	}
+
+	f, err := os.Open(localFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if !st.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", localFile)
+	}
+	// Send the digest so the API verifies the body before replacing the target.
+	sum, err := hashFile(f)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	req := &godo.MicroVMFileUploadRequest{
+		Path:   remotePath,
+		Body:   f,
+		Size:   st.Size(),
+		Mode:   mode,
+		SHA256: sum,
+	}
+	if uid != nil {
+		u, g := uint32(*uid), uint32(*gid)
+		req.UID, req.GID = &u, &g
+	}
+
+	info, err := c.MicroVMs().UploadFile(id, req)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMFile{Info: info})
+}
+
+// RunMicroVMDownload downloads a file from a MicroVM workload container to a local path.
+func RunMicroVMDownload(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	id := c.Args[0]
+
+	remotePath, err := c.Doit.GetString(c.NS, "path")
+	if err != nil {
+		return err
+	}
+	saveTo, err := c.Doit.GetString(c.NS, "save-to")
+	if err != nil {
+		return err
+	}
+
+	dl, err := c.MicroVMs().DownloadFile(id, remotePath)
+	if err != nil {
+		return err
+	}
+	defer dl.Body.Close()
+
+	// Write to a temp file in the destination directory and rename at the
+	// end so a failed or checksum-mismatched download never leaves a partial
+	// file at saveTo. dl.Body returns godo.ErrMicroVMFileChecksum at EOF on
+	// mismatch.
+	tmp, err := os.CreateTemp(filepath.Dir(saveTo), ".doctl-download-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	n, err := io.Copy(tmp, dl.Body)
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), saveTo); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.Out, "Downloaded %d bytes to %s\n", n, saveTo)
 	return nil
 }
 
