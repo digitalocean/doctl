@@ -17,8 +17,9 @@ import (
 
 var _ = suite("compute/microvm/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect       *require.Assertions
+		server       *httptest.Server
+		gotEgressRaw any
 	)
 
 	it.Before(func() {
@@ -47,6 +48,7 @@ var _ = suite("compute/microvm/create", func(t *testing.T, when spec.G, it spec.
 				expect.Equal("nyc1", got["region"])
 				expect.Equal(map[string]any{"cpu": float64(2), "memory": float64(4096)}, got["size"])
 				expect.Equal(map[string]any{"oci_ref": "docker.io/library/nginx:1.27"}, got["source"])
+				gotEgressRaw = got["egress_policy"]
 
 				w.WriteHeader(http.StatusCreated)
 				w.Write([]byte(microVMCreateResponse))
@@ -76,6 +78,33 @@ var _ = suite("compute/microvm/create", func(t *testing.T, when spec.G, it spec.
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(microVMCreateOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("egress flags are passed", func() {
+		it("sends an egress policy", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute", "microvm", "create", "sammy-microvm",
+				"--region", "nyc1",
+				"--cpu", "2",
+				"--memory", "4096",
+				"--oci-ref", "docker.io/library/nginx:1.27",
+				"--egress-allow", "*.example.com",
+				"--egress-allow", "203.0.113.5",
+				"--egress-default-action", "deny",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(map[string]any{
+				"default_action": "deny",
+				"rules": []any{
+					map[string]any{"domain": "*.example.com"},
+					map[string]any{"ip": "203.0.113.5"},
+				},
+			}, gotEgressRaw)
 		})
 	})
 
