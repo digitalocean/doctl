@@ -3783,6 +3783,13 @@ const (
 	msgReconnectFailed       = "Failed to reconnect to agent activity stream."
 	msgSuperseded            = "This session was attached from another window on this device. Stopping the stream here."
 
+	// Shown when the server replayed the session's head instead of the point
+	// this device left off at, so the events in between are missing from the
+	// pane. Deliberately muted rather than a warning: the stream is healthy and
+	// correctly bounded, and the only thing wrong would be reading what follows
+	// as a continuous transcript.
+	msgReplayTruncated = "… earlier activity not shown"
+
 	// Shown when the stream goes quiet after the prepay gate paused the
 	// session, in place of the reconnect chatter that would otherwise be the
 	// only explanation on offer. The pause card above has already named the
@@ -4772,6 +4779,25 @@ func sessionLimitErr(err error) bool {
 // superseded us, and the two would evict each other indefinitely.
 //
 // It also returns what this connection learned about the session being paused.
+// renderReplayTruncated says that the replayed window is the session's head
+// rather than this device's resume point, so the events in between are not in
+// the pane. Without it the replay reads as a continuous transcript and a hole
+// in the middle is indistinguishable from a session that was simply quiet —
+// most often after another device drove the session past the replay window
+// while this one was away.
+//
+// `logs` is the pointer rather than a fix because it replays the stored history
+// from the start, so it has the part this window skipped. The session id comes
+// off the control frame; the line degrades to the bare notice without it rather
+// than printing a command that cannot be run.
+func renderReplayTruncated(w io.Writer, sessionID string) {
+	line := msgReplayTruncated
+	if id := strings.TrimSpace(sessionID); id != "" {
+		line = fmt.Sprintf("%s — run 'doctl %s logs %s' for the full transcript", line, agentCmdName, id)
+	}
+	fmt.Fprintf(w, "\n%s\n", colorize(line, colMuted))
+}
+
 // A stream that ends right after a pause did not drop — it was stopped, for a
 // reason already known here — so the caller can explain the silence instead of
 // reporting it as a connection failure.
@@ -4825,17 +4851,25 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		ev := stream.Current()
 
 		// stream.state reports the health of the connection, not session
-		// activity, so it never renders and never moves the cursor.
+		// activity, so it never renders as an event and never moves the cursor.
+		// Two of its states still have something to say to the user.
 		if ev.Kind == godo.HostedAgentEventKindStreamState {
 			var st godo.HostedAgentStreamState
-			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
-				reasoning.end()
-				thinking.stop()
-				acc.flush(out)
-				flushAwaitingApproval(out, &awaiting, hitlLabels)
-				tools.flush(out)
-				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
-				return true, paused.outcome()
+			if err := json.Unmarshal(ev.Payload, &st); err == nil {
+				switch {
+				case st.State == godo.HostedAgentStreamStateSuperseded:
+					reasoning.end()
+					thinking.stop()
+					acc.flush(out)
+					flushAwaitingApproval(out, &awaiting, hitlLabels)
+					tools.flush(out)
+					fmt.Fprintf(out, "\n%s\n", msgSuperseded)
+					return true, paused.outcome()
+				case st.State == godo.HostedAgentStreamStateCatchingUp && st.Truncated:
+					// The frame precedes the replayed events, so the notice
+					// lands where it belongs: above the window it describes.
+					renderReplayTruncated(out, ev.SessionID)
+				}
 			}
 			_ = warmup.noteBackendEvent(ev)
 			continue
