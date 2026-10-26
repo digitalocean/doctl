@@ -43,6 +43,19 @@ type HostedAgentConfig struct {
 	// Warnings carries non-fatal create-time advisories computed from the
 	// manifest. It is populated on the create response only.
 	Warnings []string `json:"warnings,omitempty"`
+	// Region is the DO region slug the Environment lives in, e.g. "ric1". An
+	// Environment is a regional resource: it is placed in the region of the API
+	// host that created it (see HostedAgentsRegionalBaseURL), is a 404 on every
+	// other region's host, and a session can only be created from it on that
+	// same host. There is no copy or sync between regions. Returned on
+	// create/get/list for teams on the regional routing rollout; omitted
+	// otherwise, and for rows created before the field existed (all ric1).
+	Region string `json:"region,omitempty"`
+	// Location is the Environment's canonical URL from the create response's
+	// Location header, on the host of the region that owns it. Populated only
+	// by the create methods, only when the server sent the header (teams on the
+	// regional routing rollout); never on the wire.
+	Location string `json:"-"`
 }
 
 // HostedAgentConfigSummary is the list view (no manifest / credentials).
@@ -55,6 +68,9 @@ type HostedAgentConfigSummary struct {
 	CreatedBy              string    `json:"created_by"`
 	CreatedAt              Timestamp `json:"created_at"`
 	UpdatedAt              Timestamp `json:"updated_at"`
+	// Region is the DO region slug the Environment lives in; see
+	// HostedAgentConfig.Region.
+	Region string `json:"region,omitempty"`
 }
 
 // HostedAgentConfigCreateRequest is the body for POST /v2/harness-runtime/configs.
@@ -63,6 +79,9 @@ type HostedAgentConfigSummary struct {
 // tenantSecret slot carries its plaintext in a write-only value that is
 // extracted server-side and never persisted or returned. Sending the retired
 // secrets or oauth_assignments maps is rejected with a 400.
+// There is no region field: an Environment is placed in the region of the API
+// host the request reaches (see HostedAgentsRegionalBaseURL), and the server
+// rejects unknown body fields. The created Environment reports its Region.
 // Prefer HostedEnvironmentCreateRequest; this name remains for compatibility.
 type HostedAgentConfigCreateRequest struct {
 	Name         string `json:"name"`
@@ -187,6 +206,7 @@ func (s *HostedAgentsServiceOp) CreateAgentConfig(ctx context.Context, create *H
 	if root.Config == nil {
 		return nil, resp, errors.New("hosted agents: create config returned no config")
 	}
+	root.Config.Location = resp.Header.Get("Location")
 	return root.Config, resp, nil
 }
 

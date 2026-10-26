@@ -96,14 +96,18 @@ type HostedAgentsService interface {
 	// OpenAISessionID in opt so harness-api can persist openai_session_id for
 	// attach correlation (?openai_session_id=). doctl resolves ${...}
 	// placeholders client-side before calling this API; there is no
-	// server-side variables map.
+	// server-side variables map. The session is placed in the region of the
+	// API host called (see HostedAgentsRegionalBaseURL); the YAML body carries
+	// no region. The returned session reports Region and Location.
 	CreateSessionFromManifest(context.Context, []byte, *HostedAgentManifestCreateOptions) (*HostedAgentSession, *Response, error)
 	// CreateSessionFromEnvironment provisions a session from an existing
 	// immutable Environment, referenced by config_id. The request uses
 	// Content-Type: application/json with a {name, config_id} body (optional
-	// resume_on_topoff and workspace_id); the environment's stored manifest and
-	// declared credentials seed the session at create time. This is the only
-	// create path that can attach a persistent workspace.
+	// resume_on_topoff, workspace_id and region); the environment's stored
+	// manifest and declared credentials seed the session at create time. This
+	// is the only create path that can attach a persistent workspace. The
+	// Environment must live in the region of the API host called (see
+	// HostedAgentsRegionalBaseURL); on any other region's host it is a 404.
 	CreateSessionFromEnvironment(context.Context, *HostedAgentSessionFromEnvironmentRequest) (*HostedAgentSession, *Response, error)
 	// CreateSessionFromConfig is an alias for CreateSessionFromEnvironment.
 	// Prefer CreateSessionFromEnvironment; this name remains for compatibility.
@@ -483,6 +487,42 @@ type HostedAgentSession struct {
 	// (manifest parse + policy fidelity). Populated on the create response
 	// only; omitted on get/list.
 	Warnings []string `json:"warnings,omitempty"`
+	// Region is the DO region slug the session is placed in, e.g. "ric1".
+	// Stamped once at create from the region that served the request and never
+	// recomputed. Returned on create/get/list for teams on the regional routing
+	// rollout; omitted otherwise, and for sessions created before the field
+	// existed, which are all ric1.
+	Region string `json:"region,omitempty"`
+	// Location is the session's canonical URL from the create response's
+	// Location header, on the host of the region that owns it, e.g.
+	// https://api-ric1.digitalocean.com/v2/agents/sessions/{id}. Point follow-up
+	// calls at that host (HostedAgentsRegionalBaseURL(session.Region) gives the
+	// base URL). Populated only by the create methods, only when the server
+	// sent the header (teams on the regional routing rollout); never on the
+	// wire.
+	Location string `json:"-"`
+}
+
+// HostedAgentsRegionalBaseURL returns the base URL of the API host for one
+// region, e.g. "https://api-mem1.digitalocean.com/" for "mem1", in the form
+// SetBaseURL accepts. Every MARS resource lives in exactly one region, and the
+// API host chosen is what places a create and what finds a resource: a session
+// created on api-mem1 is placed in mem1 and is a 404 on any other region's
+// host. The region-less default (api.digitalocean.com) places in and serves
+// ric1. There is no redirect, forwarding or fan-out between regions. An empty
+// region returns the region-less default. Example:
+//
+//	client, _ := godo.New(httpClient, godo.SetBaseURL(godo.HostedAgentsRegionalBaseURL("mem1")))
+//	sess, _, _ := client.HostedAgents.CreateSessionFromEnvironment(ctx, &godo.HostedAgentSessionFromEnvironmentRequest{
+//		Name: "review-bot", ConfigID: cfg.ID, Region: "mem1", // body region matches the host
+//	})
+//	// sess.Location is on api-mem1; use the same client for every follow-up.
+func HostedAgentsRegionalBaseURL(region string) string {
+	region = strings.TrimSpace(strings.ToLower(region))
+	if region == "" {
+		return defaultBaseURL
+	}
+	return "https://api-" + region + ".digitalocean.com/"
 }
 
 // HostedAgentRun represents a single execution within a session.
@@ -611,6 +651,16 @@ type HostedAgentSessionFromConfigRequest struct {
 	// one shared Environment can be used with a different workspace per session.
 	// Omitted when empty, which creates the session without one.
 	WorkspaceID string `json:"workspace_id,omitempty"`
+	// Region is an optional placement check, not a routing instruction. The
+	// region a session is placed in is decided by the API host the request
+	// reaches: the region-less host (api.digitalocean.com) places in the default
+	// region, ric1, and a regional host (api-<region>.digitalocean.com, see
+	// HostedAgentsRegionalBaseURL) places in that region. When Region is set it
+	// must equal the region of the host called, or the create fails with a 4xx
+	// whose message starts with "region_mismatch"; nothing is re-placed or
+	// forwarded. Omitted when empty. Only honored for teams on the regional
+	// routing rollout; ignored otherwise.
+	Region string `json:"region,omitempty"`
 }
 
 // HostedAgentSessionFromEnvironmentRequest is the advertised alias for
@@ -1062,6 +1112,7 @@ func (s *HostedAgentsServiceOp) CreateSession(ctx context.Context, create *Hoste
 	if root.Session == nil {
 		return nil, resp, errors.New("hosted agents: create session returned no session")
 	}
+	root.Session.Location = resp.Header.Get("Location")
 	return root.Session, resp, nil
 }
 
@@ -1119,6 +1170,7 @@ func (s *HostedAgentsServiceOp) doCreateSession(ctx context.Context, req *http.R
 	if root.Session == nil {
 		return nil, resp, errors.New("hosted agents: create session returned no session")
 	}
+	root.Session.Location = resp.Header.Get("Location")
 	return root.Session, resp, nil
 }
 
