@@ -99,17 +99,10 @@ type SignalsListDialoguesOptions struct {
 // SignalsListExportsOptions are query params for GET /exports.
 type SignalsListExportsOptions struct {
 	SignalsCursorPageOptions
-	// AgentID is a deprecated alias for EnvironmentID. Accepted on the client;
-	// list requests send environment_id on the wire.
-	AgentID       string `url:"-"`
+	// AgentID is a deprecated alias for EnvironmentID. Whichever fields are set
+	// are passed through on the wire; the API rejects conflicting values.
+	AgentID       string `url:"agent_id,omitempty"`
 	EnvironmentID string `url:"environment_id,omitempty"`
-}
-
-func (o *SignalsListExportsOptions) resolveAgentID() (string, error) {
-	if o == nil {
-		return "", nil
-	}
-	return resolveSignalsAgentID(o.AgentID, o.EnvironmentID)
 }
 
 // SignalsPageInfo is Relay-style cursor paging from signals-api.
@@ -170,8 +163,8 @@ type SignalsListConsentsResponse struct {
 }
 
 // SignalsCreateExportRequest is the body for POST /v1/signals/exports.
-// AgentID is a deprecated alias for EnvironmentID. Create requests send
-// environment_id on the wire after resolving either field.
+// AgentID is a deprecated alias for EnvironmentID. Whichever fields are set are
+// passed through on the wire; the API rejects conflicting values.
 type SignalsCreateExportRequest struct {
 	AgentID       string `json:"agent_id,omitempty"`
 	EnvironmentID string `json:"environment_id,omitempty"`
@@ -183,17 +176,11 @@ type SignalsCreateExportRequest struct {
 	EndTime    *int64   `json:"end_time,omitempty"`
 }
 
-func (r *SignalsCreateExportRequest) resolveAgentID() (string, error) {
-	if r == nil {
-		return "", nil
-	}
-	return resolveSignalsAgentID(r.AgentID, r.EnvironmentID)
-}
-
 // SignalsCreateDeletionRequest is the body for POST /v1/signals/deletions.
 // JSON keys match CreateDeletionRequest in signals-api OpenAPI:
-// required type + team_id; environment_id only for agent (omit for inference).
-// AgentID is a deprecated alias; create requests send environment_id on the wire.
+// required type + team_id; environment_id/agent_id only for agent (omit for inference).
+// AgentID is a deprecated alias for EnvironmentID. Whichever fields are set are
+// passed through on the wire; the API rejects conflicting values.
 type SignalsCreateDeletionRequest struct {
 	// Type is SignalsDeletionTypeAgent or SignalsDeletionTypeInference.
 	// Required by the server (omitting type is 400). godo also requires it so a
@@ -207,13 +194,6 @@ type SignalsCreateDeletionRequest struct {
 	// Required for agent and must be empty for inference (team-wide only).
 	// Omitted from the JSON body when empty.
 	EnvironmentID string `json:"environment_id,omitempty"`
-}
-
-func (r *SignalsCreateDeletionRequest) resolveAgentID() (string, error) {
-	if r == nil {
-		return "", nil
-	}
-	return resolveSignalsAgentID(r.AgentID, r.EnvironmentID)
 }
 
 // SignalsDeletionJob is one deletion job (POST/GET /v1/signals/deletions...).
@@ -274,7 +254,7 @@ type SignalsListAgentSessionsResponse struct {
 
 // SignalsDialogue is one user/assistant turn.
 type SignalsDialogue struct {
-	ID          int64             `json:"id"`
+	ID          string            `json:"id"`
 	RunID       string            `json:"run_id"`
 	CreatedAt   string            `json:"created_at"`
 	Sequence    int               `json:"sequence"`
@@ -339,17 +319,8 @@ type SignalsExportJob struct {
 	ExpiresAt     *int64               `json:"expires_at,omitempty"`
 }
 
-func resolveSignalsAgentID(agentID, environmentID string) (string, error) {
-	a := strings.TrimSpace(agentID)
-	e := strings.TrimSpace(environmentID)
-	switch {
-	case a != "" && e != "" && a != e:
-		return "", fmt.Errorf("signals: environment_id and agent_id must match when both are set")
-	case a != "":
-		return a, nil
-	default:
-		return e, nil
-	}
+func signalsHasEnvironmentOrAgentID(agentID, environmentID string) bool {
+	return strings.TrimSpace(agentID) != "" || strings.TrimSpace(environmentID) != ""
 }
 
 // SignalsExportEdge is one edge in an export list.
@@ -515,16 +486,12 @@ func (s *SignalsServiceOp) CreateExport(ctx context.Context, body *SignalsCreate
 	if body == nil {
 		return nil, nil, fmt.Errorf("signals: create export request is required")
 	}
-	agentID, err := body.resolveAgentID()
-	if err != nil {
-		return nil, nil, err
-	}
-	if agentID == "" {
+	if !signalsHasEnvironmentOrAgentID(body.AgentID, body.EnvironmentID) {
 		return nil, nil, fmt.Errorf("signals: environment_id is required")
 	}
 	reqBody := *body
-	reqBody.EnvironmentID = agentID
-	reqBody.AgentID = ""
+	reqBody.AgentID = strings.TrimSpace(body.AgentID)
+	reqBody.EnvironmentID = strings.TrimSpace(body.EnvironmentID)
 	req, err := s.client.NewRequest(ctx, http.MethodPost, signalsBasePath+"/exports", &reqBody)
 	if err != nil {
 		return nil, nil, err
@@ -541,13 +508,9 @@ func (s *SignalsServiceOp) CreateExport(ctx context.Context, body *SignalsCreate
 func (s *SignalsServiceOp) ListExports(ctx context.Context, opts *SignalsListExportsOptions) (*SignalsListExportsResponse, *Response, error) {
 	var wireOpts *SignalsListExportsOptions
 	if opts != nil {
-		agentID, err := opts.resolveAgentID()
-		if err != nil {
-			return nil, nil, err
-		}
 		cp := *opts
-		cp.EnvironmentID = agentID
-		cp.AgentID = ""
+		cp.AgentID = strings.TrimSpace(opts.AgentID)
+		cp.EnvironmentID = strings.TrimSpace(opts.EnvironmentID)
 		wireOpts = &cp
 	}
 	path, err := addOptions(signalsBasePath+"/exports", wireOpts)
@@ -637,17 +600,14 @@ func (s *SignalsServiceOp) CreateDeletion(ctx context.Context, body *SignalsCrea
 		return nil, nil, fmt.Errorf("signals: team_id is required")
 	}
 	typ := strings.TrimSpace(body.Type)
-	agentID, err := body.resolveAgentID()
-	if err != nil {
-		return nil, nil, err
-	}
+	hasID := signalsHasEnvironmentOrAgentID(body.AgentID, body.EnvironmentID)
 	switch typ {
 	case SignalsDeletionTypeAgent:
-		if agentID == "" {
+		if !hasID {
 			return nil, nil, fmt.Errorf("signals: environment_id is required for agent")
 		}
 	case SignalsDeletionTypeInference:
-		if agentID != "" {
+		if hasID {
 			return nil, nil, fmt.Errorf("signals: environment_id must not be set for inference")
 		}
 	default:
@@ -656,7 +616,8 @@ func (s *SignalsServiceOp) CreateDeletion(ctx context.Context, body *SignalsCrea
 	reqBody := &SignalsCreateDeletionRequest{
 		Type:          typ,
 		TeamID:        body.TeamID,
-		EnvironmentID: agentID,
+		AgentID:       strings.TrimSpace(body.AgentID),
+		EnvironmentID: strings.TrimSpace(body.EnvironmentID),
 	}
 	req, err := s.client.NewRequest(ctx, http.MethodPost, signalsBasePath+"/deletions", reqBody)
 	if err != nil {

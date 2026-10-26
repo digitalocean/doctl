@@ -338,7 +338,7 @@ func TestSignalsSessionDialogueList(t *testing.T) {
 		testDialogue := do.SignalsSessionDialogue{
 			SignalsSessionDialogue: &godo.SignalsSessionDialogue{
 				SignalsDialogue: godo.SignalsDialogue{
-					ID:          1,
+					ID:          "1",
 					RunID:       "run-1",
 					Sequence:    1,
 					UserMessage: "hello",

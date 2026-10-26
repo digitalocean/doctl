@@ -78,6 +78,83 @@ func (m *MicroVM) KV() []map[string]any {
 	return out
 }
 
+type MicroVMURL struct {
+	URLs []godo.MicroVMURL
+}
+
+var _ Displayable = &MicroVMURL{}
+
+func (u *MicroVMURL) JSON(out io.Writer) error {
+	return writeJSON(u.URLs, out)
+}
+
+func (u *MicroVMURL) Cols() []string {
+	return []string{"ID", "Hostname", "Port", "Default", "Status"}
+}
+
+func (u *MicroVMURL) ColMap() map[string]string {
+	return map[string]string{
+		"ID":       "ID",
+		"Hostname": "Hostname",
+		"Port":     "Port",
+		"Default":  "Default",
+		"Status":   "Status",
+	}
+}
+
+func (u *MicroVMURL) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(u.URLs))
+	for _, url := range u.URLs {
+		out = append(out, map[string]any{
+			"ID":       url.ID,
+			"Hostname": url.Hostname,
+			"Port":     url.Port,
+			"Default":  url.Default,
+			"Status":   string(url.Status),
+		})
+	}
+	return out
+}
+
+type MicroVMFile struct {
+	Info *godo.MicroVMFileInfo
+}
+
+var _ Displayable = &MicroVMFile{}
+
+func (f *MicroVMFile) JSON(out io.Writer) error {
+	return writeJSON(f.Info, out)
+}
+
+func (f *MicroVMFile) Cols() []string {
+	return []string{"Path", "SizeBytes", "SHA256", "Mode", "UID", "GID"}
+}
+
+func (f *MicroVMFile) ColMap() map[string]string {
+	return map[string]string{
+		"Path":      "Path",
+		"SizeBytes": "Size (bytes)",
+		"SHA256":    "SHA256",
+		"Mode":      "Mode",
+		"UID":       "UID",
+		"GID":       "GID",
+	}
+}
+
+func (f *MicroVMFile) KV() []map[string]any {
+	if f.Info == nil {
+		return nil
+	}
+	return []map[string]any{{
+		"Path":      f.Info.Path,
+		"SizeBytes": f.Info.SizeBytes,
+		"SHA256":    f.Info.SHA256,
+		"Mode":      f.Info.Mode,
+		"UID":       f.Info.UID,
+		"GID":       f.Info.GID,
+	}}
+}
+
 type MicroVMCheckpoint struct {
 	Checkpoints do.MicroVMCheckpoints
 }

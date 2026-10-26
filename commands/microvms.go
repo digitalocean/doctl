@@ -15,10 +15,13 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -97,6 +100,8 @@ func MicroVM() *Command {
 		"Environment variables to inject, in `KEY=VALUE` form. Repeatable.")
 	AddStringSliceFlag(cmdMicroVMCreate, doctl.ArgTag, "", []string{},
 		"Tags to apply to the MicroVM. Repeatable.")
+	AddBoolFlag(cmdMicroVMCreate, "ingress", "", true,
+		"Whether to create the MicroVM with a default public URL. Pass `--ingress=false` to create it without one; URLs can be added later with `doctl compute microvm url add`.")
 
 	CmdBuilder(cmd, RunMicroVMPause, "pause <microvm-id>",
 		"Pause a running MicroVM",
@@ -135,7 +140,73 @@ func MicroVM() *Command {
 			"Requires the `exec_pty` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
 		Writer)
 
+	cmdMicroVMUpload := CmdBuilder(cmd, RunMicroVMUpload, "upload <microvm-id>",
+		"Upload a file into a MicroVM",
+		"Uploads a single local file (at most 64 MiB) into the MicroVM's workload container at `--path`, "+
+			"replacing any existing file. The parent directory must already exist. "+
+			"Requires the `file_transfer` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
+		Writer, displayerType(&displayers.MicroVMFile{}))
+	AddStringFlag(cmdMicroVMUpload, "local-file", "", "",
+		"Path of the local file to upload", requiredOpt())
+	AddStringFlag(cmdMicroVMUpload, "path", "", "",
+		"Absolute destination path inside the workload container, such as `/app/config.json`", requiredOpt())
+	AddStringFlag(cmdMicroVMUpload, "mode", "", "",
+		"Octal permission `mode` for the file, such as 0600 (defaults to 0644)")
+	AddIntFlag(cmdMicroVMUpload, "uid", "", 0,
+		"Owner user `id` for the file, set together with --gid (defaults to the container's user)")
+	AddIntFlag(cmdMicroVMUpload, "gid", "", 0,
+		"Owner group `id` for the file, set together with --uid (defaults to the container's group)")
+
+	cmdMicroVMDownload := CmdBuilder(cmd, RunMicroVMDownload, "download <microvm-id>",
+		"Download a file from a MicroVM",
+		"Downloads a single regular file (at most 64 MiB) from the MicroVM's workload container and saves it locally. "+
+			"The content is verified against the server's SHA-256 digest. "+
+			"Requires the `file_transfer` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
+		Writer)
+	AddStringFlag(cmdMicroVMDownload, "path", "", "",
+		"Absolute path of the file inside the workload container", requiredOpt())
+	AddStringFlag(cmdMicroVMDownload, "save-to", "", "",
+		"Local path to write the file to. An existing file is overwritten", requiredOpt())
+
 	cmd.AddCommand(microVMCheckpoints())
+	cmd.AddCommand(microVMURLs())
+
+	return cmd
+}
+
+func microVMURLs() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "url",
+			Aliases: []string{"urls"},
+			Short:   "Manage MicroVM ingress URLs",
+			Long: `The subcommands under ` + "`" + `doctl compute microvm url` + "`" + ` manage a ` +
+				`MicroVM's public ingress URLs — the system default URL and any you add. ` +
+				`A MicroVM can have at most 10 URLs.`,
+		},
+	}
+
+	CmdBuilder(cmd, RunMicroVMURLList, "list <microvm-id>",
+		"List a MicroVM's ingress URLs",
+		"Lists the public ingress URLs attached to a MicroVM, the system default URL included.",
+		Writer, aliasOpt("ls"), displayerType(&displayers.MicroVMURL{}))
+
+	cmdAdd := CmdBuilder(cmd, RunMicroVMURLAdd, "add <microvm-id>",
+		"Add an ingress URL to a MicroVM",
+		"Adds a public ingress URL to a running or paused MicroVM. The URL routes to `--port`, "+
+			"which must be one of the MicroVM's ports; when omitted it defaults to the MicroVM's HTTP port. "+
+			"A MicroVM can have at most 10 URLs.",
+		Writer, aliasOpt("a"), displayerType(&displayers.MicroVMURL{}))
+	AddIntFlag(cmdAdd, "port", "", 0,
+		"Guest port the URL routes to. Must be one of the MicroVM's ports. Defaults to the MicroVM's HTTP port when omitted.")
+
+	cmdRemove := CmdBuilder(cmd, RunMicroVMURLRemove, "remove <microvm-id> <url-id>",
+		"Remove an ingress URL from a MicroVM",
+		"Removes a public ingress URL from a running or paused MicroVM, the system default URL included. "+
+			"The hostname stops resolving and is not reused.",
+		Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdRemove, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Remove the URL without a confirmation prompt")
 
 	return cmd
 }
@@ -290,6 +361,10 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	ingress, err := c.Doit.GetBoolPtr(c.NS, "ingress")
+	if err != nil {
+		return err
+	}
 
 	req := &godo.MicroVMCreateRequest{Name: name}
 	if ociRef != "" {
@@ -358,6 +433,11 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if len(tags) > 0 {
 		req.Tags = tags
 	}
+	// Omit ingress unless the caller set it: nil keeps the API default (a
+	// default URL is created). --ingress=false opts out.
+	if ingress != nil {
+		req.Ingress = ingress
+	}
 
 	md, err := c.MicroVMs().Create(req)
 	if err != nil {
@@ -388,6 +468,57 @@ func RunMicroVMResume(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.MicroVM{MicroVMs: do.MicroVMs{*md}})
+}
+
+// RunMicroVMURLList lists a MicroVM's ingress URLs.
+func RunMicroVMURLList(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	md, err := c.MicroVMs().Get(c.Args[0])
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMURL{URLs: md.URLs})
+}
+
+// RunMicroVMURLAdd adds an ingress URL to a MicroVM.
+func RunMicroVMURLAdd(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	port, err := c.Doit.GetInt(c.NS, "port")
+	if err != nil {
+		return err
+	}
+	req := &godo.MicroVMURLCreateRequest{}
+	if port != 0 {
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("invalid --port %d: expected an integer 1-65535", port)
+		}
+		req.Port = port
+	}
+
+	u, err := c.MicroVMs().AddURL(c.Args[0], req)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMURL{URLs: []godo.MicroVMURL{*u}})
+}
+
+// RunMicroVMURLRemove removes an ingress URL from a MicroVM.
+func RunMicroVMURLRemove(c *CmdConfig) error {
+	if len(c.Args) != 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if !(force || AskForConfirmDelete("MicroVM URL", 1) == nil) {
+		return errOperationAborted
+	}
+	return c.MicroVMs().RemoveURL(c.Args[0], c.Args[1])
 }
 
 // RunMicroVMDelete deletes one or more MicroVMs by UUID.
@@ -518,6 +649,126 @@ func RunMicroVMExec(c *CmdConfig) error {
 	if result.ExitCode != 0 {
 		return fmt.Errorf("command exited with code %d", result.ExitCode)
 	}
+	return nil
+}
+
+// RunMicroVMUpload uploads a local file into a MicroVM workload container.
+func RunMicroVMUpload(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	id := c.Args[0]
+
+	localFile, err := c.Doit.GetString(c.NS, "local-file")
+	if err != nil {
+		return err
+	}
+	remotePath, err := c.Doit.GetString(c.NS, "path")
+	if err != nil {
+		return err
+	}
+	mode, err := c.Doit.GetString(c.NS, "mode")
+	if err != nil {
+		return err
+	}
+	uid, err := c.Doit.GetIntPtr(c.NS, "uid")
+	if err != nil {
+		return err
+	}
+	gid, err := c.Doit.GetIntPtr(c.NS, "gid")
+	if err != nil {
+		return err
+	}
+	if (uid == nil) != (gid == nil) {
+		return errors.New("--uid and --gid must be set together")
+	}
+	if uid != nil && (*uid < 0 || *gid < 0) {
+		return errors.New("--uid and --gid must not be negative")
+	}
+
+	f, err := os.Open(localFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if !st.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", localFile)
+	}
+	// Send the digest so the API verifies the body before replacing the target.
+	sum, err := hashFile(f)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	req := &godo.MicroVMFileUploadRequest{
+		Path:   remotePath,
+		Body:   f,
+		Size:   st.Size(),
+		Mode:   mode,
+		SHA256: sum,
+	}
+	if uid != nil {
+		u, g := uint32(*uid), uint32(*gid)
+		req.UID, req.GID = &u, &g
+	}
+
+	info, err := c.MicroVMs().UploadFile(id, req)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMFile{Info: info})
+}
+
+// RunMicroVMDownload downloads a file from a MicroVM workload container to a local path.
+func RunMicroVMDownload(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	id := c.Args[0]
+
+	remotePath, err := c.Doit.GetString(c.NS, "path")
+	if err != nil {
+		return err
+	}
+	saveTo, err := c.Doit.GetString(c.NS, "save-to")
+	if err != nil {
+		return err
+	}
+
+	dl, err := c.MicroVMs().DownloadFile(id, remotePath)
+	if err != nil {
+		return err
+	}
+	defer dl.Body.Close()
+
+	// Write to a temp file in the destination directory and rename at the
+	// end so a failed or checksum-mismatched download never leaves a partial
+	// file at saveTo. dl.Body returns godo.ErrMicroVMFileChecksum at EOF on
+	// mismatch.
+	tmp, err := os.CreateTemp(filepath.Dir(saveTo), ".doctl-download-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	n, err := io.Copy(tmp, dl.Body)
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), saveTo); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.Out, "Downloaded %d bytes to %s\n", n, saveTo)
 	return nil
 }
 

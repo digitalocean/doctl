@@ -55,6 +55,9 @@ type MicroVMsService interface {
 	Resume(id string) (*MicroVM, error)
 	Delete(id string) error
 
+	AddURL(microVMID string, req *godo.MicroVMURLCreateRequest) (*godo.MicroVMURL, error)
+	RemoveURL(microVMID, urlID string) error
+
 	ListCheckpoints(microVMID string) (MicroVMCheckpoints, error)
 	CreateCheckpoint(microVMID string, req *godo.MicroVMCheckpointCreateRequest) (*MicroVMCheckpoint, error)
 	GetCheckpoint(id string) (*MicroVMCheckpoint, error)
@@ -64,6 +67,11 @@ type MicroVMsService interface {
 
 	Exec(id string, req *godo.MicroVMExecRequest) (*godo.MicroVMExecResult, error)
 	ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error)
+
+	UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error)
+	// DownloadFile streams a file out of the MicroVM. The caller must read
+	// Body to EOF and Close it; Body verifies the SHA-256 digest at EOF.
+	DownloadFile(id, path string) (*godo.MicroVMFileDownload, error)
 }
 
 type microVMsService struct {
@@ -152,6 +160,19 @@ func (s *microVMsService) Delete(id string) error {
 	return err
 }
 
+func (s *microVMsService) AddURL(microVMID string, req *godo.MicroVMURLCreateRequest) (*godo.MicroVMURL, error) {
+	u, _, err := s.client.MicroVMs.AddURL(context.TODO(), microVMID, req)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func (s *microVMsService) RemoveURL(microVMID, urlID string) error {
+	_, err := s.client.MicroVMs.RemoveURL(context.TODO(), microVMID, urlID)
+	return err
+}
+
 func (s *microVMsService) ListCheckpoints(microVMID string) (MicroVMCheckpoints, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		listOpt := &godo.ListMicroVMCheckpointsOptions{
@@ -217,4 +238,14 @@ func (s *microVMsService) Exec(id string, req *godo.MicroVMExecRequest) (*godo.M
 
 func (s *microVMsService) ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error) {
 	return s.client.MicroVMs.ConsoleURL(id, opt)
+}
+
+func (s *microVMsService) UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error) {
+	info, _, err := s.client.MicroVMs.UploadFile(context.TODO(), id, req)
+	return info, err
+}
+
+func (s *microVMsService) DownloadFile(id, path string) (*godo.MicroVMFileDownload, error) {
+	dl, _, err := s.client.MicroVMs.DownloadFile(context.TODO(), id, path)
+	return dl, err
 }
