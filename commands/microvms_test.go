@@ -14,13 +14,21 @@ limitations under the License.
 package commands
 
 import (
+	"crypto/sha256"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 var (
@@ -65,7 +73,7 @@ func TestMicroVMCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.False(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
-		"checkpoint", "console", "create", "delete", "exec", "get", "list", "options", "pause", "resume", "url",
+		"checkpoint", "console", "create", "delete", "download", "exec", "get", "list", "options", "pause", "resume", "upload", "url",
 	)
 }
 
@@ -461,6 +469,93 @@ func TestMicroVMExec(t *testing.T) {
 		config.Doit.Set(config.NS, "cwd", "/app")
 		err := RunMicroVMExec(config)
 		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMUpload(t *testing.T) {
+	content := []byte("hello microvm\n")
+	wantSHA := fmt.Sprintf("%x", sha256.Sum256(content))
+	local := filepath.Join(t.TempDir(), "in.txt")
+	require.NoError(t, os.WriteFile(local, content, 0o600))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().UploadFile(testMicroVMID, gomock.Any()).DoAndReturn(
+			func(_ string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error) {
+				body, err := io.ReadAll(req.Body)
+				require.NoError(t, err)
+				assert.Equal(t, content, body)
+				assert.Equal(t, "/app/in.txt", req.Path)
+				assert.Equal(t, int64(len(content)), req.Size)
+				assert.Equal(t, "0600", req.Mode)
+				assert.Equal(t, wantSHA, req.SHA256)
+				require.NotNil(t, req.UID)
+				require.NotNil(t, req.GID)
+				assert.Equal(t, uint32(1000), *req.UID)
+				assert.Equal(t, uint32(1001), *req.GID)
+				return &godo.MicroVMFileInfo{Path: req.Path, SizeBytes: uint64(req.Size), SHA256: req.SHA256, Mode: req.Mode, UID: 1000, GID: 1001}, nil
+			})
+
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "local-file", local)
+		config.Doit.Set(config.NS, "path", "/app/in.txt")
+		config.Doit.Set(config.NS, "mode", "0600")
+		config.Doit.Set(config.NS, "uid", 1000)
+		config.Doit.Set(config.NS, "gid", 1001)
+		require.NoError(t, RunMicroVMUpload(config))
+	})
+}
+
+func TestMicroVMUploadUIDWithoutGID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "local-file", "/dev/null")
+		config.Doit.Set(config.NS, "path", "/app/x")
+		config.Doit.Set(config.NS, "uid", 1000)
+		err := RunMicroVMUpload(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--uid and --gid")
+	})
+}
+
+func TestMicroVMDownload(t *testing.T) {
+	content := "downloaded bytes\n"
+	saveTo := filepath.Join(t.TempDir(), "out.txt")
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().DownloadFile(testMicroVMID, "/app/out.txt").Return(&godo.MicroVMFileDownload{
+			Body:      io.NopCloser(strings.NewReader(content)),
+			SizeBytes: int64(len(content)),
+		}, nil)
+
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "path", "/app/out.txt")
+		config.Doit.Set(config.NS, "save-to", saveTo)
+		require.NoError(t, RunMicroVMDownload(config))
+
+		got, err := os.ReadFile(saveTo)
+		require.NoError(t, err)
+		assert.Equal(t, content, string(got))
+	})
+}
+
+func TestMicroVMDownloadBodyErrorLeavesNoFile(t *testing.T) {
+	saveTo := filepath.Join(t.TempDir(), "out.txt")
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().DownloadFile(testMicroVMID, "/app/out.txt").Return(&godo.MicroVMFileDownload{
+			Body: io.NopCloser(io.MultiReader(strings.NewReader("partial"), iotest.ErrReader(godo.ErrMicroVMFileChecksum))),
+		}, nil)
+
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "path", "/app/out.txt")
+		config.Doit.Set(config.NS, "save-to", saveTo)
+		err := RunMicroVMDownload(config)
+		require.ErrorIs(t, err, godo.ErrMicroVMFileChecksum)
+
+		_, statErr := os.Stat(saveTo)
+		assert.True(t, os.IsNotExist(statErr), "partial file must not be left at save-to")
+		entries, _ := os.ReadDir(filepath.Dir(saveTo))
+		assert.Empty(t, entries, "temp file must be cleaned up")
 	})
 }
 

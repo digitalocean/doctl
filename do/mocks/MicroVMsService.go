@@ -129,6 +129,21 @@ func (mr *MockMicroVMsServiceMockRecorder) DeleteCheckpoint(id any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCheckpoint", reflect.TypeOf((*MockMicroVMsService)(nil).DeleteCheckpoint), id)
 }
 
+// DownloadFile mocks base method.
+func (m *MockMicroVMsService) DownloadFile(id, path string) (*godo.MicroVMFileDownload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DownloadFile", id, path)
+	ret0, _ := ret[0].(*godo.MicroVMFileDownload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DownloadFile indicates an expected call of DownloadFile.
+func (mr *MockMicroVMsServiceMockRecorder) DownloadFile(id, path any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadFile", reflect.TypeOf((*MockMicroVMsService)(nil).DownloadFile), id, path)
+}
+
 // Exec mocks base method.
 func (m *MockMicroVMsService) Exec(id string, req *godo.MicroVMExecRequest) (*godo.MicroVMExecResult, error) {
 	m.ctrl.T.Helper()
@@ -261,4 +276,19 @@ func (m *MockMicroVMsService) Resume(id string) (*do.MicroVM, error) {
 func (mr *MockMicroVMsServiceMockRecorder) Resume(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resume", reflect.TypeOf((*MockMicroVMsService)(nil).Resume), id)
+}
+
+// UploadFile mocks base method.
+func (m *MockMicroVMsService) UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadFile", id, req)
+	ret0, _ := ret[0].(*godo.MicroVMFileInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadFile indicates an expected call of UploadFile.
+func (mr *MockMicroVMsServiceMockRecorder) UploadFile(id, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockMicroVMsService)(nil).UploadFile), id, req)
 }
