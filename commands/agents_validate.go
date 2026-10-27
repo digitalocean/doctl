@@ -38,7 +38,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"opencode":         {},
 	"codex":            {},
 	"codex-agentapi":   {},
-	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
+	"hermes":           {}, // runnable (AGENT_KIND_HERMES): the hermes gateway in the coding-hermes template
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
 	"openhands":        {}, // runnable (AGENT_KIND_OPENHANDS): OpenHands Agent Server in the openhands template
 	"custom":           {},

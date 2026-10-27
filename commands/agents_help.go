@@ -71,7 +71,7 @@ const agentsCreateHelpMD = `Create a hosted session, wait until it is ready, opt
 Provide exactly one of:
 
 - a **manifest** — as a positional path, or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin). With none of these, ` + "`./agents.yaml`" + ` is used when it exists.
-- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, or openhands (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
+- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, openhands, or hermes (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
 - ` + "`--from-config`" + ` — an existing Agent Config, by name or ID (` + "`--name`" + ` required)
 
 These four are equivalent:
