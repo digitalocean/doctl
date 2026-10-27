@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -100,6 +101,12 @@ func MicroVM() *Command {
 		"Environment variables to inject, in `KEY=VALUE` form. Repeatable.")
 	AddStringSliceFlag(cmdMicroVMCreate, doctl.ArgTag, "", []string{},
 		"Tags to apply to the MicroVM. Repeatable.")
+	AddStringSliceFlag(cmdMicroVMCreate, "egress-allow", "", []string{},
+		"A destination the MicroVM may connect to: an exact domain (`api.example.com`), a wildcard (`*.example.com`), or an exact IP address. Repeatable. "+
+			"Setting an egress flag restricts outbound traffic to HTTP and HTTPS through the platform proxy, only to the allowed destinations. "+
+			"Public networking only; the policy cannot be changed after create.")
+	AddStringFlag(cmdMicroVMCreate, "egress-default-action", "", "",
+		"What to do with a destination no `--egress-allow` rule matches: `deny` or `allow`. Defaults to `deny` when an egress policy is set")
 	AddBoolFlag(cmdMicroVMCreate, "ingress", "", true,
 		"Whether to create the MicroVM with a default public URL. Pass `--ingress=false` to create it without one; URLs can be added later with `doctl compute microvm url add`.")
 
@@ -361,6 +368,14 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	egressAllow, err := c.Doit.GetStringSlice(c.NS, "egress-allow")
+	if err != nil {
+		return err
+	}
+	egressDefaultAction, err := c.Doit.GetString(c.NS, "egress-default-action")
+	if err != nil {
+		return err
+	}
 	ingress, err := c.Doit.GetBoolPtr(c.NS, "ingress")
 	if err != nil {
 		return err
@@ -432,6 +447,15 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	}
 	if len(tags) > 0 {
 		req.Tags = tags
+	}
+	// Leave EgressPolicy nil unless an egress flag was set: nil keeps egress
+	// unrestricted (or inherits a checkpoint's policy).
+	if len(egressAllow) > 0 || egressDefaultAction != "" {
+		policy, err := buildEgressPolicy(egressAllow, egressDefaultAction)
+		if err != nil {
+			return err
+		}
+		req.EgressPolicy = policy
 	}
 	// Omit ingress unless the caller set it: nil keeps the API default (a
 	// default URL is created). --ingress=false opts out.
@@ -907,6 +931,37 @@ func parseEnvPairs(pairs []string) (map[string]string, error) {
 		out[key] = value
 	}
 	return out, nil
+}
+
+// buildEgressPolicy turns --egress-allow and --egress-default-action into an
+// egress policy. A value that parses as an IP becomes an ip rule; anything
+// else is a domain rule. CIDR ranges and host:port values are rejected here
+// because the platform matches the host only.
+func buildEgressPolicy(allow []string, defaultAction string) (*godo.MicroVMEgressPolicy, error) {
+	policy := &godo.MicroVMEgressPolicy{}
+	switch defaultAction {
+	case "":
+	case string(godo.MicroVMEgressActionDeny), string(godo.MicroVMEgressActionAllow):
+		policy.DefaultAction = godo.MicroVMEgressAction(defaultAction)
+	default:
+		return nil, fmt.Errorf("invalid --egress-default-action %q: expected deny or allow", defaultAction)
+	}
+
+	for _, s := range allow {
+		switch {
+		case s == "":
+			return nil, fmt.Errorf("invalid --egress-allow value: must not be empty")
+		case strings.Contains(s, "/"):
+			return nil, fmt.Errorf("invalid --egress-allow value %q: CIDR ranges and paths are not supported", s)
+		case net.ParseIP(s) != nil:
+			policy.Rules = append(policy.Rules, godo.MicroVMEgressRule{IP: s})
+		case strings.Contains(s, ":"):
+			return nil, fmt.Errorf("invalid --egress-allow value %q: ports are not supported", s)
+		default:
+			policy.Rules = append(policy.Rules, godo.MicroVMEgressRule{Domain: s})
+		}
+	}
+	return policy, nil
 }
 
 func parsePorts(portStrs []string) ([]uint32, error) {
