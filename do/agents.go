@@ -50,6 +50,11 @@ type HostedAgentsService interface {
 	CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
+	// GetSessionIngress reads the session's public ingress URL
+	// (GET /v2/agents/sessions/{id}/ingress): the hostname the platform
+	// publishes for the sandbox's ingress port, gated by the team's token.
+	// Not in godo yet, so decoded here.
+	GetSessionIngress(sessionID string) (*HostedAgentSessionIngress, error)
 	// UpdateSession patches session-scoped settings (never the agent manifest
 	// or config) and returns the updated session.
 	UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error)
@@ -216,6 +221,46 @@ func (s *hostedAgentsService) GetSession(sessionID string) (*HostedAgentSession,
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+// HostedAgentSessionIngress is the `ingress_url` object harness-api returns
+// for a session: one public hostname for the sandbox's published port
+// (8000 for the openhands template, where Agent Canvas is served).
+type HostedAgentSessionIngress struct {
+	IngressURLID string `json:"ingress_url_id"`
+	SessionID    string `json:"session_id"`
+	Port         int    `json:"port"`
+	URL          string `json:"url"`
+	// State is INGRESS_URL_STATE_READY once the hostname answers.
+	State     string `json:"state"`
+	CreatedAt string `json:"created_at"`
+}
+
+// IngressReady is the state in which the public URL accepts requests.
+const IngressReady = "INGRESS_URL_STATE_READY"
+
+// sessionIngressPath is the harness-api route for a session's public URL.
+const sessionIngressPath = "/v2/agents/sessions/%s/ingress"
+
+func (s *hostedAgentsService) GetSessionIngress(sessionID string) (*HostedAgentSessionIngress, error) {
+	if sessionID == "" {
+		return nil, errors.New("hosted agents: session id is required")
+	}
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf(sessionIngressPath, sessionID), nil)
+	if err != nil {
+		return nil, err
+	}
+	var out struct {
+		IngressURL *HostedAgentSessionIngress `json:"ingress_url"`
+	}
+	if _, err := s.client.Do(ctx, req, &out); err != nil {
+		return nil, err
+	}
+	if out.IngressURL == nil {
+		return nil, errors.New("hosted agents: ingress response carried no ingress_url")
+	}
+	return out.IngressURL, nil
 }
 
 func (s *hostedAgentsService) UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error) {
