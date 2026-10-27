@@ -49,7 +49,7 @@ func SignalsConsent() *Command {
 			Use:   "consent",
 			Short: "Display commands for Signals collection consent",
 			Long: "The subcommands of `doctl signals consent` manage Signals collection consent.\n\n" +
-				"Consent has a source: `agent` (per Gradient managed agent, identified by `--agent-id`) " +
+				"Consent has a source: `agent` (per Harness Runtime environment, identified by `--environment-id`) " +
 				"or `inference` (team-level, covers all serverless inference traffic for the team).",
 		},
 	}
@@ -58,7 +58,7 @@ func SignalsConsent() *Command {
 		- The consent record ID
 		- The team ID
 		- The consent source (agent or inference)
-		- The agent ID (empty for inference)
+		- The environment ID (empty for inference)
 		- Whether consent is enabled
 		- When the consent was last updated
 	`
@@ -78,55 +78,57 @@ func SignalsConsent() *Command {
 		cmd,
 		RunSignalsConsentGet,
 		"get",
-		"Get Signals consent for an agent or for serverless inference",
-		"Retrieves the current Signals collection consent status for one agent (`--source agent --agent-id <id>`) "+
+		"Get Signals consent for an environment or for serverless inference",
+		"Retrieves the current Signals collection consent status for one environment (`--source agent --environment-id <id>`) "+
 			"or the team-level serverless inference consent (`--source inference`). Missing consent is reported as disabled.",
 		Writer, aliasOpt("g"),
 		displayerType(&displayers.SignalsConsent{}),
 	)
 	AddStringFlag(cmdConsentGet, doctl.ArgSignalsConsentSource, "", godo.SignalsConsentSourceAgent, "Consent source: agent or inference.")
-	AddStringFlag(cmdConsentGet, doctl.ArgSignalsAgentID, "", "", "The agent ID to query consent for (required when --source=agent).")
+	AddStringFlag(cmdConsentGet, doctl.ArgSignalsEnvironmentID, "", "", "The environment ID to query consent for (required when --source=agent).")
+	AddStringFlag(cmdConsentGet, doctl.ArgSignalsAgentID, "", "", "Deprecated: use --environment-id.")
 
 	cmdConsentSet := CmdBuilder(
 		cmd,
 		RunSignalsConsentSet,
 		"set",
-		"Set Signals consent for an agent or for serverless inference",
-		"Enables or disables Signals collection for one agent (`--source agent --agent-id <id>`) "+
+		"Set Signals consent for an environment or for serverless inference",
+		"Enables or disables Signals collection for one environment (`--source agent --environment-id <id>`) "+
 			"or for all serverless inference traffic of your team (`--source inference`). Idempotent.",
 		Writer, aliasOpt("s"),
 		displayerType(&displayers.SignalsConsent{}),
 	)
 	AddStringFlag(cmdConsentSet, doctl.ArgSignalsConsentSource, "", godo.SignalsConsentSourceAgent, "Consent source: agent or inference.")
-	AddStringFlag(cmdConsentSet, doctl.ArgSignalsAgentID, "", "", "The agent ID to set consent for (required when --source=agent).")
+	AddStringFlag(cmdConsentSet, doctl.ArgSignalsEnvironmentID, "", "", "The environment ID to set consent for (required when --source=agent).")
+	AddStringFlag(cmdConsentSet, doctl.ArgSignalsAgentID, "", "", "Deprecated: use --environment-id.")
 	AddBoolFlag(cmdConsentSet, doctl.ArgSignalsEnabled, "", false, "Enable (true) or disable (false) Signals collection.", requiredOpt())
 
 	return cmd
 }
 
-// consentTarget resolves and validates --source / --agent-id for get and set.
+// consentTarget resolves and validates --source / --environment-id for get and set.
 func consentTarget(c *CmdConfig) (source, agentID string, err error) {
 	source, err = c.Doit.GetString(c.NS, doctl.ArgSignalsConsentSource)
 	if err != nil {
 		return "", "", err
 	}
-	agentID, err = c.Doit.GetString(c.NS, doctl.ArgSignalsAgentID)
+	idFlags, err := resolveSignalsIDFlags(c)
 	if err != nil {
 		return "", "", err
 	}
 	source = strings.ToLower(strings.TrimSpace(source))
-	agentID = strings.TrimSpace(agentID)
+	agentID = idFlags.value()
 	if source == "" {
 		source = godo.SignalsConsentSourceAgent
 	}
 	switch source {
 	case godo.SignalsConsentSourceAgent:
 		if agentID == "" {
-			return "", "", fmt.Errorf("--%s is required when --%s=%s", doctl.ArgSignalsAgentID, doctl.ArgSignalsConsentSource, godo.SignalsConsentSourceAgent)
+			return "", "", fmt.Errorf("--%s is required when --%s=%s (deprecated: --%s)", doctl.ArgSignalsEnvironmentID, doctl.ArgSignalsConsentSource, godo.SignalsConsentSourceAgent, doctl.ArgSignalsAgentID)
 		}
 	case godo.SignalsConsentSourceInference:
 		if agentID != "" {
-			return "", "", fmt.Errorf("--%s must not be set when --%s=%s (inference consent is team-level)", doctl.ArgSignalsAgentID, doctl.ArgSignalsConsentSource, godo.SignalsConsentSourceInference)
+			return "", "", fmt.Errorf("--%s and --%s must not be set when --%s=%s (inference consent is team-level)", doctl.ArgSignalsEnvironmentID, doctl.ArgSignalsAgentID, doctl.ArgSignalsConsentSource, godo.SignalsConsentSourceInference)
 		}
 	default:
 		return "", "", fmt.Errorf("invalid --%s %q: must be %s or %s", doctl.ArgSignalsConsentSource, source, godo.SignalsConsentSourceAgent, godo.SignalsConsentSourceInference)
@@ -157,7 +159,7 @@ func RunSignalsConsentList(c *CmdConfig) error {
 	return c.Display(&displayers.SignalsConsent{Consents: consents})
 }
 
-// RunSignalsConsentGet retrieves Signals consent for one agent or for inference.
+// RunSignalsConsentGet retrieves Signals consent for one environment or for inference.
 func RunSignalsConsentGet(c *CmdConfig) error {
 	source, agentID, err := consentTarget(c)
 	if err != nil {
@@ -179,7 +181,7 @@ func RunSignalsConsentGet(c *CmdConfig) error {
 	return c.Display(&displayers.SignalsAgentConsent{Consents: []do.SignalsAgentConsent{*consent}})
 }
 
-// RunSignalsConsentSet enables or disables Signals consent for one agent or for inference.
+// RunSignalsConsentSet enables or disables Signals consent for one environment or for inference.
 func RunSignalsConsentSet(c *CmdConfig) error {
 	source, agentID, err := consentTarget(c)
 	if err != nil {
