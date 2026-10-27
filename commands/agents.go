@@ -680,7 +680,7 @@ A paused session is resumed automatically before the tunnel opens, same as `+"`"
 	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`
 
 	cmdCanvas := CmdBuilder(cmd, RunAgentsCanvas, "canvas <session>",
-		"Open the session's Agent Canvas UI through a local proxy",
+		"Serve the session's Agent Canvas UI through a local proxy",
 		`Serves the session's Agent Canvas UI (openhands template) on a local port and prints the URL to open, `+"`"+`http://127.0.0.1:<port>/canvas`+"`"+`.
 
 The session's public URL only accepts requests that carry your DigitalOcean token in a header, which a browser cannot add by itself. This command listens on localhost, adds the token to every request and WebSocket, and forwards to the public URL. The token never reaches the browser. A paused session is resumed first, same as `+"`"+agentCLI+` launch`+"`"+`.

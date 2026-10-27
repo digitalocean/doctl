@@ -24,11 +24,13 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/agentproxy"
 	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/godo"
 	"github.com/pkg/browser"
@@ -38,6 +40,10 @@ import (
 // session's published port: the UI under /canvas, the agent-server's API
 // paths beside it on the same origin.
 const canvasPath = "/canvas"
+
+// canvasPort is the guest port the openhands template publishes through
+// ingress and serves Canvas on; the port-forward fallback targets it.
+const canvasPort = 8000
 
 // RunAgentsCanvas serves the session's Agent Canvas UI on a local port.
 //
@@ -86,12 +92,16 @@ func RunAgentsCanvas(c *CmdConfig) error {
 	localPort := ln.Addr().(*net.TCPAddr).Port
 	local := fmt.Sprintf("http://%s%s", net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
 
-	server := &http.Server{
-		Handler:           newCanvasProxy(target, c.getContextAccessToken(), deviceid.Get()),
-		ReadHeaderTimeout: 30 * time.Second,
-	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	server := &http.Server{
+		Handler:           loopbackOnly(newCanvasProxy(target, c.getContextAccessToken(), deviceid.Get())),
+		ReadHeaderTimeout: 30 * time.Second,
+		// Requests are rooted in the signal context, so an in-flight
+		// request (a long WebSocket, say) is cancelled on Ctrl-C rather than
+		// left to the shutdown grace period.
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- server.Serve(ln) }()
 
@@ -136,20 +146,54 @@ func resolveCanvasTarget(svc do.HostedAgentsService, sessionRef, sessionID strin
 	return target, nil
 }
 
-// canvasIngressError explains a failed ingress lookup. A 501 (not enabled in
-// this environment) or 404 (no URL for this session) is a known state with a
-// known way around, not a fault.
+// canvasIngressError explains a failed ingress lookup. Two answers are known
+// states with a known way around, not faults, and they differ: a 501 means
+// this environment does not publish session URLs at all (prod today), a 404
+// means this session has none (not an openhands session, or its sandbox was
+// not provisioned for ingress). Both get the tunnel route, which reaches the
+// same Canvas; the port and path are the openhands template's.
 func canvasIngressError(sessionRef string, err error) error {
+	tunnel := fmt.Sprintf("Reach Agent Canvas through a tunnel instead:\n"+
+		"  %s port-forward %s %d:%d\n"+
+		"then open http://127.0.0.1:%d%s", agentCLI, sessionRef, canvasPort, canvasPort, canvasPort, canvasPath)
 	var er *godo.ErrorResponse
-	if errors.As(err, &er) && er.Response != nil &&
-		(er.Response.StatusCode == http.StatusNotImplemented || er.Response.StatusCode == http.StatusNotFound) {
-		return fmt.Errorf("this environment does not publish a public URL for sessions yet (HTTP %d).\n"+
-			"Reach Agent Canvas through a tunnel instead:\n"+
-			"  %s port-forward %s 8000:8000\n"+
-			"then open http://127.0.0.1:8000%s",
-			er.Response.StatusCode, agentCLI, sessionRef, canvasPath)
+	if errors.As(err, &er) && er.Response != nil {
+		switch er.Response.StatusCode {
+		case http.StatusNotImplemented:
+			return fmt.Errorf("this environment does not publish public URLs for sessions yet (HTTP 501).\n%s", tunnel)
+		case http.StatusNotFound:
+			return fmt.Errorf("this session has no public URL (HTTP 404): only openhands sessions serve Agent Canvas on port %d, "+
+				"and the session's sandbox must have been provisioned with ingress.\n%s", canvasPort, tunnel)
+		}
 	}
 	return beautifyAgentError(err)
+}
+
+// loopbackOnly refuses what a token-adding proxy on localhost must refuse: a
+// request from a browser page on another origin (Origin header present and
+// not loopback), and a request whose Host is not loopback (DNS rebinding: a
+// page resolving its own name to 127.0.0.1 would otherwise reach the proxy
+// with a loopback Origin check that never fires). Plain tools with no Origin,
+// and pages served from localhost, pass. The same Origin rule start-proxy
+// applies (agentproxy.AllowedProxyOrigin).
+func loopbackOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !agentproxy.AllowedProxyOrigin(r.Header.Get("Origin")) {
+			http.Error(w, "forbidden: this proxy only serves pages on localhost", http.StatusForbidden)
+			return
+		}
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		switch strings.Trim(host, "[]") {
+		case "localhost", "127.0.0.1", "::1":
+		default:
+			http.Error(w, "forbidden: this proxy only answers on localhost", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // newCanvasProxy forwards every request, WebSocket upgrades included, to the
@@ -169,8 +213,11 @@ func newCanvasProxy(target *url.URL, token, deviceID string) http.Handler {
 				pr.Out.Header.Set(deviceid.HeaderName, deviceID)
 			}
 		},
+		// The dial or TLS error goes to the terminal, not to the page: the
+		// browser gets a plain 502, as the stdlib default would give.
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, err error) {
-			http.Error(w, "upstream error: "+err.Error(), http.StatusBadGateway)
+			warn("canvas proxy: upstream request failed: %v", err)
+			http.Error(w, "the session's public URL did not answer; see the doctl terminal", http.StatusBadGateway)
 		},
 	}
 }

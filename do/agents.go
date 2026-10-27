@@ -247,7 +247,7 @@ func (s *hostedAgentsService) GetSessionIngress(sessionID string) (*HostedAgentS
 		return nil, errors.New("hosted agents: session id is required")
 	}
 	ctx := context.TODO()
-	req, err := s.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf(sessionIngressPath, sessionID), nil)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf(sessionIngressPath, url.PathEscape(sessionID)), nil)
 	if err != nil {
 		return nil, err
 	}

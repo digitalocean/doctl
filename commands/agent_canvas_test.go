@@ -27,7 +27,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 // The proxy's one job: the browser's request reaches the public URL with the
@@ -104,17 +103,77 @@ func TestCanvasProxyPassesWebSocketUpgradeWithToken(t *testing.T) {
 	assert.Equal(t, "echo:hello", string(msg))
 }
 
-// An environment without public URLs is a known state: the error says so and
-// gives the port-forward route to the same Canvas.
+// A token-adding proxy on localhost must not be drivable from a page on
+// another site: a foreign Origin is refused, a loopback or absent Origin is
+// served, and a non-loopback Host (DNS rebinding) is refused too.
+func TestCanvasProxyRefusesForeignOriginsAndHosts(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+	target, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+	local := httptest.NewServer(loopbackOnly(newCanvasProxy(target, "T0K", "")))
+	defer local.Close()
+
+	get := func(origin, host string) int {
+		req, err := http.NewRequest(http.MethodGet, local.URL+"/canvas/", nil)
+		require.NoError(t, err)
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		if host != "" {
+			req.Host = host
+		}
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	assert.Equal(t, http.StatusForbidden, get("https://evil.example", ""), "foreign Origin")
+	assert.Equal(t, http.StatusForbidden, get("", "evil.example:3000"), "non-loopback Host")
+	assert.Equal(t, http.StatusOK, get("", ""), "no Origin (curl, doctl itself)")
+	assert.Equal(t, http.StatusOK, get("http://127.0.0.1:3000", ""), "page served by this proxy")
+	assert.Equal(t, http.StatusOK, get("http://localhost:3000", "localhost:3000"), "localhost Host and Origin")
+}
+
+// The two known "no URL" answers read differently and both give the tunnel.
 func TestCanvasIngressError_NotImplementedPointsAtPortForward(t *testing.T) {
 	err := canvasIngressError("my-session", &godo.ErrorResponse{
 		Response: &http.Response{StatusCode: http.StatusNotImplemented},
 		Message:  "not implemented",
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not publish a public URL")
+	assert.Contains(t, err.Error(), "does not publish public URLs for sessions yet")
 	assert.Contains(t, err.Error(), "port-forward my-session 8000:8000")
 	assert.Contains(t, err.Error(), "http://127.0.0.1:8000/canvas")
+}
+
+func TestCanvasIngressError_NotFoundIsAboutThisSession(t *testing.T) {
+	err := canvasIngressError("my-session", &godo.ErrorResponse{
+		Response: &http.Response{StatusCode: http.StatusNotFound},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "this session has no public URL")
+	assert.Contains(t, err.Error(), "only openhands sessions")
+	assert.NotContains(t, err.Error(), "environment does not publish")
+	assert.Contains(t, err.Error(), "port-forward my-session 8000:8000")
+}
+
+// The upstream failure stays in the terminal; the page gets a plain 502.
+func TestCanvasProxyUpstreamFailureIsAGeneric502(t *testing.T) {
+	dead, err := url.Parse("http://127.0.0.1:9")
+	require.NoError(t, err)
+	local := httptest.NewServer(newCanvasProxy(dead, "T0K", ""))
+	defer local.Close()
+	resp, err := http.Get(local.URL + "/canvas/")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	body := make([]byte, 512)
+	n, _ := resp.Body.Read(body)
+	assert.NotContains(t, string(body[:n]), "connection refused")
+	assert.NotContains(t, string(body[:n]), "127.0.0.1:9")
 }
 
 func TestCanvasIngressError_OtherErrorsPassThrough(t *testing.T) {
@@ -176,5 +235,3 @@ func TestEnsureSessionAwake_RejectsTerminalWithVerb(t *testing.T) {
 		assert.Contains(t, err.Error(), "cannot be served to Agent Canvas")
 	})
 }
-
-var _ = gomock.Any // keep gomock imported for parity with sibling tests
