@@ -34,8 +34,61 @@ func TestSignalsSessionListAgent(t *testing.T) {
 			},
 		}).Return(do.SignalsSessions{testSession}, nil)
 
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsSessionList(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsSessionListAgentEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsExportLimit, 20)
+
+		tm.signals.EXPECT().ListAgentSessions("agt-1", &godo.SignalsListAgentSessionsOptions{
+			SignalsCursorPageOptions: godo.SignalsCursorPageOptions{
+				Limit: 20,
+			},
+		}).Return(do.SignalsSessions{testSession}, nil)
+
 		err := RunSignalsSessionList(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsSessionListAgentBothIDsEqual(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsExportLimit, 20)
+
+		tm.signals.EXPECT().ListAgentSessions("agt-1", &godo.SignalsListAgentSessionsOptions{
+			SignalsCursorPageOptions: godo.SignalsCursorPageOptions{
+				Limit: 20,
+			},
+		}).Return(do.SignalsSessions{testSession}, nil)
+
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsSessionList(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsSessionListAgentBothIDsDifferent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "agent")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-2")
+
+		err := RunSignalsSessionList(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "must match")
 	})
 }
 
@@ -50,8 +103,11 @@ func TestSignalsSessionListAgentDefaultType(t *testing.T) {
 			},
 		}).Return(do.SignalsSessions{testSession}, nil)
 
-		err := RunSignalsSessionList(config)
-		assert.NoError(t, err)
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsSessionList(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
 	})
 }
 
@@ -61,7 +117,7 @@ func TestSignalsSessionListAgentMissingAgentID(t *testing.T) {
 
 		err := RunSignalsSessionList(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--agent-id is required")
+		assert.Contains(t, err.Error(), "--environment-id is required")
 	})
 }
 
@@ -88,7 +144,18 @@ func TestSignalsSessionListInferenceWithAgentID(t *testing.T) {
 
 		err := RunSignalsSessionList(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--agent-id must not be set")
+		assert.Contains(t, err.Error(), "must not be set")
+	})
+}
+
+func TestSignalsSessionListInferenceWithEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "inference")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
+
+		err := RunSignalsSessionList(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "must not be set")
 	})
 }
 

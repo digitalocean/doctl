@@ -47,7 +47,7 @@ func (d *SignalsConsent) Cols() []string {
 		"ID",
 		"TeamID",
 		"Source",
-		"AgentID",
+		"EnvironmentID",
 		"Enabled",
 		"UpdatedAt",
 	}
@@ -55,25 +55,31 @@ func (d *SignalsConsent) Cols() []string {
 
 func (d *SignalsConsent) ColMap() map[string]string {
 	return map[string]string{
-		"ID":        "ID",
-		"TeamID":    "Team ID",
-		"Source":    "Source",
-		"AgentID":   "Agent ID",
-		"Enabled":   "Enabled",
-		"UpdatedAt": "Updated At",
+		"ID":            "ID",
+		"TeamID":        "Team ID",
+		"Source":        "Source",
+		"EnvironmentID": "Environment ID",
+		"AgentID":       "Agent ID",
+		"Enabled":       "Enabled",
+		"UpdatedAt":     "Updated At",
 	}
 }
 
 func (d *SignalsConsent) KV() []map[string]any {
 	out := make([]map[string]any, len(d.Consents))
 	for i, c := range d.Consents {
+		id := c.EnvironmentID
+		if id == "" {
+			id = c.AgentID
+		}
 		out[i] = map[string]any{
-			"ID":        c.ID,
-			"TeamID":    c.TeamID,
-			"Source":    consentSource(c.Source),
-			"AgentID":   c.AgentID,
-			"Enabled":   strconv.FormatBool(c.Enabled),
-			"UpdatedAt": c.UpdatedAt,
+			"ID":            c.ID,
+			"TeamID":        c.TeamID,
+			"Source":        consentSource(c.Source),
+			"EnvironmentID": id,
+			"AgentID":       id,
+			"Enabled":       strconv.FormatBool(c.Enabled),
+			"UpdatedAt":     c.UpdatedAt,
 		}
 	}
 	return out
@@ -95,7 +101,7 @@ func (d *SignalsAgentConsent) Cols() []string {
 		"ID",
 		"TeamID",
 		"Source",
-		"AgentID",
+		"EnvironmentID",
 		"Enabled",
 		"UpdatedAt",
 	}
@@ -103,25 +109,31 @@ func (d *SignalsAgentConsent) Cols() []string {
 
 func (d *SignalsAgentConsent) ColMap() map[string]string {
 	return map[string]string{
-		"ID":        "ID",
-		"TeamID":    "Team ID",
-		"Source":    "Source",
-		"AgentID":   "Agent ID",
-		"Enabled":   "Enabled",
-		"UpdatedAt": "Updated At",
+		"ID":            "ID",
+		"TeamID":        "Team ID",
+		"Source":        "Source",
+		"EnvironmentID": "Environment ID",
+		"AgentID":       "Agent ID",
+		"Enabled":       "Enabled",
+		"UpdatedAt":     "Updated At",
 	}
 }
 
 func (d *SignalsAgentConsent) KV() []map[string]any {
 	out := make([]map[string]any, len(d.Consents))
 	for i, c := range d.Consents {
+		id := c.EnvironmentID
+		if id == "" {
+			id = c.AgentID
+		}
 		out[i] = map[string]any{
-			"ID":        c.ID,
-			"TeamID":    c.TeamID,
-			"Source":    consentSource(c.Source),
-			"AgentID":   c.AgentID,
-			"Enabled":   strconv.FormatBool(c.Enabled),
-			"UpdatedAt": c.UpdatedAt,
+			"ID":            c.ID,
+			"TeamID":        c.TeamID,
+			"Source":        consentSource(c.Source),
+			"EnvironmentID": id,
+			"AgentID":       id,
+			"Enabled":       strconv.FormatBool(c.Enabled),
+			"UpdatedAt":     c.UpdatedAt,
 		}
 	}
 	return out

@@ -75,6 +75,31 @@ func TestSignalsDeletionCreate_Success(t *testing.T) {
 			},
 		},
 		{
+			name: "managed agent with environment id",
+			setup: func(config *CmdConfig, tm *tcMocks) {
+				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
+				config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, testAgentUUID)
+				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				tm.signals.EXPECT().CreateDeletion(&godo.SignalsCreateDeletionRequest{
+					Type: "agent", TeamID: 42, EnvironmentID: testAgentUUID,
+				}).Return(&testDeletionJob, false, nil)
+			},
+		},
+		{
+			name: "managed agent with both ids equal",
+			setup: func(config *CmdConfig, tm *tcMocks) {
+				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
+				config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+				config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, testAgentUUID)
+				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				tm.signals.EXPECT().CreateDeletion(&godo.SignalsCreateDeletionRequest{
+					Type: "agent", TeamID: 42, AgentID: testAgentUUID, EnvironmentID: testAgentUUID,
+				}).Return(&testDeletionJob, false, nil)
+			},
+		},
+		{
 			name: "inference sends no agent id",
 			setup: func(config *CmdConfig, tm *tcMocks) {
 				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "inference")
@@ -154,23 +179,55 @@ func TestSignalsDeletionCreate_Success(t *testing.T) {
 	}
 }
 
+func TestSignalsDeletionCreate_AgentIDDeprecationWarning(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+		config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		tm.signals.EXPECT().CreateDeletion(gomock.Any()).Return(&testDeletionJob, false, nil)
+
+		stderr := captureProcessStderr(t, func() {
+			assert.NoError(t, RunSignalsDeletionCreate(config))
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsDeletionCreate_BothIDsDifferent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, "agent")
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "b1b2c3d4-e29b-41d4-a716-446655440000")
+		config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, 42)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+		err := RunSignalsDeletionCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "must match")
+	})
+}
+
 // Every case here must fail without any mock call (gomock fails the test on an
 // unexpected call).
 func TestSignalsDeletionCreate_InputErrors(t *testing.T) {
 	tests := []struct {
-		name    string
-		typ     string
-		agentID string
-		teamID  int
-		wantErr string
+		name          string
+		typ           string
+		agentID       string
+		environmentID string
+		teamID        int
+		wantErr       string
 	}{
 		{name: "missing type", typ: "", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "agent" or "inference"`},
 		{name: "unknown type", typ: "bogus", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "agent" or "inference"`},
 		{name: "wrong case type", typ: "Agent", agentID: testAgentUUID, teamID: 42, wantErr: `--type must be "agent" or "inference"`},
-		{name: "managed agent without agent id", typ: "agent", teamID: 42, wantErr: "--agent-id is required"},
-		{name: "managed agent with spaces-only agent id", typ: "agent", agentID: "  ", teamID: 42, wantErr: "--agent-id is required"},
-		{name: "managed agent with non-uuid agent id", typ: "agent", agentID: "not-a-uuid", teamID: 42, wantErr: "--agent-id must be a valid UUID"},
-		{name: "inference with agent id", typ: "inference", agentID: testAgentUUID, teamID: 42, wantErr: "--agent-id must not be set when --type is inference"},
+		{name: "managed agent without agent id", typ: "agent", teamID: 42, wantErr: "--environment-id is required"},
+		{name: "managed agent with spaces-only agent id", typ: "agent", agentID: "  ", teamID: 42, wantErr: "--environment-id is required"},
+		{name: "managed agent with non-uuid agent id", typ: "agent", agentID: "not-a-uuid", teamID: 42, wantErr: "--environment-id must be a valid UUID"},
+		{name: "managed agent with non-uuid environment id", typ: "agent", environmentID: "not-a-uuid", teamID: 42, wantErr: "--environment-id must be a valid UUID"},
+		{name: "inference with agent id", typ: "inference", agentID: testAgentUUID, teamID: 42, wantErr: "must not be set when --type is inference"},
+		{name: "inference with environment id", typ: "inference", environmentID: testAgentUUID, teamID: 42, wantErr: "must not be set when --type is inference"},
 		{name: "negative team id", typ: "inference", teamID: -1, wantErr: "--team-id must not be negative"},
 	}
 
@@ -179,6 +236,7 @@ func TestSignalsDeletionCreate_InputErrors(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				config.Doit.Set(config.NS, doctl.ArgSignalsDeletionType, tt.typ)
 				config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, tt.agentID)
+				config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, tt.environmentID)
 				config.Doit.Set(config.NS, doctl.ArgSignalsTeamID, tt.teamID)
 				config.Doit.Set(config.NS, doctl.ArgForce, true)
 
