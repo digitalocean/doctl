@@ -199,7 +199,7 @@ var harnessDisplayNames = map[string]string{
 	openAIAgentsAdapter: "Codex",
 	openHandsAgentName:  "OpenHands",
 	hermesAgentName:     "Hermes",
-	bareSandboxAgent:    "Bare sandbox",
+	bareSandboxAgent:    "Sandbox",
 }
 
 // prettyHarnessName returns the display name for a raw --harness value or
