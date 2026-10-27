@@ -81,8 +81,8 @@ func RunAgentsCanvas(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if address != "127.0.0.1" && address != "localhost" && address != "::1" {
-		warn("binding %s lets anyone who can reach this address use your token against the session", address)
+	if !isLoopbackBind(address) {
+		return fmt.Errorf("--address %s is not a loopback address; this proxy adds your token to every request it forwards, so it only listens on 127.0.0.1, localhost or ::1", address)
 	}
 
 	ln, err := net.Listen("tcp", net.JoinHostPort(address, strconv.Itoa(port)))
@@ -167,6 +167,19 @@ func canvasIngressError(sessionRef string, err error) error {
 		}
 	}
 	return beautifyAgentError(err)
+}
+
+// isLoopbackBind reports whether the listen address keeps the proxy on this
+// machine. Unlike port-forward, which only warns on a wider bind, canvas
+// refuses one: the proxy puts the team's token on every request it forwards,
+// and a client that can reach a 0.0.0.0 bind can also forge a loopback Host,
+// so the Host check alone would not hold.
+func isLoopbackBind(address string) bool {
+	switch strings.Trim(address, "[]") {
+	case "127.0.0.1", "localhost", "::1":
+		return true
+	}
+	return false
 }
 
 // loopbackOnly refuses what a token-adding proxy on localhost must refuse: a

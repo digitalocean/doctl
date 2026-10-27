@@ -50,6 +50,8 @@ func TestCanvasProxyAddsTokenAndForwardsPath(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, local.URL+"/canvas/assets/app.js?v=1", nil)
 	require.NoError(t, err)
 	req.Header.Set("Proxy-Connection", "keep-alive")
+	// Whatever the page sends as Authorization is replaced, never appended.
+	req.Header.Set("Authorization", "Bearer from-the-page")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -58,6 +60,7 @@ func TestCanvasProxyAddsTokenAndForwardsPath(t *testing.T) {
 	assert.Equal(t, "yes", resp.Header.Get("X-Upstream"))
 	require.NotNil(t, got)
 	assert.Equal(t, "Bearer T0K", got.Header.Get("Authorization"))
+	assert.Equal(t, []string{"Bearer T0K"}, got.Header.Values("Authorization"), "the page's own Authorization is overwritten, not appended")
 	assert.Equal(t, "dev-1", got.Header.Get(deviceid.HeaderName))
 	assert.Equal(t, "/canvas/assets/app.js", got.URL.Path)
 	assert.Equal(t, "v=1", got.URL.RawQuery)
@@ -135,6 +138,17 @@ func TestCanvasProxyRefusesForeignOriginsAndHosts(t *testing.T) {
 	assert.Equal(t, http.StatusOK, get("", ""), "no Origin (curl, doctl itself)")
 	assert.Equal(t, http.StatusOK, get("http://127.0.0.1:3000", ""), "page served by this proxy")
 	assert.Equal(t, http.StatusOK, get("http://localhost:3000", "localhost:3000"), "localhost Host and Origin")
+}
+
+// The proxy never binds beyond this machine: a wider bind would hand the
+// token to anyone who can reach it, Host check or not.
+func TestIsLoopbackBind(t *testing.T) {
+	for _, ok := range []string{"127.0.0.1", "localhost", "::1", "[::1]"} {
+		assert.True(t, isLoopbackBind(ok), ok)
+	}
+	for _, bad := range []string{"0.0.0.0", "", "192.168.1.5", "::", "my-laptop.local"} {
+		assert.False(t, isLoopbackBind(bad), bad)
+	}
 }
 
 // The two known "no URL" answers read differently and both give the tunnel.

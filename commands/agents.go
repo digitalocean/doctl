@@ -687,7 +687,7 @@ The session's public URL only accepts requests that carry your DigitalOcean toke
 
 Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` port-forward <session> 8000:8000`+"`"+` reaches the same Canvas at `+"`"+`http://127.0.0.1:8000/canvas`+"`"+`. The process runs in the foreground; press Ctrl-C to stop.`,
 		Writer)
-	AddStringFlag(cmdCanvas, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
+	AddStringFlag(cmdCanvas, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address (loopback only: 127.0.0.1, localhost or ::1)")
 	AddIntFlag(cmdCanvas, doctl.ArgAgentCanvasPort, "", 0, "Local port to listen on (0 picks a free port, printed on the ready line)")
 	AddBoolFlag(cmdCanvas, doctl.ArgAgentCanvasOpen, "", false, "Open the local Canvas URL in your browser")
 	cmdCanvas.Example = agentCLI + ` canvas my-session --open`
