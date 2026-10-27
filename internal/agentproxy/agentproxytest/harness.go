@@ -24,7 +24,7 @@ import (
 )
 
 // Event is one canned SSE event the harness streams back from
-// GET /v2/agents/sessions/{id}/events, matching the event-specific part of
+// GET /v2/harness-runtime/sessions/{id}/events, matching the event-specific part of
 // godo.HostedAgentEvent's wire shape (see HostedAgentEventKind's doc comment
 // for the canonical type strings).
 type Event struct {
@@ -142,16 +142,20 @@ func New(t *testing.T, sessionID string) *Harness {
 	h := &Harness{sessionID: sessionID, hitlCh: make(chan HITLResolution, 8)}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v2/agents/sessions/{id}", h.handleGetSession)
-	// One SSE surface, matching godo's StreamSession: both the live and the
-	// replay-only read go to the data plane at .../events, the latter carrying
-	// replay_only=true (see QueueReplayHistory). handleStream serves both,
-	// branching on that query parameter. The control plane's .../stream is
-	// deliberately not registered, so a request landing there fails the test
-	// instead of quietly passing against a route the client no longer uses.
-	mux.HandleFunc("GET /v2/agents/sessions/{id}/events", h.handleStream)
-	mux.HandleFunc("POST /v2/agents/sessions/{id}/input", h.handleInput)
-	mux.HandleFunc("POST /v2/agents/sessions/{id}/hitl/{requestID}", h.handleHITL)
+	// godo >= v1.233.0 addresses sessions under /v2/harness-runtime; older
+	// releases used /v2/agents. The edge serves both, so the fake does too.
+	for _, base := range []string{"/v2/harness-runtime", "/v2/agents"} {
+		mux.HandleFunc("GET "+base+"/sessions/{id}", h.handleGetSession)
+		// One SSE surface, matching godo's StreamSession: both the live and the
+		// replay-only read go to the data plane at .../events, the latter carrying
+		// replay_only=true (see QueueReplayHistory). handleStream serves both,
+		// branching on that query parameter. The control plane's .../stream is
+		// deliberately not registered, so a request landing there fails the test
+		// instead of quietly passing against a route the client no longer uses.
+		mux.HandleFunc("GET "+base+"/sessions/{id}/events", h.handleStream)
+		mux.HandleFunc("POST "+base+"/sessions/{id}/input", h.handleInput)
+		mux.HandleFunc("POST "+base+"/sessions/{id}/hitl/{requestID}", h.handleHITL)
+	}
 
 	h.Server = httptest.NewServer(mux)
 	t.Cleanup(h.Server.Close)
