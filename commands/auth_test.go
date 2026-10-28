@@ -137,6 +137,61 @@ context: default
 	assert.NotContains(t, cfg.String(), "ambient-token")
 }
 
+// Shell completion offers context names as the argument to switch and remove,
+// so a name given that way must be the one acted on rather than ignored.
+func TestAuthSwitchAndRemoveTakeContextArgument(t *testing.T) {
+	const contexts = `auth-contexts:
+  default: default-token
+  work: work-token
+context: default
+`
+
+	t.Run("switch", func(t *testing.T) {
+		cfg := withStubConfigFile(t, contexts)
+		defer withStubConfig(t, map[string]any{"context": doctl.ArgDefaultContext})()
+
+		require.NoError(t, RunAuthSwitch(&CmdConfig{Out: io.Discard, Args: []string{"Work"}}))
+		assert.Equal(t, "work", cfg.settings(t)[doctl.ArgContext])
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		cfg := withStubConfigFile(t, contexts)
+
+		require.NoError(t, RunAuthRemove(&CmdConfig{Out: io.Discard, Args: []string{"work"}}))
+		assert.NotContains(t, cfg.String(), "work-token")
+	})
+
+	t.Run("matching --context is accepted", func(t *testing.T) {
+		cfg := withStubConfigFile(t, contexts)
+		defer withContext(t, "work")()
+
+		require.NoError(t, RunAuthSwitch(&CmdConfig{Out: io.Discard, Args: []string{"work"}}))
+		assert.Equal(t, "work", cfg.settings(t)[doctl.ArgContext])
+	})
+
+	t.Run("conflicting --context is rejected", func(t *testing.T) {
+		withStubConfigFile(t, contexts)
+		defer withContext(t, "default")()
+
+		assert.Error(t, RunAuthSwitch(&CmdConfig{Out: io.Discard, Args: []string{"work"}}))
+		assert.Error(t, RunAuthRemove(&CmdConfig{Out: io.Discard, Args: []string{"work"}}))
+	})
+
+	t.Run("more than one argument is rejected", func(t *testing.T) {
+		withStubConfigFile(t, contexts)
+
+		assert.Error(t, RunAuthSwitch(&CmdConfig{Out: io.Discard, Args: []string{"work", "default"}}))
+	})
+}
+
+func TestGetAuthContextList(t *testing.T) {
+	defer withStubConfig(t, map[string]any{
+		"auth-contexts": map[string]any{"zeta": "t", doctl.ArgDefaultContext: "t", "alpha": "t"},
+	})()
+
+	assert.Equal(t, []string{doctl.ArgDefaultContext, "alpha", "zeta"}, getAuthContextList())
+}
+
 func TestAuthForcesLowercase(t *testing.T) {
 	viper.Set(doctl.ArgAccessToken, "valid-token")
 	defer viper.Set(doctl.ArgAccessToken, nil)
