@@ -724,18 +724,18 @@ func (mr *MockAgentPlatformServiceMockRecorder) ListKnowledgeBases() *gomock.Cal
 }
 
 // ListModelEvaluationMetrics mocks base method.
-func (m *MockAgentPlatformService) ListModelEvaluationMetrics() (do.EvaluationMetrics, error) {
+func (m *MockAgentPlatformService) ListModelEvaluationMetrics(opt *godo.ModelEvaluationMetricListOptions) (do.EvaluationMetrics, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListModelEvaluationMetrics")
+	ret := m.ctrl.Call(m, "ListModelEvaluationMetrics", opt)
 	ret0, _ := ret[0].(do.EvaluationMetrics)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListModelEvaluationMetrics indicates an expected call of ListModelEvaluationMetrics.
-func (mr *MockAgentPlatformServiceMockRecorder) ListModelEvaluationMetrics() *gomock.Call {
+func (mr *MockAgentPlatformServiceMockRecorder) ListModelEvaluationMetrics(opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationMetrics", reflect.TypeOf((*MockAgentPlatformService)(nil).ListModelEvaluationMetrics))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModelEvaluationMetrics", reflect.TypeOf((*MockAgentPlatformService)(nil).ListModelEvaluationMetrics), opt)
 }
 
 // ListModelEvaluationPresets mocks base method.
