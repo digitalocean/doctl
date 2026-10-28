@@ -97,6 +97,11 @@ const (
 	// `openhands` template (the agent is an always-on server there, not a CLI
 	// spawned per run). Same agent Agent Canvas creates sessions with.
 	openHandsAgentName = "openhands"
+	// hermesAgentName is the Hermes gateway, run by OHR in the `coding-hermes`
+	// template. Like OpenHands the agent is an always-on server rather than a
+	// CLI spawned per run, and the gateway is reached over `port-forward` as
+	// well as over OHR.
+	hermesAgentName    = "hermes"
 	anthropicAPIKeyEnv = "ANTHROPIC_API_KEY"
 )
 
@@ -117,9 +122,9 @@ var (
 // --harness codex users the OpenAI-managed adapter, which also differs in what
 // it supports (for example it is excluded from checkpoint/fork/rollback).
 //
-// none is not a harness at all — it is the absence of one. It is accepted here
-// so a bare sandbox is reachable without hand-writing a manifest, which is the
-// whole point of --harness.
+// none (and its equal spelling sandbox) is not a harness at all — it is the
+// absence of one. It is listed here only so isBareSandboxHarness can refuse it
+// with a pointer to `--template sandbox`.
 var harnessAgentNames = map[string]string{
 	"opencode":       "opencode",
 	"open-code":      "opencode",
@@ -130,7 +135,9 @@ var harnessAgentNames = map[string]string{
 	"openai-codex":   openAIAgentsAdapter,
 	"openhands":      openHandsAgentName,
 	"open-hands":     openHandsAgentName,
+	"hermes":         hermesAgentName,
 	"none":           bareSandboxAgent,
+	"sandbox":        bareSandboxAgent,
 }
 
 // bareSandboxAgent is the flat-manifest agent value for a sandbox with no agent
@@ -139,6 +146,21 @@ var harnessAgentNames = map[string]string{
 // server-side, so every doctl path that would talk to an agent has to be closed
 // off ahead of the call rather than left to fail at it.
 const bareSandboxAgent = "none"
+
+// bareSandboxAgentAlt is the API's equal spelling of bareSandboxAgent. doctl
+// never generates it, but a manifest that says it is a bare sandbox too.
+const bareSandboxAgentAlt = "sandbox"
+
+// hostedAgentKindSandbox is the agent kind the API writes for a new bare
+// sandbox, replacing godo.HostedAgentKindNone. godo does not declare it yet.
+const hostedAgentKindSandbox godo.HostedAgentKind = "AGENT_KIND_SANDBOX"
+
+// isBareSandboxKind reports whether a session's agent kind means no agent runs
+// in it. Sessions created before AGENT_KIND_SANDBOX existed keep
+// AGENT_KIND_NONE, so both count.
+func isBareSandboxKind(k godo.HostedAgentKind) bool {
+	return k == godo.HostedAgentKindNone || k == hostedAgentKindSandbox
+}
 
 // isBareSandboxHarness reports whether a raw --harness value asks for a sandbox
 // with no agent. Takes the raw flag value (not the resolved agent) so callers
@@ -176,7 +198,8 @@ var harnessDisplayNames = map[string]string{
 	codexAgentName:      "Codex CLI",
 	openAIAgentsAdapter: "Codex",
 	openHandsAgentName:  "OpenHands",
-	bareSandboxAgent:    "Bare sandbox",
+	hermesAgentName:     "Hermes",
+	bareSandboxAgent:    "Sandbox",
 }
 
 // prettyHarnessName returns the display name for a raw --harness value or
@@ -455,7 +478,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 		// --template implication sets it internally, while a user who types it
 		// is refused by resolveAgentCreationSource. Listing it would send them
 		// to a value that answers with a second error.
-		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands",
+		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands, hermes",
 			doctl.ArgAgentHarness, harness)
 	}
 	return agent, nil
@@ -463,7 +486,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 
 type harnessManifest struct {
 	Name        string              `yaml:"name,omitempty"`
-	Agent       string              `yaml:"agent"`
+	Harness     string              `yaml:"harness"`
 	Template    string              `yaml:"template,omitempty"`
 	Repos       []string            `yaml:"repos,omitempty"`
 	Config      map[string]any      `yaml:"config,omitempty"`
@@ -496,7 +519,8 @@ type harnessManifestOpts struct {
 	template   string
 	// model is the DigitalOcean Inference model id written as the manifest's
 	// env HARNESS_INFERENCE_MODEL. Empty leaves the key out, except for
-	// openhands, which gets defaultOpenHandsModel.
+	// openhands and hermes, which get defaultOpenHandsModel and
+	// defaultHermesModel.
 	model string
 }
 
@@ -507,6 +531,14 @@ type harnessManifestOpts struct {
 // first turn with "model not found" (seen on the first preview smoke). The
 // other harnesses read the user's own vendor key and need no default here.
 const defaultOpenHandsModel = "openai-gpt-5.5"
+
+// defaultHermesModel is the DigitalOcean Inference model a hermes session runs
+// on when --model is not given. Hermes has no fallback model of its own: the
+// gateway's render-config.sh renders an empty model into config.yaml and warns
+// that the first turn will fail, so the flag has to name one. Kept separate
+// from defaultOpenHandsModel rather than shared, because the two are
+// independent product choices and either may move without the other.
+const defaultHermesModel = "openai-gpt-5.5"
 
 // harnessInferenceModelEnv is the guest env var the harness inference driver
 // reads the model id from; one of the two HARNESS_INFERENCE_* keys harness-api
@@ -519,7 +551,7 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		return nil, err
 	}
 
-	doc := harnessManifest{Agent: agent}
+	doc := harnessManifest{Harness: agent}
 	if ref, err := normalizeHarnessRepoRef(o.repo); err != nil {
 		return nil, err
 	} else if ref != "" {
@@ -595,6 +627,23 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		doc.KeepWarm = &keepWarm
 		if strings.TrimSpace(o.model) == "" {
 			o.model = defaultOpenHandsModel
+		}
+	case agent == hermesAgentName:
+		// Same shape as openhands, for the same reason: no key slot, because
+		// hermes reads HARNESS_INFERENCE_API_KEY (render-config.sh prefers the
+		// native OPENAI_* set and falls back to it) and harness-api mints that
+		// key for the session. A user who wants the public OpenAI API instead
+		// passes --secret OPENAI_API_KEY=..., which render-config.sh takes
+		// first. The model is written below because hermes has none of its own
+		// (see defaultHermesModel).
+		//
+		// No template pin and no keep_warm, unlike openhands. templateForAgentKind
+		// already resolves the kind to coding-hermes, and no flipper gates the
+		// template per team; keep_warm defaults to true server-side for hermes
+		// on purpose, because the gateway is driven over a port-forward tunnel
+		// that idle-pause's activity tracking cannot see.
+		if strings.TrimSpace(o.model) == "" {
+			o.model = defaultHermesModel
 		}
 	}
 
@@ -745,13 +794,19 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		prog.wait("Creating hosted session…")
 	}
 	var sess *do.HostedAgentSession
-	if manifestAgentIs(manifest, openHandsAgentName) {
-		// OpenHands runs on DigitalOcean Inference and has no vendor key of
-		// its own to ask for, so the session's key is minted by harness-api.
-		// Decided off the manifest, not the --harness flag, so a --spec file
-		// that says `agent: openhands` gets the same key. A manifest that
-		// supplies HARNESS_INFERENCE_API_KEY itself keeps it: the server
-		// skips the mint for a bring-your-own key.
+	if manifestAgentIs(manifest, openHandsAgentName) || manifestAgentIs(manifest, hermesAgentName) {
+		// OpenHands and hermes run on DigitalOcean Inference and have no vendor
+		// key of their own to ask for, so the session's key is minted by
+		// harness-api. Decided off the manifest, not the --harness flag, so a
+		// --spec file that says `harness: openhands` gets the same key. A
+		// manifest that supplies HARNESS_INFERENCE_API_KEY itself keeps it: the
+		// server skips the mint for a bring-your-own key.
+		//
+		// A hermes manifest may instead carry OPENAI_API_KEY, which
+		// render-config.sh reads ahead of the minted key. The mint still runs —
+		// the server only reads the HARNESS_INFERENCE_API_KEY slot — leaving an
+		// unused key that is revoked with the config. Skipping it would need a
+		// second, adapter-specific read of the manifest for no gain.
 		sess, err = c.HostedAgents().CreateSessionFromManifestWithManagedKey(manifest, createOpt)
 	} else {
 		sess, err = c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
@@ -953,7 +1008,7 @@ func (s *lineSpinner) stopAndClear() {
 }
 
 // startupWords are the lines a create/wait spinner prints for whatever is
-// starting. A session with `agent: none` has no agent in it, so the agent
+// starting. A session with `harness: none` has no agent in it, so the agent
 // wording there names a process that never runs — "Starting agent runtime…" in
 // particular describes a step coding-base does not have, which reads as a stall
 // rather than as a stage that does not apply.
@@ -991,7 +1046,7 @@ var bareSandboxStartupWords = startupWords{
 // did not create — `port-forward` into someone else's bare sandbox included.
 func startupWordsFor(sess *do.HostedAgentSession) startupWords {
 	if sess != nil && sess.HostedAgentSession != nil &&
-		sess.AgentKind == godo.HostedAgentKindNone {
+		isBareSandboxKind(sess.AgentKind) {
 		return bareSandboxStartupWords
 	}
 	return agentStartupWords
@@ -1225,7 +1280,7 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 	// A bare sandbox has no chat to launch into, so the card has to carry the
 	// commands that do drive it — this card is the only place a bare-sandbox
 	// user is told what to do next.
-	if sum.Session != nil && sum.Session.AgentKind == godo.HostedAgentKindNone {
+	if sum.Session != nil && sum.Session.HostedAgentSession != nil && isBareSandboxKind(sum.Session.AgentKind) {
 		body.WriteString(cardRow("exec", agentCLI+" exec "+ref+" -- <command>"))
 		body.WriteString(cardRow("upload", agentCLI+" upload "+ref+" --local-file <path> --workspace-path <path>"))
 		body.WriteString(cardRow("download", agentCLI+" download "+ref+" --workspace-path <path> --save-to <path>"))

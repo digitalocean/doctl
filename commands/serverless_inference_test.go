@@ -21,7 +21,10 @@ func TestRunServerlessInferenceChatCompletionCreate_NonStreaming(t *testing.T) {
 
 		expected := &godo.ChatCompletion{
 			Choices: []godo.ChatCompletionChoice{{
-				Message: godo.AssistantMessage("hello back"),
+				Message: godo.ChatCompletionMessage{
+					Role:    "assistant",
+					Content: godo.StringContent("hello back"),
+				},
 			}},
 		}
 
@@ -76,11 +79,15 @@ func TestServerlessInferenceChatCompletionParams_FromRequestFile(t *testing.T) {
 
 func TestServerlessInferenceChatCompletionText(t *testing.T) {
 	c := &godo.ChatCompletion{
-		Choices: []godo.ChatCompletionChoice{{
-			Message: godo.AssistantMessage("answer"),
-		}},
+		Choices: []godo.ChatCompletionChoice{
+			{Message: godo.ChatCompletionMessage{Content: godo.StringContent("answer")}},
+			{Message: godo.ChatCompletionMessage{Content: godo.ContentParts(
+				godo.ChatCompletionContentPart{Type: "text", Text: " with parts"},
+				godo.ChatCompletionContentPart{Type: "image_url"},
+			)}},
+		},
 	}
-	assert.Equal(t, "answer", serverlessInferenceChatCompletionText(c))
+	assert.Equal(t, "answer with parts", serverlessInferenceChatCompletionText(c))
 }
 
 func TestRunServerlessInferenceAsyncCreate_FromFlags(t *testing.T) {

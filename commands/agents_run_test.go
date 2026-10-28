@@ -67,12 +67,22 @@ func TestResolveHarnessAgent(t *testing.T) {
 		assert.Equal(t, "OpenHands", prettyHarnessName("openhands"))
 	})
 
+	t.Run("hermes", func(t *testing.T) {
+		for _, in := range []string{"hermes", "Hermes", " HERMES "} {
+			got, err := resolveHarnessAgent(in)
+			require.NoError(t, err)
+			assert.Equal(t, hermesAgentName, got)
+		}
+		assert.Equal(t, "Hermes", prettyHarnessName("hermes"))
+	})
+
 	t.Run("unknown harness", func(t *testing.T) {
 		_, err := resolveHarnessAgent("not-a-harness")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported")
 		assert.Contains(t, err.Error(), "codex-agentapi")
 		assert.Contains(t, err.Error(), "openhands")
+		assert.Contains(t, err.Error(), "hermes")
 	})
 }
 
@@ -93,7 +103,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, "opencode", doc["agent"])
+		assert.Equal(t, "opencode", doc["harness"])
 		assert.Equal(t, "demo", doc["name"])
 		repos, ok := doc["repos"].([]any)
 		require.True(t, ok)
@@ -118,7 +128,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, codexAgentName, doc["agent"])
+		assert.Equal(t, codexAgentName, doc["harness"])
 		secrets, ok := doc["secrets"].(map[any]any)
 		require.True(t, ok)
 		assert.Equal(t, "${OPENAI_API_KEY}", secrets["OPENAI_API_KEY"])
@@ -138,7 +148,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, openAIAgentsAdapter, doc["agent"])
+		assert.Equal(t, openAIAgentsAdapter, doc["harness"])
 		env, ok := doc["env"].(map[any]any)
 		require.True(t, ok)
 		assert.Equal(t, "${ENV_ID}", env["CODEX_ENVIRONMENT_ID"])
@@ -162,7 +172,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, "claude-code", doc["agent"])
+		assert.Equal(t, "claude-code", doc["harness"])
 		_, hasEnv := doc["env"]
 		assert.False(t, hasEnv)
 		secrets, ok := doc["secrets"].(map[any]any)
@@ -187,7 +197,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.Equal(t, "openhands", doc["agent"])
+		assert.Equal(t, "openhands", doc["harness"])
 		assert.Equal(t, "openhands", doc["template"])
 		assert.Equal(t, false, doc["keep_warm"])
 		assert.NotContains(t, doc, "secrets", "the key is minted by harness-api, not asked of the user")
@@ -233,6 +243,48 @@ func TestBuildHarnessManifest(t *testing.T) {
 		env = doc["env"].(map[any]any)
 		assert.Equal(t, "openai-gpt-5.5", env[harnessInferenceModelEnv])
 		assert.Equal(t, "${ENV_ID}", env["CODEX_ENVIRONMENT_ID"])
+	})
+
+	// Hermes is openhands' shape minus the two fields openhands needs and it
+	// does not: templateForAgentKind already resolves hermes to coding-hermes,
+	// and keep_warm defaults to true server-side on purpose, because the
+	// gateway is driven over a port-forward tunnel idle-pause cannot see.
+	// Writing either one here would undo a deliberate server-side default.
+	t.Run("hermes needs no key and runs on a DO model, with no template pin and no keep_warm", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "hermes", permission: "ask"})
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "hermes", doc["harness"])
+		assert.NotContains(t, doc, "template")
+		assert.NotContains(t, doc, "keep_warm")
+		assert.NotContains(t, doc, "secrets", "the key is minted by harness-api, not asked of the user")
+		// render-config.sh renders an empty model and warns that the first turn
+		// will fail, so the manifest has to name one.
+		env, ok := doc["env"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, defaultHermesModel, env[harnessInferenceModelEnv])
+		perms, ok := doc["permissions"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, "ask", perms["default"])
+	})
+
+	t.Run("--model overrides the hermes default", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "hermes", model: " anthropic-claude-4.5-sonnet "})
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		env := doc["env"].(map[any]any)
+		assert.Equal(t, "anthropic-claude-4.5-sonnet", env[harnessInferenceModelEnv])
+	})
+
+	t.Run("hermes keeps a user-named template", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "hermes", template: "my-hermes"})
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "my-hermes", doc["template"])
 	})
 
 	t.Run("openhands keeps a user-named template", func(t *testing.T) {
@@ -428,7 +480,7 @@ func TestRunAgentsCreate_OpenHandsAsksForAManagedKeyAndADOModel(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.Contains(t, string(manifest), "agent: openhands")
+				assert.Contains(t, string(manifest), "harness: openhands")
 				assert.Contains(t, string(manifest), "template: openhands")
 				assert.Contains(t, string(manifest), "keep_warm: false")
 				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultOpenHandsModel)
@@ -459,6 +511,53 @@ func TestRunAgentsCreate_OpenHandsAsksForAManagedKeyAndADOModel(t *testing.T) {
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "openhands")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "oh")
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.Contains(t, buf.String(), "Session created")
+	})
+}
+
+// A hermes create takes the same managed-key opt-in as openhands: hermes reads
+// HARNESS_INFERENCE_API_KEY when no native OPENAI_API_KEY is set, and has no
+// model of its own, so without both the gateway fails on its first turn.
+func TestRunAgentsCreate_HermesAsksForAManagedKeyAndADOModel(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "harness: hermes")
+				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultHermesModel)
+				assert.NotContains(t, string(manifest), "HARNESS_INFERENCE_API_KEY")
+				// Both are deliberate server-side defaults for hermes; see
+				// buildHarnessManifest's hermes case.
+				assert.NotContains(t, string(manifest), "template:")
+				assert.NotContains(t, string(manifest), "keep_warm:")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_hermes_1",
+						Name:      "hm",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_hermes_1").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_hermes_1",
+					Name:      "hm",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "hermes")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "hm")
 
 		require.NoError(t, RunAgentsCreate(config))
 		assert.Contains(t, buf.String(), "Session created")
@@ -525,7 +624,7 @@ func TestRunAgentsCreate_Harness(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.Contains(t, string(manifest), "agent: opencode")
+				assert.Contains(t, string(manifest), "harness: opencode")
 				assert.Contains(t, string(manifest), "repos:")
 				assert.Contains(t, string(manifest), "katanemo/plano")
 				assert.Contains(t, string(manifest), "name: demo")
@@ -1107,12 +1206,13 @@ func TestBuildHarnessManifestPermissions(t *testing.T) {
 // the guest reads a model key on its own), no config, no framework. The customer
 // adds their own secrets and egress by writing a manifest.
 func TestBuildHarnessManifestBareSandbox(t *testing.T) {
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "none", name: "eval-runner"})
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent, name: "eval-runner"})
 	require.NoError(t, err)
 
 	var doc map[string]any
 	require.NoError(t, yaml.Unmarshal(raw, &doc))
-	assert.Equal(t, bareSandboxAgent, doc["agent"])
+	assert.Equal(t, "none", doc["harness"], "doctl generates the spelling the docs lead with")
+	assert.NotContains(t, doc, "agent", "a generated manifest sets one key, never both")
 	assert.Equal(t, "eval-runner", doc["name"])
 	assert.NotContains(t, doc, "secrets")
 	assert.NotContains(t, doc, "config")
@@ -1122,29 +1222,28 @@ func TestBuildHarnessManifestBareSandbox(t *testing.T) {
 	assert.NotContains(t, doc, "template")
 }
 
-// `none` resolves but is not offered. The two halves are easy to mistake for a
-// contradiction and are both load-bearing: the --template implication sets the
-// harness to bareSandboxAgent internally, so resolution has to accept it, while
-// a user who types `--harness none` is refused earlier by
-// resolveAgentCreationSource — so advertising it here would route them into a
-// second error.
+// `none` (and its equal spelling `sandbox`) resolves but is not offered. The
+// two halves are easy to mistake for a contradiction and are both
+// load-bearing: the --template implication sets the harness to bareSandboxAgent
+// internally, so resolution has to accept it, while a user who types
+// `--harness none` is refused earlier by resolveAgentCreationSource — so
+// advertising it here would route them into a second error.
 func TestResolveHarnessAgentAcceptsNoneInternallyButNeverOffersIt(t *testing.T) {
-	agent, err := resolveHarnessAgent("none")
-	require.NoError(t, err)
-	assert.Equal(t, bareSandboxAgent, agent)
+	for _, typed := range []string{"none", "NONE", "sandbox", "SANDBOX"} {
+		agent, err := resolveHarnessAgent(typed)
+		require.NoErrorf(t, err, "%q", typed)
+		assert.Equalf(t, bareSandboxAgent, agent, "%q resolves to the spelling doctl generates", typed)
+	}
 
-	agent, err = resolveHarnessAgent("NONE")
-	require.NoError(t, err)
-	assert.Equal(t, bareSandboxAgent, agent, "casing is normalized like every other value")
-
-	_, err = resolveHarnessAgent("bogus")
+	_, err := resolveHarnessAgent("bogus")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "codex-agentapi", "the real adapters are still listed")
 	assert.NotContains(t, err.Error(), "none", "offering a value that is refused sends the user into a second error")
+	assert.NotContains(t, err.Error(), "sandbox", "offering a value that is refused sends the user into a second error")
 }
 
 func TestIsBareSandboxHarness(t *testing.T) {
-	for _, h := range []string{"none", "None", " none ", "NONE"} {
+	for _, h := range []string{"none", "None", " none ", "NONE", "sandbox", "Sandbox", " sandbox "} {
 		assert.Truef(t, isBareSandboxHarness(h), "%q should be a bare sandbox", h)
 	}
 	for _, h := range []string{"", "opencode", "codex", "claude-code", "codex-agentapi", "custom"} {
@@ -1163,20 +1262,26 @@ func TestAgentCreationSourceBareSandbox(t *testing.T) {
 		want bool
 	}{
 		{"harness flag", agentCreationSource{harness: "none"}, true},
+		{"harness flag, sandbox spelling", agentCreationSource{harness: "sandbox"}, true},
 		{"flat manifest", agentCreationSource{manifest: []byte("agent: none\n")}, true},
 		{"flat manifest, mixed case", agentCreationSource{manifest: []byte("agent: None\n")}, true},
+		{"flat manifest, sandbox spelling", agentCreationSource{manifest: []byte("agent: sandbox\n")}, true},
+		{"flat manifest, sandbox spelling, mixed case", agentCreationSource{manifest: []byte("agent: Sandbox\n")}, true},
 		{"legacy envelope", agentCreationSource{manifest: []byte(
 			"apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: none\n")}, true},
+		{"legacy envelope, sandbox spelling", agentCreationSource{manifest: []byte(
+			"apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: sandbox\n")}, true},
 		{"managed agent flag", agentCreationSource{harness: "opencode"}, false},
 		{"managed agent manifest", agentCreationSource{manifest: []byte("agent: opencode\n")}, false},
 		{"legacy envelope, managed agent", agentCreationSource{manifest: []byte(
 			"apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: codex\n")}, false},
-		// An adapter that merely starts with "none" is a different adapter.
-		{"prefix is not a match", agentCreationSource{manifest: []byte("agent: nonesuch\n")}, false},
+		// An adapter that merely starts with the name is a different adapter.
+		{"prefix is not a match", agentCreationSource{manifest: []byte("agent: sandboxed\n")}, false},
+		{"prefix of none is not a match", agentCreationSource{manifest: []byte("agent: nonesuch\n")}, false},
 		{"empty", agentCreationSource{}, false},
 		// The server owns the error for a malformed manifest; guessing here
 		// would turn it into a confusing local one.
-		{"unparsable manifest", agentCreationSource{manifest: []byte("\tagent: none")}, false},
+		{"unparsable manifest", agentCreationSource{manifest: []byte("\tagent: sandbox")}, false},
 		// A config's agent lives server-side, so this path reports false and
 		// lets the server answer.
 		{"from config", agentCreationSource{configID: "cfg-1"}, false},
@@ -1191,10 +1296,27 @@ func TestAgentCreationSourceBareSandbox(t *testing.T) {
 	assert.False(t, nilSrc.bareSandbox())
 }
 
-// The ready card is the only place a `--harness none` user is told what to do
+func TestIsBareSandboxKind(t *testing.T) {
+	assert.True(t, isBareSandboxKind(godo.HostedAgentKindNone), "sessions created before AGENT_KIND_SANDBOX existed")
+	assert.True(t, isBareSandboxKind(hostedAgentKindSandbox))
+	for _, k := range []godo.HostedAgentKind{"", "AGENT_KIND_CODEX", "AGENT_KIND_OPENCODE", "AGENT_KIND_UNSPECIFIED"} {
+		assert.Falsef(t, isBareSandboxKind(k), "%q", k)
+	}
+}
+
+// The ready card is the only place a bare-sandbox user is told what to do
 // next, so it must carry the commands that drive a sandbox and must NOT offer
-// `launch`, which cannot work without an agent.
+// `launch`, which cannot work without an agent. Both wire kinds get the card:
+// new sessions report SANDBOX, older ones NONE.
 func TestPrintRunReadySummary_BareSandboxNextSteps(t *testing.T) {
+	for _, kind := range []godo.HostedAgentKind{godo.HostedAgentKindNone, hostedAgentKindSandbox} {
+		t.Run(string(kind), func(t *testing.T) {
+			testPrintRunReadySummaryBareSandbox(t, kind)
+		})
+	}
+}
+
+func testPrintRunReadySummaryBareSandbox(t *testing.T, kind godo.HostedAgentKind) {
 	prev := stylingEnabled
 	stylingEnabled = false
 	t.Cleanup(func() { stylingEnabled = prev })
@@ -1203,9 +1325,8 @@ func TestPrintRunReadySummary_BareSandboxNextSteps(t *testing.T) {
 	printRunReadySummary(&buf, runReadySummary{
 		Session: &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
 			Name:      "eval-runner",
-			AgentKind: godo.HostedAgentKindNone,
+			AgentKind: kind,
 		}},
-		Harness: "none",
 	})
 	got := buf.String()
 	for _, want := range []string{
@@ -1335,7 +1456,7 @@ func TestResolveAgentCreationSource_BareSandboxWritesNoPermissions(t *testing.T)
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(src.manifest, &doc))
-		assert.Equal(t, bareSandboxAgent, doc["agent"])
+		assert.Equal(t, bareSandboxAgent, doc["harness"])
 		assert.NotContains(t, doc, "permissions",
 			"a manifest declaring no agent must not carry an agent's tool policy")
 	})
@@ -1369,7 +1490,7 @@ func TestRunAgentsCreate_ManagedAgentStillAcceptsPrompt(t *testing.T) {
 }
 
 func TestBuildHarnessManifestTemplate(t *testing.T) {
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "none", template: "my-eval-image"})
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent, template: "my-eval-image"})
 	require.NoError(t, err)
 
 	var doc map[string]any
@@ -1378,7 +1499,7 @@ func TestBuildHarnessManifestTemplate(t *testing.T) {
 
 	// Omitted rather than emitted empty: the server derives the template from the
 	// agent kind, and a blank `template` key is not the same as no key.
-	raw, err = buildHarnessManifest(harnessManifestOpts{harness: "none"})
+	raw, err = buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent})
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "template")
 }
@@ -1490,7 +1611,7 @@ func TestResolveAgentCreationSource_TemplateAloneImpliesBareSandbox(t *testing.T
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(src.manifest, &doc))
-		assert.Equal(t, bareSandboxAgent, doc["agent"])
+		assert.Equal(t, bareSandboxAgent, doc["harness"])
 		assert.Equal(t, "coding-base", doc["template"])
 		assert.NotContains(t, doc, "permissions",
 			"an implied bare sandbox must not carry an agent's tool policy either")
@@ -1532,18 +1653,22 @@ func TestResolveAgentCreationSource_BareSandboxManifestRejectsAgentOnlyFlags(t *
 // The same manifest with no agent-only flag is a legitimate bare sandbox and
 // has to keep working — the guard above must refuse the flag, not the manifest.
 func TestResolveAgentCreationSource_BareSandboxManifestAloneIsAccepted(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dir := t.TempDir()
-		t.Chdir(dir)
-		path := filepath.Join(dir, "sandbox.yaml")
-		require.NoError(t, os.WriteFile(path, []byte("agent: none\nname: eval-runner\n"), 0o644))
+	for _, agent := range []string{"sandbox", "none"} {
+		t.Run(agent, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				dir := t.TempDir()
+				t.Chdir(dir)
+				path := filepath.Join(dir, "sandbox.yaml")
+				require.NoError(t, os.WriteFile(path, []byte("agent: "+agent+"\nname: eval-runner\n"), 0o644))
 
-		config.Args = []string{path}
+				config.Args = []string{path}
 
-		src, err := resolveAgentCreationSource(config)
-		require.NoError(t, err)
-		assert.True(t, src.bareSandbox())
-	})
+				src, err := resolveAgentCreationSource(config)
+				require.NoError(t, err)
+				assert.True(t, src.bareSandbox())
+			})
+		})
+	}
 }
 
 // The public spelling has to reach the manifest as the name the API knows, or
@@ -1615,19 +1740,23 @@ func TestResolveAgentCreationSource_ExplicitHarnessBeatsTemplateImplication(t *t
 // resolveAgentCreationSource can catch that — validation runs after both — so
 // this asserts the generated bytes against the validator directly.
 func TestValidateAgentManifest_BareSandboxGeneratedManifestIsValid(t *testing.T) {
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "none", name: "eval-runner"})
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: bareSandboxAgent, name: "eval-runner"})
 	require.NoError(t, err)
 
 	out := validateAgentManifest(raw)
 	assert.Empty(t, out.Errors, "doctl must accept the manifest it generated itself")
+	assert.Empty(t, out.Warnings, "doctl must not generate a spelling it then warns about")
 }
 
-func TestValidateAdapter_None(t *testing.T) {
-	var out agentManifestValidation
-	validateAdapter("none", "agent", &out)
-	assert.Empty(t, out.Errors)
-	assert.Empty(t, out.Warnings,
-		"none is supported, not merely declared, so it must not warn like openai-agents does")
+// The two spellings are equal: neither is a deprecated alias, and neither is
+// merely declared the way openai-agents is.
+func TestValidateAdapter_BareSandbox(t *testing.T) {
+	for _, adapter := range []string{"none", "sandbox"} {
+		var out agentManifestValidation
+		validateAdapter(adapter, "agent", &out)
+		assert.Emptyf(t, out.Errors, "%q", adapter)
+		assert.Emptyf(t, out.Warnings, "%q must not warn", adapter)
+	}
 }
 
 // Every --harness shape has to survive --secret. The two manifest formats

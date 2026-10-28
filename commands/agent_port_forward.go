@@ -269,14 +269,21 @@ func tunnelHeader(token, deviceID string) http.Header {
 // themselves (BUG-044). Terminal sessions are rejected; already-ready
 // sessions are left alone.
 func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) error {
+	return ensureSessionAwake(c, sessionID, "port-forwarded")
+}
+
+// ensureSessionAwake is the shared half of the above: `verb` names what the
+// caller is about to do with the session, for the terminal-status error
+// ("cannot be port-forwarded", "cannot serve Agent Canvas").
+func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
 	svc := c.HostedAgents()
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
 		return beautifyAgentError(err)
 	}
 	if isTerminalSessionStatus(sess.Status) {
-		return fmt.Errorf("session %s is %s and cannot be port-forwarded",
-			displaySessionRef(sess), humanSessionStatus(sess.Status))
+		return fmt.Errorf("session %s is %s and cannot be %s",
+			displaySessionRef(sess), humanSessionStatus(sess.Status), verb)
 	}
 	if sess.Status != godo.HostedAgentSessionStatusPaused {
 		return nil

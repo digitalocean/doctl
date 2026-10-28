@@ -34,6 +34,15 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+// AllowedProxyOrigin reports whether a browser Origin is acceptable for a
+// loopback-only proxy that adds the user's token: empty Origin (websocat,
+// codex --remote, curl) and loopback Origins are allowed; any other present
+// Origin is rejected so a page on an unrelated site cannot drive the
+// session through the proxy. Shared by start-proxy and `agents canvas`.
+func AllowedProxyOrigin(origin string) bool {
+	return allowedProxyOrigin(origin)
+}
+
 // allowedProxyOrigin reports whether a WebSocket Origin is acceptable for
 // this loopback-only proxy. Empty Origin (websocat, codex --remote) and
 // loopback Origins are allowed; any other present Origin is rejected so a

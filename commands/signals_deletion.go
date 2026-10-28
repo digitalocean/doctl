@@ -41,7 +41,7 @@ func SignalsDeletion() *Command {
 
 Deletion cannot be undone. When you create a deletion for a Harness Runtime agent (` + "`--type agent`" + `) or for Serverless Inference (` + "`--type inference`" + `), Signals turns collection off for that scope immediately, hides matching conversations from Signals reads immediately, and deletes that conversation data asynchronously in the background. Poll ` + "`doctl signals deletion get <deletion-id>`" + ` until the status is ` + "`complete`" + `.
 
-For ` + "`--type agent`" + `, set ` + "`--agent-id`" + ` to the agent's Environment Config ID (the agent UUID). For ` + "`--type inference`" + `, Signals deletes Serverless Inference conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request. Do not pass ` + "`--agent-id`" + ` for inference.
+For ` + "`--type agent`" + `, set ` + "`--environment-id`" + ` to the agent's Environment Config ID (the agent UUID). For ` + "`--type inference`" + `, Signals deletes Serverless Inference conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request. Do not pass ` + "`--environment-id`" + ` for inference.
 
 For an agent deletion, wait until the job is ` + "`complete`" + ` before enabling Signals for that agent again. Earlier export files are not deleted and remain available until they expire.
 
@@ -54,7 +54,7 @@ Note: Deletion removes Signals conversation data for the requested scope. Aggreg
 	deletionDetails := `
 - The deletion job ID
 - The type (agent or inference)
-- The agent ID (agent only)
+- The environment ID (environment only)
 - The status (queued, running, complete, failed)
 - Created / started / completed timestamps (Unix seconds)
 
@@ -68,8 +68,8 @@ Extra columns are available with --format: TeamID, ErrorMessage.
 		"Permanently delete Signals data",
 		`Starts an asynchronous, permanent deletion of Signals conversation data. This cannot be undone.
 
-- --type agent --agent-id <environment-config-id>: deletes Signals conversations for one Harness Runtime agent and turns off collection for that agent. --agent-id is the agent's Environment Config ID (the agent UUID).
-- --type inference: deletes Serverless Inference Signals conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request, and turns off team inference collection. Do not pass --agent-id.
+- --type agent --environment-id <environment-config-id>: deletes Signals conversations for one Harness Runtime agent and turns off collection for that agent. --environment-id is the agent's Environment Config ID (the agent UUID).
+- --type inference: deletes Serverless Inference Signals conversations for your whole team (team-wide; not limited to one endpoint or model) that were collected at or before the deletion request, and turns off team inference collection. Do not pass --environment-id.
 
 On create, matching conversations are hidden from Signals reads immediately and collection for that scope is turned off; deletion continues in the background. Poll `+"`doctl signals deletion get <deletion-id>`"+` until the status is complete. For an agent deletion, wait until the job is complete before enabling Signals for that agent again.
 
@@ -88,7 +88,8 @@ Each job contains:`+deletionDetails,
 		displayerType(&displayers.SignalsDeletion{}),
 	)
 	AddStringFlag(cmdCreate, doctl.ArgSignalsDeletionType, "", "", `What to delete: "agent" or "inference".`, requiredOpt())
-	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "Harness Runtime Environment Config ID (agent UUID / agent_id). Required for --type agent; must not be set for inference.")
+	AddStringFlag(cmdCreate, doctl.ArgSignalsEnvironmentID, "", "", "Harness Runtime Environment Config ID (agent UUID). Required for --type agent; must not be set for inference.")
+	AddStringFlag(cmdCreate, doctl.ArgSignalsAgentID, "", "", "Deprecated: use --environment-id.")
 	AddIntFlag(cmdCreate, doctl.ArgSignalsTeamID, "", 0, "Numeric team ID. Auto-detected when omitted.")
 	AddBoolFlag(cmdCreate, doctl.ArgForce, doctl.ArgShortForce, false, "Skip the confirmation prompt")
 
@@ -123,7 +124,7 @@ func RunSignalsDeletionCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	agentID, err := c.Doit.GetString(c.NS, doctl.ArgSignalsAgentID)
+	idFlags, err := resolveSignalsIDFlags(c)
 	if err != nil {
 		return err
 	}
@@ -136,25 +137,30 @@ func RunSignalsDeletionCreate(c *CmdConfig) error {
 		return err
 	}
 
-	// Trim first, then validate the trimmed values.
 	typ = strings.TrimSpace(typ)
-	agentID = strings.TrimSpace(agentID)
+	agentID := idFlags.value()
 
 	switch typ {
 	case godo.SignalsDeletionTypeAgent:
 		if agentID == "" {
-			return fmt.Errorf("--agent-id is required when --type is agent")
+			return fmt.Errorf("--environment-id is required when --type is agent (deprecated: --agent-id)")
 		}
 		parsed, err := uuid.Parse(agentID)
 		if err != nil {
-			return fmt.Errorf("--agent-id must be a valid UUID: %w", err)
+			return fmt.Errorf("--environment-id must be a valid UUID: %w", err)
 		}
 		// Send the canonical lowercase form so the server's duplicate-job check
 		// (keyed on the raw string) sees one spelling per agent.
 		agentID = parsed.String()
+		if idFlags.AgentID != "" {
+			idFlags.AgentID = agentID
+		}
+		if idFlags.EnvironmentID != "" {
+			idFlags.EnvironmentID = agentID
+		}
 	case godo.SignalsDeletionTypeInference:
 		if agentID != "" {
-			return fmt.Errorf("--agent-id must not be set when --type is inference")
+			return fmt.Errorf("--environment-id and --agent-id must not be set when --type is inference")
 		}
 	default:
 		return fmt.Errorf(`--type must be "agent" or "inference"`)
@@ -178,9 +184,10 @@ func RunSignalsDeletionCreate(c *CmdConfig) error {
 	}
 
 	job, existing, err := c.Signals().CreateDeletion(&godo.SignalsCreateDeletionRequest{
-		Type:    typ,
-		TeamID:  resolvedTeamID,
-		AgentID: agentID,
+		Type:          typ,
+		TeamID:        resolvedTeamID,
+		AgentID:       idFlags.AgentID,
+		EnvironmentID: idFlags.EnvironmentID,
 	})
 	if err != nil {
 		return err

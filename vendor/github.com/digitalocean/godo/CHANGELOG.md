@@ -1,5 +1,35 @@
 # Change Log
 
+## [1.233.0] - 2026-10-26
+
+- #1185 - @aguan-hue - Fi 687 godo environment
+- #1192 - @nkurraDO - feat(MARSOHS-2085): expose region on Hosted Agents sessions and environments
+- #1191 - @kishlay-singh-DO - microvms: add UploadFile and DownloadFile
+- #1189 - @mishraishika24-pixel - hosted agents: use the /v2/harness-runtime path prefix
+- #1188 - @sgupta832 - microvms: add egress policy to MicroVM and create request (MDROP-608)
+
+## [1.232.0] - 2026-10-23
+
+- #1184 - @sauravk-digitalocean - fix(FI-649): change SignalsDialogue.ID from int64 to string
+
+## [1.231.0] - 2026-10-22
+
+- #1178 - @sanpj2292 - feat(MARSOHS-2336): rename the workspace size to SizeLimitGiB (size_limit_gib)
+
+## [1.230.0] - 2026-10-21
+
+- #1179 - @dmamidala-glitch - COBS-1696: Align Insights tracing wire contract
+- #1174 - @schakraborty-do - microvms: add URL add/remove and ingress opt-out
+
+## [1.229.0] - 2026-10-19
+
+- #1173 - @potturu-vamsi - agent platform: remove MaxTokens from CandidateInferenceConfig
+
+## [1.228.0] - 2026-10-19
+
+- #1166 - @kishlay-singh-DO - Add Insights enablement endpoints
+- #1171 - @BadhriDO - hosted agents: carry deletion_protected on connections (MARSOHS-2173)
+
 ## [1.227.0] - 2026-10-16
 
 - #1168 - @SSharma-10 - Expand serverless inference for server-side tools, VLMs, TTS, and video

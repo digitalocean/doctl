@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -100,6 +100,7 @@ func TestAgentsLaunchAliases(t *testing.T) {
 func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
 	cmd := Agents()
 	assert.Equal(t, agentCmdName, cmd.Name())
+	assert.Contains(t, cmd.Aliases, "hr")
 	assert.Contains(t, cmd.Aliases, "agent")
 	assert.Contains(t, cmd.Aliases, "agents")
 	assert.Contains(t, cmd.Aliases, "ohr")
@@ -619,7 +620,7 @@ func TestRunAgentsCreate_FromHarness(t *testing.T) {
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
-				assert.Equal(t, "claude-code", doc["agent"])
+				assert.Equal(t, "claude-code", doc["harness"])
 				_, hasEnv := doc["env"]
 				assert.False(t, hasEnv)
 				secrets, ok := doc["secrets"].(map[any]any)
