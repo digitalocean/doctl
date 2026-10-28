@@ -101,9 +101,9 @@ The quickest way to get started is ` + "`" + `doctl auth login` + "`" + `, which
 
 If you prefer a personal access token instead, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
 
-To use multiple DigitalOcean accounts, including team accounts, create a named context with ` + "`" + `doctl auth login --context <name>` + "`" + ` or ` + "`" + `doctl auth init --context <name>` + "`" + `. The credentials are saved under the name you provide. To change which context later commands use, run ` + "`" + `doctl auth switch --context <name>` + "`" + `.
+To use multiple DigitalOcean accounts, including team accounts, create a named context with ` + "`" + `doctl auth login --context <name>` + "`" + ` or ` + "`" + `doctl auth init --context <name>` + "`" + `. The credentials are saved under the name you provide. To change which context later commands use, run ` + "`" + `doctl auth switch <name>` + "`" + `.
 
-To remove an account from the configuration file, run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This deletes the credentials saved under the name you provide.`,
+To remove an account from the configuration file, run ` + "`" + `doctl auth remove <name>` + "`" + `. This deletes the credentials saved under the name you provide.`,
 			GroupID: configureDoctlGroup,
 		},
 	}
@@ -142,25 +142,29 @@ To sign in with an API token instead, see the help for `+"`"+`doctl auth init`+"
 	AddDurationFlag(cmdAuthLogin, doctl.ArgOAuthTimeout, "", oauth.DefaultLoginTimeout, "How long the authorization link stays valid while doctl waits for you to approve the request in your browser")
 	cmdAuthLogin.Example = `The following example signs in to the context ` + "`" + `your-team` + "`" + `, requests full read and write access, and saves those scopes for later logins: doctl auth login --context your-team --scopes "read write" --save-scope`
 
-	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switch between authentication contexts", `This command changes which authentication context later commands use. The context must already exist.
+	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch <name>", "Switch between authentication contexts", `This command changes which authentication context later commands use. The context must already exist.
+
+Name the context as the argument or with `+"`"+`--context <name>`+"`"+`. With neither, the current context is kept.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
 To create a context, see the help for `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
 	cmdAuthSwitch.AddValidArgsFunc(authContextListValidArgsFunc)
-	cmdAuthSwitch.Example = `The following example switches to the context ` + "`" + `your-team` + "`" + `: doctl auth switch --context your-team`
+	cmdAuthSwitch.Example = `The following example switches to the context ` + "`" + `your-team` + "`" + `: doctl auth switch your-team`
 
-	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove --context <name>", "Remove authentication contexts", `This command removes an authentication context, deleting the credentials saved under that name. Removing a context does not change which context is selected.
+	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove <name>", "Remove authentication contexts", `This command removes an authentication context, deleting the credentials saved under that name. Removing a context does not change which context is selected.
+
+Name the context as the argument or with `+"`"+`--context <name>`+"`"+`.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
 To create a context, see the help for `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
 	cmdAuthRemove.AddValidArgsFunc(authContextListValidArgsFunc)
-	cmdAuthRemove.Example = `The following example removes the context ` + "`" + `your-team` + "`" + `: doctl auth remove --context your-team`
+	cmdAuthRemove.Example = `The following example removes the context ` + "`" + `your-team` + "`" + `: doctl auth remove your-team`
 
 	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "List available authentication contexts", `This command lists the authentication contexts you created with `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`. The context later commands use is marked `+"`"+`(current)`+"`"+`.
 
-To change which context is used, run `+"`"+`doctl auth switch --context <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts listed.`, Writer, false, aliasOpt("ls"))
+To change which context is used, run `+"`"+`doctl auth switch <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts listed.`, Writer, false, aliasOpt("ls"))
 	// The command runner expects that any command named "list" accepts a
 	// format flag, so we include here despite only supporting text output for
 	// this command.
@@ -171,6 +175,10 @@ To change which context is used, run `+"`"+`doctl auth switch --context <name>`+
 
 To print the token for a different context, add `+"`"+`--context <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts from `+"`"+`doctl auth list`+"`"+`.`, Writer, false, aliasOpt("t"))
 	cmdAuthToken.Example = `The following example displays the token of the current context: doctl auth token`
+
+	for _, c := range []*Command{cmdAuthInit, cmdAuthLogin, cmdAuthList, cmdAuthToken} {
+		c.AddValidArgsFunc(cobra.NoFileCompletions)
+	}
 
 	return cmd
 }
@@ -237,7 +245,10 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 // RunAuthRemove remove available auth contexts from the user's doctl config.
 func RunAuthRemove(c *CmdConfig) error {
-	context := strings.ToLower(Context)
+	context, err := namedAuthContext(c)
+	if err != nil {
+		return err
+	}
 
 	if context == "" {
 		return fmt.Errorf("You must provide a context name")
@@ -334,7 +345,10 @@ func displayAuthContexts(out io.Writer, currentContext string, contexts map[stri
 // RunAuthSwitch changes the default context and writes it to the
 // configuration.
 func RunAuthSwitch(c *CmdConfig) error {
-	context := strings.ToLower(Context)
+	context, err := namedAuthContext(c)
+	if err != nil {
+		return err
+	}
 	if context == "" {
 		context = strings.ToLower(viper.GetString("context"))
 	}
@@ -435,19 +449,39 @@ func defaultConfigFileWriter() (io.WriteCloser, error) {
 	return f, nil
 }
 
-func getAuthContextList() []string {
-	contexts := []string{"default"}
-	cfgContexts := viper.GetStringMap("auth-contexts")
+// namedAuthContext returns the lowercased context a command was pointed at,
+// given either as its argument or with --context, or "" when neither was.
+func namedAuthContext(c *CmdConfig) (string, error) {
+	context := strings.ToLower(Context)
 
-	for k := range cfgContexts {
-		contexts = append(contexts, k)
+	switch len(c.Args) {
+	case 0:
+		return context, nil
+	case 1:
+		arg := strings.ToLower(c.Args[0])
+		if context != "" && context != arg {
+			return "", fmt.Errorf("Context given twice: %q as an argument and %q with --context", arg, context)
+		}
+		return arg, nil
+	default:
+		return "", doctl.NewTooManyArgsErr(c.NS)
 	}
+}
+
+func getAuthContextList() []string {
+	contexts := []string{doctl.ArgDefaultContext}
+	for k := range viper.GetStringMap("auth-contexts") {
+		if k != doctl.ArgDefaultContext {
+			contexts = append(contexts, k)
+		}
+	}
+	sort.Strings(contexts[1:])
 
 	return contexts
 }
 
 func authContextListValidArgsFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	if len(args) != 0 {
+	if len(args) != 0 || Context != "" {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	return getAuthContextList(), cobra.ShellCompDirectiveNoFileComp
