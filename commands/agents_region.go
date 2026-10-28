@@ -15,9 +15,11 @@ package commands
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 )
@@ -25,10 +27,14 @@ import (
 // Regional routing for the harness-runtime command group (MARSOHS-2084).
 //
 // A MARS resource lives in exactly one region and is reachable only on that
-// region's API host: there is no redirect, no forwarding and no cross-region
-// lookup, so a request sent to the wrong region 404s. The region is carried by
-// the hostname — `api-<region>.digitalocean.com` — and the region-less host
-// `api.digitalocean.com` is served by the default region.
+// region's API host. There is no redirect, no forwarding and no cross-region
+// lookup: asking one region for a resource another region holds is a 404, and
+// a regional host whose region the server does not serve is refused with 421.
+//
+// The hostname is the whole signal — `api-<region>.digitalocean.com`, with the
+// region-less `api.digitalocean.com` served by the default region. harness-api
+// reads the forwarded Host itself; nothing carries the region in a request
+// header.
 //
 // `--region` is therefore a host selector. It is persistent on the group, so
 // every subcommand accepts it either side of the subcommand name
@@ -81,13 +87,16 @@ func resolvedAgentRegion() string {
 	return region
 }
 
-// regionAPIURL maps a region to its API base URL. The default region is served
-// by the region-less host, so it returns "" and leaves the host alone.
+// regionAPIURL maps a region to its API base URL. An unset region leaves the
+// host alone, so a command without the flag calls the region-less host exactly
+// as before. A region given explicitly always selects that region's host, the
+// default region included: --region ric1 addresses api-ric1 rather than
+// silently falling back to the region-less name.
 func regionAPIURL(region string) string {
-	if region == "" || region == defaultAgentRegion {
+	if region == "" {
 		return ""
 	}
-	return fmt.Sprintf("https://api-%s.digitalocean.com/", region)
+	return godo.HostedAgentsRegionalBaseURL(region)
 }
 
 // agentRegionBaseURL is the base URL agents traffic should use, honoring an
@@ -124,4 +133,57 @@ func agentRegionClientOpts() ([]godo.ClientOpt, error) {
 		return nil, nil
 	}
 	return []godo.ClientOpt{godo.SetBaseURL(base)}, nil
+}
+
+// locationBaseURL reduces a session's canonical URL to the base URL of the host
+// serving it. A Location that cannot be read yields "", which leaves the host
+// doctl already called in use: an unreadable header is not worth failing a
+// session that was created successfully.
+func locationBaseURL(location string) string {
+	u, err := url.Parse(location)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	return (&url.URL{Scheme: u.Scheme, Host: u.Host, Path: "/"}).String()
+}
+
+// useSessionLocationHost repoints the hosted-agents service at the host named
+// by a created session's Location header, so the wait, prompt and attach that
+// follow a create land in the region that actually holds the session rather
+// than the one doctl happened to call.
+//
+// It is a no-op unless the server sent a Location — it does so only for teams
+// on the regional routing rollout — and when --api-url names a host the user
+// chose, which doctl does not override.
+func useSessionLocationHost(c *CmdConfig, sess *do.HostedAgentSession) error {
+	if sess == nil || sess.HostedAgentSession == nil || sess.Location == "" {
+		return nil
+	}
+	if viper.GetString("api-url") != "" {
+		return nil
+	}
+	base := locationBaseURL(sess.Location)
+	if base == "" {
+		return nil
+	}
+
+	godoClient, err := c.Doit.GetGodoClient(Trace, true, c.getContextAccessToken(), godo.SetBaseURL(base))
+	if err != nil {
+		return fmt.Errorf("unable to initialize DigitalOcean API client: %w", err)
+	}
+	c.HostedAgents = func() do.HostedAgentsService { return do.NewHostedAgentsService(godoClient) }
+	return nil
+}
+
+// reportSessionRegion names the region a new session was placed in. The server
+// reports it only for teams on the regional routing rollout, and structured
+// output carries it as a field, so neither case prints anything here.
+func reportSessionRegion(c *CmdConfig, sess *do.HostedAgentSession) {
+	if sess == nil || sess.HostedAgentSession == nil || sess.Region == "" {
+		return
+	}
+	if agentStructuredOutput(c) {
+		return
+	}
+	fmt.Fprintln(c.Out, colorize("Region: "+sess.Region, colMuted))
 }

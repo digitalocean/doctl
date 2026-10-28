@@ -48,9 +48,12 @@ func TestRegionAPIURL(t *testing.T) {
 			want:   "",
 		},
 		{
-			name:   "default region leaves the host alone",
+			// An explicit region always names its own host, the default
+			// region included, so --region never silently means "whatever
+			// host I would have called anyway".
+			name:   "default region named explicitly still gets its host",
 			region: defaultAgentRegion,
-			want:   "",
+			want:   "https://api-ric1.digitalocean.com/",
 		},
 		{
 			name:   "non-default region gets its own host",
@@ -108,11 +111,15 @@ func TestAgentRegionClientOpts(t *testing.T) {
 		assert.Nil(t, opts)
 	})
 
-	t.Run("default region sends no option", func(t *testing.T) {
+	t.Run("default region named explicitly repoints the client", func(t *testing.T) {
 		setAgentRegion(t, defaultAgentRegion)
 		opts, err := agentRegionClientOpts()
 		require.NoError(t, err)
-		assert.Nil(t, opts)
+		require.Len(t, opts, 1)
+
+		client, err := godo.New(nil, opts...)
+		require.NoError(t, err)
+		assert.Equal(t, "https://api-ric1.digitalocean.com/", client.BaseURL.String())
 	})
 
 	t.Run("non-default region repoints the client", func(t *testing.T) {
@@ -174,9 +181,9 @@ func TestHostedAgentsWSURLHonorsRegion(t *testing.T) {
 		assert.Equal(t, "wss://api-mem1.digitalocean.com/v2/agents/sessions/sess-1/port-forward/9119", got)
 	})
 
-	t.Run("default region keeps the region-less host", func(t *testing.T) {
+	t.Run("no region keeps the region-less host", func(t *testing.T) {
 		setAPIURL(t, "")
-		setAgentRegion(t, defaultAgentRegion)
+		setAgentRegion(t, "")
 		got, err := hostedAgentsWSURL("sess-1", 9119)
 		require.NoError(t, err)
 		assert.Equal(t, "wss://api.digitalocean.com/v2/agents/sessions/sess-1/port-forward/9119", got)
@@ -196,6 +203,44 @@ func TestHostedAgentsWSURLHonorsRegion(t *testing.T) {
 		_, err := hostedAgentsWSURL("sess-1", 9119)
 		require.Error(t, err)
 	})
+}
+
+func TestLocationBaseURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		location string
+		want     string
+	}{
+		{
+			// The canonical URL of the created session, which is what the
+			// server sends; only its host matters for follow-up calls.
+			name:     "resource url reduces to its host",
+			location: "https://api-mem1.digitalocean.com/v2/agents/sessions/sess_abc123",
+			want:     "https://api-mem1.digitalocean.com/",
+		},
+		{
+			name:     "no header leaves the host alone",
+			location: "",
+			want:     "",
+		},
+		{
+			// A header doctl cannot read must not fail a session that was
+			// created successfully.
+			name:     "unreadable header leaves the host alone",
+			location: "://nope",
+			want:     "",
+		},
+		{
+			name:     "path-only header leaves the host alone",
+			location: "/v2/agents/sessions/sess_abc123",
+			want:     "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, locationBaseURL(tt.location))
+		})
+	}
 }
 
 func TestAgentsRegionFlagIsPersistent(t *testing.T) {
