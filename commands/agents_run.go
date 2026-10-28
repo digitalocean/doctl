@@ -97,6 +97,11 @@ const (
 	// `openhands` template (the agent is an always-on server there, not a CLI
 	// spawned per run). Same agent Agent Canvas creates sessions with.
 	openHandsAgentName = "openhands"
+	// hermesAgentName is the Hermes gateway, run by OHR in the `coding-hermes`
+	// template. Like OpenHands the agent is an always-on server rather than a
+	// CLI spawned per run, and the gateway is reached over `port-forward` as
+	// well as over OHR.
+	hermesAgentName    = "hermes"
 	anthropicAPIKeyEnv = "ANTHROPIC_API_KEY"
 )
 
@@ -130,6 +135,7 @@ var harnessAgentNames = map[string]string{
 	"openai-codex":   openAIAgentsAdapter,
 	"openhands":      openHandsAgentName,
 	"open-hands":     openHandsAgentName,
+	"hermes":         hermesAgentName,
 	"none":           bareSandboxAgent,
 	"sandbox":        bareSandboxAgent,
 }
@@ -192,7 +198,8 @@ var harnessDisplayNames = map[string]string{
 	codexAgentName:      "Codex CLI",
 	openAIAgentsAdapter: "Codex",
 	openHandsAgentName:  "OpenHands",
-	bareSandboxAgent:    "Bare sandbox",
+	hermesAgentName:     "Hermes",
+	bareSandboxAgent:    "Sandbox",
 }
 
 // prettyHarnessName returns the display name for a raw --harness value or
@@ -471,7 +478,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 		// --template implication sets it internally, while a user who types it
 		// is refused by resolveAgentCreationSource. Listing it would send them
 		// to a value that answers with a second error.
-		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands",
+		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands, hermes",
 			doctl.ArgAgentHarness, harness)
 	}
 	return agent, nil
@@ -512,7 +519,8 @@ type harnessManifestOpts struct {
 	template   string
 	// model is the DigitalOcean Inference model id written as the manifest's
 	// env HARNESS_INFERENCE_MODEL. Empty leaves the key out, except for
-	// openhands, which gets defaultOpenHandsModel.
+	// openhands and hermes, which get defaultOpenHandsModel and
+	// defaultHermesModel.
 	model string
 }
 
@@ -523,6 +531,14 @@ type harnessManifestOpts struct {
 // first turn with "model not found" (seen on the first preview smoke). The
 // other harnesses read the user's own vendor key and need no default here.
 const defaultOpenHandsModel = "openai-gpt-5.5"
+
+// defaultHermesModel is the DigitalOcean Inference model a hermes session runs
+// on when --model is not given. Hermes has no fallback model of its own: the
+// gateway's render-config.sh renders an empty model into config.yaml and warns
+// that the first turn will fail, so the flag has to name one. Kept separate
+// from defaultOpenHandsModel rather than shared, because the two are
+// independent product choices and either may move without the other.
+const defaultHermesModel = "openai-gpt-5.5"
 
 // harnessInferenceModelEnv is the guest env var the harness inference driver
 // reads the model id from; one of the two HARNESS_INFERENCE_* keys harness-api
@@ -611,6 +627,23 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		doc.KeepWarm = &keepWarm
 		if strings.TrimSpace(o.model) == "" {
 			o.model = defaultOpenHandsModel
+		}
+	case agent == hermesAgentName:
+		// Same shape as openhands, for the same reason: no key slot, because
+		// hermes reads HARNESS_INFERENCE_API_KEY (render-config.sh prefers the
+		// native OPENAI_* set and falls back to it) and harness-api mints that
+		// key for the session. A user who wants the public OpenAI API instead
+		// passes --secret OPENAI_API_KEY=..., which render-config.sh takes
+		// first. The model is written below because hermes has none of its own
+		// (see defaultHermesModel).
+		//
+		// No template pin and no keep_warm, unlike openhands. templateForAgentKind
+		// already resolves the kind to coding-hermes, and no flipper gates the
+		// template per team; keep_warm defaults to true server-side for hermes
+		// on purpose, because the gateway is driven over a port-forward tunnel
+		// that idle-pause's activity tracking cannot see.
+		if strings.TrimSpace(o.model) == "" {
+			o.model = defaultHermesModel
 		}
 	}
 
@@ -761,13 +794,19 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		prog.wait("Creating hosted session…")
 	}
 	var sess *do.HostedAgentSession
-	if manifestAgentIs(manifest, openHandsAgentName) {
-		// OpenHands runs on DigitalOcean Inference and has no vendor key of
-		// its own to ask for, so the session's key is minted by harness-api.
-		// Decided off the manifest, not the --harness flag, so a --spec file
-		// that says `harness: openhands` gets the same key. A manifest that
-		// supplies HARNESS_INFERENCE_API_KEY itself keeps it: the server
-		// skips the mint for a bring-your-own key.
+	if manifestAgentIs(manifest, openHandsAgentName) || manifestAgentIs(manifest, hermesAgentName) {
+		// OpenHands and hermes run on DigitalOcean Inference and have no vendor
+		// key of their own to ask for, so the session's key is minted by
+		// harness-api. Decided off the manifest, not the --harness flag, so a
+		// --spec file that says `harness: openhands` gets the same key. A
+		// manifest that supplies HARNESS_INFERENCE_API_KEY itself keeps it: the
+		// server skips the mint for a bring-your-own key.
+		//
+		// A hermes manifest may instead carry OPENAI_API_KEY, which
+		// render-config.sh reads ahead of the minted key. The mint still runs —
+		// the server only reads the HARNESS_INFERENCE_API_KEY slot — leaving an
+		// unused key that is revoked with the config. Skipping it would need a
+		// second, adapter-specific read of the manifest for no gain.
 		sess, err = c.HostedAgents().CreateSessionFromManifestWithManagedKey(manifest, createOpt)
 	} else {
 		sess, err = c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
