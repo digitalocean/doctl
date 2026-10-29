@@ -96,13 +96,19 @@ type HostedAgentsService interface {
 	// ListConnections lists the team's external-provider connections. The whole
 	// response is returned so callers can render pagination (page/per_page/total).
 	ListConnections(provider string, opt *godo.HostedAgentConnectionListOptions) (*godo.HostedAgentConnectionsListResponse, error)
-	// CreateConnection creates (or resumes) a connection binding an actor to the
-	// provider. A pending connection comes back with an Authorization to complete.
+	// CreateConnection creates a connection binding an actor to the provider. A
+	// pending connection comes back with an Authorization to complete. The API
+	// answers 409 when a non-revoked connection already exists for the actor;
+	// ReconnectConnection resumes that one.
 	CreateConnection(provider string, body *godo.HostedAgentConnectionCreateRequest) (*godo.HostedAgentConnectionEnvelope, error)
 	// GetConnection reads one connection by id, used to poll a pending authorization.
 	GetConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error)
 	// DeleteConnection revokes one connection by id and returns its final state.
 	DeleteConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error)
+	// ReconnectConnection resumes a pending connection's authorization, or
+	// restarts an expired or revoked one, keeping its actor and scopes. A
+	// connection that needs authorizing comes back with an Authorization.
+	ReconnectConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error)
 	StreamSession(ctx context.Context, sessionID string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error)
 	// Workspace file transfer APIs (/workspace/transfers). Used for all upload/download sizes.
 	CreateWorkspaceTransfer(sessionID string, create *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error)
@@ -385,6 +391,11 @@ func (s *hostedAgentsService) GetConnection(provider, id string) (*godo.HostedAg
 
 func (s *hostedAgentsService) DeleteConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
 	env, _, err := s.client.HostedAgents.DeleteConnection(context.TODO(), provider, id)
+	return env, err
+}
+
+func (s *hostedAgentsService) ReconnectConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	env, _, err := s.client.HostedAgents.ReconnectConnection(context.TODO(), provider, id)
 	return env, err
 }
 
