@@ -34,7 +34,7 @@ import (
 // which only a real command-tree assertion (not a direct Doit.Set) catches.
 func TestAgentConnectionsProviderFlagRegistered(t *testing.T) {
 	root := AgentConnections()
-	for _, name := range []string{"list", "create", "get", "revoke"} {
+	for _, name := range []string{"list", "create", "reconnect", "get", "revoke"} {
 		var sub *cobra.Command
 		for _, c := range root.Commands() {
 			if c.Name() == name {
@@ -205,7 +205,8 @@ func TestRunAgentsConnectionsCreate(t *testing.T) {
 				config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
 				err := RunAgentsConnectionsCreate(config)
 				assert.ErrorContains(t, err, "connection for alice is "+status)
-				assert.ErrorContains(t, err, "connections create --actor alice")
+				// create would now 409 on this connection; reconnect is the way on.
+				assert.ErrorContains(t, err, "connections reconnect conn_1")
 			})
 		})
 	}
@@ -255,6 +256,7 @@ func TestRunAgentsConnectionsCreate(t *testing.T) {
 			err := RunAgentsConnectionsCreate(config)
 			assert.ErrorContains(t, err, "not completed before it expired")
 			assert.ErrorContains(t, err, "connections get conn_1")
+			assert.ErrorContains(t, err, "connections reconnect conn_1")
 		})
 	})
 
@@ -276,6 +278,168 @@ func TestRunAgentsConnectionsCreate(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
 			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
 			assert.ErrorContains(t, RunAgentsConnectionsCreate(config), "connections get conn_1")
+		})
+	})
+}
+
+// Create is strict: a non-revoked connection for the same provider and actor
+// is a 409 rather than a resume (AR-3404). The error must lead to reconnect,
+// naming the existing connection when the caller can see it.
+func TestRunAgentsConnectionsCreate_Conflict(t *testing.T) {
+	conflict := godoStatusErr(http.StatusConflict, "connection already exists for this provider and user")
+
+	t.Run("names the existing connection", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				CreateConnection("github", gomock.Any()).
+				Return(nil, conflict)
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", &godo.HostedAgentConnectionListOptions{ActorID: "alice"}).
+				Return(&godo.HostedAgentConnectionsListResponse{
+					Connections: []godo.HostedAgentConnection{
+						{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "expired"},
+					},
+				}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			err := RunAgentsConnectionsCreate(config)
+
+			var ape *agentPrettyError
+			require.ErrorAs(t, err, &ape)
+			assert.Equal(t, "Connection already exists", ape.Title())
+			assert.Equal(t, http.StatusConflict, ape.Status())
+			assert.Contains(t, ape.Reason(), "already exists")
+			assert.Equal(t, agentCLI+" connections reconnect conn_1", ape.NextStep())
+		})
+	})
+
+	t.Run("falls back to list when the connection is not visible", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				CreateConnection("github", gomock.Any()).
+				Return(nil, conflict)
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", gomock.Any()).
+				Return(&godo.HostedAgentConnectionsListResponse{}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			err := RunAgentsConnectionsCreate(config)
+
+			var ape *agentPrettyError
+			require.ErrorAs(t, err, &ape)
+			assert.Contains(t, ape.NextStep(), "connections reconnect <connection-id>")
+			assert.Contains(t, ape.NextStep(), "connections list --actor alice")
+		})
+	})
+
+	t.Run("a failed lookup still gives the hint", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				CreateConnection("github", gomock.Any()).
+				Return(nil, conflict)
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", gomock.Any()).
+				Return(nil, godoStatusErr(http.StatusInternalServerError, "boom"))
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			err := RunAgentsConnectionsCreate(config)
+
+			var ape *agentPrettyError
+			require.ErrorAs(t, err, &ape)
+			assert.Contains(t, ape.NextStep(), "connections reconnect <connection-id>")
+		})
+	})
+
+	t.Run("other errors are not rewritten", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			badReq := godoStatusErr(http.StatusBadRequest, "invalid scope")
+			tm.hostedAgents.EXPECT().
+				CreateConnection("github", gomock.Any()).
+				Return(nil, badReq)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			assert.Equal(t, badReq, RunAgentsConnectionsCreate(config))
+		})
+	})
+}
+
+func TestRunAgentsConnectionsReconnect(t *testing.T) {
+	orig := agentsAuthPollInterval
+	agentsAuthPollInterval = time.Millisecond
+	defer func() { agentsAuthPollInterval = orig }()
+
+	t.Run("pending connection polls until active", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ReconnectConnection("github", "conn_1").
+				Return(pendingConnectionEnvelope(futureTimestamp()), nil)
+			gomock.InOrder(
+				tm.hostedAgents.EXPECT().
+					GetConnection("github", "conn_1").
+					Return(pendingConnectionEnvelope(nil), nil),
+				tm.hostedAgents.EXPECT().
+					GetConnection("github", "conn_1").
+					Return(&godo.HostedAgentConnectionEnvelope{
+						Connection: godo.HostedAgentConnection{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"},
+					}, nil),
+			)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			config.Args = []string{"conn_1"}
+			assert.NoError(t, RunAgentsConnectionsReconnect(config))
+		})
+	})
+
+	t.Run("already active exits without polling", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ReconnectConnection("github", "conn_1").
+				Return(&godo.HostedAgentConnectionEnvelope{
+					Connection: godo.HostedAgentConnection{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"},
+				}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Args = []string{"conn_1"}
+			assert.NoError(t, RunAgentsConnectionsReconnect(config))
+		})
+	})
+
+	t.Run("no-wait returns after the link", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ReconnectConnection("github", "conn_1").
+				Return(pendingConnectionEnvelope(futureTimestamp()), nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoWait, true)
+			config.Args = []string{"conn_1"}
+			assert.NoError(t, RunAgentsConnectionsReconnect(config))
+		})
+	})
+
+	t.Run("passes API errors through", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			notFound := godoStatusErr(http.StatusNotFound, "connection not found")
+			tm.hostedAgents.EXPECT().
+				ReconnectConnection("github", "conn_9").
+				Return(nil, notFound)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Args = []string{"conn_9"}
+			assert.Equal(t, notFound, RunAgentsConnectionsReconnect(config))
+		})
+	})
+
+	t.Run("requires a connection id", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			assert.Error(t, RunAgentsConnectionsReconnect(config))
 		})
 	})
 }

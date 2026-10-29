@@ -600,6 +600,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) PollProviderAuth(provider, pollUR
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollProviderAuth", reflect.TypeOf((*MockHostedAgentsService)(nil).PollProviderAuth), provider, pollURL)
 }
 
+// ReconnectConnection mocks base method.
+func (m *MockHostedAgentsService) ReconnectConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReconnectConnection", provider, id)
+	ret0, _ := ret[0].(*godo.HostedAgentConnectionEnvelope)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReconnectConnection indicates an expected call of ReconnectConnection.
+func (mr *MockHostedAgentsServiceMockRecorder) ReconnectConnection(provider, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconnectConnection", reflect.TypeOf((*MockHostedAgentsService)(nil).ReconnectConnection), provider, id)
+}
+
 // ResolveHITL mocks base method.
 func (m *MockHostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
 	m.ctrl.T.Helper()
