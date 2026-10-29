@@ -1057,10 +1057,6 @@ const (
 
 	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
 	ArgAgentForwardAddress = "address"
-	// ArgAgentCanvasPort is the local port the canvas proxy listens on (0 = any free port).
-	ArgAgentCanvasPort = "port"
-	// ArgAgentCanvasOpen opens the local Canvas URL in the default browser.
-	ArgAgentCanvasOpen = "open"
 
 	// ArgAgentFromCheckpoint is the checkpoint ID to fork or roll back from.
 	ArgAgentFromCheckpoint = "from-checkpoint"

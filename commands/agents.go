@@ -674,23 +674,10 @@ func Agents() *Command {
 		"Forward local TCP ports into the session's sandbox",
 		`Opens a local TCP tunnel to a port inside the session's sandbox, kubectl-style: connect to `+"`"+`localhost:<local-port>`+"`"+` and traffic flows over an authenticated connection to the sandbox port. Nothing inside the sandbox is exposed publicly.
 
-A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
+For an openhands session, `+"`"+agentCLI+` port-forward <session> 8000:8000`+"`"+` then `+"`"+`http://127.0.0.1:8000/canvas`+"`"+` in a browser opens Agent Canvas, the UI served from the sandbox itself. A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
 		Writer)
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
 	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`
-
-	cmdCanvas := CmdBuilder(cmd, RunAgentsCanvas, "canvas <session>",
-		"Serve the session's Agent Canvas UI through a local proxy",
-		`Serves the session's Agent Canvas UI (openhands template) on a local port and prints the URL to open, `+"`"+`http://127.0.0.1:<port>/canvas`+"`"+`.
-
-The session's public URL only accepts requests that carry your DigitalOcean token in a header, which a browser cannot add by itself. This command listens on localhost, adds the token to every request and WebSocket, and forwards to the public URL. The token never reaches the browser. A paused session is resumed first, same as `+"`"+agentCLI+` launch`+"`"+`.
-
-Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` port-forward <session> 8000:8000`+"`"+` reaches the same Canvas at `+"`"+`http://127.0.0.1:8000/canvas`+"`"+`. The process runs in the foreground; press Ctrl-C to stop.`,
-		Writer)
-	AddStringFlag(cmdCanvas, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address (loopback only: 127.0.0.1, localhost or ::1)")
-	AddIntFlag(cmdCanvas, doctl.ArgAgentCanvasPort, "", 0, "Local port to listen on (0 picks a free port, printed on the ready line)")
-	AddBoolFlag(cmdCanvas, doctl.ArgAgentCanvasOpen, "", false, "Open the local Canvas URL in your browser")
-	cmdCanvas.Example = agentCLI + ` canvas my-session --open`
 
 	cmdBalance := CmdBuilder(cmd, RunAgentsBalance, "balance",
 		"Show your team's prepayment balance and gate status",
