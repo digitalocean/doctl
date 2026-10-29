@@ -85,6 +85,13 @@ type HostedAgentsService interface {
 	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
 	// smallest-to-largest; no pagination.
 	ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error)
+	// ListRegions returns the regions this team may create sessions and
+	// environments in. The default region is always listed and marked
+	// IsDefault; every other open region appears only when the team holds its
+	// grant, so the catalog matches what a create admits. Sorted by slug; no
+	// pagination. The catalog is team-scoped, so one call enumerates the
+	// regions whichever regional host --region selects.
+	ListRegions() ([]godo.HostedAgentRegion, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
 	// external provider (e.g. "github"). The team is taken from the
@@ -351,6 +358,17 @@ func (s *hostedAgentsService) ListSandboxSizes() ([]godo.HostedAgentSandboxSize,
 		return nil, nil
 	}
 	return resp.Sizes, nil
+}
+
+func (s *hostedAgentsService) ListRegions() ([]godo.HostedAgentRegion, error) {
+	resp, _, err := s.client.HostedAgents.ListRegions(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	return resp.Regions, nil
 }
 
 func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
