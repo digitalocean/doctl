@@ -674,7 +674,7 @@ func Agents() *Command {
 		"Forward local TCP ports into the session's sandbox",
 		`Opens a local TCP tunnel to a port inside the session's sandbox, kubectl-style: connect to `+"`"+`localhost:<local-port>`+"`"+` and traffic flows over an authenticated connection to the sandbox port. Nothing inside the sandbox is exposed publicly.
 
-For an openhands session, `+"`"+agentCLI+` port-forward <session> 8000:8000`+"`"+` then `+"`"+`http://127.0.0.1:8000/canvas`+"`"+` in a browser opens Agent Canvas, the UI served from the sandbox itself. A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
+For an openhands session, `+"`"+agentCLI+` port-forward <session> 8000:8000`+"`"+` then `+"`"+`http://127.0.0.1:8000`+"`"+` in a browser opens Agent Canvas, the UI served from the sandbox itself. A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
 		Writer)
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
 	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`

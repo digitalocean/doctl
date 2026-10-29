@@ -225,7 +225,7 @@ codex --remote ws://127.0.0.1:1144
 
 Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
 
-For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " port-forward <session> 8000:8000`" + ` then open ` + "`http://127.0.0.1:8000/canvas`" + `, no agent CLI needed.`
+For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " port-forward <session> 8000:8000`" + ` then open ` + "`http://127.0.0.1:8000`" + `, no agent CLI needed.`
 
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from it — by name or by ID — with ` + "`" + agentCLI + " create --from-config`" + `, ` + "`" + agentCLI + " launch --from-config`" + `, or ` + "`" + agentCLI + " config start-session`" + `.
 
