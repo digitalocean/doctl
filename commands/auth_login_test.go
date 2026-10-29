@@ -83,6 +83,34 @@ func TestRunAuthLoginWarnsThatTheCurrentContextIsReplaced(t *testing.T) {
 	assert.Equal(t, doctl.ArgDefaultContext, viper.GetString(doctl.ArgContext))
 }
 
+func TestRunAuthLoginPrintsTheAgentSetupPrompt(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	var out bytes.Buffer
+	config.Out = &out
+
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	assert.Contains(t, out.String(), "https://docs.digitalocean.com/get-started.md")
+}
+
+func TestRunAuthLoginFailureOmitsTheAgentSetupPrompt(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	var out bytes.Buffer
+	config.Out = &out
+
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return nil, &oauth.AuthorizationError{Code: "access_denied"}
+	})
+
+	require.Error(t, RunAuthLogin(config))
+
+	assert.NotContains(t, out.String(), "get-started.md")
+}
+
 func TestRunAuthLoginWithoutContextLeavesTheWorkingContextAlone(t *testing.T) {
 	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
 	viper.Set(doctl.ArgContext, "your-team")
