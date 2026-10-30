@@ -187,7 +187,11 @@ func TestCallbackPageEscapesServerSuppliedText(t *testing.T) {
 	assert.NotContains(t, page, "<script>", "error text must not be able to introduce markup")
 	assert.NotContains(t, page, "<img src=x")
 	assert.Contains(t, page, "&lt;script&gt;", "error text is rendered as escaped text instead")
-	assert.NotContains(t, page, `class="ocean"`, "the particle field is only shown after a successful login")
+	assert.Contains(t, page, `class="ocean"`)
+	assert.Contains(t, page, `class="sea"`)
+	assert.Contains(t, page, successBackgroundDataURL, "a failed authorization uses the same embedded photograph as a successful login")
+	assert.Contains(t, page, `alt="DigitalOcean"`)
+	assert.Contains(t, page, "Authorization failed")
 }
 
 func TestLoginTimesOut(t *testing.T) {

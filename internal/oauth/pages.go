@@ -19,9 +19,10 @@ import (
 	"html/template"
 )
 
-// successBackgroundPNG is the image shown behind the signed-in card.
-// It is inlined into that one response: the callback server shuts down as
-// soon as the page is written, so a follow-up request for the file would miss.
+// successBackgroundPNG is the image shown behind the callback card, for both
+// a successful sign-in and a failed authorization. It is inlined into that
+// response: the callback server shuts down as soon as the page is written,
+// so a follow-up request for the file would miss.
 //
 //go:embed assets/success_background.png
 var successBackgroundPNG []byte
@@ -34,7 +35,7 @@ var successBackgroundDataURL = "data:image/png;base64," + base64.StdEncoding.Enc
 var successBackgroundSrc = template.HTMLAttr(`src="` + successBackgroundDataURL + `"`)
 
 // digitalOceanLogoSVG is the white DigitalOcean wordmark from the control
-// panel header. It is only legible on the dark success background.
+// panel header. It is only legible on the dark callback background.
 //
 //go:embed assets/digitalocean_logo.svg
 var digitalOceanLogoSVG []byte
@@ -127,7 +128,8 @@ type pageContent struct {
 	Mark      string
 	Title     string
 	Message   string
-	// Ocean is set once authorization succeeds, when Background is shown.
+	// Ocean selects the photographed background shared by the signed-in and
+	// failed-authorization pages.
 	Ocean bool
 	// Background is the src attribute for assets/success_background.png.
 	Background template.HTMLAttr
@@ -147,9 +149,12 @@ var successContent = pageContent{
 
 func errorContent(reason string) pageContent {
 	return pageContent{
-		MarkClass: "fail",
-		Mark:      "\u2717",
-		Title:     "Authorization failed",
-		Message:   reason + " You can close this tab and try again in your terminal.",
+		MarkClass:  "fail",
+		Mark:       "\u2717",
+		Title:      "Authorization failed",
+		Message:    reason + " You can close this tab and try again in your terminal.",
+		Ocean:      true,
+		Background: successBackgroundSrc,
+		Logo:       digitalOceanLogoSrc,
 	}
 }
