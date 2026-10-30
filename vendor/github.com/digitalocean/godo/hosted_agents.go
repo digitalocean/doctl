@@ -380,6 +380,15 @@ const (
 type HostedAgentStreamState struct {
 	State  HostedAgentStreamStateValue `json:"state"`
 	Cursor string                      `json:"cursor,omitempty"`
+	// Truncated marks a catching_up window that is the session's HEAD rather
+	// than the caller's resume point: a cursor was supplied or stored, could
+	// not be reached inside the replay window, and the events between it and
+	// head-N are not being sent. It is also set when the cursor was reached but
+	// a hole remains behind it. Absent or false means nothing was skipped, so a
+	// client that ignores the field reads a window it cannot tell apart from a
+	// complete one; renderers should say so rather than present the replayed
+	// events as continuous. Only catching_up carries it.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // HostedAgentStreamStateValue enumerates the stream health states.

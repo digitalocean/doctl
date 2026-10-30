@@ -118,6 +118,67 @@ func (u *MicroVMURL) KV() []map[string]any {
 	return out
 }
 
+// MicroVMAccessToken displays MicroVM access tokens. Set Created for the
+// create response so the one-time token value is shown; set AccessTokens
+// for a list.
+type MicroVMAccessToken struct {
+	AccessTokens []godo.MicroVMAccessToken
+	Created      *godo.MicroVMAccessTokenCreated
+}
+
+var _ Displayable = &MicroVMAccessToken{}
+
+func (t *MicroVMAccessToken) JSON(out io.Writer) error {
+	if t.Created != nil {
+		return writeJSON(t.Created, out)
+	}
+	return writeJSON(t.AccessTokens, out)
+}
+
+func (t *MicroVMAccessToken) Cols() []string {
+	cols := []string{"ID", "Name", "Created", "ExpiresAt"}
+	if t.Created != nil {
+		cols = append(cols, "Token")
+	}
+	return cols
+}
+
+func (t *MicroVMAccessToken) ColMap() map[string]string {
+	return map[string]string{
+		"ID":        "ID",
+		"Name":      "Name",
+		"Created":   "Created At",
+		"ExpiresAt": "Expires At",
+		"Token":     "Token",
+	}
+}
+
+func (t *MicroVMAccessToken) KV() []map[string]any {
+	if t.Created != nil {
+		kv := microVMAccessTokenKV(t.Created.MicroVMAccessToken)
+		kv["Token"] = t.Created.Token
+		return []map[string]any{kv}
+	}
+	out := make([]map[string]any, 0, len(t.AccessTokens))
+	for _, tok := range t.AccessTokens {
+		out = append(out, microVMAccessTokenKV(tok))
+	}
+	return out
+}
+
+func microVMAccessTokenKV(tok godo.MicroVMAccessToken) map[string]any {
+	expires := tok.ExpiresAt
+	if expires == "" {
+		expires = "-"
+	}
+	return map[string]any{
+		"ID":        tok.ID,
+		"Name":      tok.Name,
+		"Created":   tok.Created,
+		"ExpiresAt": expires,
+	}
+}
+
 type MicroVMFile struct {
 	Info *godo.MicroVMFileInfo
 }
