@@ -494,6 +494,10 @@ func Agents() *Command {
 		},
 	}
 
+	// Persistent, so every subcommand accepts it either side of the subcommand
+	// name. See agents_region.go for what it selects.
+	addAgentRegionFlag(cmd)
+
 	// start/run are kept as aliases so scripts written against earlier betas
 	// (and the partner guide that still says start) keep working; create is
 	// the canonical verb.
@@ -1182,6 +1186,20 @@ func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationPr
 			return nil, err
 		}
 	}
+	sess, err := createAgentSessionIn(c, src, prog)
+	if err != nil {
+		return nil, err
+	}
+	// Both create paths converge here, so the region that answered is the
+	// region every follow-up in this invocation must address.
+	if err := useSessionLocationHost(c, sess); err != nil {
+		return nil, err
+	}
+	reportSessionRegion(c, sess)
+	return sess, nil
+}
+
+func createAgentSessionIn(c *CmdConfig, src *agentCreationSource, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if src.configID != "" {
 		return createSessionFromConfig(c, src.configID, src.name, src.resumeOnTopoff, prog)
 	}
@@ -1422,10 +1440,17 @@ func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff
 	if prog != nil {
 		prog.wait("Creating hosted session from config…")
 	}
+	region, err := agentRegionFlag()
+	if err != nil {
+		return nil, err
+	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:           name,
 		ConfigID:       configID,
 		ResumeOnTopoff: resumeOnTopoff,
+		// A placement check, not a routing instruction: the host already chose
+		// the region, and the server rejects a body region that disagrees.
+		Region: region,
 	})
 	if err != nil {
 		if sessionLimitErr(err) {
@@ -1877,6 +1902,10 @@ func RunAgentsList(c *CmdConfig) error {
 	}
 
 	stylingEnabled = detectStyling()
+	// A list is single-region: it shows the rows held by the region it was
+	// addressed to, and never merges regions. Saying which one is the
+	// difference between "no sessions" and "no sessions here".
+	fmt.Fprintln(c.Out, colorize("Region: "+resolvedAgentRegion(), colMuted))
 	printSessionsList(c.Out, sessions)
 	if nextPageToken != "" {
 		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), nextPageToken)
