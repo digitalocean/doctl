@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -75,8 +76,10 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 	cmdList.Example = agentCLI + ` connections list --provider github; ` + agentCLI + ` connections list --actor alice`
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsConnectionsCreate, "create",
-		"Create (or resume) a connection for an actor",
-		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.`,
+		"Create a connection for an actor",
+		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.
+
+Each actor has at most one connection per provider. If one already exists (pending, active, or expired), create is refused; use `+"`"+agentCLI+` connections reconnect <connection-id>`+"`"+` to resume or renew it instead.`,
 		Writer, append(ns, aliasOpt("c"))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnActor, "", "", "Actor id the connection acts for", requiredOpt())
@@ -84,6 +87,17 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 	AddBoolFlag(cmdCreate, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdCreate, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
 	cmdCreate.Example = agentCLI + ` connections create --actor alice; ` + agentCLI + ` connections create --actor alice --scopes repo,read:org`
+
+	cmdReconnect := CmdBuilder(cmd, RunAgentsConnectionsReconnect, "reconnect <connection-id>",
+		"Resume or renew an existing connection",
+		`Reconnect one connection by id: resume a pending authorization, or start a new one for an expired or revoked connection. The connection keeps its id, actor, and scopes, so agent configs that use it keep working once it is active again. An active connection is left as it is.
+
+Like `+"`create`"+`, this opens the authorization link in a browser and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Only the connection's owner can reconnect it.`,
+		Writer, ns...)
+	AddStringFlag(cmdReconnect, doctl.ArgAgentConnProvider, "", "github", "External provider")
+	AddBoolFlag(cmdReconnect, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
+	AddBoolFlag(cmdReconnect, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
+	cmdReconnect.Example = agentCLI + ` connections reconnect ` + "`<connection-id>`"
 
 	cmdGet := CmdBuilder(cmd, RunAgentsConnectionsGet, "get <connection-id>",
 		"Get one connection",
@@ -166,8 +180,8 @@ func RunAgentsConnectionsList(c *CmdConfig) error {
 	return nil
 }
 
-// RunAgentsConnectionsCreate creates (or resumes) a connection and drives the
-// browser authorization to completion.
+// RunAgentsConnectionsCreate creates a connection and drives the browser
+// authorization to completion.
 func RunAgentsConnectionsCreate(c *CmdConfig) error {
 	provider, err := connectionProviderFlag(c)
 	if err != nil {
@@ -199,6 +213,64 @@ func RunAgentsConnectionsCreate(c *CmdConfig) error {
 		ActorID: actor,
 		Scopes:  scopes,
 	})
+	if err != nil {
+		if _, status, ok := agentAPIError(err); ok && status == http.StatusConflict {
+			return connectionExistsErr(svc, provider, actor, err)
+		}
+		return connectionsNotEnabledHint(err)
+	}
+	return completeConnectionAuth(c, svc, provider, env, noBrowser, noWait)
+}
+
+// connectionExistsErr turns create's 409 — a non-revoked connection already
+// exists for this provider and actor — into a pointer at reconnect. It looks
+// the connection up so the hint can name its id; the list hides other members'
+// connections, so when that finds nothing the hint falls back to listing.
+func connectionExistsErr(svc do.HostedAgentsService, provider, actor string, err error) error {
+	tips := []string{agentCLI + " connections reconnect <connection-id>", agentCLI + " connections list --actor " + actor}
+	if list, lerr := svc.ListConnections(provider, &godo.HostedAgentConnectionListOptions{ActorID: actor}); lerr == nil {
+		for _, conn := range list.Connections {
+			if conn.ActorID == actor && conn.ID != "" {
+				tips = []string{fmt.Sprintf("%s connections reconnect %s", agentCLI, conn.ID)}
+				break
+			}
+		}
+	}
+	reason, _, _ := agentAPIError(err)
+	if reason = strings.TrimSpace(reason); reason == "" {
+		reason = fmt.Sprintf("a %s connection already exists for %s", provider, actor)
+	}
+	return &agentPrettyError{
+		title:  "Connection already exists",
+		reason: reason,
+		status: http.StatusConflict,
+		tips:   tips,
+		cause:  err,
+	}
+}
+
+// RunAgentsConnectionsReconnect resumes or renews an existing connection and
+// drives the browser authorization to completion.
+func RunAgentsConnectionsReconnect(c *CmdConfig) error {
+	provider, err := connectionProviderFlag(c)
+	if err != nil {
+		return err
+	}
+	id, err := connectionIDArg(c)
+	if err != nil {
+		return err
+	}
+	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
+	if err != nil {
+		return err
+	}
+	noWait, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoWait)
+	if err != nil {
+		return err
+	}
+
+	svc := c.HostedAgents()
+	env, err := svc.ReconnectConnection(provider, id)
 	if err != nil {
 		return connectionsNotEnabledHint(err)
 	}
@@ -246,8 +318,8 @@ func RunAgentsConnectionsRevoke(c *CmdConfig) error {
 	return nil
 }
 
-// completeConnectionAuth finishes a CreateConnection response: already-active,
-// browser connect card, and optional poll until active.
+// completeConnectionAuth finishes a CreateConnection or ReconnectConnection
+// response: already-active, browser connect card, and optional poll until active.
 func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider string, env *godo.HostedAgentConnectionEnvelope, noBrowser, noWait bool) error {
 	if env == nil {
 		return fmt.Errorf("empty connection response for %s", provider)
@@ -292,8 +364,8 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				return fmt.Errorf("authorization was not completed before it expired; run `%s connections get %s` to check it, or `%s connections create --actor %s` for a new link",
-					agentCLI, env.Connection.ID, agentCLI, env.Connection.ActorID)
+				return fmt.Errorf("authorization was not completed before it expired; run `%s connections get %s` to check it, or `%s connections reconnect %s` for a new link",
+					agentCLI, env.Connection.ID, agentCLI, env.Connection.ID)
 			}
 			return fmt.Errorf("stopped waiting; run `%s connections get %s` to check the connection later", agentCLI, env.Connection.ID)
 		case <-time.After(agentsAuthPollInterval):
@@ -308,8 +380,8 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 			printAgentSuccess(c.Out, fmt.Sprintf("%s connection active for %s", provider, got.Connection.ActorID))
 			return nil
 		case connectionStatusExpired, connectionStatusRevoked:
-			return fmt.Errorf("%s connection for %s is %s; authorization was not completed. Run `%s connections create --actor %s` to start a new one",
-				provider, got.Connection.ActorID, status, agentCLI, got.Connection.ActorID)
+			return fmt.Errorf("%s connection for %s is %s; authorization was not completed. Run `%s connections reconnect %s` to start a new one",
+				provider, got.Connection.ActorID, status, agentCLI, got.Connection.ID)
 		}
 	}
 }
