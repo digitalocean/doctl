@@ -704,6 +704,7 @@ Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` po
 	cmd.AddCommand(AgentConfigs())
 	cmd.AddCommand(AgentConnections())
 	cmd.AddCommand(AgentSizes())
+	cmd.AddCommand(AgentRegions())
 	cmd.AddCommand(AgentTemplates())
 	cmd.AddCommand(AgentFiles())
 
