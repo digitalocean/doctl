@@ -13,7 +13,34 @@ limitations under the License.
 
 package oauth
 
-import "html/template"
+import (
+	_ "embed"
+	"encoding/base64"
+	"html/template"
+)
+
+// successBackgroundPNG is the image shown behind the callback card, for both
+// a successful sign-in and a failed authorization. It is inlined into that
+// response: the callback server shuts down as soon as the page is written,
+// so a follow-up request for the file would miss.
+//
+//go:embed assets/success_background.png
+var successBackgroundPNG []byte
+
+// successBackgroundDataURL is the embedded image. It is emitted with
+// template.HTMLAttr so the base64 is not rewritten (+ would otherwise become
+// &#43; and the file would no longer match the image byte for byte).
+var successBackgroundDataURL = "data:image/png;base64," + base64.StdEncoding.EncodeToString(successBackgroundPNG)
+
+var successBackgroundSrc = template.HTMLAttr(`src="` + successBackgroundDataURL + `"`)
+
+// digitalOceanLogoSVG is the white DigitalOcean wordmark from the control
+// panel header. It is only legible on the dark callback background.
+//
+//go:embed assets/digitalocean_logo.svg
+var digitalOceanLogoSVG []byte
+
+var digitalOceanLogoSrc = template.HTMLAttr(`src="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(digitalOceanLogoSVG) + `"`)
 
 // pageTemplate renders the page the local callback server shows in the
 // browser. It is an html/template rather than a format string so every field
@@ -37,6 +64,8 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   }
   main {
+    position: relative;
+    z-index: 1;
     max-width: 30rem;
     padding: 3rem 2.5rem;
     background: #ffffff;
@@ -49,14 +78,42 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
   .mark { font-size: 2rem; line-height: 1; margin-bottom: 1rem; }
   .ok { color: #0069ff; }
   .fail { color: #d0021b; }
+  .sea {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .logo {
+    position: fixed;
+    top: 1.5rem;
+    left: 2rem;
+    z-index: 1;
+    height: 1.75rem;
+  }
+  body.ocean {
+    background: #031414;
+    color-scheme: light;
+  }
+  body.ocean main {
+    border: none;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+    color: #031b4e;
+  }
   @media (prefers-color-scheme: dark) {
-    body { background: #0b1020; color: #e7ecf5; }
-    main { background: #131a2e; border-color: #24304d; }
-    p { color: #9aa7bd; }
+    body:not(.ocean) { background: #0b1020; color: #e7ecf5; }
+    body:not(.ocean) main { background: #131a2e; border-color: #24304d; }
+    body:not(.ocean) p { color: #9aa7bd; }
   }
 </style>
 </head>
-<body>
+<body{{if .Ocean}} class="ocean"{{end}}>
+  {{if .Ocean}}<img class="sea" alt="" {{.Background}}>
+  <img class="logo" alt="DigitalOcean" {{.Logo}}>{{end}}
   <main>
     <div class="mark {{.MarkClass}}">{{.Mark}}</div>
     <h1>{{.Title}}</h1>
@@ -71,20 +128,33 @@ type pageContent struct {
 	Mark      string
 	Title     string
 	Message   string
+	// Ocean selects the photographed background shared by the signed-in and
+	// failed-authorization pages.
+	Ocean bool
+	// Background is the src attribute for assets/success_background.png.
+	Background template.HTMLAttr
+	// Logo is the src attribute for assets/digitalocean_logo.svg.
+	Logo template.HTMLAttr
 }
 
 var successContent = pageContent{
-	MarkClass: "ok",
-	Mark:      "\u2713",
-	Title:     "You're signed in",
-	Message:   "doctl is now authenticated with your DigitalOcean account. You can close this tab and return to your terminal.",
+	MarkClass:  "ok",
+	Mark:       "\u2713",
+	Title:      "You're signed in",
+	Message:    "doctl is now authenticated with your DigitalOcean account. You can close this tab and return to your terminal.",
+	Ocean:      true,
+	Background: successBackgroundSrc,
+	Logo:       digitalOceanLogoSrc,
 }
 
 func errorContent(reason string) pageContent {
 	return pageContent{
-		MarkClass: "fail",
-		Mark:      "\u2717",
-		Title:     "Authorization failed",
-		Message:   reason + " You can close this tab and try again in your terminal.",
+		MarkClass:  "fail",
+		Mark:       "\u2717",
+		Title:      "Authorization failed",
+		Message:    reason + " You can close this tab and try again in your terminal.",
+		Ocean:      true,
+		Background: successBackgroundSrc,
+		Logo:       digitalOceanLogoSrc,
 	}
 }
