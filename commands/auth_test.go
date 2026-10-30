@@ -35,6 +35,27 @@ func TestAuthCommand(t *testing.T) {
 	assertCommandNames(t, cmd, "init", "list", "login", "remove", "switch", "token")
 }
 
+func TestAuthInitHelpCoversAMDAndDigitalOceanTokens(t *testing.T) {
+	var initCmd, switchCmd *Command
+	for _, child := range Auth().ChildCommands() {
+		switch child.Name() {
+		case "init":
+			initCmd = child
+		case "switch":
+			switchCmd = child
+		}
+	}
+	require.NotNil(t, initCmd)
+	require.NotNil(t, switchCmd)
+
+	assert.Contains(t, initCmd.Long, "https://cloud.digitalocean.com/v1/oauth/token/info")
+	assert.Contains(t, initCmd.Long, "https://devcloud.amd.com/v1/oauth/token/info")
+	assert.Contains(t, initCmd.Long, "--token-validation-server https://devcloud.amd.com")
+	assert.Contains(t, initCmd.Long, "--api-url https://api.devcloud.amd.com")
+	assert.Contains(t, initCmd.Example, "doctl auth init --context amd --token-validation-server https://devcloud.amd.com")
+	assert.Contains(t, switchCmd.Long, "--api-url https://api.devcloud.amd.com")
+}
+
 func TestAuthInit(t *testing.T) {
 	viper.Set(doctl.ArgAccessToken, nil)
 
