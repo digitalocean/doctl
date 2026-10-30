@@ -151,6 +151,25 @@ func TestLoginReportsAuthorizationErrors(t *testing.T) {
 	}
 }
 
+func TestSuccessPageUsesEmbeddedBackground(t *testing.T) {
+	handler := &callbackHandler{state: "the-state", results: make(chan callbackResult, 1)}
+	request := httptest.NewRequest(http.MethodGet, callbackPath+"?"+url.Values{
+		"code":  {"auth-code"},
+		"state": {"the-state"},
+	}.Encode(), nil)
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	page := recorder.Body.String()
+	assert.Contains(t, page, `class="ocean"`)
+	assert.Contains(t, page, `class="sea"`)
+	assert.Contains(t, page, "signed in")
+	assert.Contains(t, page, successBackgroundDataURL, "the success page must include the embedded photograph unchanged")
+	assert.Contains(t, page, `alt="DigitalOcean"`)
+	assert.NotContains(t, page, "<script")
+}
+
 func TestCallbackPageEscapesServerSuppliedText(t *testing.T) {
 	const payload = `<script>alert('xss')</script>`
 
@@ -168,6 +187,7 @@ func TestCallbackPageEscapesServerSuppliedText(t *testing.T) {
 	assert.NotContains(t, page, "<script>", "error text must not be able to introduce markup")
 	assert.NotContains(t, page, "<img src=x")
 	assert.Contains(t, page, "&lt;script&gt;", "error text is rendered as escaped text instead")
+	assert.NotContains(t, page, `class="ocean"`, "the particle field is only shown after a successful login")
 }
 
 func TestLoginTimesOut(t *testing.T) {
