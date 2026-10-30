@@ -51,8 +51,9 @@ const (
 	// Team-scoped external-provider connection management (harness-api's proxy
 	// of Action Gateway / tool-registry). Shares the /v2/harness-runtime/auth/{provider}
 	// prefix with the connect flow above. The by-id path takes provider then id.
-	hostedAgentProviderConnectionsPath    = hostedAgentProviderAuthPath + "/connections"
-	hostedAgentProviderConnectionByIDPath = hostedAgentProviderConnectionsPath + "/%s"
+	hostedAgentProviderConnectionsPath         = hostedAgentProviderAuthPath + "/connections"
+	hostedAgentProviderConnectionByIDPath      = hostedAgentProviderConnectionsPath + "/%s"
+	hostedAgentProviderConnectionReconnectPath = hostedAgentProviderConnectionByIDPath + "/reconnect"
 
 	hostedAgentSessionCheckpointsPath        = hostedAgentSessionByIDPath + "/checkpoints"
 	hostedAgentSessionCheckpointByIDPath     = hostedAgentSessionCheckpointsPath + "/%s"
@@ -143,15 +144,23 @@ type HostedAgentsService interface {
 	// (e.g. "github"), scoped server-side to the caller's team. Paginated with
 	// page/per_page (tool-registry defaults to 20 per page and caps at 100).
 	ListConnections(context.Context, string, *HostedAgentConnectionListOptions) (*HostedAgentConnectionsListResponse, *Response, error)
-	// CreateConnection creates (or resumes) a connection binding an actor to the
-	// provider. A still-pending connection comes back with an Authorization the
-	// user must complete in a browser; an already-active one has none.
+	// CreateConnection creates a connection binding an actor to the provider.
+	// A new connection comes back pending, with an Authorization the user must
+	// complete in a browser. The API refuses (409 Conflict) when a non-revoked
+	// connection already exists for the provider and actor; use
+	// ReconnectConnection to resume or restart that one.
 	CreateConnection(context.Context, string, *HostedAgentConnectionCreateRequest) (*HostedAgentConnectionEnvelope, *Response, error)
 	// GetConnection reads one connection by id, used to poll a pending
 	// authorization to completion.
 	GetConnection(context.Context, string, string) (*HostedAgentConnectionEnvelope, *Response, error)
 	// DeleteConnection revokes one connection by id and returns its final state.
 	DeleteConnection(context.Context, string, string) (*HostedAgentConnectionEnvelope, *Response, error)
+	// ReconnectConnection resumes a pending connection's authorization, or
+	// restarts an expired or revoked one, keeping its actor, scopes, and the
+	// agent configs that depend on it. A connection that needs authorizing comes
+	// back with an Authorization, as from CreateConnection; an active one is
+	// returned unchanged. Only the connection's owner can reconnect it.
+	ReconnectConnection(context.Context, string, string) (*HostedAgentConnectionEnvelope, *Response, error)
 	ExecInSandbox(context.Context, string, *HostedAgentSandboxExecRequest) (*HostedAgentSandboxExecResponse, *Response, error)
 	// ListSandboxSizes returns the customer-selectable sandbox (microVM) size
 	// catalog (GET /v2/harness-runtime/sessions/sandbox/sizes). Every slug is accepted by
@@ -380,6 +389,15 @@ const (
 type HostedAgentStreamState struct {
 	State  HostedAgentStreamStateValue `json:"state"`
 	Cursor string                      `json:"cursor,omitempty"`
+	// Truncated marks a catching_up window that is the session's HEAD rather
+	// than the caller's resume point: a cursor was supplied or stored, could
+	// not be reached inside the replay window, and the events between it and
+	// head-N are not being sent. It is also set when the cursor was reached but
+	// a hole remains behind it. Absent or false means nothing was skipped, so a
+	// client that ignores the field reads a window it cannot tell apart from a
+	// complete one; renderers should say so rather than present the replayed
+	// events as continuous. Only catching_up carries it.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // HostedAgentStreamStateValue enumerates the stream health states.
@@ -1509,8 +1527,7 @@ func (s *HostedAgentsServiceOp) ListConnections(ctx context.Context, provider st
 	return root, resp, nil
 }
 
-// CreateConnection creates (or resumes) a connection binding an actor to the
-// provider.
+// CreateConnection creates a connection binding an actor to the provider.
 func (s *HostedAgentsServiceOp) CreateConnection(ctx context.Context, provider string, body *HostedAgentConnectionCreateRequest) (*HostedAgentConnectionEnvelope, *Response, error) {
 	if provider == "" {
 		return nil, nil, errors.New("hosted agents: provider is required")
@@ -1562,6 +1579,27 @@ func (s *HostedAgentsServiceOp) DeleteConnection(ctx context.Context, provider, 
 	}
 	path := fmt.Sprintf(hostedAgentProviderConnectionByIDPath, provider, id)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentConnectionEnvelope)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root, resp, nil
+}
+
+// ReconnectConnection resumes or restarts one connection by id.
+func (s *HostedAgentsServiceOp) ReconnectConnection(ctx context.Context, provider, id string) (*HostedAgentConnectionEnvelope, *Response, error) {
+	if provider == "" {
+		return nil, nil, errors.New("hosted agents: provider is required")
+	}
+	if id == "" {
+		return nil, nil, errors.New("hosted agents: connection id is required")
+	}
+	path := fmt.Sprintf(hostedAgentProviderConnectionReconnectPath, provider, id)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, struct{}{})
 	if err != nil {
 		return nil, nil, err
 	}
