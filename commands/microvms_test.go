@@ -73,8 +73,14 @@ func TestMicroVMCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.False(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
-		"checkpoint", "console", "create", "delete", "download", "exec", "get", "list", "options", "pause", "resume", "upload", "url",
+		"access-token", "checkpoint", "console", "create", "delete", "download", "exec", "get", "list", "options", "pause", "resume", "upload", "url",
 	)
+}
+
+func TestMicroVMAccessTokenCommand(t *testing.T) {
+	cmd := microVMAccessTokens()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "create", "list", "revoke")
 }
 
 func TestMicroVMURLCommand(t *testing.T) {
@@ -416,6 +422,76 @@ func TestMicroVMURLRemove_missingArg(t *testing.T) {
 		config.Args = append(config.Args, testMicroVMID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 		err := RunMicroVMURLRemove(config)
+		require.Error(t, err)
+	})
+}
+
+func TestMicroVMAccessTokenCreate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().CreateAccessToken(testMicroVMID, &godo.MicroVMAccessTokenCreateRequest{Name: "alice", ExpiresInSeconds: 3600}).Return(
+			&godo.MicroVMAccessTokenCreated{
+				MicroVMAccessToken: godo.MicroVMAccessToken{ID: "tok-1", MicroVMID: testMicroVMID, Name: "alice"},
+				Token:              "dop_v1_test",
+			}, nil,
+		)
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "name", "alice")
+		config.Doit.Set(config.NS, "expires-in-seconds", 3600)
+		err := RunMicroVMAccessTokenCreate(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMAccessTokenCreate_invalidFlags(t *testing.T) {
+	tests := []struct {
+		name      string
+		tokenName string
+		expiresIn int
+	}{
+		{name: "missing name", tokenName: ""},
+		{name: "name too long", tokenName: strings.Repeat("a", 65)},
+		{name: "negative expiry", tokenName: "alice", expiresIn: -1},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Args = append(config.Args, testMicroVMID)
+				config.Doit.Set(config.NS, "name", tc.tokenName)
+				config.Doit.Set(config.NS, "expires-in-seconds", tc.expiresIn)
+				err := RunMicroVMAccessTokenCreate(config)
+				require.Error(t, err)
+			})
+		})
+	}
+}
+
+func TestMicroVMAccessTokenList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().ListAccessTokens(testMicroVMID).Return([]godo.MicroVMAccessToken{
+			{ID: "tok-1", MicroVMID: testMicroVMID, Name: "alice"},
+			{ID: "tok-2", MicroVMID: testMicroVMID, Name: "bob", ExpiresAt: "2026-11-21T14:02:11Z"},
+		}, nil)
+		config.Args = append(config.Args, testMicroVMID)
+		err := RunMicroVMAccessTokenList(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMAccessTokenRevoke(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().RevokeAccessToken(testMicroVMID, "tok-1").Return(nil)
+		config.Args = append(config.Args, testMicroVMID, "tok-1")
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		err := RunMicroVMAccessTokenRevoke(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMAccessTokenRevoke_missingArg(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		err := RunMicroVMAccessTokenRevoke(config)
 		require.Error(t, err)
 	})
 }
