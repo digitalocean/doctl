@@ -38,7 +38,7 @@ var upgrader = websocket.Upgrader{
 // loopback-only proxy that adds the user's token: empty Origin (websocat,
 // codex --remote, curl) and loopback Origins are allowed; any other present
 // Origin is rejected so a page on an unrelated site cannot drive the
-// session through the proxy. Shared by start-proxy and `agents canvas`.
+// session through the proxy.
 func AllowedProxyOrigin(origin string) bool {
 	return allowedProxyOrigin(origin)
 }

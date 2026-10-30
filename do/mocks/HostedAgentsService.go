@@ -385,21 +385,6 @@ func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSession", reflect.TypeOf((*MockHostedAgentsService)(nil).GetSession), sessionID)
 }
 
-// GetSessionIngress mocks base method.
-func (m *MockHostedAgentsService) GetSessionIngress(sessionID string) (*do.HostedAgentSessionIngress, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSessionIngress", sessionID)
-	ret0, _ := ret[0].(*do.HostedAgentSessionIngress)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetSessionIngress indicates an expected call of GetSessionIngress.
-func (mr *MockHostedAgentsServiceMockRecorder) GetSessionIngress(sessionID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSessionIngress", reflect.TypeOf((*MockHostedAgentsService)(nil).GetSessionIngress), sessionID)
-}
-
 // GetTemplate mocks base method.
 func (m *MockHostedAgentsService) GetTemplate(templateID string) (*godo.HostedAgentTemplate, error) {
 	m.ctrl.T.Helper()

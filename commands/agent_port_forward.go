@@ -272,7 +272,7 @@ func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) error {
 
 // ensureSessionAwake is the shared half of the above: `verb` names what the
 // caller is about to do with the session, for the terminal-status error
-// ("cannot be port-forwarded", "cannot serve Agent Canvas").
+// ("cannot be port-forwarded").
 func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
 	svc := c.HostedAgents()
 	sess, err := svc.GetSession(sessionID)
