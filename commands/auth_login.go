@@ -50,6 +50,11 @@ const (
 	// oauthHTTPTimeout bounds each individual call to the authorization
 	// server. It does not bound the wait for the user's browser.
 	oauthHTTPTimeout = 30 * time.Second
+
+	// agentSetupPrompt is printed after login for users working with a coding
+	// agent. The playbook it names is published by the docs site, so keep the
+	// URL in sync with docs.digitalocean.com.
+	agentSetupPrompt = "Set up DigitalOcean for me. Fetch https://docs.digitalocean.com/get-started.md and follow it."
 )
 
 // oauthTokenState is the per-context OAuth session persisted in the config
@@ -191,6 +196,7 @@ func RunAuthLogin(c *CmdConfig) error {
 	if saveScope {
 		displayOAuthDefaultScopesSaved(c, scopes)
 	}
+	displayAgentSetupHint(c)
 
 	return nil
 }
@@ -355,6 +361,10 @@ func displayOAuthLoginSummary(c *CmdConfig, authContext string, token *oauth.Tok
 		template.Render(c.Out, `{{nl}}{{muted "This token renews automatically."}}{{nl}}`, nil)
 		template.Render(c.Out, `{{muted "Run"}} {{highlight "doctl auth login"}} {{muted "again to change its scopes, or if the session is revoked."}}{{nl}}`, nil)
 	}
+}
+
+func displayAgentSetupHint(c *CmdConfig) {
+	template.Render(c.Out, `{{nl}}{{muted "Using an AI coding agent? Tell it:"}}{{nl}}  {{highlight .}}{{nl}}`, agentSetupPrompt)
 }
 
 func displayOAuthDefaultScopesSaved(c *CmdConfig, scopes string) {
