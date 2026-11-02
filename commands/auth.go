@@ -118,9 +118,12 @@ If the `+"`"+`--context`+"`"+` flag is not specified, doctl creates a default au
 
 When the `+"`"+`--access-token`+"`"+` flag or the `+"`"+`DIGITALOCEAN_ACCESS_TOKEN`+"`"+` environment variable is set, doctl validates and saves that token instead of prompting you for one, replacing any token already saved. Both apply only to the `+"`"+`default`+"`"+` context; set a token for a named context by entering it at the prompt.
 
-You can use doctl without initializing it by adding the `+"`"+`--access-token`+"`"+` flag to each command and providing an API token as the argument.`, Writer, false)
-	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
-	cmdAuthInit.Example = `The following example saves a token under the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team`
+A DigitalOcean token and an AMD DevCloud token are checked at different hosts, and each token has to live in its own context. A DigitalOcean token is validated against https://cloud.digitalocean.com/v1/oauth/token/info. An AMD DevCloud token is validated against https://devcloud.amd.com/v1/oauth/token/info, so pass `+"`"+`--token-validation-server https://devcloud.amd.com`+"`"+` when you save one. Select a context later with `+"`"+`doctl auth switch --context <name>`+"`"+`. Switching contexts changes the token only. Commands against the AMD API also need `+"`"+`--api-url https://api.devcloud.amd.com`+"`"+`.
+
+You can use doctl without initializing it by adding the `+"`"+`--access-token`+"`"+` flag to each command and providing an API token as the argument. For one AMD command, that is `+"`"+`doctl --access-token <amd-token> --api-url https://api.devcloud.amd.com <command>`+"`"+`.`, Writer, false)
+	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "Server that validates the token. Use https://devcloud.amd.com for an AMD DevCloud token")
+	cmdAuthInit.Example = `The following example saves a token under the context ` + "`" + `your-team` + "`" + `: doctl auth init --context your-team
+The following example saves an AMD DevCloud token under the context ` + "`" + `amd` + "`" + `: doctl auth init --context amd --token-validation-server https://devcloud.amd.com`
 
 	cmdAuthLogin := cmdBuilderWithInit(cmd, RunAuthLogin, "login", "Sign in to DigitalOcean via OAuth 2.1 in your browser", `This command signs doctl in to your DigitalOcean account in the browser. You approve access there instead of creating and pasting an API token.
 
@@ -146,7 +149,9 @@ To sign in with an API token instead, see the help for `+"`"+`doctl auth init`+"
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
-To create a context, see the help for `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+To create a context, see the help for `+"`"+`doctl auth login`+"`"+` or `+"`"+`doctl auth init`+"`"+`.
+
+Switching contexts changes which token later commands use. It does not change the API host. Commands for an AMD DevCloud context also need `+"`"+`--api-url https://api.devcloud.amd.com`+"`"+`.`, Writer, false)
 	cmdAuthSwitch.AddValidArgsFunc(authContextListValidArgsFunc)
 	cmdAuthSwitch.Example = `The following example switches to the context ` + "`" + `your-team` + "`" + `: doctl auth switch --context your-team`
 
