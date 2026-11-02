@@ -353,6 +353,96 @@ func TestRunAgentsConnectionsCreate_Conflict(t *testing.T) {
 		})
 	})
 
+	// Reconnect keeps a connection's scopes, so when --scopes asks for more than
+	// the existing connection holds, pointing at reconnect alone would leave the
+	// user without the scopes they asked for and no explanation.
+	scopedConn := func(scopes ...string) *godo.HostedAgentConnectionsListResponse {
+		return &godo.HostedAgentConnectionsListResponse{
+			Connections: []godo.HostedAgentConnection{{
+				ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active",
+				OAuth: &godo.HostedAgentConnectionOAuth{Scopes: scopes},
+			}},
+		}
+	}
+
+	t.Run("requested scopes the connection already has", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().CreateConnection("github", gomock.Any()).Return(nil, conflict)
+			tm.hostedAgents.EXPECT().ListConnections("github", gomock.Any()).Return(scopedConn("repo", "read:org"), nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnScopes, []string{"repo"})
+			err := RunAgentsConnectionsCreate(config)
+
+			var ape *agentPrettyError
+			require.ErrorAs(t, err, &ape)
+			assert.Equal(t, agentCLI+" connections reconnect conn_1", ape.NextStep())
+		})
+	})
+
+	t.Run("requested scopes the connection lacks", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().CreateConnection("github", gomock.Any()).Return(nil, conflict)
+			tm.hostedAgents.EXPECT().ListConnections("github", gomock.Any()).Return(scopedConn("repo"), nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnScopes, []string{"repo", "admin:org"})
+			err := RunAgentsConnectionsCreate(config)
+
+			var ape *agentPrettyError
+			require.ErrorAs(t, err, &ape)
+			assert.Equal(t, "Connection already exists", ape.Title())
+			assert.Contains(t, ape.Reason(), "has scopes repo")
+			assert.Contains(t, ape.Reason(), "cannot add admin:org")
+			assert.Contains(t, ape.NextStep(), agentCLI+" connections revoke conn_1, then create it again with --scopes repo,admin:org")
+			assert.Contains(t, ape.NextStep(), "refused while an environment uses the connection")
+			assert.Contains(t, ape.NextStep(), "To keep the current scopes: "+agentCLI+" connections reconnect conn_1")
+		})
+	})
+
+	t.Run("requested scopes but the connection's scopes are unknown", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().CreateConnection("github", gomock.Any()).Return(nil, conflict)
+			tm.hostedAgents.EXPECT().ListConnections("github", gomock.Any()).Return(&godo.HostedAgentConnectionsListResponse{
+				Connections: []godo.HostedAgentConnection{{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "pending"}},
+			}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnScopes, []string{"admin:org"})
+			err := RunAgentsConnectionsCreate(config)
+
+			var ape *agentPrettyError
+			require.ErrorAs(t, err, &ape)
+			assert.Contains(t, ape.NextStep(), agentCLI+" connections reconnect conn_1")
+			assert.Contains(t, ape.NextStep(), "keeps the connection's current scopes")
+		})
+	})
+
+	// tool-registry also answers 409 when the actor's connection was made under a
+	// different credential. Reconnect keeps the credential, so it is not the fix.
+	t.Run("different credential is not sent to reconnect", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			credConflict := godoStatusErr(http.StatusConflict,
+				`provider credential conflicts with one already registered: alice already has a team_oauth_client connection to "github" (conn_1); delete it before connecting under a different credential`)
+			tm.hostedAgents.EXPECT().CreateConnection("github", gomock.Any()).Return(nil, credConflict)
+			tm.hostedAgents.EXPECT().ListConnections("github", gomock.Any()).Return(scopedConn("repo"), nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			err := RunAgentsConnectionsCreate(config)
+
+			var ape *agentPrettyError
+			require.ErrorAs(t, err, &ape)
+			assert.Equal(t, "Connection uses a different credential", ape.Title())
+			assert.Contains(t, ape.Reason(), "different credential")
+			assert.Contains(t, ape.NextStep(), agentCLI+" connections revoke conn_1, then create it again")
+			assert.NotContains(t, ape.NextStep(), "reconnect")
+		})
+	})
+
 	t.Run("other errors are not rewritten", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			badReq := godoStatusErr(http.StatusBadRequest, "invalid scope")

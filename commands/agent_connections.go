@@ -215,38 +215,112 @@ func RunAgentsConnectionsCreate(c *CmdConfig) error {
 	})
 	if err != nil {
 		if _, status, ok := agentAPIError(err); ok && status == http.StatusConflict {
-			return connectionExistsErr(svc, provider, actor, err)
+			return connectionExistsErr(svc, provider, actor, scopes, err)
 		}
 		return connectionsNotEnabledHint(err)
 	}
 	return completeConnectionAuth(c, svc, provider, env, noBrowser, noWait)
 }
 
-// connectionExistsErr turns create's 409 — a non-revoked connection already
-// exists for this provider and actor — into a pointer at reconnect. It looks
-// the connection up so the hint can name its id; the list hides other members'
-// connections, so when that finds nothing the hint falls back to listing.
-func connectionExistsErr(svc do.HostedAgentsService, provider, actor string, err error) error {
-	tips := []string{agentCLI + " connections reconnect <connection-id>", agentCLI + " connections list --actor " + actor}
-	if list, lerr := svc.ListConnections(provider, &godo.HostedAgentConnectionListOptions{ActorID: actor}); lerr == nil {
-		for _, conn := range list.Connections {
-			if conn.ActorID == actor && conn.ID != "" {
-				tips = []string{fmt.Sprintf("%s connections reconnect %s", agentCLI, conn.ID)}
-				break
-			}
-		}
-	}
+// connectionExistsErr turns create's 409 into a next step. The 409 has two
+// causes, and reconnect only fixes one of them:
+//
+//   - The actor already has a non-revoked connection for the provider. The fix
+//     is reconnect, unless --scopes asked for more than that connection holds:
+//     reconnect keeps a connection's scopes, so it cannot add any.
+//   - The actor's connection was made under a different credential. Reconnect
+//     keeps the credential too; the server's message names the remedy.
+//
+// The connection is looked up by actor so the next step can name its id and
+// compare scopes. The list hides other members' connections, so when that finds
+// nothing the next step falls back to listing.
+func connectionExistsErr(svc do.HostedAgentsService, provider, actor string, scopes []string, err error) error {
 	reason, _, _ := agentAPIError(err)
 	if reason = strings.TrimSpace(reason); reason == "" {
 		reason = fmt.Sprintf("a %s connection already exists for %s", provider, actor)
 	}
-	return &agentPrettyError{
+	pretty := &agentPrettyError{
 		title:  "Connection already exists",
 		reason: reason,
 		status: http.StatusConflict,
-		tips:   tips,
 		cause:  err,
 	}
+
+	var existing *godo.HostedAgentConnection
+	if list, lerr := svc.ListConnections(provider, &godo.HostedAgentConnectionListOptions{ActorID: actor}); lerr == nil {
+		for i := range list.Connections {
+			if conn := &list.Connections[i]; conn.ActorID == actor && conn.ID != "" {
+				existing = conn
+				break
+			}
+		}
+	}
+	id := "<connection-id>"
+	if existing != nil {
+		id = existing.ID
+	}
+	listTip := agentCLI + " connections list --actor " + actor
+
+	if connectionCredentialConflict(reason) {
+		pretty.title = "Connection uses a different credential"
+		pretty.tips = []string{fmt.Sprintf("%s connections revoke %s, then create it again (revoke is refused while an environment uses the connection)", agentCLI, id)}
+		if existing == nil {
+			pretty.tips = append(pretty.tips, listTip)
+		}
+		return pretty
+	}
+
+	reconnectTip := fmt.Sprintf("%s connections reconnect %s", agentCLI, id)
+	switch {
+	case len(scopes) == 0:
+		pretty.tips = []string{reconnectTip}
+	case existing != nil && existing.OAuth != nil && len(existing.OAuth.Scopes) > 0:
+		missing := missingScopes(scopes, existing.OAuth.Scopes)
+		if len(missing) == 0 {
+			pretty.tips = []string{reconnectTip}
+			break
+		}
+		pretty.reason = fmt.Sprintf("%s. The existing connection has scopes %s, and reconnect keeps them, so it cannot add %s",
+			strings.TrimSuffix(reason, "."), strings.Join(existing.OAuth.Scopes, ","), strings.Join(missing, ","))
+		pretty.tips = []string{
+			fmt.Sprintf("To change scopes: %s connections revoke %s, then create it again with --scopes %s (revoke is refused while an environment uses the connection)",
+				agentCLI, id, strings.Join(scopes, ",")),
+			"To keep the current scopes: " + reconnectTip,
+		}
+	default:
+		// --scopes was passed but the existing connection's scopes are unknown.
+		pretty.tips = []string{reconnectTip + " (keeps the connection's current scopes; to change them, revoke it and create it again)"}
+	}
+	if existing == nil {
+		pretty.tips = append(pretty.tips, listTip)
+	}
+	return pretty
+}
+
+// connectionCredentialConflict reports the 409 tool-registry returns when the
+// actor's connection was made under a different credential than this request
+// selects. Its message names the remedy ("delete it before connecting under a
+// different credential"), which reconnect cannot carry out.
+func connectionCredentialConflict(reason string) bool {
+	lower := strings.ToLower(reason)
+	return strings.Contains(lower, "different credential") ||
+		strings.Contains(lower, "credential conflicts")
+}
+
+// missingScopes returns the requested scopes the granted set lacks, compared as
+// exact strings, as tool-registry compares them.
+func missingScopes(requested, granted []string) []string {
+	have := make(map[string]struct{}, len(granted))
+	for _, s := range granted {
+		have[s] = struct{}{}
+	}
+	var missing []string
+	for _, s := range requested {
+		if _, ok := have[s]; !ok {
+			missing = append(missing, s)
+		}
+	}
+	return missing
 }
 
 // RunAgentsConnectionsReconnect resumes or renews an existing connection and
