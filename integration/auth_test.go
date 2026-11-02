@@ -5,7 +5,6 @@ package integration
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -98,7 +97,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			expect.NotZero(count)
 
 			expect.Contains(buf.String(), "Validating token...")
-			expect.Contains(buf.String(), "✔")
+			expect.Contains(buf.String(), "✓")
 
 			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
@@ -189,7 +188,7 @@ context: default
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token...")
-			expect.Contains(buf.String(), "✔")
+			expect.Contains(buf.String(), "✓")
 
 			location, err := getDefaultConfigLocation()
 			expect.NoError(err)
@@ -239,8 +238,17 @@ context: default
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token...")
-			expect.Contains(buf.String(), "✘")
-			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v1/oauth/token/info: 401", server.URL))
+			expect.Contains(buf.String(), "✗")
+			// The rejected token surfaces as a structured 401 rather than the
+			// raw request line: the wrapper preserves the godo error, so the
+			// status-code table supplies the reason and points at auth init
+			// instead of the generic --help fallback. The title is what doctl
+			// was attempting, since the wrapper said so; 401 is on its own
+			// line rather than standing in as the headline.
+			expect.Contains(buf.String(), "Error: Unable to use supplied token to access API")
+			expect.Contains(buf.String(), "your API token is missing, invalid, or expired")
+			expect.Contains(buf.String(), "status 401")
+			expect.Contains(buf.String(), "run doctl auth init")
 		})
 	})
 

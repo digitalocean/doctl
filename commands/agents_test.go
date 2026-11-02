@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -100,6 +100,7 @@ func TestAgentsLaunchAliases(t *testing.T) {
 func TestAgentsPrimaryNameIsOpenHarnessRuntime(t *testing.T) {
 	cmd := Agents()
 	assert.Equal(t, agentCmdName, cmd.Name())
+	assert.Contains(t, cmd.Aliases, "hr")
 	assert.Contains(t, cmd.Aliases, "agent")
 	assert.Contains(t, cmd.Aliases, "agents")
 	assert.Contains(t, cmd.Aliases, "ohr")
@@ -612,9 +613,6 @@ func TestRunAgentsCreate(t *testing.T) {
 
 func TestRunAgentsCreate_FromHarness(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
-	origValidate := validateAnthropicAPIKey
-	t.Cleanup(func() { validateAnthropicAPIKey = origValidate })
-	validateAnthropicAPIKey = func(ctx context.Context, apiKey string) error { return nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
@@ -622,7 +620,7 @@ func TestRunAgentsCreate_FromHarness(t *testing.T) {
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
-				assert.Equal(t, "claude-code", doc["agent"])
+				assert.Equal(t, "claude-code", doc["harness"])
 				_, hasEnv := doc["env"]
 				assert.False(t, hasEnv)
 				secrets, ok := doc["secrets"].(map[any]any)
@@ -1157,6 +1155,52 @@ func TestRunAgentsAuth(t *testing.T) {
 			assert.Error(t, RunAgentsAuth(config))
 		})
 	})
+
+	t.Run("deadline from expires_at stops waiting", func(t *testing.T) {
+		prevGrace := agentsAuthExpiryGrace
+		agentsAuthExpiryGrace = 20 * time.Millisecond
+		defer func() { agentsAuthExpiryGrace = prevGrace }()
+
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				StartProviderAuth("github").
+				Return(&godo.HostedAgentProviderAuthStart{
+					Provider:   "github",
+					Status:     "pending",
+					ConnectURL: "https://example.com/connect",
+					PollURL:    "https://example.com/poll",
+					ExpiresAt:  &godo.Timestamp{Time: time.Now().Add(-time.Hour)},
+				}, nil)
+			tm.hostedAgents.EXPECT().
+				PollProviderAuth("github", "https://example.com/poll").
+				Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "pending"}, nil).
+				AnyTimes()
+			config.Args = []string{"github"}
+			config.Doit.Set(config.NS, doctl.ArgAgentAuthNoBrowser, true)
+			err := RunAgentsAuth(config)
+			assert.ErrorContains(t, err, "not completed before it expired")
+			assert.ErrorContains(t, err, "re-run `doctl harness-runtime auth github`")
+		})
+	})
+}
+
+func TestAuthWaitDeadline(t *testing.T) {
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name      string
+		expiresAt *godo.Timestamp
+		want      time.Time
+	}{
+		{"nil falls back to max wait", nil, now.Add(agentsAuthMaxWait)},
+		{"zero falls back to max wait", &godo.Timestamp{}, now.Add(agentsAuthMaxWait)},
+		{"future expiry plus grace", &godo.Timestamp{Time: now.Add(10 * time.Minute)}, now.Add(10*time.Minute + agentsAuthExpiryGrace)},
+		{"past expiry clamps to now plus grace", &godo.Timestamp{Time: now.Add(-time.Hour)}, now.Add(agentsAuthExpiryGrace)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, authWaitDeadline(tt.expiresAt, now))
+		})
+	}
 }
 
 func TestResolveSessionRef(t *testing.T) {
@@ -1716,6 +1760,13 @@ func TestRenderEvent(t *testing.T) {
 		{"token chunk", godo.HostedAgentEventKindTokenChunk, "", `{"text":"Paris"}`, "Paris"},
 		{"run started", godo.HostedAgentEventKindRunStarted, "run-1", `{"agent":"codex"}`, "\n▶ run started\n"},
 		{"run started no agent", godo.HostedAgentEventKindRunStarted, "run-2", `{}`, "\n▶ run started\n"},
+		{"run started by email", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user","id":"u-1","email":"priya@example.com"}}`, "\n▶ run started by priya@example.com\n"},
+		{"run started display name wins", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user","id":"u-1","email":"priya@example.com","display_name":"Priya"}}`, "\n▶ run started by Priya\n"},
+		{"run started id only", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user","id":"u-1"}}`, "\n▶ run started by u-1\n"},
+		{"run started by trigger", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"trigger","id":"nightly-lint"}}`, "\n▶ run started by trigger nightly-lint\n"},
+		{"run started by system", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"system"}}`, "\n▶ run started by system\n"},
+		{"run started actor names nobody", godo.HostedAgentEventKindRunStarted, "run-3", `{"agent":"hi","actor":{"kind":"user"}}`, "\n▶ run started\n"},
+		{"run started malformed payload", godo.HostedAgentEventKindRunStarted, "run-3", `"codex"`, "\n▶ run started\n"},
 		{"tool call started", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"bash"}`, "\n▸ bash\n"},
 		{"tool call started file change", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"file_change","arguments":{"path":"index.html","operation":"add"}}`, "\n▸ file_change index.html (add)\n"},
 		{"tool call started file change no operation", godo.HostedAgentEventKindToolCallStarted, "", `{"tool_call_id":"t1","name":"file_change","arguments":{"path":"index.html"}}`, "\n▸ file_change index.html\n"},
@@ -4026,9 +4077,9 @@ func TestRunAgentsLaunch_AttachAuthFailure(t *testing.T) {
 		require.True(t, errors.As(err, &pretty))
 		assert.Equal(t, "Authentication failed", pretty.title)
 		assert.Contains(t, pretty.tips, "doctl auth init")
-		display := pretty.DisplayError()
-		assert.Contains(t, display, "Authentication failed")
-		assert.NotContains(t, display, "GET http://")
+		assert.Equal(t, "Authentication failed", pretty.Title())
+		assert.NotContains(t, pretty.Reason(), "GET http://")
+		assert.NotContains(t, pretty.Error(), "GET http://")
 	})
 }
 

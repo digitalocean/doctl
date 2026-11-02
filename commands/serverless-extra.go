@@ -72,7 +72,7 @@ project (a directory you have designated for functions development).  This can b
 		`Type `+"`"+`doctl serverless watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
 It will watch the directory (which should be one you initialized for serverless development) and will deploy
 the contents to the cloud incrementally as it detects changes.`,
-		Writer)
+		Writer, noDefaultSuccess())
 	AddStringFlag(watch, "env", "", "", "Path to runtime environment file")
 	AddStringFlag(watch, "build-env", "", "", "Path to build-time environment file")
 	AddStringFlag(watch, "apihost", "", "", "API host to use")

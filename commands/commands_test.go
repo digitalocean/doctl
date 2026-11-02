@@ -285,6 +285,7 @@ type tcMocks struct {
 	listen                *domocks.MockListenerService
 	terminal              *domocks.MockTerminal
 	monitoring            *domocks.MockMonitoringService
+	insights              *domocks.MockInsightsService
 	serverless            *domocks.MockServerlessService
 	appBuilderFactory     *builder.MockComponentBuilderFactory
 	appBuilder            *builder.MockComponentBuilder
@@ -303,6 +304,7 @@ type tcMocks struct {
 	hostedAgentTriggers   *domocks.MockHostedAgentTriggersService
 	secrets               *domocks.MockSecretsService
 	vectorDBs             *domocks.MockVectorDBsService
+	signals               *domocks.MockSignalsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -365,6 +367,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		listen:                domocks.NewMockListenerService(ctrl),
 		terminal:              domocks.NewMockTerminal(ctrl),
 		monitoring:            domocks.NewMockMonitoringService(ctrl),
+		insights:              domocks.NewMockInsightsService(ctrl),
 		serverless:            domocks.NewMockServerlessService(ctrl),
 		appBuilderFactory:     builder.NewMockComponentBuilderFactory(ctrl),
 		appBuilder:            builder.NewMockComponentBuilder(ctrl),
@@ -383,6 +386,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		hostedAgentTriggers:   domocks.NewMockHostedAgentTriggersService(ctrl),
 		secrets:               domocks.NewMockSecretsService(ctrl),
 		vectorDBs:             domocks.NewMockVectorDBsService(ctrl),
+		signals:               domocks.NewMockSignalsService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -442,6 +446,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OneClicks:           func() do.OneClickService { return tm.oneClick },
 		Apps:                func() do.AppsService { return tm.apps },
 		Monitoring:          func() do.MonitoringService { return tm.monitoring },
+		Insights:            func() do.InsightsService { return tm.insights },
 		Serverless:          func() do.ServerlessService { return tm.serverless },
 		OAuth:               func() do.OAuthService { return tm.oauth },
 		PartnerAttachments:  func() do.PartnerAttachmentsService { return tm.partnerAttachments },
@@ -457,6 +462,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		HostedAgentTriggers: func() do.HostedAgentTriggersService { return tm.hostedAgentTriggers },
 		Secrets:             func() do.SecretsService { return tm.secrets },
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
+		Signals:             func() do.SignalsService { return tm.signals },
 	}
 
 	tFn(config, tm)

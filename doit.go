@@ -139,20 +139,44 @@ func (v Version) Complete(lv LatestVersioner) string {
 
 	buffer.WriteString(fmt.Sprintf("\nAPI endpoint: %s", ResolvedAPIURL()))
 
-	if tagName, err := lv.LatestVersion(); err == nil {
-		v0, err1 := semver.Make(tagName)
-		v1, err2 := semver.Make(v.String())
-
-		if len(v0.Build) == 0 {
-			v0, err1 = semver.Make(tagName + "-release")
-		}
-
-		if err1 == nil && err2 == nil && v0.GT(v1) {
-			buffer.WriteString(fmt.Sprintf("\nrelease %s is available, check it out! ", tagName))
-		}
+	if tagName := v.NewerRelease(lv); tagName != "" {
+		buffer.WriteString(fmt.Sprintf("\nrelease %s is available, check it out! ", tagName))
 	}
 
 	return buffer.String()
+}
+
+// NewerRelease returns the latest published release when it is newer than v,
+// and an empty string when v is current or the lookup fails.
+func (v Version) NewerRelease(lv LatestVersioner) string {
+	tagName, err := lv.LatestVersion()
+	if err != nil {
+		return ""
+	}
+
+	return v.NewerThan(tagName)
+}
+
+// NewerThan reports tagName when it supersedes v, and an empty string
+// otherwise. A published tag carries no prerelease segment, so it would sort
+// above the same version built for release, whose version string is labelled
+// "-release". Appending that suffix to the tag before comparing keeps a
+// current release build from being told it is out of date. A "-dev" or
+// "-beta" build of the same version still is, which is intended: it is not
+// the released binary.
+func (v Version) NewerThan(tagName string) string {
+	latest, err1 := semver.Make(tagName)
+	current, err2 := semver.Make(v.String())
+
+	if len(latest.Build) == 0 {
+		latest, err1 = semver.Make(tagName + "-release")
+	}
+
+	if err1 != nil || err2 != nil || !latest.GT(current) {
+		return ""
+	}
+
+	return tagName
 }
 
 // CompleteJSON is the complete version for doit, formatted as JSON.
@@ -172,15 +196,8 @@ func (v Version) CompleteJSON(lv LatestVersioner) string {
 	if tagName, err := lv.LatestVersion(); err == nil {
 		versionInfo.LatestRelease = tagName
 
-		v0, err1 := semver.Make(tagName)
-		v1, err2 := semver.Make(v.String())
-
-		if len(v0.Build) == 0 {
-			v0, err1 = semver.Make(tagName + "-release")
-		}
-
-		if err1 == nil && err2 == nil && v0.GT(v1) {
-			versionInfo.Notification = fmt.Sprintf("release %s is available, check it out!", tagName)
+		if newer := v.NewerThan(tagName); newer != "" {
+			versionInfo.Notification = fmt.Sprintf("release %s is available, check it out!", newer)
 		}
 	}
 
@@ -194,15 +211,24 @@ type LatestVersioner interface {
 }
 
 // GithubLatestVersioner retrieves the latest version from GitHub.
-type GithubLatestVersioner struct{}
+type GithubLatestVersioner struct {
+	// Client performs the release lookup. A nil Client uses
+	// http.DefaultClient, which has no timeout; callers that run the check
+	// incidentally rather than on request should supply a bounded one.
+	Client *http.Client
+}
 
 var _ LatestVersioner = &GithubLatestVersioner{}
 
 // LatestVersion retrieves the latest version from Github or returns
 // an error.
 func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
-	u := LatestReleaseURL
-	res, err := http.Get(u)
+	client := glv.Client
+	if client == nil {
+		client = http.DefaultClient
+	}
+
+	res, err := client.Get(LatestReleaseURL)
 	if err != nil {
 		return "", err
 	}
@@ -256,7 +282,7 @@ var _ Config = &LiveConfig{}
 // user asked for explicitly (DIGITALOCEAN_API_URL / --api-url).
 func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error) {
 	if accessToken == "" {
-		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")
+		return nil, NewMissingAccessTokenErr()
 	}
 
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
@@ -471,6 +497,16 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return out, nil
 }
 
+// GetStringArray returns a string array without splitting values on commas.
+func (c *LiveConfig) GetStringArray(ns, key string) ([]string, error) {
+	nskey := nskey(ns, key)
+	val := viper.GetStringSlice(nskey)
+	if isRequired(nskey) && emptyStringSlice(val) {
+		return nil, NewMissingArgsErr(nskey)
+	}
+	return val, nil
+}
+
 // GetStringSliceIsFlagSet returns a config value as a string slice and a bool representing the existence of the flag.
 func (c *LiveConfig) GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error) {
 	if !c.IsSet(key) {
@@ -628,6 +664,13 @@ func (c *TestConfig) GetFloat64(ns, key string) (float64, error) {
 // namespace. Because this is a mock implementation, and error will never be
 // returned.
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
+	nskey := nskey(ns, key)
+	return c.v.GetStringSlice(nskey), nil
+}
+
+// GetStringArray returns the string array value for the key without splitting
+// individual values on commas.
+func (c *TestConfig) GetStringArray(ns, key string) ([]string, error) {
 	nskey := nskey(ns, key)
 	return c.v.GetStringSlice(nskey), nil
 }

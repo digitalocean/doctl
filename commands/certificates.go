@@ -221,13 +221,13 @@ func RunCertificateDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("certificate", 1) == nil {
-		cs := c.Certificates()
-		if err := cs.Delete(cID); err != nil {
-			return err
-		}
-	} else {
-		return errOperationAborted
+	if err := confirmDelete(force, "certificate", 1); err != nil {
+		return err
+	}
+
+	cs := c.Certificates()
+	if err := cs.Delete(cID); err != nil {
+		return err
 	}
 
 	return nil

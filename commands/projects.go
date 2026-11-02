@@ -217,18 +217,18 @@ func RunProjectsDelete(c *CmdConfig) error {
 		return err
 	}
 
-	ps := c.Projects()
-	if force || AskForConfirmDelete("project", len(c.Args)) == nil {
-		for _, id := range c.Args {
-			if err := ps.Delete(id); err != nil {
-				return err
-			}
-		}
-
-		return nil
+	if err := confirmDelete(force, "project", len(c.Args)); err != nil {
+		return err
 	}
 
-	return fmt.Errorf("operation aborted")
+	ps := c.Projects()
+	for _, id := range c.Args {
+		if err := ps.Delete(id); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // RunProjectResourcesList lists the Projects.

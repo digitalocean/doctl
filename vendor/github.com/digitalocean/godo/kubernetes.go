@@ -103,6 +103,9 @@ type KubernetesClusterCreateRequest struct {
 	// must already have a NAT gateway attached, or the create request fails with a
 	// 422. This can only be set at creation time.
 	IsolatedWorkers bool `json:"isolated_workers,omitempty"`
+	// GPUOperatorReady controls whether to launch GPU nodes in the cluster with images without GPU drivers.
+	// Mutually exclusive with other GPU-related cluster options, such as NvidiaGpuDraDriver and AmdGpuDraDriver.
+	GPUOperatorReady bool `json:"gpu_operator_ready,omitempty"`
 }
 
 // KubernetesClusterUpdateRequest represents a request to update a Kubernetes cluster.
@@ -125,9 +128,11 @@ type KubernetesClusterUpdateRequest struct {
 	SSO                               *KubernetesClusterSSO                        `json:"sso,omitempty"`
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
 	NfsCsiPlugin                      *KubernetesNfsCsiPlugin                      `json:"nfs_csi_plugin,omitempty"`
-
 	// Convert cluster to run highly available control plane
 	HA *bool `json:"ha,omitempty"`
+	// GPUOperatorReady controls whether to launch GPU nodes in the cluster with images without GPU drivers.
+	// Mutually exclusive with other GPU-related cluster options, such as NvidiaGpuDraDriver and AmdGpuDraDriver.
+	GPUOperatorReady *bool `json:"gpu_operator_ready,omitempty"`
 }
 
 // KubernetesClusterDeleteSelectiveRequest represents a delete selective request to delete a cluster and it's associated resources.
@@ -283,6 +288,7 @@ type KubernetesCluster struct {
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
 	NfsCsiPlugin                      *KubernetesNfsCsiPlugin                      `json:"nfs_csi_plugin,omitempty"`
 	IsolatedWorkers                   bool                                         `json:"isolated_workers,omitempty"`
+	GPUOperatorReady                  bool                                         `json:"gpu_operator_ready"`
 
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
 	CreatedAt time.Time                `json:"created_at,omitempty"`

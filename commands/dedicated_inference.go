@@ -402,11 +402,11 @@ func RunDedicatedInferenceRevokeToken(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("dedicated inference token", 1) == nil {
-		return c.DedicatedInferences().RevokeToken(diID, tokenID)
+	if err := confirmDelete(force, "dedicated inference token", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	return c.DedicatedInferences().RevokeToken(diID, tokenID)
 }
 
 // RunDedicatedInferenceGetSizes returns available dedicated inference sizes and pricing.
@@ -438,10 +438,10 @@ func RunDedicatedInferenceDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("dedicated inference endpoint", 1) == nil {
-		id := c.Args[0]
-		return c.DedicatedInferences().Delete(id)
+	if err := confirmDelete(force, "dedicated inference endpoint", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	id := c.Args[0]
+	return c.DedicatedInferences().Delete(id)
 }

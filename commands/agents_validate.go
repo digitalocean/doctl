@@ -38,10 +38,12 @@ var knownAgentAdapters = map[string]struct{}{
 	"opencode":         {},
 	"codex":            {},
 	"codex-agentapi":   {},
-	"hermes":           {}, // runnable, but outside the default server-side agent-kind set
+	"hermes":           {}, // runnable (AGENT_KIND_HERMES): the hermes gateway in the coding-hermes template
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
+	"openhands":        {}, // runnable (AGENT_KIND_OPENHANDS): OpenHands Agent Server in the openhands template
 	"custom":           {},
-	"none":             {}, // bare sandbox (AGENT_KIND_NONE): no agent in the guest
+	"none":             {}, // bare sandbox: no agent in the guest
+	"sandbox":          {}, // equal spelling of none
 	"codex-cli":        {}, // deprecated alias
 	"openai-agents":    {}, // declared, not yet runnable
 	"claude-agent-sdk": {},
@@ -196,8 +198,21 @@ func manifestAdapter(doc map[string]any, legacy bool) string {
 		}
 		return ""
 	}
-	agent, _ := yamlString(doc["agent"])
-	return strings.TrimSpace(agent)
+	adapter, _, _ := flatManifestAdapter(doc)
+	return adapter
+}
+
+// flatManifestAdapter returns a flat manifest's adapter and the key it was
+// declared under: harness, or agent, its original name. both reports a
+// document that sets the two, which the API refuses; callers that only route
+// on the value read harness.
+func flatManifestAdapter(doc map[string]any) (adapter, key string, both bool) {
+	both = hasYAMLKey(doc, "harness") && hasYAMLKey(doc, "agent")
+	if h, _ := yamlString(doc["harness"]); strings.TrimSpace(h) != "" || !hasYAMLKey(doc, "agent") {
+		return strings.TrimSpace(h), "harness", both
+	}
+	a, _ := yamlString(doc["agent"])
+	return strings.TrimSpace(a), "agent", both
 }
 
 func bytesTrimSpace(b []byte) []byte {
@@ -210,12 +225,14 @@ func hasYAMLKey(doc map[string]any, key string) bool {
 }
 
 func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
-	agent, _ := yamlString(doc["agent"])
-	agent = strings.TrimSpace(agent)
-	if agent == "" {
-		out.Errors = append(out.Errors, `flat manifest requires top-level "agent" (e.g. agent: opencode)`)
-	} else {
-		validateAdapter(agent, "agent", out)
+	adapter, key, both := flatManifestAdapter(doc)
+	switch {
+	case both:
+		out.Errors = append(out.Errors, `set "harness" or "agent", not both; they are the same key ("agent" is its original name)`)
+	case adapter == "":
+		out.Errors = append(out.Errors, `flat manifest requires top-level "harness" (e.g. harness: opencode)`)
+	default:
+		validateAdapter(adapter, key, out)
 	}
 
 	if name, ok := yamlString(doc["name"]); ok && strings.TrimSpace(name) != "" {
@@ -271,7 +288,7 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, custom, none, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, openhands, custom, none, …)", path, adapter))
 		return
 	}
 	switch adapter {
@@ -366,7 +383,7 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 		}
 	}
 
-	validateAdapterModelEnv(adapter, env, envPath, out)
+	validateAdapterModelEnv(adapter, env, slots, envPath, out)
 }
 
 // validateManifestKeysWhitespace catches keys tainted by copy-paste invisible
@@ -791,7 +808,7 @@ func firstValue(m map[string]any, keys ...string) any {
 // validateAdapterModelEnv warns on known silent-failure env key footguns from
 // production incidents (wrong model/key names still create a session, then the
 // agent appears "not logged in" or never streams).
-func validateAdapterModelEnv(adapter string, env map[string]string, envPath string, out *agentManifestValidation) {
+func validateAdapterModelEnv(adapter string, env map[string]string, secretSlots map[string]struct{}, envPath string, out *agentManifestValidation) {
 	_, hasModel := env["MODEL"]
 	_, hasHarnessModel := env["HARNESS_INFERENCE_MODEL"]
 	_, hasHarnessBase := env["HARNESS_INFERENCE_BASE_URL"]
@@ -813,8 +830,12 @@ func validateAdapterModelEnv(adapter string, env map[string]string, envPath stri
 		if hasModel && !hasAnthropicModel {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; claude-code expects ANTHROPIC_MODEL (sessions may fail with \"Not logged in\")", envPath, envPath))
 		}
-		if hasHarnessModel && !hasAnthropicModel {
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.HARNESS_INFERENCE_MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; prefer ANTHROPIC_MODEL + ANTHROPIC_API_KEY (or declare the key under secrets)", envPath, envPath))
+		// claude-code honors HARNESS_INFERENCE_MODEL only when the harness
+		// inference group is selected, i.e. no native ANTHROPIC_API_KEY is set.
+		nativeKey := hasAnthropicKey || hasStringKey(secretSlots, "ANTHROPIC_API_KEY")
+		harnessKey := hasHarnessKey || hasStringKey(secretSlots, "HARNESS_INFERENCE_API_KEY")
+		if hasHarnessModel && !hasAnthropicModel && (nativeKey || !harnessKey) {
+			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.HARNESS_INFERENCE_MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; HARNESS_INFERENCE_MODEL is only used with HARNESS_INFERENCE_API_KEY (declared under secrets) and no ANTHROPIC_API_KEY; otherwise set ANTHROPIC_MODEL", envPath, envPath))
 		}
 		if hasAnthropicKey && !hasAnthropicModel && (hasModel || hasHarnessModel) {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.ANTHROPIC_API_KEY: set without %s.ANTHROPIC_MODEL; set ANTHROPIC_MODEL explicitly for claude-code", envPath, envPath))
@@ -1081,7 +1102,7 @@ func looksLikeFieldPath(s string) bool {
 		strings.HasPrefix(s, "permissions."), strings.HasPrefix(s, "skills["),
 		strings.HasPrefix(s, "egress"), strings.HasPrefix(s, "sandbox.egress"),
 		strings.HasPrefix(s, "spec.sandbox.egress"), strings.HasPrefix(s, "spec.egress"),
-		s == "agent", s == "name", s == "apiVersion", s == "kind", s == "spec.runtime",
+		s == "harness", s == "agent", s == "name", s == "apiVersion", s == "kind", s == "spec.runtime",
 		strings.HasPrefix(s, "spec.runtime"):
 		return true
 	default:

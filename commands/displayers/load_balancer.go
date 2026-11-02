@@ -144,6 +144,10 @@ func prettyPrintStruct(obj any) string {
 	for i := 0; i < numField; i++ {
 		k := strings.Split(val.Type().Field(i).Tag.Get("json"), ",")[0]
 		v := reflect.ValueOf(val.Field(i).Interface())
+
+		// Rendered as fmt sees it, unset fields included. formatCell decides
+		// how a nil is spelled, so that the choice is made once and only for
+		// the streams a person reads.
 		output = append(output, fmt.Sprintf("%v:%v", k, v))
 	}
 

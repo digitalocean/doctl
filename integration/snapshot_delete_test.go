@@ -122,7 +122,7 @@ var _ = suite("compute/snapshot/delete", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
+			expect.Equal(confirmNonInteractiveOutput, strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -140,7 +140,7 @@ var _ = suite("compute/snapshot/delete", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
+			expect.Equal(confirmNonInteractiveOutput, strings.TrimSpace(string(output)))
 		})
 	})
 })

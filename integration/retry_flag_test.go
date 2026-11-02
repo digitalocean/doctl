@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -102,7 +101,12 @@ var _ = suite("retries/server-error", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expectedErr := fmt.Sprintf("Error: GET %s/v2/account: 500 something broke; giving up after 3 attempt(s)", server.URL)
+			// The Reason line calls out the exhausted retries (gerr.Attempts),
+			// which is what distinguishes this from the "retries disabled"
+			// case below. No next step follows: the 500 entry drops its
+			// "run %s" once retries are exhausted, and --help cannot explain
+			// a server-side failure, so the status is the last word.
+			expectedErr := "Error: Internal Server Error\nsomething broke (gave up after 3 attempt(s))\nstatus 500"
 			expect.Equal(strings.TrimSpace(string(output)), expectedErr)
 		})
 	})
@@ -120,8 +124,7 @@ var _ = suite("retries/server-error", func(t *testing.T, when spec.G, it spec.S)
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
 
-			// Does not contain "giving up after"
-			expectedErr := fmt.Sprintf("Error: GET %s/v2/account: 500 something broke", server.URL)
+			expectedErr := "Error: Internal Server Error\nsomething broke\nstatus 500\n→ run doctl account get"
 			expect.Equal(strings.TrimSpace(string(output)), expectedErr)
 		})
 	})
