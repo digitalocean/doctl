@@ -37,10 +37,44 @@ func TestValidateAgentManifest_EnvelopeOK(t *testing.T) {
 	assert.True(t, v.ok(), "errors=%v", v.Errors)
 }
 
-func TestValidateAgentManifest_FlatRequiresAgent(t *testing.T) {
+func TestValidateAgentManifest_FlatRequiresHarness(t *testing.T) {
 	v := validateAgentManifest([]byte("env:\n  FOO: bar\n"))
 	require.False(t, v.ok())
-	assert.Contains(t, v.Errors[0], `"agent"`)
+	assert.Contains(t, v.Errors[0], `"harness"`)
+}
+
+func TestValidateAgentManifest_HarnessKey(t *testing.T) {
+	for _, key := range []string{"harness", "agent"} {
+		for _, adapter := range []string{"opencode", "none", "sandbox"} {
+			v := validateAgentManifest([]byte(key + ": " + adapter + "\n"))
+			assert.True(t, v.ok(), "%s: %s errors=%v", key, adapter, v.Errors)
+			assert.Empty(t, v.Warnings, "%s: %s", key, adapter)
+		}
+		v := validateAgentManifest([]byte(key + ": not-an-adapter\n"))
+		require.False(t, v.ok(), key)
+		assert.Contains(t, strings.Join(v.Errors, "\n"), key, "the error names the key the author wrote")
+	}
+
+	v := validateAgentManifest([]byte("harness: codex\nagent: codex\n"))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], `set "harness" or "agent", not both`)
+}
+
+func TestManifestAgentIsReadsHarnessKey(t *testing.T) {
+	for _, tc := range []struct {
+		manifest string
+		want     bool
+	}{
+		{"harness: none\n", true},
+		{"agent: none\n", true},
+		{"harness: codex\n", false},
+		{"spec:\n  runtime:\n    adapter: none\n", true},
+	} {
+		assert.Equal(t, tc.want, manifestAgentIs([]byte(tc.manifest), "none"), tc.manifest)
+	}
+	doc, err := parseAgentManifest([]byte("harness: openai-agents\n"))
+	require.NoError(t, err)
+	assert.Equal(t, "openai-agents", doc.adapter())
 }
 
 func TestValidateAgentManifest_EnvelopeRequiresRuntimeAdapter(t *testing.T) {
@@ -462,7 +496,7 @@ func TestRunAgentsValidate_Invalid(t *testing.T) {
 		out := buf.String()
 		assert.Contains(t, out, "Manifest is invalid")
 		assert.Contains(t, out, "Error")
-		assert.Contains(t, out, `"agent"`)
+		assert.Contains(t, out, `"harness"`)
 	})
 }
 

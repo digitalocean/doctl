@@ -227,6 +227,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Network())
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
+	DoitCmd.AddCommand(Insights())
 	DoitCmd.AddCommand(Serverless())
 	DoitCmd.AddCommand(Spaces())
 	DoitCmd.AddCommand(GradientAI())
@@ -366,6 +367,18 @@ func AddBoolFlag(cmd *Command, name, shorthand string, def bool, desc string, op
 func AddStringSliceFlag(cmd *Command, name, shorthand string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().StringSliceP(name, shorthand, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
+}
+
+// AddStringArrayFlag adds a repeatable string flag that preserves commas
+// within each value.
+func AddStringArrayFlag(cmd *Command, name, shorthand string, def []string, desc string, opts ...flagOpt) {
+	fn := flagName(cmd, name)
+	cmd.Flags().StringArrayP(name, shorthand, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {

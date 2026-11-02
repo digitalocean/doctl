@@ -35,7 +35,7 @@ func (d *SignalsExport) JSON(out io.Writer) error {
 func (d *SignalsExport) Cols() []string {
 	return []string{
 		"ExportID",
-		"AgentID",
+		"EnvironmentID",
 		"Status",
 		"SignalType",
 		"CreatedAt",
@@ -45,12 +45,13 @@ func (d *SignalsExport) Cols() []string {
 
 func (d *SignalsExport) ColMap() map[string]string {
 	return map[string]string{
-		"ExportID":    "Export ID",
-		"AgentID":     "Agent ID",
-		"Status":      "Status",
-		"SignalType":  "Signal Type",
-		"CreatedAt":   "Created At",
-		"CompletedAt": "Completed At",
+		"ExportID":      "Export ID",
+		"EnvironmentID": "Environment ID",
+		"AgentID":       "Agent ID",
+		"Status":        "Status",
+		"SignalType":    "Signal Type",
+		"CreatedAt":     "Created At",
+		"CompletedAt":   "Completed At",
 	}
 }
 
@@ -61,13 +62,18 @@ func (d *SignalsExport) KV() []map[string]any {
 		if e.CompletedAt != nil {
 			completedAt = strconv.FormatInt(*e.CompletedAt, 10)
 		}
+		id := e.EnvironmentID
+		if id == "" {
+			id = e.AgentID
+		}
 		out[i] = map[string]any{
-			"ExportID":    e.ExportID,
-			"AgentID":     e.AgentID,
-			"Status":      e.Status,
-			"SignalType":  strings.Join(e.Filters.SignalType, ", "),
-			"CreatedAt":   e.CreatedAt,
-			"CompletedAt": completedAt,
+			"ExportID":      e.ExportID,
+			"EnvironmentID": id,
+			"AgentID":       id,
+			"Status":        e.Status,
+			"SignalType":    strings.Join(e.Filters.SignalType, ", "),
+			"CreatedAt":     e.CreatedAt,
+			"CompletedAt":   completedAt,
 		}
 	}
 	return out

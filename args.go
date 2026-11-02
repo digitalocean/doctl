@@ -721,6 +721,86 @@ const (
 	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
 	ArgAlertPolicySlackURLs = "slack-urls"
 
+	// Insights Args
+
+	// ArgInsightsName is the name of an Insights resource.
+	ArgInsightsName = "name"
+
+	// ArgInsightsType selects an Insights resource type.
+	ArgInsightsType = "type"
+
+	// ArgInsightsRequestFile is a complete JSON or YAML API request.
+	ArgInsightsRequestFile = "request-file"
+
+	// ArgInsightsEmails is a list of notification email addresses.
+	ArgInsightsEmails = "emails"
+
+	// ArgInsightsSlackChannel is a Slack channel name.
+	ArgInsightsSlackChannel = "slack-channel"
+
+	// ArgInsightsSlackWebhookURL is a Slack incoming webhook URL.
+	ArgInsightsSlackWebhookURL = "slack-webhook-url"
+
+	// ArgInsightsWebhookURL is an HTTPS webhook destination.
+	ArgInsightsWebhookURL = "webhook-url"
+
+	// ArgInsightsWebhookHeader is a webhook header in key=value form.
+	ArgInsightsWebhookHeader = "webhook-header"
+
+	// ArgInsightsWebhookBasicAuthUsername is a webhook basic-auth username.
+	ArgInsightsWebhookBasicAuthUsername = "webhook-basic-auth-username"
+
+	// ArgInsightsWebhookBasicAuthPassword is a webhook basic-auth password.
+	ArgInsightsWebhookBasicAuthPassword = "webhook-basic-auth-password"
+
+	// ArgInsightsWebhookBearerToken is a webhook bearer token.
+	ArgInsightsWebhookBearerToken = "webhook-bearer-token"
+
+	// ArgInsightsWebhookSigningSecret is a webhook HMAC signing secret.
+	ArgInsightsWebhookSigningSecret = "webhook-signing-secret"
+
+	// ArgInsightsMetric is the metric evaluated by an alert rule.
+	ArgInsightsMetric = "metric"
+
+	// ArgInsightsResourceURN filters or scopes Insights resources.
+	ArgInsightsResourceURN = "resource-urn"
+
+	// ArgInsightsTag is a resource tag used by an alert rule.
+	ArgInsightsTag = "tag"
+
+	// ArgInsightsFilter is an alert query filter in field,operator,value form.
+	ArgInsightsFilter = "filter"
+
+	// ArgInsightsWindow is an alert evaluation window.
+	ArgInsightsWindow = "window"
+
+	// ArgInsightsOperator is an alert threshold operator.
+	ArgInsightsOperator = "operator"
+
+	// ArgInsightsWarningThreshold is an alert warning threshold.
+	ArgInsightsWarningThreshold = "warning-threshold"
+
+	// ArgInsightsCriticalThreshold is an alert critical threshold.
+	ArgInsightsCriticalThreshold = "critical-threshold"
+
+	// ArgInsightsNotificationChannel is a notification channel ID.
+	ArgInsightsNotificationChannel = "notification-channel"
+
+	// ArgInsightsNotifyOn is an alert severity that triggers notification.
+	ArgInsightsNotifyOn = "notify-on"
+
+	// ArgInsightsReAlertDuration controls repeated alert notifications.
+	ArgInsightsReAlertDuration = "re-alert-duration"
+
+	// ArgInsightsStatus is an alert rule status.
+	ArgInsightsStatus = "status"
+
+	// ArgInsightsPage is the page number for an Insights list operation.
+	ArgInsightsPage = "page"
+
+	// ArgInsightsPerPage is the page size for an Insights list operation.
+	ArgInsightsPerPage = "per-page"
+
 	// Security Args
 
 	// ArgSecurityScanResources are the resources to scan.
@@ -977,6 +1057,10 @@ const (
 
 	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
 	ArgAgentForwardAddress = "address"
+	// ArgAgentCanvasPort is the local port the canvas proxy listens on (0 = any free port).
+	ArgAgentCanvasPort = "port"
+	// ArgAgentCanvasOpen opens the local Canvas URL in the default browser.
+	ArgAgentCanvasOpen = "open"
 
 	// ArgAgentFromCheckpoint is the checkpoint ID to fork or roll back from.
 	ArgAgentFromCheckpoint = "from-checkpoint"
@@ -1215,7 +1299,11 @@ const (
 	ArgSignalsType = "type"
 
 	// ArgSignalsAgentID is the agent ID for Signals consent and export commands.
+	// Deprecated: use ArgSignalsEnvironmentID.
 	ArgSignalsAgentID = "agent-id"
+
+	// ArgSignalsEnvironmentID is the environment ID for Signals commands.
+	ArgSignalsEnvironmentID = "environment-id"
 
 	// ArgSignalsEnabled sets consent enabled (true) or disabled (false).
 	ArgSignalsEnabled = "enabled"
@@ -1264,4 +1352,65 @@ const (
 
 	// ArgSignalsSessionID is the session ID for Signals session commands.
 	ArgSignalsSessionID = "session-id"
+
+	// ArgInsightsAlertRuleID filters alert instances by alert rule ID.
+	ArgInsightsAlertRuleID = "rule-id"
+
+	// ArgInsightsQuery is a PromQL expression.
+	ArgInsightsQuery = "query"
+	// ArgInsightsTime is the evaluation time of an instant PromQL query.
+	ArgInsightsTime = "time"
+	// ArgInsightsStart is the start of a PromQL time range.
+	ArgInsightsStart = "start"
+	// ArgInsightsEnd is the end of a PromQL time range.
+	ArgInsightsEnd = "end"
+	// ArgInsightsStep is the resolution step of a PromQL range query.
+	ArgInsightsStep = "step"
+	// ArgInsightsMatch is a repeatable PromQL series selector.
+	ArgInsightsMatch = "match"
+
+	// ArgInsightsLogsFrom is the start of a logs search time range.
+	ArgInsightsLogsFrom = "from"
+	// ArgInsightsLogsTo is the end of a logs search time range.
+	ArgInsightsLogsTo = "to"
+	// ArgInsightsLogsFilter is an inline JSON logs filter expression.
+	ArgInsightsLogsFilter = "filter"
+	// ArgInsightsLogsFilterFile is a path to a JSON logs filter expression.
+	ArgInsightsLogsFilterFile = "filter-file"
+	// ArgInsightsLogsText is a substring searched across log records.
+	ArgInsightsLogsText = "text"
+	// ArgInsightsLogsOrderBy is a repeatable logs sort clause.
+	ArgInsightsLogsOrderBy = "order-by"
+	// ArgInsightsLogsLimit is the maximum number of log records to return.
+	ArgInsightsLogsLimit = "limit"
+	// ArgInsightsLogsCursor is a pagination cursor from a previous logs search.
+	ArgInsightsLogsCursor = "cursor"
+
+	// ArgInsightsTracingFrom is the start of a spans or traces search time range.
+	ArgInsightsTracingFrom = "from"
+	// ArgInsightsTracingTo is the end of a spans or traces search time range.
+	ArgInsightsTracingTo = "to"
+	// ArgInsightsTracingFilter is an inline JSON spans or traces filter expression.
+	ArgInsightsTracingFilter = "filter"
+	// ArgInsightsTracingFilterFile is a path to a JSON or YAML filter expression.
+	ArgInsightsTracingFilterFile = "filter-file"
+	// ArgInsightsTracingOrderBy is a repeatable spans or traces sort clause.
+	ArgInsightsTracingOrderBy = "order-by"
+	// ArgInsightsTracingLimit is the maximum number of spans or traces to return.
+	ArgInsightsTracingLimit = "limit"
+
+	// ArgInsightsResourceProductType filters Insights resources by product type.
+	ArgInsightsResourceProductType = "product-type"
+	// ArgInsightsResourceRegion filters or initializes an Insights resource's region.
+	ArgInsightsResourceRegion = "region"
+	// ArgInsightsResourceSort selects the field used to sort Insights resources.
+	ArgInsightsResourceSort = "sort"
+	// ArgInsightsResourceSortDirection selects the Insights resource sort direction.
+	ArgInsightsResourceSortDirection = "sort-direction"
+	// ArgInsightsResourceMetrics changes metrics enablement for an Insights resource.
+	ArgInsightsResourceMetrics = "metrics"
+	// ArgInsightsResourceLogs changes logs enablement for an Insights resource.
+	ArgInsightsResourceLogs = "logs"
+	// ArgInsightsResourceTraces changes traces enablement for an Insights resource.
+	ArgInsightsResourceTraces = "traces"
 )

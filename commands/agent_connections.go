@@ -32,9 +32,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// connectionStatusActive is the terminal status harness-api reports once a
-// connection's authorization has completed.
-const connectionStatusActive = "active"
+// Connection statuses harness-api reports. active is reached once authorization
+// completes; expired (the flow lapsed unauthorized) and revoked can never
+// become active, so a wait ends on either.
+const (
+	connectionStatusActive  = "active"
+	connectionStatusExpired = "expired"
+	connectionStatusRevoked = "revoked"
+)
 
 // AgentConnections generates the `doctl harness-runtime connections` subtree,
 // which manages external-provider connections (the newer actor-scoped auth
@@ -59,19 +64,19 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 
 	cmdList := CmdBuilder(cmd, RunAgentsConnectionsList, "list",
 		"List external-provider connections",
-		`List the team's external-provider connections. Filter by `+"`--actor`"+` or `+"`--status`"+`.`,
+		`List the team's external-provider connections. Filter by `+"`--actor`"+` or `+"`--status`"+`. Revoked connections are never listed.`,
 		Writer, append(ns, aliasOpt("ls"),
 			displayerType(&displayers.HostedAgentConnection{}))...)
 	AddStringFlag(cmdList, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	AddStringFlag(cmdList, doctl.ArgAgentConnActor, "", "", "Filter to a single actor id")
-	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by connection status (active|pending|expired)")
+	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by connection status (active|pending|expired); revoked connections are never listed")
 	AddIntFlag(cmdList, doctl.ArgAgentConnPage, "", 0, "Page number (1-based)")
 	AddIntFlag(cmdList, doctl.ArgAgentConnPerPage, "", 0, "Connections per page (server defaults to 20, max 100)")
 	cmdList.Example = agentCLI + ` connections list --provider github; ` + agentCLI + ` connections list --actor alice`
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsConnectionsCreate, "create",
 		"Create (or resume) a connection for an actor",
-		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.`,
+		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.`,
 		Writer, append(ns, aliasOpt("c"))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnActor, "", "", "Actor id the connection acts for", requiredOpt())
@@ -279,11 +284,17 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx, cancelDeadline := context.WithDeadline(ctx, authWaitDeadline(auth.ExpiresAt, time.Now()))
+	defer cancelDeadline()
 
 	fmt.Fprintln(c.Out, "Waiting for authorization to complete... (Ctrl-C to stop)")
 	for {
 		select {
 		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("authorization was not completed before it expired; run `%s connections get %s` to check it, or `%s connections create --actor %s` for a new link",
+					agentCLI, env.Connection.ID, agentCLI, env.Connection.ActorID)
+			}
 			return fmt.Errorf("stopped waiting; run `%s connections get %s` to check the connection later", agentCLI, env.Connection.ID)
 		case <-time.After(agentsAuthPollInterval):
 		}
@@ -292,9 +303,13 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 		if err != nil {
 			return err
 		}
-		if strings.EqualFold(got.Connection.Status, connectionStatusActive) {
+		switch status := strings.ToLower(got.Connection.Status); status {
+		case connectionStatusActive:
 			printAgentSuccess(c.Out, fmt.Sprintf("%s connection active for %s", provider, got.Connection.ActorID))
 			return nil
+		case connectionStatusExpired, connectionStatusRevoked:
+			return fmt.Errorf("%s connection for %s is %s; authorization was not completed. Run `%s connections create --actor %s` to start a new one",
+				provider, got.Connection.ActorID, status, agentCLI, got.Connection.ActorID)
 		}
 	}
 }
@@ -335,12 +350,19 @@ func printConnectionsList(w io.Writer, conns []godo.HostedAgentConnection) {
 		if id := strings.TrimSpace(conn.ID); id != "" {
 			meta = append(meta, colorize(id, colMuted))
 		}
+		if conn.DeletionProtected {
+			meta = append(meta, colorize("protected", colWarning))
+		}
 		fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
 		if conn.OAuth != nil && len(conn.OAuth.Scopes) > 0 {
 			fmt.Fprintf(w, "  %s %s\n", colorize("scopes", colMuted), strings.Join(conn.OAuth.Scopes, ", "))
 		}
 	}
 }
+
+// connCardLabelWidth fits the detail card's longest label, "Protected"; the
+// shared 8-wide default would leave its value one column out of line.
+const connCardLabelWidth = 9
 
 // printConnectionCard renders a single connection detail card for get.
 func printConnectionCard(w io.Writer, env *godo.HostedAgentConnectionEnvelope, created bool) {
@@ -353,27 +375,39 @@ func printConnectionCard(w io.Writer, env *godo.HostedAgentConnectionEnvelope, c
 	if created {
 		fmt.Fprintf(&body, "%s\n\n", boldColor("Connection created", colSuccess))
 	}
-	body.WriteString(cardRow("Actor", conn.ActorID))
-	body.WriteString(cardRow("Provider", conn.Provider))
-	body.WriteString(cardRow("Status", conn.Status))
+	body.WriteString(cardRowWidth("Actor", conn.ActorID, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Provider", conn.Provider, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Status", conn.Status, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Protected", connectionProtectedLabel(conn.DeletionProtected), connCardLabelWidth))
 	if id := strings.TrimSpace(conn.ID); id != "" {
-		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+		body.WriteString(cardRowWidth("ID", colorize(id, colMuted), connCardLabelWidth))
 	}
 	if conn.OAuth != nil && len(conn.OAuth.Scopes) > 0 {
-		body.WriteString(cardRow("Scopes", strings.Join(conn.OAuth.Scopes, ", ")))
+		body.WriteString(cardRowWidth("Scopes", strings.Join(conn.OAuth.Scopes, ", "), connCardLabelWidth))
 	}
 	if conn.CreatedAt != nil && !conn.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(formatCreatedAt(conn.CreatedAt.Time), colMuted)))
+		body.WriteString(cardRowWidth("Created", colorize(formatCreatedAt(conn.CreatedAt.Time), colMuted), connCardLabelWidth))
 	}
 	if env.Authorization != nil && env.Authorization.ConnectURL != "" {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Pending authorization", colMuted))
-		body.WriteString(cardRow("URL", env.Authorization.ConnectURL))
+		body.WriteString(cardRowWidth("URL", env.Authorization.ConnectURL, connCardLabelWidth))
 		if env.Authorization.VerificationCode != "" {
-			body.WriteString(cardRow("Code", env.Authorization.VerificationCode))
+			body.WriteString(cardRowWidth("Code", env.Authorization.VerificationCode, connCardLabelWidth))
 		}
 	}
 	renderAgentCard(w, body.String())
+}
+
+// connectionProtectedLabel renders deletion_protected for the detail card. A
+// protected connection is one an agent environment still depends on, so an
+// ordinary revoke is refused; "no" is printed rather than omitted so the card
+// answers the question either way.
+func connectionProtectedLabel(protected bool) string {
+	if protected {
+		return colorize("yes", colWarning)
+	}
+	return colorize("no", colMuted)
 }
 
 // connectionStatusDot colors the list bullet by connection status.

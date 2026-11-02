@@ -211,7 +211,7 @@ var _ = suite("signals/deletion/create", func(t *testing.T, when spec.G, it spec
 		it("rejects inference with --agent-id without calling the server", func() {
 			_, stderr, err := runDoctl(append(base, "--type", "inference", "--agent-id", deletionAgentUUID, "--team-id", "42", "--force")...)
 			expect.Error(err)
-			expect.Contains(stderr, "--agent-id must not be set")
+			expect.Contains(stderr, "must not be set when --type is inference")
 			expect.Empty(server.recorded())
 		})
 

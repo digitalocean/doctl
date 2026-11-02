@@ -15,7 +15,6 @@ package displayers
 
 import (
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/digitalocean/doctl/do"
@@ -109,7 +108,7 @@ func (d *SignalsSessionDialogue) KV() []map[string]any {
 			msg = msg[:77] + "..."
 		}
 		out[i] = map[string]any{
-			"ID":          strconv.FormatInt(dl.ID, 10),
+			"ID":          dl.ID,
 			"Sequence":    dl.Sequence,
 			"RunStatus":   dl.RunStatus,
 			"UserMessage": msg,
