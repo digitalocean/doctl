@@ -1104,6 +1104,9 @@ const (
 	// ArgAgentTriggerTimezone is the IANA timezone for kind=cron.
 	ArgAgentTriggerTimezone = "timezone"
 
+	// ArgAgentStrict makes manifest validation treat warnings as errors.
+	ArgAgentStrict = "strict"
+
 	// ArgAgentFromConfig names an existing Agent Config, by ID or by name, to
 	// create a session from. Spelled to sit beside --from-checkpoint rather
 	// than next to --name, where --config-id read as "the config's name".

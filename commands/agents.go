@@ -513,6 +513,7 @@ func Agents() *Command {
 		agentsValidateHelpMD,
 		Writer, agentsNS()...)
 	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope), equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Set to "-" to read from stdin.`)
+	AddBoolFlag(cmdValidate, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
 	acceptFileAliasFor(cmdValidate)
 	cmdValidate.Example = agentCLI + ` validate; ` + agentCLI + ` validate agent.yaml`
 
@@ -742,7 +743,12 @@ func addAgentCreationFlags(cmd *Command) {
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 	AddStringFlag(cmd, doctl.ArgAgentWorkspace, "", "", agentWorkspaceFlagDesc)
+	AddBoolFlag(cmd, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
 }
+
+// agentStrictFlagDesc is the one description of --strict for every command that
+// validates a manifest.
+const agentStrictFlagDesc = "Treat manifest warnings (including unknown fields) as errors. Not valid with --from-config."
 
 // agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
 // one place, because it is spending consent: every command that offers it —
@@ -1129,6 +1135,9 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 
 	if configRef != "" {
+		if agentStrictFlag(c) {
+			return nil, fmt.Errorf("--%s cannot be used with --%s; an Agent Config's manifest was validated when the config was created", doctl.ArgAgentStrict, doctl.ArgAgentFromConfig)
+		}
 		if name == "" {
 			return nil, fmt.Errorf("--%s is required when creating from --%s", doctl.ArgAgentName, doctl.ArgAgentFromConfig)
 		}
@@ -1186,6 +1195,18 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			return nil, fmt.Errorf("this manifest declares a bare sandbox (`harness: %s`), so the session runs no agent and --%s needs one; drop --%s and drive the sandbox with `%s exec`, or name an agent in the manifest",
 				bareSandboxAgent, flag, flag, agentCLI)
 		}
+	}
+
+	// The one place unknown manifest fields are reported for dry-run, create and
+	// launch. It runs on the raw manifest (before ${VAR} expansion) and before
+	// any API call or side effect (GitHub connect, OpenAI environment setup),
+	// and it is the only run: the validator later in startSessionFromRawManifest
+	// skips this pass so nothing is reported twice. Only the unknown-field pass
+	// runs here, not the whole validator.
+	earlyWarnings, err := earlyUnknownKeyCheck(raw, agentStrictFlag(c))
+	printAgentManifestWarnings(os.Stderr, earlyWarnings)
+	if err != nil {
+		return nil, err
 	}
 	return src, nil
 }
@@ -1262,6 +1283,8 @@ func RunAgentsCreate(c *CmdConfig) error {
 	}
 
 	if dryRun {
+		// resolveAgentCreationSource already ran the unknown-field check, so a
+		// misspelled key never reaches the printed manifest.
 		return printResolvedManifest(c, src)
 	}
 

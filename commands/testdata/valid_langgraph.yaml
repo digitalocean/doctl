@@ -1,0 +1,9 @@
+# Keys that only exist with harness: langgraph. No unknown-field reports.
+name: langgraph-example
+harness: langgraph
+langgraph:
+  framework:
+    repo: https://github.com/example/graph
+    repo_sha: 0123456789abcdef0123456789abcdef01234567
+    subdir: agents/graph
+    object: app:graph

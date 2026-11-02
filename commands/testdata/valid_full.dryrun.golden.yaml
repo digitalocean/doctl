@@ -1,0 +1,116 @@
+budget:
+  max_cost_usd: 5
+  max_steps: 100
+  max_wall_clock: 1h
+  on_breach: pause
+config:
+  anything: goes
+  nested:
+    free: form
+description: Exercises every known manifest key
+egress:
+  allow_hosts:
+  - api.github.com
+  allow_ips:
+  - 203.0.113.10
+entrypoint:
+- /bin/agent
+- --serve
+env:
+  LOG_LEVEL: debug
+harness: custom
+idle_timeout: 10m
+image: registry.example.com/team/agent:1.0
+keep_warm: false
+labels:
+  team: platform
+max_lifetime: 8h
+memory:
+  backend: default
+  scope: session
+mode: served
+model:
+  default: claude-sonnet
+  profile: balanced
+  routing: cost
+mounts:
+- access_key: S3_ACCESS_KEY
+  bucket: my-bucket
+  endpoint: https://nyc3.digitaloceanspaces.com
+  path: /data
+  prefix: data/2026
+  read_only: true
+  secret_key: S3_SECRET_KEY
+  type: s3fuse
+name: full-example
+permissions:
+  default: ask
+  filesystem:
+    allow_write:
+    - /workspace
+    mode: workspace-write
+  network:
+    allow:
+    - api.github.com
+    default: deny
+  rules:
+  - action: allow
+    enforcement: strict
+    match:
+      anything_else: ok
+      command: git *
+    tool: bash
+persistent_workspace: true
+repos:
+- digitalocean/doctl
+secrets:
+  API_TOKEN:
+    scheme: bearer
+    source: tenantSecret
+    url: https://api.example.com
+    value: REDACTED
+  CALLBACK_TOKEN:
+    provider: github
+    source: oauth
+  GITHUB_TOKEN: REDACTED
+  S3_ACCESS_KEY:
+    env: false
+    source: tenantSecret
+    value: REDACTED
+  S3_SECRET_KEY:
+    env: false
+    source: tenantSecret
+    value: REDACTED
+serving:
+  max: 4
+  min: 1
+  scale_to_zero:
+    idle: 15m
+  target_concurrency: 8
+size: s-2vcpu-4gb
+skills:
+- allowed_tools:
+  - bash
+  description: Use when reviewing a pull request
+  instructions: Read the diff and comment.
+  license: MIT
+  metadata:
+    author: someone
+    free_key: value
+  name: review-pr
+template: custom-template
+tools:
+- do.actions
+- do.search:
+    preload_tools:
+    - query
+    tools:
+    - query
+    - fetch
+- auth:
+    header: Authorization
+    secret: GITHUB_TOKEN
+  name: inline-server
+  tools:
+  - lookup
+  url: https://mcp.example.com
