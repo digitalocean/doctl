@@ -142,7 +142,7 @@ To sign in with an API token instead, see the help for `+"`"+`doctl auth init`+"
 	AddDurationFlag(cmdAuthLogin, doctl.ArgOAuthTimeout, "", oauth.DefaultLoginTimeout, "How long the authorization link stays valid while doctl waits for you to approve the request in your browser")
 	cmdAuthLogin.Example = `The following example signs in to the context ` + "`" + `your-team` + "`" + `, requests full read and write access, and saves those scopes for later logins: doctl auth login --context your-team --scopes "read write" --save-scope`
 
-	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch <name>", "Switch between authentication contexts", `This command changes which authentication context later commands use. The context must already exist.
+	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch [name]", "Switch between authentication contexts", `This command changes which authentication context later commands use. The context must already exist.
 
 Name the context as the argument or with `+"`"+`--context <name>`+"`"+`. With neither, the current context is kept.
 
@@ -152,7 +152,7 @@ To create a context, see the help for `+"`"+`doctl auth login`+"`"+` or `+"`"+`d
 	cmdAuthSwitch.AddValidArgsFunc(authContextListValidArgsFunc)
 	cmdAuthSwitch.Example = `The following example switches to the context ` + "`" + `your-team` + "`" + `: doctl auth switch your-team`
 
-	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove <name>", "Remove authentication contexts", `This command removes an authentication context, deleting the credentials saved under that name. Removing a context does not change which context is selected.
+	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove [name]", "Remove authentication contexts", `This command removes an authentication context, deleting the credentials saved under that name. Removing a context does not change which context is selected.
 
 Name the context as the argument or with `+"`"+`--context <name>`+"`"+`.
 
