@@ -597,6 +597,50 @@ func (h *HostedAgentSandboxSize) KV() []map[string]any {
 	return out
 }
 
+// HostedAgentRegion renders the per-team region catalog for
+// `doctl harness-runtime regions list`.
+type HostedAgentRegion struct {
+	Regions []godo.HostedAgentRegion
+}
+
+var _ Displayable = &HostedAgentRegion{}
+
+func (h *HostedAgentRegion) JSON(out io.Writer) error {
+	return writeJSON(h.Regions, out)
+}
+
+func (h *HostedAgentRegion) Cols() []string {
+	return []string{"Slug", "Default"}
+}
+
+func (h *HostedAgentRegion) ColMap() map[string]string {
+	return map[string]string{
+		"Slug":    "Slug",
+		"Default": "Default",
+	}
+}
+
+func (h *HostedAgentRegion) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Regions))
+	for _, r := range h.Regions {
+		// Marked rather than printed as a bare bool: the column answers "which
+		// one do I get if I omit --region", and a column of true/false reads as
+		// a property of each region instead of a choice among them.
+		marker := ""
+		if r.IsDefault {
+			marker = "*"
+		}
+		out = append(out, map[string]any{
+			"Slug":    r.Slug,
+			"Default": marker,
+		})
+	}
+	return out
+}
+
 // HostedAgentTemplate wraps team custom sandbox templates for display.
 type HostedAgentTemplate struct {
 	Templates []godo.HostedAgentTemplate

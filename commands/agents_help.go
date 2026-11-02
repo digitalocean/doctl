@@ -235,6 +235,12 @@ const agentsSizesRootHelpMD = `List sandbox (microVM) sizes you can set as ` + "
 
 const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalog (slug, vCPUs, memory). Ordered smallest to largest. Every returned slug is accepted by CreateSession as ` + "`spec.sandbox.sizeSlug`" + `.`
 
+const agentsRegionsRootHelpMD = `List the regions your team can create sessions and environments in, and which one you get by default.`
+
+const agentsRegionsListHelpMD = `Print the regions your team may place sessions and environments in. The default region is always listed and marked ` + "`*`" + `; it is the one a create uses when you omit ` + "`--region`" + `. Other regions appear only once your team has been granted them, so every slug listed here is accepted by ` + "`--region`" + ` and a slug missing from this list is refused.
+
+The catalog is the same whichever region you ask, so one call lists them all.`
+
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " create --spec`" + `). ` + "`--name`" + ` must be unique within your team.
 
 ` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. For ` + "`claude-code`" + `, that also satisfies ` + "`${ANTHROPIC_API_KEY}`" + ` in the manifest — the process environment is not required. ` + "`NAME=-`" + ` cannot be combined with ` + "`--spec -`" + `. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.`

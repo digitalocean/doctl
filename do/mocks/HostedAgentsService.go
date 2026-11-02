@@ -508,6 +508,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) ListConnections(provider, opt any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConnections", reflect.TypeOf((*MockHostedAgentsService)(nil).ListConnections), provider, opt)
 }
 
+// ListRegions mocks base method.
+func (m *MockHostedAgentsService) ListRegions() ([]godo.HostedAgentRegion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRegions")
+	ret0, _ := ret[0].([]godo.HostedAgentRegion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRegions indicates an expected call of ListRegions.
+func (mr *MockHostedAgentsServiceMockRecorder) ListRegions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRegions", reflect.TypeOf((*MockHostedAgentsService)(nil).ListRegions))
+}
+
 // ListSandboxSizes mocks base method.
 func (m *MockHostedAgentsService) ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error) {
 	m.ctrl.T.Helper()
