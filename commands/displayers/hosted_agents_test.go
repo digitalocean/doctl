@@ -248,3 +248,71 @@ func TestHostedAgentTemplateJSON_GetSingleItem(t *testing.T) {
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out), "Single=true must be a bare JSON object")
 	assert.Equal(t, "tpl-1", out["template_id"])
 }
+
+// --- HostedAgentConnection deletion protection (MARSOHS-2173) ----------------
+//
+// deletion_protected is the only field that tells a connection safe to revoke
+// apart from one an environment depends on. It has to reach every output path:
+// -o json via the godo struct, and --format via Cols/ColMap/KV.
+
+func TestHostedAgentConnectionCols_IncludesProtected(t *testing.T) {
+	d := &HostedAgentConnection{
+		Connections: []godo.HostedAgentConnection{
+			{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active", DeletionProtected: true},
+		},
+	}
+
+	assert.Contains(t, d.Cols(), "Protected")
+
+	// Every default column must be nameable with --format.
+	for _, col := range d.Cols() {
+		assert.Containsf(t, d.ColMap(), col, "ColMap is missing default column %q", col)
+	}
+
+	kv := d.KV()
+	require.Len(t, kv, 1)
+	assert.Equal(t, true, kv[0]["Protected"])
+}
+
+// An unprotected connection reports false rather than an empty cell: a blank
+// would read as "unknown", which is the state this field exists to remove.
+func TestHostedAgentConnectionKV_ReportsUnprotected(t *testing.T) {
+	d := &HostedAgentConnection{
+		Connections: []godo.HostedAgentConnection{
+			{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"},
+		},
+	}
+
+	kv := d.KV()
+	require.Len(t, kv, 1)
+	assert.Equal(t, false, kv[0]["Protected"])
+}
+
+// Guards the godo pin as much as the displayer: if HostedAgentConnection ever
+// loses the field (or gains omitempty), -o json silently drops it again.
+func TestHostedAgentConnectionJSON_CarriesDeletionProtected(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		protected bool
+	}{
+		{"protected", true},
+		{"unprotected", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			d := &HostedAgentConnection{
+				Connections: []godo.HostedAgentConnection{
+					{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active", DeletionProtected: tc.protected},
+				},
+				Single: true,
+			}
+			require.NoError(t, d.JSON(&buf))
+
+			var got map[string]any
+			require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+			value, ok := got["deletion_protected"]
+			require.True(t, ok, "deletion_protected missing from -o json output")
+			assert.Equal(t, tc.protected, value)
+		})
+	}
+}

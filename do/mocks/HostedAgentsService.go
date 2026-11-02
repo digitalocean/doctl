@@ -117,6 +117,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) CreateCheckpoint(sessionID, creat
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCheckpoint", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateCheckpoint), sessionID, create)
 }
 
+// CreateConnection mocks base method.
+func (m *MockHostedAgentsService) CreateConnection(provider string, body *godo.HostedAgentConnectionCreateRequest) (*godo.HostedAgentConnectionEnvelope, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateConnection", provider, body)
+	ret0, _ := ret[0].(*godo.HostedAgentConnectionEnvelope)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateConnection indicates an expected call of CreateConnection.
+func (mr *MockHostedAgentsServiceMockRecorder) CreateConnection(provider, body any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateConnection", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateConnection), provider, body)
+}
+
 // CreateSessionFromConfig mocks base method.
 func (m *MockHostedAgentsService) CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*do.HostedAgentSession, error) {
 	m.ctrl.T.Helper()
@@ -145,6 +160,21 @@ func (m *MockHostedAgentsService) CreateSessionFromManifest(manifest []byte, opt
 func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifest(manifest, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSessionFromManifest", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSessionFromManifest), manifest, opt)
+}
+
+// CreateSessionFromManifestWithManagedKey mocks base method.
+func (m *MockHostedAgentsService) CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSessionFromManifestWithManagedKey", manifest, opt)
+	ret0, _ := ret[0].(*do.HostedAgentSession)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateSessionFromManifestWithManagedKey indicates an expected call of CreateSessionFromManifestWithManagedKey.
+func (mr *MockHostedAgentsServiceMockRecorder) CreateSessionFromManifestWithManagedKey(manifest, opt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSessionFromManifestWithManagedKey", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateSessionFromManifestWithManagedKey), manifest, opt)
 }
 
 // CreateTemplate mocks base method.
@@ -219,6 +249,21 @@ func (m *MockHostedAgentsService) DeleteCheckpoint(sessionID, checkpointID strin
 func (mr *MockHostedAgentsServiceMockRecorder) DeleteCheckpoint(sessionID, checkpointID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCheckpoint", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteCheckpoint), sessionID, checkpointID)
+}
+
+// DeleteConnection mocks base method.
+func (m *MockHostedAgentsService) DeleteConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteConnection", provider, id)
+	ret0, _ := ret[0].(*godo.HostedAgentConnectionEnvelope)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteConnection indicates an expected call of DeleteConnection.
+func (mr *MockHostedAgentsServiceMockRecorder) DeleteConnection(provider, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteConnection", reflect.TypeOf((*MockHostedAgentsService)(nil).DeleteConnection), provider, id)
 }
 
 // DeleteTemplate mocks base method.
@@ -310,6 +355,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) GetCheckpoint(sessionID, checkpoi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckpoint", reflect.TypeOf((*MockHostedAgentsService)(nil).GetCheckpoint), sessionID, checkpointID)
 }
 
+// GetConnection mocks base method.
+func (m *MockHostedAgentsService) GetConnection(provider, id string) (*godo.HostedAgentConnectionEnvelope, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConnection", provider, id)
+	ret0, _ := ret[0].(*godo.HostedAgentConnectionEnvelope)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConnection indicates an expected call of GetConnection.
+func (mr *MockHostedAgentsServiceMockRecorder) GetConnection(provider, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnection", reflect.TypeOf((*MockHostedAgentsService)(nil).GetConnection), provider, id)
+}
+
 // GetSession mocks base method.
 func (m *MockHostedAgentsService) GetSession(sessionID string) (*do.HostedAgentSession, error) {
 	m.ctrl.T.Helper()
@@ -323,6 +383,21 @@ func (m *MockHostedAgentsService) GetSession(sessionID string) (*do.HostedAgentS
 func (mr *MockHostedAgentsServiceMockRecorder) GetSession(sessionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSession", reflect.TypeOf((*MockHostedAgentsService)(nil).GetSession), sessionID)
+}
+
+// GetSessionIngress mocks base method.
+func (m *MockHostedAgentsService) GetSessionIngress(sessionID string) (*do.HostedAgentSessionIngress, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSessionIngress", sessionID)
+	ret0, _ := ret[0].(*do.HostedAgentSessionIngress)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSessionIngress indicates an expected call of GetSessionIngress.
+func (mr *MockHostedAgentsServiceMockRecorder) GetSessionIngress(sessionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSessionIngress", reflect.TypeOf((*MockHostedAgentsService)(nil).GetSessionIngress), sessionID)
 }
 
 // GetTemplate mocks base method.
@@ -416,6 +491,21 @@ func (m *MockHostedAgentsService) ListCheckpoints(sessionID string, opt *godo.Ho
 func (mr *MockHostedAgentsServiceMockRecorder) ListCheckpoints(sessionID, opt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCheckpoints", reflect.TypeOf((*MockHostedAgentsService)(nil).ListCheckpoints), sessionID, opt)
+}
+
+// ListConnections mocks base method.
+func (m *MockHostedAgentsService) ListConnections(provider string, opt *godo.HostedAgentConnectionListOptions) (*godo.HostedAgentConnectionsListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConnections", provider, opt)
+	ret0, _ := ret[0].(*godo.HostedAgentConnectionsListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListConnections indicates an expected call of ListConnections.
+func (mr *MockHostedAgentsServiceMockRecorder) ListConnections(provider, opt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConnections", reflect.TypeOf((*MockHostedAgentsService)(nil).ListConnections), provider, opt)
 }
 
 // ListSandboxSizes mocks base method.
@@ -581,6 +671,20 @@ func (m *MockHostedAgentsService) StartProviderAuth(provider string) (*godo.Host
 func (mr *MockHostedAgentsServiceMockRecorder) StartProviderAuth(provider any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartProviderAuth", reflect.TypeOf((*MockHostedAgentsService)(nil).StartProviderAuth), provider)
+}
+
+// StreamExecInSandbox mocks base method.
+func (m *MockHostedAgentsService) StreamExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest, emit func(do.SandboxExecEvent) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamExecInSandbox", ctx, sessionID, body, emit)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StreamExecInSandbox indicates an expected call of StreamExecInSandbox.
+func (mr *MockHostedAgentsServiceMockRecorder) StreamExecInSandbox(ctx, sessionID, body, emit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamExecInSandbox", reflect.TypeOf((*MockHostedAgentsService)(nil).StreamExecInSandbox), ctx, sessionID, body, emit)
 }
 
 // StreamSession mocks base method.

@@ -72,18 +72,18 @@ func (mr *MockDropletsServiceMockRecorder) Backups(arg0 any) *gomock.Call {
 }
 
 // Create mocks base method.
-func (m *MockDropletsService) Create(arg0 *godo.DropletCreateRequest, arg1 bool) (*do.Droplet, error) {
+func (m *MockDropletsService) Create(arg0 *godo.DropletCreateRequest) (*do.Droplet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1)
+	ret := m.ctrl.Call(m, "Create", arg0)
 	ret0, _ := ret[0].(*do.Droplet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockDropletsServiceMockRecorder) Create(arg0, arg1 any) *gomock.Call {
+func (mr *MockDropletsServiceMockRecorder) Create(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDropletsService)(nil).Create), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDropletsService)(nil).Create), arg0)
 }
 
 // CreateMultiple mocks base method.

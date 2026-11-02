@@ -78,7 +78,7 @@ func RunAccountRateLimit(c *CmdConfig) error {
 		accessToken := c.getContextAccessToken()
 		godoClient, err := c.Doit.GetGodoClient(Trace, false, accessToken)
 		if err != nil {
-			return fmt.Errorf("Unable to initialize DigitalOcean API client: %s", err)
+			return fmt.Errorf("Unable to initialize DigitalOcean API client: %w", err)
 		}
 
 		c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }

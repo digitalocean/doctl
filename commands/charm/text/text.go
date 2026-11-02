@@ -3,6 +3,7 @@ package text
 import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/internal/ui"
 )
 
 var (
@@ -18,13 +19,13 @@ var (
 
 var (
 	// Checkmark is a checkmark icon.
-	Checkmark = NewStyled("✔")
+	Checkmark = NewStyled(ui.GlyphSuccess)
 	// Crossmark is a crossmark icon.
-	Crossmark = NewStyled("✘")
+	Crossmark = NewStyled(ui.GlyphFailure)
 	// Astreisk is a astreisk icon.
-	Astreisk = NewStyled("✱")
+	Astreisk = NewStyled(ui.GlyphAsterisk)
 	// PromptPrefix is a prompt-prefix icon.
-	PromptPrefix = NewStyled("❯")
+	PromptPrefix = NewStyled(ui.GlyphArrow)
 	// PointerUpCharacter is an up pointer icon.
 	PointerUp = NewStyled("▴")
 	// PointerRightCharacter is a right pointer icon.

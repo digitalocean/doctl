@@ -20,6 +20,8 @@ const (
 	ArgContext = "context"
 	// ArgDefaultContext is the default auth context
 	ArgDefaultContext = "default"
+	// ArgAuthContexts is the auth contexts
+	ArgAuthContexts = "auth-contexts"
 	// ArgActionID is an action id argument.
 	ArgActionID = "action-id"
 	// ArgActionAfter is an action after argument.
@@ -153,6 +155,8 @@ const (
 	ArgHA = "ha"
 	// ArgIsolatedWorkers is a cluster's isolated workers argument.
 	ArgIsolatedWorkers = "isolated-workers"
+	// ArgGPUOperatorReady is a cluster's GPU operator ready argument.
+	ArgGPUOperatorReady = "gpu-operator-ready"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
@@ -201,6 +205,8 @@ const (
 	ArgCommandUpdateSources = "update-sources"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
+	// ArgWaitTimeout bounds how long --wait polls before giving up.
+	ArgWaitTimeout = "wait-timeout"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
 	ArgSetCurrentContext = "set-current-context"
 	// ArgDropletID is a droplet id argument.
@@ -229,6 +235,8 @@ const (
 	ArgImageSlug = "image-slug"
 	// ArgInteractive is the argument to enable an interactive CLI.
 	ArgInteractive = "interactive"
+	// ArgShow reveals masked values, such as secrets, instead of hiding them.
+	ArgShow = "show"
 	// ArgIPAddress is an IP address argument.
 	ArgIPAddress = "ip-address"
 	// ArgDropletName is a droplet name argument.
@@ -713,6 +721,86 @@ const (
 	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
 	ArgAlertPolicySlackURLs = "slack-urls"
 
+	// Insights Args
+
+	// ArgInsightsName is the name of an Insights resource.
+	ArgInsightsName = "name"
+
+	// ArgInsightsType selects an Insights resource type.
+	ArgInsightsType = "type"
+
+	// ArgInsightsRequestFile is a complete JSON or YAML API request.
+	ArgInsightsRequestFile = "request-file"
+
+	// ArgInsightsEmails is a list of notification email addresses.
+	ArgInsightsEmails = "emails"
+
+	// ArgInsightsSlackChannel is a Slack channel name.
+	ArgInsightsSlackChannel = "slack-channel"
+
+	// ArgInsightsSlackWebhookURL is a Slack incoming webhook URL.
+	ArgInsightsSlackWebhookURL = "slack-webhook-url"
+
+	// ArgInsightsWebhookURL is an HTTPS webhook destination.
+	ArgInsightsWebhookURL = "webhook-url"
+
+	// ArgInsightsWebhookHeader is a webhook header in key=value form.
+	ArgInsightsWebhookHeader = "webhook-header"
+
+	// ArgInsightsWebhookBasicAuthUsername is a webhook basic-auth username.
+	ArgInsightsWebhookBasicAuthUsername = "webhook-basic-auth-username"
+
+	// ArgInsightsWebhookBasicAuthPassword is a webhook basic-auth password.
+	ArgInsightsWebhookBasicAuthPassword = "webhook-basic-auth-password"
+
+	// ArgInsightsWebhookBearerToken is a webhook bearer token.
+	ArgInsightsWebhookBearerToken = "webhook-bearer-token"
+
+	// ArgInsightsWebhookSigningSecret is a webhook HMAC signing secret.
+	ArgInsightsWebhookSigningSecret = "webhook-signing-secret"
+
+	// ArgInsightsMetric is the metric evaluated by an alert rule.
+	ArgInsightsMetric = "metric"
+
+	// ArgInsightsResourceURN filters or scopes Insights resources.
+	ArgInsightsResourceURN = "resource-urn"
+
+	// ArgInsightsTag is a resource tag used by an alert rule.
+	ArgInsightsTag = "tag"
+
+	// ArgInsightsFilter is an alert query filter in field,operator,value form.
+	ArgInsightsFilter = "filter"
+
+	// ArgInsightsWindow is an alert evaluation window.
+	ArgInsightsWindow = "window"
+
+	// ArgInsightsOperator is an alert threshold operator.
+	ArgInsightsOperator = "operator"
+
+	// ArgInsightsWarningThreshold is an alert warning threshold.
+	ArgInsightsWarningThreshold = "warning-threshold"
+
+	// ArgInsightsCriticalThreshold is an alert critical threshold.
+	ArgInsightsCriticalThreshold = "critical-threshold"
+
+	// ArgInsightsNotificationChannel is a notification channel ID.
+	ArgInsightsNotificationChannel = "notification-channel"
+
+	// ArgInsightsNotifyOn is an alert severity that triggers notification.
+	ArgInsightsNotifyOn = "notify-on"
+
+	// ArgInsightsReAlertDuration controls repeated alert notifications.
+	ArgInsightsReAlertDuration = "re-alert-duration"
+
+	// ArgInsightsStatus is an alert rule status.
+	ArgInsightsStatus = "status"
+
+	// ArgInsightsPage is the page number for an Insights list operation.
+	ArgInsightsPage = "page"
+
+	// ArgInsightsPerPage is the page size for an Insights list operation.
+	ArgInsightsPerPage = "per-page"
+
 	// Security Args
 
 	// ArgSecurityScanResources are the resources to scan.
@@ -732,12 +820,7 @@ const (
 	ArgSecretFromEnvFile = "from-env-file"
 	// ArgSecretVersion is the current version of a secret for update operations.
 	ArgSecretVersion = "version"
-	// ArgSecretShow reveals secret values instead of masking them on get.
-	ArgSecretShow = "show"
-	// ArgSecretShowKV reveals secret values instead of masking them on get,
-	// formatted as:
-	//
-	//	KEY=VALUE
+	// ArgSecretShowKV prints secret values as KEY=VALUE pairs on get.
 	ArgSecretShowKV = "kvs"
 	// ArgSecretRaw writes a single secret value to stdout with no formatting.
 	ArgSecretRaw = "raw"
@@ -746,6 +829,21 @@ const (
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
+
+	// ArgOAuthServer is the OAuth authorization server used to sign in.
+	ArgOAuthServer = "oauth-server"
+	// ArgOAuthClientID overrides the OAuth application doctl signs in as.
+	ArgOAuthClientID = "client-id"
+	// ArgOAuthScopes is the space-separated list of scopes requested when signing in.
+	ArgOAuthScopes = "scopes"
+	// ArgOAuthSaveScope persists --scopes as the default for later logins.
+	ArgOAuthSaveScope = "save-scope"
+	// ArgOAuthCallbackPort is the local port that receives the OAuth redirect.
+	ArgOAuthCallbackPort = "callback-port"
+	// ArgOAuthNoBrowser prints the authorization URL instead of opening a browser.
+	ArgOAuthNoBrowser = "no-browser"
+	// ArgOAuthTimeout bounds how long to wait for browser authorization, in seconds.
+	ArgOAuthTimeout = "timeout"
 
 	// ArgGPUs specifies to list GPU Droplets
 	ArgGPUs = "gpus"
@@ -939,11 +1037,30 @@ const (
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 
+	// ArgAgentConnProvider is the external provider for a connection (e.g. github).
+	ArgAgentConnProvider = "provider"
+
+	// ArgAgentConnActor is the actor a connection acts for (user_id on the wire).
+	ArgAgentConnActor = "actor"
+
+	// ArgAgentConnScopes optionally narrows the OAuth scopes a connection requests.
+	ArgAgentConnScopes = "scopes"
+
+	// ArgAgentConnPage is the 1-based page number for connection list.
+	ArgAgentConnPage = "page"
+
+	// ArgAgentConnPerPage is the connection list page size.
+	ArgAgentConnPerPage = "per-page"
+
 	// ArgAgentCheckpointLabel is an optional user label for an explicit checkpoint.
 	ArgAgentCheckpointLabel = "label"
 
 	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
 	ArgAgentForwardAddress = "address"
+	// ArgAgentCanvasPort is the local port the canvas proxy listens on (0 = any free port).
+	ArgAgentCanvasPort = "port"
+	// ArgAgentCanvasOpen opens the local Canvas URL in the default browser.
+	ArgAgentCanvasOpen = "open"
 
 	// ArgAgentFromCheckpoint is the checkpoint ID to fork or roll back from.
 	ArgAgentFromCheckpoint = "from-checkpoint"
@@ -1096,7 +1213,7 @@ const (
 	// ArgSimulationUserSimulatorModelUUID is the model that simulates the user.
 	ArgSimulationUserSimulatorModelUUID = "user-simulator-model-uuid"
 
-	// ArgSimulationJudgeModelUUID is the model that judges each journey.
+	// ArgSimulationJudgeModelUUID is the model that judges each episode.
 	ArgSimulationJudgeModelUUID = "judge-model-uuid"
 
 	// ArgSimulationUserSimulatorConfig is a JSON object of user simulator settings.
@@ -1105,7 +1222,7 @@ const (
 	// ArgSimulationExplorationBudget is the exploration budget for the run.
 	ArgSimulationExplorationBudget = "exploration-budget"
 
-	// ArgSimulationMaxTurns is the maximum number of turns per journey.
+	// ArgSimulationMaxTurns is the maximum number of turns per episode.
 	ArgSimulationMaxTurns = "max-turns"
 
 	// ArgSimulationMetricUUIDs are the evaluation metrics attached to the run.
@@ -1120,9 +1237,180 @@ const (
 	// ArgSimulationStarMetricSuccessThreshold is the success threshold of the star metric.
 	ArgSimulationStarMetricSuccessThreshold = "star-metric-success-threshold"
 
-	// ArgSimulationScenarioUUID filters simulation journeys by scenario UUID.
+	// ArgSimulationScenarioUUID filters simulation episodes by scenario UUID.
 	ArgSimulationScenarioUUID = "scenario-uuid"
 
-	// ArgSimulationJourneyVerdicts filters simulation journeys by verdict.
-	ArgSimulationJourneyVerdicts = "verdicts"
+	// ArgSimulationEpisodeVerdicts filters simulation episodes by verdict.
+	ArgSimulationEpisodeVerdicts = "verdicts"
+
+	// Model evaluation args
+
+	// ArgEvaluationCandidateModelUUID is the UUID of the candidate model under evaluation.
+	ArgEvaluationCandidateModelUUID = "candidate-model-uuid"
+
+	// ArgEvaluationCandidateModelName is the display name of the candidate model.
+	ArgEvaluationCandidateModelName = "candidate-model-name"
+
+	// ArgEvaluationCandidateModelSource is the source type of the candidate model.
+	ArgEvaluationCandidateModelSource = "candidate-model-source"
+
+	// ArgEvaluationCandidateInferenceConfig is a JSON object of candidate inference settings.
+	ArgEvaluationCandidateInferenceConfig = "candidate-inference-config"
+
+	// ArgEvaluationDatasetUUID is the UUID of the evaluation dataset.
+	ArgEvaluationDatasetUUID = "dataset-uuid"
+
+	// ArgEvaluationDatasetType filters or sets the evaluation dataset type.
+	ArgEvaluationDatasetType = "dataset-type"
+
+	// ArgEvaluationDatasetParadigm filters or sets the evaluation dataset paradigm.
+	ArgEvaluationDatasetParadigm = "dataset-paradigm"
+
+	// ArgEvaluationHasGroundTruth filters datasets by whether they include ground truth.
+	ArgEvaluationHasGroundTruth = "has-ground-truth"
+
+	// ArgEvaluationEvalPresetUUID is the UUID of a saved model evaluation preset.
+	ArgEvaluationEvalPresetUUID = "eval-preset-uuid"
+
+	// ArgEvaluationPresetName is the name used when saving a new evaluation preset.
+	ArgEvaluationPresetName = "preset-name"
+
+	// ArgEvaluationPresetSaveSections controls which sections are saved into a new preset.
+	ArgEvaluationPresetSaveSections = "preset-save-sections"
+
+	// ArgEvaluationEpochs is the number of times to evaluate each dataset row.
+	ArgEvaluationEpochs = "epochs"
+
+	// ArgEvaluationScoringPrompt is the LLM-as-judge scoring prompt for a custom metric.
+	ArgEvaluationScoringPrompt = "scoring-prompt"
+
+	// ArgEvaluationRequiresGroundTruth indicates whether a custom metric needs ground truth.
+	ArgEvaluationRequiresGroundTruth = "requires-ground-truth"
+
+	// ArgEvaluationDescription is a free-text description for a custom metric.
+	ArgEvaluationDescription = "description"
+
+	// ArgEvaluationCandidateTypes filters model evaluation runs by candidate model source.
+	ArgEvaluationCandidateTypes = "candidate-types"
+
+	// Signals consent args
+
+	// ArgSignalsType selects the Signals source for session list / export create: agent or inference.
+	ArgSignalsType = "type"
+
+	// ArgSignalsAgentID is the agent ID for Signals consent and export commands.
+	// Deprecated: use ArgSignalsEnvironmentID.
+	ArgSignalsAgentID = "agent-id"
+
+	// ArgSignalsEnvironmentID is the environment ID for Signals commands.
+	ArgSignalsEnvironmentID = "environment-id"
+
+	// ArgSignalsEnabled sets consent enabled (true) or disabled (false).
+	ArgSignalsEnabled = "enabled"
+
+	// ArgSignalsConsentSource selects the consent source: agent (per agent) or
+	// inference (team-level, serverless inference).
+	ArgSignalsConsentSource = "source"
+
+	// Signals export args
+
+	// ArgSignalsExportID is the export job ID.
+	ArgSignalsExportID = "export-id"
+
+	// ArgSignalsExportLimit is the maximum number of exports to return.
+	ArgSignalsExportLimit = "limit"
+
+	// ArgSignalsExportAfter is an opaque pagination cursor.
+	ArgSignalsExportAfter = "after"
+
+	// ArgSignalsExportSignalType is POST /exports signal_type (repeatable).
+	ArgSignalsExportSignalType = "signal-type"
+
+	// ArgSignalsExportSessionIDs is an optional session cohort filter.
+	ArgSignalsExportSessionIDs = "session-ids"
+
+	// ArgSignalsExportStartTime is the start time filter (Unix epoch seconds).
+	ArgSignalsExportStartTime = "start-time"
+
+	// ArgSignalsExportEndTime is the end time filter (Unix epoch seconds).
+	ArgSignalsExportEndTime = "end-time"
+
+	// ArgSignalsExportConcerning limits the export to concerning segments.
+	ArgSignalsExportConcerning = "concerning"
+
+	// ArgSignalsExportSignalCategory is an optional signal category filter.
+	ArgSignalsExportSignalCategory = "signal-category"
+
+	// ArgSignalsExportSignalLayer is an optional signal layer filter.
+	ArgSignalsExportSignalLayer = "signal-layer"
+
+	// ArgSignalsDeletionType is the deletion type: agent or inference.
+	ArgSignalsDeletionType = "type"
+
+	// ArgSignalsTeamID is the numeric team id for deletion requests (optional; auto-detected).
+	ArgSignalsTeamID = "team-id"
+
+	// ArgSignalsSessionID is the session ID for Signals session commands.
+	ArgSignalsSessionID = "session-id"
+
+	// ArgInsightsAlertRuleID filters alert instances by alert rule ID.
+	ArgInsightsAlertRuleID = "rule-id"
+
+	// ArgInsightsQuery is a PromQL expression.
+	ArgInsightsQuery = "query"
+	// ArgInsightsTime is the evaluation time of an instant PromQL query.
+	ArgInsightsTime = "time"
+	// ArgInsightsStart is the start of a PromQL time range.
+	ArgInsightsStart = "start"
+	// ArgInsightsEnd is the end of a PromQL time range.
+	ArgInsightsEnd = "end"
+	// ArgInsightsStep is the resolution step of a PromQL range query.
+	ArgInsightsStep = "step"
+	// ArgInsightsMatch is a repeatable PromQL series selector.
+	ArgInsightsMatch = "match"
+
+	// ArgInsightsLogsFrom is the start of a logs search time range.
+	ArgInsightsLogsFrom = "from"
+	// ArgInsightsLogsTo is the end of a logs search time range.
+	ArgInsightsLogsTo = "to"
+	// ArgInsightsLogsFilter is an inline JSON logs filter expression.
+	ArgInsightsLogsFilter = "filter"
+	// ArgInsightsLogsFilterFile is a path to a JSON logs filter expression.
+	ArgInsightsLogsFilterFile = "filter-file"
+	// ArgInsightsLogsText is a substring searched across log records.
+	ArgInsightsLogsText = "text"
+	// ArgInsightsLogsOrderBy is a repeatable logs sort clause.
+	ArgInsightsLogsOrderBy = "order-by"
+	// ArgInsightsLogsLimit is the maximum number of log records to return.
+	ArgInsightsLogsLimit = "limit"
+	// ArgInsightsLogsCursor is a pagination cursor from a previous logs search.
+	ArgInsightsLogsCursor = "cursor"
+
+	// ArgInsightsTracingFrom is the start of a spans or traces search time range.
+	ArgInsightsTracingFrom = "from"
+	// ArgInsightsTracingTo is the end of a spans or traces search time range.
+	ArgInsightsTracingTo = "to"
+	// ArgInsightsTracingFilter is an inline JSON spans or traces filter expression.
+	ArgInsightsTracingFilter = "filter"
+	// ArgInsightsTracingFilterFile is a path to a JSON or YAML filter expression.
+	ArgInsightsTracingFilterFile = "filter-file"
+	// ArgInsightsTracingOrderBy is a repeatable spans or traces sort clause.
+	ArgInsightsTracingOrderBy = "order-by"
+	// ArgInsightsTracingLimit is the maximum number of spans or traces to return.
+	ArgInsightsTracingLimit = "limit"
+
+	// ArgInsightsResourceProductType filters Insights resources by product type.
+	ArgInsightsResourceProductType = "product-type"
+	// ArgInsightsResourceRegion filters or initializes an Insights resource's region.
+	ArgInsightsResourceRegion = "region"
+	// ArgInsightsResourceSort selects the field used to sort Insights resources.
+	ArgInsightsResourceSort = "sort"
+	// ArgInsightsResourceSortDirection selects the Insights resource sort direction.
+	ArgInsightsResourceSortDirection = "sort-direction"
+	// ArgInsightsResourceMetrics changes metrics enablement for an Insights resource.
+	ArgInsightsResourceMetrics = "metrics"
+	// ArgInsightsResourceLogs changes logs enablement for an Insights resource.
+	ArgInsightsResourceLogs = "logs"
+	// ArgInsightsResourceTraces changes traces enablement for an Insights resource.
+	ArgInsightsResourceTraces = "traces"
 )

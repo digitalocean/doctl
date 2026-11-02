@@ -42,13 +42,15 @@ Reserved IP addresses can either be assigned to Droplets or held in the region t
 		aliasOpt("c"), displayerType(&displayers.ReservedIP{}))
 	AddStringFlag(cmdReservedIPCreate, doctl.ArgRegionSlug, "", "",
 		fmt.Sprintf("The region where to create the reserved IP address. Cannot be used with the `--%s` flag.",
-			doctl.ArgDropletID))
+			doctl.ArgDropletID),
+		flagHint("run doctl compute region list"))
 	AddStringFlag(cmdReservedIPCreate, doctl.ArgProjectID, "", "",
 		fmt.Sprintf("The ID of the project to assign the IP address. When excluded, the address is assigned to your default project. When using the `--%s` flag, it is assigned to the project containing the Droplet.",
 			doctl.ArgDropletID))
 	AddIntFlag(cmdReservedIPCreate, doctl.ArgDropletID, "", 0,
 		fmt.Sprintf("The ID of the Droplet to assign the reserved IP to. Cannot be used with the `--%s` flag.",
-			doctl.ArgRegionSlug))
+			doctl.ArgRegionSlug),
+		flagHint("run doctl compute droplet list"))
 	cmdReservedIPCreate.Example = `The following example creates a reserved IP address in the ` + "`" + `nyc1` + "`" + ` region and assigns it to a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute reserved-ip create --region nyc1 --droplet-id 386734086`
 
 	cmdReservedIPGet := CmdBuilder(cmd, RunReservedIPGet, "get <reserved-ip>", "Retrieve information about a reserved IP address", "Retrieves detailed information about a reserved IP address, including its region and the ID of the Droplet its assigned to.", Writer,
@@ -142,12 +144,12 @@ func RunReservedIPDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("reserved IP", 1) == nil {
-		ip := c.Args[0]
-		return ris.Delete(ip)
+	if err := confirmDelete(force, "reserved IP", 1); err != nil {
+		return err
 	}
 
-	return errOperationAborted
+	ip := c.Args[0]
+	return ris.Delete(ip)
 }
 
 // RunReservedIPList runs reserved IP create.

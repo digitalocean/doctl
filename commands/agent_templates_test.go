@@ -245,6 +245,7 @@ func TestValidateBaseTemplate(t *testing.T) {
 	for _, base := range []string{
 		"codex-base", "opencode-base", "claude-code-base", "hermes-base", "langgraph-base",
 		"coding-base", "coding-claude-code", "coding-codex", "coding-opencode", "coding-hermes", "crewai", "langgraph",
+		"hermes-byoa-base",
 	} {
 		assert.NoError(t, validateBaseTemplate(base), base)
 	}
@@ -259,6 +260,17 @@ func TestValidateBaseTemplate(t *testing.T) {
 		// coding-base is named under its public alias.
 		assert.Contains(t, err.Error(), templateAliasSandbox)
 		assert.Contains(t, err.Error(), "crewai")
+		assert.NotContains(t, err.Error(), "hermes-byoa-base")
+	}
+}
+
+func TestHiddenBaseTemplatesNotAdvertised(t *testing.T) {
+	for _, base := range hiddenBaseTemplates {
+		assert.NotContains(t, agentBaseTemplateFlagDesc, base)
+		assert.NotContains(t, agentsTemplatesRootHelpMD, base)
+		var buf bytes.Buffer
+		warnLegacyBaseTemplate(&buf, base)
+		assert.Empty(t, buf.String(), base)
 	}
 }
 

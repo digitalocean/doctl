@@ -92,7 +92,7 @@ func (session *ActionGatewaySession) ChatTools(ctx context.Context, opt *ActionG
 	}
 	result := make([]ChatCompletionTool, 0, len(tools))
 	for _, tool := range tools {
-		result = append(result, ChatCompletionTool{Type: "function", Function: ChatCompletionToolFunction{Name: tool.Name, Description: tool.Description, Parameters: actionGatewayToolSchema(tool.InputSchema)}})
+		result = append(result, ChatCompletionTool{Type: "function", Function: &ChatCompletionToolFunction{Name: tool.Name, Description: tool.Description, Parameters: actionGatewayToolSchema(tool.InputSchema)}})
 	}
 	return result, response, nil
 }
@@ -322,7 +322,7 @@ func (session *ActionGatewaySession) HandleChatToolCalls(ctx context.Context, co
 	messages := make([]ChatCompletionMessage, len(calls))
 	for index, call := range calls {
 		text := actionGatewayContent(results[index])
-		messages[index] = ChatCompletionMessage{Role: "tool", ToolCallID: call.ID, Content: &text}
+		messages[index] = ChatCompletionMessage{Role: "tool", ToolCallID: call.ID, Content: StringContent(text)}
 	}
 	return messages, response, nil
 }

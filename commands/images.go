@@ -252,20 +252,18 @@ func RunImagesDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("image", len(c.Args)) == nil {
+	if err := confirmDelete(force, "image", len(c.Args)); err != nil {
+		return err
+	}
 
-		for _, el := range c.Args {
-			id, err := strconv.Atoi(el)
-			if err != nil {
-				return err
-			}
-			if err := is.Delete(id); err != nil {
-				return err
-			}
+	for _, el := range c.Args {
+		id, err := strconv.Atoi(el)
+		if err != nil {
+			return err
 		}
-
-	} else {
-		return errOperationAborted
+		if err := is.Delete(id); err != nil {
+			return err
+		}
 	}
 
 	return nil

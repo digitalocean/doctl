@@ -121,7 +121,7 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(restoreFromTimestampError), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(restoreFromTimestampError)+"\n→ run doctl databases create --help", strings.TrimSpace(string(output)))
 		})
 	})
 })

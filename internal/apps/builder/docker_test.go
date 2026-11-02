@@ -13,9 +13,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/api/types"
+	"github.com/muesli/termenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -88,6 +90,12 @@ func TestDockerComponentBuild_validation(t *testing.T) {
 func TestDockerComponentBuild(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
+
+	// charm/text renders through the process-wide lipgloss profile, which
+	// doctl now points at the resolved ui.Env. Pin it so the log assertions
+	// below are about the message rather than the terminal running the test.
+	defer func(p termenv.Profile) { lipgloss.SetColorProfile(p) }(lipgloss.ColorProfile())
+	lipgloss.SetColorProfile(termenv.Ascii)
 
 	t.Run("no component", func(t *testing.T) {
 		builder := &DockerComponentBuilder{

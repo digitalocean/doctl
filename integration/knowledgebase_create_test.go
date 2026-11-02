@@ -106,7 +106,8 @@ var _ = suite("knowledge-base/create", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--name")
 		})
 
 		it("returns an error when region is missing", func() {
@@ -123,7 +124,8 @@ var _ = suite("knowledge-base/create", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--region")
 		})
 
 		it("returns an error when project-id is missing", func() {
@@ -140,7 +142,8 @@ var _ = suite("knowledge-base/create", func(t *testing.T, when spec.G, it spec.S
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Contains(string(output), "missing required")
+			expect.Contains(string(output), "required flag")
+			expect.Contains(string(output), "--project-id")
 		})
 	})
 })

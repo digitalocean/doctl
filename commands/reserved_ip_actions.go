@@ -103,7 +103,7 @@ func RunReservedIPActionsAssign(c *CmdConfig) error {
 
 	a, err := fia.Assign(ip, dropletID)
 	if err != nil {
-		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
+		checkErr(fmt.Errorf("could not assign IP to droplet: %w", err))
 	}
 
 	item := &displayers.Action{Actions: do.Actions{*a}}
@@ -123,7 +123,7 @@ func RunReservedIPActionsUnassign(c *CmdConfig) error {
 
 	a, err := fia.Unassign(ip)
 	if err != nil {
-		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
+		checkErr(fmt.Errorf("could not unassign IP to droplet: %w", err))
 	}
 
 	item := &displayers.Action{Actions: do.Actions{*a}}

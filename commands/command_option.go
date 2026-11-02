@@ -53,7 +53,18 @@ func overrideCmdNS(ns string) cmdOption {
 	}
 }
 
-// agentPrettyErrors enables styled error cards for agent subcommands.
+// noDefaultSuccess suppresses the closing line a command gets when it reports
+// nothing of its own. It is for commands whose output does not pass through
+// doctl: one that hands the terminal to another program, streams until
+// interrupted, or writes a file.
+func noDefaultSuccess() cmdOption {
+	return func(c *Command) {
+		c.noDefaultSuccess = true
+	}
+}
+
+// agentPrettyErrors opts a command into agentPrettyError enrichment before
+// the shared checkErr formatter runs.
 func agentPrettyErrors() cmdOption {
 	return func(c *Command) {
 		c.prettyAgentErrors = true
@@ -67,7 +78,7 @@ func agentsNS(opts ...cmdOption) []cmdOption {
 }
 
 // agentSubNS is for nested agent groups (config / triggers / checkpoint) that
-// need both pretty errors and a custom viper namespace.
+// need agent error enrichment and a custom viper namespace.
 func agentSubNS(ns string, opts ...cmdOption) []cmdOption {
 	return append([]cmdOption{agentPrettyErrors(), overrideCmdNS(ns)}, opts...)
 }
