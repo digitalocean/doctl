@@ -81,22 +81,27 @@ func TestBeautifyAgentError_APIResponse(t *testing.T) {
 // obvious thing, so it gets a card rather than the HTTP reason phrase. The
 // exact server copy is the fixture: matching on a substring of it is what makes
 // this fragile, and a test that never sees the real string would not notice.
+// Both manifest spellings are fixtures, since either may appear in the copy.
 func TestBeautifyAgentError_NoAgentConflictGetsItsOwnCard(t *testing.T) {
-	er := &godo.ErrorResponse{
-		Response: &http.Response{
-			StatusCode: http.StatusConflict,
-			Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions/x/input", nil),
-		},
-		Message: "this session runs no agent (agent: none); drive it with exec, workspace upload/download, or port-forward instead of sending input",
-	}
+	for _, spelling := range []string{"none", "sandbox"} {
+		t.Run(spelling, func(t *testing.T) {
+			er := &godo.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Request:    httptest.NewRequest(http.MethodPost, "https://api.digitalocean.com/v2/agents/sessions/x/input", nil),
+				},
+				Message: "this session runs no agent (agent: " + spelling + "); drive it with exec, workspace upload/download, or port-forward instead of sending input",
+			}
 
-	out := beautifyAgentError(er)
-	var pretty *agentPrettyError
-	require.True(t, errors.As(out, &pretty))
-	assert.Equal(t, "This session runs no agent", pretty.title)
-	assert.NotEqual(t, "Conflict", pretty.title, "the HTTP reason phrase is not a title")
-	assert.Contains(t, pretty.tips, agentCLI+" exec <session> -- <command>")
-	assert.Contains(t, pretty.tips, agentCLI+" port-forward <session> <port>")
+			out := beautifyAgentError(er)
+			var pretty *agentPrettyError
+			require.True(t, errors.As(out, &pretty))
+			assert.Equal(t, "This session runs no agent", pretty.title)
+			assert.NotEqual(t, "Conflict", pretty.title, "the HTTP reason phrase is not a title")
+			assert.Contains(t, pretty.tips, agentCLI+" exec <session> -- <command>")
+			assert.Contains(t, pretty.tips, agentCLI+" port-forward <session> <port>")
+		})
+	}
 }
 
 // The narrower 409s are matched before it, so adding the no-agent case must not
@@ -200,4 +205,37 @@ func TestBeautifyAgentError_AgentspecUnknownField(t *testing.T) {
 	assert.Contains(t, display, "HARNESS_INFERENCE_API_KEY")
 	assert.NotContains(t, display, "contracts/")
 	assert.NotContains(t, display, `\u00a0`)
+}
+
+// EX15 returns HTTP 504 with an applied-budget reason. That must not look like
+// a generic "Service temporarily unavailable" retry tip.
+func TestBeautifyAgentError_ExecTimeout504(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusGatewayTimeout, "exec timed out after 3s (requested)"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec timed out", pretty.title)
+	assert.Equal(t, "exec timed out after 3s (requested)", pretty.reason)
+	assert.Equal(t, http.StatusGatewayTimeout, pretty.status)
+	assert.Contains(t, pretty.tips, "Pass a larger --timeout")
+	assert.NotContains(t, pretty.tips, "Retry in a moment")
+}
+
+func TestBeautifyAgentError_ExecStreamCapacity429(t *testing.T) {
+	out := beautifyAgentError(harnessAPIErr(http.StatusTooManyRequests, "sandbox exec stream capacity exhausted, retry later"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec stream capacity exhausted", pretty.title)
+	assert.Contains(t, pretty.tips, "Wait a moment and retry")
+}
+
+func TestBeautifyAgentError_SSEExecTimeoutMessage(t *testing.T) {
+	out := beautifyAgentError(errors.New("exec timed out after 900s (default)"))
+
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Exec timed out", pretty.title)
+	assert.Contains(t, pretty.tips, "Pass a larger --timeout")
+	assert.NotContains(t, pretty.tips, "--wait-timeout")
 }

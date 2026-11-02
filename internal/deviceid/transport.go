@@ -8,11 +8,16 @@ import (
 // HeaderName is coordinated with the harness-api server. Rename in lockstep.
 const HeaderName = "X-Device-UUID"
 
-// agentsBase matches the harness-api middleware mount point. Every request
-// under /v2/agents receives the header
-const agentsBase = "/v2/agents"
+// The harness-api middleware is mounted at both prefixes: /v2/harness-runtime is
+// the public name and /v2/agents the original one, which the edge still serves.
+// Every request under either receives the header. The legacy prefix has to stay
+// until nothing sends it, or the header silently stops being stamped.
+const (
+	harnessRuntimeBase = "/v2/harness-runtime"
+	agentsBase         = "/v2/agents"
+)
 
-// Transport stamps HeaderName on requests under agentsBase.
+// Transport stamps HeaderName on requests under harnessRuntimeBase or agentsBase.
 type Transport struct {
 	Base http.RoundTripper
 	ID   string
@@ -43,12 +48,17 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.Base.RoundTrip(r)
 }
 
-// inAgentsScope matches the base path exactly or any sub-resource, but not
+// inAgentsScope matches either base path exactly or any sub-resource, but not
 // a prefix-only match like "/v2/agentsfoo".
 func inAgentsScope(req *http.Request) bool {
 	if req == nil || req.URL == nil {
 		return false
 	}
 	p := req.URL.Path
-	return p == agentsBase || strings.HasPrefix(p, agentsBase+"/")
+	for _, base := range []string{harnessRuntimeBase, agentsBase} {
+		if p == base || strings.HasPrefix(p, base+"/") {
+			return true
+		}
+	}
+	return false
 }

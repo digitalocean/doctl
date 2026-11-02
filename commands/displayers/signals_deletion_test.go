@@ -27,6 +27,7 @@ func TestSignalsDeletion_KV_NullFields(t *testing.T) {
 	assert.Equal(t, "", kv[0]["CompletedAt"])
 	assert.Equal(t, "", kv[0]["ErrorMessage"])
 	assert.Equal(t, "", kv[0]["AgentID"])
+	assert.Equal(t, "", kv[0]["EnvironmentID"])
 }
 
 func TestSignalsDeletion_KV_AllFields(t *testing.T) {
@@ -44,6 +45,7 @@ func TestSignalsDeletion_KV_AllFields(t *testing.T) {
 	assert.Equal(t, int64(42), kv[0]["TeamID"])
 	assert.Equal(t, "agent", kv[0]["Type"])
 	assert.Equal(t, "agent-1", kv[0]["AgentID"])
+	assert.Equal(t, "agent-1", kv[0]["EnvironmentID"])
 	assert.Equal(t, "failed", kv[0]["Status"])
 	assert.Equal(t, "worker timeout", kv[0]["ErrorMessage"])
 	assert.Equal(t, int64(100), kv[0]["CreatedAt"])
@@ -59,6 +61,21 @@ func TestSignalsDeletion_ColsAreInColMap(t *testing.T) {
 	}
 	assert.Contains(t, cm, "ErrorMessage")
 	assert.Contains(t, cm, "TeamID")
+	assert.Contains(t, cm, "AgentID")
+	assert.Contains(t, d.Cols(), "EnvironmentID")
+	assert.NotContains(t, d.Cols(), "AgentID")
+}
+
+func TestSignalsDeletion_EnvironmentIDAlias(t *testing.T) {
+	d := &SignalsDeletion{Deletions: do.SignalsDeletions{{
+		SignalsDeletionJob: &godo.SignalsDeletionJob{
+			DeletionID: "01J", Type: "agent", EnvironmentID: "env-1", Status: "queued",
+		},
+	}}}
+	kv := d.KV()
+	require.Len(t, kv, 1)
+	assert.Equal(t, "env-1", kv[0]["EnvironmentID"])
+	assert.Equal(t, kv[0]["EnvironmentID"], kv[0]["AgentID"])
 }
 
 func TestSignalsDeletion_JSON(t *testing.T) {
