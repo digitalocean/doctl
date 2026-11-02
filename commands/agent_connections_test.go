@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -344,7 +345,7 @@ func TestRunAgentsConnectionsRevoke(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			gomock.InOrder(
 				tm.hostedAgents.EXPECT().
-					ListConnections("github", &godo.HostedAgentConnectionListOptions{ActorID: "alice", PerPage: 100}).
+					ListConnections("github", &godo.HostedAgentConnectionListOptions{ActorID: "alice", Page: 1, PerPage: 100}).
 					Return(&godo.HostedAgentConnectionsListResponse{
 						Connections: []godo.HostedAgentConnection{
 							{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"},
@@ -411,6 +412,54 @@ func TestRunAgentsConnectionsRevoke(t *testing.T) {
 			err := RunAgentsConnectionsRevoke(config)
 			assert.ErrorContains(t, err, "more than one github connection")
 			assert.ErrorContains(t, err, "conn_1, conn_2")
+		})
+	})
+
+	// One match on page 1 is not enough: a second one on page 2 must still
+	// make revoke refuse.
+	t.Run("a second connection on a later page revokes nothing", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			page1 := []godo.HostedAgentConnection{{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"}}
+			for i := 1; i < 100; i++ {
+				page1 = append(page1, godo.HostedAgentConnection{ID: fmt.Sprintf("other_%d", i), Provider: "github", ActorID: "alice-bot"})
+			}
+			gomock.InOrder(
+				tm.hostedAgents.EXPECT().
+					ListConnections("github", &godo.HostedAgentConnectionListOptions{ActorID: "alice", Page: 1, PerPage: 100}).
+					Return(&godo.HostedAgentConnectionsListResponse{
+						Connections: page1,
+						Pagination:  godo.HostedAgentConnectionPagination{Page: 1, PerPage: 100, Total: 101},
+					}, nil),
+				tm.hostedAgents.EXPECT().
+					ListConnections("github", &godo.HostedAgentConnectionListOptions{ActorID: "alice", Page: 2, PerPage: 100}).
+					Return(&godo.HostedAgentConnectionsListResponse{
+						Connections: []godo.HostedAgentConnection{{ID: "conn_2", Provider: "github", ActorID: "alice", Status: "expired"}},
+						Pagination:  godo.HostedAgentConnectionPagination{Page: 2, PerPage: 100, Total: 101},
+					}, nil),
+			)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			err := RunAgentsConnectionsRevoke(config)
+			assert.ErrorContains(t, err, "more than one github connection")
+			assert.ErrorContains(t, err, "conn_1, conn_2")
+		})
+	})
+
+	t.Run("a server that ignores paging hits the page cap and revokes nothing", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			full := make([]godo.HostedAgentConnection, 100)
+			for i := range full {
+				full[i] = godo.HostedAgentConnection{ID: fmt.Sprintf("other_%d", i), Provider: "github", ActorID: "alice-bot"}
+			}
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", gomock.Any()).
+				Return(&godo.HostedAgentConnectionsListResponse{Connections: full}, nil).
+				Times(connectionLookupMaxPages)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			assert.ErrorContains(t, RunAgentsConnectionsRevoke(config), "could not read every github connection")
 		})
 	})
 

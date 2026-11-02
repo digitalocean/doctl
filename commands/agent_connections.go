@@ -269,21 +269,42 @@ func RunAgentsConnectionsRevoke(c *CmdConfig) error {
 	return nil
 }
 
+// connectionLookupPerPage and connectionLookupMaxPages bound the actor lookup.
+// The cap matters only if the server ignores paging; reaching it refuses the
+// lookup rather than deciding on a partial read.
+const (
+	connectionLookupPerPage  = 100
+	connectionLookupMaxPages = 50
+)
+
 // connectionIDForActor resolves the one connection an actor holds for a
 // provider. It refuses to choose when there are several, so a revoke by actor
-// can never take a connection the caller did not mean.
+// can never take a connection the caller did not mean. Every page is read:
+// a single match on the first page does not mean there is no second one.
 func connectionIDForActor(c *CmdConfig, provider, actor string) (string, error) {
-	resp, err := c.HostedAgents().ListConnections(provider, &godo.HostedAgentConnectionListOptions{
-		ActorID: actor,
-		PerPage: 100,
-	})
-	if err != nil {
-		return "", connectionsNotEnabledHint(err)
-	}
 	var ids []string
-	for _, conn := range resp.Connections {
-		if conn.ActorID == actor {
-			ids = append(ids, conn.ID)
+	seen := 0
+	for page := 1; ; page++ {
+		if page > connectionLookupMaxPages {
+			return "", fmt.Errorf("could not read every %s connection for actor %s; revoke by id", provider, actor)
+		}
+		resp, err := c.HostedAgents().ListConnections(provider, &godo.HostedAgentConnectionListOptions{
+			ActorID: actor,
+			Page:    page,
+			PerPage: connectionLookupPerPage,
+		})
+		if err != nil {
+			return "", connectionsNotEnabledHint(err)
+		}
+		for _, conn := range resp.Connections {
+			if conn.ActorID == actor {
+				ids = append(ids, conn.ID)
+			}
+		}
+		seen += len(resp.Connections)
+		if len(ids) > 1 || len(resp.Connections) < connectionLookupPerPage ||
+			(resp.Pagination.Total > 0 && seen >= int(resp.Pagination.Total)) {
+			break
 		}
 	}
 	switch {
