@@ -339,6 +339,114 @@ func TestRunAgentsConnectionsRevoke(t *testing.T) {
 			assert.Error(t, RunAgentsConnectionsRevoke(config))
 		})
 	})
+
+	t.Run("revokes by actor", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			gomock.InOrder(
+				tm.hostedAgents.EXPECT().
+					ListConnections("github", &godo.HostedAgentConnectionListOptions{ActorID: "alice", PerPage: 100}).
+					Return(&godo.HostedAgentConnectionsListResponse{
+						Connections: []godo.HostedAgentConnection{
+							{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"},
+						},
+						Pagination: godo.HostedAgentConnectionPagination{Page: 1, PerPage: 100, Total: 1},
+					}, nil),
+				tm.hostedAgents.EXPECT().
+					DeleteConnection("github", "conn_1").
+					Return(&godo.HostedAgentConnectionEnvelope{
+						Connection: godo.HostedAgentConnection{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "revoked"},
+					}, nil),
+			)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, " alice ")
+			assert.NoError(t, RunAgentsConnectionsRevoke(config))
+		})
+	})
+
+	t.Run("actor with no connection revokes nothing", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", gomock.Any()).
+				Return(&godo.HostedAgentConnectionsListResponse{}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			assert.ErrorContains(t, RunAgentsConnectionsRevoke(config), "no github connection found for actor alice")
+		})
+	})
+
+	// A list row for a different actor must never be revoked, even if the
+	// server's filter returned it.
+	t.Run("ignores rows for other actors", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", gomock.Any()).
+				Return(&godo.HostedAgentConnectionsListResponse{
+					Connections: []godo.HostedAgentConnection{
+						{ID: "conn_2", Provider: "github", ActorID: "alice-bot", Status: "active"},
+					},
+				}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			assert.ErrorContains(t, RunAgentsConnectionsRevoke(config), "no github connection found")
+		})
+	})
+
+	t.Run("actor with several connections revokes nothing", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", gomock.Any()).
+				Return(&godo.HostedAgentConnectionsListResponse{
+					Connections: []godo.HostedAgentConnection{
+						{ID: "conn_1", Provider: "github", ActorID: "alice", Status: "active"},
+						{ID: "conn_2", Provider: "github", ActorID: "alice", Status: "expired"},
+					},
+					Pagination: godo.HostedAgentConnectionPagination{Page: 1, PerPage: 100, Total: 2},
+				}, nil)
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			err := RunAgentsConnectionsRevoke(config)
+			assert.ErrorContains(t, err, "more than one github connection")
+			assert.ErrorContains(t, err, "conn_1, conn_2")
+		})
+	})
+
+	t.Run("rejects an id together with --actor", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			config.Args = []string{"conn_1"}
+			assert.ErrorContains(t, RunAgentsConnectionsRevoke(config), "not both")
+		})
+	})
+
+	t.Run("501 on the actor lookup becomes a not-enabled hint", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.hostedAgents.EXPECT().
+				ListConnections("github", gomock.Any()).
+				Return(nil, &godo.ErrorResponse{
+					Response: &http.Response{StatusCode: http.StatusNotImplemented},
+					Message:  "oauth connections are not enabled",
+				})
+
+			config.Doit.Set(config.NS, doctl.ArgAgentConnProvider, "github")
+			config.Doit.Set(config.NS, doctl.ArgAgentConnActor, "alice")
+			assert.ErrorContains(t, RunAgentsConnectionsRevoke(config), "not enabled")
+		})
+	})
+}
+
+func TestAgentConnectionsRevokeRegistersActorFlag(t *testing.T) {
+	for _, c := range AgentConnections().Commands() {
+		if c.Name() == "revoke" {
+			assert.NotNil(t, c.Flags().Lookup(doctl.ArgAgentConnActor))
+			return
+		}
+	}
+	t.Fatal("revoke subcommand not found")
 }
 
 // --- deletion protection in the styled output (MARSOHS-2173) ----------------
