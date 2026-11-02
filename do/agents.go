@@ -14,6 +14,7 @@ limitations under the License.
 package do
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -38,8 +39,22 @@ type HostedAgentsService interface {
 	// OpenAISessionID in opt so harness-api persists openai_session_id
 	// (?openai_session_id=). opt may be nil.
 	CreateSessionFromManifest(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
+	// CreateSessionFromManifestWithManagedKey is CreateSessionFromManifest
+	// with ?manage_model_access_key=true: harness-api mints a DigitalOcean
+	// Inference key for the new session and delivers it to the guest as
+	// HARNESS_INFERENCE_API_KEY. A manifest that already supplies that secret
+	// keeps its own key; the server skips the mint. Only the agents.yaml form
+	// takes the parameter, which is why it is not on CreateSessionFromConfig.
+	// godo (through v1.229.0) has no field for it, so the request is built
+	// here; fold it into opt once it does.
+	CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
+	// GetSessionIngress reads the session's public ingress URL
+	// (GET /v2/agents/sessions/{id}/ingress): the hostname the platform
+	// publishes for the sandbox's ingress port, gated by the team's token.
+	// Not in godo yet, so decoded here.
+	GetSessionIngress(sessionID string) (*HostedAgentSessionIngress, error)
 	// UpdateSession patches session-scoped settings (never the agent manifest
 	// or config) and returns the updated session.
 	UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error)
@@ -60,6 +75,12 @@ type HostedAgentsService interface {
 	// guest command runs, so the caller needs to be able to give up. A non-zero
 	// ExitCode is a successful call — only transport failure is an error.
 	ExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error)
+	// StreamExecInSandbox runs the same guest command as ExecInSandbox but
+	// delivers stdout/stderr as they arrive (SSE). emit is called for each
+	// frame; a terminal exit frame carries ExitCode. Against a server that
+	// does not yet speak SSE, the call falls back to the buffered JSON body
+	// and synthesizes the same frames so callers stay compatible.
+	StreamExecInSandbox(ctx context.Context, sessionID string, body *godo.HostedAgentSandboxExecRequest, emit func(SandboxExecEvent) error) error
 	// ListSandboxSizes returns the customer-selectable sandbox size catalog.
 	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
 	// smallest-to-largest; no pagination.
@@ -136,6 +157,51 @@ func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte, opt *go
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
 }
 
+// manageModelAccessKeyParam is harness-api's opt-in to mint the session's
+// DigitalOcean Inference key. See CreateSessionFromManifestWithManagedKey.
+const manageModelAccessKeyParam = "manage_model_access_key"
+
+func (s *hostedAgentsService) CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error) {
+	if len(bytes.TrimSpace(manifest)) == 0 {
+		return nil, errors.New("hosted agents: manifest is required")
+	}
+	// The same query godo would have sent for opt, plus the one parameter it
+	// has no field for.
+	q := url.Values{}
+	if opt != nil {
+		if opt.OpenAISessionID != "" {
+			q.Set("openai_session_id", opt.OpenAISessionID)
+		}
+		if opt.ResumeOnTopoff {
+			q.Set("resume_on_topoff", "true")
+		}
+	}
+	q.Set(manageModelAccessKeyParam, "true")
+	u, err := s.client.BaseURL.Parse("v2/agents/sessions?" + q.Encode())
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, u.String(), bytes.NewReader(manifest))
+	if err != nil {
+		return nil, err
+	}
+	// What godo's own manifest create sends: the YAML media type the server
+	// keys the agents.yaml form on, and JSON back.
+	req.Header.Set("Content-Type", "application/x-yaml")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", s.client.UserAgent)
+	var root struct {
+		Session *godo.HostedAgentSession `json:"session"`
+	}
+	if _, err := s.client.Do(context.TODO(), req, &root); err != nil {
+		return nil, err
+	}
+	if root.Session == nil {
+		return nil, errors.New("hosted agents: create session returned no session")
+	}
+	return &HostedAgentSession{HostedAgentSession: root.Session}, nil
+}
+
 func (s *hostedAgentsService) ListSessions(opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error) {
 	resp, _, err := s.client.HostedAgents.ListSessions(context.TODO(), opt)
 	if err != nil {
@@ -155,6 +221,46 @@ func (s *hostedAgentsService) GetSession(sessionID string) (*HostedAgentSession,
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+// HostedAgentSessionIngress is the `ingress_url` object harness-api returns
+// for a session: one public hostname for the sandbox's published port
+// (8000 for the openhands template, where Agent Canvas is served).
+type HostedAgentSessionIngress struct {
+	IngressURLID string `json:"ingress_url_id"`
+	SessionID    string `json:"session_id"`
+	Port         int    `json:"port"`
+	URL          string `json:"url"`
+	// State is INGRESS_URL_STATE_READY once the hostname answers.
+	State     string `json:"state"`
+	CreatedAt string `json:"created_at"`
+}
+
+// IngressReady is the state in which the public URL accepts requests.
+const IngressReady = "INGRESS_URL_STATE_READY"
+
+// sessionIngressPath is the harness-api route for a session's public URL.
+const sessionIngressPath = "/v2/agents/sessions/%s/ingress"
+
+func (s *hostedAgentsService) GetSessionIngress(sessionID string) (*HostedAgentSessionIngress, error) {
+	if sessionID == "" {
+		return nil, errors.New("hosted agents: session id is required")
+	}
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf(sessionIngressPath, url.PathEscape(sessionID)), nil)
+	if err != nil {
+		return nil, err
+	}
+	var out struct {
+		IngressURL *HostedAgentSessionIngress `json:"ingress_url"`
+	}
+	if _, err := s.client.Do(ctx, req, &out); err != nil {
+		return nil, err
+	}
+	if out.IngressURL == nil {
+		return nil, errors.New("hosted agents: ingress response carried no ingress_url")
+	}
+	return out.IngressURL, nil
 }
 
 func (s *hostedAgentsService) UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error) {

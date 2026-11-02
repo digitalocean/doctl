@@ -1,5 +1,5 @@
 # Step 1: Build
-FROM golang:1.24-alpine AS build
+FROM golang:1.26.10-alpine AS build
 
 ARG GOARCH=amd64
 ENV OUT_D /out
@@ -19,7 +19,7 @@ RUN cd /go/src/github.com/digitalocean/doctl && \
     make build GOARCH=$GOARCH
 
 # Step 2: App
-FROM alpine:3.12
+FROM alpine:3.22
 
 RUN apk add --update --no-cache \
         ca-certificates \

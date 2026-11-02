@@ -71,7 +71,7 @@ const agentsCreateHelpMD = `Create a hosted session, wait until it is ready, opt
 Provide exactly one of:
 
 - a **manifest** — as a positional path, or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin). With none of these, ` + "`./agents.yaml`" + ` is used when it exists.
-- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, or openhands (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
+- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, openhands, or hermes (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
 - ` + "`--from-config`" + ` — an existing Agent Config, by name or ID (` + "`--name`" + ` required)
 
 These four are equivalent:
@@ -83,7 +83,7 @@ These four are equivalent:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"
 ` + "```\n\n" + `Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
 ` + "```yaml\n" + `name: my-session
-agent: opencode
+harness: opencode
 ` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
 
 - ` + "`egress: unrestricted`" + `
@@ -117,7 +117,7 @@ Use ` + "`-o json`" + ` for machine-readable create output without waiting. Comb
 
 const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
 
-Catches missing ` + "`agent`" + `/` + "`spec.runtime.adapter`" + `, unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
+Catches a missing ` + "`harness`" + ` (or its original name ` + "`agent`" + `, or legacy ` + "`spec.runtime.adapter`" + `), unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
 
 Name the manifest as a positional path or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin); with none of these, ` + "`./agents.yaml`" + ` is used when it exists.
 
@@ -223,7 +223,9 @@ codex --remote ws://127.0.0.1:1144
 ` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --continue
 ` + "```\n\n" + `The opencode bridge is tested against opencode ` + opencode.TestedVersion + `; other versions usually work, and the proxy logs any request it does not recognize.
 
-Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.`
+Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
+
+For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed.`
 
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from it — by name or by ID — with ` + "`" + agentCLI + " create --from-config`" + `, ` + "`" + agentCLI + " launch --from-config`" + `, or ` + "`" + agentCLI + " config start-session`" + `.
 
@@ -255,9 +257,11 @@ Drives the sandbox directly rather than through its agent, so it works on a bare
 
 Separate the guest command from doctl's own flags with ` + "`--`" + `, or flags meant for the guest (` + "`ls -la`" + `) are parsed as doctl flags.
 
-Guest stdout and stderr pass through unchanged and the guest's exit code becomes doctl's, so this composes in pipelines and ` + "`&&`" + ` chains. Each call is independent: there is no shell session between calls, so ` + "`cd`" + ` does not carry over — use ` + "`--workdir`" + `, or run a shell explicitly (` + "`-- sh -c 'cd src && make'`" + `).
+Guest stdout and stderr pass through unchanged as they arrive, and the guest's exit code becomes doctl's, so this composes in pipelines and ` + "`&&`" + ` chains. Each call is independent: there is no shell session between calls, so ` + "`cd`" + ` does not carry over — use ` + "`--workdir`" + `, or run a shell explicitly (` + "`-- sh -c 'cd src && make'`" + `).
 
-Output is buffered until the command finishes, and capped at 1 MiB per stream. With ` + "`-o json`" + ` the full response is emitted instead of the raw streams.`
+` + "`--timeout`" + ` bounds how long the guest command may run (seconds). ` + "`0`" + ` uses the server default (currently 4 minutes for the buffered JSON path and 15 minutes when streaming). When the budget fires, the API returns HTTP 504 with a message naming which budget applied (` + "`default`" + ` / ` + "`requested`" + ` / ` + "`maximum`" + `).
+
+With ` + "`-o json`" + ` the full buffered response is emitted instead of the live streams (and that path remains capped at 1 MiB per stream). Against an older API that does not stream yet, text mode falls back to the buffered body automatically.`
 
 const agentsPromptHelpMD = `Send one prompt to an existing session, wait for the agent to finish, and print its answer. Headless execution: no TUI, no keyboard input.
 

@@ -386,6 +386,18 @@ doctl compute droplet list --context <new-context-name>
 
 To set a new default context, run `doctl auth switch --context <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified. To see the contexts you have, run `doctl auth list`; the selected one is marked `(current)`.
 
+A DigitalOcean token and an AMD DevCloud token belong in different contexts. `doctl auth init` checks a DigitalOcean token at `https://cloud.digitalocean.com/v1/oauth/token/info`. An AMD DevCloud token is checked at `https://devcloud.amd.com/v1/oauth/token/info`, so save it with `--token-validation-server`:
+
+```
+doctl auth init --context amd --token-validation-server https://devcloud.amd.com
+```
+
+`doctl auth switch` changes the token. It does not change the API host. Commands against the AMD API also need `--api-url https://api.devcloud.amd.com`. For a single command, without saving the token:
+
+```
+doctl --access-token $AMD_TOKEN --api-url https://api.devcloud.amd.com kubernetes cluster list
+```
+
 The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` [environment variable](#environment-variables) are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
 
 When the `default` context is used, the flag and the environment variable take precedence over the token saved in your configuration file, and they apply only to the command you run: `doctl` does not write them to the file. The exception is `doctl auth init`, which saves the token it validates whatever its source, because saving a token is what that command is for. Run `doctl` with no arguments to see which account is active and whether its token came from your configuration file or from the environment.
