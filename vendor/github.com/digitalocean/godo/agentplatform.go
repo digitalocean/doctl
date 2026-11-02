@@ -2811,7 +2811,7 @@ type CreateModelEvaluationRunRequest struct {
 	CandidateModelUUID       string                    `json:"candidate_model_uuid,omitempty"`
 	DatasetUUID              string                    `json:"dataset_uuid,omitempty"`
 	// Epochs is the number of times to evaluate each dataset row (n-pass).
-	// Defaults to 1 when unset. Capped at 3 by the API today.
+	// Defaults to 1 when unset. Capped at 10 by the API today.
 	Epochs         uint32   `json:"epochs,omitempty"`
 	EvalPresetUUID string   `json:"eval_preset_uuid,omitempty"`
 	JudgeModelUUID string   `json:"judge_model_uuid,omitempty"`
