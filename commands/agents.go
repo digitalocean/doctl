@@ -679,6 +679,19 @@ A paused session is resumed automatically before the tunnel opens, same as `+"`"
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
 	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`
 
+	cmdCanvas := CmdBuilder(cmd, RunAgentsCanvas, "canvas <session>",
+		"Serve the session's Agent Canvas UI through a local proxy",
+		`Serves the session's Agent Canvas UI (openhands template) on a local port and prints the URL to open, `+"`"+`http://127.0.0.1:<port>/canvas`+"`"+`.
+
+The session's public URL only accepts requests that carry your DigitalOcean token in a header, which a browser cannot add by itself. This command listens on localhost, adds the token to every request and WebSocket, and forwards to the public URL. The token never reaches the browser. A paused session is resumed first, same as `+"`"+agentCLI+` launch`+"`"+`.
+
+Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` port-forward <session> 8000:8000`+"`"+` reaches the same Canvas at `+"`"+`http://127.0.0.1:8000/canvas`+"`"+`. The process runs in the foreground; press Ctrl-C to stop.`,
+		Writer)
+	AddStringFlag(cmdCanvas, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address (loopback only: 127.0.0.1, localhost or ::1)")
+	AddIntFlag(cmdCanvas, doctl.ArgAgentCanvasPort, "", 0, "Local port to listen on (0 picks a free port, printed on the ready line)")
+	AddBoolFlag(cmdCanvas, doctl.ArgAgentCanvasOpen, "", false, "Open the local Canvas URL in your browser")
+	cmdCanvas.Example = agentCLI + ` canvas my-session --open`
+
 	cmdBalance := CmdBuilder(cmd, RunAgentsBalance, "balance",
 		"Show your team's prepayment balance and gate status",
 		agentsBalanceHelpMD,
@@ -714,7 +727,7 @@ func addAgentCreationFlags(cmd *Command) {
 	// word for a session with no agent, and resolveAgentCreationSource refuses
 	// it as a --harness value. There is one way in that we teach, and naming
 	// the absence of an agent as if it were one of the agents taught two.
-	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, openhands). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
+	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, openhands, hermes). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + harness), e.g. "name: my-session\nharness: opencode"; agent is the original name of harness and still works. Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
@@ -761,7 +774,8 @@ const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a pl
 // Config, unlike the per-session spending consent --resume-on-topoff carries.
 const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness session, written as the manifest's env " +
 	harnessInferenceModelEnv + " (for example " + defaultOpenHandsModel + " or anthropic-claude-4.5-sonnet). " +
-	"--harness openhands runs on DigitalOcean Inference and defaults to " + defaultOpenHandsModel + "; " +
+	"--harness openhands and --harness hermes run on DigitalOcean Inference and default to " +
+	defaultOpenHandsModel + " and " + defaultHermesModel + "; " +
 	"the other harnesses use their own vendor key and leave it unset unless given. " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
@@ -8147,9 +8161,16 @@ func hitlOutcomeLabel(code int32) string {
 // cardRow formats a label/value line for agent summary cards. Labels are padded
 // before color codes are applied so columns stay aligned in the terminal.
 func cardRow(label, value string) string {
+	return cardRowWidth(label, value, 8)
+}
+
+// cardRowWidth is cardRow with an explicit label column, for a card whose
+// longest label does not fit the default 8 (e.g. "Protected"). Every row of
+// such a card has to pass the same width or the values step out of line.
+func cardRowWidth(label, value string, width int) string {
 	padded := label
-	if len(padded) < 8 {
-		padded += strings.Repeat(" ", 8-len(padded))
+	if len(padded) < width {
+		padded += strings.Repeat(" ", width-len(padded))
 	}
 	return fmt.Sprintf("  %s %s\n", boldColor(padded, colHighlight), value)
 }

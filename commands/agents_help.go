@@ -71,7 +71,7 @@ const agentsCreateHelpMD = `Create a hosted session, wait until it is ready, opt
 Provide exactly one of:
 
 - a **manifest** — as a positional path, or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin). With none of these, ` + "`./agents.yaml`" + ` is used when it exists.
-- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, or openhands (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
+- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, openhands, or hermes (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
 - ` + "`--from-config`" + ` — an existing Agent Config, by name or ID (` + "`--name`" + ` required)
 
 These four are equivalent:
@@ -223,7 +223,9 @@ codex --remote ws://127.0.0.1:1144
 ` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --continue
 ` + "```\n\n" + `The opencode bridge is tested against opencode ` + opencode.TestedVersion + `; other versions usually work, and the proxy logs any request it does not recognize.
 
-Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.`
+Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
+
+For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed.`
 
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from it — by name or by ID — with ` + "`" + agentCLI + " create --from-config`" + `, ` + "`" + agentCLI + " launch --from-config`" + `, or ` + "`" + agentCLI + " config start-session`" + `.
 

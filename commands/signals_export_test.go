@@ -82,6 +82,26 @@ func TestSignalsExportListWithFilters(t *testing.T) {
 			AgentID: "agt-1",
 		}).Return(do.SignalsExports{testExport}, nil)
 
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsExportList(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsExportListWithEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "agt-1")
+		config.Doit.Set(config.NS, doctl.ArgSignalsExportLimit, 10)
+
+		tm.signals.EXPECT().ListExports(&godo.SignalsListExportsOptions{
+			SignalsCursorPageOptions: godo.SignalsCursorPageOptions{
+				Limit: 10,
+			},
+			EnvironmentID: "agt-1",
+		}).Return(do.SignalsExports{testExport}, nil)
+
 		err := RunSignalsExportList(config)
 		assert.NoError(t, err)
 	})
@@ -103,8 +123,53 @@ func TestSignalsExportCreate(t *testing.T) {
 			EndTime:    int64Ptr(int64(end)),
 		}).Return(&testExport, nil)
 
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsExportCreate(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsExportCreateEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, testAgentUUID)
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			EnvironmentID: testAgentUUID,
+		}).Return(&testExport, nil)
+
 		err := RunSignalsExportCreate(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestSignalsExportCreateBothIDsEqual(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, testAgentUUID)
+
+		tm.signals.EXPECT().CreateExport(&godo.SignalsCreateExportRequest{
+			AgentID:       testAgentUUID,
+			EnvironmentID: testAgentUUID,
+		}).Return(&testExport, nil)
+
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsExportCreate(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
+	})
+}
+
+func TestSignalsExportCreateBothIDsDifferent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsAgentID, testAgentUUID)
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, "b1b2c3d4-e29b-41d4-a716-446655440000")
+
+		err := RunSignalsExportCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "must match")
 	})
 }
 
@@ -118,8 +183,11 @@ func TestSignalsExportCreateWithSessionIDs(t *testing.T) {
 			SessionIDs: []string{"sess-1", "sess-2"},
 		}).Return(&testExport, nil)
 
-		err := RunSignalsExportCreate(config)
-		assert.NoError(t, err)
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsExportCreate(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
 	})
 }
 
@@ -132,8 +200,11 @@ func TestSignalsExportCreateAgentType(t *testing.T) {
 			AgentID: testAgentUUID,
 		}).Return(&testExport, nil)
 
-		err := RunSignalsExportCreate(config)
-		assert.NoError(t, err)
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsExportCreate(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
 	})
 }
 
@@ -143,7 +214,7 @@ func TestSignalsExportCreateAgentMissingAgentID(t *testing.T) {
 
 		err := RunSignalsExportCreate(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--agent-id is required")
+		assert.Contains(t, err.Error(), "--environment-id is required")
 	})
 }
 
@@ -167,7 +238,18 @@ func TestSignalsExportCreateInferenceWithAgentID(t *testing.T) {
 
 		err := RunSignalsExportCreate(config)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "--agent-id must not be set")
+		assert.Contains(t, err.Error(), "must not be set")
+	})
+}
+
+func TestSignalsExportCreateInferenceWithEnvironmentID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSignalsType, "inference")
+		config.Doit.Set(config.NS, doctl.ArgSignalsEnvironmentID, testAgentUUID)
+
+		err := RunSignalsExportCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "must not be set")
 	})
 }
 
@@ -240,8 +322,11 @@ func TestSignalsSessionList(t *testing.T) {
 			SignalsCursorPageOptions: godo.SignalsCursorPageOptions{Limit: 20},
 		}).Return(do.SignalsSessions{testSession}, nil)
 
-		err := RunSignalsSessionList(config)
-		assert.NoError(t, err)
+		stderr := captureProcessStderr(t, func() {
+			err := RunSignalsSessionList(config)
+			assert.NoError(t, err)
+		})
+		assert.Contains(t, stderr, signalsAgentIDDeprecationWarning)
 	})
 }
 

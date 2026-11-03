@@ -53,6 +53,7 @@ func (m *MicroVM) ColMap() map[string]string {
 		"Tags":          "Tags",
 		"FailureReason": "Failure Reason",
 		"Created":       "Created At",
+		"Egress":        "Egress",
 	}
 }
 
@@ -73,6 +74,7 @@ func (m *MicroVM) KV() []map[string]any {
 			"Tags":          strings.Join(md.Tags, ","),
 			"FailureReason": md.FailureReason,
 			"Created":       md.Created,
+			"Egress":        formatMicroVMEgress(md.EgressPolicy),
 		})
 	}
 	return out
@@ -301,6 +303,27 @@ func defaultMicroVMHostname(urls []godo.MicroVMURL) string {
 		return urls[0].Hostname
 	}
 	return ""
+}
+
+// formatMicroVMEgress renders a policy as "deny: a.example.com,203.0.113.5".
+// An empty string means the MicroVM has no policy and egress is unrestricted.
+func formatMicroVMEgress(p *godo.MicroVMEgressPolicy) string {
+	if p == nil {
+		return ""
+	}
+	action := string(p.DefaultAction)
+	if action == "" {
+		action = string(godo.MicroVMEgressActionDeny)
+	}
+	hosts := make([]string, 0, len(p.Rules))
+	for _, r := range p.Rules {
+		if r.Domain != "" {
+			hosts = append(hosts, r.Domain)
+		} else {
+			hosts = append(hosts, r.IP)
+		}
+	}
+	return action + ": " + strings.Join(hosts, ",")
 }
 
 func formatPorts(ports []uint32) string {

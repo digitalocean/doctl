@@ -173,6 +173,77 @@ func TestMicroVMCreate(t *testing.T) {
 	})
 }
 
+func TestMicroVMCreate_egressPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expected := &godo.MicroVMCreateRequest{
+			Name:   "sammy-microvm",
+			Region: "nyc1",
+			Size:   &godo.MicroVMSizeRequest{CPU: 2, Memory: 4096},
+			Source: &godo.MicroVMSource{OCIRef: "docker.io/library/nginx:1.27"},
+			EgressPolicy: &godo.MicroVMEgressPolicy{
+				DefaultAction: godo.MicroVMEgressActionDeny,
+				Rules: []godo.MicroVMEgressRule{
+					{Domain: "*.example.com"},
+					{IP: "203.0.113.5"},
+				},
+			},
+		}
+		tm.microVMs.EXPECT().Create(expected).Return(&testMicroVM, nil)
+
+		config.Args = append(config.Args, "sammy-microvm")
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, "cpu", 2)
+		config.Doit.Set(config.NS, "memory", 4096)
+		config.Doit.Set(config.NS, "oci-ref", "docker.io/library/nginx:1.27")
+		config.Doit.Set(config.NS, "egress-allow", []string{"*.example.com", "203.0.113.5"})
+		config.Doit.Set(config.NS, "egress-default-action", "deny")
+
+		err := RunMicroVMCreate(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestBuildEgressPolicy(t *testing.T) {
+	tests := []struct {
+		name    string
+		allow   []string
+		action  string
+		want    *godo.MicroVMEgressPolicy
+		wantErr string
+	}{
+		{
+			name:   "default action alone is a policy with no rules",
+			action: "deny",
+			want:   &godo.MicroVMEgressPolicy{DefaultAction: godo.MicroVMEgressActionDeny},
+		},
+		{
+			name:  "domain, wildcard and IPv4/IPv6 literals",
+			allow: []string{"api.example.com", "*.example.com", "203.0.113.5", "2001:db8::1"},
+			want: &godo.MicroVMEgressPolicy{Rules: []godo.MicroVMEgressRule{
+				{Domain: "api.example.com"},
+				{Domain: "*.example.com"},
+				{IP: "203.0.113.5"},
+				{IP: "2001:db8::1"},
+			}},
+		},
+		{name: "CIDR", allow: []string{"10.0.0.0/8"}, wantErr: "CIDR"},
+		{name: "host and port", allow: []string{"example.com:443"}, wantErr: "ports"},
+		{name: "empty value", allow: []string{""}, wantErr: "must not be empty"},
+		{name: "bad action", action: "block", wantErr: "expected deny or allow"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildEgressPolicy(tt.allow, tt.action)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestMicroVMCreate_fromCheckpoint(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		expected := &godo.MicroVMCreateRequest{

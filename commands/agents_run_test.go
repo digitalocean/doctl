@@ -67,12 +67,22 @@ func TestResolveHarnessAgent(t *testing.T) {
 		assert.Equal(t, "OpenHands", prettyHarnessName("openhands"))
 	})
 
+	t.Run("hermes", func(t *testing.T) {
+		for _, in := range []string{"hermes", "Hermes", " HERMES "} {
+			got, err := resolveHarnessAgent(in)
+			require.NoError(t, err)
+			assert.Equal(t, hermesAgentName, got)
+		}
+		assert.Equal(t, "Hermes", prettyHarnessName("hermes"))
+	})
+
 	t.Run("unknown harness", func(t *testing.T) {
 		_, err := resolveHarnessAgent("not-a-harness")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported")
 		assert.Contains(t, err.Error(), "codex-agentapi")
 		assert.Contains(t, err.Error(), "openhands")
+		assert.Contains(t, err.Error(), "hermes")
 	})
 }
 
@@ -233,6 +243,48 @@ func TestBuildHarnessManifest(t *testing.T) {
 		env = doc["env"].(map[any]any)
 		assert.Equal(t, "openai-gpt-5.5", env[harnessInferenceModelEnv])
 		assert.Equal(t, "${ENV_ID}", env["CODEX_ENVIRONMENT_ID"])
+	})
+
+	// Hermes is openhands' shape minus the two fields openhands needs and it
+	// does not: templateForAgentKind already resolves hermes to coding-hermes,
+	// and keep_warm defaults to true server-side on purpose, because the
+	// gateway is driven over a port-forward tunnel idle-pause cannot see.
+	// Writing either one here would undo a deliberate server-side default.
+	t.Run("hermes needs no key and runs on a DO model, with no template pin and no keep_warm", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "hermes", permission: "ask"})
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "hermes", doc["harness"])
+		assert.NotContains(t, doc, "template")
+		assert.NotContains(t, doc, "keep_warm")
+		assert.NotContains(t, doc, "secrets", "the key is minted by harness-api, not asked of the user")
+		// render-config.sh renders an empty model and warns that the first turn
+		// will fail, so the manifest has to name one.
+		env, ok := doc["env"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, defaultHermesModel, env[harnessInferenceModelEnv])
+		perms, ok := doc["permissions"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, "ask", perms["default"])
+	})
+
+	t.Run("--model overrides the hermes default", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "hermes", model: " anthropic-claude-4.5-sonnet "})
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		env := doc["env"].(map[any]any)
+		assert.Equal(t, "anthropic-claude-4.5-sonnet", env[harnessInferenceModelEnv])
+	})
+
+	t.Run("hermes keeps a user-named template", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "hermes", template: "my-hermes"})
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "my-hermes", doc["template"])
 	})
 
 	t.Run("openhands keeps a user-named template", func(t *testing.T) {
@@ -459,6 +511,53 @@ func TestRunAgentsCreate_OpenHandsAsksForAManagedKeyAndADOModel(t *testing.T) {
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "openhands")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "oh")
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.Contains(t, buf.String(), "Session created")
+	})
+}
+
+// A hermes create takes the same managed-key opt-in as openhands: hermes reads
+// HARNESS_INFERENCE_API_KEY when no native OPENAI_API_KEY is set, and has no
+// model of its own, so without both the gateway fails on its first turn.
+func TestRunAgentsCreate_HermesAsksForAManagedKeyAndADOModel(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "harness: hermes")
+				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultHermesModel)
+				assert.NotContains(t, string(manifest), "HARNESS_INFERENCE_API_KEY")
+				// Both are deliberate server-side defaults for hermes; see
+				// buildHarnessManifest's hermes case.
+				assert.NotContains(t, string(manifest), "template:")
+				assert.NotContains(t, string(manifest), "keep_warm:")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_hermes_1",
+						Name:      "hm",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_hermes_1").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_hermes_1",
+					Name:      "hm",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "hermes")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "hm")
 
 		require.NoError(t, RunAgentsCreate(config))
 		assert.Contains(t, buf.String(), "Session created")

@@ -350,12 +350,19 @@ func printConnectionsList(w io.Writer, conns []godo.HostedAgentConnection) {
 		if id := strings.TrimSpace(conn.ID); id != "" {
 			meta = append(meta, colorize(id, colMuted))
 		}
+		if conn.DeletionProtected {
+			meta = append(meta, colorize("protected", colWarning))
+		}
 		fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
 		if conn.OAuth != nil && len(conn.OAuth.Scopes) > 0 {
 			fmt.Fprintf(w, "  %s %s\n", colorize("scopes", colMuted), strings.Join(conn.OAuth.Scopes, ", "))
 		}
 	}
 }
+
+// connCardLabelWidth fits the detail card's longest label, "Protected"; the
+// shared 8-wide default would leave its value one column out of line.
+const connCardLabelWidth = 9
 
 // printConnectionCard renders a single connection detail card for get.
 func printConnectionCard(w io.Writer, env *godo.HostedAgentConnectionEnvelope, created bool) {
@@ -368,27 +375,39 @@ func printConnectionCard(w io.Writer, env *godo.HostedAgentConnectionEnvelope, c
 	if created {
 		fmt.Fprintf(&body, "%s\n\n", boldColor("Connection created", colSuccess))
 	}
-	body.WriteString(cardRow("Actor", conn.ActorID))
-	body.WriteString(cardRow("Provider", conn.Provider))
-	body.WriteString(cardRow("Status", conn.Status))
+	body.WriteString(cardRowWidth("Actor", conn.ActorID, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Provider", conn.Provider, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Status", conn.Status, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Protected", connectionProtectedLabel(conn.DeletionProtected), connCardLabelWidth))
 	if id := strings.TrimSpace(conn.ID); id != "" {
-		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+		body.WriteString(cardRowWidth("ID", colorize(id, colMuted), connCardLabelWidth))
 	}
 	if conn.OAuth != nil && len(conn.OAuth.Scopes) > 0 {
-		body.WriteString(cardRow("Scopes", strings.Join(conn.OAuth.Scopes, ", ")))
+		body.WriteString(cardRowWidth("Scopes", strings.Join(conn.OAuth.Scopes, ", "), connCardLabelWidth))
 	}
 	if conn.CreatedAt != nil && !conn.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(formatCreatedAt(conn.CreatedAt.Time), colMuted)))
+		body.WriteString(cardRowWidth("Created", colorize(formatCreatedAt(conn.CreatedAt.Time), colMuted), connCardLabelWidth))
 	}
 	if env.Authorization != nil && env.Authorization.ConnectURL != "" {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Pending authorization", colMuted))
-		body.WriteString(cardRow("URL", env.Authorization.ConnectURL))
+		body.WriteString(cardRowWidth("URL", env.Authorization.ConnectURL, connCardLabelWidth))
 		if env.Authorization.VerificationCode != "" {
-			body.WriteString(cardRow("Code", env.Authorization.VerificationCode))
+			body.WriteString(cardRowWidth("Code", env.Authorization.VerificationCode, connCardLabelWidth))
 		}
 	}
 	renderAgentCard(w, body.String())
+}
+
+// connectionProtectedLabel renders deletion_protected for the detail card. A
+// protected connection is one an agent environment still depends on, so an
+// ordinary revoke is refused; "no" is printed rather than omitted so the card
+// answers the question either way.
+func connectionProtectedLabel(protected bool) string {
+	if protected {
+		return colorize("yes", colWarning)
+	}
+	return colorize("no", colMuted)
 }
 
 // connectionStatusDot colors the list bullet by connection status.

@@ -36,7 +36,7 @@ func SignalsExport() *Command {
 
 	exportDetails := `
 - The export job ID
-- The agent ID
+- The environment ID
 - The export status (queued, running, complete, failed, expired)
 - Stored filters (signal_type, session_ids, time window, …)
 - Created / completed / expires timestamps (Unix seconds)
@@ -51,7 +51,8 @@ func SignalsExport() *Command {
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.SignalsExport{}),
 	)
-	AddStringFlag(cmdExportList, doctl.ArgSignalsAgentID, "", "", "Filter exports by agent ID.")
+	AddStringFlag(cmdExportList, doctl.ArgSignalsEnvironmentID, "", "", "Filter exports by environment ID.")
+	AddStringFlag(cmdExportList, doctl.ArgSignalsAgentID, "", "", "Deprecated: use --environment-id.")
 	AddIntFlag(cmdExportList, doctl.ArgSignalsExportLimit, "", 20, "Maximum number of exports to return.")
 	AddStringFlag(cmdExportList, doctl.ArgSignalsExportAfter, "", "", "Opaque pagination cursor from a previous page_info.end_cursor.")
 
@@ -63,8 +64,8 @@ func SignalsExport() *Command {
 		`Starts a bulk Signals export job (201 Created, or 200 if an active job with the same fingerprint already exists).
 
 Use --type to select the export source:
-- agent (default): export for --agent-id (required)
-- inference: export team serverless-inference data (uses the nil agent UUID; do not pass --agent-id)
+- agent (default): export for --environment-id (required)
+- inference: export team serverless-inference data (uses the nil agent UUID; do not pass --environment-id)
 
 Optional filters match signals-api POST /v1/signals/exports:
 - --session-ids (repeatable) narrows the cohort to those sessions (OR); omit for all team sessions
@@ -77,7 +78,8 @@ Use GET .../download after status is complete; the job JSON has no download_url.
 		displayerType(&displayers.SignalsExport{}),
 	)
 	AddStringFlag(cmdExportCreate, doctl.ArgSignalsType, "", signalsSessionTypeAgent, "Export source: agent or inference.")
-	AddStringFlag(cmdExportCreate, doctl.ArgSignalsAgentID, "", "", "The agent UUID to export data for (required when --type=agent).")
+	AddStringFlag(cmdExportCreate, doctl.ArgSignalsEnvironmentID, "", "", "The environment UUID to export data for (required when --type=agent).")
+	AddStringFlag(cmdExportCreate, doctl.ArgSignalsAgentID, "", "", "Deprecated: use --environment-id.")
 	AddStringSliceFlag(cmdExportCreate, doctl.ArgSignalsExportSessionIDs, "", []string{}, "Session IDs to export (JSON: session_ids). Repeatable. Omit for all team sessions.")
 	AddStringSliceFlag(cmdExportCreate, doctl.ArgSignalsExportSignalType, "", []string{}, "Signal types to include (JSON: signal_type). Repeatable. Catalog: doctl signals export options.")
 	AddIntFlag(cmdExportCreate, doctl.ArgSignalsExportStartTime, "", 0, "Start time filter (Unix epoch seconds, inclusive).")
@@ -118,7 +120,7 @@ Use GET .../download after status is complete; the job JSON has no download_url.
 
 // RunSignalsExportList lists Signals export jobs.
 func RunSignalsExportList(c *CmdConfig) error {
-	agentID, err := c.Doit.GetString(c.NS, doctl.ArgSignalsAgentID)
+	idFlags, err := resolveSignalsIDFlags(c)
 	if err != nil {
 		return err
 	}
@@ -136,7 +138,8 @@ func RunSignalsExportList(c *CmdConfig) error {
 			Limit: limit,
 			After: after,
 		},
-		AgentID: agentID,
+		AgentID:       idFlags.AgentID,
+		EnvironmentID: idFlags.EnvironmentID,
 	})
 	if err != nil {
 		return err
@@ -150,16 +153,16 @@ func RunSignalsExportCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	agentID, err := c.Doit.GetString(c.NS, doctl.ArgSignalsAgentID)
+	idFlags, err := resolveSignalsIDFlags(c)
 	if err != nil {
 		return err
 	}
-	agentID, err = resolveSignalsAgentID(exportType, agentID)
+	agentID, err := resolveSignalsAgentID(exportType, idFlags.value())
 	if err != nil {
 		return err
 	}
 	if _, err := uuid.Parse(agentID); err != nil {
-		return fmt.Errorf("agent-id must be a valid UUID: %w", err)
+		return fmt.Errorf("environment-id must be a valid UUID: %w", err)
 	}
 	sessionIDs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSignalsExportSessionIDs)
 	if err != nil {
@@ -179,9 +182,14 @@ func RunSignalsExportCreate(c *CmdConfig) error {
 	}
 
 	req := &godo.SignalsCreateExportRequest{
-		AgentID:    agentID,
 		SessionIDs: sessionIDs,
 		SignalType: signalType,
+	}
+	if idFlags.AgentID != "" || idFlags.EnvironmentID != "" {
+		req.AgentID = idFlags.AgentID
+		req.EnvironmentID = idFlags.EnvironmentID
+	} else {
+		req.AgentID = agentID
 	}
 	if startTime > 0 {
 		st := int64(startTime)
