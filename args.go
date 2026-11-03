@@ -1057,6 +1057,10 @@ const (
 
 	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
 	ArgAgentForwardAddress = "address"
+	// ArgAgentCanvasPort is the local port the canvas proxy listens on (0 = any free port).
+	ArgAgentCanvasPort = "port"
+	// ArgAgentCanvasOpen opens the local Canvas URL in the default browser.
+	ArgAgentCanvasOpen = "open"
 
 	// ArgAgentFromCheckpoint is the checkpoint ID to fork or roll back from.
 	ArgAgentFromCheckpoint = "from-checkpoint"
@@ -1309,7 +1313,11 @@ const (
 	ArgSignalsType = "type"
 
 	// ArgSignalsAgentID is the agent ID for Signals consent and export commands.
+	// Deprecated: use ArgSignalsEnvironmentID.
 	ArgSignalsAgentID = "agent-id"
+
+	// ArgSignalsEnvironmentID is the environment ID for Signals commands.
+	ArgSignalsEnvironmentID = "environment-id"
 
 	// ArgSignalsEnabled sets consent enabled (true) or disabled (false).
 	ArgSignalsEnabled = "enabled"

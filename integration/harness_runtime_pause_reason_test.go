@@ -55,10 +55,10 @@ var _ = suite("harness-runtime/pause-reason", func(t *testing.T, when spec.G, it
 			w.Header().Add("content-type", "application/json")
 
 			switch req.URL.Path {
-			case "/v2/agents/sessions":
+			case "/v2/harness-runtime/sessions":
 				lastListQuery = req.URL.RawQuery
 				w.Write([]byte(sessionsBody))
-			case "/v2/agents/sessions/sess_broke":
+			case "/v2/harness-runtime/sessions/sess_broke":
 				w.Write([]byte(`{
 					"session": {
 						"session_id": "sess_broke",

@@ -93,12 +93,15 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 	AddStringFlag(cmdGet, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	cmdGet.Example = agentCLI + ` connections get ` + "`<connection-id>`"
 
-	cmdRevoke := CmdBuilder(cmd, RunAgentsConnectionsRevoke, "revoke <connection-id>",
+	cmdRevoke := CmdBuilder(cmd, RunAgentsConnectionsRevoke, "revoke [<connection-id>]",
 		"Revoke a connection",
-		`Revoke one connection by id. Agents referencing its actor can no longer act through it.`,
+		`Revoke one connection, by id or by `+"`--actor`"+`. Agents referencing its actor can no longer act through it.
+
+With `+"`--actor`"+`, the actor must have exactly one connection for the provider. If it has more than one, revoke by id; `+"`connections list --actor`"+` shows the ids.`,
 		Writer, append(ns, aliasOpt("delete", "rm"))...)
 	AddStringFlag(cmdRevoke, doctl.ArgAgentConnProvider, "", "github", "External provider")
-	cmdRevoke.Example = agentCLI + ` connections revoke ` + "`<connection-id>`"
+	AddStringFlag(cmdRevoke, doctl.ArgAgentConnActor, "", "", "Revoke the connection of this actor id instead of naming the connection id")
+	cmdRevoke.Example = agentCLI + ` connections revoke ` + "`<connection-id>`" + `; ` + agentCLI + ` connections revoke --actor alice`
 
 	requireAgentSubcommand(cmd)
 	return cmd
@@ -228,22 +231,90 @@ func RunAgentsConnectionsGet(c *CmdConfig) error {
 	return nil
 }
 
-// RunAgentsConnectionsRevoke revokes one connection.
+// RunAgentsConnectionsRevoke revokes one connection, named by id or by --actor.
 func RunAgentsConnectionsRevoke(c *CmdConfig) error {
 	provider, err := connectionProviderFlag(c)
 	if err != nil {
 		return err
 	}
-	id, err := connectionIDArg(c)
+	actor, err := c.Doit.GetString(c.NS, doctl.ArgAgentConnActor)
 	if err != nil {
 		return err
 	}
+	actor = strings.TrimSpace(actor)
+
+	var id string
+	switch {
+	case actor != "" && len(c.Args) > 0:
+		return errors.New("pass either a connection id or --actor, not both")
+	case actor != "":
+		if id, err = connectionIDForActor(c, provider, actor); err != nil {
+			return err
+		}
+	default:
+		if id, err = connectionIDArg(c); err != nil {
+			return err
+		}
+	}
+
 	if _, err := c.HostedAgents().DeleteConnection(provider, id); err != nil {
 		return connectionsNotEnabledHint(err)
 	}
 	stylingEnabled = detectStyling()
-	printAgentSuccess(c.Out, fmt.Sprintf("Revoked connection %s", id))
+	if actor != "" {
+		printAgentSuccess(c.Out, fmt.Sprintf("Revoked connection %s for %s", id, actor))
+	} else {
+		printAgentSuccess(c.Out, fmt.Sprintf("Revoked connection %s", id))
+	}
 	return nil
+}
+
+// connectionLookupPerPage and connectionLookupMaxPages bound the actor lookup.
+// The cap matters only if the server ignores paging; reaching it refuses the
+// lookup rather than deciding on a partial read.
+const (
+	connectionLookupPerPage  = 100
+	connectionLookupMaxPages = 50
+)
+
+// connectionIDForActor resolves the one connection an actor holds for a
+// provider. It refuses to choose when there are several, so a revoke by actor
+// can never take a connection the caller did not mean. Every page is read:
+// a single match on the first page does not mean there is no second one.
+func connectionIDForActor(c *CmdConfig, provider, actor string) (string, error) {
+	var ids []string
+	seen := 0
+	for page := 1; ; page++ {
+		if page > connectionLookupMaxPages {
+			return "", fmt.Errorf("could not read every %s connection for actor %s; revoke by id", provider, actor)
+		}
+		resp, err := c.HostedAgents().ListConnections(provider, &godo.HostedAgentConnectionListOptions{
+			ActorID: actor,
+			Page:    page,
+			PerPage: connectionLookupPerPage,
+		})
+		if err != nil {
+			return "", connectionsNotEnabledHint(err)
+		}
+		for _, conn := range resp.Connections {
+			if conn.ActorID == actor {
+				ids = append(ids, conn.ID)
+			}
+		}
+		seen += len(resp.Connections)
+		if len(ids) > 1 || len(resp.Connections) < connectionLookupPerPage ||
+			(resp.Pagination.Total > 0 && seen >= int(resp.Pagination.Total)) {
+			break
+		}
+	}
+	switch {
+	case len(ids) == 0:
+		return "", fmt.Errorf("no %s connection found for actor %s", provider, actor)
+	case len(ids) > 1:
+		return "", fmt.Errorf("actor %s has more than one %s connection (%s); revoke one by id",
+			actor, provider, strings.Join(ids, ", "))
+	}
+	return ids[0], nil
 }
 
 // completeConnectionAuth finishes a CreateConnection response: already-active,
@@ -350,12 +421,19 @@ func printConnectionsList(w io.Writer, conns []godo.HostedAgentConnection) {
 		if id := strings.TrimSpace(conn.ID); id != "" {
 			meta = append(meta, colorize(id, colMuted))
 		}
+		if conn.DeletionProtected {
+			meta = append(meta, colorize("protected", colWarning))
+		}
 		fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
 		if conn.OAuth != nil && len(conn.OAuth.Scopes) > 0 {
 			fmt.Fprintf(w, "  %s %s\n", colorize("scopes", colMuted), strings.Join(conn.OAuth.Scopes, ", "))
 		}
 	}
 }
+
+// connCardLabelWidth fits the detail card's longest label, "Protected"; the
+// shared 8-wide default would leave its value one column out of line.
+const connCardLabelWidth = 9
 
 // printConnectionCard renders a single connection detail card for get.
 func printConnectionCard(w io.Writer, env *godo.HostedAgentConnectionEnvelope, created bool) {
@@ -368,27 +446,39 @@ func printConnectionCard(w io.Writer, env *godo.HostedAgentConnectionEnvelope, c
 	if created {
 		fmt.Fprintf(&body, "%s\n\n", boldColor("Connection created", colSuccess))
 	}
-	body.WriteString(cardRow("Actor", conn.ActorID))
-	body.WriteString(cardRow("Provider", conn.Provider))
-	body.WriteString(cardRow("Status", conn.Status))
+	body.WriteString(cardRowWidth("Actor", conn.ActorID, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Provider", conn.Provider, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Status", conn.Status, connCardLabelWidth))
+	body.WriteString(cardRowWidth("Protected", connectionProtectedLabel(conn.DeletionProtected), connCardLabelWidth))
 	if id := strings.TrimSpace(conn.ID); id != "" {
-		body.WriteString(cardRow("ID", colorize(id, colMuted)))
+		body.WriteString(cardRowWidth("ID", colorize(id, colMuted), connCardLabelWidth))
 	}
 	if conn.OAuth != nil && len(conn.OAuth.Scopes) > 0 {
-		body.WriteString(cardRow("Scopes", strings.Join(conn.OAuth.Scopes, ", ")))
+		body.WriteString(cardRowWidth("Scopes", strings.Join(conn.OAuth.Scopes, ", "), connCardLabelWidth))
 	}
 	if conn.CreatedAt != nil && !conn.CreatedAt.Time.IsZero() {
-		body.WriteString(cardRow("Created", colorize(formatCreatedAt(conn.CreatedAt.Time), colMuted)))
+		body.WriteString(cardRowWidth("Created", colorize(formatCreatedAt(conn.CreatedAt.Time), colMuted), connCardLabelWidth))
 	}
 	if env.Authorization != nil && env.Authorization.ConnectURL != "" {
 		fmt.Fprintln(&body)
 		fmt.Fprintln(&body, colorize("Pending authorization", colMuted))
-		body.WriteString(cardRow("URL", env.Authorization.ConnectURL))
+		body.WriteString(cardRowWidth("URL", env.Authorization.ConnectURL, connCardLabelWidth))
 		if env.Authorization.VerificationCode != "" {
-			body.WriteString(cardRow("Code", env.Authorization.VerificationCode))
+			body.WriteString(cardRowWidth("Code", env.Authorization.VerificationCode, connCardLabelWidth))
 		}
 	}
 	renderAgentCard(w, body.String())
+}
+
+// connectionProtectedLabel renders deletion_protected for the detail card. A
+// protected connection is one an agent environment still depends on, so an
+// ordinary revoke is refused; "no" is printed rather than omitted so the card
+// answers the question either way.
+func connectionProtectedLabel(protected bool) string {
+	if protected {
+		return colorize("yes", colWarning)
+	}
+	return colorize("no", colMuted)
 }
 
 // connectionStatusDot colors the list bullet by connection status.

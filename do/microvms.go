@@ -67,6 +67,11 @@ type MicroVMsService interface {
 
 	Exec(id string, req *godo.MicroVMExecRequest) (*godo.MicroVMExecResult, error)
 	ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error)
+
+	UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error)
+	// DownloadFile streams a file out of the MicroVM. The caller must read
+	// Body to EOF and Close it; Body verifies the SHA-256 digest at EOF.
+	DownloadFile(id, path string) (*godo.MicroVMFileDownload, error)
 }
 
 type microVMsService struct {
@@ -233,4 +238,14 @@ func (s *microVMsService) Exec(id string, req *godo.MicroVMExecRequest) (*godo.M
 
 func (s *microVMsService) ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error) {
 	return s.client.MicroVMs.ConsoleURL(id, opt)
+}
+
+func (s *microVMsService) UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error) {
+	info, _, err := s.client.MicroVMs.UploadFile(context.TODO(), id, req)
+	return info, err
+}
+
+func (s *microVMsService) DownloadFile(id, path string) (*godo.MicroVMFileDownload, error) {
+	dl, _, err := s.client.MicroVMs.DownloadFile(context.TODO(), id, path)
+	return dl, err
 }

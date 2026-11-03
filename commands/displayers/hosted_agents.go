@@ -783,7 +783,10 @@ func (h *HostedAgentTemplateBuild) KV() []map[string]any {
 
 // HostedAgentConnection renders external-provider connections for
 // `doctl harness-runtime connections`. Actor leads the table because the actor
-// is what a manifest secret slot binds to; no token is ever shown.
+// is what a manifest secret slot binds to; no token is ever shown. Protected
+// (deletion_protected) is always a column, protected or not: it is the only
+// signal that a revoke will be refused, and a column that came and went would
+// leave "not protected" indistinguishable from "not reported".
 type HostedAgentConnection struct {
 	Connections []godo.HostedAgentConnection
 	Single      bool
@@ -799,7 +802,7 @@ func (h *HostedAgentConnection) JSON(out io.Writer) error {
 }
 
 func (h *HostedAgentConnection) Cols() []string {
-	return []string{"Actor", "ID", "Provider", "Status", "Scopes", "CreatedAt"}
+	return []string{"Actor", "ID", "Provider", "Status", "Protected", "Scopes", "CreatedAt"}
 }
 
 func (h *HostedAgentConnection) ColMap() map[string]string {
@@ -808,6 +811,7 @@ func (h *HostedAgentConnection) ColMap() map[string]string {
 		"ID":        "ID",
 		"Provider":  "Provider",
 		"Status":    "Status",
+		"Protected": "Protected",
 		"Scopes":    "Scopes",
 		"CreatedAt": "Created",
 	}
@@ -832,6 +836,7 @@ func (h *HostedAgentConnection) KV() []map[string]any {
 			"ID":        c.ID,
 			"Provider":  c.Provider,
 			"Status":    c.Status,
+			"Protected": c.DeletionProtected,
 			"Scopes":    scopes,
 			"CreatedAt": created,
 		})

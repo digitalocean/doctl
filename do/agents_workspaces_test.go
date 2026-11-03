@@ -50,7 +50,7 @@ func TestHostedAgentsService_CreateWorkspace(t *testing.T) {
 	ws, err := svc.CreateWorkspace(&godo.HostedAgentWorkspaceCreateRequest{SizeLimitGiB: 10, Name: "notes", IdempotencyKey: "key-1"})
 	require.NoError(t, err)
 	assert.Equal(t, http.MethodPost, gotMethod)
-	assert.Equal(t, "/v2/agents/workspaces", gotPath)
+	assert.Equal(t, "/v2/harness-runtime/workspaces", gotPath)
 	assert.Equal(t, "key-1", gotKey, "the key travels as a header")
 	assert.Equal(t, map[string]any{"size_limit_gib": float64(10), "name": "notes"}, gotBody, "and never in the body")
 	assert.Equal(t, "ws_1", ws.WorkspaceID)
@@ -63,7 +63,7 @@ func TestHostedAgentsService_ListGetDeleteWorkspace(t *testing.T) {
 		calls = append(calls, r.Method+" "+r.URL.RequestURI())
 		w.Header().Set("Content-Type", "application/json")
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/v2/agents/workspaces":
+		case r.Method == http.MethodGet && r.URL.Path == "/v2/harness-runtime/workspaces":
 			_, _ = w.Write([]byte(`{"workspaces":[{"workspace_id":"ws_1"},{"workspace_id":"ws_2"}],"next_page_token":"tok2"}`))
 		case r.Method == http.MethodGet:
 			_, _ = w.Write([]byte(`{"workspace":{"workspace_id":"ws_1","attached_session_id":"sess_1"}}`))
@@ -84,9 +84,9 @@ func TestHostedAgentsService_ListGetDeleteWorkspace(t *testing.T) {
 	require.NoError(t, svc.DeleteWorkspace("ws_1"))
 
 	assert.Equal(t, []string{
-		"GET /v2/agents/workspaces?page_size=2&page_token=tok1",
-		"GET /v2/agents/workspaces/ws_1",
-		"DELETE /v2/agents/workspaces/ws_1",
+		"GET /v2/harness-runtime/workspaces?page_size=2&page_token=tok1",
+		"GET /v2/harness-runtime/workspaces/ws_1",
+		"DELETE /v2/harness-runtime/workspaces/ws_1",
 	}, calls)
 }
 

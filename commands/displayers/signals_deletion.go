@@ -35,7 +35,7 @@ func (d *SignalsDeletion) Cols() []string {
 	return []string{
 		"DeletionID",
 		"Type",
-		"AgentID",
+		"EnvironmentID",
 		"Status",
 		"CreatedAt",
 		"StartedAt",
@@ -45,15 +45,16 @@ func (d *SignalsDeletion) Cols() []string {
 
 func (d *SignalsDeletion) ColMap() map[string]string {
 	return map[string]string{
-		"DeletionID":   "Deletion ID",
-		"TeamID":       "Team ID",
-		"Type":         "Type",
-		"AgentID":      "Agent ID",
-		"Status":       "Status",
-		"ErrorMessage": "Error Message",
-		"CreatedAt":    "Created At",
-		"StartedAt":    "Started At",
-		"CompletedAt":  "Completed At",
+		"DeletionID":    "Deletion ID",
+		"TeamID":        "Team ID",
+		"Type":          "Type",
+		"EnvironmentID": "Environment ID",
+		"AgentID":       "Agent ID",
+		"Status":        "Status",
+		"ErrorMessage":  "Error Message",
+		"CreatedAt":     "Created At",
+		"StartedAt":     "Started At",
+		"CompletedAt":   "Completed At",
 	}
 }
 
@@ -72,16 +73,21 @@ func (d *SignalsDeletion) KV() []map[string]any {
 		if j.ErrorMessage != nil {
 			errMsg = *j.ErrorMessage
 		}
+		id := j.EnvironmentID
+		if id == "" {
+			id = j.AgentID
+		}
 		out[i] = map[string]any{
-			"DeletionID":   j.DeletionID,
-			"TeamID":       j.TeamID,
-			"Type":         j.Type,
-			"AgentID":      j.AgentID,
-			"Status":       j.Status,
-			"ErrorMessage": errMsg,
-			"CreatedAt":    j.CreatedAt,
-			"StartedAt":    startedAt,
-			"CompletedAt":  completedAt,
+			"DeletionID":    j.DeletionID,
+			"TeamID":        j.TeamID,
+			"Type":          j.Type,
+			"EnvironmentID": id,
+			"AgentID":       id,
+			"Status":        j.Status,
+			"ErrorMessage":  errMsg,
+			"CreatedAt":     j.CreatedAt,
+			"StartedAt":     startedAt,
+			"CompletedAt":   completedAt,
 		}
 	}
 	return out
