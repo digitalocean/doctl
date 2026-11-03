@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -75,8 +76,10 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 	cmdList.Example = agentCLI + ` connections list --provider github; ` + agentCLI + ` connections list --actor alice`
 
 	cmdCreate := CmdBuilder(cmd, RunAgentsConnectionsCreate, "create",
-		"Create (or resume) a connection for an actor",
-		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.`,
+		"Create a connection for an actor",
+		`Create a connection binding an actor to a provider. A new connection returns a browser authorization link; this command opens it and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Omit `+"`--scopes`"+` to request the provider's full configured scope set.
+
+Each actor has at most one connection per provider. If one already exists (pending, active, or expired), create is refused; use `+"`"+agentCLI+` connections reconnect <connection-id>`+"`"+` to resume or renew it instead.`,
 		Writer, append(ns, aliasOpt("c"))...)
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	AddStringFlag(cmdCreate, doctl.ArgAgentConnActor, "", "", "Actor id the connection acts for", requiredOpt())
@@ -84,6 +87,17 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 	AddBoolFlag(cmdCreate, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
 	AddBoolFlag(cmdCreate, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
 	cmdCreate.Example = agentCLI + ` connections create --actor alice; ` + agentCLI + ` connections create --actor alice --scopes repo,read:org`
+
+	cmdReconnect := CmdBuilder(cmd, RunAgentsConnectionsReconnect, "reconnect <connection-id>",
+		"Resume or renew an existing connection",
+		`Reconnect one connection by id: resume a pending authorization, or start a new one for an expired or revoked connection. The connection keeps its id, actor, and scopes, so agent configs that use it keep working once it is active again. An active connection is left as it is.
+
+Like `+"`create`"+`, this opens the authorization link in a browser and waits until authorization completes or the link expires, unless `+"`--no-wait`"+` is set. Only the connection's owner can reconnect it.`,
+		Writer, ns...)
+	AddStringFlag(cmdReconnect, doctl.ArgAgentConnProvider, "", "github", "External provider")
+	AddBoolFlag(cmdReconnect, doctl.ArgAgentAuthNoBrowser, "", false, "Print the authorization URL instead of opening a browser")
+	AddBoolFlag(cmdReconnect, doctl.ArgAgentAuthNoWait, "", false, "Print the authorization URL and exit without waiting for authorization to complete")
+	cmdReconnect.Example = agentCLI + ` connections reconnect ` + "`<connection-id>`"
 
 	cmdGet := CmdBuilder(cmd, RunAgentsConnectionsGet, "get <connection-id>",
 		"Get one connection",
@@ -93,12 +107,15 @@ This is the actor-scoped flow. The older ` + agentCLI + ` auth <provider> comman
 	AddStringFlag(cmdGet, doctl.ArgAgentConnProvider, "", "github", "External provider")
 	cmdGet.Example = agentCLI + ` connections get ` + "`<connection-id>`"
 
-	cmdRevoke := CmdBuilder(cmd, RunAgentsConnectionsRevoke, "revoke <connection-id>",
+	cmdRevoke := CmdBuilder(cmd, RunAgentsConnectionsRevoke, "revoke [<connection-id>]",
 		"Revoke a connection",
-		`Revoke one connection by id. Agents referencing its actor can no longer act through it.`,
+		`Revoke one connection, by id or by `+"`--actor`"+`. Agents referencing its actor can no longer act through it.
+
+With `+"`--actor`"+`, the actor must have exactly one connection for the provider. If it has more than one, revoke by id; `+"`connections list --actor`"+` shows the ids.`,
 		Writer, append(ns, aliasOpt("delete", "rm"))...)
 	AddStringFlag(cmdRevoke, doctl.ArgAgentConnProvider, "", "github", "External provider")
-	cmdRevoke.Example = agentCLI + ` connections revoke ` + "`<connection-id>`"
+	AddStringFlag(cmdRevoke, doctl.ArgAgentConnActor, "", "", "Revoke the connection of this actor id instead of naming the connection id")
+	cmdRevoke.Example = agentCLI + ` connections revoke ` + "`<connection-id>`" + `; ` + agentCLI + ` connections revoke --actor alice`
 
 	requireAgentSubcommand(cmd)
 	return cmd
@@ -166,8 +183,8 @@ func RunAgentsConnectionsList(c *CmdConfig) error {
 	return nil
 }
 
-// RunAgentsConnectionsCreate creates (or resumes) a connection and drives the
-// browser authorization to completion.
+// RunAgentsConnectionsCreate creates a connection and drives the browser
+// authorization to completion.
 func RunAgentsConnectionsCreate(c *CmdConfig) error {
 	provider, err := connectionProviderFlag(c)
 	if err != nil {
@@ -200,6 +217,138 @@ func RunAgentsConnectionsCreate(c *CmdConfig) error {
 		Scopes:  scopes,
 	})
 	if err != nil {
+		if _, status, ok := agentAPIError(err); ok && status == http.StatusConflict {
+			return connectionExistsErr(svc, provider, actor, scopes, err)
+		}
+		return connectionsNotEnabledHint(err)
+	}
+	return completeConnectionAuth(c, svc, provider, env, noBrowser, noWait)
+}
+
+// connectionExistsErr turns create's 409 into a next step. The 409 has two
+// causes, and reconnect only fixes one of them:
+//
+//   - The actor already has a non-revoked connection for the provider. The fix
+//     is reconnect, unless --scopes asked for more than that connection holds:
+//     reconnect keeps a connection's scopes, so it cannot add any.
+//   - The actor's connection was made under a different credential. Reconnect
+//     keeps the credential too; the server's message names the remedy.
+//
+// The connection is looked up by actor so the next step can name its id and
+// compare scopes. The list hides other members' connections, so when that finds
+// nothing the next step falls back to listing.
+func connectionExistsErr(svc do.HostedAgentsService, provider, actor string, scopes []string, err error) error {
+	reason, _, _ := agentAPIError(err)
+	if reason = strings.TrimSpace(reason); reason == "" {
+		reason = fmt.Sprintf("a %s connection already exists for %s", provider, actor)
+	}
+	pretty := &agentPrettyError{
+		title:  "Connection already exists",
+		reason: reason,
+		status: http.StatusConflict,
+		cause:  err,
+	}
+
+	var existing *godo.HostedAgentConnection
+	if list, lerr := svc.ListConnections(provider, &godo.HostedAgentConnectionListOptions{ActorID: actor}); lerr == nil {
+		for i := range list.Connections {
+			if conn := &list.Connections[i]; conn.ActorID == actor && conn.ID != "" {
+				existing = conn
+				break
+			}
+		}
+	}
+	id := "<connection-id>"
+	if existing != nil {
+		id = existing.ID
+	}
+	listTip := agentCLI + " connections list --actor " + actor
+
+	if connectionCredentialConflict(reason) {
+		pretty.title = "Connection uses a different credential"
+		pretty.tips = []string{fmt.Sprintf("%s connections revoke %s, then create it again (revoke is refused while an environment uses the connection)", agentCLI, id)}
+		if existing == nil {
+			pretty.tips = append(pretty.tips, listTip)
+		}
+		return pretty
+	}
+
+	reconnectTip := fmt.Sprintf("%s connections reconnect %s", agentCLI, id)
+	switch {
+	case len(scopes) == 0:
+		pretty.tips = []string{reconnectTip}
+	case existing != nil && existing.OAuth != nil && len(existing.OAuth.Scopes) > 0:
+		missing := missingScopes(scopes, existing.OAuth.Scopes)
+		if len(missing) == 0 {
+			pretty.tips = []string{reconnectTip}
+			break
+		}
+		pretty.reason = fmt.Sprintf("%s. The existing connection has scopes %s, and reconnect keeps them, so it cannot add %s",
+			strings.TrimSuffix(reason, "."), strings.Join(existing.OAuth.Scopes, ","), strings.Join(missing, ","))
+		pretty.tips = []string{
+			fmt.Sprintf("To change scopes: %s connections revoke %s, then create it again with --scopes %s (revoke is refused while an environment uses the connection)",
+				agentCLI, id, strings.Join(scopes, ",")),
+			"To keep the current scopes: " + reconnectTip,
+		}
+	default:
+		// --scopes was passed but the existing connection's scopes are unknown.
+		pretty.tips = []string{reconnectTip + " (keeps the connection's current scopes; to change them, revoke it and create it again)"}
+	}
+	if existing == nil {
+		pretty.tips = append(pretty.tips, listTip)
+	}
+	return pretty
+}
+
+// connectionCredentialConflict reports the 409 tool-registry returns when the
+// actor's connection was made under a different credential than this request
+// selects. Its message names the remedy ("delete it before connecting under a
+// different credential"), which reconnect cannot carry out.
+func connectionCredentialConflict(reason string) bool {
+	lower := strings.ToLower(reason)
+	return strings.Contains(lower, "different credential") ||
+		strings.Contains(lower, "credential conflicts")
+}
+
+// missingScopes returns the requested scopes the granted set lacks, compared as
+// exact strings, as tool-registry compares them.
+func missingScopes(requested, granted []string) []string {
+	have := make(map[string]struct{}, len(granted))
+	for _, s := range granted {
+		have[s] = struct{}{}
+	}
+	var missing []string
+	for _, s := range requested {
+		if _, ok := have[s]; !ok {
+			missing = append(missing, s)
+		}
+	}
+	return missing
+}
+
+// RunAgentsConnectionsReconnect resumes or renews an existing connection and
+// drives the browser authorization to completion.
+func RunAgentsConnectionsReconnect(c *CmdConfig) error {
+	provider, err := connectionProviderFlag(c)
+	if err != nil {
+		return err
+	}
+	id, err := connectionIDArg(c)
+	if err != nil {
+		return err
+	}
+	noBrowser, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoBrowser)
+	if err != nil {
+		return err
+	}
+	noWait, err := c.Doit.GetBool(c.NS, doctl.ArgAgentAuthNoWait)
+	if err != nil {
+		return err
+	}
+
+	svc := c.HostedAgents()
+	env, err := svc.ReconnectConnection(provider, id)
+	if err != nil {
 		return connectionsNotEnabledHint(err)
 	}
 	return completeConnectionAuth(c, svc, provider, env, noBrowser, noWait)
@@ -228,26 +377,94 @@ func RunAgentsConnectionsGet(c *CmdConfig) error {
 	return nil
 }
 
-// RunAgentsConnectionsRevoke revokes one connection.
+// RunAgentsConnectionsRevoke revokes one connection, named by id or by --actor.
 func RunAgentsConnectionsRevoke(c *CmdConfig) error {
 	provider, err := connectionProviderFlag(c)
 	if err != nil {
 		return err
 	}
-	id, err := connectionIDArg(c)
+	actor, err := c.Doit.GetString(c.NS, doctl.ArgAgentConnActor)
 	if err != nil {
 		return err
 	}
+	actor = strings.TrimSpace(actor)
+
+	var id string
+	switch {
+	case actor != "" && len(c.Args) > 0:
+		return errors.New("pass either a connection id or --actor, not both")
+	case actor != "":
+		if id, err = connectionIDForActor(c, provider, actor); err != nil {
+			return err
+		}
+	default:
+		if id, err = connectionIDArg(c); err != nil {
+			return err
+		}
+	}
+
 	if _, err := c.HostedAgents().DeleteConnection(provider, id); err != nil {
 		return connectionsNotEnabledHint(err)
 	}
 	stylingEnabled = detectStyling()
-	printAgentSuccess(c.Out, fmt.Sprintf("Revoked connection %s", id))
+	if actor != "" {
+		printAgentSuccess(c.Out, fmt.Sprintf("Revoked connection %s for %s", id, actor))
+	} else {
+		printAgentSuccess(c.Out, fmt.Sprintf("Revoked connection %s", id))
+	}
 	return nil
 }
 
-// completeConnectionAuth finishes a CreateConnection response: already-active,
-// browser connect card, and optional poll until active.
+// connectionLookupPerPage and connectionLookupMaxPages bound the actor lookup.
+// The cap matters only if the server ignores paging; reaching it refuses the
+// lookup rather than deciding on a partial read.
+const (
+	connectionLookupPerPage  = 100
+	connectionLookupMaxPages = 50
+)
+
+// connectionIDForActor resolves the one connection an actor holds for a
+// provider. It refuses to choose when there are several, so a revoke by actor
+// can never take a connection the caller did not mean. Every page is read:
+// a single match on the first page does not mean there is no second one.
+func connectionIDForActor(c *CmdConfig, provider, actor string) (string, error) {
+	var ids []string
+	seen := 0
+	for page := 1; ; page++ {
+		if page > connectionLookupMaxPages {
+			return "", fmt.Errorf("could not read every %s connection for actor %s; revoke by id", provider, actor)
+		}
+		resp, err := c.HostedAgents().ListConnections(provider, &godo.HostedAgentConnectionListOptions{
+			ActorID: actor,
+			Page:    page,
+			PerPage: connectionLookupPerPage,
+		})
+		if err != nil {
+			return "", connectionsNotEnabledHint(err)
+		}
+		for _, conn := range resp.Connections {
+			if conn.ActorID == actor {
+				ids = append(ids, conn.ID)
+			}
+		}
+		seen += len(resp.Connections)
+		if len(ids) > 1 || len(resp.Connections) < connectionLookupPerPage ||
+			(resp.Pagination.Total > 0 && seen >= int(resp.Pagination.Total)) {
+			break
+		}
+	}
+	switch {
+	case len(ids) == 0:
+		return "", fmt.Errorf("no %s connection found for actor %s", provider, actor)
+	case len(ids) > 1:
+		return "", fmt.Errorf("actor %s has more than one %s connection (%s); revoke one by id",
+			actor, provider, strings.Join(ids, ", "))
+	}
+	return ids[0], nil
+}
+
+// completeConnectionAuth finishes a CreateConnection or ReconnectConnection
+// response: already-active, browser connect card, and optional poll until active.
 func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider string, env *godo.HostedAgentConnectionEnvelope, noBrowser, noWait bool) error {
 	if env == nil {
 		return fmt.Errorf("empty connection response for %s", provider)
@@ -292,8 +509,8 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				return fmt.Errorf("authorization was not completed before it expired; run `%s connections get %s` to check it, or `%s connections create --actor %s` for a new link",
-					agentCLI, env.Connection.ID, agentCLI, env.Connection.ActorID)
+				return fmt.Errorf("authorization was not completed before it expired; run `%s connections get %s` to check it, or `%s connections reconnect %s` for a new link",
+					agentCLI, env.Connection.ID, agentCLI, env.Connection.ID)
 			}
 			return fmt.Errorf("stopped waiting; run `%s connections get %s` to check the connection later", agentCLI, env.Connection.ID)
 		case <-time.After(agentsAuthPollInterval):
@@ -308,8 +525,8 @@ func completeConnectionAuth(c *CmdConfig, svc do.HostedAgentsService, provider s
 			printAgentSuccess(c.Out, fmt.Sprintf("%s connection active for %s", provider, got.Connection.ActorID))
 			return nil
 		case connectionStatusExpired, connectionStatusRevoked:
-			return fmt.Errorf("%s connection for %s is %s; authorization was not completed. Run `%s connections create --actor %s` to start a new one",
-				provider, got.Connection.ActorID, status, agentCLI, got.Connection.ActorID)
+			return fmt.Errorf("%s connection for %s is %s; authorization was not completed. Run `%s connections reconnect %s` to start a new one",
+				provider, got.Connection.ActorID, status, agentCLI, got.Connection.ID)
 		}
 	}
 }
