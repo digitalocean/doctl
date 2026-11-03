@@ -611,12 +611,12 @@ func TestValidateAgentManifest_EgressDenyAllFieldShape(t *testing.T) {
 func TestValidateAgentManifest_EgressNullRejected(t *testing.T) {
 	const envelope = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress: null\n"
 	tests := map[string]string{
-		"flat null egress":       "agent: opencode\negress: null\n",
-		"flat null allow_hosts":  "agent: opencode\negress:\n  allow_hosts: null\n",
-		"flat null allow_ips":    "agent: opencode\negress:\n  allow_ips: null\n",
-		"legacy null egress":     envelope,
-		"legacy null allow":      "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allow: null\n",
-		"legacy null allowIps":   "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allowIps: null\n",
+		"flat null egress":      "agent: opencode\negress: null\n",
+		"flat null allow_hosts": "agent: opencode\negress:\n  allow_hosts: null\n",
+		"flat null allow_ips":   "agent: opencode\negress:\n  allow_ips: null\n",
+		"legacy null egress":    envelope,
+		"legacy null allow":     "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allow: null\n",
+		"legacy null allowIps":  "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allowIps: null\n",
 	}
 	for name, manifest := range tests {
 		t.Run(name, func(t *testing.T) {
