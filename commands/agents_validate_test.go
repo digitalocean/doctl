@@ -560,7 +560,6 @@ func TestValidateAgentManifest_EgressDenyAllOK(t *testing.T) {
 		"empty allow_ips":                "agent: opencode\negress:\n  allow_ips: []\n",
 		"both lists empty":               "agent: opencode\negress:\n  allow_hosts: []\n  allow_ips: []\n",
 		"empty hosts with ip is ip-only": "agent: opencode\negress:\n  allow_hosts: []\n  allow_ips: [\"203.0.113.10\"]\n",
-		"legacy denyAll":                 envelope + "      denyAll: true\n",
 		"legacy empty allow":             envelope + "      allow: []\n",
 		"legacy empty allowIps":          envelope + "      allowIps: []\n",
 	}
@@ -582,10 +581,6 @@ func TestValidateAgentManifest_EgressDenyAllRejectsCombinations(t *testing.T) {
 	}{
 		{"empty hosts with vpc", "agent: opencode\negress:\n  allow_hosts: []\n  vpc_uuid: " + vpc + "\n", "deny-all (an empty allowlist) cannot be combined with vpc_uuid"},
 		{"empty ips with subnet", "agent: opencode\negress:\n  allow_ips: []\n  vpc_uuid: " + vpc + "\n  subnet_uuid: 22222222-2222-4222-8222-222222222222\n", "vpc_uuid, subnet_uuid"},
-		{"legacy denyAll with allow", envelope + "      denyAll: true\n      allow:\n        - host: api.github.com\n", "deny-all (denyAll) cannot be combined with allow"},
-		{"legacy denyAll with allowIps", envelope + "      denyAll: true\n      allowIps: [\"203.0.113.10\"]\n", "cannot be combined with allowIps"},
-		{"legacy denyAll with vpc", envelope + "      denyAll: true\n      vpcUuid: " + vpc + "\n", "cannot be combined with vpcUuid"},
-		{"legacy denyAll with unrestricted", envelope + "      denyAll: true\n      unrestricted: true\n", "cannot be combined with unrestricted"},
 		{"legacy empty allow with unrestricted", envelope + "      allow: []\n      unrestricted: true\n", "deny-all (an empty allowlist) cannot be combined with unrestricted"},
 	}
 	for _, tt := range tests {
@@ -600,23 +595,36 @@ func TestValidateAgentManifest_EgressDenyAllRejectsCombinations(t *testing.T) {
 func TestValidateAgentManifest_EgressDenyAllFieldShape(t *testing.T) {
 	const envelope = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n"
 
-	t.Run("legacy denyAll must be a boolean", func(t *testing.T) {
-		v := validateAgentManifest([]byte(envelope + "      denyAll: \"yes\"\n"))
+	t.Run("legacy denyAll is rejected", func(t *testing.T) {
+		v := validateAgentManifest([]byte(envelope + "      denyAll: true\n"))
 		require.False(t, v.ok())
-		assert.Contains(t, joinStrings(v.Errors), "denyAll: must be a boolean")
-	})
-
-	t.Run("legacy denyAll false is not allowed", func(t *testing.T) {
-		v := validateAgentManifest([]byte(envelope + "      denyAll: false\n"))
-		require.False(t, v.ok())
-		assert.Contains(t, joinStrings(v.Errors), "denyAll: must be true when set")
+		assert.Contains(t, joinStrings(v.Errors), "denyAll: is not a manifest key")
 	})
 
 	t.Run("denyAll is not a flat key", func(t *testing.T) {
 		v := validateAgentManifest([]byte("agent: opencode\negress:\n  denyAll: true\n"))
 		require.False(t, v.ok())
-		assert.Contains(t, joinStrings(v.Errors), "denyAll: unknown field")
+		assert.Contains(t, joinStrings(v.Errors), "denyAll: is not a manifest key")
 	})
+}
+
+func TestValidateAgentManifest_EgressNullRejected(t *testing.T) {
+	const envelope = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress: null\n"
+	tests := map[string]string{
+		"flat null egress":       "agent: opencode\negress: null\n",
+		"flat null allow_hosts":  "agent: opencode\negress:\n  allow_hosts: null\n",
+		"flat null allow_ips":    "agent: opencode\negress:\n  allow_ips: null\n",
+		"legacy null egress":     envelope,
+		"legacy null allow":      "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allow: null\n",
+		"legacy null allowIps":   "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allowIps: null\n",
+	}
+	for name, manifest := range tests {
+		t.Run(name, func(t *testing.T) {
+			v := validateAgentManifest([]byte(manifest))
+			require.False(t, v.ok())
+			assert.Contains(t, joinStrings(v.Errors), "egress: none")
+		})
+	}
 }
 
 func TestValidateAgentManifest_EgressIPInHostList(t *testing.T) {
