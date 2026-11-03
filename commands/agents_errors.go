@@ -232,7 +232,7 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 	lower := strings.ToLower(msg)
 	switch status {
 	case http.StatusUnauthorized:
-		return "Authentication failed", []string{"doctl auth init"}
+		return "Authentication failed", []string{"doctl auth login"}
 	case http.StatusForbidden:
 		return "Access denied", []string{"Check your token scopes or team permissions"}
 	case http.StatusNotFound:
