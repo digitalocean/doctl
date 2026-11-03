@@ -155,6 +155,8 @@ const (
 	ArgHA = "ha"
 	// ArgIsolatedWorkers is a cluster's isolated workers argument.
 	ArgIsolatedWorkers = "isolated-workers"
+	// ArgMaxPodsPerNode is a cluster's maximum pods per node argument.
+	ArgMaxPodsPerNode = "max-pods-per-node"
 	// ArgGPUOperatorReady is a cluster's GPU operator ready argument.
 	ArgGPUOperatorReady = "gpu-operator-ready"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.

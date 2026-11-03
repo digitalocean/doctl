@@ -103,6 +103,10 @@ type KubernetesClusterCreateRequest struct {
 	// must already have a NAT gateway attached, or the create request fails with a
 	// 422. This can only be set at creation time.
 	IsolatedWorkers bool `json:"isolated_workers,omitempty"`
+	// MaxPodsPerNode sets the maximum number of pods per worker node. Supported
+	// values are 110, 220 and 450. When omitted, the default is 110. This can only
+	// be set at creation time.
+	MaxPodsPerNode int `json:"max_pods_per_node,omitempty"`
 	// GPUOperatorReady controls whether to launch GPU nodes in the cluster with images without GPU drivers.
 	// Mutually exclusive with other GPU-related cluster options, such as NvidiaGpuDraDriver and AmdGpuDraDriver.
 	GPUOperatorReady bool `json:"gpu_operator_ready,omitempty"`
@@ -288,6 +292,7 @@ type KubernetesCluster struct {
 	P2pOciRegistryPlugin              *KubernetesP2pOciRegistry                    `json:"p2p_oci_registry_plugin,omitempty"`
 	NfsCsiPlugin                      *KubernetesNfsCsiPlugin                      `json:"nfs_csi_plugin,omitempty"`
 	IsolatedWorkers                   bool                                         `json:"isolated_workers,omitempty"`
+	MaxPodsPerNode                    int                                          `json:"max_pods_per_node,omitempty"`
 	GPUOperatorReady                  bool                                         `json:"gpu_operator_ready"`
 
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
