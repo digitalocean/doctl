@@ -249,18 +249,18 @@ func (h *callbackHandler) resultFor(query url.Values) (callbackResult, pageConte
 	// not originate from the authorization request we started.
 	if subtle.ConstantTimeCompare([]byte(query.Get("state")), []byte(h.state)) != 1 {
 		err := errors.New("the authorization response state did not match the request; the login attempt may have been forged")
-		return callbackResult{err: err}, errorContent(err.Error()), http.StatusBadRequest
+		return callbackResult{err: err}, stateMismatchContent, http.StatusBadRequest
 	}
 
 	if code := query.Get("error"); code != "" {
 		err := &AuthorizationError{Code: code, Description: query.Get("error_description")}
-		return callbackResult{err: err}, errorContent(err.Error()), http.StatusBadRequest
+		return callbackResult{err: err}, authorizationErrorContent(err), http.StatusBadRequest
 	}
 
 	code := query.Get("code")
 	if code == "" {
 		err := errors.New("the authorization response did not include an authorization code")
-		return callbackResult{err: err}, errorContent(err.Error()), http.StatusBadRequest
+		return callbackResult{err: err}, missingCodeContent, http.StatusBadRequest
 	}
 
 	return callbackResult{code: code}, successContent, http.StatusOK

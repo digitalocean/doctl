@@ -160,6 +160,7 @@ var _ = suite("auth/login", func(t *testing.T, when spec.G, it spec.S) {
 			combined := output.String()
 			expect.Contains(combined, "Signed in as")
 			expect.Contains(combined, "sammy@example.com")
+			expect.Contains(combined, "https://docs.digitalocean.com/get-started.md", "the terminal shows the agent setup prompt")
 			expect.Contains(combined, "My Team")
 
 			challenge, kind, clientID, scope, redirectURI, tokenForm := as.snapshot()
@@ -224,6 +225,7 @@ var _ = suite("auth/login", func(t *testing.T, when spec.G, it spec.S) {
 
 			combined := output.String()
 			expect.Contains(combined, "access_denied")
+			expect.NotContains(combined, "get-started.md", "a declined authorization does not show the agent setup prompt")
 			expect.Contains(combined, "the user declined the request")
 
 			if contents, err := os.ReadFile(testConfig); err == nil {
