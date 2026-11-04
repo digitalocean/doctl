@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"io"
 	"testing"
 	"time"
@@ -464,6 +465,14 @@ func withTestClient(t *testing.T, tFn testFn) {
 		VectorDBs:           func() do.VectorDBsService { return tm.vectorDBs },
 		Signals:             func() do.SignalsService { return tm.signals },
 	}
+
+	// Session commands warn when the session is bound to a reuse trigger.
+	// The lookup is best-effort; existing tests do not stub it.
+	prevLookup := lookupBoundTrigger
+	lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+		return nil, errors.New("not bound")
+	}
+	t.Cleanup(func() { lookupBoundTrigger = prevLookup })
 
 	tFn(config, tm)
 }
