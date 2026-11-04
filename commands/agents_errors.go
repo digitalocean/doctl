@@ -237,7 +237,7 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 	lower := strings.ToLower(msg)
 	switch status {
 	case http.StatusUnauthorized:
-		return "Authentication failed", []string{"doctl auth init"}
+		return "Authentication failed", []string{"doctl auth login"}
 	case http.StatusForbidden:
 		// A team that has not been let into persistent workspaces gets a 403 with
 		// this message. Its token and permissions are fine, so the scopes tip would
