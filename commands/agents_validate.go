@@ -523,6 +523,27 @@ const (
 	egressDenyAllScalar      = "none"
 )
 
+// egressEmptyListWithVPCMsg is harness-api's error for an empty allowlist with
+// vpc_uuid / subnet_uuid, verbatim (agentspec.go, Egress.validate).
+const egressEmptyListWithVPCMsg = "an empty allow_hosts/allow_ips with vpc_uuid is ambiguous: drop the empty list for VPC with no ACL, or drop vpc_uuid for deny-all"
+
+// egressNullFix is harness-api's fix text for a null egress or allowlist key.
+// It differs by format: `egress: none` only exists in the flat format.
+func egressNullFix(legacy bool) string {
+	if legacy {
+		return "write allow: [] to block all, or unrestricted: true / omit it"
+	}
+	return "write `egress: none` to block all, or `unrestricted` / omit it"
+}
+
+// egressDenyAllFix is how to block all egress, in the manifest's own format.
+func egressDenyAllFix(legacy bool) string {
+	if legacy {
+		return "write allow: [] to block all egress"
+	}
+	return "write `egress: none` (or allow_hosts: []) to block all egress"
+}
+
 const (
 	egressFormatFlat           = "flat"
 	egressFormatLegacyEnvelope = "legacy envelope"
@@ -623,7 +644,7 @@ func extractManifestEgress(doc map[string]any, legacy bool) (raw any, path strin
 func validateEgressValue(raw any, path string, legacy bool, out *agentManifestValidation) {
 	switch v := raw.(type) {
 	case nil:
-		out.Errors = append(out.Errors, fmt.Sprintf("%s is empty; write `egress: none` to block all, or omit egress / use %q", path, egressUnrestrictedScalar))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s is empty; %s", path, egressNullFix(legacy)))
 		return
 	case string:
 		if scalar := strings.TrimSpace(v); scalar != egressUnrestrictedScalar && scalar != egressDenyAllScalar {
@@ -672,7 +693,7 @@ func validateEgressObject(m map[string]any, path string, legacy bool, out *agent
 			continue
 		}
 		if k == "denyAll" {
-			out.Errors = append(out.Errors, fmt.Sprintf("%s.denyAll: is not a manifest key; write allow: [] (or flat egress: none) to block all egress", path))
+			out.Errors = append(out.Errors, fmt.Sprintf("%s.denyAll: is not a manifest key; %s", path, egressDenyAllFix(legacy)))
 			continue
 		}
 		if hint, ok := egressWrongFormatHint(k, legacy); ok {
@@ -707,10 +728,10 @@ func validateEgressObject(m map[string]any, path string, legacy bool, out *agent
 	validateEgressDenyAllCombination(m, path, legacy, out)
 
 	if hostsRaw, present := m[hostsKey]; present {
-		validateEgressAllowHosts(hostsRaw, path, hostsKey, ipsKey, out)
+		validateEgressAllowHosts(hostsRaw, path, hostsKey, ipsKey, legacy, out)
 	}
 	if ipsRaw, present := m[ipsKey]; present {
-		validateEgressAllowIPs(ipsRaw, path, ipsKey, out)
+		validateEgressAllowIPs(ipsRaw, path, ipsKey, legacy, out)
 	}
 
 	if vpcRaw, hasVPC := m[vpcKey]; hasVPC {
@@ -760,18 +781,13 @@ func validateEgressDenyAllCombination(m map[string]any, path string, legacy bool
 		return
 	}
 
-	var conflicts []string
+	// emptyList means both lists are empty, so only unrestricted (legacy) and a
+	// VPC/subnet can conflict with it.
+	unrestricted := false
 	if legacy {
-		if b, ok := m["unrestricted"].(bool); ok && b {
-			conflicts = append(conflicts, "unrestricted")
-		}
+		unrestricted, _ = m["unrestricted"].(bool)
 	}
-	if hostsLen > 0 {
-		conflicts = append(conflicts, hostsKey)
-	}
-	if ipsLen > 0 {
-		conflicts = append(conflicts, ipsKey)
-	}
+	var vpcKeys []string
 	for _, key := range []string{vpcKey, subnetKey} {
 		raw, ok := m[key]
 		if !ok || raw == nil {
@@ -780,17 +796,25 @@ func validateEgressDenyAllCombination(m map[string]any, path string, legacy bool
 		if s, isString := yamlString(raw); isString && strings.TrimSpace(s) == "" {
 			continue
 		}
-		conflicts = append(conflicts, key)
+		vpcKeys = append(vpcKeys, key)
 	}
-	if len(conflicts) == 0 {
-		return
+	switch {
+	case len(vpcKeys) > 0 && !unrestricted:
+		// An empty list plus a VPC used to mean "VPC, no ACL". Use the server's
+		// wording so users are not nudged to drop the VPC and go deny-all.
+		out.Errors = append(out.Errors, fmt.Sprintf("%s: %s", path, egressEmptyListWithVPCMsg))
+	case unrestricted || len(vpcKeys) > 0:
+		conflicts := vpcKeys
+		if unrestricted {
+			conflicts = append([]string{"unrestricted"}, vpcKeys...)
+		}
+		out.Errors = append(out.Errors, fmt.Sprintf("%s: deny-all (an empty allowlist) cannot be combined with %s", path, strings.Join(conflicts, ", ")))
 	}
-	out.Errors = append(out.Errors, fmt.Sprintf("%s: deny-all (an empty allowlist) cannot be combined with %s", path, strings.Join(conflicts, ", ")))
 }
 
-func validateEgressAllowHosts(raw any, path, hostsKey, ipsKey string, out *agentManifestValidation) {
+func validateEgressAllowHosts(raw any, path, hostsKey, ipsKey string, legacy bool, out *agentManifestValidation) {
 	if raw == nil {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s is empty; write `egress: none` to block all", path, hostsKey))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s is empty; %s", path, hostsKey, egressNullFix(legacy)))
 		return
 	}
 	// Legacy envelope uses allow: [{host: "..."}]; flat authoring uses
@@ -828,9 +852,9 @@ func validateEgressAllowHosts(raw any, path, hostsKey, ipsKey string, out *agent
 	out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: must be a list", path, hostsKey))
 }
 
-func validateEgressAllowIPs(raw any, path, ipsKey string, out *agentManifestValidation) {
+func validateEgressAllowIPs(raw any, path, ipsKey string, legacy bool, out *agentManifestValidation) {
 	if raw == nil {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s is empty; write `egress: none` to block all", path, ipsKey))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s is empty; %s", path, ipsKey, egressNullFix(legacy)))
 		return
 	}
 	list, ok := yamlList(raw)

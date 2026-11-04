@@ -579,8 +579,9 @@ func TestValidateAgentManifest_EgressDenyAllRejectsCombinations(t *testing.T) {
 		manifest string
 		want     string
 	}{
-		{"empty hosts with vpc", "agent: opencode\negress:\n  allow_hosts: []\n  vpc_uuid: " + vpc + "\n", "deny-all (an empty allowlist) cannot be combined with vpc_uuid"},
-		{"empty ips with subnet", "agent: opencode\negress:\n  allow_ips: []\n  vpc_uuid: " + vpc + "\n  subnet_uuid: 22222222-2222-4222-8222-222222222222\n", "vpc_uuid, subnet_uuid"},
+		{"empty hosts with vpc", "agent: opencode\negress:\n  allow_hosts: []\n  vpc_uuid: " + vpc + "\n", "is ambiguous: drop the empty list for VPC with no ACL, or drop vpc_uuid for deny-all"},
+		{"empty ips with subnet", "agent: opencode\negress:\n  allow_ips: []\n  vpc_uuid: " + vpc + "\n  subnet_uuid: 22222222-2222-4222-8222-222222222222\n", "is ambiguous: drop the empty list for VPC with no ACL, or drop vpc_uuid for deny-all"},
+		{"legacy empty allow with vpc", envelope + "      allow: []\n      vpcUuid: " + vpc + "\n", "is ambiguous: drop the empty list for VPC with no ACL, or drop vpc_uuid for deny-all"},
 		{"legacy empty allow with unrestricted", envelope + "      allow: []\n      unrestricted: true\n", "deny-all (an empty allowlist) cannot be combined with unrestricted"},
 	}
 	for _, tt := range tests {
@@ -598,13 +599,17 @@ func TestValidateAgentManifest_EgressDenyAllFieldShape(t *testing.T) {
 	t.Run("legacy denyAll is rejected", func(t *testing.T) {
 		v := validateAgentManifest([]byte(envelope + "      denyAll: true\n"))
 		require.False(t, v.ok())
-		assert.Contains(t, joinStrings(v.Errors), "denyAll: is not a manifest key")
+		errs := joinStrings(v.Errors)
+		assert.Contains(t, errs, "denyAll: is not a manifest key; write allow: [] to block all egress")
+		assert.NotContains(t, errs, "egress: none")
 	})
 
 	t.Run("denyAll is not a flat key", func(t *testing.T) {
 		v := validateAgentManifest([]byte("agent: opencode\negress:\n  denyAll: true\n"))
 		require.False(t, v.ok())
-		assert.Contains(t, joinStrings(v.Errors), "denyAll: is not a manifest key")
+		errs := joinStrings(v.Errors)
+		assert.Contains(t, errs, "denyAll: is not a manifest key; write `egress: none` (or allow_hosts: []) to block all egress")
+		assert.NotContains(t, errs, "allow: []")
 	})
 }
 
@@ -622,7 +627,15 @@ func TestValidateAgentManifest_EgressNullRejected(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			v := validateAgentManifest([]byte(manifest))
 			require.False(t, v.ok())
-			assert.Contains(t, joinStrings(v.Errors), "egress: none")
+			errs := joinStrings(v.Errors)
+			// `egress: none` is flat-only; legacy manifests must be told allow: [].
+			if strings.HasPrefix(name, "legacy") {
+				assert.Contains(t, errs, "write allow: [] to block all, or unrestricted: true / omit it")
+				assert.NotContains(t, errs, "egress: none")
+				return
+			}
+			assert.Contains(t, errs, "write `egress: none` to block all, or `unrestricted` / omit it")
+			assert.NotContains(t, errs, "allow: []")
 		})
 	}
 }
