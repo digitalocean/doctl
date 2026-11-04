@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ const (
 	insightsAlertRulesPath           = "/v2/insights/alert-rules"
 	insightsAlertInstancesPath       = "/v2/insights/alert-instances"
 	insightsResourcesPath            = "/v2/insights/resources"
+	insightsDashboardsPath           = "/v2/insights/dashboards"
 )
 
 // Insights resource list sort fields.
@@ -30,6 +32,19 @@ const (
 const (
 	InsightsResourceSortAscending  = "asc"
 	InsightsResourceSortDescending = "desc"
+)
+
+// Insights dashboard list sort fields.
+const (
+	InsightsDashboardSortName      = "name"
+	InsightsDashboardSortCreatedAt = "created_at"
+	InsightsDashboardSortUpdatedAt = "updated_at"
+)
+
+// Insights dashboard list sort directions.
+const (
+	InsightsDashboardSortAscending  = "asc"
+	InsightsDashboardSortDescending = "desc"
 )
 
 // Insights notification channel types. These are the protobuf enum values the
@@ -240,7 +255,7 @@ const (
 
 // InsightsService manages Insights notification channels, alert rules, alert
 // instances, PromQL queries, logs searches, spans searches, traces queries,
-// and per-resource telemetry signal enablement.
+// per-resource telemetry signal enablement, and dashboards.
 type InsightsService interface {
 	ListNotificationChannels(context.Context, *ListOptions) ([]NotificationChannel, *Response, error)
 	GetNotificationChannel(context.Context, string) (*NotificationChannel, *Response, error)
@@ -279,6 +294,13 @@ type InsightsService interface {
 	ListResources(context.Context, *InsightsResourceListOptions) (*InsightsResourceList, *Response, error)
 	GetResource(context.Context, string) (*InsightsResource, *Response, error)
 	UpdateResourceSignals(context.Context, string, *InsightsResourceSignalsRequest) (*InsightsResource, *Response, error)
+
+	ListDashboards(context.Context, *DashboardListOptions) (*DashboardList, *Response, error)
+	GetDashboard(context.Context, string) (*Dashboard, *Response, error)
+	CreateDashboard(context.Context, *DashboardRequest) (*Dashboard, *Response, error)
+	UpdateDashboard(context.Context, string, *DashboardRequest) (*Dashboard, *Response, error)
+	DeleteDashboard(context.Context, string) (*Response, error)
+	GetDashboardSchema(context.Context) (json.RawMessage, *Response, error)
 }
 
 // InsightsServiceOp handles communication with Insights methods of the DigitalOcean API.
@@ -2024,4 +2046,229 @@ func (s *InsightsServiceOp) UpdateResourceSignals(ctx context.Context, resourceU
 		return nil, resp, err
 	}
 	return root.Resource, resp, nil
+}
+
+// DashboardListOptions are pagination and sort parameters for listing
+// dashboards. PerPage defaults to 20; the API rejects values above 200.
+//
+// When Sort is empty, results are ordered by created_at descending and
+// SortDirection is ignored. When Sort is set, SortDirection defaults to
+// ascending.
+type DashboardListOptions struct {
+	Page    int `url:"pagination.page,omitempty"`
+	PerPage int `url:"pagination.per_page,omitempty"`
+	// Sort is one of the InsightsDashboardSort* field constants. Any other
+	// value is rejected by the API.
+	Sort string `url:"pagination.sort,omitempty"`
+	// SortDirection is InsightsDashboardSortAscending or
+	// InsightsDashboardSortDescending. Only applied when Sort is set, in
+	// which case it defaults to ascending. Any other value is rejected by
+	// the API.
+	SortDirection string `url:"pagination.sort_direction,omitempty"`
+}
+
+// Dashboard is an Insights dashboard.
+type Dashboard struct {
+	UUID string `json:"uuid"`
+	// Name is populated by the server from spec.display.name and cannot be
+	// set directly.
+	Name string `json:"name"`
+	// Description is populated by the server from spec.display.description.
+	// Empty when the spec has no description.
+	Description string `json:"description,omitempty"`
+	// Spec is the dashboard definition as a JSON object. The API transports it
+	// as a JSON-encoded string; godo converts in both directions so callers
+	// work with the document itself.
+	Spec      json.RawMessage `json:"-"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+// DashboardRequest is the body for creating or updating a dashboard. Spec is
+// the dashboard definition as a JSON object; it must not be pre-encoded as a
+// string. godo serializes it to the string form the API expects. Retrieve the
+// JSON Schema the document must satisfy with GetDashboardSchema.
+type DashboardRequest struct {
+	Spec json.RawMessage `json:"-"`
+}
+
+// DashboardsPagination is page-based pagination metadata for a dashboards
+// list. Pages and Total are zero when the list is empty.
+type DashboardsPagination struct {
+	Page    int `json:"page"`
+	Pages   int `json:"pages"`
+	PerPage int `json:"per_page"`
+	Total   int `json:"total"`
+}
+
+// DashboardList is a page of dashboards.
+type DashboardList struct {
+	Dashboards []Dashboard           `json:"dashboards,omitempty"`
+	Pagination *DashboardsPagination `json:"pagination,omitempty"`
+}
+
+type dashboardRoot struct {
+	Dashboard *Dashboard `json:"dashboard"`
+}
+
+// dashboardSpecWire is the API representation of a dashboard spec: the JSON
+// document serialized to a string.
+type dashboardSpecWire struct {
+	Spec string `json:"spec"`
+}
+
+// MarshalJSON encodes Spec as the JSON-encoded string the API expects.
+func (d Dashboard) MarshalJSON() ([]byte, error) {
+	type wire Dashboard
+	return json.Marshal(struct {
+		wire
+		dashboardSpecWire
+	}{wire(d), dashboardSpecWire{Spec: string(d.Spec)}})
+}
+
+// UnmarshalJSON decodes the API's string-encoded spec into Spec.
+func (d *Dashboard) UnmarshalJSON(data []byte) error {
+	type wire Dashboard
+	var decoded struct {
+		wire
+		dashboardSpecWire
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*d = Dashboard(decoded.wire)
+	d.Spec = nil
+	if decoded.dashboardSpecWire.Spec != "" {
+		d.Spec = json.RawMessage(decoded.dashboardSpecWire.Spec)
+	}
+	return nil
+}
+
+// MarshalJSON encodes Spec as the JSON-encoded string the API expects. It
+// fails before any request is sent when Spec is empty, is not valid JSON, or
+// is not a JSON object, which catches a spec that was already encoded to a
+// string.
+func (r DashboardRequest) MarshalJSON() ([]byte, error) {
+	spec := bytes.TrimSpace(r.Spec)
+	if len(spec) == 0 {
+		return nil, fmt.Errorf("godo: DashboardRequest.Spec is required")
+	}
+	if spec[0] != '{' || !json.Valid(spec) {
+		return nil, fmt.Errorf("godo: DashboardRequest.Spec must be a JSON object")
+	}
+	return json.Marshal(dashboardSpecWire{Spec: string(r.Spec)})
+}
+
+// UnmarshalJSON decodes the API's string-encoded spec into Spec.
+func (r *DashboardRequest) UnmarshalJSON(data []byte) error {
+	var decoded dashboardSpecWire
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	r.Spec = nil
+	if decoded.Spec != "" {
+		r.Spec = json.RawMessage(decoded.Spec)
+	}
+	return nil
+}
+
+// ListDashboards lists the team's dashboards. Without a Sort, results are
+// newest first; see DashboardListOptions for how Sort and SortDirection
+// interact. The API returns 400 for a PerPage above 200, an unknown Sort
+// field, or an unknown SortDirection.
+func (s *InsightsServiceOp) ListDashboards(ctx context.Context, opt *DashboardListOptions) (*DashboardList, *Response, error) {
+	path, err := addOptions(insightsDashboardsPath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := new(DashboardList)
+	resp, err := s.client.Do(ctx, req, result)
+	if err != nil {
+		return nil, resp, err
+	}
+	return result, resp, nil
+}
+
+// GetDashboard retrieves a dashboard by UUID. The API returns 404 for an
+// unknown, deleted, or malformed UUID, and for dashboards owned by another team.
+func (s *InsightsServiceOp) GetDashboard(ctx context.Context, uuid string) (*Dashboard, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, insightsResourcePath(insightsDashboardsPath, uuid), nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(dashboardRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Dashboard, resp, nil
+}
+
+// CreateDashboard creates a dashboard. The API responds 200 (not 201) with the
+// created dashboard, 409 when another dashboard in the team already uses the
+// spec.display.name, and 429 when the team's dashboard limit or the
+// per-dashboard chart limit is reached.
+func (s *InsightsServiceOp) CreateDashboard(ctx context.Context, create *DashboardRequest) (*Dashboard, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPost, insightsDashboardsPath, create)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(dashboardRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Dashboard, resp, nil
+}
+
+// UpdateDashboard replaces a dashboard's spec in full; Name and Description
+// are recomputed from the new spec. The API returns 409 when the new
+// spec.display.name is already used by another dashboard in the team.
+func (s *InsightsServiceOp) UpdateDashboard(ctx context.Context, uuid string, update *DashboardRequest) (*Dashboard, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPut, insightsResourcePath(insightsDashboardsPath, uuid), update)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(dashboardRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Dashboard, resp, nil
+}
+
+// DeleteDashboard deletes a dashboard. The API responds 200 with an empty
+// object rather than 204.
+func (s *InsightsServiceOp) DeleteDashboard(ctx context.Context, uuid string) (*Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, insightsResourcePath(insightsDashboardsPath, uuid), nil)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Do(ctx, req, nil)
+}
+
+// GetDashboardSchema retrieves the JSON Schema (draft 2020-12) that dashboard
+// specs must satisfy. The returned document is the schema itself, not wrapped
+// in an envelope.
+func (s *InsightsServiceOp) GetDashboardSchema(ctx context.Context) (json.RawMessage, *Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, insightsDashboardsPath+"/schema", nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var schema json.RawMessage
+	resp, err := s.client.Do(ctx, req, &schema)
+	if err != nil {
+		return nil, resp, err
+	}
+	return schema, resp, nil
 }
