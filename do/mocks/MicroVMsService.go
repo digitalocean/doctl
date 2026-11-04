@@ -86,6 +86,21 @@ func (mr *MockMicroVMsServiceMockRecorder) Create(req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockMicroVMsService)(nil).Create), req)
 }
 
+// CreateAccessToken mocks base method.
+func (m *MockMicroVMsService) CreateAccessToken(microVMID string, req *godo.MicroVMAccessTokenCreateRequest) (*godo.MicroVMAccessTokenCreated, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAccessToken", microVMID, req)
+	ret0, _ := ret[0].(*godo.MicroVMAccessTokenCreated)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAccessToken indicates an expected call of CreateAccessToken.
+func (mr *MockMicroVMsServiceMockRecorder) CreateAccessToken(microVMID, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccessToken", reflect.TypeOf((*MockMicroVMsService)(nil).CreateAccessToken), microVMID, req)
+}
+
 // CreateCheckpoint mocks base method.
 func (m *MockMicroVMsService) CreateCheckpoint(microVMID string, req *godo.MicroVMCheckpointCreateRequest) (*do.MicroVMCheckpoint, error) {
 	m.ctrl.T.Helper()
@@ -219,6 +234,21 @@ func (mr *MockMicroVMsServiceMockRecorder) List(filter any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMicroVMsService)(nil).List), filter)
 }
 
+// ListAccessTokens mocks base method.
+func (m *MockMicroVMsService) ListAccessTokens(microVMID string) ([]godo.MicroVMAccessToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAccessTokens", microVMID)
+	ret0, _ := ret[0].([]godo.MicroVMAccessToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAccessTokens indicates an expected call of ListAccessTokens.
+func (mr *MockMicroVMsServiceMockRecorder) ListAccessTokens(microVMID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccessTokens", reflect.TypeOf((*MockMicroVMsService)(nil).ListAccessTokens), microVMID)
+}
+
 // ListCheckpoints mocks base method.
 func (m *MockMicroVMsService) ListCheckpoints(microVMID string) (do.MicroVMCheckpoints, error) {
 	m.ctrl.T.Helper()
@@ -276,6 +306,20 @@ func (m *MockMicroVMsService) Resume(id string) (*do.MicroVM, error) {
 func (mr *MockMicroVMsServiceMockRecorder) Resume(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resume", reflect.TypeOf((*MockMicroVMsService)(nil).Resume), id)
+}
+
+// RevokeAccessToken mocks base method.
+func (m *MockMicroVMsService) RevokeAccessToken(microVMID, tokenID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeAccessToken", microVMID, tokenID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeAccessToken indicates an expected call of RevokeAccessToken.
+func (mr *MockMicroVMsServiceMockRecorder) RevokeAccessToken(microVMID, tokenID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeAccessToken", reflect.TypeOf((*MockMicroVMsService)(nil).RevokeAccessToken), microVMID, tokenID)
 }
 
 // UploadFile mocks base method.
