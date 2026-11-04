@@ -18,16 +18,38 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// setActiveCommand names the command under test as the one running, and
+// restores what was there before. activeCommand is process-global, as viper
+// is, so these tests cannot run in parallel.
+func setActiveCommand(t *testing.T, cmd *cobra.Command) {
+	t.Helper()
+	prev := activeCommand
+	activeCommand = cmd
+	t.Cleanup(func() { activeCommand = prev })
+}
+
+// agentSubcommand returns a command nested inside the harness-runtime group,
+// for the cases that must hold for a subcommand rather than the group root.
+func agentSubcommand(t *testing.T) *cobra.Command {
+	t.Helper()
+	root := Agents()
+	children := root.Commands()
+	require.NotEmpty(t, children)
+	return children[0]
+}
+
 // setAgentRegion overrides the group-level --region key for one test and
-// restores what was there before. viper is process-global, so these tests
-// cannot run in parallel.
+// restores what was there before. It also marks a harness-runtime command as
+// the one running, because the region applies to that group alone.
 func setAgentRegion(t *testing.T, v string) {
 	t.Helper()
+	setActiveCommand(t, agentSubcommand(t))
 	prev := viper.GetString(agentRegionFlagKey)
 	viper.Set(agentRegionFlagKey, v)
 	t.Cleanup(func() { viper.Set(agentRegionFlagKey, prev) })
@@ -137,6 +159,60 @@ func TestAgentRegionClientOpts(t *testing.T) {
 		setAgentRegion(t, "not a region")
 		_, err := agentRegionClientOpts()
 		require.Error(t, err)
+	})
+}
+
+func TestAgentRegionIsScopedToTheGroup(t *testing.T) {
+	// --region is registered on the harness-runtime group alone, but the key
+	// it binds to is also settable in config.yaml, which viper serves to every
+	// command. The client is built for every command, so a region left in a
+	// config file must not reroute the rest of doctl.
+	t.Run("a command outside the group sends no option", func(t *testing.T) {
+		setAgentRegion(t, "mem1")
+		setActiveCommand(t, Droplet().Command)
+
+		opts, err := agentRegionClientOpts()
+		require.NoError(t, err)
+		assert.Nil(t, opts)
+	})
+
+	t.Run("an invalid region outside the group fails nothing", func(t *testing.T) {
+		// Otherwise one bad value in config.yaml makes every doctl command
+		// exit with a region error it has no flag to clear.
+		setAgentRegion(t, "MEM1")
+		setActiveCommand(t, Droplet().Command)
+
+		opts, err := agentRegionClientOpts()
+		require.NoError(t, err)
+		assert.Nil(t, opts)
+	})
+
+	t.Run("no command running sends no option", func(t *testing.T) {
+		setAgentRegion(t, "mem1")
+		setActiveCommand(t, nil)
+
+		opts, err := agentRegionClientOpts()
+		require.NoError(t, err)
+		assert.Nil(t, opts)
+	})
+
+	t.Run("a nested agent subcommand still gets the option", func(t *testing.T) {
+		// A nested group (`template list`, `config get`) is several levels
+		// below the root and carries a namespace of its own, so membership is
+		// read from the command tree rather than from the namespace.
+		setAgentRegion(t, "mem1")
+		nested := AgentTemplates()
+		require.NotEmpty(t, nested.Commands())
+		Agents().AddCommand(nested)
+		setActiveCommand(t, nested.Commands()[0])
+
+		opts, err := agentRegionClientOpts()
+		require.NoError(t, err)
+		require.Len(t, opts, 1)
+
+		client, err := godo.New(nil, opts...)
+		require.NoError(t, err)
+		assert.Equal(t, "https://api-mem1.digitalocean.com/", client.BaseURL.String())
 	})
 }
 

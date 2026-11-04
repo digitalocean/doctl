@@ -123,9 +123,11 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			accessToken := c.getContextAccessToken()
 
 			// Regional routing: the harness-runtime group's --region selects an
-			// API host (agents_region.go). No other group registers the flag,
-			// so this is nil everywhere else, and GetGodoClient applies it
-			// before --api-url so an explicit host still wins.
+			// API host (agents_region.go). This runs for every command, so the
+			// option is scoped there to that group — a `harness-runtime.region`
+			// entry in config.yaml must not reroute the rest of doctl.
+			// GetGodoClient applies it before --api-url so an explicit host
+			// still wins.
 			regionOpts, err := agentRegionClientOpts()
 			if err != nil {
 				return err

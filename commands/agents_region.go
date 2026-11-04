@@ -21,6 +21,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
@@ -65,8 +66,37 @@ func addAgentRegionFlag(cmd *Command) {
 	viper.BindPFlag(agentRegionFlagKey, cmd.PersistentFlags().Lookup(doctl.ArgRegionSlug))
 }
 
-// agentRegionFlag returns the validated --region value, or "" when unset.
+// inAgentCommandTree reports whether cmd is the harness-runtime group or one
+// of its descendants, at any depth.
+func inAgentCommandTree(cmd *cobra.Command) bool {
+	for ; cmd != nil; cmd = cmd.Parent() {
+		if cmd.Name() == agentCmdName {
+			return true
+		}
+	}
+	return false
+}
+
+// agentRegionRequested reports whether the command now running is one the
+// region applies to. The flag is registered on this group alone, but
+// agentRegionFlagKey is a viper key like any other: a `harness-runtime.region`
+// entry in config.yaml is served to every command, so the group is identified
+// from the command tree rather than from the key having a value.
+//
+// The tree is read rather than the namespace, because an agent command's
+// namespace is `agents.<name>` (overrideCmdNS in command_option.go), never the
+// command's own `harness-runtime` name, and a nested group such as
+// `template list` carries a namespace of its own again.
+func agentRegionRequested() bool {
+	return inAgentCommandTree(activeCommand)
+}
+
+// agentRegionFlag returns the validated --region value, or "" when unset or
+// when the running command is outside the group the flag belongs to.
 func agentRegionFlag() (string, error) {
+	if !agentRegionRequested() {
+		return "", nil
+	}
 	region := viper.GetString(agentRegionFlagKey)
 	if region == "" {
 		return "", nil
@@ -120,9 +150,9 @@ func agentRegionBaseURL() (string, error) {
 // requested region's host, and nil when there is nothing to change.
 //
 // GetGodoClient applies these before the --api-url override, so a host the user
-// chose explicitly still wins and doctl only ever rewrites a default. Only the
-// harness-runtime group registers --region, so this is nil for every other
-// command.
+// chose explicitly still wins and doctl only ever rewrites a default. A command
+// outside the harness-runtime group gets nil, config.yaml included — see
+// agentRegionRequested.
 func agentRegionClientOpts() ([]godo.ClientOpt, error) {
 	region, err := agentRegionFlag()
 	if err != nil {
