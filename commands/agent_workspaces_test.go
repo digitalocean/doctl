@@ -355,8 +355,24 @@ func TestRunAgentsWorkspaceDelete_ForceSkipsConfirmation(t *testing.T) {
 	})
 }
 
-// With no terminal there is nobody to ask, so the delete goes ahead without --force.
-func TestRunAgentsWorkspaceDelete_NoTerminalDeletesWithoutForce(t *testing.T) {
+// With no terminal there is nobody to ask, so the delete stops and asks for --force.
+// No DeleteWorkspace call is expected: the mock fails the test if one is made.
+func TestRunAgentsWorkspaceDelete_NoTerminalNeedsForce(t *testing.T) {
+	prev := Interactive
+	Interactive = false
+	t.Cleanup(func() { Interactive = prev })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f"}
+		require.ErrorIs(t, RunAgentsWorkspaceDelete(config), errConfirmationRequired)
+		assert.NotContains(t, buf.String(), "Deleted workspace")
+	})
+}
+
+// --force still deletes with no terminal, which is what scripts pass.
+func TestRunAgentsWorkspaceDelete_NoTerminalWithForceDeletes(t *testing.T) {
 	prev := Interactive
 	Interactive = false
 	t.Cleanup(func() { Interactive = prev })
@@ -367,6 +383,7 @@ func TestRunAgentsWorkspaceDelete_NoTerminalDeletesWithoutForce(t *testing.T) {
 		var buf bytes.Buffer
 		config.Out = &buf
 		config.Args = []string{"018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f"}
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 		require.NoError(t, RunAgentsWorkspaceDelete(config))
 		assert.Contains(t, buf.String(), "Deleted workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 	})
@@ -617,6 +634,28 @@ func TestPrintSessionShowCard_Workspace(t *testing.T) {
 	assert.Contains(t, with.String(), "Workspace")
 	assert.Contains(t, with.String(), "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
 	assert.NotContains(t, without.String(), "Workspace", "the row only appears when a workspace is attached")
+}
+
+// The list shows the workspace id without --verbose, so a reader can tell which
+// sessions hold one. A session without a workspace gets no line.
+func TestPrintSessionListItem_Workspace(t *testing.T) {
+	prev := Verbose
+	Verbose = false
+	t.Cleanup(func() { Verbose = prev })
+
+	var with, without bytes.Buffer
+	printSessionListItem(&with, &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+		SessionID:   "sess_1",
+		Status:      godo.HostedAgentSessionStatusReady,
+		WorkspaceID: "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f",
+	}})
+	printSessionListItem(&without, &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+		SessionID: "sess_2",
+		Status:    godo.HostedAgentSessionStatusReady,
+	}})
+	assert.Contains(t, with.String(), "workspace")
+	assert.Contains(t, with.String(), "018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f")
+	assert.NotContains(t, without.String(), "workspace", "no line when no workspace is attached")
 }
 
 // Help must say --workspace works with --from-config only, and must not show
