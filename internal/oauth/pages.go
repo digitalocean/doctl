@@ -292,10 +292,10 @@ type pageContent struct {
 	Prompt string
 }
 
-// agentSetupPrompt is what "Copy setup prompt for your agent" puts on the
+// AgentSetupPrompt is what "Copy setup prompt for your agent" puts on the
 // clipboard: a one-line instruction to fetch DigitalOcean's getting-started
-// guide and follow it.
-const agentSetupPrompt = "Fetch https://docs.digitalocean.com/get-started.md and follow it."
+// guide and follow it. doctl auth login also prints it in the terminal.
+const AgentSetupPrompt = "Fetch https://docs.digitalocean.com/get-started.md and follow it."
 
 var successContent = pageContent{
 	Outcome:     "successful",
@@ -303,7 +303,7 @@ var successContent = pageContent{
 	Ocean:       true,
 	Background:  successBackgroundSrc,
 	Logo:        digitalOceanLogoSrc,
-	Prompt:      agentSetupPrompt,
+	Prompt:      AgentSetupPrompt,
 	AgentOpenAI: pngSrc(agentOpenAIPNG),
 	AgentCursor: pngSrc(agentCursorPNG),
 	AgentClaude: pngSrc(agentClaudePNG),
