@@ -211,7 +211,64 @@ func TestCallbackPageEscapesServerSuppliedText(t *testing.T) {
 	assert.Contains(t, page, `class="sea"`)
 	assert.Contains(t, page, successBackgroundDataURL, "a failed authorization uses the same embedded photograph as a successful login")
 	assert.Contains(t, page, `alt="DigitalOcean"`)
-	assert.Contains(t, page, "Authorization failed")
+	assert.Contains(t, page, "Authorization<br>failed")
+}
+
+func TestFailurePagesReadAsSentences(t *testing.T) {
+	tests := []struct {
+		name    string
+		params  url.Values
+		status  string
+		message string
+		detail  string
+	}{
+		{
+			name:    "access denied",
+			params:  url.Values{"error": {"access_denied"}, "error_description": {"The user declined the request"}, "state": {"the-state"}},
+			status:  "Access declined",
+			message: "doctl wasn&#39;t given access to your DigitalOcean account. " + "You can close this tab and try again from your terminal.",
+		},
+		{
+			name:    "mismatched state",
+			params:  url.Values{"code": {"auth-code"}, "state": {"not-the-state"}},
+			status:  "Sign-in couldn&#39;t be verified",
+			message: "This response didn&#39;t match the sign-in doctl started, so doctl ignored it. You can close this tab and try again from your terminal.",
+		},
+		{
+			name:    "missing code",
+			params:  url.Values{"state": {"the-state"}},
+			status:  "Sign-in didn&#39;t finish",
+			message: "DigitalOcean didn&#39;t send back an authorization code. You can close this tab and try again from your terminal.",
+		},
+		{
+			name:    "unknown error with a lowercase description",
+			params:  url.Values{"error": {"server_error"}, "error_description": {"the server is busy"}, "state": {"the-state"}},
+			status:  "Sign-in didn&#39;t finish",
+			message: "The server is busy. You can close this tab and try again from your terminal.",
+			detail:  "Error code: server_error",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			handler := &callbackHandler{state: "the-state", results: make(chan callbackResult, 1)}
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, callbackPath+"?"+test.params.Encode(), nil))
+
+			page := recorder.Body.String()
+			assert.Contains(t, page, "Authorization<br>failed")
+			assert.Contains(t, page, `class="status failed"`)
+			assert.Contains(t, page, test.status)
+			assert.Contains(t, page, test.message)
+			if test.detail != "" {
+				assert.Contains(t, page, test.detail)
+			} else {
+				assert.NotContains(t, page, `class="detail"`)
+			}
+			assert.NotContains(t, page, "access_denied:", "the raw error code is not shown as the message")
+			assert.NotContains(t, page, "data-prompt", "a failed authorization does not offer the agent prompt")
+		})
+	}
 }
 
 func TestLoginTimesOut(t *testing.T) {

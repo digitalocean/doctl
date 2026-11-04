@@ -17,6 +17,9 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"html/template"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // successBackgroundPNG is the image shown behind the callback card, for both
@@ -83,24 +86,15 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
   main {
     position: relative;
     z-index: 1;
-    max-width: 30rem;
-    padding: 3rem 2.5rem;
-    background: #ffffff;
-    border: 1px solid #e5e8ed;
-    border-radius: 0.75rem;
-    text-align: center;
-  }
-  h1 { margin: 0 0 0.75rem; font-size: 1.25rem; font-weight: 600; }
-  p { margin: 0; line-height: 1.6; color: #4b5563; }
-  .mark { font-size: 2rem; line-height: 1; margin-bottom: 1rem; }
-  .ok { color: #0069ff; }
-  .fail { color: #d0021b; }
-  main.success {
+    box-sizing: border-box;
+    width: calc(100% - 2rem);
     max-width: 32rem;
     padding: 3rem 2.2rem 2rem;
+    background: #ffffff;
     border-radius: 1.3rem;
+    text-align: center;
   }
-  main.success h1 {
+  h1 {
     margin: 0;
     color: #031b4e;
     font-size: 2.55rem;
@@ -108,7 +102,8 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
     letter-spacing: -0.035em;
     line-height: 1.08;
   }
-  .close {
+  p { margin: 0; }
+  .status {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -119,7 +114,8 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
     font-weight: 500;
     line-height: 1.3;
   }
-  .check {
+  .status.failed { color: #031b4e; font-weight: 600; }
+  .badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -129,7 +125,22 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
     background: #1f9d55;
     flex: none;
   }
-  .check svg { width: 0.78rem; height: 0.78rem; }
+  .status.failed .badge { background: #d43f3a; }
+  .badge svg { width: 0.78rem; height: 0.78rem; }
+  .message {
+    max-width: 25rem;
+    margin: 0.75rem auto 0;
+    color: #5c6a80;
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  .detail {
+    margin-top: 1.1rem;
+    color: #8b97a8;
+    font-size: 0.8rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow-wrap: anywhere;
+  }
   .copy {
     display: inline-flex;
     align-items: center;
@@ -190,24 +201,19 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
     color-scheme: light;
   }
   body.ocean main {
-    border: none;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
-    color: #031b4e;
-  }
-  @media (prefers-color-scheme: dark) {
-    body:not(.ocean) { background: #0b1020; color: #e7ecf5; }
-    body:not(.ocean) main { background: #131a2e; border-color: #24304d; }
-    body:not(.ocean) p { color: #9aa7bd; }
   }
 </style>
 </head>
 <body{{if .Ocean}} class="ocean"{{end}}>
   {{if .Ocean}}<img class="sea" alt="" {{.Background}}>
   <img class="logo" alt="DigitalOcean" {{.Logo}}>{{end}}
-  <main{{if .Prompt}} class="success"{{end}}>
+  <main>
+    <h1>Authorization<br>{{.Outcome}}</h1>
+    <p class="status{{if .Failed}} failed{{end}}"><span class="badge" aria-hidden="true">{{if .Failed}}<svg viewBox="0 0 16 16" fill="none"><path d="M5 5 11 11M11 5 5 11" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>{{else}}<svg viewBox="0 0 16 16" fill="none"><path d="M3.4 8.2 6.5 11.2 12.6 4.8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}</span> {{.Status}}</p>
+    {{if .Message}}<p class="message">{{.Message}}</p>{{end}}
+    {{if .Detail}}<p class="detail">{{.Detail}}</p>{{end}}
     {{if .Prompt}}
-    <h1>Authorization<br>successful</h1>
-    <p class="close"><span class="check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3.4 8.2 6.5 11.2 12.6 4.8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> You can close this tab.</p>
     <button type="button" class="copy" data-prompt="{{.Prompt}}">
       <span class="agents" aria-hidden="true">
         <img alt="" {{.AgentOpenAI}}>
@@ -218,10 +224,6 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
       <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M6.5 15.5h-1a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
       <svg class="copied-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12.5 9.2 17 19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
-    {{else}}
-    <div class="mark {{.MarkClass}}">{{.Mark}}</div>
-    <h1>{{.Title}}</h1>
-    <p>{{.Message}}</p>
     {{end}}
   </main>
   {{if .Prompt}}<script>
@@ -263,10 +265,16 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
 `))
 
 type pageContent struct {
-	MarkClass string
-	Mark      string
-	Title     string
-	Message   string
+	// Failed switches the status line from a green check to a red cross.
+	Failed bool
+	// Outcome completes the "Authorization ..." heading.
+	Outcome string
+	// Status is the short line beside the check or cross.
+	Status string
+	// Message and Detail are optional and may repeat text from the
+	// authorization server; the template escapes them.
+	Message string
+	Detail  string
 	// Ocean selects the photographed background shared by the signed-in and
 	// failed-authorization pages.
 	Ocean bool
@@ -290,6 +298,8 @@ type pageContent struct {
 const agentSetupPrompt = "Fetch https://docs.digitalocean.com/get-started.md and follow it."
 
 var successContent = pageContent{
+	Outcome:     "successful",
+	Status:      "You can close this tab.",
 	Ocean:       true,
 	Background:  successBackgroundSrc,
 	Logo:        digitalOceanLogoSrc,
@@ -299,14 +309,62 @@ var successContent = pageContent{
 	AgentClaude: pngSrc(agentClaudePNG),
 }
 
-func errorContent(reason string) pageContent {
+// tryAgain closes every failure message, so each one ends the same way.
+const tryAgain = "You can close this tab and try again from your terminal."
+
+func errorContent(status, message, detail string) pageContent {
 	return pageContent{
-		MarkClass:  "fail",
-		Mark:       "\u2717",
-		Title:      "Authorization failed",
-		Message:    reason + " You can close this tab and try again in your terminal.",
+		Failed:     true,
+		Outcome:    "failed",
+		Status:     status,
+		Message:    message + " " + tryAgain,
+		Detail:     detail,
 		Ocean:      true,
 		Background: successBackgroundSrc,
 		Logo:       digitalOceanLogoSrc,
 	}
+}
+
+var stateMismatchContent = errorContent(
+	"Sign-in couldn't be verified",
+	"This response didn't match the sign-in doctl started, so doctl ignored it.",
+	"",
+)
+
+var missingCodeContent = errorContent(
+	"Sign-in didn't finish",
+	"DigitalOcean didn't send back an authorization code.",
+	"",
+)
+
+// authorizationErrorContent describes an error the authorization server sent
+// back. Codes people commonly hit get their own wording; anything else shows
+// the server's description and keeps the raw code as a small detail line.
+func authorizationErrorContent(e *AuthorizationError) pageContent {
+	switch {
+	case e.Code == "access_denied":
+		return errorContent("Access declined", "doctl wasn't given access to your DigitalOcean account.", "")
+	case isInvalidClientCode(e.Code):
+		return errorContent("doctl wasn't recognized", "DigitalOcean didn't accept doctl's sign-in request.", "Error code: "+e.Code)
+	}
+	message := "DigitalOcean couldn't complete the sign-in."
+	if e.Description != "" {
+		message = sentence(e.Description)
+	}
+	return errorContent("Sign-in didn't finish", message, "Error code: "+e.Code)
+}
+
+// sentence capitalizes s and ends it with a period, so a server description
+// such as "the request was invalid" reads as a sentence before tryAgain.
+func sentence(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	first, size := utf8.DecodeRuneInString(s)
+	s = string(unicode.ToUpper(first)) + s[size:]
+	if !strings.ContainsAny(s[len(s)-1:], ".!?") {
+		s += "."
+	}
+	return s
 }
