@@ -393,6 +393,26 @@ func TestRunAgentsWorkspaceDelete_ConflictShowsServerMessage(t *testing.T) {
 	})
 }
 
+// A team that is not enrolled for workspaces gets a 403 from the API. It reads as
+// "Not available yet", not as a permissions problem, and carries no scopes tip.
+func TestBeautifyAgentError_WorkspacesNotEnabledReadsAsNotAvailableYet(t *testing.T) {
+	out := beautifyAgentError(godoStatusErr(http.StatusForbidden, "workspaces are not enabled"))
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Not available yet", pretty.title)
+	assert.Equal(t, "workspaces are not enabled", pretty.reason)
+	assert.Empty(t, pretty.tips, "the token is fine, and a retry does not help")
+}
+
+// Any other 403 is still a permissions problem.
+func TestBeautifyAgentError_OtherForbiddenStaysAccessDenied(t *testing.T) {
+	out := beautifyAgentError(godoStatusErr(http.StatusForbidden, "you do not have access to this resource"))
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Access denied", pretty.title)
+	assert.NotEmpty(t, pretty.tips)
+}
+
 func TestBeautifyAgentError_NotImplementedReadsAsNotAvailableYet(t *testing.T) {
 	out := beautifyAgentError(godoStatusErr(http.StatusNotImplemented, "workspaces are not enabled"))
 	var pretty *agentPrettyError

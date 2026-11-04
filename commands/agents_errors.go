@@ -239,6 +239,12 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 	case http.StatusUnauthorized:
 		return "Authentication failed", []string{"doctl auth init"}
 	case http.StatusForbidden:
+		// A team that has not been let into persistent workspaces gets a 403 with
+		// this message. Its token and permissions are fine, so the scopes tip would
+		// send it the wrong way, and a retry does not help.
+		if strings.Contains(lower, "workspaces are not enabled") {
+			return "Not available yet", nil
+		}
 		return "Access denied", []string{"Check your token scopes or team permissions"}
 	case http.StatusNotFound:
 		return "Not found", []string{"doctl harness-runtime list", "Confirm the ID or name and try again"}
