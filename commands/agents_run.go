@@ -1357,6 +1357,11 @@ func printSessionListItem(w io.Writer, sess *do.HostedAgentSession) {
 		meta = append(meta, colorize(createdAgo(sess.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+	// Shown without --verbose, so the list says which sessions hold a workspace.
+	// Like the show card, a session without one gets no line.
+	if ws := strings.TrimSpace(sess.WorkspaceID); ws != "" {
+		fmt.Fprintf(w, "  %s %s\n", colorize("workspace", colMuted), ws)
+	}
 	if Verbose {
 		if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
 			fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))

@@ -333,7 +333,7 @@ A page can hold fewer workspaces than ` + "`--page-size`" + `, even none, while 
 
 const agentsWorkspaceGetHelpMD = `Print details for one persistent workspace: its state, size, how much is used, the session that holds it, and when it was last saved.`
 
-const agentsWorkspaceDeleteHelpMD = `Permanently delete a persistent workspace and everything saved in it. This cannot be undone. In a terminal it asks first unless ` + "`--force`" + ` is given; with no terminal (a script, or ` + "`--interactive=false`" + `) it deletes without asking.
+const agentsWorkspaceDeleteHelpMD = `Permanently delete a persistent workspace and everything saved in it. This cannot be undone. In a terminal it asks first unless ` + "`--force`" + ` is given. With no terminal (a script, or ` + "`--interactive=false`" + `) there is nobody to ask, so pass ` + "`--force`" + `; without it the command stops and deletes nothing.
 
 A workspace a session still holds cannot be deleted: remove the session, wait until the workspace is available again, then delete it. Removing a session never deletes its workspace. A workspace shows DELETING while its delete runs; once it finishes, the workspace no longer exists.`
 
