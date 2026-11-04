@@ -259,7 +259,7 @@ func gatherWelcome(deps welcomeDeps) welcome {
 	// A freshly installed doctl reaches nothing. There is no account to
 	// resolve, and a binary the user has not yet configured should not make
 	// unsolicited outbound requests to say a newer one exists; the answer the
-	// greeting owes them is `auth init`, which needs no network to give.
+	// greeting owes them is `auth login`, which needs no network to give.
 	if token == "" {
 		return w
 	}
@@ -514,13 +514,13 @@ func welcomeSteps(state authState) []welcomeStep {
 	switch state {
 	case authStateNoToken:
 		return []welcomeStep{
-			{"doctl auth init", "Connect doctl to your DigitalOcean account"},
+			{"doctl auth login", "Sign in to your DigitalOcean account in a browser"},
 			{"doctl auth list", "Show the authentication contexts you have"},
 			{"doctl --help", "Browse every command"},
 		}
 	case authStateInvalid:
 		return []welcomeStep{
-			{"doctl auth init", "Replace the token for this context"},
+			{"doctl auth login", "Sign in again for this context"},
 			{"doctl auth switch", "Use a different authentication context"},
 			{"doctl --help", "Browse every command"},
 		}

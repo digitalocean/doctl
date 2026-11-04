@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "workspace", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -4076,7 +4076,7 @@ func TestRunAgentsLaunch_AttachAuthFailure(t *testing.T) {
 		var pretty *agentPrettyError
 		require.True(t, errors.As(err, &pretty))
 		assert.Equal(t, "Authentication failed", pretty.title)
-		assert.Contains(t, pretty.tips, "doctl auth init")
+		assert.Contains(t, pretty.tips, "doctl auth login")
 		assert.Equal(t, "Authentication failed", pretty.Title())
 		assert.NotContains(t, pretty.Reason(), "GET http://")
 		assert.NotContains(t, pretty.Error(), "GET http://")

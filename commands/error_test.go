@@ -113,7 +113,7 @@ func Test_NextStep_OnlySuggestsHelpForLocalFailures(t *testing.T) {
 		{
 			name: "a status the table knows keeps its own advice",
 			err:  apiErr(http.StatusUnauthorized, 0, "bad token"),
-			want: "run doctl auth init",
+			want: "run doctl auth login",
 		},
 		{
 			name: "an unmapped status still beats a misleading --help",
