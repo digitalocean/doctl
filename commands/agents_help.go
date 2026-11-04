@@ -87,7 +87,7 @@ harness: opencode
 ` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
 
 - ` + "`egress: unrestricted`" + `
-- ` + "`egress: none`" + ` — deny all outbound traffic. An allowlist written empty (` + "`egress: []`, `allow_hosts: []`, `allow_ips: []`" + `) means the same; it cannot be combined with ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + ` or URL-bound credentials. A null ` + "`egress`" + ` or allowlist key (for example a fully commented-out list) is rejected — write ` + "`egress: none`" + ` instead
+- ` + "`egress: none`" + ` — deny all outbound traffic. An allowlist written empty (` + "`egress: []`, `allow_hosts: []`, `allow_ips: []`" + `) means the same; it cannot be combined with ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + `, and the API rejects it with URL-bound credentials (` + "`validate`" + ` does not check that). A null ` + "`egress`" + ` or allowlist key (for example a fully commented-out list) is rejected — write ` + "`egress: none`" + ` instead
 - host allowlist: ` + "`egress: [api.github.com, pypi.org]`" + `
 - object: ` + "`allow_hosts`" + `, ` + "`allow_ips`" + ` (exact IPv4/IPv6 literals — not CIDRs), and optional ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + ` (` + "`subnet_uuid`" + ` requires ` + "`vpc_uuid`" + `; VPC attachment is create-time immutable)
 

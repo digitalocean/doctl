@@ -583,6 +583,7 @@ func TestValidateAgentManifest_EgressDenyAllRejectsCombinations(t *testing.T) {
 		{"empty ips with subnet", "agent: opencode\negress:\n  allow_ips: []\n  vpc_uuid: " + vpc + "\n  subnet_uuid: 22222222-2222-4222-8222-222222222222\n", "is ambiguous: drop the empty list for VPC with no ACL, or drop vpc_uuid for deny-all"},
 		{"legacy empty allow with vpc", envelope + "      allow: []\n      vpcUuid: " + vpc + "\n", "is ambiguous: drop the empty list for VPC with no ACL, or drop vpc_uuid for deny-all"},
 		{"legacy empty allow with unrestricted", envelope + "      allow: []\n      unrestricted: true\n", "deny-all (an empty allowlist) cannot be combined with unrestricted"},
+		{"legacy empty allow with unrestricted and subnet", envelope + "      allow: []\n      unrestricted: true\n      subnetUuid: " + vpc + "\n", "cannot be combined with unrestricted, subnetUuid"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -615,27 +616,93 @@ func TestValidateAgentManifest_EgressDenyAllFieldShape(t *testing.T) {
 
 func TestValidateAgentManifest_EgressNullRejected(t *testing.T) {
 	const envelope = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress: null\n"
+	const envelopeEgress = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n"
+	// `egress: none` is flat-only; legacy manifests must be told allow: [].
+	const (
+		flatFix   = "write `egress: none` to block all, or `unrestricted` / omit it"
+		legacyFix = "write allow: [] to block all, or unrestricted: true / omit it"
+	)
+	tests := []struct {
+		name     string
+		manifest string
+		want     string
+		notWant  string
+	}{
+		{"flat null egress", "agent: opencode\negress: null\n", flatFix, "allow: []"},
+		{"flat null allow_hosts", "agent: opencode\negress:\n  allow_hosts: null\n", flatFix, "allow: []"},
+		{"flat null allow_ips", "agent: opencode\negress:\n  allow_ips: null\n", flatFix, "allow: []"},
+		{"legacy null egress", envelope, legacyFix, "egress: none"},
+		{"legacy null allow", envelopeEgress + "      allow: null\n", legacyFix, "egress: none"},
+		{"legacy null allowIps", envelopeEgress + "      allowIps: null\n", legacyFix, "egress: none"},
+		{"legacy empty allow with null allowIps", envelopeEgress + "      allow: []\n      allowIps: null\n", legacyFix, "egress: none"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := validateAgentManifest([]byte(tt.manifest))
+			require.False(t, v.ok())
+			errs := joinStrings(v.Errors)
+			assert.Contains(t, errs, tt.want)
+			assert.NotContains(t, errs, tt.notWant)
+		})
+	}
+}
+
+// The legacy envelope decodes egress into an object, so harness-api rejects a
+// scalar or list there; only the flat format has those forms.
+func TestValidateAgentManifest_EgressLegacyRequiresObject(t *testing.T) {
+	const envelope = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n"
 	tests := map[string]string{
-		"flat null egress":      "agent: opencode\negress: null\n",
-		"flat null allow_hosts": "agent: opencode\negress:\n  allow_hosts: null\n",
-		"flat null allow_ips":   "agent: opencode\negress:\n  allow_ips: null\n",
-		"legacy null egress":    envelope,
-		"legacy null allow":     "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allow: null\n",
-		"legacy null allowIps":  "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n      allowIps: null\n",
+		"none scalar":         envelope + "    egress: none\n",
+		"unrestricted scalar": envelope + "    egress: unrestricted\n",
+		"host list":           envelope + "    egress:\n      - api.github.com\n",
 	}
 	for name, manifest := range tests {
 		t.Run(name, func(t *testing.T) {
 			v := validateAgentManifest([]byte(manifest))
 			require.False(t, v.ok())
+			assert.Contains(t, joinStrings(v.Errors), "must be an object in the legacy envelope")
+		})
+	}
+}
+
+// harness-api matches the scalars exactly: no case folding, no trimming.
+func TestValidateAgentManifest_EgressScalarExactMatch(t *testing.T) {
+	for name, manifest := range map[string]string{
+		"capitalized": "agent: opencode\negress: None\n",
+		"padded":      "agent: opencode\negress: \" none \"\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			v := validateAgentManifest([]byte(manifest))
+			require.False(t, v.ok())
+			assert.Contains(t, joinStrings(v.Errors), "scalar must be")
+		})
+	}
+}
+
+// harness-api decodes legacy `unrestricted` into a bool, so a string is a 400.
+func TestValidateAgentManifest_EgressLegacyUnrestrictedMustBeBool(t *testing.T) {
+	const envelope = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n"
+	v := validateAgentManifest([]byte(envelope + "      allow: []\n      unrestricted: \"true\"\n"))
+	require.False(t, v.ok())
+	assert.Contains(t, joinStrings(v.Errors), "unrestricted: must be a boolean")
+}
+
+// subnet_uuid without vpc_uuid gets the "requires" error only; the "ambiguous"
+// message names vpc_uuid, a key the user did not write.
+func TestValidateAgentManifest_EgressEmptyListSubnetOnly(t *testing.T) {
+	const envelope = "apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nspec:\n  runtime:\n    adapter: opencode\n  sandbox:\n    egress:\n"
+	const subnet = "22222222-2222-4222-8222-222222222222"
+	tests := map[string]struct{ manifest, requires string }{
+		"flat":   {"agent: opencode\negress:\n  allow_hosts: []\n  subnet_uuid: " + subnet + "\n", "subnet_uuid requires"},
+		"legacy": {envelope + "      allow: []\n      subnetUuid: " + subnet + "\n", "subnetUuid requires"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			v := validateAgentManifest([]byte(tt.manifest))
+			require.False(t, v.ok())
 			errs := joinStrings(v.Errors)
-			// `egress: none` is flat-only; legacy manifests must be told allow: [].
-			if strings.HasPrefix(name, "legacy") {
-				assert.Contains(t, errs, "write allow: [] to block all, or unrestricted: true / omit it")
-				assert.NotContains(t, errs, "egress: none")
-				return
-			}
-			assert.Contains(t, errs, "write `egress: none` to block all, or `unrestricted` / omit it")
-			assert.NotContains(t, errs, "allow: []")
+			assert.Contains(t, errs, tt.requires)
+			assert.NotContains(t, errs, "ambiguous")
 		})
 	}
 }

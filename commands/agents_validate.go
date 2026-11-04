@@ -567,6 +567,18 @@ var egressAliasFields = []egressAliasField{
 	{flatKey: "subnet_uuid", legacyKey: "subnetUuid"},
 }
 
+// egressKeysForFormat returns the hosts, ips, vpc and subnet key names for the
+// manifest's format.
+func egressKeysForFormat(legacy bool) (hosts, ips, vpc, subnet string) {
+	pick := func(f egressAliasField) string {
+		if legacy {
+			return f.legacyKey
+		}
+		return f.flatKey
+	}
+	return pick(egressAliasFields[0]), pick(egressAliasFields[1]), pick(egressAliasFields[2]), pick(egressAliasFields[3])
+}
+
 func egressKnownKeysForFormat(legacy bool) map[string]struct{} {
 	known := make(map[string]struct{}, len(egressAliasFields)+1)
 	for _, f := range egressAliasFields {
@@ -604,8 +616,9 @@ func egressWrongFormatHint(k string, legacy bool) (hint string, matched bool) {
 // validateManifestEgress checks the egress policy oneOf (MARSOHS-1219): omitted,
 // "unrestricted", "none" (deny all), host list, or object with allow_hosts /
 // allow_ips / vpc_uuid / subnet_uuid. An allowlist written present-but-empty
-// also means deny-all (MARSOHS-2118, VULN-5606). Structural checks only — advisory wording (e.g. IP-only ACL) is
-// harness-api session.warnings, not duplicated here (MARSOHS-1404).
+// also means deny-all (MARSOHS-2118). Structural checks only: advisory wording
+// (e.g. IP-only ACL) is harness-api session.warnings, not duplicated here
+// (MARSOHS-1404).
 func validateManifestEgress(doc map[string]any, legacy bool, out *agentManifestValidation) {
 	raw, path, ok := extractManifestEgress(doc, legacy)
 	if !ok {
@@ -642,12 +655,20 @@ func extractManifestEgress(doc map[string]any, legacy bool) (raw any, path strin
 }
 
 func validateEgressValue(raw any, path string, legacy bool, out *agentManifestValidation) {
-	switch v := raw.(type) {
-	case nil:
+	if raw == nil {
 		out.Errors = append(out.Errors, fmt.Sprintf("%s is empty; %s", path, egressNullFix(legacy)))
 		return
+	}
+	// The legacy envelope decodes egress into an object, so harness-api
+	// rejects a scalar or list there. Those forms are flat-only.
+	if _, isMap := yamlMap(raw); legacy && !isMap {
+		out.Errors = append(out.Errors, fmt.Sprintf("%s must be an object in the legacy envelope; use allow: [] to block all, or unrestricted: true", path))
+		return
+	}
+	switch v := raw.(type) {
 	case string:
-		if scalar := strings.TrimSpace(v); scalar != egressUnrestrictedScalar && scalar != egressDenyAllScalar {
+		// Exact match, like harness-api: no trimming, no case folding.
+		if v != egressUnrestrictedScalar && v != egressDenyAllScalar {
 			out.Errors = append(out.Errors, fmt.Sprintf(`%s scalar must be %q or %q (got %q)`, path, egressUnrestrictedScalar, egressDenyAllScalar, v))
 		}
 		return
@@ -692,6 +713,8 @@ func validateEgressObject(m map[string]any, path string, legacy bool, out *agent
 		if _, ok := known[k]; ok {
 			continue
 		}
+		// harness-api has no denyAll key; the entry only gives a better hint
+		// than a bare "unknown field".
 		if k == "denyAll" {
 			out.Errors = append(out.Errors, fmt.Sprintf("%s.denyAll: is not a manifest key; %s", path, egressDenyAllFix(legacy)))
 			continue
@@ -703,21 +726,15 @@ func validateEgressObject(m map[string]any, path string, legacy bool, out *agent
 		out.Errors = append(out.Errors, fmt.Sprintf("%s.%s: unknown field", path, k))
 	}
 
-	hostsKey, ipsKey, vpcKey, subnetKey := "allow_hosts", "allow_ips", "vpc_uuid", "subnet_uuid"
-	if legacy {
-		hostsKey, ipsKey, vpcKey, subnetKey = "allow", "allowIps", "vpcUuid", "subnetUuid"
-	}
+	hostsKey, ipsKey, vpcKey, subnetKey := egressKeysForFormat(legacy)
 
 	if legacy {
 		if ur, present := m["unrestricted"]; present {
+			// harness-api decodes this into a Go bool, so a string is a 400.
 			switch t := ur.(type) {
 			case bool:
 				if !t {
 					out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set`, path))
-				}
-			case string:
-				if strings.TrimSpace(t) != "unrestricted" && strings.ToLower(strings.TrimSpace(t)) != "true" {
-					out.Errors = append(out.Errors, fmt.Sprintf(`%s.unrestricted: must be true when set (got %q)`, path, t))
 				}
 			default:
 				out.Errors = append(out.Errors, fmt.Sprintf("%s.unrestricted: must be a boolean", path))
@@ -752,12 +769,11 @@ func validateEgressObject(m map[string]any, path string, legacy bool, out *agent
 // validateEgressDenyAllCombination mirrors harness-api's Egress.validate: an
 // object is deny-all when an allowlist key is present but empty and the other
 // list names nothing. A missing or null key is not "present". Deny-all cannot
-// be combined with unrestricted, a non-empty allowlist, or a VPC/subnet.
+// be combined with unrestricted or a VPC/subnet. Checks that need other
+// context stay server-only: deny-all with URL-bound credentials, and legacy
+// unrestricted with a non-empty allowlist.
 func validateEgressDenyAllCombination(m map[string]any, path string, legacy bool, out *agentManifestValidation) {
-	hostsKey, ipsKey, vpcKey, subnetKey := "allow_hosts", "allow_ips", "vpc_uuid", "subnet_uuid"
-	if legacy {
-		hostsKey, ipsKey, vpcKey, subnetKey = "allow", "allowIps", "vpcUuid", "subnetUuid"
-	}
+	hostsKey, ipsKey, vpcKey, subnetKey := egressKeysForFormat(legacy)
 
 	// listState reports whether a list key is present (non-null) and how many
 	// entries it has. A value that is not a list is reported by the per-key
@@ -787,26 +803,31 @@ func validateEgressDenyAllCombination(m map[string]any, path string, legacy bool
 	if legacy {
 		unrestricted, _ = m["unrestricted"].(bool)
 	}
-	var vpcKeys []string
-	for _, key := range []string{vpcKey, subnetKey} {
+	isSet := func(key string) bool {
 		raw, ok := m[key]
 		if !ok || raw == nil {
-			continue
+			return false
 		}
-		if s, isString := yamlString(raw); isString && strings.TrimSpace(s) == "" {
-			continue
-		}
-		vpcKeys = append(vpcKeys, key)
+		s, isString := yamlString(raw)
+		return !isString || strings.TrimSpace(s) != ""
 	}
+	vpcSet, subnetSet := isSet(vpcKey), isSet(subnetKey)
+
 	switch {
-	case len(vpcKeys) > 0 && !unrestricted:
+	case vpcSet && !unrestricted:
 		// An empty list plus a VPC used to mean "VPC, no ACL". Use the server's
 		// wording so users are not nudged to drop the VPC and go deny-all.
 		out.Errors = append(out.Errors, fmt.Sprintf("%s: %s", path, egressEmptyListWithVPCMsg))
-	case unrestricted || len(vpcKeys) > 0:
-		conflicts := vpcKeys
+	case unrestricted || vpcSet:
+		var conflicts []string
 		if unrestricted {
-			conflicts = append([]string{"unrestricted"}, vpcKeys...)
+			conflicts = append(conflicts, "unrestricted")
+		}
+		if vpcSet {
+			conflicts = append(conflicts, vpcKey)
+		}
+		if subnetSet {
+			conflicts = append(conflicts, subnetKey)
 		}
 		out.Errors = append(out.Errors, fmt.Sprintf("%s: deny-all (an empty allowlist) cannot be combined with %s", path, strings.Join(conflicts, ", ")))
 	}
