@@ -18,6 +18,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -124,13 +125,18 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 
 			// Regional routing: the harness-runtime group's --region selects an
 			// API host (agents_region.go). This runs for every command, so the
-			// option is scoped there to that group — a `harness-runtime.region`
-			// entry in config.yaml must not reroute the rest of doctl.
-			// GetGodoClient applies it before --api-url so an explicit host
-			// still wins.
-			regionOpts, err := agentRegionClientOpts()
-			if err != nil {
-				return err
+			// option is read only for that group. The flag is registered there
+			// alone, but viper also loads `harness-runtime.region` from
+			// config.yaml, where it would otherwise reroute every doctl command
+			// and a bad value would fail all of them. GetGodoClient applies the
+			// option before --api-url so an explicit host still wins.
+			var regionOpts []godo.ClientOpt
+			if isAgentNS(c.NS) {
+				var err error
+				regionOpts, err = agentRegionClientOpts()
+				if err != nil {
+					return err
+				}
 			}
 
 			godoClient, err := c.Doit.GetGodoClient(Trace, true, accessToken, regionOpts...)
@@ -361,6 +367,14 @@ func resourceID(d displayers.Displayable) string {
 var detailVerbs = map[string]bool{
 	"get":    true,
 	"create": true,
+}
+
+// isAgentNS reports whether ns names the harness-runtime command group or one
+// of its subcommands. Only that group registers --region, but viper serves
+// `harness-runtime.region` from config.yaml to every command, so the namespace
+// is what decides whether the regional host applies.
+func isAgentNS(ns string) bool {
+	return ns == agentCmdName || strings.HasPrefix(ns, agentCmdName+".")
 }
 
 // isDetailNS reports whether ns names one of those commands. A namespace ends
