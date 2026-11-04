@@ -220,7 +220,7 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
         <img alt="" {{.AgentCursor}}>
         <img alt="" {{.AgentClaude}}>
       </span>
-      <span class="label"><span class="idle">Copy setup prompt for your agent</span><span class="done" aria-live="polite">Copied</span></span>
+      <span class="label"><span class="idle">Copy setup prompt for your agent</span><span class="done" aria-live="polite">Copied. Paste it into your agent</span></span>
       <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M6.5 15.5h-1a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
       <svg class="copied-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12.5 9.2 17 19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
@@ -238,7 +238,7 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
       window.clearTimeout(timer);
       timer = window.setTimeout(function () {
         button.classList.remove("copied");
-      }, 1600);
+      }, 2500);
     };
     var fallback = function () {
       var area = document.createElement("textarea");
@@ -309,7 +309,7 @@ var successContent = pageContent{
 	AgentClaude: pngSrc(agentClaudePNG),
 }
 
-// tryAgain closes every failure message, so each one ends the same way.
+// tryAgain closes the failure messages that have no more specific next step.
 const tryAgain = "You can close this tab and try again from your terminal."
 
 func errorContent(status, message, detail string) pageContent {
@@ -317,7 +317,7 @@ func errorContent(status, message, detail string) pageContent {
 		Failed:     true,
 		Outcome:    "failed",
 		Status:     status,
-		Message:    message + " " + tryAgain,
+		Message:    message,
 		Detail:     detail,
 		Ocean:      true,
 		Background: successBackgroundSrc,
@@ -327,13 +327,13 @@ func errorContent(status, message, detail string) pageContent {
 
 var stateMismatchContent = errorContent(
 	"Sign-in couldn't be verified",
-	"This response didn't match the sign-in doctl started, so doctl ignored it.",
+	"This page came from a different sign-in attempt, so doctl ignored it for your safety. Close this tab and run doctl auth login again.",
 	"",
 )
 
 var missingCodeContent = errorContent(
 	"Sign-in didn't finish",
-	"DigitalOcean didn't send back an authorization code.",
+	"DigitalOcean didn't send back an authorization code. "+tryAgain,
 	"",
 )
 
@@ -343,15 +343,15 @@ var missingCodeContent = errorContent(
 func authorizationErrorContent(e *AuthorizationError) pageContent {
 	switch {
 	case e.Code == "access_denied":
-		return errorContent("Access declined", "doctl wasn't given access to your DigitalOcean account.", "")
+		return errorContent("Access declined", "doctl wasn't given access to your DigitalOcean account. "+tryAgain, "")
 	case isInvalidClientCode(e.Code):
-		return errorContent("doctl wasn't recognized", "DigitalOcean didn't accept doctl's sign-in request.", "Error code: "+e.Code)
+		return errorContent("doctl wasn't recognized", "DigitalOcean didn't accept doctl's sign-in request. "+tryAgain, "Error code: "+e.Code)
 	}
 	message := "DigitalOcean couldn't complete the sign-in."
 	if e.Description != "" {
 		message = sentence(e.Description)
 	}
-	return errorContent("Sign-in didn't finish", message, "Error code: "+e.Code)
+	return errorContent("Sign-in didn't finish", message+" "+tryAgain, "Error code: "+e.Code)
 }
 
 // sentence capitalizes s and ends it with a period, so a server description

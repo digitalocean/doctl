@@ -232,7 +232,7 @@ func TestFailurePagesReadAsSentences(t *testing.T) {
 			name:    "mismatched state",
 			params:  url.Values{"code": {"auth-code"}, "state": {"not-the-state"}},
 			status:  "Sign-in couldn&#39;t be verified",
-			message: "This response didn&#39;t match the sign-in doctl started, so doctl ignored it. You can close this tab and try again from your terminal.",
+			message: "This page came from a different sign-in attempt, so doctl ignored it for your safety. Close this tab and run doctl auth login again.",
 		},
 		{
 			name:    "missing code",
