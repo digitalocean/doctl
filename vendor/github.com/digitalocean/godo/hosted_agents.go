@@ -470,8 +470,9 @@ type HostedAgentSession struct {
 	// prepayment balance is restored. Set at create (manifest query param or
 	// config JSON body), toggled afterwards with UpdateSession, and returned on
 	// get/list so clients can confirm enrollment. Never inherited by forks.
-	// Omitted when false.
-	ResumeOnTopoff bool `json:"resume_on_topoff,omitempty"`
+	// Always encoded, so a revoked consent reads as false rather than absent.
+	// The server omits it when false, which decodes to the same value.
+	ResumeOnTopoff bool `json:"resume_on_topoff"`
 	// WorkspaceID is the persistent workspace this session attaches (see
 	// HostedAgentWorkspace). Set at create and returned on get/list; omitted
 	// when the session has no persistent workspace.
