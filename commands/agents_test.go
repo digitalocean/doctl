@@ -1092,6 +1092,77 @@ func TestRunAgentsResume(t *testing.T) {
 	})
 }
 
+func TestRunAgentsResume_WarnsWhenBoundToReuseTrigger(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var stderr bytes.Buffer
+		prevOut := agentBoundSessionWarnOut
+		agentBoundSessionWarnOut = &stderr
+		t.Cleanup(func() { agentBoundSessionWarnOut = prevOut })
+
+		lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+			return &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+				TriggerID:      "tr_1",
+				Name:           "nightly",
+				SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
+				BoundSessionID: "sess_test",
+			}}, nil
+		}
+		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsResume(config))
+		assert.Contains(t, stderr.String(), "sess_test")
+		assert.Contains(t, stderr.String(), "nightly")
+	})
+}
+
+func TestRunAgentsResume_BoundSessionLookupMissIsSilent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var stderr bytes.Buffer
+		prevOut := agentBoundSessionWarnOut
+		agentBoundSessionWarnOut = &stderr
+		t.Cleanup(func() { agentBoundSessionWarnOut = prevOut })
+
+		lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+			return nil, errors.New("404")
+		}
+		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsResume(config))
+		assert.Empty(t, stderr.String())
+	})
+}
+
+func TestWarnBoundReuseSession_SkipsFreshAndOtherSessions(t *testing.T) {
+	var stderr bytes.Buffer
+	prevOut := agentBoundSessionWarnOut
+	prevLookup := lookupBoundTrigger
+	agentBoundSessionWarnOut = &stderr
+	t.Cleanup(func() {
+		agentBoundSessionWarnOut = prevOut
+		lookupBoundTrigger = prevLookup
+	})
+
+	lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+		return &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			Name:           "fresh-nightly",
+			SessionMode:    godo.HostedAgentTriggerSessionModeFresh,
+			BoundSessionID: "sess_test",
+		}}, nil
+	}
+	warnBoundReuseSession(&CmdConfig{}, "sess_test")
+	assert.Empty(t, stderr.String())
+
+	lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+		return &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			Name:           "other",
+			SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
+			BoundSessionID: "sess_other",
+		}}, nil
+	}
+	warnBoundReuseSession(&CmdConfig{}, "sess_test")
+	assert.Empty(t, stderr.String())
+}
+
 func TestRunAgentsAuth(t *testing.T) {
 	// Keep the wait loop from sleeping through the poll interval in tests.
 	orig := agentsAuthPollInterval
