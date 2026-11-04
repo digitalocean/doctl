@@ -42,6 +42,23 @@ var digitalOceanLogoSVG []byte
 
 var digitalOceanLogoSrc = template.HTMLAttr(`src="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(digitalOceanLogoSVG) + `"`)
 
+// The agent marks on the signed-in page are inlined for the same reason as
+// the background: the callback server is gone before the browser can ask for
+// another file. Each one is drawn on black so the row of circles matches.
+//
+//go:embed assets/agent_openai.png
+var agentOpenAIPNG []byte
+
+//go:embed assets/agent_cursor.png
+var agentCursorPNG []byte
+
+//go:embed assets/agent_claude.png
+var agentClaudePNG []byte
+
+func pngSrc(b []byte) template.HTMLAttr {
+	return template.HTMLAttr(`src="data:image/png;base64,` + base64.StdEncoding.EncodeToString(b) + `"`)
+}
+
 // pageTemplate renders the page the local callback server shows in the
 // browser. It is an html/template rather than a format string so every field
 // is escaped for the context it appears in: the message repeats text from the
@@ -78,6 +95,79 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
   .mark { font-size: 2rem; line-height: 1; margin-bottom: 1rem; }
   .ok { color: #0069ff; }
   .fail { color: #d0021b; }
+  main.success {
+    max-width: 32rem;
+    padding: 3rem 2.2rem 2rem;
+    border-radius: 1.3rem;
+  }
+  main.success h1 {
+    margin: 0;
+    color: #031b4e;
+    font-size: 2.55rem;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+  }
+  .close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 1.3rem;
+    color: #5c6a80;
+    font-size: 1.1rem;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 50%;
+    background: #1f9d55;
+    flex: none;
+  }
+  .check svg { width: 0.78rem; height: 0.78rem; }
+  .copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 1.55rem;
+    padding: 0.45rem 0.9rem 0.45rem 0.5rem;
+    border: 2.5px solid #5d6c6c;
+    border-radius: 999px;
+    background: #fff;
+    color: #031b4e;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  .copy:hover { background: #f6f8fb; }
+  .copy:focus-visible { outline: 2px solid #0069ff; outline-offset: 3px; }
+  .agents { display: flex; align-items: center; }
+  .agents img {
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-left: -0.43rem;
+    border-radius: 50%;
+    background: #111;
+    object-fit: cover;
+    box-shadow: 0 0 0 2.5px #fff;
+  }
+  .agents img:first-child { margin-left: 0; }
+  .label { display: grid; }
+  .label > span { grid-area: 1 / 1; }
+  .label .done { visibility: hidden; text-align: center; }
+  .copy.copied .label .idle { visibility: hidden; }
+  .copy.copied .label .done { visibility: visible; }
+  .copy-icon, .copied-icon { width: 1.05rem; height: 1.05rem; flex: none; color: #8b97a8; }
+  .copied-icon { display: none; color: #1f9d55; }
+  .copy.copied .copy-icon { display: none; }
+  .copy.copied .copied-icon { display: block; }
   .sea {
     position: fixed;
     inset: 0;
@@ -114,11 +204,60 @@ var pageTemplate = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
 <body{{if .Ocean}} class="ocean"{{end}}>
   {{if .Ocean}}<img class="sea" alt="" {{.Background}}>
   <img class="logo" alt="DigitalOcean" {{.Logo}}>{{end}}
-  <main>
+  <main{{if .Prompt}} class="success"{{end}}>
+    {{if .Prompt}}
+    <h1>Authorization<br>successful</h1>
+    <p class="close"><span class="check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3.4 8.2 6.5 11.2 12.6 4.8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> You can close this tab.</p>
+    <button type="button" class="copy" data-prompt="{{.Prompt}}">
+      <span class="agents" aria-hidden="true">
+        <img alt="" {{.AgentOpenAI}}>
+        <img alt="" {{.AgentCursor}}>
+        <img alt="" {{.AgentClaude}}>
+      </span>
+      <span class="label"><span class="idle">Copy setup prompt for your agent</span><span class="done" aria-live="polite">Copied</span></span>
+      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M6.5 15.5h-1a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
+      <svg class="copied-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12.5 9.2 17 19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    {{else}}
     <div class="mark {{.MarkClass}}">{{.Mark}}</div>
     <h1>{{.Title}}</h1>
     <p>{{.Message}}</p>
+    {{end}}
   </main>
+  {{if .Prompt}}<script>
+(function () {
+  var button = document.querySelector(".copy");
+  if (!button) return;
+  var timer;
+  button.addEventListener("click", function () {
+    var text = button.getAttribute("data-prompt");
+    var finish = function () {
+      button.classList.add("copied");
+      window.clearTimeout(timer);
+      timer = window.setTimeout(function () {
+        button.classList.remove("copied");
+      }, 1600);
+    };
+    var fallback = function () {
+      var area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.left = "-9999px";
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(area);
+      finish();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(finish, fallback);
+      return;
+    }
+    fallback();
+  });
+})();
+</script>{{end}}
 </body>
 </html>
 `))
@@ -135,16 +274,29 @@ type pageContent struct {
 	Background template.HTMLAttr
 	// Logo is the src attribute for assets/digitalocean_logo.svg.
 	Logo template.HTMLAttr
+	// Agent marks are the src attributes for the three icons on the copy button.
+	AgentOpenAI template.HTMLAttr
+	AgentCursor template.HTMLAttr
+	AgentClaude template.HTMLAttr
+	// Prompt, when set, is the agent setup text the signed-in page copies.
+	// It is doctl's own text, escaped into the button, and read back by the
+	// inline script. Authorization-server text never goes here.
+	Prompt string
 }
 
+// agentSetupPrompt is what "Copy setup prompt for your agent" puts on the
+// clipboard: a one-line instruction to fetch DigitalOcean's getting-started
+// guide and follow it.
+const agentSetupPrompt = "Fetch https://docs.digitalocean.com/get-started.md and follow it."
+
 var successContent = pageContent{
-	MarkClass:  "ok",
-	Mark:       "\u2713",
-	Title:      "You're signed in",
-	Message:    "doctl is now authenticated with your DigitalOcean account. You can close this tab and return to your terminal.",
-	Ocean:      true,
-	Background: successBackgroundSrc,
-	Logo:       digitalOceanLogoSrc,
+	Ocean:       true,
+	Background:  successBackgroundSrc,
+	Logo:        digitalOceanLogoSrc,
+	Prompt:      agentSetupPrompt,
+	AgentOpenAI: pngSrc(agentOpenAIPNG),
+	AgentCursor: pngSrc(agentCursorPNG),
+	AgentClaude: pngSrc(agentClaudePNG),
 }
 
 func errorContent(reason string) pageContent {
