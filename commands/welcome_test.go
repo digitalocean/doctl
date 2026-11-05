@@ -147,14 +147,14 @@ func TestRenderWelcomeDistinguishesAuthStates(t *testing.T) {
 			name:      "no token asks the user to authenticate",
 			w:         welcome{auth: authStateNoToken},
 			expect:    "not authenticated",
-			expectCmd: "doctl auth init",
+			expectCmd: "doctl auth login",
 		},
 		{
 			name:      "valid token names the account",
 			w:         welcome{auth: authStateValid, account: "sammy@example.com"},
 			expect:    "sammy@example.com",
 			expectCmd: "doctl compute droplet list",
-			reject:    "doctl auth init",
+			reject:    "doctl auth login",
 		},
 		{
 			name:      "valid token without an email still reads as authenticated",
@@ -166,7 +166,7 @@ func TestRenderWelcomeDistinguishesAuthStates(t *testing.T) {
 			name:      "rejected token points at replacing it",
 			w:         welcome{auth: authStateInvalid},
 			expect:    "token rejected",
-			expectCmd: "doctl auth init",
+			expectCmd: "doctl auth login",
 		},
 		{
 			name:      "unverified token does not claim the token is bad",

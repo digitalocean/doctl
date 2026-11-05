@@ -169,7 +169,7 @@ func TestSuccessPageUsesEmbeddedBackground(t *testing.T) {
 	assert.Contains(t, page, "Authorization<br>successful")
 	assert.Contains(t, page, "You can close this tab.")
 	assert.Contains(t, page, "Copy setup prompt for your agent")
-	assert.Contains(t, page, `data-prompt="`+agentSetupPrompt+`"`)
+	assert.Contains(t, page, `data-prompt="`+AgentSetupPrompt+`"`)
 	assert.Contains(t, page, successBackgroundDataURL, "the success page must include the embedded photograph unchanged")
 	assert.Contains(t, page, `alt="DigitalOcean"`)
 	assert.Equal(t, 1, strings.Count(page, "<script>"), "the copy control needs one inline script; the callback server cannot serve a file")

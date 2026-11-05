@@ -87,6 +87,7 @@ harness: opencode
 ` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
 
 - ` + "`egress: unrestricted`" + `
+- ` + "`egress: none`" + ` — deny all outbound traffic. An allowlist written empty (` + "`egress: []`, `allow_hosts: []`, `allow_ips: []`" + `) means the same; it cannot be combined with ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + `, and the API rejects it with URL-bound credentials (` + "`validate`" + ` does not check that). A null ` + "`egress`" + ` or allowlist key (for example a fully commented-out list) is rejected — write ` + "`egress: none`" + ` instead
 - host allowlist: ` + "`egress: [api.github.com, pypi.org]`" + `
 - object: ` + "`allow_hosts`" + `, ` + "`allow_ips`" + ` (exact IPv4/IPv6 literals — not CIDRs), and optional ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + ` (` + "`subnet_uuid`" + ` requires ` + "`vpc_uuid`" + `; VPC attachment is create-time immutable)
 
@@ -120,7 +121,7 @@ Use ` + "`-o json`" + ` for machine-readable create output without waiting. Comb
 
 const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
 
-Catches a missing ` + "`harness`" + ` (or its original name ` + "`agent`" + `, or legacy ` + "`spec.runtime.adapter`" + `), unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
+Catches a missing ` + "`harness`" + ` (or its original name ` + "`agent`" + `, or legacy ` + "`spec.runtime.adapter`" + `), unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, ` + "`none`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). Rejects null ` + "`egress`" + ` or allowlist keys (write ` + "`egress: none`" + ` to deny all). The API remains the authoritative validator for the full contract.
 
 Name the manifest as a positional path or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin); with none of these, ` + "`./agents.yaml`" + ` is used when it exists.
 
@@ -333,7 +334,7 @@ A page can hold fewer workspaces than ` + "`--page-size`" + `, even none, while 
 
 const agentsWorkspaceGetHelpMD = `Print details for one persistent workspace: its state, size, how much is used, the session that holds it, and when it was last saved.`
 
-const agentsWorkspaceDeleteHelpMD = `Permanently delete a persistent workspace and everything saved in it. This cannot be undone. In a terminal it asks first unless ` + "`--force`" + ` is given; with no terminal (a script, or ` + "`--interactive=false`" + `) it deletes without asking.
+const agentsWorkspaceDeleteHelpMD = `Permanently delete a persistent workspace and everything saved in it. This cannot be undone. In a terminal it asks first unless ` + "`--force`" + ` is given. With no terminal (a script, or ` + "`--interactive=false`" + `) there is nobody to ask, so pass ` + "`--force`" + `; without it the command stops and deletes nothing.
 
 A workspace a session still holds cannot be deleted: remove the session, wait until the workspace is available again, then delete it. Removing a session never deletes its workspace. A workspace shows DELETING while its delete runs; once it finishes, the workspace no longer exists.`
 
