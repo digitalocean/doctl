@@ -87,6 +87,13 @@ spec:
 	assert.JSONEq(t, `{"kind":"Dashboard","spec":{"display":{"name":"Droplet CPU"}}}`, string(got))
 }
 
+func TestReadInsightsDashboardSpecConvertsFlowStyleYAML(t *testing.T) {
+	// Flow-style YAML starts with "{" like JSON but is not valid JSON.
+	got, err := readInsightsDashboardSpec(strings.NewReader(`{kind: Dashboard, spec: {display: {name: Droplet CPU}}}`), "-")
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"kind":"Dashboard","spec":{"display":{"name":"Droplet CPU"}}}`, string(got))
+}
+
 func TestReadInsightsDashboardSpecErrors(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -99,6 +106,8 @@ func TestReadInsightsDashboardSpecErrors(t *testing.T) {
 		{name: "double encoded", input: `"{\"kind\":\"Dashboard\"}"`, wantErr: "spec file must contain a single JSON object"},
 		{name: "two objects", input: `{"kind":"Dashboard"} {"kind":"Dashboard"}`, wantErr: "spec file must contain a single JSON object"},
 		{name: "object then garbage", input: `{"kind":"Dashboard"} trailing`, wantErr: "spec file must contain a single JSON object"},
+		{name: "two YAML documents", input: "kind: Dashboard\n---\nkind: Dashboard\n", wantErr: "spec file must contain a single JSON object"},
+		{name: "YAML scalar", input: "just a string\n", wantErr: "spec file must contain a single JSON object"},
 		{name: "invalid", input: `{"kind":`, wantErr: "parsing spec file"},
 	}
 	for _, tt := range tests {

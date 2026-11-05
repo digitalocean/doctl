@@ -16,6 +16,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	yamlv2 "gopkg.in/yaml.v2"
 	"sigs.k8s.io/yaml"
 )
 
@@ -92,9 +94,9 @@ func readInsightsRequest[T any](stdin io.Reader, path string) (*T, error) {
 
 // readInsightsDashboardSpec reads a dashboard spec document from path, or
 // from stdin when path is "-". JSON input is sent as written rather than
-// re-serialized; YAML input is converted to JSON. The document must be
-// exactly one JSON object. The API may return the spec with keys reordered
-// and whitespace normalized.
+// re-serialized; YAML input is converted to JSON. The file must contain
+// exactly one document and it must be an object. The API may return the spec
+// with keys reordered and whitespace normalized.
 func readInsightsDashboardSpec(stdin io.Reader, path string) (json.RawMessage, error) {
 	var (
 		data []byte
@@ -113,25 +115,35 @@ func readInsightsDashboardSpec(stdin io.Reader, path string) (json.RawMessage, e
 	if len(spec) == 0 {
 		return nil, errInsightsDashboardSpecNotObject
 	}
-	if spec[0] != '{' {
-		if spec, err = yaml.YAMLToJSON(spec); err != nil {
-			return nil, fmt.Errorf("parsing spec file: %w", err)
-		}
-		if len(spec) == 0 || spec[0] != '{' {
+	if json.Valid(spec) {
+		if spec[0] != '{' {
 			return nil, errInsightsDashboardSpecNotObject
 		}
 		return json.RawMessage(spec), nil
 	}
 
-	decoder := json.NewDecoder(bytes.NewReader(spec))
-	var document json.RawMessage
+	// Not JSON, so treat it as YAML. Flow-style YAML such as {kind: Dashboard}
+	// also starts with "{", which is why the JSON check above is on validity
+	// rather than on the first byte. yaml.YAMLToJSON only converts the first
+	// document and silently drops anything after it, so count documents first
+	// with the same parser it uses underneath.
+	decoder := yamlv2.NewDecoder(bytes.NewReader(spec))
+	var document, extra interface{}
 	if err := decoder.Decode(&document); err != nil {
 		return nil, fmt.Errorf("parsing spec file: %w", err)
 	}
-	if decoder.InputOffset() != int64(len(spec)) {
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		return nil, errInsightsDashboardSpecNotObject
 	}
-	return json.RawMessage(spec), nil
+
+	converted, err := yaml.YAMLToJSON(spec)
+	if err != nil {
+		return nil, fmt.Errorf("parsing spec file: %w", err)
+	}
+	if len(converted) == 0 || converted[0] != '{' {
+		return nil, errInsightsDashboardSpecNotObject
+	}
+	return json.RawMessage(converted), nil
 }
 
 var errInsightsDashboardSpecNotObject = fmt.Errorf("spec file must contain a single JSON object")
