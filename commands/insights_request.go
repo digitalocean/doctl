@@ -128,7 +128,7 @@ func readInsightsDashboardSpec(stdin io.Reader, path string) (json.RawMessage, e
 	// document and silently drops anything after it, so count documents first
 	// with the same parser it uses underneath.
 	decoder := yamlv2.NewDecoder(bytes.NewReader(spec))
-	var document, extra interface{}
+	var document, extra any
 	if err := decoder.Decode(&document); err != nil {
 		return nil, fmt.Errorf("parsing spec file: %w", err)
 	}
