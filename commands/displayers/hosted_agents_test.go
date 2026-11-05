@@ -109,6 +109,24 @@ func TestHostedAgentSessionJSON_PreservesSandboxIDAndResumeOnTopoff(t *testing.T
 	assert.Equal(t, true, out["resume_on_topoff"])
 }
 
+// MARSOHS-2563: the server omits resume_on_topoff when consent is off, so
+// -o json has to print it as false rather than drop the key.
+func TestHostedAgentSessionJSON_PrintsFalseResumeOnTopoff(t *testing.T) {
+	var buf bytes.Buffer
+	d := &HostedAgentSession{
+		Sessions: []do.HostedAgentSession{{
+			HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_1"},
+		}},
+		Single: true,
+	}
+	require.NoError(t, d.JSON(&buf))
+
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	require.Contains(t, out, "resume_on_topoff")
+	assert.Equal(t, false, out["resume_on_topoff"])
+}
+
 // --- HostedAgentSession pause reason -----------------------------------------
 
 func TestHostedAgentSessionJSON_CarriesPauseReason(t *testing.T) {
