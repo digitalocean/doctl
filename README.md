@@ -384,7 +384,7 @@ To use a non-default context, pass the context name to any `doctl` command. For 
 doctl compute droplet list --context <new-context-name>
 ```
 
-To set a new default context, run `doctl auth switch --context <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified. To see the contexts you have, run `doctl auth list`; the selected one is marked `(current)`.
+To set a new default context, run `doctl auth switch <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified. To see the contexts you have, run `doctl auth list`; the selected one is marked `(current)`.
 
 A DigitalOcean token and an AMD DevCloud token belong in different contexts. `doctl auth init` checks a DigitalOcean token at `https://cloud.digitalocean.com/v1/oauth/token/info`. An AMD DevCloud token is checked at `https://devcloud.amd.com/v1/oauth/token/info`, so save it with `--token-validation-server`:
 
