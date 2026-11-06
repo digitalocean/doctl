@@ -16,12 +16,15 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"regexp"
 	"strings"
 
+	"github.com/digitalocean/doctl"
+	yamlv2 "gopkg.in/yaml.v2"
 	"sigs.k8s.io/yaml"
 )
 
@@ -87,6 +90,83 @@ func readInsightsRequest[T any](stdin io.Reader, path string) (*T, error) {
 		return nil, fmt.Errorf("parsing request file: %w", err)
 	}
 	return &request, nil
+}
+
+// readInsightsDashboardSpec reads a dashboard spec document from path, or
+// from stdin when path is "-". JSON input is sent as written rather than
+// re-serialized; YAML input is converted to JSON. The file must contain
+// exactly one document and it must be an object. The API may return the spec
+// with keys reordered and whitespace normalized.
+func readInsightsDashboardSpec(stdin io.Reader, path string) (json.RawMessage, error) {
+	var (
+		data []byte
+		err  error
+	)
+	if path == "-" {
+		data, err = io.ReadAll(stdin)
+	} else {
+		data, err = os.ReadFile(path)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading spec file: %w", err)
+	}
+
+	spec := bytes.TrimSpace(data)
+	if len(spec) == 0 {
+		return nil, errInsightsDashboardSpecNotObject
+	}
+	if json.Valid(spec) {
+		if spec[0] != '{' {
+			return nil, errInsightsDashboardSpecNotObject
+		}
+		return json.RawMessage(spec), nil
+	}
+
+	// Not JSON, so treat it as YAML. Flow-style YAML such as {kind: Dashboard}
+	// also starts with "{", which is why the JSON check above is on validity
+	// rather than on the first byte. yaml.YAMLToJSON only converts the first
+	// document and silently drops anything after it, so count documents first
+	// with the same parser it uses underneath.
+	decoder := yamlv2.NewDecoder(bytes.NewReader(spec))
+	var document, extra any
+	if err := decoder.Decode(&document); err != nil {
+		return nil, fmt.Errorf("parsing spec file: %w", err)
+	}
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return nil, errInsightsDashboardSpecNotObject
+	}
+
+	converted, err := yaml.YAMLToJSON(spec)
+	if err != nil {
+		return nil, fmt.Errorf("parsing spec file: %w", err)
+	}
+	if len(converted) == 0 || converted[0] != '{' {
+		return nil, errInsightsDashboardSpecNotObject
+	}
+	return json.RawMessage(converted), nil
+}
+
+var errInsightsDashboardSpecNotObject = fmt.Errorf("spec file must contain a single JSON object")
+
+// insightsPageOptions reads --page and --per-page, returning zero for flags
+// that were not set so the server applies its defaults.
+func insightsPageOptions(c *CmdConfig, maxPerPage int) (page, perPage int, err error) {
+	page, err = c.Doit.GetInt(c.NS, doctl.ArgInsightsPage)
+	if err != nil {
+		return 0, 0, err
+	}
+	if page < 0 || (page == 0 && c.Doit.IsSet(doctl.ArgInsightsPage)) {
+		return 0, 0, fmt.Errorf("--%s must be at least 1", doctl.ArgInsightsPage)
+	}
+	perPage, err = c.Doit.GetInt(c.NS, doctl.ArgInsightsPerPage)
+	if err != nil {
+		return 0, 0, err
+	}
+	if perPage < 0 || perPage > maxPerPage ||
+		(perPage == 0 && c.Doit.IsSet(doctl.ArgInsightsPerPage)) {
+		return 0, 0, fmt.Errorf("--%s must be between 1 and %d", doctl.ArgInsightsPerPage, maxPerPage)
+	}
+	return page, perPage, nil
 }
 
 func ensureJSONEOF(decoder *json.Decoder) error {
