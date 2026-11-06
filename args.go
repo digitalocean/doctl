@@ -1160,6 +1160,20 @@ const (
 	// create, or changed later on an existing session with `agents update`.
 	ArgAgentResumeOnTopoff = "resume-on-topoff"
 
+	// ArgAgentWorkspace names the persistent workspace a new session attaches.
+	// Per-session: never part of an agents.yaml manifest.
+	ArgAgentWorkspace = "workspace"
+
+	// ArgAgentWorkspaceSizeLimitGiB is the size, in GiB, of a new persistent workspace.
+	ArgAgentWorkspaceSizeLimitGiB = "size-limit-gib"
+
+	// ArgAgentWorkspaceState filters `workspace list` to one workspace state.
+	ArgAgentWorkspaceState = "state"
+
+	// ArgAgentIdempotencyKey makes a repeated `workspace create` return the
+	// first workspace instead of creating another.
+	ArgAgentIdempotencyKey = "idempotency-key"
+
 	// Gradient AI simulation args
 
 	// ArgGenAISearch filters a Gradient AI list by a free-text search term.
@@ -1413,4 +1427,11 @@ const (
 	ArgInsightsResourceLogs = "logs"
 	// ArgInsightsResourceTraces changes traces enablement for an Insights resource.
 	ArgInsightsResourceTraces = "traces"
+
+	// ArgInsightsDashboardSpecFile is a path to a dashboard spec document.
+	ArgInsightsDashboardSpecFile = "spec-file"
+	// ArgInsightsDashboardSort selects the field used to sort Insights dashboards.
+	ArgInsightsDashboardSort = "sort"
+	// ArgInsightsDashboardSortDirection selects the Insights dashboard sort direction.
+	ArgInsightsDashboardSortDirection = "sort-direction"
 )

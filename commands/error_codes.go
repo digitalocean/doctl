@@ -57,7 +57,7 @@ var errorCodeTable = map[int]errorCodeEntry{
 	},
 	http.StatusUnauthorized: {
 		Reason:   "your API token is missing, invalid, or expired",
-		NextStep: "run doctl auth init",
+		NextStep: "run doctl auth login",
 	},
 	http.StatusForbidden: {
 		Reason:   "your token does not have permission for this action",
