@@ -1427,4 +1427,11 @@ const (
 	ArgInsightsResourceLogs = "logs"
 	// ArgInsightsResourceTraces changes traces enablement for an Insights resource.
 	ArgInsightsResourceTraces = "traces"
+
+	// ArgInsightsDashboardSpecFile is a path to a dashboard spec document.
+	ArgInsightsDashboardSpecFile = "spec-file"
+	// ArgInsightsDashboardSort selects the field used to sort Insights dashboards.
+	ArgInsightsDashboardSort = "sort"
+	// ArgInsightsDashboardSortDirection selects the Insights dashboard sort direction.
+	ArgInsightsDashboardSortDirection = "sort-direction"
 )
