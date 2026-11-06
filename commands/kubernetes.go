@@ -336,6 +336,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Creates the cluster with the NFS CSI plugin enabled. Defaults to false. To enable it, supply --enable-nfs-csi-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableCorednsAutoscaler, "", false,
 		"Creates the cluster with the CoreDNS Autoscaler enabled, which scales CoreDNS replicas in proportion to the cluster's size. When omitted, API applies version-specific default (true for 1.36.0+; false for older). Use --enable-coredns-autoscaler=false to disable.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableInsightsLogs, "", false,
+		"Opts the cluster in to sending its logs to Insights. This can only be set when creating a cluster. When omitted, the cluster is not opted in (equivalent to --enable-insights-logs=false). To opt in, supply --enable-insights-logs=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDevicePlugin, "", false,
 		"Creates the cluster with amd gpu device plugin installed. Defaults to true for clusters with AMD GPUs and otherwise false. To always enable it, supply --enable-amd-gpu-device-plugin=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableAmdGpuDeviceMetricsExporterPlugin, "", false,
@@ -1917,6 +1919,20 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		if enableCorednsAutoscaler != nil {
 			r.CorednsAutoscaler = &godo.KubernetesCorednsAutoscaler{
 				Enabled: enableCorednsAutoscaler,
+			}
+		}
+	}
+
+	// Only send the Insights opt-in when the user explicitly sets the flag, so that an unset flag
+	// records no choice rather than an explicit opt-out.
+	if c.Doit.IsSet(doctl.ArgEnableInsightsLogs) {
+		enableInsightsLogs, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableInsightsLogs)
+		if err != nil {
+			return err
+		}
+		if enableInsightsLogs != nil {
+			r.Insights = &godo.KubernetesInsightsTelemetryOptIn{
+				Logs: enableInsightsLogs,
 			}
 		}
 	}
