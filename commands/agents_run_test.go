@@ -218,6 +218,31 @@ func TestBuildHarnessManifest(t *testing.T) {
 		assert.Equal(t, map[any]any{"MINIMAX_API_KEY": "${MINIMAX_API_KEY}"}, secrets)
 	})
 
+	// The slot is a ${MINIMAX_API_KEY} reference, so --harness minimax-code
+	// is the vendor-key path only: with the variable set it expands, without
+	// it the create stops before any API call, naming the variable. A
+	// DigitalOcean Inference session (HARNESS_INFERENCE_API_KEY, no MiniMax
+	// key) therefore needs a hand-written manifest, which is what the
+	// buildHarnessManifest comment says.
+	t.Run("minimax-code's generated manifest expands MINIMAX_API_KEY or stops naming it", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax-code"})
+		require.NoError(t, err)
+
+		out, err := expandManifestEnvCollect(raw, func(name string) (string, bool) {
+			if name == minimaxAPIKeyEnv {
+				return "mm-test-key", true
+			}
+			return "", false
+		})
+		require.NoError(t, err)
+		assert.Contains(t, string(out), "MINIMAX_API_KEY: mm-test-key")
+		assert.NotContains(t, string(out), "${")
+
+		_, err = expandManifestEnvCollect(raw, func(string) (string, bool) { return "", false })
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), minimaxAPIKeyEnv)
+	})
+
 	t.Run("opencode has no injected key requirement", func(t *testing.T) {
 		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
 		require.NoError(t, err)
