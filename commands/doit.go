@@ -72,6 +72,11 @@ var (
 	RetryMax     int
 	RetryWaitMax int
 	RetryWaitMin int
+
+	// ResponseHeaderTimeout bounds how long a single attempt waits for response
+	// headers. Separate from the retry settings above because it is enforced by
+	// the transport, not by godo.
+	ResponseHeaderTimeout int
 )
 
 func init() {
@@ -119,6 +124,11 @@ func init() {
 	rootPFlagSet.IntVar(&RetryWaitMin, "http-retry-wait-min", 1, "Set the maximum number of seconds to wait before retrying a failed request")
 	viper.BindPFlag("http-retry-wait-min", rootPFlagSet.Lookup("http-retry-wait-min"))
 	DoitCmd.PersistentFlags().MarkHidden("http-retry-wait-min")
+
+	// Visible, unlike the wait tuning above: this one bounds a wait that was
+	// previously unbounded, so it changes what every request does by default.
+	rootPFlagSet.IntVar(&ResponseHeaderTimeout, "http-response-header-timeout", 30, "Set the maximum number of seconds to wait for response headers before giving up on a request attempt. Retries still apply. Set to 0 to wait indefinitely")
+	viper.BindPFlag("http-response-header-timeout", rootPFlagSet.Lookup("http-response-header-timeout"))
 
 	// Resolve the output policy once, after flags are parsed and config is
 	// read but before any command writes. Cobra runs the nearest
