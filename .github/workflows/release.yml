@@ -62,7 +62,17 @@ jobs:
   snapcraft-stable:
     name: 'Snapcraft: Stable Release'
     needs: integration-tests
-    runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            elf-machine: Advanced Micro Devices X86-64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            elf-machine: AArch64
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,6 +83,31 @@ jobs:
       - name: Build snap
         uses: snapcore/action-build@v1
         id: build
+
+      - name: Verify snap
+        id: verify
+        shell: bash
+        env:
+          SNAP_PATH: ${{ steps.build.outputs.snap }}
+          SNAP_ARCH: ${{ matrix.arch }}
+          ELF_MACHINE: ${{ matrix.elf-machine }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools binutils python3-yaml
+          snap_dir="$(mktemp -d)/snap"
+          trap 'rm -rf "$(dirname "$snap_dir")"' EXIT
+          unsquashfs -d "$snap_dir" "$SNAP_PATH"
+          python3 - "$snap_dir/meta/snap.yaml" <<'PYTHON'
+          import os
+          import sys
+          import yaml
+
+          with open(sys.argv[1]) as metadata:
+              assert yaml.safe_load(metadata)["architectures"] == [os.environ["SNAP_ARCH"]]
+          PYTHON
+          readelf -h "$snap_dir/bin/doctl.real" | grep -q "Machine:.*${ELF_MACHINE}"
+          "$snap_dir/bin/doctl.real" version
 
       - uses: snapcore/action-publish@master
         env:
