@@ -101,8 +101,13 @@ const (
 	// template. Like OpenHands the agent is an always-on server rather than a
 	// CLI spawned per run, and the gateway is reached over `port-forward` as
 	// well as over OHR.
-	hermesAgentName    = "hermes"
-	anthropicAPIKeyEnv = "ANTHROPIC_API_KEY"
+	hermesAgentName = "hermes"
+	// minimaxCodeAgentName is MiniMax Code (`mcode`), a CLI spawned per run by
+	// OHR's ACP adapter in the coding-minimax-code template. Same shape as
+	// claude-code: the user's own vendor key, no server-minted credential.
+	minimaxCodeAgentName = "minimax-code"
+	anthropicAPIKeyEnv   = "ANTHROPIC_API_KEY"
+	minimaxAPIKeyEnv     = "MINIMAX_API_KEY"
 )
 
 var (
@@ -136,6 +141,8 @@ var harnessAgentNames = map[string]string{
 	"openhands":      openHandsAgentName,
 	"open-hands":     openHandsAgentName,
 	"hermes":         hermesAgentName,
+	"minimax-code":   minimaxCodeAgentName,
+	"minimax":        minimaxCodeAgentName,
 	"none":           bareSandboxAgent,
 	"sandbox":        bareSandboxAgent,
 }
@@ -193,13 +200,14 @@ func isAgentlessTemplate(template string) bool {
 // harnessAgentNames) to their proper display name, matching the casing used
 // by prettyAgentKind (e.g. "opencode" -> "OpenCode").
 var harnessDisplayNames = map[string]string{
-	"opencode":          "OpenCode",
-	claudeCodeAgentName: "Claude Code",
-	codexAgentName:      "Codex CLI",
-	openAIAgentsAdapter: "Codex",
-	openHandsAgentName:  "OpenHands",
-	hermesAgentName:     "Hermes",
-	bareSandboxAgent:    "Sandbox",
+	"opencode":           "OpenCode",
+	claudeCodeAgentName:  "Claude Code",
+	codexAgentName:       "Codex CLI",
+	openAIAgentsAdapter:  "Codex",
+	openHandsAgentName:   "OpenHands",
+	hermesAgentName:      "Hermes",
+	minimaxCodeAgentName: "MiniMax Code",
+	bareSandboxAgent:     "Sandbox",
 }
 
 // prettyHarnessName returns the display name for a raw --harness value or
@@ -483,7 +491,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 		// --template implication sets it internally, while a user who types it
 		// is refused by resolveAgentCreationSource. Listing it would send them
 		// to a value that answers with a second error.
-		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands, hermes",
+		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands, hermes, minimax-code",
 			doctl.ArgAgentHarness, harness)
 	}
 	return agent, nil
@@ -612,6 +620,18 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		// missing key is prompted for on a TTY.
 		doc.Secrets = map[string]string{
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
+		}
+	case agent == minimaxCodeAgentName:
+		// Same as claude-code with MiniMax's key: mcode dials MiniMax's own
+		// endpoint under a native MINIMAX_API_KEY and has a default model of
+		// its own, so nothing else goes in the manifest. Like claude-code,
+		// the slot is always written, so --harness is the vendor-key path
+		// only: a session on DigitalOcean Inference (HARNESS_INFERENCE_API_KEY
+		// and HARNESS_INFERENCE_MODEL, no MiniMax key) needs a hand-written
+		// manifest. No template pin: harness-api resolves the kind to
+		// coding-minimax-code itself.
+		doc.Secrets = map[string]string{
+			minimaxAPIKeyEnv: "${" + minimaxAPIKeyEnv + "}",
 		}
 	case agent == openHandsAgentName:
 		// No key slot: OpenHands runs on DigitalOcean Inference. The create
