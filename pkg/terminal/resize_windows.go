@@ -15,7 +15,10 @@ func (t *terminal) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- 
 
 	ticker := time.NewTicker(250 * time.Millisecond)
 	for {
-		width, height, err := term.GetSize(int(os.Stdin.Fd()))
+		// On Windows the console size must be queried on an output handle:
+		// GetConsoleScreenBufferInfo fails with "The handle is invalid" when
+		// given the input handle, so use stdout rather than stdin here.
+		width, height, err := term.GetSize(int(os.Stdout.Fd()))
 		if err != nil {
 			return fmt.Errorf("error getting terminal size: %w", err)
 		}
