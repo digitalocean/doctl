@@ -1,5 +1,23 @@
 # Change Log
 
+## [1.236.0] - 2026-11-04
+
+- #1197 - @apinonformoso - microvms: add access token create, list, and revoke
+- #1207 - @DO-rrao - release v1.235.0
+- #1204 - @jkosanam - hosted agents: always encode resume_on_topoff on sessions (MARSOHS-2563)
+- #1201 - @adityasingh-beep - COBS-1891: Add Insights dashboard support
+
+## [1.235.0] - 2026-11-04
+
+- #1204 - @jkosanam - hosted agents: always encode resume_on_topoff on sessions (MARSOHS-2563)
+- #1201 - @adityasingh-beep - COBS-1891: Add Insights dashboard support
+
+## [1.234.0] - 2026-11-02
+
+- #1198 - @BadhriDO - hosted agents: add ReconnectConnection (AR-3404, MARSOHS-2177)
+- #1196 - @potturu-vamsi - Raise max model evaluation epochs to 10
+- #1194 - @kamleshsahu - hosted agents: add truncated to the stream state frame (MARSOHS-900)
+
 ## [1.233.0] - 2026-10-26
 
 - #1185 - @aguan-hue - Fi 687 godo environment

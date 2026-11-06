@@ -87,6 +87,7 @@ harness: opencode
 ` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
 
 - ` + "`egress: unrestricted`" + `
+- ` + "`egress: none`" + ` — deny all outbound traffic. An allowlist written empty (` + "`egress: []`, `allow_hosts: []`, `allow_ips: []`" + `) means the same; it cannot be combined with ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + `, and the API rejects it with URL-bound credentials (` + "`validate`" + ` does not check that). A null ` + "`egress`" + ` or allowlist key (for example a fully commented-out list) is rejected — write ` + "`egress: none`" + ` instead
 - host allowlist: ` + "`egress: [api.github.com, pypi.org]`" + `
 - object: ` + "`allow_hosts`" + `, ` + "`allow_ips`" + ` (exact IPv4/IPv6 literals — not CIDRs), and optional ` + "`vpc_uuid`" + ` / ` + "`subnet_uuid`" + ` (` + "`subnet_uuid`" + ` requires ` + "`vpc_uuid`" + `; VPC attachment is create-time immutable)
 
@@ -111,13 +112,16 @@ harness: opencode
   --on-hitl approve --resume-on-topoff
 ` + "```\n\n" + `It is off by default and is spending consent, so it is deliberately narrow: per-session (never inherited from an Agent Config, and never by a fork) and honoured only for a session paused for low balance whose last run had not finished. A session you paused yourself, or one that idled out, stays paused. It is not an ` + "`agents.yaml`" + ` field — pass the flag on each create, or change it later with ` + "`" + agentCLI + " update <session> --resume-on-topoff[=false]`" + `.
 
-Creating from a manifest or ` + "`--harness`" + ` also persists an Agent Config named after the session (shown as Config on the ready card). Start later sessions from it with ` + "`create --from-config`" + ` or ` + "`config start-session`" + `.
+**Keeping files between sessions.** ` + "`--workspace <id>`" + ` gives a new session a persistent workspace made with ` + "`" + agentCLI + " workspace create`" + `, so the ` + "`/workspace`" + ` folder starts with what the last session saved. It works only with ` + "`--from-config`" + `: save the manifest as an Agent Config first with ` + "`" + agentCLI + " config create`" + `, then create the session from it. It is not an ` + "`agents.yaml`" + ` field, so pass it on each create. A workspace is held by one session at a time, so a new session can ask for it only once the previous one has been removed and its files are saved.
+` + "```bash\n" + agentCLI + ` config create --spec agents.yaml --name reviewer
+` + agentCLI + ` create --from-config reviewer --name review-2 --workspace <workspace-id>
+` + "```\n\n" + `Creating from a manifest or ` + "`--harness`" + ` also persists an Agent Config named after the session (shown as Config on the ready card). Start later sessions from it with ` + "`create --from-config`" + ` or ` + "`config start-session`" + `.
 
 Use ` + "`-o json`" + ` for machine-readable create output without waiting. Combined with ` + "`--prompt`" + `, doctl still waits until the session is ready and delivers the prompt before printing JSON — otherwise the prompt would be dropped.`
 
 const agentsValidateHelpMD = `Check an agents.yaml / JSON manifest client-side without creating a session.
 
-Catches a missing ` + "`harness`" + ` (or its original name ` + "`agent`" + `, or legacy ` + "`spec.runtime.adapter`" + `), unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). The API remains the authoritative validator for the full contract.
+Catches a missing ` + "`harness`" + ` (or its original name ` + "`agent`" + `, or legacy ` + "`spec.runtime.adapter`" + `), unknown adapters, reserved env keys, credentials placed in ` + "`env`" + ` instead of ` + "`secrets`" + `, conflicting model env keys (` + "`MODEL`" + ` / ` + "`HARNESS_INFERENCE_MODEL`" + ` / ` + "`ANTHROPIC_MODEL`" + `), and egress policy shape (` + "`unrestricted`" + `, ` + "`none`" + `, host list, or object with ` + "`allow_hosts`" + ` / ` + "`allow_ips`" + ` / ` + "`vpc_uuid`" + `). Rejects null ` + "`egress`" + ` or allowlist keys (write ` + "`egress: none`" + ` to deny all). The API remains the authoritative validator for the full contract.
 
 Name the manifest as a positional path or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin); with none of these, ` + "`./agents.yaml`" + ` is used when it exists.
 
@@ -154,7 +158,9 @@ const agentsLogsHelpMD = `Replay the session's event history, then exit. Very ol
 
 const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "`approve`" + `, ` + "`reject`" + `, or ` + "`defer`" + `. For an MCP elicitation that asks for values (a data form), pass ` + "`--content`" + ` with a JSON object matching what it requested — a plain ` + "`approve`" + ` with no ` + "`--content`" + ` is only correct for a yes/no approval or an OAuth link, not a form.`
 
-const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox. Aliases: ` + "`destroy`" + `, ` + "`rm`" + `.`
+const agentsRemoveHelpMD = `Remove a session and tear down its workspace sandbox. Aliases: ` + "`destroy`" + `, ` + "`rm`" + `.
+
+A persistent workspace the session held is saved and kept. Removing a session never deletes a workspace; attach it to a new session with ` + "`--workspace`" + `, or delete it with ` + "`" + agentCLI + " workspace delete`" + `.`
 
 const agentsPauseHelpMD = `Pause a running session. The workspace is preserved — resume with ` + "`" + agentCLI + " resume`" + `.`
 
@@ -304,6 +310,33 @@ const agentsCheckpointListHelpMD = `List checkpoints for a session, newest first
 const agentsCheckpointGetHelpMD = `Print details for one checkpoint.`
 
 const agentsCheckpointDeleteHelpMD = `Delete a checkpoint.`
+
+const agentsWorkspaceRootHelpMD = `Persistent workspaces: a saved set of files that outlives your sessions. Inside a session it is the ` + "`/workspace`" + ` folder.
+
+Create one, then give it to a new session with ` + "`--workspace <id>`" + ` on ` + "`" + agentCLI + " create --from-config`" + ` or ` + "`" + agentCLI + " launch --from-config`" + `. A workspace can only be attached to a session created from a saved Agent Config. Removing a session never deletes its workspace: the files are saved, and the next session can pick them up.
+` + "```bash\n" + agentCLI + ` workspace create --size-limit-gib 10 --name notes
+` + agentCLI + ` config create --spec agents.yaml --name reviewer
+` + agentCLI + ` create --from-config reviewer --name review-2 --workspace <workspace-id>
+` + "```\n\n" + `Limits in this beta:
+
+- One session holds a workspace at a time.
+- A workspace is attached when a session is created, not afterwards.
+- The size limit is fixed when the workspace is created.
+- Fork and rollback are not available for a session that has a workspace.`
+
+const agentsWorkspaceCreateHelpMD = `Create a persistent workspace. ` + "`--size-limit-gib`" + ` is required: the size limit of the workspace in GiB, a whole number from 1 to 100, and your team's limit may be lower. The size limit cannot be changed later. ` + "`--name`" + ` is an optional label and is not unique.
+
+**Safe to retry.** Each run sends one idempotency key, so a request that doctl repeats within the run cannot create a second workspace. doctl makes up a key unless you pass ` + "`--idempotency-key`" + `. A script that re-runs the whole command must pass its own key: without one, every run is a new workspace. Within 24 hours the same key with the same size and name returns the first workspace; the same key with different values is rejected. If the workspace that key created is being deleted, the retry is refused with a conflict; try again in a moment and the key then creates a new workspace.`
+
+const agentsWorkspaceListHelpMD = `List persistent workspaces, newest first. Show only one state with ` + "`--state`" + ` (AVAILABLE, ATTACHING, ATTACHED, RELEASING, FAILED or DELETING); use ` + "`--state AVAILABLE`" + ` to see the workspaces a new session can use. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.
+
+A page can hold fewer workspaces than ` + "`--page-size`" + `, even none, while a next page token is printed. Keep listing with that token until none is printed.`
+
+const agentsWorkspaceGetHelpMD = `Print details for one persistent workspace: its state, size, how much is used, the session that holds it, and when it was last saved.`
+
+const agentsWorkspaceDeleteHelpMD = `Permanently delete a persistent workspace and everything saved in it. This cannot be undone. In a terminal it asks first unless ` + "`--force`" + ` is given. With no terminal (a script, or ` + "`--interactive=false`" + `) there is nobody to ask, so pass ` + "`--force`" + `; without it the command stops and deletes nothing.
+
+A workspace a session still holds cannot be deleted: remove the session, wait until the workspace is available again, then delete it. Removing a session never deletes its workspace. A workspace shows DELETING while its delete runs; once it finishes, the workspace no longer exists.`
 
 const agentsTriggersRootHelpMD = `Webhook and cron triggers that start agent runs on external events or a schedule.
 
