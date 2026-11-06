@@ -899,6 +899,57 @@ func TestKubernetesCreate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Test Insights logs opt-in: the request only carries Insights when --enable-insights-logs is explicitly set.
+	for name, tc := range map[string]struct {
+		set      bool
+		value    bool
+		expected *godo.KubernetesInsightsTelemetryOptIn
+	}{
+		"flag omitted sends no insights": {set: false, expected: nil},
+		"opt in":                         {set: true, value: true, expected: &godo.KubernetesInsightsTelemetryOptIn{Logs: boolPtr(true)}},
+		"explicit opt out":               {set: true, value: false, expected: &godo.KubernetesInsightsTelemetryOptIn{Logs: boolPtr(false)}},
+	} {
+		tc := tc
+		t.Run("insights logs "+name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				clusterName := "insights-cluster"
+				r := godo.KubernetesClusterCreateRequest{
+					Name:        clusterName,
+					RegionSlug:  "sfo2",
+					VersionSlug: "1.13.0",
+					NodePools: []*godo.KubernetesNodePoolCreateRequest{
+						{
+							Name:  clusterName + "-default-pool",
+							Size:  "s-1vcpu-2gb",
+							Count: 3,
+						},
+					},
+					MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
+						StartTime: "00:00",
+						Day:       godo.KubernetesMaintenanceDayAny,
+					},
+					SurgeUpgrade: true,
+					Insights:     tc.expected,
+				}
+				tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
+
+				config.Args = append(config.Args, clusterName)
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, "sfo2")
+				config.Doit.Set(config.NS, doctl.ArgClusterVersionSlug, "1.13.0")
+				config.Doit.Set(config.NS, doctl.ArgSizeSlug, "s-1vcpu-2gb")
+				config.Doit.Set(config.NS, doctl.ArgNodePoolCount, 3)
+				config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
+				config.Doit.Set(config.NS, doctl.ArgSurgeUpgrade, true)
+				if tc.set {
+					config.Doit.Set(config.NS, doctl.ArgEnableInsightsLogs, tc.value)
+				}
+
+				err := testK8sCmdService().RunKubernetesClusterCreate("s-1vcpu-2gb", 3)(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
+
 	// Test NFS CSI plugin omitted: when the flag is not set, nfs_csi_plugin is left unset
 	// so the API can apply its default.
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
