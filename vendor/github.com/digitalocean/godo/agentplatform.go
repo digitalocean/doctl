@@ -260,6 +260,7 @@ type AgentPlatformService interface {
 	ListModelEvaluationRuns(ctx context.Context, opt *ModelEvaluationRunListOptions) (*ModelEvaluationRunListResponse, *Response, error)
 	ListModelEvaluationPresets(ctx context.Context) (*ModelEvaluationPresetListResponse, *Response, error)
 	ListModelEvaluationMetrics(ctx context.Context) (*ModelEvaluationMetricListResponse, *Response, error)
+	ListModelEvaluationMetricsWithOptions(ctx context.Context, opt *ModelEvaluationMetricListOptions) (*ModelEvaluationMetricListResponse, *Response, error)
 	ListEvaluationDatasets(ctx context.Context, opt *EvaluationDatasetListOptions) (*EvaluationDatasetListResponse, *Response, error)
 	CreateEvaluationDataset(ctx context.Context, createRequest *CreateEvaluationDatasetRequest) (*CreateEvaluationDatasetResponse, *Response, error)
 	DeleteEvaluationDataset(ctx context.Context, datasetUUID string) (*EvaluationDatasetDeleteResponse, *Response, error)
@@ -579,6 +580,15 @@ const (
 	EvaluationMetricSourceCustom      EvaluationMetricSource = "EVALUATION_METRIC_SOURCE_CUSTOM"
 )
 
+// EvaluationMetricTurnType is whether a metric applies to single-turn or multi-turn inputs.
+type EvaluationMetricTurnType string
+
+const (
+	EvaluationMetricTurnTypeUnspecified EvaluationMetricTurnType = "EVALUATION_METRIC_TURN_TYPE_UNSPECIFIED"
+	EvaluationMetricTurnTypeSingleTurn  EvaluationMetricTurnType = "EVALUATION_METRIC_TURN_TYPE_SINGLE_TURN"
+	EvaluationMetricTurnTypeMultiTurn   EvaluationMetricTurnType = "EVALUATION_METRIC_TURN_TYPE_MULTI_TURN"
+)
+
 // Workspace represents a workspace containing agents and evaluation test cases.
 type Workspace struct {
 	UUID                string                `json:"uuid,omitempty"`
@@ -631,15 +641,17 @@ type EvaluationMetric struct {
 	Source            EvaluationMetricSource            `json:"source,omitempty"`
 	CustomEvalConfig  *CustomEvaluationMetricConfig     `json:"custom_eval_config,omitempty"`
 	AssociatedPresets []AssociatedModelEvaluationPreset `json:"associated_presets,omitempty"`
+	TurnType          EvaluationMetricTurnType          `json:"turn_type,omitempty"`
 }
 
 // CustomEvaluationMetricConfig represents the LLM-as-judge scoring configuration for custom evaluation metrics.
 type CustomEvaluationMetricConfig struct {
-	RequiresGroundTruth bool       `json:"requires_ground_truth,omitempty"`
-	ScoringPrompt       string     `json:"scoring_prompt,omitempty"`
-	CreatedAt           *Timestamp `json:"created_at,omitempty"`
-	UpdatedAt           *Timestamp `json:"updated_at,omitempty"`
-	DeletedAt           *Timestamp `json:"deleted_at,omitempty"`
+	RequiresGroundTruth bool                     `json:"requires_ground_truth,omitempty"`
+	ScoringPrompt       string                   `json:"scoring_prompt,omitempty"`
+	TurnType            EvaluationMetricTurnType `json:"turn_type,omitempty"`
+	CreatedAt           *Timestamp               `json:"created_at,omitempty"`
+	UpdatedAt           *Timestamp               `json:"updated_at,omitempty"`
+	DeletedAt           *Timestamp               `json:"deleted_at,omitempty"`
 }
 
 // AssociatedModelEvaluationPreset identifies a saved model evaluation preset that references a custom metric.
@@ -3144,6 +3156,12 @@ type ModelEvaluationMetricListResponse struct {
 	Metrics []*EvaluationMetric `json:"metrics,omitempty"`
 }
 
+// ModelEvaluationMetricListOptions holds optional filters for
+// ListModelEvaluationMetricsWithOptions.
+type ModelEvaluationMetricListOptions struct {
+	TurnType EvaluationMetricTurnType `url:"turn_type,omitempty"`
+}
+
 // EvaluationDatasetListOptions holds the optional filters for
 // ListEvaluationDatasets.
 type EvaluationDatasetListOptions struct {
@@ -3372,7 +3390,18 @@ func (s *AgentPlatformServiceOp) ListModelEvaluationPresets(ctx context.Context)
 // ListModelEvaluationMetrics lists all available metrics that can be selected
 // when creating a model evaluation run.
 func (s *AgentPlatformServiceOp) ListModelEvaluationMetrics(ctx context.Context) (*ModelEvaluationMetricListResponse, *Response, error) {
-	req, err := s.client.NewRequest(ctx, http.MethodGet, modelEvaluationMetricsBasePath, nil)
+	return s.ListModelEvaluationMetricsWithOptions(ctx, nil)
+}
+
+// ListModelEvaluationMetricsWithOptions lists model evaluation metrics, optionally
+// filtered by turn type (single-turn vs multi-turn).
+func (s *AgentPlatformServiceOp) ListModelEvaluationMetricsWithOptions(ctx context.Context, opt *ModelEvaluationMetricListOptions) (*ModelEvaluationMetricListResponse, *Response, error) {
+	path, err := addOptions(modelEvaluationMetricsBasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
