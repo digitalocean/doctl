@@ -2084,6 +2084,39 @@ func sessionIDArg(c *CmdConfig) (string, error) {
 	return resolveSessionRef(c.HostedAgents(), c.Args[0])
 }
 
+// agentBoundSessionWarnOut is stderr so a warning never mixes into json output.
+var agentBoundSessionWarnOut io.Writer = os.Stderr
+
+// lookupBoundTrigger is the by-session read warnBoundReuseSession uses.
+// A miss is not a failure: the command the user asked for still runs.
+var lookupBoundTrigger = func(c *CmdConfig, sessionID string) (*do.HostedAgentTrigger, error) {
+	if c == nil || c.HostedAgentTriggers == nil {
+		return nil, errors.New("triggers unavailable")
+	}
+	return c.HostedAgentTriggers().GetBySession(sessionID)
+}
+
+// warnBoundReuseSession tells the user this session is the one a reuse trigger
+// fires into. A 404, a lookup error, a fresh trigger, or a different bound
+// session prints nothing and never fails the command.
+func warnBoundReuseSession(c *CmdConfig, sessionID string) {
+	trig, err := lookupBoundTrigger(c, sessionID)
+	if err != nil || trig == nil || trig.HostedAgentTrigger == nil {
+		return
+	}
+	if trig.SessionMode != godo.HostedAgentTriggerSessionModeReuse {
+		return
+	}
+	if strings.TrimSpace(trig.BoundSessionID) != sessionID {
+		return
+	}
+	name := strings.TrimSpace(trig.Name)
+	if name == "" {
+		name = trig.TriggerID
+	}
+	fmt.Fprintf(agentBoundSessionWarnOut, "Warning: session %s is bound to reuse trigger %s. Resuming, stopping, or prompting it can interrupt a firing that is waiting for this session to pause.\n", sessionID, name)
+}
+
 // RunAgentsShow prints one session.
 func RunAgentsShow(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
@@ -2140,6 +2173,7 @@ func RunAgentsCancel(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	runID, err := c.Doit.GetString(c.NS, doctl.ArgAgentCancelRunID)
 	if err != nil {
 		return err
@@ -2187,6 +2221,7 @@ func RunAgentsResume(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
 		return err
 	}
@@ -2819,6 +2854,7 @@ func RunAgentsApprove(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	requestID := c.Args[1]
 	outcome, err := hitlOutcomeFor(c.Args[2])
 	if err != nil {

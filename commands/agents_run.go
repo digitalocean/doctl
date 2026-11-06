@@ -317,6 +317,7 @@ func launchExistingSession(c *CmdConfig, ref string) error {
 	if err != nil {
 		return launchUnresolvableRefErr(ref, err)
 	}
+	warnBoundReuseSession(c, sessionID)
 
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
