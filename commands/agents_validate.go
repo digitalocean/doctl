@@ -151,6 +151,17 @@ func (v *agentManifestValidation) error() error {
 // keys, MODEL vs HARNESS_INFERENCE_MODEL). Server-side agentspec remains
 // authoritative for the full contract.
 func validateAgentManifest(manifest []byte) *agentManifestValidation {
+	return validateAgentManifestOpts(manifest, true)
+}
+
+// validateAgentManifestSkippingUnknownKeys is validateAgentManifest without the
+// unknown-field pass. Real create runs that pass earlier (before any side
+// effect), so running it again here would report every key twice.
+func validateAgentManifestSkippingUnknownKeys(manifest []byte) *agentManifestValidation {
+	return validateAgentManifestOpts(manifest, false)
+}
+
+func validateAgentManifestOpts(manifest []byte, checkUnknownKeys bool) *agentManifestValidation {
 	out := &agentManifestValidation{}
 	if len(bytesTrimSpace(manifest)) == 0 {
 		out.Errors = append(out.Errors, "manifest is empty")
@@ -171,7 +182,7 @@ func validateAgentManifest(manifest []byte) *agentManifestValidation {
 	if legacy {
 		validateEnvelopeManifest(doc, out)
 	} else {
-		validateFlatManifest(doc, out)
+		validateFlatManifest(doc, out, checkUnknownKeys)
 	}
 
 	validateManifestKeysWhitespace(doc, legacy, out)
@@ -224,7 +235,7 @@ func hasYAMLKey(doc map[string]any, key string) bool {
 	return ok
 }
 
-func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
+func validateFlatManifest(doc map[string]any, out *agentManifestValidation, checkUnknownKeys bool) {
 	adapter, key, both := flatManifestAdapter(doc)
 	switch {
 	case both:
@@ -239,6 +250,12 @@ func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
 		if err := validateHostedAgentIdentifier(strings.TrimSpace(name)); err != nil {
 			out.Errors = append(out.Errors, fmt.Sprintf("name: %v", err))
 		}
+	}
+
+	if checkUnknownKeys {
+		errs, warns := unknownManifestKeys(doc)
+		out.Errors = append(out.Errors, errs...)
+		out.Warnings = append(out.Warnings, warns...)
 	}
 }
 
@@ -1010,6 +1027,23 @@ func hasStringKey(set map[string]struct{}, key string) bool {
 	return ok
 }
 
+// applyStrict turns every warning into an error (--strict).
+func applyStrict(v *agentManifestValidation) *agentManifestValidation {
+	if v == nil {
+		return nil
+	}
+	v.Errors = append(v.Errors, v.Warnings...)
+	v.Warnings = nil
+	return v
+}
+
+// agentStrictFlag reports whether --strict was given. Commands that do not
+// register the flag read false.
+func agentStrictFlag(c *CmdConfig) bool {
+	strict, _ := c.Doit.GetBool(c.NS, doctl.ArgAgentStrict)
+	return strict
+}
+
 func reportAgentManifestValidation(v *agentManifestValidation) error {
 	if v == nil {
 		return nil
@@ -1062,6 +1096,9 @@ func RunAgentsValidate(c *CmdConfig) error {
 		return err
 	}
 	v := validateAgentManifest(raw)
+	if agentStrictFlag(c) {
+		applyStrict(v)
+	}
 	printAgentManifestValidation(c.Out, v)
 	if !v.ok() {
 		return ErrExitSilently
