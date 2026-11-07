@@ -550,6 +550,48 @@ const defaultHermesModel = "openai-gpt-5.5"
 // still lets a manifest set.
 const harnessInferenceModelEnv = "HARNESS_INFERENCE_MODEL"
 
+// harnessInferenceAPIKeyEnv is the guest secret the DO Inference path delivers
+// as. manage_model_access_key asks harness-api to mint it when the manifest
+// names a harness model but supplies no inference or vendor API key.
+const harnessInferenceAPIKeyEnv = "HARNESS_INFERENCE_API_KEY"
+
+// needsManagedModelAccessKey reports whether create should ask harness-api to
+// mint a DigitalOcean Inference key (manage_model_access_key). True only when
+// the resolved manifest sets HARNESS_INFERENCE_MODEL and supplies no non-empty
+// HARNESS_INFERENCE_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY (env or
+// secrets). Empty slots and ${VAR} placeholders do not count as provided.
+func needsManagedModelAccessKey(manifest []byte) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return false
+	}
+	_, legacy := doc["apiVersion"]
+	env, _, _, _ := extractManifestEnvAndSecrets(doc, legacy)
+	if strings.TrimSpace(env[harnessInferenceModelEnv]) == "" {
+		return false
+	}
+	if hasProvidedCredential(manifest, env, harnessInferenceAPIKeyEnv) {
+		return false
+	}
+	if hasProvidedCredential(manifest, env, openAIAPIKeyEnv) {
+		return false
+	}
+	if hasProvidedCredential(manifest, env, anthropicAPIKeyEnv) {
+		return false
+	}
+	return true
+}
+
+func hasProvidedCredential(manifest []byte, env map[string]string, name string) bool {
+	if v := strings.TrimSpace(env[name]); v != "" && v != redactedSecretValue && !isEnvPlaceholder(v) {
+		return true
+	}
+	if v := strings.TrimSpace(resolvedManifestSecretValues(manifest)[name]); v != "" {
+		return true
+	}
+	return false
+}
+
 func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 	agent, err := resolveHarnessAgent(o.harness)
 	if err != nil {
@@ -614,17 +656,13 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
 	case agent == openHandsAgentName:
-		// No key slot: OpenHands runs on DigitalOcean Inference. The create
-		// asks harness-api to mint the session's key
-		// (startSessionFromRawManifest sends ?manage_model_access_key=true for
-		// this agent), OHR hands it to the agent-server with the conversation,
-		// and a user who wants their own key passes --secret
-		// HARNESS_INFERENCE_API_KEY=..., which the server keeps instead of
-		// minting. What the manifest does need is the model, since the
-		// adapter's fallback is not a DO catalogue id (see
-		// defaultOpenHandsModel). Pin the template the agent lives in unless
-		// the user named one, and opt out of keep_warm (see
-		// harnessManifest.KeepWarm).
+		// No key slot: OpenHands runs on DigitalOcean Inference. Setting
+		// HARNESS_INFERENCE_MODEL below (with no vendor/harness API key)
+		// makes needsManagedModelAccessKey ask harness-api to mint
+		// HARNESS_INFERENCE_API_KEY. A user who wants their own key passes
+		// --secret HARNESS_INFERENCE_API_KEY=..., which skips that opt-in.
+		// Pin the template the agent lives in unless the user named one, and
+		// opt out of keep_warm (see harnessManifest.KeepWarm).
 		if doc.Template == "" {
 			doc.Template = openHandsAgentName
 		}
@@ -634,13 +672,11 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 			o.model = defaultOpenHandsModel
 		}
 	case agent == hermesAgentName:
-		// Same shape as openhands, for the same reason: no key slot, because
-		// hermes reads HARNESS_INFERENCE_API_KEY (render-config.sh prefers the
-		// native OPENAI_* set and falls back to it) and harness-api mints that
-		// key for the session. A user who wants the public OpenAI API instead
-		// passes --secret OPENAI_API_KEY=..., which render-config.sh takes
-		// first. The model is written below because hermes has none of its own
-		// (see defaultHermesModel).
+		// Same shape as openhands: no key slot; HARNESS_INFERENCE_MODEL below
+		// triggers manage_model_access_key unless the user brings
+		// HARNESS_INFERENCE_API_KEY or OPENAI_API_KEY (--secret). Hermes
+		// prefers OPENAI_* when present (render-config.sh). The model is
+		// written because hermes has none of its own (see defaultHermesModel).
 		//
 		// No template pin and no keep_warm, unlike openhands. templateForAgentKind
 		// already resolves the kind to coding-hermes, and no flipper gates the
@@ -799,19 +835,10 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		prog.wait("Creating hosted session…")
 	}
 	var sess *do.HostedAgentSession
-	if manifestAgentIs(manifest, openHandsAgentName) || manifestAgentIs(manifest, hermesAgentName) {
-		// OpenHands and hermes run on DigitalOcean Inference and have no vendor
-		// key of their own to ask for, so the session's key is minted by
-		// harness-api. Decided off the manifest, not the --harness flag, so a
-		// --spec file that says `harness: openhands` gets the same key. A
-		// manifest that supplies HARNESS_INFERENCE_API_KEY itself keeps it: the
-		// server skips the mint for a bring-your-own key.
-		//
-		// A hermes manifest may instead carry OPENAI_API_KEY, which
-		// render-config.sh reads ahead of the minted key. The mint still runs —
-		// the server only reads the HARNESS_INFERENCE_API_KEY slot — leaving an
-		// unused key that is revoked with the config. Skipping it would need a
-		// second, adapter-specific read of the manifest for no gain.
+	if needsManagedModelAccessKey(manifest) {
+		// Manifest asks for harness-routed inference (HARNESS_INFERENCE_MODEL)
+		// without bringing HARNESS_INFERENCE_API_KEY / OPENAI_API_KEY /
+		// ANTHROPIC_API_KEY, so harness-api mints the DO Inference key.
 		sess, err = c.HostedAgents().CreateSessionFromManifestWithManagedKey(manifest, createOpt)
 	} else {
 		sess, err = c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
