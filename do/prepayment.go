@@ -16,16 +16,18 @@ package do
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/digitalocean/godo"
 )
 
-// ErrNoBillingPermission is returned when the API token lacks the billing:read
-// scope that prepay routes require. It is a distinct, user-actionable state
-// rather than a failure: the caller can still be told to ask a Team Owner or
-// Biller, which is the only thing they could act on anyway.
-var ErrNoBillingPermission = errors.New("token lacks the billing:read scope required to read the prepayment balance")
+// ErrNoBillingPermission is returned by Get when the balance request is
+// refused with a 403. A missing billing:read scope is one cause, but a team
+// role or account state can also produce it, so the text names no cause. The
+// returned error also wraps the original API error, so callers can read the
+// status and the server's message with errors.As.
+var ErrNoBillingPermission = errors.New("the prepayment balance could not be read: the request was refused")
 
 // PrepaymentConfig aliases godo.PrepaymentConfig so harness-runtime callers can
 // use do.* types without depending on godo directly.
@@ -50,7 +52,8 @@ type PrepaymentService interface {
 	GetStatus() (*PrepaymentStatusResponse, error)
 	// Get returns config and status together (same wire response as GetConfig)
 	// and accepts a context so callers enriching a 402 card can bound the
-	// lookup. A 403 becomes ErrNoBillingPermission.
+	// lookup. A 403 matches ErrNoBillingPermission and still wraps the API
+	// error; any other failure is returned as is.
 	Get(ctx context.Context) (*PrepaymentConfig, *PrepaymentStatus, error)
 }
 
@@ -90,7 +93,9 @@ func (ps *prepaymentService) Get(ctx context.Context) (*PrepaymentConfig, *Prepa
 	if err != nil {
 		var er *godo.ErrorResponse
 		if errors.As(err, &er) && er.Response != nil && er.Response.StatusCode == http.StatusForbidden {
-			return nil, nil, ErrNoBillingPermission
+			// Wrap both so callers keep matching the sentinel while the balance
+			// command can still read the status and server message.
+			return nil, nil, fmt.Errorf("%w: %w", ErrNoBillingPermission, err)
 		}
 		return nil, nil, err
 	}

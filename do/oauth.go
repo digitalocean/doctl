@@ -42,6 +42,9 @@ type OAuthApplication struct {
 // OAuthService is an interface for interacting with DigitalOcean's account api.
 type OAuthService interface {
 	TokenInfo(string) (*OAuthTokenInfo, error)
+	// TokenInfoContext is TokenInfo with a context, so callers can bound the
+	// check with a deadline.
+	TokenInfoContext(ctx context.Context, server string) (*OAuthTokenInfo, error)
 }
 
 type oauthService struct {
@@ -59,12 +62,15 @@ func NewOAuthService(godoClient *godo.Client) OAuthService {
 }
 
 func (oa *oauthService) TokenInfo(server string) (*OAuthTokenInfo, error) {
+	return oa.TokenInfoContext(context.TODO(), server)
+}
+
+func (oa *oauthService) TokenInfoContext(ctx context.Context, server string) (*OAuthTokenInfo, error) {
 	tokenInfoURI := oauthBaseURL + tokenInfoPath
 	if server != "" {
 		tokenInfoURI = server + tokenInfoPath
 	}
 
-	ctx := context.TODO()
 	req, err := oa.client.NewRequest(ctx, http.MethodGet, tokenInfoURI, nil)
 	if err != nil {
 		return nil, err

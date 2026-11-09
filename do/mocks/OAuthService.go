@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	do "github.com/digitalocean/doctl/do"
@@ -53,4 +54,19 @@ func (m *MockOAuthService) TokenInfo(arg0 string) (*do.OAuthTokenInfo, error) {
 func (mr *MockOAuthServiceMockRecorder) TokenInfo(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TokenInfo", reflect.TypeOf((*MockOAuthService)(nil).TokenInfo), arg0)
+}
+
+// TokenInfoContext mocks base method.
+func (m *MockOAuthService) TokenInfoContext(ctx context.Context, server string) (*do.OAuthTokenInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TokenInfoContext", ctx, server)
+	ret0, _ := ret[0].(*do.OAuthTokenInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TokenInfoContext indicates an expected call of TokenInfoContext.
+func (mr *MockOAuthServiceMockRecorder) TokenInfoContext(ctx, server any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TokenInfoContext", reflect.TypeOf((*MockOAuthService)(nil).TokenInfoContext), ctx, server)
 }
