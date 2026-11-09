@@ -48,6 +48,10 @@ type HostedAgentsService interface {
 	// godo (through v1.229.0) has no field for it, so the request is built
 	// here; fold it into opt once it does.
 	CreateSessionFromManifestWithManagedKey(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*HostedAgentSession, error)
+	// ValidatePolicy asks the server how it would resolve the manifest's
+	// tool-permission policy, without creating a session. It takes a context
+	// because the client retries, so a caller must bound it.
+	ValidatePolicy(ctx context.Context, manifest []byte) (*godo.HostedAgentPolicyValidationResult, error)
 	ListSessions(*godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 	GetSession(sessionID string) (*HostedAgentSession, error)
 	// GetSessionIngress reads the session's public ingress URL
@@ -169,6 +173,11 @@ func (s *hostedAgentsService) CreateSessionFromManifest(manifest []byte, opt *go
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) ValidatePolicy(ctx context.Context, manifest []byte) (*godo.HostedAgentPolicyValidationResult, error) {
+	res, _, err := s.client.HostedAgents.ValidatePolicy(ctx, manifest)
+	return res, err
 }
 
 // manageModelAccessKeyParam is harness-api's opt-in to mint the session's

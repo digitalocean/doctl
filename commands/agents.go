@@ -748,18 +748,14 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentWorkspace, "", "", agentWorkspaceFlagDesc)
 }
 
-// agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
-// one place, because it is spending consent: every command that offers it —
-// create, config start-session, launch, update — has to describe the same
-// scope and the same way to revoke it.
 // defaultHarnessPermission is the tool-permission default written onto a
-// --harness manifest. Omitting the block entirely leaves each adapter on its
-// own template default, which for codex is `untrusted` — every shell command
-// and file write raises an approval request. That is the right default for a
-// policy someone authored deliberately and the wrong one for a manifest doctl
-// generated from a single flag, so --harness states the policy explicitly and
-// --permission is how it is narrowed.
-const defaultHarnessPermission = "allow"
+// --harness manifest, and the default of --permission. It is ask, which is
+// what the manifest spec resolves an omitted permissions.default to, so the
+// flag and a hand-written manifest agree. It used to be allow, chosen because
+// with no policy block codex's own default asks on every shell command and
+// file write. The policy the server will apply is printed at create time (see
+// reportAppliedPermission).
+const defaultHarnessPermission = "ask"
 
 // agentTemplateFlagDesc names both halves of the template namespace on purpose.
 // The two are not separate settings: a session's template resolves against the
@@ -785,16 +781,24 @@ const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness sess
 	"the other harnesses use their own vendor key and leave it unset unless given. " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
-const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
+const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run every tool without asking), " +
+	"ask (hold each tool call for approval), or deny (refuse every tool call). Defaults to ask. " +
 	// No backticks, for the same reason as agentTemplateFlagDesc.
-	"ask (raise an approval request per tool call, resolvable with '" + agentCLI + " approve'), or deny. " +
-	"Written as the manifest's permissions.default. Only valid with --harness; a --spec manifest declares its own."
+	"With ask, a run waits until someone approves: with '" + agentCLI + " approve', in the chat, or automatically with --" + doctl.ArgAgentOnHITL + " on create. " +
+	"The wait does not time out, and launch cannot auto-approve. For unattended runs use 'create --" + doctl.ArgAgentOnHITL + " approve' or --permission allow. " +
+	"MCP tool calls that cannot request approval fail under ask instead of waiting. " +
+	"Written as the manifest's permissions.default; the policy the server will apply is printed when the session is created. " +
+	"Only valid with --harness; a --spec manifest declares its own."
 
 // No backticks, for the same reason as agentTemplateFlagDesc.
 const agentWorkspaceFlagDesc = "ID of a persistent workspace to keep this session's /workspace files in (see '" + agentCLI + " workspace create'). " +
 	"Only valid with --from-config: save the manifest as an Agent Config first. " +
 	"Per-session, so pass it on each create. A workspace is held by one session at a time."
 
+// agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
+// one place, because it is spending consent: every command that offers it —
+// create, config start-session, launch, update — has to describe the same
+// scope and the same way to revoke it.
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
 	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
@@ -835,6 +839,10 @@ type agentCreationSource struct {
 	// workspaceID is the persistent workspace to attach. Only valid with
 	// --from-config, where it is sent in the create request body.
 	workspaceID string
+	// permission is the permissions.default doctl wrote into a generated
+	// manifest; empty when the manifest is not doctl's (--spec) or declares no
+	// agent, so there is nothing of ours to report back.
+	permission string
 }
 
 // bareSandbox reports whether this source asks for a session with no agent,
@@ -1094,8 +1102,8 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		// Refusing the flag is only half of it: `permission` already carries the
 		// cobra default, so leaving it set writes permissions.default into a
 		// manifest that declares no agent — and `config create --spec -` would
-		// carry that forward as if the customer had chosen it. The default exists
-		// to keep codex off `untrusted`; there is no adapter here to default.
+		// carry that forward as if the customer had chosen it. There is no agent
+		// here for a tool policy to apply to.
 		permission = ""
 	} else if harness != "" && isAgentlessTemplate(template) {
 		// The inverse pairing, and the one that fails quietly: a managed harness
@@ -1130,6 +1138,10 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		name:           name,
 		resumeOnTopoff: resumeOnTopoff,
 		workspaceID:    workspaceID,
+	}
+
+	if harness != "" {
+		src.permission = permission
 	}
 
 	if configRef != "" {
@@ -1230,7 +1242,62 @@ func createAgentSessionIn(c *CmdConfig, src *agentCreationSource, prog *creation
 	if err := rejectRedactedSecrets(src.manifest); err != nil {
 		return nil, err
 	}
-	return startSessionFromRawManifest(c, src.manifest, src.resumeOnTopoff, prog)
+	return startSessionFromRawManifest(c, src.manifest, src.resumeOnTopoff, src.permission, prog)
+}
+
+// permissionCheckTimeout bounds the policy check; the client retries, so
+// without it a slow endpoint would stall every --harness create. It matches
+// prepayLookupTimeout, the other best-effort read made before a create.
+const permissionCheckTimeout = 5 * time.Second
+
+var errPolicyCheckNoDefault = errors.New("no default in the response")
+
+// reportAppliedPermission prints the permissions.default the server will ship
+// and enforce for a --harness manifest, asking the server rather than
+// guessing: it can downgrade an allow it cannot verify, and the agent can
+// enforce something other than what ships. It goes to stderr so a pipe or
+// -o json still reads clean, and a failed check never blocks the create — the
+// create itself is the authority, this is only the heads-up.
+func reportAppliedPermission(c *CmdConfig, manifest []byte, requested string) {
+	ctx, cancel := context.WithTimeout(context.Background(), permissionCheckTimeout)
+	defer cancel()
+	res, err := c.HostedAgents().ValidatePolicy(ctx, manifest)
+	if err == nil && (res == nil || res.DefaultAction == "") {
+		err = errPolicyCheckNoDefault
+	}
+	var line string
+	if err != nil {
+		// Not the raw error: the client's carries the request URL and id.
+		var reason string
+		if msg, _, ok := agentAPIError(err); ok {
+			reason = msg
+			if reason == "" {
+				reason = "request failed"
+			}
+		} else if errors.Is(err, context.DeadlineExceeded) {
+			reason = "timed out"
+		} else if errors.Is(err, errPolicyCheckNoDefault) {
+			reason = err.Error()
+		} else {
+			// Not err.Error(): a transport error carries the request URL.
+			reason = "request failed"
+		}
+		line = fmt.Sprintf("permissions.default: %s (requested; server check failed: %s)", requested, reason)
+	} else {
+		shipped := string(res.DefaultAction)
+		line = fmt.Sprintf("permissions.default: %s (server will apply", shipped)
+		if shipped != requested {
+			line += "; requested " + requested
+		}
+		if enforced := string(res.DefaultActionRendered); enforced != "" && enforced != shipped {
+			line += "; the agent enforces " + enforced
+			if res.DefaultActionReason != "" {
+				line += ": " + res.DefaultActionReason
+			}
+		}
+		line += ")"
+	}
+	fmt.Fprintln(uiEnv().ErrWriter(), line)
 }
 
 // readySummaryFor describes the created session for the ready card.

@@ -749,7 +749,9 @@ func manifestIncludesPrompt(manifest []byte, prompt string) bool {
 
 // startSessionFromRawManifest uploads a manifest and creates a hosted session.
 // When prog is non-nil it prints Plano-style lifecycle steps around each phase.
-func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
+// permission is the permissions.default doctl generated, or empty when the
+// manifest is the caller's own; when set, the server's resolution of it is printed.
+func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, permission string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if prog != nil {
 		prog.step("Validating configuration…")
 	}
@@ -785,6 +787,12 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	}
 	if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 		return nil, err
+	}
+
+	// After local validation, so a manifest that fails it never reaches the
+	// server, and on the expanded bytes, which are the ones create sends.
+	if permission != "" {
+		reportAppliedPermission(c, manifest, permission)
 	}
 
 	var createOpt *godo.HostedAgentManifestCreateOptions
