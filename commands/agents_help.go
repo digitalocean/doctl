@@ -154,7 +154,13 @@ const agentsListHelpMD = `List sessions visible to your team. Filter with ` + "`
 
 const agentsShowHelpMD = `Print details for one session. Pass the session ID or name.`
 
-const agentsLogsHelpMD = `Replay the session's event history, then exit. Very old or long histories may show only recent events.`
+const agentsLogsHelpMD = `Replay the session's event history, then exit.
+
+With ` + "`-o json`" + `, prints newline-delimited JSON, one object per line, so the history can be read as data (for example with ` + "`jq`" + `). Token chunks are not merged. ` + "`--pretty`" + ` implies ` + "`-o json`" + ` and indents each object, so its output is not one object per line. An empty history prints nothing on stdout.
+
+The server returns at most the newest 2000 events or 4 MiB, from the last 14 days. When older events are dropped, the output has no marker.
+
+JSON output includes the full prompt, tool arguments and log fields, which text output leaves out.`
 
 const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "`approve`" + `, ` + "`reject`" + `, or ` + "`defer`" + `. For an MCP elicitation that asks for values (a data form), pass ` + "`--content`" + ` with a JSON object matching what it requested — a plain ` + "`approve`" + ` with no ` + "`--content`" + ` is only correct for a yes/no approval or an OAuth link, not a form.`
 

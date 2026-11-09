@@ -566,10 +566,11 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("get"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 
-	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
+	cmdLogs := CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the event history for a session",
 		agentsLogsHelpMD,
 		Writer, agentsNS()...)
+	AddBoolFlag(cmdLogs, doctl.ArgAgentPretty, "", false, "Indent each JSON event for reading. Implies -o json.")
 
 	cmdApprove := CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
@@ -2899,6 +2900,38 @@ func hitlOutcomeFor(s string) (godo.HostedAgentHITLOutcome, error) {
 // stream is finite: the server ends it after the last stored event, which is
 // what terminates the loop below.
 func RunAgentsLogs(c *CmdConfig) error {
+	pretty, err := c.Doit.GetBool(c.NS, doctl.ArgAgentPretty)
+	if err != nil {
+		return err
+	}
+	// Decide the format before any request so a refusal prints nothing. The
+	// global -o defaults to "text", so only an explicit -o text conflicts with
+	// --pretty; the default merely gets upgraded to JSON.
+	if Output != "text" && Output != "json" {
+		return errors.New("logs supports -o text and -o json")
+	}
+	if pretty && Output == "text" && agentFlagChanged(c, doctl.ArgOutput) {
+		return errors.New("--pretty only applies to JSON output")
+	}
+	if Output == "json" || pretty {
+		// checkErr prints a {"errors":[...]} envelope on stdout under -o json,
+		// which would add a non-event line to the stream. Report on stderr and
+		// exit non-zero silently instead, for both -o json and --pretty.
+		if err := runAgentsLogs(c, pretty, true); err != nil {
+			// Same rewrite the runner applies to text output, so a 402 says
+			// "add funds" here too.
+			err = beautifyAgentErrorFor(c, err)
+			if !errors.Is(err, ErrExitSilently) {
+				fmt.Fprint(uiEnv().ErrWriter(), formatStructuredError(uiEnv(), err))
+			}
+			return ErrExitSilently
+		}
+		return nil
+	}
+	return runAgentsLogs(c, pretty, false)
+}
+
+func runAgentsLogs(c *CmdConfig, pretty, asJSON bool) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
 		return err
@@ -2915,6 +2948,10 @@ func RunAgentsLogs(c *CmdConfig) error {
 		return err
 	}
 	defer stream.Close()
+
+	if asJSON {
+		return writeEventsJSON(c.Out, stream, pretty)
+	}
 
 	// TOKEN_CHUNK events stream token-by-token; buffer them so the whole
 	// assistant message renders as markdown at once. Other event kinds are
@@ -2939,6 +2976,66 @@ func RunAgentsLogs(c *CmdConfig) error {
 		renderEvent(c.Out, ev)
 	}
 	acc.flush(c.Out)
+	return stream.Err()
+}
+
+// logEventJSON is the server's event envelope. godo's event type has no JSON
+// tags and drops tenant_id, config_id and trace_parent while decoding, so those
+// three cannot be reproduced here.
+type logEventJSON struct {
+	EventID         string          `json:"event_id"`
+	RunID           string          `json:"run_id"`
+	SessionID       string          `json:"session_id,omitempty"`
+	Timestamp       *string         `json:"timestamp"`
+	Seq             uint64          `json:"seq"`
+	SourceEventID   string          `json:"source_event_id,omitempty"`
+	SourceEventType string          `json:"source_event_type,omitempty"`
+	Type            string          `json:"type"`
+	Data            json.RawMessage `json:"data"`
+}
+
+// writeEventsJSON prints one JSON object per event. Each event is encoded in
+// full before it is written, so a mid-stream failure leaves only complete
+// lines behind. Token chunks are kept as separate events: the consumer is a
+// program that wants the history as recorded, not a merged message.
+func writeEventsJSON(w io.Writer, stream *godo.HostedAgentSessionStream, pretty bool) error {
+	for stream.Next() {
+		ev := stream.Current()
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			continue
+		}
+		out := logEventJSON{
+			EventID:         ev.EventID,
+			RunID:           ev.RunID,
+			SessionID:       ev.SessionID,
+			Seq:             ev.Seq,
+			SourceEventID:   ev.SourceEventID,
+			SourceEventType: ev.SourceEventType,
+			Type:            string(ev.Kind),
+			Data:            ev.Payload,
+		}
+		// godo leaves the time zero when the frame had none; null says so
+		// instead of inventing year 1.
+		if !ev.At.Time.IsZero() {
+			ts := ev.At.Time.UTC().Format(time.RFC3339Nano)
+			out.Timestamp = &ts
+		}
+		if len(out.Data) == 0 {
+			out.Data = json.RawMessage("null")
+		}
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		if pretty {
+			enc.SetIndent("", "  ")
+		}
+		if err := enc.Encode(out); err != nil {
+			return err
+		}
+		if _, err := w.Write(buf.Bytes()); err != nil {
+			return err
+		}
+	}
 	return stream.Err()
 }
 

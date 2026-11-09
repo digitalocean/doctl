@@ -1155,6 +1155,9 @@ const (
 	// requestedSchema, passed to `agents approve` alongside the outcome.
 	ArgAgentHITLContent = "content"
 
+	// ArgAgentPretty indents each JSON event printed by `logs`.
+	ArgAgentPretty = "pretty"
+
 	// ArgAgentResumeOnTopoff opts a session in to automatic resumption when the
 	// team's prepayment balance is topped off after a low-balance pause. Set at
 	// create, or changed later on an existing session with `agents update`.
