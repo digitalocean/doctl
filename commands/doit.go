@@ -100,23 +100,20 @@ func init() {
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "Enable verbose output")
 
 	interactive := isTerminal(os.Stdout) && isTerminal(os.Stderr)
-	interactiveHelpText := "Enable interactive behavior. Defaults to true if the terminal supports it"
-	if !interactive {
-		// this is automatically added if interactive == true
-		interactiveHelpText += " (default false)"
-	}
-	rootPFlagSet.BoolVarP(&Interactive, doctl.ArgInteractive, "", interactive, interactiveHelpText)
+	// The default depends on where doctl runs, so the help text must not state
+	// a fixed default; it has to read correctly beside either default value.
+	rootPFlagSet.BoolVarP(&Interactive, doctl.ArgInteractive, "", interactive, "Enable interactive behavior. Defaults to false unless both standard output and standard error are terminals")
 
 	rootPFlagSet.BoolVarP(&Show, doctl.ArgShow, "", false, "Reveal masked values, such as secrets, instead of hiding them. Values are unmasked automatically in CI")
 
 	rootPFlagSet.IntVar(&RetryMax, "http-retry-max", 5, "Set maximum number of retries for requests that fail with a 429 or 500-level error")
 	viper.BindPFlag("http-retry-max", rootPFlagSet.Lookup("http-retry-max"))
 
-	rootPFlagSet.IntVar(&RetryWaitMax, "http-retry-wait-max", 30, "Set the minimum number of seconds to wait before retrying a failed request")
+	rootPFlagSet.IntVar(&RetryWaitMax, "http-retry-wait-max", 30, "Set the maximum number of seconds to wait before retrying a failed request")
 	viper.BindPFlag("http-retry-wait-max", rootPFlagSet.Lookup("http-retry-wait-max"))
 	DoitCmd.PersistentFlags().MarkHidden("http-retry-wait-max")
 
-	rootPFlagSet.IntVar(&RetryWaitMin, "http-retry-wait-min", 1, "Set the maximum number of seconds to wait before retrying a failed request")
+	rootPFlagSet.IntVar(&RetryWaitMin, "http-retry-wait-min", 1, "Set the minimum number of seconds to wait before retrying a failed request")
 	viper.BindPFlag("http-retry-wait-min", rootPFlagSet.Lookup("http-retry-wait-min"))
 	DoitCmd.PersistentFlags().MarkHidden("http-retry-wait-min")
 
