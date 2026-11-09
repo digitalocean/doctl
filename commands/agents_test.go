@@ -5942,8 +5942,8 @@ func runLogsForTest(t *testing.T, body string, trailErr error, output string, fl
 const logsTestBody = "" +
 	"id: s0\ndata: {\"event_id\":\"s0\",\"type\":\"stream.state\",\"data\":{\"state\":\"live\"}}\n\n" +
 	`id: e1` + "\n" + `data: {"event_id":"e1","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:05Z","seq":1,"source_event_type":"native/x","type":"run.started","data":{"user_input":"a <b> & c"}}` + "\n\n" +
-	`id: e2` + "\n" + `data: {"event_id":"e2","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:06Z","seq":2,"type":"run.token_delta","data":{"text":"hel"}}` + "\n\n" +
-	`id: e3` + "\n" + `data: {"event_id":"e3","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:07Z","seq":3,"type":"run.token_delta","data":{"text":"lo"}}` + "\n\n"
+	`id: e2` + "\n" + `data: {"event_id":"e2","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:06Z","seq":2,"type":"run.token_delta","data":{"text":"good"}}` + "\n\n" +
+	`id: e3` + "\n" + `data: {"event_id":"e3","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:07Z","seq":3,"type":"run.token_delta","data":{"text":"bye"}}` + "\n\n"
 
 func TestRunAgentsLogs_JSONLines(t *testing.T) {
 	out, err := runLogsForTest(t, logsTestBody, nil, "json", nil, true)
@@ -6014,7 +6014,7 @@ func TestRunAgentsLogs_TextModeStillMergesAndSkipsJSON(t *testing.T) {
 	assert.Contains(t, out, "[2026-01-02T03:04:05Z] run.started")
 	assert.NotContains(t, out, `"event_id"`)
 	assert.NotContains(t, out, "stream.state")
-	assert.Contains(t, out, "hello", "token chunks merge into one message")
+	assert.Contains(t, out, "goodbye", "token chunks merge into one message")
 }
 
 // errCorruptFrame only signals hostedAgentSSEHandler to append a corrupt frame.
