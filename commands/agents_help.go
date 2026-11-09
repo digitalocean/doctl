@@ -99,6 +99,8 @@ harness: opencode
 
 **Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
 
+When the resolved manifest sets ` + "`HARNESS_INFERENCE_MODEL`" + ` without ` + "`HARNESS_INFERENCE_API_KEY`" + `, ` + "`OPENAI_API_KEY`" + `, or ` + "`ANTHROPIC_API_KEY`" + `, doctl asks harness-api to mint a DigitalOcean Inference key (` + "`manage_model_access_key`" + `). Supply one of those secrets to bring your own key instead.
+
 **Inspect before creating.** ` + "`--dry-run`" + ` prints the fully-resolved manifest — name applied, ` + "`${VAR}`" + ` expanded, secret values redacted — and exits without calling the API. That makes a working ` + "`--harness`" + ` invocation reusable, with no file ever touching disk:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --dry-run \
   | ` + agentCLI + ` config create --spec - --name reviewer --secret ANTHROPIC_API_KEY=@~/.secrets/anthropic.key
@@ -243,7 +245,9 @@ const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalo
 
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " create --spec`" + `). ` + "`--name`" + ` must be unique within your team.
 
-` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. For ` + "`claude-code`" + `, that also satisfies ` + "`${ANTHROPIC_API_KEY}`" + ` in the manifest — the process environment is not required. ` + "`NAME=-`" + ` cannot be combined with ` + "`--spec -`" + `. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.`
+` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. For ` + "`claude-code`" + `, that also satisfies ` + "`${ANTHROPIC_API_KEY}`" + ` in the manifest — the process environment is not required. ` + "`NAME=-`" + ` cannot be combined with ` + "`--spec -`" + `. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.
+
+When the manifest sets ` + "`HARNESS_INFERENCE_MODEL`" + ` and does not supply ` + "`HARNESS_INFERENCE_API_KEY`" + `, ` + "`OPENAI_API_KEY`" + `, or ` + "`ANTHROPIC_API_KEY`" + `, doctl asks the platform to mint a DigitalOcean Inference key for the config (delivered to sessions as ` + "`HARNESS_INFERENCE_API_KEY`" + `). Pass ` + "`--secret HARNESS_INFERENCE_API_KEY=...`" + ` (or a vendor key) to bring your own instead.`
 
 const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
 

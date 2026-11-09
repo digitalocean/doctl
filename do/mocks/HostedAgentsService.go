@@ -88,18 +88,18 @@ func (mr *MockHostedAgentsServiceMockRecorder) CommitWorkspaceTransfer(sessionID
 }
 
 // CreateAgentConfig mocks base method.
-func (m *MockHostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+func (m *MockHostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAgentConfig", create)
+	ret := m.ctrl.Call(m, "CreateAgentConfig", create, manageModelAccessKey)
 	ret0, _ := ret[0].(*godo.HostedAgentConfig)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateAgentConfig indicates an expected call of CreateAgentConfig.
-func (mr *MockHostedAgentsServiceMockRecorder) CreateAgentConfig(create any) *gomock.Call {
+func (mr *MockHostedAgentsServiceMockRecorder) CreateAgentConfig(create, manageModelAccessKey any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgentConfig", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateAgentConfig), create)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgentConfig", reflect.TypeOf((*MockHostedAgentsService)(nil).CreateAgentConfig), create, manageModelAccessKey)
 }
 
 // CreateCheckpoint mocks base method.
