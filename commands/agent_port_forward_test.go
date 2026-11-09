@@ -504,6 +504,7 @@ func TestEnsureSessionAwakeForPortForward_ResumesPaused(t *testing.T) {
 		_, err := ensureSessionAwakeForPortForward(config, "sess_paused")
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "is paused — resuming")
+		assert.Contains(t, buf.String(), "Session awake")
 	})
 }
 
