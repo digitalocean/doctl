@@ -35,8 +35,8 @@ func TestHostedAgentsService_CreateAgentConfigWithManagedKey(t *testing.T) {
 		raw, _ := io.ReadAll(r.Body)
 		require.NoError(t, json.Unmarshal(raw, &gotBody))
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Location", "https://api-ric1.digitalocean.com/v2/harness-runtime/configs/cfg_mak")
-		_, _ = w.Write([]byte(`{"config":{"id":"cfg_mak","name":"oh"}}`))
+		w.Header().Set("Location", "https://api-ric1.digitalocean.com/v2/harness-runtime/configs/cfg_managed")
+		_, _ = w.Write([]byte(`{"config":{"id":"cfg_managed","name":"oh"}}`))
 	}))
 	t.Cleanup(srv.Close)
 	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
@@ -55,8 +55,8 @@ func TestHostedAgentsService_CreateAgentConfigWithManagedKey(t *testing.T) {
 	assert.Contains(t, gotBody["manifest_yaml"], "HARNESS_INFERENCE_MODEL")
 	assert.Equal(t, true, gotBody["manage_model_access_key"])
 	require.NotNil(t, cfg)
-	assert.Equal(t, "cfg_mak", cfg.ID)
-	assert.Equal(t, "https://api-ric1.digitalocean.com/v2/harness-runtime/configs/cfg_mak", cfg.Location)
+	assert.Equal(t, "cfg_managed", cfg.ID)
+	assert.Equal(t, "https://api-ric1.digitalocean.com/v2/harness-runtime/configs/cfg_managed", cfg.Location)
 }
 
 func TestHostedAgentsService_CreateAgentConfigWithoutManagedKeyOmitsField(t *testing.T) {
