@@ -62,7 +62,7 @@ func RunAgentsCanvas(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := ensureSessionAwake(c, sessionID, "served to Agent Canvas"); err != nil {
+	if err := ensureSessionAwake(c, sessionID, "served to Agent Canvas", false); err != nil {
 		return err
 	}
 	target, err := resolveCanvasTarget(c.HostedAgents(), c.Args[0], sessionID)

@@ -332,8 +332,10 @@ func launchExistingSession(c *CmdConfig, ref string) error {
 	// reports that rather than this trying to resume it.
 	if sess.Status == godo.HostedAgentSessionStatusPaused {
 		fmt.Fprintf(c.Out, "%s\n", colorize(fmt.Sprintf("Session %s is paused — resuming…", displaySessionRef(sess)), colMuted))
-		if err := svc.ResumeSession(sessionID); err != nil {
-			return beautifyAgentError(err)
+		prog := newStageProgress(c.Out)
+		defer prog.stop()
+		if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
+			return beautifyAgentErrorFor(c, err)
 		}
 		// Re-read: the session we hold says "paused", which would banner and
 		// stream as though the resume had not happened.
@@ -854,6 +856,18 @@ type creationProgress struct {
 	out   io.Writer
 	start time.Time
 	spin  *lineSpinner
+	// seeThrough looks past the reporting wrapper on c.Out when deciding
+	// whether out is a terminal. Only the wake stages opt in; the other
+	// commands keep their line-per-call output.
+	seeThrough bool
+}
+
+// newStageProgress is newCreationProgress for the wake, poll and send stages,
+// which animate in place on a terminal even when out is a command's c.Out.
+func newStageProgress(out io.Writer) *creationProgress {
+	p := newCreationProgress(out)
+	p.seeThrough = true
+	return p
 }
 
 func newCreationProgress(out io.Writer) *creationProgress {
@@ -902,7 +916,11 @@ func (p *creationProgress) wait(msg string) {
 		p.spin.setLabel(msg)
 		return
 	}
-	if isTerminalWriter(p.out) {
+	termOut := p.out
+	if p.seeThrough {
+		termOut = underlyingWriter(termOut)
+	}
+	if isTerminalWriter(termOut) {
 		p.spin = newLineSpinner(p.out, msg, p.start)
 		return
 	}
@@ -926,6 +944,18 @@ func (p *creationProgress) elapsed() time.Duration {
 		return 0
 	}
 	return d.Truncate(time.Second)
+}
+
+// underlyingWriter unwraps the reporting wrapper every command's c.Out is
+// given, which would otherwise hide the terminal behind it.
+func underlyingWriter(w io.Writer) io.Writer {
+	for {
+		rw, ok := w.(*reportingWriter)
+		if !ok {
+			return w
+		}
+		w = rw.out
+	}
 }
 
 // isTerminalWriter reports whether w is a real terminal doctl can safely
