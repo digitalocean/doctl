@@ -21,7 +21,7 @@ func Insights() *Command {
 		Command: &cobra.Command{
 			Use:     "insights",
 			Short:   "Display commands for managing Insights",
-			Long:    "The subcommands of `doctl insights` manage alerting and resource signal enablement, and query observability data.",
+			Long:    "The subcommands of `doctl insights` manage alerting, dashboards, and resource signal enablement, and query observability data.",
 			GroupID: manageResourcesGroup,
 		},
 	}
@@ -34,6 +34,7 @@ func Insights() *Command {
 	cmd.AddCommand(insightsSpans())
 	cmd.AddCommand(insightsTraces())
 	cmd.AddCommand(insightsResources())
+	cmd.AddCommand(insightsDashboards())
 
 	return cmd
 }

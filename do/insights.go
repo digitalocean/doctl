@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/digitalocean/godo"
 )
@@ -54,6 +55,13 @@ type InsightsService interface {
 	ListResources(*godo.InsightsResourceListOptions) (*godo.InsightsResourceList, error)
 	GetResource(string) (*godo.InsightsResource, error)
 	UpdateResourceSignals(string, *godo.InsightsResourceSignalsRequest) (*godo.InsightsResource, error)
+
+	ListDashboards(*godo.DashboardListOptions) (*godo.DashboardList, error)
+	GetDashboard(string) (*godo.Dashboard, error)
+	CreateDashboard(*godo.DashboardRequest) (*godo.Dashboard, error)
+	UpdateDashboard(string, *godo.DashboardRequest) (*godo.Dashboard, error)
+	DeleteDashboard(string) error
+	GetDashboardSchema() (json.RawMessage, error)
 }
 
 type insightsService struct {
@@ -201,5 +209,35 @@ func (s *insightsService) GetResource(resourceURN string) (*godo.InsightsResourc
 
 func (s *insightsService) UpdateResourceSignals(resourceURN string, request *godo.InsightsResourceSignalsRequest) (*godo.InsightsResource, error) {
 	result, _, err := s.client.Insights.UpdateResourceSignals(context.TODO(), resourceURN, request)
+	return result, err
+}
+
+func (s *insightsService) ListDashboards(opt *godo.DashboardListOptions) (*godo.DashboardList, error) {
+	result, _, err := s.client.Insights.ListDashboards(context.TODO(), opt)
+	return result, err
+}
+
+func (s *insightsService) GetDashboard(uuid string) (*godo.Dashboard, error) {
+	result, _, err := s.client.Insights.GetDashboard(context.TODO(), uuid)
+	return result, err
+}
+
+func (s *insightsService) CreateDashboard(request *godo.DashboardRequest) (*godo.Dashboard, error) {
+	result, _, err := s.client.Insights.CreateDashboard(context.TODO(), request)
+	return result, err
+}
+
+func (s *insightsService) UpdateDashboard(uuid string, request *godo.DashboardRequest) (*godo.Dashboard, error) {
+	result, _, err := s.client.Insights.UpdateDashboard(context.TODO(), uuid, request)
+	return result, err
+}
+
+func (s *insightsService) DeleteDashboard(uuid string) error {
+	_, err := s.client.Insights.DeleteDashboard(context.TODO(), uuid)
+	return err
+}
+
+func (s *insightsService) GetDashboardSchema() (json.RawMessage, error) {
+	result, _, err := s.client.Insights.GetDashboardSchema(context.TODO())
 	return result, err
 }

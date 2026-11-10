@@ -16,6 +16,7 @@ package do
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -138,7 +139,13 @@ type HostedAgentsService interface {
 	CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error)
 	ListAgentConfigs(opt *godo.HostedAgentConfigListOptions) ([]godo.HostedAgentConfigSummary, string, error)
 	GetAgentConfig(configID string) (*godo.HostedAgentConfig, error)
-	CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error)
+	// CreateAgentConfig creates an Environment from name + manifest_yaml.
+	// When manageModelAccessKey is true, the request also sends
+	// manage_model_access_key=true so harness-api can mint
+	// HARNESS_INFERENCE_API_KEY for the config. godo has no field for that
+	// yet, so true takes a hand-built body (same pattern as
+	// CreateSessionFromManifestWithManagedKey).
+	CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error)
 	DeleteAgentConfig(configID string) error
 	ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 
@@ -528,9 +535,54 @@ func (s *hostedAgentsService) GetAgentConfig(configID string) (*godo.HostedAgent
 	return cfg, err
 }
 
-func (s *hostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
-	cfg, _, err := s.client.HostedAgents.CreateAgentConfig(context.TODO(), create)
-	return cfg, err
+func (s *hostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
+	if create == nil {
+		return nil, errors.New("hosted agents: create request is required")
+	}
+	if !manageModelAccessKey {
+		cfg, _, err := s.client.HostedAgents.CreateAgentConfig(context.TODO(), create)
+		return cfg, err
+	}
+
+	// godo's HostedAgentConfigCreateRequest has no manage_model_access_key
+	// field yet; build the body that harness-api accepts.
+	body, err := json.Marshal(struct {
+		Name                 string `json:"name"`
+		ManifestYAML         string `json:"manifest_yaml"`
+		ManageModelAccessKey bool   `json:"manage_model_access_key"`
+	}{
+		Name:                 create.Name,
+		ManifestYAML:         create.ManifestYAML,
+		ManageModelAccessKey: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	u, err := s.client.BaseURL.Parse("v2/harness-runtime/configs")
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, u.String(), bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", s.client.UserAgent)
+	var root struct {
+		Config *godo.HostedAgentConfig `json:"config"`
+	}
+	resp, err := s.client.Do(context.TODO(), req, &root)
+	if err != nil {
+		return nil, err
+	}
+	if root.Config == nil {
+		return nil, errors.New("hosted agents: create config returned no config")
+	}
+	if resp != nil {
+		root.Config.Location = resp.Header.Get("Location")
+	}
+	return root.Config, nil
 }
 
 func (s *hostedAgentsService) DeleteAgentConfig(configID string) error {
