@@ -353,10 +353,10 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	// bytes, so the Automate tab's /api/automation calls can be answered here
 	// (canvasAutomationServer); everything else still crosses the tunnel. The
 	// tab's answers carry actions taken with the user's token, so they are
-	// given on a loopback bind only.
-	canvasHTTP := sess != nil && sess.HostedAgentSession != nil && sess.AgentKind == hostedAgentKindOpenHands
+	// given on a loopback bind only, and on any other bind the port is
+	// tunnelled as raw bytes like every other port (canvasAutomationOn).
 	var automation http.Handler
-	if canvasHTTP && isLoopbackBind(address) {
+	if canvasAutomationOn(sess, address) {
 		automation = loopbackOnly(newCanvasAutomationServer(sessionID, c.HostedAgentTriggers()))
 	}
 
@@ -387,14 +387,16 @@ func RunAgentsPortForward(c *CmdConfig) error {
 			address, localPort, pair.remote, sessionID)
 
 		warner := newTunnelWarner(pair.remote)
-		if canvasHTTP && pair.remote == canvasPort {
-			if automation != nil {
-				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (its Automate tab is answered by doctl through the triggers API)\n",
-					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
-			} else {
+		if pair.remote == canvasPort && isOpenHandsSession(sess) {
+			if automation == nil {
 				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab off: it needs a loopback --address)\n",
 					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			} else {
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (its Automate tab is answered by doctl through the triggers API)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
 			}
+		}
+		if automation != nil && pair.remote == canvasPort {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -556,6 +558,20 @@ func bridgeLocalConn(ctx context.Context, local net.Conn, wsURL string, header h
 	return err
 }
 
+// isOpenHandsSession reports whether the session runs the OpenHands
+// agent-server, whose port 8000 serves Agent Canvas.
+func isOpenHandsSession(sess *do.HostedAgentSession) bool {
+	return sess != nil && sess.HostedAgentSession != nil && sess.AgentKind == hostedAgentKindOpenHands
+}
+
+// canvasAutomationOn decides whether port 8000 is served as HTTP with the
+// Automate tab answered here: an openhands session, on a loopback bind. The
+// tab's answers act with the user's token, so a bind other machines can
+// reach gets the plain tunnel instead.
+func canvasAutomationOn(sess *do.HostedAgentSession, address string) bool {
+	return isOpenHandsSession(sess) && isLoopbackBind(address)
+}
+
 // canvasForwardHandler is the HTTP face of a tunnel to an openhands
 // session's Canvas port: a request under /api/automation goes to the
 // automation handler (when given), any other request, WebSocket upgrades
@@ -567,9 +583,10 @@ func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, wa
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return dialTunnelConn(ctx, wsURL, header, tracer)
 		},
-		DisableCompression: true,
-		MaxIdleConns:       8,
-		IdleConnTimeout:    90 * time.Second,
+		DisableCompression:  true,
+		MaxIdleConns:        16,
+		MaxIdleConnsPerHost: 16, // one dial per parallel page request, kept for the next
+		IdleConnTimeout:     90 * time.Second,
 	}
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {

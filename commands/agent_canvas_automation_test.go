@@ -321,3 +321,73 @@ func TestCanvasAutomation_APIErrorsPassThrough(t *testing.T) {
 		assert.Equal(t, http.StatusBadGateway, rec.Code)
 	})
 }
+
+// The minimum interval holds whatever shape the minute field takes: every
+// minute written as a range or a list, a step that wraps the hour short,
+// while a wide gap passes and a single-hour schedule is not read as wrapping.
+func TestCanvasAutomation_MinimumIntervalCoversEveryMinuteShape(t *testing.T) {
+	tooShort := []string{"* * * * *", "* * * * 1-5", "0-59 * * * *", "*/58 * * * *", "0,2 * * * *", "0,58 * * * *", "5/3 * * * *"}
+	for _, expr := range tooShort {
+		errs := validateCanvasTrigger(&canvasTrigger{Type: "cron", Schedule: expr})
+		require.Len(t, errs, 1, expr)
+		assert.Equal(t, "interval_too_short", errs[0].Code, expr)
+	}
+	fine := []string{"*/5 * * * *", "0 * * * *", "0,30 * * * *", "0,58 9 * * *", "0-59/10 * * * *", "15 9 * * 1-5", "0 */2 * * *"}
+	for _, expr := range fine {
+		assert.Empty(t, validateCanvasTrigger(&canvasTrigger{Type: "cron", Schedule: expr}), expr)
+	}
+	for _, expr := range []string{"61 * * * *", "a * * * *", "10-5 * * * *", "*/0 * * * *", "1,,2 * * * *"} {
+		errs := validateCanvasTrigger(&canvasTrigger{Type: "cron", Schedule: expr})
+		require.Len(t, errs, 1, expr)
+		assert.Equal(t, "invalid_cron", errs[0].Code, expr)
+	}
+}
+
+// A timezone-only edit resends the schedule with the new zone; an empty
+// prompt is refused as it is on create.
+func TestCanvasAutomation_PatchTimezoneOnlyAndEmptyPrompt(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		current := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&current, nil).Times(2)
+		tm.hostedAgentTriggers.EXPECT().
+			Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{Cron: &godo.HostedAgentCreateCronConfig{CronExpr: "0 9 * * *", Timezone: "Asia/Tokyo"}}).
+			Return(&current, nil)
+		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
+		rec, _ := canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_1", `{"timezone":"Asia/Tokyo"}`)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		rec, body := canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_1", `{"prompt":"   "}`)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, body["detail"], "prompt")
+	})
+}
+
+// A wrong method on a fixed path is 405, not a trigger lookup; statuses the
+// mapping does not know read as the two Canvas has or as failed.
+func TestCanvasAutomation_MethodNotAllowedAndStatusMapping(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
+		for _, p := range []string{"/api/automation/v1/validate", "/api/automation/v1/capabilities", "/api/automation/health"} {
+			rec, _ := canvasReq(t, h, http.MethodDelete, p, "")
+			assert.Equal(t, http.StatusMethodNotAllowed, rec.Code, p)
+		}
+	})
+	assert.Equal(t, "CANCELLED", canvasRunStatus("cancelled"))
+	assert.Equal(t, "SKIPPED", canvasRunStatus("skipped"))
+	assert.Equal(t, "FAILED", canvasRunStatus("timed_out"))
+	run := toCanvasRun(godo.HostedAgentTriggerExecution{ExecutionID: "e", Status: "timed_out"})
+	require.NotNil(t, run.ErrorDetail)
+	assert.Equal(t, "execution status timed_out", *run.ErrorDetail)
+}
+
+// The tab is on for an openhands session on a loopback bind only; any other
+// bind, or another agent kind, gets the raw tunnel.
+func TestCanvasAutomationOn(t *testing.T) {
+	oh := &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{AgentKind: hostedAgentKindOpenHands}}
+	cc := &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{AgentKind: godo.HostedAgentKindClaudeCode}}
+	assert.True(t, canvasAutomationOn(oh, "127.0.0.1"))
+	assert.True(t, canvasAutomationOn(oh, "::1"))
+	assert.False(t, canvasAutomationOn(oh, "0.0.0.0"))
+	assert.False(t, canvasAutomationOn(oh, "192.168.1.5"))
+	assert.False(t, canvasAutomationOn(cc, "127.0.0.1"))
+	assert.False(t, canvasAutomationOn(nil, "127.0.0.1"))
+}

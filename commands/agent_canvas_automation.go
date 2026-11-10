@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata" // the timezone pick list must load on a Windows build too
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -54,7 +55,14 @@ const (
 	canvasRunStatusRunning   = "RUNNING"
 	canvasRunStatusCompleted = "COMPLETED"
 	canvasRunStatusFailed    = "FAILED"
+	canvasRunStatusCancelled = "CANCELLED"
+	canvasRunStatusSkipped   = "SKIPPED"
 )
+
+// canvasRunPages bounds the executions read for one run-history answer:
+// every page up to this many, whatever the tab's window, so total and the
+// per-status counts cover the history rather than the first page.
+const canvasRunPages = 10
 
 // canvasCronMinIntervalSeconds is the shortest schedule the tab offers; it is
 // the figure the Canvas automation interface documents for its own service
@@ -167,6 +175,8 @@ func (s *canvasAutomationServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		s.create(w, r)
 	case path == "/v1/preset/plugin" || path == "/v1/uploads" || (path == "/v1" && r.Method == http.MethodPost):
 		writeDetail(w, http.StatusNotImplemented, "this session's automations are DigitalOcean triggers, which run a prompt on a schedule; plugin presets and script bundles are not available here")
+	case path == "/health" || path == "/v1/capabilities" || path == "/v1/validate" || path == "/v1/preset/prompt" || path == "/v1" || path == "/v1/preset/plugin" || path == "/v1/uploads":
+		writeDetail(w, http.StatusMethodNotAllowed, "method not allowed")
 	default:
 		m := canvasAutomationID.FindStringSubmatch(path)
 		if m == nil {
@@ -231,7 +241,10 @@ func (s *canvasAutomationServer) owned(w http.ResponseWriter, id string) (*godo.
 	return t.HostedAgentTrigger, true
 }
 
-// sessionTriggers lists every trigger bound to this session, all pages.
+// sessionTriggers lists every trigger bound to this session. The API lists
+// triggers per team with no bound-session filter, so every refresh of the
+// tab reads the team's triggers (pages of 100, up to 50 pages) and keeps
+// this session's; a filter on the API would make this one call.
 func (s *canvasAutomationServer) sessionTriggers() ([]godo.HostedAgentTrigger, error) {
 	var out []godo.HostedAgentTrigger
 	token := ""
@@ -363,6 +376,10 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		changed = true
 	}
 	if body.Prompt != nil && *body.Prompt != current.PromptTemplate {
+		if strings.TrimSpace(*body.Prompt) == "" {
+			writeDetail(w, http.StatusBadRequest, "the prompt cannot be empty")
+			return
+		}
 		update.PromptTemplate = *body.Prompt
 		changed = true
 	}
@@ -376,28 +393,37 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 			changed = true
 		}
 	}
-	if body.Trigger != nil && body.Trigger.Schedule != "" {
-		if current.Kind != godo.HostedAgentTriggerKindCron {
-			writeDetail(w, http.StatusBadRequest, "this automation is a webhook trigger; its schedule cannot be set")
+	// The schedule and the timezone travel together on the API, so an edit
+	// to either resends both: a new schedule with the timezone kept, or the
+	// current schedule with a new timezone.
+	schedule, tz := "", ""
+	if body.Trigger != nil {
+		schedule, tz = body.Trigger.Schedule, body.Trigger.Timezone
+	}
+	if tz == "" && body.Timezone != nil {
+		tz = *body.Timezone
+	}
+	if schedule != "" || tz != "" {
+		if current.Kind != godo.HostedAgentTriggerKindCron || current.Cron == nil {
+			writeDetail(w, http.StatusBadRequest, "this automation is a webhook trigger; it has no schedule or timezone to set")
 			return
 		}
-		tz := body.Trigger.Timezone
-		if tz == "" && body.Timezone != nil {
-			tz = *body.Timezone
+		if schedule == "" {
+			schedule = current.Cron.CronExpr
 		}
-		if tz == "" && current.Cron != nil {
+		if tz == "" {
 			tz = current.Cron.Timezone
 		}
 		if tz == "" {
 			tz = "UTC"
 		}
-		probe := canvasTrigger{Type: "cron", Schedule: body.Trigger.Schedule, Timezone: tz}
+		probe := canvasTrigger{Type: "cron", Schedule: schedule, Timezone: tz}
 		if errs := validateCanvasTrigger(&probe); len(errs) > 0 {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"detail": errs[0].Message, "errors": errs})
 			return
 		}
-		if current.Cron == nil || current.Cron.CronExpr != body.Trigger.Schedule || current.Cron.Timezone != tz {
-			update.Cron = &godo.HostedAgentCreateCronConfig{CronExpr: body.Trigger.Schedule, Timezone: tz}
+		if current.Cron.CronExpr != schedule || current.Cron.Timezone != tz {
+			update.Cron = &godo.HostedAgentCreateCronConfig{CronExpr: schedule, Timezone: tz}
 			changed = true
 		}
 	}
@@ -426,7 +452,7 @@ func (s *canvasAutomationServer) runs(w http.ResponseWriter, r *http.Request, id
 	limit, offset := pageParams(r, 50)
 	var all []godo.HostedAgentTriggerExecution
 	token := ""
-	for page := 0; page < 20 && len(all) < offset+limit; page++ {
+	for page := 0; page < canvasRunPages; page++ {
 		items, next, err := s.triggers.ListExecutions(id, &godo.HostedAgentTriggerExecutionListOptions{PageSize: 100, PageToken: token})
 		if err != nil {
 			writeGodoError(w, err)
@@ -488,8 +514,11 @@ func toCanvasRun(e godo.HostedAgentTriggerExecution) canvasRun {
 	if e.FailureReason != "" {
 		reason := e.FailureReason
 		run.ErrorDetail = &reason
+	} else if run.Status == canvasRunStatusFailed && e.Status != godo.HostedAgentTriggerExecutionStatusFailed {
+		reason := "execution status " + string(e.Status)
+		run.ErrorDetail = &reason
 	}
-	if run.Status == canvasRunStatusCompleted || run.Status == canvasRunStatusFailed {
+	if run.Status != canvasRunStatusPending && run.Status != canvasRunStatusRunning {
 		if done := canvasTime(e.UpdatedAt); done != "" {
 			run.CompletedAt = &done
 		}
@@ -508,7 +537,17 @@ func canvasRunStatus(s godo.HostedAgentTriggerExecutionStatus) string {
 	case godo.HostedAgentTriggerExecutionStatusFailed:
 		return canvasRunStatusFailed
 	}
-	return strings.ToUpper(string(s))
+	// Statuses the API may grow that this build does not know: the two
+	// Canvas renders are passed as such, anything else reads as failed (the
+	// run did not complete), with the raw status kept in error_detail by
+	// toCanvasRun.
+	switch strings.ToLower(string(s)) {
+	case "cancelled", "canceled":
+		return canvasRunStatusCancelled
+	case "skipped":
+		return canvasRunStatusSkipped
+	}
+	return canvasRunStatusFailed
 }
 
 func canvasTime(t godo.Timestamp) string {
@@ -518,12 +557,9 @@ func canvasTime(t godo.Timestamp) string {
 	return t.Time.UTC().Format(time.RFC3339)
 }
 
-// canvasEveryNMinutes matches the schedules Canvas itself reads as "every N
-// minutes" when it checks the minimum interval.
-var canvasEveryNMinutes = regexp.MustCompile(`^(?:\*|\*/(\d+)) \* \* \* \*$`)
-
 // validateCanvasTrigger checks a cron draft the way the tab expects: five
-// fields, an interval not under the minimum, a timezone Go knows.
+// fields, a minute field that parses, an interval not under the minimum, a
+// timezone Go knows.
 func validateCanvasTrigger(t *canvasTrigger) []canvasValidationError {
 	if t == nil {
 		return nil
@@ -533,16 +569,13 @@ func validateCanvasTrigger(t *canvasTrigger) []canvasValidationError {
 		return append(errs, canvasValidationError{Field: "trigger.type", Code: "unsupported_trigger", Message: "only scheduled (cron) automations are available for this session"})
 	}
 	expr := strings.TrimSpace(t.Schedule)
-	if len(strings.Fields(expr)) != 5 {
+	fields := strings.Fields(expr)
+	if len(fields) != 5 {
 		errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "invalid_cron", Message: "the schedule must have five fields: minute hour day-of-month month day-of-week"})
-	} else if m := canvasEveryNMinutes.FindStringSubmatch(expr); m != nil {
-		every := 1
-		if m[1] != "" {
-			every, _ = strconv.Atoi(m[1])
-		}
-		if every*60 < canvasCronMinIntervalSeconds {
-			errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "interval_too_short", Message: fmt.Sprintf("Minimum interval for this session is %d minutes.", canvasCronMinIntervalSeconds/60)})
-		}
+	} else if minutes, ok := cronMinutes(fields[0]); !ok {
+		errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "invalid_cron", Message: fmt.Sprintf("the minute field %q is not a cron minute expression", fields[0])})
+	} else if gap := cronMinGapMinutes(minutes, strings.ContainsAny(fields[1], "*,-/")); gap*60 < canvasCronMinIntervalSeconds {
+		errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "interval_too_short", Message: fmt.Sprintf("Minimum interval for this session is %d minutes.", canvasCronMinIntervalSeconds/60)})
 	}
 	if t.Timezone != "" {
 		if _, err := time.LoadLocation(t.Timezone); err != nil {
@@ -602,4 +635,76 @@ func writeGodoError(w http.ResponseWriter, err error) {
 		return
 	}
 	writeDetail(w, http.StatusBadGateway, "the DigitalOcean triggers API did not answer: "+err.Error())
+}
+
+// cronMinutes expands a cron minute field ("*", "*/15", "0,30", "0-59/5",
+// "5-10,45") into the sorted set of minutes it names; ok is false when the
+// field is not a minute expression.
+func cronMinutes(field string) ([]int, bool) {
+	set := map[int]bool{}
+	for _, part := range strings.Split(field, ",") {
+		step := 1
+		if i := strings.Index(part, "/"); i >= 0 {
+			n, err := strconv.Atoi(part[i+1:])
+			if err != nil || n < 1 || n > 59 {
+				return nil, false
+			}
+			step, part = n, part[:i]
+		}
+		lo, hi := 0, 59
+		switch {
+		case part == "*":
+		case strings.Contains(part, "-"):
+			bounds := strings.SplitN(part, "-", 2)
+			a, err1 := strconv.Atoi(bounds[0])
+			b, err2 := strconv.Atoi(bounds[1])
+			if err1 != nil || err2 != nil || a < 0 || b > 59 || a > b {
+				return nil, false
+			}
+			lo, hi = a, b
+		default:
+			a, err := strconv.Atoi(part)
+			if err != nil || a < 0 || a > 59 {
+				return nil, false
+			}
+			lo, hi = a, a
+			if step != 1 {
+				hi = 59 // "5/10" means every 10 minutes from 5, as cron reads it
+			}
+		}
+		for m := lo; m <= hi; m += step {
+			set[m] = true
+		}
+	}
+	if len(set) == 0 {
+		return nil, false
+	}
+	out := make([]int, 0, len(set))
+	for m := range set {
+		out = append(out, m)
+	}
+	sort.Ints(out)
+	return out, true
+}
+
+// cronMinGapMinutes is the shortest time between two firings a minute set
+// allows: the smallest gap between its minutes within an hour, and, when the
+// hour field can name two hours in a row (anything but a single hour), the
+// gap across the top of the hour as well. One minute a day is 60 or more.
+func cronMinGapMinutes(minutes []int, hoursMayBeConsecutive bool) int {
+	if len(minutes) == 0 {
+		return 60
+	}
+	gap := 60
+	for i := 1; i < len(minutes); i++ {
+		if d := minutes[i] - minutes[i-1]; d < gap {
+			gap = d
+		}
+	}
+	if hoursMayBeConsecutive {
+		if d := 60 - minutes[len(minutes)-1] + minutes[0]; d < gap {
+			gap = d
+		}
+	}
+	return gap
 }
