@@ -297,6 +297,8 @@ func TestCanvasAutomation_NotImplementedAndWebhookShape(t *testing.T) {
 		assert.Equal(t, "github", tr["source"])
 		assert.Equal(t, "*", tr["on"])
 
+		// Run now in a region whose triggers API lacks the route: 501.
+		tm.hostedAgentTriggers.EXPECT().Run("tr_h").Return(nil, &godo.ErrorResponse{Response: &http.Response{StatusCode: http.StatusMethodNotAllowed}, Message: "method not allowed"})
 		rec, _ = canvasReq(t, h, http.MethodPost, "/api/automation/v1/tr_h/dispatch", "")
 		assert.Equal(t, http.StatusNotImplemented, rec.Code)
 		rec, _ = canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/plugin", `{}`)
@@ -468,11 +470,13 @@ func TestCanvasAutomation_CreateDropsTheModel(t *testing.T) {
 }
 
 // Run now as Canvas sends it, a POST with no body and no Content-Type,
-// reaches its own answer (501 for now) instead of the JSON gate.
+// reaches the dispatch handler instead of the JSON gate (here the region
+// lacks the route, so the answer is 501).
 func TestCanvasAutomationHandler_BodilessPostPassesTheJSONGate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
 		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil)
+		tm.hostedAgentTriggers.EXPECT().Run("tr_1").Return(nil, &godo.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}, Message: "not found"})
 		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers)
 		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8000/api/automation/v1/tr_1/dispatch", nil)
 		req.Host = "127.0.0.1:8000"
@@ -501,5 +505,29 @@ func TestCanvasAutomation_SessionIDCaseAndTriggerIDShape(t *testing.T) {
 			rec, _ = canvasReq(t, h, http.MethodGet, p, "")
 			assert.Equal(t, http.StatusNotFound, rec.Code, p)
 		}
+	})
+}
+
+// Run now fires the trigger and answers the pending execution as a run the
+// tab can poll; the API's own refusals (paused trigger 409, backlog 429) pass
+// through with their status.
+func TestCanvasAutomation_DispatchRunsTheTrigger(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil).Times(2)
+		at := godo.Timestamp{Time: time.Date(2026, 11, 10, 9, 0, 0, 0, time.UTC)}
+		tm.hostedAgentTriggers.EXPECT().Run("tr_1").Return(&do.HostedAgentTriggerExecution{
+			HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{ExecutionID: "ex_new", TriggerID: "tr_1", Status: godo.HostedAgentTriggerExecutionStatusPending, CreatedAt: at},
+		}, nil)
+		tm.hostedAgentTriggers.EXPECT().Run("tr_1").Return(nil, &godo.ErrorResponse{Response: &http.Response{StatusCode: http.StatusConflict}, Message: "trigger is paused; resume it before running it"})
+		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
+		rec, body := canvasReq(t, h, http.MethodPost, "/api/automation/v1/tr_1/dispatch", "")
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		assert.Equal(t, "ex_new", body["id"])
+		assert.Equal(t, "PENDING", body["status"])
+		assert.Nil(t, body["completed_at"])
+		rec, body = canvasReq(t, h, http.MethodPost, "/api/automation/v1/tr_1/dispatch", "")
+		assert.Equal(t, http.StatusConflict, rec.Code)
+		assert.Contains(t, body["detail"], "paused")
 	})
 }

@@ -15,6 +15,9 @@ package do
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/digitalocean/godo"
@@ -73,17 +76,47 @@ type HostedAgentTriggersService interface {
 	GetBySession(sessionID string) (*HostedAgentTrigger, error)
 	ListReusableSessions(*godo.HostedAgentReusableSessionListOptions) ([]HostedAgentReusableSession, string, error)
 	ListWebhookProviders() ([]HostedAgentWebhookProvider, error)
+	// Run fires the trigger now (POST .../triggers/{id}/executions) and returns
+	// the pending execution to poll. godo has no method for this route yet, so
+	// the call goes through the godo client's request plumbing directly.
+	Run(triggerID string) (*HostedAgentTriggerExecution, error)
 }
 
 type hostedAgentTriggersService struct {
-	svc godo.HostedAgentTriggersService
+	svc    godo.HostedAgentTriggersService
+	client *godo.Client
 }
 
 var _ HostedAgentTriggersService = &hostedAgentTriggersService{}
 
 // NewHostedAgentTriggersService builds a HostedAgentTriggersService from a godo client.
 func NewHostedAgentTriggersService(client *godo.Client) HostedAgentTriggersService {
-	return &hostedAgentTriggersService{svc: client.HostedAgentTriggers}
+	return &hostedAgentTriggersService{svc: client.HostedAgentTriggers, client: client}
+}
+
+// hostedAgentTriggerRunPath is the run-now route, on the same prefix godo
+// uses for the other trigger routes.
+const hostedAgentTriggerRunPath = "/v2/harness-runtime/triggers/%s/executions"
+
+func (s *hostedAgentTriggersService) Run(triggerID string) (*HostedAgentTriggerExecution, error) {
+	if s.client == nil {
+		return nil, fmt.Errorf("triggers: no API client")
+	}
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf(hostedAgentTriggerRunPath, url.PathEscape(triggerID)), nil)
+	if err != nil {
+		return nil, err
+	}
+	var root struct {
+		Execution *godo.HostedAgentTriggerExecution `json:"execution"`
+	}
+	if _, err := s.client.Do(ctx, req, &root); err != nil {
+		return nil, err
+	}
+	if root.Execution == nil {
+		return nil, fmt.Errorf("triggers: the API returned no execution")
+	}
+	return &HostedAgentTriggerExecution{HostedAgentTriggerExecution: root.Execution}, nil
 }
 
 func (s *hostedAgentTriggersService) List(opt *godo.HostedAgentTriggerListOptions) ([]HostedAgentTrigger, string, error) {

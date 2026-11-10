@@ -138,6 +138,13 @@ func AgentTriggers() *Command {
 		Writer, agentPrettyErrors(),
 		displayerType(&displayers.HostedAgentTriggerExecution{}))
 
+	cmdRun := CmdBuilder(cmd, RunAgentTriggersRun, "run <trigger-id>",
+		"Run a trigger now",
+		agentsTriggersRunHelpMD,
+		Writer, agentPrettyErrors(),
+		displayerType(&displayers.HostedAgentTriggerExecution{}))
+	cmdRun.Example = `doctl harness-runtime triggers run TRIGGER_ID`
+
 	cmdCancelExecution := CmdBuilder(cmd, RunAgentTriggersCancelExecution, "cancel-execution <trigger-id> <execution-id>",
 		"Cancel a running trigger execution",
 		agentsTriggersCancelExecutionHelpMD,
@@ -413,6 +420,23 @@ func RunAgentTriggersGetExecution(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	e, err := c.HostedAgentTriggers().GetExecution(c.Args[0], c.Args[1])
+	if err != nil {
+		return err
+	}
+	if agentStructuredOutput(c) {
+		return c.Display(&displayers.HostedAgentTriggerExecution{Executions: []do.HostedAgentTriggerExecution{*e}, Single: true})
+	}
+	stylingEnabled = detectStyling()
+	printTriggerExecutionCard(c.Out, e)
+	return nil
+}
+
+// RunAgentTriggersRun fires a trigger now and prints the pending execution.
+func RunAgentTriggersRun(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	e, err := c.HostedAgentTriggers().Run(c.Args[0])
 	if err != nil {
 		return err
 	}

@@ -46,8 +46,9 @@ import (
 // What the tab can do here follows the capabilities answer: scheduled (cron)
 // automations with a prompt. Event triggers, plugin presets, script bundles,
 // uploads and the KV store are not offered, and Canvas hides what the answer
-// does not list. Run now (dispatch) waits for a run-now call on the triggers
-// API and answers 501 until then.
+// does not list. Run now (dispatch) fires the trigger through the triggers
+// API's run-now route, and answers 501 in a region that does not have that
+// route yet.
 const canvasAutomationPrefix = "/api/automation"
 
 // canvasRunStatus* are the run states Canvas renders (its AutomationRunStatus
@@ -244,10 +245,7 @@ func (s *canvasAutomationServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		case sub == "/runs" && r.Method == http.MethodGet:
 			s.runs(w, r, id)
 		case sub == "/dispatch" && r.Method == http.MethodPost:
-			if _, ok := s.owned(w, id); !ok {
-				return
-			}
-			writeDetail(w, http.StatusNotImplemented, "Run now is not available yet for DigitalOcean triggers; the automation runs on its schedule")
+			s.dispatch(w, id)
 		case sub == "/tarball":
 			writeDetail(w, http.StatusNotImplemented, "a DigitalOcean trigger has no script bundle to download")
 		default:
@@ -497,6 +495,32 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	writeJSON(w, http.StatusOK, toCanvasAutomation(*t.HostedAgentTrigger))
+}
+
+// dispatch is the tab's Run now: the trigger is fired through the run-now
+// route and the pending execution comes back as a run (201), which the tab
+// then polls in the run history. The route is newer than some regions'
+// harness-trigger: a 404 or 405 from it after the trigger itself was found
+// means the region does not have it yet, which the tab is told as 501.
+func (s *canvasAutomationServer) dispatch(w http.ResponseWriter, id string) {
+	if _, ok := s.owned(w, id); !ok {
+		return
+	}
+	e, err := s.triggers.Run(id)
+	if err != nil {
+		var er *godo.ErrorResponse
+		if errors.As(err, &er) && er.Response != nil && (er.Response.StatusCode == http.StatusNotFound || er.Response.StatusCode == http.StatusMethodNotAllowed) {
+			writeDetail(w, http.StatusNotImplemented, "Run now is not available in this region yet; the automation runs on its schedule")
+			return
+		}
+		writeGodoError(w, err)
+		return
+	}
+	if e == nil || e.HostedAgentTriggerExecution == nil {
+		writeDetail(w, http.StatusBadGateway, "the triggers API returned no execution")
+		return
+	}
+	writeJSON(w, http.StatusCreated, toCanvasRun(*e.HostedAgentTriggerExecution))
 }
 
 // runs is the automation's run history: the trigger's executions, newest
