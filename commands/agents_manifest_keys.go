@@ -434,8 +434,9 @@ func (w *keyWalker) tool(m map[string]any, path string) {
 // create --dry-run and real create call it before any side effect or ${VAR}
 // expansion. It returns nil, nil when raw does not parse as a YAML map (the
 // full validator reports parse errors later) or is a legacy envelope. With
-// strict, warnings are returned as part of the error instead.
-func earlyUnknownKeyCheck(raw []byte, strict bool) (warnings []string, err error) {
+// strict, warnings are returned as part of the error instead. With
+// allowUnknown, near-miss errors are returned as warnings.
+func earlyUnknownKeyCheck(raw []byte, strict, allowUnknown bool) (warnings []string, err error) {
 	var doc map[string]any
 	if yerr := yaml.Unmarshal(raw, &doc); yerr != nil || len(doc) == 0 {
 		return nil, nil
@@ -444,6 +445,10 @@ func earlyUnknownKeyCheck(raw []byte, strict bool) (warnings []string, err error
 		return nil, nil
 	}
 	errs, warns := unknownManifestKeys(doc)
+	if allowUnknown {
+		warns = append(warns, errs...)
+		errs = nil
+	}
 	if strict {
 		errs = append(errs, warns...)
 		warns = nil

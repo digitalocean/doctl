@@ -58,6 +58,7 @@ func AgentConfigs() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config", requiredOpt())
 	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddBoolFlag(cmdCreate, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
+	AddBoolFlag(cmdCreate, doctl.ArgAgentAllowUnknownFields, "", false, agentAllowUnknownFlagDesc)
 	cmdCreate.Example = agentCLI + ` config create --spec agent-spec.yaml --name my-config; ` + agentCLI + ` config create --spec agent-spec.yaml --name my-config --secret ANTHROPIC_API_KEY=@~/.secrets/anthropic.key`
 
 	cmdList := CmdBuilder(cmd, RunAgentsConfigList, "list",
@@ -146,8 +147,8 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 		return err
 	}
 	v := validateAgentManifest(manifest)
-	if agentStrictFlag(c) {
-		applyStrict(v)
+	if err := applyManifestFlags(c, v); err != nil {
+		return err
 	}
 	if err := reportDurableAgentManifestValidation(v); err != nil {
 		return err

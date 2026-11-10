@@ -518,6 +518,7 @@ func Agents() *Command {
 		Writer, agentsNS()...)
 	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope), equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Set to "-" to read from stdin.`)
 	AddBoolFlag(cmdValidate, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
+	AddBoolFlag(cmdValidate, doctl.ArgAgentAllowUnknownFields, "", false, agentAllowUnknownFlagDesc)
 	acceptFileAliasFor(cmdValidate)
 	cmdValidate.Example = agentCLI + ` validate; ` + agentCLI + ` validate agent.yaml`
 
@@ -748,10 +749,13 @@ func addAgentCreationFlags(cmd *Command) {
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 	AddStringFlag(cmd, doctl.ArgAgentWorkspace, "", "", agentWorkspaceFlagDesc)
 	AddBoolFlag(cmd, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
+	AddBoolFlag(cmd, doctl.ArgAgentAllowUnknownFields, "", false, agentAllowUnknownFlagDesc)
 }
 
 // agentStrictFlagDesc is the one description of --strict for every command that
 // validates a manifest.
+const agentAllowUnknownFlagDesc = "Report unknown manifest fields that look like a misspelling as warnings instead of errors, for a field newer than this doctl. Not valid with --strict or --from-config."
+
 const agentStrictFlagDesc = "Treat manifest warnings (including unknown fields) as errors. Not valid with --from-config."
 
 // agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
@@ -1139,8 +1143,10 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 
 	if configRef != "" {
-		if agentStrictFlag(c) {
-			return nil, fmt.Errorf("--%s cannot be used with --%s; an Agent Config's manifest was validated when the config was created", doctl.ArgAgentStrict, doctl.ArgAgentFromConfig)
+		for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
+			if c.Doit.IsSet(flag) {
+				return nil, fmt.Errorf("--%s cannot be used with --%s; an Agent Config's manifest was validated when the config was created", flag, doctl.ArgAgentFromConfig)
+			}
 		}
 		if name == "" {
 			return nil, fmt.Errorf("--%s is required when creating from --%s", doctl.ArgAgentName, doctl.ArgAgentFromConfig)
@@ -1207,7 +1213,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// and it is the only run: the validator later in startSessionFromRawManifest
 	// skips this pass so nothing is reported twice. Only the unknown-field pass
 	// runs here, not the whole validator.
-	earlyWarnings, err := earlyUnknownKeyCheck(raw, agentStrictFlag(c))
+	strict, allowUnknown, err := agentManifestStrictness(c)
+	if err != nil {
+		return nil, err
+	}
+	earlyWarnings, err := earlyUnknownKeyCheck(raw, strict, allowUnknown)
 	printAgentManifestWarnings(os.Stderr, earlyWarnings)
 	if err != nil {
 		return nil, err

@@ -1107,6 +1107,11 @@ const (
 	// ArgAgentStrict makes manifest validation treat warnings as errors.
 	ArgAgentStrict = "strict"
 
+	// ArgAgentAllowUnknownFields downgrades the "did you mean" near-miss errors
+	// for unknown manifest fields to warnings, so a field newer than this doctl
+	// does not block the command.
+	ArgAgentAllowUnknownFields = "allow-unknown-fields"
+
 	// ArgAgentFromConfig names an existing Agent Config, by ID or by name, to
 	// create a session from. Spelled to sit beside --from-checkpoint rather
 	// than next to --name, where --config-id read as "the config's name".

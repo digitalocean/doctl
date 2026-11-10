@@ -65,6 +65,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to use as the session template for session-mode=fresh, instead of --spec. Its manifest is copied into this trigger at create time.")
 	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddBoolFlag(cmdCreate, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
+	AddBoolFlag(cmdCreate, doctl.ArgAgentAllowUnknownFields, "", false, agentAllowUnknownFlagDesc)
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Paused session ID for session-mode=reuse")
 	cmdCreate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerProvider, "", "", "Webhook provider (github|gitlab|custom); default custom")
@@ -93,6 +94,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdUpdate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config whose manifest becomes this trigger's session template, instead of --spec.")
 	AddStringSliceFlag(cmdUpdate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
+	AddBoolFlag(cmdUpdate, doctl.ArgAgentAllowUnknownFields, "", false, agentAllowUnknownFlagDesc)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Updated bound session ID for reuse triggers")
 	cmdUpdate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerCronExpr, "", "", "Updated cron expression")
@@ -765,8 +767,8 @@ func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
 		return nil, err
 	}
 	v := validateAgentManifest(manifest)
-	if agentStrictFlag(c) {
-		applyStrict(v)
+	if err := applyManifestFlags(c, v); err != nil {
+		return nil, err
 	}
 	if err := reportAgentManifestValidation(v); err != nil {
 		return nil, err

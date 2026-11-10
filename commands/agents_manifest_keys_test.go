@@ -343,7 +343,7 @@ spec:
 		for _, w := range v.Warnings {
 			assert.NotContains(t, w, "unknown field")
 		}
-		warns, err := earlyUnknownKeyCheck([]byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\negresss: 1\n"), true)
+		warns, err := earlyUnknownKeyCheck([]byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\negresss: 1\n"), true, false)
 		assert.NoError(t, err)
 		assert.Nil(t, warns)
 	})
@@ -361,7 +361,7 @@ spec:
 			v := validateAgentManifest(raw)
 			assert.Empty(t, v.Errors, name)
 			assert.Empty(t, v.Warnings, name)
-			warns, err := earlyUnknownKeyCheck(raw, true)
+			warns, err := earlyUnknownKeyCheck(raw, true, false)
 			assert.NoError(t, err, name)
 			assert.Empty(t, warns, name)
 		}
@@ -370,7 +370,7 @@ spec:
 	t.Run("crewai fixture has no unknown-field reports", func(t *testing.T) {
 		raw, err := os.ReadFile(filepath.Join("testdata", "valid_crewai.yaml"))
 		require.NoError(t, err)
-		warns, err := earlyUnknownKeyCheck(raw, true)
+		warns, err := earlyUnknownKeyCheck(raw, true, false)
 		assert.NoError(t, err)
 		assert.Empty(t, warns)
 	})
@@ -391,7 +391,7 @@ func TestUnknownManifestKeys_HarnessSpellings(t *testing.T) {
 	})
 
 	t.Run("harness: opencode alone is clean even with --strict", func(t *testing.T) {
-		warns, err := earlyUnknownKeyCheck([]byte("name: demo\nharness: opencode\n"), true)
+		warns, err := earlyUnknownKeyCheck([]byte("name: demo\nharness: opencode\n"), true, false)
 		assert.NoError(t, err)
 		assert.Empty(t, warns)
 		assert.True(t, validateAgentManifest([]byte("name: demo\nharness: opencode\n")).ok())
@@ -519,21 +519,21 @@ func TestValidFixturesUseEveryKnownKey(t *testing.T) {
 
 func TestEarlyUnknownKeyCheck(t *testing.T) {
 	t.Run("near miss errors in the create-path shape", func(t *testing.T) {
-		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\negresss: [a.com]\n"), false)
+		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\negresss: [a.com]\n"), false, false)
 		require.Error(t, err)
 		assert.Empty(t, warns)
 		assert.True(t, strings.HasPrefix(err.Error(), "manifest validation failed:\n  - egresss:"), err.Error())
 	})
 
 	t.Run("far key warns without strict", func(t *testing.T) {
-		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\nbogus_field: 1\n"), false)
+		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\nbogus_field: 1\n"), false, false)
 		require.NoError(t, err)
 		require.Len(t, warns, 1)
 		assert.Contains(t, warns[0], "bogus_field")
 	})
 
 	t.Run("far key fails with strict", func(t *testing.T) {
-		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\nbogus_field: 1\n"), true)
+		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\nbogus_field: 1\n"), true, false)
 		require.Error(t, err)
 		assert.Empty(t, warns)
 		assert.Contains(t, err.Error(), "bogus_field")
@@ -541,14 +541,14 @@ func TestEarlyUnknownKeyCheck(t *testing.T) {
 
 	t.Run("unparseable or empty input is left to the validator", func(t *testing.T) {
 		for _, raw := range []string{"", "{{{ not yaml", "- a\n- b\n"} {
-			warns, err := earlyUnknownKeyCheck([]byte(raw), true)
+			warns, err := earlyUnknownKeyCheck([]byte(raw), true, false)
 			assert.NoError(t, err, raw)
 			assert.Nil(t, warns, raw)
 		}
 	})
 
 	t.Run("${VAR} placeholders do not trip the parser", func(t *testing.T) {
-		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\nsecrets:\n  K: ${SOME_KEY}\nenv:\n  A: ${B}\n"), true)
+		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\nsecrets:\n  K: ${SOME_KEY}\nenv:\n  A: ${B}\n"), true, false)
 		assert.NoError(t, err)
 		assert.Empty(t, warns)
 	})
@@ -884,7 +884,7 @@ func TestRunAgentsConfigCreate_UnknownKeys(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			if expectCreate {
 				tm.hostedAgents.EXPECT().
-					CreateAgentConfig(gomock.Any()).
+					CreateAgentConfig(gomock.Any(), gomock.Any()).
 					Return(&godo.HostedAgentConfig{ID: "cfg_1", Name: "my-config"}, nil)
 			} // otherwise any CreateAgentConfig call fails the test
 			var buf bytes.Buffer
@@ -961,5 +961,96 @@ func TestRunAgentTriggersCreate_UnknownKeys(t *testing.T) {
 		stderr, err := run(t, "agent: opencode\nbogus_field: 1\n", false, true)
 		require.NoError(t, err)
 		assert.Contains(t, stderr, "bogus_field")
+	})
+}
+
+// --- --allow-unknown-fields --------------------------------------------------
+
+func TestAllowUnknownFields(t *testing.T) {
+	t.Run("early check turns a near miss into a warning", func(t *testing.T) {
+		warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\negresss: [a.com]\n"), false, true)
+		require.NoError(t, err)
+		require.Len(t, warns, 1)
+		assert.Contains(t, warns[0], `unknown field "egresss"`)
+	})
+
+	t.Run("validate moves only near misses, other errors stay", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "agents.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("harness: opencode\negresss: [a.com]\nname: \"-bad-\"\n"), 0o600))
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentSpec, path)
+			config.Doit.Set(config.NS, doctl.ArgAgentAllowUnknownFields, true)
+			var buf bytes.Buffer
+			config.Out = &buf
+			require.ErrorIs(t, RunAgentsValidate(config), ErrExitSilently)
+			assert.Contains(t, buf.String(), "Warning")
+			assert.Contains(t, buf.String(), "egresss")
+			assert.Contains(t, buf.String(), "1 error")
+		})
+	})
+
+	t.Run("validate passes when the near miss is the only problem", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "agents.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("harness: opencode\nsecret: {}\n"), 0o600))
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentSpec, path)
+			var buf bytes.Buffer
+			config.Out = &buf
+			require.ErrorIs(t, RunAgentsValidate(config), ErrExitSilently, "without the flag the near miss blocks")
+
+			config.Doit.Set(config.NS, doctl.ArgAgentAllowUnknownFields, true)
+			buf.Reset()
+			require.NoError(t, RunAgentsValidate(config))
+			assert.Contains(t, buf.String(), `unknown field "secret"`)
+		})
+	})
+
+	t.Run("cannot be combined with --strict", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "agents.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("harness: opencode\n"), 0o600))
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			config.Doit.Set(config.NS, doctl.ArgAgentSpec, path)
+			config.Doit.Set(config.NS, doctl.ArgAgentStrict, true)
+			config.Doit.Set(config.NS, doctl.ArgAgentAllowUnknownFields, true)
+			config.Out = &bytes.Buffer{}
+			err := RunAgentsValidate(config)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "cannot be used together")
+		})
+	})
+
+	t.Run("dry-run create prints the manifest and warns", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "agents.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("harness: opencode\negresss: [a.com]\n"), 0o600))
+		withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+			var buf bytes.Buffer
+			config.Out = &buf
+			config.Args = []string{path}
+			config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
+			config.Doit.Set(config.NS, doctl.ArgAgentAllowUnknownFields, true)
+			var err error
+			stderr := captureProcessStderr(t, func() { err = RunAgentsCreate(config) })
+			require.NoError(t, err)
+			assert.Contains(t, stderr, `unknown field "egresss"`)
+			assert.NotEmpty(t, buf.String())
+		})
+	})
+
+	t.Run("flag is registered next to --strict", func(t *testing.T) {
+		on := func(parent *Command, name string) {
+			for _, c := range parent.Commands() {
+				if c.Name() == name {
+					require.NotNil(t, c.Flags().Lookup(doctl.ArgAgentAllowUnknownFields), name)
+					return
+				}
+			}
+			t.Fatalf("command %q not found", name)
+		}
+		for _, n := range []string{"validate", "create", "launch"} {
+			on(Agents(), n)
+		}
+		on(AgentConfigs(), "create")
+		on(AgentTriggers(), "create")
+		on(AgentTriggers(), "update")
 	})
 }
