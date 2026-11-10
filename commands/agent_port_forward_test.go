@@ -656,13 +656,3 @@ func TestCanvasForwardHandler_ProxiesThroughTheTunnelAndAnswersAutomationLocally
 	require.NoError(t, err)
 	assert.Equal(t, "echo:hello", string(msg))
 }
-
-// Without an automation handler (a non-loopback bind) the prefix is plain
-// proxied traffic: the guest answers it, as a raw tunnel would let it.
-func TestCanvasForwardHandler_NoAutomationHandlerProxiesThePrefix(t *testing.T) {
-	h := canvasForwardHandler("ws://127.0.0.1:1/never", nil, nil, nil, nil)
-	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8000/api/automation/health", nil)
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusBadGateway, rec.Code, "the request went for the tunnel, which is not there in this test")
-}

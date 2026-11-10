@@ -550,10 +550,11 @@ func canvasRunStatus(s godo.HostedAgentTriggerExecutionStatus) string {
 		return canvasRunStatusFailed
 	}
 	// Statuses the API may grow that this build does not know: the two
-	// Canvas renders are passed as such; one that reads as still going
-	// ("queued", "cancelling", "starting") shows as running, so the tab
-	// keeps polling it; anything else reads as failed (the run did not
-	// complete), with the raw status kept in error_detail by toCanvasRun.
+	// Canvas renders are passed as such; the in-flight names listed in
+	// canvasInFlightStatuses show as running, so the tab keeps polling
+	// them; anything else reads as failed (the run did not complete), with
+	// the raw status kept in error_detail by toCanvasRun. A list, not a
+	// pattern: a parked state such as "suspended" must not poll forever.
 	raw := strings.ToLower(string(s))
 	switch raw {
 	case "cancelled", "canceled":
@@ -561,10 +562,17 @@ func canvasRunStatus(s godo.HostedAgentTriggerExecutionStatus) string {
 	case "skipped":
 		return canvasRunStatusSkipped
 	}
-	if strings.HasSuffix(raw, "ing") || strings.Contains(raw, "queue") || strings.Contains(raw, "pend") || strings.Contains(raw, "schedul") {
+	if canvasInFlightStatuses[raw] {
 		return canvasRunStatusRunning
 	}
 	return canvasRunStatusFailed
+}
+
+// canvasInFlightStatuses are execution states, beyond pending and running,
+// that mean a run is still going.
+var canvasInFlightStatuses = map[string]bool{
+	"queued": true, "scheduled": true, "starting": true, "dispatching": true,
+	"resuming": true, "cancelling": true, "canceling": true,
 }
 
 func canvasTime(t godo.Timestamp) string {

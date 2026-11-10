@@ -573,9 +573,10 @@ func canvasAutomationOn(sess *do.HostedAgentSession, address string) bool {
 }
 
 // canvasForwardHandler is the HTTP face of a tunnel to an openhands
-// session's Canvas port: a request under /api/automation goes to the
-// automation handler (when given), any other request, WebSocket upgrades
-// included, is proxied through the tunnel to the guest. The guest sees the
+// session's Canvas port, used only when the Automate tab is on
+// (canvasAutomationOn): a request under /api/automation goes to the
+// automation handler, any other request, WebSocket upgrades included, is
+// proxied through the tunnel to the guest. The guest sees the
 // request as it came, Host and all, since that is what the raw tunnel would
 // carry; the ReverseProxy only owns hop-by-hop headers and the 101 splice.
 func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, automation http.Handler) http.Handler {
@@ -603,7 +604,7 @@ func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, wa
 		},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if automation != nil && (r.URL.Path == canvasAutomationPrefix || strings.HasPrefix(r.URL.Path, canvasAutomationPrefix+"/")) {
+		if r.URL.Path == canvasAutomationPrefix || strings.HasPrefix(r.URL.Path, canvasAutomationPrefix+"/") {
 			automation.ServeHTTP(w, r)
 			return
 		}
