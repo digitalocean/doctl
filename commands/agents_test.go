@@ -4617,6 +4617,60 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 	assert.Equal(t, hitlID, pending.get())
 }
 
+// streamStateFrame writes a stream.state control frame carrying a session id,
+// which sseFrame's envelope omits. renderReplayTruncated reads that id off the
+// frame, so the notice's command half only exists when it is present.
+func streamStateFrame(sessionID, dataJSON string) string {
+	return fmt.Sprintf(
+		"data: {\"event_id\":\"\",\"session_id\":%q,\"type\":%q,\"data\":%s}\n\n",
+		sessionID, string(godo.HostedAgentEventKindStreamState), dataJSON,
+	)
+}
+
+// TestDrainStream_ReplayTruncatedNotice covers MARSOHS-900: a catching_up
+// window marked truncated skipped the events between this device's cursor and
+// head-N, and the pane must say so before the replayed events rather than
+// presenting them as continuous.
+func TestDrainStream_ReplayTruncatedNotice(t *testing.T) {
+	body := streamStateFrame("sess_x", `{"state":"catching_up","cursor":"","truncated":true}`) +
+		sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	superseded, _ := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.False(t, superseded)
+	out := buf.String()
+	assert.Contains(t, out, "earlier activity not shown")
+	// The pointer has to name a runnable command, so the session id matters.
+	assert.Contains(t, out, "logs sess_x")
+}
+
+// TestDrainStream_CatchingUpWithoutTruncatedIsSilent is the other half of the
+// contract: the marker is omitted when false, which is the common case, and a
+// complete replay must not be annotated as if it had a hole.
+func TestDrainStream_CatchingUpWithoutTruncatedIsSilent(t *testing.T) {
+	body := streamStateFrame("sess_x", `{"state":"catching_up","cursor":""}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.NotContains(t, buf.String(), "earlier activity not shown")
+}
+
 // TestRenderApprovalResolvedLine confirms the resolved line shares
 // renderApprovalLine's exact "status  ·  label  ·  id" structure (just with a
 // different status), for every outcome, and degrades to omitting the label
