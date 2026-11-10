@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/digitalocean/doctl/commands/internal/manifestkeys"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,9 +32,8 @@ import (
 // Keys for server features doctl does not support yet are left out of both the
 // copy and the tree on purpose: a manifest using one gets the "unknown field"
 // warning, which says it may be a newer field. To refresh the copy, copy the
-// new schema over, drop those keys, then update
-// manifestRootKeys and friends in agents_manifest_keys.go until this test
-// passes.
+// new schema over, drop those keys, then run `go generate ./commands` to
+// rebuild agents_manifest_keys_tree.go.
 
 const rootKeyPath = ""
 
@@ -229,7 +229,7 @@ func TestManifestKeyTreeMatchesSchemaCopy(t *testing.T) {
 				displayKeyPath(p), w, g, subtractKeys(w, g), subtractKeys(g, w)))
 		}
 	}
-	require.Empty(t, diffs, "doctl's manifest key tree differs from testdata/agent.flat.schema.json; update agents_manifest_keys.go (keep the schema's key order):\n  %s", strings.Join(diffs, "\n  "))
+	require.Empty(t, diffs, "doctl's manifest key tree differs from testdata/agent.flat.schema.json; run `go generate ./commands`:\n  %s", strings.Join(diffs, "\n  "))
 
 	// Sanity check only, after the readable diff: this tree holds 22 closed
 	// objects (the schema's others are egress, which is skipped, and the tools
@@ -289,4 +289,16 @@ func TestEgressKeysMatchSchemaCopy(t *testing.T) {
 	sorted := append([]string(nil), schemaKeys...)
 	sort.Strings(sorted)
 	require.Equal(t, sorted, known)
+}
+
+// The committed tree must be exactly what the generator produces from the
+// schema copy, so a schema refresh that skips `go generate` fails here.
+func TestManifestKeyTreeIsGenerated(t *testing.T) {
+	schema, err := os.ReadFile(filepath.Join("testdata", "agent.flat.schema.json"))
+	require.NoError(t, err)
+	want, err := manifestkeys.Generate(schema)
+	require.NoError(t, err)
+	got, err := os.ReadFile("agents_manifest_keys_tree.go")
+	require.NoError(t, err)
+	require.Equal(t, string(want), string(got), "agents_manifest_keys_tree.go is stale; run `go generate ./commands`")
 }

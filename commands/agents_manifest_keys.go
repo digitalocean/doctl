@@ -29,10 +29,11 @@ import (
 // at only `agent` and `name`, so `validate` and `create --dry-run` passed it.
 //
 // Source of truth: the published flat agent manifest JSON schema. A copy
-// (as of 2026-11-02) lives in testdata/agent.flat.schema.json and
-// TestManifestKeyTreeMatchesSchemaCopy fails when this tree and the copy
-// differ, so a schema refresh forces an update here. Key order is the schema's
-// property order; it breaks ties between equally close candidates.
+// (as of 2026-11-02) lives in testdata/agent.flat.schema.json, and the key tree
+// is generated from it (see the go:generate line below), so a schema refresh
+// is one command and TestManifestKeyTreeIsGenerated fails if it was skipped.
+// Key order is the schema's property order; it breaks ties between equally
+// close candidates.
 //
 // Only closed objects (additionalProperties: false) are listed. Open objects
 // (config, labels, env, secrets slot names, permissions.rules[].match,
@@ -89,101 +90,11 @@ func (n *keyNode) names() []string {
 	return out
 }
 
-func leafKeys(names ...string) []keyDef {
-	out := make([]keyDef, len(names))
-	for i, n := range names {
-		out[i] = keyDef{name: n}
-	}
-	return out
-}
-
-var (
-	manifestSecretSlotKeys = &keyNode{keys: leafKeys("source", "provider", "value", "env", "url", "scheme")}
-	manifestModelKeys      = &keyNode{keys: leafKeys("default", "routing", "profile")}
-	manifestMemoryKeys     = &keyNode{keys: leafKeys("backend", "scope")}
-
-	manifestToolCatalogKeys = &keyNode{keys: leafKeys("tools", "preload_tools")}
-	manifestToolAuthKeys    = &keyNode{keys: leafKeys("header", "secret")}
-	manifestToolInlineKeys  = &keyNode{keys: []keyDef{
-		{name: "name"},
-		{name: "url"},
-		{name: "tools"},
-		{name: "auth", kind: keyObject, child: manifestToolAuthKeys},
-	}}
-
-	manifestPermissionRuleKeys = &keyNode{keys: leafKeys("tool", "match", "action", "enforcement")}
-	manifestFilesystemKeys     = &keyNode{keys: leafKeys("mode", "allow_write")}
-	manifestNetworkKeys        = &keyNode{keys: leafKeys("default", "allow")}
-	manifestPermissionsKeys    = &keyNode{keys: []keyDef{
-		{name: "default"},
-		{name: "rules", kind: keyObjectList, child: manifestPermissionRuleKeys},
-		{name: "filesystem", kind: keyObject, child: manifestFilesystemKeys},
-		{name: "network", kind: keyObject, child: manifestNetworkKeys},
-	}}
-
-	manifestMountKeys  = &keyNode{keys: leafKeys("type", "path", "bucket", "prefix", "endpoint", "read_only", "access_key", "secret_key")}
-	manifestSkillKeys  = &keyNode{keys: leafKeys("name", "description", "instructions", "license", "metadata", "allowed_tools")}
-	manifestBudgetKeys = &keyNode{keys: leafKeys("max_cost_usd", "max_steps", "max_wall_clock", "on_breach")}
-
-	// crewai and langgraph: framework is shared ($defs/framework); inputs is
-	// crewai only. inputs.defaults is an open map, inputs.schema maps free
-	// input names to a closed {type, required} object.
-	manifestFrameworkKeys    = &keyNode{keys: leafKeys("repo", "repo_sha", "subdir", "object")}
-	manifestInputsSchemaKeys = &keyNode{keys: leafKeys("type", "required")}
-	manifestInputsKeys       = &keyNode{keys: []keyDef{
-		{name: "prompt_key"},
-		{name: "defaults"}, // open map
-		{name: "schema", kind: keyMapOfObjects, child: manifestInputsSchemaKeys},
-	}}
-	manifestCrewAIKeys = &keyNode{keys: []keyDef{
-		{name: "framework", kind: keyObject, child: manifestFrameworkKeys},
-		{name: "inputs", kind: keyObject, child: manifestInputsKeys},
-	}}
-	manifestLangGraphKeys = &keyNode{keys: []keyDef{
-		{name: "framework", kind: keyObject, child: manifestFrameworkKeys},
-	}}
-
-	manifestScaleToZeroKeys = &keyNode{keys: leafKeys("idle")}
-	manifestServingKeys     = &keyNode{keys: []keyDef{
-		{name: "min"},
-		{name: "max"},
-		{name: "target_concurrency"},
-		{name: "scale_to_zero", kind: keyObject, child: manifestScaleToZeroKeys},
-	}}
-
-	manifestRootKeys = &keyNode{keys: []keyDef{
-		{name: "name"},
-		{name: "description"},
-		{name: "labels"}, // open map
-		{name: "harness"},
-		{name: "agent"}, // original name of harness
-
-		{name: "image"},
-		{name: "entrypoint"},
-		{name: "config"}, // open map
-		{name: "crewai", kind: keyObject, child: manifestCrewAIKeys},
-		{name: "langgraph", kind: keyObject, child: manifestLangGraphKeys},
-		{name: "repos"},
-		{name: "env"}, // open map
-		{name: "secrets", kind: keyMapOfObjects, child: manifestSecretSlotKeys},
-		{name: "model", kind: keyObject, child: manifestModelKeys},
-		{name: "memory", kind: keyObject, child: manifestMemoryKeys},
-		{name: "size"},
-		{name: "idle_timeout"},
-		{name: "keep_warm"},
-		{name: "max_lifetime"},
-		{name: "egress"}, // checked by validateEgressObject
-		{name: "tools", kind: keyTools},
-		{name: "permissions", kind: keyObject, child: manifestPermissionsKeys},
-		{name: "template"},
-		{name: "persistent_workspace"},
-		{name: "mounts", kind: keyObjectList, child: manifestMountKeys},
-		{name: "skills", kind: keyObjectList, child: manifestSkillKeys},
-		{name: "budget", kind: keyObject, child: manifestBudgetKeys},
-		{name: "mode"},
-		{name: "serving", kind: keyObject, child: manifestServingKeys},
-	}}
-)
+// The tree itself (manifestRootKeys and the nodes under it) lives in
+// agents_manifest_keys_tree.go, generated from testdata/agent.flat.schema.json.
+// To follow a schema change, replace the copy and run `go generate ./commands`.
+//
+//go:generate go run ./internal/manifestkeys/cmd
 
 // editDistance is the Levenshtein distance between a and b, counted in runes.
 // The server counts bytes. Every known key is ASCII, and a candidate within
