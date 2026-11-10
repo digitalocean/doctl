@@ -113,19 +113,18 @@ func canvasAutomationHandler(sessionID string, triggers do.HostedAgentTriggersSe
 // same-origin and sends JSON, so it is untouched; plain tools send no Origin.
 func canvasSameOrigin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if origin := r.Header.Get("Origin"); origin != "" && origin != "null" {
+		// An opaque "null" Origin never gets here: loopbackOnly refuses it.
+		if origin := r.Header.Get("Origin"); origin != "" {
 			u, err := url.Parse(origin)
 			if err != nil || u.Scheme != "http" || !strings.EqualFold(u.Host, r.Host) {
 				writeDetail(w, http.StatusForbidden, "the automation API answers the Canvas page on this port only")
 				return
 			}
-		} else if origin == "null" {
-			writeDetail(w, http.StatusForbidden, "the automation API answers the Canvas page on this port only")
-			return
 		}
 		// A write with a body must be JSON; a bodiless POST (Canvas's Run now
-		// sends none) carries nothing a page could smuggle and passes.
-		hasBody := r.ContentLength > 0 || len(r.TransferEncoding) > 0
+		// sends none) carries nothing a page could smuggle and passes. A
+		// chunked body reads as -1, so anything but 0 is a body.
+		hasBody := r.ContentLength != 0
 		if hasBody && (r.Method == http.MethodPost || r.Method == http.MethodPatch || r.Method == http.MethodPut) {
 			ct, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			if ct != "application/json" {
@@ -202,7 +201,10 @@ type canvasPatchBody struct {
 	Timezone *string        `json:"timezone"`
 }
 
-var canvasAutomationID = regexp.MustCompile(`^/v1/([^/]+)(/runs|/dispatch|/tarball)?/?$`)
+// canvasAutomationID picks the trigger id out of the path. Only the id
+// characters the API issues are accepted, so what reaches the godo client's
+// path is an id and never a path segment or a query.
+var canvasAutomationID = regexp.MustCompile(`^/v1/([A-Za-z0-9_-]+)(/runs|/dispatch|/tarball)?/?$`)
 
 func (s *canvasAutomationServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, canvasAutomationPrefix)
@@ -282,7 +284,7 @@ func (s *canvasAutomationServer) owned(w http.ResponseWriter, id string) (*godo.
 		writeGodoError(w, err)
 		return nil, false
 	}
-	if t == nil || t.HostedAgentTrigger == nil || t.BoundSessionID != s.sessionID {
+	if t == nil || t.HostedAgentTrigger == nil || !strings.EqualFold(t.BoundSessionID, s.sessionID) {
 		writeDetail(w, http.StatusNotFound, "Automation not found")
 		return nil, false
 	}
@@ -291,8 +293,11 @@ func (s *canvasAutomationServer) owned(w http.ResponseWriter, id string) (*godo.
 
 // sessionTriggers lists every trigger bound to this session. The API lists
 // triggers per team with no bound-session filter, so every refresh of the
-// tab reads the team's triggers (pages of 100, up to 50 pages) and keeps
-// this session's; a filter on the API would make this one call.
+// tab reads the team's triggers (pages of 100, up to 50 pages, so a team
+// past 5,000 triggers has the rest unseen here) and keeps this session's;
+// a bound-session filter on the API would make this one call. The session
+// id is compared case-insensitively: the server stores it in lower case
+// and a ref typed in upper case must still find its triggers.
 func (s *canvasAutomationServer) sessionTriggers() ([]godo.HostedAgentTrigger, error) {
 	var out []godo.HostedAgentTrigger
 	token := ""
@@ -302,7 +307,7 @@ func (s *canvasAutomationServer) sessionTriggers() ([]godo.HostedAgentTrigger, e
 			return nil, err
 		}
 		for _, t := range items {
-			if t.HostedAgentTrigger != nil && t.BoundSessionID == s.sessionID {
+			if t.HostedAgentTrigger != nil && strings.EqualFold(t.BoundSessionID, s.sessionID) {
 				out = append(out, *t.HostedAgentTrigger)
 			}
 		}

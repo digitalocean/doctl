@@ -355,10 +355,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	// tab's answers carry actions taken with the user's token, so they are
 	// given on a loopback bind only, and on any other bind the port is
 	// tunnelled as raw bytes like every other port (canvasAutomationOn).
-	var automation http.Handler
-	if canvasAutomationOn(sess, address) {
-		automation = canvasAutomationHandler(sessionID, c.HostedAgentTriggers())
-	}
+	automation := canvasAutomationOn(sess, address)
 
 	header := tunnelHeader(c.getContextAccessToken(), deviceid.Get())
 
@@ -388,7 +385,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 
 		warner := newTunnelWarner(pair.remote)
 		if pair.remote == canvasPort && isOpenHandsSession(sess) {
-			if automation == nil {
+			if !automation {
 				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab off: it needs a loopback --address)\n",
 					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
 			} else {
@@ -396,11 +393,14 @@ func RunAgentsPortForward(c *CmdConfig) error {
 					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
 			}
 		}
-		if automation != nil && pair.remote == canvasPort {
+		if automation && pair.remote == canvasPort {
+			// The server's own id (lower case), not the ref as typed: the
+			// triggers' bound_session_id is compared against it.
+			triggers := c.HostedAgentTriggers()
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, automation))
+				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, sess.SessionID, triggers))
 			}()
 			continue
 		}
@@ -575,11 +575,13 @@ func canvasAutomationOn(sess *do.HostedAgentSession, address string) bool {
 // canvasForwardHandler is the HTTP face of a tunnel to an openhands
 // session's Canvas port, used only when the Automate tab is on
 // (canvasAutomationOn): a request under /api/automation goes to the
-// automation handler, any other request, WebSocket upgrades included, is
-// proxied through the tunnel to the guest. The guest sees the
+// automation API, built here behind its gates (canvasAutomationHandler) so
+// the one production caller cannot mount it bare; any other request,
+// WebSocket upgrades included, is proxied through the tunnel to the guest. The guest sees the
 // request as it came, Host and all, since that is what the raw tunnel would
 // carry; the ReverseProxy only owns hop-by-hop headers and the 101 splice.
-func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, automation http.Handler) http.Handler {
+func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, sessionID string, triggers do.HostedAgentTriggersService) http.Handler {
+	automation := canvasAutomationHandler(sessionID, triggers)
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return dialTunnelConn(ctx, wsURL, header, tracer)

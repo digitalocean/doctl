@@ -482,3 +482,24 @@ func TestCanvasAutomationHandler_BodilessPostPassesTheJSONGate(t *testing.T) {
 		assert.Equal(t, http.StatusNotImplemented, rec.Code, rec.Body.String())
 	})
 }
+
+// The server stores the bound session id in lower case; a ref typed in upper
+// case still owns its triggers, and an id that is not an id is 404 before
+// any API call.
+func TestCanvasAutomation_SessionIDCaseAndTriggerIDShape(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		mine := cronTrigger("tr_1", "01a1c5e5-5f96-71da-bca5-f5921275d3b0", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil)
+		tm.hostedAgentTriggers.EXPECT().List(&godo.HostedAgentTriggerListOptions{PageSize: 100}).Return([]do.HostedAgentTrigger{mine}, "", nil)
+		h := newCanvasAutomationServer("01A1C5E5-5F96-71DA-BCA5-F5921275D3B0", tm.hostedAgentTriggers)
+		rec, _ := canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_1", "")
+		assert.Equal(t, http.StatusOK, rec.Code)
+		rec, body := canvasReq(t, h, http.MethodGet, "/api/automation/v1", "")
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.EqualValues(t, 1, body["total"])
+		for _, p := range []string{"/api/automation/v1/..", "/api/automation/v1/a%3Fb=1", "/api/automation/v1/x%2Fy"} {
+			rec, _ = canvasReq(t, h, http.MethodGet, p, "")
+			assert.Equal(t, http.StatusNotFound, rec.Code, p)
+		}
+	})
+}

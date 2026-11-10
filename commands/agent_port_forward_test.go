@@ -627,10 +627,9 @@ func TestCanvasForwardHandler_ProxiesThroughTheTunnelAndAnswersAutomationLocally
 	defer tunnel.Close()
 	wsURL := "ws" + strings.TrimPrefix(tunnel.URL, "http") + "/v2/agents/sessions/sess_1/port-forward/8000"
 
-	automation := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"status":"ok","from":"doctl","path":%q}`, r.URL.Path)
-	})
-	local := httptest.NewServer(canvasForwardHandler(wsURL, tunnelHeader("T0K", ""), nil, nil, automation))
+	// The automation API as port-forward mounts it, gates included; the
+	// triggers service is never reached in this test (health needs none).
+	local := httptest.NewServer(canvasForwardHandler(wsURL, tunnelHeader("T0K", ""), nil, nil, "sess_1", nil))
 	defer local.Close()
 
 	resp, err := http.Get(local.URL + "/canvas/")
@@ -645,7 +644,15 @@ func TestCanvasForwardHandler_ProxiesThroughTheTunnelAndAnswersAutomationLocally
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Contains(t, string(body), `"from":"doctl"`)
+	assert.Contains(t, string(body), `"service":"doctl"`)
+
+	// The gates are on this path: a page on another local port is refused.
+	req, _ := http.NewRequest(http.MethodGet, local.URL+"/api/automation/health", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode, "the mounted automation API refuses another local page")
 
 	conn, wsResp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(local.URL, "http")+"/sockets/events", nil)
 	require.NoError(t, err, "upgrade through the tunnel")
