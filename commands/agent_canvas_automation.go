@@ -123,7 +123,10 @@ func canvasSameOrigin(next http.Handler) http.Handler {
 			writeDetail(w, http.StatusForbidden, "the automation API answers the Canvas page on this port only")
 			return
 		}
-		if r.Method == http.MethodPost || r.Method == http.MethodPatch || r.Method == http.MethodPut {
+		// A write with a body must be JSON; a bodiless POST (Canvas's Run now
+		// sends none) carries nothing a page could smuggle and passes.
+		hasBody := r.ContentLength > 0 || len(r.TransferEncoding) > 0
+		if hasBody && (r.Method == http.MethodPost || r.Method == http.MethodPatch || r.Method == http.MethodPut) {
 			ct, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			if ct != "application/json" {
 				writeDetail(w, http.StatusUnsupportedMediaType, "the automation API takes application/json")
@@ -180,7 +183,8 @@ type canvasValidationError struct {
 	Message string `json:"message"`
 }
 
-// canvasCreateBody is what the tab posts to /v1/preset/prompt.
+// canvasCreateBody is what the tab posts to /v1/preset/prompt. A model, when
+// the form sends one, is read and dropped (see create).
 type canvasCreateBody struct {
 	Name    string        `json:"name"`
 	Prompt  string        `json:"prompt"`
@@ -375,10 +379,9 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 		writeDetail(w, http.StatusBadRequest, "only scheduled (cron) automations are available for this session")
 		return
 	}
-	if body.Model != nil && strings.TrimSpace(*body.Model) != "" {
-		writeDetail(w, http.StatusBadRequest, "a trigger runs on the session's active LLM profile; leave the model empty and pick the model in the composer")
-		return
-	}
+	// A model the form may carry is not kept: a trigger runs on the
+	// session's active LLM profile, so the automation comes back with model
+	// null and the tab shows none, rather than a model that is not used.
 	if errs := validateCanvasTrigger(&body.Trigger); len(errs) > 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"detail": errs[0].Message, "errors": errs})
 		return

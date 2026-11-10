@@ -450,14 +450,35 @@ func TestCanvasAutomationHandler_GatesAgainstOtherLocalPages(t *testing.T) {
 	})
 }
 
-// A model in the create body is refused: a trigger runs on the session's
-// active profile, so a model shown in the tab would not be the one used.
-func TestCanvasAutomation_CreateRefusesAModel(t *testing.T) {
+// A model in the create body is dropped, not refused: a trigger runs on the
+// session's active profile, and a form that pre-fills the model must still
+// create. The automation comes back with model null.
+func TestCanvasAutomation_CreateDropsTheModel(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+			tr := cronTrigger("tr_m", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
+			return &tr
+		}()}, nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
 			`{"name":"x","prompt":"y","model":"gpt-5","trigger":{"type":"cron","schedule":"*/5 * * * *"}}`)
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-		assert.Contains(t, body["detail"], "model")
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		assert.Nil(t, body["model"])
+	})
+}
+
+// Run now as Canvas sends it, a POST with no body and no Content-Type,
+// reaches its own answer (501 for now) instead of the JSON gate.
+func TestCanvasAutomationHandler_BodilessPostPassesTheJSONGate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil)
+		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers)
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8000/api/automation/v1/tr_1/dispatch", nil)
+		req.Host = "127.0.0.1:8000"
+		req.Header.Set("Origin", "http://127.0.0.1:8000")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusNotImplemented, rec.Code, rec.Body.String())
 	})
 }
