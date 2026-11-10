@@ -189,7 +189,7 @@ const agentsUploadHelpMD = `Copy a local file into the session workspace at ` + 
 
 Use ` + "`--archive`" + ` when uploading an uncompressed tar to extract at the destination. Maximum size 50 GiB.`
 
-const agentsDownloadHelpMD = `Copy a file from the session workspace to a local path (` + "`--save-to`" + `).
+const agentsDownloadHelpMD = `Copy a file from the session workspace to a local path (` + "`--save-to`" + `, or ` + "`--local-file`" + ` as on ` + "`upload`" + `).
 
 Use ` + "`--archive`" + ` to download a directory as a tar archive. Maximum size 50 GiB.`
 

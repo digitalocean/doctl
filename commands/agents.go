@@ -629,6 +629,8 @@ func Agents() *Command {
 	AddStringFlag(cmdDownload, doctl.ArgAgentWorkspacePath, "", "", "Source path inside the workspace root (/workspace)", requiredOpt())
 	AddStringFlag(cmdDownload, doctl.ArgAgentSaveTo, "", "", "Local file path to write the download to", requiredOpt())
 	AddBoolFlag(cmdDownload, doctl.ArgAgentArchive, "", false, "Tar-stream the directory at the source path")
+	// upload names the local path --local-file; accept the same word here.
+	acceptFlagAlias(cmdDownload, doctl.ArgAgentLocalFile, doctl.ArgAgentSaveTo)
 	cmdDownload.Example = `doctl harness-runtime download sess_abc123 --workspace-path src/main.go --save-to ./main.go`
 
 	cmdExec := CmdBuilder(cmd, RunAgentsExec, "exec <session> -- <command> [args...]",
@@ -1618,9 +1620,17 @@ func readManifest(stdin io.Reader, path string) ([]byte, error) {
 // file (apps, dedicated-inference); --file and -f exist because kubectl,
 // compose and planoai trained that muscle memory.
 func acceptFileAliasFor(cmd *Command) {
+	acceptFlagAlias(cmd, "file", doctl.ArgAgentSpec)
+}
+
+// acceptFlagAlias makes --alias a second spelling of --canonical on cmd. The
+// alias is not registered, so help output and required-flag checks only ever
+// see the canonical flag. A command can have one normalize function, so this
+// serves one alias per command.
+func acceptFlagAlias(cmd *Command, alias, canonical string) {
 	cmd.Flags().SetNormalizeFunc(func(_ *pflag.FlagSet, name string) pflag.NormalizedName {
-		if name == "file" {
-			name = doctl.ArgAgentSpec
+		if name == alias {
+			name = canonical
 		}
 		return pflag.NormalizedName(name)
 	})
