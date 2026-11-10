@@ -59,9 +59,12 @@ const (
 	canvasRunStatusSkipped   = "SKIPPED"
 )
 
-// canvasRunPages bounds the executions read for one run-history answer:
-// every page up to this many, whatever the tab's window, so total and the
-// per-status counts cover the history rather than the first page.
+// canvasRunPages bounds the executions read for one run-history answer.
+// Pages are read until the tab's window (offset+limit) is filled, so the
+// usual call is one page; when more pages remain, total is reported as one
+// more than what was read, which keeps the tab's "more" alive without
+// walking the whole history on every poll. The per-status counts cover
+// what was read.
 const canvasRunPages = 10
 
 // canvasCronMinIntervalSeconds is the shortest schedule the tab offers; it is
@@ -452,6 +455,7 @@ func (s *canvasAutomationServer) runs(w http.ResponseWriter, r *http.Request, id
 	limit, offset := pageParams(r, 50)
 	var all []godo.HostedAgentTriggerExecution
 	token := ""
+	more := false
 	for page := 0; page < canvasRunPages; page++ {
 		items, next, err := s.triggers.ListExecutions(id, &godo.HostedAgentTriggerExecutionListOptions{PageSize: 100, PageToken: token})
 		if err != nil {
@@ -467,6 +471,10 @@ func (s *canvasAutomationServer) runs(w http.ResponseWriter, r *http.Request, id
 			break
 		}
 		token = next
+		if len(all) >= offset+limit {
+			more = true
+			break
+		}
 	}
 	counts := map[string]int{}
 	runs := []canvasRun{}
@@ -477,7 +485,11 @@ func (s *canvasAutomationServer) runs(w http.ResponseWriter, r *http.Request, id
 			runs = append(runs, run)
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"runs": runs, "total": len(all), "status_counts": counts})
+	total := len(all)
+	if more {
+		total++
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"runs": runs, "total": total, "status_counts": counts})
 }
 
 // toCanvasAutomation maps a trigger onto the automation the tab reads. A
@@ -538,14 +550,19 @@ func canvasRunStatus(s godo.HostedAgentTriggerExecutionStatus) string {
 		return canvasRunStatusFailed
 	}
 	// Statuses the API may grow that this build does not know: the two
-	// Canvas renders are passed as such, anything else reads as failed (the
-	// run did not complete), with the raw status kept in error_detail by
-	// toCanvasRun.
-	switch strings.ToLower(string(s)) {
+	// Canvas renders are passed as such; one that reads as still going
+	// ("queued", "cancelling", "starting") shows as running, so the tab
+	// keeps polling it; anything else reads as failed (the run did not
+	// complete), with the raw status kept in error_detail by toCanvasRun.
+	raw := strings.ToLower(string(s))
+	switch raw {
 	case "cancelled", "canceled":
 		return canvasRunStatusCancelled
 	case "skipped":
 		return canvasRunStatusSkipped
+	}
+	if strings.HasSuffix(raw, "ing") || strings.Contains(raw, "queue") || strings.Contains(raw, "pend") || strings.Contains(raw, "schedul") {
+		return canvasRunStatusRunning
 	}
 	return canvasRunStatusFailed
 }
@@ -572,9 +589,11 @@ func validateCanvasTrigger(t *canvasTrigger) []canvasValidationError {
 	fields := strings.Fields(expr)
 	if len(fields) != 5 {
 		errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "invalid_cron", Message: "the schedule must have five fields: minute hour day-of-month month day-of-week"})
-	} else if minutes, ok := cronMinutes(fields[0]); !ok {
+	} else if minutes, ok := cronField(fields[0], 59); !ok {
 		errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "invalid_cron", Message: fmt.Sprintf("the minute field %q is not a cron minute expression", fields[0])})
-	} else if gap := cronMinGapMinutes(minutes, strings.ContainsAny(fields[1], "*,-/")); gap*60 < canvasCronMinIntervalSeconds {
+	} else if hours, ok := cronField(fields[1], 23); !ok {
+		errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "invalid_cron", Message: fmt.Sprintf("the hour field %q is not a cron hour expression", fields[1])})
+	} else if gap := cronMinGapMinutes(minutes, cronHasConsecutive(hours, 23)); gap*60 < canvasCronMinIntervalSeconds {
 		errs = append(errs, canvasValidationError{Field: "trigger.schedule", Code: "interval_too_short", Message: fmt.Sprintf("Minimum interval for this session is %d minutes.", canvasCronMinIntervalSeconds/60)})
 	}
 	if t.Timezone != "" {
@@ -637,39 +656,39 @@ func writeGodoError(w http.ResponseWriter, err error) {
 	writeDetail(w, http.StatusBadGateway, "the DigitalOcean triggers API did not answer: "+err.Error())
 }
 
-// cronMinutes expands a cron minute field ("*", "*/15", "0,30", "0-59/5",
-// "5-10,45") into the sorted set of minutes it names; ok is false when the
-// field is not a minute expression.
-func cronMinutes(field string) ([]int, bool) {
+// cronField expands a cron minute or hour field ("*", "*/15", "0,30",
+// "0-59/5", "5-10,45") into the sorted set of values it names, 0..max; ok is
+// false when the field is not such an expression.
+func cronField(field string, max int) ([]int, bool) {
 	set := map[int]bool{}
 	for _, part := range strings.Split(field, ",") {
 		step := 1
 		if i := strings.Index(part, "/"); i >= 0 {
 			n, err := strconv.Atoi(part[i+1:])
-			if err != nil || n < 1 || n > 59 {
+			if err != nil || n < 1 || n > max {
 				return nil, false
 			}
 			step, part = n, part[:i]
 		}
-		lo, hi := 0, 59
+		lo, hi := 0, max
 		switch {
 		case part == "*":
 		case strings.Contains(part, "-"):
 			bounds := strings.SplitN(part, "-", 2)
 			a, err1 := strconv.Atoi(bounds[0])
 			b, err2 := strconv.Atoi(bounds[1])
-			if err1 != nil || err2 != nil || a < 0 || b > 59 || a > b {
+			if err1 != nil || err2 != nil || a < 0 || b > max || a > b {
 				return nil, false
 			}
 			lo, hi = a, b
 		default:
 			a, err := strconv.Atoi(part)
-			if err != nil || a < 0 || a > 59 {
+			if err != nil || a < 0 || a > max {
 				return nil, false
 			}
 			lo, hi = a, a
 			if step != 1 {
-				hi = 59 // "5/10" means every 10 minutes from 5, as cron reads it
+				hi = max // "5/10" means every 10 from 5, as cron reads it
 			}
 		}
 		for m := lo; m <= hi; m += step {
@@ -687,10 +706,21 @@ func cronMinutes(field string) ([]int, bool) {
 	return out, true
 }
 
+// cronHasConsecutive reports whether a sorted value set names two values in
+// a row, the last and the first wrapping (23 then 0 for hours).
+func cronHasConsecutive(values []int, max int) bool {
+	for i := 1; i < len(values); i++ {
+		if values[i]-values[i-1] == 1 {
+			return true
+		}
+	}
+	return len(values) > 1 && values[0] == 0 && values[len(values)-1] == max
+}
+
 // cronMinGapMinutes is the shortest time between two firings a minute set
 // allows: the smallest gap between its minutes within an hour, and, when the
-// hour field can name two hours in a row (anything but a single hour), the
-// gap across the top of the hour as well. One minute a day is 60 or more.
+// hour field names two hours in a row (cronHasConsecutive), the gap across
+// the top of the hour as well. One minute a day is 60 or more.
 func cronMinGapMinutes(minutes []int, hoursMayBeConsecutive bool) int {
 	if len(minutes) == 0 {
 		return 60

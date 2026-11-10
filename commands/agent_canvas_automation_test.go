@@ -259,11 +259,11 @@ func TestCanvasAutomation_RunsMapExecutions(t *testing.T) {
 				{HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{ExecutionID: "ex_3", Status: godo.HostedAgentTriggerExecutionStatusRunning, CreatedAt: at}},
 				{HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{ExecutionID: "ex_2", Status: godo.HostedAgentTriggerExecutionStatusFailed, FailureReason: "session gone", CreatedAt: at, UpdatedAt: done}},
 				{HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{ExecutionID: "ex_1", Status: godo.HostedAgentTriggerExecutionStatusSucceeded, CreatedAt: at, UpdatedAt: done}},
-			}, "", nil)
+			}, "page2", nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_1/runs?limit=2&offset=0", "")
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		assert.EqualValues(t, 3, body["total"])
+		assert.EqualValues(t, 4, body["total"], "one page filled the window; a page remained, so total says there is more")
 		runs := body["runs"].([]any)
 		require.Len(t, runs, 2)
 		assert.Equal(t, "RUNNING", runs[0].(map[string]any)["status"])
@@ -332,7 +332,15 @@ func TestCanvasAutomation_MinimumIntervalCoversEveryMinuteShape(t *testing.T) {
 		require.Len(t, errs, 1, expr)
 		assert.Equal(t, "interval_too_short", errs[0].Code, expr)
 	}
-	fine := []string{"*/5 * * * *", "0 * * * *", "0,30 * * * *", "0,58 9 * * *", "0-59/10 * * * *", "15 9 * * 1-5", "0 */2 * * *"}
+	fine := []string{"*/5 * * * *", "0 * * * *", "0,30 * * * *", "0,58 9 * * *", "0-59/10 * * * *", "15 9 * * 1-5", "0 */2 * * *", "0,58 */2 * * *", "0,58 1,3,5 * * *"}
+	for _, expr := range []string{"0,58 9,10 * * *", "0,58 23,0 * * *", "0,58 8-10 * * *"} {
+		errs := validateCanvasTrigger(&canvasTrigger{Type: "cron", Schedule: expr})
+		require.Len(t, errs, 1, expr)
+		assert.Equal(t, "interval_too_short", errs[0].Code, expr)
+	}
+	errs := validateCanvasTrigger(&canvasTrigger{Type: "cron", Schedule: "0 24 * * *"})
+	require.Len(t, errs, 1)
+	assert.Equal(t, "invalid_cron", errs[0].Code)
 	for _, expr := range fine {
 		assert.Empty(t, validateCanvasTrigger(&canvasTrigger{Type: "cron", Schedule: expr}), expr)
 	}
@@ -374,9 +382,12 @@ func TestCanvasAutomation_MethodNotAllowedAndStatusMapping(t *testing.T) {
 	assert.Equal(t, "CANCELLED", canvasRunStatus("cancelled"))
 	assert.Equal(t, "SKIPPED", canvasRunStatus("skipped"))
 	assert.Equal(t, "FAILED", canvasRunStatus("timed_out"))
+	assert.Equal(t, "RUNNING", canvasRunStatus("queued"), "an in-flight status the build does not know keeps the tab polling")
+	assert.Equal(t, "RUNNING", canvasRunStatus("cancelling"))
 	run := toCanvasRun(godo.HostedAgentTriggerExecution{ExecutionID: "e", Status: "timed_out"})
 	require.NotNil(t, run.ErrorDetail)
 	assert.Equal(t, "execution status timed_out", *run.ErrorDetail)
+	assert.Nil(t, toCanvasRun(godo.HostedAgentTriggerExecution{ExecutionID: "q", Status: "queued"}).CompletedAt)
 }
 
 // The tab is on for an openhands session on a loopback bind only; any other
