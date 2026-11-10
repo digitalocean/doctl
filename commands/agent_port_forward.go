@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/signal"
@@ -17,8 +18,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/godo"
 	"github.com/gorilla/websocket"
@@ -268,25 +271,33 @@ func tunnelHeader(token, deviceID string) http.Header {
 // tunnels, matching launch/attach so users don't have to sequence resume
 // themselves (BUG-044). Terminal sessions are rejected; already-ready
 // sessions are left alone.
-func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) error {
-	return ensureSessionAwake(c, sessionID, "port-forwarded")
+func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) (*do.HostedAgentSession, error) {
+	return ensureSessionAwakeSession(c, sessionID, "port-forwarded")
 }
 
 // ensureSessionAwake is the shared half of the above: `verb` names what the
 // caller is about to do with the session, for the terminal-status error
 // ("cannot be port-forwarded", "cannot serve Agent Canvas").
 func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
+	_, err := ensureSessionAwakeSession(c, sessionID, verb)
+	return err
+}
+
+// ensureSessionAwakeSession is ensureSessionAwake that also hands back the
+// session as it was read (before any resume), for callers that need its
+// agent kind.
+func ensureSessionAwakeSession(c *CmdConfig, sessionID string, verb string) (*do.HostedAgentSession, error) {
 	svc := c.HostedAgents()
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
-		return beautifyAgentError(err)
+		return nil, beautifyAgentError(err)
 	}
 	if isTerminalSessionStatus(sess.Status) {
-		return fmt.Errorf("session %s is %s and cannot be %s",
+		return nil, fmt.Errorf("session %s is %s and cannot be %s",
 			displaySessionRef(sess), humanSessionStatus(sess.Status), verb)
 	}
 	if sess.Status != godo.HostedAgentSessionStatusPaused {
-		return nil
+		return sess, nil
 	}
 
 	stylingEnabled = detectStyling()
@@ -296,7 +307,7 @@ func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
 	// so the prepay card has to be built here or a gated resume would print a
 	// raw REST dump.
 	if err := svc.ResumeSession(sessionID); err != nil {
-		return beautifyAgentErrorFor(c, err)
+		return nil, beautifyAgentErrorFor(c, err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), runWaitTimeout)
@@ -304,9 +315,9 @@ func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
 	prog := newCreationProgress(c.Out)
 	defer prog.stop()
 	if _, err := waitForSessionReady(ctx, svc, sessionID, prog); err != nil {
-		return beautifyAgentError(err)
+		return nil, beautifyAgentError(err)
 	}
-	return nil
+	return sess, nil
 }
 
 // RunAgentsPortForward opens local TCP tunnels to ports inside the session's
@@ -319,7 +330,8 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := ensureSessionAwakeForPortForward(c, sessionID); err != nil {
+	sess, err := ensureSessionAwakeForPortForward(c, sessionID)
+	if err != nil {
 		return err
 	}
 	pairs := make([]forwardPair, 0, len(c.Args)-1)
@@ -336,6 +348,16 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	}
 	if address != "127.0.0.1" && address != "localhost" && address != "::1" {
 		warn("binding %s exposes the tunnel to anyone who can reach this address", address)
+	}
+	// An openhands session's Canvas port is served as HTTP rather than as raw
+	// bytes, so the Automate tab's /api/automation calls can be answered here
+	// (canvasAutomationServer); everything else still crosses the tunnel. The
+	// tab's answers carry actions taken with the user's token, so they are
+	// given on a loopback bind only.
+	canvasHTTP := sess != nil && sess.HostedAgentSession != nil && sess.AgentKind == hostedAgentKindOpenHands
+	var automation http.Handler
+	if canvasHTTP && isLoopbackBind(address) {
+		automation = loopbackOnly(newCanvasAutomationServer(sessionID, c.HostedAgentTriggers()))
 	}
 
 	header := tunnelHeader(c.getContextAccessToken(), deviceid.Get())
@@ -365,6 +387,21 @@ func RunAgentsPortForward(c *CmdConfig) error {
 			address, localPort, pair.remote, sessionID)
 
 		warner := newTunnelWarner(pair.remote)
+		if canvasHTTP && pair.remote == canvasPort {
+			if automation != nil {
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (its Automate tab is answered by doctl through the triggers API)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			} else {
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab off: it needs a loopback --address)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, automation))
+			}()
+			continue
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -518,3 +555,128 @@ func bridgeLocalConn(ctx context.Context, local net.Conn, wsURL string, header h
 	ws.Close()
 	return err
 }
+
+// canvasForwardHandler is the HTTP face of a tunnel to an openhands
+// session's Canvas port: a request under /api/automation goes to the
+// automation handler (when given), any other request, WebSocket upgrades
+// included, is proxied through the tunnel to the guest. The guest sees the
+// request as it came, Host and all, since that is what the raw tunnel would
+// carry; the ReverseProxy only owns hop-by-hop headers and the 101 splice.
+func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, automation http.Handler) http.Handler {
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return dialTunnelConn(ctx, wsURL, header, tracer)
+		},
+		DisableCompression: true,
+		MaxIdleConns:       8,
+		IdleConnTimeout:    90 * time.Second,
+	}
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(&url.URL{Scheme: "http", Host: "canvas.tunnel"})
+			pr.Out.Host = pr.In.Host
+		},
+		Transport:     transport,
+		FlushInterval: -1,
+		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, err error) {
+			if warner != nil {
+				warner.report(err)
+			}
+			http.Error(w, "the session did not answer through the tunnel; see the doctl terminal", http.StatusBadGateway)
+		},
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if automation != nil && (r.URL.Path == canvasAutomationPrefix || strings.HasPrefix(r.URL.Path, canvasAutomationPrefix+"/")) {
+			automation.ServeHTTP(w, r)
+			return
+		}
+		proxy.ServeHTTP(w, r)
+	})
+}
+
+// serveCanvasForward runs the HTTP server for one Canvas pair until ctx ends.
+func serveCanvasForward(ctx context.Context, ln net.Listener, handler http.Handler) {
+	server := &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: 30 * time.Second,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+	}
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}()
+	_ = server.Serve(ln)
+}
+
+// dialTunnelConn opens one port-forward WebSocket and presents it as a
+// net.Conn: binary frames in are bytes out, bytes in are binary frames out.
+func dialTunnelConn(ctx context.Context, wsURL string, header http.Header, tracer *wsTracer) (net.Conn, error) {
+	ws, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
+	body := handshakeBody(resp)
+	if tracer != nil {
+		tracer.handshake(wsURL, header, resp, body)
+	}
+	if err != nil {
+		return nil, serverRejection(resp, body, err)
+	}
+	return &wsTunnelConn{ws: ws}, nil
+}
+
+// wsTunnelConn adapts a gorilla WebSocket to net.Conn for http.Transport.
+type wsTunnelConn struct {
+	ws      *websocket.Conn
+	readBuf []byte
+	writeMu sync.Mutex
+	closed  bool
+}
+
+func (c *wsTunnelConn) Read(p []byte) (int, error) {
+	for len(c.readBuf) == 0 {
+		mt, data, err := c.ws.ReadMessage()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				return 0, io.EOF
+			}
+			return 0, err
+		}
+		if mt == websocket.BinaryMessage {
+			c.readBuf = data
+		}
+	}
+	n := copy(p, c.readBuf)
+	c.readBuf = c.readBuf[n:]
+	return n, nil
+}
+
+func (c *wsTunnelConn) Write(p []byte) (int, error) {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	if c.closed {
+		return 0, net.ErrClosed
+	}
+	if err := c.ws.WriteMessage(websocket.BinaryMessage, p); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+func (c *wsTunnelConn) Close() error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	if c.closed {
+		return nil
+	}
+	c.closed = true
+	_ = c.ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	return c.ws.Close()
+}
+
+func (c *wsTunnelConn) LocalAddr() net.Addr  { return c.ws.UnderlyingConn().LocalAddr() }
+func (c *wsTunnelConn) RemoteAddr() net.Addr { return c.ws.UnderlyingConn().RemoteAddr() }
+func (c *wsTunnelConn) SetDeadline(t time.Time) error {
+	return errors.Join(c.ws.SetReadDeadline(t), c.ws.SetWriteDeadline(t))
+}
+func (c *wsTunnelConn) SetReadDeadline(t time.Time) error  { return c.ws.SetReadDeadline(t) }
+func (c *wsTunnelConn) SetWriteDeadline(t time.Time) error { return c.ws.SetWriteDeadline(t) }
