@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "triggers", "config", "connections", "sizes", "regions", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "workspace", "triggers", "config", "connections", "sizes", "regions", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -4076,7 +4076,7 @@ func TestRunAgentsLaunch_AttachAuthFailure(t *testing.T) {
 		var pretty *agentPrettyError
 		require.True(t, errors.As(err, &pretty))
 		assert.Equal(t, "Authentication failed", pretty.title)
-		assert.Contains(t, pretty.tips, "doctl auth init")
+		assert.Contains(t, pretty.tips, "doctl auth login")
 		assert.Equal(t, "Authentication failed", pretty.Title())
 		assert.NotContains(t, pretty.Reason(), "GET http://")
 		assert.NotContains(t, pretty.Error(), "GET http://")
@@ -4615,6 +4615,60 @@ func TestDrainStream_HITLReattachShowsCommand(t *testing.T) {
 	assert.NotContains(t, out, "action pending")
 	assert.Equal(t, 1, pending.len())
 	assert.Equal(t, hitlID, pending.get())
+}
+
+// streamStateFrame writes a stream.state control frame carrying a session id,
+// which sseFrame's envelope omits. renderReplayTruncated reads that id off the
+// frame, so the notice's command half only exists when it is present.
+func streamStateFrame(sessionID, dataJSON string) string {
+	return fmt.Sprintf(
+		"data: {\"event_id\":\"\",\"session_id\":%q,\"type\":%q,\"data\":%s}\n\n",
+		sessionID, string(godo.HostedAgentEventKindStreamState), dataJSON,
+	)
+}
+
+// TestDrainStream_ReplayTruncatedNotice covers MARSOHS-900: a catching_up
+// window marked truncated skipped the events between this device's cursor and
+// head-N, and the pane must say so before the replayed events rather than
+// presenting them as continuous.
+func TestDrainStream_ReplayTruncatedNotice(t *testing.T) {
+	body := streamStateFrame("sess_x", `{"state":"catching_up","cursor":"","truncated":true}`) +
+		sseFrame("evt-1", string(godo.HostedAgentEventKindSessionUpdated), `{}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	superseded, _ := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.False(t, superseded)
+	out := buf.String()
+	assert.Contains(t, out, "earlier activity not shown")
+	// The pointer has to name a runnable command, so the session id matters.
+	assert.Contains(t, out, "logs sess_x")
+}
+
+// TestDrainStream_CatchingUpWithoutTruncatedIsSilent is the other half of the
+// contract: the marker is omitted when false, which is the common case, and a
+// complete replay must not be annotated as if it had a hole.
+func TestDrainStream_CatchingUpWithoutTruncatedIsSilent(t *testing.T) {
+	body := streamStateFrame("sess_x", `{"state":"catching_up","cursor":""}`)
+	srv := httptest.NewServer(hostedAgentSSEHandler(body, nil))
+	t.Cleanup(srv.Close)
+
+	client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+	assert.NoError(t, err)
+	stream := openHostedAgentStream(t, client, nil)
+	defer stream.Close()
+
+	var buf bytes.Buffer
+	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
+
+	assert.NotContains(t, buf.String(), "earlier activity not shown")
 }
 
 // TestRenderApprovalResolvedLine confirms the resolved line shares

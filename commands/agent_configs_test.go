@@ -43,10 +43,11 @@ func TestAgentConfigCreate(t *testing.T) {
 		require.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o600))
 
 		tm.hostedAgents.EXPECT().
-			CreateAgentConfig(gomock.Any()).
-			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+			CreateAgentConfig(gomock.Any(), false).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 				assert.Equal(t, "my-config", req.Name)
 				assert.Contains(t, req.ManifestYAML, "agent: opencode")
+				assert.False(t, manageModelAccessKey)
 				return &godo.HostedAgentConfig{ID: "cfg_1", Name: "my-config"}, nil
 			})
 
@@ -69,10 +70,11 @@ func TestAgentConfigCreate_SecretInjectedFromFlag(t *testing.T) {
 		require.NoError(t, os.WriteFile(keyFile, []byte("sk-ant-from-file\n"), 0o600))
 
 		tm.hostedAgents.EXPECT().
-			CreateAgentConfig(gomock.Any()).
-			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+			CreateAgentConfig(gomock.Any(), false).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 				assert.Contains(t, req.ManifestYAML, "sk-ant-from-file")
 				assert.NotContains(t, req.ManifestYAML, "placeholder", "the flag overrides a value already in the file")
+				assert.False(t, manageModelAccessKey)
 				return &godo.HostedAgentConfig{ID: "cfg_secret", Name: "reviewer"}, nil
 			})
 
@@ -106,16 +108,89 @@ func TestAgentConfigCreate_SecretSatisfiesClaudeEnvRef(t *testing.T) {
 			"agent: claude-code\nenv:\n  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}\n"), 0o600))
 
 		tm.hostedAgents.EXPECT().
-			CreateAgentConfig(gomock.Any()).
-			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+			CreateAgentConfig(gomock.Any(), false).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 				assert.Contains(t, req.ManifestYAML, "sk-ant-from-secret")
 				assert.NotContains(t, req.ManifestYAML, "${ANTHROPIC_API_KEY}")
+				assert.False(t, manageModelAccessKey)
 				return &godo.HostedAgentConfig{ID: "cfg_claude", Name: "reviewer"}, nil
 			})
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "reviewer")
 		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=sk-ant-from-secret"})
+		require.NoError(t, RunAgentsConfigCreate(config))
+	})
+}
+
+// A harness-inference manifest with a model and no API key asks the platform
+// to mint HARNESS_INFERENCE_API_KEY for the durable Environment.
+func TestAgentConfigCreate_HarnessModelOptsInToManagedKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte(
+			"harness: openhands\ntemplate: openhands\nkeep_warm: false\nenv:\n  HARNESS_INFERENCE_MODEL: openai-gpt-5.5\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any(), true).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
+				assert.True(t, manageModelAccessKey)
+				assert.Contains(t, req.ManifestYAML, harnessInferenceModelEnv)
+				assert.NotContains(t, req.ManifestYAML, harnessInferenceAPIKeyEnv)
+				return &godo.HostedAgentConfig{ID: "cfg_oh", Name: "oh"}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "oh")
+		require.NoError(t, RunAgentsConfigCreate(config))
+	})
+}
+
+// BYOK via --secret HARNESS_INFERENCE_API_KEY keeps the value in the manifest
+// and does not ask the platform to mint.
+func TestAgentConfigCreate_HarnessKeyBYOKSkipsManagedKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte(
+			"harness: openhands\ntemplate: openhands\nkeep_warm: false\nenv:\n  HARNESS_INFERENCE_MODEL: openai-gpt-5.5\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any(), false).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
+				assert.False(t, manageModelAccessKey)
+				assert.Contains(t, req.ManifestYAML, "sk-do-byok")
+				return &godo.HostedAgentConfig{ID: "cfg_byok", Name: "oh"}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "oh")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{harnessInferenceAPIKeyEnv + "=sk-do-byok"})
+		require.NoError(t, RunAgentsConfigCreate(config))
+	})
+}
+
+// A vendor OPENAI_API_KEY means the guest will not use the minted DO key, so
+// doctl must not opt the Environment into manage_model_access_key.
+func TestAgentConfigCreate_OpenAIKeySkipsManagedKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte(
+			"harness: hermes\nenv:\n  HARNESS_INFERENCE_MODEL: openai-gpt-5.5\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any(), false).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
+				assert.False(t, manageModelAccessKey)
+				assert.Contains(t, req.ManifestYAML, "sk-openai")
+				return &godo.HostedAgentConfig{ID: "cfg_oai", Name: "hm"}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "hm")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{openAIAPIKeyEnv + "=sk-openai"})
 		require.NoError(t, RunAgentsConfigCreate(config))
 	})
 }

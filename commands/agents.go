@@ -494,6 +494,10 @@ func Agents() *Command {
 		},
 	}
 
+	// Persistent, so every subcommand accepts it either side of the subcommand
+	// name. See agents_region.go for what it selects.
+	addAgentRegionFlag(cmd)
+
 	// start/run are kept as aliases so scripts written against earlier betas
 	// (and the partner guide that still says start) keep working; create is
 	// the canonical verb.
@@ -506,7 +510,7 @@ func Agents() *Command {
 	AddBoolFlag(cmdCreate, doctl.ArgAgentDryRun, "", false, "Print the fully-resolved manifest (secrets redacted) and exit without creating anything")
 	AddStringFlag(cmdCreate, doctl.ArgAgentOnHITL, "", "", "Stay attached headlessly and resolve every approval request this way (approve|reject|defer), until the run finishes. For unattended automation; no TUI, no keyboard input.")
 	markAgentCreationSourcesExclusive(cmdCreate)
-	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --harness openhands --model anthropic-claude-4.5-sonnet; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --harness opencode --dry-run`
+	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --harness openhands --model anthropic-claude-4.5-sonnet; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --from-config my-config --name my-session --workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f; ` + agentCLI + ` create --harness opencode --dry-run`
 
 	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate [<manifest>]",
 		"Validate an agent manifest",
@@ -531,7 +535,7 @@ func Agents() *Command {
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentDryRun)
 	cmdLaunch.Flags().MarkHidden(doctl.ArgAgentOnHITL)
 	markAgentCreationSourcesExclusive(cmdLaunch)
-	cmdLaunch.Example = agentCLI + ` launch my-session; ` + agentCLI + ` launch; ` + agentCLI + ` launch agent-spec.yaml; ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` launch --from-config my-config --name my-session`
+	cmdLaunch.Example = agentCLI + ` launch my-session; ` + agentCLI + ` launch; ` + agentCLI + ` launch agent-spec.yaml; ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` launch --from-config my-config --name my-session --workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f`
 
 	cmdStartProxy := CmdBuilder(cmd, RunAgentsStartProxy, "start-proxy",
 		"Bridge the Codex CLI to a hosted session",
@@ -700,6 +704,7 @@ Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` po
 	cmdBalance.Example = `doctl harness-runtime balance; doctl harness-runtime balance -o json`
 
 	cmd.AddCommand(AgentCheckpoints())
+	cmd.AddCommand(AgentWorkspaces())
 	cmd.AddCommand(AgentTriggers())
 	cmd.AddCommand(AgentConfigs())
 	cmd.AddCommand(AgentConnections())
@@ -741,6 +746,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgInferenceModel, "", "", agentModelFlagDesc)
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
+	AddStringFlag(cmd, doctl.ArgAgentWorkspace, "", "", agentWorkspaceFlagDesc)
 }
 
 // agentResumeOnTopoffFlagDesc documents the consent this flag grants once, in
@@ -785,6 +791,11 @@ const agentPermissionFlagDesc = "Tool-permission default for a --harness session
 	"ask (raise an approval request per tool call, resolvable with '" + agentCLI + " approve'), or deny. " +
 	"Written as the manifest's permissions.default. Only valid with --harness; a --spec manifest declares its own."
 
+// No backticks, for the same reason as agentTemplateFlagDesc.
+const agentWorkspaceFlagDesc = "ID of a persistent workspace to keep this session's /workspace files in (see '" + agentCLI + " workspace create'). " +
+	"Only valid with --from-config: save the manifest as an Agent Config first. " +
+	"Per-session, so pass it on each create. A workspace is held by one session at a time."
+
 const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
 	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
@@ -822,6 +833,9 @@ type agentCreationSource struct {
 	// server takes it as a query parameter precisely so the immutable,
 	// config-shareable agents.yaml cannot carry per-session spending consent.
 	resumeOnTopoff bool
+	// workspaceID is the persistent workspace to attach. Only valid with
+	// --from-config, where it is sent in the create request body.
+	workspaceID string
 }
 
 // bareSandbox reports whether this source asks for a session with no agent,
@@ -918,6 +932,10 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		return nil, err
 	}
 	resumeOnTopoff, err := c.Doit.GetBool(c.NS, doctl.ArgAgentResumeOnTopoff)
+	if err != nil {
+		return nil, err
+	}
+	workspaceID, err := invocationString(c, doctl.ArgAgentWorkspace)
 	if err != nil {
 		return nil, err
 	}
@@ -1099,12 +1117,20 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			doctl.ArgAgentTemplate, doctl.ArgAgentHarness)
 	}
 
+	// Only a session created from a saved Agent Config can attach a workspace.
+	// Any other source would drop the flag, so fail before any API call.
+	workspaceID = strings.TrimSpace(workspaceID)
+	if workspaceID != "" && configRef == "" {
+		return nil, errWorkspaceNeedsConfig()
+	}
+
 	src := &agentCreationSource{
 		harness:        harness,
 		repo:           repo,
 		prompt:         prompt,
 		name:           name,
 		resumeOnTopoff: resumeOnTopoff,
+		workspaceID:    workspaceID,
 	}
 
 	if configRef != "" {
@@ -1183,8 +1209,22 @@ func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationPr
 			return nil, err
 		}
 	}
+	sess, err := createAgentSessionIn(c, src, prog)
+	if err != nil {
+		return nil, err
+	}
+	// Both create paths converge here, so the region that answered is the
+	// region every follow-up in this invocation must address.
+	if err := useSessionLocationHost(c, sess); err != nil {
+		return nil, err
+	}
+	reportSessionRegion(c, sess)
+	return sess, nil
+}
+
+func createAgentSessionIn(c *CmdConfig, src *agentCreationSource, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if src.configID != "" {
-		return createSessionFromConfig(c, src.configID, src.name, src.resumeOnTopoff, prog)
+		return createSessionFromConfig(c, src.configID, src.name, src.resumeOnTopoff, src.workspaceID, prog)
 	}
 	// Checked here rather than at resolution time so --dry-run, which stores
 	// nothing, can still re-print a manifest it already redacted.
@@ -1413,7 +1453,7 @@ func sendInitialPrompt(c *CmdConfig, sessionID string, src *agentCreationSource)
 
 // createSessionFromConfig creates a session from an Agent Config ID. Shared by
 // `create --from-config` and `launch --from-config`.
-func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
+func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff bool, workspaceID string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if name == "" {
 		return nil, fmt.Errorf("--%s is required when creating from --%s", doctl.ArgAgentName, doctl.ArgAgentFromConfig)
 	}
@@ -1423,10 +1463,18 @@ func createSessionFromConfig(c *CmdConfig, configID, name string, resumeOnTopoff
 	if prog != nil {
 		prog.wait("Creating hosted session from config…")
 	}
+	region, err := agentRegionFlag()
+	if err != nil {
+		return nil, err
+	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:           name,
 		ConfigID:       configID,
 		ResumeOnTopoff: resumeOnTopoff,
+		WorkspaceID:    workspaceID,
+		// A placement check, not a routing instruction: the host already chose
+		// the region, and the server rejects a body region that disagrees.
+		Region: region,
 	})
 	if err != nil {
 		if sessionLimitErr(err) {
@@ -1878,6 +1926,10 @@ func RunAgentsList(c *CmdConfig) error {
 	}
 
 	stylingEnabled = detectStyling()
+	// A list is single-region: it shows the rows held by the region it was
+	// addressed to, and never merges regions. Saying which one is the
+	// difference between "no sessions" and "no sessions here".
+	fmt.Fprintln(c.Out, colorize("Region: "+resolvedAgentRegion(), colMuted))
 	printSessionsList(c.Out, sessions)
 	if nextPageToken != "" {
 		fmt.Fprintf(c.Out, "\n%s %s\n", colorize("Next page token:", colMuted), nextPageToken)
@@ -3798,6 +3850,13 @@ const (
 	msgReconnectFailed       = "Failed to reconnect to agent activity stream."
 	msgSuperseded            = "This session was attached from another window on this device. Stopping the stream here."
 
+	// Shown when the server replayed the session's head instead of the point
+	// this device left off at, so the events in between are missing from the
+	// pane. Deliberately muted rather than a warning: the stream is healthy and
+	// correctly bounded, and the only thing wrong would be reading what follows
+	// as a continuous transcript.
+	msgReplayTruncated = "… earlier activity not shown"
+
 	// Shown when the stream goes quiet after the prepay gate paused the
 	// session, in place of the reconnect chatter that would otherwise be the
 	// only explanation on offer. The pause card above has already named the
@@ -4787,6 +4846,25 @@ func sessionLimitErr(err error) bool {
 // superseded us, and the two would evict each other indefinitely.
 //
 // It also returns what this connection learned about the session being paused.
+// renderReplayTruncated says that the replayed window is the session's head
+// rather than this device's resume point, so the events in between are not in
+// the pane. Without it the replay reads as a continuous transcript and a hole
+// in the middle is indistinguishable from a session that was simply quiet —
+// most often after another device drove the session past the replay window
+// while this one was away.
+//
+// `logs` is the pointer rather than a fix because it replays the stored history
+// from the start, so it has the part this window skipped. The session id comes
+// off the control frame; the line degrades to the bare notice without it rather
+// than printing a command that cannot be run.
+func renderReplayTruncated(w io.Writer, sessionID string) {
+	line := msgReplayTruncated
+	if id := strings.TrimSpace(sessionID); id != "" {
+		line = fmt.Sprintf("%s — run 'doctl %s logs %s' for the full transcript", line, agentCmdName, id)
+	}
+	fmt.Fprintf(w, "\n%s\n", colorize(line, colMuted))
+}
+
 // A stream that ends right after a pause did not drop — it was stopped, for a
 // reason already known here — so the caller can explain the silence instead of
 // reporting it as a connection failure.
@@ -4840,17 +4918,25 @@ func drainStream(stream *godo.HostedAgentSessionStream, out io.Writer, pending *
 		ev := stream.Current()
 
 		// stream.state reports the health of the connection, not session
-		// activity, so it never renders and never moves the cursor.
+		// activity, so it never renders as an event and never moves the cursor.
+		// Two of its states still have something to say to the user.
 		if ev.Kind == godo.HostedAgentEventKindStreamState {
 			var st godo.HostedAgentStreamState
-			if err := json.Unmarshal(ev.Payload, &st); err == nil && st.State == godo.HostedAgentStreamStateSuperseded {
-				reasoning.end()
-				thinking.stop()
-				acc.flush(out)
-				flushAwaitingApproval(out, &awaiting, hitlLabels)
-				tools.flush(out)
-				fmt.Fprintf(out, "\n%s\n", msgSuperseded)
-				return true, paused.outcome()
+			if err := json.Unmarshal(ev.Payload, &st); err == nil {
+				switch {
+				case st.State == godo.HostedAgentStreamStateSuperseded:
+					reasoning.end()
+					thinking.stop()
+					acc.flush(out)
+					flushAwaitingApproval(out, &awaiting, hitlLabels)
+					tools.flush(out)
+					fmt.Fprintf(out, "\n%s\n", msgSuperseded)
+					return true, paused.outcome()
+				case st.State == godo.HostedAgentStreamStateCatchingUp && st.Truncated:
+					// The frame precedes the replayed events, so the notice
+					// lands where it belongs: above the window it describes.
+					renderReplayTruncated(out, ev.SessionID)
+				}
 			}
 			_ = warmup.noteBackendEvent(ev)
 			continue
@@ -8324,15 +8410,25 @@ var agentKindDisplayNames = map[godo.HostedAgentKind]string{
 	godo.HostedAgentKindCursorCLI:   "Cursor CLI",
 	godo.HostedAgentKindOpenAICodex: "Codex",
 	hostedAgentKindOpenHands:        "OpenHands",
+	hostedAgentKindHermes:           "Hermes",
+	hostedAgentKindLangGraph:        "LangGraph",
+	hostedAgentKindCrewAI:           "CrewAI",
 	godo.HostedAgentKindCustom:      "Custom",
 	godo.HostedAgentKindNone:        "None",
 	hostedAgentKindSandbox:          "None",
 }
 
-// hostedAgentKindOpenHands is the agent kind harness-api reports for sessions
-// running the OpenHands Agent Server (template `openhands`). Declared here
-// until godo adds the constant; the wire value is the one harness-api emits.
-const hostedAgentKindOpenHands godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
+// The agent kinds harness-api reports for sessions that godo has no constant
+// for yet: the OpenHands Agent Server (template `openhands`), the Hermes
+// gateway (template `coding-hermes`), and the LangGraph and CrewAI framework
+// adapters. Declared here until godo adds them; the wire values are the ones
+// harness-api emits.
+const (
+	hostedAgentKindOpenHands godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
+	hostedAgentKindHermes    godo.HostedAgentKind = "AGENT_KIND_HERMES"
+	hostedAgentKindLangGraph godo.HostedAgentKind = "AGENT_KIND_LANGGRAPH"
+	hostedAgentKindCrewAI    godo.HostedAgentKind = "AGENT_KIND_CREWAI"
+)
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into the friendly "OpenCode"
 // label. Falls back to the sentinel "agent" for unspecified or unrecognized
