@@ -25,6 +25,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func canvasReq(t *testing.T, h http.Handler, method, path, body string) (*httptest.ResponseRecorder, map[string]any) {
@@ -402,4 +403,61 @@ func TestCanvasAutomationOn(t *testing.T) {
 	assert.False(t, canvasAutomationOn(oh, "192.168.1.5"))
 	assert.False(t, canvasAutomationOn(cc, "127.0.0.1"))
 	assert.False(t, canvasAutomationOn(nil, "127.0.0.1"))
+}
+
+// The gates port-forward mounts the API behind, through the wrapped handler:
+// a page on another local port cannot drive it (its Origin is refused and a
+// text/plain write is refused), a non-loopback Host is refused, and the
+// Canvas page itself (same origin, JSON) is served.
+func TestCanvasAutomationHandler_GatesAgainstOtherLocalPages(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers)
+		send := func(method, origin, contentType, host string) *httptest.ResponseRecorder {
+			req := httptest.NewRequest(method, "http://"+host+"/api/automation/v1/preset/prompt", strings.NewReader(`{"name":"x","prompt":"y","trigger":{"type":"cron","schedule":"*/5 * * * *"}}`))
+			req.Host = host
+			if origin != "" {
+				req.Header.Set("Origin", origin)
+			}
+			if contentType != "" {
+				req.Header.Set("Content-Type", contentType)
+			}
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			return rec
+		}
+		// Another forwarded port's page: refused on Origin, and on body type.
+		assert.Equal(t, http.StatusForbidden, send(http.MethodPost, "http://localhost:3000", "text/plain", "127.0.0.1:8000").Code)
+		assert.Equal(t, http.StatusForbidden, send(http.MethodPost, "http://127.0.0.1:3000", "application/json", "127.0.0.1:8000").Code)
+		assert.Equal(t, http.StatusForbidden, send(http.MethodPost, "null", "application/json", "127.0.0.1:8000").Code)
+		assert.Equal(t, http.StatusUnsupportedMediaType, send(http.MethodPost, "", "text/plain", "127.0.0.1:8000").Code, "a write without JSON is refused even with no Origin")
+		// DNS rebinding: a loopback Origin with a foreign Host.
+		assert.Equal(t, http.StatusForbidden, send(http.MethodPost, "http://evil.example:8000", "application/json", "evil.example:8000").Code)
+		// A foreign Origin that happens to equal a foreign Host is still refused by the Host check.
+		assert.Equal(t, http.StatusForbidden, send(http.MethodGet, "http://evil.example:8000", "", "evil.example:8000").Code)
+
+		// The Canvas page: same origin as the listener, JSON, served (and
+		// the API call behind it is made).
+		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+			tr := cronTrigger("tr_ok", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
+			return &tr
+		}()}, nil)
+		assert.Equal(t, http.StatusCreated, send(http.MethodPost, "http://127.0.0.1:8000", "application/json; charset=utf-8", "127.0.0.1:8000").Code)
+		// A read without an Origin (curl) is served too.
+		req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8000/api/automation/health", nil)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+// A model in the create body is refused: a trigger runs on the session's
+// active profile, so a model shown in the tab would not be the one used.
+func TestCanvasAutomation_CreateRefusesAModel(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
+		rec, body := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
+			`{"name":"x","prompt":"y","model":"gpt-5","trigger":{"type":"cron","schedule":"*/5 * * * *"}}`)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, body["detail"], "model")
+	})
 }

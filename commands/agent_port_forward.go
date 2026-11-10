@@ -357,7 +357,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	// tunnelled as raw bytes like every other port (canvasAutomationOn).
 	var automation http.Handler
 	if canvasAutomationOn(sess, address) {
-		automation = loopbackOnly(newCanvasAutomationServer(sessionID, c.HostedAgentTriggers()))
+		automation = canvasAutomationHandler(sessionID, c.HostedAgentTriggers())
 	}
 
 	header := tunnelHeader(c.getContextAccessToken(), deviceid.Get())

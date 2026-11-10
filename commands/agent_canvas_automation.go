@@ -18,7 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -91,6 +93,45 @@ type canvasAutomationServer struct {
 
 func newCanvasAutomationServer(sessionID string, triggers do.HostedAgentTriggersService) *canvasAutomationServer {
 	return &canvasAutomationServer{sessionID: sessionID, triggers: triggers, now: time.Now}
+}
+
+// canvasAutomationHandler is the automation API as port-forward mounts it:
+// behind the loopback Host check every token-adding proxy here has
+// (loopbackOnly), and behind canvasSameOrigin, which is what makes it safe
+// next to other forwarded ports.
+func canvasAutomationHandler(sessionID string, triggers do.HostedAgentTriggersService) http.Handler {
+	return loopbackOnly(canvasSameOrigin(newCanvasAutomationServer(sessionID, triggers)))
+}
+
+// canvasSameOrigin refuses what a loopback Origin check alone lets through:
+// a page on another local port. port-forward often carries one next to
+// Canvas (an app the agent built on :3000, say), and a page there could
+// otherwise POST to this API with the user's token, as a text/plain body
+// needs no CORS preflight. So a request that names an Origin must name this
+// listener's own origin, and a write must be JSON, which a page from another
+// origin can only send after a preflight that is never answered. Canvas is
+// same-origin and sends JSON, so it is untouched; plain tools send no Origin.
+func canvasSameOrigin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); origin != "" && origin != "null" {
+			u, err := url.Parse(origin)
+			if err != nil || u.Scheme != "http" || !strings.EqualFold(u.Host, r.Host) {
+				writeDetail(w, http.StatusForbidden, "the automation API answers the Canvas page on this port only")
+				return
+			}
+		} else if origin == "null" {
+			writeDetail(w, http.StatusForbidden, "the automation API answers the Canvas page on this port only")
+			return
+		}
+		if r.Method == http.MethodPost || r.Method == http.MethodPatch || r.Method == http.MethodPut {
+			ct, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+			if ct != "application/json" {
+				writeDetail(w, http.StatusUnsupportedMediaType, "the automation API takes application/json")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // canvasAutomation is an automation as the tab reads it.
@@ -332,6 +373,10 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 	}
 	if body.Trigger.Type != "cron" {
 		writeDetail(w, http.StatusBadRequest, "only scheduled (cron) automations are available for this session")
+		return
+	}
+	if body.Model != nil && strings.TrimSpace(*body.Model) != "" {
+		writeDetail(w, http.StatusBadRequest, "a trigger runs on the session's active LLM profile; leave the model empty and pick the model in the composer")
 		return
 	}
 	if errs := validateCanvasTrigger(&body.Trigger); len(errs) > 0 {
