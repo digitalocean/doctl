@@ -1384,15 +1384,17 @@ func printSessionListItem(w io.Writer, sess *do.HostedAgentSession) {
 		meta = append(meta, colorize(createdAgo(sess.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+	// The full ID is always shown so it can be pasted into other commands. An
+	// unnamed session already shows its ID as the title, so skip the repeat.
+	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+		fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
+	}
 	// Shown without --verbose, so the list says which sessions hold a workspace.
 	// Like the show card, a session without one gets no line.
 	if ws := strings.TrimSpace(sess.WorkspaceID); ws != "" {
 		fmt.Fprintf(w, "  %s %s\n", colorize("workspace", colMuted), ws)
 	}
 	if Verbose {
-		if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
-			fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
-		}
 		if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
 			fmt.Fprintf(w, "  %s %s\n", colorize("repo", colMuted), repo)
 		}
@@ -1410,10 +1412,8 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 
 	var body strings.Builder
 	body.WriteString(cardRow("Session", ref))
-	if Verbose {
-		if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
-			body.WriteString(cardRow("ID", colorize(id, colMuted)))
-		}
+	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+		body.WriteString(cardRow("ID", colorize(id, colMuted)))
 	}
 	body.WriteString(cardRow("Agent", agent))
 	body.WriteString(cardRow("Status", sessionStatusGlyph(sess.Status)+" "+sessionStatusWithReason(sess)))

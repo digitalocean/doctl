@@ -679,3 +679,91 @@ func TestWorkspaceHelpSaysFromConfigOnly(t *testing.T) {
 	assert.Contains(t, agentsWorkspaceRootHelpMD, "create --from-config reviewer --name review-2 --workspace <workspace-id>")
 	assert.NotContains(t, agentsCreateHelpMD, "--spec agents.yaml --workspace")
 }
+
+func setVerboseForTest(t *testing.T, v bool) {
+	t.Helper()
+	prev := Verbose
+	Verbose = v
+	t.Cleanup(func() { Verbose = prev })
+}
+
+// Distinct from the workspace UUIDs used elsewhere in this file, so a count of
+// it can only match the session ID.
+const sessionIDForTest = "0190a7c4-5b2d-7e81-8f3a-6c9d1e2f4a5b"
+
+// lineIndex returns the index of the first line that satisfies match, or -1.
+func lineIndex(lines []string, match func(string) bool) int {
+	for i, l := range lines {
+		if match(l) {
+			return i
+		}
+	}
+	return -1
+}
+
+func sessionForIDTest(name string) *do.HostedAgentSession {
+	return &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+		SessionID:   sessionIDForTest,
+		Name:        name,
+		Status:      godo.HostedAgentSessionStatusReady,
+		WorkspaceID: "ws_1",
+	}}
+}
+
+// The full session ID shows without --verbose, once, and never repeats the
+// title of an unnamed session.
+func TestPrintSessionShowCard_ID(t *testing.T) {
+	t.Run("named session without verbose", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionShowCard(&buf, sessionForIDTest("demo"))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+		lines := strings.Split(buf.String(), "\n")
+		i := lineIndex(lines, func(l string) bool { return strings.Contains(l, "Session") })
+		require.True(t, i >= 0 && i+1 < len(lines), "no Session row in %q", buf.String())
+		assert.Equal(t, []string{"ID", sessionIDForTest}, strings.Fields(lines[i+1]),
+			"the ID row sits directly below the Session row")
+	})
+	t.Run("unnamed session prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionShowCard(&buf, sessionForIDTest(""))
+		// The next-step hint repeats the reference, so check the card rows only.
+		card, _, _ := strings.Cut(buf.String(), "Next step")
+		assert.Equal(t, 1, strings.Count(card, sessionIDForTest))
+	})
+	t.Run("verbose prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, true)
+		var buf bytes.Buffer
+		printSessionShowCard(&buf, sessionForIDTest("demo"))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+	})
+}
+
+func TestPrintSessionListItem_ID(t *testing.T) {
+	t.Run("sits between the meta line and the workspace line", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionListItem(&buf, sessionForIDTest("demo"))
+		out := buf.String()
+		assert.Equal(t, 1, strings.Count(out, sessionIDForTest))
+		lines := strings.Split(out, "\n")
+		meta := lineIndex(lines, func(l string) bool { return strings.Contains(l, "ready") })
+		id := lineIndex(lines, func(l string) bool { return strings.TrimSpace(l) == sessionIDForTest })
+		ws := lineIndex(lines, func(l string) bool { return strings.HasPrefix(strings.TrimSpace(l), "workspace") })
+		require.True(t, meta >= 0 && id == meta+1 && ws == id+1,
+			"want the ID alone on the line between meta and workspace, got %q", out)
+	})
+	t.Run("unnamed session prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionListItem(&buf, sessionForIDTest(""))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+	})
+	t.Run("verbose prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, true)
+		var buf bytes.Buffer
+		printSessionListItem(&buf, sessionForIDTest("demo"))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+	})
+}
