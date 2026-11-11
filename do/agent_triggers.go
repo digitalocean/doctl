@@ -81,11 +81,27 @@ type HostedAgentTriggersService interface {
 	// the pending execution to poll. godo has no method for this route yet, so
 	// the call goes through the godo client's request plumbing directly.
 	Run(triggerID string) (*HostedAgentTriggerExecution, error)
-	// CreateKeepingSessionAwake is Create with keep_session_awake set: a reuse
-	// trigger that runs while its bound session is awake and leaves it awake
-	// after the run, for a session a user keeps open in Agent Canvas. godo's
-	// request type has no field for it yet, so the body is composed here.
-	CreateKeepingSessionAwake(create *godo.HostedAgentTriggerCreateRequest) (*HostedAgentTriggerCreateResult, error)
+	// The Canvas set: the triggers API fields godo does not carry yet
+	// (keep_session_awake, webhook.events), read and written through the godo
+	// client's request plumbing. CreateForCanvas is Create with
+	// keep_session_awake set (a reuse trigger that runs while its bound
+	// session is awake and leaves it awake, for a session open in Agent
+	// Canvas) and, for a webhook, the event filter. GetWithDetails and
+	// ListWithDetails are Get and List that also return those fields;
+	// UpdateWebhookEvents replaces a webhook trigger's event filter.
+	CreateForCanvas(create *godo.HostedAgentTriggerCreateRequest, webhookEvents []string) (*HostedAgentTriggerCreateResult, *HostedAgentTriggerDetails, error)
+	GetWithDetails(triggerID string) (*HostedAgentTrigger, *HostedAgentTriggerDetails, error)
+	ListWithDetails(pageSize int, pageToken string) ([]HostedAgentTrigger, []HostedAgentTriggerDetails, string, error)
+	UpdateWebhookEvents(triggerID string, events []string) (*HostedAgentTrigger, *HostedAgentTriggerDetails, error)
+}
+
+// HostedAgentTriggerDetails are the trigger fields godo's type does not carry
+// yet, read from the same JSON.
+type HostedAgentTriggerDetails struct {
+	KeepSessionAwake bool
+	// WebhookEvents is the webhook trigger's event filter; empty is every
+	// delivery.
+	WebhookEvents []string
 }
 
 type hostedAgentTriggersService struct {
@@ -107,34 +123,167 @@ const (
 	hostedAgentTriggersPath   = "/v2/harness-runtime/triggers"
 )
 
-func (s *hostedAgentTriggersService) CreateKeepingSessionAwake(create *godo.HostedAgentTriggerCreateRequest) (*HostedAgentTriggerCreateResult, error) {
-	if s.client == nil {
-		return nil, fmt.Errorf("triggers: no API client")
+// triggerDetails decodes the Canvas fields from a trigger's JSON.
+type triggerDetailsJSON struct {
+	KeepSessionAwake bool `json:"keep_session_awake"`
+	Webhook          *struct {
+		Events []string `json:"events"`
+	} `json:"webhook"`
+}
+
+func (j triggerDetailsJSON) details() HostedAgentTriggerDetails {
+	d := HostedAgentTriggerDetails{KeepSessionAwake: j.KeepSessionAwake}
+	if j.Webhook != nil {
+		d.WebhookEvents = j.Webhook.Events
 	}
-	// The godo request as JSON, plus the one field godo does not know.
+	return d
+}
+
+// decodeTriggerWithDetails reads one trigger JSON object twice: as godo's
+// type and as the Canvas fields.
+func decodeTriggerWithDetails(raw json.RawMessage) (*HostedAgentTrigger, *HostedAgentTriggerDetails, error) {
+	var t godo.HostedAgentTrigger
+	if err := json.Unmarshal(raw, &t); err != nil {
+		return nil, nil, err
+	}
+	var j triggerDetailsJSON
+	if err := json.Unmarshal(raw, &j); err != nil {
+		return nil, nil, err
+	}
+	d := j.details()
+	return &HostedAgentTrigger{HostedAgentTrigger: &t}, &d, nil
+}
+
+func (s *hostedAgentTriggersService) CreateForCanvas(create *godo.HostedAgentTriggerCreateRequest, webhookEvents []string) (*HostedAgentTriggerCreateResult, *HostedAgentTriggerDetails, error) {
+	if s.client == nil {
+		return nil, nil, fmt.Errorf("triggers: no API client")
+	}
+	// The godo request as JSON, plus the fields godo does not know.
 	raw, err := json.Marshal(create)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var body map[string]any
 	if err := json.Unmarshal(raw, &body); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	body["keep_session_awake"] = true
+	if len(webhookEvents) > 0 {
+		wh, _ := body["webhook"].(map[string]any)
+		if wh == nil {
+			wh = map[string]any{}
+		}
+		wh["events"] = webhookEvents
+		body["webhook"] = wh
+	}
 	ctx := context.TODO()
 	req, err := s.client.NewRequest(ctx, http.MethodPost, hostedAgentTriggersPath, body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	var resp godo.HostedAgentTriggerCreateResponse
-	if _, err := s.client.Do(ctx, req, &resp); err != nil {
-		return nil, err
+	var root struct {
+		Trigger       json.RawMessage `json:"trigger"`
+		WebhookSecret string          `json:"webhook_secret"`
 	}
-	result := &HostedAgentTriggerCreateResult{WebhookSecret: resp.WebhookSecret}
-	if resp.Trigger != nil {
-		result.Trigger = &HostedAgentTrigger{HostedAgentTrigger: resp.Trigger}
+	if _, err := s.client.Do(ctx, req, &root); err != nil {
+		return nil, nil, err
 	}
-	return result, nil
+	result := &HostedAgentTriggerCreateResult{WebhookSecret: root.WebhookSecret}
+	if len(root.Trigger) == 0 {
+		return result, &HostedAgentTriggerDetails{}, nil
+	}
+	t, d, err := decodeTriggerWithDetails(root.Trigger)
+	if err != nil {
+		return nil, nil, err
+	}
+	result.Trigger = t
+	return result, d, nil
+}
+
+func (s *hostedAgentTriggersService) GetWithDetails(triggerID string) (*HostedAgentTrigger, *HostedAgentTriggerDetails, error) {
+	if s.client == nil {
+		return nil, nil, fmt.Errorf("triggers: no API client")
+	}
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf(hostedAgentTriggersPath+"/%s", url.PathEscape(triggerID)), nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	var root struct {
+		Trigger json.RawMessage `json:"trigger"`
+	}
+	if _, err := s.client.Do(ctx, req, &root); err != nil {
+		return nil, nil, err
+	}
+	if len(root.Trigger) == 0 {
+		return nil, nil, fmt.Errorf("triggers: the API returned no trigger")
+	}
+	return decodeTriggerWithDetails(root.Trigger)
+}
+
+func (s *hostedAgentTriggersService) ListWithDetails(pageSize int, pageToken string) ([]HostedAgentTrigger, []HostedAgentTriggerDetails, string, error) {
+	if s.client == nil {
+		return nil, nil, "", fmt.Errorf("triggers: no API client")
+	}
+	q := url.Values{}
+	if pageSize > 0 {
+		q.Set("page_size", fmt.Sprint(pageSize))
+	}
+	if pageToken != "" {
+		q.Set("page_token", pageToken)
+	}
+	path := hostedAgentTriggersPath
+	if len(q) > 0 {
+		path += "?" + q.Encode()
+	}
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	var root struct {
+		Triggers      []json.RawMessage `json:"triggers"`
+		NextPageToken string            `json:"next_page_token"`
+	}
+	if _, err := s.client.Do(ctx, req, &root); err != nil {
+		return nil, nil, "", err
+	}
+	triggers := make([]HostedAgentTrigger, 0, len(root.Triggers))
+	details := make([]HostedAgentTriggerDetails, 0, len(root.Triggers))
+	for _, raw := range root.Triggers {
+		t, d, err := decodeTriggerWithDetails(raw)
+		if err != nil {
+			return nil, nil, "", err
+		}
+		triggers = append(triggers, *t)
+		details = append(details, *d)
+	}
+	return triggers, details, root.NextPageToken, nil
+}
+
+func (s *hostedAgentTriggersService) UpdateWebhookEvents(triggerID string, events []string) (*HostedAgentTrigger, *HostedAgentTriggerDetails, error) {
+	if s.client == nil {
+		return nil, nil, fmt.Errorf("triggers: no API client")
+	}
+	if events == nil {
+		events = []string{}
+	}
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodPatch, fmt.Sprintf(hostedAgentTriggersPath+"/%s", url.PathEscape(triggerID)),
+		map[string]any{"webhook": map[string]any{"events": events}})
+	if err != nil {
+		return nil, nil, err
+	}
+	var root struct {
+		Trigger json.RawMessage `json:"trigger"`
+	}
+	if _, err := s.client.Do(ctx, req, &root); err != nil {
+		return nil, nil, err
+	}
+	if len(root.Trigger) == 0 {
+		return nil, nil, fmt.Errorf("triggers: the API returned no trigger")
+	}
+	return decodeTriggerWithDetails(root.Trigger)
 }
 
 func (s *hostedAgentTriggersService) Run(triggerID string) (*HostedAgentTriggerExecution, error) {

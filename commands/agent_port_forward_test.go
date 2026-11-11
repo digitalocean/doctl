@@ -629,7 +629,7 @@ func TestCanvasForwardHandler_ProxiesThroughTheTunnelAndAnswersAutomationLocally
 
 	// The automation API as port-forward mounts it, gates included; the
 	// triggers service is never reached in this test (health needs none).
-	local := httptest.NewServer(canvasForwardHandler(wsURL, tunnelHeader("T0K", ""), nil, nil, "sess_1", nil))
+	local := httptest.NewServer(canvasForwardHandler(wsURL, tunnelHeader("T0K", ""), nil, nil, "sess_1", nil, nil))
 	defer local.Close()
 
 	resp, err := http.Get(local.URL + "/canvas/")

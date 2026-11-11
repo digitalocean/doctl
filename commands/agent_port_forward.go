@@ -400,7 +400,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, sess.SessionID, triggers))
+				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, sess.SessionID, triggers, c.Out))
 			}()
 			continue
 		}
@@ -580,8 +580,8 @@ func canvasAutomationOn(sess *do.HostedAgentSession, address string) bool {
 // WebSocket upgrades included, is proxied through the tunnel to the guest. The guest sees the
 // request as it came, Host and all, since that is what the raw tunnel would
 // carry; the ReverseProxy only owns hop-by-hop headers and the 101 splice.
-func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, sessionID string, triggers do.HostedAgentTriggersService) http.Handler {
-	automation := canvasAutomationHandler(sessionID, triggers)
+func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, sessionID string, triggers do.HostedAgentTriggersService, out io.Writer) http.Handler {
+	automation := canvasAutomationHandler(sessionID, triggers, out)
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return dialTunnelConn(ctx, wsURL, header, tracer)

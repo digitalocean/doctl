@@ -71,19 +71,20 @@ func (mr *MockHostedAgentTriggersServiceMockRecorder) Create(arg0 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).Create), arg0)
 }
 
-// CreateKeepingSessionAwake mocks base method.
-func (m *MockHostedAgentTriggersService) CreateKeepingSessionAwake(create *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
+// CreateForCanvas mocks base method.
+func (m *MockHostedAgentTriggersService) CreateForCanvas(create *godo.HostedAgentTriggerCreateRequest, webhookEvents []string) (*do.HostedAgentTriggerCreateResult, *do.HostedAgentTriggerDetails, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateKeepingSessionAwake", create)
+	ret := m.ctrl.Call(m, "CreateForCanvas", create, webhookEvents)
 	ret0, _ := ret[0].(*do.HostedAgentTriggerCreateResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(*do.HostedAgentTriggerDetails)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
-// CreateKeepingSessionAwake indicates an expected call of CreateKeepingSessionAwake.
-func (mr *MockHostedAgentTriggersServiceMockRecorder) CreateKeepingSessionAwake(create any) *gomock.Call {
+// CreateForCanvas indicates an expected call of CreateForCanvas.
+func (mr *MockHostedAgentTriggersServiceMockRecorder) CreateForCanvas(create, webhookEvents any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKeepingSessionAwake", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).CreateKeepingSessionAwake), create)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateForCanvas", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).CreateForCanvas), create, webhookEvents)
 }
 
 // Delete mocks base method.
@@ -143,6 +144,22 @@ func (m *MockHostedAgentTriggersService) GetExecution(triggerID, executionID str
 func (mr *MockHostedAgentTriggersServiceMockRecorder) GetExecution(triggerID, executionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecution", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).GetExecution), triggerID, executionID)
+}
+
+// GetWithDetails mocks base method.
+func (m *MockHostedAgentTriggersService) GetWithDetails(triggerID string) (*do.HostedAgentTrigger, *do.HostedAgentTriggerDetails, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWithDetails", triggerID)
+	ret0, _ := ret[0].(*do.HostedAgentTrigger)
+	ret1, _ := ret[1].(*do.HostedAgentTriggerDetails)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetWithDetails indicates an expected call of GetWithDetails.
+func (mr *MockHostedAgentTriggersServiceMockRecorder) GetWithDetails(triggerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithDetails", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).GetWithDetails), triggerID)
 }
 
 // List mocks base method.
@@ -208,6 +225,23 @@ func (mr *MockHostedAgentTriggersServiceMockRecorder) ListWebhookProviders() *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWebhookProviders", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).ListWebhookProviders))
 }
 
+// ListWithDetails mocks base method.
+func (m *MockHostedAgentTriggersService) ListWithDetails(pageSize int, pageToken string) ([]do.HostedAgentTrigger, []do.HostedAgentTriggerDetails, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWithDetails", pageSize, pageToken)
+	ret0, _ := ret[0].([]do.HostedAgentTrigger)
+	ret1, _ := ret[1].([]do.HostedAgentTriggerDetails)
+	ret2, _ := ret[2].(string)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// ListWithDetails indicates an expected call of ListWithDetails.
+func (mr *MockHostedAgentTriggersServiceMockRecorder) ListWithDetails(pageSize, pageToken any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWithDetails", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).ListWithDetails), pageSize, pageToken)
+}
+
 // RotateSecret mocks base method.
 func (m *MockHostedAgentTriggersService) RotateSecret(triggerID string, gracePeriodSeconds *int) (*do.HostedAgentTriggerRotateSecretResult, error) {
 	m.ctrl.T.Helper()
@@ -251,4 +285,20 @@ func (m *MockHostedAgentTriggersService) Update(triggerID string, update *godo.H
 func (mr *MockHostedAgentTriggersServiceMockRecorder) Update(triggerID, update any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).Update), triggerID, update)
+}
+
+// UpdateWebhookEvents mocks base method.
+func (m *MockHostedAgentTriggersService) UpdateWebhookEvents(triggerID string, events []string) (*do.HostedAgentTrigger, *do.HostedAgentTriggerDetails, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWebhookEvents", triggerID, events)
+	ret0, _ := ret[0].(*do.HostedAgentTrigger)
+	ret1, _ := ret[1].(*do.HostedAgentTriggerDetails)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// UpdateWebhookEvents indicates an expected call of UpdateWebhookEvents.
+func (mr *MockHostedAgentTriggersServiceMockRecorder) UpdateWebhookEvents(triggerID, events any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWebhookEvents", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).UpdateWebhookEvents), triggerID, events)
 }
