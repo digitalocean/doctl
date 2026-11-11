@@ -1057,6 +1057,10 @@ const (
 
 	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
 	ArgAgentForwardAddress = "address"
+	// ArgAgentAutomate is how port-forward answers Agent Canvas's Automate tab:
+	// confirm (ask in the terminal before a trigger is created, enabled or run),
+	// allow (no questions) or off (the tab is not served).
+	ArgAgentAutomate = "automate"
 	// ArgAgentCanvasPort is the local port the canvas proxy listens on (0 = any free port).
 	ArgAgentCanvasPort = "port"
 	// ArgAgentCanvasOpen opens the local Canvas URL in the default browser.

@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/term"
 	"io"
 	"log"
 	"net"
@@ -355,7 +357,26 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	// tab's answers carry actions taken with the user's token, so they are
 	// given on a loopback bind only, and on any other bind the port is
 	// tunnelled as raw bytes like every other port (canvasAutomationOn).
-	automation := canvasAutomationOn(sess, address)
+	automateMode, err := c.Doit.GetString(c.NS, doctl.ArgAgentAutomate)
+	if err != nil {
+		return err
+	}
+	automateMode = strings.ToLower(strings.TrimSpace(automateMode))
+	switch automateMode {
+	case "confirm", "allow", "off":
+	default:
+		return fmt.Errorf("--%s must be confirm, allow or off", doctl.ArgAgentAutomate)
+	}
+	automation := canvasAutomationOn(sess, address) && automateMode != "off"
+	// The tab's writes act with the user's token, and the page that asks for
+	// them is served from the sandbox, which the agent itself can change. So
+	// a write is confirmed out of band, here in the terminal, unless the
+	// user chose --automate=allow; without a terminal to ask at, writes are
+	// refused and the tab says so.
+	var confirmWrite canvasConfirmFunc
+	if automateMode == "confirm" {
+		confirmWrite = terminalConfirm(c.Out)
+	}
 
 	header := tunnelHeader(c.getContextAccessToken(), deviceid.Get())
 
@@ -385,11 +406,18 @@ func RunAgentsPortForward(c *CmdConfig) error {
 
 		warner := newTunnelWarner(pair.remote)
 		if pair.remote == canvasPort && isOpenHandsSession(sess) {
-			if !automation {
+			switch {
+			case automateMode == "off":
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab off: --automate=off)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			case !automation:
 				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab off: it needs a loopback --address)\n",
 					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
-			} else {
-				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (its Automate tab is answered by doctl through the triggers API)\n",
+			case automateMode == "confirm":
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab answered by doctl through the triggers API; creating, enabling or running an automation asks here first)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			default:
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab answered by doctl through the triggers API, no confirmation)\n",
 					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
 			}
 		}
@@ -400,7 +428,7 @@ func RunAgentsPortForward(c *CmdConfig) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, sess.SessionID, triggers, c.Out))
+				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, sess.SessionID, triggers, c.Out, confirmWrite))
 			}()
 			continue
 		}
@@ -580,8 +608,8 @@ func canvasAutomationOn(sess *do.HostedAgentSession, address string) bool {
 // WebSocket upgrades included, is proxied through the tunnel to the guest. The guest sees the
 // request as it came, Host and all, since that is what the raw tunnel would
 // carry; the ReverseProxy only owns hop-by-hop headers and the 101 splice.
-func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, sessionID string, triggers do.HostedAgentTriggersService, out io.Writer) http.Handler {
-	automation := canvasAutomationHandler(sessionID, triggers, out)
+func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, sessionID string, triggers do.HostedAgentTriggersService, out io.Writer, confirm canvasConfirmFunc) http.Handler {
+	automation := canvasAutomationHandler(sessionID, triggers, out, confirm)
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return dialTunnelConn(ctx, wsURL, header, tracer)
@@ -700,3 +728,36 @@ func (c *wsTunnelConn) SetDeadline(t time.Time) error {
 }
 func (c *wsTunnelConn) SetReadDeadline(t time.Time) error  { return c.ws.SetReadDeadline(t) }
 func (c *wsTunnelConn) SetWriteDeadline(t time.Time) error { return c.ws.SetWriteDeadline(t) }
+
+// terminalConfirm asks the user, on the port-forward terminal, to allow a
+// write the Automate tab requested. The question is answered on stdin, out
+// of the page's reach; no terminal means no, as does a minute's silence.
+func terminalConfirm(out io.Writer) canvasConfirmFunc {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return func(string) (bool, string) {
+			return false, "doctl has no terminal to ask at; start port-forward with --automate=allow to let Canvas create and run automations without asking"
+		}
+	}
+	var mu sync.Mutex
+	reader := bufio.NewReader(os.Stdin)
+	return func(what string) (bool, string) {
+		mu.Lock()
+		defer mu.Unlock()
+		fmt.Fprintf(out, "\nAgent Canvas asks to %s.\n  Allow? [y/N] (no answer within 60s means no) ", what)
+		answer := make(chan string, 1)
+		go func() {
+			line, _ := reader.ReadString('\n')
+			answer <- strings.ToLower(strings.TrimSpace(line))
+		}()
+		select {
+		case a := <-answer:
+			if a == "y" || a == "yes" {
+				return true, ""
+			}
+			return false, "declined in the doctl terminal"
+		case <-time.After(60 * time.Second):
+			fmt.Fprintln(out, "\n  no answer; refused")
+			return false, "no answer in the doctl terminal within 60s"
+		}
+	}
+}

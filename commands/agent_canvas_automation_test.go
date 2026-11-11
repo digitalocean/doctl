@@ -419,7 +419,7 @@ func TestCanvasAutomationOn(t *testing.T) {
 // Canvas page itself (same origin, JSON) is served.
 func TestCanvasAutomationHandler_GatesAgainstOtherLocalPages(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers, nil)
+		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers, nil, nil)
 		send := func(method, origin, contentType, host string) *httptest.ResponseRecorder {
 			req := httptest.NewRequest(method, "http://"+host+"/api/automation/v1/preset/prompt", strings.NewReader(`{"name":"x","prompt":"y","trigger":{"type":"cron","schedule":"*/5 * * * *"}}`))
 			req.Host = host
@@ -483,7 +483,7 @@ func TestCanvasAutomationHandler_BodilessPostPassesTheJSONGate(t *testing.T) {
 		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
 		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
 		tm.hostedAgentTriggers.EXPECT().Run("tr_1").Return(nil, &godo.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}, Message: "not found"})
-		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers, nil)
+		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers, nil, nil)
 		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8000/api/automation/v1/tr_1/dispatch", nil)
 		req.Host = "127.0.0.1:8000"
 		req.Header.Set("Origin", "http://127.0.0.1:8000")
@@ -591,5 +591,72 @@ func TestCanvasAutomation_PatchEventOn(t *testing.T) {
 		rec, body := canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_h", `{"trigger":{"type":"event","source":"github","on":"issues.opened"}}`)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, "issues.opened", body["trigger"].(map[string]any)["on"])
+	})
+}
+
+// With a confirmation hook, a create, an enable and a run-now wait for the
+// user's answer; a no is a 403 with the reason and no API call; reads,
+// disables and deletes never ask.
+func TestCanvasAutomation_ConfirmationGatesWrites(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var asked []string
+		answer := false
+		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
+		h.confirm = func(what string) (bool, string) {
+			asked = append(asked, what)
+			return answer, "declined in the doctl terminal"
+		}
+		paused := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusPaused)
+		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&paused, &do.HostedAgentTriggerDetails{}, nil).AnyTimes()
+
+		rec, body := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
+			`{"name":"nightly","prompt":"y","trigger":{"type":"cron","schedule":"*/5 * * * *","timezone":"UTC"}}`)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Contains(t, body["detail"], "declined")
+		rec, _ = canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_1", `{"enabled":true}`)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		rec, _ = canvasReq(t, h, http.MethodPost, "/api/automation/v1/tr_1/dispatch", "")
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		require.Len(t, asked, 3)
+		assert.Contains(t, asked[0], `create automation "nightly" on schedule "*/5 * * * *"`)
+		assert.Contains(t, asked[1], `enable automation`)
+		assert.Contains(t, asked[2], `run automation`)
+
+		// A read and a disable do not ask.
+		rec, _ = canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_1", "")
+		assert.Equal(t, http.StatusOK, rec.Code)
+		rec, _ = canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_1", `{"enabled":false}`)
+		assert.Equal(t, http.StatusOK, rec.Code, "already paused: nothing to do, nothing to ask")
+		assert.Len(t, asked, 3)
+
+		// A yes lets the create through.
+		answer = true
+		tm.hostedAgentTriggers.EXPECT().CreateForCanvas(gomock.Any(), gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+			tr := cronTrigger("tr_ok", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
+			return &tr
+		}()}, &do.HostedAgentTriggerDetails{}, nil)
+		rec, _ = canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
+			`{"name":"nightly","prompt":"y","trigger":{"type":"cron","schedule":"*/5 * * * *","timezone":"UTC"}}`)
+		assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	})
+}
+
+// The team scan behind the list is reused for ten seconds and dropped by a
+// write, so a tab refresh is one scan, not one per request.
+func TestCanvasAutomation_ListIsCachedBriefly(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		mine := cronTrigger("tr_mine", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
+		tm.hostedAgentTriggers.EXPECT().ListWithDetails(100, "").Return([]do.HostedAgentTrigger{mine}, []do.HostedAgentTriggerDetails{{}}, "", nil).Times(2)
+		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_mine").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
+		tm.hostedAgentTriggers.EXPECT().Delete("tr_mine").Return(nil)
+		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
+		for i := 0; i < 3; i++ {
+			rec, _ := canvasReq(t, h, http.MethodGet, "/api/automation/v1?limit=50", "")
+			require.Equal(t, http.StatusOK, rec.Code)
+		}
+		rec, _ := canvasReq(t, h, http.MethodDelete, "/api/automation/v1/tr_mine", "")
+		require.Equal(t, http.StatusNoContent, rec.Code)
+		rec, _ = canvasReq(t, h, http.MethodGet, "/api/automation/v1?limit=50", "")
+		require.Equal(t, http.StatusOK, rec.Code, "the delete dropped the cache, so this is the second scan")
 	})
 }

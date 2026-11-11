@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	_ "time/tzdata" // the timezone pick list must load on a Windows build too
 
@@ -43,6 +44,11 @@ import (
 // user's token, and maps every call onto triggers. A trigger made from the
 // tab is bound to the session (session_mode reuse), so it is the one trigger
 // the console's Triggers page and `doctl harness-runtime triggers` show too.
+//
+// The page that drives this API is served from the sandbox, which the agent
+// itself can change, so a write that costs or acts (create, enable, run
+// now) is confirmed out of band in the port-forward terminal unless the user
+// started with --automate=allow (canvasConfirmFunc). Reads are free.
 //
 // What the tab can do here follows the capabilities answer: scheduled (cron)
 // automations with a prompt, and event automations on GitHub or GitLab, which
@@ -122,7 +128,23 @@ type canvasAutomationServer struct {
 	// out is the port-forward terminal, where a new event automation's
 	// webhook URL and one-time secret are printed; nil prints nothing.
 	out io.Writer
+	// confirm, when set, is asked before a write that costs or acts (create,
+	// enable, run now); it answers no with a reason the tab shows. Reads,
+	// disables and deletes never ask: they cost nothing.
+	confirm canvasConfirmFunc
+	// listCache keeps the last team scan for canvasListCacheTTL, so a tab
+	// refresh is not fifty API calls each time; invalidated by every write.
+	listMu     sync.Mutex
+	listCached []canvasTriggerRow
+	listAt     time.Time
 }
+
+// canvasConfirmFunc asks the user to allow a write the tab requested; it
+// returns the answer and, on no, the reason to show.
+type canvasConfirmFunc func(what string) (bool, string)
+
+// canvasListCacheTTL is how long a team scan is reused by the tab's list.
+const canvasListCacheTTL = 10 * time.Second
 
 func newCanvasAutomationServer(sessionID string, triggers do.HostedAgentTriggersService) *canvasAutomationServer {
 	return &canvasAutomationServer{sessionID: sessionID, triggers: triggers, now: time.Now}
@@ -132,10 +154,32 @@ func newCanvasAutomationServer(sessionID string, triggers do.HostedAgentTriggers
 // behind the loopback Host check every token-adding proxy here has
 // (loopbackOnly), and behind canvasSameOrigin, which is what makes it safe
 // next to other forwarded ports.
-func canvasAutomationHandler(sessionID string, triggers do.HostedAgentTriggersService, out io.Writer) http.Handler {
+func canvasAutomationHandler(sessionID string, triggers do.HostedAgentTriggersService, out io.Writer, confirm canvasConfirmFunc) http.Handler {
 	srv := newCanvasAutomationServer(sessionID, triggers)
 	srv.out = out
+	srv.confirm = confirm
 	return loopbackOnly(canvasSameOrigin(srv))
+}
+
+// allowed asks the confirmation hook, when there is one, and answers the
+// tab with 403 when the user says no (or nobody can be asked).
+func (s *canvasAutomationServer) allowed(w http.ResponseWriter, what string) bool {
+	if s.confirm == nil {
+		return true
+	}
+	ok, why := s.confirm(what)
+	if ok {
+		return true
+	}
+	writeDetail(w, http.StatusForbidden, "not allowed: "+why)
+	return false
+}
+
+// invalidateList drops the cached team scan after a write.
+func (s *canvasAutomationServer) invalidateList() {
+	s.listMu.Lock()
+	s.listCached, s.listAt = nil, time.Time{}
+	s.listMu.Unlock()
 }
 
 // canvasSameOrigin refuses what a loopback Origin check alone lets through:
@@ -345,6 +389,13 @@ func (s *canvasAutomationServer) ownedWithDetails(w http.ResponseWriter, id stri
 // id is compared case-insensitively: the server stores it in lower case
 // and a ref typed in upper case must still find its triggers.
 func (s *canvasAutomationServer) sessionTriggers() ([]canvasTriggerRow, error) {
+	s.listMu.Lock()
+	if s.listCached != nil && s.now().Sub(s.listAt) < canvasListCacheTTL {
+		cached := s.listCached
+		s.listMu.Unlock()
+		return cached, nil
+	}
+	s.listMu.Unlock()
 	var out []canvasTriggerRow
 	token := ""
 	for page := 0; page < 50; page++ {
@@ -367,6 +418,12 @@ func (s *canvasAutomationServer) sessionTriggers() ([]canvasTriggerRow, error) {
 		token = next
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].trigger.CreatedAt.Time.After(out[j].trigger.CreatedAt.Time) })
+	if out == nil {
+		out = []canvasTriggerRow{}
+	}
+	s.listMu.Lock()
+	s.listCached, s.listAt = out, s.now()
+	s.listMu.Unlock()
 	return out, nil
 }
 
@@ -406,6 +463,7 @@ func (s *canvasAutomationServer) delete(w http.ResponseWriter, id string) {
 		writeGodoError(w, err)
 		return
 	}
+	s.invalidateList()
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -467,11 +525,22 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 		req.Webhook = &godo.HostedAgentCreateWebhookConfig{Provider: godo.HostedAgentWebhookProviderKey(body.Trigger.Source)}
 		events = canvasEventList(body.Trigger.On)
 	}
+	what := fmt.Sprintf("create automation %q", body.Name)
+	switch body.Trigger.Type {
+	case "cron":
+		what += fmt.Sprintf(" on schedule %q (%s)", req.Cron.CronExpr, req.Cron.Timezone)
+	case "event":
+		what += fmt.Sprintf(" on %s events %v", body.Trigger.Source, events)
+	}
+	if !s.allowed(w, what) {
+		return
+	}
 	result, details, err := s.triggers.CreateForCanvas(req, events)
 	if err != nil {
 		writeGodoError(w, err)
 		return
 	}
+	s.invalidateList()
 	if result == nil || result.Trigger == nil || result.Trigger.HostedAgentTrigger == nil {
 		writeDetail(w, http.StatusBadGateway, "the triggers API returned no trigger")
 		return
@@ -568,6 +637,9 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 			want = godo.HostedAgentTriggerStatusActive
 		}
 		if want != current.Status {
+			if want == godo.HostedAgentTriggerStatusActive && !s.allowed(w, fmt.Sprintf("enable automation %q", current.Name)) {
+				return
+			}
 			update.Status = want
 			changed = true
 		}
@@ -591,6 +663,7 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 			writeGodoError(w, err)
 			return
 		}
+		s.invalidateList()
 		if t != nil && t.HostedAgentTrigger != nil {
 			current = t.HostedAgentTrigger
 		}
@@ -642,6 +715,7 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		writeGodoError(w, err)
 		return
 	}
+	s.invalidateList()
 	if t == nil || t.HostedAgentTrigger == nil {
 		writeDetail(w, http.StatusBadGateway, "the triggers API returned no trigger")
 		return
@@ -655,7 +729,11 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 // harness-trigger: a 404 or 405 from it after the trigger itself was found
 // means the region does not have it yet, which the tab is told as 501.
 func (s *canvasAutomationServer) dispatch(w http.ResponseWriter, id string) {
-	if _, ok := s.owned(w, id); !ok {
+	t, ok := s.owned(w, id)
+	if !ok {
+		return
+	}
+	if !s.allowed(w, fmt.Sprintf("run automation %q now", t.Name)) {
 		return
 	}
 	e, err := s.triggers.Run(id)
