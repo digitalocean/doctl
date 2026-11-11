@@ -76,6 +76,15 @@ func TestResolveHarnessAgent(t *testing.T) {
 		assert.Equal(t, "Hermes", prettyHarnessName("hermes"))
 	})
 
+	t.Run("minimax-code aliases", func(t *testing.T) {
+		for _, in := range []string{"minimax-code", "minimax", "MiniMax-Code", " MINIMAX "} {
+			got, err := resolveHarnessAgent(in)
+			require.NoError(t, err)
+			assert.Equal(t, minimaxCodeAgentName, got)
+		}
+		assert.Equal(t, "MiniMax Code", prettyHarnessName("minimax"))
+	})
+
 	t.Run("unknown harness", func(t *testing.T) {
 		_, err := resolveHarnessAgent("not-a-harness")
 		assert.Error(t, err)
@@ -83,6 +92,7 @@ func TestResolveHarnessAgent(t *testing.T) {
 		assert.Contains(t, err.Error(), "codex-agentapi")
 		assert.Contains(t, err.Error(), "openhands")
 		assert.Contains(t, err.Error(), "hermes")
+		assert.Contains(t, err.Error(), "minimax-code")
 	})
 }
 
@@ -95,6 +105,7 @@ func TestPrettyAgentKind_GatewayAndFrameworkKinds(t *testing.T) {
 	assert.Equal(t, "Hermes", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_HERMES")))
 	assert.Equal(t, "LangGraph", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_LANGGRAPH")))
 	assert.Equal(t, "CrewAI", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_CREWAI")))
+	assert.Equal(t, "MiniMax Code", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_MINIMAX_CODE")))
 	assert.Equal(t, "agent", prettyAgentKind(godo.HostedAgentKind("AGENT_KIND_NOT_A_KIND")), "an unrecognized kind keeps the sentinel")
 }
 
@@ -186,6 +197,50 @@ func TestBuildHarnessManifest(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, "${ANTHROPIC_API_KEY}", secrets["ANTHROPIC_API_KEY"])
 		assert.NotContains(t, doc, "config")
+	})
+
+	// minimax-code is the claude-code shape with MiniMax's key: the vendor
+	// key slot and nothing else. No env (mcode has a default model), no
+	// template pin (harness-api resolves the kind), no keep_warm, no config.
+	t.Run("minimax-code references MINIMAX_API_KEY and nothing else", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax"})
+		require.NoError(t, err)
+
+		var doc map[string]any
+		require.NoError(t, yaml.Unmarshal(raw, &doc))
+		assert.Equal(t, "minimax-code", doc["harness"])
+		assert.NotContains(t, doc, "env")
+		assert.NotContains(t, doc, "template")
+		assert.NotContains(t, doc, "keep_warm")
+		assert.NotContains(t, doc, "config")
+		secrets, ok := doc["secrets"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, map[any]any{"MINIMAX_API_KEY": "${MINIMAX_API_KEY}"}, secrets)
+	})
+
+	// The slot is a ${MINIMAX_API_KEY} reference, so --harness minimax-code
+	// is the vendor-key path only: with the variable set it expands, without
+	// it the create stops before any API call, naming the variable. A
+	// DigitalOcean Inference session (HARNESS_INFERENCE_API_KEY, no MiniMax
+	// key) therefore needs a hand-written manifest, which is what the
+	// buildHarnessManifest comment says.
+	t.Run("minimax-code's generated manifest expands MINIMAX_API_KEY or stops naming it", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax-code"})
+		require.NoError(t, err)
+
+		out, err := expandManifestEnvCollect(raw, func(name string) (string, bool) {
+			if name == minimaxAPIKeyEnv {
+				return "mm-test-key", true
+			}
+			return "", false
+		})
+		require.NoError(t, err)
+		assert.Contains(t, string(out), "MINIMAX_API_KEY: mm-test-key")
+		assert.NotContains(t, string(out), "${")
+
+		_, err = expandManifestEnvCollect(raw, func(string) (string, bool) { return "", false })
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), minimaxAPIKeyEnv)
 	})
 
 	t.Run("opencode has no injected key requirement", func(t *testing.T) {

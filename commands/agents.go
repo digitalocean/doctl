@@ -734,7 +734,7 @@ func addAgentCreationFlags(cmd *Command) {
 	// word for a session with no agent, and resolveAgentCreationSource refuses
 	// it as a --harness value. There is one way in that we teach, and naming
 	// the absence of an agent as if it were one of the agents taught two.
-	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, openhands, hermes). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
+	AddStringFlag(cmd, doctl.ArgAgentHarness, "", "", "Coding-agent harness (opencode, claude-code, codex, codex-agentapi, openhands, hermes, minimax-code). Builds the manifest for you. codex is the Codex CLI run by DigitalOcean; codex-agentapi is OpenAI's sandbox-provider model, where OpenAI runs the agent loop. Omit it and pass --template sandbox for a sandbox with no agent in it, which you drive with exec, upload, download and port-forward. Mutually exclusive with --spec and --from-config.")
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + harness), e.g. "name: my-session\nharness: opencode"; agent is the original name of harness and still works. Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
@@ -8414,6 +8414,7 @@ var agentKindDisplayNames = map[godo.HostedAgentKind]string{
 	hostedAgentKindHermes:           "Hermes",
 	hostedAgentKindLangGraph:        "LangGraph",
 	hostedAgentKindCrewAI:           "CrewAI",
+	hostedAgentKindMinimaxCode:      "MiniMax Code",
 	godo.HostedAgentKindCustom:      "Custom",
 	godo.HostedAgentKindNone:        "None",
 	hostedAgentKindSandbox:          "None",
@@ -8421,14 +8422,15 @@ var agentKindDisplayNames = map[godo.HostedAgentKind]string{
 
 // The agent kinds harness-api reports for sessions that godo has no constant
 // for yet: the OpenHands Agent Server (template `openhands`), the Hermes
-// gateway (template `coding-hermes`), and the LangGraph and CrewAI framework
-// adapters. Declared here until godo adds them; the wire values are the ones
-// harness-api emits.
+// gateway (template `coding-hermes`), the LangGraph and CrewAI framework
+// adapters, and MiniMax Code (template `coding-minimax-code`). Declared here
+// until godo adds them; the wire values are the ones harness-api emits.
 const (
-	hostedAgentKindOpenHands godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
-	hostedAgentKindHermes    godo.HostedAgentKind = "AGENT_KIND_HERMES"
-	hostedAgentKindLangGraph godo.HostedAgentKind = "AGENT_KIND_LANGGRAPH"
-	hostedAgentKindCrewAI    godo.HostedAgentKind = "AGENT_KIND_CREWAI"
+	hostedAgentKindOpenHands   godo.HostedAgentKind = "AGENT_KIND_OPENHANDS"
+	hostedAgentKindHermes      godo.HostedAgentKind = "AGENT_KIND_HERMES"
+	hostedAgentKindLangGraph   godo.HostedAgentKind = "AGENT_KIND_LANGGRAPH"
+	hostedAgentKindCrewAI      godo.HostedAgentKind = "AGENT_KIND_CREWAI"
+	hostedAgentKindMinimaxCode godo.HostedAgentKind = "AGENT_KIND_MINIMAX_CODE"
 )
 
 // prettyAgentKind turns AGENT_KIND_OPENCODE into the friendly "OpenCode"
