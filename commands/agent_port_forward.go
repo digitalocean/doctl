@@ -738,19 +738,44 @@ func terminalConfirm(out io.Writer) canvasConfirmFunc {
 			return false, "doctl has no terminal to ask at; start port-forward with --automate=allow to let Canvas create and run automations without asking"
 		}
 	}
+	// One reader owns stdin for the life of the tunnel and hands lines over
+	// a channel: a prompt that times out leaves no second reader behind,
+	// and the line it was waiting for is drained before the next prompt so
+	// a late answer is never taken for the new question.
+	lines := make(chan string, 8)
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			line, err := reader.ReadString('\n')
+			if line != "" || err == nil {
+				lines <- strings.ToLower(strings.TrimSpace(line))
+			}
+			if err != nil {
+				close(lines)
+				return
+			}
+		}
+	}()
 	var mu sync.Mutex
-	reader := bufio.NewReader(os.Stdin)
 	return func(what string) (bool, string) {
 		mu.Lock()
 		defer mu.Unlock()
+		for drained := false; !drained; {
+			select {
+			case _, ok := <-lines:
+				if !ok {
+					return false, "the doctl terminal's input is closed"
+				}
+			default:
+				drained = true
+			}
+		}
 		fmt.Fprintf(out, "\nAgent Canvas asks to %s.\n  Allow? [y/N] (no answer within 60s means no) ", what)
-		answer := make(chan string, 1)
-		go func() {
-			line, _ := reader.ReadString('\n')
-			answer <- strings.ToLower(strings.TrimSpace(line))
-		}()
 		select {
-		case a := <-answer:
+		case a, ok := <-lines:
+			if !ok {
+				return false, "the doctl terminal's input is closed"
+			}
 			if a == "y" || a == "yes" {
 				return true, ""
 			}

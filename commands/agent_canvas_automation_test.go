@@ -84,7 +84,7 @@ func TestCanvasAutomation_HealthAndCapabilities(t *testing.T) {
 func TestCanvasAutomation_ListIsScopedToTheSession(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().
-			ListWithDetails(100, "").
+			ListWithDetails("sess_1", 100, "").
 			Return([]do.HostedAgentTrigger{
 				cronTrigger("tr_mine", "sess_1", "0 9 * * 1-5", godo.HostedAgentTriggerStatusActive),
 				cronTrigger("tr_other", "sess_2", "0 1 * * *", godo.HostedAgentTriggerStatusActive),
@@ -321,7 +321,7 @@ func TestCanvasAutomation_APIErrorsPassThrough(t *testing.T) {
 		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_gone").Return(nil, nil, &godo.ErrorResponse{
 			Response: &http.Response{StatusCode: http.StatusNotFound}, Message: "trigger not found",
 		})
-		tm.hostedAgentTriggers.EXPECT().ListWithDetails(100, "").Return(nil, nil, "", assert.AnError)
+		tm.hostedAgentTriggers.EXPECT().ListWithDetails("sess_1", 100, "").Return(nil, nil, "", assert.AnError)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_gone", "")
 		assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -500,7 +500,7 @@ func TestCanvasAutomation_SessionIDCaseAndTriggerIDShape(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_1", "01a1c5e5-5f96-71da-bca5-f5921275d3b0", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
 		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
-		tm.hostedAgentTriggers.EXPECT().ListWithDetails(100, "").Return([]do.HostedAgentTrigger{mine}, []do.HostedAgentTriggerDetails{{}}, "", nil)
+		tm.hostedAgentTriggers.EXPECT().ListWithDetails("01a1c5e5-5f96-71da-bca5-f5921275d3b0", 100, "").Return([]do.HostedAgentTrigger{mine}, []do.HostedAgentTriggerDetails{{}}, "", nil)
 		h := newCanvasAutomationServer("01A1C5E5-5F96-71DA-BCA5-F5921275D3B0", tm.hostedAgentTriggers)
 		rec, _ := canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_1", "")
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -617,17 +617,40 @@ func TestCanvasAutomation_ConfirmationGatesWrites(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 		rec, _ = canvasReq(t, h, http.MethodPost, "/api/automation/v1/tr_1/dispatch", "")
 		assert.Equal(t, http.StatusForbidden, rec.Code)
-		require.Len(t, asked, 3)
+		// Edits that change what runs, when, or on what ask too, as one
+		// question listing the changes; the page can rewrite an enabled
+		// automation, so this is the same gate as a create.
+		rec, _ = canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_1", `{"prompt":"rm -rf everything","trigger":{"type":"cron","schedule":"*/5 * * * *"}}`)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		hook := do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			TriggerID: "tr_h", Name: "gh", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
+			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
+		}}
+		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_h").Return(&hook, &do.HostedAgentTriggerDetails{}, nil).AnyTimes()
+		rec, _ = canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_h", `{"trigger":{"type":"event","source":"github","on":"push"}}`)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		require.Len(t, asked, 5)
 		assert.Contains(t, asked[0], `create automation "nightly" on schedule "*/5 * * * *"`)
-		assert.Contains(t, asked[1], `enable automation`)
+		assert.Contains(t, asked[0], `prompt: "y"`, "the question shows the prompt that will run")
+		assert.Contains(t, asked[0], `keeps the session awake`)
+		assert.Contains(t, asked[1], `change automation`)
+		assert.Contains(t, asked[1], `enable it`)
 		assert.Contains(t, asked[2], `run automation`)
+		assert.Contains(t, asked[3], `prompt: "rm -rf everything"`)
+		assert.Contains(t, asked[3], `schedule: "*/5 * * * *" (UTC)`)
+		assert.Contains(t, asked[4], `events: [push]`)
 
-		// A read and a disable do not ask.
+		// A read, a disable and a rename do not ask.
 		rec, _ = canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_1", "")
 		assert.Equal(t, http.StatusOK, rec.Code)
 		rec, _ = canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_1", `{"enabled":false}`)
 		assert.Equal(t, http.StatusOK, rec.Code, "already paused: nothing to do, nothing to ask")
-		assert.Len(t, asked, 3)
+		renamed := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusPaused)
+		renamed.Name = "renamed"
+		tm.hostedAgentTriggers.EXPECT().Update("tr_1", gomock.Any()).Return(&renamed, nil)
+		rec, _ = canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_1", `{"name":"renamed"}`)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Len(t, asked, 5)
 
 		// A yes lets the create through.
 		answer = true
@@ -646,7 +669,7 @@ func TestCanvasAutomation_ConfirmationGatesWrites(t *testing.T) {
 func TestCanvasAutomation_ListIsCachedBriefly(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_mine", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().ListWithDetails(100, "").Return([]do.HostedAgentTrigger{mine}, []do.HostedAgentTriggerDetails{{}}, "", nil).Times(2)
+		tm.hostedAgentTriggers.EXPECT().ListWithDetails("sess_1", 100, "").Return([]do.HostedAgentTrigger{mine}, []do.HostedAgentTriggerDetails{{}}, "", nil).Times(2)
 		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_mine").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
 		tm.hostedAgentTriggers.EXPECT().Delete("tr_mine").Return(nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
@@ -658,5 +681,21 @@ func TestCanvasAutomation_ListIsCachedBriefly(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, rec.Code)
 		rec, _ = canvasReq(t, h, http.MethodGet, "/api/automation/v1?limit=50", "")
 		require.Equal(t, http.StatusOK, rec.Code, "the delete dropped the cache, so this is the second scan")
+	})
+}
+
+// A region whose triggers API drops keep_session_awake is told to the user
+// in the terminal: there the automation runs only while the tab is closed.
+func TestCanvasAutomation_CreateNotesMissingKeepAwake(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var term bytes.Buffer
+		made := cronTrigger("tr_old", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
+		tm.hostedAgentTriggers.EXPECT().CreateForCanvas(gomock.Any(), gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: &made}, &do.HostedAgentTriggerDetails{KeepSessionAwake: false}, nil)
+		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers, &term, nil)
+		rec, _ := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
+			`{"name":"old","prompt":"y","trigger":{"type":"cron","schedule":"0 9 * * *","timezone":"UTC"}}`)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		assert.Contains(t, term.String(), "cannot keep the session awake yet")
+		assert.Contains(t, term.String(), `"n-tr_old" runs only while this Canvas tab is closed`)
 	})
 }

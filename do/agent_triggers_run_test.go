@@ -97,6 +97,7 @@ func TestHostedAgentTriggersListAndGetWithDetails(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.URL.Path == "/v2/harness-runtime/triggers" {
 			assert.Equal(t, "100", r.URL.Query().Get("page_size"))
+			assert.Equal(t, "sess-1", r.URL.Query().Get("bound_session_id"))
 			_, _ = w.Write([]byte(`{"triggers":[{"trigger_id":"a","kind":"webhook","keep_session_awake":true,"webhook":{"provider":"github","events":["push"]}},{"trigger_id":"b","kind":"cron"}],"next_page_token":"p2"}`))
 			return
 		}
@@ -106,7 +107,7 @@ func TestHostedAgentTriggersListAndGetWithDetails(t *testing.T) {
 	client, err := godo.New(http.DefaultClient, godo.SetBaseURL(srv.URL+"/"))
 	require.NoError(t, err)
 	svc := do.NewHostedAgentTriggersService(client)
-	items, details, next, err := svc.ListWithDetails(100, "")
+	items, details, next, err := svc.ListWithDetails("sess-1", 100, "")
 	require.NoError(t, err)
 	assert.Equal(t, "p2", next)
 	require.Len(t, items, 2)

@@ -226,9 +226,9 @@ func (mr *MockHostedAgentTriggersServiceMockRecorder) ListWebhookProviders() *go
 }
 
 // ListWithDetails mocks base method.
-func (m *MockHostedAgentTriggersService) ListWithDetails(pageSize int, pageToken string) ([]do.HostedAgentTrigger, []do.HostedAgentTriggerDetails, string, error) {
+func (m *MockHostedAgentTriggersService) ListWithDetails(boundSessionID string, pageSize int, pageToken string) ([]do.HostedAgentTrigger, []do.HostedAgentTriggerDetails, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWithDetails", pageSize, pageToken)
+	ret := m.ctrl.Call(m, "ListWithDetails", boundSessionID, pageSize, pageToken)
 	ret0, _ := ret[0].([]do.HostedAgentTrigger)
 	ret1, _ := ret[1].([]do.HostedAgentTriggerDetails)
 	ret2, _ := ret[2].(string)
@@ -237,9 +237,9 @@ func (m *MockHostedAgentTriggersService) ListWithDetails(pageSize int, pageToken
 }
 
 // ListWithDetails indicates an expected call of ListWithDetails.
-func (mr *MockHostedAgentTriggersServiceMockRecorder) ListWithDetails(pageSize, pageToken any) *gomock.Call {
+func (mr *MockHostedAgentTriggersServiceMockRecorder) ListWithDetails(boundSessionID, pageSize, pageToken any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWithDetails", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).ListWithDetails), pageSize, pageToken)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWithDetails", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).ListWithDetails), boundSessionID, pageSize, pageToken)
 }
 
 // RotateSecret mocks base method.

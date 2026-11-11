@@ -47,7 +47,8 @@ import (
 //
 // The page that drives this API is served from the sandbox, which the agent
 // itself can change, so a write that costs or acts (create, enable, run
-// now) is confirmed out of band in the port-forward terminal unless the user
+// now, an edit of what runs or when) is confirmed out of band, with the
+// prompt shown, in the port-forward terminal unless the user
 // started with --automate=allow (canvasConfirmFunc). Reads are free.
 //
 // What the tab can do here follows the capabilities answer: scheduled (cron)
@@ -129,8 +130,9 @@ type canvasAutomationServer struct {
 	// webhook URL and one-time secret are printed; nil prints nothing.
 	out io.Writer
 	// confirm, when set, is asked before a write that costs or acts (create,
-	// enable, run now); it answers no with a reason the tab shows. Reads,
-	// disables and deletes never ask: they cost nothing.
+	// enable, run now, an edit of the prompt, schedule or events); it
+	// answers no with a reason the tab shows. Reads, renames, disables and
+	// deletes never ask: they cost nothing.
 	confirm canvasConfirmFunc
 	// listCache keeps the last team scan for canvasListCacheTTL, so a tab
 	// refresh is not fifty API calls each time; invalidated by every write.
@@ -381,11 +383,10 @@ func (s *canvasAutomationServer) ownedWithDetails(w http.ResponseWriter, id stri
 	return t.HostedAgentTrigger, *d, true
 }
 
-// sessionTriggers lists every trigger bound to this session. The API lists
-// triggers per team with no bound-session filter, so every refresh of the
-// tab reads the team's triggers (pages of 100, up to 50 pages, so a team
-// past 5,000 triggers has the rest unseen here) and keeps this session's;
-// a bound-session filter on the API would make this one call. The session
+// sessionTriggers lists every trigger bound to this session: one call with
+// the API's bound_session_id filter. A region whose triggers API predates
+// the filter ignores it and returns the team's triggers, so the rows are
+// still checked here and paged (100 a page, up to 50 pages). The session
 // id is compared case-insensitively: the server stores it in lower case
 // and a ref typed in upper case must still find its triggers.
 func (s *canvasAutomationServer) sessionTriggers() ([]canvasTriggerRow, error) {
@@ -399,7 +400,7 @@ func (s *canvasAutomationServer) sessionTriggers() ([]canvasTriggerRow, error) {
 	var out []canvasTriggerRow
 	token := ""
 	for page := 0; page < 50; page++ {
-		items, details, next, err := s.triggers.ListWithDetails(100, token)
+		items, details, next, err := s.triggers.ListWithDetails(strings.ToLower(s.sessionID), 100, token)
 		if err != nil {
 			return nil, err
 		}
@@ -532,6 +533,7 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 	case "event":
 		what += fmt.Sprintf(" on %s events %v", body.Trigger.Source, events)
 	}
+	what += fmt.Sprintf("\n  prompt: %s\n  it runs in this session and keeps the session awake (billed) while it does", canvasPromptPreview(body.Prompt))
 	if !s.allowed(w, what) {
 		return
 	}
@@ -549,6 +551,13 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 		details = &do.HostedAgentTriggerDetails{}
 	}
 	t := *result.Trigger.HostedAgentTrigger
+	// A region whose triggers API predates keep_session_awake drops it
+	// silently, and a trigger there waits for the session to pause, which
+	// an open Canvas never does: say so in the terminal, since the tab has
+	// nowhere to.
+	if !details.KeepSessionAwake && s.out != nil {
+		fmt.Fprintf(s.out, "\n  Note: this region's triggers API cannot keep the session awake yet, so %q runs only while this Canvas tab is closed and the session is paused; while the tab is open its runs fail.\n\n", t.Name)
+	}
 	if t.Kind == godo.HostedAgentTriggerKindWebhook {
 		s.printWebhookWiring(t, result.WebhookSecret)
 		// A region whose triggers API does not filter events yet drops the
@@ -617,8 +626,14 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		writeDetail(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// Every change is worked out first and confirmed as one question, then
+	// written: an edit that changes what runs, when, or on what (prompt,
+	// schedule, event filter, enabling) is asked in the terminal like a
+	// create is, since the page can rewrite an enabled automation. A
+	// rename or a pause is not asked.
 	update := &godo.HostedAgentTriggerUpdateRequest{}
 	changed := false
+	var asks []string
 	if body.Name != nil && strings.TrimSpace(*body.Name) != "" && *body.Name != current.Name {
 		update.Name = *body.Name
 		changed = true
@@ -630,6 +645,7 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		}
 		update.PromptTemplate = *body.Prompt
 		changed = true
+		asks = append(asks, "prompt: "+canvasPromptPreview(*body.Prompt))
 	}
 	if body.Enabled != nil {
 		want := godo.HostedAgentTriggerStatusPaused
@@ -637,40 +653,31 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 			want = godo.HostedAgentTriggerStatusActive
 		}
 		if want != current.Status {
-			if want == godo.HostedAgentTriggerStatusActive && !s.allowed(w, fmt.Sprintf("enable automation %q", current.Name)) {
-				return
-			}
 			update.Status = want
 			changed = true
+			if want == godo.HostedAgentTriggerStatusActive {
+				asks = append(asks, "enable it")
+			}
 		}
 	}
 	// An event automation's "on" is the webhook's event filter, its own
 	// call on the API; the trigger row's own fields go below.
+	var events []string
+	setEvents := false
 	if body.Trigger != nil && current.Kind == godo.HostedAgentTriggerKindWebhook && body.Trigger.On != nil {
 		if strings.TrimSpace(body.Trigger.Filter) != "" {
 			writeDetail(w, http.StatusBadRequest, "filter expressions are not supported; pick the events to run on")
 			return
 		}
-		events := canvasEventList(body.Trigger.On)
+		events = canvasEventList(body.Trigger.On)
 		for _, e := range events {
 			if !canvasEventName.MatchString(e) {
 				writeDetail(w, http.StatusBadRequest, fmt.Sprintf("%q is not an event name", e))
 				return
 			}
 		}
-		t, d, err := s.triggers.UpdateWebhookEvents(id, events)
-		if err != nil {
-			writeGodoError(w, err)
-			return
-		}
-		s.invalidateList()
-		if t != nil && t.HostedAgentTrigger != nil {
-			current = t.HostedAgentTrigger
-		}
-		if d != nil {
-			currentDetails = *d
-		}
-		changed = changed || false
+		setEvents = true
+		asks = append(asks, fmt.Sprintf("events: %v", events))
 	}
 	// The schedule and the timezone travel together on the API, so an edit
 	// to either resends both: a new schedule with the timezone kept, or the
@@ -704,6 +711,24 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		if current.Cron.CronExpr != schedule || current.Cron.Timezone != tz {
 			update.Cron = &godo.HostedAgentCreateCronConfig{CronExpr: schedule, Timezone: tz}
 			changed = true
+			asks = append(asks, fmt.Sprintf("schedule: %q (%s)", schedule, tz))
+		}
+	}
+	if len(asks) > 0 && !s.allowed(w, fmt.Sprintf("change automation %q\n  %s", current.Name, strings.Join(asks, "\n  "))) {
+		return
+	}
+	if setEvents {
+		t, d, err := s.triggers.UpdateWebhookEvents(id, events)
+		if err != nil {
+			writeGodoError(w, err)
+			return
+		}
+		s.invalidateList()
+		if t != nil && t.HostedAgentTrigger != nil {
+			current = t.HostedAgentTrigger
+		}
+		if d != nil {
+			currentDetails = *d
 		}
 	}
 	if !changed {
@@ -721,6 +746,16 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	writeJSON(w, http.StatusOK, toCanvasAutomation(*t.HostedAgentTrigger, currentDetails))
+}
+
+// canvasPromptPreview is the prompt as shown in a terminal question: one
+// line, cut at 160 characters, so the user sees what will run.
+func canvasPromptPreview(prompt string) string {
+	p := strings.Join(strings.Fields(prompt), " ")
+	if len(p) > 160 {
+		p = p[:157] + "..."
+	}
+	return fmt.Sprintf("%q", p)
 }
 
 // dispatch is the tab's Run now: the trigger is fired through the run-now

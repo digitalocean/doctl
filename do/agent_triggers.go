@@ -87,11 +87,17 @@ type HostedAgentTriggersService interface {
 	// keep_session_awake set (a reuse trigger that runs while its bound
 	// session is awake and leaves it awake, for a session open in Agent
 	// Canvas) and, for a webhook, the event filter. GetWithDetails and
-	// ListWithDetails are Get and List that also return those fields;
+	// ListWithDetails are Get and List that also return those fields, and
+	// ListWithDetails narrows the list to one bound session when
+	// boundSessionID is set (bound_session_id on the API; an older region
+	// ignores it and returns the team's triggers, so callers still check).
 	// UpdateWebhookEvents replaces a webhook trigger's event filter.
+	//
+	// Order: these shims go once godo#1222 is released and doctl bumps
+	// godo; the cthulhu side (digitalocean/cthulhu#185788) deploys first.
 	CreateForCanvas(create *godo.HostedAgentTriggerCreateRequest, webhookEvents []string) (*HostedAgentTriggerCreateResult, *HostedAgentTriggerDetails, error)
 	GetWithDetails(triggerID string) (*HostedAgentTrigger, *HostedAgentTriggerDetails, error)
-	ListWithDetails(pageSize int, pageToken string) ([]HostedAgentTrigger, []HostedAgentTriggerDetails, string, error)
+	ListWithDetails(boundSessionID string, pageSize int, pageToken string) ([]HostedAgentTrigger, []HostedAgentTriggerDetails, string, error)
 	UpdateWebhookEvents(triggerID string, events []string) (*HostedAgentTrigger, *HostedAgentTriggerDetails, error)
 }
 
@@ -221,11 +227,14 @@ func (s *hostedAgentTriggersService) GetWithDetails(triggerID string) (*HostedAg
 	return decodeTriggerWithDetails(root.Trigger)
 }
 
-func (s *hostedAgentTriggersService) ListWithDetails(pageSize int, pageToken string) ([]HostedAgentTrigger, []HostedAgentTriggerDetails, string, error) {
+func (s *hostedAgentTriggersService) ListWithDetails(boundSessionID string, pageSize int, pageToken string) ([]HostedAgentTrigger, []HostedAgentTriggerDetails, string, error) {
 	if s.client == nil {
 		return nil, nil, "", fmt.Errorf("triggers: no API client")
 	}
 	q := url.Values{}
+	if boundSessionID != "" {
+		q.Set("bound_session_id", boundSessionID)
+	}
 	if pageSize > 0 {
 		q.Set("page_size", fmt.Sprint(pageSize))
 	}
