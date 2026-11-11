@@ -571,6 +571,51 @@ func TestRunAgentsCreate_HermesAsksForAManagedKeyAndADOModel(t *testing.T) {
 	})
 }
 
+// A hermes create that brings OPENAI_API_KEY must not mint a DO Inference key:
+// render-config prefers the vendor key, and an unused minted key would still
+// be stored on the durable config.
+func TestRunAgentsCreate_HermesWithOpenAIKeySkipsManagedKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "harness: hermes")
+				assert.Contains(t, string(manifest), "OPENAI_API_KEY")
+				assert.Contains(t, string(manifest), "sk-openai")
+				assert.False(t, needsManagedModelAccessKey(manifest))
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_hermes_oai",
+						Name:      "hm",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_hermes_oai").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_hermes_oai",
+					Name:      "hm",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "hermes")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "hm")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{openAIAPIKeyEnv + "=sk-openai"})
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.Contains(t, buf.String(), "Session created")
+	})
+}
+
 // A --spec manifest that says `agent: openhands` gets the same key: the
 // decision is read off the manifest, not the --harness flag.
 func TestRunAgentsCreate_OpenHandsSpecAlsoAsksForAManagedKey(t *testing.T) {

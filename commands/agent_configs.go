@@ -150,7 +150,7 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	cfg, err := c.HostedAgents().CreateAgentConfig(&godo.HostedAgentConfigCreateRequest{
 		Name:         name,
 		ManifestYAML: string(manifest),
-	})
+	}, needsManagedModelAccessKey(manifest))
 	if err != nil {
 		return err
 	}
@@ -313,10 +313,17 @@ func RunAgentsConfigStartSession(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	region, err := agentRegionFlag()
+	if err != nil {
+		return err
+	}
 	sess, err := c.HostedAgents().CreateSessionFromConfig(&godo.HostedAgentSessionFromConfigRequest{
 		Name:           name,
 		ConfigID:       configID,
 		ResumeOnTopoff: resumeOnTopoff,
+		// A placement check, not a routing instruction: the host already chose
+		// the region, and the server rejects a body region that disagrees.
+		Region: region,
 	})
 	if err != nil {
 		return err
