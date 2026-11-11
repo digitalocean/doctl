@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -80,6 +81,11 @@ type HostedAgentTriggersService interface {
 	// the pending execution to poll. godo has no method for this route yet, so
 	// the call goes through the godo client's request plumbing directly.
 	Run(triggerID string) (*HostedAgentTriggerExecution, error)
+	// CreateKeepingSessionAwake is Create with keep_session_awake set: a reuse
+	// trigger that runs while its bound session is awake and leaves it awake
+	// after the run, for a session a user keeps open in Agent Canvas. godo's
+	// request type has no field for it yet, so the body is composed here.
+	CreateKeepingSessionAwake(create *godo.HostedAgentTriggerCreateRequest) (*HostedAgentTriggerCreateResult, error)
 }
 
 type hostedAgentTriggersService struct {
@@ -95,8 +101,41 @@ func NewHostedAgentTriggersService(client *godo.Client) HostedAgentTriggersServi
 }
 
 // hostedAgentTriggerRunPath is the run-now route, on the same prefix godo
-// uses for the other trigger routes.
-const hostedAgentTriggerRunPath = "/v2/harness-runtime/triggers/%s/executions"
+// uses for the other trigger routes; hostedAgentTriggersPath is the create route.
+const (
+	hostedAgentTriggerRunPath = "/v2/harness-runtime/triggers/%s/executions"
+	hostedAgentTriggersPath   = "/v2/harness-runtime/triggers"
+)
+
+func (s *hostedAgentTriggersService) CreateKeepingSessionAwake(create *godo.HostedAgentTriggerCreateRequest) (*HostedAgentTriggerCreateResult, error) {
+	if s.client == nil {
+		return nil, fmt.Errorf("triggers: no API client")
+	}
+	// The godo request as JSON, plus the one field godo does not know.
+	raw, err := json.Marshal(create)
+	if err != nil {
+		return nil, err
+	}
+	var body map[string]any
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return nil, err
+	}
+	body["keep_session_awake"] = true
+	ctx := context.TODO()
+	req, err := s.client.NewRequest(ctx, http.MethodPost, hostedAgentTriggersPath, body)
+	if err != nil {
+		return nil, err
+	}
+	var resp godo.HostedAgentTriggerCreateResponse
+	if _, err := s.client.Do(ctx, req, &resp); err != nil {
+		return nil, err
+	}
+	result := &HostedAgentTriggerCreateResult{WebhookSecret: resp.WebhookSecret}
+	if resp.Trigger != nil {
+		result.Trigger = &HostedAgentTrigger{HostedAgentTrigger: resp.Trigger}
+	}
+	return result, nil
+}
 
 func (s *hostedAgentTriggersService) Run(triggerID string) (*HostedAgentTriggerExecution, error) {
 	if s.client == nil {

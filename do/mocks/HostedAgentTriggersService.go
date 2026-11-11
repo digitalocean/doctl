@@ -71,6 +71,21 @@ func (mr *MockHostedAgentTriggersServiceMockRecorder) Create(arg0 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).Create), arg0)
 }
 
+// CreateKeepingSessionAwake mocks base method.
+func (m *MockHostedAgentTriggersService) CreateKeepingSessionAwake(create *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateKeepingSessionAwake", create)
+	ret0, _ := ret[0].(*do.HostedAgentTriggerCreateResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateKeepingSessionAwake indicates an expected call of CreateKeepingSessionAwake.
+func (mr *MockHostedAgentTriggersServiceMockRecorder) CreateKeepingSessionAwake(create any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKeepingSessionAwake", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).CreateKeepingSessionAwake), create)
+}
+
 // Delete mocks base method.
 func (m *MockHostedAgentTriggersService) Delete(triggerID string) error {
 	m.ctrl.T.Helper()

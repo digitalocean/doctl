@@ -44,7 +44,9 @@ import (
 // the console's Triggers page and `doctl harness-runtime triggers` show too.
 //
 // What the tab can do here follows the capabilities answer: scheduled (cron)
-// automations with a prompt. Event triggers, plugin presets, script bundles,
+// automations with a prompt. Each is created with keep_session_awake, since
+// the tab's session is open in a browser and never paused: the trigger runs
+// while the session is awake and leaves it awake after the run. Event triggers, plugin presets, script bundles,
 // uploads and the KV store are not offered, and Canvas hides what the answer
 // does not list. Run now (dispatch) fires the trigger through the triggers
 // API's run-now route, and answers 501 in a region that does not have that
@@ -393,7 +395,9 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 	if tz == "" {
 		tz = "UTC"
 	}
-	result, err := s.triggers.Create(&godo.HostedAgentTriggerCreateRequest{
+	// keep_session_awake: the tab's session is open in a browser and never
+	// paused, so the trigger must run while it is awake and leave it awake.
+	result, err := s.triggers.CreateKeepingSessionAwake(&godo.HostedAgentTriggerCreateRequest{
 		Kind:           godo.HostedAgentTriggerKindCron,
 		Name:           body.Name,
 		SessionMode:    godo.HostedAgentTriggerSessionModeReuse,

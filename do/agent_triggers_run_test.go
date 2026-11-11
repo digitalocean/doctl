@@ -14,6 +14,7 @@ limitations under the License.
 package do_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -61,4 +62,28 @@ func TestHostedAgentTriggersRunKeepsTheAPIStatus(t *testing.T) {
 	require.ErrorAs(t, err, &er)
 	assert.Equal(t, http.StatusConflict, er.Response.StatusCode)
 	assert.Contains(t, er.Message, "paused")
+}
+
+// CreateKeepingSessionAwake posts the godo request plus keep_session_awake.
+func TestHostedAgentTriggersCreateKeepingSessionAwake(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"trigger":{"trigger_id":"tr_1","kind":"cron","session_mode":"reuse"}}`))
+	}))
+	defer srv.Close()
+	client, err := godo.New(http.DefaultClient, godo.SetBaseURL(srv.URL+"/"))
+	require.NoError(t, err)
+	res, err := do.NewHostedAgentTriggersService(client).CreateKeepingSessionAwake(&godo.HostedAgentTriggerCreateRequest{
+		Kind: godo.HostedAgentTriggerKindCron, Name: "n", SessionMode: godo.HostedAgentTriggerSessionModeReuse,
+		PromptTemplate: "p", Output: godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
+		BoundSessionID: "sess_1", Cron: &godo.HostedAgentCreateCronConfig{CronExpr: "0 9 * * *", Timezone: "UTC"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, got["keep_session_awake"])
+	assert.Equal(t, "sess_1", got["bound_session_id"])
+	assert.Equal(t, "reuse", got["session_mode"])
+	assert.Equal(t, "tr_1", res.Trigger.TriggerID)
 }

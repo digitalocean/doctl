@@ -118,7 +118,7 @@ func TestCanvasAutomation_ListIsScopedToTheSession(t *testing.T) {
 func TestCanvasAutomation_CreateBindsACronTriggerToTheSession(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().
-			Create(&godo.HostedAgentTriggerCreateRequest{
+			CreateKeepingSessionAwake(&godo.HostedAgentTriggerCreateRequest{
 				Kind:           godo.HostedAgentTriggerKindCron,
 				Name:           "Nightly digest",
 				SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
@@ -439,7 +439,7 @@ func TestCanvasAutomationHandler_GatesAgainstOtherLocalPages(t *testing.T) {
 
 		// The Canvas page: same origin as the listener, JSON, served (and
 		// the API call behind it is made).
-		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+		tm.hostedAgentTriggers.EXPECT().CreateKeepingSessionAwake(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
 			tr := cronTrigger("tr_ok", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
 			return &tr
 		}()}, nil)
@@ -457,7 +457,7 @@ func TestCanvasAutomationHandler_GatesAgainstOtherLocalPages(t *testing.T) {
 // create. The automation comes back with model null.
 func TestCanvasAutomation_CreateDropsTheModel(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+		tm.hostedAgentTriggers.EXPECT().CreateKeepingSessionAwake(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
 			tr := cronTrigger("tr_m", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
 			return &tr
 		}()}, nil)
