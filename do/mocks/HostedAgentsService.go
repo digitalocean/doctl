@@ -792,6 +792,21 @@ func (mr *MockHostedAgentsServiceMockRecorder) UpdateSession(sessionID, update a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSession", reflect.TypeOf((*MockHostedAgentsService)(nil).UpdateSession), sessionID, update)
 }
 
+// UpdateSessionConfig mocks base method.
+func (m *MockHostedAgentsService) UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateSessionConfig", sessionID, update)
+	ret0, _ := ret[0].(*godo.HostedAgentSessionConfigUpdateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateSessionConfig indicates an expected call of UpdateSessionConfig.
+func (mr *MockHostedAgentsServiceMockRecorder) UpdateSessionConfig(sessionID, update any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSessionConfig", reflect.TypeOf((*MockHostedAgentsService)(nil).UpdateSessionConfig), sessionID, update)
+}
+
 // UpdateTemplate mocks base method.
 func (m *MockHostedAgentsService) UpdateTemplate(templateID string, update *godo.HostedAgentTemplateUpdateRequest) (*godo.HostedAgentTemplate, error) {
 	m.ctrl.T.Helper()

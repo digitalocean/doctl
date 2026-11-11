@@ -605,12 +605,17 @@ func Agents() *Command {
 	cmdResume.Example = `doctl harness-runtime resume sess_abc123`
 
 	cmdUpdate := CmdBuilder(cmd, RunAgentsUpdate, "update <session>",
-		"Update settings on an existing session",
+		"Update settings or live config on an existing session",
 		agentsUpdateHelpMD,
 		Writer, agentsNS(
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
-	cmdUpdate.Example = agentCLI + ` update my-session --resume-on-topoff; ` + agentCLI + ` update sess_abc123 --resume-on-topoff=false`
+	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
+	acceptFileAliasFor(cmdUpdate)
+	AddIntFlag(cmdUpdate, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for a config update to finish (0 uses the default). Only used with --spec. Ignored with -o json.")
+	AddBoolFlag(cmdUpdate, doctl.ArgAgentNoWait, "", false, "With --spec, return once the config update is accepted instead of waiting for it to finish. Implied by -o json.")
+	cmdUpdate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentResumeOnTopoff)
+	cmdUpdate.Example = agentCLI + ` update my-session --resume-on-topoff; ` + agentCLI + ` update sess_abc123 --resume-on-topoff=false; ` + agentCLI + ` update my-session --spec tools.yaml; ` + agentCLI + ` update my-session --file - < tools.yaml`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
@@ -2236,6 +2241,14 @@ func RunAgentsUpdate(c *CmdConfig) error {
 		return err
 	}
 
+	if agentFlagChanged(c, doctl.ArgAgentSpec) {
+		if agentFlagChanged(c, doctl.ArgAgentResumeOnTopoff) {
+			return fmt.Errorf("--%s and --%s cannot be combined; run them as two updates",
+				doctl.ArgAgentSpec, doctl.ArgAgentResumeOnTopoff)
+		}
+		return runAgentsUpdateConfig(c, sessionID)
+	}
+
 	update, err := agentSessionUpdateRequest(c)
 	if err != nil {
 		return err
@@ -2267,6 +2280,80 @@ func RunAgentsUpdate(c *CmdConfig) error {
 	return nil
 }
 
+// runAgentsUpdateConfig sends a partial manifest (tools, env, secrets) to the
+// session and, unless told not to, waits for the server to finish applying it.
+func runAgentsUpdateConfig(c *CmdConfig, sessionID string) error {
+	path, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	if err != nil {
+		return err
+	}
+	manifest, err := readManifest(os.Stdin, path)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.HostedAgents().UpdateSessionConfig(sessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: string(manifest)})
+	if err != nil {
+		return err
+	}
+	if res == nil || res.Session == nil {
+		return errors.New("session config update returned no session")
+	}
+	sess := &do.HostedAgentSession{HostedAgentSession: res.Session}
+
+	if agentStructuredOutput(c) {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+
+	stylingEnabled = detectStyling()
+	for _, w := range res.Warnings {
+		fmt.Fprintf(c.Out, "%s %s\n", colorize("!", colWarning), w)
+	}
+
+	if res.Outcome == godo.HostedAgentSessionConfigUpdateOutcomeUnchanged {
+		fmt.Fprintf(c.Out, "%s Session %s: nothing to change\n", colorize("·", colMuted), displaySessionRef(sess))
+		printSessionShowCard(c.Out, sess)
+		return nil
+	}
+
+	noWait, err := c.Doit.GetBool(c.NS, doctl.ArgAgentNoWait)
+	if err != nil {
+		return err
+	}
+	if noWait {
+		printAgentSuccess(c.Out, fmt.Sprintf("Config update accepted for session %s; it is applying (check with `%s show %s`)",
+			displaySessionRef(sess), agentCLI, displaySessionRef(sess)))
+		printSessionShowCard(c.Out, sess)
+		return nil
+	}
+
+	wait := runWaitTimeout
+	if waitSec, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWaitTimeout); err == nil && waitSec > 0 {
+		wait = time.Duration(waitSec) * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+
+	prog := newCreationProgress(c.Out)
+	defer prog.stop()
+	final, err := waitForSessionConfigUpdate(ctx, c.HostedAgents(), sessionID, prog)
+	if err != nil {
+		return err
+	}
+
+	summary := configChangesSummary(res.Session.Update)
+	if summary == "" {
+		summary = configChangesSummary(final.Update)
+	}
+	msg := fmt.Sprintf("Session %s updated", displaySessionRef(final))
+	if summary != "" {
+		msg += ": " + summary
+	}
+	printAgentSuccess(c.Out, msg)
+	printSessionShowCard(c.Out, final)
+	return nil
+}
+
 // agentSessionUpdateRequest builds the PATCH body from the flags that were
 // actually passed. Reading GetBool unconditionally would send resume_on_topoff
 // on every call and silently revoke a consent the user never mentioned, so
@@ -2283,8 +2370,8 @@ func agentSessionUpdateRequest(c *CmdConfig) (*godo.HostedAgentSessionUpdateRequ
 	if update.ResumeOnTopoff == nil {
 		// The server answers an empty body with a 400, so say what to pass
 		// instead of forwarding a request that cannot succeed.
-		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke)",
-			doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentResumeOnTopoff)
+		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke), or --%s to change tools, env or secrets",
+			doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentSpec)
 	}
 	return update, nil
 }

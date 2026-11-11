@@ -1178,6 +1178,110 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 	}
 }
 
+// waitForSessionConfigUpdate polls the session until a live config update has
+// finished: the status has left SESSION_STATUS_UPDATING and the update is no
+// longer APPLYING. It returns the settled session, or an error when the update
+// FAILED (naming the server's detail and whether it reverted), the session
+// ended, or ctx expired.
+func waitForSessionConfigUpdate(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
+	ticker := time.NewTicker(sessionReadyPollInterval)
+	defer ticker.Stop()
+
+	announced := false
+	var last godo.HostedAgentSessionStatus
+	for {
+		sess, err := svc.GetSession(sessionID)
+		if err != nil {
+			return nil, err
+		}
+		last = sess.Status
+
+		applying := sess.Status == godo.HostedAgentSessionStatusUpdating ||
+			(sess.Update != nil && sess.Update.State == godo.HostedAgentSessionConfigUpdateStateApplying)
+		if applying {
+			if prog != nil && !announced {
+				prog.wait("Applying config update…")
+				announced = true
+			}
+		} else {
+			switch sess.Status {
+			case godo.HostedAgentSessionStatusFailed,
+				godo.HostedAgentSessionStatusDestroyed,
+				godo.HostedAgentSessionStatusDestroying:
+				return nil, fmt.Errorf("session entered %s during the config update", humanSessionStatus(sess.Status))
+			}
+			if u := sess.Update; u != nil && u.State == godo.HostedAgentSessionConfigUpdateStateFailed {
+				return nil, configUpdateFailedError(u)
+			}
+			return sess, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return nil, fmt.Errorf("timed out waiting for the config update of session %s (last status: %s); it may still finish, check `%s show %s`",
+					sessionID, humanSessionStatus(last), agentCLI, sessionID)
+			}
+			return nil, ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
+// configUpdateFailedError describes a FAILED config update, carrying the
+// server's detail and whether the previous config was restored.
+func configUpdateFailedError(u *godo.HostedAgentSessionConfigUpdate) error {
+	msg := "config update failed"
+	if u.Error != "" {
+		msg += " (" + string(u.Error) + ")"
+	}
+	if d := strings.TrimSpace(u.Detail); d != "" {
+		msg += ": " + d
+	}
+	if u.Reverted {
+		msg += ". The session was reverted to its previous config"
+	}
+	return errors.New(msg)
+}
+
+// configChangesSummary renders an update's changes compactly, e.g.
+// "tools +jira −docs; env ~MODE". Empty when nothing is recorded.
+func configChangesSummary(u *godo.HostedAgentSessionConfigUpdate) string {
+	if u == nil {
+		return ""
+	}
+	return configDiffSummary(u.Changes)
+}
+
+func configDiffSummary(ch *godo.HostedAgentSessionConfigChanges) string {
+	if ch == nil {
+		return ""
+	}
+	var parts []string
+	for _, sec := range []struct {
+		name string
+		c    *godo.HostedAgentSessionConfigSectionChanges
+	}{{"tools", ch.Tools}, {"env", ch.Env}, {"secrets", ch.Secrets}} {
+		if sec.c == nil {
+			continue
+		}
+		var items []string
+		for _, k := range sec.c.Added {
+			items = append(items, "+"+k)
+		}
+		for _, k := range sec.c.Removed {
+			items = append(items, "−"+k)
+		}
+		for _, k := range sec.c.Changed {
+			items = append(items, "~"+k)
+		}
+		if len(items) > 0 {
+			parts = append(parts, sec.name+" "+strings.Join(items, " "))
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
 // bitsReadyNote returns a one-shot message when the session payload shows
 // environment identifiers while status is still not READY.
 func bitsReadyNote(sess *do.HostedAgentSession) string {
@@ -1221,6 +1325,8 @@ func runStatusLabel(status godo.HostedAgentSessionStatus) string {
 		return "Agent ready (detached)"
 	case godo.HostedAgentSessionStatusPaused:
 		return "Agent paused"
+	case godo.HostedAgentSessionStatusUpdating:
+		return "Applying config update…"
 	default:
 		return humanSessionStatus(status)
 	}
@@ -1433,6 +1539,24 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	if ws := strings.TrimSpace(sess.WorkspaceID); ws != "" {
 		body.WriteString(cardRow("Workspace", colorize(ws, colMuted)))
 	}
+	// Only shown once the live config has moved away from the created manifest.
+	if sess.ConfigDrifted {
+		drift := "yes"
+		if d := configDiffSummary(sess.ConfigDiff); d != "" {
+			drift = d
+		}
+		body.WriteString(cardRow("Config drifted", drift))
+	}
+	if u := sess.Update; u != nil && u.State != "" {
+		last := strings.ToLower(strings.ReplaceAll(string(u.State), "_", " "))
+		if sum := configChangesSummary(u); sum != "" {
+			last += " · " + sum
+		}
+		if !u.StartedAt.Time.IsZero() {
+			last += " · " + formatCreatedAt(u.StartedAt.Time)
+		}
+		body.WriteString(cardRow("Last update", colorize(last, colMuted)))
+	}
 	if !sess.CreatedAt.Time.IsZero() {
 		body.WriteString(cardRow("Created", colorize(formatCreatedAt(sess.CreatedAt.Time), colMuted)))
 	}
@@ -1459,7 +1583,7 @@ func sessionStatusGlyph(status godo.HostedAgentSessionStatus) string {
 	switch status {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
 		return colorize("●", colSuccess)
-	case godo.HostedAgentSessionStatusProvisioning:
+	case godo.HostedAgentSessionStatusProvisioning, godo.HostedAgentSessionStatusUpdating:
 		return colorize("…", colWarning)
 	case godo.HostedAgentSessionStatusPaused:
 		return colorize("○", colWarning)
@@ -1477,7 +1601,7 @@ func colorizeSessionStatus(status godo.HostedAgentSessionStatus) string {
 	switch status {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
 		return colorize(label, colSuccess)
-	case godo.HostedAgentSessionStatusProvisioning, godo.HostedAgentSessionStatusPaused:
+	case godo.HostedAgentSessionStatusProvisioning, godo.HostedAgentSessionStatusPaused, godo.HostedAgentSessionStatusUpdating:
 		return colorize(label, colWarning)
 	case godo.HostedAgentSessionStatusFailed:
 		return colorize(label, colError)

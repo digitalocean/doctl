@@ -59,6 +59,10 @@ type HostedAgentsService interface {
 	// UpdateSession patches session-scoped settings (never the agent manifest
 	// or config) and returns the updated session.
 	UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error)
+	// UpdateSessionConfig patches the live config (tools, env, secrets) of a
+	// session from a partial manifest. The result carries the outcome
+	// (ACCEPTED or UNCHANGED); on ACCEPTED the caller polls GetSession.
+	UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error)
 	DestroySession(sessionID string) error
 	PauseSession(sessionID string) error
 	ResumeSession(sessionID string) error
@@ -290,6 +294,14 @@ func (s *hostedAgentsService) UpdateSession(sessionID string, update *godo.Hoste
 		return nil, err
 	}
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
+}
+
+func (s *hostedAgentsService) UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error) {
+	res, _, err := s.client.HostedAgents.UpdateSessionConfig(context.TODO(), sessionID, update)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (s *hostedAgentsService) DestroySession(sessionID string) error {
