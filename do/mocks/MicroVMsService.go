@@ -322,6 +322,21 @@ func (mr *MockMicroVMsServiceMockRecorder) RevokeAccessToken(microVMID, tokenID 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeAccessToken", reflect.TypeOf((*MockMicroVMsService)(nil).RevokeAccessToken), microVMID, tokenID)
 }
 
+// Update mocks base method.
+func (m *MockMicroVMsService) Update(id string, req *godo.MicroVMUpdateRequest) (*do.MicroVM, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", id, req)
+	ret0, _ := ret[0].(*do.MicroVM)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockMicroVMsServiceMockRecorder) Update(id, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockMicroVMsService)(nil).Update), id, req)
+}
+
 // UploadFile mocks base method.
 func (m *MockMicroVMsService) UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error) {
 	m.ctrl.T.Helper()

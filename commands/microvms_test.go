@@ -73,7 +73,7 @@ func TestMicroVMCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.False(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
-		"access-token", "checkpoint", "console", "create", "delete", "download", "exec", "get", "list", "options", "pause", "resume", "upload", "url",
+		"access-token", "checkpoint", "console", "create", "delete", "download", "exec", "get", "list", "options", "pause", "resume", "update", "upload", "url",
 	)
 }
 
@@ -494,6 +494,72 @@ func TestMicroVMAccessTokenRevoke_missingArg(t *testing.T) {
 		err := RunMicroVMAccessTokenRevoke(config)
 		require.Error(t, err)
 	})
+}
+
+func TestMicroVMUpdate(t *testing.T) {
+	tests := []struct {
+		name     string
+		flags    map[string]any
+		expected *godo.MicroVMUpdateRequest
+	}{
+		{
+			name: "all fields",
+			flags: map[string]any{
+				"name":                    "renamed",
+				doctl.ArgTag:              []string{"prod", "web"},
+				"auto-pause-idle-timeout": "10m",
+			},
+			expected: &godo.MicroVMUpdateRequest{
+				Name:      "renamed",
+				Tags:      &[]string{"prod", "web"},
+				AutoPause: &godo.AutoPauseConfig{IdleTimeout: "10m"},
+			},
+		},
+		{
+			name:     "name only",
+			flags:    map[string]any{"name": "renamed"},
+			expected: &godo.MicroVMUpdateRequest{Name: "renamed"},
+		},
+		{
+			name:     "clear tags",
+			flags:    map[string]any{"clear-tags": true},
+			expected: &godo.MicroVMUpdateRequest{Tags: &[]string{}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.microVMs.EXPECT().Update(testMicroVMID, tt.expected).Return(&testMicroVM, nil)
+
+				config.Args = append(config.Args, testMicroVMID)
+				for k, v := range tt.flags {
+					config.Doit.Set(config.NS, k, v)
+				}
+				require.NoError(t, RunMicroVMUpdate(config))
+			})
+		})
+	}
+}
+
+func TestMicroVMUpdate_invalidFlags(t *testing.T) {
+	tests := []struct {
+		name  string
+		flags map[string]any
+	}{
+		{name: "no fields", flags: map[string]any{}},
+		{name: "tag and clear-tags", flags: map[string]any{doctl.ArgTag: []string{"prod"}, "clear-tags": true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Args = append(config.Args, testMicroVMID)
+				for k, v := range tt.flags {
+					config.Doit.Set(config.NS, k, v)
+				}
+				require.Error(t, RunMicroVMUpdate(config))
+			})
+		})
+	}
 }
 
 func TestMicroVMPause(t *testing.T) {

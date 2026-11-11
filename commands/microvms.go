@@ -110,6 +110,20 @@ func MicroVM() *Command {
 	AddBoolFlag(cmdMicroVMCreate, "ingress", "", true,
 		"Whether to create the MicroVM with a default public URL. Pass `--ingress=false` to create it without one; URLs can be added later with `doctl compute microvm url add`.")
 
+	cmdMicroVMUpdate := CmdBuilder(cmd, RunMicroVMUpdate, "update <microvm-id>",
+		"Update a MicroVM's name, tags, or auto-pause idle timeout",
+		"Updates a running or paused MicroVM in place. Set at least one flag; settings you omit keep their current value. "+
+			"Every other MicroVM setting is fixed at create, and changing one requires a new MicroVM.",
+		Writer, aliasOpt("u"), displayerType(&displayers.MicroVM{}))
+	AddStringFlag(cmdMicroVMUpdate, "name", "", "",
+		"The new name for the MicroVM")
+	AddStringSliceFlag(cmdMicroVMUpdate, doctl.ArgTag, "", []string{},
+		"The complete set of tags for the MicroVM. Replaces the current tags. Repeatable.")
+	AddBoolFlag(cmdMicroVMUpdate, "clear-tags", "", false,
+		"Remove every tag from the MicroVM (mutually exclusive with `--tag`)")
+	AddStringFlag(cmdMicroVMUpdate, "auto-pause-idle-timeout", "", "",
+		"Idle duration before auto-pause (e.g. `5m`, `30s`)")
+
 	CmdBuilder(cmd, RunMicroVMPause, "pause <microvm-id>",
 		"Pause a running MicroVM",
 		"Requests that the MicroVM transition to the `paused` state. Returns the mutated MicroVM.",
@@ -504,6 +518,52 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	}
 
 	md, err := c.MicroVMs().Create(req)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVM{MicroVMs: do.MicroVMs{*md}})
+}
+
+// RunMicroVMUpdate changes the name, tags, or auto-pause idle timeout of a MicroVM.
+func RunMicroVMUpdate(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	name, err := c.Doit.GetString(c.NS, "name")
+	if err != nil {
+		return err
+	}
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
+	if err != nil {
+		return err
+	}
+	clearTags, err := c.Doit.GetBool(c.NS, "clear-tags")
+	if err != nil {
+		return err
+	}
+	idleTimeout, err := c.Doit.GetString(c.NS, "auto-pause-idle-timeout")
+	if err != nil {
+		return err
+	}
+
+	if clearTags && len(tags) > 0 {
+		return fmt.Errorf("--tag and --clear-tags are mutually exclusive")
+	}
+	req := &godo.MicroVMUpdateRequest{Name: name}
+	switch {
+	case clearTags:
+		req.Tags = &[]string{}
+	case len(tags) > 0:
+		req.Tags = &tags
+	}
+	if idleTimeout != "" {
+		req.AutoPause = &godo.AutoPauseConfig{IdleTimeout: idleTimeout}
+	}
+	if req.Name == "" && req.Tags == nil && req.AutoPause == nil {
+		return fmt.Errorf("set at least one of --name, --tag, --clear-tags, or --auto-pause-idle-timeout")
+	}
+
+	md, err := c.MicroVMs().Update(c.Args[0], req)
 	if err != nil {
 		return err
 	}
