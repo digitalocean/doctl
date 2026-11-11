@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -54,33 +55,45 @@ func defaultAskConnectGitHub() (bool, error) {
 	return choice == confirm.Yes, nil
 }
 
-// maybeOfferGitHubAuth checks team GitHub connect status when --gh-repo is used.
-// Already connected → continue. Otherwise optionally run `agent auth github`.
-// Declining (or non-interactive) continues; public repos do not require auth.
-func maybeOfferGitHubAuth(c *CmdConfig) error {
+// maybeOfferGitHubAuth checks team GitHub connect status when --gh-repo is used,
+// and reports whether GitHub is connected by the end. Already connected →
+// continue. Otherwise optionally run `agent auth github`. Declining (or
+// non-interactive) continues; public repos do not require auth.
+//
+// Structured output never prompts, and its status lines go to stderr so stdout
+// stays one JSON document.
+func maybeOfferGitHubAuth(c *CmdConfig) (bool, error) {
+	structured := agentStructuredOutput(c)
+	var out io.Writer = c.Out
+	if structured {
+		out = execStderr
+	}
+
 	svc := c.HostedAgents()
 	start, err := svc.StartProviderAuth(agentGitHubProvider)
 	if err != nil {
 		warn("could not check GitHub connection status: %v (continuing; use `doctl harness-runtime auth github` for private repos)", err)
-		return nil
+		return false, nil
 	}
 	if start != nil && strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
-		fmt.Fprintf(c.Out, "%s %s\n", colorize("✓", colSuccess), colorize("GitHub already connected", colMuted))
-		return nil
+		fmt.Fprintf(out, "%s %s\n", colorize("✓", colSuccess), colorize("GitHub already connected", colMuted))
+		return true, nil
 	}
 
-	connect, err := askConnectGitHub()
-	if err != nil {
-		return err
+	connect := false
+	if !structured {
+		if connect, err = askConnectGitHub(); err != nil {
+			return false, err
+		}
 	}
 	if !connect {
-		fmt.Fprintf(c.Out, "%s %s\n",
+		fmt.Fprintf(out, "%s %s\n",
 			colorize("•", colMuted),
-			colorize("Skipping GitHub connect — fine for public repos. Use `doctl harness-runtime auth github` later for private ones.", colMuted))
-		return nil
+			colorize("Skipping GitHub connect — fine for public repos. Private repos need the connection (`doctl harness-runtime auth github`); with it, doctl gives the session your GitHub token.", colMuted))
+		return false, nil
 	}
 
-	return completeProviderAuth(c, svc, agentGitHubProvider, start, false, false)
+	return completeProviderAuthConnected(c, svc, agentGitHubProvider, start, false, false)
 }
 
 const (
@@ -283,11 +296,8 @@ func launchNewSession(c *CmdConfig) error {
 	if sess == nil {
 		return errors.New("session create returned no session")
 	}
-	sess, err = waitForAgentSessionReady(c, sess, prog)
+	sess, _, err = finishSessionStart(c, sess, src, prog)
 	if err != nil {
-		return err
-	}
-	if err := sendInitialPrompt(c, sess.SessionID, src); err != nil {
 		return err
 	}
 
@@ -734,13 +744,25 @@ func normalizeHarnessRepoRef(repo string) (string, error) {
 	return validateGitHubOwnerRepo(repo)
 }
 
+var (
+	// Underscores occur in managed-enterprise account names (user_short).
+	githubOwnerRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
+	githubRepoRE  = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+)
+
 func validateGitHubOwnerRepo(ref string) (string, error) {
 	ref = strings.Trim(ref, "/")
 	if ref == "" {
 		return "", fmt.Errorf("invalid --%s: missing GitHub owner/repo", doctl.ArgAgentRepo)
 	}
-	if strings.Count(ref, "/") != 1 || strings.ContainsAny(ref, " \t") {
+	if strings.Count(ref, "/") != 1 {
 		return "", fmt.Errorf("invalid --%s %q: use https://github.com/owner/repo or owner/repo", doctl.ArgAgentRepo, ref)
+	}
+	owner, name, _ := strings.Cut(ref, "/")
+	// The name becomes part of a clone URL and a directory inside the sandbox,
+	// so only GitHub's own name characters get through.
+	if !githubOwnerRE.MatchString(owner) || !githubRepoRE.MatchString(name) || name == "." || name == ".." {
+		return "", fmt.Errorf("invalid --%s %q: the owner may use letters, digits, hyphens and underscores, and the repository letters, digits, '.', '_' and '-'", doctl.ArgAgentRepo, ref)
 	}
 	return ref, nil
 }
@@ -1229,15 +1251,16 @@ func runStatusLabel(status godo.HostedAgentSessionStatus) string {
 type creationTimings struct {
 	Create time.Duration
 	Ready  time.Duration
+	Clone  time.Duration
 	Prompt time.Duration
 }
 
 func (t creationTimings) total() time.Duration {
-	return t.Create + t.Ready + t.Prompt
+	return t.Create + t.Ready + t.Clone + t.Prompt
 }
 
 func (t creationTimings) visible() bool {
-	return t.Create >= time.Second || t.Ready >= time.Second || t.Prompt >= time.Second
+	return t.Create >= time.Second || t.Ready >= time.Second || t.Clone >= time.Second || t.Prompt >= time.Second
 }
 
 type runReadySummary struct {
@@ -1283,8 +1306,9 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 			body.WriteString(cardRow("Config", colorize(cfg, colMuted)))
 		}
 	}
-	if Verbose && sum.Repo != "" {
-		body.WriteString(cardRow("Repo", sum.Repo))
+	if sum.Repo != "" {
+		_, dest := repoClonePaths(sum.Repo)
+		body.WriteString(cardRow("Repo", sum.Repo+" → "+dest))
 	}
 	if prompt := strings.TrimSpace(sum.Prompt); prompt != "" {
 		if len(prompt) > 72 {
@@ -1301,6 +1325,9 @@ func printRunReadySummary(w io.Writer, sum runReadySummary) {
 		fmt.Fprintln(&body, colorize("Timing", colMuted))
 		body.WriteString(cardRow("create", formatPhaseDuration(sum.Timings.Create)))
 		body.WriteString(cardRow("ready", formatPhaseDuration(sum.Timings.Ready)))
+		if sum.Timings.Clone > 0 {
+			body.WriteString(cardRow("clone", formatPhaseDuration(sum.Timings.Clone)))
+		}
 		if sum.Timings.Prompt > 0 || strings.TrimSpace(sum.Prompt) != "" {
 			body.WriteString(cardRow("prompt", formatPhaseDuration(sum.Timings.Prompt)))
 		}

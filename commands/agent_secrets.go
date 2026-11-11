@@ -180,7 +180,9 @@ func resolvedManifestSecretValues(manifest []byte) map[string]string {
 	}
 	out := make(map[string]string, len(vals))
 	for name, value := range vals {
-		if isEnvPlaceholder(value) {
+		// An oauth/ reference is resolved by the server, not a value to
+		// expand ${NAME} into or to count as a credential supplied locally.
+		if isEnvPlaceholder(value) || strings.HasPrefix(value, "oauth/") {
 			continue
 		}
 		out[name] = value
@@ -267,6 +269,11 @@ func dropEnvKeysCoveredBySecrets(manifest []byte) []byte {
 // file. Legacy envelopes take them under spec.secrets, flat manifests under a
 // top-level secrets. An empty map returns the manifest untouched, so the
 // no-flag path is byte-for-byte what the user wrote.
+//
+// A value that is a provider reference such as "oauth/github" is written the
+// same way; the server reads that shorthand as a connection, not a plaintext
+// credential. Only flat manifests take it: callers must not pass a reference
+// for a legacy envelope, whose list slots name their source separately.
 func injectManifestSecrets(manifest []byte, secrets map[string]string) ([]byte, error) {
 	if len(secrets) == 0 {
 		return manifest, nil
@@ -312,7 +319,9 @@ func injectManifestSecrets(manifest []byte, secrets map[string]string) ([]byte, 
 // mergeSecretSlots folds secrets into whatever shape the manifest already
 // uses. The map form (`secrets: {NAME: value}` or `NAME: {value, url}`) is
 // preserved when present so we don't rewrite a user's file into a different
-// style; an existing list stays a list for the same reason.
+// style; an existing list stays a list for the same reason. Values pass through
+// verbatim, so a provider reference such as "oauth/github" lands as the same
+// string shorthand a plaintext would.
 //
 // When the manifest declares no secrets at all there is no style to preserve,
 // and the two formats do not agree on what to write: the legacy envelope's

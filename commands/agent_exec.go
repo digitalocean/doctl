@@ -143,7 +143,13 @@ func disableRetriesForExec(c *CmdConfig) error {
 	if RetryMax <= 0 {
 		return nil
 	}
-	godoClient, err := c.Doit.GetGodoClient(Trace, false, c.getContextAccessToken())
+	// The rebuilt client must keep the host the command was already using, or a
+	// regional session's exec would go to the default host and 404.
+	hostOpts, err := hostedAgentsHostOpts(c)
+	if err != nil {
+		return err
+	}
+	godoClient, err := c.Doit.GetGodoClient(Trace, false, c.getContextAccessToken(), hostOpts...)
 	if err != nil {
 		return fmt.Errorf("unable to initialize DigitalOcean API client: %s", err)
 	}
