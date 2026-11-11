@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 	_ "time/tzdata" // the timezone pick list must load on a Windows build too
+	"unicode/utf8"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -676,8 +677,12 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 				return
 			}
 		}
-		setEvents = true
-		asks = append(asks, fmt.Sprintf("events: %v", events))
+		// A client that echoes an unchanged "on" (a pause that resends the
+		// whole trigger) is not an edit: no question, no write.
+		if !sameEventSet(events, currentDetails.WebhookEvents) {
+			setEvents = true
+			asks = append(asks, fmt.Sprintf("events: %v", events))
+		}
 	}
 	// The schedule and the timezone travel together on the API, so an edit
 	// to either resends both: a new schedule with the timezone kept, or the
@@ -748,14 +753,33 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 	writeJSON(w, http.StatusOK, toCanvasAutomation(*t.HostedAgentTrigger, currentDetails))
 }
 
-// canvasPromptPreview is the prompt as shown in a terminal question: one
-// line, cut at 160 characters, so the user sees what will run.
+// canvasPromptPreview is the prompt as shown in a terminal question: the
+// whole prompt, whitespace collapsed, so nothing past a cut is approved
+// unseen; only past canvasPromptPreviewMax characters is it cut, on a
+// character boundary, and then its full length is said.
 func canvasPromptPreview(prompt string) string {
 	p := strings.Join(strings.Fields(prompt), " ")
-	if len(p) > 160 {
-		p = p[:157] + "..."
+	if n := utf8.RuneCountInString(p); n > canvasPromptPreviewMax {
+		runes := []rune(p)
+		return fmt.Sprintf("%q... (%d characters in all; the full prompt is in the tab)", string(runes[:canvasPromptPreviewMax]), n)
 	}
 	return fmt.Sprintf("%q", p)
+}
+
+// canvasPromptPreviewMax is how much of a prompt a terminal question shows
+// before cutting it; a prompt the tab's form takes is usually well under.
+const canvasPromptPreviewMax = 2000
+
+// sameEventSet is true when two event lists name the same events, in any
+// order; nil and empty are the same (no filter).
+func sameEventSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	sa, sb := slices.Clone(a), slices.Clone(b)
+	slices.Sort(sa)
+	slices.Sort(sb)
+	return slices.Equal(sa, sb)
 }
 
 // dispatch is the tab's Run now: the trigger is fired through the run-now

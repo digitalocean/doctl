@@ -16,11 +16,13 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
@@ -698,4 +700,44 @@ func TestCanvasAutomation_CreateNotesMissingKeepAwake(t *testing.T) {
 		assert.Contains(t, term.String(), "cannot keep the session awake yet")
 		assert.Contains(t, term.String(), `"n-tr_old" runs only while this Canvas tab is closed`)
 	})
+}
+
+// A pause that echoes the webhook's unchanged "on" is a pause, not an
+// edit: nothing is asked and the event filter is not rewritten.
+func TestCanvasAutomation_PauseEchoingUnchangedEventsAsksNothing(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		hook := do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			TriggerID: "tr_h", Name: "gh", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
+			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
+		}}
+		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_h").Return(&hook, &do.HostedAgentTriggerDetails{WebhookEvents: []string{"push", "issues.opened"}}, nil)
+		paused := hook
+		paused.HostedAgentTrigger = &godo.HostedAgentTrigger{}
+		*paused.HostedAgentTrigger = *hook.HostedAgentTrigger
+		paused.Status = godo.HostedAgentTriggerStatusPaused
+		tm.hostedAgentTriggers.EXPECT().Update("tr_h", gomock.Any()).DoAndReturn(func(_ string, u *godo.HostedAgentTriggerUpdateRequest) (*do.HostedAgentTrigger, error) {
+			assert.Equal(t, godo.HostedAgentTriggerStatusPaused, u.Status)
+			return &paused, nil
+		})
+		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
+		h.confirm = func(what string) (bool, string) {
+			t.Errorf("asked %q; a pause with unchanged events must not ask", what)
+			return false, "declined"
+		}
+		rec, body := canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_h",
+			`{"enabled":false,"trigger":{"type":"event","source":"github","on":["issues.opened","push"]}}`)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, false, body["enabled"])
+	})
+}
+
+// The question shows the whole prompt; only a very long one is cut, on a
+// character boundary, and then its length is said.
+func TestCanvasPromptPreview(t *testing.T) {
+	assert.Equal(t, `"a b"`, canvasPromptPreview("a \n  b"))
+	long := strings.Repeat("é", canvasPromptPreviewMax+5)
+	got := canvasPromptPreview(long)
+	assert.True(t, strings.HasPrefix(got, `"`+strings.Repeat("é", canvasPromptPreviewMax)+`"...`), got[:20])
+	assert.Contains(t, got, fmt.Sprintf("(%d characters in all", canvasPromptPreviewMax+5))
+	assert.True(t, utf8.ValidString(got))
 }
