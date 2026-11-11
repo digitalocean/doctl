@@ -960,8 +960,14 @@ func validateAdapterModelEnv(adapter string, env map[string]string, secretSlots 
 		// claude-code honors HARNESS_INFERENCE_MODEL only when the harness
 		// inference group is selected, i.e. no native ANTHROPIC_API_KEY is set.
 		nativeKey := hasAnthropicKey || hasStringKey(secretSlots, "ANTHROPIC_API_KEY")
+		// The model is used when the session runs on DigitalOcean Inference:
+		// no native key, and either a harness key or no credential at all (in
+		// which case create asks for a DigitalOcean key to be issued). An
+		// OpenAI key alone does not provide that.
 		harnessKey := hasHarnessKey || hasStringKey(secretSlots, "HARNESS_INFERENCE_API_KEY")
-		if hasHarnessModel && !hasAnthropicModel && (nativeKey || !harnessKey) {
+		_, hasOpenAIKeyEnv := env["OPENAI_API_KEY"]
+		openAIKey := hasOpenAIKeyEnv || hasStringKey(secretSlots, "OPENAI_API_KEY")
+		if hasHarnessModel && !hasAnthropicModel && (nativeKey || (!harnessKey && openAIKey)) {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.HARNESS_INFERENCE_MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; HARNESS_INFERENCE_MODEL is only used with HARNESS_INFERENCE_API_KEY (declared under secrets) and no ANTHROPIC_API_KEY; otherwise set ANTHROPIC_MODEL", envPath, envPath))
 		}
 		if hasAnthropicKey && !hasAnthropicModel && (hasModel || hasHarnessModel) {
