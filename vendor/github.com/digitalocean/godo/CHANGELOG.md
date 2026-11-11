@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.237.0] - 2026-11-10
+
+- #1210 - @vsailokesh-lab - get, list catalog v2 api
+- #1186 - @achiang-do - feat(agentplatform): add turn_type for model evaluation metrics
+- #1212 - @bbatha - Add Action Gateway endpoint and endpoint version APIs
+- #1200 - @kgautam676 - Adding insights to kubernetes Create cluster type
+- #1199 - @amandhaw - hosted agents: add ListRegions
+
 ## [1.236.0] - 2026-11-04
 
 - #1197 - @apinonformoso - microvms: add access token create, list, and revoke

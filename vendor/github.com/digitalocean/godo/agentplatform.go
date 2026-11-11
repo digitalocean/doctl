@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
 const (
 	gradientBasePath                         = "/v2/gen-ai/agents"
 	agentModelBasePath                       = "/v2/gen-ai/models"
+	modelCatalogV2BasePath                   = agentModelBasePath + "/catalog_v2"
 	inferenceRoutersBasePath                 = agentModelBasePath + "/routers"
 	inferenceRouterTaskPresetsPath           = inferenceRoutersBasePath + "/tasks/presets"
 	datacenterRegionsPath                    = "/v2/gen-ai/regions"
@@ -239,6 +241,8 @@ type AgentPlatformService interface {
 	ListAvailableModels(context.Context, *ListOptions) ([]*Model, *Response, error)
 	SearchModels(context.Context, string) ([]string, *Response, error)
 	GetModelByUUID(context.Context, string) (*Model, *Response, error)
+	ListModelCatalogV2(context.Context, *ModelCatalogV2ListOptions) (*ModelCatalogV2List, *Response, error)
+	GetModelCatalogCardV2(context.Context, string, string) (*ModelCatalogEntryV2, *Response, error)
 	ListDatacenterRegions(context.Context, *bool, *bool) ([]*DatacenterRegions, *Response, error)
 	ListCustomModels(ctx context.Context, opt *CustomModelListOptions) (*CustomModelListResponse, *Response, error)
 	GetCustomModel(ctx context.Context, uuid string) (*CustomModel, *Response, error)
@@ -2368,6 +2372,238 @@ func (g *AgentPlatformServiceOp) GetModelByUUID(ctx context.Context, uuid string
 	}
 
 	return nil, resp, nil
+}
+
+// ModelCatalogV2ListOptions filters GET /v2/gen-ai/models/catalog_v2.
+// Slice fields are repeated query parameters and use OR semantics, except
+// InputModality, OutputModality, and Capabilities, which require every value.
+type ModelCatalogV2ListOptions struct {
+	Page           int      `url:"page,omitempty"`
+	PerPage        int      `url:"per_page,omitempty"`
+	Search         string   `url:"search,omitempty"`
+	Serving        []string `url:"serving,omitempty"`
+	Badges         []string `url:"badges,omitempty"`
+	InputModality  []string `url:"input_modality,omitempty"`
+	OutputModality []string `url:"output_modality,omitempty"`
+	Product        []string `url:"product,omitempty"`
+	Capabilities   []string `url:"capabilities,omitempty"`
+	ItemType       []string `url:"item_type,omitempty"`
+	SortBy         string   `url:"sort_by,omitempty"`
+	SortDirection  string   `url:"sort_direction,omitempty"`
+	Creator        []string `url:"creator,omitempty"`
+}
+
+// ModelCatalogV2List is the List Model Catalog V2 response.
+type ModelCatalogV2List struct {
+	Data                      []*ModelCatalogEntryV2 `json:"data"`
+	Meta                      *Meta                  `json:"meta,omitempty"`
+	Links                     *Links                 `json:"links,omitempty"`
+	AvailableCreators         []string               `json:"available_creators,omitempty"`
+	AvailableServing          []string               `json:"available_serving,omitempty"`
+	AvailableBadges           []string               `json:"available_badges,omitempty"`
+	AvailableSortBy           []string               `json:"available_sort_by,omitempty"`
+	AvailableSortDirections   []string               `json:"available_sort_directions,omitempty"`
+	AvailableInputModalities  []string               `json:"available_input_modalities,omitempty"`
+	AvailableOutputModalities []string               `json:"available_output_modalities,omitempty"`
+	AvailableProducts         []string               `json:"available_products,omitempty"`
+	AvailableModelTypes       []string               `json:"available_model_types,omitempty"`
+}
+
+// ModelCatalogEntryV2 is a V2 catalog row. Description, code snippets, pricing
+// detail, and liveliness are populated on Get Model Catalog Card V2.
+// Performance is populated on list rows and the card when canary data exists.
+type ModelCatalogEntryV2 struct {
+	ID                       string                   `json:"id,omitempty"`
+	ModelID                  string                   `json:"model_id,omitempty"`
+	Name                     string                   `json:"name,omitempty"`
+	Provider                 string                   `json:"provider,omitempty"`
+	Creator                  string                   `json:"creator,omitempty"`
+	ShortDescription         string                   `json:"short_description,omitempty"`
+	ItemType                 string                   `json:"item_type,omitempty"`
+	ContextWindow            string                   `json:"context_window,omitempty"`
+	ParameterCountInBillions float64                  `json:"parameter_count_in_billions,omitempty"`
+	Capabilities             []string                 `json:"capabilities,omitempty"`
+	Serving                  []string                 `json:"serving,omitempty"`
+	Products                 []string                 `json:"products,omitempty"`
+	Badges                   []string                 `json:"badges,omitempty"`
+	Pricing                  *ModelCatalogPricing     `json:"pricing,omitempty"`
+	InputModality            []string                 `json:"input_modality,omitempty"`
+	OutputModality           []string                 `json:"output_modality,omitempty"`
+	CreatedAt                *Timestamp               `json:"created_at,omitempty"`
+	MaxOutputTokens          string                   `json:"max_output_tokens,omitempty"`
+	ScaledPricingEnabled     bool                     `json:"scaled_pricing_enabled,omitempty"`
+	HuggingFaceRepoID        string                   `json:"huggingface_repo_id,omitempty"`
+	SupportedEndpoints       []string                 `json:"supported_endpoints,omitempty"`
+	Type                     string                   `json:"type,omitempty"`
+	Thinking                 bool                     `json:"thinking,omitempty"`
+	MaxTokens                *NumericRange            `json:"max_tokens,omitempty"`
+	SupportsTemperature      bool                     `json:"supports_temperature,omitempty"`
+	Temperature              *NumericRange            `json:"temperature,omitempty"`
+	TopP                     *NumericRange            `json:"top_p,omitempty"`
+	ReasoningEfforts         []string                 `json:"reasoning_efforts,omitempty"`
+	Description              string                   `json:"description,omitempty"`
+	CodeSnippets             *CodeSnippets            `json:"code_snippets,omitempty"`
+	PricingDetail            *ModelPricingDetail      `json:"pricing_detail,omitempty"`
+	Liveliness               *ModelLiveliness         `json:"liveliness,omitempty"`
+	Performance              *ModelCatalogPerformance `json:"performance,omitempty"`
+}
+
+// ModelCatalogPerformance is the compact canary rollup on a V2 catalog row.
+// List uses a rolling 24 hour window. Get uses the liveliness cache window.
+type ModelCatalogPerformance struct {
+	WindowDays           uint32  `json:"window_days,omitempty"`
+	Status               string  `json:"status,omitempty"`
+	E2ELatencyP50Seconds float64 `json:"e2e_latency_p50_seconds,omitempty"`
+	E2ELatencyP75Seconds float64 `json:"e2e_latency_p75_seconds,omitempty"`
+	E2ELatencyP95Seconds float64 `json:"e2e_latency_p95_seconds,omitempty"`
+	ThroughputP50TokPerS float64 `json:"throughput_p50_tok_per_s,omitempty"`
+	ThroughputP75TokPerS float64 `json:"throughput_p75_tok_per_s,omitempty"`
+	ThroughputP95TokPerS float64 `json:"throughput_p95_tok_per_s,omitempty"`
+	Samples              uint32  `json:"samples,omitempty"`
+	TTFTP50Seconds       float64 `json:"ttft_p50_seconds,omitempty"`
+	TTFTP75Seconds       float64 `json:"ttft_p75_seconds,omitempty"`
+	TTFTP95Seconds       float64 `json:"ttft_p95_seconds,omitempty"`
+}
+
+// NumericRange is a min, max, and default bound for a model setting.
+type NumericRange struct {
+	Min     float64 `json:"min,omitempty"`
+	Max     float64 `json:"max,omitempty"`
+	Default float64 `json:"default,omitempty"`
+	Step    float64 `json:"step,omitempty"`
+}
+
+// CodeSnippets holds invocation examples for a catalog model.
+type CodeSnippets struct {
+	Python     string `json:"python,omitempty"`
+	Javascript string `json:"javascript,omitempty"`
+	Curl       string `json:"curl,omitempty"`
+	SDK        string `json:"sdk,omitempty"`
+}
+
+// ModelCatalogPricing is the V2 catalog price list. It includes the shared
+// model rates plus the cache and reasoning rates published on catalog v2.
+type ModelCatalogPricing struct {
+	ModelPricing
+	CacheReadInputPricePerMillion    float64 `json:"cache_read_input_price_per_million,omitempty"`
+	CacheWrite1hInputPricePerMillion float64 `json:"cache_write_1h_input_price_per_million,omitempty"`
+	CacheWrite5mInputPricePerMillion float64 `json:"cache_write_5m_input_price_per_million,omitempty"`
+	InputCacheRead                   float64 `json:"input_cache_read,omitempty"`
+	ReasoningPricePerMillion         float64 `json:"reasoning_price_per_million,omitempty"`
+}
+
+// ModelPricingDetail is the per-variant price breakdown on a catalog card.
+type ModelPricingDetail struct {
+	Variants []*ModelPricingVariant `json:"variants,omitempty"`
+}
+
+// ModelPricingVariant is one tier and billing mode for a model.
+type ModelPricingVariant struct {
+	Tier          string               `json:"tier,omitempty"`
+	Label         string               `json:"label,omitempty"`
+	Mode          string               `json:"mode,omitempty"`
+	Prices        *ModelCatalogPricing `json:"prices,omitempty"`
+	ScaledPricing *ModelScaledPricing  `json:"scaled_pricing,omitempty"`
+	Currency      string               `json:"currency,omitempty"`
+}
+
+// ModelScaledPricing is a time-varying price schedule.
+type ModelScaledPricing struct {
+	MinPrices *ModelCatalogPricing    `json:"min_prices,omitempty"`
+	MaxPrices *ModelCatalogPricing    `json:"max_prices,omitempty"`
+	Intervals []*ModelPricingInterval `json:"intervals,omitempty"`
+}
+
+// ModelPricingInterval is one window of constant rates.
+type ModelPricingInterval struct {
+	StartTime *Timestamp           `json:"start_time,omitempty"`
+	EndTime   *Timestamp           `json:"end_time,omitempty"`
+	Prices    *ModelCatalogPricing `json:"prices,omitempty"`
+}
+
+// ModelLiveliness is canary performance for a catalog card.
+type ModelLiveliness struct {
+	Source        string                 `json:"source,omitempty"`
+	OverallStatus string                 `json:"overall_status,omitempty"`
+	TTFT          *ModelLivelinessMetric `json:"ttft,omitempty"`
+	E2ELatency    *ModelLivelinessMetric `json:"e2e_latency,omitempty"`
+	Throughput    *ModelLivelinessMetric `json:"throughput,omitempty"`
+}
+
+// ModelLivelinessMetric is one daily performance series.
+type ModelLivelinessMetric struct {
+	Unit   string                `json:"unit,omitempty"`
+	Status string                `json:"status,omitempty"`
+	Days   []*ModelLivelinessDay `json:"days,omitempty"`
+}
+
+// ModelLivelinessDay is one UTC day of a performance metric.
+type ModelLivelinessDay struct {
+	DayMS   float64 `json:"day_ms,omitempty"`
+	Partial bool    `json:"partial,omitempty"`
+	Samples uint32  `json:"samples,omitempty"`
+	P50     float64 `json:"p50,omitempty"`
+	P75     float64 `json:"p75,omitempty"`
+	P95     float64 `json:"p95,omitempty"`
+}
+
+// ListModelCatalogV2 returns a page of the authenticated V2 model catalog.
+func (g *AgentPlatformServiceOp) ListModelCatalogV2(ctx context.Context, opt *ModelCatalogV2ListOptions) (*ModelCatalogV2List, *Response, error) {
+	path, err := addOptions(modelCatalogV2BasePath, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := g.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(ModelCatalogV2List)
+	resp, err := g.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if root.Links != nil {
+		resp.Links = root.Links
+	}
+
+	return root, resp, nil
+}
+
+// GetModelCatalogCardV2 returns one V2 catalog card.
+// id is the catalog ID. modelID is the inference model ID and may be used
+// instead of id. At least one of them is required.
+func (g *AgentPlatformServiceOp) GetModelCatalogCardV2(ctx context.Context, id, modelID string) (*ModelCatalogEntryV2, *Response, error) {
+	id = strings.TrimSpace(id)
+	modelID = strings.TrimSpace(modelID)
+	if id == "" && modelID == "" {
+		return nil, nil, fmt.Errorf("id or model_id is required")
+	}
+	pathID := id
+	if pathID == "" {
+		pathID = modelID
+	}
+
+	path := fmt.Sprintf("%s/%s", modelCatalogV2BasePath, url.PathEscape(pathID))
+	if modelID != "" {
+		path += "?model_id=" + url.QueryEscape(modelID)
+	}
+
+	req, err := g.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(struct {
+		Data *ModelCatalogEntryV2 `json:"data"`
+	})
+	resp, err := g.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Data, resp, nil
 }
 
 // ListDatacenterRegions returns a list of available datacenter regions for Agent Platform services
