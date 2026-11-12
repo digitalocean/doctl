@@ -259,3 +259,22 @@ func TestRenderStyledHelp_HighlightsMidLineExample(t *testing.T) {
 	assert.Contains(t, out, "The following example creates a cluster named `example-cluster`:")
 	assert.Contains(t, out, "doctl kubernetes cluster create example-cluster --region nyc1")
 }
+
+func TestRenderStyledHelpSections_OmitsHeader(t *testing.T) {
+	root := &cobra.Command{Use: "doctl"}
+	parent := &Command{Command: root}
+	short := "Rotate a webhook trigger's secret"
+	long := "Issue a new webhook secret (shown once). Webhook triggers only."
+	cmd := CmdBuilder(parent, func(*CmdConfig) error { return nil }, "rotate-secret <trigger-id>", short, long, Writer)
+	AddIntFlag(cmd, "grace-period", "", 0, "Seconds the old secret keeps verifying")
+
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	require.NoError(t, renderStyledHelpSections(cmd.Command, &buf, env, false))
+	out := buf.String()
+
+	assert.Contains(t, out, "USAGE")
+	assert.Contains(t, out, "--grace-period")
+	assert.NotContains(t, out, short)
+	assert.NotContains(t, out, long)
+}

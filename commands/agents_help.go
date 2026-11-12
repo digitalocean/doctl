@@ -485,7 +485,8 @@ func requireAgentSubcommand(cmd *Command) {
 }
 
 // agentsStyledHelpFunc prints a compact colored header on TTYs, plain prose with
-// bordered code examples, then the standard cobra usage section (always plain).
+// bordered code examples, then the shared Next Gen usage/flags sections without
+// re-printing Short/Long (root UsageFunc would duplicate the header).
 func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {
 	w := cmd.OutOrStdout()
 	stylingEnabled = detectStyling()
@@ -506,6 +507,6 @@ func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {
 	}
 
 	if cmd.Runnable() || cmd.HasAvailableSubCommands() {
-		fmt.Fprint(w, cmd.UsageString())
+		_ = renderStyledHelpSections(cmd, w, uiEnv(), false)
 	}
 }

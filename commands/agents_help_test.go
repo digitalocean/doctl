@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
+	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +35,45 @@ func TestRenderAgentsHelpLongColorizesCodeOnly(t *testing.T) {
 	assert.Contains(t, out, "More text.")
 	assert.Contains(t, out, "doctl agents run")
 	assert.NotContains(t, out, "```")
+}
+
+// MARSOHS-2591: root UsageFunc re-renders Short+Long. agentsStyledHelpFunc must
+// not call UsageString(), or rotate-secret --help prints the description twice.
+func TestAgentsStyledHelpFunc_LongAppearsOnceWithSharedUsageFunc(t *testing.T) {
+	prevEnv := resolvedEnv
+	t.Cleanup(func() { resolvedEnv = prevEnv })
+
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	resolvedEnv = &env
+
+	long := strings.TrimSpace(agentsTriggersRotateSecretHelpMD)
+	short := "Rotate a webhook trigger's secret"
+	cmd := &cobra.Command{
+		Use:   "rotate-secret <trigger-id>",
+		Short: short,
+		Long:  long,
+		Run:   func(*cobra.Command, []string) {},
+	}
+	cmd.Flags().Int("grace-period", 0, "Seconds the old secret keeps verifying")
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	// Same stacking as installHelpRenderer: UsageFunc prints the full help.
+	cmd.SetUsageFunc(func(c *cobra.Command) error {
+		return renderStyledHelp(c, c.OutOrStderr(), env, true)
+	})
+
+	agentsStyledHelpFunc(cmd, nil)
+	out := buf.String()
+
+	assert.Equal(t, 1, strings.Count(out, long), "Long must appear once; got:\n%s", out)
+	assert.Equal(t, 1, strings.Count(out, "USAGE"), "USAGE must appear once; got:\n%s", out)
+	assert.Contains(t, out, "--grace-period")
+	// Regression: pre-fix path reprinted Short via writeHelpHeader after Long.
+	usageIdx := strings.Index(out, "USAGE")
+	require.Greater(t, usageIdx, -1)
+	afterLong := out[strings.Index(out, long)+len(long) : usageIdx]
+	assert.NotContains(t, afterLong, short)
 }
 
 func TestRenderHelpCodeBlockStyled(t *testing.T) {
