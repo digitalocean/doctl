@@ -191,8 +191,15 @@ func harborFileMatches(dest string, wantSize int64, wantSHA256 string) bool {
 // harborSafePath resolves a server-supplied relative path inside dir and
 // refuses any that would land outside it.
 func harborSafePath(dir, name string) (string, error) {
-	clean := filepath.Clean(filepath.FromSlash(strings.TrimSpace(name)))
-	if clean == "." || clean == "" || filepath.IsAbs(clean) || filepath.VolumeName(clean) != "" ||
+	// Judge the path as it was written, before the OS rewrites it. On Windows a
+	// leading slash is not absolute, so "/etc/passwd" would otherwise be accepted.
+	slashed := strings.TrimSpace(name)
+	if slashed == "" || slashed == "." || strings.HasPrefix(slashed, "/") || strings.HasPrefix(slashed, `\`) ||
+		strings.HasPrefix(slashed, "../") || strings.HasPrefix(slashed, `..\`) || slashed == ".." {
+		return "", fmt.Errorf("refusing to write a file with the unsafe path %q", name)
+	}
+	clean := filepath.Clean(filepath.FromSlash(slashed))
+	if filepath.IsAbs(clean) || filepath.VolumeName(clean) != "" ||
 		clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("refusing to write a file with the unsafe path %q", name)
 	}

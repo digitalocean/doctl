@@ -231,10 +231,34 @@ func collectHarborFiles(root string) ([]harborFile, error) {
 		if !info.Mode().IsRegular() {
 			return nil, fmt.Errorf("%s must be a regular file", rel)
 		}
-		files = append(files, harborFile{Path: rel, Abs: abs, Size: info.Size(), Exec: info.Mode().Perm()&0o111 != 0})
+		exec, err := harborExecutable(abs, info)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", rel, err)
+		}
+		files = append(files, harborFile{Path: rel, Abs: abs, Size: info.Size(), Exec: exec})
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 	return files, nil
+}
+
+// harborExecutable reports whether a file should be archived as executable.
+// It checks the permission bits and, because Windows does not store them,
+// also the signals Harbor itself uses: a .sh name or a shebang.
+func harborExecutable(path string, info fs.FileInfo) (bool, error) {
+	if info.Mode().Perm()&0o111 != 0 || strings.HasSuffix(strings.ToLower(path), ".sh") {
+		return true, nil
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+	buf := make([]byte, 2)
+	n, err := f.Read(buf)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return false, err
+	}
+	return n == 2 && string(buf) == "#!", nil
 }
 
 // ensureHarborInsideTask refuses a file whose symlinks lead outside the task,
