@@ -32,11 +32,12 @@ func writeHarborFixture(t *testing.T, root string, files map[string]string) {
 	for rel, content := range files {
 		p := filepath.Join(root, filepath.FromSlash(rel))
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
-		mode := os.FileMode(0o644)
+		require.NoError(t, os.WriteFile(p, []byte(content), 0o644))
 		if strings.HasSuffix(rel, ".sh") {
-			mode = 0o755
+			// Windows drops the mode given to WriteFile, so set the executable
+			// bit again. Go maps it onto the file's Windows attributes.
+			require.NoError(t, os.Chmod(p, 0o755))
 		}
-		require.NoError(t, os.WriteFile(p, []byte(content), mode))
 	}
 }
 

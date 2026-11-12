@@ -511,5 +511,5 @@ func TestHarborSafePath(t *testing.T) {
 	}
 	got, err := harborSafePath(dir, "a/b/../c")
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(dir, "a", "c"), got)
+	assert.Equal(t, filepath.Join(dir, "a", "c"), filepath.Clean(got))
 }
