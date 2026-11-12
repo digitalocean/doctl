@@ -1034,6 +1034,10 @@ const (
 	// ArgAgentAuthNoBrowser prints the provider authorization URL instead of opening a browser.
 	ArgAgentAuthNoBrowser = "no-browser"
 
+	// ArgAgentNoWait makes `agents update --spec` return once the server has
+	// accepted the config update, without waiting for it to finish. Same flag
+	// string as ArgAgentAuthNoWait on `auth`.
+	ArgAgentNoWait = "no-wait"
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 

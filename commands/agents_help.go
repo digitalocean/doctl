@@ -174,9 +174,14 @@ Without ` + "`--run-id`" + `, cancels whichever turn is running when the request
 
 Nothing running is not an error: the command says so and exits 0, so it is safe to run unconditionally. With ` + "`-o json`" + ` it prints ` + "`{\"session_id\", \"run_id\", \"outcome\"}`" + `, where ` + "`outcome`" + ` is ` + "`acked`" + `, ` + "`no_turn`" + ` or ` + "`unsupported`" + ` and ` + "`run_id`" + ` is absent when nothing was running. An agent that cannot cancel a turn is an error, since the turn keeps running. Cancel undoes nothing the turn already did; a half-written file stays half-written. It never pauses the session — use ` + "`" + agentCLI + " pause`" + ` for that.`
 
-const agentsUpdateHelpMD = `Change settings on a session that already exists. Only flags you pass are changed; everything else is left alone. This never edits the agent manifest — configs are immutable, so create a new one to change how the agent runs.
+const agentsUpdateHelpMD = `Change a session that already exists. Only what you pass is changed; everything else is left alone. Two kinds of change, which cannot be combined in one call.
 
-Today the one setting is ` + "`--resume-on-topoff`" + `, the consent to be resumed automatically after a low-balance pause:
+**Live config** (` + "`--spec`" + `, alias ` + "`--file`" + `): send a partial manifest holding only the sections to change, ` + "`tools`, `env` and `secrets`" + `. Sections you leave out are untouched. ` + "`tools`" + ` is the full replacement list (` + "`tools: []`" + ` detaches every MCP server). ` + "`env`" + ` and ` + "`secrets`" + ` are full sets: a key you leave out is removed, and a secret is a string to set or rotate, or ` + "`{}`" + ` to keep its current value. ` + "`model`" + ` and ` + "`permissions`" + ` are not supported yet.
+` + "```bash\n" + agentCLI + ` update my-session --spec tools.yaml
+` + agentCLI + ` update my-session --file - < tools.yaml
+` + "```\n\n" + `The change is applied while the session runs. A tools-only change usually takes seconds; an env or secret change restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature, and the session must be running.
+
+**Session setting** (` + "`--resume-on-topoff`" + `): the consent to be resumed automatically after a low-balance pause:
 ` + "```bash\n" + agentCLI + ` update my-session --resume-on-topoff
 ` + agentCLI + ` update my-session --resume-on-topoff=false
 ` + "```\n\n" + `Note the ` + "`=`" + `: boolean flags take a value only when it is attached, so ` + "`--resume-on-topoff false`" + ` would set the flag to true and leave ` + "`false`" + ` behind as an argument.
@@ -242,6 +247,12 @@ Configs are immutable — create a new config to change a manifest. Delete is bl
 const agentsSizesRootHelpMD = `List sandbox (microVM) sizes you can set as ` + "`spec.sandbox.sizeSlug`" + ` when creating a session.`
 
 const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalog (slug, vCPUs, memory). Ordered smallest to largest. Every returned slug is accepted by CreateSession as ` + "`spec.sandbox.sizeSlug`" + `.`
+
+const agentsRegionsRootHelpMD = `List the regions your team can create sessions and environments in, and which one you get by default.`
+
+const agentsRegionsListHelpMD = `Print the regions your team may place sessions and environments in. The default region is always listed and marked ` + "`*`" + `; it is the one a create uses when you omit ` + "`--region`" + `. Other regions appear only once your team has been granted them, so every slug listed here is accepted by ` + "`--region`" + ` and a slug missing from this list is refused.
+
+The catalog is the same whichever region you ask, so one call lists them all.`
 
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " create --spec`" + `). ` + "`--name`" + ` must be unique within your team.
 
