@@ -89,6 +89,7 @@ type MicroVMsService interface {
 	ListFiltered(ctx context.Context, opt *ListMicroVMsOptions) ([]MicroVM, *Response, error)
 	Get(ctx context.Context, id string) (*MicroVM, *Response, error)
 	Create(ctx context.Context, createRequest *MicroVMCreateRequest) (*MicroVM, *Response, error)
+	Update(ctx context.Context, id string, updateRequest *MicroVMUpdateRequest) (*MicroVM, *Response, error)
 	Pause(ctx context.Context, id string) (*MicroVM, *Response, error)
 	Resume(ctx context.Context, id string) (*MicroVM, *Response, error)
 	Delete(ctx context.Context, id string) (*Response, error)
@@ -295,6 +296,18 @@ type MicroVMCreateRequest struct {
 	// egress unrestricted, or inherits the origin's policy on a checkpoint
 	// restore. Only valid with public networking and fixed at create.
 	EgressPolicy *MicroVMEgressPolicy `json:"egress_policy,omitempty"`
+}
+
+// MicroVMUpdateRequest represents a request to update a MicroVM. Set at
+// least one field; omitted fields keep their current value. Every other
+// MicroVM field is fixed at create, and changing one means a new MicroVM.
+type MicroVMUpdateRequest struct {
+	Name string `json:"name,omitempty"`
+	// Tags replaces the whole tag set. Nil leaves the tags unchanged; a
+	// pointer to an empty slice removes every tag.
+	Tags *[]string `json:"tags,omitempty"`
+	// AutoPause changes the idle timeout. IdleTimeout must be set.
+	AutoPause *AutoPauseConfig `json:"auto_pause,omitempty"`
 }
 
 // MicroVMCheckpointCreateRequest represents a request to create a checkpoint.
@@ -643,6 +656,32 @@ func (s *MicroVMsServiceOp) Create(ctx context.Context, createRequest *MicroVMCr
 	}
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, microVMBasePath, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(microVMRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.MicroVM, resp, nil
+}
+
+// Update changes the name, tags or auto-pause idle timeout of a running or
+// paused MicroVM and returns the updated MicroVM.
+func (s *MicroVMsServiceOp) Update(ctx context.Context, id string, updateRequest *MicroVMUpdateRequest) (*MicroVM, *Response, error) {
+	if id == "" {
+		return nil, nil, NewArgError("id", "cannot be empty")
+	}
+	if updateRequest == nil {
+		return nil, nil, NewArgError("updateRequest", "cannot be nil")
+	}
+
+	path := fmt.Sprintf("%s/%s", microVMBasePath, id)
+
+	req, err := s.client.NewRequest(ctx, http.MethodPatch, path, updateRequest)
 	if err != nil {
 		return nil, nil, err
 	}

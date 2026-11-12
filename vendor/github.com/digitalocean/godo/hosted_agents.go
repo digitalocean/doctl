@@ -169,11 +169,13 @@ type HostedAgentsService interface {
 	// pagination.
 	ListSandboxSizes(context.Context) (*HostedAgentSandboxSizesResponse, *Response, error)
 	// ListRegions returns the regions the caller's team may create sessions and
-	// environments in (GET /v2/harness-runtime/regions). The default region is
-	// always listed and is marked IsDefault; every other open region is listed
-	// only when the team holds its grant, so the set is exactly what
-	// CreateSession and CreateSessionFromEnvironment placement admit. Sorted by
-	// slug; no pagination.
+	// environments in (GET /v2/harness-runtime/regions). A region is chosen by
+	// the API host called, so each returned Slug names the host to point a
+	// client at; see HostedAgentsRegionalBaseURL. The default region is always
+	// listed and is marked IsDefault; every other open region is listed only
+	// when the team holds its grant, so a create on a listed region's host is
+	// admitted and a region missing from the list is refused. Sorted by slug;
+	// no pagination.
 	//
 	// The catalog is team-scoped, not host-scoped: it is the same on every
 	// regional host, so one call enumerates the regions rather than one call
