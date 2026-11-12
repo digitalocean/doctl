@@ -50,6 +50,7 @@ mockgen -source serverless.go -package=mocks ServerlessService > mocks/Serverles
 mockgen -source partner_network_connect.go  -package=mocks PartnerAttachmentsService > mocks/PartnerAttachmentsService.go
 mockgen -source spaces_keys.go -package=mocks SpacesKeysService > mocks/SpacesKeysService.go
 mockgen -source gradientai.go -package=mocks AgentPlatformService > mocks/AgentPlatformService.go
+mockgen -source harbor.go -package=mocks HarborService > mocks/HarborService.go
 mockgen -source inference.go -package=mocks InferenceService > mocks/InferenceService.go
 mockgen -source insights.go -package=mocks InsightsService > mocks/InsightsService.go
 mockgen -source nfs.go -package=mocks NfsService > mocks/NfsService.go

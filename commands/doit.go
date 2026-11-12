@@ -232,6 +232,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Spaces())
 	DoitCmd.AddCommand(GradientAI())
 	DoitCmd.AddCommand(Evaluation())
+	DoitCmd.AddCommand(GenAI())
 	DoitCmd.AddCommand(DedicatedInferenceCmd())
 	DoitCmd.AddCommand(Inference())
 	DoitCmd.AddCommand(Nfs())

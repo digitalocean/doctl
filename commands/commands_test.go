@@ -294,6 +294,7 @@ type tcMocks struct {
 	partnerAttachments    *domocks.MockPartnerAttachmentsService
 	spacesKeys            *domocks.MockSpacesKeysService
 	agentPlatform         *domocks.MockAgentPlatformService
+	harbor                *domocks.MockHarborService
 	dedicatedInferences   *domocks.MockDedicatedInferenceService
 	inference             *domocks.MockInferenceService
 	nfs                   *domocks.MockNfsService
@@ -376,6 +377,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		partnerAttachments:    domocks.NewMockPartnerAttachmentsService(ctrl),
 		spacesKeys:            domocks.NewMockSpacesKeysService(ctrl),
 		agentPlatform:         domocks.NewMockAgentPlatformService(ctrl),
+		harbor:                domocks.NewMockHarborService(ctrl),
 		dedicatedInferences:   domocks.NewMockDedicatedInferenceService(ctrl),
 		inference:             domocks.NewMockInferenceService(ctrl),
 		nfs:                   domocks.NewMockNfsService(ctrl),
@@ -452,6 +454,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		PartnerAttachments:  func() do.PartnerAttachmentsService { return tm.partnerAttachments },
 		SpacesKeys:          func() do.SpacesKeysService { return tm.spacesKeys },
 		AgentPlatform:       func() do.AgentPlatformService { return tm.agentPlatform },
+		Harbor:              func() do.HarborService { return tm.harbor },
 		DedicatedInferences: func() do.DedicatedInferenceService { return tm.dedicatedInferences },
 		Inference:           func() do.InferenceService { return tm.inference },
 		Nfs:                 func() do.NfsService { return tm.nfs },

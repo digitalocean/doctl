@@ -94,6 +94,7 @@ type CmdConfig struct {
 	PartnerAttachments  func() do.PartnerAttachmentsService
 	SpacesKeys          func() do.SpacesKeysService
 	AgentPlatform       func() do.AgentPlatformService
+	Harbor              func() do.HarborService
 	DedicatedInferences func() do.DedicatedInferenceService
 	Inference           func() do.InferenceService
 	Nfs                 func() do.NfsService
@@ -187,6 +188,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 			c.AgentPlatform = func() do.AgentPlatformService { return do.NewAgentPlatformService(godoClient) }
+			c.Harbor = func() do.HarborService { return do.NewHarborService(godoClient) }
 			c.DedicatedInferences = func() do.DedicatedInferenceService {
 				return do.NewDedicatedInferenceService(godoClient)
 			}

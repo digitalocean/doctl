@@ -21,7 +21,7 @@ func GradientAI() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "gradient",
-			Aliases: []string{"ai", "genai", "gradientai"},
+			Aliases: []string{"ai", "gradientai"},
 			Short:   "Manage Gradient AI resources",
 			Long: `doctl gradient is deprecated and hidden from help.
 
