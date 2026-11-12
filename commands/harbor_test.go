@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -273,9 +274,13 @@ func TestRunHarborTaskPull(t *testing.T) {
 		b, err := os.ReadFile(filepath.Join(out, "fix-login-bug", "tests", "test.sh"))
 		require.NoError(t, err)
 		assert.Equal(t, "#!/bin/sh\nexit 0\n", string(b))
-		info, err := os.Stat(filepath.Join(out, "fix-login-bug", "tests", "test.sh"))
-		require.NoError(t, err)
-		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+		// Windows cannot store Unix permission bits, so the executable bit only
+		// survives extraction where the filesystem supports it.
+		if runtime.GOOS != "windows" {
+			info, err := os.Stat(filepath.Join(out, "fix-login-bug", "tests", "test.sh"))
+			require.NoError(t, err)
+			assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+		}
 
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			config.Args = []string{"fix-login-bug"}

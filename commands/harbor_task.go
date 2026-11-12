@@ -16,6 +16,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -403,7 +404,7 @@ func RunHarborTaskPull(c *CmdConfig) error {
 			return err
 		}
 	}
-	if err := os.Rename(unpacked, dest); err != nil {
+	if err := moveHarborDir(unpacked, dest); err != nil {
 		return err
 	}
 	return c.Display(&displayers.HarborPull{Result: &do.HarborPullResult{Name: name, Digest: got, Path: dest, Files: len(sums)}})
@@ -436,6 +437,54 @@ func harborStatus(err error) int {
 		return apiErr.Response.StatusCode
 	}
 	return 0
+}
+
+// moveHarborDir moves src into place at dest. A rename across the same
+// directory is atomic, but Windows refuses to rename onto an existing
+// directory, so it falls back to copying and then removes src.
+func moveHarborDir(src, dest string) error {
+	if err := os.Rename(src, dest); err == nil {
+		return nil
+	}
+	if err := copyHarborDir(src, dest); err != nil {
+		return err
+	}
+	return os.RemoveAll(src)
+}
+
+// copyHarborDir copies the files of src into dest, keeping each file's mode.
+func copyHarborDir(src, dest string) error {
+	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dest, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		in, err := os.Open(p)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+		info, err := in.Stat()
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return err
+		}
+		out, err := os.OpenFile(target, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode().Perm())
+		if err != nil {
+			return err
+		}
+		_, copyErr := io.Copy(out, in)
+		return errors.Join(copyErr, out.Close())
+	})
 }
 
 // harborProgress reports progress on stderr so stdout stays parseable.
