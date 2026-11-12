@@ -59,6 +59,10 @@ type HostedAgentsService interface {
 	// UpdateSession patches session-scoped settings (never the agent manifest
 	// or config) and returns the updated session.
 	UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error)
+	// UpdateSessionConfig patches the live config (tools, env, secrets) of a
+	// session from a partial manifest. The result carries the outcome
+	// (ACCEPTED or UNCHANGED); on ACCEPTED the caller polls GetSession.
+	UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error)
 	DestroySession(sessionID string) error
 	PauseSession(sessionID string) error
 	ResumeSession(sessionID string) error
@@ -86,6 +90,13 @@ type HostedAgentsService interface {
 	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
 	// smallest-to-largest; no pagination.
 	ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error)
+	// ListRegions returns the regions this team may create sessions and
+	// environments in. The default region is always listed and marked
+	// IsDefault; every other open region appears only when the team holds its
+	// grant, so the catalog matches what a create admits. Sorted by slug; no
+	// pagination. The catalog is team-scoped, so one call enumerates the
+	// regions whichever regional host --region selects.
+	ListRegions() ([]godo.HostedAgentRegion, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
 	// external provider (e.g. "github"). The team is taken from the
@@ -292,6 +303,14 @@ func (s *hostedAgentsService) UpdateSession(sessionID string, update *godo.Hoste
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
 }
 
+func (s *hostedAgentsService) UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error) {
+	res, _, err := s.client.HostedAgents.UpdateSessionConfig(context.TODO(), sessionID, update)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func (s *hostedAgentsService) DestroySession(sessionID string) error {
 	_, err := s.client.HostedAgents.DestroySession(context.TODO(), sessionID)
 	return err
@@ -372,6 +391,17 @@ func (s *hostedAgentsService) ListSandboxSizes() ([]godo.HostedAgentSandboxSize,
 		return nil, nil
 	}
 	return resp.Sizes, nil
+}
+
+func (s *hostedAgentsService) ListRegions() ([]godo.HostedAgentRegion, error) {
+	resp, _, err := s.client.HostedAgents.ListRegions(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	return resp.Regions, nil
 }
 
 func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
