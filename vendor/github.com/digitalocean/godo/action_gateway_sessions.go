@@ -61,6 +61,9 @@ type ActionGatewaySessionRecord struct {
 	UpdatedAt           *Timestamp                    `json:"updatedAt"`
 	OwningUserID        string                        `json:"owning_user_id"`
 	OwningUserNumericID string                        `json:"owning_user_numeric_id"`
+	EndpointID          string                        `json:"endpoint_id"`
+	EndpointVersionID   string                        `json:"endpoint_version_id"`
+	VersionNumber       int64                         `json:"version_number"`
 }
 
 // ActionGatewaySessionCreateRequest is the wire request for creating a session.
