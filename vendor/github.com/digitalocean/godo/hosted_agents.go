@@ -123,8 +123,15 @@ type HostedAgentsService interface {
 	ListSessions(context.Context, *HostedAgentSessionListOptions) (*HostedAgentSessionsListResponse, *Response, error)
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	// UpdateSession patches session-scoped settings on an existing session and
-	// returns the updated snapshot. Never touches the agent manifest or config.
+	// returns the updated snapshot. Never touches the agent manifest or config;
+	// use UpdateSessionConfig to change tools, env or secrets.
 	UpdateSession(context.Context, string, *HostedAgentSessionUpdateRequest) (*HostedAgentSession, *Response, error)
+	// UpdateSessionConfig patches the live configuration of a session (tools,
+	// env, secrets) from a partial manifest YAML. The server answers 202 with
+	// outcome ACCEPTED and the session in SESSION_STATUS_UPDATING; callers poll
+	// GetSession until the status leaves UPDATING and then read Session.Update.
+	// An unchanged manifest answers 200 with outcome UNCHANGED.
+	UpdateSessionConfig(context.Context, string, *HostedAgentSessionConfigUpdateRequest) (*HostedAgentSessionConfigUpdateResponse, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
 	PauseSession(context.Context, string) (*Response, error)
 	ResumeSession(context.Context, string) (*Response, error)
@@ -169,11 +176,13 @@ type HostedAgentsService interface {
 	// pagination.
 	ListSandboxSizes(context.Context) (*HostedAgentSandboxSizesResponse, *Response, error)
 	// ListRegions returns the regions the caller's team may create sessions and
-	// environments in (GET /v2/harness-runtime/regions). The default region is
-	// always listed and is marked IsDefault; every other open region is listed
-	// only when the team holds its grant, so the set is exactly what
-	// CreateSession and CreateSessionFromEnvironment placement admit. Sorted by
-	// slug; no pagination.
+	// environments in (GET /v2/harness-runtime/regions). A region is chosen by
+	// the API host called, so each returned Slug names the host to point a
+	// client at; see HostedAgentsRegionalBaseURL. The default region is always
+	// listed and is marked IsDefault; every other open region is listed only
+	// when the team holds its grant, so a create on a listed region's host is
+	// admitted and a region missing from the list is refused. Sorted by slug;
+	// no pagination.
 	//
 	// The catalog is team-scoped, not host-scoped: it is the same on every
 	// regional host, so one call enumerates the regions rather than one call
@@ -268,6 +277,9 @@ const (
 	HostedAgentSessionStatusDestroyed    HostedAgentSessionStatus = "SESSION_STATUS_DESTROYED"
 	HostedAgentSessionStatusFailed       HostedAgentSessionStatus = "SESSION_STATUS_FAILED"
 	HostedAgentSessionStatusPaused       HostedAgentSessionStatus = "SESSION_STATUS_PAUSED"
+	// HostedAgentSessionStatusUpdating is reported while a config update
+	// (UpdateSessionConfig) is being applied.
+	HostedAgentSessionStatusUpdating HostedAgentSessionStatus = "SESSION_STATUS_UPDATING"
 )
 
 // HostedAgentSessionPauseReason is why a paused session was paused. The API
@@ -485,6 +497,17 @@ type HostedAgentSession struct {
 	// Always encoded, so a revoked consent reads as false rather than absent.
 	// The server omits it when false, which decodes to the same value.
 	ResumeOnTopoff bool `json:"resume_on_topoff"`
+	// Update is the latest config update (see UpdateSessionConfig), present
+	// once any update has been requested.
+	Update *HostedAgentSessionConfigUpdate `json:"update,omitempty"`
+	// ConfigDrifted is true when the running config differs from the manifest
+	// the session was created from. Omitted by the server when false.
+	ConfigDrifted bool `json:"config_drifted,omitempty"`
+	// ConfigDiff summarises the drift, per section.
+	ConfigDiff *HostedAgentSessionConfigChanges `json:"config_diff,omitempty"`
+	// Manifest is the effective manifest; only present when ConfigDrifted.
+	// Never contains secret values.
+	Manifest json.RawMessage `json:"manifest,omitempty"`
 	// WorkspaceID is the persistent workspace this session attaches (see
 	// HostedAgentWorkspace). Set at create and returned on get/list; omitted
 	// when the session has no persistent workspace.
@@ -691,7 +714,8 @@ type HostedAgentSessionFromEnvironmentRequest = HostedAgentSessionFromConfigRequ
 
 // HostedAgentSessionUpdateRequest is the body for PATCH
 // /v2/harness-runtime/sessions/{session_id}: an allowlisted subset of session-scoped
-// settings, never an agents.yaml or Agent Config mutation. The server rejects
+// settings (see HostedAgentsService.UpdateSessionConfig for live config
+// changes such as tools, env and secrets). The server rejects
 // unknown top-level keys, and rejects an empty object, so every field is a
 // pointer: nil omits it and leaves the server-side value untouched.
 type HostedAgentSessionUpdateRequest struct {
@@ -1110,6 +1134,92 @@ type HostedAgentWorkspaceTransferCancelResponse struct {
 	Status     HostedAgentWorkspaceTransferStatus `json:"status"`
 }
 
+// HostedAgentSessionConfigUpdateRequest is the body for PATCH
+// /v2/harness-runtime/sessions/{session_id} when changing live configuration.
+// ManifestYAML holds only the sections to change (tools, env, secrets); absent
+// sections are untouched. It cannot be combined with resume_on_topoff.
+type HostedAgentSessionConfigUpdateRequest struct {
+	ManifestYAML string `json:"manifest_yaml"`
+}
+
+// HostedAgentSessionConfigUpdateOutcome is the outcome of a config update request.
+type HostedAgentSessionConfigUpdateOutcome string
+
+const (
+	// HostedAgentSessionConfigUpdateOutcomeAccepted: HTTP 202, update is applying.
+	HostedAgentSessionConfigUpdateOutcomeAccepted HostedAgentSessionConfigUpdateOutcome = "ACCEPTED"
+	// HostedAgentSessionConfigUpdateOutcomeUnchanged: HTTP 200, nothing to change.
+	HostedAgentSessionConfigUpdateOutcomeUnchanged HostedAgentSessionConfigUpdateOutcome = "UNCHANGED"
+)
+
+// HostedAgentSessionConfigUpdateState is the state of a config update.
+type HostedAgentSessionConfigUpdateState string
+
+const (
+	HostedAgentSessionConfigUpdateStateApplying         HostedAgentSessionConfigUpdateState = "APPLYING"
+	HostedAgentSessionConfigUpdateStateApplied          HostedAgentSessionConfigUpdateState = "APPLIED"
+	HostedAgentSessionConfigUpdateStateAppliedRestarted HostedAgentSessionConfigUpdateState = "APPLIED_RESTARTED"
+	HostedAgentSessionConfigUpdateStateFailed           HostedAgentSessionConfigUpdateState = "FAILED"
+)
+
+// HostedAgentSessionConfigUpdateKind distinguishes a requested update from an
+// automatic rollback.
+type HostedAgentSessionConfigUpdateKind string
+
+const (
+	HostedAgentSessionConfigUpdateKindUpdate   HostedAgentSessionConfigUpdateKind = "update"
+	HostedAgentSessionConfigUpdateKindRollback HostedAgentSessionConfigUpdateKind = "rollback"
+)
+
+// HostedAgentSessionConfigUpdateError is the failure class of a FAILED update.
+type HostedAgentSessionConfigUpdateError string
+
+const (
+	HostedAgentSessionConfigUpdateErrorUpdateFailed       HostedAgentSessionConfigUpdateError = "update_failed"
+	HostedAgentSessionConfigUpdateErrorRequiresNewSession HostedAgentSessionConfigUpdateError = "requires_new_session"
+	HostedAgentSessionConfigUpdateErrorInterrupted        HostedAgentSessionConfigUpdateError = "interrupted"
+)
+
+// HostedAgentSessionConfigSectionChanges lists the keys touched in one section.
+type HostedAgentSessionConfigSectionChanges struct {
+	Added   []string `json:"added,omitempty"`
+	Removed []string `json:"removed,omitempty"`
+	Changed []string `json:"changed,omitempty"`
+}
+
+// HostedAgentSessionConfigChanges summarises changes per manifest section.
+type HostedAgentSessionConfigChanges struct {
+	Tools   *HostedAgentSessionConfigSectionChanges `json:"tools,omitempty"`
+	Env     *HostedAgentSessionConfigSectionChanges `json:"env,omitempty"`
+	Secrets *HostedAgentSessionConfigSectionChanges `json:"secrets,omitempty"`
+}
+
+// HostedAgentSessionConfigUpdate describes one config update (or rollback) of a session.
+type HostedAgentSessionConfigUpdate struct {
+	UpdateID     string                              `json:"update_id"`
+	SessionID    string                              `json:"session_id,omitempty"`
+	Kind         HostedAgentSessionConfigUpdateKind  `json:"kind,omitempty"`
+	State        HostedAgentSessionConfigUpdateState `json:"state"`
+	Sections     []string                            `json:"sections,omitempty"`
+	Changes      *HostedAgentSessionConfigChanges    `json:"changes,omitempty"`
+	Error        HostedAgentSessionConfigUpdateError `json:"error,omitempty"`
+	Reverted     bool                                `json:"reverted,omitempty"`
+	Detail       string                              `json:"detail,omitempty"`
+	ManifestHash string                              `json:"manifest_hash,omitempty"`
+	PreviousHash string                              `json:"previous_hash,omitempty"`
+	UserUUID     string                              `json:"user_uuid,omitempty"`
+	UserEmail    string                              `json:"user_email,omitempty"`
+	StartedAt    Timestamp                           `json:"started_at"`
+	FinishedAt   Timestamp                           `json:"finished_at"`
+}
+
+// HostedAgentSessionConfigUpdateResponse is returned by UpdateSessionConfig.
+type HostedAgentSessionConfigUpdateResponse struct {
+	Session  *HostedAgentSession                   `json:"session"`
+	Outcome  HostedAgentSessionConfigUpdateOutcome `json:"outcome,omitempty"`
+	Warnings []string                              `json:"warnings,omitempty"`
+}
+
 type hostedAgentSessionRoot struct {
 	Session *HostedAgentSession `json:"session"`
 }
@@ -1279,6 +1389,37 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 		return nil, resp, errors.New("hosted agents: update session returned no session")
 	}
 	return root.Session, resp, nil
+}
+
+// UpdateSessionConfig patches the live configuration of a session from a
+// partial manifest YAML (tools, env, secrets). The response carries the
+// session, the outcome (ACCEPTED on HTTP 202, UNCHANGED on HTTP 200) and any
+// warnings. godo does not wait: on ACCEPTED the session is
+// SESSION_STATUS_UPDATING and the caller polls GetSession until the status
+// leaves UPDATING, then reads Session.Update. See the API error statuses: 403
+// (feature not enabled), 409 (not running / already updating), 422
+// (requires a new session), 501 (model or permissions).
+func (s *HostedAgentsServiceOp) UpdateSessionConfig(ctx context.Context, sessionID string, update *HostedAgentSessionConfigUpdateRequest) (*HostedAgentSessionConfigUpdateResponse, *Response, error) {
+	if sessionID == "" {
+		return nil, nil, errors.New("hosted agents: session id is required")
+	}
+	if update == nil || update.ManifestYAML == "" {
+		return nil, nil, errors.New("hosted agents: manifest yaml is required")
+	}
+	path := fmt.Sprintf(hostedAgentSessionByIDPath, sessionID)
+	req, err := s.client.NewRequest(ctx, http.MethodPatch, path, update)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(HostedAgentSessionConfigUpdateResponse)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if root.Session == nil {
+		return nil, resp, errors.New("hosted agents: update session config returned no session")
+	}
+	return root, resp, nil
 }
 
 // DestroySession tears down a session. The API returns HTTP 204 on success.
