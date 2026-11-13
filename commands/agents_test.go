@@ -5947,3 +5947,56 @@ func TestSessionUpdatedPhase(t *testing.T) {
 	assert.Equal(t, "provisioning sandbox", sessionUpdatedPhase([]byte(`{"status":"SESSION_STATUS_PROVISIONING"}`)))
 	assert.Equal(t, "cloning repo", sessionUpdatedPhase([]byte(`{"message":"cloning repo"}`)))
 }
+
+// download accepts --local-file (the word upload uses) as a second spelling of
+// --save-to, and the required check still fires when neither is given.
+func TestAgentsDownload_LocalFileIsAliasForSaveTo(t *testing.T) {
+	cmd, _, err := DoitCmd.Find([]string{"agents", "download"})
+	require.NoError(t, err)
+
+	// --save-to stays the canonical name: help and missing-flag errors use it.
+	alias := cmd.Flags().Lookup(doctl.ArgAgentLocalFile)
+	require.NotNil(t, alias)
+	assert.Equal(t, doctl.ArgAgentSaveTo, alias.Name)
+
+	// Other tests build the agents command tree again, and each build points
+	// these viper keys at its own flags; bind them back to this command's flags
+	// so the value LiveConfig reads is the one parsed here.
+	require.NoError(t, viper.BindPFlag("agents.download.save-to", cmd.Flags().Lookup(doctl.ArgAgentSaveTo)))
+	require.NoError(t, viper.BindPFlag("agents.download.workspace-path", cmd.Flags().Lookup(doctl.ArgAgentWorkspacePath)))
+
+	reset := func() {
+		for _, name := range []string{doctl.ArgAgentWorkspacePath, doctl.ArgAgentSaveTo} {
+			f := cmd.Flags().Lookup(name)
+			_ = f.Value.Set("")
+			f.Changed = false
+		}
+	}
+	reset()
+	t.Cleanup(reset)
+
+	for _, spelling := range []string{doctl.ArgAgentLocalFile, doctl.ArgAgentSaveTo} {
+		t.Run(spelling, func(t *testing.T) {
+			reset()
+			require.NoError(t, cmd.ParseFlags([]string{
+				"--" + doctl.ArgAgentWorkspacePath, "src/main.go",
+				"--" + spelling, "./out.go",
+			}))
+			got, err := (&doctl.LiveConfig{}).GetString("agents.download", doctl.ArgAgentSaveTo)
+			require.NoError(t, err)
+			assert.Equal(t, "./out.go", got)
+			assert.Empty(t, collectMissingRequiredFlags(cmd))
+		})
+	}
+
+	t.Run("neither spelling", func(t *testing.T) {
+		reset()
+		require.NoError(t, cmd.ParseFlags([]string{"--" + doctl.ArgAgentWorkspacePath, "src/main.go"}))
+		// The pre-run check a user sees names the canonical flag.
+		issues := collectMissingRequiredFlags(cmd)
+		require.Len(t, issues, 1)
+		assert.Equal(t, doctl.ArgAgentSaveTo, issues[0].Flag)
+		_, err := (&doctl.LiveConfig{}).GetString("agents.download", doctl.ArgAgentSaveTo)
+		assert.Error(t, err)
+	})
+}
