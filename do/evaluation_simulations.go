@@ -62,12 +62,6 @@ type SimulationRun struct {
 // SimulationRuns is a slice of SimulationRun.
 type SimulationRuns []SimulationRun
 
-// SimulationRunDetail wraps a godo.SimulationRunGetResponse, which carries a
-// simulation run together with its per-scenario result rollups.
-type SimulationRunDetail struct {
-	*godo.SimulationRunGetResponse
-}
-
 // SimulationEpisode wraps a godo.SimulationEpisode.
 type SimulationEpisode struct {
 	*godo.SimulationEpisode
@@ -243,58 +237,6 @@ func (a *agentPlatformService) CreateSimulationRun(req *godo.CreateSimulationRun
 		return nil, err
 	}
 	return &SimulationRun{SimulationRun: run}, nil
-}
-
-// ListSimulationRuns lists all simulation runs for the team.
-func (a *agentPlatformService) ListSimulationRuns(opt *godo.SimulationRunListOptions) (SimulationRuns, error) {
-	if opt == nil {
-		opt = &godo.SimulationRunListOptions{}
-	}
-
-	return paginateGenAIList(func(listOpt *godo.ListOptions) ([]*godo.SimulationRun, *godo.Response, error) {
-		filters := *opt
-		filters.ListOptions = *listOpt
-		res, resp, err := a.client.AgentPlatform.ListSimulationRuns(context.TODO(), &filters)
-		if err != nil {
-			return nil, nil, err
-		}
-		return res.SimulationRuns, resp, nil
-	}, func(run *godo.SimulationRun) SimulationRun {
-		return SimulationRun{SimulationRun: run}
-	})
-}
-
-// GetSimulationRun retrieves a simulation run by its UUID, including per-scenario results.
-func (a *agentPlatformService) GetSimulationRun(runUUID string) (*SimulationRunDetail, error) {
-	res, _, err := a.client.AgentPlatform.GetSimulationRun(context.TODO(), runUUID)
-	if err != nil {
-		return nil, err
-	}
-	return &SimulationRunDetail{SimulationRunGetResponse: res}, nil
-}
-
-// UpdateSimulationRun updates a simulation run by its UUID.
-func (a *agentPlatformService) UpdateSimulationRun(runUUID string, req *godo.UpdateSimulationRunRequest) (*SimulationRun, error) {
-	run, _, err := a.client.AgentPlatform.UpdateSimulationRun(context.TODO(), runUUID, req)
-	if err != nil {
-		return nil, err
-	}
-	return &SimulationRun{SimulationRun: run}, nil
-}
-
-// CancelSimulationRun cancels an in-progress simulation run.
-func (a *agentPlatformService) CancelSimulationRun(runUUID string) (*SimulationRun, error) {
-	run, _, err := a.client.AgentPlatform.CancelSimulationRun(context.TODO(), runUUID)
-	if err != nil {
-		return nil, err
-	}
-	return &SimulationRun{SimulationRun: run}, nil
-}
-
-// DeleteSimulationRun deletes a simulation run by its UUID.
-func (a *agentPlatformService) DeleteSimulationRun(runUUID string) error {
-	_, _, err := a.client.AgentPlatform.DeleteSimulationRun(context.TODO(), runUUID)
-	return err
 }
 
 // ListSimulationEpisodes lists all episodes for a simulation run.
