@@ -501,7 +501,8 @@ func TestEnsureSessionAwakeForPortForward_ResumesPaused(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		require.NoError(t, ensureSessionAwakeForPortForward(config, "sess_paused"))
+		_, err := ensureSessionAwakeForPortForward(config, "sess_paused")
+		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "is paused — resuming")
 	})
 }
@@ -518,7 +519,8 @@ func TestEnsureSessionAwakeForPortForward_ReadyIsNoop(t *testing.T) {
 			}, nil)
 		// No ResumeSession expectation: gomock fails if it is called.
 
-		require.NoError(t, ensureSessionAwakeForPortForward(config, "sess_ready"))
+		_, err := ensureSessionAwakeForPortForward(config, "sess_ready")
+		require.NoError(t, err)
 	})
 }
 
@@ -540,10 +542,124 @@ func TestEnsureSessionAwakeForPortForward_RejectsTerminal(t *testing.T) {
 						},
 					}, nil)
 
-				err := ensureSessionAwakeForPortForward(config, "sess_gone")
+				_, err := ensureSessionAwakeForPortForward(config, "sess_gone")
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "cannot be port-forwarded")
 			})
 		})
 	}
+}
+
+// The Canvas port of an openhands session is served as HTTP: a page request
+// crosses the tunnel to the guest as it came (path, Host, body), a WebSocket
+// upgrade is spliced through, and /api/automation never leaves the machine.
+func TestCanvasForwardHandler_ProxiesThroughTheTunnelAndAnswersAutomationLocally(t *testing.T) {
+	upgrader := websocket.Upgrader{}
+	// The guest: Canvas's front, answering a page and echoing on a socket.
+	guest := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/canvas/":
+			fmt.Fprintf(w, "canvas page host=%s", r.Host)
+		case "/api/automation/health":
+			http.Error(w, "the guest must never see this", http.StatusTeapot)
+		case "/sockets/events":
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+			mt, msg, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			_ = conn.WriteMessage(mt, append([]byte("echo:"), msg...))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer guest.Close()
+	guestAddr := strings.TrimPrefix(guest.URL, "http://")
+
+	// harness-api's port-forward: one WebSocket per TCP connection, binary
+	// frames relayed byte for byte to the guest port.
+	tunnel := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer T0K" {
+			http.Error(w, "no token", http.StatusUnauthorized)
+			return
+		}
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer ws.Close()
+		tcp, err := net.Dial("tcp", guestAddr)
+		if err != nil {
+			return
+		}
+		defer tcp.Close()
+		go func() {
+			buf := make([]byte, 32<<10)
+			for {
+				n, err := tcp.Read(buf)
+				if n > 0 {
+					if werr := ws.WriteMessage(websocket.BinaryMessage, buf[:n]); werr != nil {
+						return
+					}
+				}
+				if err != nil {
+					_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+					return
+				}
+			}
+		}()
+		for {
+			mt, data, err := ws.ReadMessage()
+			if err != nil {
+				return
+			}
+			if mt == websocket.BinaryMessage {
+				if _, err := tcp.Write(data); err != nil {
+					return
+				}
+			}
+		}
+	}))
+	defer tunnel.Close()
+	wsURL := "ws" + strings.TrimPrefix(tunnel.URL, "http") + "/v2/agents/sessions/sess_1/port-forward/8000"
+
+	// The automation API as port-forward mounts it, gates included; the
+	// triggers service is never reached in this test (health needs none).
+	local := httptest.NewServer(canvasForwardHandler(wsURL, tunnelHeader("T0K", ""), nil, nil, "sess_1", nil, nil, nil))
+	defer local.Close()
+
+	resp, err := http.Get(local.URL + "/canvas/")
+	require.NoError(t, err)
+	page, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "canvas page host="+strings.TrimPrefix(local.URL, "http://"), string(page), "the guest sees the browser's Host, as the raw tunnel would carry it")
+
+	resp, err = http.Get(local.URL + "/api/automation/health")
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Contains(t, string(body), `"service":"doctl"`)
+
+	// The gates are on this path: a page on another local port is refused.
+	req, _ := http.NewRequest(http.MethodGet, local.URL+"/api/automation/health", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode, "the mounted automation API refuses another local page")
+
+	conn, wsResp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(local.URL, "http")+"/sockets/events", nil)
+	require.NoError(t, err, "upgrade through the tunnel")
+	defer conn.Close()
+	assert.Equal(t, http.StatusSwitchingProtocols, wsResp.StatusCode)
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte("hello")))
+	_, msg, err := conn.ReadMessage()
+	require.NoError(t, err)
+	assert.Equal(t, "echo:hello", string(msg))
 }

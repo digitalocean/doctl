@@ -238,7 +238,7 @@ codex --remote ws://127.0.0.1:1144
 
 Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
 
-For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed.`
+For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed. Where sessions have no public URL, ` + "`" + agentCLI + " port-forward <session> 8000:8000`" + ` serves the same Canvas at ` + "`http://127.0.0.1:8000/canvas`" + `, and its Automate tab is answered by doctl through the triggers API (scheduled prompts bound to the session).`
 
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from it — by name or by ID — with ` + "`" + agentCLI + " create --from-config`" + `, ` + "`" + agentCLI + " launch --from-config`" + `, or ` + "`" + agentCLI + " config start-session`" + `.
 
@@ -382,6 +382,10 @@ const agentsTriggersRotateSecretHelpMD = `Issue a new webhook secret (shown once
 const agentsTriggersListExecutionsHelpMD = `List firings for a trigger. Use ` + "`get-execution`" + ` for full payload and output.`
 
 const agentsTriggersGetExecutionHelpMD = `Print one trigger execution, including payload and output when available.`
+
+const agentsTriggersRunHelpMD = `Fire the trigger once, now, as a cron tick or a webhook delivery would: one execution is enqueued and the worker runs it the same way (a reuse trigger sends the prompt to its bound session; a fresh trigger creates a session). The pending execution is printed; follow it with ` + "`" + agentCLI + " triggers get-execution <trigger-id> <execution-id>`" + `.
+
+A paused trigger is not run (resume it first), and a trigger whose runs are backed up to the limit answers 429.`
 
 const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is only paused — the platform has no run-interrupt call today, so the agent's turn may still be in flight even after this returns. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
 

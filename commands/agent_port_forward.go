@@ -1,14 +1,17 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/term"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/signal"
@@ -17,8 +20,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/deviceid"
 	"github.com/digitalocean/godo"
 	"github.com/gorilla/websocket"
@@ -268,25 +273,33 @@ func tunnelHeader(token, deviceID string) http.Header {
 // tunnels, matching launch/attach so users don't have to sequence resume
 // themselves (BUG-044). Terminal sessions are rejected; already-ready
 // sessions are left alone.
-func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) error {
-	return ensureSessionAwake(c, sessionID, "port-forwarded")
+func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) (*do.HostedAgentSession, error) {
+	return ensureSessionAwakeSession(c, sessionID, "port-forwarded")
 }
 
 // ensureSessionAwake is the shared half of the above: `verb` names what the
 // caller is about to do with the session, for the terminal-status error
 // ("cannot be port-forwarded", "cannot serve Agent Canvas").
 func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
+	_, err := ensureSessionAwakeSession(c, sessionID, verb)
+	return err
+}
+
+// ensureSessionAwakeSession is ensureSessionAwake that also hands back the
+// session as it was read (before any resume), for callers that need its
+// agent kind.
+func ensureSessionAwakeSession(c *CmdConfig, sessionID string, verb string) (*do.HostedAgentSession, error) {
 	svc := c.HostedAgents()
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
-		return beautifyAgentError(err)
+		return nil, beautifyAgentError(err)
 	}
 	if isTerminalSessionStatus(sess.Status) {
-		return fmt.Errorf("session %s is %s and cannot be %s",
+		return nil, fmt.Errorf("session %s is %s and cannot be %s",
 			displaySessionRef(sess), humanSessionStatus(sess.Status), verb)
 	}
 	if sess.Status != godo.HostedAgentSessionStatusPaused {
-		return nil
+		return sess, nil
 	}
 
 	stylingEnabled = detectStyling()
@@ -296,7 +309,7 @@ func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
 	// so the prepay card has to be built here or a gated resume would print a
 	// raw REST dump.
 	if err := svc.ResumeSession(sessionID); err != nil {
-		return beautifyAgentErrorFor(c, err)
+		return nil, beautifyAgentErrorFor(c, err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), runWaitTimeout)
@@ -304,9 +317,9 @@ func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
 	prog := newCreationProgress(c.Out)
 	defer prog.stop()
 	if _, err := waitForSessionReady(ctx, svc, sessionID, prog); err != nil {
-		return beautifyAgentError(err)
+		return nil, beautifyAgentError(err)
 	}
-	return nil
+	return sess, nil
 }
 
 // RunAgentsPortForward opens local TCP tunnels to ports inside the session's
@@ -319,7 +332,8 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := ensureSessionAwakeForPortForward(c, sessionID); err != nil {
+	sess, err := ensureSessionAwakeForPortForward(c, sessionID)
+	if err != nil {
 		return err
 	}
 	pairs := make([]forwardPair, 0, len(c.Args)-1)
@@ -336,6 +350,35 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	}
 	if address != "127.0.0.1" && address != "localhost" && address != "::1" {
 		warn("binding %s exposes the tunnel to anyone who can reach this address", address)
+	}
+	// An openhands session's Canvas port is served as HTTP rather than as raw
+	// bytes, so the Automate tab's /api/automation calls can be answered here
+	// (canvasAutomationServer); everything else still crosses the tunnel. The
+	// tab's answers carry actions taken with the user's token, so they are
+	// given on a loopback bind only, and on any other bind the port is
+	// tunnelled as raw bytes like every other port (canvasAutomationOn).
+	automateMode, err := c.Doit.GetString(c.NS, doctl.ArgAgentAutomate)
+	if err != nil {
+		return err
+	}
+	automateMode = strings.ToLower(strings.TrimSpace(automateMode))
+	switch automateMode {
+	case "confirm", "allow", "off":
+	default:
+		return fmt.Errorf("--%s must be confirm, allow or off", doctl.ArgAgentAutomate)
+	}
+	automation := canvasAutomationOn(sess, address) && automateMode != "off"
+	// The tab's writes act with the user's token, and the page that asks for
+	// them is served from the sandbox, which the agent itself can change. So
+	// a write is confirmed out of band, here in the terminal, unless the
+	// user chose --automate=allow; without a terminal to ask at, writes are
+	// refused and the tab says so.
+	// The confirmer exists only when the Automate tab is served and asks for
+	// it; it touches stdin only when it has a question, so a port-forward
+	// run in the background is never stopped for reading the terminal.
+	var confirmWrite canvasConfirmFunc
+	if automation && automateMode == "confirm" {
+		confirmWrite = terminalConfirm(c.Out)
 	}
 
 	header := tunnelHeader(c.getContextAccessToken(), deviceid.Get())
@@ -365,6 +408,33 @@ func RunAgentsPortForward(c *CmdConfig) error {
 			address, localPort, pair.remote, sessionID)
 
 		warner := newTunnelWarner(pair.remote)
+		if pair.remote == canvasPort && isOpenHandsSession(sess) {
+			switch {
+			case automateMode == "off":
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab off: --automate=off)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			case !automation:
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab off: it needs a loopback --address)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			case automateMode == "confirm":
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab answered by doctl through the triggers API; creating, enabling or running an automation asks here first)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			default:
+				fmt.Fprintf(c.Out, "  Agent Canvas: http://%s%s (Automate tab answered by doctl through the triggers API, no confirmation)\n",
+					net.JoinHostPort(address, strconv.Itoa(localPort)), canvasPath)
+			}
+		}
+		if automation && pair.remote == canvasPort {
+			// The server's own id (lower case), not the ref as typed: the
+			// triggers' bound_session_id is compared against it.
+			triggers := c.HostedAgentTriggers()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				serveCanvasForward(ctx, ln, canvasForwardHandler(wsURL, header, tracer, warner, sess.SessionID, triggers, c.Out, confirmWrite))
+			}()
+			continue
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -517,4 +587,212 @@ func bridgeLocalConn(ctx context.Context, local net.Conn, wsURL string, header h
 	local.Close()
 	ws.Close()
 	return err
+}
+
+// isOpenHandsSession reports whether the session runs the OpenHands
+// agent-server, whose port 8000 serves Agent Canvas.
+func isOpenHandsSession(sess *do.HostedAgentSession) bool {
+	return sess != nil && sess.HostedAgentSession != nil && sess.AgentKind == hostedAgentKindOpenHands
+}
+
+// canvasAutomationOn decides whether port 8000 is served as HTTP with the
+// Automate tab answered here: an openhands session, on a loopback bind. The
+// tab's answers act with the user's token, so a bind other machines can
+// reach gets the plain tunnel instead.
+func canvasAutomationOn(sess *do.HostedAgentSession, address string) bool {
+	return isOpenHandsSession(sess) && isLoopbackBind(address)
+}
+
+// canvasForwardHandler is the HTTP face of a tunnel to an openhands
+// session's Canvas port, used only when the Automate tab is on
+// (canvasAutomationOn): a request under /api/automation goes to the
+// automation API, built here behind its gates (canvasAutomationHandler) so
+// the one production caller cannot mount it bare; any other request,
+// WebSocket upgrades included, is proxied through the tunnel to the guest. The guest sees the
+// request as it came, Host and all, since that is what the raw tunnel would
+// carry; the ReverseProxy only owns hop-by-hop headers and the 101 splice.
+func canvasForwardHandler(wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner, sessionID string, triggers do.HostedAgentTriggersService, out io.Writer, confirm canvasConfirmFunc) http.Handler {
+	automation := canvasAutomationHandler(sessionID, triggers, out, confirm)
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return dialTunnelConn(ctx, wsURL, header, tracer)
+		},
+		DisableCompression:  true,
+		MaxIdleConns:        16,
+		MaxIdleConnsPerHost: 16, // one dial per parallel page request, kept for the next
+		IdleConnTimeout:     90 * time.Second,
+	}
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(&url.URL{Scheme: "http", Host: "canvas.tunnel"})
+			pr.Out.Host = pr.In.Host
+		},
+		Transport:     transport,
+		FlushInterval: -1,
+		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, err error) {
+			if warner != nil {
+				warner.report(err)
+			}
+			http.Error(w, "the session did not answer through the tunnel; see the doctl terminal", http.StatusBadGateway)
+		},
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == canvasAutomationPrefix || strings.HasPrefix(r.URL.Path, canvasAutomationPrefix+"/") {
+			automation.ServeHTTP(w, r)
+			return
+		}
+		proxy.ServeHTTP(w, r)
+	})
+}
+
+// serveCanvasForward runs the HTTP server for one Canvas pair until ctx ends.
+func serveCanvasForward(ctx context.Context, ln net.Listener, handler http.Handler) {
+	server := &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: 30 * time.Second,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+	}
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}()
+	_ = server.Serve(ln)
+}
+
+// dialTunnelConn opens one port-forward WebSocket and presents it as a
+// net.Conn: binary frames in are bytes out, bytes in are binary frames out.
+func dialTunnelConn(ctx context.Context, wsURL string, header http.Header, tracer *wsTracer) (net.Conn, error) {
+	ws, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
+	body := handshakeBody(resp)
+	if tracer != nil {
+		tracer.handshake(wsURL, header, resp, body)
+	}
+	if err != nil {
+		return nil, serverRejection(resp, body, err)
+	}
+	return &wsTunnelConn{ws: ws}, nil
+}
+
+// wsTunnelConn adapts a gorilla WebSocket to net.Conn for http.Transport.
+type wsTunnelConn struct {
+	ws      *websocket.Conn
+	readBuf []byte
+	writeMu sync.Mutex
+	closed  bool
+}
+
+func (c *wsTunnelConn) Read(p []byte) (int, error) {
+	for len(c.readBuf) == 0 {
+		mt, data, err := c.ws.ReadMessage()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				return 0, io.EOF
+			}
+			return 0, err
+		}
+		if mt == websocket.BinaryMessage {
+			c.readBuf = data
+		}
+	}
+	n := copy(p, c.readBuf)
+	c.readBuf = c.readBuf[n:]
+	return n, nil
+}
+
+func (c *wsTunnelConn) Write(p []byte) (int, error) {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	if c.closed {
+		return 0, net.ErrClosed
+	}
+	if err := c.ws.WriteMessage(websocket.BinaryMessage, p); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+func (c *wsTunnelConn) Close() error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	if c.closed {
+		return nil
+	}
+	c.closed = true
+	_ = c.ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	return c.ws.Close()
+}
+
+func (c *wsTunnelConn) LocalAddr() net.Addr  { return c.ws.UnderlyingConn().LocalAddr() }
+func (c *wsTunnelConn) RemoteAddr() net.Addr { return c.ws.UnderlyingConn().RemoteAddr() }
+func (c *wsTunnelConn) SetDeadline(t time.Time) error {
+	return errors.Join(c.ws.SetReadDeadline(t), c.ws.SetWriteDeadline(t))
+}
+func (c *wsTunnelConn) SetReadDeadline(t time.Time) error  { return c.ws.SetReadDeadline(t) }
+func (c *wsTunnelConn) SetWriteDeadline(t time.Time) error { return c.ws.SetWriteDeadline(t) }
+
+// terminalConfirm asks the user, on the port-forward terminal, to allow a
+// write the Automate tab requested. The question is answered on stdin, out
+// of the page's reach; no terminal means no, as does a minute's silence.
+func terminalConfirm(out io.Writer) canvasConfirmFunc {
+	// stdin is opened at the first question, not when port-forward starts:
+	// a process that reads the terminal from the background is stopped by
+	// the shell (SIGTTIN), and a tunnel whose tab is never used must not
+	// read anything. From then on one reader owns stdin for the life of the
+	// tunnel and hands lines over a channel, so a prompt that times out
+	// leaves no second reader behind, and the line it was waiting for is
+	// drained before the next prompt so a late answer is never taken for
+	// the new question.
+	var (
+		mu    sync.Mutex
+		lines chan string
+	)
+	return func(what string) (bool, string) {
+		mu.Lock()
+		defer mu.Unlock()
+		if !term.IsTerminal(int(os.Stdin.Fd())) {
+			return false, "doctl has no terminal to ask at; start port-forward with --automate=allow to let Canvas create and run automations without asking"
+		}
+		if lines == nil {
+			lines = make(chan string, 8)
+			go func(lines chan<- string) {
+				reader := bufio.NewReader(os.Stdin)
+				for {
+					line, err := reader.ReadString('\n')
+					if line != "" || err == nil {
+						lines <- strings.ToLower(strings.TrimSpace(line))
+					}
+					if err != nil {
+						close(lines)
+						return
+					}
+				}
+			}(lines)
+		}
+		for drained := false; !drained; {
+			select {
+			case _, ok := <-lines:
+				if !ok {
+					return false, "the doctl terminal's input is closed"
+				}
+			default:
+				drained = true
+			}
+		}
+		fmt.Fprintf(out, "\nAgent Canvas asks to %s.\n  Allow? [y/N] (no answer within 60s means no) ", what)
+		select {
+		case a, ok := <-lines:
+			if !ok {
+				return false, "the doctl terminal's input is closed"
+			}
+			if a == "y" || a == "yes" {
+				return true, ""
+			}
+			return false, "declined in the doctl terminal"
+		case <-time.After(60 * time.Second):
+			fmt.Fprintln(out, "\n  no answer; refused")
+			return false, "no answer in the doctl terminal within 60s"
+		}
+	}
 }

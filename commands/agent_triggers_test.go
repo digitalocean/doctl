@@ -35,7 +35,7 @@ func TestAgentTriggersCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
 		"list", "create", "get", "update", "delete", "pause", "resume",
-		"rotate-secret", "list-executions", "get-execution", "cancel-execution",
+		"rotate-secret", "run", "list-executions", "get-execution", "cancel-execution",
 		"get-by-session", "list-reusable-sessions", "list-providers",
 	)
 }
@@ -776,5 +776,18 @@ func TestAgentTriggersCancelExecution_Force(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		require.NoError(t, RunAgentTriggersCancelExecution(config))
+	})
+}
+
+func TestAgentTriggersRun(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().Run("tr_1").Return(&do.HostedAgentTriggerExecution{
+			HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{ExecutionID: "ex_1", TriggerID: "tr_1", Status: godo.HostedAgentTriggerExecutionStatusPending},
+		}, nil)
+		config.Args = append(config.Args, "tr_1")
+		var buf bytes.Buffer
+		config.Out = &buf
+		require.NoError(t, RunAgentTriggersRun(config))
+		assert.Contains(t, buf.String(), "ex_1")
 	})
 }

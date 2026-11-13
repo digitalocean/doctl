@@ -208,6 +208,21 @@ func (mr *MockHostedAgentTriggersServiceMockRecorder) RotateSecret(triggerID, gr
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RotateSecret", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).RotateSecret), triggerID, gracePeriodSeconds)
 }
 
+// Run mocks base method.
+func (m *MockHostedAgentTriggersService) Run(triggerID string) (*do.HostedAgentTriggerExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run", triggerID)
+	ret0, _ := ret[0].(*do.HostedAgentTriggerExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Run indicates an expected call of Run.
+func (mr *MockHostedAgentTriggersServiceMockRecorder) Run(triggerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockHostedAgentTriggersService)(nil).Run), triggerID)
+}
+
 // Update mocks base method.
 func (m *MockHostedAgentTriggersService) Update(triggerID string, update *godo.HostedAgentTriggerUpdateRequest) (*do.HostedAgentTrigger, error) {
 	m.ctrl.T.Helper()

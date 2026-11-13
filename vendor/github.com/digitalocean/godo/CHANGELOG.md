@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.240.0] - 2026-11-13
+
+- #1222 - @sk09-dev - hosted agents: trigger run-now, keep_session_awake, webhook event filter, list by session
+
 ## [1.239.0] - 2026-11-12
 
 - #1220 - @hmooda-do - hosted agents: add UpdateSessionConfig for live session config updates

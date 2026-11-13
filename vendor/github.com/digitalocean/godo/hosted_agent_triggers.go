@@ -35,6 +35,10 @@ type HostedAgentTriggersService interface {
 	GetBySession(context.Context, string) (*HostedAgentTrigger, *Response, error)
 	ListReusableSessions(context.Context, *HostedAgentReusableSessionListOptions) (*HostedAgentReusableSessionsListResponse, *Response, error)
 	ListWebhookProviders(context.Context) (*HostedAgentWebhookProvidersListResponse, *Response, error)
+	// Run fires the trigger now: one pending execution is enqueued, what a
+	// cron tick or a webhook delivery enqueues, and the worker runs it the
+	// same way. Poll the returned execution with GetExecution.
+	Run(context.Context, string) (*HostedAgentTriggerExecution, *Response, error)
 }
 
 // HostedAgentTriggersServiceOp handles communication with Hosted Agents Trigger methods.
@@ -119,10 +123,14 @@ type HostedAgentTrigger struct {
 	Output          *HostedAgentTriggerOutputRead `json:"output,omitempty"`
 	SessionTemplate string                        `json:"session_template,omitempty"`
 	BoundSessionID  string                        `json:"bound_session_id,omitempty"`
-	Webhook         *HostedAgentWebhookConfig     `json:"webhook,omitempty"`
-	Cron            *HostedAgentCronConfig        `json:"cron,omitempty"`
-	CreatedAt       Timestamp                     `json:"created_at,omitempty"`
-	UpdatedAt       Timestamp                     `json:"updated_at,omitempty"`
+	// KeepSessionAwake (reuse only) lets the trigger run while its bound
+	// session is awake and leaves the session awake after the run, for a
+	// session a user keeps open in Agent Canvas.
+	KeepSessionAwake bool                      `json:"keep_session_awake,omitempty"`
+	Webhook          *HostedAgentWebhookConfig `json:"webhook,omitempty"`
+	Cron             *HostedAgentCronConfig    `json:"cron,omitempty"`
+	CreatedAt        Timestamp                 `json:"created_at,omitempty"`
+	UpdatedAt        Timestamp                 `json:"updated_at,omitempty"`
 }
 
 // HostedAgentTriggerOutputRead is output-delivery config as returned on reads.
@@ -151,6 +159,9 @@ type HostedAgentTriggerSlackOutputWrite struct {
 type HostedAgentWebhookConfig struct {
 	Provider   HostedAgentWebhookProviderKey `json:"provider,omitempty"`
 	WebhookURL string                        `json:"webhook_url,omitempty"`
+	// Events are the provider event names the trigger fires on (github and
+	// gitlab), as "event" or "event.action"; empty means every delivery.
+	Events []string `json:"events,omitempty"`
 }
 
 // HostedAgentCronConfig is present when kind=cron.
@@ -162,20 +173,35 @@ type HostedAgentCronConfig struct {
 
 // HostedAgentTriggerCreateRequest creates a webhook or cron trigger.
 type HostedAgentTriggerCreateRequest struct {
-	Kind            HostedAgentTriggerKind          `json:"kind"`
-	Name            string                          `json:"name"`
-	SessionMode     HostedAgentTriggerSessionMode   `json:"session_mode"`
-	PromptTemplate  string                          `json:"prompt_template"`
-	Output          HostedAgentTriggerOutputWrite   `json:"output"`
-	SessionTemplate string                          `json:"session_template,omitempty"`
-	BoundSessionID  string                          `json:"bound_session_id,omitempty"`
-	Webhook         *HostedAgentCreateWebhookConfig `json:"webhook,omitempty"`
-	Cron            *HostedAgentCreateCronConfig    `json:"cron,omitempty"`
+	Kind            HostedAgentTriggerKind        `json:"kind"`
+	Name            string                        `json:"name"`
+	SessionMode     HostedAgentTriggerSessionMode `json:"session_mode"`
+	PromptTemplate  string                        `json:"prompt_template"`
+	Output          HostedAgentTriggerOutputWrite `json:"output"`
+	SessionTemplate string                        `json:"session_template,omitempty"`
+	BoundSessionID  string                        `json:"bound_session_id,omitempty"`
+	// KeepSessionAwake is reuse only; see HostedAgentTrigger.KeepSessionAwake.
+	KeepSessionAwake bool                            `json:"keep_session_awake,omitempty"`
+	Webhook          *HostedAgentCreateWebhookConfig `json:"webhook,omitempty"`
+	Cron             *HostedAgentCreateCronConfig    `json:"cron,omitempty"`
 }
 
 // HostedAgentCreateWebhookConfig is the webhook block on create.
 type HostedAgentCreateWebhookConfig struct {
 	Provider HostedAgentWebhookProviderKey `json:"provider,omitempty"`
+	// Events narrows the deliveries the trigger fires on (github and gitlab
+	// only): "push", "pull_request.opened", or a bare "pull_request" for
+	// every action. Empty fires on every delivery.
+	Events []string `json:"events,omitempty"`
+}
+
+// HostedAgentUpdateWebhookConfig is the webhook block on update: the event
+// filter only, since the provider is immutable. Events is sent as given: a
+// nil slice marshals as null, which the API treats as "leave the filter
+// unchanged"; an empty non-nil slice ([]string{}) marshals as [] and clears
+// it, so the trigger fires on every delivery again.
+type HostedAgentUpdateWebhookConfig struct {
+	Events []string `json:"events"`
 }
 
 // HostedAgentCreateCronConfig is the cron block on create/update.
@@ -192,7 +218,10 @@ type HostedAgentTriggerUpdateRequest struct {
 	Output          *HostedAgentTriggerOutputWrite `json:"output,omitempty"`
 	SessionTemplate string                         `json:"session_template,omitempty"`
 	BoundSessionID  string                         `json:"bound_session_id,omitempty"`
-	Cron            *HostedAgentCreateCronConfig   `json:"cron,omitempty"`
+	// KeepSessionAwake turns the awake-session behaviour on or off (reuse only).
+	KeepSessionAwake *bool                           `json:"keep_session_awake,omitempty"`
+	Webhook          *HostedAgentUpdateWebhookConfig `json:"webhook,omitempty"`
+	Cron             *HostedAgentCreateCronConfig    `json:"cron,omitempty"`
 }
 
 // HostedAgentTriggerCreateResponse is returned on create.
@@ -208,6 +237,8 @@ type HostedAgentTriggerListOptions struct {
 	PageToken string                   `url:"page_token,omitempty"`
 	Kind      HostedAgentTriggerKind   `url:"kind,omitempty"`
 	Status    HostedAgentTriggerStatus `url:"status,omitempty"`
+	// BoundSessionID lists only the reuse triggers bound to that session.
+	BoundSessionID string `url:"bound_session_id,omitempty"`
 }
 
 // HostedAgentTriggersListResponse is returned by List.
@@ -361,6 +392,24 @@ func (s *HostedAgentTriggersServiceOp) Create(ctx context.Context, create *Hoste
 		return nil, resp, err
 	}
 	return root, resp, nil
+}
+
+// Run fires the trigger now and returns the pending execution.
+func (s *HostedAgentTriggersServiceOp) Run(ctx context.Context, triggerID string) (*HostedAgentTriggerExecution, *Response, error) {
+	if triggerID == "" {
+		return nil, nil, NewArgError("triggerID", "cannot be empty")
+	}
+	path := fmt.Sprintf(hostedAgentTriggerExecutionsPath, triggerID)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(hostedAgentTriggerExecutionRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Execution, resp, nil
 }
 
 // Get returns a single trigger by ID.
