@@ -104,6 +104,18 @@ func (p helpPainter) hint(text string) string {
 }
 
 func renderStyledHelp(cmd *cobra.Command, w io.Writer, env ui.Env, onErr bool) error {
+	return writeStyledHelp(cmd, w, env, onErr, true)
+}
+
+// renderStyledHelpSections writes USAGE / flags / examples without Short/Long.
+// agentsStyledHelpFunc already prints a styled description, then needs these
+// sections; calling UsageString() would re-run the full renderer and duplicate
+// the header (MARSOHS-2591).
+func renderStyledHelpSections(cmd *cobra.Command, w io.Writer, env ui.Env, onErr bool) error {
+	return writeStyledHelp(cmd, w, env, onErr, false)
+}
+
+func writeStyledHelp(cmd *cobra.Command, w io.Writer, env ui.Env, onErr bool, withHeader bool) error {
 	if cmd == nil {
 		return nil
 	}
@@ -116,7 +128,9 @@ func renderStyledHelp(cmd *cobra.Command, w io.Writer, env ui.Env, onErr bool) e
 	p := helpPainter{env: env, onErr: onErr}
 	var b strings.Builder
 
-	writeHelpHeader(&b, p, cmd)
+	if withHeader {
+		writeHelpHeader(&b, p, cmd)
+	}
 	writeHelpUsage(&b, p, cmd)
 	writeHelpAliases(&b, p, cmd)
 	writeHelpCommands(&b, p, cmd)

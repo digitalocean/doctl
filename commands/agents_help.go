@@ -485,17 +485,25 @@ func requireAgentSubcommand(cmd *Command) {
 }
 
 // agentsStyledHelpFunc prints a compact colored header on TTYs, plain prose with
-// bordered code examples, then the standard cobra usage section (always plain).
+// bordered code examples, then the shared Next Gen usage/flags sections without
+// re-printing Short/Long (root UsageFunc would duplicate the header).
 func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {
 	w := cmd.OutOrStdout()
-	stylingEnabled = detectStyling()
+	env := uiEnv()
+	// Match the USAGE/flags Style gate so the header and sections agree.
+	stylingEnabled = env.Style
 
 	if long := strings.TrimSpace(cmd.Long); long != "" {
+		short := strings.TrimSpace(cmd.Short)
 		if stylingEnabled {
 			fmt.Fprintln(w, boldColor(cmd.CommandPath(), colHighlight))
-			if short := strings.TrimSpace(cmd.Short); short != "" {
+			if short != "" {
 				fmt.Fprintln(w, colorize(short, colMuted))
 			}
+			fmt.Fprintln(w)
+		} else if short != "" {
+			// Non-TTY path: keep the one-line summary UsageString used to print.
+			fmt.Fprintln(w, short)
 			fmt.Fprintln(w)
 		}
 		fmt.Fprint(w, renderAgentsHelpLong(long))
@@ -506,6 +514,8 @@ func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {
 	}
 
 	if cmd.Runnable() || cmd.HasAvailableSubCommands() {
-		fmt.Fprint(w, cmd.UsageString())
+		if err := renderStyledHelpSections(cmd, w, env, false); err != nil {
+			fmt.Fprintln(cmd.ErrOrStderr(), err)
+		}
 	}
 }
