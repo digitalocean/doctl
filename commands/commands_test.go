@@ -286,6 +286,7 @@ type tcMocks struct {
 	terminal              *domocks.MockTerminal
 	monitoring            *domocks.MockMonitoringService
 	insights              *domocks.MockInsightsService
+	ads                   *domocks.MockADSService
 	serverless            *domocks.MockServerlessService
 	appBuilderFactory     *builder.MockComponentBuilderFactory
 	appBuilder            *builder.MockComponentBuilder
@@ -368,6 +369,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		terminal:              domocks.NewMockTerminal(ctrl),
 		monitoring:            domocks.NewMockMonitoringService(ctrl),
 		insights:              domocks.NewMockInsightsService(ctrl),
+		ads:                   domocks.NewMockADSService(ctrl),
 		serverless:            domocks.NewMockServerlessService(ctrl),
 		appBuilderFactory:     builder.NewMockComponentBuilderFactory(ctrl),
 		appBuilder:            builder.NewMockComponentBuilder(ctrl),
@@ -447,6 +449,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Apps:                func() do.AppsService { return tm.apps },
 		Monitoring:          func() do.MonitoringService { return tm.monitoring },
 		Insights:            func() do.InsightsService { return tm.insights },
+		ADS:                 func() do.ADSService { return tm.ads },
 		Serverless:          func() do.ServerlessService { return tm.serverless },
 		OAuth:               func() do.OAuthService { return tm.oauth },
 		PartnerAttachments:  func() do.PartnerAttachmentsService { return tm.partnerAttachments },

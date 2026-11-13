@@ -228,6 +228,7 @@ func addCommands() {
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Insights())
+	DoitCmd.AddCommand(ADS())
 	DoitCmd.AddCommand(Serverless())
 	DoitCmd.AddCommand(Spaces())
 	DoitCmd.AddCommand(GradientAI())

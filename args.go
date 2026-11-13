@@ -1442,4 +1442,61 @@ const (
 	ArgInsightsDashboardSort = "sort"
 	// ArgInsightsDashboardSortDirection selects the Insights dashboard sort direction.
 	ArgInsightsDashboardSortDirection = "sort-direction"
+
+	// ArgADSWorkspace is the ADS workspace UUID that owns a secret, data flow, or metrics query.
+	ArgADSWorkspace = "workspace"
+	// ArgADSName is the name of an ADS workspace, token, or data flow.
+	ArgADSName = "name"
+	// ArgADSQueryInstanceSize is the ADS workspace query engine size.
+	ArgADSQueryInstanceSize = "query-instance-size"
+	// ArgADSTokenPurpose is the purpose of an ADS token.
+	ArgADSTokenPurpose = "purpose"
+	// ArgADSTokenWorkspaceUUIDs is the list of workspaces an ADS token is bound to.
+	ArgADSTokenWorkspaceUUIDs = "workspace-uuids"
+	// ArgADSTokenWorkspaceUUID filters ADS tokens by workspace.
+	ArgADSTokenWorkspaceUUID = "workspace-uuid"
+	// ArgADSTokenExpiresIn is the ADS token lifetime in seconds.
+	ArgADSTokenExpiresIn = "expires-in"
+	// ArgADSTokenPermissions is the list of permissions granted to an ADS token.
+	ArgADSTokenPermissions = "permissions"
+	// ArgADSPage is the page of ADS results to return.
+	ArgADSPage = "page"
+	// ArgADSPerPage is the number of ADS results per page.
+	ArgADSPerPage = "per-page"
+	// ArgADSSecretData is a key=value pair stored in an ADS workspace secret.
+	ArgADSSecretData = "data"
+	// ArgADSSecretDataFile is a JSON or YAML file of ADS workspace secret key-value pairs.
+	ArgADSSecretDataFile = "data-file"
+	// ArgADSDataFlowDesiredReplicas is the desired replica count of an ADS data flow.
+	ArgADSDataFlowDesiredReplicas = "desired-replicas"
+	// ArgADSDataFlowMaxReplicas is the maximum replica count of an ADS data flow.
+	ArgADSDataFlowMaxReplicas = "max-replicas"
+	// ArgADSDataFlowImageRef is the container image reference of an ADS data flow.
+	ArgADSDataFlowImageRef = "image-ref"
+	// ArgADSDataFlowManifestFile is a JSON or YAML ADS data flow manifest.
+	ArgADSDataFlowManifestFile = "manifest-file"
+	// ArgADSDataFlowSecretRefs is the list of workspace secrets an ADS data flow references.
+	ArgADSDataFlowSecretRefs = "secret-refs"
+	// ArgADSDataFlowClearSecretRefs removes every secret reference from an ADS data flow.
+	ArgADSDataFlowClearSecretRefs = "clear-secret-refs"
+	// ArgADSDataFlowRewindTo is the time an ADS data flow rewinds to.
+	ArgADSDataFlowRewindTo = "rewind-to"
+	// ArgADSFchainSHA256 is the SHA-256 checksum of an ADS function-chain archive.
+	ArgADSFchainSHA256 = "sha256"
+	// ArgADSFchainObjectKey is the object key of an uploaded ADS function-chain archive.
+	ArgADSFchainObjectKey = "object-key"
+	// ArgADSMetricNames is the list of ADS metric names to query.
+	ArgADSMetricNames = "metric-names"
+	// ArgADSMetricDataFlow limits an ADS metrics query to one data flow.
+	ArgADSMetricDataFlow = "data-flow"
+	// ArgADSMetricFrom is the start of an ADS metrics query window.
+	ArgADSMetricFrom = "from"
+	// ArgADSMetricTo is the end of an ADS metrics query window.
+	ArgADSMetricTo = "to"
+	// ArgADSMetricGroupBy is the list of ADS metric labels to group by.
+	ArgADSMetricGroupBy = "group-by"
+	// ArgADSMetricLimit is the maximum number of ADS metric rows to return.
+	ArgADSMetricLimit = "limit"
+	// ArgADSMetricType is the ADS metric type to query.
+	ArgADSMetricType = "metric-type"
 )
