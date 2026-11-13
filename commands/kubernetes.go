@@ -1923,8 +1923,7 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
-	// Only send the Insights opt-in when the user explicitly sets the flag, so that an unset flag
-	// records no choice rather than an explicit opt-out.
+	// Only forward --enable-insights-logs when explicitly set; when omitted the API defaults to logs=false.
 	if c.Doit.IsSet(doctl.ArgEnableInsightsLogs) {
 		enableInsightsLogs, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableInsightsLogs)
 		if err != nil {
