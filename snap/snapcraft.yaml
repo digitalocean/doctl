@@ -28,8 +28,7 @@ parts:
 
   doctl:
     after: [launcher]
-    source: https://github.com/digitalocean/doctl
-    source-type: git
+    source: .
     plugin: go
     build-snaps: [go/latest/stable]
     build-environment:
