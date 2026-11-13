@@ -41,7 +41,11 @@ func TestRenderAgentsHelpLongColorizesCodeOnly(t *testing.T) {
 // not call UsageString(), or rotate-secret --help prints the description twice.
 func TestAgentsStyledHelpFunc_LongAppearsOnceWithSharedUsageFunc(t *testing.T) {
 	prevEnv := resolvedEnv
-	t.Cleanup(func() { resolvedEnv = prevEnv })
+	prevStyle := stylingEnabled
+	t.Cleanup(func() {
+		resolvedEnv = prevEnv
+		stylingEnabled = prevStyle
+	})
 
 	var buf bytes.Buffer
 	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
@@ -49,6 +53,9 @@ func TestAgentsStyledHelpFunc_LongAppearsOnceWithSharedUsageFunc(t *testing.T) {
 
 	long := strings.TrimSpace(agentsTriggersRotateSecretHelpMD)
 	short := "Rotate a webhook trigger's secret"
+	// Fence-free marker: renderAgentsHelpLong rewrites ``` blocks, so do not
+	// count the raw Long string.
+	marker := "Issue a new webhook secret (shown once). Webhook triggers only."
 	cmd := &cobra.Command{
 		Use:   "rotate-secret <trigger-id>",
 		Short: short,
@@ -66,14 +73,18 @@ func TestAgentsStyledHelpFunc_LongAppearsOnceWithSharedUsageFunc(t *testing.T) {
 	agentsStyledHelpFunc(cmd, nil)
 	out := buf.String()
 
-	assert.Equal(t, 1, strings.Count(out, long), "Long must appear once; got:\n%s", out)
+	assert.Equal(t, 1, strings.Count(out, marker), "Long must appear once; got:\n%s", out)
 	assert.Equal(t, 1, strings.Count(out, "USAGE"), "USAGE must appear once; got:\n%s", out)
 	assert.Contains(t, out, "--grace-period")
-	// Regression: pre-fix path reprinted Short via writeHelpHeader after Long.
 	usageIdx := strings.Index(out, "USAGE")
 	require.Greater(t, usageIdx, -1)
-	afterLong := out[strings.Index(out, long)+len(long) : usageIdx]
-	assert.NotContains(t, afterLong, short)
+	beforeUsage := out[:usageIdx]
+	assert.Contains(t, beforeUsage, short, "non-TTY help must keep the Short summary")
+	assert.Equal(t, 1, strings.Count(beforeUsage, short))
+	// Regression: pre-fix path reprinted Short via writeHelpHeader after Long.
+	markerIdx := strings.Index(out, marker)
+	require.Greater(t, markerIdx, -1)
+	assert.NotContains(t, out[markerIdx+len(marker):usageIdx], short)
 }
 
 func TestRenderHelpCodeBlockStyled(t *testing.T) {
