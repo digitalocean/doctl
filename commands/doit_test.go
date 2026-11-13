@@ -270,3 +270,21 @@ func TestOwesClosingLine(t *testing.T) {
 		})
 	}
 }
+
+func TestRootFlagHelpText(t *testing.T) {
+	flags := DoitCmd.PersistentFlags()
+
+	waitMax := flags.Lookup("http-retry-wait-max")
+	require.NotNil(t, waitMax)
+	assert.Contains(t, waitMax.Usage, "maximum")
+
+	waitMin := flags.Lookup("http-retry-wait-min")
+	require.NotNil(t, waitMin)
+	assert.Contains(t, waitMin.Usage, "minimum")
+
+	// The default depends on the terminal, so the usage must not state one.
+	interactive := flags.Lookup("interactive")
+	require.NotNil(t, interactive)
+	assert.NotContains(t, interactive.Usage, "(default")
+	assert.NotContains(t, interactive.Usage, "Defaults to true")
+}
