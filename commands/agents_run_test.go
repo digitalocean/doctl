@@ -727,6 +727,7 @@ func TestRunAgentsCreate_ModelRequiresHarness(t *testing.T) {
 }
 
 func TestRunAgentsCreate_Harness(t *testing.T) {
+	repoTestSetup(t)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -770,6 +771,7 @@ func TestRunAgentsCreate_Harness(t *testing.T) {
 
 		// buildHarnessManifest embeds the prompt only for Codex, so an
 		// opencode session has to be told once it is ready.
+		expectRepoClone(tm, "sess_run_1", "katanemo", "plano", 128, "")
 		tm.hostedAgents.EXPECT().
 			SendInput("sess_run_1", &godo.HostedAgentSendInputRequest{Text: "Review README"}).
 			Return(nil, nil)
@@ -784,7 +786,7 @@ func TestRunAgentsCreate_Harness(t *testing.T) {
 		assert.Contains(t, out, "Agent is ready")
 		assert.NotContains(t, out, "SESSION_STATUS_")
 		assert.Contains(t, out, "doctl harness-runtime launch demo")
-		assert.NotContains(t, out, "katanemo/plano", "repo is hidden by default; only shown with -v/--verbose")
+		assert.Contains(t, out, "katanemo/plano → /workspace/plano", "the ready card shows the repo and where it was cloned without -v")
 	})
 }
 
@@ -909,6 +911,7 @@ secrets:
 }
 
 func TestRunAgentsCreate_HarnessVerboseShowsRepoAndID(t *testing.T) {
+	repoTestSetup(t)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
@@ -948,6 +951,7 @@ func TestRunAgentsCreate_HarnessVerboseShowsRepoAndID(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			StartProviderAuth("github").
 			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+		expectRepoClone(tm, "sess_run_2", "katanemo", "plano", 128, "")
 
 		require.NoError(t, RunAgentsCreate(config))
 		out := buf.String()
@@ -1065,7 +1069,8 @@ func TestMaybeOfferGitHubAuth_AlreadyConnected(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		require.NoError(t, maybeOfferGitHubAuth(config))
+		_, err := maybeOfferGitHubAuth(config)
+		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "GitHub already connected")
 	})
 }
@@ -1087,7 +1092,8 @@ func TestMaybeOfferGitHubAuth_SkipWhenDeclined(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		require.NoError(t, maybeOfferGitHubAuth(config))
+		_, err := maybeOfferGitHubAuth(config)
+		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "Skipping GitHub connect")
 	})
 }
@@ -1117,7 +1123,8 @@ func TestMaybeOfferGitHubAuth_ConnectsWhenAccepted(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		require.NoError(t, maybeOfferGitHubAuth(config))
+		_, err := maybeOfferGitHubAuth(config)
+		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "github connected successfully")
 	})
 }
