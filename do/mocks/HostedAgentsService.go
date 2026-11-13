@@ -836,3 +836,18 @@ func (mr *MockHostedAgentsServiceMockRecorder) UpdateTemplate(templateID, update
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTemplate", reflect.TypeOf((*MockHostedAgentsService)(nil).UpdateTemplate), templateID, update)
 }
+
+// ValidatePolicy mocks base method.
+func (m *MockHostedAgentsService) ValidatePolicy(ctx context.Context, manifest []byte) (*godo.HostedAgentPolicyValidationResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidatePolicy", ctx, manifest)
+	ret0, _ := ret[0].(*godo.HostedAgentPolicyValidationResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidatePolicy indicates an expected call of ValidatePolicy.
+func (mr *MockHostedAgentsServiceMockRecorder) ValidatePolicy(ctx, manifest any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatePolicy", reflect.TypeOf((*MockHostedAgentsService)(nil).ValidatePolicy), ctx, manifest)
+}

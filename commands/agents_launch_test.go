@@ -192,6 +192,7 @@ func TestRunAgentsLaunch_PrintsAutoCreatedConfigNotice(t *testing.T) {
 				AgentKind: godo.HostedAgentKindOpenCode,
 			},
 		}
+		expectValidatePolicy(t, tm, "ask")
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(ready, nil)

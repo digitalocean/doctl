@@ -81,7 +81,9 @@ These four are equivalent:
 ` + agentCLI + ` create --spec agents.yaml
 ` + "```\n\n" + `With a manifest or ` + "`--harness`" + `, optionally pass ` + "`--gh-repo`" + ` and ` + "`--prompt`" + `. Example:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"
-` + "```\n\n" + `Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
+` + "```\n\n" + `With the default ` + "`--permission ask`" + `, the run waits at the first tool call that needs approval; approve it with ` + "`" + agentCLI + ` approve` + "`" + `, or pass ` + "`--on-hitl approve`" + ` or ` + "`--permission allow`" + ` for an unattended run.
+
+Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
 ` + "```yaml\n" + `name: my-session
 harness: opencode
 ` + "```\n\n" + `**Egress** (optional). Omitting ` + "`egress`" + ` leaves destinations unrestricted. Exactly one form:
@@ -144,7 +146,9 @@ const agentsLaunchHelpMD = `Open an interactive chat on a session, creating it f
 ` + agentCLI + ` launch agents.yaml
 ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"
 ` + agentCLI + ` launch --from-config reviewer --name my-session
-` + "```\n\n" + `**How the positional argument is read.** One rule: *does a readable file exist at that path?* If yes it is a manifest and a new session is created; if no it is treated as a session name or ID. An argument that is neither reports both possibilities. Naming a creation flag settles it without consulting the filesystem.
+` + "```\n\n" + `With the default ` + "`--permission ask`" + `, the run waits at the first tool call that needs approval; approve it in the chat. ` + "`launch`" + ` cannot auto-approve, so for an unattended run use ` + "`create --on-hitl approve`" + ` or ` + "`--permission allow`" + `.
+
+**How the positional argument is read.** One rule: *does a readable file exist at that path?* If yes it is a manifest and a new session is created; if no it is treated as a session name or ID. An argument that is neither reports both possibilities. Naming a creation flag settles it without consulting the filesystem.
 
 Type messages and press Enter. Ctrl-C cancels the turn in progress and leaves the session ready for the next message; so does Esc on an empty prompt (Esc with text typed clears the text first). Agents that cannot cancel a turn say so. Ctrl-D detaches without removing the session, and so does Ctrl-C when no turn is running or once a cancel has been sent — reattach later, or run ` + "`" + agentCLI + " remove`" + ` to tear it down. If the connection drops, doctl reconnects automatically. For OpenAI sandbox sessions, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when it is unset.
 
