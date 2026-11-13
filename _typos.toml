@@ -1,7 +1,9 @@
 [files]
 extend-exclude = [
   "vendor/**",
-  "go.mod"
+  "go.mod",
+  # Deliberately misspelled manifest keys are the test inputs.
+  "commands/agents_manifest_keys_test.go"
 ]
 
 [default.extend-identifiers]

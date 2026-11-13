@@ -133,6 +133,9 @@ const (
 type agentManifestValidation struct {
 	Errors   []string
 	Warnings []string
+	// NearMisses is the subset of Errors raised by the unknown-field near-miss
+	// rule. --allow-unknown-fields moves exactly these to Warnings.
+	NearMisses []string
 }
 
 func (v *agentManifestValidation) ok() bool {
@@ -152,6 +155,17 @@ func (v *agentManifestValidation) error() error {
 // keys, MODEL vs HARNESS_INFERENCE_MODEL). Server-side agentspec remains
 // authoritative for the full contract.
 func validateAgentManifest(manifest []byte) *agentManifestValidation {
+	return validateAgentManifestOpts(manifest, true)
+}
+
+// validateAgentManifestSkippingUnknownKeys is validateAgentManifest without the
+// unknown-field pass. Real create runs that pass earlier (before any side
+// effect), so running it again here would report every key twice.
+func validateAgentManifestSkippingUnknownKeys(manifest []byte) *agentManifestValidation {
+	return validateAgentManifestOpts(manifest, false)
+}
+
+func validateAgentManifestOpts(manifest []byte, checkUnknownKeys bool) *agentManifestValidation {
 	out := &agentManifestValidation{}
 	if len(bytesTrimSpace(manifest)) == 0 {
 		out.Errors = append(out.Errors, "manifest is empty")
@@ -172,7 +186,7 @@ func validateAgentManifest(manifest []byte) *agentManifestValidation {
 	if legacy {
 		validateEnvelopeManifest(doc, out)
 	} else {
-		validateFlatManifest(doc, out)
+		validateFlatManifest(doc, out, checkUnknownKeys)
 	}
 
 	validateManifestKeysWhitespace(doc, legacy, out)
@@ -225,7 +239,7 @@ func hasYAMLKey(doc map[string]any, key string) bool {
 	return ok
 }
 
-func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
+func validateFlatManifest(doc map[string]any, out *agentManifestValidation, checkUnknownKeys bool) {
 	adapter, key, both := flatManifestAdapter(doc)
 	switch {
 	case both:
@@ -240,6 +254,13 @@ func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
 		if err := validateHostedAgentIdentifier(strings.TrimSpace(name)); err != nil {
 			out.Errors = append(out.Errors, fmt.Sprintf("name: %v", err))
 		}
+	}
+
+	if checkUnknownKeys {
+		errs, warns := unknownManifestKeys(doc)
+		out.Errors = append(out.Errors, errs...)
+		out.NearMisses = append(out.NearMisses, errs...)
+		out.Warnings = append(out.Warnings, warns...)
 	}
 }
 
@@ -1011,6 +1032,72 @@ func hasStringKey(set map[string]struct{}, key string) bool {
 	return ok
 }
 
+// applyStrict turns every warning into an error (--strict).
+func applyStrict(v *agentManifestValidation) *agentManifestValidation {
+	if v == nil {
+		return nil
+	}
+	v.Errors = append(v.Errors, v.Warnings...)
+	v.Warnings = nil
+	return v
+}
+
+// allowUnknownFields moves the unknown-field near-miss errors to warnings
+// (--allow-unknown-fields). Every other error is left alone.
+func allowUnknownFields(v *agentManifestValidation) *agentManifestValidation {
+	if v == nil || len(v.NearMisses) == 0 {
+		return v
+	}
+	moved := make(map[string]struct{}, len(v.NearMisses))
+	for _, m := range v.NearMisses {
+		moved[m] = struct{}{}
+	}
+	kept := v.Errors[:0:0]
+	for _, e := range v.Errors {
+		if _, ok := moved[e]; ok {
+			v.Warnings = append(v.Warnings, e)
+			continue
+		}
+		kept = append(kept, e)
+	}
+	v.Errors, v.NearMisses = kept, nil
+	return v
+}
+
+// agentManifestStrictness reads --strict and --allow-unknown-fields. They pull
+// in opposite directions (strict turns every warning into an error, the other
+// turns near-miss errors into warnings), so giving both is an error.
+func agentManifestStrictness(c *CmdConfig) (strict, allowUnknown bool, err error) {
+	strict = agentStrictFlag(c)
+	allowUnknown, _ = c.Doit.GetBool(c.NS, doctl.ArgAgentAllowUnknownFields)
+	if strict && allowUnknown {
+		return false, false, fmt.Errorf("--%s and --%s cannot be used together", doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields)
+	}
+	return strict, allowUnknown, nil
+}
+
+// applyManifestFlags applies --allow-unknown-fields and --strict to v.
+func applyManifestFlags(c *CmdConfig, v *agentManifestValidation) error {
+	strict, allowUnknown, err := agentManifestStrictness(c)
+	if err != nil {
+		return err
+	}
+	if allowUnknown {
+		allowUnknownFields(v)
+	}
+	if strict {
+		applyStrict(v)
+	}
+	return nil
+}
+
+// agentStrictFlag reports whether --strict was given. Commands that do not
+// register the flag read false.
+func agentStrictFlag(c *CmdConfig) bool {
+	strict, _ := c.Doit.GetBool(c.NS, doctl.ArgAgentStrict)
+	return strict
+}
+
 func reportAgentManifestValidation(v *agentManifestValidation) error {
 	if v == nil {
 		return nil
@@ -1063,6 +1150,9 @@ func RunAgentsValidate(c *CmdConfig) error {
 		return err
 	}
 	v := validateAgentManifest(raw)
+	if err := applyManifestFlags(c, v); err != nil {
+		return err
+	}
 	printAgentManifestValidation(c.Out, v)
 	if !v.ok() {
 		return ErrExitSilently

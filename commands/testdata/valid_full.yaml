@@ -1,0 +1,114 @@
+# Uses every key the flat manifest schema declares that can appear with
+# harness: custom (except the egress object keys, which validateEgressObject
+# owns). The keys that need another harness live in valid_crewai.yaml,
+# valid_langgraph.yaml and valid_agent_alias.yaml. Must validate with no errors
+# and no warnings. Keep in step with commands/agents_manifest_keys.go.
+name: full-example
+description: Exercises every known manifest key
+labels:
+  team: platform
+harness: custom
+image: registry.example.com/team/agent:1.0
+entrypoint: ["/bin/agent", "--serve"]
+config:
+  anything: goes
+  nested:
+    free: form
+repos:
+  - digitalocean/doctl
+env:
+  LOG_LEVEL: debug
+secrets:
+  GITHUB_TOKEN: oauth/github
+  S3_ACCESS_KEY:
+    source: tenantSecret
+    value: example-access-key
+    env: false
+  S3_SECRET_KEY:
+    source: tenantSecret
+    value: example-secret-key
+    env: false
+  CALLBACK_TOKEN:
+    source: oauth
+    provider: github
+  API_TOKEN:
+    source: tenantSecret
+    value: example-api-token
+    url: https://api.example.com
+    scheme: bearer
+model:
+  default: claude-sonnet
+  routing: cost
+  profile: balanced
+memory:
+  backend: default
+  scope: session
+size: s-2vcpu-4gb
+idle_timeout: 10m
+keep_warm: false
+max_lifetime: 8h
+egress:
+  allow_hosts:
+    - api.github.com
+  allow_ips:
+    - 203.0.113.10
+tools:
+  - do.actions
+  - do.search:
+      tools: [query, fetch]
+      preload_tools: [query]
+  - name: inline-server
+    url: https://mcp.example.com
+    tools: [lookup]
+    auth:
+      header: Authorization
+      secret: GITHUB_TOKEN
+permissions:
+  default: ask
+  rules:
+    - tool: bash
+      match:
+        command: "git *"
+        anything_else: ok
+      action: allow
+      enforcement: strict
+  filesystem:
+    mode: workspace-write
+    allow_write:
+      - /workspace
+  network:
+    default: deny
+    allow:
+      - api.github.com
+template: custom-template
+persistent_workspace: true
+mounts:
+  - type: s3fuse
+    path: /data
+    bucket: my-bucket
+    prefix: data/2026
+    endpoint: https://nyc3.digitaloceanspaces.com
+    read_only: true
+    access_key: S3_ACCESS_KEY
+    secret_key: S3_SECRET_KEY
+skills:
+  - name: review-pr
+    description: Use when reviewing a pull request
+    instructions: Read the diff and comment.
+    license: MIT
+    metadata:
+      author: someone
+      free_key: value
+    allowed_tools: [bash]
+budget:
+  max_cost_usd: 5
+  max_steps: 100
+  max_wall_clock: 1h
+  on_breach: pause
+mode: served
+serving:
+  min: 1
+  max: 4
+  target_concurrency: 8
+  scale_to_zero:
+    idle: 15m

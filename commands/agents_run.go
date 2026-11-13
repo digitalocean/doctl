@@ -458,6 +458,8 @@ func rejectCreationFlagsForExistingSession(c *CmdConfig) error {
 		doctl.ArgAgentPermission,
 		doctl.ArgAgentWorkspace,
 		doctl.ArgInferenceModel,
+		doctl.ArgAgentStrict,
+		doctl.ArgAgentAllowUnknownFields,
 	} {
 		if flag == doctl.ArgAgentWorkspace && c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a new session from a saved config: `%s create --%s <config> --%s <workspace-id>`",
@@ -810,6 +812,11 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		prog.step("Validating configuration…")
 	}
 
+	// Unknown manifest fields were already reported, once, by
+	// resolveAgentCreationSource before any API call; the validator below skips
+	// that pass so nothing is reported twice. --strict still applies to its
+	// other warnings.
+
 	needsOpenAI, err := manifestNeedsOpenAIPrepare(raw)
 	if err != nil {
 		return nil, err
@@ -839,7 +846,11 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	if err != nil {
 		return nil, err
 	}
-	if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
+	v := validateAgentManifestSkippingUnknownKeys(manifest)
+	if err := applyManifestFlags(c, v); err != nil {
+		return nil, err
+	}
+	if err := reportAgentManifestValidation(v); err != nil {
 		return nil, err
 	}
 

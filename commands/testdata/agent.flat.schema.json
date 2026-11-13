@@ -1,0 +1,1048 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.agents.digitalocean.com/agent.flat.schema.json",
+  "title": "DigitalOcean Agent manifest (flat format)",
+  "description": "Flat agent manifest (the primary format). Structure copied from the published schema; free-text descriptions removed.",
+  "type": "object",
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "required": [
+        "harness"
+      ]
+    },
+    {
+      "required": [
+        "agent"
+      ]
+    }
+  ],
+  "$defs": {
+    "duration": {
+      "type": "string",
+      "pattern": "^([0-9]+(h|m|s))+$"
+    },
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo",
+        "repo_sha"
+      ],
+      "properties": {
+        "repo": {
+          "type": "string",
+          "pattern": "^https://github\\.com/.+"
+        },
+        "repo_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{40}$"
+        },
+        "subdir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "object": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prompt_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+          "maxLength": 64
+        },
+        "defaults": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+            "maxLength": 64
+          },
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "schema": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+            "maxLength": 64
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "string",
+                  "integer",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "name": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9]([A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1024
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "harness": {
+      "enum": [
+        "claude-code",
+        "opencode",
+        "codex",
+        "cursor",
+        "hermes",
+        "codex-agentapi",
+        "none",
+        "sandbox",
+        "custom",
+        "codex-cli",
+        "cursor-cli",
+        "openai-agents",
+        "claude-agent-sdk",
+        "crewai",
+        "langgraph"
+      ]
+    },
+    "agent": {
+      "$ref": "#/properties/harness"
+    },
+    "image": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entrypoint": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "crewai": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "framework": {
+          "$ref": "#/$defs/framework"
+        },
+        "inputs": {
+          "$ref": "#/$defs/inputs"
+        }
+      }
+    },
+    "langgraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "framework": {
+          "$ref": "#/$defs/framework"
+        }
+      }
+    },
+    "repos": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9._-]+$"
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string",
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "^oauth/$"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "^\\$(\\{[A-Za-z_][A-Za-z0-9_]*\\}|[A-Za-z_][A-Za-z0-9_]*)$"
+                }
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "source": {
+                "enum": [
+                  "oauth",
+                  "tenantSecret"
+                ]
+              },
+              "provider": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "env": {
+                "type": "boolean"
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scheme": {
+                "enum": [
+                  "bearer",
+                  "raw"
+                ]
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "source": {
+                      "const": "oauth"
+                    }
+                  },
+                  "required": [
+                    "source"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "provider"
+                  ],
+                  "allOf": [
+                    {
+                      "not": {
+                        "required": [
+                          "value"
+                        ]
+                      }
+                    },
+                    {
+                      "not": {
+                        "properties": {
+                          "env": {
+                            "const": false
+                          }
+                        },
+                        "required": [
+                          "env"
+                        ]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": [
+                          "url"
+                        ]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": [
+                          "scheme"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "url",
+                    "env"
+                  ],
+                  "properties": {
+                    "env": {
+                      "const": false
+                    }
+                  }
+                },
+                "then": false
+              },
+              {
+                "if": {
+                  "required": [
+                    "scheme"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "url"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "scheme": {
+                      "const": "raw"
+                    }
+                  },
+                  "required": [
+                    "scheme"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "pattern": "^[^\\x00-\\x20\\x7f]([^\\x00-\\x1f\\x7f]*[^\\x00-\\x20\\x7f])?$"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "model": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "string"
+            },
+            "routing": {
+              "type": "string"
+            },
+            "profile": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "memory": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "backend"
+          ],
+          "properties": {
+            "backend": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scope": {
+              "enum": [
+                "tenant",
+                "user",
+                "agent",
+                "session"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "size": {
+      "type": "string"
+    },
+    "idle_timeout": {
+      "$ref": "#/$defs/duration"
+    },
+    "keep_warm": {
+      "type": "boolean"
+    },
+    "max_lifetime": {
+      "$ref": "#/$defs/duration"
+    },
+    "egress": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "unrestricted"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow_hosts": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "allow_ips": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "vpc_uuid": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subnet_uuid": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "pattern": "^do\\.[a-z0-9]([a-z0-9._-]{0,59}[a-z0-9])?$"
+          },
+          {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": false,
+            "patternProperties": {
+              "^do\\.[a-z0-9]([a-z0-9._-]{0,59}[a-z0-9])?$": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "anyOf": [
+                        {
+                          "pattern": "^[a-z0-9]([a-z0-9._-]*[a-z0-9])?(@[0-9]+)?$"
+                        },
+                        {
+                          "pattern": "^toolbelt:[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?(@[0-9]+)?$"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "minProperties": 1,
+                    "properties": {
+                      "tools": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "anyOf": [
+                            {
+                              "pattern": "^[a-z0-9]([a-z0-9._-]*[a-z0-9])?(@[0-9]+)?$"
+                            },
+                            {
+                              "pattern": "^toolbelt:[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?(@[0-9]+)?$"
+                            }
+                          ]
+                        }
+                      },
+                      "preload_tools": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]([a-z0-9._-]*[a-z0-9])?(@[0-9]+)?$"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?$",
+                "not": {
+                  "pattern": "^do\\."
+                }
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https://"
+              },
+              "tools": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[a-z0-9]([a-z0-9._-]*[a-z0-9])?(@[0-9]+)?$"
+                }
+              },
+              "auth": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "secret"
+                ],
+                "properties": {
+                  "header": {
+                    "type": "string"
+                  },
+                  "secret": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "enum": [
+            "allow",
+            "ask",
+            "deny"
+          ]
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tool",
+              "action"
+            ],
+            "properties": {
+              "tool": {
+                "type": "string",
+                "minLength": 1,
+                "anyOf": [
+                  {
+                    "not": {
+                      "pattern": "/|^toolbelt:"
+                    }
+                  },
+                  {
+                    "pattern": "^[^/]+/toolbelt:[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?(@[0-9]+)?$"
+                  },
+                  {
+                    "pattern": "^[^/]+/[a-z0-9]([a-z0-9._-]*[a-z0-9])?(@[0-9]+)?$"
+                  }
+                ]
+              },
+              "match": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "action": {
+                "enum": [
+                  "allow",
+                  "ask",
+                  "deny"
+                ]
+              },
+              "enforcement": {
+                "enum": [
+                  "strict",
+                  "best-effort"
+                ]
+              }
+            }
+          }
+        },
+        "filesystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "read-only",
+                "workspace-write"
+              ]
+            },
+            "allow_write": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "enum": [
+                "allow",
+                "deny"
+              ]
+            },
+            "allow": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "template": {
+      "type": "string"
+    },
+    "persistent_workspace": {
+      "type": "boolean",
+      "deprecated": true
+    },
+    "mounts": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "path",
+          "bucket",
+          "access_key",
+          "secret_key"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "s3fuse"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "bucket": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "read_only": {
+            "type": "boolean"
+          },
+          "access_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "secret_key": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "description",
+          "instructions"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "instructions": {
+            "type": "string",
+            "minLength": 1
+          },
+          "license": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "allowed_tools": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_steps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_wall_clock": {
+          "$ref": "#/$defs/duration"
+        },
+        "on_breach": {
+          "enum": [
+            "pause",
+            "humanInput",
+            "fail"
+          ]
+        }
+      }
+    },
+    "mode": {
+      "enum": [
+        "interactive",
+        "served"
+      ]
+    },
+    "serving": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "target_concurrency": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scale_to_zero": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "idle": {
+              "$ref": "#/$defs/duration"
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "served"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "serving"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "serving"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "image"
+            ]
+          },
+          {
+            "required": [
+              "entrypoint"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "harness": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "harness"
+            ]
+          },
+          {
+            "properties": {
+              "agent": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "agent"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "harness": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "harness"
+            ]
+          },
+          {
+            "properties": {
+              "agent": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "agent"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "required": [
+          "image"
+        ]
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "harness": {
+                "const": "crewai"
+              }
+            },
+            "required": [
+              "harness"
+            ]
+          },
+          {
+            "properties": {
+              "agent": {
+                "const": "crewai"
+              }
+            },
+            "required": [
+              "agent"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "anyOf": [
+          {
+            "required": [
+              "crewai"
+            ],
+            "properties": {
+              "crewai": {
+                "required": [
+                  "framework"
+                ]
+              }
+            }
+          },
+          {
+            "required": [
+              "env"
+            ],
+            "properties": {
+              "env": {
+                "required": [
+                  "FRAMEWORK_REPO",
+                  "FRAMEWORK_REPO_SHA"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "crewai"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "harness": {
+                "const": "langgraph"
+              }
+            },
+            "required": [
+              "harness"
+            ]
+          },
+          {
+            "properties": {
+              "agent": {
+                "const": "langgraph"
+              }
+            },
+            "required": [
+              "agent"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "anyOf": [
+          {
+            "required": [
+              "langgraph"
+            ],
+            "properties": {
+              "langgraph": {
+                "required": [
+                  "framework"
+                ]
+              }
+            }
+          },
+          {
+            "required": [
+              "env"
+            ],
+            "properties": {
+              "env": {
+                "required": [
+                  "FRAMEWORK_REPO",
+                  "FRAMEWORK_REPO_SHA"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "langgraph"
+          ]
+        }
+      }
+    }
+  ]
+}
