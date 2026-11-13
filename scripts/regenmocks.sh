@@ -10,6 +10,7 @@ go install -mod=readonly go.uber.org/mock/mockgen@latest
 
 mockgen -source account.go -package=mocks AccountService > mocks/AccountService.go
 mockgen -source actions.go -package=mocks ActionService > mocks/ActionService.go
+mockgen -source ads.go -package=mocks ADSService > mocks/ADSService.go
 mockgen -source apps.go -package=mocks AppsService > mocks/AppsService.go
 mockgen -source balance.go -package=mocks BalanceService > mocks/BalanceService.go
 mockgen -source billing_history.go -package=mocks BillingHistoryService > mocks/BillingHistoryService.go
