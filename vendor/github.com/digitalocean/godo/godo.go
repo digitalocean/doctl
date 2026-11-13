@@ -109,6 +109,7 @@ type Client struct {
 	ActionGateway       *ActionGatewayService
 	HostedAgents        HostedAgentsService
 	HostedAgentTriggers HostedAgentTriggersService
+	ADS                 ADSService
 	DedicatedInference  DedicatedInferenceService
 	BatchInference      BatchInferenceService
 	Signals             SignalsService
@@ -375,6 +376,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.ActionGateway = newActionGatewayService(c)
 	c.HostedAgents = &HostedAgentsServiceOp{client: c}
 	c.HostedAgentTriggers = &HostedAgentTriggersServiceOp{client: c}
+	c.ADS = &ADSServiceOp{client: c}
 	c.DedicatedInference = &DedicatedInferenceServiceOp{client: c}
 	batchInferenceURL, _ := url.Parse(defaultBatchInferenceBaseURL)
 	c.BatchInference = &BatchInferenceServiceOp{client: c, baseURL: batchInferenceURL}
