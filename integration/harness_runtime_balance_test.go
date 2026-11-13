@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -150,18 +151,25 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 			}
 		})
 
-		// The user can neither see nor fix the balance, so this is a state to
-		// display, not a REST error to dump.
-		it("reports the gate state as unknown and names the missing scope", func() {
+		// -u points at the test server, which is not the default API, so the
+		// follow-up token check is skipped and nothing leaves this machine.
+		it("exits non-zero and explains why the balance cannot be read", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"harness-runtime", "balance",
 			)
+			// Any call that leaves this machine goes to a dead proxy and fails
+			// the test; only the loopback test server is reachable.
+			cmd.Env = append(os.Environ(),
+				"HTTPS_PROXY=http://127.0.0.1:1",
+				"HTTP_PROXY=http://127.0.0.1:1",
+				"NO_PROXY=127.0.0.1,localhost",
+			)
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err)
-			expect.Equal(strings.TrimSpace(harnessBalanceNoPermission), strings.TrimSpace(string(output)))
+			expect.Error(err)
+			expect.Equal(strings.TrimSpace(harnessBalanceUnreadable), strings.TrimSpace(string(output)))
 		})
 	})
 })
@@ -181,7 +189,7 @@ Balance    Month-to-date Balance    Auto Top-off                      Status
 $3.00      $22.00                   on (at $5.00, charging $25.00)    OK
 `
 
-const harnessBalanceNoPermission string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-unknown    unknown                  unknown         unknown (token lacks billing:read)
+const harnessBalanceUnreadable string = `
+Error: Cannot read the balance: the token may lack the billing:read scope. Server said: insufficient scope.
+status 403
 `

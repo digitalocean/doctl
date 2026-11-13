@@ -15,6 +15,8 @@ package do_test
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -111,4 +113,29 @@ func TestPrepaymentServiceGetStatus(t *testing.T) {
 	resp, err := ps.GetStatus()
 	assert.NoError(t, err)
 	assert.Equal(t, "75.00", resp.Status.MonthToDateBalance)
+}
+
+// A 403 matches ErrNoBillingPermission and still exposes the API error, so the
+// balance command can read the status and the server's message.
+func TestPrepaymentServiceGet_ForbiddenKeepsAPIError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	gPrepaymentSvc := NewMockGodoPrepaymentService(ctrl)
+	apiErr := &godo.ErrorResponse{
+		Response: &http.Response{StatusCode: http.StatusForbidden},
+		Message:  "You are not authorized to perform this operation",
+	}
+	gPrepaymentSvc.EXPECT().GetConfig(gomock.Any()).Return(nil, nil, apiErr)
+
+	ps := do.NewPrepaymentService(&godo.Client{Prepayment: gPrepaymentSvc})
+
+	_, _, err := ps.Get(context.Background())
+	assert.ErrorIs(t, err, do.ErrNoBillingPermission)
+
+	var got *godo.ErrorResponse
+	if assert.True(t, errors.As(err, &got)) {
+		assert.Equal(t, http.StatusForbidden, got.Response.StatusCode)
+		assert.Equal(t, "You are not authorized to perform this operation", got.Message)
+	}
 }
