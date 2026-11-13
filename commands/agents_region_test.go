@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -243,6 +244,18 @@ func TestAgentRegionBaseURL(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "https://api.preview.example.com/", got)
 	})
+
+	t.Run("an api-url equal to the default does not override --region", func(t *testing.T) {
+		// config.yaml files written by older doctl versions carry the default
+		// value; it is not a choice (MARSOHS-2805).
+		for _, v := range []string{"https://api.digitalocean.com/", "https://api.digitalocean.com"} {
+			setAPIURL(t, v)
+			setAgentRegion(t, "mem1")
+			got, err := agentRegionBaseURL()
+			require.NoError(t, err)
+			assert.Equal(t, "https://api-mem1.digitalocean.com/", got, "api-url %q", v)
+		}
+	})
 }
 
 func TestHostedAgentsWSURLHonorsRegion(t *testing.T) {
@@ -265,6 +278,14 @@ func TestHostedAgentsWSURLHonorsRegion(t *testing.T) {
 		assert.Equal(t, "wss://api.digitalocean.com/v2/agents/sessions/sess-1/port-forward/9119", got)
 	})
 
+	t.Run("an api-url equal to the default does not override --region", func(t *testing.T) {
+		setAPIURL(t, "https://api.digitalocean.com/")
+		setAgentRegion(t, "mem1")
+		got, err := hostedAgentsWSURL("sess-1", 9119)
+		require.NoError(t, err)
+		assert.Equal(t, "wss://api-mem1.digitalocean.com/v2/agents/sessions/sess-1/port-forward/9119", got)
+	})
+
 	t.Run("an explicit --api-url wins", func(t *testing.T) {
 		setAPIURL(t, "https://api.preview.example.com/")
 		setAgentRegion(t, "mem1")
@@ -278,6 +299,34 @@ func TestHostedAgentsWSURLHonorsRegion(t *testing.T) {
 		setAgentRegion(t, "nope!")
 		_, err := hostedAgentsWSURL("sess-1", 9119)
 		require.Error(t, err)
+	})
+}
+
+func TestUseSessionLocationHost(t *testing.T) {
+	sess := &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+		Location: "https://api-mem1.digitalocean.com/v2/agents/sessions/s1",
+	}}
+
+	// HostedAgents is nil until the session's host replaces it.
+	moved := func(t *testing.T, apiURL string) bool {
+		t.Helper()
+		setAPIURL(t, apiURL)
+		c := &CmdConfig{Doit: &doctl.TestConfig{}, getContextAccessToken: func() string { return "test-token" }}
+		require.NoError(t, useSessionLocationHost(c, sess))
+		return c.HostedAgents != nil
+	}
+
+	t.Run("no api-url follows the Location host", func(t *testing.T) {
+		assert.True(t, moved(t, ""))
+	})
+
+	t.Run("an api-url equal to the default follows the Location host", func(t *testing.T) {
+		// Left over from older doctl versions; not a choice (MARSOHS-2805).
+		assert.True(t, moved(t, "https://api.digitalocean.com/"))
+	})
+
+	t.Run("an explicit --api-url keeps the host the user chose", func(t *testing.T) {
+		assert.False(t, moved(t, "https://api.preview.example.com/"))
 	})
 }
 
