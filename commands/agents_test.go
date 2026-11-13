@@ -1087,8 +1087,12 @@ func TestRunAgentsPause(t *testing.T) {
 func TestRunAgentsResume(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		var buf bytes.Buffer
+		config.Out = &buf
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
+		assert.Contains(t, buf.String(), "Session awake")
+		assert.Contains(t, buf.String(), "resumed")
 	})
 }
 

@@ -244,6 +244,7 @@ func TestRunAgentsLaunch_ResumesPausedSession(t *testing.T) {
 		err := RunAgentsLaunch(config)
 		require.Error(t, err)
 		assert.Contains(t, buf.String(), "is paused — resuming")
+		assert.Contains(t, buf.String(), "Session awake")
 	})
 }
 

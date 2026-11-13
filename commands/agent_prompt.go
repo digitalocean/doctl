@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -145,8 +146,23 @@ func RunAgentsPrompt(c *CmdConfig) error {
 	defer stopSignals()
 	go col.watchInterrupts(ctx, sigs, stopWaiting)
 
-	if err := promptResumeIfPaused(ctx, svc, sessionID, quiet); err != nil {
+	woke, err := promptResumeIfPaused(ctx, svc, sessionID, quiet)
+	if err != nil {
+		// The context decides, not the error's type: only a deadline or
+		// Ctrl-C ends the command as a timeout or interrupt, and an API or
+		// transport failure stays an ordinary error even when it wraps one.
+		if ctx.Err() != nil {
+			col.endedWhileWaking = true
+			return col.report(c, ctx)
+		}
 		return err
+	}
+	col.ctx = ctx
+	col.woke = woke
+	if woke && !quiet {
+		// Only a freshly woken session has the slow send to explain.
+		col.sendProg = newStageProgress(promptStderr)
+		defer col.sendProg.stop()
 	}
 
 	streamErr := runHeadlessStream(ctx, svc, sessionID, col.cursor,
@@ -184,28 +200,43 @@ func promptTextFrom(args []string) (string, error) {
 // promptResumeIfPaused resumes a paused session on the way in and waits for it
 // to come back, matching `launch`. A headless caller cannot react to "the
 // session happens to be asleep", so making it sequence `resume` itself would
-// just be an error every unattended script had to handle.
-func promptResumeIfPaused(ctx context.Context, svc do.HostedAgentsService, sessionID string, quiet bool) error {
+// just be an error every unattended script had to handle. It reports whether a
+// wake happened.
+func promptResumeIfPaused(ctx context.Context, svc do.HostedAgentsService, sessionID string, quiet bool) (bool, error) {
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
-		return beautifyAgentError(err)
+		return false, beautifyAgentError(err)
 	}
 	if sess.Status != godo.HostedAgentSessionStatusPaused {
-		return nil
+		return false, nil
 	}
 
+	var prog *creationProgress
 	if !quiet {
 		fmt.Fprintf(promptStderr, "Session %s is paused — resuming…\n", displaySessionRef(sess))
+		prog = newStageProgress(promptStderr)
+		defer prog.stop()
 	}
-	if err := svc.ResumeSession(sessionID); err != nil {
-		return beautifyAgentError(err)
+	woke, err := wakeSessionWithProgress(ctx, svc, sessionID, prog)
+	if err != nil {
+		return false, ctxOrPretty(ctx, err)
 	}
-	// Sending input to a session that is awake but not yet listening loses the
-	// prompt, so wait for READY rather than racing the resume.
+	// Confirm the session reports READY before sending rather than relying on
+	// the resume alone. That is normally one quiet read, but a session someone
+	// else is waking gives no such signal from the resume.
 	if _, err := waitForSessionReady(ctx, svc, sessionID, nil); err != nil {
-		return beautifyAgentError(err)
+		return false, ctxOrPretty(ctx, err)
 	}
-	return nil
+	return woke, nil
+}
+
+// ctxOrPretty returns ctx.Err() when the context has ended, so the caller can
+// map a deadline to the timeout exit code, and dresses every other failure.
+func ctxOrPretty(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return beautifyAgentError(err)
 }
 
 // promptCollector accumulates one run's output off the event stream.
@@ -216,6 +247,22 @@ type promptCollector struct {
 	outcome          godo.HostedAgentHITLOutcome
 	includeReasoning bool
 	quiet            bool
+
+	// ctx bounds the send; nil means unbounded.
+	ctx context.Context
+	// woke is set when this run woke the session first.
+	woke bool
+	// endedWhileWaking and sending record how far the run got when a deadline
+	// or Ctrl-C ended it, to say whether the prompt can have been delivered.
+	endedWhileWaking bool
+	sending          bool
+	// sigInt is set by Ctrl-C (not SIGTERM); earlyInterrupt is set by report
+	// when that Ctrl-C landed before the run started.
+	sigInt         bool
+	earlyInterrupt bool
+	// sendProg shows the "sending the prompt" stage; set only after a wake,
+	// when the send can be slow.
+	sendProg *creationProgress
 
 	cursor *eventCursor
 	// seen guards against double-counting text: a reconnect replays from the
@@ -256,6 +303,12 @@ func (p *promptCollector) liveRun() string {
 	return p.live
 }
 
+func (p *promptCollector) interrupted() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.sigInt
+}
+
 func (p *promptCollector) sentCancel() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -279,6 +332,11 @@ func (p *promptCollector) watchInterrupts(ctx context.Context, sigs <-chan os.Si
 		case <-ctx.Done():
 			return
 		case sig := <-sigs:
+			if sig == os.Interrupt {
+				p.mu.Lock()
+				p.sigInt = true
+				p.mu.Unlock()
+			}
 			if sig != os.Interrupt || grace != nil || !p.cancelLiveRun() {
 				stopWaiting()
 				return
@@ -323,10 +381,31 @@ func (p *promptCollector) drain(stream *godo.HostedAgentSessionStream) (bool, er
 	// before subscribing could, and this command would then wait out its whole
 	// timeout for a terminal event it had already missed.
 	if !p.sent {
-		resp, err := p.svc.SendInput(p.sessionID, &godo.HostedAgentSendInputRequest{Text: p.text})
+		ctx := p.ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		p.sending = true
+		var resp *godo.HostedAgentSendInputResponse
+		err := runStage(ctx, p.sendProg, "sending the prompt", func() error {
+			var sendErr error
+			resp, sendErr = p.svc.SendInput(p.sessionID, &godo.HostedAgentSendInputRequest{Text: p.text})
+			return sendErr
+		})
 		if err != nil {
+			if ctx.Err() != nil {
+				// Not an error: report() turns the deadline into exit 124.
+				return false, nil
+			}
+			// A server error right after a wake can mean the agent was not
+			// listening yet; the text was not accepted.
+			if _, status, ok := agentAPIError(err); ok && p.woke && status == http.StatusInternalServerError {
+				return false, errors.New("the prompt was not delivered: the agent in the session did not start listening in time. Send it again.")
+			}
 			return false, beautifyAgentError(err)
 		}
+		// The "run started" line below ends the stage.
+		p.sendProg.stopSpin()
 		p.sent = true
 		p.runID = resp.RunID
 		p.setLive(resp.RunID)
@@ -481,6 +560,11 @@ func (p *promptCollector) report(c *CmdConfig, ctx context.Context) error {
 		// status already set by handle
 	case timedOut:
 		p.status = promptStatusTimedOut
+	case ctx.Err() != nil && !p.sent && (p.endedWhileWaking || p.sending) && p.interrupted():
+		// Ctrl-C before the run existed: there is no run to cancel, but the
+		// caller still pressed Ctrl-C, so exit as one.
+		p.status = promptStatusCancelled
+		p.earlyInterrupt = true
 	default:
 		p.status = promptStatusIncomplete
 	}
@@ -535,6 +619,25 @@ func (p *promptCollector) reasoningForOutput() string {
 
 // summarize prints the closing status line to stderr.
 func (p *promptCollector) summarize() {
+	// Not quiet-gated: a timeout or interrupt is an error, and these say
+	// whether the prompt can have arrived.
+	if !p.sent && (p.endedWhileWaking || p.sending) &&
+		(p.status == promptStatusTimedOut || p.status == promptStatusCancelled) {
+		what := "timed out"
+		if p.status == promptStatusCancelled {
+			what = "interrupted"
+		}
+		if p.endedWhileWaking {
+			fmt.Fprintf(promptStderr,
+				"%s waiting for the session to wake; the prompt was not sent. Check the session with `%s show %s`\n",
+				what, agentCLI, p.sessionID)
+		} else {
+			fmt.Fprintf(promptStderr,
+				"%s before the prompt was delivered; it may still arrive, so check `%s logs %s` before sending it again\n",
+				what, agentCLI, p.sessionID)
+		}
+		return
+	}
 	if p.quiet {
 		return
 	}
@@ -576,7 +679,7 @@ func (p *promptCollector) exitFor() error {
 	case promptStatusCancelled:
 		// 130 only for our own Ctrl-C; a run another client cancelled failed
 		// as far as this caller is concerned.
-		if p.sentCancel() {
+		if p.sentCancel() || p.earlyInterrupt {
 			promptExit(promptInterruptExit)
 		} else {
 			promptExit(1)
