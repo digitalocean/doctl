@@ -373,8 +373,11 @@ func RunAgentsPortForward(c *CmdConfig) error {
 	// a write is confirmed out of band, here in the terminal, unless the
 	// user chose --automate=allow; without a terminal to ask at, writes are
 	// refused and the tab says so.
+	// The confirmer exists only when the Automate tab is served and asks for
+	// it; it touches stdin only when it has a question, so a port-forward
+	// run in the background is never stopped for reading the terminal.
 	var confirmWrite canvasConfirmFunc
-	if automateMode == "confirm" {
+	if automation && automateMode == "confirm" {
 		confirmWrite = terminalConfirm(c.Out)
 	}
 
@@ -733,33 +736,40 @@ func (c *wsTunnelConn) SetWriteDeadline(t time.Time) error { return c.ws.SetWrit
 // write the Automate tab requested. The question is answered on stdin, out
 // of the page's reach; no terminal means no, as does a minute's silence.
 func terminalConfirm(out io.Writer) canvasConfirmFunc {
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return func(string) (bool, string) {
-			return false, "doctl has no terminal to ask at; start port-forward with --automate=allow to let Canvas create and run automations without asking"
-		}
-	}
-	// One reader owns stdin for the life of the tunnel and hands lines over
-	// a channel: a prompt that times out leaves no second reader behind,
-	// and the line it was waiting for is drained before the next prompt so
-	// a late answer is never taken for the new question.
-	lines := make(chan string, 8)
-	go func() {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			line, err := reader.ReadString('\n')
-			if line != "" || err == nil {
-				lines <- strings.ToLower(strings.TrimSpace(line))
-			}
-			if err != nil {
-				close(lines)
-				return
-			}
-		}
-	}()
-	var mu sync.Mutex
+	// stdin is opened at the first question, not when port-forward starts:
+	// a process that reads the terminal from the background is stopped by
+	// the shell (SIGTTIN), and a tunnel whose tab is never used must not
+	// read anything. From then on one reader owns stdin for the life of the
+	// tunnel and hands lines over a channel, so a prompt that times out
+	// leaves no second reader behind, and the line it was waiting for is
+	// drained before the next prompt so a late answer is never taken for
+	// the new question.
+	var (
+		mu    sync.Mutex
+		lines chan string
+	)
 	return func(what string) (bool, string) {
 		mu.Lock()
 		defer mu.Unlock()
+		if !term.IsTerminal(int(os.Stdin.Fd())) {
+			return false, "doctl has no terminal to ask at; start port-forward with --automate=allow to let Canvas create and run automations without asking"
+		}
+		if lines == nil {
+			lines = make(chan string, 8)
+			go func(lines chan<- string) {
+				reader := bufio.NewReader(os.Stdin)
+				for {
+					line, err := reader.ReadString('\n')
+					if line != "" || err == nil {
+						lines <- strings.ToLower(strings.TrimSpace(line))
+					}
+					if err != nil {
+						close(lines)
+						return
+					}
+				}
+			}(lines)
+		}
 		for drained := false; !drained; {
 			select {
 			case _, ok := <-lines:
