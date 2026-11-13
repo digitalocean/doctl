@@ -157,7 +157,7 @@ func adsWorkspace() *Command {
 	AddBoolFlag(deleteCmd, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the workspace without a confirmation prompt")
 
 	creds := CmdBuilder(cmd, RunADSWorkspaceQueryCredentials, "query-credentials <workspace-uuid>", "Get the query credentials of a workspace",
-		"Retrieves the user and password for a workspace's query engine.\n\nThe output includes the password in plain text. Treat it as a secret: do not paste it into tickets, chat, or logs.", Writer,
+		"Retrieves the user and password for a workspace's query engine.\n\nThe password is hidden unless you pass `--show`, in text and JSON output alike. In CI it is shown automatically. The password can be retrieved again at any time. Treat it as a secret: do not paste it into tickets, chat, or logs.", Writer,
 		displayerType(&displayers.ADSQueryCredentials{}))
 	creds.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(creds)
@@ -251,8 +251,17 @@ func RunADSWorkspaceQueryCredentials(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	warn("The output below contains the workspace's query password. Treat it as a secret.")
-	return c.Display(&displayers.ADSQueryCredentials{Credentials: *creds})
+
+	// The password can be fetched again at any time, so it is masked unless
+	// --show is passed (or doctl runs in CI), as `doctl secrets` does.
+	display := *creds
+	if c.UI.Mask {
+		display.Password = secretMaskedValue
+		warn("The password is hidden. Run the command again with --%s to reveal it.", doctl.ArgShow)
+	} else {
+		warn("The output below contains the workspace's query password. Treat it as a secret.")
+	}
+	return c.Display(&displayers.ADSQueryCredentials{Credentials: display})
 }
 
 func adsToken() *Command {

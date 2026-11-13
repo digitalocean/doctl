@@ -172,19 +172,40 @@ func TestRunADSWorkspaceDeleteRequiresConfirmation(t *testing.T) {
 }
 
 func TestRunADSWorkspaceQueryCredentials(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.ads.EXPECT().GetWorkspaceQueryCredentials(testADSRegion, testADSWorkspace).Return(&godo.ADSQueryCredentials{
-			User:     "reader",
-			Password: "secret_value",
-		}, nil)
-		config.Args = []string{testADSWorkspace}
-		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testADSRegion)
-		buf := withInsightsOutput(t, config, "text")
+	tests := []struct {
+		name         string
+		mask         bool
+		format       string
+		wantPassword bool
+	}{
+		{name: "masked text", mask: true, format: "text"},
+		{name: "masked json", mask: true, format: "json"},
+		{name: "show text", mask: false, format: "text", wantPassword: true},
+		{name: "show json", mask: false, format: "json", wantPassword: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.ads.EXPECT().GetWorkspaceQueryCredentials(testADSRegion, testADSWorkspace).Return(&godo.ADSQueryCredentials{
+					User:     "reader",
+					Password: "secret_value",
+				}, nil)
+				config.Args = []string{testADSWorkspace}
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, testADSRegion)
+				config.UI.Mask = tt.mask
+				buf := withInsightsOutput(t, config, tt.format)
 
-		require.NoError(t, RunADSWorkspaceQueryCredentials(config))
-		assert.Contains(t, buf.String(), "reader")
-		assert.Contains(t, buf.String(), "secret_value")
-	})
+				require.NoError(t, RunADSWorkspaceQueryCredentials(config))
+				assert.Contains(t, buf.String(), "reader")
+				if tt.wantPassword {
+					assert.Contains(t, buf.String(), "secret_value")
+				} else {
+					assert.NotContains(t, buf.String(), "secret_value")
+					assert.Contains(t, buf.String(), secretMaskedValue)
+				}
+			})
+		})
+	}
 }
 
 func TestRunADSTokenCreate(t *testing.T) {
