@@ -530,6 +530,16 @@ func (c *LiveConfig) GetStringMapString(ns, key string) (map[string]string, erro
 	// Re-implement the necessary pieces on our own instead.
 
 	vals := map[string]string{}
+
+	// viper converts a bound StringToStringP flag into a map, which
+	// GetStringSlice silently reads as empty, so take the map as is.
+	if m, ok := viper.Get(nskey).(map[string]any); ok {
+		for k, v := range m {
+			vals[k] = fmt.Sprint(v)
+		}
+		return vals, nil
+	}
+
 	items := viper.GetStringSlice(nskey)
 	for _, item := range items {
 		parts := strings.SplitN(item, "=", 2)

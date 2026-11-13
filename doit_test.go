@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/digitalocean/godo"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -222,4 +223,23 @@ func TestCommandName(t *testing.T) {
 			t.Errorf("got %s, want %s", actual, expected)
 		}
 	})
+}
+
+func TestLiveConfigGetStringMapStringFromFlag(t *testing.T) {
+	flags := pflag.NewFlagSet("put", pflag.ContinueOnError)
+	flags.StringToStringP("data", "", map[string]string{}, "")
+	viper.BindPFlag("secret.put.data", flags.Lookup("data"))
+	t.Cleanup(viper.Reset)
+
+	if err := flags.Parse([]string{"--data", "user=loader", "--data", "password=a=b"}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := (&LiveConfig{}).GetStringMapString("secret.put", "data")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got["user"] != "loader" || got["password"] != "a=b" {
+		t.Errorf("got %v, want map[password:a=b user:loader]", got)
+	}
 }
