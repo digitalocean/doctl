@@ -138,7 +138,7 @@ type canvasAutomationServer struct {
 	// listCache keeps the last team scan for canvasListCacheTTL, so a tab
 	// refresh is not fifty API calls each time; invalidated by every write.
 	listMu     sync.Mutex
-	listCached []canvasTriggerRow
+	listCached []godo.HostedAgentTrigger
 	listAt     time.Time
 }
 
@@ -363,25 +363,24 @@ func (s *canvasAutomationServer) capabilities() map[string]any {
 // else is "not found" to the tab, so one session's Canvas can neither read
 // nor change another session's triggers.
 func (s *canvasAutomationServer) owned(w http.ResponseWriter, id string) (*godo.HostedAgentTrigger, bool) {
-	t, _, ok := s.ownedWithDetails(w, id)
-	return t, ok
-}
-
-// ownedWithDetails is owned plus the Canvas fields (the webhook's events).
-func (s *canvasAutomationServer) ownedWithDetails(w http.ResponseWriter, id string) (*godo.HostedAgentTrigger, do.HostedAgentTriggerDetails, bool) {
-	t, d, err := s.triggers.GetWithDetails(id)
+	t, err := s.triggers.Get(id)
 	if err != nil {
 		writeGodoError(w, err)
-		return nil, do.HostedAgentTriggerDetails{}, false
+		return nil, false
 	}
 	if t == nil || t.HostedAgentTrigger == nil || !strings.EqualFold(t.BoundSessionID, s.sessionID) {
 		writeDetail(w, http.StatusNotFound, "Automation not found")
-		return nil, do.HostedAgentTriggerDetails{}, false
+		return nil, false
 	}
-	if d == nil {
-		d = &do.HostedAgentTriggerDetails{}
+	return t.HostedAgentTrigger, true
+}
+
+// webhookEvents is a webhook trigger's event filter; empty is every delivery.
+func webhookEvents(t *godo.HostedAgentTrigger) []string {
+	if t == nil || t.Webhook == nil {
+		return nil
 	}
-	return t.HostedAgentTrigger, *d, true
+	return t.Webhook.Events
 }
 
 // sessionTriggers lists every trigger bound to this session: one call with
@@ -390,7 +389,7 @@ func (s *canvasAutomationServer) ownedWithDetails(w http.ResponseWriter, id stri
 // still checked here and paged (100 a page, up to 50 pages). The session
 // id is compared case-insensitively: the server stores it in lower case
 // and a ref typed in upper case must still find its triggers.
-func (s *canvasAutomationServer) sessionTriggers() ([]canvasTriggerRow, error) {
+func (s *canvasAutomationServer) sessionTriggers() ([]godo.HostedAgentTrigger, error) {
 	s.listMu.Lock()
 	if s.listCached != nil && s.now().Sub(s.listAt) < canvasListCacheTTL {
 		cached := s.listCached
@@ -398,20 +397,18 @@ func (s *canvasAutomationServer) sessionTriggers() ([]canvasTriggerRow, error) {
 		return cached, nil
 	}
 	s.listMu.Unlock()
-	var out []canvasTriggerRow
+	var out []godo.HostedAgentTrigger
 	token := ""
 	for page := 0; page < 50; page++ {
-		items, details, next, err := s.triggers.ListWithDetails(strings.ToLower(s.sessionID), 100, token)
+		items, next, err := s.triggers.List(&godo.HostedAgentTriggerListOptions{
+			BoundSessionID: strings.ToLower(s.sessionID), PageSize: 100, PageToken: token,
+		})
 		if err != nil {
 			return nil, err
 		}
-		for i, t := range items {
+		for _, t := range items {
 			if t.HostedAgentTrigger != nil && strings.EqualFold(t.BoundSessionID, s.sessionID) {
-				row := canvasTriggerRow{trigger: *t.HostedAgentTrigger}
-				if i < len(details) {
-					row.details = details[i]
-				}
-				out = append(out, row)
+				out = append(out, *t.HostedAgentTrigger)
 			}
 		}
 		if next == "" {
@@ -419,20 +416,14 @@ func (s *canvasAutomationServer) sessionTriggers() ([]canvasTriggerRow, error) {
 		}
 		token = next
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].trigger.CreatedAt.Time.After(out[j].trigger.CreatedAt.Time) })
+	sort.SliceStable(out, func(i, j int) bool { return out[i].CreatedAt.Time.After(out[j].CreatedAt.Time) })
 	if out == nil {
-		out = []canvasTriggerRow{}
+		out = []godo.HostedAgentTrigger{}
 	}
 	s.listMu.Lock()
 	s.listCached, s.listAt = out, s.now()
 	s.listMu.Unlock()
 	return out, nil
-}
-
-// canvasTriggerRow is a trigger with its Canvas fields.
-type canvasTriggerRow struct {
-	trigger godo.HostedAgentTrigger
-	details do.HostedAgentTriggerDetails
 }
 
 func (s *canvasAutomationServer) list(w http.ResponseWriter, r *http.Request) {
@@ -444,17 +435,17 @@ func (s *canvasAutomationServer) list(w http.ResponseWriter, r *http.Request) {
 	}
 	page := []canvasAutomation{}
 	for i := offset; i < len(all) && i < offset+limit; i++ {
-		page = append(page, toCanvasAutomation(all[i].trigger, all[i].details))
+		page = append(page, toCanvasAutomation(all[i]))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"automations": page, "total": len(all)})
 }
 
 func (s *canvasAutomationServer) get(w http.ResponseWriter, id string) {
-	t, d, ok := s.ownedWithDetails(w, id)
+	t, ok := s.owned(w, id)
 	if !ok {
 		return
 	}
-	writeJSON(w, http.StatusOK, toCanvasAutomation(*t, d))
+	writeJSON(w, http.StatusOK, toCanvasAutomation(*t))
 }
 
 func (s *canvasAutomationServer) delete(w http.ResponseWriter, id string) {
@@ -507,11 +498,12 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 	// open in a browser and never paused, so the trigger must run while it
 	// is awake and leave it awake.
 	req := &godo.HostedAgentTriggerCreateRequest{
-		Name:           body.Name,
-		SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
-		PromptTemplate: body.Prompt,
-		Output:         godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
-		BoundSessionID: s.sessionID,
+		Name:             body.Name,
+		SessionMode:      godo.HostedAgentTriggerSessionModeReuse,
+		PromptTemplate:   body.Prompt,
+		Output:           godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
+		BoundSessionID:   s.sessionID,
+		KeepSessionAwake: true,
 	}
 	var events []string
 	switch body.Trigger.Type {
@@ -524,8 +516,8 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 		req.Cron = &godo.HostedAgentCreateCronConfig{CronExpr: body.Trigger.Schedule, Timezone: tz}
 	case "event":
 		req.Kind = godo.HostedAgentTriggerKindWebhook
-		req.Webhook = &godo.HostedAgentCreateWebhookConfig{Provider: godo.HostedAgentWebhookProviderKey(body.Trigger.Source)}
 		events = canvasEventList(body.Trigger.On)
+		req.Webhook = &godo.HostedAgentCreateWebhookConfig{Provider: godo.HostedAgentWebhookProviderKey(body.Trigger.Source), Events: events}
 	}
 	what := fmt.Sprintf("create automation %q", body.Name)
 	switch body.Trigger.Type {
@@ -538,7 +530,7 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 	if !s.allowed(w, what) {
 		return
 	}
-	result, details, err := s.triggers.CreateForCanvas(req, events)
+	result, err := s.triggers.Create(req)
 	if err != nil {
 		writeGodoError(w, err)
 		return
@@ -548,15 +540,12 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 		writeDetail(w, http.StatusBadGateway, "the triggers API returned no trigger")
 		return
 	}
-	if details == nil {
-		details = &do.HostedAgentTriggerDetails{}
-	}
 	t := *result.Trigger.HostedAgentTrigger
 	// A region whose triggers API predates keep_session_awake drops it
 	// silently, and a trigger there waits for the session to pause, which
 	// an open Canvas never does: say so in the terminal, since the tab has
 	// nowhere to.
-	if !details.KeepSessionAwake && s.out != nil {
+	if !t.KeepSessionAwake && s.out != nil {
 		fmt.Fprintf(s.out, "\n  Note: this region's triggers API cannot keep the session awake yet, so %q runs only while this Canvas tab is closed and the session is paused; while the tab is open its runs fail.\n\n", t.Name)
 	}
 	if t.Kind == godo.HostedAgentTriggerKindWebhook {
@@ -564,11 +553,11 @@ func (s *canvasAutomationServer) create(w http.ResponseWriter, r *http.Request) 
 		// A region whose triggers API does not filter events yet drops the
 		// filter silently; the user must know the trigger fires on every
 		// delivery there, and the tab shows "*" for it.
-		if len(events) > 0 && len(details.WebhookEvents) == 0 && s.out != nil {
+		if len(events) > 0 && len(webhookEvents(&t)) == 0 && s.out != nil {
 			fmt.Fprintf(s.out, "  Note: this region's triggers API does not filter events yet, so this automation runs on every %s webhook delivery until it does.\n\n", string(t.Webhook.Provider))
 		}
 	}
-	writeJSON(w, http.StatusCreated, toCanvasAutomation(t, *details))
+	writeJSON(w, http.StatusCreated, toCanvasAutomation(t))
 }
 
 // printWebhookWiring tells the user, in the terminal where port-forward
@@ -618,7 +607,7 @@ func canvasEventList(on any) []string {
 }
 
 func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, id string) {
-	current, currentDetails, ok := s.ownedWithDetails(w, id)
+	current, ok := s.owned(w, id)
 	if !ok {
 		return
 	}
@@ -663,14 +652,12 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 	}
 	// An event automation's "on" is the webhook's event filter, its own
 	// call on the API; the trigger row's own fields go below.
-	var events []string
-	setEvents := false
 	if body.Trigger != nil && current.Kind == godo.HostedAgentTriggerKindWebhook && body.Trigger.On != nil {
 		if strings.TrimSpace(body.Trigger.Filter) != "" {
 			writeDetail(w, http.StatusBadRequest, "filter expressions are not supported; pick the events to run on")
 			return
 		}
-		events = canvasEventList(body.Trigger.On)
+		events := canvasEventList(body.Trigger.On)
 		for _, e := range events {
 			if !canvasEventName.MatchString(e) {
 				writeDetail(w, http.StatusBadRequest, fmt.Sprintf("%q is not an event name", e))
@@ -679,8 +666,9 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		}
 		// A client that echoes an unchanged "on" (a pause that resends the
 		// whole trigger) is not an edit: no question, no write.
-		if !sameEventSet(events, currentDetails.WebhookEvents) {
-			setEvents = true
+		if !sameEventSet(events, webhookEvents(current)) {
+			update.Webhook = &godo.HostedAgentUpdateWebhookConfig{Events: events}
+			changed = true
 			asks = append(asks, fmt.Sprintf("events: %v", events))
 		}
 	}
@@ -722,22 +710,8 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 	if len(asks) > 0 && !s.allowed(w, fmt.Sprintf("change automation %q\n  %s", current.Name, strings.Join(asks, "\n  "))) {
 		return
 	}
-	if setEvents {
-		t, d, err := s.triggers.UpdateWebhookEvents(id, events)
-		if err != nil {
-			writeGodoError(w, err)
-			return
-		}
-		s.invalidateList()
-		if t != nil && t.HostedAgentTrigger != nil {
-			current = t.HostedAgentTrigger
-		}
-		if d != nil {
-			currentDetails = *d
-		}
-	}
 	if !changed {
-		writeJSON(w, http.StatusOK, toCanvasAutomation(*current, currentDetails))
+		writeJSON(w, http.StatusOK, toCanvasAutomation(*current))
 		return
 	}
 	t, err := s.triggers.Update(id, update)
@@ -750,7 +724,7 @@ func (s *canvasAutomationServer) patch(w http.ResponseWriter, r *http.Request, i
 		writeDetail(w, http.StatusBadGateway, "the triggers API returned no trigger")
 		return
 	}
-	writeJSON(w, http.StatusOK, toCanvasAutomation(*t.HostedAgentTrigger, currentDetails))
+	writeJSON(w, http.StatusOK, toCanvasAutomation(*t.HostedAgentTrigger))
 }
 
 // canvasPromptPreview is the prompt as shown in a terminal question: the
@@ -861,7 +835,7 @@ func (s *canvasAutomationServer) runs(w http.ResponseWriter, r *http.Request, id
 // toCanvasAutomation maps a trigger onto the automation the tab reads. A
 // webhook trigger bound to the session (made elsewhere) shows as an event
 // automation on its provider, firing on every delivery.
-func toCanvasAutomation(t godo.HostedAgentTrigger, d do.HostedAgentTriggerDetails) canvasAutomation {
+func toCanvasAutomation(t godo.HostedAgentTrigger) canvasAutomation {
 	prompt := t.PromptTemplate
 	a := canvasAutomation{
 		ID:        t.TriggerID,
@@ -885,12 +859,13 @@ func toCanvasAutomation(t godo.HostedAgentTrigger, d do.HostedAgentTriggerDetail
 		}
 		var on any = "*"
 		onText := "every " + source + " event"
-		switch len(d.WebhookEvents) {
+		evs := webhookEvents(&t)
+		switch len(evs) {
 		case 0:
 		case 1:
-			on, onText = d.WebhookEvents[0], d.WebhookEvents[0]
+			on, onText = evs[0], evs[0]
 		default:
-			on, onText = d.WebhookEvents, strings.Join(d.WebhookEvents, ", ")
+			on, onText = evs, strings.Join(evs, ", ")
 		}
 		human := "On " + onText
 		if webhookURL != "" {

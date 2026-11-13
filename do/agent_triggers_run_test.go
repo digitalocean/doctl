@@ -14,7 +14,6 @@ limitations under the License.
 package do_test
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -62,61 +61,4 @@ func TestHostedAgentTriggersRunKeepsTheAPIStatus(t *testing.T) {
 	require.ErrorAs(t, err, &er)
 	assert.Equal(t, http.StatusConflict, er.Response.StatusCode)
 	assert.Contains(t, er.Message, "paused")
-}
-
-// CreateForCanvas posts the godo request plus keep_session_awake and the webhook events, and decodes the Canvas fields back.
-func TestHostedAgentTriggersCreateKeepingSessionAwake(t *testing.T) {
-	var got map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewDecoder(r.Body).Decode(&got)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"trigger":{"trigger_id":"tr_1","kind":"webhook","session_mode":"reuse","keep_session_awake":true,"webhook":{"provider":"github","events":["push"]}},"webhook_secret":"s"}`))
-	}))
-	defer srv.Close()
-	client, err := godo.New(http.DefaultClient, godo.SetBaseURL(srv.URL+"/"))
-	require.NoError(t, err)
-	res, details, err := do.NewHostedAgentTriggersService(client).CreateForCanvas(&godo.HostedAgentTriggerCreateRequest{
-		Kind: godo.HostedAgentTriggerKindWebhook, Name: "n", SessionMode: godo.HostedAgentTriggerSessionModeReuse,
-		PromptTemplate: "p", Output: godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
-		BoundSessionID: "sess_1", Webhook: &godo.HostedAgentCreateWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
-	}, []string{"push"})
-	require.NoError(t, err)
-	assert.Equal(t, true, got["keep_session_awake"])
-	assert.Equal(t, "sess_1", got["bound_session_id"])
-	assert.Equal(t, "reuse", got["session_mode"])
-	assert.Equal(t, map[string]any{"provider": "github", "events": []any{"push"}}, got["webhook"])
-	assert.Equal(t, "tr_1", res.Trigger.TriggerID)
-	assert.Equal(t, []string{"push"}, details.WebhookEvents, "the Canvas fields come back from the same JSON")
-}
-
-// ListWithDetails and GetWithDetails read godo's trigger and the Canvas
-// fields from the same JSON.
-func TestHostedAgentTriggersListAndGetWithDetails(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.URL.Path == "/v2/harness-runtime/triggers" {
-			assert.Equal(t, "100", r.URL.Query().Get("page_size"))
-			assert.Equal(t, "sess-1", r.URL.Query().Get("bound_session_id"))
-			_, _ = w.Write([]byte(`{"triggers":[{"trigger_id":"a","kind":"webhook","keep_session_awake":true,"webhook":{"provider":"github","events":["push"]}},{"trigger_id":"b","kind":"cron"}],"next_page_token":"p2"}`))
-			return
-		}
-		_, _ = w.Write([]byte(`{"trigger":{"trigger_id":"a","kind":"webhook","webhook":{"provider":"github","events":["push","issues.opened"]}}}`))
-	}))
-	defer srv.Close()
-	client, err := godo.New(http.DefaultClient, godo.SetBaseURL(srv.URL+"/"))
-	require.NoError(t, err)
-	svc := do.NewHostedAgentTriggersService(client)
-	items, details, next, err := svc.ListWithDetails("sess-1", 100, "")
-	require.NoError(t, err)
-	assert.Equal(t, "p2", next)
-	require.Len(t, items, 2)
-	assert.Equal(t, "a", items[0].TriggerID)
-	assert.True(t, details[0].KeepSessionAwake)
-	assert.Equal(t, []string{"push"}, details[0].WebhookEvents)
-	assert.False(t, details[1].KeepSessionAwake)
-	tr, d, err := svc.GetWithDetails("a")
-	require.NoError(t, err)
-	assert.Equal(t, "a", tr.TriggerID)
-	assert.Equal(t, []string{"push", "issues.opened"}, d.WebhookEvents)
 }

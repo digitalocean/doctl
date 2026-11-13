@@ -86,12 +86,12 @@ func TestCanvasAutomation_HealthAndCapabilities(t *testing.T) {
 func TestCanvasAutomation_ListIsScopedToTheSession(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().
-			ListWithDetails("sess_1", 100, "").
+			List(&godo.HostedAgentTriggerListOptions{BoundSessionID: "sess_1", PageSize: 100}).
 			Return([]do.HostedAgentTrigger{
 				cronTrigger("tr_mine", "sess_1", "0 9 * * 1-5", godo.HostedAgentTriggerStatusActive),
 				cronTrigger("tr_other", "sess_2", "0 1 * * *", godo.HostedAgentTriggerStatusActive),
 				cronTrigger("tr_paused", "sess_1", "30 1 * * *", godo.HostedAgentTriggerStatusPaused),
-			}, []do.HostedAgentTriggerDetails{{}, {}, {}}, "", nil)
+			}, "", nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodGet, "/api/automation/v1?limit=50&offset=0", "")
 		require.Equal(t, http.StatusOK, rec.Code)
@@ -122,21 +122,23 @@ func TestCanvasAutomation_ListIsScopedToTheSession(t *testing.T) {
 func TestCanvasAutomation_CreateBindsACronTriggerToTheSession(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().
-			CreateForCanvas(&godo.HostedAgentTriggerCreateRequest{
-				Kind:           godo.HostedAgentTriggerKindCron,
-				Name:           "Nightly digest",
-				SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
-				PromptTemplate: "Summarise yesterday",
-				Output:         godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
-				BoundSessionID: "sess_1",
-				Cron:           &godo.HostedAgentCreateCronConfig{CronExpr: "30 1 * * *", Timezone: "Europe/London"},
-			}, nil).
+			Create(&godo.HostedAgentTriggerCreateRequest{
+				Kind:             godo.HostedAgentTriggerKindCron,
+				Name:             "Nightly digest",
+				SessionMode:      godo.HostedAgentTriggerSessionModeReuse,
+				PromptTemplate:   "Summarise yesterday",
+				Output:           godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
+				BoundSessionID:   "sess_1",
+				KeepSessionAwake: true,
+				Cron:             &godo.HostedAgentCreateCronConfig{CronExpr: "30 1 * * *", Timezone: "Europe/London"},
+			}).
 			Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
 				tr := cronTrigger("tr_new", "sess_1", "30 1 * * *", godo.HostedAgentTriggerStatusActive)
 				tr.Name = "Nightly digest"
 				tr.Cron.Timezone = "Europe/London"
+				tr.KeepSessionAwake = true
 				return &tr
-			}()}, &do.HostedAgentTriggerDetails{KeepSessionAwake: true}, nil)
+			}()}, nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
 			`{"name":"Nightly digest","prompt":"Summarise yesterday","trigger":{"type":"cron","schedule":"30 1 * * *","timezone":"Europe/London"}}`)
@@ -200,7 +202,7 @@ func TestCanvasAutomation_PatchTogglesAndEdits(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		current := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
 		paused := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusPaused)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&current, &do.HostedAgentTriggerDetails{}, nil).Times(3)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&current, nil).Times(3)
 		tm.hostedAgentTriggers.EXPECT().
 			Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{Status: godo.HostedAgentTriggerStatusPaused}).
 			Return(&paused, nil)
@@ -233,7 +235,7 @@ func TestCanvasAutomation_PatchTogglesAndEdits(t *testing.T) {
 func TestCanvasAutomation_OtherSessionsTriggersAreInvisible(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		other := cronTrigger("tr_x", "sess_other", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_x").Return(&other, &do.HostedAgentTriggerDetails{}, nil).Times(3)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_x").Return(&other, nil).Times(3)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		for _, m := range []string{http.MethodGet, http.MethodPatch, http.MethodDelete} {
 			rec, _ := canvasReq(t, h, m, "/api/automation/v1/tr_x", `{"enabled":false}`)
@@ -246,7 +248,7 @@ func TestCanvasAutomation_OtherSessionsTriggersAreInvisible(t *testing.T) {
 func TestCanvasAutomation_Delete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil)
 		tm.hostedAgentTriggers.EXPECT().Delete("tr_1").Return(nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, _ := canvasReq(t, h, http.MethodDelete, "/api/automation/v1/tr_1", "")
@@ -259,7 +261,7 @@ func TestCanvasAutomation_Delete(t *testing.T) {
 func TestCanvasAutomation_RunsMapExecutions(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil)
 		at := godo.Timestamp{Time: time.Date(2026, 11, 10, 9, 0, 0, 0, time.UTC)}
 		done := godo.Timestamp{Time: time.Date(2026, 11, 10, 9, 2, 0, 0, time.UTC)}
 		tm.hostedAgentTriggers.EXPECT().
@@ -295,7 +297,7 @@ func TestCanvasAutomation_NotImplementedAndWebhookShape(t *testing.T) {
 			TriggerID: "tr_h", Name: "gh", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
 			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
 		}}
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_h").Return(&hook, &do.HostedAgentTriggerDetails{}, nil).Times(2)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_h").Return(&hook, nil).Times(2)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 
 		rec, body := canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_h", "")
@@ -320,10 +322,10 @@ func TestCanvasAutomation_NotImplementedAndWebhookShape(t *testing.T) {
 // a 409 for a limit); a transport failure is a 502.
 func TestCanvasAutomation_APIErrorsPassThrough(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_gone").Return(nil, nil, &godo.ErrorResponse{
+		tm.hostedAgentTriggers.EXPECT().Get("tr_gone").Return(nil, &godo.ErrorResponse{
 			Response: &http.Response{StatusCode: http.StatusNotFound}, Message: "trigger not found",
 		})
-		tm.hostedAgentTriggers.EXPECT().ListWithDetails("sess_1", 100, "").Return(nil, nil, "", assert.AnError)
+		tm.hostedAgentTriggers.EXPECT().List(&godo.HostedAgentTriggerListOptions{BoundSessionID: "sess_1", PageSize: 100}).Return(nil, "", assert.AnError)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_gone", "")
 		assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -367,7 +369,7 @@ func TestCanvasAutomation_MinimumIntervalCoversEveryMinuteShape(t *testing.T) {
 func TestCanvasAutomation_PatchTimezoneOnlyAndEmptyPrompt(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		current := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&current, &do.HostedAgentTriggerDetails{}, nil).Times(2)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&current, nil).Times(2)
 		tm.hostedAgentTriggers.EXPECT().
 			Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{Cron: &godo.HostedAgentCreateCronConfig{CronExpr: "0 9 * * *", Timezone: "Asia/Tokyo"}}).
 			Return(&current, nil)
@@ -447,10 +449,10 @@ func TestCanvasAutomationHandler_GatesAgainstOtherLocalPages(t *testing.T) {
 
 		// The Canvas page: same origin as the listener, JSON, served (and
 		// the API call behind it is made).
-		tm.hostedAgentTriggers.EXPECT().CreateForCanvas(gomock.Any(), gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
 			tr := cronTrigger("tr_ok", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
 			return &tr
-		}()}, &do.HostedAgentTriggerDetails{}, nil)
+		}()}, nil)
 		assert.Equal(t, http.StatusCreated, send(http.MethodPost, "http://127.0.0.1:8000", "application/json; charset=utf-8", "127.0.0.1:8000").Code)
 		// A read without an Origin (curl) is served too.
 		req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8000/api/automation/health", nil)
@@ -465,10 +467,10 @@ func TestCanvasAutomationHandler_GatesAgainstOtherLocalPages(t *testing.T) {
 // create. The automation comes back with model null.
 func TestCanvasAutomation_CreateDropsTheModel(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.hostedAgentTriggers.EXPECT().CreateForCanvas(gomock.Any(), gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
 			tr := cronTrigger("tr_m", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
 			return &tr
-		}()}, &do.HostedAgentTriggerDetails{}, nil)
+		}()}, nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
 			`{"name":"x","prompt":"y","model":"gpt-5","trigger":{"type":"cron","schedule":"*/5 * * * *"}}`)
@@ -483,7 +485,7 @@ func TestCanvasAutomation_CreateDropsTheModel(t *testing.T) {
 func TestCanvasAutomationHandler_BodilessPostPassesTheJSONGate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil)
 		tm.hostedAgentTriggers.EXPECT().Run("tr_1").Return(nil, &godo.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}, Message: "not found"})
 		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers, nil, nil)
 		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8000/api/automation/v1/tr_1/dispatch", nil)
@@ -501,8 +503,8 @@ func TestCanvasAutomationHandler_BodilessPostPassesTheJSONGate(t *testing.T) {
 func TestCanvasAutomation_SessionIDCaseAndTriggerIDShape(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_1", "01a1c5e5-5f96-71da-bca5-f5921275d3b0", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
-		tm.hostedAgentTriggers.EXPECT().ListWithDetails("01a1c5e5-5f96-71da-bca5-f5921275d3b0", 100, "").Return([]do.HostedAgentTrigger{mine}, []do.HostedAgentTriggerDetails{{}}, "", nil)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil)
+		tm.hostedAgentTriggers.EXPECT().List(&godo.HostedAgentTriggerListOptions{BoundSessionID: "01a1c5e5-5f96-71da-bca5-f5921275d3b0", PageSize: 100}).Return([]do.HostedAgentTrigger{mine}, "", nil)
 		h := newCanvasAutomationServer("01A1C5E5-5F96-71DA-BCA5-F5921275D3B0", tm.hostedAgentTriggers)
 		rec, _ := canvasReq(t, h, http.MethodGet, "/api/automation/v1/tr_1", "")
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -522,7 +524,7 @@ func TestCanvasAutomation_SessionIDCaseAndTriggerIDShape(t *testing.T) {
 func TestCanvasAutomation_DispatchRunsTheTrigger(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&mine, &do.HostedAgentTriggerDetails{}, nil).Times(2)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&mine, nil).Times(2)
 		at := godo.Timestamp{Time: time.Date(2026, 11, 10, 9, 0, 0, 0, time.UTC)}
 		tm.hostedAgentTriggers.EXPECT().Run("tr_1").Return(&do.HostedAgentTriggerExecution{
 			HostedAgentTriggerExecution: &godo.HostedAgentTriggerExecution{ExecutionID: "ex_new", TriggerID: "tr_1", Status: godo.HostedAgentTriggerExecutionStatusPending, CreatedAt: at},
@@ -546,23 +548,24 @@ func TestCanvasAutomation_DispatchRunsTheTrigger(t *testing.T) {
 func TestCanvasAutomation_CreateEventTrigger(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgentTriggers.EXPECT().
-			CreateForCanvas(&godo.HostedAgentTriggerCreateRequest{
-				Kind:           godo.HostedAgentTriggerKindWebhook,
-				Name:           "PR review",
-				SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
-				PromptTemplate: "Review the PR",
-				Output:         godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
-				BoundSessionID: "sess_1",
-				Webhook:        &godo.HostedAgentCreateWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
-			}, []string{"pull_request.opened", "pull_request.synchronize"}).
+			Create(&godo.HostedAgentTriggerCreateRequest{
+				Kind:             godo.HostedAgentTriggerKindWebhook,
+				Name:             "PR review",
+				SessionMode:      godo.HostedAgentTriggerSessionModeReuse,
+				PromptTemplate:   "Review the PR",
+				Output:           godo.HostedAgentTriggerOutputWrite{Mode: godo.HostedAgentTriggerOutputModeNone},
+				BoundSessionID:   "sess_1",
+				KeepSessionAwake: true,
+				Webhook:          &godo.HostedAgentCreateWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub, Events: []string{"pull_request.opened", "pull_request.synchronize"}},
+			}).
 			Return(&do.HostedAgentTriggerCreateResult{
 				WebhookSecret: "s3cret-once",
 				Trigger: &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
 					TriggerID: "tr_ev", Name: "PR review", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
-					BoundSessionID: "sess_1",
-					Webhook:        &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub, WebhookURL: "https://api.example/v2/agents/triggers/tr_ev/webhook"},
+					BoundSessionID: "sess_1", KeepSessionAwake: true,
+					Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub, WebhookURL: "https://api.example/v2/agents/triggers/tr_ev/webhook", Events: []string{"pull_request.opened", "pull_request.synchronize"}},
 				}},
-			}, &do.HostedAgentTriggerDetails{KeepSessionAwake: true, WebhookEvents: []string{"pull_request.opened", "pull_request.synchronize"}}, nil)
+			}, nil)
 		var term bytes.Buffer
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		h.out = &term
@@ -585,10 +588,16 @@ func TestCanvasAutomation_PatchEventOn(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		hook := do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
 			TriggerID: "tr_h", Name: "gh", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
-			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
+			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub, Events: []string{"push"}},
 		}}
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_h").Return(&hook, &do.HostedAgentTriggerDetails{WebhookEvents: []string{"push"}}, nil)
-		tm.hostedAgentTriggers.EXPECT().UpdateWebhookEvents("tr_h", []string{"issues.opened"}).Return(&hook, &do.HostedAgentTriggerDetails{WebhookEvents: []string{"issues.opened"}}, nil)
+		updated := do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			TriggerID: "tr_h", Name: "gh", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
+			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub, Events: []string{"issues.opened"}},
+		}}
+		tm.hostedAgentTriggers.EXPECT().Get("tr_h").Return(&hook, nil)
+		tm.hostedAgentTriggers.EXPECT().Update("tr_h", &godo.HostedAgentTriggerUpdateRequest{
+			Webhook: &godo.HostedAgentUpdateWebhookConfig{Events: []string{"issues.opened"}},
+		}).Return(&updated, nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		rec, body := canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_h", `{"trigger":{"type":"event","source":"github","on":"issues.opened"}}`)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -609,7 +618,7 @@ func TestCanvasAutomation_ConfirmationGatesWrites(t *testing.T) {
 			return answer, "declined in the doctl terminal"
 		}
 		paused := cronTrigger("tr_1", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusPaused)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_1").Return(&paused, &do.HostedAgentTriggerDetails{}, nil).AnyTimes()
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(&paused, nil).AnyTimes()
 
 		rec, body := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
 			`{"name":"nightly","prompt":"y","trigger":{"type":"cron","schedule":"*/5 * * * *","timezone":"UTC"}}`)
@@ -628,7 +637,7 @@ func TestCanvasAutomation_ConfirmationGatesWrites(t *testing.T) {
 			TriggerID: "tr_h", Name: "gh", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
 			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
 		}}
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_h").Return(&hook, &do.HostedAgentTriggerDetails{}, nil).AnyTimes()
+		tm.hostedAgentTriggers.EXPECT().Get("tr_h").Return(&hook, nil).AnyTimes()
 		rec, _ = canvasReq(t, h, http.MethodPatch, "/api/automation/v1/tr_h", `{"trigger":{"type":"event","source":"github","on":"push"}}`)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 		require.Len(t, asked, 5)
@@ -656,10 +665,10 @@ func TestCanvasAutomation_ConfirmationGatesWrites(t *testing.T) {
 
 		// A yes lets the create through.
 		answer = true
-		tm.hostedAgentTriggers.EXPECT().CreateForCanvas(gomock.Any(), gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
+		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: func() *do.HostedAgentTrigger {
 			tr := cronTrigger("tr_ok", "sess_1", "*/5 * * * *", godo.HostedAgentTriggerStatusActive)
 			return &tr
-		}()}, &do.HostedAgentTriggerDetails{}, nil)
+		}()}, nil)
 		rec, _ = canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
 			`{"name":"nightly","prompt":"y","trigger":{"type":"cron","schedule":"*/5 * * * *","timezone":"UTC"}}`)
 		assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -671,8 +680,8 @@ func TestCanvasAutomation_ConfirmationGatesWrites(t *testing.T) {
 func TestCanvasAutomation_ListIsCachedBriefly(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		mine := cronTrigger("tr_mine", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().ListWithDetails("sess_1", 100, "").Return([]do.HostedAgentTrigger{mine}, []do.HostedAgentTriggerDetails{{}}, "", nil).Times(2)
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_mine").Return(&mine, &do.HostedAgentTriggerDetails{}, nil)
+		tm.hostedAgentTriggers.EXPECT().List(&godo.HostedAgentTriggerListOptions{BoundSessionID: "sess_1", PageSize: 100}).Return([]do.HostedAgentTrigger{mine}, "", nil).Times(2)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_mine").Return(&mine, nil)
 		tm.hostedAgentTriggers.EXPECT().Delete("tr_mine").Return(nil)
 		h := newCanvasAutomationServer("sess_1", tm.hostedAgentTriggers)
 		for i := 0; i < 3; i++ {
@@ -692,7 +701,7 @@ func TestCanvasAutomation_CreateNotesMissingKeepAwake(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		var term bytes.Buffer
 		made := cronTrigger("tr_old", "sess_1", "0 9 * * *", godo.HostedAgentTriggerStatusActive)
-		tm.hostedAgentTriggers.EXPECT().CreateForCanvas(gomock.Any(), gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: &made}, &do.HostedAgentTriggerDetails{KeepSessionAwake: false}, nil)
+		tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).Return(&do.HostedAgentTriggerCreateResult{Trigger: &made}, nil)
 		h := canvasAutomationHandler("sess_1", tm.hostedAgentTriggers, &term, nil)
 		rec, _ := canvasReq(t, h, http.MethodPost, "/api/automation/v1/preset/prompt",
 			`{"name":"old","prompt":"y","trigger":{"type":"cron","schedule":"0 9 * * *","timezone":"UTC"}}`)
@@ -708,9 +717,9 @@ func TestCanvasAutomation_PauseEchoingUnchangedEventsAsksNothing(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		hook := do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
 			TriggerID: "tr_h", Name: "gh", Kind: godo.HostedAgentTriggerKindWebhook, Status: godo.HostedAgentTriggerStatusActive,
-			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub},
+			BoundSessionID: "sess_1", Webhook: &godo.HostedAgentWebhookConfig{Provider: godo.HostedAgentWebhookProviderGitHub, Events: []string{"push", "issues.opened"}},
 		}}
-		tm.hostedAgentTriggers.EXPECT().GetWithDetails("tr_h").Return(&hook, &do.HostedAgentTriggerDetails{WebhookEvents: []string{"push", "issues.opened"}}, nil)
+		tm.hostedAgentTriggers.EXPECT().Get("tr_h").Return(&hook, nil)
 		paused := hook
 		paused.HostedAgentTrigger = &godo.HostedAgentTrigger{}
 		*paused.HostedAgentTrigger = *hook.HostedAgentTrigger
