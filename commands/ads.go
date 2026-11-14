@@ -50,9 +50,16 @@ Most commands need the workspace's region, passed with ` + "`" + `--region` + "`
 	cmd.AddCommand(adsToken())
 	cmd.AddCommand(adsSecret())
 	cmd.AddCommand(adsDataFlow())
-	cmd.AddCommand(adsMetrics())
+	adsMetrics(cmd)
 
 	return cmd
+}
+
+// adsNS keeps the config keys of a group's subcommands under ads-<group>.
+// Without it, `ads workspace get` and `harness-runtime workspace get` both
+// bind workspace.get.*, and one command reads the other's flags.
+func adsNS(group *Command) cmdOption {
+	return overrideCmdNS("ads-" + group.Name())
 }
 
 func addADSRegionFlag(cmd *Command) {
@@ -101,7 +108,7 @@ func adsPlan() *Command {
 	}
 
 	CmdBuilder(cmd, RunADSPlanList, "list", "List ADS plans",
-		"Lists the regions where your team can create a workspace, and the query engine sizes offered in each.", Writer,
+		"Lists the regions where your team can create a workspace, and the query engine sizes offered in each.", Writer, adsNS(cmd),
 		aliasOpt("ls"),
 		displayerType(&displayers.ADSPlan{}))
 
@@ -128,7 +135,7 @@ func adsWorkspace() *Command {
 	}
 
 	create := CmdBuilder(cmd, RunADSWorkspaceCreate, "create", "Create a workspace",
-		"Creates a workspace in a region. Without `--name` or `--query-instance-size`, the server picks a name and the `small` query engine size.", Writer,
+		"Creates a workspace in a region. Without `--name` or `--query-instance-size`, the server picks a name and the `small` query engine size.", Writer, adsNS(cmd),
 		aliasOpt("c"),
 		displayerType(&displayers.ADSWorkspace{}))
 	addADSRegionFlag(create)
@@ -137,27 +144,27 @@ func adsWorkspace() *Command {
 	create.Example = "The following example creates a workspace in `nyc3`: doctl ads workspace create --region nyc3 --name analytics --query-instance-size medium"
 
 	list := CmdBuilder(cmd, RunADSWorkspaceList, "list", "List workspaces",
-		"Lists the workspaces in a region.", Writer,
+		"Lists the workspaces in a region.", Writer, adsNS(cmd),
 		aliasOpt("ls"),
 		displayerType(&displayers.ADSWorkspace{}))
 	addADSRegionFlag(list)
 
 	get := CmdBuilder(cmd, RunADSWorkspaceGet, "get <workspace-uuid>", "Get a workspace",
-		"Retrieves a workspace.", Writer,
+		"Retrieves a workspace.", Writer, adsNS(cmd),
 		aliasOpt("g"),
 		displayerType(&displayers.ADSWorkspace{}))
 	get.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(get)
 
 	deleteCmd := CmdBuilder(cmd, RunADSWorkspaceDelete, "delete <workspace-uuid>", "Delete a workspace",
-		"Deletes a workspace, including its secrets and data flows. This cannot be undone.", Writer,
+		"Deletes a workspace, including its secrets and data flows. This cannot be undone.", Writer, adsNS(cmd),
 		aliasOpt("d", "rm"))
 	deleteCmd.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(deleteCmd)
 	AddBoolFlag(deleteCmd, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the workspace without a confirmation prompt")
 
 	creds := CmdBuilder(cmd, RunADSWorkspaceQueryCredentials, "query-credentials <workspace-uuid>", "Get the query credentials of a workspace",
-		"Retrieves the user and password for a workspace's query engine.\n\nThe password is hidden unless you pass `--show`, in text and JSON output alike. In CI it is shown automatically. The password can be retrieved again at any time. Treat it as a secret: do not paste it into tickets, chat, or logs.", Writer,
+		"Retrieves the user and password for a workspace's query engine.\n\nThe password is hidden unless you pass `--show`, in text and JSON output alike. In CI it is shown automatically. The password can be retrieved again at any time. Treat it as a secret: do not paste it into tickets, chat, or logs.", Writer, adsNS(cmd),
 		displayerType(&displayers.ADSQueryCredentials{}))
 	creds.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(creds)
@@ -275,7 +282,7 @@ func adsToken() *Command {
 	}
 
 	create := CmdBuilder(cmd, RunADSTokenCreate, "create", "Create a query token",
-		"Creates a token in a region. The access token is shown only once, in the output of this command. It cannot be retrieved again, so save it somewhere safe.", Writer,
+		"Creates a token in a region. The access token is shown only once, in the output of this command. It cannot be retrieved again, so save it somewhere safe.", Writer, adsNS(cmd),
 		aliasOpt("c"),
 		displayerType(&displayers.ADSTokenCreated{}))
 	addADSRegionFlag(create)
@@ -287,7 +294,7 @@ func adsToken() *Command {
 	create.Example = "The following example creates a query token for one workspace: doctl ads token create --region nyc3 --name reporting --purpose query --workspace-uuids f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
 
 	list := CmdBuilder(cmd, RunADSTokenList, "list", "List query tokens",
-		"Lists the tokens in a region. Access tokens are never included in the list.", Writer,
+		"Lists the tokens in a region. Access tokens are never included in the list.", Writer, adsNS(cmd),
 		aliasOpt("ls"),
 		displayerType(&displayers.ADSToken{}))
 	addADSRegionFlag(list)
@@ -411,7 +418,7 @@ A secret is a set of string properties. doctl never prints property values: ` + 
 	}
 
 	put := CmdBuilder(cmd, RunADSSecretPut, "put <secret-key>", "Create or replace a workspace secret",
-		"Writes a workspace secret, replacing any existing version with the same key.\n\nPass properties with `--data key=value`, repeated or comma-separated, or read them from a flat JSON or YAML object with `--data-file`. Use `--data-file -` to read from stdin, which keeps values out of your shell history. The values are not printed back.", Writer,
+		"Writes a workspace secret, replacing any existing version with the same key.\n\nPass properties with `--data key=value`, repeated or comma-separated, or read them from a flat JSON or YAML object with `--data-file`. Use `--data-file -` to read from stdin, which keeps values out of your shell history. The values are not printed back.", Writer, adsNS(cmd),
 		displayerType(&displayers.ADSSecretWrite{}))
 	put.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(put)
@@ -421,7 +428,7 @@ A secret is a set of string properties. doctl never prints property values: ` + 
 	put.Example = "The following example stores database credentials read from stdin: doctl ads secret put warehouse-db --region nyc3 --workspace f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --data-file - < creds.json"
 
 	get := CmdBuilder(cmd, RunADSSecretGet, "get <secret-key>", "Get a workspace secret's metadata",
-		"Retrieves a workspace secret's metadata and property names. Property values are never returned.", Writer,
+		"Retrieves a workspace secret's metadata and property names. Property values are never returned.", Writer, adsNS(cmd),
 		aliasOpt("g"),
 		displayerType(&displayers.ADSSecret{}))
 	get.Args = cobra.ExactArgs(1)
@@ -429,14 +436,14 @@ A secret is a set of string properties. doctl never prints property values: ` + 
 	addADSWorkspaceFlag(get)
 
 	list := CmdBuilder(cmd, RunADSSecretList, "list", "List workspace secrets",
-		"Lists the secret keys stored in a workspace.", Writer,
+		"Lists the secret keys stored in a workspace.", Writer, adsNS(cmd),
 		aliasOpt("ls"),
 		displayerType(&displayers.ADSSecretKey{}))
 	addADSRegionFlag(list)
 	addADSWorkspaceFlag(list)
 
 	deleteCmd := CmdBuilder(cmd, RunADSSecretDelete, "delete <secret-key>", "Delete a workspace secret",
-		"Permanently deletes a workspace secret. This cannot be undone.", Writer,
+		"Permanently deletes a workspace secret. This cannot be undone.", Writer, adsNS(cmd),
 		aliasOpt("d", "rm"))
 	deleteCmd.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(deleteCmd)

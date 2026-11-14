@@ -22,6 +22,8 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,6 +70,67 @@ func TestADSHelpUsesPublicNames(t *testing.T) {
 		}
 	}
 	walk(ADS())
+}
+
+// TestADSFlagsReadableAtRuntime checks that every string flag on every ads
+// command is bound to the config key its handler reads. A command attached
+// to its parent after its flags were added binds them under the wrong key,
+// and the value set on the command line is then never seen.
+func TestADSFlagsReadableAtRuntime(t *testing.T) {
+	// A fresh tree, because building one rebinds the config keys to its
+	// flags; other tests in this package build ads trees too.
+	ads := ADS()
+
+	checked := 0
+	var walk func(*Command)
+	walk = func(cmd *Command) {
+		for _, child := range cmd.ChildCommands() {
+			walk(child)
+		}
+		if cmd.Run == nil {
+			return
+		}
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			if f.Value.Type() != "string" {
+				return
+			}
+			prev, prevChanged := f.Value.String(), f.Changed
+			require.NoError(t, cmd.Flags().Set(f.Name, "probe"))
+			t.Cleanup(func() { _ = f.Value.Set(prev); f.Changed = prevChanged })
+
+			key := cmdNS(cmd) + "." + f.Name
+			assert.Equal(t, "probe", viper.GetString(key), "%s --%s is not readable at %s", cmd.CommandPath(), f.Name, key)
+			checked++
+		})
+	}
+	walk(ads)
+	assert.Greater(t, checked, 50, "expected to check every string flag")
+}
+
+// TestADSNamespacesUnique checks that no other doctl command shares a config
+// namespace with an ads command. Commands that share one bind the same flag
+// keys, so one of them reads the other's flag values.
+func TestADSNamespacesUnique(t *testing.T) {
+	owners := map[string][]string{}
+	var walk func(*Command)
+	walk = func(cmd *Command) {
+		for _, child := range cmd.ChildCommands() {
+			walk(child)
+		}
+		if cmd.Run != nil {
+			owners[cmdNS(cmd)] = append(owners[cmdNS(cmd)], cmd.CommandPath())
+		}
+	}
+	walk(DoitCmd)
+
+	for ns, paths := range owners {
+		for _, path := range paths {
+			if strings.HasPrefix(path, "doctl ads ") {
+				assert.Len(t, paths, 1, "namespace %q is shared by %v", ns, paths)
+				break
+			}
+		}
+	}
 }
 
 func TestADSRootRegistered(t *testing.T) {
