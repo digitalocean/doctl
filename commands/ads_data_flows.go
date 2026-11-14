@@ -43,7 +43,7 @@ Every data flow command needs the workspace's ` + "`" + `--region` + "`" + ` and
 	}
 
 	create := CmdBuilder(cmd, RunADSDataFlowCreate, "create", "Create a data flow",
-		"Creates a data flow in a workspace from a manifest. If the response includes an upload location, use `--format UUID,State,UploadURL` or `--output json` to see the presigned upload URL.", Writer,
+		"Creates a data flow in a workspace from a manifest. If the response includes an upload location, use `--format UUID,State,UploadURL` or `--output json` to see the presigned upload URL.", Writer, adsNS(cmd),
 		aliasOpt("c"),
 		displayerType(&displayers.ADSDataFlowChange{}))
 	addADSRegionFlag(create)
@@ -56,14 +56,14 @@ Every data flow command needs the workspace's ` + "`" + `--region` + "`" + ` and
 	create.Example = "The following example creates a data flow from a manifest file: doctl ads data-flow create --region nyc3 --workspace f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name orders --manifest-file orders.yaml"
 
 	list := CmdBuilder(cmd, RunADSDataFlowList, "list", "List data flows",
-		"Lists the data flows in a workspace.", Writer,
+		"Lists the data flows in a workspace.", Writer, adsNS(cmd),
 		aliasOpt("ls"),
 		displayerType(&displayers.ADSDataFlow{}))
 	addADSRegionFlag(list)
 	addADSWorkspaceFlag(list)
 
 	get := CmdBuilder(cmd, RunADSDataFlowGet, "get <data-flow-id>", "Get a data flow",
-		"Retrieves a data flow. Use `--output json` to see its full spec.", Writer,
+		"Retrieves a data flow. Use `--output json` to see its full spec.", Writer, adsNS(cmd),
 		aliasOpt("g"),
 		displayerType(&displayers.ADSDataFlow{}))
 	get.Args = cobra.ExactArgs(1)
@@ -71,7 +71,7 @@ Every data flow command needs the workspace's ` + "`" + `--region` + "`" + ` and
 	addADSWorkspaceFlag(get)
 
 	update := CmdBuilder(cmd, RunADSDataFlowUpdate, "update <data-flow-id>", "Update a data flow",
-		"Updates a data flow's replica settings, secret references, or manifest. Set at least one of the flags below; unset flags leave the current value unchanged.", Writer,
+		"Updates a data flow's replica settings, secret references, or manifest. Set at least one of the flags below; unset flags leave the current value unchanged.", Writer, adsNS(cmd),
 		aliasOpt("u"),
 		displayerType(&displayers.ADSDataFlowChange{}))
 	update.Args = cobra.ExactArgs(1)
@@ -84,7 +84,7 @@ Every data flow command needs the workspace's ` + "`" + `--region` + "`" + ` and
 	AddStringFlag(update, doctl.ArgADSDataFlowManifestFile, "", "", "Path to a replacement manifest, a JSON or YAML object. Set to - to read from stdin")
 
 	deleteCmd := CmdBuilder(cmd, RunADSDataFlowDelete, "delete <data-flow-id>", "Delete a data flow",
-		"Starts deleting a data flow. This cannot be undone.", Writer,
+		"Starts deleting a data flow. This cannot be undone.", Writer, adsNS(cmd),
 		aliasOpt("d", "rm"))
 	deleteCmd.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(deleteCmd)
@@ -99,28 +99,28 @@ Every data flow command needs the workspace's ` + "`" + `--region` + "`" + ` and
 		{"resume <data-flow-id>", "Resume a data flow", "Resumes a paused data flow.", RunADSDataFlowResume},
 		{"restart <data-flow-id>", "Restart a data flow", "Restarts a data flow.", RunADSDataFlowRestart},
 	} {
-		c := CmdBuilder(cmd, action.run, action.use, action.short, action.long, Writer)
+		c := CmdBuilder(cmd, action.run, action.use, action.short, action.long, Writer, adsNS(cmd))
 		c.Args = cobra.ExactArgs(1)
 		addADSRegionFlag(c)
 		addADSWorkspaceFlag(c)
 	}
 
 	rewind := CmdBuilder(cmd, RunADSDataFlowRewind, "rewind <data-flow-id>", "Rewind a data flow",
-		"Asks a data flow to reprocess data from an earlier time.\n\nThe API currently reports rewind as unsupported, so this command returns that error until the server supports it.", Writer)
+		"Asks a data flow to reprocess data from an earlier time.\n\nThe API currently reports rewind as unsupported, so this command returns that error until the server supports it.", Writer, adsNS(cmd))
 	rewind.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(rewind)
 	addADSWorkspaceFlag(rewind)
 	AddStringFlag(rewind, doctl.ArgADSDataFlowRewindTo, "", "", "Time to rewind to, in RFC 3339 format, for example `2026-11-01T00:00:00Z`")
 
 	uploadURL := CmdBuilder(cmd, RunADSDataFlowUploadURL, "upload-url", "Create an upload URL for a function-chain archive",
-		"Creates a temporary presigned URL for uploading a function-chain archive. Upload the archive to the URL with an HTTP PUT, then pass the returned object key to `doctl ads data-flow attach`.", Writer,
+		"Creates a temporary presigned URL for uploading a function-chain archive. Upload the archive to the URL with an HTTP PUT, then pass the returned object key to `doctl ads data-flow attach`.", Writer, adsNS(cmd),
 		displayerType(&displayers.ADSFchainUploadURL{}))
 	addADSRegionFlag(uploadURL)
 	addADSWorkspaceFlag(uploadURL)
 	AddStringFlag(uploadURL, doctl.ArgADSFchainSHA256, "", "", "Hex-encoded SHA-256 checksum of the archive")
 
 	attach := CmdBuilder(cmd, RunADSDataFlowAttach, "attach <data-flow-id>", "Attach a function-chain archive to a data flow",
-		"Attaches a function-chain archive, uploaded with the URL from `doctl ads data-flow upload-url`, to a data flow.", Writer)
+		"Attaches a function-chain archive, uploaded with the URL from `doctl ads data-flow upload-url`, to a data flow.", Writer, adsNS(cmd))
 	attach.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(attach)
 	addADSWorkspaceFlag(attach)
@@ -438,8 +438,11 @@ func RunADSDataFlowAttach(c *CmdConfig) error {
 	})
 }
 
-func adsMetrics() *Command {
-	cmd := CmdBuilder(nil, RunADSMetrics, "metrics", "Query data flow metrics for a workspace",
+// adsMetrics adds the metrics command to parent. It is built with its parent
+// rather than attached later because flags are bound to config keys named
+// after the parent at the time they are added.
+func adsMetrics(parent *Command) *Command {
+	cmd := CmdBuilder(parent, RunADSMetrics, "metrics", "Query data flow metrics for a workspace",
 		"Queries data flow metrics for a workspace. The columns in the output depend on the metrics and grouping you ask for; use `--output json` for the raw rows.", Writer,
 		displayerType(&displayers.ADSMetrics{}))
 	addADSRegionFlag(cmd)

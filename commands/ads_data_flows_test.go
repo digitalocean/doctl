@@ -40,7 +40,7 @@ func TestADSDataFlowCommand(t *testing.T) {
 	assertCommandNames(t, adsDataFlow(),
 		"create", "list", "get", "update", "delete",
 		"pause", "resume", "restart", "rewind", "upload-url", "attach")
-	assert.Equal(t, "metrics", adsMetrics().Name())
+	assertCommandNames(t, ADS(), "plan", "workspace", "token", "secret", "data-flow", "metrics")
 }
 
 func TestRunADSDataFlowCreate(t *testing.T) {
