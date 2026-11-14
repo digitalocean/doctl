@@ -1532,3 +1532,43 @@ func TestRunAppsCancelJobInvocation(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestRunAppsGetLogsNoPrefixPreservesShortMessages(t *testing.T) {
+	for _, tt := range []struct {
+		name, input, expected string
+		noPrefix              bool
+	}{
+		{"single word", "ready", "ready", true},
+		{"two words", "server ready", "server ready", true},
+		{"trailing newline", "ready\n", "ready\n", true},
+		{"prefixed", "service 2026-10-07T00:00:00Z hello world\n", "hello world\n", true},
+		{"empty", "", "", true},
+		{"prefix disabled", "service timestamp hello", "service timestamp hello", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				appID := uuid.New().String()
+				tm.apps.EXPECT().GetLogs(appID, "deployment", "service", godo.AppLogTypeRun, true, 1).Return(&godo.AppLogs{LiveURL: "https://example.invalid/?token=test"}, nil)
+				tm.listen.EXPECT().Listen(gomock.Any()).Return(nil)
+				tc := config.Doit.(*doctl.TestConfig)
+				tc.ListenFn = func(_ *url.URL, _ string, schemaFunc listen.SchemaFunc, _ io.Writer, _ <-chan []byte) listen.ListenerService {
+					message, err := json.Marshal(map[string]string{"data": tt.input})
+					require.NoError(t, err)
+					reader, err := schemaFunc(message)
+					require.NoError(t, err)
+					content, err := io.ReadAll(reader)
+					require.NoError(t, err)
+					assert.Equal(t, tt.expected, string(content))
+					return tm.listen
+				}
+				config.Args = []string{appID, "service"}
+				config.Doit.Set(config.NS, doctl.ArgAppDeployment, "deployment")
+				config.Doit.Set(config.NS, doctl.ArgAppLogType, "run")
+				config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+				config.Doit.Set(config.NS, doctl.ArgAppLogTail, 1)
+				config.Doit.Set(config.NS, doctl.ArgNoPrefix, tt.noPrefix)
+				require.NoError(t, RunAppsGetLogs(config))
+			})
+		})
+	}
+}
