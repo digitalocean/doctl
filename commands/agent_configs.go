@@ -140,6 +140,12 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err := rejectRedactedSecrets(raw); err != nil {
 		return err
 	}
+	// Resolve DO SI defaults before expand and before needsManagedModelAccessKey
+	// so an injected HARNESS_INFERENCE_MODEL opts into manage_model_access_key.
+	raw, err = resolveInferenceProvider(raw, true)
+	if err != nil {
+		return err
+	}
 	manifest, err := expandManifestEnvCollect(raw, envLookupWithOverlay(secrets))
 	if err != nil {
 		return err

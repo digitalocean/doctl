@@ -79,7 +79,7 @@ func TestRunAgentsLaunch_ManifestArgCreates(t *testing.T) {
 		// No ListSessions expectation: reading this as a session name would
 		// have to look one up, and gomock fails the test if it does.
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
 			Return(nil, assertCalledErr)
 
 		config.Args = []string{path}
@@ -193,7 +193,7 @@ func TestRunAgentsLaunch_PrintsAutoCreatedConfigNotice(t *testing.T) {
 			},
 		}
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
 			Return(ready, nil)
 		tm.hostedAgents.EXPECT().
 			GetSession("sess_launch").
@@ -342,7 +342,24 @@ func TestRunAgentsCreate_DryRunPrintsManifestWithoutCreating(t *testing.T) {
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(buf.Bytes(), &doc), "output must be valid YAML so it can be piped")
 		assert.Equal(t, "printed-only", doc["name"])
+		assert.Contains(t, buf.String(), harnessInferenceModelEnv+": "+defaultDOSIModel,
+			"dry-run must show the same DO SI default the real create would send")
 		assert.True(t, strings.HasSuffix(buf.String(), "\n"))
+	})
+}
+
+func TestRunAgentsCreate_DryRunBlankClaudeRewritesToDOSI(t *testing.T) {
+	_ = os.Unsetenv(anthropicAPIKeyEnv)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
+
+		require.NoError(t, RunAgentsCreate(config))
+		out := buf.String()
+		assert.NotContains(t, out, anthropicAPIKeyEnv)
+		assert.Contains(t, out, harnessInferenceModelEnv+": "+defaultDOSIModel)
 	})
 }
 
@@ -475,24 +492,25 @@ func TestRedactedSecretIsRejectedInsteadOfStored(t *testing.T) {
 	})
 }
 
-// --harness claude-code declares ANTHROPIC_API_KEY as a secret slot. Creating
-// for real needs the key locally (or via --secret); --dry-run still prints a
-// usable template with the slot redacted so a machine without the key can pipe
-// it into config create --secret ANTHROPIC_API_KEY=@path.
-func TestRunAgentsCreate_DryRunLeavesUnsetEnvAsPlaceholder(t *testing.T) {
+// --harness minimax-code still requires MINIMAX_API_KEY (no blank→DO SI).
+// --dry-run leaves the slot redacted so a machine without the key can pipe
+// into config create --secret MINIMAX_API_KEY=@path.
+func TestRunAgentsCreate_DryRunLeavesUnsetMinimaxAsPlaceholder(t *testing.T) {
+	_ = os.Unsetenv(minimaxAPIKeyEnv)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		var buf bytes.Buffer
 		config.Out = &buf
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "minimax-code")
 		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
 
 		require.NoError(t, RunAgentsCreate(config))
 		out := buf.String()
-		assert.Contains(t, out, "ANTHROPIC_API_KEY",
+		assert.Contains(t, out, "MINIMAX_API_KEY",
 			"the secret slot stays visible so the template can still be produced")
 		assert.Contains(t, out, redactedSecretValue,
 			"an unset secret is redacted rather than echoed as a ${VAR} placeholder")
-		assert.NotContains(t, out, "env:")
+		assert.NotContains(t, out, harnessInferenceModelEnv,
+			"MiniMax is not rewritten onto DO SI")
 	})
 }
 
@@ -1104,7 +1122,7 @@ func TestRunAgentsCreate_OnHITLWatchesPastReady(t *testing.T) {
 			},
 		}
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), nil).
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
 			Return(ready, nil)
 		tm.hostedAgents.EXPECT().
 			GetSession("sess_x").

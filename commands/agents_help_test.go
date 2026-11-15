@@ -268,6 +268,9 @@ func TestAgentsCreateHelpDocumentsNewFlags(t *testing.T) {
 		assert.Contains(t, agentsCreateHelpMD, want)
 	}
 	assert.Contains(t, agentsCreateHelpMD, "redacted", "--dry-run's secret handling must be stated")
+	assert.Contains(t, agentsCreateHelpMD, "DigitalOcean Serverless Inference")
+	assert.Contains(t, agentsCreateHelpMD, defaultDOSIModel)
+	assert.Contains(t, agentsConfigCreateHelpMD, defaultDOSIModel)
 	assert.Contains(t, agentsCreateHelpMD, "NAME=@path", "the @file form is the one worth reaching for in CI")
 	assert.Contains(t, agentsCreateHelpMD, "--prompt", "json mode must document that --prompt is still delivered")
 	assert.Contains(t, agentsCreateHelpMD, "Agent Config", "implicit configs from create --spec must be named")

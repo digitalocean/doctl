@@ -788,10 +788,10 @@ const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a pl
 // parameter because it is agent configuration, shareable through an Agent
 // Config, unlike the per-session spending consent --resume-on-topoff carries.
 const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness session, written as the manifest's env " +
-	harnessInferenceModelEnv + " (for example " + defaultOpenHandsModel + " or anthropic-claude-4.5-sonnet). " +
-	"--harness openhands and --harness hermes run on DigitalOcean Inference and default to " +
-	defaultOpenHandsModel + " and " + defaultHermesModel + "; " +
-	"the other harnesses use their own vendor key and leave it unset unless given. " +
+	harnessInferenceModelEnv + " (for example " + defaultDOSIModel + " or anthropic-claude-4.5-sonnet). " +
+	"--harness opencode defaults to " + defaultDOSIModel + "; --harness openhands and --harness hermes default to " +
+	defaultOpenHandsModel + " and " + defaultHermesModel + ". " +
+	"--harness claude-code and --harness codex prompt for a vendor key (leave blank to use DigitalOcean Serverless Inference). " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
 const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
@@ -1363,24 +1363,26 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 			doctl.ArgAgentDryRun, doctl.ArgAgentFromConfig, agentCLI)
 	}
 
+	// Match the real create path: default missing inference providers onto DO SI
+	// without prompting (dry-run must stay non-interactive). Unset vendor keys
+	// therefore rewrite to HARNESS_INFERENCE_MODEL rather than remaining as
+	// ${ANTHROPIC_API_KEY}/${OPENAI_API_KEY} placeholders. Remaining unbound
+	// refs (e.g. MiniMax, server-provided ENV_ID) still stay as ${VAR}.
+	raw, err := resolveInferenceProvider(src.manifest, false)
+	if err != nil {
+		return err
+	}
+
 	// The real create path expands ${VAR} inside startSessionFromRawManifest;
 	// do it here too so the output matches what the server would have received.
 	//
-	// Unset variables are the one deliberate difference. Creating for real needs
-	// every value now, but --dry-run emits a template whose credentials are
-	// meant to be bound further down the pipe:
-	//
-	//   create --harness claude-code --dry-run \
-	//     | config create --spec - --name reviewer --secret ANTHROPIC_API_KEY=@key
-	//
-	// Erroring on ANTHROPIC_API_KEY here would demand the key locally purely to
-	// print a manifest that exists to carry it somewhere else. So an unset
-	// reference stays a ${VAR} placeholder and is reported on stderr, which
-	// keeps a typo visible without corrupting the YAML on stdout.
+	// Unset variables that were not rewritten above stay as ${VAR} placeholders
+	// and are reported on stderr, which keeps a typo visible without corrupting
+	// the YAML on stdout.
 	var unbound []string
 	seen := map[string]bool{}
-	secrets := resolvedManifestSecretValues(src.manifest)
-	manifest, err := expandManifestEnvLookup(src.manifest, func(name string) (string, bool) {
+	secrets := resolvedManifestSecretValues(raw)
+	manifest, err := expandManifestEnvLookup(raw, func(name string) (string, bool) {
 		if serverProvidedEnvPlaceholders[name] {
 			return "${" + name + "}", true
 		}
