@@ -959,11 +959,12 @@ func validateAdapterModelEnv(adapter string, env map[string]string, secretSlots 
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; claude-code expects ANTHROPIC_MODEL (sessions may fail with \"Not logged in\")", envPath, envPath))
 		}
 		// claude-code honors HARNESS_INFERENCE_MODEL only when the harness
-		// inference group is selected, i.e. no native ANTHROPIC_API_KEY is set.
+		// inference group is selected (no native ANTHROPIC_API_KEY). A missing
+		// HARNESS_INFERENCE_API_KEY in the YAML is fine: doctl's
+		// manage_model_access_key mint supplies it at create time.
 		nativeKey := hasAnthropicKey || hasStringKey(secretSlots, "ANTHROPIC_API_KEY")
-		harnessKey := hasHarnessKey || hasStringKey(secretSlots, "HARNESS_INFERENCE_API_KEY")
-		if hasHarnessModel && !hasAnthropicModel && (nativeKey || !harnessKey) {
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.HARNESS_INFERENCE_MODEL: set for adapter claude-code, but %s.ANTHROPIC_MODEL is missing; HARNESS_INFERENCE_MODEL is only used with HARNESS_INFERENCE_API_KEY (declared under secrets) and no ANTHROPIC_API_KEY; otherwise set ANTHROPIC_MODEL", envPath, envPath))
+		if hasHarnessModel && !hasAnthropicModel && nativeKey {
+			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.HARNESS_INFERENCE_MODEL: set for adapter claude-code alongside ANTHROPIC_API_KEY, but %s.ANTHROPIC_MODEL is missing; with a native Anthropic key set ANTHROPIC_MODEL (HARNESS_INFERENCE_MODEL is only used when ANTHROPIC_API_KEY is absent)", envPath, envPath))
 		}
 		if hasAnthropicKey && !hasAnthropicModel && (hasModel || hasHarnessModel) {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.ANTHROPIC_API_KEY: set without %s.ANTHROPIC_MODEL; set ANTHROPIC_MODEL explicitly for claude-code", envPath, envPath))

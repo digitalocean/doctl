@@ -243,13 +243,16 @@ func TestBuildHarnessManifest(t *testing.T) {
 		assert.Contains(t, err.Error(), minimaxAPIKeyEnv)
 	})
 
-	t.Run("opencode has no injected key requirement", func(t *testing.T) {
+	t.Run("opencode defaults onto DigitalOcean Serverless Inference", func(t *testing.T) {
 		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
 		require.NoError(t, err)
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.NotContains(t, doc, "env")
+		env, ok := doc["env"].(map[any]any)
+		require.True(t, ok)
+		assert.Equal(t, defaultDOSIModel, env[harnessInferenceModelEnv])
+		assert.NotContains(t, doc, "secrets", "the key is minted by harness-api, not asked of the user")
 		assert.NotContains(t, doc, "keep_warm")
 	})
 
@@ -282,7 +285,7 @@ func TestBuildHarnessManifest(t *testing.T) {
 		assert.Equal(t, "anthropic-claude-4.5-sonnet", env[harnessInferenceModelEnv])
 	})
 
-	t.Run("--model is written for any harness, and only when given", func(t *testing.T) {
+	t.Run("--model is written for any harness; opencode defaults when omitted", func(t *testing.T) {
 		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode", model: "openai-gpt-5.5"})
 		require.NoError(t, err)
 		var doc map[string]any
@@ -294,10 +297,12 @@ func TestBuildHarnessManifest(t *testing.T) {
 		require.NoError(t, err)
 		doc = nil
 		require.NoError(t, yaml.Unmarshal(raw, &doc))
-		assert.NotContains(t, doc, "env")
+		env = doc["env"].(map[any]any)
+		assert.Equal(t, defaultDOSIModel, env[harnessInferenceModelEnv])
 
 		// codex-agentapi already carries env; the model joins it rather than
-		// replacing it.
+		// replacing it. Without --model, codex-agentapi still has no
+		// HARNESS_INFERENCE_MODEL (OpenAI Agents owns the model).
 		raw, err = buildHarnessManifest(harnessManifestOpts{harness: "codex-agentapi", model: "openai-gpt-5.5"})
 		require.NoError(t, err)
 		doc = nil
@@ -534,6 +539,48 @@ func TestWaitForSessionReady_BitsReadyWhileProvisioning(t *testing.T) {
 	})
 }
 
+// --harness opencode defaults onto DigitalOcean Serverless Inference and opts
+// into manage_model_access_key (injection before the mint predicate).
+func TestRunAgentsCreate_OpencodeDefaultsToDOSIAndManagedKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "harness: opencode")
+				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultDOSIModel)
+				assert.NotContains(t, string(manifest), "HARNESS_INFERENCE_API_KEY")
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_oc_1",
+						Name:      "oc",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_oc_1").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_oc_1",
+					Name:      "oc",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "oc")
+
+		require.NoError(t, RunAgentsCreate(config))
+		assert.Contains(t, buf.String(), "Session created")
+	})
+}
+
 // An openhands create goes out with the managed-key opt-in and a DO model in
 // the manifest: without the first the agent-server has no inference key, and
 // without the second it asks the DO gateway for a model it does not serve.
@@ -729,7 +776,7 @@ func TestRunAgentsCreate_ModelRequiresHarness(t *testing.T) {
 func TestRunAgentsCreate_Harness(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), nil).
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				assert.Contains(t, string(manifest), "harness: opencode")
 				assert.Contains(t, string(manifest), "repos:")
@@ -789,9 +836,8 @@ func TestRunAgentsCreate_Harness(t *testing.T) {
 }
 
 // TestRunAgentsCreate_ClaudeCodeMissingAnthropicKey ensures a missing inference
-// key is caught locally (no CreateSessionFromManifest/GetSession
-// expectations set below — gomock fails the test if either is called) rather
-// than letting the harness fail once it's already hosted.
+// key rewrites onto DigitalOcean Serverless Inference (manage_model_access_key)
+// rather than failing before create.
 func TestRunAgentsCreate_ClaudeCodeMissingAnthropicKey(t *testing.T) {
 	_ = os.Unsetenv(anthropicAPIKeyEnv)
 	prevInteractive := Interactive
@@ -802,14 +848,40 @@ func TestRunAgentsCreate_ClaudeCodeMissingAnthropicKey(t *testing.T) {
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), "harness: claude-code")
+				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultDOSIModel)
+				assert.NotContains(t, string(manifest), anthropicAPIKeyEnv)
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_claude_dosi",
+						Name:      "demo-claude",
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
+		tm.hostedAgents.EXPECT().
+			GetSession("sess_claude_dosi").
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_claude_dosi",
+					Name:      "demo-claude",
+					Status:    godo.HostedAgentSessionStatusReady,
+				},
+			}, nil)
+
+		prev := sessionReadyPollInterval
+		sessionReadyPollInterval = time.Millisecond
+		defer func() { sessionReadyPollInterval = prev }()
+
 		var buf bytes.Buffer
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "demo-claude")
 
-		err := RunAgentsCreate(config)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), anthropicAPIKeyEnv)
+		require.NoError(t, RunAgentsCreate(config))
 	})
 }
 
@@ -911,7 +983,7 @@ secrets:
 func TestRunAgentsCreate_HarnessVerboseShowsRepoAndID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), nil).
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{

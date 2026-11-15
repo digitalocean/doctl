@@ -80,18 +80,21 @@ func TestRunAgentsCreate_ResumeOnTopoff(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(
-				[]byte(sampleManifest),
+			CreateSessionFromManifestWithManagedKey(
+				gomock.Any(),
 				&godo.HostedAgentManifestCreateOptions{ResumeOnTopoff: true},
 			).
-			Return(&do.HostedAgentSession{
-				HostedAgentSession: &godo.HostedAgentSession{
-					SessionID:      "sess_topoff",
-					AgentKind:      godo.HostedAgentKindOpenCode,
-					Status:         godo.HostedAgentSessionStatusProvisioning,
-					ResumeOnTopoff: true,
-				},
-			}, nil)
+			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultDOSIModel)
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID:      "sess_topoff",
+						AgentKind:      godo.HostedAgentKindOpenCode,
+						Status:         godo.HostedAgentSessionStatusProvisioning,
+						ResumeOnTopoff: true,
+					},
+				}, nil
+			})
 		tm.hostedAgents.EXPECT().
 			GetSession("sess_topoff").
 			Return(&do.HostedAgentSession{
@@ -124,7 +127,7 @@ func TestRunAgentsCreate_ResumeOnTopoffNotWrittenIntoManifest(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				assert.NotContains(t, string(manifest), "resume_on_topoff")
 				assert.NotContains(t, string(manifest), "resumeOnTopoff")

@@ -559,7 +559,7 @@ func TestRunAgentsCreate_Spec_NoWorkspaceNoOptions(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest(gomock.Any(), nil).
+			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
 			Return(nil, assertCalledErr)
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)

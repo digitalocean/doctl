@@ -43,11 +43,12 @@ func TestAgentConfigCreate(t *testing.T) {
 		require.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o600))
 
 		tm.hostedAgents.EXPECT().
-			CreateAgentConfig(gomock.Any(), false).
+			CreateAgentConfig(gomock.Any(), true).
 			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 				assert.Equal(t, "my-config", req.Name)
 				assert.Contains(t, req.ManifestYAML, "agent: opencode")
-				assert.False(t, manageModelAccessKey)
+				assert.Contains(t, req.ManifestYAML, harnessInferenceModelEnv+": "+defaultDOSIModel)
+				assert.True(t, manageModelAccessKey)
 				return &godo.HostedAgentConfig{ID: "cfg_1", Name: "my-config"}, nil
 			})
 
@@ -119,6 +120,28 @@ func TestAgentConfigCreate_SecretSatisfiesClaudeEnvRef(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "reviewer")
 		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"ANTHROPIC_API_KEY=sk-ant-from-secret"})
+		require.NoError(t, RunAgentsConfigCreate(config))
+	})
+}
+
+// A provider-less manifest gets HARNESS_INFERENCE_MODEL injected before the
+// manage_model_access_key decision, so create opts into minting.
+func TestAgentConfigCreate_ProviderlessInjectsDOSIAndManagedKey(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dir := t.TempDir()
+		specPath := filepath.Join(dir, "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte("harness: opencode\n"), 0o600))
+
+		tm.hostedAgents.EXPECT().
+			CreateAgentConfig(gomock.Any(), true).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
+				assert.True(t, manageModelAccessKey)
+				assert.Contains(t, req.ManifestYAML, harnessInferenceModelEnv+": "+defaultDOSIModel)
+				return &godo.HostedAgentConfig{ID: "cfg_dosi", Name: "oc"}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "oc")
 		require.NoError(t, RunAgentsConfigCreate(config))
 	})
 }
