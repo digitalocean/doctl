@@ -150,4 +150,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace github.com/digitalocean/godo => /Users/jinyoungoh/.claude/jobs/f410a3ab/tmp/godo-ads
+replace github.com/digitalocean/godo => ../godo
