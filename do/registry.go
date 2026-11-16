@@ -481,19 +481,28 @@ func (rs *registriesService) DockerCredentials(name string, request *godo.Regist
 
 // ListRepositories lists repositories in a registry.
 func (rs *registriesService) ListRepositories(registryName string) ([]Repository, error) {
-	opts := &godo.ListOptions{
-		Page:    1,
-		PerPage: 200,
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListRepositories(rs.ctx, registryName, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
 	}
 
-	repositories, _, err := rs.client.Registry.ListRepositories(rs.ctx, registryName, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]Repository, len(repositories))
-	for i, r := range repositories {
-		ret[i] = Repository{Repository: r}
+	ret := make([]Repository, len(si))
+	for i := range si {
+		ret[i] = Repository{Repository: si[i].(*godo.Repository)}
 	}
 
 	return ret, nil
@@ -501,19 +510,31 @@ func (rs *registriesService) ListRepositories(registryName string) ([]Repository
 
 // ListRepositoriesV2 lists repositories in a registry using the V2 API.
 func (rs *registriesService) ListRepositoriesV2(registryName string) ([]RepositoryV2, error) {
-	opts := &godo.TokenListOptions{
-		Page:    1,
-		PerPage: 200,
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := rs.client.Registries.ListRepositoriesV2(rs.ctx, registryName, &godo.TokenListOptions{
+			Page:    opt.Page,
+			PerPage: opt.PerPage,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
 	}
 
-	repositories, _, err := rs.client.Registries.ListRepositoriesV2(rs.ctx, registryName, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]RepositoryV2, len(repositories))
-	for i, r := range repositories {
-		ret[i] = RepositoryV2{RepositoryV2: r}
+	ret := make([]RepositoryV2, len(si))
+	for i := range si {
+		ret[i] = RepositoryV2{RepositoryV2: si[i].(*godo.RepositoryV2)}
 	}
 
 	return ret, nil
@@ -521,19 +542,28 @@ func (rs *registriesService) ListRepositoriesV2(registryName string) ([]Reposito
 
 // ListRepositoryTags lists tags for a repository.
 func (rs *registriesService) ListRepositoryTags(registryName, repositoryName string) ([]RepositoryTag, error) {
-	opts := &godo.ListOptions{
-		Page:    1,
-		PerPage: 200,
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := rs.client.Registries.ListRepositoryTags(rs.ctx, registryName, repositoryName, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
 	}
 
-	tags, _, err := rs.client.Registries.ListRepositoryTags(rs.ctx, registryName, repositoryName, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]RepositoryTag, len(tags))
-	for i, t := range tags {
-		ret[i] = RepositoryTag{RepositoryTag: t}
+	ret := make([]RepositoryTag, len(si))
+	for i := range si {
+		ret[i] = RepositoryTag{RepositoryTag: si[i].(*godo.RepositoryTag)}
 	}
 
 	return ret, nil
@@ -547,19 +577,28 @@ func (rs *registriesService) DeleteTag(registryName, repositoryName, tag string)
 
 // ListRepositoryManifests lists manifests for a repository.
 func (rs *registriesService) ListRepositoryManifests(registryName, repositoryName string) ([]RepositoryManifest, error) {
-	opts := &godo.ListOptions{
-		Page:    1,
-		PerPage: 200,
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := rs.client.Registries.ListRepositoryManifests(rs.ctx, registryName, repositoryName, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
 	}
 
-	manifests, _, err := rs.client.Registries.ListRepositoryManifests(rs.ctx, registryName, repositoryName, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]RepositoryManifest, len(manifests))
-	for i, m := range manifests {
-		ret[i] = RepositoryManifest{RepositoryManifest: m}
+	ret := make([]RepositoryManifest, len(si))
+	for i := range si {
+		ret[i] = RepositoryManifest{RepositoryManifest: si[i].(*godo.RepositoryManifest)}
 	}
 
 	return ret, nil
@@ -593,19 +632,28 @@ func (rs *registriesService) GetGarbageCollection(registryName string) (*Garbage
 
 // ListGarbageCollections lists garbage collections for a registry.
 func (rs *registriesService) ListGarbageCollections(registryName string) ([]GarbageCollection, error) {
-	opts := &godo.ListOptions{
-		Page:    1,
-		PerPage: 200,
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := rs.client.Registries.ListGarbageCollections(rs.ctx, registryName, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
 	}
 
-	gcs, _, err := rs.client.Registries.ListGarbageCollections(rs.ctx, registryName, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]GarbageCollection, len(gcs))
-	for i, gc := range gcs {
-		ret[i] = GarbageCollection{GarbageCollection: gc}
+	ret := make([]GarbageCollection, len(si))
+	for i := range si {
+		ret[i] = GarbageCollection{GarbageCollection: si[i].(*godo.GarbageCollection)}
 	}
 
 	return ret, nil
