@@ -406,7 +406,10 @@ func renderAgentsHelpLong(text string) string {
 	if strings.TrimSpace(text) == "" {
 		return ""
 	}
-	styled := detectStyling()
+	// Honor the caller's Style gate (agentsStyledHelpFunc sets stylingEnabled
+	// from uiEnv().Style). detectStyling() would restyle the body under -o json
+	// on a TTY while the header stayed plain.
+	styled := stylingEnabled
 	var b strings.Builder
 	last := 0
 	for _, loc := range agentsHelpCodeFence.FindAllStringSubmatchIndex(text, -1) {

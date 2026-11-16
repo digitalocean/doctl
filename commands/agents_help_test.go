@@ -37,6 +37,26 @@ func TestRenderAgentsHelpLongColorizesCodeOnly(t *testing.T) {
 	assert.NotContains(t, out, "```")
 }
 
+// MARSOHS-2591: Long must follow stylingEnabled (env.Style), not detectStyling().
+// Otherwise -o json on a TTY leaves the header plain but boxes the code body.
+func TestRenderAgentsHelpLong_FollowsStylingEnabled(t *testing.T) {
+	prev := stylingEnabled
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	in := "See:\n\n```bash\ndoctl agents run\n```\n"
+
+	stylingEnabled = false
+	plain := renderAgentsHelpLong(in)
+	assert.Contains(t, plain, "doctl agents run")
+	assert.NotContains(t, plain, "╭", "Style off must not border code blocks")
+	assert.Contains(t, plain, "  doctl agents run")
+
+	stylingEnabled = true
+	styled := renderAgentsHelpLong(in)
+	assert.Contains(t, styled, "doctl agents run")
+	assert.Contains(t, styled, "╭", "Style on must border code blocks")
+}
+
 // MARSOHS-2591: root UsageFunc re-renders Short+Long. agentsStyledHelpFunc must
 // not call UsageString(), or rotate-secret --help prints the description twice.
 func TestAgentsStyledHelpFunc_LongAppearsOnceWithSharedUsageFunc(t *testing.T) {
