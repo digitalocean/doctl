@@ -81,8 +81,8 @@ If you need to provide a `context.Context` to your new client, you should use [`
 ## Action Gateway
 
 `client.ActionGateway` exposes the Action Gateway control-plane resources: tools,
-toolbelts, output views, MCP servers, connections, sessions, users, and end-user
-limits. Use a PAT with the corresponding `action_gateway` scopes. For example:
+toolbelts, output views, MCP servers, connections, provider credentials,
+sessions, endpoints, users, and end-user limits. Use a PAT with the corresponding `action_gateway` scopes. For example:
 
 ```go
 toolbelts, _, err := client.ActionGateway.Toolbelts.List(ctx, &godo.ActionGatewayToolbeltsListOptions{Status: "active"})

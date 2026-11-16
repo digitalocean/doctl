@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.241.0] - 2026-11-16
+
+- #1229 - @tgillam-do - Add Action Gateway provider credential APIs
+- #1227 - @rohinsuri - Add Insights logs opt-in to registry create
+
 ## [1.240.0] - 2026-11-13
 
 - #1222 - @sk09-dev - hosted agents: trigger run-now, keep_session_awake, webhook event filter, list by session
