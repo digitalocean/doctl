@@ -1034,6 +1034,10 @@ const (
 	// ArgAgentAuthNoBrowser prints the provider authorization URL instead of opening a browser.
 	ArgAgentAuthNoBrowser = "no-browser"
 
+	// ArgAgentNoWait makes `agents update --spec` return once the server has
+	// accepted the config update, without waiting for it to finish. Same flag
+	// string as ArgAgentAuthNoWait on `auth`.
+	ArgAgentNoWait = "no-wait"
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 
@@ -1057,6 +1061,10 @@ const (
 
 	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
 	ArgAgentForwardAddress = "address"
+	// ArgAgentAutomate is how port-forward answers Agent Canvas's Automate tab:
+	// confirm (ask in the terminal before a trigger is created, enabled or run),
+	// allow (no questions) or off (the tab is not served).
+	ArgAgentAutomate = "automate"
 	// ArgAgentCanvasPort is the local port the canvas proxy listens on (0 = any free port).
 	ArgAgentCanvasPort = "port"
 	// ArgAgentCanvasOpen opens the local Canvas URL in the default browser.

@@ -71,7 +71,7 @@ const agentsCreateHelpMD = `Create a hosted session, wait until it is ready, opt
 Provide exactly one of:
 
 - a **manifest** — as a positional path, or with ` + "`--spec`" + ` / ` + "`-f`" + ` / ` + "`--file`" + ` (` + "`-`" + ` reads stdin). With none of these, ` + "`./agents.yaml`" + ` is used when it exists.
-- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, openhands, or hermes (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
+- ` + "`--harness`" + ` — opencode, claude-code, codex, codex-agentapi, openhands, hermes, or minimax-code (builds the manifest for you). ` + "`codex`" + ` is the Codex CLI, with the agent loop run by DigitalOcean; ` + "`codex-agentapi`" + ` is OpenAI's sandbox-provider model, where the loop and session state live at OpenAI and DigitalOcean supplies only the sandbox (and which checkpoint, fork, and rollback do not cover).
 - ` + "`--from-config`" + ` — an existing Agent Config, by name or ID (` + "`--name`" + ` required)
 
 These four are equivalent:
@@ -97,7 +97,9 @@ harness: opencode
   vpc_uuid: <uuid>
 ` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + ` and ` + "`codex-agentapi`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
-**Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
+**Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment; the same holds for ` + "`minimax-code`" + ` and ` + "`MINIMAX_API_KEY`" + `. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
+
+When the resolved manifest sets ` + "`HARNESS_INFERENCE_MODEL`" + ` without ` + "`HARNESS_INFERENCE_API_KEY`" + `, ` + "`OPENAI_API_KEY`" + `, or ` + "`ANTHROPIC_API_KEY`" + `, doctl asks harness-api to mint a DigitalOcean Inference key (` + "`manage_model_access_key`" + `). Supply one of those secrets to bring your own key instead.
 
 **Inspect before creating.** ` + "`--dry-run`" + ` prints the fully-resolved manifest — name applied, ` + "`${VAR}`" + ` expanded, secret values redacted — and exits without calling the API. That makes a working ` + "`--harness`" + ` invocation reusable, with no file ever touching disk:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --dry-run \
@@ -172,9 +174,14 @@ Without ` + "`--run-id`" + `, cancels whichever turn is running when the request
 
 Nothing running is not an error: the command says so and exits 0, so it is safe to run unconditionally. With ` + "`-o json`" + ` it prints ` + "`{\"session_id\", \"run_id\", \"outcome\"}`" + `, where ` + "`outcome`" + ` is ` + "`acked`" + `, ` + "`no_turn`" + ` or ` + "`unsupported`" + ` and ` + "`run_id`" + ` is absent when nothing was running. An agent that cannot cancel a turn is an error, since the turn keeps running. Cancel undoes nothing the turn already did; a half-written file stays half-written. It never pauses the session — use ` + "`" + agentCLI + " pause`" + ` for that.`
 
-const agentsUpdateHelpMD = `Change settings on a session that already exists. Only flags you pass are changed; everything else is left alone. This never edits the agent manifest — configs are immutable, so create a new one to change how the agent runs.
+const agentsUpdateHelpMD = `Change a session that already exists. Only what you pass is changed; everything else is left alone. Two kinds of change, which cannot be combined in one call.
 
-Today the one setting is ` + "`--resume-on-topoff`" + `, the consent to be resumed automatically after a low-balance pause:
+**Live config** (` + "`--spec`" + `, alias ` + "`--file`" + `): send a partial manifest holding only the sections to change, ` + "`tools`, `env` and `secrets`" + `. Sections you leave out are untouched. ` + "`tools`" + ` is the full replacement list (` + "`tools: []`" + ` detaches every MCP server). ` + "`env`" + ` and ` + "`secrets`" + ` are full sets: a key you leave out is removed, and a secret is a string to set or rotate, or ` + "`{}`" + ` to keep its current value. ` + "`model`" + ` and ` + "`permissions`" + ` are not supported yet.
+` + "```bash\n" + agentCLI + ` update my-session --spec tools.yaml
+` + agentCLI + ` update my-session --file - < tools.yaml
+` + "```\n\n" + `The change is applied while the session runs. A tools-only change usually takes seconds; an env or secret change restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature, and the session must be running.
+
+**Session setting** (` + "`--resume-on-topoff`" + `): the consent to be resumed automatically after a low-balance pause:
 ` + "```bash\n" + agentCLI + ` update my-session --resume-on-topoff
 ` + agentCLI + ` update my-session --resume-on-topoff=false
 ` + "```\n\n" + `Note the ` + "`=`" + `: boolean flags take a value only when it is attached, so ` + "`--resume-on-topoff false`" + ` would set the flag to true and leave ` + "`false`" + ` behind as an argument.
@@ -231,7 +238,7 @@ codex --remote ws://127.0.0.1:1144
 
 Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
 
-For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed.`
+For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed. Where sessions have no public URL, ` + "`" + agentCLI + " port-forward <session> 8000:8000`" + ` serves the same Canvas at ` + "`http://127.0.0.1:8000/canvas`" + `, and its Automate tab is answered by doctl through the triggers API (scheduled prompts bound to the session).`
 
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from it — by name or by ID — with ` + "`" + agentCLI + " create --from-config`" + `, ` + "`" + agentCLI + " launch --from-config`" + `, or ` + "`" + agentCLI + " config start-session`" + `.
 
@@ -241,9 +248,17 @@ const agentsSizesRootHelpMD = `List sandbox (microVM) sizes you can set as ` + "
 
 const agentsSizesListHelpMD = `Print the customer-selectable sandbox size catalog (slug, vCPUs, memory). Ordered smallest to largest. Every returned slug is accepted by CreateSession as ` + "`spec.sandbox.sizeSlug`" + `.`
 
+const agentsRegionsRootHelpMD = `List the regions your team can create sessions and environments in, and which one you get by default.`
+
+const agentsRegionsListHelpMD = `Print the regions your team may place sessions and environments in. The default region is always listed and marked ` + "`*`" + `; it is the one a create uses when you omit ` + "`--region`" + `. Other regions appear only once your team has been granted them, so every slug listed here is accepted by ` + "`--region`" + ` and a slug missing from this list is refused.
+
+The catalog is the same whichever region you ask, so one call lists them all.`
+
 const agentsConfigCreateHelpMD = `Create an immutable config from an agents.yaml manifest (same format as ` + "`" + agentCLI + " create --spec`" + `). ` + "`--name`" + ` must be unique within your team.
 
-` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. For ` + "`claude-code`" + `, that also satisfies ` + "`${ANTHROPIC_API_KEY}`" + ` in the manifest — the process environment is not required. ` + "`NAME=-`" + ` cannot be combined with ` + "`--spec -`" + `. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.`
+` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable) fills a secret slot the manifest declares. For ` + "`claude-code`" + `, that also satisfies ` + "`${ANTHROPIC_API_KEY}`" + ` in the manifest (` + "`${MINIMAX_API_KEY}`" + ` for ` + "`minimax-code`" + `) — the process environment is not required. ` + "`NAME=-`" + ` cannot be combined with ` + "`--spec -`" + `. The value is captured server-side against this config and never returned, so sessions started from it need no secrets of their own.
+
+When the manifest sets ` + "`HARNESS_INFERENCE_MODEL`" + ` and does not supply ` + "`HARNESS_INFERENCE_API_KEY`" + `, ` + "`OPENAI_API_KEY`" + `, or ` + "`ANTHROPIC_API_KEY`" + `, doctl asks the platform to mint a DigitalOcean Inference key for the config (delivered to sessions as ` + "`HARNESS_INFERENCE_API_KEY`" + `). Pass ` + "`--secret HARNESS_INFERENCE_API_KEY=...`" + ` (or a vendor key) to bring your own instead.`
 
 const agentsConfigListHelpMD = `List configs for your team. Paginate with ` + "`--page-size`" + ` and ` + "`--page-token`" + `.`
 
@@ -367,6 +382,10 @@ const agentsTriggersRotateSecretHelpMD = `Issue a new webhook secret (shown once
 const agentsTriggersListExecutionsHelpMD = `List firings for a trigger. Use ` + "`get-execution`" + ` for full payload and output.`
 
 const agentsTriggersGetExecutionHelpMD = `Print one trigger execution, including payload and output when available.`
+
+const agentsTriggersRunHelpMD = `Fire the trigger once, now, as a cron tick or a webhook delivery would: one execution is enqueued and the worker runs it the same way (a reuse trigger sends the prompt to its bound session; a fresh trigger creates a session). The pending execution is printed; follow it with ` + "`" + agentCLI + " triggers get-execution <trigger-id> <execution-id>`" + `.
+
+A paused trigger is not run (resume it first), and a trigger whose runs are backed up to the limit answers 429.`
 
 const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is only paused — the platform has no run-interrupt call today, so the agent's turn may still be in flight even after this returns. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
 

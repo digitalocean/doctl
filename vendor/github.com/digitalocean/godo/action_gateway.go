@@ -16,6 +16,7 @@ type ActionGatewayService struct {
 	MCPServers  *ActionGatewayMCPServersService
 	Connections *ActionGatewayConnectionsService
 	Sessions    *ActionGatewaySessionsService
+	Endpoints   *ActionGatewayEndpointsService
 	Users       *ActionGatewayUsersService
 	ActorLimits *ActionGatewayActorLimitsService
 }
@@ -28,6 +29,7 @@ func newActionGatewayService(client *Client) *ActionGatewayService {
 		MCPServers:  &ActionGatewayMCPServersService{client},
 		Connections: &ActionGatewayConnectionsService{client},
 		Sessions:    &ActionGatewaySessionsService{client},
+		Endpoints:   &ActionGatewayEndpointsService{client},
 		Users:       &ActionGatewayUsersService{client},
 		ActorLimits: &ActionGatewayActorLimitsService{client},
 	}

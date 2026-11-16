@@ -150,7 +150,7 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	cfg, err := c.HostedAgents().CreateAgentConfig(&godo.HostedAgentConfigCreateRequest{
 		Name:         name,
 		ManifestYAML: string(manifest),
-	})
+	}, needsManagedModelAccessKey(manifest))
 	if err != nil {
 		return err
 	}
