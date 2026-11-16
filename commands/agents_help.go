@@ -506,8 +506,8 @@ func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {
 			fmt.Fprintln(w, short)
 			fmt.Fprintln(w)
 		}
-		fmt.Fprint(w, renderAgentsHelpLong(long))
-		fmt.Fprintln(w)
+		// One blank line before USAGE (writeHelpHeader does the same).
+		fmt.Fprint(w, strings.TrimRight(renderAgentsHelpLong(long), "\n")+"\n\n")
 	} else if short := strings.TrimSpace(cmd.Short); short != "" {
 		fmt.Fprintln(w, short)
 		fmt.Fprintln(w)

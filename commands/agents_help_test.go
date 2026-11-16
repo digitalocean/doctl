@@ -81,6 +81,7 @@ func TestAgentsStyledHelpFunc_LongAppearsOnceWithSharedUsageFunc(t *testing.T) {
 	beforeUsage := out[:usageIdx]
 	assert.Contains(t, beforeUsage, short, "non-TTY help must keep the Short summary")
 	assert.Equal(t, 1, strings.Count(beforeUsage, short))
+	assert.True(t, strings.HasSuffix(beforeUsage, "\n\n"), "need a blank line between description and USAGE; got:\n%q", beforeUsage)
 	// Regression: pre-fix path reprinted Short via writeHelpHeader after Long.
 	markerIdx := strings.Index(out, marker)
 	require.Greater(t, markerIdx, -1)
