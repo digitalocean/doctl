@@ -137,21 +137,36 @@ func TestRunADSDataFlowGet(t *testing.T) {
 
 func TestRunADSDataFlowUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		prev := adsStdin
-		adsStdin = strings.NewReader(`{"source":{"kind":"mysql"}}`)
-		t.Cleanup(func() { adsStdin = prev })
-
 		tm.ads.EXPECT().UpdateDataFlow(&godo.ADSDataFlowUpdateRequest{
 			Region:          testADSRegion,
 			ID:              testADSDataFlow,
 			Workspace:       testADSWorkspace,
 			DesiredReplicas: 2,
 			SecretRefs:      []string{"warehouse-db"},
-			Manifest:        json.RawMessage(`{"source":{"kind":"mysql"}}`),
 		}).Return(&godo.ADSDataFlowUpdateResponse{UUID: testADSDataFlow, State: "updating"}, nil)
 		setADSDataFlowLocation(config, testADSDataFlow)
 		config.Doit.Set(config.NS, doctl.ArgADSDataFlowDesiredReplicas, 2)
 		config.Doit.Set(config.NS, doctl.ArgADSDataFlowSecretRefs, []string{"warehouse-db"})
+
+		require.NoError(t, RunADSDataFlowUpdate(config))
+	})
+}
+
+func TestRunADSDataFlowUpdateManifestPatch(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		prev := adsStdin
+		adsStdin = strings.NewReader("input:\n  prefix: archive/\npump: null\n")
+		t.Cleanup(func() { adsStdin = prev })
+
+		// YAML is converted to JSON; null members are kept so the merge
+		// patch can remove keys.
+		tm.ads.EXPECT().UpdateDataFlow(&godo.ADSDataFlowUpdateRequest{
+			Region:    testADSRegion,
+			ID:        testADSDataFlow,
+			Workspace: testADSWorkspace,
+			Manifest:  json.RawMessage(`{"input":{"prefix":"archive/"},"pump":null}`),
+		}).Return(&godo.ADSDataFlowUpdateResponse{UUID: testADSDataFlow, State: "updating"}, nil)
+		setADSDataFlowLocation(config, testADSDataFlow)
 		config.Doit.Set(config.NS, doctl.ArgADSDataFlowManifestFile, "-")
 
 		require.NoError(t, RunADSDataFlowUpdate(config))
@@ -169,10 +184,17 @@ func TestRunADSDataFlowUpdateRejectsBadInput(t *testing.T) {
 			doctl.ArgADSDataFlowSecretRefs:      []string{"warehouse-db"},
 			doctl.ArgADSDataFlowClearSecretRefs: true,
 		}, wantErr: "cannot be combined"},
+		{name: "manifest patch with replicas", set: map[string]any{
+			doctl.ArgADSDataFlowManifestFile:    "-",
+			doctl.ArgADSDataFlowDesiredReplicas: 2,
+		}, wantErr: "patch the manifest in a separate update"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+				prev := adsStdin
+				adsStdin = strings.NewReader(`{"pump":null}`)
+				t.Cleanup(func() { adsStdin = prev })
 				setADSDataFlowLocation(config, testADSDataFlow)
 				for key, value := range tt.set {
 					config.Doit.Set(config.NS, key, value)

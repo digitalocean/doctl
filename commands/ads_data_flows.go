@@ -71,7 +71,7 @@ Every data flow command needs the workspace's ` + "`" + `--region` + "`" + ` and
 	addADSWorkspaceFlag(get)
 
 	update := CmdBuilder(cmd, RunADSDataFlowUpdate, "update <data-flow-id>", "Update a data flow",
-		"Updates a data flow's replica settings, secret references, or manifest. Set at least one of the flags below; unset flags leave the current value unchanged.", Writer, adsNS(cmd),
+		"Updates a data flow's replica settings and secret references, or patches its manifest. Unset flags leave the current value unchanged.\n\n`--manifest-file` is a JSON merge patch (RFC 7386) of the stored manifest: keys you set replace the stored ones, and keys set to null are removed. It cannot be combined with the other flags; patch the manifest in a separate update.", Writer, adsNS(cmd),
 		aliasOpt("u"),
 		displayerType(&displayers.ADSDataFlowChange{}))
 	update.Args = cobra.ExactArgs(1)
@@ -81,7 +81,7 @@ Every data flow command needs the workspace's ` + "`" + `--region` + "`" + ` and
 	AddIntFlag(update, doctl.ArgADSDataFlowMaxReplicas, "", 0, "Maximum number of replicas")
 	AddStringSliceFlag(update, doctl.ArgADSDataFlowSecretRefs, "", []string{}, "Comma-separated keys of workspace secrets the data flow uses. Replaces the current list")
 	AddBoolFlag(update, doctl.ArgADSDataFlowClearSecretRefs, "", false, "Remove every secret reference from the data flow")
-	AddStringFlag(update, doctl.ArgADSDataFlowManifestFile, "", "", "Path to a replacement manifest, a JSON or YAML object. Set to - to read from stdin")
+	AddStringFlag(update, doctl.ArgADSDataFlowManifestFile, "", "", "Path to a JSON merge patch of the manifest, as a JSON or YAML object. Set to - to read from stdin. Cannot be combined with the other update flags")
 
 	deleteCmd := CmdBuilder(cmd, RunADSDataFlowDelete, "delete <data-flow-id>", "Delete a data flow",
 		"Starts deleting a data flow. This cannot be undone.", Writer, adsNS(cmd),
@@ -294,7 +294,15 @@ func RunADSDataFlowUpdate(c *CmdConfig) error {
 			return err
 		}
 	}
-	if desired == 0 && max == 0 && len(secretRefs) == 0 && !clearRefs && manifest == nil {
+	otherChanges := desired != 0 || max != 0 || len(secretRefs) > 0 || clearRefs
+	// The API takes the manifest merge patch on its own, not alongside
+	// replica or secret-ref changes (PatchDataFlowRequest in pipeline.proto).
+	if manifest != nil && otherChanges {
+		return fmt.Errorf("--%s cannot be combined with --%s, --%s, --%s, or --%s; patch the manifest in a separate update",
+			doctl.ArgADSDataFlowManifestFile, doctl.ArgADSDataFlowDesiredReplicas, doctl.ArgADSDataFlowMaxReplicas,
+			doctl.ArgADSDataFlowSecretRefs, doctl.ArgADSDataFlowClearSecretRefs)
+	}
+	if !otherChanges && manifest == nil {
 		return fmt.Errorf("nothing to update: set --%s, --%s, --%s, --%s, or --%s",
 			doctl.ArgADSDataFlowDesiredReplicas, doctl.ArgADSDataFlowMaxReplicas,
 			doctl.ArgADSDataFlowSecretRefs, doctl.ArgADSDataFlowClearSecretRefs, doctl.ArgADSDataFlowManifestFile)
