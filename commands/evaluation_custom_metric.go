@@ -114,7 +114,14 @@ func RunCustomEvaluationMetricCreate(c *CmdConfig) error {
 		RequiresGroundTruth: requiresGroundTruth,
 	}
 	if rawTurnType != "" {
-		config.TurnType = godo.EvaluationMetricTurnType(genAIEnumValue(evaluationMetricTurnTypePrefix, rawTurnType))
+		tt := godo.EvaluationMetricTurnType(genAIEnumValue(evaluationMetricTurnTypePrefix, rawTurnType))
+		if tt != godo.EvaluationMetricTurnTypeSingleTurn && tt != godo.EvaluationMetricTurnTypeMultiTurn {
+			return fmt.Errorf("--%s must be one of single_turn, multi_turn; got %q", doctl.ArgEvaluationTurnType, rawTurnType)
+		}
+		config.TurnType = tt
+	}
+	if config.TurnType == godo.EvaluationMetricTurnTypeMultiTurn && requiresGroundTruth {
+		return fmt.Errorf("multi_turn cannot be combined with --%s", doctl.ArgEvaluationRequiresGroundTruth)
 	}
 
 	metric, err := c.AgentPlatform().CreateCustomEvaluationMetric(&godo.CreateCustomEvaluationMetricRequest{

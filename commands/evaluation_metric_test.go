@@ -51,3 +51,13 @@ func TestModelEvaluationMetricListTurnTypeFilter(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestModelEvaluationMetricListInvalidTurnType(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgEvaluationTurnType, "foo")
+
+		err := RunModelEvaluationMetricList(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "must be one of single_turn, multi_turn")
+	})
+}

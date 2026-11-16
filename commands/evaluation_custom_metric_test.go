@@ -55,6 +55,19 @@ func TestCustomEvaluationMetricCreateTurnType(t *testing.T) {
 	})
 }
 
+func TestCustomEvaluationMetricCreateMultiTurnRequiresGroundTruth(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgGenAIName, "bad")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationScoringPrompt, "Score something")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationTurnType, "multi_turn")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationRequiresGroundTruth, true)
+
+		err := RunCustomEvaluationMetricCreate(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "multi_turn cannot be combined with --requires-ground-truth")
+	})
+}
+
 func TestCustomEvaluationMetricUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testEvaluationMetricUUID)
