@@ -55,6 +55,7 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 					},
 					"status": {
 						"balance": "42.75",
+						"available_credit": "9.29",
 						"eligible": true,
 						"month_to_date_balance": "8.10"
 					}
@@ -88,6 +89,7 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 					},
 					"status": {
 						"balance": "0.00",
+						"available_credit": "0.00",
 						"blocked": true,
 						"eligible": true,
 						"month_to_date_balance": "0.00"
@@ -167,21 +169,21 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 })
 
 const harnessBalanceOK string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-$42.75     $8.10                    off             OK
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$42.75     $9.29               $8.10                    off             OK
 `
 
 const harnessBalanceBlocked string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-$0.00      $0.00                    off             Blocked — add funds
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$0.00      $0.00               $0.00                    off             Blocked — add funds
 `
 
 const harnessBalanceAutoTopOff string = `
-Balance    Month-to-date Balance    Auto Top-off                      Status
-$3.00      $22.00                   on (at $5.00, charging $25.00)    OK
+Balance    Available Credit    Month-to-date Balance    Auto Top-off                      Status
+$3.00      unknown             $22.00                   on (at $5.00, charging $25.00)    OK
 `
 
 const harnessBalanceNoPermission string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-unknown    unknown                  unknown         unknown (token lacks billing:read)
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+unknown    unknown             unknown                  unknown         unknown (token lacks billing:read)
 `

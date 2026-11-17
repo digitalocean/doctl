@@ -32,6 +32,7 @@ func TestRunAgentsBalance(t *testing.T) {
 		}
 		status := &do.PrepaymentStatus{
 			Balance:            "12.50",
+			AvailableCredit:    "9.29",
 			Eligible:           true,
 			MonthToDateBalance: "3.25",
 		}

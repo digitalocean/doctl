@@ -37,6 +37,7 @@ func (p *PrepaymentConfig) Cols() []string {
 		"PrepayAmount",
 		"PrepayThreshold",
 		"Balance",
+		"AvailableCredit",
 		"Blocked",
 		"Eligible",
 		"MonthToDateBalance",
@@ -52,6 +53,7 @@ func (p *PrepaymentConfig) ColMap() map[string]string {
 		"PrepayAmount":        "Prepay Amount",
 		"PrepayThreshold":     "Prepay Threshold",
 		"Balance":             "Balance",
+		"AvailableCredit":     "Available Credit",
 		"Blocked":             "Blocked",
 		"Eligible":            "Eligible",
 		"MonthToDateBalance":  "Month-to-date Balance",
@@ -78,6 +80,7 @@ func (p *PrepaymentConfig) KV() []map[string]any {
 	}
 	if p.Status != nil {
 		x["Balance"] = p.Status.Balance
+		x["AvailableCredit"] = p.Status.AvailableCredit
 		x["Blocked"] = p.Status.Blocked
 		x["Eligible"] = p.Status.Eligible
 		x["MonthToDateBalance"] = p.Status.MonthToDateBalance
@@ -101,6 +104,7 @@ func (p *PrepaymentStatus) JSON(out io.Writer) error {
 func (p *PrepaymentStatus) Cols() []string {
 	return []string{
 		"Balance",
+		"AvailableCredit",
 		"IsAutoPrepayEnabled",
 		"Blocked",
 		"Eligible",
@@ -111,6 +115,7 @@ func (p *PrepaymentStatus) Cols() []string {
 func (p *PrepaymentStatus) ColMap() map[string]string {
 	return map[string]string{
 		"Balance":             "Balance",
+		"AvailableCredit":     "Available Credit",
 		"IsAutoPrepayEnabled": "Auto Prepay Enabled",
 		"Blocked":             "Blocked",
 		"Eligible":            "Eligible",
@@ -122,6 +127,7 @@ func (p *PrepaymentStatus) KV() []map[string]any {
 	x := map[string]any{}
 	if p.Status != nil {
 		x["Balance"] = p.Status.Balance
+		x["AvailableCredit"] = p.Status.AvailableCredit
 		x["IsAutoPrepayEnabled"] = p.Status.IsAutoPrepayEnabled
 		x["Blocked"] = p.Status.Blocked
 		x["Eligible"] = p.Status.Eligible
