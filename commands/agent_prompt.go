@@ -117,6 +117,7 @@ func RunAgentsPrompt(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 
 	col := &promptCollector{
 		svc:              svc,
