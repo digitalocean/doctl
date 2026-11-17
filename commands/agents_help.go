@@ -238,7 +238,7 @@ codex --remote ws://127.0.0.1:1144
 
 Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
 
-For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed.`
+For an openhands session the native UI is Agent Canvas, served from the sandbox itself: ` + "`" + agentCLI + " canvas <session> --open`" + ` puts it on a local port with your token added, no agent CLI needed. Where sessions have no public URL, ` + "`" + agentCLI + " port-forward <session> 8000:8000`" + ` serves the same Canvas at ` + "`http://127.0.0.1:8000/canvas`" + `, and its Automate tab is answered by doctl through the triggers API (scheduled prompts bound to the session).`
 
 const agentsConfigRootHelpMD = `Reusable agent manifests for your team. Create a config once, then start sessions from it — by name or by ID — with ` + "`" + agentCLI + " create --from-config`" + `, ` + "`" + agentCLI + " launch --from-config`" + `, or ` + "`" + agentCLI + " config start-session`" + `.
 
@@ -383,7 +383,11 @@ const agentsTriggersListExecutionsHelpMD = `List firings for a trigger. Use ` + 
 
 const agentsTriggersGetExecutionHelpMD = `Print one trigger execution, including payload and output when available.`
 
-const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is only paused — the platform has no run-interrupt call today, so the agent's turn may still be in flight even after this returns. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
+const agentsTriggersRunHelpMD = `Fire the trigger once, now, as a cron tick or a webhook delivery would: one execution is enqueued and the worker runs it the same way (a reuse trigger sends the prompt to its bound session; a fresh trigger creates a session). The pending execution is printed; follow it with ` + "`" + agentCLI + " triggers get-execution <trigger-id> <execution-id>`" + `.
+
+A paused trigger is not run (resume it first), and a trigger whose runs are backed up to the limit answers 429.`
+
+const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is paused and the turn it was running is stopped. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
 
 const agentsTriggersGetBySessionHelpMD = `Find the trigger that created or binds a session.`
 
@@ -402,7 +406,10 @@ func renderAgentsHelpLong(text string) string {
 	if strings.TrimSpace(text) == "" {
 		return ""
 	}
-	styled := detectStyling()
+	// Honor the caller's Style gate (agentsStyledHelpFunc sets stylingEnabled
+	// from uiEnv().Style). detectStyling() would restyle the body under -o json
+	// on a TTY while the header stayed plain.
+	styled := stylingEnabled
 	var b strings.Builder
 	last := 0
 	for _, loc := range agentsHelpCodeFence.FindAllStringSubmatchIndex(text, -1) {
@@ -485,27 +492,37 @@ func requireAgentSubcommand(cmd *Command) {
 }
 
 // agentsStyledHelpFunc prints a compact colored header on TTYs, plain prose with
-// bordered code examples, then the standard cobra usage section (always plain).
+// bordered code examples, then the shared Next Gen usage/flags sections without
+// re-printing Short/Long (root UsageFunc would duplicate the header).
 func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {
 	w := cmd.OutOrStdout()
-	stylingEnabled = detectStyling()
+	env := uiEnv()
+	// Match the USAGE/flags Style gate so the header and sections agree.
+	stylingEnabled = env.Style
 
 	if long := strings.TrimSpace(cmd.Long); long != "" {
+		short := strings.TrimSpace(cmd.Short)
 		if stylingEnabled {
 			fmt.Fprintln(w, boldColor(cmd.CommandPath(), colHighlight))
-			if short := strings.TrimSpace(cmd.Short); short != "" {
+			if short != "" {
 				fmt.Fprintln(w, colorize(short, colMuted))
 			}
 			fmt.Fprintln(w)
+		} else if short != "" {
+			// Non-TTY path: keep the one-line summary UsageString used to print.
+			fmt.Fprintln(w, short)
+			fmt.Fprintln(w)
 		}
-		fmt.Fprint(w, renderAgentsHelpLong(long))
-		fmt.Fprintln(w)
+		// One blank line before USAGE (writeHelpHeader does the same).
+		fmt.Fprint(w, strings.TrimRight(renderAgentsHelpLong(long), "\n")+"\n\n")
 	} else if short := strings.TrimSpace(cmd.Short); short != "" {
 		fmt.Fprintln(w, short)
 		fmt.Fprintln(w)
 	}
 
 	if cmd.Runnable() || cmd.HasAvailableSubCommands() {
-		fmt.Fprint(w, cmd.UsageString())
+		if err := renderStyledHelpSections(cmd, w, env, false); err != nil {
+			fmt.Fprintln(cmd.ErrOrStderr(), err)
+		}
 	}
 }

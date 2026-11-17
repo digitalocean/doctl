@@ -73,17 +73,37 @@ type HostedAgentTriggersService interface {
 	GetBySession(sessionID string) (*HostedAgentTrigger, error)
 	ListReusableSessions(*godo.HostedAgentReusableSessionListOptions) ([]HostedAgentReusableSession, string, error)
 	ListWebhookProviders() ([]HostedAgentWebhookProvider, error)
+	// Run fires the trigger now (POST .../triggers/{id}/executions) and returns
+	// the pending execution to poll.
+	Run(triggerID string) (*HostedAgentTriggerExecution, error)
 }
 
 type hostedAgentTriggersService struct {
-	svc godo.HostedAgentTriggersService
+	svc    godo.HostedAgentTriggersService
+	client *godo.Client
 }
 
 var _ HostedAgentTriggersService = &hostedAgentTriggersService{}
 
 // NewHostedAgentTriggersService builds a HostedAgentTriggersService from a godo client.
 func NewHostedAgentTriggersService(client *godo.Client) HostedAgentTriggersService {
-	return &hostedAgentTriggersService{svc: client.HostedAgentTriggers}
+	return &hostedAgentTriggersService{svc: client.HostedAgentTriggers, client: client}
+}
+
+// hostedAgentTriggerRunPath is the run-now route, on the same prefix godo
+// uses for the other trigger routes; hostedAgentTriggersPath is the create route.
+const (
+	hostedAgentTriggerRunPath = "/v2/harness-runtime/triggers/%s/executions"
+	hostedAgentTriggersPath   = "/v2/harness-runtime/triggers"
+)
+
+// triggerDetails decodes the Canvas fields from a trigger's JSON.
+func (s *hostedAgentTriggersService) Run(triggerID string) (*HostedAgentTriggerExecution, error) {
+	e, _, err := s.svc.Run(context.TODO(), triggerID)
+	if err != nil {
+		return nil, err
+	}
+	return &HostedAgentTriggerExecution{HostedAgentTriggerExecution: e}, nil
 }
 
 func (s *hostedAgentTriggersService) List(opt *godo.HostedAgentTriggerListOptions) ([]HostedAgentTrigger, string, error) {
