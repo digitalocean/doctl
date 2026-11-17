@@ -775,6 +775,7 @@ func TestKubernetesCreate(t *testing.T) {
 				Required: false,
 			},
 			IsolatedWorkers:  true,
+			MaxPodsPerNode:   220,
 			GPUOperatorReady: true,
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
@@ -813,6 +814,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgEnableRDMASharedDevicePlugin, testCluster.RdmaSharedDevicePlugin.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgEnableCorednsAutoscaler, testCluster.CorednsAutoscaler.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgIsolatedWorkers, true)
+		config.Doit.Set(config.NS, doctl.ArgMaxPodsPerNode, 220)
 		config.Doit.Set(config.NS, doctl.ArgGPUOperatorReady, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesEnableSSO, true)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesRequireSSO, false)

@@ -314,6 +314,8 @@ After creating a cluster, a configuration context is added to kubectl and made a
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgIsolatedWorkers, "", false, "Enables isolated workers for the cluster. Defaults to `false`, To enable isolated workers for the cluster, supply `--isolated-workers=true`. NAT GW must be available in the vpc when this option is enabled.")
+	AddIntFlag(cmdKubeClusterCreate, doctl.ArgMaxPodsPerNode, "", 0,
+		"The maximum number of pods per worker node. Supported values are `110`, `220` and `450`. Defaults to `110` when not set. This can only be set at cluster creation.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgGPUOperatorReady, "", false,
 		"Launches GPU nodes in the cluster with images without GPU drivers, allowing GPU operators to manage drivers. Defaults to `false`. To enable it, supply `--gpu-operator-ready=true`. Mutually exclusive with other GPU-related cluster options.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
@@ -1854,6 +1856,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		return err
 	}
 	r.IsolatedWorkers = isolatedWorkers
+
+	maxPodsPerNode, err := c.Doit.GetInt(c.NS, doctl.ArgMaxPodsPerNode)
+	if err != nil {
+		return err
+	}
+	r.MaxPodsPerNode = maxPodsPerNode
 
 	gpuOperatorReady, err := c.Doit.GetBool(c.NS, doctl.ArgGPUOperatorReady)
 	if err != nil {
