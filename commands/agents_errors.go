@@ -200,6 +200,11 @@ func beautifyAgentError(err error) error {
 		tips = []string{"doctl harness-runtime config list-sessions <config-id>", "doctl harness-runtime remove <session>"}
 	case strings.Contains(lower, "mutually exclusive") || strings.Contains(lower, "is required") || strings.Contains(lower, "invalid --"):
 		title = "Invalid arguments"
+	case lower == "operation aborted":
+		// A delete the user did not confirm, or one that must ask and has no terminal to ask
+		// on. Nothing was sent to the API.
+		title = "Not confirmed"
+		tips = []string{"Nothing was deleted", "Re-run with --force to delete without being asked"}
 	case strings.Contains(lower, "not set locally") || strings.Contains(lower, "environment variable"):
 		title = "Missing environment value"
 		tips = []string{"Set the variable in your shell, or re-run in a terminal to be prompted"}
@@ -232,8 +237,14 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 	lower := strings.ToLower(msg)
 	switch status {
 	case http.StatusUnauthorized:
-		return "Authentication failed", []string{"doctl auth init"}
+		return "Authentication failed", []string{"doctl auth login"}
 	case http.StatusForbidden:
+		// A team that has not been let into persistent workspaces gets a 403 with
+		// this message. Its token and permissions are fine, so the scopes tip would
+		// send it the wrong way, and a retry does not help.
+		if strings.Contains(lower, "workspaces are not enabled") {
+			return "Not available yet", nil
+		}
 		return "Access denied", []string{"Check your token scopes or team permissions"}
 	case http.StatusNotFound:
 		return "Not found", []string{"doctl harness-runtime list", "Confirm the ID or name and try again"}
@@ -276,6 +287,9 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 			}
 		}
 		return "Invalid request", nil
+	case http.StatusNotImplemented:
+		// Permanent for now, so no retry advice.
+		return "Not available yet", nil
 	case http.StatusGatewayTimeout:
 		if strings.Contains(lower, "exec timed out") {
 			return "Exec timed out", []string{

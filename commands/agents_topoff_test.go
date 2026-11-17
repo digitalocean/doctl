@@ -57,7 +57,9 @@ func TestResumeOnTopoffWireNames(t *testing.T) {
 	t.Run("read back off the session", func(t *testing.T) {
 		f, ok := reflect.TypeOf(godo.HostedAgentSession{}).FieldByName("ResumeOnTopoff")
 		require.True(t, ok)
-		assert.Equal(t, "resume_on_topoff,omitempty", f.Tag.Get("json"))
+		// godo encodes this field always, so a revoked consent reads as
+		// false rather than absent.
+		assert.Equal(t, "resume_on_topoff", f.Tag.Get("json"))
 	})
 
 	t.Run("body field on the session patch path", func(t *testing.T) {

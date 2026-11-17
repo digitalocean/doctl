@@ -421,13 +421,14 @@ func TestDryRunOutputPipesIntoConfigCreate(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateAgentConfig(gomock.Any()).
-			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
+			CreateAgentConfig(gomock.Any(), false).
+			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 				assert.Equal(t, "kimi-k3-reviewer", req.Name)
 				assert.Contains(t, req.ManifestYAML, "adamdev/orders-api")
 				assert.Contains(t, req.ManifestYAML, "sk-ant-real",
 					"--secret on this side has to fill the slot the dry run redacted")
 				assert.NotContains(t, req.ManifestYAML, redactedSecretValue)
+				assert.False(t, manageModelAccessKey)
 				return &godo.HostedAgentConfig{ID: "cfg_piped", Name: "kimi-k3-reviewer"}, nil
 			})
 

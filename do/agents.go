@@ -16,6 +16,7 @@ package do
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -58,6 +59,10 @@ type HostedAgentsService interface {
 	// UpdateSession patches session-scoped settings (never the agent manifest
 	// or config) and returns the updated session.
 	UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error)
+	// UpdateSessionConfig patches the live config (tools, env, secrets) of a
+	// session from a partial manifest. The result carries the outcome
+	// (ACCEPTED or UNCHANGED); on ACCEPTED the caller polls GetSession.
+	UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error)
 	DestroySession(sessionID string) error
 	PauseSession(sessionID string) error
 	ResumeSession(sessionID string) error
@@ -85,6 +90,13 @@ type HostedAgentsService interface {
 	// Every slug is accepted by CreateSession as spec.sandbox.sizeSlug. Ordered
 	// smallest-to-largest; no pagination.
 	ListSandboxSizes() ([]godo.HostedAgentSandboxSize, error)
+	// ListRegions returns the regions this team may create sessions and
+	// environments in. The default region is always listed and marked
+	// IsDefault; every other open region appears only when the team holds its
+	// grant, so the catalog matches what a create admits. Sorted by slug; no
+	// pagination. The catalog is team-scoped, so one call enumerates the
+	// regions whichever regional host --region selects.
+	ListRegions() ([]godo.HostedAgentRegion, error)
 	ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error
 	// StartProviderAuth begins (or resumes) the team-scoped connect flow for an
 	// external provider (e.g. "github"). The team is taken from the
@@ -125,12 +137,26 @@ type HostedAgentsService interface {
 	ForkSession(sessionID string, fork *godo.HostedAgentForkSessionRequest) ([]HostedAgentSession, error)
 	RollbackToCheckpoint(sessionID, checkpointID string) (*HostedAgentSession, error)
 
+	// Persistent workspaces (/v2/harness-runtime/workspaces): saved files that outlive
+	// sessions and attach to one session at a time. Not the session
+	// /workspace transfer APIs above.
+	CreateWorkspace(create *godo.HostedAgentWorkspaceCreateRequest) (*godo.HostedAgentWorkspace, error)
+	ListWorkspaces(opt *godo.HostedAgentWorkspaceListOptions) ([]godo.HostedAgentWorkspace, string, error)
+	GetWorkspace(workspaceID string) (*godo.HostedAgentWorkspace, error)
+	DeleteWorkspace(workspaceID string) error
+
 	// Agent Configs: immutable, team-scoped agent manifests plus config-backed
 	// session creation.
 	CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error)
 	ListAgentConfigs(opt *godo.HostedAgentConfigListOptions) ([]godo.HostedAgentConfigSummary, string, error)
 	GetAgentConfig(configID string) (*godo.HostedAgentConfig, error)
-	CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error)
+	// CreateAgentConfig creates an Environment from name + manifest_yaml.
+	// When manageModelAccessKey is true, the request also sends
+	// manage_model_access_key=true so harness-api can mint
+	// HARNESS_INFERENCE_API_KEY for the config. godo has no field for that
+	// yet, so true takes a hand-built body (same pattern as
+	// CreateSessionFromManifestWithManagedKey).
+	CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error)
 	DeleteAgentConfig(configID string) error
 	ListAgentConfigSessions(configID string, opt *godo.HostedAgentSessionListOptions) ([]HostedAgentSession, string, error)
 
@@ -277,6 +303,14 @@ func (s *hostedAgentsService) UpdateSession(sessionID string, update *godo.Hoste
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
 }
 
+func (s *hostedAgentsService) UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error) {
+	res, _, err := s.client.HostedAgents.UpdateSessionConfig(context.TODO(), sessionID, update)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func (s *hostedAgentsService) DestroySession(sessionID string) error {
 	_, err := s.client.HostedAgents.DestroySession(context.TODO(), sessionID)
 	return err
@@ -357,6 +391,17 @@ func (s *hostedAgentsService) ListSandboxSizes() ([]godo.HostedAgentSandboxSize,
 		return nil, nil
 	}
 	return resp.Sizes, nil
+}
+
+func (s *hostedAgentsService) ListRegions() ([]godo.HostedAgentRegion, error) {
+	resp, _, err := s.client.HostedAgents.ListRegions(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	return resp.Regions, nil
 }
 
 func (s *hostedAgentsService) ResolveHITL(sessionID, requestID string, body *godo.HostedAgentResolveHITLRequest) error {
@@ -476,6 +521,29 @@ func (s *hostedAgentsService) RollbackToCheckpoint(sessionID, checkpointID strin
 	return &HostedAgentSession{HostedAgentSession: sess}, nil
 }
 
+func (s *hostedAgentsService) CreateWorkspace(create *godo.HostedAgentWorkspaceCreateRequest) (*godo.HostedAgentWorkspace, error) {
+	ws, _, err := s.client.HostedAgents.CreateWorkspace(context.TODO(), create)
+	return ws, err
+}
+
+func (s *hostedAgentsService) ListWorkspaces(opt *godo.HostedAgentWorkspaceListOptions) ([]godo.HostedAgentWorkspace, string, error) {
+	resp, _, err := s.client.HostedAgents.ListWorkspaces(context.TODO(), opt)
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Workspaces, resp.NextPageToken, nil
+}
+
+func (s *hostedAgentsService) GetWorkspace(workspaceID string) (*godo.HostedAgentWorkspace, error) {
+	ws, _, err := s.client.HostedAgents.GetWorkspace(context.TODO(), workspaceID)
+	return ws, err
+}
+
+func (s *hostedAgentsService) DeleteWorkspace(workspaceID string) error {
+	_, err := s.client.HostedAgents.DeleteWorkspace(context.TODO(), workspaceID)
+	return err
+}
+
 func (s *hostedAgentsService) CreateSessionFromConfig(create *godo.HostedAgentSessionFromConfigRequest) (*HostedAgentSession, error) {
 	sess, _, err := s.client.HostedAgents.CreateSessionFromConfig(context.TODO(), create)
 	if err != nil {
@@ -497,9 +565,54 @@ func (s *hostedAgentsService) GetAgentConfig(configID string) (*godo.HostedAgent
 	return cfg, err
 }
 
-func (s *hostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest) (*godo.HostedAgentConfig, error) {
-	cfg, _, err := s.client.HostedAgents.CreateAgentConfig(context.TODO(), create)
-	return cfg, err
+func (s *hostedAgentsService) CreateAgentConfig(create *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
+	if create == nil {
+		return nil, errors.New("hosted agents: create request is required")
+	}
+	if !manageModelAccessKey {
+		cfg, _, err := s.client.HostedAgents.CreateAgentConfig(context.TODO(), create)
+		return cfg, err
+	}
+
+	// godo's HostedAgentConfigCreateRequest has no manage_model_access_key
+	// field yet; build the body that harness-api accepts.
+	body, err := json.Marshal(struct {
+		Name                 string `json:"name"`
+		ManifestYAML         string `json:"manifest_yaml"`
+		ManageModelAccessKey bool   `json:"manage_model_access_key"`
+	}{
+		Name:                 create.Name,
+		ManifestYAML:         create.ManifestYAML,
+		ManageModelAccessKey: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	u, err := s.client.BaseURL.Parse("v2/harness-runtime/configs")
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, u.String(), bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", s.client.UserAgent)
+	var root struct {
+		Config *godo.HostedAgentConfig `json:"config"`
+	}
+	resp, err := s.client.Do(context.TODO(), req, &root)
+	if err != nil {
+		return nil, err
+	}
+	if root.Config == nil {
+		return nil, errors.New("hosted agents: create config returned no config")
+	}
+	if resp != nil {
+		root.Config.Location = resp.Header.Get("Location")
+	}
+	return root.Config, nil
 }
 
 func (s *hostedAgentsService) DeleteAgentConfig(configID string) error {

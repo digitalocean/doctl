@@ -110,6 +110,20 @@ func MicroVM() *Command {
 	AddBoolFlag(cmdMicroVMCreate, "ingress", "", true,
 		"Whether to create the MicroVM with a default public URL. Pass `--ingress=false` to create it without one; URLs can be added later with `doctl compute microvm url add`.")
 
+	cmdMicroVMUpdate := CmdBuilder(cmd, RunMicroVMUpdate, "update <microvm-id>",
+		"Update a MicroVM's name, tags, or auto-pause idle timeout",
+		"Updates a running or paused MicroVM in place. Set at least one flag; settings you omit keep their current value. "+
+			"Every other MicroVM setting is fixed at create, and changing one requires a new MicroVM.",
+		Writer, aliasOpt("u"), displayerType(&displayers.MicroVM{}))
+	AddStringFlag(cmdMicroVMUpdate, "name", "", "",
+		"The new name for the MicroVM")
+	AddStringSliceFlag(cmdMicroVMUpdate, doctl.ArgTag, "", []string{},
+		"The complete set of tags for the MicroVM. Replaces the current tags. Repeatable.")
+	AddBoolFlag(cmdMicroVMUpdate, "clear-tags", "", false,
+		"Remove every tag from the MicroVM (mutually exclusive with `--tag`)")
+	AddStringFlag(cmdMicroVMUpdate, "auto-pause-idle-timeout", "", "",
+		"Idle duration before auto-pause (e.g. `5m`, `30s`)")
+
 	CmdBuilder(cmd, RunMicroVMPause, "pause <microvm-id>",
 		"Pause a running MicroVM",
 		"Requests that the MicroVM transition to the `paused` state. Returns the mutated MicroVM.",
@@ -177,6 +191,46 @@ func MicroVM() *Command {
 
 	cmd.AddCommand(microVMCheckpoints())
 	cmd.AddCommand(microVMURLs())
+	cmd.AddCommand(microVMAccessTokens())
+
+	return cmd
+}
+
+func microVMAccessTokens() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "access-token",
+			Aliases: []string{"access-tokens"},
+			Short:   "Manage MicroVM access tokens",
+			Long: `The subcommands under ` + "`" + `doctl compute microvm access-token` + "`" + ` manage ` +
+				`API tokens that grant access to the public endpoint of one MicroVM only. ` +
+				`A MicroVM can have at most 10 live access tokens. Deleting the MicroVM revokes them.`,
+		},
+	}
+
+	cmdCreate := CmdBuilder(cmd, RunMicroVMAccessTokenCreate, "create <microvm-id>",
+		"Create an access token for a MicroVM",
+		"Creates an API token that grants access to the public endpoint of the MicroVM only. "+
+			"The token value is shown once, in this output. Save it: `list` never returns it. "+
+			"To recover a lost token, revoke it and create a new one. "+
+			"The token works on the default URL of the MicroVM. Extra URLs accept team tokens only for now.",
+		Writer, aliasOpt("c"), displayerType(&displayers.MicroVMAccessToken{}))
+	AddStringFlag(cmdCreate, "name", "", "",
+		"A name for the token, unique among the live access tokens of the MicroVM (1 to 64 characters)", requiredOpt())
+	AddIntFlag(cmdCreate, "expires-in-seconds", "", 0,
+		"The lifetime of the token in seconds. Omit for a token that does not expire")
+
+	CmdBuilder(cmd, RunMicroVMAccessTokenList, "list <microvm-id>",
+		"List the access tokens of a MicroVM",
+		"Lists the live access tokens of the MicroVM, oldest first. Token values are never shown.",
+		Writer, aliasOpt("ls"), displayerType(&displayers.MicroVMAccessToken{}))
+
+	cmdRevoke := CmdBuilder(cmd, RunMicroVMAccessTokenRevoke, "revoke <microvm-id> <token-id>",
+		"Revoke an access token of a MicroVM",
+		"Revokes an access token. The token stops working right away. Revoke is permanent.",
+		Writer, aliasOpt("rm", "delete"))
+	AddBoolFlag(cmdRevoke, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Revoke the access token without a confirmation prompt")
 
 	return cmd
 }
@@ -470,6 +524,52 @@ func RunMicroVMCreate(c *CmdConfig) error {
 	return c.Display(&displayers.MicroVM{MicroVMs: do.MicroVMs{*md}})
 }
 
+// RunMicroVMUpdate changes the name, tags, or auto-pause idle timeout of a MicroVM.
+func RunMicroVMUpdate(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	name, err := c.Doit.GetString(c.NS, "name")
+	if err != nil {
+		return err
+	}
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
+	if err != nil {
+		return err
+	}
+	clearTags, err := c.Doit.GetBool(c.NS, "clear-tags")
+	if err != nil {
+		return err
+	}
+	idleTimeout, err := c.Doit.GetString(c.NS, "auto-pause-idle-timeout")
+	if err != nil {
+		return err
+	}
+
+	if clearTags && len(tags) > 0 {
+		return fmt.Errorf("--tag and --clear-tags are mutually exclusive")
+	}
+	req := &godo.MicroVMUpdateRequest{Name: name}
+	switch {
+	case clearTags:
+		req.Tags = &[]string{}
+	case len(tags) > 0:
+		req.Tags = &tags
+	}
+	if idleTimeout != "" {
+		req.AutoPause = &godo.AutoPauseConfig{IdleTimeout: idleTimeout}
+	}
+	if req.Name == "" && req.Tags == nil && req.AutoPause == nil {
+		return fmt.Errorf("set at least one of --name, --tag, --clear-tags, or --auto-pause-idle-timeout")
+	}
+
+	md, err := c.MicroVMs().Update(c.Args[0], req)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVM{MicroVMs: do.MicroVMs{*md}})
+}
+
 // RunMicroVMPause transitions a MicroVM to the paused state.
 func RunMicroVMPause(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
@@ -543,6 +643,63 @@ func RunMicroVMURLRemove(c *CmdConfig) error {
 		return errOperationAborted
 	}
 	return c.MicroVMs().RemoveURL(c.Args[0], c.Args[1])
+}
+
+// RunMicroVMAccessTokenCreate creates an access token scoped to one MicroVM.
+func RunMicroVMAccessTokenCreate(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	name, err := c.Doit.GetString(c.NS, "name")
+	if err != nil {
+		return err
+	}
+	if name == "" || len(name) > 64 {
+		return fmt.Errorf("--name must be between 1 and 64 characters")
+	}
+	expiresIn, err := c.Doit.GetInt(c.NS, "expires-in-seconds")
+	if err != nil {
+		return err
+	}
+	if expiresIn < 0 {
+		return fmt.Errorf("invalid --expires-in-seconds %d: expected a positive integer", expiresIn)
+	}
+
+	tok, err := c.MicroVMs().CreateAccessToken(c.Args[0], &godo.MicroVMAccessTokenCreateRequest{
+		Name:             name,
+		ExpiresInSeconds: expiresIn,
+	})
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMAccessToken{Created: tok})
+}
+
+// RunMicroVMAccessTokenList lists the live access tokens of a MicroVM.
+func RunMicroVMAccessTokenList(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	list, err := c.MicroVMs().ListAccessTokens(c.Args[0])
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.MicroVMAccessToken{AccessTokens: list})
+}
+
+// RunMicroVMAccessTokenRevoke revokes an access token of a MicroVM.
+func RunMicroVMAccessTokenRevoke(c *CmdConfig) error {
+	if len(c.Args) != 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if !(force || AskForConfirmDelete("MicroVM access token", 1) == nil) {
+		return errOperationAborted
+	}
+	return c.MicroVMs().RevokeAccessToken(c.Args[0], c.Args[1])
 }
 
 // RunMicroVMDelete deletes one or more MicroVMs by UUID.

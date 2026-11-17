@@ -58,7 +58,34 @@ func (h *HostedAgentSession) Cols() []string {
 	if len(h.Sessions) == 0 || h.anyPauseReason() {
 		cols = append(cols, "PauseReason")
 	}
+	// Same rule for the persistent workspace: most sessions have none.
+	if len(h.Sessions) == 0 || h.anyWorkspace() {
+		cols = append(cols, "WorkspaceID")
+	}
+	// Same rule for config drift: only sessions whose live config was changed
+	// after create carry it.
+	if len(h.Sessions) == 0 || h.anyConfigDrifted() {
+		cols = append(cols, "ConfigDrifted")
+	}
 	return cols
+}
+
+func (h *HostedAgentSession) anyConfigDrifted() bool {
+	for _, s := range h.Sessions {
+		if s.HostedAgentSession != nil && s.ConfigDrifted {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *HostedAgentSession) anyWorkspace() bool {
+	for _, s := range h.Sessions {
+		if s.HostedAgentSession != nil && s.WorkspaceID != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HostedAgentSession) anyPauseReason() bool {
@@ -82,6 +109,8 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"RepoHint":        "Repo",
 		"CreatedAt":       "Created",
 		"PauseReason":     "Pause Reason",
+		"WorkspaceID":     "Workspace",
+		"ConfigDrifted":   "Drifted",
 	}
 }
 
@@ -107,7 +136,9 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			// Passed through verbatim: the API reserves the right to add
 			// reasons, so an unrecognized value is shown as-is rather than
 			// flattened to "unknown".
-			"PauseReason": string(s.PauseReason),
+			"PauseReason":   string(s.PauseReason),
+			"WorkspaceID":   s.WorkspaceID,
+			"ConfigDrifted": s.ConfigDrifted,
 		})
 	}
 	return out
@@ -158,6 +189,71 @@ func (h *HostedAgentCheckpoint) KV() []map[string]any {
 			"Label":        cp.Label,
 			"SizeBytes":    cp.SizeBytes,
 			"CreatedAt":    cp.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		})
+	}
+	return out
+}
+
+// HostedAgentWorkspace wraps one or more persistent workspaces for display.
+type HostedAgentWorkspace struct {
+	Workspaces []godo.HostedAgentWorkspace
+	Single     bool
+}
+
+var _ Displayable = &HostedAgentWorkspace{}
+
+func (h *HostedAgentWorkspace) JSON(out io.Writer) error {
+	if h.Single && len(h.Workspaces) == 1 {
+		return writeJSON(h.Workspaces[0], out)
+	}
+	if h.Workspaces == nil {
+		// An empty list is [], not null.
+		return writeJSON([]godo.HostedAgentWorkspace{}, out)
+	}
+	return writeJSON(h.Workspaces, out)
+}
+
+func (h *HostedAgentWorkspace) Cols() []string {
+	return []string{"WorkspaceID", "Name", "State", "SizeLimitGiB", "BytesUsed", "AttachedSessionID", "LastSavedAt", "CreatedAt"}
+}
+
+func (h *HostedAgentWorkspace) ColMap() map[string]string {
+	return map[string]string{
+		"WorkspaceID":       "ID",
+		"Name":              "Name",
+		"State":             "State",
+		"SizeLimitGiB":      "Size Limit (GiB)",
+		"BytesUsed":         "Used",
+		"AttachedSessionID": "Attached Session",
+		"LastSavedAt":       "Last Saved",
+		"CreatedAt":         "Created",
+	}
+}
+
+func (h *HostedAgentWorkspace) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Workspaces))
+	for _, w := range h.Workspaces {
+		// Not saved yet is blank rather than a zero time.
+		lastSaved := ""
+		if w.LastSavedAt != nil && !w.LastSavedAt.Time.IsZero() {
+			lastSaved = w.LastSavedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
+		}
+		used := uint64(0)
+		if w.BytesUsed > 0 {
+			used = uint64(w.BytesUsed)
+		}
+		out = append(out, map[string]any{
+			"WorkspaceID":       w.WorkspaceID,
+			"Name":              w.Name,
+			"State":             string(w.State),
+			"SizeLimitGiB":      w.SizeLimitGiB,
+			"BytesUsed":         BytesToHumanReadableUnitBinary(used),
+			"AttachedSessionID": w.AttachedSessionID,
+			"LastSavedAt":       lastSaved,
+			"CreatedAt":         w.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		})
 	}
 	return out
@@ -592,6 +688,50 @@ func (h *HostedAgentSandboxSize) KV() []map[string]any {
 			"MemoryMB":         s.MemoryMB,
 			"PricePerHourUSD":  fmt.Sprintf("%0.5f", s.PricePerHourUSD),
 			"PricePerMonthUSD": fmt.Sprintf("%0.3f", s.PricePerMonthUSD),
+		})
+	}
+	return out
+}
+
+// HostedAgentRegion renders the per-team region catalog for
+// `doctl harness-runtime regions list`.
+type HostedAgentRegion struct {
+	Regions []godo.HostedAgentRegion
+}
+
+var _ Displayable = &HostedAgentRegion{}
+
+func (h *HostedAgentRegion) JSON(out io.Writer) error {
+	return writeJSON(h.Regions, out)
+}
+
+func (h *HostedAgentRegion) Cols() []string {
+	return []string{"Slug", "Default"}
+}
+
+func (h *HostedAgentRegion) ColMap() map[string]string {
+	return map[string]string{
+		"Slug":    "Slug",
+		"Default": "Default",
+	}
+}
+
+func (h *HostedAgentRegion) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Regions))
+	for _, r := range h.Regions {
+		// Marked rather than printed as a bare bool: the column answers "which
+		// one do I get if I omit --region", and a column of true/false reads as
+		// a property of each region instead of a choice among them.
+		marker := ""
+		if r.IsDefault {
+			marker = "*"
+		}
+		out = append(out, map[string]any{
+			"Slug":    r.Slug,
+			"Default": marker,
 		})
 	}
 	return out

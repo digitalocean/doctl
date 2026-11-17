@@ -191,6 +191,7 @@ func RunAuthLogin(c *CmdConfig) error {
 	if saveScope {
 		displayOAuthDefaultScopesSaved(c, scopes)
 	}
+	displayAgentSetupHint(c)
 
 	return nil
 }
@@ -355,6 +356,10 @@ func displayOAuthLoginSummary(c *CmdConfig, authContext string, token *oauth.Tok
 		template.Render(c.Out, `{{nl}}{{muted "This token renews automatically."}}{{nl}}`, nil)
 		template.Render(c.Out, `{{muted "Run"}} {{highlight "doctl auth login"}} {{muted "again to change its scopes, or if the session is revoked."}}{{nl}}`, nil)
 	}
+}
+
+func displayAgentSetupHint(c *CmdConfig) {
+	template.Render(c.Out, `{{nl}}{{muted "Paste this setup prompt into your agent:"}}{{nl}}  {{highlight .}}{{nl}}`, oauth.AgentSetupPrompt)
 }
 
 func displayOAuthDefaultScopesSaved(c *CmdConfig, scopes string) {

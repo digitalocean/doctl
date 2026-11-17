@@ -51,12 +51,19 @@ type MicroVMsService interface {
 	List(filter MicroVMListFilter) (MicroVMs, error)
 	Get(id string) (*MicroVM, error)
 	Create(req *godo.MicroVMCreateRequest) (*MicroVM, error)
+	Update(id string, req *godo.MicroVMUpdateRequest) (*MicroVM, error)
 	Pause(id string) (*MicroVM, error)
 	Resume(id string) (*MicroVM, error)
 	Delete(id string) error
 
 	AddURL(microVMID string, req *godo.MicroVMURLCreateRequest) (*godo.MicroVMURL, error)
 	RemoveURL(microVMID, urlID string) error
+
+	// CreateAccessToken returns the token value once. ListAccessTokens never
+	// returns it.
+	CreateAccessToken(microVMID string, req *godo.MicroVMAccessTokenCreateRequest) (*godo.MicroVMAccessTokenCreated, error)
+	ListAccessTokens(microVMID string) ([]godo.MicroVMAccessToken, error)
+	RevokeAccessToken(microVMID, tokenID string) error
 
 	ListCheckpoints(microVMID string) (MicroVMCheckpoints, error)
 	CreateCheckpoint(microVMID string, req *godo.MicroVMCheckpointCreateRequest) (*MicroVMCheckpoint, error)
@@ -139,6 +146,14 @@ func (s *microVMsService) Create(req *godo.MicroVMCreateRequest) (*MicroVM, erro
 	return &MicroVM{MicroVM: md}, nil
 }
 
+func (s *microVMsService) Update(id string, req *godo.MicroVMUpdateRequest) (*MicroVM, error) {
+	md, _, err := s.client.MicroVMs.Update(context.TODO(), id, req)
+	if err != nil {
+		return nil, err
+	}
+	return &MicroVM{MicroVM: md}, nil
+}
+
 func (s *microVMsService) Pause(id string) (*MicroVM, error) {
 	md, _, err := s.client.MicroVMs.Pause(context.TODO(), id)
 	if err != nil {
@@ -170,6 +185,27 @@ func (s *microVMsService) AddURL(microVMID string, req *godo.MicroVMURLCreateReq
 
 func (s *microVMsService) RemoveURL(microVMID, urlID string) error {
 	_, err := s.client.MicroVMs.RemoveURL(context.TODO(), microVMID, urlID)
+	return err
+}
+
+func (s *microVMsService) CreateAccessToken(microVMID string, req *godo.MicroVMAccessTokenCreateRequest) (*godo.MicroVMAccessTokenCreated, error) {
+	t, _, err := s.client.MicroVMs.CreateAccessToken(context.TODO(), microVMID, req)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func (s *microVMsService) ListAccessTokens(microVMID string) ([]godo.MicroVMAccessToken, error) {
+	list, _, err := s.client.MicroVMs.ListAccessTokens(context.TODO(), microVMID)
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (s *microVMsService) RevokeAccessToken(microVMID, tokenID string) error {
+	_, err := s.client.MicroVMs.RevokeAccessToken(context.TODO(), microVMID, tokenID)
 	return err
 }
 

@@ -1036,6 +1036,10 @@ const (
 	// ArgAgentAuthNoBrowser prints the provider authorization URL instead of opening a browser.
 	ArgAgentAuthNoBrowser = "no-browser"
 
+	// ArgAgentNoWait makes `agents update --spec` return once the server has
+	// accepted the config update, without waiting for it to finish. Same flag
+	// string as ArgAgentAuthNoWait on `auth`.
+	ArgAgentNoWait = "no-wait"
 	// ArgAgentAuthNoWait prints the authorization URL and exits without polling for completion.
 	ArgAgentAuthNoWait = "no-wait"
 
@@ -1059,6 +1063,10 @@ const (
 
 	// ArgAgentForwardAddress is the local bind address for port-forward listeners.
 	ArgAgentForwardAddress = "address"
+	// ArgAgentAutomate is how port-forward answers Agent Canvas's Automate tab:
+	// confirm (ask in the terminal before a trigger is created, enabled or run),
+	// allow (no questions) or off (the tab is not served).
+	ArgAgentAutomate = "automate"
 	// ArgAgentCanvasPort is the local port the canvas proxy listens on (0 = any free port).
 	ArgAgentCanvasPort = "port"
 	// ArgAgentCanvasOpen opens the local Canvas URL in the default browser.
@@ -1161,6 +1169,20 @@ const (
 	// team's prepayment balance is topped off after a low-balance pause. Set at
 	// create, or changed later on an existing session with `agents update`.
 	ArgAgentResumeOnTopoff = "resume-on-topoff"
+
+	// ArgAgentWorkspace names the persistent workspace a new session attaches.
+	// Per-session: never part of an agents.yaml manifest.
+	ArgAgentWorkspace = "workspace"
+
+	// ArgAgentWorkspaceSizeLimitGiB is the size, in GiB, of a new persistent workspace.
+	ArgAgentWorkspaceSizeLimitGiB = "size-limit-gib"
+
+	// ArgAgentWorkspaceState filters `workspace list` to one workspace state.
+	ArgAgentWorkspaceState = "state"
+
+	// ArgAgentIdempotencyKey makes a repeated `workspace create` return the
+	// first workspace instead of creating another.
+	ArgAgentIdempotencyKey = "idempotency-key"
 
 	// Gradient AI simulation args
 
@@ -1415,4 +1437,11 @@ const (
 	ArgInsightsResourceLogs = "logs"
 	// ArgInsightsResourceTraces changes traces enablement for an Insights resource.
 	ArgInsightsResourceTraces = "traces"
+
+	// ArgInsightsDashboardSpecFile is a path to a dashboard spec document.
+	ArgInsightsDashboardSpecFile = "spec-file"
+	// ArgInsightsDashboardSort selects the field used to sort Insights dashboards.
+	ArgInsightsDashboardSort = "sort"
+	// ArgInsightsDashboardSortDirection selects the Insights dashboard sort direction.
+	ArgInsightsDashboardSortDirection = "sort-direction"
 )

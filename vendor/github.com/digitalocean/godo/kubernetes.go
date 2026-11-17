@@ -103,13 +103,16 @@ type KubernetesClusterCreateRequest struct {
 	// must already have a NAT gateway attached, or the create request fails with a
 	// 422. This can only be set at creation time.
 	IsolatedWorkers bool `json:"isolated_workers,omitempty"`
-	// MaxPodsPerNode sets the maximum number of pods per worker node. Supported
-	// values are 110, 220 and 450. When omitted, the default is 110. This can only
-	// be set at creation time.
+	// MaxPodsPerNode sets the maximum number of pods per worker node. Zero leaves
+	// it unset and the API applies its default. See the API reference for
+	// supported values. This can only be set at creation time.
 	MaxPodsPerNode int `json:"max_pods_per_node,omitempty"`
 	// GPUOperatorReady controls whether to launch GPU nodes in the cluster with images without GPU drivers.
 	// Mutually exclusive with other GPU-related cluster options, such as NvidiaGpuDraDriver and AmdGpuDraDriver.
 	GPUOperatorReady bool `json:"gpu_operator_ready,omitempty"`
+	// Insights is the telemetry the customer opts in to for the cluster.
+	// It is only accepted when creating a cluster and is not returned in responses.
+	Insights *KubernetesInsightsTelemetryOptIn `json:"insights,omitempty"`
 }
 
 // KubernetesClusterUpdateRequest represents a request to update a Kubernetes cluster.
@@ -386,6 +389,14 @@ type KubernetesRdmaSharedDevicePlugin struct {
 // KubernetesCorednsAutoscaler represents information about the CoreDNS Cluster Proportional Autoscaler cluster plugin.
 type KubernetesCorednsAutoscaler struct {
 	Enabled *bool `json:"enabled"`
+}
+
+// KubernetesInsightsTelemetryOptIn represents the Insights telemetry a customer opts in to
+// when creating a Kubernetes cluster. It is create-only and is never returned by the API.
+type KubernetesInsightsTelemetryOptIn struct {
+	// Logs controls whether the cluster's logs are sent to Insights. A nil value
+	// records no choice, while a pointer to false records an explicit opt-out.
+	Logs *bool `json:"logs,omitempty"`
 }
 
 // KubernetesP2pOciRegistry represents information about the Peer-to-peer OCI registry cluster plugin.

@@ -1,5 +1,47 @@
 # Change Log
 
+## [1.242.0] - 2026-11-17
+
+- #1206 - @sdharavath - hosted agents: decode trigger pause reason and waiting execution fields (MARSOHS-2624)
+
+## [1.241.0] - 2026-11-16
+
+- #1229 - @tgillam-do - Add Action Gateway provider credential APIs
+- #1227 - @rohinsuri - Add Insights logs opt-in to registry create
+
+## [1.240.0] - 2026-11-13
+
+- #1222 - @sk09-dev - hosted agents: trigger run-now, keep_session_awake, webhook event filter, list by session
+
+## [1.239.0] - 2026-11-12
+
+- #1220 - @hmooda-do - hosted agents: add UpdateSessionConfig for live session config updates
+
+## [1.238.0] - 2026-11-12
+
+- #1219 - @kwadhwa-source - microvms: add Update for name, tags, and auto_pause (MDROP-719)
+- #1209 - @amandhaw - hosted agents: say how a returned region slug is used
+
+## [1.237.0] - 2026-11-10
+
+- #1210 - @vsailokesh-lab - get, list catalog v2 api
+- #1186 - @achiang-do - feat(agentplatform): add turn_type for model evaluation metrics
+- #1212 - @bbatha - Add Action Gateway endpoint and endpoint version APIs
+- #1200 - @kgautam676 - Adding insights to kubernetes Create cluster type
+- #1199 - @amandhaw - hosted agents: add ListRegions
+
+## [1.236.0] - 2026-11-04
+
+- #1197 - @apinonformoso - microvms: add access token create, list, and revoke
+- #1207 - @DO-rrao - release v1.235.0
+- #1204 - @jkosanam - hosted agents: always encode resume_on_topoff on sessions (MARSOHS-2563)
+- #1201 - @adityasingh-beep - COBS-1891: Add Insights dashboard support
+
+## [1.235.0] - 2026-11-04
+
+- #1204 - @jkosanam - hosted agents: always encode resume_on_topoff on sessions (MARSOHS-2563)
+- #1201 - @adityasingh-beep - COBS-1891: Add Insights dashboard support
+
 ## [1.234.0] - 2026-11-02
 
 - #1198 - @BadhriDO - hosted agents: add ReconnectConnection (AR-3404, MARSOHS-2177)
