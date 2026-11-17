@@ -300,6 +300,9 @@ const (
 	// Deprecated: Use HostedAgentSessionPauseReasonZeroBalance. Servers now return
 	// "zero_balance"; this constant is kept for backward compatibility with older API responses.
 	HostedAgentSessionPauseReasonLowBalance HostedAgentSessionPauseReason = "low_balance"
+	// HostedAgentSessionPauseReasonTrigger is a pause recorded after a reuse
+	// trigger firing, rather than one the customer requested.
+	HostedAgentSessionPauseReasonTrigger HostedAgentSessionPauseReason = "trigger"
 )
 
 // HostedAgentProviderAuthState tracks OAuth authorization for an external provider.

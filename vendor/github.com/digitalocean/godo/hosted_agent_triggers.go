@@ -102,6 +102,17 @@ const (
 	HostedAgentTriggerExecutionStatusFailed    HostedAgentTriggerExecutionStatus = "failed"
 )
 
+// HostedAgentTriggerExecutionStatusReason is why a non-terminal execution is
+// held. The API may add reasons, so an unrecognized value stays an opaque
+// string. Status itself stays running while one of these is set.
+type HostedAgentTriggerExecutionStatusReason string
+
+const (
+	// HostedAgentTriggerExecutionWaitingForBoundSession means a reuse firing is
+	// waiting for its bound session to pause. Status stays running.
+	HostedAgentTriggerExecutionWaitingForBoundSession HostedAgentTriggerExecutionStatusReason = "waiting_for_bound_session"
+)
+
 // HostedAgentWebhookSignatureScheme is how an external system authenticates a delivery.
 type HostedAgentWebhookSignatureScheme string
 
@@ -272,17 +283,19 @@ type HostedAgentTriggerRotateSecretResponse struct {
 
 // HostedAgentTriggerExecution is one row per firing.
 type HostedAgentTriggerExecution struct {
-	ExecutionID     string                            `json:"execution_id,omitempty"`
-	TriggerID       string                            `json:"trigger_id,omitempty"`
-	Status          HostedAgentTriggerExecutionStatus `json:"status,omitempty"`
-	SessionID       string                            `json:"session_id,omitempty"`
-	RunID           string                            `json:"run_id,omitempty"`
-	FailureReason   string                            `json:"failure_reason,omitempty"`
-	CreatedAt       Timestamp                         `json:"created_at,omitempty"`
-	UpdatedAt       Timestamp                         `json:"updated_at,omitempty"`
-	Payload         string                            `json:"payload,omitempty"`
-	OutputText      string                            `json:"output_text,omitempty"`
-	OutputTruncated bool                              `json:"output_truncated,omitempty"`
+	ExecutionID     string                                  `json:"execution_id,omitempty"`
+	TriggerID       string                                  `json:"trigger_id,omitempty"`
+	Status          HostedAgentTriggerExecutionStatus       `json:"status,omitempty"`
+	SessionID       string                                  `json:"session_id,omitempty"`
+	RunID           string                                  `json:"run_id,omitempty"`
+	StatusReason    HostedAgentTriggerExecutionStatusReason `json:"status_reason,omitempty"`
+	StatusMessage   string                                  `json:"status_message,omitempty"`
+	FailureReason   string                                  `json:"failure_reason,omitempty"`
+	CreatedAt       Timestamp                               `json:"created_at,omitempty"`
+	UpdatedAt       Timestamp                               `json:"updated_at,omitempty"`
+	Payload         string                                  `json:"payload,omitempty"`
+	OutputText      string                                  `json:"output_text,omitempty"`
+	OutputTruncated bool                                    `json:"output_truncated,omitempty"`
 }
 
 // HostedAgentTriggerExecutionListOptions specifies optional execution list filters.
