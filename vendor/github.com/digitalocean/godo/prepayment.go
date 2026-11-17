@@ -38,6 +38,9 @@ type PrepaymentStatus struct {
 	Blocked             bool   `json:"blocked"`
 	Eligible            bool   `json:"eligible"`
 	MonthToDateBalance  string `json:"month_to_date_balance"`
+	// AvailableCredit is the credit available for Inference & Agents: inference,
+	// trial, and available subscription credit. Empty when the token lacks billing read access.
+	AvailableCredit string `json:"available_credit,omitempty"`
 }
 
 // PrepaymentConfigResponse is the response from the public prepayment config endpoint.
