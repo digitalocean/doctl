@@ -22,10 +22,25 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// defaultDOSIModel is the DigitalOcean Serverless Inference catalogue id
-// injected when a create path has no model/provider yet (provider-less
-// manifests, blank vendor-key → DO SI, and --harness opencode without --model).
+// defaultDOSIModel is the shared DigitalOcean Serverless Inference catalogue
+// id used when a create path has no model/provider yet and the harness has no
+// more specific default (see defaultModelForHarness).
 const defaultDOSIModel = "kimi-k3"
+
+// defaultModelForHarness returns the DigitalOcean Inference catalogue id a
+// harness gets when no model is supplied. Harness-specific catalogue defaults
+// (openhands, hermes) win; everything else falls back to defaultDOSIModel so
+// --harness and provider-less file/config creates stay aligned.
+func defaultModelForHarness(adapter string) string {
+	switch strings.ToLower(strings.TrimSpace(adapter)) {
+	case openHandsAgentName, "open-hands":
+		return defaultOpenHandsModel
+	case hermesAgentName:
+		return defaultHermesModel
+	default:
+		return defaultDOSIModel
+	}
+}
 
 // blankableVendorKeyEnvs are guest inference keys that may be left blank to
 // fall back to DigitalOcean Serverless Inference. MiniMax is intentionally
@@ -140,8 +155,8 @@ func manifestReferencesVendorKey(manifest []byte, name string) bool {
 	return false
 }
 
-// injectDefaultDOSIModel sets env.HARNESS_INFERENCE_MODEL to defaultDOSIModel
-// when missing. Never overwrites an existing model.
+// injectDefaultDOSIModel sets env.HARNESS_INFERENCE_MODEL from
+// defaultModelForHarness when missing. Never overwrites an existing model.
 func injectDefaultDOSIModel(manifest []byte) ([]byte, error) {
 	var doc map[string]any
 	if err := yaml.Unmarshal(manifest, &doc); err != nil {
@@ -169,7 +184,12 @@ func injectDefaultDOSIModel(manifest []byte) ([]byte, error) {
 	if strings.TrimSpace(env[harnessInferenceModelEnv]) != "" {
 		return manifest, nil
 	}
-	env[harnessInferenceModelEnv] = defaultDOSIModel
+
+	adapter := ""
+	if parsed, err := parseAgentManifest(manifest); err == nil && parsed != nil {
+		adapter = parsed.adapter()
+	}
+	env[harnessInferenceModelEnv] = defaultModelForHarness(adapter)
 
 	outEnv := make(map[string]any, len(env))
 	for k, v := range env {
