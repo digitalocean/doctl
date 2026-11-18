@@ -80,12 +80,12 @@ func TestRunAgentsCreate_ResumeOnTopoff(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(
+			CreateSessionFromManifest(
 				gomock.Any(),
 				&godo.HostedAgentManifestCreateOptions{ResumeOnTopoff: true},
 			).
 			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultDOSIModel)
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID:      "sess_topoff",
@@ -127,10 +127,11 @@ func TestRunAgentsCreate_ResumeOnTopoffNotWrittenIntoManifest(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				assert.NotContains(t, string(manifest), "resume_on_topoff")
 				assert.NotContains(t, string(manifest), "resumeOnTopoff")
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				require.NotNil(t, opt)
 				assert.True(t, opt.ResumeOnTopoff)
 				return &do.HostedAgentSession{

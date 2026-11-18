@@ -79,7 +79,7 @@ func TestRunAgentsLaunch_ManifestArgCreates(t *testing.T) {
 		// No ListSessions expectation: reading this as a session name would
 		// have to look one up, and gomock fails the test if it does.
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(nil, assertCalledErr)
 
 		config.Args = []string{path}
@@ -193,7 +193,7 @@ func TestRunAgentsLaunch_PrintsAutoCreatedConfigNotice(t *testing.T) {
 			},
 		}
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(ready, nil)
 		tm.hostedAgents.EXPECT().
 			GetSession("sess_launch").
@@ -337,14 +337,37 @@ func TestRunAgentsCreate_DryRunPrintsManifestWithoutCreating(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "printed-only")
 		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
 
-		require.NoError(t, RunAgentsCreate(config))
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentsCreate(config))
+		})
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(buf.Bytes(), &doc), "output must be valid YAML so it can be piped")
 		assert.Equal(t, "printed-only", doc["name"])
-		assert.Contains(t, buf.String(), harnessInferenceModelEnv+": "+defaultDOSIModel,
-			"dry-run must show the same DO SI default the real create would send")
+		assert.NotContains(t, buf.String(), harnessInferenceModelEnv,
+			"opencode dry-run must keep the free-model path (no DO SI default)")
 		assert.True(t, strings.HasSuffix(buf.String(), "\n"))
+		assert.NotContains(t, stderr, "DigitalOcean Serverless Inference")
+	})
+}
+
+func TestRunAgentsCreate_DryRunOpenHandsPrintsDOSINotice(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "openhands")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "printed-oh")
+		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
+
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentsCreate(config))
+		})
+
+		assert.Contains(t, buf.String(), harnessInferenceModelEnv+": "+defaultOpenHandsModel)
+		assert.NotContains(t, buf.String(), "DigitalOcean Serverless Inference",
+			"DO SI notice must stay on stderr so piped YAML stays clean")
+		assert.Contains(t, stderr, defaultOpenHandsModel)
+		assert.Contains(t, stderr, "DigitalOcean Serverless Inference")
 	})
 }
 
@@ -359,7 +382,7 @@ func TestRunAgentsCreate_DryRunBlankClaudeRewritesToDOSI(t *testing.T) {
 		require.NoError(t, RunAgentsCreate(config))
 		out := buf.String()
 		assert.NotContains(t, out, anthropicAPIKeyEnv)
-		assert.Contains(t, out, harnessInferenceModelEnv+": "+defaultDOSIModel)
+		assert.Contains(t, out, harnessInferenceModelEnv+": "+defaultClaudeCodeModel)
 	})
 }
 
@@ -1122,7 +1145,7 @@ func TestRunAgentsCreate_OnHITLWatchesPastReady(t *testing.T) {
 			},
 		}
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			CreateSessionFromManifest(gomock.Any(), nil).
 			Return(ready, nil)
 		tm.hostedAgents.EXPECT().
 			GetSession("sess_x").

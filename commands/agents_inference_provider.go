@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -25,18 +26,49 @@ import (
 // defaultDOSIModel is the shared DigitalOcean Serverless Inference catalogue
 // id used when a create path has no model/provider yet and the harness has no
 // more specific default (see defaultModelForHarness).
-const defaultDOSIModel = "kimi-k3"
+const defaultDOSIModel = "kimi-k3.1-pro"
+
+// defaultClaudeCodeModel is the DO Inference catalogue id used when
+// claude-code falls back to DigitalOcean Serverless Inference (blank /
+// missing ANTHROPIC_API_KEY, or a provider-less claude-code manifest).
+const defaultClaudeCodeModel = "anthropic-claude-4.5-sonnet"
+
+// defaultCodexModel is the DO Inference catalogue id used when coding codex
+// falls back to DigitalOcean Serverless Inference (blank / missing
+// OPENAI_API_KEY, or a provider-less codex manifest). Not used for
+// codex-agentapi, which still requires a real OpenAI key.
+const defaultCodexModel = "openai-gpt-5.5"
 
 // defaultModelForHarness returns the DigitalOcean Inference catalogue id a
 // harness gets when no model is supplied. Harness-specific catalogue defaults
-// (openhands, hermes) win; everything else falls back to defaultDOSIModel so
-// --harness and provider-less file/config creates stay aligned.
+// win. OpenCode returns "" so create keeps OpenCode's free-model path unless
+// the user passes --model / HARNESS_INFERENCE_MODEL. Unknown adapters fall
+// back to defaultDOSIModel.
 func defaultModelForHarness(adapter string) string {
 	switch strings.ToLower(strings.TrimSpace(adapter)) {
 	case openHandsAgentName, "open-hands":
 		return defaultOpenHandsModel
 	case hermesAgentName:
 		return defaultHermesModel
+	case claudeCodeAgentName, "claude":
+		return defaultClaudeCodeModel
+	case codexAgentName:
+		return defaultCodexModel
+	case "opencode", "open-code":
+		return ""
+	default:
+		return defaultDOSIModel
+	}
+}
+
+// defaultModelForBlankableVendorKey is the model named in the leave-blank
+// vendor-key prompt, matching the harness that key usually belongs to.
+func defaultModelForBlankableVendorKey(name string) string {
+	switch name {
+	case anthropicAPIKeyEnv:
+		return defaultClaudeCodeModel
+	case openAIAPIKeyEnv:
+		return defaultCodexModel
 	default:
 		return defaultDOSIModel
 	}
@@ -70,7 +102,7 @@ func defaultPromptOptionalVendorKey(name string) (string, error) {
 	fmt.Fprintf(os.Stderr, "%s %s\n",
 		colorize("•", colHighlight),
 		fmt.Sprintf("%s is not set — enter it, or leave blank to use DigitalOcean Serverless Inference (%s)",
-			boldColor(name, colHighlight), defaultDOSIModel))
+			boldColor(name, colHighlight), defaultModelForBlankableVendorKey(name)))
 
 	opts := []input.Option{}
 	if isSecretEnvVarName(name) {
@@ -189,7 +221,13 @@ func injectDefaultDOSIModel(manifest []byte) ([]byte, error) {
 	if parsed, err := parseAgentManifest(manifest); err == nil && parsed != nil {
 		adapter = parsed.adapter()
 	}
-	env[harnessInferenceModelEnv] = defaultModelForHarness(adapter)
+	model := defaultModelForHarness(adapter)
+	if model == "" {
+		// OpenCode (and any future harness with no DO SI default) leaves the
+		// guest on its own free / built-in models.
+		return manifest, nil
+	}
+	env[harnessInferenceModelEnv] = model
 
 	outEnv := make(map[string]any, len(env))
 	for k, v := range env {
@@ -297,6 +335,53 @@ func stripVendorKeyFromManifest(manifest []byte, name string) ([]byte, error) {
 func isBareSandboxManifest(manifest []byte) bool {
 	return manifestAgentIs(manifest, bareSandboxAgent) ||
 		manifestAgentIs(manifest, bareSandboxAgentAlt)
+}
+
+// harnessInferenceModelFromManifest returns the trimmed HARNESS_INFERENCE_MODEL
+// value from a flat or legacy agentspec document, or "" when unset.
+func harnessInferenceModelFromManifest(manifest []byte) string {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return ""
+	}
+	_, legacy := doc["apiVersion"]
+	env, _, _, _ := extractManifestEnvAndSecrets(doc, legacy)
+	return strings.TrimSpace(env[harnessInferenceModelEnv])
+}
+
+// maybePrintDefaultDOSINotice tells the user when create resolved onto a
+// harness catalogue default model with DigitalOcean Serverless Inference
+// (managed key). Silent when a vendor/BYOK key is present or the model was
+// overridden away from the harness default. Writes to stderr when w is nil.
+func maybePrintDefaultDOSINotice(w io.Writer, manifest []byte) {
+	if !needsManagedModelAccessKey(manifest) {
+		return
+	}
+	model := harnessInferenceModelFromManifest(manifest)
+	if model == "" {
+		return
+	}
+	adapter := ""
+	if parsed, err := parseAgentManifest(manifest); err == nil && parsed != nil {
+		adapter = parsed.adapter()
+	}
+	if model != defaultModelForHarness(adapter) {
+		return
+	}
+	if w == nil {
+		w = os.Stderr
+	}
+	printDefaultDOSINotice(w, model)
+}
+
+func printDefaultDOSINotice(w io.Writer, model string) {
+	stylingEnabled = detectStyling()
+	fmt.Fprintf(w, "%s %s\n",
+		colorize("•", colHighlight),
+		fmt.Sprintf("Using default model %s with DigitalOcean Serverless Inference (billed to your DigitalOcean account).",
+			boldColor(model, colHighlight)))
+	fmt.Fprintf(w, "  %s\n",
+		colorize("To use your own OpenAI or Anthropic key instead, create a new environment with OPENAI_API_KEY or ANTHROPIC_API_KEY.", colMuted))
 }
 
 // resolveInferenceProvider rewrites a create-time manifest so every non-sandbox
