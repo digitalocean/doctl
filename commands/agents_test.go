@@ -274,7 +274,7 @@ func TestCreateNeverAttaches(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(&do.HostedAgentSession{
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_no_attach",
@@ -321,7 +321,7 @@ func TestRunAgentsCreate_JSONHonoursPrompt(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(&do.HostedAgentSession{
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_json_prompt",
@@ -364,7 +364,7 @@ func TestRunAgentsCreate_JSONWithoutPromptSkipsWait(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(&do.HostedAgentSession{
 				HostedAgentSession: &godo.HostedAgentSession{
 					SessionID: "sess_json_nowait",
@@ -456,9 +456,10 @@ func TestRunAgentsCreate_DiscoversAgentsYAML(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), gomock.Any()).
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				assert.Contains(t, string(manifest), "agent: opencode")
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID: "sess-discovered",
@@ -584,9 +585,9 @@ func TestRunAgentsCreate(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultDOSIModel)
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID: "sess_test",
@@ -665,14 +666,14 @@ func TestRunAgentsCreate_WithName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		// The manifest sent to the server must carry metadata.name = the flag.
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				meta, ok := doc["metadata"].(map[any]any)
 				assert.True(t, ok, "metadata should be a mapping")
 				assert.Equal(t, "my-session", meta["name"])
-				assert.Contains(t, string(manifest), harnessInferenceModelEnv+": "+defaultDOSIModel)
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
@@ -828,12 +829,13 @@ func TestRunAgentsCreate_FlatWithName(t *testing.T) {
 		// The manifest sent to the server must carry a top-level name (flat
 		// format), not the legacy metadata.name.
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				assert.Equal(t, "my-session", doc["name"])
 				assert.NotContains(t, doc, "metadata")
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
@@ -1837,7 +1839,7 @@ func TestRunAgentsCreate_SkillsEnvSizeCapError(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
+			CreateSessionFromManifest(gomock.Any(), nil).
 			Return(nil, er)
 
 		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)

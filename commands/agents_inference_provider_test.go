@@ -14,12 +14,85 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMaybePrintDefaultDOSINotice(t *testing.T) {
+	t.Run("prints when harness default model uses DO SI", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "openhands"})
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		maybePrintDefaultDOSINotice(&buf, raw)
+
+		out := buf.String()
+		assert.Contains(t, out, defaultOpenHandsModel)
+		assert.Contains(t, out, "DigitalOcean Serverless Inference")
+		assert.Contains(t, out, "billed to your DigitalOcean account")
+		assert.Contains(t, out, "OPENAI_API_KEY")
+		assert.Contains(t, out, "ANTHROPIC_API_KEY")
+		assert.Contains(t, out, "create a new environment")
+	})
+
+	t.Run("silent for opencode free-model path", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
+		require.NoError(t, err)
+		raw, err = resolveInferenceProvider(raw, false)
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		maybePrintDefaultDOSINotice(&buf, raw)
+		assert.Empty(t, buf.String())
+	})
+
+	t.Run("prints claude-code blank-vendor default", func(t *testing.T) {
+		_ = os.Unsetenv(anthropicAPIKeyEnv)
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "claude-code"})
+		require.NoError(t, err)
+		raw, err = resolveInferenceProvider(raw, false)
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		maybePrintDefaultDOSINotice(&buf, raw)
+		assert.Contains(t, buf.String(), defaultClaudeCodeModel)
+		assert.Contains(t, buf.String(), "DigitalOcean Serverless Inference")
+	})
+
+	t.Run("silent when vendor key is provided", func(t *testing.T) {
+		t.Setenv(anthropicAPIKeyEnv, "sk-ant-real")
+		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "claude-code"})
+		require.NoError(t, err)
+		raw, err = resolveInferenceProvider(raw, false)
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		maybePrintDefaultDOSINotice(&buf, raw)
+		assert.Empty(t, buf.String())
+	})
+
+	t.Run("silent when --model overrides the harness default", func(t *testing.T) {
+		raw, err := buildHarnessManifest(harnessManifestOpts{
+			harness: "openhands",
+			model:   "anthropic-claude-4.5-sonnet",
+		})
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		maybePrintDefaultDOSINotice(&buf, raw)
+		assert.Empty(t, buf.String())
+	})
+
+	t.Run("silent for bare sandbox", func(t *testing.T) {
+		var buf bytes.Buffer
+		maybePrintDefaultDOSINotice(&buf, []byte("harness: none\n"))
+		assert.Empty(t, buf.String())
+	})
+}
 
 func TestHasInferenceProvider(t *testing.T) {
 	cases := []struct {
@@ -43,19 +116,24 @@ func TestHasInferenceProvider(t *testing.T) {
 }
 
 func TestDefaultModelForHarness(t *testing.T) {
-	assert.Equal(t, defaultDOSIModel, defaultModelForHarness("opencode"))
+	assert.Equal(t, "", defaultModelForHarness("opencode"), "opencode keeps free models; no DO SI default")
+	assert.Equal(t, "", defaultModelForHarness("open-code"))
 	assert.Equal(t, defaultOpenHandsModel, defaultModelForHarness("openhands"))
 	assert.Equal(t, defaultOpenHandsModel, defaultModelForHarness("open-hands"))
 	assert.Equal(t, defaultHermesModel, defaultModelForHarness("hermes"))
-	assert.Equal(t, defaultDOSIModel, defaultModelForHarness("claude-code"))
+	assert.Equal(t, defaultClaudeCodeModel, defaultModelForHarness("claude-code"))
+	assert.Equal(t, defaultClaudeCodeModel, defaultModelForHarness("claude"))
+	assert.Equal(t, defaultCodexModel, defaultModelForHarness("codex"))
 	assert.Equal(t, defaultDOSIModel, defaultModelForHarness(""))
 }
 
 func TestInjectDefaultDOSIModel(t *testing.T) {
-	t.Run("injects shared DO SI default for opencode", func(t *testing.T) {
-		out, err := injectDefaultDOSIModel([]byte("harness: opencode\n"))
+	t.Run("skips opencode so free models stay available", func(t *testing.T) {
+		in := []byte("harness: opencode\n")
+		out, err := injectDefaultDOSIModel(in)
 		require.NoError(t, err)
-		assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultDOSIModel)
+		assert.NotContains(t, string(out), harnessInferenceModelEnv)
+		assert.NotContains(t, string(out), defaultDOSIModel)
 	})
 
 	t.Run("openhands file gets the openhands catalogue default", func(t *testing.T) {
@@ -71,6 +149,18 @@ func TestInjectDefaultDOSIModel(t *testing.T) {
 		assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultHermesModel)
 	})
 
+	t.Run("claude-code file gets the claude catalogue default", func(t *testing.T) {
+		out, err := injectDefaultDOSIModel([]byte("harness: claude-code\n"))
+		require.NoError(t, err)
+		assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultClaudeCodeModel)
+	})
+
+	t.Run("codex file gets the codex catalogue default", func(t *testing.T) {
+		out, err := injectDefaultDOSIModel([]byte("harness: codex\n"))
+		require.NoError(t, err)
+		assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultCodexModel)
+	})
+
 	t.Run("does not overwrite existing model", func(t *testing.T) {
 		in := []byte("harness: opencode\nenv:\n  HARNESS_INFERENCE_MODEL: already-set\n")
 		out, err := injectDefaultDOSIModel(in)
@@ -80,8 +170,16 @@ func TestInjectDefaultDOSIModel(t *testing.T) {
 	})
 }
 
-func TestResolveInferenceProvider_ProviderlessInject(t *testing.T) {
+func TestResolveInferenceProvider_OpencodeKeepsFreeModelPath(t *testing.T) {
 	out, err := resolveInferenceProvider([]byte("harness: opencode\n"), false)
+	require.NoError(t, err)
+	assert.False(t, needsManagedModelAccessKey(out))
+	assert.NotContains(t, string(out), harnessInferenceModelEnv)
+	assert.NotContains(t, string(out), defaultDOSIModel)
+}
+
+func TestResolveInferenceProvider_ProviderlessUnknownHarnessInjectsDOSI(t *testing.T) {
+	out, err := resolveInferenceProvider([]byte("harness: custom-agent\n"), false)
 	require.NoError(t, err)
 	assert.True(t, needsManagedModelAccessKey(out), "injection must precede the mint predicate")
 	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultDOSIModel)
@@ -118,7 +216,7 @@ func TestResolveInferenceProvider_BlankVendorToDOSI(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotContains(t, string(out), anthropicAPIKeyEnv)
-	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultDOSIModel)
+	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultClaudeCodeModel)
 	assert.True(t, needsManagedModelAccessKey(out))
 }
 
@@ -177,11 +275,18 @@ func TestResolveInferenceProvider_PromptBlankFallsBackToDOSI(t *testing.T) {
 	out, err := resolveInferenceProvider(raw, true)
 	require.NoError(t, err)
 	assert.True(t, needsManagedModelAccessKey(out))
-	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultDOSIModel)
+	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultCodexModel)
 }
 
-func TestBuildHarnessManifest_OpencodeDefaultsToDOSI(t *testing.T) {
+func TestBuildHarnessManifest_OpencodeOmitsDOSIDefault(t *testing.T) {
 	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), harnessInferenceModelEnv)
+	assert.False(t, needsManagedModelAccessKey(raw))
+}
+
+func TestBuildHarnessManifest_OpencodeModelOptsIntoDOSI(t *testing.T) {
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode", model: defaultDOSIModel})
 	require.NoError(t, err)
 	assert.Contains(t, string(raw), harnessInferenceModelEnv+": "+defaultDOSIModel)
 	assert.True(t, needsManagedModelAccessKey(raw))

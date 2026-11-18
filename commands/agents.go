@@ -788,10 +788,12 @@ const agentTemplateFlagDesc = "Sandbox template the session runs on. Either a pl
 // parameter because it is agent configuration, shareable through an Agent
 // Config, unlike the per-session spending consent --resume-on-topoff carries.
 const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness session, written as the manifest's env " +
-	harnessInferenceModelEnv + " (for example " + defaultDOSIModel + " or anthropic-claude-4.5-sonnet). " +
-	"--harness opencode defaults to " + defaultDOSIModel + "; --harness openhands and --harness hermes default to " +
-	defaultOpenHandsModel + " and " + defaultHermesModel + ". " +
-	"--harness claude-code and --harness codex prompt for a vendor key (leave blank to use DigitalOcean Serverless Inference). " +
+	harnessInferenceModelEnv + " (for example " + defaultDOSIModel + " or " + defaultClaudeCodeModel + "). " +
+	"--harness opencode has no default (OpenCode free models); pass --model to opt into DigitalOcean Serverless Inference. " +
+	"--harness openhands and --harness hermes default to " +
+	defaultOpenHandsModel + " and " + defaultHermesModel + "; " +
+	"--harness claude-code and --harness codex default to " + defaultClaudeCodeModel + " and " + defaultCodexModel +
+	" when the vendor key is left blank. " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
 const agentPermissionFlagDesc = "Tool-permission default for a --harness session: allow (run tools without asking), " +
@@ -1372,6 +1374,7 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	if err != nil {
 		return err
 	}
+	maybePrintDefaultDOSINotice(os.Stderr, raw)
 
 	// The real create path expands ${VAR} inside startSessionFromRawManifest;
 	// do it here too so the output matches what the server would have received.

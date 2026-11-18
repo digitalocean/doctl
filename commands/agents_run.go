@@ -532,8 +532,11 @@ type harnessManifestOpts struct {
 	template   string
 	// model is the DigitalOcean Inference model id written as the manifest's
 	// env HARNESS_INFERENCE_MODEL. Empty leaves the key out, except for
-	// opencode (defaultDOSIModel), openhands (defaultOpenHandsModel), and
-	// hermes (defaultHermesModel).
+	// harnesses that get a catalogue default via defaultModelForHarness
+	// (claude-code → defaultClaudeCodeModel, coding codex → defaultCodexModel,
+	// openhands / hermes → their catalogue ids). OpenCode intentionally has
+	// no default so free models stay available. Vendor-key harnesses only
+	// write the model after blank-key rewrite.
 	model string
 }
 
@@ -676,13 +679,9 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		doc.Secrets = map[string]string{
 			minimaxAPIKeyEnv: "${" + minimaxAPIKeyEnv + "}",
 		}
-	case agent == "opencode":
-		// Default onto DigitalOcean Serverless Inference when --model is omitted
-		// so create always has a provider. OpenCode free models are not offered
-		// as a doctl create prompt or default.
-		if strings.TrimSpace(o.model) == "" {
-			o.model = defaultModelForHarness(agent)
-		}
+	// opencode: no DO SI default — omitting --model leaves OpenCode on its
+	// free / built-in models. Pass --model (a DO catalogue id) to opt into
+	// DigitalOcean Serverless Inference via manage_model_access_key.
 	case agent == openHandsAgentName:
 		// No key slot: OpenHands runs on DigitalOcean Inference. Setting
 		// HARNESS_INFERENCE_MODEL below (with no vendor/harness API key)
@@ -849,6 +848,7 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	if err != nil {
 		return nil, err
 	}
+	maybePrintDefaultDOSINotice(os.Stderr, raw)
 
 	lookup := envLookupWithOverlay(withServerProvidedOverlay(resolvedManifestSecretValues(raw), envOverlay))
 	manifest, err := expandManifestEnvCollect(raw, lookup)

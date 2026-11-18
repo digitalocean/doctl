@@ -146,6 +146,7 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	maybePrintDefaultDOSINotice(os.Stderr, raw)
 	manifest, err := expandManifestEnvCollect(raw, envLookupWithOverlay(secrets))
 	if err != nil {
 		return err
