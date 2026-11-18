@@ -37,6 +37,7 @@ var _ = suite("prepayment/config", func(t *testing.T, when spec.G, it spec.S) {
 					},
 					"status": {
 						"balance": "25.00",
+						"available_credit": "9.29",
 						"is_auto_prepay_enabled": true,
 						"blocked": true,
 						"eligible": true,
@@ -86,6 +87,7 @@ var _ = suite("prepayment/status", func(t *testing.T, when spec.G, it spec.S) {
 				w.Write([]byte(`{
 					"status": {
 						"balance": "25.00",
+						"available_credit": "9.29",
 						"is_auto_prepay_enabled": true,
 						"blocked": true,
 						"eligible": true,
@@ -119,11 +121,11 @@ var _ = suite("prepayment/status", func(t *testing.T, when spec.G, it spec.S) {
 })
 
 const prepaymentConfigOutput string = `
-Spend Limit    Auto Prepay Enabled    Prepay Amount    Prepay Threshold    Balance    Blocked    Eligible    Month-to-date Balance    Created At              Updated At
-100.00         true                   50.00            10.00               25.00      true       true        75.00                    2026-06-22T19:31:51Z    2026-06-25T18:40:07Z
+Spend Limit    Auto Prepay Enabled    Prepay Amount    Prepay Threshold    Balance    Available Credit    Blocked    Eligible    Month-to-date Balance    Created At              Updated At
+100.00         true                   50.00            10.00               25.00      9.29                true       true        75.00                    2026-06-22T19:31:51Z    2026-06-25T18:40:07Z
 `
 
 const prepaymentStatusOutput string = `
-Balance    Auto Prepay Enabled    Blocked    Eligible    Month-to-date Balance
-25.00      true                   true       true        75.00
+Balance    Available Credit    Auto Prepay Enabled    Blocked    Eligible    Month-to-date Balance
+25.00      9.29                true                   true       true        75.00
 `

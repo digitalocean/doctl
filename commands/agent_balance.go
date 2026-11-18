@@ -25,6 +25,8 @@ const agentsBalanceHelpMD = `Shows your team's prepayment balance and whether th
 
 Harness Runtime sessions are paid for from a single team-wide prepayment balance shared with the rest of your DigitalOcean usage. When that balance runs out, running sessions are paused with their work saved, and commands that would spend — ` + "`create`" + `, ` + "`launch`" + `, ` + "`resume`" + `, ` + "`fork`" + `, ` + "`exec`" + `, and sending a prompt — fail until funds are added.
 
+Available Credit is the inference, trial, and subscription credit on the team for Inference & Agents usage. It is tracked separately from the prepayment balance.
+
 This is a point-in-time read, not a live meter; run it again for a fresh figure. Reading it requires a token with the ` + "`billing:read`" + ` scope. Without that scope the balance shows as unknown, which is expected rather than an error — ask a Team Owner or Biller to add funds.
 
 Note ` + "`doctl balance get`" + ` is a different number: it reports the classic account ledger, not the prepayment wallet that gates Harness Runtime.`
