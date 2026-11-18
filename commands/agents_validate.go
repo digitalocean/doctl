@@ -1045,6 +1045,9 @@ func RunAgentsValidate(c *CmdConfig) error {
 	if Output != "json" {
 		stylingEnabled = detectStyling()
 	}
+	if len(commandArgv(c)) > 0 {
+		return fmt.Errorf("validate checks a manifest and takes no command after --; put the command in the manifest's `command.argv`")
+	}
 	specPath, err := namedManifestPath(c)
 	if err != nil {
 		return err

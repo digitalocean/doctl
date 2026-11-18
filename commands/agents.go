@@ -501,7 +501,7 @@ func Agents() *Command {
 	// start/run are kept as aliases so scripts written against earlier betas
 	// (and the partner guide that still says start) keep working; create is
 	// the canonical verb.
-	cmdCreate := CmdBuilder(cmd, RunAgentsCreate, "create [<manifest>]",
+	cmdCreate := CmdBuilder(cmd, RunAgentsCreate, "create [<manifest>] [-- <command>...]",
 		"Create a session without attaching",
 		agentsCreateHelpMD,
 		Writer, agentsNS(aliasOpt("deploy", "start", "run"),
@@ -509,8 +509,9 @@ func Agents() *Command {
 	addAgentCreationFlags(cmdCreate)
 	AddBoolFlag(cmdCreate, doctl.ArgAgentDryRun, "", false, "Print the fully-resolved manifest (secrets redacted) and exit without creating anything")
 	AddStringFlag(cmdCreate, doctl.ArgAgentOnHITL, "", "", "Stay attached headlessly and resolve every approval request this way (approve|reject|defer), until the run finishes. For unattended automation; no TUI, no keyboard input.")
+	AddStringFlag(cmdCreate, doctl.ArgAgentExecWorkdir, "", "", "Absolute guest directory the command after -- runs in (defaults to the manifest's command.workdir, then /workspace)")
 	markAgentCreationSourcesExclusive(cmdCreate)
-	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --harness openhands --model anthropic-claude-4.5-sonnet; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --from-config my-config --name my-session --workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f; ` + agentCLI + ` create --harness opencode --dry-run`
+	cmdCreate.Example = agentCLI + ` create; ` + agentCLI + ` create agent-spec.yaml --name my-session; ` + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"; ` + agentCLI + ` create --harness openhands --model anthropic-claude-4.5-sonnet; ` + agentCLI + ` create --from-config my-config --name my-session; ` + agentCLI + ` create --from-config my-config --name my-session --workspace 018f6f2a-3c1e-7b6a-9d4e-5a7b8c9d0e1f; ` + agentCLI + ` create --harness opencode --dry-run; ` + agentCLI + ` create -- python train.py --epochs 3`
 
 	cmdValidate := CmdBuilder(cmd, RunAgentsValidate, "validate [<manifest>]",
 		"Validate an agent manifest",
@@ -960,6 +961,11 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		return nil, err
 	}
 	model = strings.TrimSpace(model)
+	cmdOverlay, err := resolveCommandOverlay(c)
+	if err != nil {
+		return nil, err
+	}
+	positional := manifestArgs(c)
 	// Resolved here, before any check reads it and before it reaches the
 	// manifest, so the agentless check and the wire agree. templateAsTyped is
 	// kept only for errors: quoting the platform name back at someone who typed
@@ -993,7 +999,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			doctl.ArgAgentHarness, harness, doctl.ArgAgentTemplate, templateAliasSandbox, doctl.ArgAgentHarness)
 	}
 
-	if len(c.Args) > 0 && (harness != "" || configRef != "") {
+	if len(positional) > 0 && (harness != "" || configRef != "") {
 		return nil, fmt.Errorf("a manifest path cannot be combined with --%s or --%s", doctl.ArgAgentHarness, doctl.ArgAgentFromConfig)
 	}
 	// --model writes a field into the manifest --harness generates; every
@@ -1017,9 +1023,21 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// declares its own template. --spec and --from-config are cobra-exclusive
 	// with --template already; a positional path and a discovered ./agents.yaml
 	// are not, and both still get the refusal below.
-	if template != "" && harness == "" && configRef == "" && len(c.Args) == 0 &&
+	//
+	// A command after -- implies the same thing for the same reason: it only
+	// runs in a sandbox with no agent, so `create -- python train.py` alone is a
+	// complete request.
+	if (template != "" || cmdOverlay.set()) && harness == "" && configRef == "" && len(positional) == 0 &&
 		!agentFlagChanged(c, doctl.ArgAgentSpec) && discoverManifestFile() == "" {
 		harness = bareSandboxAgent
+	}
+	if cmdOverlay.set() {
+		if configRef != "" {
+			return nil, fmt.Errorf("a command after -- cannot be used with --%s; an Agent Config's manifest lives server-side, so put the command in it", doctl.ArgAgentFromConfig)
+		}
+		if harness != "" && !isBareSandboxHarness(harness) {
+			return nil, commandNeedsBareSandboxErr("--" + doctl.ArgAgentHarness + " " + harness)
+		}
 	}
 
 	// Never call GetString(--spec) when another source is selected: a stale
@@ -1181,6 +1199,16 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 	if raw, err = injectManifestName(raw, name); err != nil {
 		return nil, err
+	}
+	if cmdOverlay.set() {
+		// Checked before injecting, so the error is about the manifest as the
+		// user wrote it; a server-side 400 would name the merged document.
+		if !(&agentCreationSource{harness: harness, manifest: raw}).bareSandbox() {
+			return nil, commandNeedsBareSandboxErr("the manifest")
+		}
+		if raw, err = injectManifestCommand(raw, cmdOverlay); err != nil {
+			return nil, err
+		}
 	}
 	if raw, err = injectManifestSecrets(raw, secrets); err != nil {
 		return nil, err
@@ -1694,12 +1722,13 @@ func namedManifestPath(c *CmdConfig) (string, error) {
 	}
 	spec = strings.TrimSpace(spec)
 
-	if len(c.Args) > 1 {
-		return "", fmt.Errorf("expected at most one manifest path, got %d", len(c.Args))
+	args := manifestArgs(c)
+	if len(args) > 1 {
+		return "", fmt.Errorf("expected at most one manifest path, got %d; to run a command in the sandbox, put it after --", len(args))
 	}
 	arg := ""
-	if len(c.Args) == 1 {
-		arg = strings.TrimSpace(c.Args[0])
+	if len(args) == 1 {
+		arg = strings.TrimSpace(args[0])
 	}
 
 	switch {
