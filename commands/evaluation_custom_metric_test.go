@@ -36,6 +36,38 @@ func TestCustomEvaluationMetricCreate(t *testing.T) {
 	})
 }
 
+func TestCustomEvaluationMetricCreateTurnType(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgGenAIName, "conversation-quality")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationScoringPrompt, "Score the conversation")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationTurnType, "multi_turn")
+
+		tm.agentPlatform.EXPECT().CreateCustomEvaluationMetric(&godo.CreateCustomEvaluationMetricRequest{
+			MetricName: "conversation-quality",
+			Config: &godo.CustomEvaluationMetricConfig{
+				ScoringPrompt: "Score the conversation",
+				TurnType:      godo.EvaluationMetricTurnTypeMultiTurn,
+			},
+		}).Return(&testEvaluationMetric, nil)
+
+		err := RunCustomEvaluationMetricCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestCustomEvaluationMetricCreateMultiTurnRequiresGroundTruth(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgGenAIName, "bad")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationScoringPrompt, "Score something")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationTurnType, "multi_turn")
+		config.Doit.Set(config.NS, doctl.ArgEvaluationRequiresGroundTruth, true)
+
+		err := RunCustomEvaluationMetricCreate(config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "multi_turn cannot be combined with --requires-ground-truth")
+	})
+}
+
 func TestCustomEvaluationMetricUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testEvaluationMetricUUID)
@@ -47,13 +79,15 @@ func TestCustomEvaluationMetricUpdate(t *testing.T) {
 				MetricUUID: testEvaluationMetricUUID,
 				MetricName: "helpfulness",
 				Source:     godo.EvaluationMetricSourceCustom,
+				TurnType:   godo.EvaluationMetricTurnTypeSingleTurn,
 				CustomEvalConfig: &godo.CustomEvaluationMetricConfig{
 					ScoringPrompt:       "Score helpfulness from 0 to 1",
 					RequiresGroundTruth: false,
+					TurnType:            godo.EvaluationMetricTurnTypeSingleTurn,
 				},
 			},
 		}
-		tm.agentPlatform.EXPECT().ListModelEvaluationMetrics().
+		tm.agentPlatform.EXPECT().ListModelEvaluationMetrics(nil).
 			Return(do.EvaluationMetrics{existing}, nil)
 		tm.agentPlatform.EXPECT().UpdateCustomEvaluationMetric(testEvaluationMetricUUID, &godo.UpdateCustomEvaluationMetricRequest{
 			MetricUUID:  testEvaluationMetricUUID,
@@ -62,6 +96,7 @@ func TestCustomEvaluationMetricUpdate(t *testing.T) {
 			Config: &godo.CustomEvaluationMetricConfig{
 				ScoringPrompt:       "Score helpfulness from 0 to 1",
 				RequiresGroundTruth: false,
+				TurnType:            godo.EvaluationMetricTurnTypeSingleTurn,
 			},
 		}).Return(&existing, nil)
 
