@@ -85,20 +85,9 @@ func RunInsightsResourceList(c *CmdConfig) error {
 		return err
 	}
 
-	page, err := c.Doit.GetInt(c.NS, doctl.ArgInsightsPage)
+	page, perPage, err := insightsPageOptions(c, insightsResourcesMaxPerPage)
 	if err != nil {
 		return err
-	}
-	if page < 0 || (page == 0 && c.Doit.IsSet(doctl.ArgInsightsPage)) {
-		return fmt.Errorf("--%s must be at least 1", doctl.ArgInsightsPage)
-	}
-	perPage, err := c.Doit.GetInt(c.NS, doctl.ArgInsightsPerPage)
-	if err != nil {
-		return err
-	}
-	if perPage < 0 || perPage > insightsResourcesMaxPerPage ||
-		(perPage == 0 && c.Doit.IsSet(doctl.ArgInsightsPerPage)) {
-		return fmt.Errorf("--%s must be between 1 and %d", doctl.ArgInsightsPerPage, insightsResourcesMaxPerPage)
 	}
 
 	sortField, err := insightsTrimmedString(c, doctl.ArgInsightsResourceSort)
