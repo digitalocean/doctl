@@ -42,11 +42,33 @@ func TestHasInferenceProvider(t *testing.T) {
 	}
 }
 
+func TestDefaultModelForHarness(t *testing.T) {
+	assert.Equal(t, defaultDOSIModel, defaultModelForHarness("opencode"))
+	assert.Equal(t, defaultOpenHandsModel, defaultModelForHarness("openhands"))
+	assert.Equal(t, defaultOpenHandsModel, defaultModelForHarness("open-hands"))
+	assert.Equal(t, defaultHermesModel, defaultModelForHarness("hermes"))
+	assert.Equal(t, defaultDOSIModel, defaultModelForHarness("claude-code"))
+	assert.Equal(t, defaultDOSIModel, defaultModelForHarness(""))
+}
+
 func TestInjectDefaultDOSIModel(t *testing.T) {
-	t.Run("injects when missing", func(t *testing.T) {
+	t.Run("injects shared DO SI default for opencode", func(t *testing.T) {
 		out, err := injectDefaultDOSIModel([]byte("harness: opencode\n"))
 		require.NoError(t, err)
 		assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultDOSIModel)
+	})
+
+	t.Run("openhands file gets the openhands catalogue default", func(t *testing.T) {
+		out, err := injectDefaultDOSIModel([]byte("harness: openhands\ntemplate: openhands\nkeep_warm: false\n"))
+		require.NoError(t, err)
+		assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultOpenHandsModel)
+		assert.NotContains(t, string(out), defaultDOSIModel)
+	})
+
+	t.Run("hermes file gets the hermes catalogue default", func(t *testing.T) {
+		out, err := injectDefaultDOSIModel([]byte("harness: hermes\n"))
+		require.NoError(t, err)
+		assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultHermesModel)
 	})
 
 	t.Run("does not overwrite existing model", func(t *testing.T) {
@@ -63,6 +85,20 @@ func TestResolveInferenceProvider_ProviderlessInject(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, needsManagedModelAccessKey(out), "injection must precede the mint predicate")
 	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultDOSIModel)
+}
+
+func TestResolveInferenceProvider_OpenHandsFileUsesOpenHandsDefault(t *testing.T) {
+	out, err := resolveInferenceProvider([]byte("harness: openhands\ntemplate: openhands\nkeep_warm: false\n"), false)
+	require.NoError(t, err)
+	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultOpenHandsModel)
+	assert.True(t, needsManagedModelAccessKey(out))
+}
+
+func TestResolveInferenceProvider_HermesFileUsesHermesDefault(t *testing.T) {
+	out, err := resolveInferenceProvider([]byte("harness: hermes\n"), false)
+	require.NoError(t, err)
+	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultHermesModel)
+	assert.True(t, needsManagedModelAccessKey(out))
 }
 
 func TestResolveInferenceProvider_BareSandboxSkipped(t *testing.T) {

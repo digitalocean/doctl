@@ -682,7 +682,7 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		// so create always has a provider. OpenCode free models are not offered
 		// as a doctl create prompt or default.
 		if strings.TrimSpace(o.model) == "" {
-			o.model = defaultDOSIModel
+			o.model = defaultModelForHarness(agent)
 		}
 	case agent == openHandsAgentName:
 		// No key slot: OpenHands runs on DigitalOcean Inference. Setting
@@ -698,7 +698,7 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		keepWarm := false
 		doc.KeepWarm = &keepWarm
 		if strings.TrimSpace(o.model) == "" {
-			o.model = defaultOpenHandsModel
+			o.model = defaultModelForHarness(agent)
 		}
 	case agent == hermesAgentName:
 		// Same shape as openhands: no key slot; HARNESS_INFERENCE_MODEL below
@@ -713,7 +713,7 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		// on purpose, because the gateway is driven over a port-forward tunnel
 		// that idle-pause's activity tracking cannot see.
 		if strings.TrimSpace(o.model) == "" {
-			o.model = defaultHermesModel
+			o.model = defaultModelForHarness(agent)
 		}
 	}
 
