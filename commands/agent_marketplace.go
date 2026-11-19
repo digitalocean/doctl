@@ -111,7 +111,7 @@ On publish, credentials in known formats are replaced by declared secret slots t
 		`Runs the automated review over the exact files that will be sent and stops on any failure. Publishes the folder as a secret (unlisted) GitHub gist under your GitHub account, which needs a github.com login (gh auth login or GITHUB_TOKEN), and prints the line to share. Anyone with the line can read the files, every version stays readable, and deleting the gist unpublishes it. A static snapshot never changes; with version history, each publish adds a version, and --watch republishes when files in the folder change. Running agents keep the version they started with.`,
 		Writer, false, ns...)
 	AddBoolFlag(cmdPublish, mkArgWatch, "", false, "Keep running and republish on every change (version-history listings only)")
-	AddBoolFlag(cmdPublish, mkArgYes, "y", false, "Publish without the confirmation prompt")
+	AddBoolFlag(cmdPublish, mkArgYes, "y", false, "Publish without the confirmation prompt (required when not run in a terminal)")
 
 	cmdDeploy := CmdBuilder(cmd, RunAgentsMarketplaceDeploy, "deploy <listing-id>[@<version>]",
 		"Run a published listing in your team",
@@ -446,7 +446,10 @@ func RunAgentsMarketplacePublish(c *CmdConfig) error {
 		}
 		if first {
 			printMKOutgoing(c.Out, l, files)
-			if isInteractiveTerminal() && !yes && !askMKConfirm("Publish these files? Anyone with the deploy line can read them.", true) {
+			if !yes && !isInteractiveTerminal() {
+				return fmt.Errorf("not published: confirm in a terminal, or pass --%s to publish these files without the prompt", mkArgYes)
+			}
+			if !yes && !askMKConfirm("Publish these files? Anyone with the deploy line can read them.", false) {
 				return errMKPickerCancelled
 			}
 		}

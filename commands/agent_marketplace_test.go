@@ -600,6 +600,51 @@ func TestMKDeployOffTerminalNeedsYes(t *testing.T) {
 	assert.True(t, res.created)
 }
 
+// TestMKPublishOffTerminalNeedsYes: a publish run from a script, a pipe or CI
+// sends nothing to GitHub and asks for --yes; with --yes it goes ahead.
+func TestMKPublishOffTerminalNeedsYes(t *testing.T) {
+	l, files := buildTestListing(t)
+	dir := filepath.Join(t.TempDir(), "listing")
+	require.NoError(t, writeMKFolder(dir, l, files))
+
+	var gistCalls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && r.URL.Path == "/gists" {
+			gistCalls++
+			_, _ = io.WriteString(w, `{"id":"abc123","html_url":"https://gist.github.com/abc123","history":[{"version":"v1sha"}]}`)
+			return
+		}
+		gistCalls++
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+	prevAPI, prevToken := mkGitHubAPI, mkGitHubToken
+	mkGitHubAPI, mkGitHubToken = srv.URL, func() (string, error) { return "tok", nil }
+	t.Cleanup(func() { mkGitHubAPI, mkGitHubToken = prevAPI, prevToken })
+	stubInteractiveTerminal(t, false)
+	var warnings bytes.Buffer
+	withUIEnv(t, ui.Plain(&warnings, &warnings))
+
+	publish := func(yes bool) error {
+		var err error
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			config.Args = []string{dir}
+			config.Out = &bytes.Buffer{}
+			config.Doit.Set(config.NS, mkArgYes, yes)
+			err = RunAgentsMarketplacePublish(config)
+		})
+		return err
+	}
+
+	assert.ErrorContains(t, publish(false), "--yes")
+	assert.Zero(t, gistCalls, "nothing is sent to GitHub without consent")
+	assert.Empty(t, readMKState(dir).ListingID)
+
+	require.NoError(t, publish(true))
+	assert.Equal(t, 1, gistCalls)
+	assert.Equal(t, "abc123", readMKState(dir).ListingID)
+}
+
 // TestMKDeploySaysWhenClaudeMDIsNotApplied: CLAUDE.md reaches the session
 // only through the workspace copy, so the consent card and the warning say
 // so when --no-native-files skips it or the copy fails.
