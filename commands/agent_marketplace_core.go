@@ -265,13 +265,27 @@ func countExtraFiles(dir string) int {
 	return n
 }
 
+// mkImportRE is a CLAUDE.md import line: @ and a path that starts with ~, /
+// or ., holds a /, or ends in a document extension. @Override,
+// @pytest.fixture and @dataclass are code, not imports.
+var mkImportRE = regexp.MustCompile(`^@(?:[~/.]\S*|\S*/\S*|\S+\.(?i:md|mdc|markdown|txt|rst|json|ya?ml|toml))$`)
+
 // stripClaudeImports removes CLAUDE.md `@path` import lines. They point at
-// files on the author's machine that a hosted session cannot read.
+// files on the author's machine that a hosted session cannot read. Fenced
+// code blocks are kept whole: Claude Code reads no imports inside them.
 func stripClaudeImports(text string) (string, []string) {
 	var keep, imports []string
+	fence := ""
 	for _, line := range strings.Split(text, "\n") {
 		t := strings.TrimSpace(line)
-		if strings.HasPrefix(t, "@") && !strings.Contains(t, " ") && len(t) > 1 {
+		switch {
+		case fence != "":
+			if strings.HasPrefix(t, fence) {
+				fence = ""
+			}
+		case strings.HasPrefix(t, "```") || strings.HasPrefix(t, "~~~"):
+			fence = t[:len(t)-len(strings.TrimLeft(t, t[:1]))]
+		case mkImportRE.MatchString(t):
 			imports = append(imports, t)
 			continue
 		}

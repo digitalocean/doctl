@@ -100,6 +100,42 @@ func TestScanClaudeSetup(t *testing.T) {
 	assert.Equal(t, "http", sc.MCPServers[1].Kind)
 }
 
+// TestScanKeepsCodeThatLooksLikeAnImport: only path-like @ lines outside code
+// fences are CLAUDE.md imports; annotations and decorators stay in the
+// published CLAUDE.md and are not reported as files on your machine.
+func TestScanKeepsCodeThatLooksLikeAnImport(t *testing.T) {
+	home := t.TempDir()
+	md := strings.Join([]string{
+		"Be terse.",
+		"@~/.cursor/rules/caveman.mdc",
+		"@docs/style.md",
+		"@AGENTS.md",
+		"@dataclass",
+		"```java",
+		"@Override",
+		"public String toString() { return name; }",
+		"```",
+		"~~~~python",
+		"@pytest.fixture",
+		"~~~",
+		"@app.route",
+		"~~~~",
+		"Write an import like this:",
+		"```markdown",
+		"@docs/your-rules.md",
+		"```",
+		"Never push to main.",
+	}, "\n")
+	writeFile(t, filepath.Join(home, ".claude/CLAUDE.md"), md)
+	sc, err := scanClaudeSetup(home, t.TempDir())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"@~/.cursor/rules/caveman.mdc", "@docs/style.md", "@AGENTS.md"}, sc.ClaudeMDImports)
+	for _, kept := range []string{"@dataclass", "@Override", "@pytest.fixture", "@app.route", "@docs/your-rules.md", "Never push to main."} {
+		assert.Contains(t, sc.ClaudeMD, kept)
+	}
+	assert.NotContains(t, sc.ClaudeMD, "@docs/style.md")
+}
+
 func TestRedactSecrets(t *testing.T) {
 	next := 0
 	out, slots := redactSecrets("token ghp_abcdefghijklmnopqrstuvwxyz12 and API_KEY=realvalue123 and API_KEY=your_key_here", &next)
