@@ -1143,10 +1143,8 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 
 	if configRef != "" {
-		for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
-			if c.Doit.IsSet(flag) {
-				return nil, fmt.Errorf("--%s cannot be used with --%s; an Agent Config's manifest was validated when the config was created", flag, doctl.ArgAgentFromConfig)
-			}
+		if err := rejectManifestFlagsWithFromConfig(c); err != nil {
+			return nil, err
 		}
 		if name == "" {
 			return nil, fmt.Errorf("--%s is required when creating from --%s", doctl.ArgAgentName, doctl.ArgAgentFromConfig)
@@ -1223,6 +1221,19 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		return nil, err
 	}
 	return src, nil
+}
+
+// rejectManifestFlagsWithFromConfig fails when --strict or
+// --allow-unknown-fields is given with --from-config. The config's stored
+// manifest was validated when the config was created, and the user cannot edit
+// it, so neither flag has anything to act on.
+func rejectManifestFlagsWithFromConfig(c *CmdConfig) error {
+	for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
+		if c.Doit.IsSet(flag) {
+			return fmt.Errorf("--%s cannot be used with --%s; an Agent Config's manifest was validated when the config was created", flag, doctl.ArgAgentFromConfig)
+		}
+	}
+	return nil
 }
 
 func agentSourcesExclusiveErr() error {

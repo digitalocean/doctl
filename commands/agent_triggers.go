@@ -736,6 +736,9 @@ func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
 
 	var manifest []byte
 	if configRef != "" {
+		if err := rejectManifestFlagsWithFromConfig(c); err != nil {
+			return nil, err
+		}
 		configID, err := resolveConfigRef(c.HostedAgents(), configRef)
 		if err != nil {
 			return nil, err
@@ -766,7 +769,10 @@ func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
 	if err := rejectRedactedSecrets(manifest); err != nil {
 		return nil, err
 	}
-	v := validateAgentManifest(manifest)
+	// A --from-config manifest is the server's stored copy. Its field names
+	// came back from the server and the user cannot edit them, so the
+	// unknown-field pass is skipped.
+	v := validateAgentManifestOpts(manifest, configRef == "")
 	if err := applyManifestFlags(c, v); err != nil {
 		return nil, err
 	}

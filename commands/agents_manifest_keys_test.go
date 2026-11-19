@@ -15,6 +15,8 @@ package commands
 
 import (
 	"bytes"
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -962,6 +964,71 @@ func TestRunAgentTriggersCreate_UnknownKeys(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, stderr, "bogus_field")
 	})
+}
+
+// A --from-config manifest is the server's stored copy, so its field names are
+// not checked. A field newer than this doctl (here `secret`, one edit from
+// `secrets`) must neither block the trigger nor print a warning the user cannot
+// act on, and --strict and --allow-unknown-fields are rejected as on create.
+func TestRunAgentTriggers_FromConfigSkipsUnknownFields(t *testing.T) {
+	stored := json.RawMessage(`{"agent":"opencode","secret":{},"server_added_field":"x"}`)
+	trigger := &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+		TriggerID: "tr_cfg", Name: "nightly", Kind: godo.HostedAgentTriggerKindCron,
+	}}
+	freshFromConfig := func(config *CmdConfig) {
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "nightly")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "review open PRs")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerTimezone, "UTC")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_abc123")
+		config.Out = io.Discard
+	}
+	cmds := []struct {
+		name   string
+		run    func(*CmdConfig) error
+		expect func(*tcMocks)
+	}{
+		{"create", RunAgentTriggersCreate, func(tm *tcMocks) {
+			tm.hostedAgentTriggers.EXPECT().Create(gomock.Any()).
+				Return(&do.HostedAgentTriggerCreateResult{Trigger: trigger}, nil)
+		}},
+		{"update", func(c *CmdConfig) error {
+			c.Args = []string{"tr_cfg"}
+			return RunAgentTriggersUpdate(c)
+		}, func(tm *tcMocks) {
+			tm.hostedAgentTriggers.EXPECT().Update("tr_cfg", gomock.Any()).Return(trigger, nil)
+		}},
+	}
+
+	for _, cmd := range cmds {
+		t.Run(cmd.name+" copies the stored manifest with no unknown-field report", func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().GetAgentConfig("cfg_abc123").
+					Return(&godo.HostedAgentConfig{ID: "cfg_abc123", Name: "reviewer", Manifest: stored}, nil)
+				cmd.expect(tm)
+				freshFromConfig(config)
+				var err error
+				stderr := captureProcessStderr(t, func() { err = cmd.run(config) })
+				require.NoError(t, err)
+				assert.NotContains(t, stderr, "unknown field")
+			})
+		})
+		for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
+			t.Run(cmd.name+" rejects --"+flag, func(t *testing.T) {
+				// No expectations: the flag must fail before any API call.
+				withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+					freshFromConfig(config)
+					config.Doit.Set(config.NS, flag, true)
+					err := cmd.run(config)
+					require.Error(t, err)
+					assert.Contains(t, err.Error(), "--"+flag+" cannot be used with --from-config")
+				})
+			})
+		}
+	}
 }
 
 // --- --allow-unknown-fields --------------------------------------------------
