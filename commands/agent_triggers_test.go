@@ -169,6 +169,133 @@ func TestAgentTriggersCreate_FromConfigCopiesManifest(t *testing.T) {
 	})
 }
 
+// VULN-5833: --from-config must not expand server-held ${VAR} from local env.
+func TestAgentTriggersCreate_FromConfigDoesNotExpandLocalEnv(t *testing.T) {
+	const (
+		envName  = "DOCTL_VULN5833_CREATE_SENTINEL"
+		envValue = "DO-NOT-UPLOAD-CREATE-SECRET"
+	)
+	t.Setenv(envName, envValue)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			GetAgentConfig("cfg_probe").
+			Return(&godo.HostedAgentConfig{
+				ID:   "cfg_probe",
+				Name: "probe",
+				Manifest: json.RawMessage(`{"agent":"opencode","permissions":{"default":"deny"},"env":{"PROBE":"${` + envName + `}"}}`),
+			}, nil)
+
+		tm.hostedAgentTriggers.EXPECT().
+			Create(gomock.Any()).
+			DoAndReturn(func(req *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
+				assert.Contains(t, req.SessionTemplate, "${"+envName+"}")
+				assert.NotContains(t, req.SessionTemplate, envValue)
+				return &do.HostedAgentTriggerCreateResult{
+					Trigger: &do.HostedAgentTrigger{
+						HostedAgentTrigger: &godo.HostedAgentTrigger{
+							TriggerID: "tr_probe",
+							Name:      "probe-create",
+							Kind:      godo.HostedAgentTriggerKindCron,
+						},
+					},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "probe-create")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "authorised security test")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerTimezone, "UTC")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_probe")
+
+		config.Out = io.Discard
+		require.NoError(t, RunAgentTriggersCreate(config))
+	})
+}
+
+// VULN-5833: unset ${VAR} must stay literal (no missing-var oracle).
+func TestAgentTriggersCreate_FromConfigLeavesUnsetRefsLiteral(t *testing.T) {
+	const envName = "DOCTL_VULN5833_UNSET_SENTINEL"
+	require.NoError(t, os.Unsetenv(envName))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			GetAgentConfig("cfg_probe").
+			Return(&godo.HostedAgentConfig{
+				ID:   "cfg_probe",
+				Name: "probe",
+				Manifest: json.RawMessage(`{"agent":"opencode","permissions":{"default":"deny"},"env":{"PROBE":"${` + envName + `}"}}`),
+			}, nil)
+
+		tm.hostedAgentTriggers.EXPECT().
+			Create(gomock.Any()).
+			DoAndReturn(func(req *godo.HostedAgentTriggerCreateRequest) (*do.HostedAgentTriggerCreateResult, error) {
+				assert.Contains(t, req.SessionTemplate, "${"+envName+"}")
+				return &do.HostedAgentTriggerCreateResult{
+					Trigger: &do.HostedAgentTrigger{
+						HostedAgentTrigger: &godo.HostedAgentTrigger{
+							TriggerID: "tr_unset",
+							Name:      "probe-unset",
+							Kind:      godo.HostedAgentTriggerKindCron,
+						},
+					},
+				}, nil
+			})
+
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "cron")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "probe-unset")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "fresh")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "authorised security test")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerCronExpr, "0 9 * * *")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerTimezone, "UTC")
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_probe")
+
+		config.Out = io.Discard
+		require.NoError(t, RunAgentTriggersCreate(config))
+	})
+}
+
+// VULN-5833: same non-expansion guarantee on triggers update.
+func TestAgentTriggersUpdate_FromConfigDoesNotExpandLocalEnv(t *testing.T) {
+	const (
+		envName  = "DOCTL_VULN5833_UPDATE_SENTINEL"
+		envValue = "DO-NOT-UPLOAD-UPDATE-SECRET"
+	)
+	t.Setenv(envName, envValue)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			GetAgentConfig("cfg_probe").
+			Return(&godo.HostedAgentConfig{
+				ID:   "cfg_probe",
+				Name: "probe",
+				Manifest: json.RawMessage(`{"agent":"opencode","permissions":{"default":"deny"},"env":{"PROBE":"${` + envName + `}"}}`),
+			}, nil)
+
+		tm.hostedAgentTriggers.EXPECT().
+			Update("tr_1", gomock.Any()).
+			DoAndReturn(func(_ string, req *godo.HostedAgentTriggerUpdateRequest) (*do.HostedAgentTrigger, error) {
+				assert.Contains(t, req.SessionTemplate, "${"+envName+"}")
+				assert.NotContains(t, req.SessionTemplate, envValue)
+				return &do.HostedAgentTrigger{
+					HostedAgentTrigger: &godo.HostedAgentTrigger{
+						TriggerID: "tr_1",
+						Name:      "probe-update",
+					},
+				}, nil
+			})
+
+		config.Args = []string{"tr_1"}
+		config.Doit.Set(config.NS, doctl.ArgAgentFromConfig, "cfg_probe")
+		config.Out = io.Discard
+		require.NoError(t, RunAgentTriggersUpdate(config))
+	})
+}
+
 // A config name resolves the same way it does on create/launch, so a trigger
 // can be written against the name a human actually remembers.
 func TestAgentTriggersCreate_FromConfigByName(t *testing.T) {

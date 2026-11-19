@@ -365,11 +365,11 @@ const agentsTriggersCreateHelpMD = `Create a webhook or cron trigger.
 
 Webhook: optional ` + "`--provider`" + ` (github|gitlab|custom). Cron: requires ` + "`--cron-expr`" + ` and ` + "`--timezone`" + `. Set ` + "`--output-mode`" + ` to none, email, or slack for run-result delivery.
 
-**` + "`--from-config`" + ` copies, it does not link.** The config's manifest is read once, now, and stored on the trigger — replacing or editing the config later does not change triggers already created from it. A config's stored secret values are never returned to a client, so supply them again here with ` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable), which works with ` + "`--spec`" + ` too.`
+**` + "`--from-config`" + ` copies, it does not link.** The config's manifest is read once, now, and stored on the trigger — replacing or editing the config later does not change triggers already created from it. Unlike ` + "`--spec`" + `, ` + "`${VAR}`" + ` references are left as stored and are not resolved from the local environment. A config's stored secret values are never returned to a client, so supply them again here with ` + "`--secret NAME=VALUE`" + ` (also ` + "`NAME=@path`" + ` / ` + "`NAME=-`" + `, repeatable), which works with ` + "`--spec`" + ` too.`
 
 const agentsTriggersUpdateHelpMD = `Update a trigger. Only flags you pass are changed. Kind and webhook provider cannot be changed.
 
-` + "`--spec`" + ` or ` + "`--from-config`" + ` replaces the session template for fresh triggers, with the same copy-not-link caveat as ` + "`create`" + `: re-supply any secret values with ` + "`--secret`" + `.`
+` + "`--spec`" + ` or ` + "`--from-config`" + ` replaces the session template for fresh triggers, with the same copy-not-link caveat as ` + "`create`" + ` (including that ` + "`--from-config`" + ` does not expand ` + "`${VAR}`" + ` from the local environment): re-supply any secret values with ` + "`--secret`" + `.`
 
 const agentsTriggersDeleteHelpMD = `Delete a trigger. Does not remove a bound reuse session.`
 
