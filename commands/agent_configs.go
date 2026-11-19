@@ -144,6 +144,10 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	manifest, err = preferHarnessKeyInManifest(manifest)
+	if err != nil {
+		return err
+	}
 	if err := reportDurableAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 		return err
 	}

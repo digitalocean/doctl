@@ -46,7 +46,8 @@ func TestAgentConfigCreate(t *testing.T) {
 			CreateAgentConfig(gomock.Any(), false).
 			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 				assert.Equal(t, "my-config", req.Name)
-				assert.Contains(t, req.ManifestYAML, "agent: opencode")
+				assert.Contains(t, req.ManifestYAML, "harness: opencode")
+				assert.NotContains(t, req.ManifestYAML, "agent:")
 				assert.False(t, manageModelAccessKey)
 				return &godo.HostedAgentConfig{ID: "cfg_1", Name: "my-config"}, nil
 			})

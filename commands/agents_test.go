@@ -458,7 +458,8 @@ func TestRunAgentsCreate_DiscoversAgentsYAML(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.Contains(t, string(manifest), "agent: opencode")
+				assert.Contains(t, string(manifest), "harness: opencode")
+				assert.NotContains(t, string(manifest), "agent:")
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID: "sess-discovered",
