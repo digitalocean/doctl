@@ -14,8 +14,10 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
@@ -23,12 +25,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -400,6 +408,122 @@ func TestBuildDeployManifest(t *testing.T) {
 		assert.NotEmpty(t, s["instructions"])
 		assert.False(t, strings.HasPrefix(s["instructions"], "---"), "frontmatter is not part of instructions")
 	}
+}
+
+type mkDeployResult struct {
+	err     error
+	out     string            // stdout: the listing card, the review, progress
+	warn    string            // warnings
+	created bool              // a session was created
+	placed  map[string]string // /workspace path -> the bytes uploaded there
+}
+
+// runMKDeploy runs `marketplace deploy abc123 --model m --no-attach` plus
+// flags against a fake gist API serving l and files, and a hosted-agents
+// mock whose session is ready at once. Uploads go to presigned URLs on the
+// same server, so placed is exactly what the session received; a non-nil
+// uploadErr makes every upload fail instead.
+func runMKDeploy(t *testing.T, l *mkListing, files map[string]string, flags map[string]any, uploadErr error) mkDeployResult {
+	t.Helper()
+	lj, _ := json.Marshal(l)
+	gistFiles := map[string]any{"listing.json": map[string]string{"content": string(lj)}}
+	for p, c := range files {
+		gistFiles[gistFileName(p)] = map[string]string{"content": c}
+	}
+	var mu sync.Mutex
+	res := mkDeployResult{placed: map[string]string{}}
+	paths := map[string]string{} // transfer ID -> workspace path
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/gists/abc123":
+			_ = json.NewEncoder(w).Encode(map[string]any{"id": "abc123", "files": gistFiles, "history": []map[string]string{{"version": "v1sha"}}})
+		case r.Method == http.MethodPut && strings.HasPrefix(r.URL.Path, "/put/"):
+			body, _ := io.ReadAll(r.Body)
+			mu.Lock()
+			res.placed[paths[strings.TrimPrefix(r.URL.Path, "/put/")]] = string(body)
+			mu.Unlock()
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	prevAPI, prevToken := mkGitHubAPI, mkGitHubToken
+	mkGitHubAPI, mkGitHubToken = srv.URL, func() (string, error) { return "", nil }
+	t.Cleanup(func() { mkGitHubAPI, mkGitHubToken = prevAPI, prevToken })
+	stubInteractiveTerminal(t, false)
+	t.Setenv(mkInferenceKeySlot, "")
+	var out, warnings bytes.Buffer
+	withUIEnv(t, ui.Plain(&warnings, &warnings))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		ready := &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_mk", Status: godo.HostedAgentSessionStatusReady}}
+		tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			DoAndReturn(func([]byte, *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				res.created = true
+				return ready, nil
+			}).AnyTimes()
+		tm.hostedAgents.EXPECT().GetSession("sess_mk").Return(ready, nil).AnyTimes()
+		tm.hostedAgents.EXPECT().CreateWorkspaceTransfer("sess_mk", gomock.Any()).
+			DoAndReturn(func(_ string, r *godo.HostedAgentWorkspaceTransferCreateRequest) (*godo.HostedAgentWorkspaceTransfer, error) {
+				if uploadErr != nil {
+					return nil, uploadErr
+				}
+				mu.Lock()
+				defer mu.Unlock()
+				id := fmt.Sprintf("x%d", len(paths))
+				paths[id] = r.Path
+				return &godo.HostedAgentWorkspaceTransfer{TransferID: id, PartSize: r.SizeBytes}, nil
+			}).AnyTimes()
+		tm.hostedAgents.EXPECT().CreateWorkspaceTransferPartUploadURLs("sess_mk", gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_, id string, _ *godo.HostedAgentWorkspaceTransferPartUploadURLsRequest) (*godo.HostedAgentWorkspaceTransferPartUploadURLs, error) {
+				return &godo.HostedAgentWorkspaceTransferPartUploadURLs{PartURLs: []godo.HostedAgentWorkspaceTransferPartUploadURL{{PartNumber: 1, UploadURL: srv.URL + "/put/" + id}}}, nil
+			}).AnyTimes()
+		tm.hostedAgents.EXPECT().CommitWorkspaceTransfer("sess_mk", gomock.Any(), gomock.Any()).Return(&godo.HostedAgentWorkspaceTransfer{}, nil).AnyTimes()
+		tm.hostedAgents.EXPECT().GetWorkspaceTransfer("sess_mk", gomock.Any()).
+			Return(&godo.HostedAgentWorkspaceTransfer{Status: godo.HostedAgentWorkspaceTransferStatusCompleted}, nil).AnyTimes()
+
+		config.Args = []string{"abc123"}
+		config.Out = &out
+		config.Doit.Set(config.NS, mkArgModel, "m")
+		config.Doit.Set(config.NS, mkArgNoAttach, true)
+		for k, v := range flags {
+			config.Doit.Set(config.NS, k, v)
+		}
+		res.err = RunAgentsMarketplaceDeploy(config)
+	})
+	mu.Lock()
+	defer mu.Unlock()
+	res.out, res.warn = out.String(), warnings.String()
+	return res
+}
+
+// mkDeployFlags is a deploy that needs no prompt: consent and the inference key.
+func mkDeployFlags(extra map[string]any) map[string]any {
+	flags := map[string]any{mkArgYes: true, doctl.ArgAgentSecret: []string{mkInferenceKeySlot + "=k1"}}
+	for k, v := range extra {
+		flags[k] = v
+	}
+	return flags
+}
+
+// TestMKDeployPlacesOnlyReviewedSkillFrontmatter: the SKILL.md deploy puts
+// in /workspace/.claude/skills carries only the name and description the
+// review saw, never extra keys such as allowed-tools from a stranger's gist.
+func TestMKDeployPlacesOnlyReviewedSkillFrontmatter(t *testing.T) {
+	l, files := buildTestListing(t)
+	s := l.Skills[0]
+	files[s.File] = "---\nname: " + s.Name + "\ndescription: " + s.Description + "\nallowed-tools: Bash(*)\n---\nRun the checks.\n"
+
+	res := runMKDeploy(t, l, files, mkDeployFlags(nil), nil)
+	require.NoError(t, res.err)
+	placed := res.placed[".claude/skills/"+s.Name+"/SKILL.md"]
+	require.True(t, strings.HasPrefix(placed, "---\n"), placed)
+	fm, body, _ := strings.Cut(strings.TrimPrefix(placed, "---\n"), "\n---\n")
+	var keys map[string]string
+	require.NoError(t, yaml.Unmarshal([]byte(fm), &keys))
+	assert.Equal(t, map[string]string{"name": s.Name, "description": s.Description}, keys)
+	assert.Equal(t, "Run the checks.", strings.TrimSpace(body))
+	assert.Equal(t, files["CLAUDE.md"], res.placed["CLAUDE.md"])
 }
 
 func TestGistRoundTrip(t *testing.T) {

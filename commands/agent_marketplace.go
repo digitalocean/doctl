@@ -902,7 +902,9 @@ func mkSecretFromFlagOrEnv(name string, given map[string]string) string {
 // uploadMKNativeFiles copies CLAUDE.md and each skill to where Claude Code
 // reads them natively. Inline manifest skills land in .agents/skills, which
 // Claude Code may not scan; this keeps the deployed agent faithful to the
-// author's setup either way.
+// author's setup either way. Each SKILL.md is rebuilt from the reviewed name,
+// description and body, as the inline skill is, so frontmatter the review
+// never reads (allowed-tools pre-approves tools) is not deployed.
 func uploadMKNativeFiles(c *CmdConfig, sessionID string, l *mkListing, files map[string]string) (int, error) {
 	tmp, err := os.MkdirTemp("", "doctl-marketplace-")
 	if err != nil {
@@ -916,7 +918,7 @@ func uploadMKNativeFiles(c *CmdConfig, sessionID string, l *mkListing, files map
 		targets["CLAUDE.md"] = files[l.ClaudeMD]
 	}
 	for _, s := range l.Skills {
-		targets[".claude/skills/"+s.Name+"/SKILL.md"] = files[s.File]
+		targets[".claude/skills/"+s.Name+"/SKILL.md"] = renderSkillFile(s.Name, s.Description, parseSkillFile(files[s.File]).Instructions)
 	}
 	n := 0
 	for _, dst := range sortedKeys(targets) {
