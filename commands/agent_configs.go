@@ -134,8 +134,11 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if specPath == "" && len(reuse) > 0 {
+		return fmt.Errorf("--reuse-secret needs --spec; without --spec, create asks keep or new for each secret on a terminal")
+	}
 	if specPath == "" && len(secretPairs) == 0 && canPromptForEnv() {
-		return runAgentsConfigCreateFrom(c, from)
+		return runAgentsConfigCreateFrom(c, from, name)
 	}
 	if specPath == "" || name == "" {
 		return fmt.Errorf("--spec and --name are required (or run on a terminal without --spec to pick a config to create from)")

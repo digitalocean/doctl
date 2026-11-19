@@ -44,12 +44,12 @@ const (
 )
 
 // runAgentsConfigCreateFrom is the terminal create-from flow: pick a config
-// (unless --from names one), show it, then name the new config, optionally
-// edit the manifest in $EDITOR, and decide keep or new for each secret.
-// Nothing is created until the final confirm, and Esc/Ctrl-C at any prompt
-// creates nothing.
-func runAgentsConfigCreateFrom(c *CmdConfig, from string) error {
-	err := createAgentConfigFrom(c, from)
+// (unless --from names one), show it, then name the new config (prefilled
+// from --name when given), optionally edit the manifest in $EDITOR, and
+// decide keep or new for each secret. Nothing is created until the final
+// confirm, and Esc/Ctrl-C at any prompt creates nothing.
+func runAgentsConfigCreateFrom(c *CmdConfig, from, name string) error {
+	err := createAgentConfigFrom(c, from, name)
 	if isPromptCanceled(err) {
 		fmt.Fprintln(c.Out, colorize("Canceled. Nothing was created.", colMuted))
 		return nil
@@ -57,7 +57,7 @@ func runAgentsConfigCreateFrom(c *CmdConfig, from string) error {
 	return err
 }
 
-func createAgentConfigFrom(c *CmdConfig, from string) error {
+func createAgentConfigFrom(c *CmdConfig, from, name string) error {
 	svc := c.HostedAgents()
 	stylingEnabled = detectStyling()
 	if from == "" {
@@ -81,8 +81,11 @@ func createAgentConfigFrom(c *CmdConfig, from string) error {
 	printCreateFromSource(c, src, doc)
 	sourceDoc, _ := manifestYAML(doc) // snapshot to diff against after edits
 
-	name, err := input.New("Name for the new config:",
-		input.WithInitialValue(src.Name+"-2"),
+	if name == "" {
+		name = src.Name + "-2"
+	}
+	name, err = input.New("Name for the new config:",
+		input.WithInitialValue(name),
 		input.WithRequired(),
 		input.WithValidator(func(s string) error {
 			switch {

@@ -121,6 +121,20 @@ func TestAgentConfigCreate_ReuseSecretNeedsFrom(t *testing.T) {
 	})
 }
 
+// Without --spec a terminal gets the create-from TUI, which asks keep or new
+// for each secret, so --reuse-secret there used to be dropped without a word.
+// It is an error instead, on a terminal or not, before any prompt.
+func TestAgentConfigCreate_ReuseSecretNeedsSpec(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgAgentFrom, "cfg_src")
+		config.Doit.Set(config.NS, doctl.ArgAgentReuseSecret, []string{"OPENAI_API_KEY"})
+
+		err := RunAgentsConfigCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--reuse-secret needs --spec")
+	})
+}
+
 // The point of --secret on config create is that a checked-in manifest can
 // declare which credentials it needs while the value arrives from a secret
 // store at create time. The value is captured server-side once, which is why
