@@ -85,7 +85,7 @@ template: custom-template
 persistent_workspace: true
 mounts:
   - type: s3fuse
-    path: /data
+    path: /workspace/data
     bucket: my-bucket
     prefix: data/2026
     endpoint: https://nyc3.digitaloceanspaces.com

@@ -37,7 +37,7 @@ mounts:
 - access_key: S3_ACCESS_KEY
   bucket: my-bucket
   endpoint: https://nyc3.digitaloceanspaces.com
-  path: /data
+  path: /workspace/data
   prefix: data/2026
   read_only: true
   secret_key: S3_SECRET_KEY
