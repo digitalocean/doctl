@@ -526,6 +526,20 @@ func TestMKDeployPlacesOnlyReviewedSkillFrontmatter(t *testing.T) {
 	assert.Equal(t, files["CLAUDE.md"], res.placed["CLAUDE.md"])
 }
 
+// TestMKDeployOffTerminalNeedsYes: a deploy line run from a script, a pipe or
+// CI creates nothing and asks for --yes; with --yes it goes ahead.
+func TestMKDeployOffTerminalNeedsYes(t *testing.T) {
+	l, files := buildTestListing(t)
+	res := runMKDeploy(t, l, files, map[string]any{doctl.ArgAgentSecret: []string{mkInferenceKeySlot + "=k1"}}, nil)
+	assert.ErrorContains(t, res.err, "--yes")
+	assert.False(t, res.created, "no session without consent")
+	assert.Empty(t, res.placed)
+
+	res = runMKDeploy(t, l, files, mkDeployFlags(nil), nil)
+	require.NoError(t, res.err)
+	assert.True(t, res.created)
+}
+
 func TestGistRoundTrip(t *testing.T) {
 	l, files := buildTestListing(t)
 	lj, _ := json.Marshal(l)

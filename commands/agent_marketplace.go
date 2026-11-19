@@ -121,7 +121,7 @@ On publish, credentials in known formats are replaced by declared secret slots t
 	AddStringFlag(cmdDeploy, mkArgModel, "", "", "Inference model ID (default: a Claude model from your Serverless Inference catalog)")
 	AddStringFlag(cmdDeploy, mkArgInferenceURL, "", mkDefaultInferenceURL, "Serverless Inference base URL used to pick a model (the platform sets the session's own endpoint)")
 	AddStringFlag(cmdDeploy, mkArgName, "", "", "Session name (default: listing slug plus a short suffix)")
-	AddBoolFlag(cmdDeploy, mkArgYes, "y", false, "Deploy without the confirmation prompt")
+	AddBoolFlag(cmdDeploy, mkArgYes, "y", false, "Deploy without the confirmation prompt (required when not run in a terminal)")
 	AddBoolFlag(cmdDeploy, mkArgNoAttach, "", false, "Create the session but do not open the chat")
 	AddBoolFlag(cmdDeploy, mkArgNoNativeFiles, "", false, "Do not copy CLAUDE.md and skills into /workspace/.claude (inline manifest skills only)")
 	cmdDeploy.Example = `  ` + mkCLI + ` marketplace deploy 8f3a1c2d9e@4b7e21a
@@ -792,7 +792,12 @@ func RunAgentsMarketplaceDeploy(c *CmdConfig) error {
 	if reviewFailed(findings) {
 		return errors.New("this listing failed review on your machine; it was not deployed")
 	}
-	if isInteractiveTerminal() && !yes && !askMKConfirm("Deploy this agent into your team?", true) {
+	// The listing is someone else's, so consent is never implied: off a
+	// terminal it takes --yes, and at the prompt Enter alone declines.
+	if !yes && !isInteractiveTerminal() {
+		return fmt.Errorf("not deployed: confirm in a terminal, or pass --%s to deploy this listing without the prompt", mkArgYes)
+	}
+	if !yes && !askMKConfirm("Deploy this agent into your team?", false) {
 		return errMKPickerCancelled
 	}
 
