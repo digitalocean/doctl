@@ -54,6 +54,18 @@ type RegistryCreateRequest struct {
 	Name                 string `json:"name,omitempty"`
 	SubscriptionTierSlug string `json:"subscription_tier_slug,omitempty"`
 	Region               string `json:"region,omitempty"`
+	// Insights is the telemetry the customer opts in to for the registry.
+	// It is only accepted when creating a registry and is not returned in responses.
+	Insights *RegistryInsightsTelemetryOptIn `json:"insights,omitempty"`
+}
+
+// RegistryInsightsTelemetryOptIn represents the Insights telemetry a customer opts in to
+// when creating a container registry. It is create-only and is never returned by the API.
+type RegistryInsightsTelemetryOptIn struct {
+	// Logs controls whether the registry's logs are sent to Insights.
+	// Nil and false both create the registry with logs not enabled. Logs is a
+	// pointer so an explicit false is sent; a plain bool would omit false.
+	Logs *bool `json:"logs,omitempty"`
 }
 
 // RegistryDockerCredentialsRequest represents a request to retrieve docker

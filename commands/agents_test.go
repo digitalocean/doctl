@@ -71,7 +71,7 @@ func TestAgentsCommand(t *testing.T) {
 	cmd := Agents()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "workspace", "triggers", "config", "connections", "sizes", "template", "exec", "prompt", "files", "balance")
+	assertCommandNames(t, cmd, "create", "validate", "launch", "list", "show", "logs", "approve", "remove", "pause", "cancel", "resume", "update", "upload", "download", "start-proxy", "port-forward", "canvas", "auth", "fork", "rollback", "checkpoint", "workspace", "triggers", "config", "connections", "sizes", "regions", "template", "exec", "prompt", "files", "balance")
 }
 
 // start and run remain aliases of create for scripts written against earlier
@@ -1090,6 +1090,77 @@ func TestRunAgentsResume(t *testing.T) {
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
 	})
+}
+
+func TestRunAgentsResume_WarnsWhenBoundToReuseTrigger(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var stderr bytes.Buffer
+		prevOut := agentBoundSessionWarnOut
+		agentBoundSessionWarnOut = &stderr
+		t.Cleanup(func() { agentBoundSessionWarnOut = prevOut })
+
+		lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+			return &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+				TriggerID:      "tr_1",
+				Name:           "nightly",
+				SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
+				BoundSessionID: "sess_test",
+			}}, nil
+		}
+		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsResume(config))
+		assert.Contains(t, stderr.String(), "sess_test")
+		assert.Contains(t, stderr.String(), "nightly")
+	})
+}
+
+func TestRunAgentsResume_BoundSessionLookupMissIsSilent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var stderr bytes.Buffer
+		prevOut := agentBoundSessionWarnOut
+		agentBoundSessionWarnOut = &stderr
+		t.Cleanup(func() { agentBoundSessionWarnOut = prevOut })
+
+		lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+			return nil, errors.New("404")
+		}
+		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		config.Args = []string{"sess_test"}
+		assert.NoError(t, RunAgentsResume(config))
+		assert.Empty(t, stderr.String())
+	})
+}
+
+func TestWarnBoundReuseSession_SkipsFreshAndOtherSessions(t *testing.T) {
+	var stderr bytes.Buffer
+	prevOut := agentBoundSessionWarnOut
+	prevLookup := lookupBoundTrigger
+	agentBoundSessionWarnOut = &stderr
+	t.Cleanup(func() {
+		agentBoundSessionWarnOut = prevOut
+		lookupBoundTrigger = prevLookup
+	})
+
+	lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+		return &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			Name:           "fresh-nightly",
+			SessionMode:    godo.HostedAgentTriggerSessionModeFresh,
+			BoundSessionID: "sess_test",
+		}}, nil
+	}
+	warnBoundReuseSession(&CmdConfig{}, "sess_test")
+	assert.Empty(t, stderr.String())
+
+	lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
+		return &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			Name:           "other",
+			SessionMode:    godo.HostedAgentTriggerSessionModeReuse,
+			BoundSessionID: "sess_other",
+		}}, nil
+	}
+	warnBoundReuseSession(&CmdConfig{}, "sess_test")
+	assert.Empty(t, stderr.String())
 }
 
 func TestRunAgentsAuth(t *testing.T) {
