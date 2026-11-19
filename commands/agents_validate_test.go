@@ -120,6 +120,24 @@ func TestValidateAgentManifest_UnknownAdapterErrorNamesOpenHands(t *testing.T) {
 	assert.Contains(t, v.Errors[0], "openhands")
 }
 
+func TestValidateAgentManifest_MinimaxCodeAccepted(t *testing.T) {
+	const manifest = `agent: minimax-code
+secrets:
+  MINIMAX_API_KEY: ${MINIMAX_API_KEY}
+`
+	v := validateAgentManifest([]byte(manifest))
+	assert.True(t, v.ok(), "errors=%v", v.Errors)
+	for _, w := range v.Warnings {
+		assert.NotContains(t, w, "not yet supported")
+	}
+}
+
+func TestValidateAgentManifest_UnknownAdapterErrorNamesMinimaxCode(t *testing.T) {
+	v := validateAgentManifest([]byte("agent: not-a-real-adapter\n"))
+	require.False(t, v.ok())
+	assert.Contains(t, v.Errors[0], "minimax-code")
+}
+
 func TestValidateAgentManifest_HermesAccepted(t *testing.T) {
 	const manifest = `name: hermes-smoke
 agent: hermes
