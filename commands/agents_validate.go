@@ -135,6 +135,15 @@ type agentManifestValidation struct {
 	// NearMisses is the subset of Errors raised by the unknown-field near-miss
 	// rule. --allow-unknown-fields moves exactly these to Warnings.
 	NearMisses []string
+	// Credentials is the subset of Warnings about a credential in env. Agent
+	// Config create moves exactly these to Errors.
+	Credentials []string
+}
+
+// warnCredential records a warning that Agent Config create promotes to an error.
+func (v *agentManifestValidation) warnCredential(msg string) {
+	v.Warnings = append(v.Warnings, msg)
+	v.Credentials = append(v.Credentials, msg)
 }
 
 func (v *agentManifestValidation) ok() bool {
@@ -396,11 +405,11 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 		}
 		switch {
 		case hasStringKey(slots, key):
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.%s: matches a declared %s slot; supply the value through secrets, not %s", envPath, key, secretsPath, envPath))
+			out.warnCredential(fmt.Sprintf("%s.%s: matches a declared %s slot; supply the value through secrets, not %s", envPath, key, secretsPath, envPath))
 		case hasCredentialPrefix(val):
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.%s: value looks like a credential; declare it under %s instead", envPath, key, secretsPath))
+			out.warnCredential(fmt.Sprintf("%s.%s: value looks like a credential; declare it under %s instead", envPath, key, secretsPath))
 		case isCredentialLookingEnvKey(key) && !isEnvPlaceholder(val):
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.%s: name suggests a credential; declare it under %s instead (guest env is debug-readable and stored as-is)", envPath, key, secretsPath))
+			out.warnCredential(fmt.Sprintf("%s.%s: name suggests a credential; declare it under %s instead (guest env is debug-readable and stored as-is)", envPath, key, secretsPath))
 		}
 	}
 
@@ -1044,23 +1053,34 @@ func applyStrict(v *agentManifestValidation) *agentManifestValidation {
 // allowUnknownFields moves the unknown-field near-miss errors to warnings
 // (--allow-unknown-fields). Every other error is left alone.
 func allowUnknownFields(v *agentManifestValidation) *agentManifestValidation {
-	if v == nil || len(v.NearMisses) == 0 {
-		return v
+	if v == nil {
+		return nil
 	}
-	moved := make(map[string]struct{}, len(v.NearMisses))
-	for _, m := range v.NearMisses {
+	moveFindings(&v.Errors, &v.Warnings, v.NearMisses)
+	v.NearMisses = nil
+	return v
+}
+
+// moveFindings moves the messages in subset from *from to the end of *to,
+// keeping their order. subset holds messages the validator recorded when it
+// raised them, so nothing here depends on their wording.
+func moveFindings(from, to *[]string, subset []string) {
+	if len(subset) == 0 {
+		return
+	}
+	moved := make(map[string]struct{}, len(subset))
+	for _, m := range subset {
 		moved[m] = struct{}{}
 	}
-	kept := v.Errors[:0:0]
-	for _, e := range v.Errors {
-		if _, ok := moved[e]; ok {
-			v.Warnings = append(v.Warnings, e)
+	kept := (*from)[:0:0]
+	for _, f := range *from {
+		if _, ok := moved[f]; ok {
+			*to = append(*to, f)
 			continue
 		}
-		kept = append(kept, e)
+		kept = append(kept, f)
 	}
-	v.Errors, v.NearMisses = kept, nil
-	return v
+	*from = kept
 }
 
 // agentManifestStrictness reads --strict and --allow-unknown-fields. They pull
@@ -1112,15 +1132,8 @@ func reportDurableAgentManifestValidation(v *agentManifestValidation) error {
 	if v == nil {
 		return nil
 	}
-	var kept []string
-	for _, w := range v.Warnings {
-		if strings.Contains(w, "matches a declared") || strings.Contains(w, "looks like a credential") || strings.Contains(w, "name suggests a credential") {
-			v.Errors = append(v.Errors, w)
-			continue
-		}
-		kept = append(kept, w)
-	}
-	v.Warnings = kept
+	moveFindings(&v.Warnings, &v.Errors, v.Credentials)
+	v.Credentials = nil
 	printAgentManifestWarnings(os.Stderr, v.Warnings)
 	return v.error()
 }

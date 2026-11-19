@@ -284,23 +284,6 @@ tools:
 	}
 }
 
-// config create promotes warnings containing these substrings to errors, so a
-// far-key warning must never contain them.
-func TestUnknownManifestKeys_MessagesAvoidPromotionSubstrings(t *testing.T) {
-	_, warns := unknownManifestKeys(parseManifestDoc(t, "agent: opencode\nbogus_field: 1\nEgress: x\n"))
-	require.Len(t, warns, 2)
-	for _, w := range warns {
-		for _, banned := range []string{"matches a declared", "looks like a credential", "name suggests a credential"} {
-			assert.NotContains(t, w, banned)
-		}
-	}
-
-	// And end to end: the durable reporter keeps them as warnings.
-	v := validateAgentManifest([]byte("agent: opencode\nbogus_field: 1\n"))
-	require.Len(t, v.Warnings, 1)
-	require.NoError(t, reportDurableAgentManifestValidation(v))
-}
-
 func TestValidateAgentManifest_UnknownKeys(t *testing.T) {
 	t.Run("near miss is an error", func(t *testing.T) {
 		v := validateAgentManifest([]byte("name: demo\nagent: opencode\negresss: [api.github.com]\n"))
@@ -916,6 +899,26 @@ func TestRunAgentsConfigCreate_UnknownKeys(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, stderr, "bogus_field")
 	})
+
+	// config create promotes the env credential warnings to errors. An unknown
+	// key whose name is one of their phrases is still only an unknown key.
+	for _, key := range []string{"matches a declared", "looks like a credential", "name suggests a credential"} {
+		t.Run("unknown key named "+key+" stays a warning", func(t *testing.T) {
+			stderr, err := run(t, "agent: opencode\n\""+key+"\": 1\n", false, true)
+			require.NoError(t, err)
+			assert.Contains(t, stderr, "unknown field")
+		})
+	}
+	for _, tc := range []struct{ name, manifest, want string }{
+		{"env value that is a credential", "agent: opencode\nenv:\n  OPENAI_API_KEY: sk-proj-literal\n", "looks like a credential"},
+		{"env name that suggests a credential", "agent: opencode\nenv:\n  GITHUB_TOKEN: literal\n", "name suggests a credential"},
+	} {
+		t.Run(tc.name+" is promoted to an error", func(t *testing.T) {
+			_, err := run(t, tc.manifest, false, false)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.want)
+		})
+	}
 }
 
 func TestRunAgentTriggersCreate_UnknownKeys(t *testing.T) {

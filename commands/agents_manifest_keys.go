@@ -194,10 +194,6 @@ func joinManifestPath(parent, key string) string {
 // any other unknown key is a warning (the server stays the authority for names
 // doctl does not know). Messages carry the full path, for example
 // permissions.network.<key> or mounts[0].<key>.
-//
-// The warning text must not contain "matches a declared", "looks like a
-// credential" or "name suggests a credential": config create promotes
-// warnings containing them to errors.
 func unknownManifestKeys(doc map[string]any) (errs, warns []string) {
 	w := &keyWalker{}
 	w.object(doc, manifestRootKeys, "")
