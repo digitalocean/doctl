@@ -786,10 +786,6 @@ func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
 	if err := rejectRedactedSecrets(manifest); err != nil {
 		return nil, err
 	}
-	manifest, err = preferHarnessKeyInManifest(manifest)
-	if err != nil {
-		return nil, err
-	}
 	if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 		return nil, err
 	}

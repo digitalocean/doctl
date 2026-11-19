@@ -55,9 +55,9 @@ spec:
 `
 
 // sampleFlatManifest is the flat-format equivalent of sampleManifest: no
-// envelope, top-level agent key.
+// envelope, top-level harness key (the preferred spelling; agent still works).
 const sampleFlatManifest = `name: test-agent
-agent: opencode
+harness: opencode
 `
 
 func testAttachStateFromPending(pending *pendingHITL) *attachState {
@@ -759,7 +759,7 @@ spec:
 	})
 
 	t.Run("flat manifest gets a top-level name", func(t *testing.T) {
-		out, err := injectManifestName([]byte("agent: opencode\n"), "my-session")
+		out, err := injectManifestName([]byte("harness: opencode\n"), "my-session")
 		assert.NoError(t, err)
 		var doc map[string]any
 		assert.NoError(t, yaml.Unmarshal(out, &doc))
@@ -773,7 +773,8 @@ spec:
 		var doc map[string]any
 		assert.NoError(t, yaml.Unmarshal(out, &doc))
 		assert.Equal(t, "override", doc["name"])
-		assert.Equal(t, "opencode", doc["agent"])
+		assert.Equal(t, "opencode", doc["harness"])
+		assert.NotContains(t, doc, "agent")
 		assert.NotContains(t, doc, "metadata")
 	})
 
@@ -819,7 +820,7 @@ func TestManifestUsesLegacyEnvelope(t *testing.T) {
 func TestRunAgentsCreate_FlatWithName(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "agent.yaml")
-	assert.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o644))
+	assert.NoError(t, os.WriteFile(specPath, []byte("harness: opencode\n"), 0o644))
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		// The manifest sent to the server must carry a top-level name (flat
@@ -830,6 +831,8 @@ func TestRunAgentsCreate_FlatWithName(t *testing.T) {
 				var doc map[string]any
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				assert.Equal(t, "my-session", doc["name"])
+				assert.Equal(t, "opencode", doc["harness"])
+				assert.NotContains(t, doc, "agent")
 				assert.NotContains(t, doc, "metadata")
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},

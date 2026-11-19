@@ -40,7 +40,7 @@ func TestAgentConfigCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
 		specPath := filepath.Join(dir, "agent.yaml")
-		require.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o600))
+		require.NoError(t, os.WriteFile(specPath, []byte("harness: opencode\n"), 0o600))
 
 		tm.hostedAgents.EXPECT().
 			CreateAgentConfig(gomock.Any(), false).

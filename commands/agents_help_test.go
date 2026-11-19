@@ -121,8 +121,8 @@ func TestRenderHelpCodeBlockStyled(t *testing.T) {
 }
 
 func TestRenderHelpCodeBlockPlain(t *testing.T) {
-	out := renderHelpCodeBlock("agent: opencode", false)
-	assert.Contains(t, out, "  agent: opencode")
+	out := renderHelpCodeBlock("harness: opencode", false)
+	assert.Contains(t, out, "  harness: opencode")
 	assert.NotContains(t, out, "```")
 	assert.NotContains(t, out, "\x1b[")
 }

@@ -840,10 +840,6 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	if err != nil {
 		return nil, err
 	}
-	manifest, err = preferHarnessKeyInManifest(manifest)
-	if err != nil {
-		return nil, err
-	}
 	if err := reportAgentManifestValidation(validateAgentManifest(manifest)); err != nil {
 		return nil, err
 	}

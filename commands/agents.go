@@ -1416,11 +1416,6 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 			doctl.ArgAgentResumeOnTopoff)
 	}
 
-	manifest, err = preferHarnessKeyInManifest(manifest)
-	if err != nil {
-		return err
-	}
-
 	out := redactManifestSecrets(manifest)
 	if !bytes.HasSuffix(out, []byte("\n")) {
 		out = append(out, '\n')
@@ -1874,57 +1869,6 @@ func manifestUsesLegacyEnvelope(manifest []byte) bool {
 	}
 	_, ok := doc["apiVersion"]
 	return ok
-}
-
-// preferHarnessKeyInManifest rewrites a flat manifest's original `agent` key
-// to the current `harness` spelling before doctl prints or uploads YAML.
-// Documents that already use harness are unchanged. When both keys are set to
-// the same value, agent is dropped; conflicting values are left alone so
-// validateAgentManifest can refuse them. Legacy envelopes (apiVersion) are
-// unchanged — they select the adapter via spec.runtime.adapter.
-func preferHarnessKeyInManifest(manifest []byte) ([]byte, error) {
-	if len(bytes.TrimSpace(manifest)) == 0 {
-		return manifest, nil
-	}
-	var doc map[string]any
-	if err := yaml.Unmarshal(manifest, &doc); err != nil {
-		return nil, fmt.Errorf("parsing manifest to prefer harness key: %w", err)
-	}
-	if doc == nil {
-		return manifest, nil
-	}
-	if _, legacy := doc["apiVersion"]; legacy {
-		return manifest, nil
-	}
-
-	harness, hasHarness := yamlString(doc["harness"])
-	agent, hasAgent := yamlString(doc["agent"])
-	harness = strings.TrimSpace(harness)
-	agent = strings.TrimSpace(agent)
-
-	switch {
-	case !hasAgent && !hasYAMLKey(doc, "agent"):
-		return manifest, nil
-	case hasHarness && harness != "" && hasAgent && agent != "" && harness != agent:
-		// Conflicting selectors — leave both for the validator.
-		return manifest, nil
-	case hasHarness && harness != "":
-		delete(doc, "agent")
-	case hasAgent && agent != "":
-		doc["harness"] = agent
-		delete(doc, "agent")
-	case hasYAMLKey(doc, "agent"):
-		// Empty agent key with no harness: drop the empty original spelling.
-		delete(doc, "agent")
-	default:
-		return manifest, nil
-	}
-
-	out, err := yaml.Marshal(doc)
-	if err != nil {
-		return nil, fmt.Errorf("rewriting agent key to harness: %w", err)
-	}
-	return out, nil
 }
 
 // injectManifestName sets the session name on the manifest: top-level `name`
@@ -2383,10 +2327,6 @@ func runAgentsUpdateConfig(c *CmdConfig, sessionID string) error {
 		return err
 	}
 	manifest, err := readManifest(os.Stdin, path)
-	if err != nil {
-		return err
-	}
-	manifest, err = preferHarnessKeyInManifest(manifest)
 	if err != nil {
 		return err
 	}
