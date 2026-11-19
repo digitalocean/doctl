@@ -1443,7 +1443,9 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigExecCredential(c *CmdC
 			return fmt.Errorf("Invalid %s flag: %d", doctl.ArgKubernetesSSOLocalServerPort, ssoLocalServerPort)
 		}
 
-		token, expiry, err = s.ssoLogin(context.Background(), ssoClientID, ssoIssuerURL, sso.WithLocalServerPort(uint16(ssoLocalServerPort)), sso.WithLogger(logger))
+		ssoCtx, ssoCancel := context.WithTimeout(context.Background(), sso.DefaultLoginTimeout)
+		defer ssoCancel()
+		token, expiry, err = s.ssoLogin(ssoCtx, ssoClientID, ssoIssuerURL, sso.WithLocalServerPort(uint16(ssoLocalServerPort)), sso.WithLogger(logger))
 		if err != nil {
 			return fmt.Errorf("Failed to get ID token: %w", err)
 		}
