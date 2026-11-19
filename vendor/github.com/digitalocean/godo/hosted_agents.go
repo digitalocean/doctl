@@ -1190,11 +1190,23 @@ type HostedAgentSessionConfigSectionChanges struct {
 	Changed []string `json:"changed,omitempty"`
 }
 
+// HostedAgentSessionConfigEgressChanges lists the hosts and IP addresses an
+// egress change added or removed. Mode is the new egress mode (allowlist,
+// unrestricted or deny_all), set only when the mode changed.
+type HostedAgentSessionConfigEgressChanges struct {
+	Mode    string   `json:"mode,omitempty"`
+	Added   []string `json:"added,omitempty"`
+	Removed []string `json:"removed,omitempty"`
+}
+
 // HostedAgentSessionConfigChanges summarises changes per manifest section.
+// Secrets.Changed names the secrets that got a new value or were bound to
+// another URL or scheme; it never carries values.
 type HostedAgentSessionConfigChanges struct {
 	Tools   *HostedAgentSessionConfigSectionChanges `json:"tools,omitempty"`
 	Env     *HostedAgentSessionConfigSectionChanges `json:"env,omitempty"`
 	Secrets *HostedAgentSessionConfigSectionChanges `json:"secrets,omitempty"`
+	Egress  *HostedAgentSessionConfigEgressChanges  `json:"egress,omitempty"`
 }
 
 // HostedAgentSessionConfigUpdate describes one config update (or rollback) of a session.
@@ -1395,24 +1407,59 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 }
 
 // UpdateSessionConfig patches the live configuration of a session from a
-// partial manifest YAML (tools, env, secrets). In tools, only Action Gateway
-// (do.actions) entries can change; the session's custom MCP servers must be
-// sent back exactly as they are. The response carries the
+// partial manifest YAML (tools, env, secrets, egress). In tools, only Action
+// Gateway (do.actions) entries can change; the session's custom MCP servers
+// must be sent back exactly as they are. The response carries the
 // session, the outcome (ACCEPTED on HTTP 202, UNCHANGED on HTTP 200) and any
 // warnings. godo does not wait: on ACCEPTED the session is
 // SESSION_STATUS_UPDATING and the caller polls GetSession until the status
 // leaves UPDATING, then reads Session.Update. See the API error statuses: 400
-// (invalid patch, including a top-level model or permissions section; change
-// the model through env.HARNESS_INFERENCE_MODEL), 403 (feature not enabled),
-// 409 (session status does not allow an update, or a turn or approval is in
-// progress), 422 (requires a new session, including
-// adding, removing or changing a custom MCP server).
+// (invalid patch, including a top-level model or permissions section or a
+// malformed model name; change the model through env), 403 (feature not enabled),
+// 409 (session status does not allow an update, a turn or approval is in
+// progress, or the session's mutability does not allow the change), 422 (requires a
+// new session, including adding, removing or changing a custom MCP server, or
+// changing egress.vpc_uuid or egress.subnet_uuid).
 //
-// The model can change only on a session whose model provider is DigitalOcean
-// Serverless Inference (created with HARNESS_INFERENCE_MODEL and no inference
-// endpoint of its own): set HARNESS_INFERENCE_MODEL in env to another
-// Serverless Inference model id or router:<name>. A session on any other model
-// provider cannot change its model (422).
+// A URL-bound secret can be rotated (a new value as a string), moved
+// ({value, url, scheme}), added ({value, url}; scheme defaults to bearer) or
+// removed (left out of secrets). Moving one to a new host or path, or to
+// scheme raw, requires value (400 otherwise). {url} with no value binds an
+// existing plain secret to a URL and keeps its value. A URL-bound secret
+// cannot be changed back to a plain secret. The url must be https:// with an
+// exact hostname, an optional path, and no port, query or fragment.
+//
+// egress replaces the session's allowlist. Send it as an object with
+// allow_hosts (hostnames) and allow_ips (exact IP addresses, not CIDR ranges);
+// only this form is supported in an update. Hosts and IPs left out are
+// removed. The VPC cannot change: omit vpc_uuid and subnet_uuid, or send their
+// current values.
+//
+// URL-bound secret and egress changes do not restart the agent: an update
+// that changes only those ends APPLIED, and the proxy applies the change on
+// the session's next outbound connection. Open connections are not closed.
+// Both need URL-bound secret and egress updates enabled for the team (403
+// otherwise). A session created with unrestricted egress and no URL-bound
+// secrets cannot gain either one: the update ends FAILED with
+// requires_new_session.
+//
+// The model changes through env, in the key that matches the endpoint the
+// session was created with:
+//   - DigitalOcean Serverless Inference (HARNESS_INFERENCE_MODEL, no endpoint
+//     of its own): HARNESS_INFERENCE_MODEL, set to a model id or router:<name>.
+//   - Its own OpenAI-compatible endpoint (OPENAI_BASE_URL): MODEL, which is
+//     read before OPENAI_MODEL.
+//   - Its own Anthropic endpoint (ANTHROPIC_BASE_URL) or the Anthropic API (an
+//     ANTHROPIC_API_KEY secret): ANTHROPIC_MODEL, which is read before MODEL.
+//
+// A session keeps its model endpoint: changing the provider or the base URL,
+// or adding or removing HARNESS_INFERENCE_MODEL, is a 422. On a session with
+// its own endpoint, removing the model key selects the agent's default model,
+// and the provider key (OPENAI_API_KEY or ANTHROPIC_API_KEY) can only be
+// rotated: removing it, adding it, or changing its url or scheme is a 422.
+// Rotating a URL-bound provider key follows the URL-bound secret rules above.
+// A model name must be one line of at most 256 bytes, with no leading or
+// trailing whitespace and no " #" or ": " (400).
 //
 // The session status must be SESSION_STATUS_READY, SESSION_STATUS_DETACHED or
 // SESSION_STATUS_PAUSED (a paused session is resumed for the update and paused

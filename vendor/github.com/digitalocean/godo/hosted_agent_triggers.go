@@ -64,6 +64,18 @@ const (
 	HostedAgentTriggerStatusPaused HostedAgentTriggerStatus = "paused"
 )
 
+// HostedAgentTriggerStatusReason is why the service, not the customer, paused
+// a trigger. The API may add reasons, so an unrecognized value stays an opaque
+// string; show StatusMessage for it.
+type HostedAgentTriggerStatusReason string
+
+const (
+	// HostedAgentTriggerStatusReasonAgentConfigDeleted means the trigger's
+	// agent config was deleted, so every firing would fail. Re-enabling needs a
+	// new session template.
+	HostedAgentTriggerStatusReasonAgentConfigDeleted HostedAgentTriggerStatusReason = "agent_config_deleted"
+)
+
 // HostedAgentTriggerSessionMode controls whether each firing creates a new
 // session or reuses a bound paused session.
 type HostedAgentTriggerSessionMode string
@@ -123,11 +135,19 @@ const (
 
 // HostedAgentTrigger is a webhook or cron automation bound to an agent/session.
 type HostedAgentTrigger struct {
-	TriggerID       string                        `json:"trigger_id,omitempty"`
-	TeamID          int64                         `json:"team_id,omitempty"`
-	Kind            HostedAgentTriggerKind        `json:"kind,omitempty"`
-	Name            string                        `json:"name,omitempty"`
-	Status          HostedAgentTriggerStatus      `json:"status,omitempty"`
+	TriggerID string                   `json:"trigger_id,omitempty"`
+	TeamID    int64                    `json:"team_id,omitempty"`
+	Kind      HostedAgentTriggerKind   `json:"kind,omitempty"`
+	Name      string                   `json:"name,omitempty"`
+	Status    HostedAgentTriggerStatus `json:"status,omitempty"`
+	// StatusReason is set only while status is paused and the service, not
+	// the customer, paused the trigger; empty otherwise. While it is set, an
+	// update that sets status to active without a new SessionTemplate returns
+	// 409. An update that supplies a new SessionTemplate clears it.
+	StatusReason HostedAgentTriggerStatusReason `json:"status_reason,omitempty"`
+	// StatusMessage is text to show the customer that explains StatusReason
+	// and how to resolve it. Set exactly when StatusReason is set.
+	StatusMessage   string                        `json:"status_message,omitempty"`
 	SessionMode     HostedAgentTriggerSessionMode `json:"session_mode,omitempty"`
 	AgentKind       HostedAgentKind               `json:"agent_kind,omitempty"`
 	PromptTemplate  string                        `json:"prompt_template,omitempty"`

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/digitalocean/godo/internal/agents"
 	"github.com/google/go-querystring/query"
 	"github.com/hashicorp/go-retryablehttp"
 	"golang.org/x/oauth2"
@@ -25,6 +26,8 @@ const (
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
+
+	agentUserAgentToken = "Agent/"
 
 	headerRateLimit             = "RateLimit-Limit"
 	headerRateRemaining         = "RateLimit-Remaining"
@@ -318,7 +321,7 @@ func NewClient(httpClient *http.Client) *Client {
 
 	baseURL, _ := url.Parse(defaultBaseURL)
 
-	c := &Client{HTTPClient: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	c := &Client{HTTPClient: httpClient, BaseURL: baseURL, UserAgent: defaultUserAgent()}
 
 	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
@@ -477,6 +480,15 @@ func SetBaseURL(bu string) ClientOpt {
 		c.BaseURL = u
 		return nil
 	}
+}
+
+// defaultUserAgent returns the library User-Agent, with an "Agent/<name>"
+// token appended when running inside a known AI agent environment.
+func defaultUserAgent() string {
+	if name := agents.Detect(); name != "" {
+		return userAgent + " " + agentUserAgentToken + name
+	}
+	return userAgent
 }
 
 // SetUserAgent is a client option for setting the user agent.
