@@ -191,6 +191,38 @@ func TestRegistryCreate(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	})
+
+	for _, tc := range []struct {
+		name     string
+		set      bool
+		value    bool
+		expected *godo.RegistryInsightsTelemetryOptIn
+	}{
+		{name: "insights omitted", set: false},
+		{name: "insights opt-in", set: true, value: true, expected: &godo.RegistryInsightsTelemetryOptIn{Logs: godo.PtrTo(true)}},
+		{name: "insights explicit false", set: true, value: false, expected: &godo.RegistryInsightsTelemetryOptIn{Logs: godo.PtrTo(false)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				rcr := godo.RegistryCreateRequest{
+					Name:                 testRegistryName,
+					SubscriptionTierSlug: testSubscriptionTier,
+					Region:               testRegistryRegion,
+					Insights:             tc.expected,
+				}
+				tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+				config.Args = append(config.Args, testRegistryName)
+				config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, testSubscriptionTier)
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, testRegistryRegion)
+				if tc.set {
+					config.Doit.Set(config.NS, doctl.ArgEnableInsightsLogs, tc.value)
+				}
+
+				err := RunRegistryCreate(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
 }
 
 func TestRegistryGet(t *testing.T) {
@@ -1124,6 +1156,40 @@ func TestRegistriesCreate(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	})
+
+	for _, tc := range []struct {
+		name     string
+		set      bool
+		value    bool
+		expected *godo.RegistryInsightsTelemetryOptIn
+	}{
+		{name: "insights omitted", set: false},
+		{name: "insights opt-in", set: true, value: true, expected: &godo.RegistryInsightsTelemetryOptIn{Logs: godo.PtrTo(true)}},
+		{name: "insights explicit false", set: true, value: false, expected: &godo.RegistryInsightsTelemetryOptIn{Logs: godo.PtrTo(false)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				rcr := godo.RegistryCreateRequest{
+					Name:     testRegistryName,
+					Region:   testRegistryRegion,
+					Insights: tc.expected,
+				}
+				tm.registries.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+				config.Args = append(config.Args, testRegistryName)
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, testRegistryRegion)
+				if tc.set {
+					config.Doit.Set(config.NS, doctl.ArgEnableInsightsLogs, tc.value)
+				}
+
+				config.Registries = func() do.RegistriesService {
+					return tm.registries
+				}
+
+				err := RunRegistriesCreate(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
 
 	t.Run("error", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
