@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,4 +147,32 @@ func TestHostedAgentReusableSessionJSON_OneItem(t *testing.T) {
 	var out []any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out), "list-reusable-sessions with 1 item must always be a JSON array")
 	assert.Len(t, out, 1)
+}
+
+// status_reason and status_message reach -o json as the API sent them, and
+// --format can pick them, while the default columns stay as they were.
+func TestHostedAgentTrigger_StatusReason(t *testing.T) {
+	d := &HostedAgentTrigger{
+		Triggers: []do.HostedAgentTrigger{{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			TriggerID:     "tr_1",
+			Status:        godo.HostedAgentTriggerStatusPaused,
+			StatusReason:  godo.HostedAgentTriggerStatusReasonAgentConfigDeleted,
+			StatusMessage: "This trigger was paused because its agent config was deleted.",
+		}}},
+		Single: true,
+	}
+
+	var js bytes.Buffer
+	require.NoError(t, d.JSON(&js))
+	var obj map[string]any
+	require.NoError(t, json.Unmarshal(js.Bytes(), &obj))
+	assert.Equal(t, "agent_config_deleted", obj["status_reason"])
+	assert.Equal(t, "This trigger was paused because its agent config was deleted.", obj["status_message"])
+
+	var text bytes.Buffer
+	require.NoError(t, DisplayText(d, &text, true, []string{"TriggerID", "StatusReason"}, ui.Env{}))
+	assert.Equal(t, "tr_1    agent_config_deleted\n", text.String())
+
+	assert.NotContains(t, d.Cols(), "StatusReason")
+	assert.NotContains(t, d.Cols(), "StatusMessage")
 }

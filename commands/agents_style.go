@@ -445,6 +445,9 @@ func printTriggerListItem(w io.Writer, t *do.HostedAgentTrigger) {
 		meta = append(meta, colorize(createdAgo(t.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+	if reason := strings.TrimSpace(string(t.StatusReason)); reason != "" {
+		fmt.Fprintf(w, "  %s %s\n", colorize(reason+":", colWarning), strings.TrimSpace(t.StatusMessage))
+	}
 	if id := strings.TrimSpace(t.TriggerID); id != "" && id != name {
 		fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
 	}
@@ -472,6 +475,15 @@ func printTriggerCard(w io.Writer, t *do.HostedAgentTrigger, created bool) {
 	}
 	if status := strings.TrimSpace(string(t.Status)); status != "" {
 		body.WriteString(cardRow("Status", triggerStatusGlyph(t.Status)+" "+colorizeTriggerStatus(t.Status)))
+	}
+	if reason := strings.TrimSpace(string(t.StatusReason)); reason != "" {
+		body.WriteString(cardRow("Reason", colorize(reason, colWarning)))
+		if msg := strings.TrimSpace(t.StatusMessage); msg != "" {
+			body.WriteString(cardRow("Message", msg))
+		}
+		if t.StatusReason == godo.HostedAgentTriggerStatusReasonAgentConfigDeleted {
+			body.WriteString(cardRow("Resume", triggerResumeCmd(t.TriggerID)))
+		}
 	}
 	if mode := strings.TrimSpace(string(t.SessionMode)); mode != "" {
 		body.WriteString(cardRow("Mode", colorize(mode, colMuted)))
