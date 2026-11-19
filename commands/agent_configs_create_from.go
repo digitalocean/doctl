@@ -271,29 +271,44 @@ func printCreateFromPlan(c *CmdConfig, src *godo.HostedAgentConfig, name string,
 	renderAgentCard(c.Out, body.String())
 }
 
-// changedManifestKeys names the top-level manifest keys the edit changed,
-// ignoring secret values typed afterwards (those are listed separately).
+// changedManifestKeys names the manifest keys the edit changed, ignoring
+// secret values typed afterwards (those are listed separately). The legacy
+// envelope keeps its body under spec, so spec is compared one level down and
+// reported as spec.<key>.
 func changedManifestKeys(sourceYAML string, doc map[string]any) []string {
 	var before map[string]any
 	if err := yaml.Unmarshal([]byte(sourceYAML), &before); err != nil {
 		return nil
 	}
+	changed := changedKeys(before, doc, "")
+	sort.Strings(changed)
+	return changed
+}
+
+func changedKeys(before, after map[string]any, prefix string) []string {
 	var changed []string
 	seen := map[string]bool{}
-	for _, m := range []map[string]any{before, doc} {
+	for _, m := range []map[string]any{before, after} {
 		for k := range m {
-			if seen[k] || k == "secrets" || k == "spec" {
+			if seen[k] || k == "secrets" {
 				continue
 			}
 			seen[k] = true
+			if prefix == "" && k == "spec" {
+				a, aok := before[k].(map[string]any)
+				b, bok := after[k].(map[string]any)
+				if aok && bok {
+					changed = append(changed, changedKeys(a, b, "spec.")...)
+					continue
+				}
+			}
 			a, _ := json.Marshal(before[k])
-			b, _ := json.Marshal(doc[k])
+			b, _ := json.Marshal(after[k])
 			if !bytes.Equal(a, b) {
-				changed = append(changed, k)
+				changed = append(changed, prefix+k)
 			}
 		}
 	}
-	sort.Strings(changed)
 	return changed
 }
 
