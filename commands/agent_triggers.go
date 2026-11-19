@@ -16,7 +16,9 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -281,7 +283,7 @@ func RunAgentTriggersUpdate(c *CmdConfig) error {
 	}
 	t, err := c.HostedAgentTriggers().Update(c.Args[0], update)
 	if err != nil {
-		return err
+		return triggerResumeHint(c, c.Args[0], update, err)
 	}
 	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
@@ -325,9 +327,10 @@ func agentTriggersSetStatus(c *CmdConfig, status godo.HostedAgentTriggerStatus) 
 	if err := ensureOneArg(c); err != nil {
 		return err
 	}
-	t, err := c.HostedAgentTriggers().Update(c.Args[0], &godo.HostedAgentTriggerUpdateRequest{Status: status})
+	update := &godo.HostedAgentTriggerUpdateRequest{Status: status}
+	t, err := c.HostedAgentTriggers().Update(c.Args[0], update)
 	if err != nil {
-		return err
+		return triggerResumeHint(c, c.Args[0], update, err)
 	}
 	if agentStructuredOutput(c) {
 		return c.Display(&displayers.HostedAgentTrigger{Triggers: []do.HostedAgentTrigger{*t}, Single: true})
@@ -526,6 +529,37 @@ func RunAgentTriggersListProviders(c *CmdConfig) error {
 }
 
 // --- helpers ----------------------------------------------------------------
+
+// triggerResumeCmd is the command that re-enables a trigger the service paused
+// because its agent config was deleted: a new session template and status
+// active, sent in one update.
+func triggerResumeCmd(triggerID string) string {
+	return fmt.Sprintf("%s triggers update %s --%s <manifest> --%s active", agentCLI, triggerID, doctl.ArgAgentSpec, doctl.ArgAgentStatus)
+}
+
+// triggerResumeHint adds triggerResumeCmd to the 409 the API returns when an
+// update sets status active, without a new session template, on a trigger the
+// service paused because its agent config was deleted. The 409 carries no
+// reason code, so the trigger is read back to confirm its status_reason. That
+// read happens only on this failure.
+func triggerResumeHint(c *CmdConfig, triggerID string, update *godo.HostedAgentTriggerUpdateRequest, err error) error {
+	if update.Status != godo.HostedAgentTriggerStatusActive || update.SessionTemplate != "" {
+		return err
+	}
+	if _, status, ok := agentAPIError(err); !ok || status != http.StatusConflict {
+		return err
+	}
+	t, getErr := c.HostedAgentTriggers().Get(triggerID)
+	if getErr != nil || t == nil || t.HostedAgentTrigger == nil || t.StatusReason != godo.HostedAgentTriggerStatusReasonAgentConfigDeleted {
+		return err
+	}
+	var pretty *agentPrettyError
+	if !errors.As(beautifyAgentError(err), &pretty) {
+		return err
+	}
+	pretty.tips = append(pretty.tips, triggerResumeCmd(triggerID))
+	return pretty
+}
 
 func printNextPageToken(c *CmdConfig, next string) error {
 	if next == "" {

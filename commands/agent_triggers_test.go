@@ -16,7 +16,9 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -789,5 +791,121 @@ func TestAgentTriggersRun(t *testing.T) {
 		config.Out = &buf
 		require.NoError(t, RunAgentTriggersRun(config))
 		assert.Contains(t, buf.String(), "ex_1")
+	})
+}
+
+// configDeletedTrigger is a fresh trigger the service paused because its agent
+// config was deleted, as the API returns it.
+func configDeletedTrigger() *do.HostedAgentTrigger {
+	return &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+		TriggerID:     "tr_1",
+		Name:          "nightly",
+		Kind:          godo.HostedAgentTriggerKindCron,
+		Status:        godo.HostedAgentTriggerStatusPaused,
+		SessionMode:   godo.HostedAgentTriggerSessionModeFresh,
+		StatusReason:  godo.HostedAgentTriggerStatusReasonAgentConfigDeleted,
+		StatusMessage: "This trigger was paused because its agent config was deleted. Update the trigger's agent manifest to resume it.",
+	}}
+}
+
+const configDeletedResumeCmd = "doctl harness-runtime triggers update tr_1 --spec <manifest> --status active"
+
+func TestAgentTriggersGet_ShowsWhyServicePausedIt(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(configDeletedTrigger(), nil)
+		config.Args = []string{"tr_1"}
+		var buf bytes.Buffer
+		config.Out = &buf
+
+		require.NoError(t, RunAgentTriggersGet(config))
+		assert.Contains(t, buf.String(), "agent_config_deleted")
+		assert.Contains(t, buf.String(), "paused because its agent config was deleted")
+		assert.Contains(t, buf.String(), configDeletedResumeCmd)
+	})
+}
+
+func TestAgentTriggersList_ShowsWhyServicePausedIt(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().List(nil).Return([]do.HostedAgentTrigger{*configDeletedTrigger()}, "", nil)
+		var buf bytes.Buffer
+		config.Out = &buf
+
+		require.NoError(t, RunAgentTriggersList(config))
+		assert.Contains(t, buf.String(), "agent_config_deleted")
+		assert.Contains(t, buf.String(), "paused because its agent config was deleted")
+	})
+}
+
+// A trigger with no status_reason prints exactly what it printed before
+// status_reason existed.
+func TestAgentTriggersGetAndList_NoReasonOutputUnchanged(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		trig := &do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			TriggerID:   "tr_2",
+			Name:        "gh-ci",
+			Kind:        godo.HostedAgentTriggerKindWebhook,
+			Status:      godo.HostedAgentTriggerStatusPaused,
+			SessionMode: godo.HostedAgentTriggerSessionModeFresh,
+		}}
+		tm.hostedAgentTriggers.EXPECT().Get("tr_2").Return(trig, nil)
+		tm.hostedAgentTriggers.EXPECT().List(nil).Return([]do.HostedAgentTrigger{*trig}, "", nil)
+		config.Args = []string{"tr_2"}
+		var buf bytes.Buffer
+		config.Out = &buf
+
+		require.NoError(t, RunAgentTriggersGet(config))
+		assert.Equal(t, "\n  Name     gh-ci\n  ID       tr_2\n  Kind     webhook\n  Status   ○ paused\n  Mode     fresh\n\n", buf.String())
+
+		buf.Reset()
+		require.NoError(t, RunAgentTriggersList(config))
+		assert.Equal(t, "1 trigger\n\n○ gh-ci\n  webhook · fresh · paused\n  tr_2\n", buf.String())
+	})
+}
+
+// The 409 for re-enabling a trigger the service paused keeps the server's
+// message and adds the doctl command that resumes it.
+func TestAgentTriggersResume_ConflictOnServicePauseAddsResumeCommand(t *testing.T) {
+	const serverMsg = "trigger was paused because its agent config was deleted; supply a new session_template to resume it"
+	for name, run := range map[string]func(*CmdConfig) error{
+		"update --status active": func(c *CmdConfig) error {
+			c.Doit.Set(c.NS, doctl.ArgAgentStatus, "active")
+			return RunAgentTriggersUpdate(c)
+		},
+		"resume": RunAgentTriggersResume,
+	} {
+		t.Run(name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgentTriggers.EXPECT().
+					Update("tr_1", &godo.HostedAgentTriggerUpdateRequest{Status: godo.HostedAgentTriggerStatusActive}).
+					Return(nil, godoStatusErr(http.StatusConflict, serverMsg))
+				tm.hostedAgentTriggers.EXPECT().Get("tr_1").Return(configDeletedTrigger(), nil)
+				config.Args = []string{"tr_1"}
+
+				var pretty *agentPrettyError
+				require.True(t, errors.As(beautifyAgentError(run(config)), &pretty))
+				assert.Equal(t, serverMsg, pretty.Reason())
+				assert.Equal(t, http.StatusConflict, pretty.Status())
+				assert.Contains(t, pretty.NextStep(), configDeletedResumeCmd)
+			})
+		})
+	}
+}
+
+// A 409 on a trigger the service did not pause is some other conflict, so it
+// gets no resume command.
+func TestAgentTriggersResume_ConflictWithoutReasonAddsNothing(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgentTriggers.EXPECT().
+			Update("tr_2", &godo.HostedAgentTriggerUpdateRequest{Status: godo.HostedAgentTriggerStatusActive}).
+			Return(nil, godoStatusErr(http.StatusConflict, "conflict"))
+		tm.hostedAgentTriggers.EXPECT().Get("tr_2").Return(&do.HostedAgentTrigger{HostedAgentTrigger: &godo.HostedAgentTrigger{
+			TriggerID: "tr_2",
+			Status:    godo.HostedAgentTriggerStatusPaused,
+		}}, nil)
+		config.Args = []string{"tr_2"}
+
+		var pretty *agentPrettyError
+		require.True(t, errors.As(beautifyAgentError(RunAgentTriggersResume(config)), &pretty))
+		assert.NotContains(t, pretty.NextStep(), "--spec")
 	})
 }

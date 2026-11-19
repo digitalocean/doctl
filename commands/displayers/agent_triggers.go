@@ -62,6 +62,8 @@ func (h *HostedAgentTrigger) ColMap() map[string]string {
 		"WebhookURL":     "Webhook URL",
 		"NextRunAt":      "Next Run",
 		"CreatedAt":      "Created",
+		"StatusReason":   "Status Reason",
+		"StatusMessage":  "Status Message",
 	}
 }
 
@@ -85,6 +87,8 @@ func (h *HostedAgentTrigger) KV() []map[string]any {
 			"WebhookURL":     "",
 			"NextRunAt":      "",
 			"CreatedAt":      t.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+			"StatusReason":   t.StatusReason,
+			"StatusMessage":  t.StatusMessage,
 		}
 		if t.Webhook != nil {
 			row["WebhookURL"] = t.Webhook.WebhookURL
