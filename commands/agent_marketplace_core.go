@@ -970,17 +970,18 @@ func reviewListing(l *mkListing, files map[string]string) []mkFinding {
 		add(mkFlag, "Endpoint instructions in text", "a *_BASE_URL assignment appears in "+strings.Join(mentions, ", "))
 	}
 
-	// R4: egress. Wildcards fail; no allowlist leaves the platform default,
-	// which is allowed but flagged.
-	var wild []string
+	// R4: egress. The list joins the deployer's session allowlist, so every
+	// entry must be a public DNS host name; no allowlist leaves the platform
+	// default, which is allowed but flagged.
+	var bad []string
 	for _, h := range l.EgressAllowList {
-		if strings.ContainsAny(h, "*/ ") {
-			wild = append(wild, h)
+		if !isPublicHostName(h) {
+			bad = append(bad, fmt.Sprintf("%q", h))
 		}
 	}
 	switch {
-	case len(wild) > 0:
-		add(mkFail, "Egress allowlist", "not plain host names: "+strings.Join(wild, ", "))
+	case len(bad) > 0:
+		add(mkFail, "Egress allowlist", "not public DNS host names (IP addresses, ports, wildcards, paths and local names are refused): "+strings.Join(bad, ", "))
 	case len(l.EgressAllowList) == 0:
 		add(mkFlag, "Egress allowlist", "none declared, so the platform's default host allowlist applies; a human reviewer would check this before catalog listing")
 	default:
@@ -1025,6 +1026,27 @@ func reviewListing(l *mkListing, files map[string]string) []mkFinding {
 		add(mkPass, "Skill limits", fmt.Sprintf("%d skill(s), %s of %s", len(l.Skills), humanBytes(uint64(total)), humanBytes(uint64(mkMaxSkillTotalBytes))))
 	}
 	return out
+}
+
+// mkHostRE is a DNS name of two or more labels whose last label is shaped
+// like a top-level domain (letters, or an xn-- IDN), so no IP literal in any
+// notation (10.0.0.5, 127.1, ::1) and nothing with a port, path or wildcard
+// passes as a host name.
+var mkHostRE = regexp.MustCompile(`^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$`)
+
+// isPublicHostName reports whether h is a DNS name a listing may add to the
+// egress allowlist: not an IP, and not a loopback or local-only name.
+func isPublicHostName(h string) bool {
+	h = strings.ToLower(h)
+	if len(h) > 253 || !mkHostRE.MatchString(h) {
+		return false
+	}
+	for _, local := range []string{".localhost", ".localdomain", ".local", ".internal"} {
+		if strings.HasSuffix(h, local) {
+			return false
+		}
+	}
+	return true
 }
 
 // validateMKLayout pins every path in listing.json to the layout init writes,

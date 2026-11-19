@@ -373,6 +373,29 @@ func TestReviewUntrustedListing(t *testing.T) {
 	assert.Equal(t, mkFail, findingFor(reviewListing(lying, big), "Skill limits").Level)
 }
 
+// TestReviewEgressTakesOnlyPublicHostNames: a listing's egress list joins the
+// deployer's session allowlist, so the review fails any entry that is not a
+// public DNS host name.
+func TestReviewEgressTakesOnlyPublicHostNames(t *testing.T) {
+	l, files := buildTestListing(t)
+	egress := func(hosts ...string) mkFinding {
+		c := *l
+		c.EgressAllowList = hosts
+		return findingFor(reviewListing(&c, files), "Egress allowlist")
+	}
+	for _, bad := range []string{
+		"", "169.254.169.254", "10.0.0.5", "192.168.1.1", "127.0.0.1", "127.1", "0x7f.0.0.1", "::1", "[fe80::1]",
+		"localhost", "app.localhost", "localhost.localdomain", "printer.local", "metadata.google.internal", "metadata",
+		"evil.com:8080", "*.example.com", "example.com/x", "exa mple.com", "-bad.example.com",
+	} {
+		f := egress("api.github.com", bad)
+		assert.Equal(t, mkFail, f.Level, "%q", bad)
+		assert.Contains(t, f.Detail, fmt.Sprintf("%q", bad))
+		assert.NotContains(t, f.Detail, `"api.github.com"`, "a good entry is not listed as bad")
+	}
+	assert.Equal(t, mkPass, egress("api.github.com", "pypi.org", "Registry.NPMJS.org", "xn--bcher-kva.de").Level)
+}
+
 func TestMKSecretFromFlagOrEnv(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "from-env")
 	t.Setenv(mkInferenceKeySlot, "inference-from-env")
