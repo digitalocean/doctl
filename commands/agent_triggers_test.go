@@ -181,8 +181,8 @@ func TestAgentTriggersCreate_FromConfigDoesNotExpandLocalEnv(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			GetAgentConfig("cfg_probe").
 			Return(&godo.HostedAgentConfig{
-				ID:   "cfg_probe",
-				Name: "probe",
+				ID:       "cfg_probe",
+				Name:     "probe",
 				Manifest: json.RawMessage(`{"agent":"opencode","permissions":{"default":"deny"},"env":{"PROBE":"${` + envName + `}"}}`),
 			}, nil)
 
@@ -225,8 +225,8 @@ func TestAgentTriggersCreate_FromConfigLeavesUnsetRefsLiteral(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			GetAgentConfig("cfg_probe").
 			Return(&godo.HostedAgentConfig{
-				ID:   "cfg_probe",
-				Name: "probe",
+				ID:       "cfg_probe",
+				Name:     "probe",
 				Manifest: json.RawMessage(`{"agent":"opencode","permissions":{"default":"deny"},"env":{"PROBE":"${` + envName + `}"}}`),
 			}, nil)
 
@@ -271,8 +271,8 @@ func TestAgentTriggersUpdate_FromConfigDoesNotExpandLocalEnv(t *testing.T) {
 		tm.hostedAgents.EXPECT().
 			GetAgentConfig("cfg_probe").
 			Return(&godo.HostedAgentConfig{
-				ID:   "cfg_probe",
-				Name: "probe",
+				ID:       "cfg_probe",
+				Name:     "probe",
 				Manifest: json.RawMessage(`{"agent":"opencode","permissions":{"default":"deny"},"env":{"PROBE":"${` + envName + `}"}}`),
 			}, nil)
 
