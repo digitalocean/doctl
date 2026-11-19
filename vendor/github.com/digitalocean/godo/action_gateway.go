@@ -10,28 +10,30 @@ const actionGatewayPath = "/v2/action-gateway"
 
 // ActionGatewayService groups the public Action Gateway control-plane resources.
 type ActionGatewayService struct {
-	Tools       *ActionGatewayToolsService
-	Toolbelts   *ActionGatewayToolbeltsService
-	OutputViews *ActionGatewayOutputViewsService
-	MCPServers  *ActionGatewayMCPServersService
-	Connections *ActionGatewayConnectionsService
-	Sessions    *ActionGatewaySessionsService
-	Endpoints   *ActionGatewayEndpointsService
-	Users       *ActionGatewayUsersService
-	ActorLimits *ActionGatewayActorLimitsService
+	Tools               *ActionGatewayToolsService
+	Toolbelts           *ActionGatewayToolbeltsService
+	OutputViews         *ActionGatewayOutputViewsService
+	MCPServers          *ActionGatewayMCPServersService
+	Connections         *ActionGatewayConnectionsService
+	ProviderCredentials *ActionGatewayProviderCredentialsService
+	Sessions            *ActionGatewaySessionsService
+	Endpoints           *ActionGatewayEndpointsService
+	Users               *ActionGatewayUsersService
+	ActorLimits         *ActionGatewayActorLimitsService
 }
 
 func newActionGatewayService(client *Client) *ActionGatewayService {
 	return &ActionGatewayService{
-		Tools:       &ActionGatewayToolsService{client},
-		Toolbelts:   &ActionGatewayToolbeltsService{client},
-		OutputViews: &ActionGatewayOutputViewsService{client},
-		MCPServers:  &ActionGatewayMCPServersService{client},
-		Connections: &ActionGatewayConnectionsService{client},
-		Sessions:    &ActionGatewaySessionsService{client},
-		Endpoints:   &ActionGatewayEndpointsService{client},
-		Users:       &ActionGatewayUsersService{client},
-		ActorLimits: &ActionGatewayActorLimitsService{client},
+		Tools:               &ActionGatewayToolsService{client},
+		Toolbelts:           &ActionGatewayToolbeltsService{client},
+		OutputViews:         &ActionGatewayOutputViewsService{client},
+		MCPServers:          &ActionGatewayMCPServersService{client},
+		Connections:         &ActionGatewayConnectionsService{client},
+		ProviderCredentials: &ActionGatewayProviderCredentialsService{client},
+		Sessions:            &ActionGatewaySessionsService{client},
+		Endpoints:           &ActionGatewayEndpointsService{client},
+		Users:               &ActionGatewayUsersService{client},
+		ActorLimits:         &ActionGatewayActorLimitsService{client},
 	}
 }
 

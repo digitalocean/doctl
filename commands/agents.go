@@ -683,9 +683,12 @@ func Agents() *Command {
 		"Forward local TCP ports into the session's sandbox",
 		`Opens a local TCP tunnel to a port inside the session's sandbox, kubectl-style: connect to `+"`"+`localhost:<local-port>`+"`"+` and traffic flows over an authenticated connection to the sandbox port. Nothing inside the sandbox is exposed publicly.
 
-A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
+A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.
+
+For an openhands session, forwarding port 8000 serves Agent Canvas at `+"`"+`http://127.0.0.1:<local-port>/canvas`+"`"+`. That port is carried as HTTP: the chat and everything else cross the tunnel as before, and Canvas's Automate tab (`+"`"+`/api/automation`+"`"+`) is answered by doctl itself through the Hosted Agents triggers API, with your token. An automation made in the tab is a trigger bound to the session, the same one `+"`"+agentCLI+` triggers list`+"`"+` and the console show: a scheduled one is a cron trigger, an event one (GitHub or GitLab) is a webhook trigger filtered to the chosen events, and its payload URL and one-time secret are printed here for you to add in the provider. Because that page is served from the sandbox, which the agent can change, creating, enabling, editing (prompt, schedule, events) or running an automation is confirmed here in the terminal first, with the prompt that will run (`+"`"+`--automate=confirm`+"`"+`, the default); `+"`"+`--automate=allow`+"`"+` answers without asking and `+"`"+`--automate=off`+"`"+` does not serve the tab. The tab needs a loopback `+"`"+`--address`+"`"+`; with any other bind the port is tunnelled as is.`,
 		Writer)
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
+	AddStringFlag(cmdPortForward, doctl.ArgAgentAutomate, "", "confirm", "Agent Canvas's Automate tab (openhands sessions, port 8000): confirm asks here in the terminal before an automation is created, enabled, edited or run; allow answers without asking; off does not serve the tab")
 	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`
 
 	cmdCanvas := CmdBuilder(cmd, RunAgentsCanvas, "canvas <session>",
@@ -2119,6 +2122,39 @@ func sessionIDArg(c *CmdConfig) (string, error) {
 	return resolveSessionRef(c.HostedAgents(), c.Args[0])
 }
 
+// agentBoundSessionWarnOut is stderr so a warning never mixes into json output.
+var agentBoundSessionWarnOut io.Writer = os.Stderr
+
+// lookupBoundTrigger is the by-session read warnBoundReuseSession uses.
+// A miss is not a failure: the command the user asked for still runs.
+var lookupBoundTrigger = func(c *CmdConfig, sessionID string) (*do.HostedAgentTrigger, error) {
+	if c == nil || c.HostedAgentTriggers == nil {
+		return nil, errors.New("triggers unavailable")
+	}
+	return c.HostedAgentTriggers().GetBySession(sessionID)
+}
+
+// warnBoundReuseSession tells the user this session is the one a reuse trigger
+// fires into. A 404, a lookup error, a fresh trigger, or a different bound
+// session prints nothing and never fails the command.
+func warnBoundReuseSession(c *CmdConfig, sessionID string) {
+	trig, err := lookupBoundTrigger(c, sessionID)
+	if err != nil || trig == nil || trig.HostedAgentTrigger == nil {
+		return
+	}
+	if trig.SessionMode != godo.HostedAgentTriggerSessionModeReuse {
+		return
+	}
+	if strings.TrimSpace(trig.BoundSessionID) != sessionID {
+		return
+	}
+	name := strings.TrimSpace(trig.Name)
+	if name == "" {
+		name = trig.TriggerID
+	}
+	fmt.Fprintf(agentBoundSessionWarnOut, "Warning: session %s is bound to reuse trigger %s. Resuming, stopping, or prompting it can interrupt a firing that is waiting for this session to pause.\n", sessionID, name)
+}
+
 // RunAgentsShow prints one session.
 func RunAgentsShow(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
@@ -2175,6 +2211,7 @@ func RunAgentsCancel(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	runID, err := c.Doit.GetString(c.NS, doctl.ArgAgentCancelRunID)
 	if err != nil {
 		return err
@@ -2222,6 +2259,7 @@ func RunAgentsResume(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
 		return err
 	}
@@ -2936,6 +2974,7 @@ func RunAgentsApprove(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	requestID := c.Args[1]
 	outcome, err := hitlOutcomeFor(c.Args[2])
 	if err != nil {
