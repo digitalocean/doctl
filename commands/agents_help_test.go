@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl/internal/agentproxy/opencode"
+	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +35,77 @@ func TestRenderAgentsHelpLongColorizesCodeOnly(t *testing.T) {
 	assert.Contains(t, out, "More text.")
 	assert.Contains(t, out, "doctl agents run")
 	assert.NotContains(t, out, "```")
+}
+
+// MARSOHS-2591: Long must follow stylingEnabled (env.Style), not detectStyling().
+// Otherwise -o json on a TTY leaves the header plain but boxes the code body.
+func TestRenderAgentsHelpLong_FollowsStylingEnabled(t *testing.T) {
+	prev := stylingEnabled
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	in := "See:\n\n```bash\ndoctl agents run\n```\n"
+
+	stylingEnabled = false
+	plain := renderAgentsHelpLong(in)
+	assert.Contains(t, plain, "doctl agents run")
+	assert.NotContains(t, plain, "╭", "Style off must not border code blocks")
+	assert.Contains(t, plain, "  doctl agents run")
+
+	stylingEnabled = true
+	styled := renderAgentsHelpLong(in)
+	assert.Contains(t, styled, "doctl agents run")
+	assert.Contains(t, styled, "╭", "Style on must border code blocks")
+}
+
+// MARSOHS-2591: root UsageFunc re-renders Short+Long. agentsStyledHelpFunc must
+// not call UsageString(), or rotate-secret --help prints the description twice.
+func TestAgentsStyledHelpFunc_LongAppearsOnceWithSharedUsageFunc(t *testing.T) {
+	prevEnv := resolvedEnv
+	prevStyle := stylingEnabled
+	t.Cleanup(func() {
+		resolvedEnv = prevEnv
+		stylingEnabled = prevStyle
+	})
+
+	var buf bytes.Buffer
+	env := ui.Detect(&buf, &buf, ui.WithASCII(true), ui.WithMachineOutput(true))
+	resolvedEnv = &env
+
+	long := strings.TrimSpace(agentsTriggersRotateSecretHelpMD)
+	short := "Rotate a webhook trigger's secret"
+	// Fence-free marker: renderAgentsHelpLong rewrites ``` blocks, so do not
+	// count the raw Long string.
+	marker := "Issue a new webhook secret (shown once). Webhook triggers only."
+	cmd := &cobra.Command{
+		Use:   "rotate-secret <trigger-id>",
+		Short: short,
+		Long:  long,
+		Run:   func(*cobra.Command, []string) {},
+	}
+	cmd.Flags().Int("grace-period", 0, "Seconds the old secret keeps verifying")
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	// Same stacking as installHelpRenderer: UsageFunc prints the full help.
+	cmd.SetUsageFunc(func(c *cobra.Command) error {
+		return renderStyledHelp(c, c.OutOrStderr(), env, true)
+	})
+
+	agentsStyledHelpFunc(cmd, nil)
+	out := buf.String()
+
+	assert.Equal(t, 1, strings.Count(out, marker), "Long must appear once; got:\n%s", out)
+	assert.Equal(t, 1, strings.Count(out, "USAGE"), "USAGE must appear once; got:\n%s", out)
+	assert.Contains(t, out, "--grace-period")
+	usageIdx := strings.Index(out, "USAGE")
+	require.Greater(t, usageIdx, -1)
+	beforeUsage := out[:usageIdx]
+	assert.Contains(t, beforeUsage, short, "non-TTY help must keep the Short summary")
+	assert.Equal(t, 1, strings.Count(beforeUsage, short))
+	assert.True(t, strings.HasSuffix(beforeUsage, "\n\n"), "need a blank line between description and USAGE; got:\n%q", beforeUsage)
+	// Regression: pre-fix path reprinted Short via writeHelpHeader after Long.
+	markerIdx := strings.Index(out, marker)
+	require.Greater(t, markerIdx, -1)
+	assert.NotContains(t, out[markerIdx+len(marker):usageIdx], short)
 }
 
 func TestRenderHelpCodeBlockStyled(t *testing.T) {
