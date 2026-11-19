@@ -135,7 +135,8 @@
         "openai-agents",
         "claude-agent-sdk",
         "crewai",
-        "langgraph"
+        "langgraph",
+        "minimax-code"
       ]
     },
     "agent": {
@@ -407,11 +408,21 @@
     "max_lifetime": {
       "$ref": "#/$defs/duration"
     },
+    "policy_profile": {
+      "type": "string",
+      "enum": [
+        "openshell-default"
+      ]
+    },
     "egress": {
       "oneOf": [
         {
           "type": "string",
           "const": "unrestricted"
+        },
+        {
+          "type": "string",
+          "const": "none"
         },
         {
           "type": "array",
@@ -682,6 +693,7 @@
           "type",
           "path",
           "bucket",
+          "endpoint",
           "access_key",
           "secret_key"
         ],
@@ -693,7 +705,7 @@
           },
           "path": {
             "type": "string",
-            "pattern": "^/"
+            "pattern": "^/workspace/[^/]"
           },
           "bucket": {
             "type": "string",

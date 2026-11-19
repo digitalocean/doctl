@@ -61,6 +61,7 @@ permissions:
       command: git *
     tool: bash
 persistent_workspace: true
+policy_profile: openshell-default
 repos:
 - digitalocean/doctl
 secrets:

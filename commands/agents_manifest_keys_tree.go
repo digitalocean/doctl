@@ -24,6 +24,7 @@ var (
 		{name: "idle_timeout"},
 		{name: "keep_warm"},
 		{name: "max_lifetime"},
+		{name: "policy_profile"},
 		{name: "egress"},
 		{name: "tools", kind: keyTools},
 		{name: "permissions", kind: keyObject, child: manifestPermissionsKeys},

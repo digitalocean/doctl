@@ -29,7 +29,7 @@ import (
 // at only `agent` and `name`, so `validate` and `create --dry-run` passed it.
 //
 // Source of truth: the published flat agent manifest JSON schema. A copy
-// (as of 2026-11-02) lives in testdata/agent.flat.schema.json, and the key tree
+// (as of 2026-11-19) lives in testdata/agent.flat.schema.json, and the key tree
 // is generated from it (see the go:generate line below), so a schema refresh
 // is one command and TestManifestKeyTreeIsGenerated fails if it was skipped.
 // Key order is the schema's property order; it breaks ties between equally

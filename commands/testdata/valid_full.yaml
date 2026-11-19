@@ -47,6 +47,7 @@ size: s-2vcpu-4gb
 idle_timeout: 10m
 keep_warm: false
 max_lifetime: 8h
+policy_profile: openshell-default
 egress:
   allow_hosts:
     - api.github.com
