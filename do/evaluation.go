@@ -222,8 +222,8 @@ func (a *agentPlatformService) DeleteModelEvaluationPreset(evalPresetUUID string
 }
 
 // ListModelEvaluationMetrics lists available model evaluation metrics.
-func (a *agentPlatformService) ListModelEvaluationMetrics() (EvaluationMetrics, error) {
-	res, _, err := a.client.AgentPlatform.ListModelEvaluationMetrics(context.TODO())
+func (a *agentPlatformService) ListModelEvaluationMetrics(opt *godo.ModelEvaluationMetricListOptions) (EvaluationMetrics, error) {
+	res, _, err := a.client.AgentPlatform.ListModelEvaluationMetricsWithOptions(context.TODO(), opt)
 	if err != nil {
 		return nil, err
 	}

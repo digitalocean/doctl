@@ -101,8 +101,13 @@ const (
 	// template. Like OpenHands the agent is an always-on server rather than a
 	// CLI spawned per run, and the gateway is reached over `port-forward` as
 	// well as over OHR.
-	hermesAgentName    = "hermes"
-	anthropicAPIKeyEnv = "ANTHROPIC_API_KEY"
+	hermesAgentName = "hermes"
+	// minimaxCodeAgentName is MiniMax Code (`mcode`), a CLI spawned per run by
+	// OHR's ACP adapter in the coding-minimax-code template. Same shape as
+	// claude-code: the user's own vendor key, no server-minted credential.
+	minimaxCodeAgentName = "minimax-code"
+	anthropicAPIKeyEnv   = "ANTHROPIC_API_KEY"
+	minimaxAPIKeyEnv     = "MINIMAX_API_KEY"
 )
 
 var (
@@ -136,6 +141,8 @@ var harnessAgentNames = map[string]string{
 	"openhands":      openHandsAgentName,
 	"open-hands":     openHandsAgentName,
 	"hermes":         hermesAgentName,
+	"minimax-code":   minimaxCodeAgentName,
+	"minimax":        minimaxCodeAgentName,
 	"none":           bareSandboxAgent,
 	"sandbox":        bareSandboxAgent,
 }
@@ -193,13 +200,14 @@ func isAgentlessTemplate(template string) bool {
 // harnessAgentNames) to their proper display name, matching the casing used
 // by prettyAgentKind (e.g. "opencode" -> "OpenCode").
 var harnessDisplayNames = map[string]string{
-	"opencode":          "OpenCode",
-	claudeCodeAgentName: "Claude Code",
-	codexAgentName:      "Codex CLI",
-	openAIAgentsAdapter: "Codex",
-	openHandsAgentName:  "OpenHands",
-	hermesAgentName:     "Hermes",
-	bareSandboxAgent:    "Sandbox",
+	"opencode":           "OpenCode",
+	claudeCodeAgentName:  "Claude Code",
+	codexAgentName:       "Codex CLI",
+	openAIAgentsAdapter:  "Codex",
+	openHandsAgentName:   "OpenHands",
+	hermesAgentName:      "Hermes",
+	minimaxCodeAgentName: "MiniMax Code",
+	bareSandboxAgent:     "Sandbox",
 }
 
 // prettyHarnessName returns the display name for a raw --harness value or
@@ -317,6 +325,7 @@ func launchExistingSession(c *CmdConfig, ref string) error {
 	if err != nil {
 		return launchUnresolvableRefErr(ref, err)
 	}
+	warnBoundReuseSession(c, sessionID)
 
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
@@ -483,7 +492,7 @@ func resolveHarnessAgent(harness string) (string, error) {
 		// --template implication sets it internally, while a user who types it
 		// is refused by resolveAgentCreationSource. Listing it would send them
 		// to a value that answers with a second error.
-		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands, hermes",
+		return "", fmt.Errorf("unsupported --%s %q; supported values: opencode, claude-code, codex, codex-agentapi, openhands, hermes, minimax-code",
 			doctl.ArgAgentHarness, harness)
 	}
 	return agent, nil
@@ -690,6 +699,18 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 			doc.Secrets = map[string]string{
 				"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 			}
+		}
+	case agent == minimaxCodeAgentName:
+		// Same as claude-code with MiniMax's key: mcode dials MiniMax's own
+		// endpoint under a native MINIMAX_API_KEY and has a default model of
+		// its own, so nothing else goes in the manifest. Like claude-code,
+		// the slot is always written, so --harness is the vendor-key path
+		// only: a session on DigitalOcean Inference (HARNESS_INFERENCE_API_KEY
+		// and HARNESS_INFERENCE_MODEL, no MiniMax key) needs a hand-written
+		// manifest. No template pin: harness-api resolves the kind to
+		// coding-minimax-code itself.
+		doc.Secrets = map[string]string{
+			minimaxAPIKeyEnv: "${" + minimaxAPIKeyEnv + "}",
 		}
 	case agent == openHandsAgentName:
 		// No key slot: OpenHands runs on DigitalOcean Inference. Setting
@@ -1214,6 +1235,110 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 	}
 }
 
+// waitForSessionConfigUpdate polls the session until a live config update has
+// finished: the status has left SESSION_STATUS_UPDATING and the update is no
+// longer APPLYING. It returns the settled session, or an error when the update
+// FAILED (naming the server's detail and whether it reverted), the session
+// ended, or ctx expired.
+func waitForSessionConfigUpdate(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
+	ticker := time.NewTicker(sessionReadyPollInterval)
+	defer ticker.Stop()
+
+	announced := false
+	var last godo.HostedAgentSessionStatus
+	for {
+		sess, err := svc.GetSession(sessionID)
+		if err != nil {
+			return nil, err
+		}
+		last = sess.Status
+
+		applying := sess.Status == godo.HostedAgentSessionStatusUpdating ||
+			(sess.Update != nil && sess.Update.State == godo.HostedAgentSessionConfigUpdateStateApplying)
+		if applying {
+			if prog != nil && !announced {
+				prog.wait("Applying config update…")
+				announced = true
+			}
+		} else {
+			switch sess.Status {
+			case godo.HostedAgentSessionStatusFailed,
+				godo.HostedAgentSessionStatusDestroyed,
+				godo.HostedAgentSessionStatusDestroying:
+				return nil, fmt.Errorf("session entered %s during the config update", humanSessionStatus(sess.Status))
+			}
+			if u := sess.Update; u != nil && u.State == godo.HostedAgentSessionConfigUpdateStateFailed {
+				return nil, configUpdateFailedError(u)
+			}
+			return sess, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return nil, fmt.Errorf("timed out waiting for the config update of session %s (last status: %s); it may still finish, check `%s show %s`",
+					sessionID, humanSessionStatus(last), agentCLI, sessionID)
+			}
+			return nil, ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
+// configUpdateFailedError describes a FAILED config update, carrying the
+// server's detail and whether the previous config was restored.
+func configUpdateFailedError(u *godo.HostedAgentSessionConfigUpdate) error {
+	msg := "config update failed"
+	if u.Error != "" {
+		msg += " (" + string(u.Error) + ")"
+	}
+	if d := strings.TrimSpace(u.Detail); d != "" {
+		msg += ": " + d
+	}
+	if u.Reverted {
+		msg += ". The session was reverted to its previous config"
+	}
+	return errors.New(msg)
+}
+
+// configChangesSummary renders an update's changes compactly, e.g.
+// "tools +jira −docs; env ~MODE". Empty when nothing is recorded.
+func configChangesSummary(u *godo.HostedAgentSessionConfigUpdate) string {
+	if u == nil {
+		return ""
+	}
+	return configDiffSummary(u.Changes)
+}
+
+func configDiffSummary(ch *godo.HostedAgentSessionConfigChanges) string {
+	if ch == nil {
+		return ""
+	}
+	var parts []string
+	for _, sec := range []struct {
+		name string
+		c    *godo.HostedAgentSessionConfigSectionChanges
+	}{{"tools", ch.Tools}, {"env", ch.Env}, {"secrets", ch.Secrets}} {
+		if sec.c == nil {
+			continue
+		}
+		var items []string
+		for _, k := range sec.c.Added {
+			items = append(items, "+"+k)
+		}
+		for _, k := range sec.c.Removed {
+			items = append(items, "−"+k)
+		}
+		for _, k := range sec.c.Changed {
+			items = append(items, "~"+k)
+		}
+		if len(items) > 0 {
+			parts = append(parts, sec.name+" "+strings.Join(items, " "))
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
 // bitsReadyNote returns a one-shot message when the session payload shows
 // environment identifiers while status is still not READY.
 func bitsReadyNote(sess *do.HostedAgentSession) string {
@@ -1257,6 +1382,8 @@ func runStatusLabel(status godo.HostedAgentSessionStatus) string {
 		return "Agent ready (detached)"
 	case godo.HostedAgentSessionStatusPaused:
 		return "Agent paused"
+	case godo.HostedAgentSessionStatusUpdating:
+		return "Applying config update…"
 	default:
 		return humanSessionStatus(status)
 	}
@@ -1469,6 +1596,24 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 	if ws := strings.TrimSpace(sess.WorkspaceID); ws != "" {
 		body.WriteString(cardRow("Workspace", colorize(ws, colMuted)))
 	}
+	// Only shown once the live config has moved away from the created manifest.
+	if sess.ConfigDrifted {
+		drift := "yes"
+		if d := configDiffSummary(sess.ConfigDiff); d != "" {
+			drift = d
+		}
+		body.WriteString(cardRow("Config drifted", drift))
+	}
+	if u := sess.Update; u != nil && u.State != "" {
+		last := strings.ToLower(strings.ReplaceAll(string(u.State), "_", " "))
+		if sum := configChangesSummary(u); sum != "" {
+			last += " · " + sum
+		}
+		if !u.StartedAt.Time.IsZero() {
+			last += " · " + formatCreatedAt(u.StartedAt.Time)
+		}
+		body.WriteString(cardRow("Last update", colorize(last, colMuted)))
+	}
 	if !sess.CreatedAt.Time.IsZero() {
 		body.WriteString(cardRow("Created", colorize(formatCreatedAt(sess.CreatedAt.Time), colMuted)))
 	}
@@ -1495,7 +1640,7 @@ func sessionStatusGlyph(status godo.HostedAgentSessionStatus) string {
 	switch status {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
 		return colorize("●", colSuccess)
-	case godo.HostedAgentSessionStatusProvisioning:
+	case godo.HostedAgentSessionStatusProvisioning, godo.HostedAgentSessionStatusUpdating:
 		return colorize("…", colWarning)
 	case godo.HostedAgentSessionStatusPaused:
 		return colorize("○", colWarning)
@@ -1513,7 +1658,7 @@ func colorizeSessionStatus(status godo.HostedAgentSessionStatus) string {
 	switch status {
 	case godo.HostedAgentSessionStatusReady, godo.HostedAgentSessionStatusDetached:
 		return colorize(label, colSuccess)
-	case godo.HostedAgentSessionStatusProvisioning, godo.HostedAgentSessionStatusPaused:
+	case godo.HostedAgentSessionStatusProvisioning, godo.HostedAgentSessionStatusPaused, godo.HostedAgentSessionStatusUpdating:
 		return colorize(label, colWarning)
 	case godo.HostedAgentSessionStatusFailed:
 		return colorize(label, colError)
