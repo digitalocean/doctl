@@ -41,6 +41,7 @@ var knownAgentAdapters = map[string]struct{}{
 	"hermes":           {}, // runnable (AGENT_KIND_HERMES): the hermes gateway in the coding-hermes template
 	"langgraph":        {}, // runnable (AGENT_KIND_LANGGRAPH)
 	"openhands":        {}, // runnable (AGENT_KIND_OPENHANDS): OpenHands Agent Server in the openhands template
+	"minimax-code":     {}, // runnable (AGENT_KIND_MINIMAX_CODE): MiniMax Code (mcode) in the coding-minimax-code template
 	"custom":           {},
 	"none":             {}, // bare sandbox: no agent in the guest
 	"sandbox":          {}, // equal spelling of none
@@ -288,7 +289,7 @@ func validateEnvelopeManifest(doc map[string]any, out *agentManifestValidation) 
 
 func validateAdapter(adapter, path string, out *agentManifestValidation) {
 	if _, ok := knownAgentAdapters[adapter]; !ok {
-		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, openhands, custom, none, …)", path, adapter))
+		out.Errors = append(out.Errors, fmt.Sprintf("%s %q is not a known adapter (want claude-code, opencode, codex, codex-agentapi, openhands, minimax-code, custom, none, …)", path, adapter))
 		return
 	}
 	switch adapter {
