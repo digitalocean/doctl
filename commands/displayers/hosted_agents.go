@@ -62,7 +62,21 @@ func (h *HostedAgentSession) Cols() []string {
 	if len(h.Sessions) == 0 || h.anyWorkspace() {
 		cols = append(cols, "WorkspaceID")
 	}
+	// Same rule for config drift: only sessions whose live config was changed
+	// after create carry it.
+	if len(h.Sessions) == 0 || h.anyConfigDrifted() {
+		cols = append(cols, "ConfigDrifted")
+	}
 	return cols
+}
+
+func (h *HostedAgentSession) anyConfigDrifted() bool {
+	for _, s := range h.Sessions {
+		if s.HostedAgentSession != nil && s.ConfigDrifted {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HostedAgentSession) anyWorkspace() bool {
@@ -96,6 +110,7 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"CreatedAt":       "Created",
 		"PauseReason":     "Pause Reason",
 		"WorkspaceID":     "Workspace",
+		"ConfigDrifted":   "Drifted",
 	}
 }
 
@@ -121,8 +136,9 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			// Passed through verbatim: the API reserves the right to add
 			// reasons, so an unrecognized value is shown as-is rather than
 			// flattened to "unknown".
-			"PauseReason": string(s.PauseReason),
-			"WorkspaceID": s.WorkspaceID,
+			"PauseReason":   string(s.PauseReason),
+			"WorkspaceID":   s.WorkspaceID,
+			"ConfigDrifted": s.ConfigDrifted,
 		})
 	}
 	return out
@@ -672,6 +688,50 @@ func (h *HostedAgentSandboxSize) KV() []map[string]any {
 			"MemoryMB":         s.MemoryMB,
 			"PricePerHourUSD":  fmt.Sprintf("%0.5f", s.PricePerHourUSD),
 			"PricePerMonthUSD": fmt.Sprintf("%0.3f", s.PricePerMonthUSD),
+		})
+	}
+	return out
+}
+
+// HostedAgentRegion renders the per-team region catalog for
+// `doctl harness-runtime regions list`.
+type HostedAgentRegion struct {
+	Regions []godo.HostedAgentRegion
+}
+
+var _ Displayable = &HostedAgentRegion{}
+
+func (h *HostedAgentRegion) JSON(out io.Writer) error {
+	return writeJSON(h.Regions, out)
+}
+
+func (h *HostedAgentRegion) Cols() []string {
+	return []string{"Slug", "Default"}
+}
+
+func (h *HostedAgentRegion) ColMap() map[string]string {
+	return map[string]string{
+		"Slug":    "Slug",
+		"Default": "Default",
+	}
+}
+
+func (h *HostedAgentRegion) KV() []map[string]any {
+	if h == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, len(h.Regions))
+	for _, r := range h.Regions {
+		// Marked rather than printed as a bare bool: the column answers "which
+		// one do I get if I omit --region", and a column of true/false reads as
+		// a property of each region instead of a choice among them.
+		marker := ""
+		if r.IsDefault {
+			marker = "*"
+		}
+		out = append(out, map[string]any{
+			"Slug":    r.Slug,
+			"Default": marker,
 		})
 	}
 	return out
