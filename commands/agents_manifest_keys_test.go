@@ -1034,6 +1034,47 @@ func TestRunAgentTriggers_FromConfigSkipsUnknownFields(t *testing.T) {
 	}
 }
 
+// A trigger command with no manifest to check fails on --strict and
+// --allow-unknown-fields instead of ignoring them.
+func TestRunAgentTriggers_ManifestFlagsWithoutManifest(t *testing.T) {
+	cmds := []struct {
+		name  string
+		run   func(*CmdConfig) error
+		setup func(*CmdConfig)
+		want  string
+	}{
+		{"create with --session-mode=reuse", RunAgentTriggersCreate, func(config *CmdConfig) {
+			config.Doit.Set(config.NS, doctl.ArgAgentTriggerKind, "webhook")
+			config.Doit.Set(config.NS, doctl.ArgAgentName, "gh-ci")
+			config.Doit.Set(config.NS, doctl.ArgAgentTriggerSessionMode, "reuse")
+			config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "run it")
+			config.Doit.Set(config.NS, doctl.ArgAgentTriggerOutputMode, "none")
+			config.Doit.Set(config.NS, doctl.ArgAgentTriggerBoundSessionID, "sess_1")
+		}, "only applies to --session-mode=fresh"},
+		{"update with no --spec", func(c *CmdConfig) error {
+			c.Args = []string{"tr_1"}
+			return RunAgentTriggersUpdate(c)
+		}, func(config *CmdConfig) {
+			config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "run it again")
+		}, "needs a manifest to check; pass --spec"},
+	}
+	for _, cmd := range cmds {
+		for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
+			t.Run(cmd.name+" rejects --"+flag, func(t *testing.T) {
+				// No expectations: the flag must fail before any API call.
+				withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+					config.Out = io.Discard
+					cmd.setup(config)
+					config.Doit.Set(config.NS, flag, true)
+					err := cmd.run(config)
+					require.Error(t, err)
+					assert.Contains(t, err.Error(), "--"+flag+" "+cmd.want)
+				})
+			})
+		}
+	}
+}
+
 // --- --allow-unknown-fields --------------------------------------------------
 
 func TestAllowUnknownFields(t *testing.T) {

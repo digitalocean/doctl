@@ -652,6 +652,9 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 		}
 		req.SessionTemplate = string(manifest)
 	case godo.HostedAgentTriggerSessionModeReuse:
+		if err := rejectManifestFlags(c, fmt.Sprintf("only applies to --%s=fresh; a reuse trigger has no manifest to check", doctl.ArgAgentTriggerSessionMode)); err != nil {
+			return nil, err
+		}
 		bound, err := c.Doit.GetString(c.NS, doctl.ArgAgentTriggerBoundSessionID)
 		if err != nil {
 			return nil, err
@@ -730,6 +733,9 @@ func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
 	if specPath == "" && configRef == "" {
 		if len(secrets) > 0 {
 			return nil, fmt.Errorf("--%s needs a session template to inject into; pass --%s or --%s", doctl.ArgAgentSecret, doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
+		}
+		if err := rejectManifestFlags(c, fmt.Sprintf("needs a manifest to check; pass --%s", doctl.ArgAgentSpec)); err != nil {
+			return nil, err
 		}
 		return nil, nil
 	}

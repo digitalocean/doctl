@@ -1228,9 +1228,16 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 // manifest was validated when the config was created, and the user cannot edit
 // it, so neither flag has anything to act on.
 func rejectManifestFlagsWithFromConfig(c *CmdConfig) error {
+	return rejectManifestFlags(c, fmt.Sprintf("cannot be used with --%s; an Agent Config's manifest was validated when the config was created", doctl.ArgAgentFromConfig))
+}
+
+// rejectManifestFlags fails when --strict or --allow-unknown-fields is given
+// where there is no manifest for it to check, so the flag is never silently
+// ignored. why completes the message after "--<flag> ".
+func rejectManifestFlags(c *CmdConfig, why string) error {
 	for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
 		if c.Doit.IsSet(flag) {
-			return fmt.Errorf("--%s cannot be used with --%s; an Agent Config's manifest was validated when the config was created", flag, doctl.ArgAgentFromConfig)
+			return fmt.Errorf("--%s %s", flag, why)
 		}
 	}
 	return nil
