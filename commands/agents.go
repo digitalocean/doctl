@@ -610,7 +610,7 @@ func Agents() *Command {
 		Writer, agentsNS(
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
-	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
+	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets. Absent sections are untouched; "tools" is the full replacement list (only do.actions entries can change; send custom MCP servers back unchanged), "env" and "secrets" are full sets (a key left out is removed). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
 	acceptFileAliasFor(cmdUpdate)
 	AddIntFlag(cmdUpdate, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for a config update to finish (0 uses the default). Only used with --spec. Ignored with -o json.")
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentNoWait, "", false, "With --spec, return once the config update is accepted instead of waiting for it to finish. Implied by -o json.")
