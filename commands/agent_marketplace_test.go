@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -538,6 +539,35 @@ func TestMKDeployOffTerminalNeedsYes(t *testing.T) {
 	res = runMKDeploy(t, l, files, mkDeployFlags(nil), nil)
 	require.NoError(t, res.err)
 	assert.True(t, res.created)
+}
+
+// TestMKDeploySaysWhenClaudeMDIsNotApplied: CLAUDE.md reaches the session
+// only through the workspace copy, so the consent card and the warning say
+// so when --no-native-files skips it or the copy fails.
+func TestMKDeploySaysWhenClaudeMDIsNotApplied(t *testing.T) {
+	l, files := buildTestListing(t)
+	res := runMKDeploy(t, l, files, mkDeployFlags(nil), nil)
+	require.NoError(t, res.err)
+	assert.Contains(t, res.out, "CLAUDE.md house rules")
+	assert.NotContains(t, res.out, "not applied")
+	assert.Contains(t, res.placed, "CLAUDE.md")
+
+	res = runMKDeploy(t, l, files, mkDeployFlags(map[string]any{mkArgNoNativeFiles: true}), nil)
+	require.NoError(t, res.err)
+	assert.Contains(t, res.out, "CLAUDE.md house rules — not applied: --no-native-files skips copying it")
+	assert.Empty(t, res.placed)
+
+	res = runMKDeploy(t, l, files, mkDeployFlags(nil), errors.New("transfer refused"))
+	require.NoError(t, res.err, "the session is running, so deploy still succeeds")
+	assert.Contains(t, res.warn, "running without its CLAUDE.md house rules")
+	assert.Contains(t, res.warn, "transfer refused")
+
+	noMD := *l
+	noMD.ClaudeMD = ""
+	res = runMKDeploy(t, &noMD, files, mkDeployFlags(nil), errors.New("transfer refused"))
+	require.NoError(t, res.err)
+	assert.Contains(t, res.warn, "copying skills into /workspace failed")
+	assert.NotContains(t, res.warn, "CLAUDE.md", "a listing without CLAUDE.md is not warned about one")
 }
 
 func TestGistRoundTrip(t *testing.T) {

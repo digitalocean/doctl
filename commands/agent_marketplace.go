@@ -123,7 +123,7 @@ On publish, credentials in known formats are replaced by declared secret slots t
 	AddStringFlag(cmdDeploy, mkArgName, "", "", "Session name (default: listing slug plus a short suffix)")
 	AddBoolFlag(cmdDeploy, mkArgYes, "y", false, "Deploy without the confirmation prompt (required when not run in a terminal)")
 	AddBoolFlag(cmdDeploy, mkArgNoAttach, "", false, "Create the session but do not open the chat")
-	AddBoolFlag(cmdDeploy, mkArgNoNativeFiles, "", false, "Do not copy CLAUDE.md and skills into /workspace/.claude (inline manifest skills only)")
+	AddBoolFlag(cmdDeploy, mkArgNoNativeFiles, "", false, "Do not copy CLAUDE.md and skills into /workspace/.claude (inline manifest skills only; CLAUDE.md is not applied)")
 	cmdDeploy.Example = `  ` + mkCLI + ` marketplace deploy 8f3a1c2d9e@4b7e21a
   ` + mkCLI + ` marketplace deploy 8f3a1c2d9e --secret HARNESS_INFERENCE_API_KEY=@$HOME/.secrets/do-inference.key`
 
@@ -702,12 +702,14 @@ func RunAgentsMarketplaceShow(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	printMKListingCard(c.Out, l, g, version, strings.Contains(c.Args[0], "@"))
+	printMKListingCard(c.Out, l, g, version, strings.Contains(c.Args[0], "@"), false)
 	printMKReview(c.Out, reviewListing(l, files))
 	return nil
 }
 
-func printMKListingCard(w io.Writer, l *mkListing, g *mkGist, version string, pinned bool) {
+// noNative is deploy's --no-native-files: CLAUDE.md has no manifest field,
+// so without the workspace copy the session never sees it.
+func printMKListingCard(w io.Writer, l *mkListing, g *mkGist, version string, pinned, noNative bool) {
 	short := version
 	if len(short) > 7 {
 		short = short[:7]
@@ -740,7 +742,10 @@ func printMKListingCard(w io.Writer, l *mkListing, g *mkGist, version string, pi
 		}
 		fmt.Fprintf(w, "  • %s %s\n", s.Name, colorize("— "+d, colMuted))
 	}
-	if l.ClaudeMD != "" {
+	switch {
+	case l.ClaudeMD != "" && noNative:
+		fmt.Fprintf(w, "  • CLAUDE.md house rules %s\n", colorize("— not applied: --"+mkArgNoNativeFiles+" skips copying it", colWarning))
+	case l.ClaudeMD != "":
 		fmt.Fprintln(w, "  • CLAUDE.md house rules")
 	}
 	fmt.Fprintln(w, boldColor("\nWhat it can access", colHighlight))
@@ -786,7 +791,7 @@ func RunAgentsMarketplaceDeploy(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	printMKListingCard(c.Out, l, g, version, strings.Contains(c.Args[0], "@"))
+	printMKListingCard(c.Out, l, g, version, strings.Contains(c.Args[0], "@"), noNative)
 	findings := reviewListing(l, files)
 	printMKReview(c.Out, findings)
 	if reviewFailed(findings) {
@@ -874,9 +879,13 @@ func RunAgentsMarketplaceDeploy(c *CmdConfig) error {
 
 	if !noNative {
 		n, err := uploadMKNativeFiles(c, sess.SessionID, l, files)
-		if err != nil {
-			warn("the agent is running, but copying CLAUDE.md/skills into /workspace failed: %v (inline skills still apply)", err)
-		} else {
+		switch {
+		case err != nil && l.ClaudeMD != "":
+			// CLAUDE.md sorts after .claude/, so a failed copy never placed it.
+			warn("the agent is running without its CLAUDE.md house rules: copying files into /workspace failed: %v (the inline skills still apply; CLAUDE.md reaches the agent only through this copy)", err)
+		case err != nil:
+			warn("the agent is running, but copying skills into /workspace failed: %v (the inline skills still apply)", err)
+		default:
 			prog.ok(fmt.Sprintf("Placed %d file(s) in /workspace (CLAUDE.md, .claude/skills)", n))
 		}
 	}
