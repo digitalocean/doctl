@@ -59,8 +59,8 @@ func AgentConfigs() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", `Path to an agent manifest in YAML or JSON. Prefer flat format (top-level name + harness), e.g. "name: my-config\nharness: opencode"; agent is the original name of harness and still works. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Omit on a terminal to pick a config and create a new one from it.`)
 	AddStringFlag(cmdCreate, doctl.ArgAgentName, "", "", "Team-unique name for the config (required with --spec)")
 	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
-	AddStringFlag(cmdCreate, doctl.ArgAgentFrom, "", "", "Create from this existing config ID. On a terminal without --spec, opens an interactive view of it.")
-	AddStringSliceFlag(cmdCreate, doctl.ArgAgentReuseSecret, "", nil, "Secret slot whose stored value is copied from --from instead of set in --spec (repeatable; required with --from and --spec)")
+	AddStringFlag(cmdCreate, doctl.ArgAgentFrom, "", "", "Create from this existing config ID, copying its Insights settings. On a terminal without --spec, opens an interactive view of it.")
+	AddStringSliceFlag(cmdCreate, doctl.ArgAgentReuseSecret, "", nil, "Secret slot whose stored value is copied from --from instead of set in --spec (repeatable; needs --from and --spec)")
 	cmdCreate.Example = agentCLI + ` config create --spec agent-spec.yaml --name my-config; ` +
 		agentCLI + ` config create --spec agent-spec.yaml --name my-config --secret ANTHROPIC_API_KEY=@~/.secrets/anthropic.key; ` +
 		agentCLI + ` config create  # on a terminal: pick a config and create a new one from it; ` +
@@ -140,8 +140,8 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 	if specPath == "" || name == "" {
 		return fmt.Errorf("--spec and --name are required (or run on a terminal without --spec to pick a config to create from)")
 	}
-	if (from == "") != (len(reuse) == 0) {
-		return fmt.Errorf("--from and --reuse-secret go together: name at least one --reuse-secret to copy from --from")
+	if len(reuse) > 0 && from == "" {
+		return fmt.Errorf("--reuse-secret needs --from, the config whose stored secret values it copies")
 	}
 	if err := rejectStdinSecretWithStdinManifest(specPath, secretPairs); err != nil {
 		return err
@@ -184,7 +184,11 @@ func RunAgentsConfigCreate(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
-		req.Insights, req.SourceConfigID, req.ReuseSecrets = src.Insights, from, reuse
+		req.Insights = src.Insights
+		if len(reuse) > 0 {
+			// The API's pair rule: both set, or both omitted when nothing is kept.
+			req.SourceConfigID, req.ReuseSecrets = from, reuse
+		}
 	}
 	cfg, err := c.HostedAgents().CreateAgentConfig(req, needsManagedModelAccessKey(manifest))
 	if err != nil {

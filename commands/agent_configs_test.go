@@ -57,6 +57,70 @@ func TestAgentConfigCreate(t *testing.T) {
 	})
 }
 
+// --from copies Insights from the source config, which a spec file cannot
+// carry, so scripts need it even when no secret is kept. The API takes
+// source_config_id and reuse_secrets together or not at all, so the source ID
+// goes out only when --reuse-secret names a slot.
+func TestAgentConfigCreate_From(t *testing.T) {
+	on := true
+	for _, tc := range []struct {
+		name, spec string
+		reuse      []string
+		wantSource string
+	}{
+		{name: "source has no tenant secrets", spec: "agent: opencode\n"},
+		{
+			name:       "keeps a secret",
+			spec:       "agent: opencode\nsecrets:\n  OPENAI_API_KEY: {source: tenantSecret}\n",
+			reuse:      []string{"OPENAI_API_KEY"},
+			wantSource: "cfg_src",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				specPath := filepath.Join(t.TempDir(), "agent.yaml")
+				require.NoError(t, os.WriteFile(specPath, []byte(tc.spec), 0o600))
+				insights := &godo.HostedAgentInsightsOptIn{Metrics: &on}
+
+				tm.hostedAgents.EXPECT().GetAgentConfig("cfg_src").
+					Return(&godo.HostedAgentConfig{ID: "cfg_src", Name: "my-config", Insights: insights}, nil)
+				tm.hostedAgents.EXPECT().
+					CreateAgentConfig(gomock.Any(), false).
+					DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, _ bool) (*godo.HostedAgentConfig, error) {
+						assert.Equal(t, insights, req.Insights)
+						assert.Equal(t, tc.wantSource, req.SourceConfigID)
+						assert.Equal(t, tc.reuse, req.ReuseSecrets)
+						return &godo.HostedAgentConfig{ID: "cfg_new", Name: "my-config-v2"}, nil
+					})
+
+				config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+				config.Doit.Set(config.NS, doctl.ArgAgentName, "my-config-v2")
+				config.Doit.Set(config.NS, doctl.ArgAgentFrom, "cfg_src")
+				if tc.reuse != nil {
+					config.Doit.Set(config.NS, doctl.ArgAgentReuseSecret, tc.reuse)
+				}
+				require.NoError(t, RunAgentsConfigCreate(config))
+			})
+		})
+	}
+}
+
+// --reuse-secret names slots to copy from --from, so it is an error alone, and
+// the message says what is missing.
+func TestAgentConfigCreate_ReuseSecretNeedsFrom(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		specPath := filepath.Join(t.TempDir(), "agent.yaml")
+		require.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o600))
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, specPath)
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "my-config")
+		config.Doit.Set(config.NS, doctl.ArgAgentReuseSecret, []string{"OPENAI_API_KEY"})
+
+		err := RunAgentsConfigCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--reuse-secret needs --from")
+	})
+}
+
 // The point of --secret on config create is that a checked-in manifest can
 // declare which credentials it needs while the value arrives from a secret
 // store at create time. The value is captured server-side once, which is why
