@@ -51,6 +51,7 @@ type MicroVMsService interface {
 	List(filter MicroVMListFilter) (MicroVMs, error)
 	Get(id string) (*MicroVM, error)
 	Create(req *godo.MicroVMCreateRequest) (*MicroVM, error)
+	Update(id string, req *godo.MicroVMUpdateRequest) (*MicroVM, error)
 	Pause(id string) (*MicroVM, error)
 	Resume(id string) (*MicroVM, error)
 	Delete(id string) error
@@ -139,6 +140,14 @@ func (s *microVMsService) Get(id string) (*MicroVM, error) {
 
 func (s *microVMsService) Create(req *godo.MicroVMCreateRequest) (*MicroVM, error) {
 	md, _, err := s.client.MicroVMs.Create(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &MicroVM{MicroVM: md}, nil
+}
+
+func (s *microVMsService) Update(id string, req *godo.MicroVMUpdateRequest) (*MicroVM, error) {
+	md, _, err := s.client.MicroVMs.Update(context.TODO(), id, req)
 	if err != nil {
 		return nil, err
 	}
