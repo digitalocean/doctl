@@ -3043,19 +3043,22 @@ func RunAgentsLogs(c *CmdConfig) error {
 		return errors.New("--pretty only applies to JSON output")
 	}
 	if format == "json" || pretty {
-		// checkErr prints a {"errors":[...]} envelope on stdout under -o json,
-		// which would add a non-event line to the stream. Report on stderr and
-		// exit non-zero silently instead, for both -o json and --pretty.
-		if err := runAgentsLogs(c, pretty, true); err != nil {
-			// Same rewrite the runner applies to text output, so a 402 says
-			// "add funds" here too.
-			err = beautifyAgentErrorFor(c, err)
-			if !errors.Is(err, ErrExitSilently) {
-				fmt.Fprint(uiEnv().ErrWriter(), formatStructuredError(uiEnv(), err))
-			}
-			return ErrExitSilently
+		// Before the first event, the runner's checkErr prints the standard
+		// {"errors":[...]} envelope under -o json. After it, that envelope
+		// would be a non-event line in the stream, so report on stderr and
+		// exit non-zero silently instead.
+		out := &reportingWriter{out: c.Out}
+		c.Out = out
+		err := runAgentsLogs(c, pretty, true)
+		if err == nil || !out.wrote.Load() {
+			return err
 		}
-		return nil
+		// Same rewrite the runner applies, so a 402 says "add funds" here too.
+		err = beautifyAgentErrorFor(c, err)
+		if !errors.Is(err, ErrExitSilently) {
+			fmt.Fprint(uiEnv().ErrWriter(), formatStructuredError(uiEnv(), err))
+		}
+		return ErrExitSilently
 	}
 	return runAgentsLogs(c, pretty, false)
 }
