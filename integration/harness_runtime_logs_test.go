@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -33,6 +34,10 @@ var _ = suite("harness-runtime/logs", func(t *testing.T, when spec.G, it spec.S)
 			case "/v2/harness-runtime/sessions/sess_x/events":
 				w.Header().Set("Content-Type", "text/event-stream")
 				w.Write([]byte(harnessLogsSSE))
+			case "/v2/harness-runtime/sessions/sess_gone/events":
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"id":"not_found","message":"session not found"}`))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -64,5 +69,30 @@ var _ = suite("harness-runtime/logs", func(t *testing.T, when spec.G, it spec.S)
 		for _, l := range lines {
 			expect.True(json.Valid([]byte(l)), l)
 		}
+	})
+
+	it("prints the -o json error envelope on stdout when nothing was streamed", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"-o", "json",
+			"harness-runtime", "logs", "sess_gone",
+		)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		output, err := cmd.Output()
+		expect.Error(err)
+		expect.Empty(stderr.String())
+		var got struct {
+			Errors []struct {
+				Detail string `json:"detail"`
+				Status int    `json:"status"`
+			} `json:"errors"`
+		}
+		expect.NoError(json.Unmarshal(output, &got), string(output))
+		expect.Len(got.Errors, 1)
+		expect.Equal(http.StatusNotFound, got.Errors[0].Status)
+		expect.Contains(got.Errors[0].Detail, "session not found")
 	})
 })

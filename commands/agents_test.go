@@ -6173,12 +6173,13 @@ func TestRunAgentsLogs_AbsentDataAndTimestampArePrintedAsNull(t *testing.T) {
 }
 
 // runLogsThroughCheckErr runs `logs` the way the real runner does: the error it
-// returns goes to checkErr, with stdout, stderr and the exit hook captured.
-func runLogsThroughCheckErr(t *testing.T, flags map[string]any, body string, streamErr, startErr error) (stdout, stderr string, exited bool) {
+// returns is beautified and goes to checkErr, with stdout, stderr and the exit
+// hook captured. output is what -o sets, which both Output and viper see.
+func runLogsThroughCheckErr(t *testing.T, output string, flags map[string]any, body string, streamErr, startErr error) (stdout, stderr string, exited bool) {
 	t.Helper()
 	prevOut, prevAction := Output, errAction
-	Output = "text"
-	viper.Set("output", "json")
+	Output = output
+	viper.Set("output", output)
 	t.Cleanup(func() { Output = prevOut; errAction = prevAction; viper.Set("output", "") })
 	errAction = func() { exited = true }
 
@@ -6211,43 +6212,54 @@ func runLogsThroughCheckErr(t *testing.T, flags map[string]any, body string, str
 		for k, v := range flags {
 			config.Doit.Set(config.NS, k, v)
 		}
-		Output = "json"
-		if flags[doctl.ArgAgentPretty] == true {
-			Output = "text"
-		}
 		tm.prepayment.EXPECT().Get(gomock.Any()).Return(nil, nil, errors.New("lookup failed")).AnyTimes()
-		checkErr(RunAgentsLogs(config))
-		// Event lines go to the command's writer; anything checkErr printed
-		// went to os.Stdout.
+		checkErr(beautifyAgentErrorFor(config, RunAgentsLogs(config)))
+		// Event lines go to the command's writer and checkErr prints to
+		// os.Stdout. Both are the process's stdout, events first.
 		stdout = buf.String()
 	})
 	require.NoError(t, w.Close())
 	extra, err := io.ReadAll(r)
 	require.NoError(t, err)
 	require.NoError(t, r.Close())
-	assert.Empty(t, string(extra), "checkErr must print nothing on stdout")
-	return stdout, errBuf.String(), exited
+	return stdout + string(extra), errBuf.String(), exited
 }
 
-func TestRunAgentsLogs_ErrorsGoToStderrAndExitNonZero(t *testing.T) {
-	for name, flags := range map[string]map[string]any{
-		"json":   nil,
-		"pretty": {doctl.ArgAgentPretty: true},
+func TestRunAgentsLogs_JSONErrorBeforeAnyEventPrintsTheErrorEnvelope(t *testing.T) {
+	stdout, stderr, exited := runLogsThroughCheckErr(t, "json", nil, "", nil, terminalStreamErr())
+	assert.True(t, exited, "exit must be non-zero")
+	assert.Empty(t, stderr)
+	var got outputErrors
+	require.NoError(t, json.Unmarshal([]byte(stdout), &got), stdout)
+	require.Len(t, got.Errors, 1)
+	assert.Equal(t, http.StatusNotFound, got.Errors[0].Status)
+}
+
+func TestRunAgentsLogs_ErrorAfterEventsGoesToStderr(t *testing.T) {
+	for name, tc := range map[string]struct {
+		output string
+		flags  map[string]any
+	}{
+		"json":   {"json", nil},
+		"pretty": {"text", map[string]any{doctl.ArgAgentPretty: true}},
 	} {
-		t.Run(name+" mid-stream", func(t *testing.T) {
-			stdout, stderr, exited := runLogsThroughCheckErr(t, flags, logsFrame("e1", 1, "run.started", `{}`), errCorruptFrame, nil)
+		t.Run(name, func(t *testing.T) {
+			stdout, stderr, exited := runLogsThroughCheckErr(t, tc.output, tc.flags, logsFrame("e1", 1, "run.started", `{}`), errCorruptFrame, nil)
 			assert.True(t, exited, "exit must be non-zero")
 			assert.Contains(t, stdout, `"e1"`)
 			assert.NotContains(t, stdout, `"errors"`)
 			assert.NotEmpty(t, stderr)
 		})
-		t.Run(name+" before streaming", func(t *testing.T) {
-			stdout, stderr, exited := runLogsThroughCheckErr(t, flags, "", nil, terminalStreamErr())
-			assert.True(t, exited, "exit must be non-zero")
-			assert.Empty(t, stdout)
-			assert.NotEmpty(t, stderr)
-		})
 	}
+}
+
+// --pretty without -o json leaves outputFormat at text, so checkErr renders
+// the error as text on stderr.
+func TestRunAgentsLogs_PrettyErrorBeforeAnyEventGoesToStderr(t *testing.T) {
+	stdout, stderr, exited := runLogsThroughCheckErr(t, "text", map[string]any{doctl.ArgAgentPretty: true}, "", nil, terminalStreamErr())
+	assert.True(t, exited, "exit must be non-zero")
+	assert.Empty(t, stdout)
+	assert.NotEmpty(t, stderr)
 }
 
 // logsCobraCmd returns the real `logs` command under a root carrying the same
@@ -6316,9 +6328,9 @@ func TestRunAgentsLogs_CobraFlags(t *testing.T) {
 }
 
 func TestRunAgentsLogs_JSONModePaymentRequiredShowsAddFunds(t *testing.T) {
-	stdout, stderr, exited := runLogsThroughCheckErr(t, nil, "", nil, harnessAPIErr(http.StatusPaymentRequired, prepayBlockedWireMessage))
+	stdout, stderr, exited := runLogsThroughCheckErr(t, "json", nil, "", nil, harnessAPIErr(http.StatusPaymentRequired, prepayBlockedWireMessage))
 	assert.True(t, exited)
-	assert.Empty(t, stdout)
-	assert.Contains(t, stderr, prepayBlockedTitle)
-	assert.Contains(t, stderr, prepayTopUpURL)
+	assert.Empty(t, stderr)
+	assert.Contains(t, stdout, prepayBlockedTitle)
+	assert.Contains(t, stdout, prepayTopUpURL)
 }
