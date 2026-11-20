@@ -34,7 +34,6 @@ func TestProtectLoopbackHTTPRequiresBasicAuth(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.Contains(t, resp.Header.Get("WWW-Authenticate"), "Basic")
 
 	req, err := http.NewRequest(http.MethodGet, srv.URL+"/", nil)
 	require.NoError(t, err)

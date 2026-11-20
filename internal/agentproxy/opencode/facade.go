@@ -220,12 +220,9 @@ func (f *Facade) buildMux() {
 	// resume — real server returns empty arrays for a no-edits session.
 	mux.HandleFunc("GET /session", f.handleSessionList)
 	mux.HandleFunc("POST /session", f.handleSessionCreate)
-	mux.HandleFunc("GET /session/{id}", func(w http.ResponseWriter, r *http.Request) {
-		if !f.requireSessionPath(w, r) {
-			return
-		}
+	mux.HandleFunc("GET /session/{id}", f.withSessionPath(func(w http.ResponseWriter, r *http.Request) {
 		f.writeJSON(w, f.sessionObject())
-	})
+	}))
 	mux.HandleFunc("GET /session/{id}/message", f.withSessionPath(f.handleMessageList))
 	mux.HandleFunc("GET /session/{id}/diff", f.withSessionPath(f.json([]any{})))
 	mux.HandleFunc("GET /session/{id}/todo", f.withSessionPath(f.json([]any{})))

@@ -35,7 +35,6 @@ func ProtectLoopbackHTTP(next http.Handler, password string) http.Handler {
 			return
 		}
 		if password == "" || !validBasicAuth(r, OpenCodeProxyBasicUser, password) {
-			w.Header().Set("WWW-Authenticate", `Basic realm="doctl harness-runtime proxy"`)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
