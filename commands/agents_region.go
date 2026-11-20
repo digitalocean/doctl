@@ -202,7 +202,18 @@ func useSessionLocationHost(c *CmdConfig, sess *do.HostedAgentSession) error {
 		return fmt.Errorf("unable to initialize DigitalOcean API client: %w", err)
 	}
 	c.HostedAgents = func() do.HostedAgentsService { return do.NewHostedAgentsService(godoClient) }
+	c.hostedAgentsBase = base
 	return nil
+}
+
+// hostedAgentsHostOpts returns the godo options that keep a rebuilt client on
+// the host this command is already using: the session's location host when one
+// was adopted, otherwise the --region host.
+func hostedAgentsHostOpts(c *CmdConfig) ([]godo.ClientOpt, error) {
+	if c.hostedAgentsBase != "" {
+		return []godo.ClientOpt{godo.SetBaseURL(c.hostedAgentsBase)}, nil
+	}
+	return agentRegionClientOpts()
 }
 
 // reportSessionRegion names the region a new session was placed in. The server

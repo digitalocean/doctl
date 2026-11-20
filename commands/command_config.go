@@ -100,6 +100,10 @@ type CmdConfig struct {
 	NfsActions          func() do.NfsActionsService
 	Security            func() do.SecurityService
 	HostedAgents        func() do.HostedAgentsService
+	// hostedAgentsBase is the host useSessionLocationHost repointed
+	// HostedAgents at, so a client rebuilt later (the no-retry exec client)
+	// keeps calling the same host. Empty when the default or --region host is in use.
+	hostedAgentsBase    string
 	HostedAgentTriggers func() do.HostedAgentTriggersService
 	Secrets             func() do.SecretsService
 	Signals             func() do.SignalsService
