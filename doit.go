@@ -61,6 +61,21 @@ func ResolvedAPIURL() string {
 	return DefaultAPIURL
 }
 
+// ExplicitAPIURL returns the API base URL the user chose with --api-url,
+// DIGITALOCEAN_API_URL, or config, or "" when they chose none.
+//
+// A value equal to DefaultAPIURL counts as none. Older doctl versions wrote
+// every flag default into config.yaml, so that value is usually left over
+// rather than chosen, and it must not replace a host that --region selects. A
+// trailing slash and letter case do not make a different host.
+func ExplicitAPIURL() string {
+	u := strings.TrimSpace(viper.GetString("api-url"))
+	if strings.EqualFold(strings.TrimRight(u, "/"), strings.TrimRight(DefaultAPIURL, "/")) {
+		return ""
+	}
+	return u
+}
+
 // Version is the version info for doit.
 type Version struct {
 	Major, Minor, Patch int
@@ -279,7 +294,8 @@ var _ Config = &LiveConfig{}
 
 // GetGodoClient returns a GodoClient. opts are applied before the --api-url
 // override, so a caller-supplied default base URL yields to an endpoint the
-// user asked for explicitly (DIGITALOCEAN_API_URL / --api-url).
+// user asked for explicitly (DIGITALOCEAN_API_URL / --api-url). An api-url equal
+// to the default is not explicit: see ExplicitAPIURL.
 func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string, opts ...godo.ClientOpt) (*godo.Client, error) {
 	if accessToken == "" {
 		return nil, NewMissingAccessTokenErr()
@@ -319,7 +335,7 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string,
 
 	args = append(args, opts...)
 
-	apiURL := viper.GetString("api-url")
+	apiURL := ExplicitAPIURL()
 	if apiURL != "" {
 		args = append(args, godo.SetBaseURL(apiURL))
 	}
