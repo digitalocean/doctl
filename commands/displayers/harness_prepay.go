@@ -52,7 +52,7 @@ func (b *HarnessPrepayBalance) Cols() []string {
 func (b *HarnessPrepayBalance) ColMap() map[string]string {
 	return map[string]string{
 		"Balance":            "Balance",
-		"AvailableCredit":    "Inference & Agents Balance",
+		"AvailableCredit":    "Available Credit",
 		"MonthToDateBalance": "Month-to-date Balance",
 		"AutoTopOff":         "Auto Top-off",
 		"Status":             "Status",
@@ -76,9 +76,9 @@ func (b *HarnessPrepayBalance) balance() string {
 	return prepayMoney(b.Status.Balance)
 }
 
-// availableCredit is the figure the Control Panel shows as the Inference &
-// Agents balance. Billing sums inference, trial, and available subscription
-// credit into it.
+// availableCredit is billing's sum of inference, trial, and available
+// subscription credit. It is not the Control Panel's Inference & Agents
+// balance, which counts inference credit alone.
 func (b *HarnessPrepayBalance) availableCredit() string {
 	if b.Status == nil {
 		return "unknown"

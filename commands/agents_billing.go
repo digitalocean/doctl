@@ -27,8 +27,13 @@ import (
 )
 
 const (
-	prepayBlockedTitle = "Prepayment balance exhausted"
+	prepayBlockedTitle = "Blocked by the prepayment gate"
 	prepayUnknownTitle = "Prepayment status unavailable"
+
+	// prepayBlockedCause names both funding sources because the gate counts
+	// cash prepayment and credit together, so naming either alone would blame
+	// the wrong figure.
+	prepayBlockedCause = "Your team's prepayment and credit don't cover its usage, so Harness Runtime can't start or resume sessions."
 
 	prepayTopUpURL   = "https://cloud.digitalocean.com/account/billing"
 	prepayBalanceCmd = "doctl harness-runtime balance"
@@ -55,14 +60,15 @@ func prepayUnknownErr(err error) bool {
 }
 
 // newPrepayBlockedError builds the add-funds card for a 402, enriched with the
-// team's live balance and auto top-off state when billing can be read.
+// team's live balance, available credit, and auto top-off state when billing
+// can be read.
 //
 // The copy leads with the team-level cause rather than the command that
 // failed, because the same card appears on every spend path. c may be nil, and
 // any billing lookup failure falls back to the plain card — a billing error
 // must never turn a clean 402 into a confusing double error.
 func newPrepayBlockedError(c *CmdConfig, cause error) *agentPrettyError {
-	reason := fmt.Sprintf("Your team's prepayment balance has run out, so Harness Runtime can't start or resume sessions. %s", prepaySavedWork)
+	reason := fmt.Sprintf("%s %s", prepayBlockedCause, prepaySavedWork)
 	tips := []string{
 		fmt.Sprintf("Add funds at %s", prepayTopUpURL),
 		prepayBalanceCmd,
@@ -77,8 +83,17 @@ func newPrepayBlockedError(c *CmdConfig, cause error) *agentPrettyError {
 	case err != nil || status == nil:
 		// Keep the plain card.
 	default:
+		// Quote the figures under the labels `doctl harness-runtime balance`
+		// uses, so the card and the table it points to read the same.
+		var figures []string
 		if amount := formatPrepayMoney(status.Balance); amount != "" {
-			reason = fmt.Sprintf("Your team's prepayment balance is %s, so Harness Runtime can't start or resume sessions. %s", amount, prepaySavedWork)
+			figures = append(figures, "Balance "+amount)
+		}
+		if amount := formatPrepayMoney(status.AvailableCredit); amount != "" {
+			figures = append(figures, "Available Credit "+amount)
+		}
+		if len(figures) > 0 {
+			reason = fmt.Sprintf("%s %s. %s", prepayBlockedCause, strings.Join(figures, ", "), prepaySavedWork)
 		}
 		if status.IsAutoPrepayEnabled || (cfg != nil && cfg.IsAutoPrepayEnabled) {
 			reason += " Auto top-off is enabled, so this should resolve shortly."
