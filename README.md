@@ -578,6 +578,42 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 doctl compute ssh <user>@<droplet-name>
 ```
 
+## Sandboxes
+
+`doctl sandbox` (also `doctl sandboxes`) creates and manages DigitalOcean Sandboxes. With no flags, `create` uses the `coding-base` template and the `mars-2vcpu-4gb` size.
+
+* Create a sandbox:
+```
+doctl sandbox create
+```
+* Create a sandbox from another template and size, with no internet access and an environment variable (repeat `--env` for more; the values are secrets and are never shown):
+```
+doctl sandbox create --template <template> --size <size-slug> --allow-internet-access=false --env API_KEY=<value>
+```
+* List your sandboxes, or only the running, paused or creating ones:
+```
+doctl sandbox list
+doctl sandbox list --state running
+```
+* Show one sandbox, picking the columns to print:
+```
+doctl sandbox get <sandbox-id>
+doctl sandbox get <sandbox-id> --format ID,State --no-header
+```
+* Pause and resume a sandbox:
+```
+doctl sandbox pause <sandbox-id>
+doctl sandbox resume <sandbox-id>
+```
+* Delete one or more sandboxes (add `--force` to skip the confirmation):
+```
+doctl sandbox delete <sandbox-id>...
+```
+
+Add `-o json` to any command for machine-readable output. JSON keeps the API's state values, such as `SANDBOX_STATE_RUNNING`, while the table shows `running`.
+
+> **Note:** `sandbox` used to be an alias of `doctl serverless`. It now belongs to the Sandboxes commands. If you have scripts that run `doctl sandbox deploy`, `doctl sandbox install` and so on, change them to `doctl serverless` (or `doctl sls`).
+
 ## Tutorials
 
 * [How To Use Doctl, the Official DigitalOcean Command-Line Client](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)

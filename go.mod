@@ -2,6 +2,9 @@ module github.com/digitalocean/doctl
 
 go 1.26.10
 
+// Local godo, for the Sandbox service. Remove once a godo release includes it.
+replace github.com/digitalocean/godo => ../godo
+
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21

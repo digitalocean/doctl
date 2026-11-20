@@ -61,7 +61,7 @@ parts:
 
       # Install the sandbox
       mkdir -p $OVERRIDE_SANDBOX_DIR
-      $SNAPCRAFT_PART_INSTALL/bin/doctl sandbox install
+      $SNAPCRAFT_PART_INSTALL/bin/doctl serverless install
       rm -rf $XDG_CONFIG_HOME/doctl
     organize:
       bin/doctl: bin/doctl.real

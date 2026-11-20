@@ -265,6 +265,7 @@ type tcMocks struct {
 	reservedIPActions     *domocks.MockReservedIPActionsService
 	reservedIPv6s         *domocks.MockReservedIPv6sService
 	byoipPrefixes         *domocks.MockBYOIPPrefixsService
+	sandboxes             *domocks.MockSandboxesService
 	domains               *domocks.MockDomainsService
 	uptimeChecks          *domocks.MockUptimeChecksService
 	volumes               *domocks.MockVolumesService
@@ -343,6 +344,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		reservedIPActions:     domocks.NewMockReservedIPActionsService(ctrl),
 		reservedIPv6s:         domocks.NewMockReservedIPv6sService(ctrl),
 		byoipPrefixes:         domocks.NewMockBYOIPPrefixsService(ctrl),
+		sandboxes:             domocks.NewMockSandboxesService(ctrl),
 		droplets:              domocks.NewMockDropletsService(ctrl),
 		dropletActions:        domocks.NewMockDropletActionsService(ctrl),
 		dropletAutoscale:      domocks.NewMockDropletAutoscaleService(ctrl),
@@ -418,6 +420,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		ReservedIPActions:   func() do.ReservedIPActionsService { return tm.reservedIPActions },
 		ReservedIPv6s:       func() do.ReservedIPv6sService { return tm.reservedIPv6s },
 		BYOIPPrefixes:       func() do.BYOIPPrefixsService { return tm.byoipPrefixes },
+		Sandboxes:           func() do.SandboxesService { return tm.sandboxes },
 		Droplets:            func() do.DropletsService { return tm.droplets },
 		DropletActions:      func() do.DropletActionsService { return tm.dropletActions },
 		DropletAutoscale:    func() do.DropletAutoscaleService { return tm.dropletAutoscale },

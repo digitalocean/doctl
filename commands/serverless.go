@@ -72,7 +72,7 @@ One or more local file system areas are employed, along with one or more 'functi
 A one-time install of the serverless software is needed (use ` + "`" + `doctl serverless install` + "`" + ` to install the software,
 then ` + "`" + `doctl serverless connect` + "`" + ` to connect to a functions namespace associated with your account).
 Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop, test, and deploy.`,
-			Aliases: []string{"sandbox", "sbx", "sls"},
+			Aliases: []string{"sbx", "sls"},
 			GroupID: manageResourcesGroup,
 		},
 	}

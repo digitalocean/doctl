@@ -32,6 +32,7 @@ mockgen -source projects.go -package=mocks ProjectsService > mocks/ProjectsServi
 mockgen -source regions.go -package=mocks RegionsService > mocks/RegionsService.go
 mockgen -source registry.go -package=mocks RegistryService > mocks/RegistryService.go
 mockgen -source snapshots.go -package=mocks SnapshotsService > mocks/SnapshotsService.go
+mockgen -source sandboxes.go -package=mocks SandboxesService > mocks/SandboxesService.go
 mockgen -source sizes.go -package=mocks SizesService > mocks/SizesService.go
 mockgen -source sshkeys.go -package=mocks KeysService > mocks/KeysService.go
 mockgen -source tags.go -package=mocks TagsService > mocks/TagsService.go

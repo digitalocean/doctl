@@ -151,6 +151,72 @@ image, _, err := client.ImageGenerations.Generate(ctx, &godo.ImageGenerateParams
 
 For streaming, embeddings, messages, responses, async invocations, batch inference, agent inference, and full runnable programs, see [`examples/serverless-inference/`](examples/serverless-inference/) and [`examples/agent-inference/`](examples/agent-inference/).
 
+## Sandboxes
+
+The `sandbox` package creates and manages DigitalOcean Sandboxes (`/v2/sandboxes`). It reads the token from `DIGITALOCEAN_ACCESS_TOKEN`, or you can set `Config.Token`.
+
+```go
+import (
+    "context"
+
+    "github.com/digitalocean/godo/sandbox"
+)
+
+ctx := context.Background()
+
+c, err := sandbox.NewClient(nil)
+if err != nil {
+    log.Fatal(err)
+}
+
+sb, err := c.Create(ctx, nil) // template coding-base, size mars-2vcpu-4gb
+if err != nil {
+    log.Fatal(err)
+}
+defer sb.Kill(ctx)
+
+err = sb.Pause(ctx)
+err = sb.Resume(ctx)
+```
+
+Every field of `CreateParams` is optional:
+
+```go
+off := false
+sb, err := c.Create(ctx, &sandbox.CreateParams{
+    Template:            "coding-base",
+    Size:                "mars-2vcpu-4gb",
+    AllowInternetAccess: &off,                       // false limits egress to the platform file-transfer host
+    EnvVars:             map[string]string{"MY_KEY": "value"}, // values are secrets
+})
+```
+
+Find existing sandboxes:
+
+```go
+sb, err := c.Get(ctx, id)      // fetch by ID
+sb, err := c.Connect(ctx, id)  // fetch, and resume it if it is paused
+
+for sb, err := range c.List(&sandbox.ListParams{State: godo.SandboxStateRunning}).All(ctx) {
+    if err != nil { ... }
+    fmt.Println(sb.ID(), sb.Template())
+}
+
+pages := c.List(&sandbox.ListParams{Limit: 50}) // or one page at a time
+for pages.HasNext() {
+    items, err := pages.NextItems(ctx)
+    ...
+}
+```
+
+`sb.Refresh(ctx)` re-reads a sandbox, `sb.IsRunning(ctx)` checks its state, and `sb.WaitUntilRunning(ctx, nil)` polls until it is running. `c.Kill(ctx, id)` and `c.Pause(ctx, id)` work by ID; `Kill` reports `false` when the sandbox is already gone.
+
+Failed calls return a `*godo.ErrorResponse`. Test it with `sandbox.IsNotFound`, `IsUnauthorized`, `IsPermissionDenied`, `IsInvalidRequest`, `IsConflict` and `IsRateLimited`.
+
+For the raw API, use `client.Sandboxes` (`List`, `Get`, `Create`, `Delete`, `Pause`, `Resume`) on a regular `godo.Client`. A runnable program is in [`examples/sandbox/`](examples/sandbox/).
+
+Running commands and file transfer are not available yet: they need data-plane routes that are not in the API.
+
 ## Examples
 
 

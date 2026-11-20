@@ -591,6 +591,18 @@ const (
 	// ArgPrivateNetworkUUID is the flag for VPC UUID
 	ArgPrivateNetworkUUID = "private-network-uuid"
 
+	// ArgSandboxTemplate is the template a sandbox is created from.
+	ArgSandboxTemplate = "template"
+
+	// ArgSandboxAllowInternetAccess controls whether a sandbox may reach the internet.
+	ArgSandboxAllowInternetAccess = "allow-internet-access"
+
+	// ArgSandboxEnv sets environment variables on a sandbox, as KEY=VALUE.
+	ArgSandboxEnv = "env"
+
+	// ArgSandboxState filters `sandbox list` to one state.
+	ArgSandboxState = "state"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 

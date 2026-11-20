@@ -94,6 +94,7 @@ type Client struct {
 	ReservedIPV6s       ReservedIPV6sService
 	ReservedIPActions   ReservedIPActionsService
 	ReservedIPV6Actions ReservedIPV6ActionsService
+	Sandboxes           SandboxesService
 	Sizes               SizesService
 	Snapshots           SnapshotsService
 	SpacesKeys          SpacesKeysService
@@ -360,6 +361,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.ReservedIPActions = &ReservedIPActionsServiceOp{client: c}
 	c.ReservedIPV6Actions = &ReservedIPV6ActionsServiceOp{client: c}
 	c.BYOIPPrefixes = &BYOIPPrefixServiceOp{client: c}
+	c.Sandboxes = &SandboxesServiceOp{client: c}
 	c.Sizes = &SizesServiceOp{client: c}
 	c.Snapshots = &SnapshotsServiceOp{client: c}
 	c.SpacesKeys = &SpacesKeysServiceOp{client: c}

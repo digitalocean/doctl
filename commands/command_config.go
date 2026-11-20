@@ -54,6 +54,7 @@ type CmdConfig struct {
 	ImageActions      func() do.ImageActionsService
 	LoadBalancers     func() do.LoadBalancersService
 	MicroVMs          func() do.MicroVMsService
+	Sandboxes         func() do.SandboxesService
 	ReservedIPs       func() do.ReservedIPsService
 	ReservedIPActions func() do.ReservedIPActionsService
 	ReservedIPv6s     func() do.ReservedIPv6sService
@@ -196,6 +197,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Nfs = func() do.NfsService { return do.NewNfsService(godoClient) }
 			c.NfsActions = func() do.NfsActionsService { return do.NewNfsActionsService(godoClient) }
 			c.MicroVMs = func() do.MicroVMsService { return do.NewMicroVMsService(godoClient) }
+			c.Sandboxes = func() do.SandboxesService { return do.NewSandboxesService(godoClient) }
 			c.Security = func() do.SecurityService { return do.NewSecurityService(godoClient) }
 			c.HostedAgents = func() do.HostedAgentsService { return do.NewHostedAgentsService(godoClient) }
 			c.HostedAgentTriggers = func() do.HostedAgentTriggersService {
