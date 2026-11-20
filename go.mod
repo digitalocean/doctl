@@ -5,7 +5,7 @@ go 1.26.10
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21
-	github.com/digitalocean/godo v1.243.0
+	github.com/digitalocean/godo v1.244.0
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -150,4 +150,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace github.com/digitalocean/godo => github.com/nveerdixit/godo v1.201.1-0.20261119042203-eb7d696a073e
+replace github.com/digitalocean/godo => github.com/nveerdixit/godo v1.201.1-0.20261120151339-3759eaa4977f
