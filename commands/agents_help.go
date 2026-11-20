@@ -160,6 +160,10 @@ const agentsLogsHelpMD = `Replay the session's event history, then exit.
 
 With ` + "`-o json`" + `, prints newline-delimited JSON, one object per line, so the history can be read as data (for example with ` + "`jq`" + `). Token chunks are not merged. ` + "`--pretty`" + ` implies ` + "`-o json`" + ` and indents each object, so its output is not one object per line. An empty history prints nothing on stdout.
 
+Each object holds a subset of the API's event fields: ` + "`event_id`" + `, ` + "`run_id`" + `, ` + "`session_id`" + `, ` + "`timestamp`" + `, ` + "`seq`" + `, ` + "`source_event_id`" + `, ` + "`source_event_type`" + `, ` + "`type`" + ` and ` + "`data`" + `. It leaves out ` + "`tenant_id`" + `, ` + "`config_id`" + ` and ` + "`trace_parent`" + `. Empty ` + "`session_id`" + `, ` + "`source_event_id`" + ` and ` + "`source_event_type`" + ` are omitted, and a missing ` + "`timestamp`" + ` or ` + "`data`" + ` prints as ` + "`null`" + `.
+
+With ` + "`-o json`" + `, an error before the first event prints doctl's standard ` + "`errors`" + ` object on stdout. An error after the first event goes to stderr, so stdout holds only events.
+
 The server returns at most the newest 2000 events or 4 MiB, from the last 14 days. When older events are dropped, the output has no marker.
 
 JSON output includes the full prompt, tool arguments and log fields, which text output leaves out.`

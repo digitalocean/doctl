@@ -3111,9 +3111,10 @@ func runAgentsLogs(c *CmdConfig, pretty, asJSON bool) error {
 	return stream.Err()
 }
 
-// logEventJSON is the server's event envelope. godo's event type has no JSON
-// tags and drops tenant_id, config_id and trace_parent while decoding, so those
-// three cannot be reproduced here.
+// logEventJSON is the subset of the server's event envelope that godo keeps,
+// under the server's field names. godo's event type has no JSON tags and drops
+// tenant_id, config_id and trace_parent while decoding, so those three cannot
+// be reproduced here. agentsLogsHelpMD lists the fields for users.
 type logEventJSON struct {
 	EventID         string          `json:"event_id"`
 	RunID           string          `json:"run_id"`
