@@ -126,10 +126,36 @@ func TestSecondEventStreamConsumerConflicts(t *testing.T) {
 func TestShareIsRefused(t *testing.T) {
 	srv, _ := newBridgedFacade(t)
 
-	resp, err := http.Post(srv.URL+"/session/sess-1/share", "application/json", nil)
+	resp, err := http.Post(srv.URL+testSessionURL("/share"), "application/json", nil)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestSessionPathRejectsForeignID(t *testing.T) {
+	srv, h := newBridgedFacade(t)
+	h.QueueRun("run-path")
+
+	resp, err := http.Post(srv.URL+"/session/any/prompt_async", "application/json",
+		strings.NewReader(`{"parts":[{"type":"text","text":"nope"}]}`))
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	assert.Nil(t, h.LastInput())
+
+	resp, err = http.Get(srv.URL + "/session/unknown/message")
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Correct id still reaches the bridge.
+	resp, err = http.Post(srv.URL+testSessionURL("/prompt_async"), "application/json",
+		strings.NewReader(`{"parts":[{"type":"text","text":"ok"}]}`))
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	require.NotNil(t, h.LastInput())
+	assert.Equal(t, "ok", h.LastInput().Text)
 }
 
 func TestUnknownRouteIs404(t *testing.T) {
