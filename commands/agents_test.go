@@ -6133,6 +6133,19 @@ func TestRunAgentsLogs_JSONMidStreamErrorKeepsPartialLines(t *testing.T) {
 	assert.Equal(t, "e1", m["event_id"])
 }
 
+// A config file's `output: json` reaches viper but not the -o flag variable.
+func TestRunAgentsLogs_ConfigFileOutputJSONPrintsJSON(t *testing.T) {
+	viper.Set("output", "json")
+	t.Cleanup(func() { viper.Set("output", "") })
+	out, err := runLogsForTest(t, logsTestBody, nil, "text", nil, true)
+	require.NoError(t, err)
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	require.Len(t, lines, 3, out)
+	for _, l := range lines {
+		assert.True(t, json.Valid([]byte(l)), l)
+	}
+}
+
 func TestRunAgentsLogs_TextModeStillMergesAndSkipsJSON(t *testing.T) {
 	out, err := runLogsForTest(t, logsTestBody, nil, "text", nil, true)
 	require.NoError(t, err)
