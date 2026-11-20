@@ -31,6 +31,8 @@ var _ = suite("harness-runtime/update-config", func(t *testing.T, when spec.G, i
 	)
 
 	const manifest = "tools:\n  - do.actions:\n      tools: [toolbelt:read-only@1]\n"
+	const permissionsManifest = "permissions:\n  default: ask\n  rules:\n    - tool: bash\n      match:\n        command: \"rm -rf *\"\n      action: deny\n    - tool: do.actions/exa_web_search\n      action: allow\n"
+	const refusal = `permissions can't change live on hermes for: bash rule \"rm -rf *\" (only do.actions allow/deny rules can change on this agent). Remove these changes and send the update again.`
 
 	it.Before(func() {
 		expect = require.New(t)
@@ -49,6 +51,11 @@ var _ = suite("harness-runtime/update-config", func(t *testing.T, when spec.G, i
 			case req.URL.Path == "/v2/harness-runtime/sessions/sess_cfg" && req.Method == http.MethodPatch:
 				raw, _ := io.ReadAll(req.Body)
 				_ = json.Unmarshal(raw, &gotBody)
+				if outcome == "CONFLICT" {
+					w.WriteHeader(http.StatusConflict)
+					w.Write([]byte(`{"id":"conflict","message":"` + refusal + `"}`))
+					return
+				}
 				if outcome == "UNCHANGED" {
 					w.Write([]byte(`{"session":{"session_id":"sess_cfg","name":"cfg","agent_kind":"AGENT_KIND_OPENCODE","status":"SESSION_STATUS_READY"},"outcome":"UNCHANGED"}`))
 					return
@@ -128,6 +135,40 @@ var _ = suite("harness-runtime/update-config", func(t *testing.T, when spec.G, i
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err, string(output))
 		expect.Contains(string(output), "nothing to change")
+		expect.Equal(int32(0), atomic.LoadInt32(&gets))
+	})
+
+	it("sends a permissions section through unchanged", func() {
+		permissionsPath := filepath.Join(t.TempDir(), "permissions.yaml")
+		expect.NoError(os.WriteFile(permissionsPath, []byte(permissionsManifest), 0o644))
+
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"harness-runtime", "update", "sess_cfg", "--spec", permissionsPath,
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err, string(output))
+		expect.Equal(permissionsManifest, gotBody["manifest_yaml"])
+		expect.Len(gotBody, 1)
+		expect.Contains(string(output), "updated")
+	})
+
+	it("reports a permissions change the agent can't apply, without polling", func() {
+		outcome = "CONFLICT"
+		permissionsPath := filepath.Join(t.TempDir(), "permissions.yaml")
+		expect.NoError(os.WriteFile(permissionsPath, []byte(permissionsManifest), 0o644))
+
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"harness-runtime", "update", "sess_cfg", "--spec", permissionsPath,
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.Error(err)
+		expect.Contains(string(output), `permissions can't change live on hermes for: bash rule "rm -rf *"`)
 		expect.Equal(int32(0), atomic.LoadInt32(&gets))
 	})
 
