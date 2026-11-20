@@ -232,8 +232,8 @@ Typical flow:
 
 # terminal 2 — connect Codex to the proxy
 codex --remote ws://127.0.0.1:1144
-` + "```\n\n" + `With ` + "`--type opencode`" + `, connect the opencode TUI instead (` + "`--continue`" + ` resumes the session's prior turns):
-` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --continue
+` + "```\n\n" + `With ` + "`--type opencode`" + `, use the Connect line the proxy prints (includes a one-time ` + "`--password`" + `; ` + "`--continue`" + ` resumes prior turns):
+` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --password <printed-secret> --continue
 ` + "```\n\n" + `The opencode bridge is tested against opencode ` + opencode.TestedVersion + `; other versions usually work, and the proxy logs any request it does not recognize.
 
 Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
