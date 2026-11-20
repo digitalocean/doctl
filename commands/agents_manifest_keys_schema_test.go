@@ -300,5 +300,7 @@ func TestManifestKeyTreeIsGenerated(t *testing.T) {
 	require.NoError(t, err)
 	got, err := os.ReadFile("agents_manifest_keys_tree.go")
 	require.NoError(t, err)
-	require.Equal(t, string(want), string(got), "agents_manifest_keys_tree.go is stale; run `go generate ./commands`")
+	// A Windows checkout can turn the committed file's line endings into CRLF.
+	gotLF := strings.ReplaceAll(string(got), "\r\n", "\n")
+	require.Equal(t, string(want), gotLF, "agents_manifest_keys_tree.go is stale; run `go generate ./commands`")
 }
