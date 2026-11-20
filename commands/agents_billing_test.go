@@ -270,7 +270,7 @@ func TestRenderEvent_sessionUpdatedPause(t *testing.T) {
 		})
 
 		out := buf.String()
-		assert.Contains(t, out, "Paused — prepayment balance exhausted")
+		assert.Contains(t, out, "Paused by the prepayment gate")
 		assert.Contains(t, out, prepayTopUpURL)
 		assert.NotContains(t, out, "session updated")
 	})
@@ -315,7 +315,7 @@ func TestDrainStream_zeroBalancePauseSurvivesWarmup(t *testing.T) {
 
 	_, pause := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), warmup, &tokenDeduper{})
 
-	assert.Contains(t, buf.String(), "Paused — prepayment balance exhausted")
+	assert.Contains(t, buf.String(), "Paused by the prepayment gate")
 	assert.Equal(t, pauseOutcome{observed: true, reason: "zero_balance"}, pause,
 		"the caller needs the reason to explain the stream ending")
 }
@@ -336,7 +336,7 @@ func TestDrainStream_pauseIsExplainedOnce(t *testing.T) {
 	var buf bytes.Buffer
 	_, pause := drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
 
-	assert.Equal(t, 1, strings.Count(buf.String(), "Paused — prepayment balance exhausted"))
+	assert.Equal(t, 1, strings.Count(buf.String(), "Paused by the prepayment gate"))
 	assert.Equal(t, "zero_balance", pause.reason)
 }
 
@@ -357,7 +357,7 @@ func TestDrainStream_pauseAfterResumeIsExplainedAgain(t *testing.T) {
 	var buf bytes.Buffer
 	drainStream(stream, &buf, &pendingHITL{}, &eventCursor{}, newThinkingState(&buf), nil, &tokenDeduper{})
 
-	assert.Equal(t, 2, strings.Count(buf.String(), "Paused — prepayment balance exhausted"))
+	assert.Equal(t, 2, strings.Count(buf.String(), "Paused by the prepayment gate"))
 }
 
 // A session that is merely running must not leave a pause reason behind, or
@@ -429,7 +429,7 @@ func TestStreamWithReconnect_lowBalancePauseExplainsTheSilence(t *testing.T) {
 		&eventCursor{}, newThinkingState(&buf), nil)
 
 	out := buf.String()
-	assert.Contains(t, out, "Paused — prepayment balance exhausted")
+	assert.Contains(t, out, "Paused by the prepayment gate")
 	assert.Equal(t, 1, strings.Count(out, msgPausedStayingAttached),
 		"the reason doctl is still connected is worth saying once, not once per attempt")
 	assert.Contains(t, out, msgPausedStoppedWatching)
@@ -485,7 +485,10 @@ func TestRenderRunPaused(t *testing.T) {
 		renderRunPaused(&buf, "zero_balance")
 
 		out := buf.String()
-		assert.Contains(t, out, "Paused — prepayment balance exhausted")
+		assert.Contains(t, out, "Paused by the prepayment gate")
+		// The gate counts credit as well as cash, so the banner names both, as
+		// the 402 card does, rather than blaming the balance alone.
+		assert.Contains(t, out, "Your team's prepayment and credit don't cover its usage.")
 		assert.Contains(t, out, "Your work is saved.")
 		assert.Contains(t, out, prepayTopUpURL)
 	})
@@ -495,7 +498,7 @@ func TestRenderRunPaused(t *testing.T) {
 		renderRunPaused(&buf, "low_balance")
 
 		out := buf.String()
-		assert.Contains(t, out, "Paused — prepayment balance exhausted")
+		assert.Contains(t, out, "Paused by the prepayment gate")
 		assert.Contains(t, out, prepayTopUpURL)
 	})
 
