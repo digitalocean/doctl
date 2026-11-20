@@ -6133,6 +6133,23 @@ func TestRunAgentsLogs_JSONMidStreamErrorKeepsPartialLines(t *testing.T) {
 	assert.Equal(t, "e1", m["event_id"])
 }
 
+// The frame carries every field of the server's event envelope. Scripts read
+// the help to learn which of them logs prints.
+func TestRunAgentsLogs_HelpNamesTheJSONFields(t *testing.T) {
+	frame := `id: e1` + "\n" + `data: {"event_id":"e1","run_id":"run_1","tenant_id":"42","session_id":"sess_x","config_id":"cfg_1","trace_parent":"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01","timestamp":"2026-01-02T03:04:05Z","seq":1,"source_event_id":"n1","source_event_type":"native/x","type":"run.started","data":{}}` + "\n\n"
+	out, err := runLogsForTest(t, frame, nil, "json", nil, true)
+	require.NoError(t, err)
+	var got map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(out), &got), out)
+	for k := range got {
+		assert.Contains(t, agentsLogsHelpMD, "`"+k+"`", "printed but not named in the help")
+	}
+	for _, k := range []string{"tenant_id", "config_id", "trace_parent"} {
+		assert.NotContains(t, got, k)
+		assert.Contains(t, agentsLogsHelpMD, "`"+k+"`", "left out but not named in the help")
+	}
+}
+
 // A config file's `output: json` reaches viper but not the -o flag variable.
 func TestRunAgentsLogs_ConfigFileOutputJSONPrintsJSON(t *testing.T) {
 	viper.Set("output", "json")
