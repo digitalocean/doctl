@@ -46,12 +46,13 @@ func (b *HarnessPrepayBalance) JSON(out io.Writer) error {
 }
 
 func (b *HarnessPrepayBalance) Cols() []string {
-	return []string{"Balance", "MonthToDateBalance", "AutoTopOff", "Status"}
+	return []string{"Balance", "AvailableCredit", "MonthToDateBalance", "AutoTopOff", "Status"}
 }
 
 func (b *HarnessPrepayBalance) ColMap() map[string]string {
 	return map[string]string{
 		"Balance":            "Balance",
+		"AvailableCredit":    "Inference & Agents Balance",
 		"MonthToDateBalance": "Month-to-date Balance",
 		"AutoTopOff":         "Auto Top-off",
 		"Status":             "Status",
@@ -61,6 +62,7 @@ func (b *HarnessPrepayBalance) ColMap() map[string]string {
 func (b *HarnessPrepayBalance) KV() []map[string]any {
 	return []map[string]any{{
 		"Balance":            b.balance(),
+		"AvailableCredit":    b.availableCredit(),
 		"MonthToDateBalance": b.monthToDate(),
 		"AutoTopOff":         b.autoTopOff(),
 		"Status":             b.status(),
@@ -72,6 +74,16 @@ func (b *HarnessPrepayBalance) balance() string {
 		return "unknown"
 	}
 	return prepayMoney(b.Status.Balance)
+}
+
+// availableCredit is the figure the Control Panel shows as the Inference &
+// Agents balance. Billing sums inference, trial, and available subscription
+// credit into it.
+func (b *HarnessPrepayBalance) availableCredit() string {
+	if b.Status == nil {
+		return "unknown"
+	}
+	return prepayMoney(b.Status.AvailableCredit)
 }
 
 func (b *HarnessPrepayBalance) monthToDate() string {

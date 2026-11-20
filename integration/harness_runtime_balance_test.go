@@ -215,18 +215,18 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 })
 
 const harnessBalanceOK string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-$42.75     $8.10                    off             OK
+Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
+$42.75     unknown                       $8.10                    off             OK
 `
 
 const harnessBalanceBlocked string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-$0.00      $0.00                    off             Blocked — add funds
+Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
+$0.00      unknown                       $0.00                    off             Blocked — add funds
 `
 
 const harnessBalanceAutoTopOff string = `
-Balance    Month-to-date Balance    Auto Top-off                      Status
-$3.00      $22.00                   on (at $5.00, charging $25.00)    OK
+Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off                      Status
+$3.00      unknown                       $22.00                   on (at $5.00, charging $25.00)    OK
 `
 
 const harnessBalanceCredit string = `
@@ -254,6 +254,6 @@ const harnessBalanceCreditJSON string = `{
 }`
 
 const harnessBalanceNoPermission string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-unknown    unknown                  unknown         unknown (token lacks billing:read)
+Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
+unknown    unknown                       unknown                  unknown         unknown (token lacks billing:read)
 `

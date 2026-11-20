@@ -27,7 +27,9 @@ Harness Runtime sessions are paid for from a single team-wide prepayment balance
 
 This is a point-in-time read, not a live meter; run it again for a fresh figure. Reading it requires a token with the ` + "`billing:read`" + ` scope. Without that scope the balance shows as unknown, which is expected rather than an error — ask a Team Owner or Biller to add funds.
 
-Note ` + "`doctl balance get`" + ` is a different number: it reports the classic account ledger, not the prepayment wallet that gates Harness Runtime.`
+Note ` + "`doctl balance get`" + ` is a different number: it reports the classic account ledger, not the prepayment wallet that gates Harness Runtime.
+
+The Balance column is your cash prepayment. The Inference & Agents Balance column is the figure the Control Panel shows under that name. Billing adds up your Inference & Agents credit, trial credit, and available subscription credit to get it. A team that pays with Inference & Agents credit can show a Balance of $0.00 while its Inference & Agents Balance is positive. In JSON output, the Inference & Agents Balance is ` + "`status.available_credit`" + `.`
 
 // RunAgentsBalance runs `doctl harness-runtime balance`.
 func RunAgentsBalance(c *CmdConfig) error {
