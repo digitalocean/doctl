@@ -198,7 +198,9 @@ func TestNewPrepayBlockedError_Enrichment(t *testing.T) {
 	t.Run("an uninitialized config still renders", func(t *testing.T) {
 		pretty := newPrepayBlockedError(nil, cause)
 		assert.Equal(t, prepayBlockedTitle, pretty.title)
-		assert.Contains(t, pretty.reason, "prepayment balance has run out")
+		// Without figures the card still names both funding sources, because
+		// the gate counts credit as well as the cash balance.
+		assert.Contains(t, pretty.reason, "prepayment and credit don't cover its usage")
 	})
 
 	// The user has already earned this error, so a degraded billing API must

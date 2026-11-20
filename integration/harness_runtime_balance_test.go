@@ -143,9 +143,9 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 	})
 
 	// APICLI-5566: a team on the credit prepay flow holds no cash prepayment,
-	// so balance is 0.00, while the Control Panel shows its Inference & Agents
-	// balance, which billing returns as available_credit.
-	when("the team pays from Inference & Agents credit", func() {
+	// so balance is 0.00, while billing returns the credit it spends as
+	// available_credit.
+	when("the team pays from credit", func() {
 		it.Before(func() {
 			respond = func(w http.ResponseWriter) {
 				w.Write([]byte(`{
@@ -164,7 +164,7 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 			}
 		})
 
-		it("shows the Inference & Agents balance next to the cash balance", func() {
+		it("shows the available credit next to the cash balance", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -215,23 +215,23 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 })
 
 const harnessBalanceOK string = `
-Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
-$42.75     unknown                       $8.10                    off             OK
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$42.75     unknown             $8.10                    off             OK
 `
 
 const harnessBalanceBlocked string = `
-Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
-$0.00      unknown                       $0.00                    off             Blocked — add funds
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$0.00      unknown             $0.00                    off             Blocked — add funds
 `
 
 const harnessBalanceAutoTopOff string = `
-Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off                      Status
-$3.00      unknown                       $22.00                   on (at $5.00, charging $25.00)    OK
+Balance    Available Credit    Month-to-date Balance    Auto Top-off                      Status
+$3.00      unknown             $22.00                   on (at $5.00, charging $25.00)    OK
 `
 
 const harnessBalanceCredit string = `
-Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
-$0.00      $9.29                         $38.66                   off             OK
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$0.00      $9.29               $38.66                   off             OK
 `
 
 const harnessBalanceCreditJSON string = `{
@@ -254,6 +254,6 @@ const harnessBalanceCreditJSON string = `{
 }`
 
 const harnessBalanceNoPermission string = `
-Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
-unknown    unknown                       unknown                  unknown         unknown (token lacks billing:read)
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+unknown    unknown             unknown                  unknown         unknown (token lacks billing:read)
 `
