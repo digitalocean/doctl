@@ -188,7 +188,9 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 			c.AgentPlatform = func() do.AgentPlatformService { return do.NewAgentPlatformService(godoClient) }
-			c.Harbor = func() do.HarborService { return do.NewHarborService(godoClient) }
+			c.Harbor = func() do.HarborService {
+				return do.NewHarborService(godoClient, viper.GetBool(harborPreviewFlagKey))
+			}
 			c.DedicatedInferences = func() do.DedicatedInferenceService {
 				return do.NewDedicatedInferenceService(godoClient)
 			}

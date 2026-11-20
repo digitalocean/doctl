@@ -28,12 +28,17 @@ import (
 
 // harborBasePath is the root of the Managed Harbor API. It has no godo client
 // yet, so every route is built from this prefix.
-const harborBasePath = "/v2/gen-ai/harbor"
+const harborBasePath = "/v1/eval-harness"
+
+// harborPreviewBasePath is the preview lane. The edge rewrites it to
+// harborBasePath on the preview deployment, so routes below it are the same.
+const harborPreviewBasePath = harborBasePath + "/preview"
 
 // Upload states.
 const (
 	HarborUploadUploading  = "uploading"
 	HarborUploadValidating = "validating"
+	HarborUploadBuilding   = "building"
 	HarborUploadAccepted   = "accepted"
 	HarborUploadRejected   = "rejected"
 	HarborUploadSuperseded = "superseded"
@@ -68,11 +73,15 @@ func HarborJobTerminal(status string) bool {
 	return false
 }
 
-// HarborLintFinding is one result of server-side lint.
+// HarborLintFinding is one result of server-side lint. Dataset findings use
+// file and task; task findings use path.
 type HarborLintFinding struct {
 	Rule     string `json:"rule,omitempty"`
 	Severity string `json:"severity,omitempty"`
 	Path     string `json:"path,omitempty"`
+	File     string `json:"file,omitempty"`
+	Task     string `json:"task,omitempty"`
+	Line     int    `json:"line,omitempty"`
 	Message  string `json:"message,omitempty"`
 }
 
@@ -107,69 +116,7 @@ func (r HarborLintReport) MarshalJSON() ([]byte, error) {
 	}{r.Passed, r.Findings})
 }
 
-// HarborTask is a published task: its current archive and lint report.
-type HarborTask struct {
-	Name                 string            `json:"name"`
-	Description          string            `json:"description,omitempty"`
-	Keywords             []string          `json:"keywords,omitempty"`
-	Digest               string            `json:"digest,omitempty"`
-	ArchiveSizeBytes     int64             `json:"archive_size_bytes,omitempty"`
-	ImageSource          string            `json:"image_source,omitempty"`
-	ImageRef             string            `json:"image_ref,omitempty"`
-	Manifest             json.RawMessage   `json:"manifest,omitempty"`
-	LintReport           *HarborLintReport `json:"lint_report,omitempty"`
-	HarborVersion        string            `json:"harbor_version,omitempty"`
-	PublishedByUserEmail string            `json:"published_by_user_email,omitempty"`
-	PublishedAt          *time.Time        `json:"published_at,omitempty"`
-	CreatedAt            *time.Time        `json:"created_at,omitempty"`
-	UpdatedAt            *time.Time        `json:"updated_at,omitempty"`
-}
-
-// HarborTaskUploadRequest announces an archive before it is uploaded.
-type HarborTaskUploadRequest struct {
-	Digest      string            `json:"digest"`
-	SizeBytes   int64             `json:"size_bytes"`
-	FileDigests map[string]string `json:"file_digests"`
-	Manifest    map[string]any    `json:"manifest"`
-}
-
-// HarborTaskUploadStart is the reply to an upload request: either the digest
-// is already current (Unchanged), or the archive goes to UploadURL.
-type HarborTaskUploadStart struct {
-	Unchanged  bool   `json:"unchanged"`
-	UploadUUID string `json:"upload_uuid,omitempty"`
-	UploadURL  string `json:"upload_url,omitempty"`
-}
-
-// HarborTaskUpload is the state of one publish attempt.
-type HarborTaskUpload struct {
-	UploadUUID       string            `json:"upload_uuid"`
-	TaskName         string            `json:"task_name,omitempty"`
-	Digest           string            `json:"digest,omitempty"`
-	State            string            `json:"state"`
-	LintReport       *HarborLintReport `json:"lint_report,omitempty"`
-	ErrorDescription string            `json:"error_description,omitempty"`
-	CreatedAt        *time.Time        `json:"created_at,omitempty"`
-	UpdatedAt        *time.Time        `json:"updated_at,omitempty"`
-}
-
-// HarborPublishUnchanged is the publish state reported when the task's
-// current digest already matches the local folder.
-const HarborPublishUnchanged = "unchanged"
-
-// HarborPublishResult is what doctl reports for one published task folder.
-type HarborPublishResult struct {
-	Name             string            `json:"name"`
-	Digest           string            `json:"digest"`
-	State            string            `json:"state"`
-	UploadUUID       string            `json:"upload_uuid,omitempty"`
-	Files            int               `json:"files"`
-	ArchiveSizeBytes int64             `json:"archive_size_bytes"`
-	LintReport       *HarborLintReport `json:"lint_report,omitempty"`
-	ErrorDescription string            `json:"error_description,omitempty"`
-}
-
-// HarborPullResult is what doctl reports for a downloaded task.
+// HarborPullResult is what doctl reports for a downloaded dataset.
 type HarborPullResult struct {
 	Name   string `json:"name"`
 	Digest string `json:"digest"`
@@ -209,10 +156,11 @@ func (p *HarborPresignedURL) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// HarborDatasetTask is a task referenced by a dataset.
+// HarborDatasetTask is a task inside a dataset.
 type HarborDatasetTask struct {
-	Name   string `json:"name"`
-	Digest string `json:"digest,omitempty"`
+	Name      string `json:"name"`
+	Digest    string `json:"digest,omitempty"`
+	SizeBytes int64  `json:"size_bytes,omitempty"`
 }
 
 // UnmarshalJSON accepts a bare task name as well as an object.
@@ -226,10 +174,33 @@ func (t *HarborDatasetTask) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, (*plain)(t))
 }
 
-// HarborDataset is a named list of the team's tasks.
+// Dataset upload states. Validation finishes inside the complete call, which
+// returns ready or failed.
+const (
+	HarborDatasetUploading  = "uploading"
+	HarborDatasetValidating = "validating"
+	HarborDatasetReady      = "ready"
+	HarborDatasetFailed     = "failed"
+	HarborDatasetArchived   = "archived"
+)
+
+// HarborDatasetTerminal reports whether a dataset upload will not change again.
+func HarborDatasetTerminal(status string) bool {
+	switch status {
+	case HarborDatasetReady, HarborDatasetFailed, HarborDatasetArchived:
+		return true
+	}
+	return false
+}
+
+// HarborDataset is the ready version of a dataset.
 type HarborDataset struct {
+	UUID                 string              `json:"uuid,omitempty"`
 	Name                 string              `json:"name"`
 	Description          string              `json:"description,omitempty"`
+	Digest               string              `json:"digest,omitempty"`
+	SizeBytes            int64               `json:"size_bytes,omitempty"`
+	Status               string              `json:"status,omitempty"`
 	Tasks                []HarborDatasetTask `json:"tasks,omitempty"`
 	HasMetric            bool                `json:"has_metric,omitempty"`
 	PublishedByUserEmail string              `json:"published_by_user_email,omitempty"`
@@ -238,18 +209,56 @@ type HarborDataset struct {
 	UpdatedAt            *time.Time          `json:"updated_at,omitempty"`
 }
 
-// HarborDatasetRequest creates or replaces a dataset.
-type HarborDatasetRequest struct {
-	Description string   `json:"description,omitempty"`
-	Tasks       []string `json:"tasks"`
+// HarborDatasetUploadRequest announces a dataset archive. Digest is the
+// SHA-256 of the .tar.gz bytes, not the hash of the files inside it.
+type HarborDatasetUploadRequest struct {
+	Digest    string `json:"digest"`
+	SizeBytes int64  `json:"size_bytes"`
+}
+
+// HarborDatasetUploadURL is the presigned PUT for a dataset archive.
+type HarborDatasetUploadURL struct {
+	Method    string     `json:"method"`
+	URL       string     `json:"url"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+}
+
+// HarborDatasetUpload is one upload of a dataset archive.
+type HarborDatasetUpload struct {
+	UUID      string              `json:"uuid"`
+	Dataset   string              `json:"dataset,omitempty"`
+	Status    string              `json:"status"`
+	Digest    string              `json:"digest,omitempty"`
+	SizeBytes int64               `json:"size_bytes,omitempty"`
+	Error     string              `json:"error,omitempty"`
+	Findings  []HarborLintFinding `json:"findings,omitempty"`
+	CreatedAt *time.Time          `json:"created_at,omitempty"`
+	UpdatedAt *time.Time          `json:"updated_at,omitempty"`
+}
+
+// HarborDatasetUploadStart is the reply to a dataset upload request.
+type HarborDatasetUploadStart struct {
+	Unchanged bool                    `json:"unchanged"`
+	Dataset   *HarborDataset          `json:"dataset,omitempty"`
+	Upload    *HarborDatasetUpload    `json:"upload,omitempty"`
+	UploadURL *HarborDatasetUploadURL `json:"upload_url,omitempty"`
 }
 
 // HarborJobAgent is one agent and model pair in a job.
 type HarborJobAgent struct {
-	Name    string         `json:"name"`
-	Version string         `json:"version,omitempty"`
-	Model   string         `json:"model"`
-	Kwargs  map[string]any `json:"kwargs,omitempty"`
+	Name      string         `json:"name"`
+	Version   string         `json:"version,omitempty"`
+	ModelName string         `json:"model_name"`
+	Kwargs    map[string]any `json:"kwargs,omitempty"`
+}
+
+// HarborJobDataset is the dataset a job runs, optionally narrowed to some of
+// its tasks. A job runs exactly one dataset.
+type HarborJobDataset struct {
+	Name             string   `json:"name"`
+	TaskNames        []string `json:"task_names,omitempty"`
+	ExcludeTaskNames []string `json:"exclude_task_names,omitempty"`
+	NTasks           int      `json:"n_tasks,omitempty"`
 }
 
 // HarborJobRetry is the trial retry policy.
@@ -259,15 +268,13 @@ type HarborJobRetry struct {
 
 // HarborJobRequest submits a job.
 type HarborJobRequest struct {
-	Name              string           `json:"name,omitempty"`
-	Tasks             []string         `json:"tasks,omitempty"`
-	Dataset           string           `json:"dataset,omitempty"`
-	Agents            []HarborJobAgent `json:"agents"`
-	NAttempts         int              `json:"n_attempts"`
-	NConcurrentTrials int              `json:"n_concurrent_trials"`
-	Retry             HarborJobRetry   `json:"retry"`
-	DryRun            bool             `json:"dry_run"`
-	TriggerSource     string           `json:"trigger_source,omitempty"`
+	JobName           string             `json:"job_name,omitempty"`
+	Datasets          []HarborJobDataset `json:"datasets"`
+	Agents            []HarborJobAgent   `json:"agents"`
+	NAttempts         int                `json:"n_attempts"`
+	NConcurrentTrials int                `json:"n_concurrent_trials"`
+	Retry             HarborJobRetry     `json:"retry"`
+	DryRun            bool               `json:"dry_run"`
 }
 
 // HarborJob is a submitted job and its progress.
@@ -310,100 +317,44 @@ func (j *HarborJob) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// HarborTrial is one agent attempt at one task.
-type HarborTrial struct {
-	TrialName        string             `json:"trial_name"`
-	TaskName         string             `json:"task_name"`
-	TaskDigest       string             `json:"task_digest,omitempty"`
-	AgentName        string             `json:"agent_name"`
-	AgentVersion     string             `json:"agent_version,omitempty"`
-	ModelSlug        string             `json:"model_slug"`
-	Attempt          int                `json:"attempt"`
-	Status           string             `json:"status"`
-	Rewards          map[string]float64 `json:"rewards,omitempty"`
-	NInputTokens     *int64             `json:"n_input_tokens,omitempty"`
-	NOutputTokens    *int64             `json:"n_output_tokens,omitempty"`
-	ExceptionType    string             `json:"exception_type,omitempty"`
-	ExceptionMessage string             `json:"exception_message,omitempty"`
-	Timing           json.RawMessage    `json:"timing,omitempty"`
-	CreatedAt        *time.Time         `json:"created_at,omitempty"`
-	UpdatedAt        *time.Time         `json:"updated_at,omitempty"`
-}
-
-// HarborArtifact is one file of a job's results with its download link.
-type HarborArtifact struct {
-	Path      string     `json:"path"`
-	URL       string     `json:"url"`
-	SizeBytes int64      `json:"size_bytes,omitempty"`
-	SHA256    string     `json:"sha256,omitempty"`
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
-}
-
-func (a *HarborArtifact) UnmarshalJSON(b []byte) error {
-	type plain HarborArtifact
-	var v struct {
-		plain
-		Name        string `json:"name"`
-		Key         string `json:"key"`
-		DownloadURL string `json:"download_url"`
-	}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	*a = HarborArtifact(v.plain)
-	a.Path = harborFirstNonEmpty(a.Path, v.Name, v.Key)
-	a.URL = harborFirstNonEmpty(a.URL, v.DownloadURL)
-	return nil
-}
-
-// HarborAgent is a supported agent with its pinned version.
-type HarborAgent struct {
-	Name        string `json:"name"`
-	Version     string `json:"version,omitempty"`
-	Protocol    string `json:"protocol,omitempty"`
-	Description string `json:"description,omitempty"`
-}
-
 // HarborService is the Managed Harbor API.
 type HarborService interface {
-	ListTasks(query string) ([]HarborTask, error)
-	GetTask(name string) (*HarborTask, error)
-	DeleteTask(name string) error
-	GetTaskArchive(name string) (*HarborPresignedURL, error)
-	StartTaskUpload(name string, req *HarborTaskUploadRequest) (*HarborTaskUploadStart, error)
-	CompleteTaskUpload(name, uploadUUID string) (*HarborTaskUpload, error)
-	GetTaskUpload(name, uploadUUID string) (*HarborTaskUpload, error)
-
-	PutDataset(name string, req *HarborDatasetRequest) (*HarborDataset, error)
-	ListDatasets() ([]HarborDataset, error)
+	StartDatasetUpload(name string, req *HarborDatasetUploadRequest) (*HarborDatasetUploadStart, error)
+	CompleteDatasetUpload(name, uploadUUID string) (*HarborDatasetUpload, error)
+	GetDatasetUpload(name, uploadUUID string) (*HarborDatasetUpload, error)
+	ListDatasets(query string) ([]HarborDataset, error)
 	GetDataset(name string) (*HarborDataset, error)
+	GetDatasetArchive(name string) (*HarborPresignedURL, error)
 	DeleteDataset(name string) error
 
 	CreateJob(req *HarborJobRequest, idempotencyKey string) (*HarborJob, error)
-	ListJobs() ([]HarborJob, error)
-	GetJob(uuid string) (*HarborJob, error)
-	ListTrials(uuid string) ([]HarborTrial, error)
-	ListArtifacts(uuid string) ([]HarborArtifact, error)
+	ListJobs(status string) ([]HarborJob, error)
+	GetJobArtifacts(uuid string) (*HarborPresignedURL, error)
 	CancelJob(uuid string) (*HarborJob, error)
-
-	ListAgents() ([]HarborAgent, error)
+	DeleteJob(uuid string) error
 }
 
 type harborService struct {
-	client *godo.Client
+	client   *godo.Client
+	basePath string
 }
 
 var _ HarborService = &harborService{}
 
 // NewHarborService builds a HarborService on the shared API client, so it uses
-// the same token, base URL, and retry policy as every other command.
-func NewHarborService(client *godo.Client) HarborService {
-	return &harborService{client: client}
+// the same token, base URL, and retry policy as every other command. preview
+// sends requests to the preview lane instead of production.
+func NewHarborService(client *godo.Client, preview bool) HarborService {
+	basePath := harborBasePath
+	if preview {
+		basePath = harborPreviewBasePath
+	}
+	return &harborService{client: client, basePath: basePath}
 }
 
 func (s *harborService) do(method, path string, body any, header http.Header, out any) (*godo.Response, error) {
 	ctx := context.TODO()
-	req, err := s.client.NewRequest(ctx, method, harborBasePath+path, body)
+	req, err := s.client.NewRequest(ctx, method, s.basePath+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -504,65 +455,47 @@ func harborList[T any](s *harborService, path string, query url.Values, key stri
 	return items, nil
 }
 
-func harborTaskPath(name string) string { return "/tasks/" + url.PathEscape(name) }
-
 func harborJobPath(uuid string) string { return "/jobs/" + url.PathEscape(uuid) }
 
-func (s *harborService) ListTasks(query string) ([]HarborTask, error) {
+func (s *harborService) StartDatasetUpload(name string, req *HarborDatasetUploadRequest) (*HarborDatasetUploadStart, error) {
+	var out HarborDatasetUploadStart
+	_, err := s.do(http.MethodPost, "/datasets/"+url.PathEscape(name)+"/uploads", req, nil, &out)
+	if err == nil && out.Upload != nil && out.Upload.Dataset == "" {
+		out.Upload.Dataset = name
+	}
+	return &out, err
+}
+
+func (s *harborService) CompleteDatasetUpload(name, uploadUUID string) (*HarborDatasetUpload, error) {
+	up, err := harborOne[HarborDatasetUpload](s, http.MethodPost, "/datasets/"+url.PathEscape(name)+"/uploads/"+url.PathEscape(uploadUUID)+"/complete", nil, nil, "upload")
+	if err == nil && up.UUID == "" {
+		up.UUID = uploadUUID
+	}
+	return up, err
+}
+
+func (s *harborService) GetDatasetUpload(name, uploadUUID string) (*HarborDatasetUpload, error) {
+	up, err := harborOne[HarborDatasetUpload](s, http.MethodGet, "/datasets/"+url.PathEscape(name)+"/uploads/"+url.PathEscape(uploadUUID), nil, nil, "upload")
+	if err == nil && up.UUID == "" {
+		up.UUID = uploadUUID
+	}
+	return up, err
+}
+
+func (s *harborService) ListDatasets(query string) ([]HarborDataset, error) {
 	q := url.Values{}
 	if query != "" {
 		q.Set("q", query)
 	}
-	return harborList[HarborTask](s, "/tasks", q, "tasks")
-}
-
-func (s *harborService) GetTask(name string) (*HarborTask, error) {
-	return harborOne[HarborTask](s, http.MethodGet, harborTaskPath(name), nil, nil, "task")
-}
-
-func (s *harborService) DeleteTask(name string) error {
-	_, err := s.do(http.MethodDelete, harborTaskPath(name), nil, nil, nil)
-	return err
-}
-
-func (s *harborService) GetTaskArchive(name string) (*HarborPresignedURL, error) {
-	return harborOne[HarborPresignedURL](s, http.MethodGet, harborTaskPath(name)+"/archive", nil, nil, "archive")
-}
-
-func (s *harborService) StartTaskUpload(name string, req *HarborTaskUploadRequest) (*HarborTaskUploadStart, error) {
-	return harborOne[HarborTaskUploadStart](s, http.MethodPost, harborTaskPath(name)+"/uploads", req, nil, "upload")
-}
-
-func (s *harborService) CompleteTaskUpload(name, uploadUUID string) (*HarborTaskUpload, error) {
-	up, err := harborOne[HarborTaskUpload](s, http.MethodPost, harborTaskPath(name)+"/uploads/"+url.PathEscape(uploadUUID)+"/complete", nil, nil, "upload")
-	if err == nil && up.UploadUUID == "" {
-		up.UploadUUID = uploadUUID
-	}
-	return up, err
-}
-
-func (s *harborService) GetTaskUpload(name, uploadUUID string) (*HarborTaskUpload, error) {
-	up, err := harborOne[HarborTaskUpload](s, http.MethodGet, harborTaskPath(name)+"/uploads/"+url.PathEscape(uploadUUID), nil, nil, "upload")
-	if err == nil && up.UploadUUID == "" {
-		up.UploadUUID = uploadUUID
-	}
-	return up, err
-}
-
-func (s *harborService) PutDataset(name string, req *HarborDatasetRequest) (*HarborDataset, error) {
-	ds, err := harborOne[HarborDataset](s, http.MethodPut, "/datasets/"+url.PathEscape(name), req, nil, "dataset")
-	if err == nil && ds.Name == "" {
-		ds.Name = name
-	}
-	return ds, err
-}
-
-func (s *harborService) ListDatasets() ([]HarborDataset, error) {
-	return harborList[HarborDataset](s, "/datasets", nil, "datasets")
+	return harborList[HarborDataset](s, "/datasets", q, "datasets")
 }
 
 func (s *harborService) GetDataset(name string) (*HarborDataset, error) {
 	return harborOne[HarborDataset](s, http.MethodGet, "/datasets/"+url.PathEscape(name), nil, nil, "dataset")
+}
+
+func (s *harborService) GetDatasetArchive(name string) (*HarborPresignedURL, error) {
+	return harborOne[HarborPresignedURL](s, http.MethodGet, "/datasets/"+url.PathEscape(name)+"/archive", nil, nil, "archive")
 }
 
 func (s *harborService) DeleteDataset(name string) error {
@@ -578,20 +511,43 @@ func (s *harborService) CreateJob(req *HarborJobRequest, idempotencyKey string) 
 	return harborOne[HarborJob](s, http.MethodPost, "/jobs", req, header, "job")
 }
 
-func (s *harborService) ListJobs() ([]HarborJob, error) {
-	return harborList[HarborJob](s, "/jobs", nil, "jobs")
+// harborJobListLimit is the largest page GET /jobs accepts. ListJobs asks for
+// that many and follows next_page_token until the last page.
+const harborJobListLimit = 100
+
+func (s *harborService) ListJobs(status string) ([]HarborJob, error) {
+	jobs := []HarborJob{}
+	token := ""
+	for {
+		q := url.Values{}
+		q.Set("limit", strconv.Itoa(harborJobListLimit))
+		if status != "" {
+			q.Set("status", status)
+		}
+		if token != "" {
+			q.Set("page_token", token)
+		}
+		var page struct {
+			Jobs          []HarborJob `json:"jobs"`
+			NextPageToken string      `json:"next_page_token"`
+		}
+		if _, err := s.do(http.MethodGet, "/jobs?"+q.Encode(), nil, nil, &page); err != nil {
+			return nil, err
+		}
+		if len(page.Jobs) > 0 {
+			jobs = append(jobs, page.Jobs...)
+		}
+		if page.NextPageToken == "" || page.NextPageToken == token {
+			return jobs, nil
+		}
+		token = page.NextPageToken
+	}
 }
 
-func (s *harborService) GetJob(uuid string) (*HarborJob, error) {
-	return harborOne[HarborJob](s, http.MethodGet, harborJobPath(uuid), nil, nil, "job")
-}
-
-func (s *harborService) ListTrials(uuid string) ([]HarborTrial, error) {
-	return harborList[HarborTrial](s, harborJobPath(uuid)+"/trials", nil, "trials")
-}
-
-func (s *harborService) ListArtifacts(uuid string) ([]HarborArtifact, error) {
-	return harborList[HarborArtifact](s, harborJobPath(uuid)+"/artifacts", nil, "artifacts")
+// GetJobArtifacts returns the presigned URL for a job's results archive. The
+// API signs job.zip, whose files sit at the archive root.
+func (s *harborService) GetJobArtifacts(uuid string) (*HarborPresignedURL, error) {
+	return harborOne[HarborPresignedURL](s, http.MethodGet, harborJobPath(uuid)+"/artifacts", nil, nil, "artifacts")
 }
 
 func (s *harborService) CancelJob(uuid string) (*HarborJob, error) {
@@ -602,8 +558,9 @@ func (s *harborService) CancelJob(uuid string) (*HarborJob, error) {
 	return job, err
 }
 
-func (s *harborService) ListAgents() ([]HarborAgent, error) {
-	return harborList[HarborAgent](s, "/agents", nil, "agents")
+func (s *harborService) DeleteJob(uuid string) error {
+	_, err := s.do(http.MethodDelete, harborJobPath(uuid), nil, nil, nil)
+	return err
 }
 
 func harborFirstNonEmpty(values ...string) string {

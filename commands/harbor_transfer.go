@@ -15,6 +15,7 @@ package commands
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
@@ -276,6 +277,117 @@ func extractHarborArchive(archive, dir string) (map[string]string, error) {
 		}
 		sums[filepath.ToSlash(filepath.Clean(filepath.FromSlash(hdr.Name)))] = hex.EncodeToString(h.Sum(nil))
 	}
+}
+
+// extractHarborZip unpacks a job results archive into dir. Files sit at the
+// archive root, which is the layout harbor view reads under <out>/<job-uuid>.
+// A file already on disk with the same contents is left in place. written is
+// how many files were created or replaced, and skipped is how many matched.
+func extractHarborZip(archive, dir string) (written, skipped int, err error) {
+	f, err := os.Open(archive)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return 0, 0, err
+	}
+	zr, err := zip.NewReader(f, info.Size())
+	if err != nil {
+		return 0, 0, fmt.Errorf("reading the job archive: %w", err)
+	}
+
+	type entry struct {
+		file *zip.File
+		dest string
+	}
+	var entries []entry
+	var total int64
+	for _, zf := range zr.File {
+		if zf.FileInfo().IsDir() {
+			continue
+		}
+		if !zf.FileInfo().Mode().IsRegular() {
+			return 0, 0, fmt.Errorf("the job archive contains %q, which is not a regular file", zf.Name)
+		}
+		if len(entries) >= harborMaxFiles {
+			return 0, 0, fmt.Errorf("the job archive has more than %d files", harborMaxFiles)
+		}
+		size := int64(zf.UncompressedSize64)
+		if size < 0 || size > harborMaxExtractBytes || total > harborMaxExtractBytes-size {
+			return 0, 0, fmt.Errorf("the job archive unpacks to more than 1 GiB")
+		}
+		total += size
+		dest, err := harborSafePath(dir, zf.Name)
+		if err != nil {
+			return 0, 0, err
+		}
+		entries = append(entries, entry{file: zf, dest: dest})
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return 0, 0, err
+	}
+	for _, e := range entries {
+		changed, err := writeHarborZipEntry(e.file, e.dest)
+		if err != nil {
+			return written, skipped, fmt.Errorf("%s: %w", e.file.Name, err)
+		}
+		if changed {
+			written++
+		} else {
+			skipped++
+		}
+	}
+	return written, skipped, nil
+}
+
+// writeHarborZipEntry writes one zip entry to dest. It returns false when dest
+// already holds those exact bytes.
+func writeHarborZipEntry(zf *zip.File, dest string) (bool, error) {
+	rc, err := zf.Open()
+	if err != nil {
+		return false, err
+	}
+	defer rc.Close()
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return false, err
+	}
+
+	size := int64(zf.UncompressedSize64)
+	tmp, err := os.CreateTemp(filepath.Dir(dest), ".doctl-download-*")
+	if err != nil {
+		return false, err
+	}
+	tmpName := tmp.Name()
+	h := sha256.New()
+	n, copyErr := io.Copy(io.MultiWriter(tmp, h), io.LimitReader(rc, size+1))
+	if err := errors.Join(copyErr, tmp.Close()); err != nil {
+		os.Remove(tmpName)
+		return false, err
+	}
+	if n != size {
+		os.Remove(tmpName)
+		return false, fmt.Errorf("received %d bytes, expected %d", n, size)
+	}
+	if harborFileMatches(dest, size, hex.EncodeToString(h.Sum(nil))) {
+		os.Remove(tmpName)
+		return false, nil
+	}
+	mode := os.FileMode(0o644)
+	if zf.Mode()&0o111 != 0 {
+		mode = 0o755
+	}
+	if err := os.Chmod(tmpName, mode); err != nil {
+		os.Remove(tmpName)
+		return false, err
+	}
+	if err := os.Rename(tmpName, dest); err != nil {
+		os.Remove(tmpName)
+		return false, err
+	}
+	return true, nil
 }
 
 // redactURLError strips the query string from a URL in err. Presigned URLs

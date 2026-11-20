@@ -14,13 +14,20 @@ limitations under the License.
 package commands
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
-	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -47,11 +54,9 @@ func HarborDatasetCmd() *Command {
 		RunHarborDatasetPublish,
 		"publish <dataset-dir>",
 		"Publish a Harbor dataset folder",
-		`Reads dataset.toml in a Harbor dataset folder and creates or replaces the dataset.
+		`Packs a Harbor dataset folder into one archive and uploads it. The archive has dataset.toml at the root and each task under tasks/<task-name>/. The server validates the archive when the upload completes and stores the dataset as ready, or failed with findings.
 
-Each `+"`[[tasks]]`"+` entry becomes a task name, with any org prefix (`+"`my-org/`"+`) dropped because tasks belong to your team. Tasks are not versioned, so `+"`digest`"+` fields are ignored; a job always runs each task's current version.
-
-Task folders found inside the dataset folder (any folder with a task.toml, up to two levels deep) are published first when the dataset lists them, and the command waits for each to pass lint. Listed tasks with no local folder must already be published.
+Each `+"`[[tasks]]`"+` entry must be a task folder inside the dataset (any folder with a task.toml, up to two levels deep). An org prefix (`+"`my-org/`"+`) is dropped because datasets belong to a team. The name stored in the archive matches the name the dataset is published under.
 
 The dataset's name comes from `+"`--name`"+`, then from `+"`[dataset] name`"+` without its org prefix, then from the folder name.`,
 		Writer, aliasOpt("p"),
@@ -60,7 +65,7 @@ The dataset's name comes from `+"`--name`"+`, then from `+"`[dataset] name`"+` w
 	)
 	AddStringFlag(cmdPublish, doctl.ArgHarborName, "", "", "The name to publish the dataset under (default: the name in dataset.toml, then the folder name)")
 	AddDurationFlag(cmdPublish, doctl.ArgWaitTimeout, "", harborDefaultLintTimeout, waitTimeoutDesc)
-	AddDurationFlag(cmdPublish, doctl.ArgHarborPollInterval, "", harborDefaultLintInterval, "How often to check lint progress of the dataset's tasks")
+	AddDurationFlag(cmdPublish, doctl.ArgHarborPollInterval, "", harborDefaultLintInterval, "How often to check whether the dataset upload has finished")
 	cmdPublish.Example = "The following example publishes the dataset in `./backend-bugs`: " +
 		"`doctl genai harbor dataset publish ./backend-bugs`"
 
@@ -69,12 +74,14 @@ The dataset's name comes from `+"`--name`"+`, then from `+"`[dataset] name`"+` w
 		RunHarborDatasetList,
 		"list",
 		"List Harbor datasets",
-		"Lists your team's datasets with the number of tasks in each.",
+		"Lists your team's ready datasets with the number of tasks in each. `--query` limits the list to names that contain the term.",
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.HarborDatasets{}),
 		overrideCmdNS(harborDatasetNS),
 	)
-	cmdList.Example = "The following example lists datasets: `doctl genai harbor dataset list`"
+	AddStringFlag(cmdList, doctl.ArgHarborQuery, "", "", "Only lists datasets whose name contains this term")
+	cmdList.Example = "The following example lists datasets whose name contains `bugs`: " +
+		"`doctl genai harbor dataset list --query bugs`"
 
 	cmdGet := CmdBuilder(
 		cmd,
@@ -87,6 +94,21 @@ The dataset's name comes from `+"`--name`"+`, then from `+"`[dataset] name`"+` w
 		overrideCmdNS(harborDatasetNS),
 	)
 	cmdGet.Example = "The following example retrieves a dataset: `doctl genai harbor dataset get backend-bugs`"
+
+	cmdPull := CmdBuilder(
+		cmd,
+		RunHarborDatasetPull,
+		"pull <dataset-name>",
+		"Download a Harbor dataset",
+		"Downloads the ready archive of a dataset and unpacks it into `<out>/<dataset-name>`. The archive is checked against the dataset's digest.",
+		Writer,
+		displayerType(&displayers.HarborPull{}),
+		overrideCmdNS(harborDatasetNS),
+	)
+	AddStringFlag(cmdPull, doctl.ArgHarborOut, "", ".", "The folder to unpack the dataset into")
+	AddBoolFlag(cmdPull, doctl.ArgForce, doctl.ArgShortForce, false, "Replaces the dataset folder if it already exists")
+	cmdPull.Example = "The following example unpacks a dataset into `./backend-bugs`: " +
+		"`doctl genai harbor dataset pull backend-bugs`"
 
 	cmdDelete := CmdBuilder(
 		cmd,
@@ -132,6 +154,9 @@ func planHarborDataset(dir, nameOverride string) (*harborDatasetPlan, error) {
 	root, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
+	}
+	if root, err = filepath.EvalSymlinks(root); err != nil {
+		return nil, fmt.Errorf("reading dataset folder: %w", err)
 	}
 	data, err := os.ReadFile(filepath.Join(root, "dataset.toml"))
 	if err != nil {
@@ -262,8 +287,126 @@ func harborStripOrg(name string) string {
 	return name
 }
 
-// RunHarborDatasetPublish publishes the dataset's local tasks, then the
-// dataset itself.
+// harborDatasetArchive is one dataset folder packed for the upload API.
+type harborDatasetArchive struct {
+	Path   string
+	Size   int64
+	Digest string
+	Files  int
+}
+
+// Close removes the temporary archive.
+func (a *harborDatasetArchive) Close() {
+	if a != nil && a.Path != "" {
+		os.Remove(a.Path)
+	}
+}
+
+// packHarborDataset writes a .tar.gz with dataset.toml and tasks/<name>/, then
+// hashes those exact bytes. The API checks that hash, not a hash of the files.
+func packHarborDataset(plan *harborDatasetPlan) (*harborDatasetArchive, error) {
+	type entry struct {
+		name string
+		file harborFile
+	}
+	var entries []entry
+	for _, name := range plan.Tasks {
+		dir, ok := plan.LocalTasks[name]
+		if !ok {
+			return nil, fmt.Errorf("task %s is listed in dataset.toml but there is no folder for it under the dataset", name)
+		}
+		files, err := collectHarborFiles(dir)
+		if err != nil {
+			return nil, fmt.Errorf("task %s: %w", name, err)
+		}
+		if len(files) == 0 {
+			return nil, fmt.Errorf("task %s has no files to publish", name)
+		}
+		for _, f := range files {
+			entries = append(entries, entry{name: path.Join("tasks", name, f.Path), file: f})
+		}
+	}
+	if len(entries) > harborMaxFiles {
+		return nil, fmt.Errorf("the dataset has %d files; the limit is %d", len(entries), harborMaxFiles)
+	}
+
+	config := "[dataset]\nname = " + strconv.Quote(plan.Name) + "\n"
+	if plan.Description != "" {
+		config += "description = " + strconv.Quote(plan.Description) + "\n"
+	}
+
+	tmp, err := os.CreateTemp("", "doctl-harbor-dataset-*.tar.gz")
+	if err != nil {
+		return nil, err
+	}
+	arch := &harborDatasetArchive{Path: tmp.Name(), Files: len(entries) + 1}
+	gz := gzip.NewWriter(tmp)
+	gz.Header.ModTime = time.Unix(0, 0)
+	tw := tar.NewWriter(gz)
+	if err := writeHarborTarBytes(tw, "dataset.toml", []byte(config)); err != nil {
+		arch.Close()
+		tmp.Close()
+		return nil, err
+	}
+	for _, e := range entries {
+		mode := int64(0o644)
+		if e.file.Exec {
+			mode = 0o755
+		}
+		hdr := &tar.Header{Typeflag: tar.TypeReg, Name: e.name, Size: e.file.Size, Mode: mode, ModTime: time.Unix(0, 0)}
+		if err := tw.WriteHeader(hdr); err != nil {
+			arch.Close()
+			tmp.Close()
+			return nil, err
+		}
+		if _, err := copyHarborFile(tw, e.file); err != nil {
+			arch.Close()
+			tmp.Close()
+			return nil, err
+		}
+	}
+	if err := errors.Join(tw.Close(), gz.Close(), tmp.Close()); err != nil {
+		arch.Close()
+		return nil, err
+	}
+	sum, size, err := hashHarborFile(arch.Path)
+	if err != nil {
+		arch.Close()
+		return nil, err
+	}
+	if size > harborMaxArchiveBytes {
+		arch.Close()
+		return nil, fmt.Errorf("the dataset archive is %s; the limit is 100 MiB", displayers.BytesToHumanReadableUnitBinary(uint64(size)))
+	}
+	arch.Size = size
+	arch.Digest = "sha256:" + sum
+	return arch, nil
+}
+
+func writeHarborTarBytes(tw *tar.Writer, name string, body []byte) error {
+	hdr := &tar.Header{Typeflag: tar.TypeReg, Name: name, Size: int64(len(body)), Mode: 0o644, ModTime: time.Unix(0, 0)}
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+	_, err := tw.Write(body)
+	return err
+}
+
+func hashHarborFile(path string) (string, int64, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", 0, err
+	}
+	defer f.Close()
+	h := sha256.New()
+	n, err := io.Copy(h, f)
+	if err != nil {
+		return "", 0, err
+	}
+	return hex.EncodeToString(h.Sum(nil)), n, nil
+}
+
+// RunHarborDatasetPublish packs a dataset folder and uploads that one archive.
 func RunHarborDatasetPublish(c *CmdConfig) error {
 	if err := ensureOneArg(c); err != nil {
 		return err
@@ -284,49 +427,176 @@ func RunHarborDatasetPublish(c *CmdConfig) error {
 	for _, w := range plan.Warnings {
 		warn("%s", w)
 	}
-
-	names := make([]string, 0, len(plan.LocalTasks))
-	for n := range plan.LocalTasks {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	var rejected []string
-	for _, n := range names {
-		result, err := publishHarborTask(c, plan.LocalTasks[n], n, wait)
-		if err != nil {
-			return fmt.Errorf("publishing task %s: %w", n, err)
-		}
-		harborProgress("Task %s: %s (%s)", n, result.State, result.Digest)
-		if result.LintReport != nil {
-			for _, f := range result.LintReport.Findings {
-				harborProgress("  %s %s %s: %s", f.Severity, f.Rule, f.Path, f.Message)
-			}
-		}
-		if result.State == do.HarborUploadRejected {
-			rejected = append(rejected, n)
-		}
-	}
-	if len(rejected) > 0 {
-		return fmt.Errorf("the server rejected %s, so the dataset was not published", strings.Join(rejected, ", "))
-	}
-
-	ds, err := c.Harbor().PutDataset(plan.Name, &do.HarborDatasetRequest{
-		Description: plan.Description,
-		Tasks:       plan.Tasks,
-	})
+	arch, err := packHarborDataset(plan)
 	if err != nil {
 		return err
+	}
+	defer arch.Close()
+	harborProgress("Packed %d files from %s (%s)", arch.Files, c.Args[0], displayers.BytesToHumanReadableUnitBinary(uint64(arch.Size)))
+
+	svc := c.Harbor()
+	start, err := svc.StartDatasetUpload(plan.Name, &do.HarborDatasetUploadRequest{Digest: arch.Digest, SizeBytes: arch.Size})
+	if err != nil {
+		return err
+	}
+	if start.Unchanged {
+		if start.Dataset == nil {
+			start.Dataset = &do.HarborDataset{Name: plan.Name, Digest: arch.Digest, Status: do.HarborDatasetReady}
+		}
+		notice("Dataset %s is already published with this archive.", plan.Name)
+		return c.Display(&displayers.HarborDatasets{Datasets: []do.HarborDataset{*start.Dataset}, Single: true})
+	}
+	if start.Upload == nil || start.Upload.UUID == "" || start.UploadURL == nil || start.UploadURL.URL == "" {
+		return fmt.Errorf("the upload response for %s has no upload link", plan.Name)
+	}
+	if err := putHarborArchive(start.UploadURL.URL, arch.Path, arch.Size); err != nil {
+		return err
+	}
+	upload, err := svc.CompleteDatasetUpload(plan.Name, start.Upload.UUID)
+	if err != nil {
+		return fmt.Errorf("completing the upload of %s: %w", plan.Name, err)
+	}
+	upload, err = waitForHarborDatasetUpload(c, plan.Name, upload, wait)
+	if err != nil {
+		return err
+	}
+	if err := displayHarborDatasetFindings(c, plan.Name, upload.Findings); err != nil {
+		return err
+	}
+	if upload.Status == do.HarborDatasetFailed {
+		msg := fmt.Sprintf("the server rejected dataset %s", plan.Name)
+		if upload.Error != "" {
+			msg += ": " + upload.Error
+		}
+		return errors.New(msg)
+	}
+
+	ds, err := svc.GetDataset(plan.Name)
+	if err != nil {
+		ds = &do.HarborDataset{Name: plan.Name, Digest: upload.Digest, Status: upload.Status, SizeBytes: upload.SizeBytes}
+	}
+	if ds.Status == "" {
+		ds.Status = upload.Status
 	}
 	return c.Display(&displayers.HarborDatasets{Datasets: []do.HarborDataset{*ds}, Single: true})
 }
 
+func waitForHarborDatasetUpload(c *CmdConfig, name string, upload *do.HarborDatasetUpload, wait harborWait) (*do.HarborDatasetUpload, error) {
+	deadline := time.Now().Add(wait.Timeout)
+	var shown string
+	for !do.HarborDatasetTerminal(upload.Status) {
+		if shown != upload.Status {
+			harborProgress("%s", harborDatasetProgress(name, upload.Status))
+			shown = upload.Status
+		}
+		if wait.Timeout > 0 && time.Now().After(deadline) {
+			return nil, fmt.Errorf("publish of %s did not finish within %s; the upload is still %s", name, wait.Timeout, upload.Status)
+		}
+		harborSleep(wait.Interval)
+		next, err := c.Harbor().GetDatasetUpload(name, upload.UUID)
+		if err != nil {
+			return nil, err
+		}
+		upload = next
+	}
+	return upload, nil
+}
+
+func harborDatasetProgress(name, status string) string {
+	switch status {
+	case do.HarborDatasetUploading:
+		return fmt.Sprintf("Uploading %s", name)
+	case do.HarborDatasetValidating:
+		return fmt.Sprintf("Validating %s", name)
+	default:
+		return fmt.Sprintf("Waiting for %s (%s)", name, status)
+	}
+}
+
+func displayHarborDatasetFindings(c *CmdConfig, name string, findings []do.HarborLintFinding) error {
+	if len(findings) == 0 || Output == "json" {
+		return nil
+	}
+	fmt.Fprintf(c.Out, "\nFindings for %s:\n", name)
+	return c.Display(&displayers.HarborLintFindings{Findings: findings})
+}
+
 // RunHarborDatasetList lists datasets.
 func RunHarborDatasetList(c *CmdConfig) error {
-	datasets, err := c.Harbor().ListDatasets()
+	query, err := c.Doit.GetString(c.NS, doctl.ArgHarborQuery)
+	if err != nil {
+		return err
+	}
+	datasets, err := c.Harbor().ListDatasets(strings.TrimSpace(query))
 	if err != nil {
 		return err
 	}
 	return c.Display(&displayers.HarborDatasets{Datasets: datasets})
+}
+
+// RunHarborDatasetPull downloads a dataset archive and unpacks it. The digest
+// is the SHA-256 of the .tar.gz bytes.
+func RunHarborDatasetPull(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	name := c.Args[0]
+	out, err := c.Doit.GetString(c.NS, doctl.ArgHarborOut)
+	if err != nil {
+		return err
+	}
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	dest, err := harborSafePath(out, name)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Lstat(dest); err == nil && !force {
+		return fmt.Errorf("%s already exists; pass --force to replace it", dest)
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+
+	svc := c.Harbor()
+	ds, err := svc.GetDataset(name)
+	if err != nil {
+		return err
+	}
+	archive, err := svc.GetDatasetArchive(name)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		return err
+	}
+	staging, err := os.MkdirTemp(out, ".doctl-pull-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(staging)
+
+	archivePath := filepath.Join(staging, "archive.tar.gz")
+	if _, err := downloadHarborFile(archive.URL, archivePath, ds.SizeBytes, ds.Digest); err != nil {
+		return err
+	}
+	unpacked := filepath.Join(staging, "dataset")
+	sums, err := extractHarborArchive(archivePath, unpacked)
+	if err != nil {
+		return err
+	}
+	if force {
+		if err := os.RemoveAll(dest); err != nil {
+			return err
+		}
+	}
+	if err := moveHarborDir(unpacked, dest); err != nil {
+		return err
+	}
+	return c.Display(&displayers.HarborPull{Result: &do.HarborPullResult{Name: name, Digest: ds.Digest, Path: dest, Files: len(sums)}})
 }
 
 // RunHarborDatasetGet retrieves a dataset.

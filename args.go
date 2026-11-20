@@ -1306,8 +1306,15 @@ const (
 	ArgHarborIdempotencyKey = "idempotency-key"
 	// ArgHarborDryRun validates a job without starting it.
 	ArgHarborDryRun = "dry-run"
+	// ArgHarborJobConfig is a Harbor job file in YAML or JSON. -c is doctl's
+	// own config file, so the job file cannot use that flag.
+	ArgHarborJobConfig = "job-config"
 	// ArgHarborPollInterval is how often a waiting Harbor command checks for progress.
 	ArgHarborPollInterval = "poll-interval"
+	// ArgHarborPreview sends Harbor requests to the preview lane of the API.
+	ArgHarborPreview = "preview"
+	// ArgHarborStatus limits a Harbor job list to one job status.
+	ArgHarborStatus = "status"
 
 	// ArgEvaluationHasGroundTruth filters datasets by whether they include ground truth.
 	ArgEvaluationHasGroundTruth = "has-ground-truth"

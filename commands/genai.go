@@ -14,11 +14,19 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-const harborNS = "genai.harbor"
+const (
+	harborNS = "genai.harbor"
+
+	// harborPreviewFlagKey is the viper key of the group-level --preview flag.
+	// One persistent flag serves every subcommand, so it does not use the
+	// per-command key AddBoolFlag would produce.
+	harborPreviewFlagKey = harborNS + "." + doctl.ArgHarborPreview
+)
 
 // GenAI creates the genai command.
 func GenAI() *Command {
@@ -50,53 +58,23 @@ func Harbor() *Command {
 		Command: &cobra.Command{
 			Use:   "harbor",
 			Short: "Run Harbor agent benchmarks on DigitalOcean",
-			Long: `The subcommands of ` + "`doctl genai harbor`" + ` publish Harbor tasks to your team, run agents against them, and download the results.
+			Long: `The subcommands of ` + "`doctl genai harbor`" + ` publish Harbor datasets, run them on DigitalOcean models, and download the results.
 
-A task is a Harbor task folder (task.toml, instruction.md, environment/, tests/). A job runs one or more agent and model pairs against tasks, and each attempt is a trial scored by the task's tests. Trials run in DO Sandbox and call models through DigitalOcean inference, so no provider API keys are needed.
+Author and check a task on your own machine with the harbor CLI: ` + "`harbor task init`" + `, ` + "`harbor task start-env`" + `, ` + "`harbor run -a oracle`" + `, and ` + "`harbor lint`" + `. Then use doctl to publish the dataset, run agents, and download the job. Open the downloaded folder with ` + "`harbor view`" + `.
 
-Author and test tasks locally with the open-source harbor CLI (harbor init, harbor lint, harbor run); use doctl to publish and run them on DigitalOcean.`,
+A task passed to ` + "`run`" + ` uses ` + "`-T`" + ` or ` + "`--task`" + `. ` + "`-t`" + ` is doctl's access token.`,
 		},
 	}
 
-	cmd.AddCommand(HarborTaskCmd())
+	// Hidden until launch: the preview lane is gated by the genai_preview
+	// feature flag and is only for testing before the production routes open.
+	cmd.PersistentFlags().Bool(doctl.ArgHarborPreview, false, "Send requests to the preview deployment of the Harbor API")
+	cmd.PersistentFlags().MarkHidden(doctl.ArgHarborPreview)
+	viper.BindPFlag(harborPreviewFlagKey, cmd.PersistentFlags().Lookup(doctl.ArgHarborPreview))
+
 	cmd.AddCommand(HarborDatasetCmd())
 	HarborRunCmd(cmd)
 	cmd.AddCommand(HarborJobCmd())
-	cmd.AddCommand(HarborAgentsCmd())
 
 	return cmd
-}
-
-// HarborAgentsCmd lists the supported agents.
-func HarborAgentsCmd() *Command {
-	cmd := &Command{
-		Command: &cobra.Command{
-			Use:   "agents",
-			Short: "Display commands that list Harbor agents",
-			Long:  "The subcommands of `doctl genai harbor agents` list the agents Harbor jobs can run.",
-		},
-	}
-
-	cmdList := CmdBuilder(
-		cmd,
-		RunHarborAgentsList,
-		"list",
-		"List supported Harbor agents",
-		"Lists the agents a job can run, each with the version it is pinned to and the model protocol it needs.",
-		Writer, aliasOpt("ls"),
-		displayerType(&displayers.HarborAgents{}),
-		overrideCmdNS(harborNS+".agents"),
-	)
-	cmdList.Example = "The following example lists the supported agents: `doctl genai harbor agents list`"
-
-	return cmd
-}
-
-// RunHarborAgentsList lists the supported agents.
-func RunHarborAgentsList(c *CmdConfig) error {
-	agents, err := c.Harbor().ListAgents()
-	if err != nil {
-		return err
-	}
-	return c.Display(&displayers.HarborAgents{Agents: agents})
 }

@@ -80,49 +80,6 @@ func harborLintSummary(r *do.HarborLintReport) string {
 	return strings.Join(parts, ", ")
 }
 
-// HarborPublish displays the outcome of publishing task folders.
-type HarborPublish struct {
-	Results []*do.HarborPublishResult
-}
-
-var _ Displayable = &HarborPublish{}
-
-func (v *HarborPublish) JSON(out io.Writer) error {
-	return harborJSON(v.Results, true, out)
-}
-
-func (v *HarborPublish) Cols() []string {
-	return []string{"Name", "State", "Digest", "Files", "Size", "Lint", "UploadUUID"}
-}
-
-func (v *HarborPublish) ColMap() map[string]string {
-	return map[string]string{
-		"Name":       "Name",
-		"State":      "State",
-		"Digest":     "Digest",
-		"Files":      "Files",
-		"Size":       "Size",
-		"Lint":       "Lint",
-		"UploadUUID": "Upload UUID",
-	}
-}
-
-func (v *HarborPublish) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(v.Results))
-	for _, r := range v.Results {
-		out = append(out, map[string]any{
-			"Name":       r.Name,
-			"State":      r.State,
-			"Digest":     r.Digest,
-			"Files":      r.Files,
-			"Size":       harborSize(r.ArchiveSizeBytes),
-			"Lint":       harborLintSummary(r.LintReport),
-			"UploadUUID": r.UploadUUID,
-		})
-	}
-	return out
-}
-
 // HarborLintFindings displays lint findings.
 type HarborLintFindings struct {
 	Findings []do.HarborLintFinding
@@ -145,63 +102,19 @@ func (v *HarborLintFindings) ColMap() map[string]string {
 func (v *HarborLintFindings) KV() []map[string]any {
 	out := make([]map[string]any, 0, len(v.Findings))
 	for _, f := range v.Findings {
-		out = append(out, map[string]any{"Severity": f.Severity, "Rule": f.Rule, "Path": f.Path, "Message": f.Message})
-	}
-	return out
-}
-
-// HarborTasks displays published tasks.
-type HarborTasks struct {
-	Tasks  []do.HarborTask
-	Single bool
-}
-
-var _ Displayable = &HarborTasks{}
-
-func (v *HarborTasks) JSON(out io.Writer) error {
-	return harborJSON(v.Tasks, v.Single, out)
-}
-
-func (v *HarborTasks) Cols() []string {
-	if v.Single {
-		return []string{"Name", "Digest", "Size", "Image", "Lint", "PublishedBy", "PublishedAt"}
-	}
-	return []string{"Name", "Digest", "Size", "PublishedAt"}
-}
-
-func (v *HarborTasks) ColMap() map[string]string {
-	return map[string]string{
-		"Name":        "Name",
-		"Digest":      "Digest",
-		"Size":        "Size",
-		"Image":       "Image",
-		"Lint":        "Lint",
-		"PublishedBy": "Published By",
-		"PublishedAt": "Published At",
-	}
-}
-
-func (v *HarborTasks) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(v.Tasks))
-	for _, t := range v.Tasks {
-		image := t.ImageSource
-		if t.ImageRef != "" {
-			image = t.ImageRef
+		file := f.Path
+		if file == "" {
+			file = f.File
 		}
-		out = append(out, map[string]any{
-			"Name":        t.Name,
-			"Digest":      t.Digest,
-			"Size":        harborSize(t.ArchiveSizeBytes),
-			"Image":       image,
-			"Lint":        harborLintSummary(t.LintReport),
-			"PublishedBy": t.PublishedByUserEmail,
-			"PublishedAt": harborTime(t.PublishedAt),
-		})
+		if f.Task != "" {
+			file = f.Task + ": " + file
+		}
+		out = append(out, map[string]any{"Severity": f.Severity, "Rule": f.Rule, "Path": file, "Message": f.Message})
 	}
 	return out
 }
 
-// HarborPull displays a downloaded task.
+// HarborPull displays a downloaded dataset.
 type HarborPull struct {
 	Result *do.HarborPullResult
 }
@@ -238,18 +151,20 @@ func (v *HarborDatasets) JSON(out io.Writer) error {
 
 func (v *HarborDatasets) Cols() []string {
 	if v.Single {
-		return []string{"Name", "Description", "Tasks", "PublishedAt"}
+		return []string{"Name", "Status", "Digest", "Tasks", "Updated"}
 	}
-	return []string{"Name", "Description", "TaskCount", "PublishedAt"}
+	return []string{"Name", "Status", "Digest", "TaskCount", "Updated"}
 }
 
 func (v *HarborDatasets) ColMap() map[string]string {
 	return map[string]string{
 		"Name":        "Name",
+		"Status":      "Status",
+		"Digest":      "Digest",
 		"Description": "Description",
 		"Tasks":       "Tasks",
 		"TaskCount":   "Tasks",
-		"PublishedAt": "Published At",
+		"Updated":     "Updated",
 	}
 }
 
@@ -260,12 +175,18 @@ func (v *HarborDatasets) KV() []map[string]any {
 		for i, t := range d.Tasks {
 			names[i] = t.Name
 		}
+		updated := d.UpdatedAt
+		if updated == nil {
+			updated = d.PublishedAt
+		}
 		out = append(out, map[string]any{
 			"Name":        d.Name,
+			"Status":      d.Status,
+			"Digest":      d.Digest,
 			"Description": d.Description,
 			"Tasks":       strings.Join(names, ","),
 			"TaskCount":   len(d.Tasks),
-			"PublishedAt": harborTime(d.PublishedAt),
+			"Updated":     harborTime(updated),
 		})
 	}
 	return out
@@ -308,7 +229,7 @@ func (v *HarborJobs) KV() []map[string]any {
 	for _, j := range v.Jobs {
 		agents := make([]string, len(j.Agents))
 		for i, a := range j.Agents {
-			agents[i] = a.Name + "/" + a.Model
+			agents[i] = a.Name + "/" + a.ModelName
 		}
 		out = append(out, map[string]any{
 			"UUID":        j.JobUUID,
@@ -322,90 +243,6 @@ func (v *HarborJobs) KV() []map[string]any {
 		})
 	}
 	return out
-}
-
-// HarborTrials displays the trials of a job.
-type HarborTrials struct {
-	Trials []do.HarborTrial
-}
-
-var _ Displayable = &HarborTrials{}
-
-func (v *HarborTrials) JSON(out io.Writer) error {
-	return harborJSON(v.Trials, false, out)
-}
-
-func (v *HarborTrials) Cols() []string {
-	return []string{"Trial", "Task", "Agent", "Model", "Attempt", "Status", "Reward", "Tokens", "Error"}
-}
-
-func (v *HarborTrials) ColMap() map[string]string {
-	return map[string]string{
-		"Trial":   "Trial",
-		"Task":    "Task",
-		"Agent":   "Agent",
-		"Model":   "Model",
-		"Attempt": "Attempt",
-		"Status":  "Status",
-		"Reward":  "Reward",
-		"Tokens":  "Tokens (in/out)",
-		"Error":   "Error",
-	}
-}
-
-func (v *HarborTrials) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(v.Trials))
-	for _, t := range v.Trials {
-		tokens := ""
-		if t.NInputTokens != nil || t.NOutputTokens != nil {
-			tokens = fmt.Sprintf("%d/%d", derefInt64(t.NInputTokens), derefInt64(t.NOutputTokens))
-		}
-		errText := t.ExceptionType
-		if t.ExceptionMessage != "" {
-			errText = strings.TrimSpace(errText + ": " + t.ExceptionMessage)
-			errText = strings.TrimPrefix(errText, ": ")
-		}
-		out = append(out, map[string]any{
-			"Trial":   t.TrialName,
-			"Task":    t.TaskName,
-			"Agent":   t.AgentName,
-			"Model":   t.ModelSlug,
-			"Attempt": t.Attempt,
-			"Status":  t.Status,
-			"Reward":  harborReward(t.Rewards),
-			"Tokens":  tokens,
-			"Error":   errText,
-		})
-	}
-	return out
-}
-
-// harborReward shows the conventional "reward" key on its own, and any other
-// reward keys as key=value.
-func harborReward(rewards map[string]float64) string {
-	if len(rewards) == 0 {
-		return ""
-	}
-	if r, ok := rewards["reward"]; ok && len(rewards) == 1 {
-		return fmt.Sprintf("%g", r)
-	}
-	keys := make([]string, 0, len(rewards))
-	for k := range rewards {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	parts := make([]string, len(keys))
-	for i, k := range keys {
-		parts[i] = fmt.Sprintf("%s=%g", k, rewards[k])
-	}
-	return strings.Join(parts, ",")
-}
-
-func derefInt64(p *int64) int64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }
 
 // HarborDownload displays a downloaded job.
@@ -431,31 +268,4 @@ func (v *HarborDownload) KV() []map[string]any {
 	}
 	r := v.Result
 	return []map[string]any{{"JobUUID": r.JobUUID, "Downloaded": r.Downloaded, "Skipped": r.Skipped, "Size": harborSize(r.Bytes), "Path": r.Path}}
-}
-
-// HarborAgents displays the supported agents.
-type HarborAgents struct {
-	Agents []do.HarborAgent
-}
-
-var _ Displayable = &HarborAgents{}
-
-func (v *HarborAgents) JSON(out io.Writer) error {
-	return harborJSON(v.Agents, false, out)
-}
-
-func (v *HarborAgents) Cols() []string {
-	return []string{"Name", "Version", "Protocol", "Description"}
-}
-
-func (v *HarborAgents) ColMap() map[string]string {
-	return map[string]string{"Name": "Name", "Version": "Version", "Protocol": "Protocol", "Description": "Description"}
-}
-
-func (v *HarborAgents) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(v.Agents))
-	for _, a := range v.Agents {
-		out = append(out, map[string]any{"Name": a.Name, "Version": a.Version, "Protocol": a.Protocol, "Description": a.Description})
-	}
-	return out
 }
