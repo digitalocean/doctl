@@ -200,6 +200,35 @@ func waitForLocalServer(ctx context.Context, port uint16) error {
 	}
 }
 
+func TestGetAuthCodePreboundPortDoesNotOpenBrowser(t *testing.T) {
+	holder, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer holder.Close()
+
+	port := uint16(holder.Addr().(*net.TCPAddr).Port)
+	opened := false
+	login := &localOIDCLogin{
+		port:   port,
+		logger: log.New(io.Discard, "", 0),
+		state:  "test-state",
+		ssoServer: &ssoServer{
+			authCodeURL: "http://example.invalid/authorize",
+			logger:      log.New(io.Discard, "", 0),
+			authCodeCh:  make(chan authCodeResponse),
+			errorCh:     make(chan error),
+		},
+		openURL: func(string) error {
+			opened = true
+			return nil
+		},
+	}
+
+	_, err = login.getAuthCode(context.Background())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "listening for the OIDC callback")
+	require.False(t, opened, "browser must not open when the callback port is already bound")
+}
+
 func TestGetIDToken(t *testing.T) {
 	const (
 		clientID = "test-client-id"

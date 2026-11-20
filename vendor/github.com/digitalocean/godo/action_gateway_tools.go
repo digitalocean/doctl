@@ -360,6 +360,35 @@ type ActionGatewayGetToolHealthResponse struct {
 	History  *ActionGatewayHealthHistory  `json:"history"`
 }
 
+// ActionGatewayToolVersionChange is one difference from the previous released
+// version of a tool. Type is one of the change types in the API reference, such
+// as "inputPropertyAdded" or "requiredScopesAdded".
+type ActionGatewayToolVersionChange struct {
+	Type     string   `json:"type"`
+	Path     string   `json:"path,omitempty"`
+	Values   []string `json:"values,omitempty"`
+	Breaking bool     `json:"breaking"`
+}
+
+// ActionGatewayToolVersionRelease is one released version of a catalog tool.
+// Pin it by calling the tool as "<ToolSlug>@<Version>".
+type ActionGatewayToolVersionRelease struct {
+	ToolSlug        string                           `json:"tool_slug"`
+	Version         string                           `json:"version"`
+	ReleasedAt      *Timestamp                       `json:"released_at,omitempty"`
+	Latest          bool                             `json:"latest"`
+	PreviousVersion string                           `json:"previous_version,omitempty"`
+	Breaking        bool                             `json:"breaking"`
+	Changes         []ActionGatewayToolVersionChange `json:"changes,omitempty"`
+}
+
+// ActionGatewayToolVersionsResponse is one page of a tool's released versions,
+// newest first.
+type ActionGatewayToolVersionsResponse struct {
+	Versions      []ActionGatewayToolVersionRelease `json:"versions"`
+	NextPageToken string                            `json:"next_page_token,omitempty"`
+}
+
 // List retrieves a page of catalog tools.
 func (s *ActionGatewayToolsService) List(ctx context.Context, opt *ActionGatewayToolListOptions) (*ActionGatewayToolsResponse, *Response, error) {
 	return actionGatewayRequest[ActionGatewayToolsResponse](ctx, s.client, http.MethodGet, actionGatewayPath+"/tools", opt, nil)
@@ -402,4 +431,14 @@ func (s *ActionGatewayToolsService) GetHealth(ctx context.Context, slug string, 
 		return nil, nil, err
 	}
 	return actionGatewayRequest[ActionGatewayGetToolHealthResponse](ctx, s.client, http.MethodGet, path, opt, nil)
+}
+
+// ListVersions retrieves a page of a catalog tool's released versions, newest
+// first, each with its changes from the previous release.
+func (s *ActionGatewayToolsService) ListVersions(ctx context.Context, slug string, opt *ActionGatewayCursorOptions) (*ActionGatewayToolVersionsResponse, *Response, error) {
+	path, err := actionGatewayItem(actionGatewayPath+"/tools", actionGatewayPathPart{"slug", slug})
+	if err != nil {
+		return nil, nil, err
+	}
+	return actionGatewayRequest[ActionGatewayToolVersionsResponse](ctx, s.client, http.MethodGet, path+"/versions", opt, nil)
 }
