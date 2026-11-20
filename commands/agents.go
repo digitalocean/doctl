@@ -3033,14 +3033,16 @@ func RunAgentsLogs(c *CmdConfig) error {
 	}
 	// Decide the format before any request so a refusal prints nothing. The
 	// global -o defaults to "text", so only an explicit -o text conflicts with
-	// --pretty; the default merely gets upgraded to JSON.
-	if Output != "text" && Output != "json" {
+	// --pretty; the default merely gets upgraded to JSON. outputFormat also
+	// sees a config file's output, as checkErr does.
+	format := outputFormat()
+	if format != "text" && format != "json" {
 		return errors.New("logs supports -o text and -o json")
 	}
-	if pretty && Output == "text" && agentFlagChanged(c, doctl.ArgOutput) {
+	if pretty && format == "text" && agentFlagChanged(c, doctl.ArgOutput) {
 		return errors.New("--pretty only applies to JSON output")
 	}
-	if Output == "json" || pretty {
+	if format == "json" || pretty {
 		// checkErr prints a {"errors":[...]} envelope on stdout under -o json,
 		// which would add a non-event line to the stream. Report on stderr and
 		// exit non-zero silently instead, for both -o json and --pretty.
