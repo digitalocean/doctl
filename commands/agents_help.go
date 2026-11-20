@@ -95,6 +95,13 @@ harness: opencode
   allow_hosts: [api.github.com]
   allow_ips: ["203.0.113.10"]
   vpc_uuid: <uuid>
+` + "```\n\n" + `**Command** (optional, sandbox with no agent only). A sandbox can run one program for its whole life: it starts once the sandbox is ready, and the session ends when it exits, keeping the exit code. Put it in the manifest, or after ` + "`--`" + `, which replaces the manifest's argv and keeps its ` + "`workdir`" + ` unless ` + "`--workdir`" + ` is given. With no manifest, ` + "`--`" + ` alone creates a sandbox with no agent. Everything after ` + "`--`" + ` is passed as the argv, unsplit:
+` + "```bash\n" + agentCLI + ` create -- python train.py --epochs 3
+` + agentCLI + ` create sandbox.yaml --workdir /workspace/app -- npm test
+` + "```\n" + "```yaml\n" + `harness: none
+command:
+  argv: ["python", "train.py", "--epochs", "3"]
+  workdir: /workspace
 ` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + ` and ` + "`codex-agentapi`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
 
 **Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment; the same holds for ` + "`minimax-code`" + ` and ` + "`MINIMAX_API_KEY`" + `. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.

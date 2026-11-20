@@ -429,6 +429,9 @@ func isReadableFile(path string) bool {
 // rejectCreateOnlyLaunchFlags turns `launch --dry-run` / `--on-hitl` into a
 // pointer at `create`, which is where those flags mean something.
 func rejectCreateOnlyLaunchFlags(c *CmdConfig) error {
+	if len(commandArgv(c)) > 0 {
+		return fmt.Errorf("`%s launch` ends in a chat with an agent, and a command after -- runs in a sandbox with none; use `%s create -- <command>`", agentCLI, agentCLI)
+	}
 	for _, flag := range []string{doctl.ArgAgentDryRun, doctl.ArgAgentOnHITL} {
 		if c.Doit.IsSet(flag) {
 			return fmt.Errorf("--%s only applies when creating a session without attaching; use `%s create --%s`", flag, agentCLI, flag)
