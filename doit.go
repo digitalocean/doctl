@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -38,6 +39,8 @@ import (
 	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/client"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 
@@ -286,7 +289,19 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string,
 	}
 
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
-	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
+
+	// A dedicated transport rather than oauth2.NewClient's, which falls through to
+	// http.DefaultTransport: responseHeaderTimeout below is a per-client setting
+	// and must not be stamped onto the process-wide default.
+	headerTimeout := responseHeaderTimeout()
+	baseTransport := cleanhttp.DefaultPooledTransport()
+	baseTransport.ResponseHeaderTimeout = headerTimeout
+	oauthClient := &http.Client{
+		Transport: &oauth2.Transport{
+			Base:   baseTransport,
+			Source: tokenSource,
+		},
+	}
 
 	args := []godo.ClientOpt{
 		godo.SetUserAgent(userAgent()),
@@ -329,6 +344,18 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string,
 		return nil, err
 	}
 
+	// godo builds its own retrying client when retries are configured and keeps
+	// only the token source off the one above, so baseTransport's timeout is
+	// discarded on that path and has to be reapplied to what godo really dials
+	// with. Reporting belongs here too: a header timeout is only retried on this
+	// path, and only the retry policy sees why an attempt failed.
+	if rt := retryRoundTripper(client); rt != nil {
+		setRetryResponseHeaderTimeout(rt, headerTimeout)
+		if headerTimeout > 0 {
+			reportResponseHeaderTimeouts(rt, logger, headerTimeout)
+		}
+	}
+
 	if trace {
 		r := newRecorder(client.HTTPClient.Transport)
 
@@ -351,6 +378,96 @@ func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string,
 	client.HTTPClient.Transport = deviceid.NewTransport(client.HTTPClient.Transport, deviceid.Get())
 
 	return client, nil
+}
+
+// responseHeaderTimeout is how long one attempt waits for response headers
+// before the transport abandons it. Zero waits indefinitely.
+//
+// Deliberately not http.Client.Timeout, which bounds the whole response: that
+// would sever long-lived SSE streams such as agent session attach, which are
+// meant to stay open indefinitely. Nothing else in the chain bounds the header
+// wait — the gateway sets its request timeouts to 0 so those streams survive —
+// so without this a request lost upstream hangs until the edge gives up at
+// ~125s, which godo then retries silently (MARSOHS-2367).
+func responseHeaderTimeout() time.Duration {
+	return time.Duration(viper.GetInt("http-response-header-timeout")) * time.Second
+}
+
+// retryRoundTripper returns the retrying round tripper godo built, or nil when
+// godo was not given a retry config and left the client above in place.
+//
+// Reaching it means walking godo's wrapping: the oauth2 transport it rebuilds,
+// over retryablehttp's round tripper. TestGetGodoClientSetsResponseHeaderTimeout
+// covers those layers so a godo upgrade that reshuffles them fails there rather
+// than quietly reverting the header wait to unbounded.
+func retryRoundTripper(client *godo.Client) *retryablehttp.RoundTripper {
+	oauthTransport, ok := client.HTTPClient.Transport.(*oauth2.Transport)
+	if !ok {
+		return nil
+	}
+	roundTripper, ok := oauthTransport.Base.(*retryablehttp.RoundTripper)
+	if !ok || roundTripper.Client == nil || roundTripper.Client.HTTPClient == nil {
+		return nil
+	}
+	return roundTripper
+}
+
+// setRetryResponseHeaderTimeout applies d to the pooled transport underneath the
+// retrying client, which godo constructed itself.
+func setRetryResponseHeaderTimeout(rt *retryablehttp.RoundTripper, d time.Duration) {
+	transport, ok := rt.Client.HTTPClient.Transport.(*http.Transport)
+	if !ok {
+		return
+	}
+	transport.ResponseHeaderTimeout = d
+}
+
+// reportResponseHeaderTimeouts writes a line to stderr for every attempt a
+// header timeout abandons.
+//
+// This is load-bearing, not diagnostics. The timeout turns a ~125s hang into a
+// retry that usually succeeds, so without a report it converts a visible failure
+// into an invisible one: the hangs people complained about become brief pauses
+// nobody mentions, and the upstream fault it is covering for stops being
+// reported at all (MARSOHS-2367).
+//
+// Hooks onto the retry policy rather than replacing it, because the policy is
+// the only place that sees why an attempt failed, and godo's own policy handles
+// cases of its own that must be preserved.
+//
+// Reports the abandoned attempt rather than a retry, because the policy cannot
+// tell whether one follows: retryablehttp consults it on every failed attempt
+// and only then checks whether any budget is left, so the last attempt of a
+// losing request reaches here indistinguishable from the rest.
+func reportResponseHeaderTimeouts(rt *retryablehttp.RoundTripper, logger *log.Logger, d time.Duration) {
+	next := rt.Client.CheckRetry
+	if next == nil {
+		next = retryablehttp.DefaultRetryPolicy
+	}
+
+	rt.Client.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		retry, checkErr := next(ctx, resp, err)
+		if isResponseHeaderTimeout(err) {
+			logger.Printf("no response headers from the API within %s; abandoning the attempt", d)
+		}
+		return retry, checkErr
+	}
+}
+
+// isResponseHeaderTimeout reports whether err is a transport abandoning an
+// attempt under ResponseHeaderTimeout.
+//
+// Matched on the message because both implementations return an unexported
+// error, and being a net.Error timeout does not distinguish this from a dial or
+// TLS handshake timeout. The two differ only in prefix — "net/http: " over
+// HTTP/1 and "http2: " over HTTP/2, the one this API negotiates — so the shared
+// remainder is what covers both.
+func isResponseHeaderTimeout(err error) bool {
+	var netErr net.Error
+	if !errors.As(err, &netErr) || !netErr.Timeout() {
+		return false
+	}
+	return strings.Contains(err.Error(), "timeout awaiting response headers")
 }
 
 // GetDockerEngineClient returns a container engine client.
