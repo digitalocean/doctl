@@ -637,6 +637,7 @@ func TestRunAgentsCreate_HermesAsksForAManagedKeyAndADOModel(t *testing.T) {
 // be stored on the durable config.
 func TestRunAgentsCreate_HermesWithOpenAIKeySkipsManagedKey(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectValidatePolicy(t, tm, "ask")
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
