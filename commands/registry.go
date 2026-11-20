@@ -73,6 +73,8 @@ func Registry() *Command {
 		"Subscription tier for the new registry. For a list of possible values, use the `doctl registry options subscription-tiers` command.", requiredOpt())
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgRegionSlug, "", "",
 		"A `slug` indicating which datacenter region the registry reside in. For a list of supported region slugs, use the `doctl registry options available-regions` command")
+	AddBoolFlag(cmdRunRegistryCreate, doctl.ArgEnableInsightsLogs, "", false,
+		"Opts the registry in to sending its logs to Insights. This can only be set when creating a registry. When omitted, or set to false, the registry is created with logs not enabled. To opt in, supply --enable-insights-logs=true.")
 	cmdRunRegistryCreate.Example = `The following example creates a registry named ` + "`" + `example-registry` + "`" + ` in the NYC3 region: doctl registry create example-registry --region=nyc3`
 
 	getRegDesc := "Retrieves details about a private container registry, including its name and the endpoint used to access it."
@@ -376,6 +378,23 @@ func RegistryOptions() *Command {
 
 // Registry Run Commands
 
+// setRegistryInsights sets insights.logs only when --enable-insights-logs is set.
+// An omitted flag leaves Insights nil, so godo does not send the field.
+func setRegistryInsights(c *CmdConfig, req *godo.RegistryCreateRequest) error {
+	if !c.Doit.IsSet(doctl.ArgEnableInsightsLogs) {
+		return nil
+	}
+	logs, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableInsightsLogs)
+	if err != nil {
+		return err
+	}
+	if logs == nil {
+		return nil
+	}
+	req.Insights = &godo.RegistryInsightsTelemetryOptIn{Logs: logs}
+	return nil
+}
+
 // RunRegistryCreate creates a registry
 func RunRegistryCreate(c *CmdConfig) error {
 	err := ensureOneArg(c)
@@ -399,6 +418,9 @@ func RunRegistryCreate(c *CmdConfig) error {
 		Name:                 name,
 		SubscriptionTierSlug: subscriptionTier,
 		Region:               region,
+	}
+	if err := setRegistryInsights(c, rcr); err != nil {
+		return err
 	}
 	r, err := rs.Create(rcr)
 	if err != nil {
@@ -1131,6 +1153,8 @@ func Registries() *Command {
 		"Subscription tier for the new registry. For a list of possible values, use the `doctl registries options subscription-tiers` command.", requiredOpt())
 	AddStringFlag(cmdRunRegistriesCreate, doctl.ArgRegionSlug, "", "",
 		"A `slug` indicating which datacenter region the registry reside in. For a list of supported region slugs, use the `doctl registries options available-regions` command")
+	AddBoolFlag(cmdRunRegistriesCreate, doctl.ArgEnableInsightsLogs, "", false,
+		"Opts the registry in to sending its logs to Insights. This can only be set when creating a registry. When omitted, or set to false, the registry is created with logs not enabled. To opt in, supply --enable-insights-logs=true.")
 	cmdRunRegistriesCreate.Example = `The following example creates a registry named ` + "`" + `example-registry` + "`" + ` in the NYC3 region: doctl registries create example-registry --region=nyc3`
 
 	getRegistryDesc := `Retrieves information about a registry in your account, including:
@@ -1247,6 +1271,9 @@ func RunRegistriesCreate(c *CmdConfig) error {
 		Name:                 name,
 		SubscriptionTierSlug: subscriptionTier,
 		Region:               region,
+	}
+	if err := setRegistryInsights(c, createRequest); err != nil {
+		return err
 	}
 	registry, err := c.Registries().Create(createRequest)
 	if err != nil {

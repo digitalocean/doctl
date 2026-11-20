@@ -605,12 +605,17 @@ func Agents() *Command {
 	cmdResume.Example = `doctl harness-runtime resume sess_abc123`
 
 	cmdUpdate := CmdBuilder(cmd, RunAgentsUpdate, "update <session>",
-		"Update settings on an existing session",
+		"Update settings or live config on an existing session",
 		agentsUpdateHelpMD,
 		Writer, agentsNS(
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
-	cmdUpdate.Example = agentCLI + ` update my-session --resume-on-topoff; ` + agentCLI + ` update sess_abc123 --resume-on-topoff=false`
+	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
+	acceptFileAliasFor(cmdUpdate)
+	AddIntFlag(cmdUpdate, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for a config update to finish (0 uses the default). Only used with --spec. Ignored with -o json.")
+	AddBoolFlag(cmdUpdate, doctl.ArgAgentNoWait, "", false, "With --spec, return once the config update is accepted instead of waiting for it to finish. Implied by -o json.")
+	cmdUpdate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentResumeOnTopoff)
+	cmdUpdate.Example = agentCLI + ` update my-session --resume-on-topoff; ` + agentCLI + ` update sess_abc123 --resume-on-topoff=false; ` + agentCLI + ` update my-session --spec tools.yaml; ` + agentCLI + ` update my-session --file - < tools.yaml`
 
 	cmdUpload := CmdBuilder(cmd, RunAgentsUpload, "upload <session>",
 		"Upload a file into a session workspace",
@@ -678,9 +683,12 @@ func Agents() *Command {
 		"Forward local TCP ports into the session's sandbox",
 		`Opens a local TCP tunnel to a port inside the session's sandbox, kubectl-style: connect to `+"`"+`localhost:<local-port>`+"`"+` and traffic flows over an authenticated connection to the sandbox port. Nothing inside the sandbox is exposed publicly.
 
-A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.`,
+A paused session is resumed automatically before the tunnel opens, same as `+"`"+agentCLI+` launch`+"`"+`. A bare port forwards the same port on both ends; `+"`"+`0:<remote-port>`+"`"+` lets the OS pick a free local port (printed on the ready line). Remote ports must be between 1024 and 65535. The process runs in the foreground; press Ctrl-C to stop.
+
+For an openhands session, forwarding port 8000 serves Agent Canvas at `+"`"+`http://127.0.0.1:<local-port>/canvas`+"`"+`. That port is carried as HTTP: the chat and everything else cross the tunnel as before, and Canvas's Automate tab (`+"`"+`/api/automation`+"`"+`) is answered by doctl itself through the Hosted Agents triggers API, with your token. An automation made in the tab is a trigger bound to the session, the same one `+"`"+agentCLI+` triggers list`+"`"+` and the console show: a scheduled one is a cron trigger, an event one (GitHub or GitLab) is a webhook trigger filtered to the chosen events, and its payload URL and one-time secret are printed here for you to add in the provider. Because that page is served from the sandbox, which the agent can change, creating, enabling, editing (prompt, schedule, events) or running an automation is confirmed here in the terminal first, with the prompt that will run (`+"`"+`--automate=confirm`+"`"+`, the default); `+"`"+`--automate=allow`+"`"+` answers without asking and `+"`"+`--automate=off`+"`"+` does not serve the tab. The tab needs a loopback `+"`"+`--address`+"`"+`; with any other bind the port is tunnelled as is.`,
 		Writer)
 	AddStringFlag(cmdPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
+	AddStringFlag(cmdPortForward, doctl.ArgAgentAutomate, "", "confirm", "Agent Canvas's Automate tab (openhands sessions, port 8000): confirm asks here in the terminal before an automation is created, enabled, edited or run; allow answers without asking; off does not serve the tab")
 	cmdPortForward.Example = agentCLI + ` port-forward sess_abc123 3000 8080:8000`
 
 	cmdCanvas := CmdBuilder(cmd, RunAgentsCanvas, "canvas <session>",
@@ -2114,6 +2122,39 @@ func sessionIDArg(c *CmdConfig) (string, error) {
 	return resolveSessionRef(c.HostedAgents(), c.Args[0])
 }
 
+// agentBoundSessionWarnOut is stderr so a warning never mixes into json output.
+var agentBoundSessionWarnOut io.Writer = os.Stderr
+
+// lookupBoundTrigger is the by-session read warnBoundReuseSession uses.
+// A miss is not a failure: the command the user asked for still runs.
+var lookupBoundTrigger = func(c *CmdConfig, sessionID string) (*do.HostedAgentTrigger, error) {
+	if c == nil || c.HostedAgentTriggers == nil {
+		return nil, errors.New("triggers unavailable")
+	}
+	return c.HostedAgentTriggers().GetBySession(sessionID)
+}
+
+// warnBoundReuseSession tells the user this session is the one a reuse trigger
+// fires into. A 404, a lookup error, a fresh trigger, or a different bound
+// session prints nothing and never fails the command.
+func warnBoundReuseSession(c *CmdConfig, sessionID string) {
+	trig, err := lookupBoundTrigger(c, sessionID)
+	if err != nil || trig == nil || trig.HostedAgentTrigger == nil {
+		return
+	}
+	if trig.SessionMode != godo.HostedAgentTriggerSessionModeReuse {
+		return
+	}
+	if strings.TrimSpace(trig.BoundSessionID) != sessionID {
+		return
+	}
+	name := strings.TrimSpace(trig.Name)
+	if name == "" {
+		name = trig.TriggerID
+	}
+	fmt.Fprintf(agentBoundSessionWarnOut, "Warning: session %s is bound to reuse trigger %s. Resuming, stopping, or prompting it can interrupt a firing that is waiting for this session to pause.\n", sessionID, name)
+}
+
 // RunAgentsShow prints one session.
 func RunAgentsShow(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
@@ -2170,6 +2211,7 @@ func RunAgentsCancel(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	runID, err := c.Doit.GetString(c.NS, doctl.ArgAgentCancelRunID)
 	if err != nil {
 		return err
@@ -2217,6 +2259,7 @@ func RunAgentsResume(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
 		return err
 	}
@@ -2235,6 +2278,14 @@ func RunAgentsUpdate(c *CmdConfig) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
 		return err
+	}
+
+	if agentFlagChanged(c, doctl.ArgAgentSpec) {
+		if agentFlagChanged(c, doctl.ArgAgentResumeOnTopoff) {
+			return fmt.Errorf("--%s and --%s cannot be combined; run them as two updates",
+				doctl.ArgAgentSpec, doctl.ArgAgentResumeOnTopoff)
+		}
+		return runAgentsUpdateConfig(c, sessionID)
 	}
 
 	update, err := agentSessionUpdateRequest(c)
@@ -2268,6 +2319,80 @@ func RunAgentsUpdate(c *CmdConfig) error {
 	return nil
 }
 
+// runAgentsUpdateConfig sends a partial manifest (tools, env, secrets) to the
+// session and, unless told not to, waits for the server to finish applying it.
+func runAgentsUpdateConfig(c *CmdConfig, sessionID string) error {
+	path, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
+	if err != nil {
+		return err
+	}
+	manifest, err := readManifest(os.Stdin, path)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.HostedAgents().UpdateSessionConfig(sessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: string(manifest)})
+	if err != nil {
+		return err
+	}
+	if res == nil || res.Session == nil {
+		return errors.New("session config update returned no session")
+	}
+	sess := &do.HostedAgentSession{HostedAgentSession: res.Session}
+
+	if agentStructuredOutput(c) {
+		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
+	}
+
+	stylingEnabled = detectStyling()
+	for _, w := range res.Warnings {
+		fmt.Fprintf(c.Out, "%s %s\n", colorize("!", colWarning), w)
+	}
+
+	if res.Outcome == godo.HostedAgentSessionConfigUpdateOutcomeUnchanged {
+		fmt.Fprintf(c.Out, "%s Session %s: nothing to change\n", colorize("·", colMuted), displaySessionRef(sess))
+		printSessionShowCard(c.Out, sess)
+		return nil
+	}
+
+	noWait, err := c.Doit.GetBool(c.NS, doctl.ArgAgentNoWait)
+	if err != nil {
+		return err
+	}
+	if noWait {
+		printAgentSuccess(c.Out, fmt.Sprintf("Config update accepted for session %s; it is applying (check with `%s show %s`)",
+			displaySessionRef(sess), agentCLI, displaySessionRef(sess)))
+		printSessionShowCard(c.Out, sess)
+		return nil
+	}
+
+	wait := runWaitTimeout
+	if waitSec, err := c.Doit.GetInt(c.NS, doctl.ArgAgentWaitTimeout); err == nil && waitSec > 0 {
+		wait = time.Duration(waitSec) * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+
+	prog := newCreationProgress(c.Out)
+	defer prog.stop()
+	final, err := waitForSessionConfigUpdate(ctx, c.HostedAgents(), sessionID, prog)
+	if err != nil {
+		return err
+	}
+
+	summary := configChangesSummary(res.Session.Update)
+	if summary == "" {
+		summary = configChangesSummary(final.Update)
+	}
+	msg := fmt.Sprintf("Session %s updated", displaySessionRef(final))
+	if summary != "" {
+		msg += ": " + summary
+	}
+	printAgentSuccess(c.Out, msg)
+	printSessionShowCard(c.Out, final)
+	return nil
+}
+
 // agentSessionUpdateRequest builds the PATCH body from the flags that were
 // actually passed. Reading GetBool unconditionally would send resume_on_topoff
 // on every call and silently revoke a consent the user never mentioned, so
@@ -2284,8 +2409,8 @@ func agentSessionUpdateRequest(c *CmdConfig) (*godo.HostedAgentSessionUpdateRequ
 	if update.ResumeOnTopoff == nil {
 		// The server answers an empty body with a 400, so say what to pass
 		// instead of forwarding a request that cannot succeed.
-		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke)",
-			doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentResumeOnTopoff)
+		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke), or --%s to change tools, env or secrets",
+			doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentSpec)
 	}
 	return update, nil
 }
@@ -2849,6 +2974,7 @@ func RunAgentsApprove(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	warnBoundReuseSession(c, sessionID)
 	requestID := c.Args[1]
 	outcome, err := hitlOutcomeFor(c.Args[2])
 	if err != nil {

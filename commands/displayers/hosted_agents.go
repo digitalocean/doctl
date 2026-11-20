@@ -62,7 +62,21 @@ func (h *HostedAgentSession) Cols() []string {
 	if len(h.Sessions) == 0 || h.anyWorkspace() {
 		cols = append(cols, "WorkspaceID")
 	}
+	// Same rule for config drift: only sessions whose live config was changed
+	// after create carry it.
+	if len(h.Sessions) == 0 || h.anyConfigDrifted() {
+		cols = append(cols, "ConfigDrifted")
+	}
 	return cols
+}
+
+func (h *HostedAgentSession) anyConfigDrifted() bool {
+	for _, s := range h.Sessions {
+		if s.HostedAgentSession != nil && s.ConfigDrifted {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HostedAgentSession) anyWorkspace() bool {
@@ -96,6 +110,7 @@ func (h *HostedAgentSession) ColMap() map[string]string {
 		"CreatedAt":       "Created",
 		"PauseReason":     "Pause Reason",
 		"WorkspaceID":     "Workspace",
+		"ConfigDrifted":   "Drifted",
 	}
 }
 
@@ -121,8 +136,9 @@ func (h *HostedAgentSession) KV() []map[string]any {
 			// Passed through verbatim: the API reserves the right to add
 			// reasons, so an unrecognized value is shown as-is rather than
 			// flattened to "unknown".
-			"PauseReason": string(s.PauseReason),
-			"WorkspaceID": s.WorkspaceID,
+			"PauseReason":   string(s.PauseReason),
+			"WorkspaceID":   s.WorkspaceID,
+			"ConfigDrifted": s.ConfigDrifted,
 		})
 	}
 	return out

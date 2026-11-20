@@ -140,7 +140,7 @@ type AgentPlatformService interface {
 	ListModelEvaluationPresets() (ModelEvaluationPresets, error)
 	GetModelEvaluationPreset(evalPresetUUID string) (*ModelEvaluationPreset, error)
 	DeleteModelEvaluationPreset(evalPresetUUID string) error
-	ListModelEvaluationMetrics() (EvaluationMetrics, error)
+	ListModelEvaluationMetrics(opt *godo.ModelEvaluationMetricListOptions) (EvaluationMetrics, error)
 	CreateCustomEvaluationMetric(req *godo.CreateCustomEvaluationMetricRequest) (*EvaluationMetric, error)
 	UpdateCustomEvaluationMetric(metricUUID string, req *godo.UpdateCustomEvaluationMetricRequest) (*EvaluationMetric, error)
 	DeleteCustomEvaluationMetric(metricUUID string) error
