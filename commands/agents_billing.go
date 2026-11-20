@@ -30,10 +30,11 @@ const (
 	prepayBlockedTitle = "Blocked by the prepayment gate"
 	prepayUnknownTitle = "Prepayment status unavailable"
 
-	// prepayBlockedCause names both funding sources because the gate counts
-	// cash prepayment and credit together, so naming either alone would blame
-	// the wrong figure.
-	prepayBlockedCause = "Your team's prepayment and credit don't cover its usage, so Harness Runtime can't start or resume sessions."
+	// prepayShortfall names both funding sources because the gate counts cash
+	// prepayment and credit together, so naming either alone would blame the
+	// wrong figure. The 402 card and the pause banner both lead with it.
+	prepayShortfall    = "Your team's prepayment and credit don't cover its usage"
+	prepayBlockedCause = prepayShortfall + ", so Harness Runtime can't start or resume sessions."
 
 	prepayTopUpURL   = "https://cloud.digitalocean.com/account/billing"
 	prepayBalanceCmd = "doctl harness-runtime balance"
@@ -258,8 +259,8 @@ const (
 func renderPauseNotice(w io.Writer, subject, reason string) {
 	if isZeroBalancePauseReason(reason) {
 		fmt.Fprintf(w, "\n%s %s\n", colorize("⏸", colWarning),
-			boldColor("Paused — prepayment balance exhausted", colWarning))
-		fmt.Fprintf(w, "  %s\n", colorize("Your work is saved. Add funds, then send any message to continue.", colMuted))
+			boldColor("Paused by the prepayment gate", colWarning))
+		fmt.Fprintf(w, "  %s\n", colorize(prepayShortfall+". Your work is saved. Add funds, then send any message to continue.", colMuted))
 		fmt.Fprintf(w, "  %s\n", colorize(prepayTopUpURL, colMuted))
 		fmt.Fprintln(w, colorize(runSeparator, colMuted))
 		return

@@ -705,7 +705,7 @@ Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` po
 	cmdCanvas.Example = agentCLI + ` canvas my-session --open`
 
 	cmdBalance := CmdBuilder(cmd, RunAgentsBalance, "balance",
-		"Show your team's prepayment balance and gate status",
+		"Show your team's prepayment balance, credit, and prepay-flow status",
 		agentsBalanceHelpMD,
 		Writer, agentsNS(
 			displayerType(&displayers.HarnessPrepayBalance{}))...)
@@ -804,9 +804,9 @@ const agentWorkspaceFlagDesc = "ID of a persistent workspace to keep this sessio
 	"Only valid with --from-config: save the manifest as an Agent Config first. " +
 	"Per-session, so pass it on each create. A workspace is held by one session at a time."
 
-const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
+const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once funds are added after the prepayment gate pauses it. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
-	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
+	"Only a session paused by the prepayment gate whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
 
 func markAgentCreationSourcesExclusive(cmd *Command) {
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)
