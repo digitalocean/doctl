@@ -142,6 +142,54 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 		})
 	})
 
+	// APICLI-5566: a team on the credit prepay flow holds no cash prepayment,
+	// so balance is 0.00, while the Control Panel shows its Inference & Agents
+	// balance, which billing returns as available_credit.
+	when("the team pays from Inference & Agents credit", func() {
+		it.Before(func() {
+			respond = func(w http.ResponseWriter) {
+				w.Write([]byte(`{
+					"config": {
+						"spend_limit": "0.00",
+						"prepay_amount": "0.00",
+						"prepay_threshold": "0.00"
+					},
+					"status": {
+						"balance": "0.00",
+						"eligible": true,
+						"month_to_date_balance": "38.66",
+						"available_credit": "9.29"
+					}
+				}`))
+			}
+		})
+
+		it("shows the Inference & Agents balance next to the cash balance", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"harness-runtime", "balance",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expect.Equal(strings.TrimSpace(harnessBalanceCredit), strings.TrimSpace(string(output)))
+		})
+
+		it("keeps available_credit in the JSON output", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"harness-runtime", "balance",
+				"-o", "json",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expect.JSONEq(harnessBalanceCreditJSON, string(output))
+		})
+	})
+
 	when("the token cannot read billing", func() {
 		it.Before(func() {
 			respond = func(w http.ResponseWriter) {
@@ -180,6 +228,30 @@ const harnessBalanceAutoTopOff string = `
 Balance    Month-to-date Balance    Auto Top-off                      Status
 $3.00      $22.00                   on (at $5.00, charging $25.00)    OK
 `
+
+const harnessBalanceCredit string = `
+Balance    Inference & Agents Balance    Month-to-date Balance    Auto Top-off    Status
+$0.00      $9.29                         $38.66                   off             OK
+`
+
+const harnessBalanceCreditJSON string = `{
+  "config": {
+    "spend_limit": "0.00",
+    "is_auto_prepay_enabled": false,
+    "prepay_amount": "0.00",
+    "prepay_threshold": "0.00",
+    "created_at": "0001-01-01T00:00:00Z",
+    "updated_at": "0001-01-01T00:00:00Z"
+  },
+  "status": {
+    "balance": "0.00",
+    "is_auto_prepay_enabled": false,
+    "blocked": false,
+    "eligible": true,
+    "month_to_date_balance": "38.66",
+    "available_credit": "9.29"
+  }
+}`
 
 const harnessBalanceNoPermission string = `
 Balance    Month-to-date Balance    Auto Top-off    Status
