@@ -44,7 +44,7 @@ func (m *MockHarborService) CancelJob(uuid string) (*do.HarborJob, error) {
 }
 
 // CancelJob indicates an expected call of CancelJob.
-func (mr *MockHarborServiceMockRecorder) CancelJob(uuid interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) CancelJob(uuid any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelJob", reflect.TypeOf((*MockHarborService)(nil).CancelJob), uuid)
 }
@@ -59,7 +59,7 @@ func (m *MockHarborService) CompleteDatasetUpload(name, uploadUUID string) (*do.
 }
 
 // CompleteDatasetUpload indicates an expected call of CompleteDatasetUpload.
-func (mr *MockHarborServiceMockRecorder) CompleteDatasetUpload(name, uploadUUID interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) CompleteDatasetUpload(name, uploadUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteDatasetUpload", reflect.TypeOf((*MockHarborService)(nil).CompleteDatasetUpload), name, uploadUUID)
 }
@@ -74,7 +74,7 @@ func (m *MockHarborService) CreateJob(req *do.HarborJobRequest, idempotencyKey s
 }
 
 // CreateJob indicates an expected call of CreateJob.
-func (mr *MockHarborServiceMockRecorder) CreateJob(req, idempotencyKey interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) CreateJob(req, idempotencyKey any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJob", reflect.TypeOf((*MockHarborService)(nil).CreateJob), req, idempotencyKey)
 }
@@ -88,7 +88,7 @@ func (m *MockHarborService) DeleteDataset(name string) error {
 }
 
 // DeleteDataset indicates an expected call of DeleteDataset.
-func (mr *MockHarborServiceMockRecorder) DeleteDataset(name interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) DeleteDataset(name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDataset", reflect.TypeOf((*MockHarborService)(nil).DeleteDataset), name)
 }
@@ -102,7 +102,7 @@ func (m *MockHarborService) DeleteJob(uuid string) error {
 }
 
 // DeleteJob indicates an expected call of DeleteJob.
-func (mr *MockHarborServiceMockRecorder) DeleteJob(uuid interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) DeleteJob(uuid any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*MockHarborService)(nil).DeleteJob), uuid)
 }
@@ -117,7 +117,7 @@ func (m *MockHarborService) GetDataset(name string) (*do.HarborDataset, error) {
 }
 
 // GetDataset indicates an expected call of GetDataset.
-func (mr *MockHarborServiceMockRecorder) GetDataset(name interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) GetDataset(name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataset", reflect.TypeOf((*MockHarborService)(nil).GetDataset), name)
 }
@@ -132,7 +132,7 @@ func (m *MockHarborService) GetDatasetArchive(name string) (*do.HarborPresignedU
 }
 
 // GetDatasetArchive indicates an expected call of GetDatasetArchive.
-func (mr *MockHarborServiceMockRecorder) GetDatasetArchive(name interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) GetDatasetArchive(name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatasetArchive", reflect.TypeOf((*MockHarborService)(nil).GetDatasetArchive), name)
 }
@@ -147,7 +147,7 @@ func (m *MockHarborService) GetDatasetUpload(name, uploadUUID string) (*do.Harbo
 }
 
 // GetDatasetUpload indicates an expected call of GetDatasetUpload.
-func (mr *MockHarborServiceMockRecorder) GetDatasetUpload(name, uploadUUID interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) GetDatasetUpload(name, uploadUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatasetUpload", reflect.TypeOf((*MockHarborService)(nil).GetDatasetUpload), name, uploadUUID)
 }
@@ -162,7 +162,7 @@ func (m *MockHarborService) GetJobArtifacts(uuid string) (*do.HarborPresignedURL
 }
 
 // GetJobArtifacts indicates an expected call of GetJobArtifacts.
-func (mr *MockHarborServiceMockRecorder) GetJobArtifacts(uuid interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) GetJobArtifacts(uuid any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobArtifacts", reflect.TypeOf((*MockHarborService)(nil).GetJobArtifacts), uuid)
 }
@@ -177,7 +177,7 @@ func (m *MockHarborService) ListDatasets(query string) ([]do.HarborDataset, erro
 }
 
 // ListDatasets indicates an expected call of ListDatasets.
-func (mr *MockHarborServiceMockRecorder) ListDatasets(query interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) ListDatasets(query any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasets", reflect.TypeOf((*MockHarborService)(nil).ListDatasets), query)
 }
@@ -192,7 +192,7 @@ func (m *MockHarborService) ListJobs(status string) ([]do.HarborJob, error) {
 }
 
 // ListJobs indicates an expected call of ListJobs.
-func (mr *MockHarborServiceMockRecorder) ListJobs(status interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) ListJobs(status any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockHarborService)(nil).ListJobs), status)
 }
@@ -207,7 +207,7 @@ func (m *MockHarborService) StartDatasetUpload(name string, req *do.HarborDatase
 }
 
 // StartDatasetUpload indicates an expected call of StartDatasetUpload.
-func (mr *MockHarborServiceMockRecorder) StartDatasetUpload(name, req interface{}) *gomock.Call {
+func (mr *MockHarborServiceMockRecorder) StartDatasetUpload(name, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartDatasetUpload", reflect.TypeOf((*MockHarborService)(nil).StartDatasetUpload), name, req)
 }
