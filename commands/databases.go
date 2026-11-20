@@ -1487,7 +1487,7 @@ We recommend starting with a pool size of about half your available connections 
 		"The username for the database user")
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolDBName, "", "",
 		"The name of the specific database within the database cluster", requiredOpt())
-	cmdDatabasePoolCreate.Example = `The following example creates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10 and sets the user to the database's default user: doctl databases pool create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --size 10`
+	cmdDatabasePoolCreate.Example = `The following example creates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--db` + "`" + ` flag to target the ` + "`" + `defaultdb` + "`" + ` database and the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10, and sets the user to the database's default user: doctl databases pool create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --db defaultdb --size 10`
 
 	cmdDatabasePoolUpdate := CmdBuilder(cmd, RunDatabasePoolUpdate,
 		"update <database-cluster-id> <pool-name>", "Update a connection pool for a database", `Updates the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
