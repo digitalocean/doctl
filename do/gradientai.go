@@ -117,11 +117,6 @@ type AgentPlatformService interface {
 	ListScenarioLibraryScenarios(libraryScenarioUUID string, opt *godo.ScenarioListOptions) (Scenarios, error)
 	CreateScenarioSetFromLibrary(libraryScenarioUUID string, req *godo.CreateScenarioSetFromLibraryRequest) (*ScenarioSet, error)
 	CreateSimulationRun(req *godo.CreateSimulationRunRequest) (*SimulationRun, error)
-	ListSimulationRuns(opt *godo.SimulationRunListOptions) (SimulationRuns, error)
-	GetSimulationRun(runUUID string) (*SimulationRunDetail, error)
-	UpdateSimulationRun(runUUID string, req *godo.UpdateSimulationRunRequest) (*SimulationRun, error)
-	CancelSimulationRun(runUUID string) (*SimulationRun, error)
-	DeleteSimulationRun(runUUID string) error
 	ListSimulationEpisodes(runUUID string, opt *godo.SimulationEpisodeListOptions) (SimulationEpisodes, error)
 	GetSimulationEpisode(runUUID string, episodeUUID string) (*SimulationEpisode, error)
 	GetSimulationEpisodeTrajectory(runUUID string, episodeUUID string) (*SimulationTrajectory, error)

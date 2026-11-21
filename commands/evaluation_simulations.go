@@ -33,8 +33,6 @@ const (
 	scenarioSetSortFieldPrefix     = "SCENARIO_SET_SORT_FIELD_"
 	scenarioSortFieldPrefix        = "SCENARIO_SORT_FIELD_"
 	scenarioLibrarySortFieldPrefix = "SCENARIO_LIBRARY_SORT_FIELD_"
-	simulationRunStatusPrefix      = "SIMULATION_RUN_STATUS_"
-	simulationRunSortFieldPrefix   = "SIMULATION_RUN_SORT_FIELD_"
 	episodeStatusPrefix            = "SIMULATION_EPISODE_STATUS_"
 	episodeVerdictPrefix           = "SIMULATION_EPISODE_VERDICT_"
 	episodeSortFieldPrefix         = "SIMULATION_EPISODE_SORT_FIELD_"
