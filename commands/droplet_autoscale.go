@@ -60,6 +60,7 @@ You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale 
 		AddBoolFlag(c, doctl.ArgPublicNetworking, "", true, "Enable public networking")
 		AddBoolFlag(c, doctl.ArgIPv6, "", true, "Enable droplet IPv6")
 		AddStringFlag(c, doctl.ArgUserData, "", "", "Droplet user data")
+		AddStringFlag(c, doctl.ArgUserDataFile, "", "", "The path to a file containing a shell script or Cloud-init YAML file to run on the Droplet's first boot. Example: `path/to/file.yaml`")
 	}
 
 	CmdBuilder(cmd, RunDropletAutoscaleGet, "get <autoscale-pool-id>", "Get an active Droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscalePools{}))
@@ -231,6 +232,14 @@ func buildDropletAutoscaleRequestFromArgs(c *CmdConfig, r *godo.DropletAutoscale
 		},
 		func() error {
 			userData, err := c.Doit.GetString(c.NS, doctl.ArgUserData)
+			if err != nil {
+				return err
+			}
+			filename, err := c.Doit.GetString(c.NS, doctl.ArgUserDataFile)
+			if err != nil {
+				return err
+			}
+			userData, err = extractUserData(userData, filename)
 			if err != nil {
 				return err
 			}
