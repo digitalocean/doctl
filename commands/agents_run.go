@@ -533,8 +533,11 @@ type harnessManifestOpts struct {
 	template   string
 	// model is the DigitalOcean Inference model id written as the manifest's
 	// env HARNESS_INFERENCE_MODEL. Empty leaves the key out, except for
-	// openhands and hermes, which get defaultOpenHandsModel and
-	// defaultHermesModel.
+	// harnesses that get a catalogue default via defaultModelForHarness
+	// (claude-code → defaultClaudeCodeModel, coding codex → defaultCodexModel,
+	// openhands / hermes → their catalogue ids). OpenCode intentionally has
+	// no default so free models stay available. Vendor-key harnesses only
+	// write the model after blank-key rewrite.
 	model string
 }
 
@@ -645,9 +648,9 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		// from the guest env (brightstaff runs with `credentials: backend:
 		// env`, and the adapter regenerates .codex/auth.json per run from it).
 		// OPENAI_API_KEY is the slot that set takes first, so this asks for the
-		// same thing claude-code asks for with its own key. A manifest may use
-		// the HARNESS_INFERENCE_* set instead, but --harness writes the common
-		// case rather than every case.
+		// same thing claude-code asks for with its own key. Leaving the prompt
+		// blank (or non-interactive unset) rewrites onto DigitalOcean
+		// Serverless Inference via resolveInferenceProvider.
 		//
 		// No config block and no CODEX_* env: those belong to codex-agentapi
 		// above, where OpenAI runs the loop. The prompt is not embedded here
@@ -659,8 +662,9 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 	case agent == claudeCodeAgentName:
 		// Claude Code needs its own inference key just like Codex needs
 		// OPENAI_API_KEY. Referencing it here (rather than baking in a
-		// literal) routes through expandManifestEnvCollect/ensureEnvVar so a
-		// missing key is prompted for on a TTY.
+		// literal) routes through resolveInferenceProvider / expand so a
+		// missing key is prompted for on a TTY; leaving the prompt blank
+		// rewrites onto DigitalOcean Serverless Inference.
 		doc.Secrets = map[string]string{
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
@@ -672,10 +676,13 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		// only: a session on DigitalOcean Inference (HARNESS_INFERENCE_API_KEY
 		// and HARNESS_INFERENCE_MODEL, no MiniMax key) needs a hand-written
 		// manifest. No template pin: harness-api resolves the kind to
-		// coding-minimax-code itself.
+		// coding-minimax-code itself. Blank→DO SI does not apply to MiniMax.
 		doc.Secrets = map[string]string{
 			minimaxAPIKeyEnv: "${" + minimaxAPIKeyEnv + "}",
 		}
+	// opencode: no DO SI default — omitting --model leaves OpenCode on its
+	// free / built-in models. Pass --model (a DO catalogue id) to opt into
+	// DigitalOcean Serverless Inference via manage_model_access_key.
 	case agent == openHandsAgentName:
 		// No key slot: OpenHands runs on DigitalOcean Inference. Setting
 		// HARNESS_INFERENCE_MODEL below (with no vendor/harness API key)
@@ -690,7 +697,7 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		keepWarm := false
 		doc.KeepWarm = &keepWarm
 		if strings.TrimSpace(o.model) == "" {
-			o.model = defaultOpenHandsModel
+			o.model = defaultModelForHarness(agent)
 		}
 	case agent == hermesAgentName:
 		// Same shape as openhands: no key slot; HARNESS_INFERENCE_MODEL below
@@ -705,7 +712,7 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		// on purpose, because the gateway is driven over a port-forward tunnel
 		// that idle-pause's activity tracking cannot see.
 		if strings.TrimSpace(o.model) == "" {
-			o.model = defaultHermesModel
+			o.model = defaultModelForHarness(agent)
 		}
 	}
 
@@ -834,6 +841,15 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	}
 
 	raw = dropEnvKeysCoveredBySecrets(raw)
+
+	// Inject / rewrite inference provider before expand and before
+	// needsManagedModelAccessKey so an auto-defaulted HARNESS_INFERENCE_MODEL
+	// opts into manage_model_access_key.
+	raw, err = resolveInferenceProvider(raw, true)
+	if err != nil {
+		return nil, err
+	}
+	maybePrintDefaultDOSINotice(os.Stderr, raw)
 
 	lookup := envLookupWithOverlay(withServerProvidedOverlay(resolvedManifestSecretValues(raw), envOverlay))
 	manifest, err := expandManifestEnvCollect(raw, lookup)

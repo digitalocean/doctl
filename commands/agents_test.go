@@ -459,6 +459,7 @@ func TestRunAgentsCreate_DiscoversAgentsYAML(t *testing.T) {
 			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 				assert.Contains(t, string(manifest), "agent: opencode")
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{
 						SessionID: "sess-discovered",
@@ -584,14 +585,17 @@ func TestRunAgentsCreate(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
-			CreateSessionFromManifest([]byte(sampleManifest), nil).
-			Return(&do.HostedAgentSession{
-				HostedAgentSession: &godo.HostedAgentSession{
-					SessionID: "sess_test",
-					AgentKind: godo.HostedAgentKindOpenCode,
-					Status:    godo.HostedAgentSessionStatusProvisioning,
-				},
-			}, nil)
+			CreateSessionFromManifest(gomock.Any(), nil).
+			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
+				return &do.HostedAgentSession{
+					HostedAgentSession: &godo.HostedAgentSession{
+						SessionID: "sess_test",
+						AgentKind: godo.HostedAgentKindOpenCode,
+						Status:    godo.HostedAgentSessionStatusProvisioning,
+					},
+				}, nil
+			})
 		tm.hostedAgents.EXPECT().
 			GetSession("sess_test").
 			Return(&do.HostedAgentSession{
@@ -669,6 +673,7 @@ func TestRunAgentsCreate_WithName(t *testing.T) {
 				meta, ok := doc["metadata"].(map[any]any)
 				assert.True(t, ok, "metadata should be a mapping")
 				assert.Equal(t, "my-session", meta["name"])
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
@@ -830,6 +835,7 @@ func TestRunAgentsCreate_FlatWithName(t *testing.T) {
 				assert.NoError(t, yaml.Unmarshal(manifest, &doc))
 				assert.Equal(t, "my-session", doc["name"])
 				assert.NotContains(t, doc, "metadata")
+				assert.NotContains(t, string(manifest), harnessInferenceModelEnv)
 				return &do.HostedAgentSession{
 					HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_test", Name: "my-session"},
 				}, nil
