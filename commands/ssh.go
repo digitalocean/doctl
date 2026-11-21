@@ -128,7 +128,7 @@ func RunSSH(c *CmdConfig) error {
 			user = shi.user
 		}
 
-		if i, err := strconv.Atoi(shi.port); shi.port != "" && err != nil {
+		if i, err := strconv.Atoi(shi.port); shi.port != "" && err == nil {
 			port = i
 		}
 
