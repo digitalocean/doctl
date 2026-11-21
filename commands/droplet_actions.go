@@ -141,7 +141,9 @@ This also powercycles the Droplet.`, Writer,
 	cmdDropletActionPasswordReset.Example = `The following example resets the root password for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action password-reset 386734086`
 
 	cmdDropletActionEnableIPv6 := CmdBuilder(cmd, RunDropletActionEnableIPv6,
-		"enable-ipv6 <droplet-id>", "Enable IPv6 on a Droplet", `Enables IPv6 networking on a Droplet. When executed, we automatically assign an IPv6 address to the Droplet. 
+		"enable-ipv6 <droplet-id>", "Enable IPv6 on a Droplet", `Enables IPv6 networking on a Droplet. When executed, we automatically assign an IPv6 address to the Droplet. Once enabled, IPv6 cannot be disabled.
+
+The Droplet must be powered off before enabling IPv6. If the Droplet is powered on, the request fails. Use `+"`"+`doctl compute droplet-action power-off`+"`"+` to power the Droplet off first.
 
 The Droplet may require additional network configuration to properly use the new IPv6 address. For more information, see: https://docs.digitalocean.com/products/networking/ipv6/how-to/enable`, Writer,
 		displayerType(&displayers.Action{}))
