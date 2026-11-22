@@ -14,9 +14,15 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
+
+const evaluationMetricTurnTypePrefix = "EVALUATION_METRIC_TURN_TYPE_"
 
 // ModelEvaluationMetricCmd handles operations on model evaluation metrics.
 func ModelEvaluationMetricCmd() *Command {
@@ -38,15 +44,30 @@ func ModelEvaluationMetricCmd() *Command {
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.EvaluationMetric{}),
 	)
+	AddStringFlag(cmdMetricList, doctl.ArgEvaluationTurnType, "", "", "Filters the results by turn type. One of: `single_turn`, `multi_turn`")
 	cmdMetricList.Example = "The following example lists model evaluation metrics: " +
-		"`doctl evaluation metric list`"
+		"`doctl evaluation metric list --turn-type multi_turn`"
 
 	return cmd
 }
 
 // RunModelEvaluationMetricList lists model evaluation metrics.
 func RunModelEvaluationMetricList(c *CmdConfig) error {
-	metrics, err := c.AgentPlatform().ListModelEvaluationMetrics()
+	rawTurnType, err := c.Doit.GetString(c.NS, doctl.ArgEvaluationTurnType)
+	if err != nil {
+		return err
+	}
+
+	var opt *godo.ModelEvaluationMetricListOptions
+	if rawTurnType != "" {
+		tt := godo.EvaluationMetricTurnType(genAIEnumValue(evaluationMetricTurnTypePrefix, rawTurnType))
+		if tt != godo.EvaluationMetricTurnTypeSingleTurn && tt != godo.EvaluationMetricTurnTypeMultiTurn {
+			return fmt.Errorf("--%s must be one of single_turn, multi_turn; got %q", doctl.ArgEvaluationTurnType, rawTurnType)
+		}
+		opt = &godo.ModelEvaluationMetricListOptions{TurnType: tt}
+	}
+
+	metrics, err := c.AgentPlatform().ListModelEvaluationMetrics(opt)
 	if err != nil {
 		return err
 	}

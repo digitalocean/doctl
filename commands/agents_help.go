@@ -176,10 +176,10 @@ Nothing running is not an error: the command says so and exits 0, so it is safe 
 
 const agentsUpdateHelpMD = `Change a session that already exists. Only what you pass is changed; everything else is left alone. Two kinds of change, which cannot be combined in one call.
 
-**Live config** (` + "`--spec`" + `, alias ` + "`--file`" + `): send a partial manifest holding only the sections to change, ` + "`tools`, `env` and `secrets`" + `. Sections you leave out are untouched. ` + "`tools`" + ` is the full replacement list (` + "`tools: []`" + ` detaches every MCP server). ` + "`env`" + ` and ` + "`secrets`" + ` are full sets: a key you leave out is removed, and a secret is a string to set or rotate, or ` + "`{}`" + ` to keep its current value. ` + "`model`" + ` and ` + "`permissions`" + ` are not supported yet.
+**Live config** (` + "`--spec`" + `, alias ` + "`--file`" + `): send a partial manifest holding only the sections to change, ` + "`tools`, `env` and `secrets`" + `. Sections you leave out are untouched. ` + "`tools`" + ` is the full replacement list, but only Action Gateway (` + "`do.actions`" + `) entries can change: include the session's custom MCP servers exactly as they are, because adding, removing or changing one needs a new session; on a session without custom MCP servers, ` + "`tools: []`" + ` detaches every Action Gateway tool. ` + "`env`" + ` and ` + "`secrets`" + ` are full sets: a key you leave out is removed, and a secret is a string to set or rotate, or ` + "`{}`" + ` to keep its current value. The model can change only when the session's model provider is DigitalOcean Serverless Inference (the session was created with ` + "`HARNESS_INFERENCE_MODEL`" + ` and no inference endpoint of its own): set ` + "`HARNESS_INFERENCE_MODEL`" + ` in ` + "`env`" + ` to another Serverless Inference model id or ` + "`router:<name>`" + `. A session on any other model provider cannot change its model, and a top-level ` + "`model`" + ` section is rejected. ` + "`permissions`" + ` cannot be changed on an existing session.
 ` + "```bash\n" + agentCLI + ` update my-session --spec tools.yaml
 ` + agentCLI + ` update my-session --file - < tools.yaml
-` + "```\n\n" + `The change is applied while the session runs. A tools-only change usually takes seconds; an env or secret change restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature, and the session must be running.
+` + "```\n\n" + `The change is applied while the session runs. A tools-only change usually takes seconds; an env or secret change restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature. The session status must be ` + "`SESSION_STATUS_READY`" + `, ` + "`SESSION_STATUS_DETACHED`" + ` or ` + "`SESSION_STATUS_PAUSED`" + ` (a paused session is resumed for the update and paused again, unless it was paused for zero balance), with no turn running and no approval pending. Any other status, including provisioning or already updating, is refused.
 
 **Session setting** (` + "`--resume-on-topoff`" + `): the consent to be resumed automatically after a low-balance pause:
 ` + "```bash\n" + agentCLI + ` update my-session --resume-on-topoff
@@ -387,7 +387,7 @@ const agentsTriggersRunHelpMD = `Fire the trigger once, now, as a cron tick or a
 
 A paused trigger is not run (resume it first), and a trigger whose runs are backed up to the limit answers 429.`
 
-const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is only paused — the platform has no run-interrupt call today, so the agent's turn may still be in flight even after this returns. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
+const agentsTriggersCancelExecutionHelpMD = `Cancel a running trigger execution and free the trigger's queue. For a fresh-mode trigger the session is destroyed outright. For a reuse-mode trigger the session is paused and the turn it was running is stopped. Cancelling an execution that has not started a run yet returns an error; pass ` + "`--force`" + ` to cancel anyway, or wait — the platform's own reclaim sweep clears that case automatically within 15 minutes regardless.`
 
 const agentsTriggersGetBySessionHelpMD = `Find the trigger that created or binds a session.`
 
@@ -406,7 +406,10 @@ func renderAgentsHelpLong(text string) string {
 	if strings.TrimSpace(text) == "" {
 		return ""
 	}
-	styled := detectStyling()
+	// Honor the caller's Style gate (agentsStyledHelpFunc sets stylingEnabled
+	// from uiEnv().Style). detectStyling() would restyle the body under -o json
+	// on a TTY while the header stayed plain.
+	styled := stylingEnabled
 	var b strings.Builder
 	last := 0
 	for _, loc := range agentsHelpCodeFence.FindAllStringSubmatchIndex(text, -1) {
@@ -489,27 +492,37 @@ func requireAgentSubcommand(cmd *Command) {
 }
 
 // agentsStyledHelpFunc prints a compact colored header on TTYs, plain prose with
-// bordered code examples, then the standard cobra usage section (always plain).
+// bordered code examples, then the shared Next Gen usage/flags sections without
+// re-printing Short/Long (root UsageFunc would duplicate the header).
 func agentsStyledHelpFunc(cmd *cobra.Command, _ []string) {
 	w := cmd.OutOrStdout()
-	stylingEnabled = detectStyling()
+	env := uiEnv()
+	// Match the USAGE/flags Style gate so the header and sections agree.
+	stylingEnabled = env.Style
 
 	if long := strings.TrimSpace(cmd.Long); long != "" {
+		short := strings.TrimSpace(cmd.Short)
 		if stylingEnabled {
 			fmt.Fprintln(w, boldColor(cmd.CommandPath(), colHighlight))
-			if short := strings.TrimSpace(cmd.Short); short != "" {
+			if short != "" {
 				fmt.Fprintln(w, colorize(short, colMuted))
 			}
 			fmt.Fprintln(w)
+		} else if short != "" {
+			// Non-TTY path: keep the one-line summary UsageString used to print.
+			fmt.Fprintln(w, short)
+			fmt.Fprintln(w)
 		}
-		fmt.Fprint(w, renderAgentsHelpLong(long))
-		fmt.Fprintln(w)
+		// One blank line before USAGE (writeHelpHeader does the same).
+		fmt.Fprint(w, strings.TrimRight(renderAgentsHelpLong(long), "\n")+"\n\n")
 	} else if short := strings.TrimSpace(cmd.Short); short != "" {
 		fmt.Fprintln(w, short)
 		fmt.Fprintln(w)
 	}
 
 	if cmd.Runnable() || cmd.HasAvailableSubCommands() {
-		fmt.Fprint(w, cmd.UsageString())
+		if err := renderStyledHelpSections(cmd, w, env, false); err != nil {
+			fmt.Fprintln(cmd.ErrOrStderr(), err)
+		}
 	}
 }

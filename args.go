@@ -175,6 +175,8 @@ const (
 	ArgEnableNfsCsiPlugin = "enable-nfs-csi-plugin"
 	// ArgEnableCorednsAutoscaler enables the CoreDNS Autoscaler cluster plugin.
 	ArgEnableCorednsAutoscaler = "enable-coredns-autoscaler"
+	// ArgEnableInsightsLogs opts the cluster in to sending its logs to Insights.
+	ArgEnableInsightsLogs = "enable-insights-logs"
 	// ArgEnableAmdGpuDevicePlugin enables automatic amd gpu device plugin installation.
 	ArgEnableAmdGpuDevicePlugin = "enable-amd-gpu-device-plugin"
 	// ArgEnableAmdGpuDeviceMetricsExporterPlugin enables automatic amd gpu device metrics exporter plugin installation.
@@ -1308,6 +1310,9 @@ const (
 
 	// ArgEvaluationRequiresGroundTruth indicates whether a custom metric needs ground truth.
 	ArgEvaluationRequiresGroundTruth = "requires-ground-truth"
+
+	// ArgEvaluationTurnType is the single-turn vs multi-turn applicability of a metric.
+	ArgEvaluationTurnType = "turn-type"
 
 	// ArgEvaluationDescription is a free-text description for a custom metric.
 	ArgEvaluationDescription = "description"
