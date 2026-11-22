@@ -42,7 +42,31 @@ type SandboxesService interface {
 	StreamCommand(ctx context.Context, sandboxID string, pid int64) (SandboxCommandStream, error)
 	SignalCommand(sandboxID string, pid int64, signal godo.SandboxCommandSignal) error
 	WriteCommandStdin(sandboxID string, pid int64, data []byte, eof bool) error
+
+	ListTemplates() (SandboxTemplates, error)
+	GetTemplate(templateID string) (*SandboxTemplate, error)
+	CreateTemplate(req *godo.SandboxTemplateCreateRequest) (*SandboxTemplate, error)
+	UpdateTemplate(templateID string, req *godo.SandboxTemplateUpdateRequest) (*SandboxTemplate, error)
+	DeleteTemplate(templateID string) error
+	ListTemplateBuilds(templateID string) (SandboxTemplateBuilds, error)
+	GetTemplateBuild(templateID, buildID string) (*SandboxTemplateBuild, error)
 }
+
+// SandboxTemplate wraps a godo SandboxTemplate.
+type SandboxTemplate struct {
+	*godo.SandboxTemplate
+}
+
+// SandboxTemplates is a slice of SandboxTemplate.
+type SandboxTemplates []SandboxTemplate
+
+// SandboxTemplateBuild wraps a godo SandboxTemplateBuild.
+type SandboxTemplateBuild struct {
+	*godo.SandboxTemplateBuild
+}
+
+// SandboxTemplateBuilds is a slice of SandboxTemplateBuild.
+type SandboxTemplateBuilds []SandboxTemplateBuild
 
 // SandboxCommand wraps a godo SandboxCommand.
 type SandboxCommand struct {
@@ -161,4 +185,81 @@ func (s *sandboxesService) WriteCommandStdin(sandboxID string, pid int64, data [
 	_, err := s.client.Sandboxes.WriteCommandStdin(context.TODO(), sandboxID, pid,
 		&godo.SandboxCommandStdinRequest{Data: data, EOF: eof})
 	return err
+}
+
+// ListTemplates returns every custom template of the team, following the
+// next-page token.
+func (s *sandboxesService) ListTemplates() (SandboxTemplates, error) {
+	var out SandboxTemplates
+	opt := &godo.SandboxTemplateListOptions{}
+	for {
+		page, _, err := s.client.Sandboxes.ListTemplates(context.TODO(), opt)
+		if err != nil {
+			return nil, err
+		}
+		for i := range page.Templates {
+			out = append(out, SandboxTemplate{SandboxTemplate: &page.Templates[i]})
+		}
+		if page.NextPageToken == "" {
+			return out, nil
+		}
+		opt.PageToken = page.NextPageToken
+	}
+}
+
+func (s *sandboxesService) GetTemplate(templateID string) (*SandboxTemplate, error) {
+	t, _, err := s.client.Sandboxes.GetTemplate(context.TODO(), templateID)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxTemplate{SandboxTemplate: t}, nil
+}
+
+func (s *sandboxesService) CreateTemplate(req *godo.SandboxTemplateCreateRequest) (*SandboxTemplate, error) {
+	t, _, err := s.client.Sandboxes.CreateTemplate(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxTemplate{SandboxTemplate: t}, nil
+}
+
+func (s *sandboxesService) UpdateTemplate(templateID string, req *godo.SandboxTemplateUpdateRequest) (*SandboxTemplate, error) {
+	t, _, err := s.client.Sandboxes.UpdateTemplate(context.TODO(), templateID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxTemplate{SandboxTemplate: t}, nil
+}
+
+func (s *sandboxesService) DeleteTemplate(templateID string) error {
+	_, err := s.client.Sandboxes.DeleteTemplate(context.TODO(), templateID)
+	return err
+}
+
+// ListTemplateBuilds returns every build of a template, following the
+// next-page token.
+func (s *sandboxesService) ListTemplateBuilds(templateID string) (SandboxTemplateBuilds, error) {
+	var out SandboxTemplateBuilds
+	opt := &godo.SandboxTemplateListOptions{}
+	for {
+		page, _, err := s.client.Sandboxes.ListTemplateBuilds(context.TODO(), templateID, opt)
+		if err != nil {
+			return nil, err
+		}
+		for i := range page.Builds {
+			out = append(out, SandboxTemplateBuild{SandboxTemplateBuild: &page.Builds[i]})
+		}
+		if page.NextPageToken == "" {
+			return out, nil
+		}
+		opt.PageToken = page.NextPageToken
+	}
+}
+
+func (s *sandboxesService) GetTemplateBuild(templateID, buildID string) (*SandboxTemplateBuild, error) {
+	b, _, err := s.client.Sandboxes.GetTemplateBuild(context.TODO(), templateID, buildID)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxTemplateBuild{SandboxTemplateBuild: b}, nil
 }

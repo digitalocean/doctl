@@ -14,6 +14,7 @@ limitations under the License.
 package displayers
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -100,4 +101,131 @@ func (s *SandboxCommand) KV() []map[string]any {
 		})
 	}
 	return out
+}
+
+// SandboxTemplate displays sandbox templates.
+type SandboxTemplate struct {
+	Templates do.SandboxTemplates
+}
+
+var _ Displayable = &SandboxTemplate{}
+
+func (s *SandboxTemplate) JSON(out io.Writer) error {
+	return writeJSON(s.Templates, out)
+}
+
+func (s *SandboxTemplate) Cols() []string {
+	return []string{"ID", "Name", "Status", "BaseTemplate", "Image", "Created", "Updated"}
+}
+
+func (s *SandboxTemplate) ColMap() map[string]string {
+	return map[string]string{
+		"ID":           "ID",
+		"Name":         "Name",
+		"Status":       "Status",
+		"BaseTemplate": "Base Template",
+		"Image":        "Image",
+		"Created":      "Created At",
+		"Updated":      "Updated At",
+	}
+}
+
+func (s *SandboxTemplate) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(s.Templates))
+	for _, t := range s.Templates {
+		out = append(out, map[string]any{
+			"ID":           t.ID,
+			"Name":         t.Name,
+			"Status":       formatSandboxStatus(string(t.Status), "TEMPLATE_STATUS_"),
+			"BaseTemplate": baseTemplateOf(t.Spec),
+			"Image":        FormatSandboxImage(imageOf(t.Spec)),
+			"Created":      t.CreatedAt.UTC().Format(time.RFC3339),
+			"Updated":      t.UpdatedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	return out
+}
+
+// SandboxTemplateBuild displays the builds of a sandbox template.
+type SandboxTemplateBuild struct {
+	Builds do.SandboxTemplateBuilds
+}
+
+var _ Displayable = &SandboxTemplateBuild{}
+
+func (s *SandboxTemplateBuild) JSON(out io.Writer) error {
+	return writeJSON(s.Builds, out)
+}
+
+func (s *SandboxTemplateBuild) Cols() []string {
+	return []string{"ID", "TemplateID", "Status", "Error", "Created", "Updated"}
+}
+
+func (s *SandboxTemplateBuild) ColMap() map[string]string {
+	return map[string]string{
+		"ID":         "ID",
+		"TemplateID": "Template ID",
+		"Status":     "Status",
+		"Error":      "Error",
+		"Created":    "Created At",
+		"Updated":    "Updated At",
+	}
+}
+
+func (s *SandboxTemplateBuild) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(s.Builds))
+	for _, b := range s.Builds {
+		out = append(out, map[string]any{
+			"ID":         b.ID,
+			"TemplateID": b.TemplateID,
+			"Status":     formatSandboxStatus(string(b.Status), "TEMPLATE_BUILD_STATUS_"),
+			"Error":      b.Error,
+			"Created":    b.CreatedAt.UTC().Format(time.RFC3339),
+			"Updated":    b.UpdatedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	return out
+}
+
+// FormatSandboxImage writes an image as registry/repository:tag or
+// registry/repository@digest. An empty or missing image is an empty string.
+func FormatSandboxImage(img *godo.SandboxImageSource) string {
+	if img == nil {
+		return ""
+	}
+	ref := img.Repository
+	if img.Registry != "" {
+		ref = img.Registry + "/" + ref
+	}
+	switch {
+	case img.Digest != "":
+		return ref + "@" + img.Digest
+	case img.Tag != "":
+		return fmt.Sprintf("%s:%s", ref, img.Tag)
+	}
+	return ref
+}
+
+func imageOf(spec *godo.SandboxTemplateSpec) *godo.SandboxImageSource {
+	if spec == nil {
+		return nil
+	}
+	return spec.Image
+}
+
+func baseTemplateOf(spec *godo.SandboxTemplateSpec) string {
+	if spec == nil {
+		return ""
+	}
+	return spec.BaseTemplate
+}
+
+func formatSandboxStatus(status, prefix string) string {
+	return strings.ToLower(strings.TrimPrefix(status, prefix))
+}
+
+// FormatSandboxTemplateStatus shortens an API status such as
+// TEMPLATE_STATUS_READY to ready.
+func FormatSandboxTemplateStatus(status godo.SandboxTemplateStatus) string {
+	return formatSandboxStatus(string(status), "TEMPLATE_STATUS_")
 }

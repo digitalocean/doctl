@@ -27,6 +27,14 @@ type SandboxesService interface {
 	StreamCommand(context.Context, string, int64) (*SandboxCommandStream, *Response, error)
 	SignalCommand(context.Context, string, int64, SandboxCommandSignal) (*Response, error)
 	WriteCommandStdin(context.Context, string, int64, *SandboxCommandStdinRequest) (*Response, error)
+
+	ListTemplates(context.Context, *SandboxTemplateListOptions) (*SandboxTemplateList, *Response, error)
+	CreateTemplate(context.Context, *SandboxTemplateCreateRequest) (*SandboxTemplate, *Response, error)
+	GetTemplate(context.Context, string) (*SandboxTemplate, *Response, error)
+	UpdateTemplate(context.Context, string, *SandboxTemplateUpdateRequest) (*SandboxTemplate, *Response, error)
+	DeleteTemplate(context.Context, string) (*Response, error)
+	ListTemplateBuilds(context.Context, string, *SandboxTemplateListOptions) (*SandboxTemplateBuildList, *Response, error)
+	GetTemplateBuild(context.Context, string, string) (*SandboxTemplateBuild, *Response, error)
 }
 
 // SandboxesServiceOp handles communication with the sandbox related methods of

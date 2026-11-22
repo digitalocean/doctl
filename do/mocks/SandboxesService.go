@@ -57,6 +57,21 @@ func (mr *MockSandboxesServiceMockRecorder) Create(req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSandboxesService)(nil).Create), req)
 }
 
+// CreateTemplate mocks base method.
+func (m *MockSandboxesService) CreateTemplate(req *godo.SandboxTemplateCreateRequest) (*do.SandboxTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateTemplate", req)
+	ret0, _ := ret[0].(*do.SandboxTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateTemplate indicates an expected call of CreateTemplate.
+func (mr *MockSandboxesServiceMockRecorder) CreateTemplate(req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTemplate", reflect.TypeOf((*MockSandboxesService)(nil).CreateTemplate), req)
+}
+
 // Delete mocks base method.
 func (m *MockSandboxesService) Delete(sandboxID string) error {
 	m.ctrl.T.Helper()
@@ -69,6 +84,20 @@ func (m *MockSandboxesService) Delete(sandboxID string) error {
 func (mr *MockSandboxesServiceMockRecorder) Delete(sandboxID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSandboxesService)(nil).Delete), sandboxID)
+}
+
+// DeleteTemplate mocks base method.
+func (m *MockSandboxesService) DeleteTemplate(templateID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTemplate", templateID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTemplate indicates an expected call of DeleteTemplate.
+func (mr *MockSandboxesServiceMockRecorder) DeleteTemplate(templateID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTemplate", reflect.TypeOf((*MockSandboxesService)(nil).DeleteTemplate), templateID)
 }
 
 // Get mocks base method.
@@ -84,6 +113,36 @@ func (m *MockSandboxesService) Get(sandboxID string) (*do.Sandbox, error) {
 func (mr *MockSandboxesServiceMockRecorder) Get(sandboxID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSandboxesService)(nil).Get), sandboxID)
+}
+
+// GetTemplate mocks base method.
+func (m *MockSandboxesService) GetTemplate(templateID string) (*do.SandboxTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplate", templateID)
+	ret0, _ := ret[0].(*do.SandboxTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplate indicates an expected call of GetTemplate.
+func (mr *MockSandboxesServiceMockRecorder) GetTemplate(templateID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*MockSandboxesService)(nil).GetTemplate), templateID)
+}
+
+// GetTemplateBuild mocks base method.
+func (m *MockSandboxesService) GetTemplateBuild(templateID, buildID string) (*do.SandboxTemplateBuild, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplateBuild", templateID, buildID)
+	ret0, _ := ret[0].(*do.SandboxTemplateBuild)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplateBuild indicates an expected call of GetTemplateBuild.
+func (mr *MockSandboxesServiceMockRecorder) GetTemplateBuild(templateID, buildID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateBuild", reflect.TypeOf((*MockSandboxesService)(nil).GetTemplateBuild), templateID, buildID)
 }
 
 // List mocks base method.
@@ -114,6 +173,36 @@ func (m *MockSandboxesService) ListCommands(sandboxID string) (do.SandboxCommand
 func (mr *MockSandboxesServiceMockRecorder) ListCommands(sandboxID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCommands", reflect.TypeOf((*MockSandboxesService)(nil).ListCommands), sandboxID)
+}
+
+// ListTemplateBuilds mocks base method.
+func (m *MockSandboxesService) ListTemplateBuilds(templateID string) (do.SandboxTemplateBuilds, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTemplateBuilds", templateID)
+	ret0, _ := ret[0].(do.SandboxTemplateBuilds)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTemplateBuilds indicates an expected call of ListTemplateBuilds.
+func (mr *MockSandboxesServiceMockRecorder) ListTemplateBuilds(templateID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplateBuilds", reflect.TypeOf((*MockSandboxesService)(nil).ListTemplateBuilds), templateID)
+}
+
+// ListTemplates mocks base method.
+func (m *MockSandboxesService) ListTemplates() (do.SandboxTemplates, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTemplates")
+	ret0, _ := ret[0].(do.SandboxTemplates)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTemplates indicates an expected call of ListTemplates.
+func (mr *MockSandboxesServiceMockRecorder) ListTemplates() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplates", reflect.TypeOf((*MockSandboxesService)(nil).ListTemplates))
 }
 
 // Pause mocks base method.
@@ -188,6 +277,21 @@ func (m *MockSandboxesService) StreamCommand(ctx context.Context, sandboxID stri
 func (mr *MockSandboxesServiceMockRecorder) StreamCommand(ctx, sandboxID, pid any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamCommand", reflect.TypeOf((*MockSandboxesService)(nil).StreamCommand), ctx, sandboxID, pid)
+}
+
+// UpdateTemplate mocks base method.
+func (m *MockSandboxesService) UpdateTemplate(templateID string, req *godo.SandboxTemplateUpdateRequest) (*do.SandboxTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTemplate", templateID, req)
+	ret0, _ := ret[0].(*do.SandboxTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateTemplate indicates an expected call of UpdateTemplate.
+func (mr *MockSandboxesServiceMockRecorder) UpdateTemplate(templateID, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTemplate", reflect.TypeOf((*MockSandboxesService)(nil).UpdateTemplate), templateID, req)
 }
 
 // WriteCommandStdin mocks base method.

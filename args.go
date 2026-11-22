@@ -615,6 +615,12 @@ const (
 	// ArgSandboxSignal is the signal `sandbox command kill` sends.
 	ArgSandboxSignal = "signal"
 
+	// ArgSandboxImage is the OCI image a sandbox template is built from.
+	ArgSandboxImage = "image"
+
+	// ArgSandboxBaseTemplate is the base template a sandbox template is rebased onto.
+	ArgSandboxBaseTemplate = "base-template"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 

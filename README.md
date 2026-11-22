@@ -623,6 +623,17 @@ doctl sandbox command attach <sandbox-id> <pid>
 doctl sandbox command kill <sandbox-id> <pid> --signal kill
 ```
 
+* Build and manage custom templates. A template is an OCI image rebased onto a base template (`coding-base` by default); `--wait` waits for the asynchronous build, and a failed build is reported with its error:
+```
+doctl sandbox template create my-template --image registry.digitalocean.com/my-team/my-image:v1 --wait
+doctl sandbox template list
+doctl sandbox template get <template-id>
+doctl sandbox template update <template-id> --image registry.digitalocean.com/my-team/my-image:v2 --wait
+doctl sandbox template build list <template-id>
+doctl sandbox template delete <template-id>...
+```
+  Once a template is ready, pass its name to `doctl sandbox create --template`. Global base templates are not listed.
+
 Output can only be read while a command runs, so a command that exits before `doctl` attaches fails with a not-found error.
 
 Add `-o json` to any command for machine-readable output. JSON keeps the API's state values, such as `SANDBOX_STATE_RUNNING`, while the table shows `running`.
