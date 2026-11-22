@@ -237,6 +237,39 @@ running, err := sb.Commands.List(ctx)                // PID, Cmd, Cwd
 err = sb.Commands.Connect(running[0].PID).Kill(ctx) // SIGTERM; Signal(ctx, godo.SandboxCommandSignalKill) to force
 ```
 
+Build and manage custom templates:
+
+```go
+// Build a template from an OCI image (rebased onto a base template, coding-base by default).
+tpl, err := c.CreateTemplate(ctx, &sandbox.TemplateParams{
+    Name:         "my-template",
+    SourceOCIRef: "registry.digitalocean.com/my-team/my-image:v1",
+})
+err = tpl.WaitUntilReady(ctx, nil)           // the build is asynchronous; fails if it fails
+sb, err := c.Create(ctx, &sandbox.CreateParams{Template: tpl.Name()})
+
+for t, err := range c.ListTemplates(nil).All(ctx) { ... }
+err = tpl.Update(ctx, &sandbox.TemplateUpdate{SourceOCIRef: "registry.digitalocean.com/my-team/my-image:v2"})
+builds, err := tpl.Builds(0).NextItems(ctx)  // []godo.SandboxTemplateBuild, with Status and Error
+deleted, err := tpl.Delete(ctx)              // false if it is already gone
+```
+
+The raw calls are `client.Sandboxes.CreateTemplate`, `GetTemplate`, `ListTemplates`, `UpdateTemplate`, `DeleteTemplate`, `ListTemplateBuilds` and `GetTemplateBuild`.
+
+Take and manage snapshots of a running or paused sandbox:
+
+```go
+// Name and TTL are optional. The capture is asynchronous.
+snap, err := sb.CreateSnapshot(ctx, &sandbox.SnapshotParams{Name: "my-snapshot", TTL: "168h"})
+err = snap.WaitUntilReady(ctx, nil) // fails, with the API's message, if the snapshot failed
+
+for s, err := range c.ListSnapshots(&sandbox.ListSnapshotsParams{SandboxID: sb.ID()}).All(ctx) { ... }
+again, err := c.GetSnapshot(ctx, snap.ID())   // again.Info.Size() is the size in bytes once complete
+deleted, err := snap.Delete(ctx)               // false if it is already gone
+```
+
+The raw calls are `client.Sandboxes.CreateSnapshot`, `GetSnapshot`, `ListSnapshots` and `DeleteSnapshot`. A snapshot captures the boot disk and memory, not the workspace data disk. The API does not yet have a way to start a sandbox from a snapshot.
+
 The raw calls are `client.Sandboxes.StartCommand`, `ListCommands`, `StreamCommand`, `SignalCommand` and `WriteCommandStdin`. Output can only be read while a command runs: a command that exits before the stream attaches fails with a 404 (`sandbox.IsNotFound`). File transfer is not available yet: it needs routes that are not in the API.
 
 ## Examples

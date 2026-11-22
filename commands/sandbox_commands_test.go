@@ -59,7 +59,7 @@ func exitEv(code int32) *godo.SandboxCommandEvent {
 
 func TestSandboxCommandGroupNames(t *testing.T) {
 	cmd := Sandbox()
-	assertCommandNames(t, cmd, "command", "create", "delete", "exec", "get", "list", "pause", "resume", "template")
+	assertCommandNames(t, cmd, "command", "create", "delete", "exec", "get", "list", "pause", "resume", "snapshot", "template")
 	for _, sub := range cmd.Commands() {
 		if sub.Name() == "command" {
 			assert.Equal(t, []string{"commands"}, sub.Aliases)

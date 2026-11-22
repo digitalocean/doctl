@@ -57,6 +57,21 @@ func (mr *MockSandboxesServiceMockRecorder) Create(req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSandboxesService)(nil).Create), req)
 }
 
+// CreateSnapshot mocks base method.
+func (m *MockSandboxesService) CreateSnapshot(sandboxID string, req *godo.SandboxSnapshotCreateRequest) (*do.SandboxSnapshot, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSnapshot", sandboxID, req)
+	ret0, _ := ret[0].(*do.SandboxSnapshot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateSnapshot indicates an expected call of CreateSnapshot.
+func (mr *MockSandboxesServiceMockRecorder) CreateSnapshot(sandboxID, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSnapshot", reflect.TypeOf((*MockSandboxesService)(nil).CreateSnapshot), sandboxID, req)
+}
+
 // CreateTemplate mocks base method.
 func (m *MockSandboxesService) CreateTemplate(req *godo.SandboxTemplateCreateRequest) (*do.SandboxTemplate, error) {
 	m.ctrl.T.Helper()
@@ -86,6 +101,20 @@ func (mr *MockSandboxesServiceMockRecorder) Delete(sandboxID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSandboxesService)(nil).Delete), sandboxID)
 }
 
+// DeleteSnapshot mocks base method.
+func (m *MockSandboxesService) DeleteSnapshot(snapshotID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSnapshot", snapshotID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSnapshot indicates an expected call of DeleteSnapshot.
+func (mr *MockSandboxesServiceMockRecorder) DeleteSnapshot(snapshotID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSnapshot", reflect.TypeOf((*MockSandboxesService)(nil).DeleteSnapshot), snapshotID)
+}
+
 // DeleteTemplate mocks base method.
 func (m *MockSandboxesService) DeleteTemplate(templateID string) error {
 	m.ctrl.T.Helper()
@@ -113,6 +142,21 @@ func (m *MockSandboxesService) Get(sandboxID string) (*do.Sandbox, error) {
 func (mr *MockSandboxesServiceMockRecorder) Get(sandboxID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSandboxesService)(nil).Get), sandboxID)
+}
+
+// GetSnapshot mocks base method.
+func (m *MockSandboxesService) GetSnapshot(snapshotID string) (*do.SandboxSnapshot, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSnapshot", snapshotID)
+	ret0, _ := ret[0].(*do.SandboxSnapshot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSnapshot indicates an expected call of GetSnapshot.
+func (mr *MockSandboxesServiceMockRecorder) GetSnapshot(snapshotID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshot", reflect.TypeOf((*MockSandboxesService)(nil).GetSnapshot), snapshotID)
 }
 
 // GetTemplate mocks base method.
@@ -173,6 +217,21 @@ func (m *MockSandboxesService) ListCommands(sandboxID string) (do.SandboxCommand
 func (mr *MockSandboxesServiceMockRecorder) ListCommands(sandboxID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCommands", reflect.TypeOf((*MockSandboxesService)(nil).ListCommands), sandboxID)
+}
+
+// ListSnapshots mocks base method.
+func (m *MockSandboxesService) ListSnapshots(sandboxID string) (do.SandboxSnapshots, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSnapshots", sandboxID)
+	ret0, _ := ret[0].(do.SandboxSnapshots)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSnapshots indicates an expected call of ListSnapshots.
+func (mr *MockSandboxesServiceMockRecorder) ListSnapshots(sandboxID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSnapshots", reflect.TypeOf((*MockSandboxesService)(nil).ListSnapshots), sandboxID)
 }
 
 // ListTemplateBuilds mocks base method.

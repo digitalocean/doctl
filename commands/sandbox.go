@@ -99,6 +99,7 @@ func Sandbox() *Command {
 
 	addSandboxCommandCmds(cmd)
 	addSandboxTemplateCmds(cmd)
+	addSandboxSnapshotCmds(cmd)
 
 	return cmd
 }

@@ -229,3 +229,72 @@ func formatSandboxStatus(status, prefix string) string {
 func FormatSandboxTemplateStatus(status godo.SandboxTemplateStatus) string {
 	return formatSandboxStatus(string(status), "TEMPLATE_STATUS_")
 }
+
+// SandboxSnapshot displays sandbox snapshots.
+type SandboxSnapshot struct {
+	Snapshots do.SandboxSnapshots
+}
+
+var _ Displayable = &SandboxSnapshot{}
+
+func (s *SandboxSnapshot) JSON(out io.Writer) error {
+	return writeJSON(s.Snapshots, out)
+}
+
+func (s *SandboxSnapshot) Cols() []string {
+	return []string{"ID", "SandboxID", "Name", "State", "Size", "Created", "TTL"}
+}
+
+func (s *SandboxSnapshot) ColMap() map[string]string {
+	return map[string]string{
+		"ID":        "ID",
+		"SandboxID": "Sandbox ID",
+		"Name":      "Name",
+		"State":     "State",
+		"Size":      "Size",
+		"Created":   "Created At",
+		"TTL":       "TTL",
+		"Error":     "Error",
+	}
+}
+
+func (s *SandboxSnapshot) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(s.Snapshots))
+	for _, snap := range s.Snapshots {
+		out = append(out, map[string]any{
+			"ID":        snap.ID,
+			"SandboxID": snap.SandboxID,
+			"Name":      snap.Name,
+			"State":     FormatSandboxSnapshotState(snap.State),
+			"Size":      FormatSandboxSnapshotSize(snap.Size()),
+			"Created":   snap.CreatedAt.UTC().Format(time.RFC3339),
+			"TTL":       snap.TTL,
+			"Error":     snap.ErrorMessage,
+		})
+	}
+	return out
+}
+
+// FormatSandboxSnapshotState shortens an API state such as
+// SNAPSHOT_STATE_COMPLETE to complete.
+func FormatSandboxSnapshotState(state godo.SandboxSnapshotState) string {
+	return formatSandboxStatus(string(state), "SNAPSHOT_STATE_")
+}
+
+// FormatSandboxSnapshotSize writes a size in bytes in binary units, such as
+// 1.0 GiB. An unset size (0) is an empty string.
+func FormatSandboxSnapshotSize(bytes uint64) string {
+	if bytes == 0 {
+		return ""
+	}
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := uint64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}

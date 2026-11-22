@@ -35,6 +35,10 @@ type SandboxesService interface {
 	DeleteTemplate(context.Context, string) (*Response, error)
 	ListTemplateBuilds(context.Context, string, *SandboxTemplateListOptions) (*SandboxTemplateBuildList, *Response, error)
 	GetTemplateBuild(context.Context, string, string) (*SandboxTemplateBuild, *Response, error)
+	CreateSnapshot(context.Context, string, *SandboxSnapshotCreateRequest) (*SandboxSnapshot, *Response, error)
+	GetSnapshot(context.Context, string) (*SandboxSnapshot, *Response, error)
+	ListSnapshots(context.Context, *SandboxSnapshotListOptions) (*SandboxSnapshotList, *Response, error)
+	DeleteSnapshot(context.Context, string) (*Response, error)
 }
 
 // SandboxesServiceOp handles communication with the sandbox related methods of

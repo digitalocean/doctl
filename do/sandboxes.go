@@ -50,7 +50,20 @@ type SandboxesService interface {
 	DeleteTemplate(templateID string) error
 	ListTemplateBuilds(templateID string) (SandboxTemplateBuilds, error)
 	GetTemplateBuild(templateID, buildID string) (*SandboxTemplateBuild, error)
+
+	ListSnapshots(sandboxID string) (SandboxSnapshots, error)
+	GetSnapshot(snapshotID string) (*SandboxSnapshot, error)
+	CreateSnapshot(sandboxID string, req *godo.SandboxSnapshotCreateRequest) (*SandboxSnapshot, error)
+	DeleteSnapshot(snapshotID string) error
 }
+
+// SandboxSnapshot wraps a godo SandboxSnapshot.
+type SandboxSnapshot struct {
+	*godo.SandboxSnapshot
+}
+
+// SandboxSnapshots is a slice of SandboxSnapshot.
+type SandboxSnapshots []SandboxSnapshot
 
 // SandboxTemplate wraps a godo SandboxTemplate.
 type SandboxTemplate struct {
@@ -262,4 +275,45 @@ func (s *sandboxesService) GetTemplateBuild(templateID, buildID string) (*Sandbo
 		return nil, err
 	}
 	return &SandboxTemplateBuild{SandboxTemplateBuild: b}, nil
+}
+
+// ListSnapshots returns every snapshot of the team, newest first, or only the
+// snapshots of sandboxID when it is not empty. It follows the next-page token.
+func (s *sandboxesService) ListSnapshots(sandboxID string) (SandboxSnapshots, error) {
+	var out SandboxSnapshots
+	opt := &godo.SandboxSnapshotListOptions{SandboxID: sandboxID}
+	for {
+		page, _, err := s.client.Sandboxes.ListSnapshots(context.TODO(), opt)
+		if err != nil {
+			return nil, err
+		}
+		for i := range page.Snapshots {
+			out = append(out, SandboxSnapshot{SandboxSnapshot: &page.Snapshots[i]})
+		}
+		if page.NextPageToken == "" {
+			return out, nil
+		}
+		opt.PageToken = page.NextPageToken
+	}
+}
+
+func (s *sandboxesService) GetSnapshot(snapshotID string) (*SandboxSnapshot, error) {
+	snap, _, err := s.client.Sandboxes.GetSnapshot(context.TODO(), snapshotID)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxSnapshot{SandboxSnapshot: snap}, nil
+}
+
+func (s *sandboxesService) CreateSnapshot(sandboxID string, req *godo.SandboxSnapshotCreateRequest) (*SandboxSnapshot, error) {
+	snap, _, err := s.client.Sandboxes.CreateSnapshot(context.TODO(), sandboxID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxSnapshot{SandboxSnapshot: snap}, nil
+}
+
+func (s *sandboxesService) DeleteSnapshot(snapshotID string) error {
+	_, err := s.client.Sandboxes.DeleteSnapshot(context.TODO(), snapshotID)
+	return err
 }

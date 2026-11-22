@@ -634,6 +634,16 @@ doctl sandbox template delete <template-id>...
 ```
   Once a template is ready, pass its name to `doctl sandbox create --template`. Global base templates are not listed.
 
+* Take and manage snapshots of a running or paused sandbox. A snapshot captures the boot disk and memory, not the workspace data disk, and is created asynchronously; `--wait` waits until it is complete and reports a failed snapshot with its error:
+```
+doctl sandbox snapshot create <sandbox-id> --name my-snapshot --ttl 168h --wait
+doctl sandbox snapshot list
+doctl sandbox snapshot list --sandbox-id <sandbox-id>
+doctl sandbox snapshot get <snapshot-id> --format State,Error
+doctl sandbox snapshot delete <snapshot-id>...
+```
+  The name is 1 to 63 characters: lowercase letters, digits and hyphens. `--ttl` is a duration such as `168h`; without it, the platform default applies. There is no command to start a sandbox from a snapshot yet.
+
 Output can only be read while a command runs, so a command that exits before `doctl` attaches fails with a not-found error.
 
 Add `-o json` to any command for machine-readable output. JSON keeps the API's state values, such as `SANDBOX_STATE_RUNNING`, while the table shows `running`.

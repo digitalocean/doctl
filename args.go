@@ -621,6 +621,15 @@ const (
 	// ArgSandboxBaseTemplate is the base template a sandbox template is rebased onto.
 	ArgSandboxBaseTemplate = "base-template"
 
+	// ArgSandboxSnapshotName is the name given to a sandbox snapshot.
+	ArgSandboxSnapshotName = "name"
+
+	// ArgSandboxSnapshotTTL is how long a sandbox snapshot is kept.
+	ArgSandboxSnapshotTTL = "ttl"
+
+	// ArgSandboxID filters `sandbox snapshot list` to the snapshots of one sandbox.
+	ArgSandboxID = "sandbox-id"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 
