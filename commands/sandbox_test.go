@@ -42,9 +42,9 @@ func testSandbox(state godo.SandboxState) do.Sandbox {
 func TestSandboxCommands(t *testing.T) {
 	cmd := Sandbox()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "delete", "get", "list", "pause", "resume")
+	assertCommandNames(t, cmd, "command", "create", "delete", "exec", "get", "list", "pause", "resume")
 	assert.Equal(t, "sandbox", cmd.Use)
-	assert.Equal(t, []string{"sandboxes"}, cmd.Aliases)
+	assert.Equal(t, []string{"sandboxes", "sb"}, cmd.Aliases)
 }
 
 func TestSandboxCreateWithDefaults(t *testing.T) {

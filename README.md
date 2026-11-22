@@ -610,6 +610,21 @@ doctl sandbox resume <sandbox-id>
 doctl sandbox delete <sandbox-id>...
 ```
 
+* Run a command in a sandbox. Output streams as it arrives and `doctl` exits non-zero when the command does. The command is an executable and its arguments, so use `bash -lc` for a shell string:
+```
+doctl sandbox exec <sandbox-id> -- bash -lc 'echo hello'
+cat data.txt | doctl sandbox exec <sandbox-id> --stdin -- wc -l
+doctl sandbox exec <sandbox-id> --cwd /workspace --env KEY=value --timeout 60 -- ./run.sh
+```
+* List the running commands, attach to one, or stop one (`--signal term` is the default, `--signal kill` forces it):
+```
+doctl sandbox command list <sandbox-id>
+doctl sandbox command attach <sandbox-id> <pid>
+doctl sandbox command kill <sandbox-id> <pid> --signal kill
+```
+
+Output can only be read while a command runs, so a command that exits before `doctl` attaches fails with a not-found error.
+
 Add `-o json` to any command for machine-readable output. JSON keeps the API's state values, such as `SANDBOX_STATE_RUNNING`, while the table shows `running`.
 
 > **Note:** `sandbox` used to be an alias of `doctl serverless`. It now belongs to the Sandboxes commands. If you have scripts that run `doctl sandbox deploy`, `doctl sandbox install` and so on, change them to `doctl serverless` (or `doctl sls`).

@@ -97,6 +97,8 @@ func Sandbox() *Command {
 	cmdSandboxDelete.Example = "The following example deletes two sandboxes without asking: " +
 		"doctl sandbox delete 01a0ef1a-d873-793d-ae6a-5dd6239be62a 01a0ef1b-0000-7000-8000-000000000001 --force"
 
+	addSandboxCommandCmds(cmd)
+
 	return cmd
 }
 

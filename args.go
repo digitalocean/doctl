@@ -603,6 +603,18 @@ const (
 	// ArgSandboxState filters `sandbox list` to one state.
 	ArgSandboxState = "state"
 
+	// ArgSandboxCwd is the working directory of a sandbox command.
+	ArgSandboxCwd = "cwd"
+
+	// ArgSandboxStdin forwards the local stdin to a sandbox command.
+	ArgSandboxStdin = "stdin"
+
+	// ArgSandboxTimeout kills a sandbox command after this many seconds.
+	ArgSandboxTimeout = "timeout"
+
+	// ArgSandboxSignal is the signal `sandbox command kill` sends.
+	ArgSandboxSignal = "signal"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 

@@ -36,6 +36,27 @@ type SandboxesService interface {
 	Delete(sandboxID string) error
 	Pause(sandboxID string) (*Sandbox, error)
 	Resume(sandboxID string) (*Sandbox, error)
+
+	ListCommands(sandboxID string) (SandboxCommands, error)
+	StartCommand(sandboxID string, req *godo.SandboxCommandStartRequest) (int64, error)
+	StreamCommand(ctx context.Context, sandboxID string, pid int64) (SandboxCommandStream, error)
+	SignalCommand(sandboxID string, pid int64, signal godo.SandboxCommandSignal) error
+	WriteCommandStdin(sandboxID string, pid int64, data []byte, eof bool) error
+}
+
+// SandboxCommand wraps a godo SandboxCommand.
+type SandboxCommand struct {
+	*godo.SandboxCommand
+}
+
+// SandboxCommands is a slice of SandboxCommand.
+type SandboxCommands []SandboxCommand
+
+// SandboxCommandStream reads the events of a running command. Next returns
+// io.EOF when the stream ends. Close it when done.
+type SandboxCommandStream interface {
+	Next() (*godo.SandboxCommandEvent, error)
+	Close() error
 }
 
 type sandboxesService struct {
@@ -104,4 +125,40 @@ func (s *sandboxesService) Resume(sandboxID string) (*Sandbox, error) {
 		return nil, err
 	}
 	return &Sandbox{Sandbox: sb}, nil
+}
+
+func (s *sandboxesService) ListCommands(sandboxID string) (SandboxCommands, error) {
+	list, _, err := s.client.Sandboxes.ListCommands(context.TODO(), sandboxID)
+	if err != nil {
+		return nil, err
+	}
+	out := make(SandboxCommands, len(list))
+	for i := range list {
+		out[i] = SandboxCommand{SandboxCommand: &list[i]}
+	}
+	return out, nil
+}
+
+func (s *sandboxesService) StartCommand(sandboxID string, req *godo.SandboxCommandStartRequest) (int64, error) {
+	pid, _, err := s.client.Sandboxes.StartCommand(context.TODO(), sandboxID, req)
+	return pid, err
+}
+
+func (s *sandboxesService) StreamCommand(ctx context.Context, sandboxID string, pid int64) (SandboxCommandStream, error) {
+	stream, _, err := s.client.Sandboxes.StreamCommand(ctx, sandboxID, pid)
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
+}
+
+func (s *sandboxesService) SignalCommand(sandboxID string, pid int64, signal godo.SandboxCommandSignal) error {
+	_, err := s.client.Sandboxes.SignalCommand(context.TODO(), sandboxID, pid, signal)
+	return err
+}
+
+func (s *sandboxesService) WriteCommandStdin(sandboxID string, pid int64, data []byte, eof bool) error {
+	_, err := s.client.Sandboxes.WriteCommandStdin(context.TODO(), sandboxID, pid,
+		&godo.SandboxCommandStdinRequest{Data: data, EOF: eof})
+	return err
 }

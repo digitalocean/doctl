@@ -66,3 +66,38 @@ func (s *Sandbox) KV() []map[string]any {
 func FormatSandboxState(state godo.SandboxState) string {
 	return strings.ToLower(strings.TrimPrefix(string(state), "SANDBOX_STATE_"))
 }
+
+// SandboxCommand displays the commands running in a sandbox.
+type SandboxCommand struct {
+	Commands do.SandboxCommands
+}
+
+var _ Displayable = &SandboxCommand{}
+
+func (s *SandboxCommand) JSON(out io.Writer) error {
+	return writeJSON(s.Commands, out)
+}
+
+func (s *SandboxCommand) Cols() []string {
+	return []string{"PID", "Command", "Cwd"}
+}
+
+func (s *SandboxCommand) ColMap() map[string]string {
+	return map[string]string{
+		"PID":     "PID",
+		"Command": "Command",
+		"Cwd":     "Working Directory",
+	}
+}
+
+func (s *SandboxCommand) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(s.Commands))
+	for _, c := range s.Commands {
+		out = append(out, map[string]any{
+			"PID":     c.PID,
+			"Command": c.Cmd,
+			"Cwd":     c.Cwd,
+		})
+	}
+	return out
+}

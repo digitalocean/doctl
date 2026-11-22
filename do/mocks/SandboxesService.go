@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	do "github.com/digitalocean/doctl/do"
@@ -100,6 +101,21 @@ func (mr *MockSandboxesServiceMockRecorder) List(state any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSandboxesService)(nil).List), state)
 }
 
+// ListCommands mocks base method.
+func (m *MockSandboxesService) ListCommands(sandboxID string) (do.SandboxCommands, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCommands", sandboxID)
+	ret0, _ := ret[0].(do.SandboxCommands)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCommands indicates an expected call of ListCommands.
+func (mr *MockSandboxesServiceMockRecorder) ListCommands(sandboxID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCommands", reflect.TypeOf((*MockSandboxesService)(nil).ListCommands), sandboxID)
+}
+
 // Pause mocks base method.
 func (m *MockSandboxesService) Pause(sandboxID string) (*do.Sandbox, error) {
 	m.ctrl.T.Helper()
@@ -128,4 +144,115 @@ func (m *MockSandboxesService) Resume(sandboxID string) (*do.Sandbox, error) {
 func (mr *MockSandboxesServiceMockRecorder) Resume(sandboxID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resume", reflect.TypeOf((*MockSandboxesService)(nil).Resume), sandboxID)
+}
+
+// SignalCommand mocks base method.
+func (m *MockSandboxesService) SignalCommand(sandboxID string, pid int64, signal godo.SandboxCommandSignal) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SignalCommand", sandboxID, pid, signal)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SignalCommand indicates an expected call of SignalCommand.
+func (mr *MockSandboxesServiceMockRecorder) SignalCommand(sandboxID, pid, signal any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignalCommand", reflect.TypeOf((*MockSandboxesService)(nil).SignalCommand), sandboxID, pid, signal)
+}
+
+// StartCommand mocks base method.
+func (m *MockSandboxesService) StartCommand(sandboxID string, req *godo.SandboxCommandStartRequest) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartCommand", sandboxID, req)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartCommand indicates an expected call of StartCommand.
+func (mr *MockSandboxesServiceMockRecorder) StartCommand(sandboxID, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartCommand", reflect.TypeOf((*MockSandboxesService)(nil).StartCommand), sandboxID, req)
+}
+
+// StreamCommand mocks base method.
+func (m *MockSandboxesService) StreamCommand(ctx context.Context, sandboxID string, pid int64) (do.SandboxCommandStream, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamCommand", ctx, sandboxID, pid)
+	ret0, _ := ret[0].(do.SandboxCommandStream)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamCommand indicates an expected call of StreamCommand.
+func (mr *MockSandboxesServiceMockRecorder) StreamCommand(ctx, sandboxID, pid any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamCommand", reflect.TypeOf((*MockSandboxesService)(nil).StreamCommand), ctx, sandboxID, pid)
+}
+
+// WriteCommandStdin mocks base method.
+func (m *MockSandboxesService) WriteCommandStdin(sandboxID string, pid int64, data []byte, eof bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteCommandStdin", sandboxID, pid, data, eof)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteCommandStdin indicates an expected call of WriteCommandStdin.
+func (mr *MockSandboxesServiceMockRecorder) WriteCommandStdin(sandboxID, pid, data, eof any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteCommandStdin", reflect.TypeOf((*MockSandboxesService)(nil).WriteCommandStdin), sandboxID, pid, data, eof)
+}
+
+// MockSandboxCommandStream is a mock of SandboxCommandStream interface.
+type MockSandboxCommandStream struct {
+	ctrl     *gomock.Controller
+	recorder *MockSandboxCommandStreamMockRecorder
+	isgomock struct{}
+}
+
+// MockSandboxCommandStreamMockRecorder is the mock recorder for MockSandboxCommandStream.
+type MockSandboxCommandStreamMockRecorder struct {
+	mock *MockSandboxCommandStream
+}
+
+// NewMockSandboxCommandStream creates a new mock instance.
+func NewMockSandboxCommandStream(ctrl *gomock.Controller) *MockSandboxCommandStream {
+	mock := &MockSandboxCommandStream{ctrl: ctrl}
+	mock.recorder = &MockSandboxCommandStreamMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSandboxCommandStream) EXPECT() *MockSandboxCommandStreamMockRecorder {
+	return m.recorder
+}
+
+// Close mocks base method.
+func (m *MockSandboxCommandStream) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockSandboxCommandStreamMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSandboxCommandStream)(nil).Close))
+}
+
+// Next mocks base method.
+func (m *MockSandboxCommandStream) Next() (*godo.SandboxCommandEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Next")
+	ret0, _ := ret[0].(*godo.SandboxCommandEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Next indicates an expected call of Next.
+func (mr *MockSandboxCommandStreamMockRecorder) Next() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockSandboxCommandStream)(nil).Next))
 }

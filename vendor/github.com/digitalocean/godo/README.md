@@ -215,7 +215,29 @@ Failed calls return a `*godo.ErrorResponse`. Test it with `sandbox.IsNotFound`, 
 
 For the raw API, use `client.Sandboxes` (`List`, `Get`, `Create`, `Delete`, `Pause`, `Resume`) on a regular `godo.Client`. A runnable program is in [`examples/sandbox/`](examples/sandbox/).
 
-Running commands and file transfer are not available yet: they need data-plane routes that are not in the API.
+Run commands with `sb.Commands`:
+
+```go
+// A shell command (bash -lc): wait for it and read the result.
+res, err := sb.Commands.Run(ctx, `echo "Hello"`, &sandbox.RunOptions{
+    Cwd:      "/workspace",
+    OnStdout: func(text string) { fmt.Print(text) }, // optional, as output arrives
+})
+fmt.Println(res.Stdout, res.ExitCode) // a non-zero exit code is returned, not an error
+
+// An executable and its arguments: start it, then attach, write to it or stop it.
+cmd, err := sb.Commands.Start(ctx, "cat", &sandbox.StartOptions{Stdin: true})
+err = cmd.WriteStdin(ctx, []byte("hello\n"), true) // true closes stdin
+for ev, err := range cmd.Events(ctx) {            // started, stdout, stderr, exit
+    if err != nil { ... }
+    if ev.Type == sandbox.EventStdout { fmt.Print(ev.Text) }
+}
+
+running, err := sb.Commands.List(ctx)                // PID, Cmd, Cwd
+err = sb.Commands.Connect(running[0].PID).Kill(ctx) // SIGTERM; Signal(ctx, godo.SandboxCommandSignalKill) to force
+```
+
+The raw calls are `client.Sandboxes.StartCommand`, `ListCommands`, `StreamCommand`, `SignalCommand` and `WriteCommandStdin`. Output can only be read while a command runs: a command that exits before the stream attaches fails with a 404 (`sandbox.IsNotFound`). File transfer is not available yet: it needs routes that are not in the API.
 
 ## Examples
 

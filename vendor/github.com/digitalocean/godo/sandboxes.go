@@ -21,6 +21,12 @@ type SandboxesService interface {
 	Delete(context.Context, string) (*Response, error)
 	Pause(context.Context, string) (*Sandbox, *Response, error)
 	Resume(context.Context, string) (*Sandbox, *Response, error)
+
+	ListCommands(context.Context, string) ([]SandboxCommand, *Response, error)
+	StartCommand(context.Context, string, *SandboxCommandStartRequest) (int64, *Response, error)
+	StreamCommand(context.Context, string, int64) (*SandboxCommandStream, *Response, error)
+	SignalCommand(context.Context, string, int64, SandboxCommandSignal) (*Response, error)
+	WriteCommandStdin(context.Context, string, int64, *SandboxCommandStdinRequest) (*Response, error)
 }
 
 // SandboxesServiceOp handles communication with the sandbox related methods of
