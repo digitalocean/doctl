@@ -245,6 +245,45 @@ func (v *HarborJobs) KV() []map[string]any {
 	return out
 }
 
+// HarborDatasetUploads displays dataset uploads, including one that is still validating.
+type HarborDatasetUploads struct {
+	Uploads []do.HarborDatasetUpload
+}
+
+var _ Displayable = &HarborDatasetUploads{}
+
+func (v *HarborDatasetUploads) JSON(out io.Writer) error {
+	return harborJSON(v.Uploads, true, out)
+}
+
+func (v *HarborDatasetUploads) Cols() []string {
+	return []string{"UUID", "Dataset", "Status", "Error", "Updated"}
+}
+
+func (v *HarborDatasetUploads) ColMap() map[string]string {
+	return map[string]string{
+		"UUID":    "Upload UUID",
+		"Dataset": "Dataset",
+		"Status":  "Status",
+		"Error":   "Error",
+		"Updated": "Updated",
+	}
+}
+
+func (v *HarborDatasetUploads) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(v.Uploads))
+	for _, u := range v.Uploads {
+		out = append(out, map[string]any{
+			"UUID":    u.UUID,
+			"Dataset": u.Dataset,
+			"Status":  u.Status,
+			"Error":   u.Error,
+			"Updated": harborTime(u.UpdatedAt),
+		})
+	}
+	return out
+}
+
 // HarborDownload displays a downloaded job.
 type HarborDownload struct {
 	Result *do.HarborDownloadResult

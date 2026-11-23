@@ -131,9 +131,10 @@ func tarNames(t *testing.T, blob []byte) []string {
 func TestHarborCommandTree(t *testing.T) {
 	root := GenAI()
 	for path, want := range map[string][]string{
-		"harbor":         {"dataset", "job", "run"},
-		"harbor dataset": {"delete", "get", "list", "publish", "pull"},
-		"harbor job":     {"cancel", "delete", "download", "list"},
+		"harbor":                {"dataset", "job", "run"},
+		"harbor dataset":        {"delete", "get", "list", "publish", "pull", "upload"},
+		"harbor dataset upload": {"get"},
+		"harbor job":            {"cancel", "delete", "download", "list"},
 	} {
 		cmd, _, err := root.Find(strings.Fields(path))
 		require.NoError(t, err, path)
@@ -531,6 +532,24 @@ path = "metric.py"
 	plan, err := planHarborDataset(dir, "")
 	require.NoError(t, err)
 	assert.Len(t, plan.Warnings, 4, "org prefix of the dataset, of a task, ignored digests, and dataset files")
+}
+
+func TestRunHarborDatasetUploadGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		updated := time.Date(2026, 11, 23, 7, 33, 4, 0, time.UTC)
+		tm.harbor.EXPECT().GetDatasetUpload("checkout-ops", "e163bfe3-eef1-435a-b1bd-59e18927a97c").Return(&do.HarborDatasetUpload{
+			UUID: "e163bfe3-eef1-435a-b1bd-59e18927a97c", Status: do.HarborDatasetValidating, UpdatedAt: &updated,
+		}, nil)
+		config.Args = []string{"checkout-ops", "e163bfe3-eef1-435a-b1bd-59e18927a97c"}
+		require.NoError(t, RunHarborDatasetUploadGet(config))
+	})
+}
+
+func TestHarborDatasetWaitText(t *testing.T) {
+	text := harborDatasetWaitText("checkout-ops", &do.HarborDatasetUpload{
+		UUID: "e163bfe3-eef1-435a-b1bd-59e18927a97c", Status: do.HarborDatasetValidating,
+	}, 4*time.Minute+12*time.Second)
+	assert.Equal(t, "Validating checkout-ops    4m12s elapsed    upload e163bfe3-eef1-435a-b1bd-59e18927a97c", text)
 }
 
 func TestRunHarborDatasetList(t *testing.T) {

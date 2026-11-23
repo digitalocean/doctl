@@ -69,6 +69,27 @@ The dataset's name comes from `+"`--name`"+`, then from `+"`[dataset] name`"+` w
 	cmdPublish.Example = "The following example publishes the dataset in `./backend-bugs`: " +
 		"`doctl genai harbor dataset publish ./backend-bugs`"
 
+	cmdUpload := &Command{
+		Command: &cobra.Command{
+			Use:   "upload",
+			Short: "Display commands for an in-progress Harbor dataset upload",
+			Long:  "An upload stays invisible to `dataset get` until validation finishes and the dataset is ready. `dataset upload get` reads that in-progress upload by the id `dataset publish` prints.",
+		},
+	}
+	cmd.AddCommand(cmdUpload)
+	cmdUploadGet := CmdBuilder(
+		cmdUpload,
+		RunHarborDatasetUploadGet,
+		"get <dataset-name> <upload-uuid>",
+		"Show the state of a Harbor dataset upload",
+		"Shows one dataset upload, including while it is still validating. `dataset get` does not see the dataset until this upload is ready.",
+		Writer,
+		displayerType(&displayers.HarborDatasetUploads{}),
+		overrideCmdNS(harborDatasetNS),
+	)
+	cmdUploadGet.Example = "The following example checks an upload that `dataset publish` printed: " +
+		"`doctl genai harbor dataset upload get checkout-ops e163bfe3-eef1-435a-b1bd-59e18927a97c`"
+
 	cmdList := CmdBuilder(
 		cmd,
 		RunHarborDatasetList,
@@ -456,6 +477,10 @@ func RunHarborDatasetPublish(c *CmdConfig) error {
 	if err != nil {
 		return fmt.Errorf("completing the upload of %s: %w", plan.Name, err)
 	}
+	if upload.UUID == "" {
+		upload.UUID = start.Upload.UUID
+	}
+	harborProgress("Upload %s. Check it later with `doctl genai harbor dataset upload get %s %s`.", upload.UUID, plan.Name, upload.UUID)
 	upload, err = waitForHarborDatasetUpload(c, plan.Name, upload, wait)
 	if err != nil {
 		return err
@@ -482,17 +507,21 @@ func RunHarborDatasetPublish(c *CmdConfig) error {
 }
 
 func waitForHarborDatasetUpload(c *CmdConfig, name string, upload *do.HarborDatasetUpload, wait harborWait) (*do.HarborDatasetUpload, error) {
-	deadline := time.Now().Add(wait.Timeout)
-	var shown string
+	started := time.Now()
+	deadline := started.Add(wait.Timeout)
+	var line harborStatusLine
+	defer line.finish()
 	for !do.HarborDatasetTerminal(upload.Status) {
-		if shown != upload.Status {
-			harborProgress("%s", harborDatasetProgress(name, upload.Status))
-			shown = upload.Status
+		line.show(harborDatasetWaitText(name, upload, time.Since(started)))
+		if wait.Timeout > 0 && !time.Now().Before(deadline) {
+			return nil, harborUploadTimeout(name, upload, wait.Timeout)
 		}
-		if wait.Timeout > 0 && time.Now().After(deadline) {
-			return nil, fmt.Errorf("publish of %s did not finish within %s; the upload is still %s", name, wait.Timeout, upload.Status)
+		harborWaitPause(wait.Interval, func() {
+			line.show(harborDatasetWaitText(name, upload, time.Since(started)))
+		})
+		if wait.Timeout > 0 && !time.Now().Before(deadline) {
+			return nil, harborUploadTimeout(name, upload, wait.Timeout)
 		}
-		harborSleep(wait.Interval)
 		next, err := c.Harbor().GetDatasetUpload(name, upload.UUID)
 		if err != nil {
 			return nil, err
@@ -500,6 +529,70 @@ func waitForHarborDatasetUpload(c *CmdConfig, name string, upload *do.HarborData
 		upload = next
 	}
 	return upload, nil
+}
+
+func harborUploadTimeout(name string, upload *do.HarborDatasetUpload, timeout time.Duration) error {
+	return fmt.Errorf("publish of %s did not finish within %s; upload %s is still %s. Check it with `doctl genai harbor dataset upload get %s %s`", name, timeout, upload.UUID, upload.Status, name, upload.UUID)
+}
+
+func harborDatasetWaitText(name string, upload *do.HarborDatasetUpload, elapsed time.Duration) string {
+	return fmt.Sprintf("%s    %s elapsed    upload %s", harborDatasetProgress(name, upload.Status), elapsed.Truncate(time.Second), upload.UUID)
+}
+
+// harborStatusLine is the single progress line under a dataset publish. On a
+// terminal it rewrites itself so the elapsed time moves. Anywhere else each
+// update is a new line, which is what logs and tests capture.
+type harborStatusLine struct {
+	rewriting bool
+	last      string
+}
+
+func (l *harborStatusLine) show(text string) {
+	w := uiEnv().ErrWriter()
+	if uiEnv().ErrTTY {
+		padded := text
+		if extra := len(l.last) - len(text); extra > 0 {
+			padded += strings.Repeat(" ", extra)
+		}
+		fmt.Fprint(w, "\r"+padded)
+		l.rewriting = true
+		l.last = text
+		return
+	}
+	fmt.Fprintln(w, text)
+}
+
+func (l *harborStatusLine) finish() {
+	if l.rewriting {
+		fmt.Fprintln(uiEnv().ErrWriter())
+		l.rewriting = false
+		l.last = ""
+	}
+}
+
+// harborWaitPause waits for total, and on a terminal refreshes tick about once
+// a second. Tests replace harborSleep with a no-op, so a non-terminal wait is
+// one sleep: looping until the clock moves would spin.
+func harborWaitPause(total time.Duration, tick func()) {
+	if total <= 0 {
+		return
+	}
+	if !uiEnv().ErrTTY || total <= time.Second {
+		harborSleep(total)
+		return
+	}
+	left := total
+	for left > 0 {
+		step := time.Second
+		if step > left {
+			step = left
+		}
+		harborSleep(step)
+		left -= step
+		if left > 0 {
+			tick()
+		}
+	}
 }
 
 func harborDatasetProgress(name, status string) string {
@@ -597,6 +690,30 @@ func RunHarborDatasetPull(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.HarborPull{Result: &do.HarborPullResult{Name: name, Digest: ds.Digest, Path: dest, Files: len(sums)}})
+}
+
+// RunHarborDatasetUploadGet shows one in-progress or finished upload. dataset
+// get cannot see it until the dataset is ready.
+func RunHarborDatasetUploadGet(c *CmdConfig) error {
+	switch len(c.Args) {
+	case 0, 1:
+		return doctl.NewMissingArgsErr(c.NS)
+	case 2:
+	default:
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+	name, uploadUUID := c.Args[0], c.Args[1]
+	upload, err := c.Harbor().GetDatasetUpload(name, uploadUUID)
+	if err != nil {
+		return err
+	}
+	if upload.Dataset == "" {
+		upload.Dataset = name
+	}
+	if upload.UUID == "" {
+		upload.UUID = uploadUUID
+	}
+	return c.Display(&displayers.HarborDatasetUploads{Uploads: []do.HarborDatasetUpload{*upload}})
 }
 
 // RunHarborDatasetGet retrieves a dataset.
