@@ -669,14 +669,11 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
 		}
 	case agent == minimaxCodeAgentName:
-		// Same as claude-code with MiniMax's key: mcode dials MiniMax's own
-		// endpoint under a native MINIMAX_API_KEY and has a default model of
-		// its own, so nothing else goes in the manifest. Like claude-code,
-		// the slot is always written, so --harness is the vendor-key path
-		// only: a session on DigitalOcean Inference (HARNESS_INFERENCE_API_KEY
-		// and HARNESS_INFERENCE_MODEL, no MiniMax key) needs a hand-written
-		// manifest. No template pin: harness-api resolves the kind to
-		// coding-minimax-code itself. Blank→DO SI does not apply to MiniMax.
+		// Same shape as claude-code: the slot is always written as a
+		// ${MINIMAX_API_KEY} reference so expand/resolve can prompt on a TTY.
+		// Leaving the prompt blank (or omitting the key non-interactively)
+		// rewrites onto DigitalOcean Serverless Inference. No template pin:
+		// harness-api resolves the kind to coding-minimax-code itself.
 		doc.Secrets = map[string]string{
 			minimaxAPIKeyEnv: "${" + minimaxAPIKeyEnv + "}",
 		}

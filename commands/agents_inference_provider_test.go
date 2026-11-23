@@ -124,6 +124,8 @@ func TestDefaultModelForHarness(t *testing.T) {
 	assert.Equal(t, defaultClaudeCodeModel, defaultModelForHarness("claude-code"))
 	assert.Equal(t, defaultClaudeCodeModel, defaultModelForHarness("claude"))
 	assert.Equal(t, defaultCodexModel, defaultModelForHarness("codex"))
+	assert.Equal(t, defaultMinimaxCodeModel, defaultModelForHarness("minimax-code"))
+	assert.Equal(t, defaultMinimaxCodeModel, defaultModelForHarness("minimax"))
 	assert.Equal(t, defaultDOSIModel, defaultModelForHarness(""))
 }
 
@@ -248,7 +250,7 @@ func TestResolveInferenceProvider_OpenAISandboxKeepsRequiredKey(t *testing.T) {
 	assert.NotContains(t, string(out), harnessInferenceModelEnv)
 }
 
-func TestResolveInferenceProvider_MinimaxStaysRequired(t *testing.T) {
+func TestResolveInferenceProvider_BlankMinimaxToDOSI(t *testing.T) {
 	_ = os.Unsetenv(minimaxAPIKeyEnv)
 	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax-code"})
 	require.NoError(t, err)
@@ -256,8 +258,22 @@ func TestResolveInferenceProvider_MinimaxStaysRequired(t *testing.T) {
 	out, err := resolveInferenceProvider(raw, false)
 	require.NoError(t, err)
 
-	// MiniMax is out of blank→DO SI; placeholder remains for ensureEnvVar to require.
+	assert.NotContains(t, string(out), minimaxAPIKeyEnv)
+	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultMinimaxCodeModel)
+	assert.True(t, needsManagedModelAccessKey(out))
+}
+
+func TestResolveInferenceProvider_KeepsProvidedMinimaxKey(t *testing.T) {
+	t.Setenv(minimaxAPIKeyEnv, "mm-real-key")
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax-code"})
+	require.NoError(t, err)
+
+	out, err := resolveInferenceProvider(raw, false)
+	require.NoError(t, err)
+
 	assert.Contains(t, string(out), "MINIMAX_API_KEY: ${MINIMAX_API_KEY}")
+	assert.NotContains(t, string(out), harnessInferenceModelEnv)
+	assert.False(t, needsManagedModelAccessKey(out))
 }
 
 func TestResolveInferenceProvider_PromptBlankFallsBackToDOSI(t *testing.T) {
@@ -278,6 +294,25 @@ func TestResolveInferenceProvider_PromptBlankFallsBackToDOSI(t *testing.T) {
 	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultCodexModel)
 }
 
+func TestResolveInferenceProvider_PromptBlankMinimaxFallsBackToDOSI(t *testing.T) {
+	_ = os.Unsetenv(minimaxAPIKeyEnv)
+	prev := promptOptionalVendorKey
+	t.Cleanup(func() { promptOptionalVendorKey = prev })
+	promptOptionalVendorKey = func(name string) (string, error) {
+		assert.Equal(t, minimaxAPIKeyEnv, name)
+		return "", nil
+	}
+
+	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax-code"})
+	require.NoError(t, err)
+
+	out, err := resolveInferenceProvider(raw, true)
+	require.NoError(t, err)
+	assert.True(t, needsManagedModelAccessKey(out))
+	assert.NotContains(t, string(out), minimaxAPIKeyEnv)
+	assert.Contains(t, string(out), harnessInferenceModelEnv+": "+defaultMinimaxCodeModel)
+}
+
 func TestBuildHarnessManifest_OpencodeOmitsDOSIDefault(t *testing.T) {
 	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "opencode"})
 	require.NoError(t, err)
@@ -292,13 +327,3 @@ func TestBuildHarnessManifest_OpencodeModelOptsIntoDOSI(t *testing.T) {
 	assert.True(t, needsManagedModelAccessKey(raw))
 }
 
-func TestResolveInferenceProvider_MinimaxPlaceholderDoesNotCatchAllInject(t *testing.T) {
-	_ = os.Unsetenv(minimaxAPIKeyEnv)
-	raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax-code"})
-	require.NoError(t, err)
-
-	out, err := resolveInferenceProvider(raw, false)
-	require.NoError(t, err)
-	assert.Contains(t, string(out), "MINIMAX_API_KEY: ${MINIMAX_API_KEY}")
-	assert.NotContains(t, string(out), harnessInferenceModelEnv)
-}

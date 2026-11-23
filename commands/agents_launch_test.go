@@ -515,10 +515,9 @@ func TestRedactedSecretIsRejectedInsteadOfStored(t *testing.T) {
 	})
 }
 
-// --harness minimax-code still requires MINIMAX_API_KEY (no blank→DO SI).
-// --dry-run leaves the slot redacted so a machine without the key can pipe
-// into config create --secret MINIMAX_API_KEY=@path.
-func TestRunAgentsCreate_DryRunLeavesUnsetMinimaxAsPlaceholder(t *testing.T) {
+// --harness minimax-code with no MINIMAX_API_KEY rewrites onto DO SI, same
+// blank→DO SI path as claude-code / coding codex.
+func TestRunAgentsCreate_DryRunBlankMinimaxRewritesToDOSI(t *testing.T) {
 	_ = os.Unsetenv(minimaxAPIKeyEnv)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		var buf bytes.Buffer
@@ -528,12 +527,8 @@ func TestRunAgentsCreate_DryRunLeavesUnsetMinimaxAsPlaceholder(t *testing.T) {
 
 		require.NoError(t, RunAgentsCreate(config))
 		out := buf.String()
-		assert.Contains(t, out, "MINIMAX_API_KEY",
-			"the secret slot stays visible so the template can still be produced")
-		assert.Contains(t, out, redactedSecretValue,
-			"an unset secret is redacted rather than echoed as a ${VAR} placeholder")
-		assert.NotContains(t, out, harnessInferenceModelEnv,
-			"MiniMax is not rewritten onto DO SI")
+		assert.NotContains(t, out, minimaxAPIKeyEnv)
+		assert.Contains(t, out, harnessInferenceModelEnv+": "+defaultMinimaxCodeModel)
 	})
 }
 

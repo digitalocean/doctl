@@ -39,6 +39,13 @@ const defaultClaudeCodeModel = "anthropic-claude-4.5-sonnet"
 // codex-agentapi, which still requires a real OpenAI key.
 const defaultCodexModel = "openai-gpt-5.5"
 
+// defaultMinimaxCodeModel is the DO Inference catalogue id used when
+// minimax-code falls back to DigitalOcean Serverless Inference (blank /
+// missing MINIMAX_API_KEY, or a provider-less minimax-code manifest). There
+// is no MiniMax-branded catalogue id on DO SI, so this matches the shared
+// default.
+const defaultMinimaxCodeModel = defaultDOSIModel
+
 // defaultModelForHarness returns the DigitalOcean Inference catalogue id a
 // harness gets when no model is supplied. Harness-specific catalogue defaults
 // win. OpenCode returns "" so create keeps OpenCode's free-model path unless
@@ -54,6 +61,8 @@ func defaultModelForHarness(adapter string) string {
 		return defaultClaudeCodeModel
 	case codexAgentName:
 		return defaultCodexModel
+	case minimaxCodeAgentName, "minimax":
+		return defaultMinimaxCodeModel
 	case "opencode", "open-code":
 		return ""
 	default:
@@ -69,16 +78,17 @@ func defaultModelForBlankableVendorKey(name string) string {
 		return defaultClaudeCodeModel
 	case openAIAPIKeyEnv:
 		return defaultCodexModel
+	case minimaxAPIKeyEnv:
+		return defaultMinimaxCodeModel
 	default:
 		return defaultDOSIModel
 	}
 }
 
 // blankableVendorKeyEnvs are guest inference keys that may be left blank to
-// fall back to DigitalOcean Serverless Inference. MiniMax is intentionally
-// omitted: --harness minimax-code stays vendor-key-only. codex-agentapi still
+// fall back to DigitalOcean Serverless Inference. codex-agentapi still
 // requires OPENAI_API_KEY for sandbox minting and is skipped separately.
-var blankableVendorKeyEnvs = []string{anthropicAPIKeyEnv, openAIAPIKeyEnv}
+var blankableVendorKeyEnvs = []string{anthropicAPIKeyEnv, openAIAPIKeyEnv, minimaxAPIKeyEnv}
 
 // inferenceCredentialEnvs are credentials that mean the manifest already has
 // an inference provider (BYOK or vendor), so the catch-all must not inject.
@@ -381,13 +391,13 @@ func printDefaultDOSINotice(w io.Writer, model string) {
 		fmt.Sprintf("Using default model %s with DigitalOcean Serverless Inference (billed to your DigitalOcean account).",
 			boldColor(model, colHighlight)))
 	fmt.Fprintf(w, "  %s\n",
-		colorize("To use your own OpenAI or Anthropic key instead, create a new environment with OPENAI_API_KEY or ANTHROPIC_API_KEY.", colMuted))
+		colorize("To use your own OpenAI, Anthropic, or MiniMax key instead, create a new environment with OPENAI_API_KEY, ANTHROPIC_API_KEY, or MINIMAX_API_KEY.", colMuted))
 }
 
 // resolveInferenceProvider rewrites a create-time manifest so every non-sandbox
 // session/config has an inference provider. allowPrompt enables the interactive
-// "leave blank → DO SI" path for Anthropic/OpenAI guest keys; dry-run passes
-// false so unbound keys rewrite to DO SI without blocking on a TTY.
+// "leave blank → DO SI" path for Anthropic/OpenAI/MiniMax guest keys; dry-run
+// passes false so unbound keys rewrite to DO SI without blocking on a TTY.
 //
 // Callers must run this before needsManagedModelAccessKey so an injected
 // HARNESS_INFERENCE_MODEL is visible to the mint predicate.

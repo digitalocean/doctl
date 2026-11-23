@@ -218,12 +218,9 @@ func TestBuildHarnessManifest(t *testing.T) {
 		assert.Equal(t, map[any]any{"MINIMAX_API_KEY": "${MINIMAX_API_KEY}"}, secrets)
 	})
 
-	// The slot is a ${MINIMAX_API_KEY} reference, so --harness minimax-code
-	// is the vendor-key path only: with the variable set it expands, without
-	// it the create stops before any API call, naming the variable. A
-	// DigitalOcean Inference session (HARNESS_INFERENCE_API_KEY, no MiniMax
-	// key) therefore needs a hand-written manifest, which is what the
-	// buildHarnessManifest comment says.
+	// The slot is a ${MINIMAX_API_KEY} reference; expand fills a real key.
+	// Leaving it blank is handled by resolveInferenceProvider (DO SI), not
+	// expandEnvRefs — these cases still cover expand-with-key / expand-missing.
 	t.Run("minimax-code's generated manifest expands MINIMAX_API_KEY or stops naming it", func(t *testing.T) {
 		raw, err := buildHarnessManifest(harnessManifestOpts{harness: "minimax-code"})
 		require.NoError(t, err)

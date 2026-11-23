@@ -792,7 +792,8 @@ const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness sess
 	"--harness opencode has no default (OpenCode free models); pass --model to opt into DigitalOcean Serverless Inference. " +
 	"--harness openhands and --harness hermes default to " +
 	defaultOpenHandsModel + " and " + defaultHermesModel + "; " +
-	"--harness claude-code and --harness codex default to " + defaultClaudeCodeModel + " and " + defaultCodexModel +
+	"--harness claude-code, --harness codex, and --harness minimax-code default to " +
+	defaultClaudeCodeModel + ", " + defaultCodexModel + ", and " + defaultMinimaxCodeModel +
 	" when the vendor key is left blank. " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
