@@ -141,7 +141,7 @@ func TestRunADSDataFlowUpdate(t *testing.T) {
 			Region:          testADSRegion,
 			ID:              testADSDataFlow,
 			Workspace:       testADSWorkspace,
-			DesiredReplicas: 2,
+			DesiredReplicas: godo.PtrTo(int32(2)),
 			SecretRefs:      []string{"warehouse-db"},
 		}).Return(&godo.ADSDataFlowUpdateResponse{UUID: testADSDataFlow, State: "updating"}, nil)
 		setADSDataFlowLocation(config, testADSDataFlow)

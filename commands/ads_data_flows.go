@@ -307,12 +307,16 @@ func RunADSDataFlowUpdate(c *CmdConfig) error {
 			doctl.ArgADSDataFlowDesiredReplicas, doctl.ArgADSDataFlowMaxReplicas,
 			doctl.ArgADSDataFlowSecretRefs, doctl.ArgADSDataFlowClearSecretRefs, doctl.ArgADSDataFlowManifestFile)
 	}
+	var desiredReplicas *int32
+	if desired != 0 {
+		desiredReplicas = &desired
+	}
 
 	resp, err := c.ADS().UpdateDataFlow(&godo.ADSDataFlowUpdateRequest{
 		Region:          region,
 		ID:              c.Args[0],
 		Workspace:       workspace,
-		DesiredReplicas: desired,
+		DesiredReplicas: desiredReplicas,
 		MaxReplicas:     max,
 		SecretRefs:      secretRefs,
 		ClearSecretRefs: clearRefs,
