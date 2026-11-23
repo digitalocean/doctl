@@ -210,6 +210,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Apps())
 	DoitCmd.AddCommand(Auth())
+	DoitCmd.AddCommand(Signup())
 	DoitCmd.AddCommand(Balance())
 	DoitCmd.AddCommand(BillingHistory())
 	DoitCmd.AddCommand(Prepayment())

@@ -514,6 +514,7 @@ func welcomeSteps(state authState) []welcomeStep {
 	switch state {
 	case authStateNoToken:
 		return []welcomeStep{
+			{"doctl signup", "Create a DigitalOcean account in a browser"},
 			{"doctl auth login", "Sign in to your DigitalOcean account in a browser"},
 			{"doctl auth list", "Show the authentication contexts you have"},
 			{"doctl --help", "Browse every command"},
