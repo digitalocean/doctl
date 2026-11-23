@@ -15,13 +15,17 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -33,15 +37,27 @@ import (
 
 // doctl compute microvm port-forward: one local TCP listener per port pair.
 // Each accepted connection opens its own WebSocket to
-// GET /v2/microvms/{id}/port_forward?port=N. Unlike the sandbox tunnel, the
-// server upgrades first and then sends a text frame: {"status":{"state":
-// "connected"}} when the guest port is open, or {"error":...} followed by a
-// normal close. The first frame therefore decides whether the tunnel opened;
-// without reading it, a refused port looks like an empty reply.
+// GET /v2/microvms/{id}/port_forward?port=N. The server upgrades first and
+// then sends a text frame: {"status":{"state":"connected"}} when the guest
+// port is open, or {"error":...} followed by a normal close. The first frame
+// therefore decides whether the tunnel opened; without reading it, a refused
+// port looks like an empty reply.
+//
+// This file does not share code with `doctl agents port-forward`: the two
+// tunnels speak different protocols and are owned separately.
 
 // microVMAgentPort is the guest port of the MicroVM agent. The API refuses to
 // forward it; doctl checks first so the error comes before a listener opens.
 const microVMAgentPort = 50051
+
+const (
+	// microVMCopyBuf is the read size for local → tunnel copies.
+	microVMCopyBuf = 32 << 10
+	// microVMRejectionBodyLimit bounds what is read from a refused upgrade.
+	microVMRejectionBodyLimit = 4 << 10
+	// microVMRejectionMax keeps an HTML error page to one terminal line.
+	microVMRejectionMax = 300
+)
 
 var (
 	// microVMResumeTimeout bounds the wait for a paused MicroVM to run.
@@ -52,6 +68,40 @@ var (
 	microVMTunnelOpenTimeout = time.Minute
 )
 
+// microVMForwardPair is one [<local>:]<remote> mapping. Local 0 lets the OS pick.
+type microVMForwardPair struct {
+	local  int
+	remote int
+}
+
+// parseMicroVMForwardPair parses "[<local-port>:]<remote-port>". A bare port
+// forwards the same port on both ends.
+func parseMicroVMForwardPair(arg string) (microVMForwardPair, error) {
+	bad := fmt.Errorf("invalid port pair %q: expected [<local-port>:]<remote-port>", arg)
+	localRaw, remoteRaw, hasLocal := strings.Cut(arg, ":")
+	if !hasLocal {
+		localRaw, remoteRaw = "", arg
+	}
+	remote, err := strconv.Atoi(remoteRaw)
+	if err != nil {
+		return microVMForwardPair{}, bad
+	}
+	if remote < 1 || remote > 65535 {
+		return microVMForwardPair{}, fmt.Errorf("remote port must be between 1 and 65535 (got %d)", remote)
+	}
+	if remote == microVMAgentPort {
+		return microVMForwardPair{}, fmt.Errorf("remote port %d is reserved for the MicroVM agent and cannot be forwarded", microVMAgentPort)
+	}
+	local := remote
+	if hasLocal {
+		local, err = strconv.Atoi(localRaw)
+		if err != nil || local < 0 || local > 65535 {
+			return microVMForwardPair{}, bad
+		}
+	}
+	return microVMForwardPair{local: local, remote: remote}, nil
+}
+
 // RunMicroVMPortForward opens local TCP tunnels to ports inside a MicroVM and
 // blocks until interrupted.
 func RunMicroVMPortForward(c *CmdConfig) error {
@@ -59,14 +109,11 @@ func RunMicroVMPortForward(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	id := c.Args[0]
-	pairs := make([]forwardPair, 0, len(c.Args)-1)
+	pairs := make([]microVMForwardPair, 0, len(c.Args)-1)
 	for _, arg := range c.Args[1:] {
-		p, err := parsePortPair(arg, 1)
+		p, err := parseMicroVMForwardPair(arg)
 		if err != nil {
 			return err
-		}
-		if p.remote == microVMAgentPort {
-			return fmt.Errorf("remote port %d is reserved for the MicroVM agent and cannot be forwarded", microVMAgentPort)
 		}
 		pairs = append(pairs, p)
 	}
@@ -87,7 +134,10 @@ func RunMicroVMPortForward(c *CmdConfig) error {
 
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+token)
-	tracer := newWSTracer()
+	var tracer *log.Logger
+	if Trace {
+		tracer = log.New(os.Stderr, "doctl: ", log.LstdFlags)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -115,15 +165,11 @@ func RunMicroVMPortForward(c *CmdConfig) error {
 		fmt.Fprintf(c.Out, "Forwarding %s -> port %d in MicroVM %s\n",
 			net.JoinHostPort(address, strconv.Itoa(localPort)), pair.remote, id)
 
-		warner := newTunnelWarner(pair.remote)
-		warner.explain = explainMicroVMTunnelErr
-		bridge := func(ctx context.Context, conn net.Conn) error {
-			return bridgeMicroVMConn(ctx, conn, wsURL, header, tracer)
-		}
+		warner := &microVMTunnelWarner{remotePort: pair.remote, seen: map[string]int{}}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			acceptLoop(ctx, ln, bridge, warner)
+			microVMAcceptLoop(ctx, ln, wsURL, header, tracer, warner)
 		}()
 	}
 	fmt.Fprintln(c.Out, "Ready. Press Ctrl-C to stop.")
@@ -171,6 +217,23 @@ func ensureMicroVMRunning(c *CmdConfig, id string) error {
 	}
 }
 
+// microVMAcceptLoop accepts local connections and bridges each over its own
+// WebSocket. A per-connection failure never stops the listener.
+func microVMAcceptLoop(ctx context.Context, ln net.Listener, wsURL string, header http.Header, tracer *log.Logger, warner *microVMTunnelWarner) {
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			return // listener closed on shutdown
+		}
+		go func() {
+			defer conn.Close()
+			if err := bridgeMicroVMConn(ctx, conn, wsURL, header, tracer); err != nil && ctx.Err() == nil {
+				warner.report(err)
+			}
+		}()
+	}
+}
+
 // microVMTunnelError is an {"error":...} frame sent instead of "connected".
 type microVMTunnelError struct {
 	code, message string
@@ -182,18 +245,72 @@ func (e *microVMTunnelError) Error() string {
 
 // bridgeMicroVMConn opens one tunnel for an accepted local connection, waits
 // for the server to confirm the guest port is open, then copies bytes.
-func bridgeMicroVMConn(ctx context.Context, local net.Conn, wsURL string, header http.Header, tracer *wsTracer) error {
+func bridgeMicroVMConn(ctx context.Context, local net.Conn, wsURL string, header http.Header, tracer *log.Logger) error {
 	ws, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
-	body := handshakeBody(resp)
-	tracer.handshake(wsURL, header, resp, body)
+	body := microVMRejectionBody(resp)
+	if tracer != nil {
+		// gorilla dials its own connection, so doctl's HTTP trace never sees
+		// the handshake. The token is never printed.
+		status := "no response"
+		if resp != nil {
+			status = resp.Status
+		}
+		tracer.Println("->", "GET "+wsURL)
+		tracer.Println("<-", status, collapseMicroVMLine(body, microVMRejectionMax))
+	}
 	if err != nil {
-		return serverRejection(resp, body, err)
+		if resp == nil {
+			return fmt.Errorf("dialing tunnel: %w", err)
+		}
+		if msg := microVMRejectionMessage(body); msg != "" {
+			return fmt.Errorf("server rejected tunnel (%s): %s", resp.Status, msg)
+		}
+		return fmt.Errorf("server rejected tunnel (%s): %w", resp.Status, err)
 	}
 	defer ws.Close()
 	if err := awaitMicroVMTunnel(ws); err != nil {
 		return err
 	}
-	return pumpTunnel(local, ws)
+	return pumpMicroVMTunnel(local, ws)
+}
+
+// microVMRejectionBody reads what the server said when it refused the upgrade.
+// gorilla keeps up to 1 KiB of a rejected handshake's body for this purpose.
+func microVMRejectionBody(resp *http.Response) string {
+	if resp == nil || resp.Body == nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(io.LimitReader(resp.Body, microVMRejectionBodyLimit))
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// microVMRejectionMessage takes the "message" field of an API error body, or
+// the raw text on one line for anything else (a proxy's text or HTML page).
+func microVMRejectionMessage(body string) string {
+	body = strings.TrimSpace(body)
+	if body == "" {
+		return ""
+	}
+	var apiErr struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal([]byte(body), &apiErr); err == nil && apiErr.Message != "" {
+		return apiErr.Message
+	}
+	return collapseMicroVMLine(body, microVMRejectionMax)
+}
+
+// collapseMicroVMLine squashes whitespace and caps the length.
+func collapseMicroVMLine(s string, max int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if r := []rune(s); len(r) > max {
+		return string(r[:max]) + "..."
+	}
+	return s
 }
 
 // awaitMicroVMTunnel reads control frames until the server reports the guest
@@ -222,17 +339,100 @@ func awaitMicroVMTunnel(ws *websocket.Conn) error {
 	}
 }
 
+// pumpMicroVMTunnel copies bytes between local and an open tunnel until either
+// side closes. Text frames after "connected" are skipped.
+func pumpMicroVMTunnel(local net.Conn, ws *websocket.Conn) error {
+	errCh := make(chan error, 2)
+
+	// Tunnel → local. A normal close means the guest side hung up.
+	go func() {
+		for {
+			mt, data, err := ws.ReadMessage()
+			if err != nil {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					errCh <- nil
+				} else {
+					errCh <- err
+				}
+				return
+			}
+			if mt != websocket.BinaryMessage {
+				continue
+			}
+			if _, err := local.Write(data); err != nil {
+				errCh <- nil // the local reader went away; nothing to report
+				return
+			}
+		}
+	}()
+
+	// Local → tunnel. This goroutine owns all data writes (gorilla allows one
+	// concurrent writer), including the close frame when the local side ends.
+	go func() {
+		buf := make([]byte, microVMCopyBuf)
+		for {
+			n, err := local.Read(buf)
+			if n > 0 {
+				if werr := ws.WriteMessage(websocket.BinaryMessage, buf[:n]); werr != nil {
+					errCh <- werr
+					return
+				}
+			}
+			if err != nil {
+				_ = ws.WriteMessage(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+				errCh <- nil
+				return
+			}
+		}
+	}()
+
+	err := <-errCh
+	local.Close()
+	ws.Close()
+	return err
+}
+
 // explainMicroVMTunnelErr says what a failed tunnel means for the port the
 // user asked for.
 func explainMicroVMTunnelErr(err error, remotePort int) string {
 	var te *microVMTunnelError
-	if !errors.As(err, &te) {
-		return explainTunnelClose(err, remotePort)
+	if errors.As(err, &te) {
+		if te.code == godo.MicroVMConsoleErrAgentError {
+			return fmt.Sprintf("port %d: the MicroVM could not connect to that port (%s) — "+
+				"start the process that listens on it, then retry", remotePort, te.message)
+		}
+		return fmt.Sprintf("port %d: the tunnel did not open (%s) — retry; "+
+			"if it keeps happening, re-run with --trace", remotePort, te)
 	}
-	if te.code == godo.MicroVMConsoleErrAgentError {
-		return fmt.Sprintf("port %d: the MicroVM could not connect to that port (%s) — "+
-			"start the process that listens on it, then retry", remotePort, te.message)
+	if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) {
+		return fmt.Sprintf("port %d: the tunnel dropped without closing cleanly — "+
+			"check your network; new connections still work", remotePort)
 	}
-	return fmt.Sprintf("port %d: the tunnel did not open (%s) — retry; "+
-		"if it keeps happening, re-run with --trace", remotePort, te)
+	return fmt.Sprintf("port %d: %v", remotePort, err)
+}
+
+// microVMTunnelWarner prints each distinct tunnel failure once per port. One
+// page load opens several connections, so a stopped server would otherwise
+// repeat the same warning for each of them.
+type microVMTunnelWarner struct {
+	remotePort int
+	mu         sync.Mutex
+	seen       map[string]int
+}
+
+func (w *microVMTunnelWarner) report(err error) {
+	msg := explainMicroVMTunnelErr(err, w.remotePort)
+
+	w.mu.Lock()
+	n := w.seen[msg]
+	w.seen[msg] = n + 1
+	w.mu.Unlock()
+
+	switch n {
+	case 0:
+		warn("%s", msg)
+	case 1:
+		warn("port %d: same failure again; further identical warnings are suppressed", w.remotePort)
+	}
 }

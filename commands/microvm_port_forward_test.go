@@ -32,17 +32,36 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestParsePortPairAllowsLowMicroVMPorts(t *testing.T) {
-	p, err := parsePortPair("8080:80", 1)
-	require.NoError(t, err)
-	assert.Equal(t, forwardPair{local: 8080, remote: 80}, p)
+func TestParseMicroVMForwardPair(t *testing.T) {
+	for arg, want := range map[string]microVMForwardPair{
+		"80":      {local: 80, remote: 80},
+		"8080:80": {local: 8080, remote: 80},
+		"0:5432":  {local: 0, remote: 5432},
+	} {
+		got, err := parseMicroVMForwardPair(arg)
+		require.NoError(t, err, arg)
+		assert.Equal(t, want, got, arg)
+	}
+	for arg, want := range map[string]string{
+		"0":        "between 1 and 65535",
+		"70000":    "between 1 and 65535",
+		"50051":    "reserved for the MicroVM agent",
+		"abc":      "invalid port pair",
+		"x:80":     "invalid port pair",
+		"70000:80": "invalid port pair",
+	} {
+		_, err := parseMicroVMForwardPair(arg)
+		assert.ErrorContains(t, err, want, arg)
+	}
+}
 
-	_, err = parsePortPair("0", 1)
-	assert.ErrorContains(t, err, "between 1 and 65535")
-
-	// The sandbox rule is unchanged.
-	_, err = parseForwardPair("80")
-	assert.ErrorContains(t, err, "between 1024 and 65535")
+func TestMicroVMTunnelWarnerSuppressesRepeats(t *testing.T) {
+	w := &microVMTunnelWarner{remotePort: 80, seen: map[string]int{}}
+	err := &microVMTunnelError{code: "agent_error", message: "connection refused"}
+	for i := 0; i < 4; i++ {
+		w.report(err)
+	}
+	assert.Equal(t, 4, w.seen[explainMicroVMTunnelErr(err, 80)])
 }
 
 func TestRunMicroVMPortForwardRefusesAgentPort(t *testing.T) {
