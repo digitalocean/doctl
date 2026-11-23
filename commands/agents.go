@@ -1547,18 +1547,25 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		return fmt.Errorf("session %q not found: %w", sessionRef, err)
 	}
 
-	// The two facades speak different transports, so the listen URL scheme
-	// and the connect command diverge per type. --replay is codex-only:
-	// opencode's attach fetches history itself (GET /session/{id}/message,
-	// served from M3 on), so there is nothing for the proxy to push.
+	// Transports differ by type: Codex is WebSocket; OpenCode is HTTP+SSE.
+	// --replay is codex-only (OpenCode fetches history itself).
+	// OpenCode also gets a one-time Basic Auth password on the Connect line
+	// (`opencode attach --password`) so the local facade is not open.
 	listenURL := fmt.Sprintf("ws://127.0.0.1:%d", port)
 	connectCmd := fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)
+	var proxyPassword string
 	if proxyType == "opencode" {
 		if replay {
 			return fmt.Errorf("--replay is codex-only; opencode's own `attach` replays history itself")
 		}
+		var err error
+		proxyPassword, err = agentproxy.NewProxyPassword()
+		if err != nil {
+			return fmt.Errorf("minting proxy password: %w", err)
+		}
 		listenURL = fmt.Sprintf("http://127.0.0.1:%d", port)
-		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d", port)
+		// Quote so a future alphabet change cannot break the shell line.
+		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d --password %s", port, strconv.Quote(proxyPassword))
 	}
 
 	stylingEnabled = detectStyling()
@@ -1583,11 +1590,12 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		if err != nil {
 			dir = "/"
 		}
-		return agentproxy.ServeHTTP(ctx, port, &opencode.Facade{
+		handler := agentproxy.ProtectLoopbackHTTP(&opencode.Facade{
 			SessionID: sessionID,
 			Sessions:  svc,
 			Dir:       dir,
-		})
+		}, proxyPassword)
+		return agentproxy.ServeHTTP(ctx, port, handler)
 	}
 
 	// Fresh Facade per connection (see ServeListener): per-connection state
