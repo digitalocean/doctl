@@ -15,6 +15,8 @@ package commands
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +24,8 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -36,7 +40,7 @@ func addSandboxCommandCmds(parent *Command) {
 		"Run a command in a sandbox",
 		"Runs an executable in a sandbox, streams its output and exits with a non-zero status when the command does. "+
 			"The command is an executable and its arguments, not a shell string: use `-- bash -lc '...'` for a shell. "+
-			"Output can only be read while the command runs, so a command that exits before doctl attaches fails with a not-found error.",
+			"Output can only be read while the command runs, so doctl holds the command until it has attached to the output, which also makes fast commands such as `echo` safe.",
 		Writer)
 	AddStringFlag(cmdExec, doctl.ArgSandboxCwd, "", "", "The working directory of the command")
 	AddStringArrayFlag(cmdExec, doctl.ArgSandboxEnv, "", nil,
@@ -108,14 +112,16 @@ func RunSandboxExec(c *CmdConfig) error {
 		return err
 	}
 
+	// Output can only be read while the command runs, so a short command can
+	// exit before the stream attaches. The gate holds it until doctl has
+	// attached; see gatedArgs.
+	gate := newGatePath()
 	req := &godo.SandboxCommandStartRequest{
-		Cmd:            argv[0],
+		Cmd:            "sh",
+		Args:           gatedArgs(gate, argv),
 		Cwd:            cwd,
 		Stdin:          withStdin,
 		TimeoutSeconds: int64(timeout),
-	}
-	if len(argv) > 1 {
-		req.Args = argv[1:]
 	}
 	if len(env) > 0 {
 		req.EnvVars = env
@@ -134,7 +140,19 @@ func RunSandboxExec(c *CmdConfig) error {
 		go forwardStdin(svc, id, pid, os.Stdin)
 	}
 
-	code, err := streamSandboxCommand(ctx, svc, id, pid, c.Out, os.Stderr)
+	var once sync.Once
+	release := func() {
+		once.Do(func() {
+			if _, err := svc.StartCommand(id, &godo.SandboxCommandStartRequest{Cmd: "touch", Args: []string{gate}}); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not release the command, it starts after %s: %v\n", gateMaxWait, err)
+			}
+		})
+	}
+	// Fallback for a stream that only returns once the command prints.
+	timer := time.AfterFunc(gateReleaseAfter, release)
+	defer timer.Stop()
+
+	code, err := streamSandboxCommand(ctx, svc, id, pid, c.Out, os.Stderr, release)
 	if err != nil {
 		if ctx.Err() != nil {
 			// Ctrl-C: ask the command to stop rather than leave it running.
@@ -170,7 +188,7 @@ func RunSandboxCommandAttach(c *CmdConfig) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	code, err := streamSandboxCommand(ctx, c.Sandboxes(), id, pid, c.Out, os.Stderr)
+	code, err := streamSandboxCommand(ctx, c.Sandboxes(), id, pid, c.Out, os.Stderr, nil)
 	if err != nil {
 		if ctx.Err() != nil {
 			return errors.New("detached; the command is still running")
@@ -230,7 +248,9 @@ func parseSandboxSignal(value string) (godo.SandboxCommandSignal, error) {
 // streamSandboxCommand copies a command's output to stdout and stderr until it
 // exits, and returns its exit code. A stream that ends without an exit event is
 // an error: the outcome is unknown.
-func streamSandboxCommand(ctx context.Context, svc do.SandboxesService, id string, pid int64, stdout, stderr io.Writer) (int32, error) {
+// streamSandboxCommand copies a command's output until it exits. onAttach, if
+// set, runs once the stream is open.
+func streamSandboxCommand(ctx context.Context, svc do.SandboxesService, id string, pid int64, stdout, stderr io.Writer, onAttach func()) (int32, error) {
 	stream, err := svc.StreamCommand(ctx, id, pid)
 	if err != nil {
 		var apiErr *godo.ErrorResponse
@@ -240,6 +260,9 @@ func streamSandboxCommand(ctx context.Context, svc do.SandboxesService, id strin
 		return 0, err
 	}
 	defer stream.Close()
+	if onAttach != nil {
+		onAttach()
+	}
 
 	for {
 		ev, err := stream.Next()
@@ -283,4 +306,28 @@ func forwardStdin(svc do.SandboxesService, id string, pid int64, r io.Reader) {
 			return
 		}
 	}
+}
+
+const (
+	// gateReleaseAfter releases a gated command when the stream has not opened yet.
+	gateReleaseAfter = 3 * time.Second
+	// gateMaxWait is how long a gated command waits before it runs anyway.
+	gateMaxWait = 30 * time.Second
+)
+
+// gateScript waits for the file named by $1, deletes it, and then replaces
+// itself with the rest of the arguments, so argv, cwd, env and stdin reach
+// the command unchanged. It polls every 50 ms, up to gateMaxWait.
+const gateScript = `g=$1; shift; i=0; while [ ! -e "$g" ] && [ $i -lt 600 ]; do sleep 0.05; i=$((i+1)); done; rm -f "$g"; exec "$@"`
+
+// gatedArgs are the sh arguments that run argv behind the gate file.
+func gatedArgs(gate string, argv []string) []string {
+	return append([]string{"-c", gateScript, "doctl-gate", gate}, argv...)
+}
+
+// newGatePath returns a unique gate file path. Tests replace it.
+var newGatePath = func() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return "/tmp/.doctl-gate-" + hex.EncodeToString(b)
 }

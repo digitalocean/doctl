@@ -82,9 +82,10 @@ func TestSandboxExecStreamsOutputAndReportsSuccess(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSandboxTimeout, 30)
 		config.Doit.Set(config.NS, doctl.ArgSandboxStdin, false)
 
+		useTestGate(t)
 		tm.sandboxes.EXPECT().StartCommand(testSandboxID, &godo.SandboxCommandStartRequest{
-			Cmd:            "bash",
-			Args:           []string{"-lc", "echo hi"},
+			Cmd:            "sh",
+			Args:           gatedArgs(testGate, []string{"bash", "-lc", "echo hi"}),
 			Cwd:            "/workspace",
 			EnvVars:        map[string]string{"A": "1", "B": "x=y,z"},
 			TimeoutSeconds: 30,
@@ -96,6 +97,7 @@ func TestSandboxExecStreamsOutputAndReportsSuccess(t *testing.T) {
 			exitEv(0),
 		}}
 		tm.sandboxes.EXPECT().StreamCommand(gomock.Any(), testSandboxID, int64(42)).Return(stream, nil)
+		expectGateRelease(tm)
 
 		require.NoError(t, RunSandboxExec(config))
 		assert.Equal(t, "hi\n", out.String())
@@ -106,9 +108,11 @@ func TestSandboxExecStreamsOutputAndReportsSuccess(t *testing.T) {
 func TestSandboxExecReturnsAnErrorForANonZeroExitCode(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = []string{testSandboxID, "false"}
-		tm.sandboxes.EXPECT().StartCommand(testSandboxID, &godo.SandboxCommandStartRequest{Cmd: "false"}).Return(int64(7), nil)
+		useTestGate(t)
+		tm.sandboxes.EXPECT().StartCommand(testSandboxID, gatedStart("false")).Return(int64(7), nil)
 		tm.sandboxes.EXPECT().StreamCommand(gomock.Any(), testSandboxID, int64(7)).
 			Return(&fakeStream{events: []*godo.SandboxCommandEvent{stderrEv("boom\n"), exitEv(3)}}, nil)
+		expectGateRelease(tm)
 
 		assert.EqualError(t, RunSandboxExec(config), "command exited with code 3")
 	})
@@ -117,7 +121,8 @@ func TestSandboxExecReturnsAnErrorForANonZeroExitCode(t *testing.T) {
 func TestSandboxExecTellsWhenTheCommandExitedBeforeAttach(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = []string{testSandboxID, "true"}
-		tm.sandboxes.EXPECT().StartCommand(testSandboxID, &godo.SandboxCommandStartRequest{Cmd: "true"}).Return(int64(7), nil)
+		useTestGate(t)
+		tm.sandboxes.EXPECT().StartCommand(testSandboxID, gatedStart("true")).Return(int64(7), nil)
 		notFound := &godo.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}, Message: "not found"}
 		tm.sandboxes.EXPECT().StreamCommand(gomock.Any(), testSandboxID, int64(7)).Return(nil, notFound)
 
@@ -130,9 +135,11 @@ func TestSandboxExecTellsWhenTheCommandExitedBeforeAttach(t *testing.T) {
 func TestSandboxExecFailsWhenTheStreamEndsWithoutAnExit(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = []string{testSandboxID, "sleep", "9"}
-		tm.sandboxes.EXPECT().StartCommand(testSandboxID, &godo.SandboxCommandStartRequest{Cmd: "sleep", Args: []string{"9"}}).Return(int64(7), nil)
+		useTestGate(t)
+		tm.sandboxes.EXPECT().StartCommand(testSandboxID, gatedStart("sleep", "9")).Return(int64(7), nil)
 		tm.sandboxes.EXPECT().StreamCommand(gomock.Any(), testSandboxID, int64(7)).
 			Return(&fakeStream{events: []*godo.SandboxCommandEvent{stdoutEv("partial")}}, nil)
+		expectGateRelease(tm)
 
 		assert.ErrorContains(t, RunSandboxExec(config), "outcome is unknown")
 	})
@@ -229,7 +236,33 @@ func TestSandboxCommandArgumentValidation(t *testing.T) {
 func TestStreamSandboxCommandPropagatesStreamErrors(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.sandboxes.EXPECT().StreamCommand(gomock.Any(), testSandboxID, int64(1)).Return(nil, errors.New("denied"))
-		_, err := streamSandboxCommand(context.Background(), config.Sandboxes(), testSandboxID, 1, io.Discard, io.Discard)
+		_, err := streamSandboxCommand(context.Background(), config.Sandboxes(), testSandboxID, 1, io.Discard, io.Discard, nil)
 		assert.EqualError(t, err, "denied")
 	})
+}
+
+const testGate = "/tmp/.doctl-gate-test"
+
+// useTestGate makes the gate path predictable for the duration of a test.
+func useTestGate(t *testing.T) {
+	t.Helper()
+	orig := newGatePath
+	newGatePath = func() string { return testGate }
+	t.Cleanup(func() { newGatePath = orig })
+}
+
+// gatedStart is the start request exec sends for argv with no flags set.
+func gatedStart(argv ...string) *godo.SandboxCommandStartRequest {
+	return &godo.SandboxCommandStartRequest{Cmd: "sh", Args: gatedArgs(testGate, argv)}
+}
+
+// expectGateRelease expects the touch that lets a gated command run.
+func expectGateRelease(tm *tcMocks) {
+	tm.sandboxes.EXPECT().StartCommand(testSandboxID,
+		&godo.SandboxCommandStartRequest{Cmd: "touch", Args: []string{testGate}}).Return(int64(8), nil)
+}
+
+func TestGatedArgsKeepTheCommandsArgvUnchanged(t *testing.T) {
+	args := gatedArgs("/tmp/g", []string{"bash", "-lc", "echo 'a b'"})
+	assert.Equal(t, []string{"-c", gateScript, "doctl-gate", "/tmp/g", "bash", "-lc", "echo 'a b'"}, args)
 }
