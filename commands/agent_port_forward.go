@@ -70,6 +70,13 @@ type forwardPair struct {
 // parseForwardPair parses "[<local-port>:]<remote-port>". A bare port forwards
 // the same port on both ends; "0:<remote>" lets the OS pick the local port.
 func parseForwardPair(arg string) (forwardPair, error) {
+	return parsePortPair(arg, 1024)
+}
+
+// parsePortPair parses "[<local-port>:]<remote-port>" with the remote port in
+// minRemote..65535. Sandboxes forward only non-privileged ports; MicroVMs
+// forward any port.
+func parsePortPair(arg string, minRemote int) (forwardPair, error) {
 	bad := func() (forwardPair, error) {
 		return forwardPair{}, fmt.Errorf("invalid port pair %q: expected [<local-port>:]<remote-port>", arg)
 	}
@@ -81,8 +88,8 @@ func parseForwardPair(arg string) (forwardPair, error) {
 	if err != nil {
 		return bad()
 	}
-	if remote < 1024 || remote > 65535 {
-		return forwardPair{}, fmt.Errorf("remote port must be between 1024 and 65535 (got %d)", remote)
+	if remote < minRemote || remote > 65535 {
+		return forwardPair{}, fmt.Errorf("remote port must be between %d and 65535 (got %d)", minRemote, remote)
 	}
 	local := remote
 	if localRaw != "" {
@@ -485,8 +492,10 @@ func explainTunnelClose(err error, remotePort int) string {
 // the second one tells the user nothing the first did not.
 type tunnelWarner struct {
 	remotePort int
-	mu         sync.Mutex
-	seen       map[string]int
+	// explain turns a failure into the line printed; nil uses explainTunnelClose.
+	explain func(err error, remotePort int) string
+	mu      sync.Mutex
+	seen    map[string]int
 }
 
 func newTunnelWarner(remotePort int) *tunnelWarner {
@@ -494,7 +503,11 @@ func newTunnelWarner(remotePort int) *tunnelWarner {
 }
 
 func (w *tunnelWarner) report(err error) {
-	msg := explainTunnelClose(err, w.remotePort)
+	explain := w.explain
+	if explain == nil {
+		explain = explainTunnelClose
+	}
+	msg := explain(err, w.remotePort)
 
 	w.mu.Lock()
 	seen := w.seen[msg]
@@ -512,6 +525,14 @@ func (w *tunnelWarner) report(err error) {
 // acceptForwardLoop accepts local connections and bridges each over its own
 // WebSocket. A per-connection failure never kills the listener.
 func acceptForwardLoop(ctx context.Context, ln net.Listener, wsURL string, header http.Header, tracer *wsTracer, warner *tunnelWarner) {
+	acceptLoop(ctx, ln, func(ctx context.Context, conn net.Conn) error {
+		return bridgeLocalConn(ctx, conn, wsURL, header, tracer)
+	}, warner)
+}
+
+// acceptLoop accepts local connections and hands each to bridge on its own
+// goroutine, reporting failures through warner.
+func acceptLoop(ctx context.Context, ln net.Listener, bridge func(context.Context, net.Conn) error, warner *tunnelWarner) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -519,7 +540,7 @@ func acceptForwardLoop(ctx context.Context, ln net.Listener, wsURL string, heade
 		}
 		go func() {
 			defer conn.Close()
-			if err := bridgeLocalConn(ctx, conn, wsURL, header, tracer); err != nil && ctx.Err() == nil {
+			if err := bridge(ctx, conn); err != nil && ctx.Err() == nil {
 				warner.report(err)
 			}
 		}()
@@ -536,7 +557,12 @@ func bridgeLocalConn(ctx context.Context, local net.Conn, wsURL string, header h
 		return serverRejection(resp, body, err)
 	}
 	defer ws.Close()
+	return pumpTunnel(local, ws)
+}
 
+// pumpTunnel copies bytes between local and an open tunnel WebSocket until
+// either side closes. Text frames from the server are skipped.
+func pumpTunnel(local net.Conn, ws *websocket.Conn) error {
 	errCh := make(chan error, 2)
 
 	// WS → local. Read errors include server close frames (normal closure when
@@ -583,7 +609,7 @@ func bridgeLocalConn(ctx context.Context, local net.Conn, wsURL string, header h
 		}
 	}()
 
-	err = <-errCh
+	err := <-errCh
 	local.Close()
 	ws.Close()
 	return err
