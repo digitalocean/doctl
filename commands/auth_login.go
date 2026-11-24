@@ -123,9 +123,6 @@ func RunAuthLogin(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	// writeConfig persists every viper setting, so login-only flags from this
-	// invocation must not stick around for later runs.
-	clearEphemeralOAuthLoginFlags(c)
 
 	ctx := context.Background()
 	httpClient := &http.Client{Timeout: oauthHTTPTimeout}
@@ -159,31 +156,46 @@ func RunAuthLogin(c *CmdConfig) error {
 
 	template.Render(c.Out, `{{success checkmark}}{{nl}}{{nl}}`, nil)
 
+	cfg, err := loadConfigFile()
+	if err != nil {
+		return err
+	}
+
 	c.setContextAccessToken(token.AccessToken)
+	cfg.setToken(authContext, token.AccessToken)
 	if token.RefreshToken == "" {
 		// Without a refresh token there is nothing to renew later, so make
 		// sure an earlier session is not left behind to be refreshed over the
 		// top of this one.
 		removeOAuthTokenState(authContext)
+		cfg.removeOAuthSession(authContext)
 	} else {
-		storeOAuthTokenState(authContext, &oauthTokenState{
+		state := &oauthTokenState{
 			Issuer:        metadata.Issuer,
 			ClientID:      clientID,
 			TokenEndpoint: metadata.TokenEndpoint,
 			RefreshToken:  token.RefreshToken,
 			Scope:         token.Scope,
 			ExpiresAt:     token.Expiry,
-		})
+		}
+		storeOAuthTokenState(authContext, state)
+		cfg.setOAuthSession(authContext, state.configValues())
 	}
 	if saveScope {
 		storeOAuthDefaultScopes(scopes)
+		var saved any
+		if scopes != "" {
+			saved = scopes
+		}
+		cfg.set(oauthDefaultScopesConfigKey, saved)
 	}
 
 	// The context just signed in to is the one later commands should use,
 	// including a named context passed with --context.
 	viper.Set(doctl.ArgContext, authContext)
+	cfg.setCurrentContext(authContext)
 
-	if err := writeConfig(); err != nil {
+	if err := cfg.write(); err != nil {
 		return err
 	}
 
@@ -271,18 +283,6 @@ func oauthTimeout(c *CmdConfig) (time.Duration, error) {
 		return oauth.DefaultLoginTimeout, nil
 	}
 	return c.Doit.GetDuration(c.NS, doctl.ArgOAuthTimeout)
-}
-
-// clearEphemeralOAuthLoginFlags resets login-only flags so writeConfig does
-// not persist them into the doctl configuration file.
-func clearEphemeralOAuthLoginFlags(c *CmdConfig) {
-	viper.Set(c.NS+"."+doctl.ArgOAuthServer, oauth.DefaultIssuer)
-	viper.Set(c.NS+"."+doctl.ArgOAuthClientID, oauth.DefaultClientID)
-	viper.Set(c.NS+"."+doctl.ArgOAuthScopes, defaultOAuthScopes)
-	viper.Set(c.NS+"."+doctl.ArgOAuthSaveScope, false)
-	viper.Set(c.NS+"."+doctl.ArgOAuthCallbackPort, 0)
-	viper.Set(c.NS+"."+doctl.ArgOAuthNoBrowser, false)
-	viper.Set(c.NS+"."+doctl.ArgOAuthTimeout, oauth.DefaultLoginTimeout)
 }
 
 // loadOAuthDefaultScopes returns the scopes saved with --save-scope, if any.
@@ -415,11 +415,11 @@ var refreshedCredentialKeys = []string{
 	oauthTokensConfigKey,
 }
 
-// writeRefreshedCredentials saves the renewed session without going through
-// writeConfig. writeConfig serializes viper.AllSettings(), which holds every
-// flag in the CLI because each one is bound with BindPFlag at init. A refresh
-// runs inside whatever command the user happened to type, so writing all of
-// that would turn that command's flags into defaults for every later run.
+// writeRefreshedCredentials saves the renewed session and nothing else.
+// viper.AllSettings() holds every flag in the CLI because each one is bound
+// with BindPFlag at init. A refresh runs inside whatever command the user
+// happened to type, so writing all of that would turn that command's flags
+// into defaults for every later run.
 func writeRefreshedCredentials() error {
 	settings, err := configFileSettings()
 	if err != nil {
@@ -524,22 +524,27 @@ func loadOAuthTokenState(authContext string) *oauthTokenState {
 }
 
 func storeOAuthTokenState(authContext string, state *oauthTokenState) {
-	var expiresAt string
-	if !state.ExpiresAt.IsZero() {
-		expiresAt = state.ExpiresAt.UTC().Format(time.RFC3339)
-	}
-
 	states := oauthTokenStates()
-	states[strings.ToLower(authContext)] = map[string]any{
-		"issuer":         state.Issuer,
-		"client-id":      state.ClientID,
-		"token-endpoint": state.TokenEndpoint,
-		"refresh-token":  state.RefreshToken,
-		"scope":          state.Scope,
-		"expires-at":     expiresAt,
-	}
+	states[strings.ToLower(authContext)] = state.configValues()
 
 	viper.Set(oauthTokensConfigKey, states)
+}
+
+// configValues returns the session as it is stored in the config file.
+func (s *oauthTokenState) configValues() map[string]any {
+	var expiresAt string
+	if !s.ExpiresAt.IsZero() {
+		expiresAt = s.ExpiresAt.UTC().Format(time.RFC3339)
+	}
+
+	return map[string]any{
+		"issuer":         s.Issuer,
+		"client-id":      s.ClientID,
+		"token-endpoint": s.TokenEndpoint,
+		"refresh-token":  s.RefreshToken,
+		"scope":          s.Scope,
+		"expires-at":     expiresAt,
+	}
 }
 
 // removeOAuthTokenState drops the stored OAuth session for a context. It is

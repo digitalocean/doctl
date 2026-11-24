@@ -610,7 +610,7 @@ func Agents() *Command {
 		Writer, agentsNS(
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
-	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
+	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets, egress. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed), and "egress" replaces allow_hosts and allow_ips (the VPC cannot change). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
 	acceptFileAliasFor(cmdUpdate)
 	AddIntFlag(cmdUpdate, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for a config update to finish (0 uses the default). Only used with --spec. Ignored with -o json.")
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentNoWait, "", false, "With --spec, return once the config update is accepted instead of waiting for it to finish. Implied by -o json.")
@@ -1547,18 +1547,25 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		return fmt.Errorf("session %q not found: %w", sessionRef, err)
 	}
 
-	// The two facades speak different transports, so the listen URL scheme
-	// and the connect command diverge per type. --replay is codex-only:
-	// opencode's attach fetches history itself (GET /session/{id}/message,
-	// served from M3 on), so there is nothing for the proxy to push.
+	// Transports differ by type: Codex is WebSocket; OpenCode is HTTP+SSE.
+	// --replay is codex-only (OpenCode fetches history itself).
+	// OpenCode also gets a one-time Basic Auth password on the Connect line
+	// (`opencode attach --password`) so the local facade is not open.
 	listenURL := fmt.Sprintf("ws://127.0.0.1:%d", port)
 	connectCmd := fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)
+	var proxyPassword string
 	if proxyType == "opencode" {
 		if replay {
 			return fmt.Errorf("--replay is codex-only; opencode's own `attach` replays history itself")
 		}
+		var err error
+		proxyPassword, err = agentproxy.NewProxyPassword()
+		if err != nil {
+			return fmt.Errorf("minting proxy password: %w", err)
+		}
 		listenURL = fmt.Sprintf("http://127.0.0.1:%d", port)
-		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d", port)
+		// Quote so a future alphabet change cannot break the shell line.
+		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d --password %s", port, strconv.Quote(proxyPassword))
 	}
 
 	stylingEnabled = detectStyling()
@@ -1583,11 +1590,12 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		if err != nil {
 			dir = "/"
 		}
-		return agentproxy.ServeHTTP(ctx, port, &opencode.Facade{
+		handler := agentproxy.ProtectLoopbackHTTP(&opencode.Facade{
 			SessionID: sessionID,
 			Sessions:  svc,
 			Dir:       dir,
-		})
+		}, proxyPassword)
+		return agentproxy.ServeHTTP(ctx, port, handler)
 	}
 
 	// Fresh Facade per connection (see ServeListener): per-connection state
@@ -2319,7 +2327,7 @@ func RunAgentsUpdate(c *CmdConfig) error {
 	return nil
 }
 
-// runAgentsUpdateConfig sends a partial manifest (tools, env, secrets) to the
+// runAgentsUpdateConfig sends a partial manifest (tools, env, secrets, egress) to the
 // session and, unless told not to, waits for the server to finish applying it.
 func runAgentsUpdateConfig(c *CmdConfig, sessionID string) error {
 	path, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
