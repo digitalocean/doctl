@@ -337,12 +337,52 @@ func TestRunAgentsCreate_DryRunPrintsManifestWithoutCreating(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAgentName, "printed-only")
 		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
 
-		require.NoError(t, RunAgentsCreate(config))
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentsCreate(config))
+		})
 
 		var doc map[string]any
 		require.NoError(t, yaml.Unmarshal(buf.Bytes(), &doc), "output must be valid YAML so it can be piped")
 		assert.Equal(t, "printed-only", doc["name"])
+		assert.NotContains(t, buf.String(), harnessInferenceModelEnv,
+			"opencode dry-run must keep the free-model path (no DO SI default)")
 		assert.True(t, strings.HasSuffix(buf.String(), "\n"))
+		assert.NotContains(t, stderr, "DigitalOcean Serverless Inference")
+	})
+}
+
+func TestRunAgentsCreate_DryRunOpenHandsPrintsDOSINotice(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "openhands")
+		config.Doit.Set(config.NS, doctl.ArgAgentName, "printed-oh")
+		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
+
+		stderr := captureProcessStderr(t, func() {
+			require.NoError(t, RunAgentsCreate(config))
+		})
+
+		assert.Contains(t, buf.String(), harnessInferenceModelEnv+": "+defaultOpenHandsModel)
+		assert.NotContains(t, buf.String(), "DigitalOcean Serverless Inference",
+			"DO SI notice must stay on stderr so piped YAML stays clean")
+		assert.Contains(t, stderr, defaultOpenHandsModel)
+		assert.Contains(t, stderr, "DigitalOcean Serverless Inference")
+	})
+}
+
+func TestRunAgentsCreate_DryRunBlankClaudeRewritesToDOSI(t *testing.T) {
+	_ = os.Unsetenv(anthropicAPIKeyEnv)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
+
+		require.NoError(t, RunAgentsCreate(config))
+		out := buf.String()
+		assert.NotContains(t, out, anthropicAPIKeyEnv)
+		assert.Contains(t, out, harnessInferenceModelEnv+": "+defaultClaudeCodeModel)
 	})
 }
 
@@ -475,24 +515,20 @@ func TestRedactedSecretIsRejectedInsteadOfStored(t *testing.T) {
 	})
 }
 
-// --harness claude-code declares ANTHROPIC_API_KEY as a secret slot. Creating
-// for real needs the key locally (or via --secret); --dry-run still prints a
-// usable template with the slot redacted so a machine without the key can pipe
-// it into config create --secret ANTHROPIC_API_KEY=@path.
-func TestRunAgentsCreate_DryRunLeavesUnsetEnvAsPlaceholder(t *testing.T) {
+// --harness minimax-code with no MINIMAX_API_KEY rewrites onto DO SI, same
+// blank→DO SI path as claude-code / coding codex.
+func TestRunAgentsCreate_DryRunBlankMinimaxRewritesToDOSI(t *testing.T) {
+	_ = os.Unsetenv(minimaxAPIKeyEnv)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		var buf bytes.Buffer
 		config.Out = &buf
-		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "claude-code")
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "minimax-code")
 		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
 
 		require.NoError(t, RunAgentsCreate(config))
 		out := buf.String()
-		assert.Contains(t, out, "ANTHROPIC_API_KEY",
-			"the secret slot stays visible so the template can still be produced")
-		assert.Contains(t, out, redactedSecretValue,
-			"an unset secret is redacted rather than echoed as a ${VAR} placeholder")
-		assert.NotContains(t, out, "env:")
+		assert.NotContains(t, out, minimaxAPIKeyEnv)
+		assert.Contains(t, out, harnessInferenceModelEnv+": "+defaultMinimaxCodeModel)
 	})
 }
 
