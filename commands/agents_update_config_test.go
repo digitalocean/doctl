@@ -191,7 +191,7 @@ func TestRunAgentsUpdate_ConfigSendsPermissions(t *testing.T) {
 
 func TestRunAgentsUpdate_ConfigPermissionsRefused(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		refusal := `permissions can't change live on hermes for: bash rule "rm -rf *" (only do.actions allow/deny rules can change on this agent). Remove these changes and send the update again (update_unsupported)`
+		refusal := `permissions can't change live on hermes for: bash rule "rm -rf *" (only do.actions allow/deny rules and an allow or deny default action can change on this agent). Remove these changes and send the update again (update_unsupported)`
 		tm.hostedAgents.EXPECT().
 			UpdateSessionConfig(updateConfigSessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: updateConfigPermissionsManifest}).
 			Return(nil, errors.New(refusal))

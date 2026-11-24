@@ -32,7 +32,7 @@ var _ = suite("harness-runtime/update-config", func(t *testing.T, when spec.G, i
 
 	const manifest = "tools:\n  - do.actions:\n      tools: [toolbelt:read-only@1]\n"
 	const permissionsManifest = "permissions:\n  default: ask\n  rules:\n    - tool: bash\n      match:\n        command: \"rm -rf *\"\n      action: deny\n    - tool: do.actions/exa_web_search\n      action: allow\n"
-	const refusal = `permissions can't change live on hermes for: bash rule \"rm -rf *\" (only do.actions allow/deny rules can change on this agent). Remove these changes and send the update again (update_unsupported)`
+	const refusal = `permissions can't change live on hermes for: bash rule \"rm -rf *\" (only do.actions allow/deny rules and an allow or deny default action can change on this agent). Remove these changes and send the update again (update_unsupported)`
 
 	it.Before(func() {
 		expect = require.New(t)
