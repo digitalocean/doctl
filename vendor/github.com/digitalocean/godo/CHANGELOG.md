@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.245.0] - 2026-11-23
+
+- #1240 - @kishlay-singh-DO - microvms: add PortForwardURL
+- #1218 - @jinyoungoh-public - Aidc 1782/add publicapi godo
+
 ## [1.244.0] - 2026-11-19
 
 - #1237 - @hmooda-do - hosted agents: Document custom MCP servers and model/permissions rules for session updates
