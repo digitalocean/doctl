@@ -74,6 +74,7 @@ type MicroVMsService interface {
 
 	Exec(id string, req *godo.MicroVMExecRequest) (*godo.MicroVMExecResult, error)
 	ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error)
+	PortForwardURL(id string, port int) (string, error)
 
 	UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error)
 	// DownloadFile streams a file out of the MicroVM. The caller must read
@@ -274,6 +275,10 @@ func (s *microVMsService) Exec(id string, req *godo.MicroVMExecRequest) (*godo.M
 
 func (s *microVMsService) ConsoleURL(id string, opt *godo.MicroVMConsoleOptions) (string, error) {
 	return s.client.MicroVMs.ConsoleURL(id, opt)
+}
+
+func (s *microVMsService) PortForwardURL(id string, port int) (string, error) {
+	return s.client.MicroVMs.PortForwardURL(id, port)
 }
 
 func (s *microVMsService) UploadFile(id string, req *godo.MicroVMFileUploadRequest) (*godo.MicroVMFileInfo, error) {
