@@ -60,7 +60,7 @@ type HostedAgentsService interface {
 	// or config) and returns the updated session.
 	UpdateSession(sessionID string, update *godo.HostedAgentSessionUpdateRequest) (*HostedAgentSession, error)
 	// UpdateSessionConfig patches the live config (tools, env, secrets,
-	// permissions) of a session from a partial manifest. The result carries the outcome
+	// permissions, skills) of a session from a partial manifest. The result carries the outcome
 	// (ACCEPTED or UNCHANGED); on ACCEPTED the caller polls GetSession.
 	UpdateSessionConfig(sessionID string, update *godo.HostedAgentSessionConfigUpdateRequest) (*godo.HostedAgentSessionConfigUpdateResponse, error)
 	DestroySession(sessionID string) error
