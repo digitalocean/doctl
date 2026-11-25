@@ -353,6 +353,7 @@ func TestRunAgentsCreate_JSONHonoursPrompt(t *testing.T) {
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "classify this")
+		config.Doit.Set(config.NS, doctl.ArgAgentPermission, "ask")
 
 		require.NoError(t, RunAgentsCreate(config))
 		assert.NotContains(t, buf.String(), "Agent is ready", "json stdout must stay parseable")

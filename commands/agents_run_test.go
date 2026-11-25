@@ -734,6 +734,7 @@ func TestRunAgentsCreate_ModelRequiresHarness(t *testing.T) {
 }
 
 func TestRunAgentsCreate_Harness(t *testing.T) {
+	stubInteractiveTerminal(t, true)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		expectValidatePolicy(t, tm, "ask")
 		tm.hostedAgents.EXPECT().
@@ -1962,10 +1963,14 @@ func TestResolveAgentCreationSource_DefaultPermissionIsAsk(t *testing.T) {
 	})
 }
 
-// createWithPermissionCheck runs a --harness create with --permission allow,
-// the policy check answering as given, and returns what reached stderr.
-func createWithPermissionCheck(t *testing.T, check func(tm *tcMocks)) string {
+// createWithPermissionCheck runs a --harness create (-o json, so it returns
+// once the session exists) with the given --permission, the policy check
+// answering as given, and returns what reached stderr.
+func createWithPermissionCheck(t *testing.T, permission string, check func(tm *tcMocks)) string {
 	t.Helper()
+	prev := Output
+	Output = "json"
+	t.Cleanup(func() { Output = prev })
 	var stderr bytes.Buffer
 	withUIEnv(t, ui.Plain(&bytes.Buffer{}, &stderr))
 
@@ -1973,19 +1978,21 @@ func createWithPermissionCheck(t *testing.T, check func(tm *tcMocks)) string {
 		check(tm)
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
-			Return(nil, assertCalledErr)
+			Return(&do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{SessionID: "sess_perm"}}, nil)
 
 		config.Out = &bytes.Buffer{}
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
-		config.Doit.Set(config.NS, doctl.ArgAgentPermission, "allow")
-		require.ErrorIs(t, RunAgentsCreate(config), assertCalledErr)
+		if permission != "" {
+			config.Doit.Set(config.NS, doctl.ArgAgentPermission, permission)
+		}
+		require.NoError(t, RunAgentsCreate(config))
 	})
 	return stderr.String()
 }
 
 func TestRunAgentsCreate_PrintsDowngradedPermission(t *testing.T) {
 	var sent []byte
-	out := createWithPermissionCheck(t, func(tm *tcMocks) {
+	out := createWithPermissionCheck(t, "allow", func(tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ValidatePolicy(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ context.Context, m []byte) (*godo.HostedAgentPolicyValidationResult, error) {
@@ -2001,7 +2008,7 @@ func TestRunAgentsCreate_PrintsDowngradedPermission(t *testing.T) {
 }
 
 func TestRunAgentsCreate_PrintsEnforcedPermissionWhenItDiffers(t *testing.T) {
-	out := createWithPermissionCheck(t, func(tm *tcMocks) {
+	out := createWithPermissionCheck(t, "allow", func(tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ValidatePolicy(gomock.Any(), gomock.Any()).
 			Return(&godo.HostedAgentPolicyValidationResult{
@@ -2014,7 +2021,7 @@ func TestRunAgentsCreate_PrintsEnforcedPermissionWhenItDiffers(t *testing.T) {
 }
 
 func TestRunAgentsCreate_PermissionCheckFailureDoesNotBlockCreate(t *testing.T) {
-	out := createWithPermissionCheck(t, func(tm *tcMocks) {
+	out := createWithPermissionCheck(t, "allow", func(tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ValidatePolicy(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("boom"))
@@ -2023,7 +2030,7 @@ func TestRunAgentsCreate_PermissionCheckFailureDoesNotBlockCreate(t *testing.T) 
 }
 
 func TestRunAgentsCreate_PermissionCheckFailureHidesRequestDetails(t *testing.T) {
-	out := createWithPermissionCheck(t, func(tm *tcMocks) {
+	out := createWithPermissionCheck(t, "allow", func(tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ValidatePolicy(gomock.Any(), gomock.Any()).
 			Return(nil, &godo.ErrorResponse{
@@ -2038,7 +2045,7 @@ func TestRunAgentsCreate_PermissionCheckFailureHidesRequestDetails(t *testing.T)
 func TestRunAgentsCreate_PermissionCheckHasADeadline(t *testing.T) {
 	var deadline time.Time
 	var ok bool
-	out := createWithPermissionCheck(t, func(tm *tcMocks) {
+	out := createWithPermissionCheck(t, "allow", func(tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ValidatePolicy(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, _ []byte) (*godo.HostedAgentPolicyValidationResult, error) {
@@ -2052,25 +2059,79 @@ func TestRunAgentsCreate_PermissionCheckHasADeadline(t *testing.T) {
 }
 
 func TestRunAgentsCreate_PermissionMatchingRequestIsPlain(t *testing.T) {
-	var stderr bytes.Buffer
-	withUIEnv(t, ui.Plain(io.Discard, &stderr))
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+	out := createWithPermissionCheck(t, "", func(tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ValidatePolicy(gomock.Any(), gomock.Any()).
 			Return(&godo.HostedAgentPolicyValidationResult{
 				DefaultAction:         godo.HostedAgentPolicyActionAsk,
 				DefaultActionRendered: godo.HostedAgentPolicyActionAsk,
 			}, nil)
+	})
+	assert.Equal(t, "permissions.default: ask (server will apply)\n", out)
+}
+
+// A failed create has no session to describe the policy of.
+func TestRunAgentsCreate_FailedCreatePrintsNoPermission(t *testing.T) {
+	var stderr bytes.Buffer
+	withUIEnv(t, ui.Plain(io.Discard, &stderr))
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ValidatePolicy(gomock.Any(), gomock.Any()).
+			Return(&godo.HostedAgentPolicyValidationResult{DefaultAction: godo.HostedAgentPolicyActionAsk}, nil)
 		tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), nil).Return(nil, assertCalledErr)
 		config.Out = &bytes.Buffer{}
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 		require.ErrorIs(t, RunAgentsCreate(config), assertCalledErr)
 	})
-	assert.Equal(t, "permissions.default: ask (server will apply)\n", stderr.String())
+	assert.NotContains(t, stderr.String(), "permissions.default")
+}
+
+// The default ask with --prompt and nothing to approve it would leave the run
+// waiting forever, so a create with no terminal refuses before any API call;
+// gomock fails the test if one is made.
+func TestRunAgentsCreate_UnattendedDefaultAskRefuses(t *testing.T) {
+	stubInteractiveTerminal(t, false)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Out = &bytes.Buffer{}
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "fix the tests")
+		err := RunAgentsCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--on-hitl approve")
+		assert.Contains(t, err.Error(), "--permission allow")
+	})
+}
+
+func TestRefuseUnattendedAsk_PassesWhenSomethingCanApprove(t *testing.T) {
+	ask := &agentCreationSource{permission: "ask", prompt: "go"}
+	cases := []struct {
+		name        string
+		interactive bool
+		explicit    bool
+		onHITL      godo.HostedAgentHITLOutcome
+		src         *agentCreationSource
+	}{
+		{name: "terminal", interactive: true, src: ask},
+		{name: "explicit --permission ask", explicit: true, src: ask},
+		{name: "--on-hitl", onHITL: "approve", src: ask},
+		{name: "no prompt", src: &agentCreationSource{permission: "ask"}},
+		{name: "allow", src: &agentCreationSource{permission: "allow", prompt: "go"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			stubInteractiveTerminal(t, tc.interactive)
+			withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+				if tc.explicit {
+					config.Doit.Set(config.NS, doctl.ArgAgentPermission, "ask")
+				}
+				assert.NoError(t, refuseUnattendedAsk(config, tc.src, tc.onHITL))
+			})
+		})
+	}
 }
 
 func TestRunAgentsCreate_PermissionCheckWithNoDefaultCountsAsFailed(t *testing.T) {
-	out := createWithPermissionCheck(t, func(tm *tcMocks) {
+	out := createWithPermissionCheck(t, "allow", func(tm *tcMocks) {
 		tm.hostedAgents.EXPECT().
 			ValidatePolicy(gomock.Any(), gomock.Any()).
 			Return(&godo.HostedAgentPolicyValidationResult{}, nil)
@@ -2078,9 +2139,10 @@ func TestRunAgentsCreate_PermissionCheckWithNoDefaultCountsAsFailed(t *testing.T
 	assert.Equal(t, "permissions.default: allow (requested; server check failed: no default in the response)\n", out)
 }
 
-// What the policy check sees has to be what create sends, expansion included:
-// ANTHROPIC_API_KEY is a ${VAR} reference until create resolves it.
-func TestRunAgentsCreate_PermissionCheckSeesTheManifestCreateSends(t *testing.T) {
+// What the policy check sees has to be what create sends, expansion included
+// (ANTHROPIC_API_KEY is a ${VAR} reference until create resolves it), except
+// for secret values, which only create needs.
+func TestRunAgentsCreate_PermissionCheckSeesTheManifestCreateSendsWithoutSecrets(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-from-env")
 	var validated, created []byte
 	withUIEnv(t, ui.Plain(io.Discard, io.Discard))
@@ -2103,7 +2165,8 @@ func TestRunAgentsCreate_PermissionCheckSeesTheManifestCreateSends(t *testing.T)
 	})
 	require.NotEmpty(t, validated)
 	assert.Contains(t, string(created), "sk-ant-from-env", "expansion must have changed the bytes")
-	assert.Equal(t, string(created), string(validated))
+	assert.NotContains(t, string(validated), "sk-ant-from-env")
+	assert.Equal(t, string(redactManifestSecrets(created)), string(validated))
 }
 
 func TestRunAgentsCreate_SpecDoesNotValidatePolicy(t *testing.T) {

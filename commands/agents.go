@@ -763,7 +763,7 @@ func addAgentCreationFlags(cmd *Command) {
 // flag and a hand-written manifest agree. It used to be allow, chosen because
 // with no policy block codex's own default asks on every shell command and
 // file write. The policy the server will apply is printed at create time (see
-// reportAppliedPermission).
+// appliedPermissionLine).
 const defaultHarnessPermission = "ask"
 
 // agentTemplateFlagDesc names both halves of the template namespace on purpose.
@@ -794,7 +794,8 @@ const agentPermissionFlagDesc = "Tool-permission default for a --harness session
 	"ask (hold each tool call for approval), or deny (refuse every tool call). Defaults to ask. " +
 	// No backticks, for the same reason as agentTemplateFlagDesc.
 	"With ask, a run waits until someone approves: with '" + agentCLI + " approve', in the chat, or automatically with --" + doctl.ArgAgentOnHITL + " on create. " +
-	"The wait does not time out, and launch cannot auto-approve. For unattended runs use 'create --" + doctl.ArgAgentOnHITL + " approve' or --permission allow. " +
+	"The wait does not time out, and launch cannot auto-approve. For unattended runs use 'create --" + doctl.ArgAgentOnHITL + " approve' or --permission allow; " +
+	"with no terminal, create --prompt refuses the default rather than leave the run waiting (pass --permission ask to keep it). " +
 	"MCP tool calls that cannot request approval fail under ask instead of waiting. " +
 	"Written as the manifest's permissions.default; the policy the server will apply is printed when the session is created. " +
 	"Only valid with --harness; a --spec manifest declares its own."
@@ -1255,21 +1256,21 @@ func createAgentSessionIn(c *CmdConfig, src *agentCreationSource, prog *creation
 }
 
 // permissionCheckTimeout bounds the policy check; the client retries, so
-// without it a slow endpoint would stall every --harness create. It matches
-// prepayLookupTimeout, the other best-effort read made before a create.
+// without it a slow endpoint would stall every --harness create past the
+// create call it runs alongside. It matches prepayLookupTimeout, the other
+// best-effort read made around a create.
 const permissionCheckTimeout = 5 * time.Second
 
 var errPolicyCheckNoDefault = errors.New("no default in the response")
 
-// reportAppliedPermission prints the permissions.default the server will ship
+// appliedPermissionLine describes the permissions.default the server will ship
 // and enforce for a --harness manifest, asking the server rather than
 // guessing: it can downgrade an allow it cannot verify, and the agent can
-// enforce something other than what ships. It goes to stderr so a pipe or
-// -o json still reads clean, and a failed check never blocks the create — the
-// create itself is the authority, this is only the heads-up.
-func reportAppliedPermission(c *CmdConfig, manifest []byte, requested string) {
-	ctx, cancel := context.WithTimeout(context.Background(), permissionCheckTimeout)
-	defer cancel()
+// enforce something other than what ships. The server resolves the policy from
+// the manifest alone (create's query parameters do not feed it), so the answer
+// matches create's. A failed check never blocks the create — the create itself
+// is the authority, this is only the heads-up.
+func appliedPermissionLine(ctx context.Context, c *CmdConfig, manifest []byte, requested string) string {
 	res, err := c.HostedAgents().ValidatePolicy(ctx, manifest)
 	if err == nil && (res == nil || res.DefaultAction == "") {
 		err = errPolicyCheckNoDefault
@@ -1306,7 +1307,23 @@ func reportAppliedPermission(c *CmdConfig, manifest []byte, requested string) {
 		}
 		line += ")"
 	}
-	fmt.Fprintln(uiEnv().ErrWriter(), line)
+	return line
+}
+
+// refuseUnattendedAsk stops a create with no terminal whose --prompt would
+// start a run under the default ask with nothing to approve it: the run would
+// wait at its first tool call, and that wait does not time out. A --permission
+// passed explicitly, ask included, is the caller's choice and passes.
+func refuseUnattendedAsk(c *CmdConfig, src *agentCreationSource, onHITL godo.HostedAgentHITLOutcome) error {
+	if src.permission != "ask" || src.prompt == "" || onHITL != "" ||
+		agentFlagChanged(c, doctl.ArgAgentPermission) || isInteractiveTerminal() {
+		return nil
+	}
+	return fmt.Errorf("--%s defaults to ask, so this --%s would wait at its first tool call for an approval nothing here can give, and the wait does not time out. "+
+		"Pass --%s approve (or reject) to resolve approvals from this command, --%s allow to run tools without asking, "+
+		"or --%s ask to keep the wait and approve with `%s approve`",
+		doctl.ArgAgentPermission, doctl.ArgAgentTriggerPrompt, doctl.ArgAgentOnHITL,
+		doctl.ArgAgentPermission, doctl.ArgAgentPermission, agentCLI)
 }
 
 // readySummaryFor describes the created session for the ready card.
@@ -1357,6 +1374,9 @@ func RunAgentsCreate(c *CmdConfig) error {
 
 	if dryRun {
 		return printResolvedManifest(c, src)
+	}
+	if err := refuseUnattendedAsk(c, src, onHITL); err != nil {
+		return err
 	}
 
 	prog := (*creationProgress)(nil)
