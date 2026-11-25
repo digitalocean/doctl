@@ -1,5 +1,22 @@
 # Change Log
 
+## [1.246.0] - 2026-11-25
+
+- #1244 - @rishabhsingh-do - hosted agents: document and test live permissions updates in UpdateSessionConfig (MARSOHS-2938)
+- #1247 - @ldalbert - account: add is_trial to Account
+- #1243 - @RohithSangati - Append the detected AI agent to the User-Agent header
+- #1241 - @gane5hvarma - hosted agents: document URL-bound secret, egress and model session updates
+
+## [1.245.0] - 2026-11-23
+
+- #1240 - @kishlay-singh-DO - microvms: add PortForwardURL
+- #1218 - @jinyoungoh-public - Aidc 1782/add publicapi godo
+
+## [1.244.0] - 2026-11-19
+
+- #1237 - @hmooda-do - hosted agents: Document custom MCP servers and model/permissions rules for session updates
+- #1235 - @bbatha - action-gateway: add Tools.ListVersions
+
 ## [1.243.0] - 2026-11-17
 
 - #1228 - @ldalbert - prepayment: add available_credit to PrepaymentStatus
