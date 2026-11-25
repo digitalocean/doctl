@@ -1217,9 +1217,8 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	// The one place unknown manifest fields are reported for dry-run, create and
 	// launch. It runs on the raw manifest (before ${VAR} expansion) and before
 	// any API call or side effect (GitHub connect, OpenAI environment setup),
-	// and it is the only run: the validator later in startSessionFromRawManifest
-	// skips this pass so nothing is reported twice. Only the unknown-field pass
-	// runs here, not the whole validator.
+	// and it is the only run: checkExpandedManifest, which runs the rest of the
+	// validator after expansion, skips this pass so nothing is reported twice.
 	strict, allowUnknown, err := agentManifestStrictness(c)
 	if err != nil {
 		return nil, err
@@ -1242,10 +1241,11 @@ func rejectManifestFlagsWithFromConfig(c *CmdConfig) error {
 
 // rejectManifestFlags fails when --strict or --allow-unknown-fields is given
 // where there is no manifest for it to check, so the flag is never silently
-// ignored. why completes the message after "--<flag> ".
+// ignored. An explicit --flag=false asks for nothing and passes. why completes
+// the message after "--<flag> ".
 func rejectManifestFlags(c *CmdConfig, why string) error {
 	for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
-		if c.Doit.IsSet(flag) {
+		if on, _ := c.Doit.GetBool(c.NS, flag); on {
 			return fmt.Errorf("--%s %s", flag, why)
 		}
 	}
@@ -1338,8 +1338,6 @@ func RunAgentsCreate(c *CmdConfig) error {
 	}
 
 	if dryRun {
-		// resolveAgentCreationSource already ran the unknown-field check, so a
-		// misspelled key never reaches the printed manifest.
 		return printResolvedManifest(c, src)
 	}
 
@@ -1465,6 +1463,10 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	if src.resumeOnTopoff {
 		notice("--%s is sent as a request parameter, not written into the manifest, so it does not appear below and does not survive being piped elsewhere; pass it again on the command that creates the session",
 			doctl.ArgAgentResumeOnTopoff)
+	}
+
+	if err := checkExpandedManifest(c, manifest); err != nil {
+		return err
 	}
 
 	out := redactManifestSecrets(manifest)

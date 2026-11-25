@@ -664,12 +664,23 @@ func TestRunAgentsCreate_DryRunUnknownKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("a value that is not an unknown-key problem still prints", func(t *testing.T) {
-		// Dry-run runs only the unknown-key pass, not the whole validator.
-		stdout, stderr, err := dryRunCreate(t, "name: demo\nagent: not-a-real-adapter\n", false)
+	t.Run("an error the real create rejects fails the dry run too", func(t *testing.T) {
+		stdout, _, err := dryRunCreate(t, "name: demo\nagent: not-a-real-adapter\n", false)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not-a-real-adapter")
+		assert.Empty(t, stdout)
+	})
+
+	t.Run("--strict fails on a credential in env and does not print it", func(t *testing.T) {
+		const manifest = "name: demo\nagent: opencode\nenv:\n  OPENAI_API_KEY: sk-live-123\n"
+		stdout, stderr, err := dryRunCreate(t, manifest, false)
 		require.NoError(t, err)
-		assert.Contains(t, stdout, "not-a-real-adapter")
-		assert.Empty(t, strings.TrimSpace(stderr))
+		assert.Contains(t, stderr, "env.OPENAI_API_KEY")
+
+		stdout, _, err = dryRunCreate(t, manifest, true)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "env.OPENAI_API_KEY")
+		assert.Empty(t, stdout)
 	})
 }
 
@@ -1072,6 +1083,37 @@ func TestRunAgentTriggers_ManifestFlagsWithoutManifest(t *testing.T) {
 				})
 			})
 		}
+	}
+}
+
+// A top-level unknown key is printed with its path highlighted, like a nested one.
+func TestUnknownTopLevelKeyMessagesSplitOnPath(t *testing.T) {
+	warns, err := earlyUnknownKeyCheck([]byte("agent: opencode\nfoo_bar: 1\nKeep_Warm: true\nmodel:\n  bogus_field: 1\n"), false, false)
+	require.NoError(t, err)
+	var paths []string
+	for _, w := range warns {
+		path, _, ok := splitValidationPath(w)
+		require.True(t, ok, w)
+		paths = append(paths, path)
+	}
+	assert.ElementsMatch(t, []string{"foo_bar", "Keep_Warm", "model.bogus_field"}, paths)
+
+	_, _, ok := splitValidationPath(`note: unknown field "other"`)
+	assert.False(t, ok)
+}
+
+// An explicit --flag=false asks for nothing, so it is not rejected where the
+// flag has nothing to act on.
+func TestRejectManifestFlags_AcceptsExplicitFalse(t *testing.T) {
+	for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
+		t.Run(flag, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+				config.Doit.Set(config.NS, flag, false)
+				assert.NoError(t, rejectManifestFlagsWithFromConfig(config))
+				config.Doit.Set(config.NS, flag, true)
+				assert.Error(t, rejectManifestFlagsWithFromConfig(config))
+			})
+		})
 	}
 }
 

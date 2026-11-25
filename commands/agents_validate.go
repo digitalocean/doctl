@@ -1111,6 +1111,18 @@ func applyManifestFlags(c *CmdConfig, v *agentManifestValidation) error {
 	return nil
 }
 
+// checkExpandedManifest runs the validator on a ${VAR}-expanded manifest for
+// create, launch and --dry-run, so a dry run fails exactly where the real
+// create would. It skips the unknown-field pass: resolveAgentCreationSource
+// already ran it on the raw manifest.
+func checkExpandedManifest(c *CmdConfig, manifest []byte) error {
+	v := validateAgentManifestSkippingUnknownKeys(manifest)
+	if err := applyManifestFlags(c, v); err != nil {
+		return err
+	}
+	return reportAgentManifestValidation(v)
+}
+
 // agentStrictFlag reports whether --strict was given. Commands that do not
 // register the flag read false.
 func agentStrictFlag(c *CmdConfig) bool {
@@ -1316,7 +1328,9 @@ func splitValidationPath(msg string) (path, rest string, ok bool) {
 	// "spec.env.MODEL: rest" or "agent "not-a-real-adapter" is not…"
 	if i := strings.Index(msg, ": "); i > 0 {
 		candidate := msg[:i]
-		if looksLikeFieldPath(candidate) {
+		// A top-level unknown key has no dot to recognize it by; its message
+		// names the key again.
+		if looksLikeFieldPath(candidate) || strings.HasPrefix(msg[i+2:], fmt.Sprintf("unknown field %q", candidate)) {
 			return candidate, msg[i+2:], true
 		}
 	}
