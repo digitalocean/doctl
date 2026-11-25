@@ -78,7 +78,7 @@ Before opening the page, doctl checks that:
 - Your account's email address is verified. If it is not, run `+"`"+`doctl auth login`+"`"+` to verify it, then run this command again.
 - Your team does not have a payment method yet. Teams that already have one can manage payment methods at `+digitalOceanBillingURL+`.
 
-Payment details are entered in the browser; doctl does not collect them itself.
+Payment details are entered in the browser; doctl does not collect them itself. The control panel uses your browser's own sign-in, which can be a different account or team than the one doctl uses, so doctl prints the account it checked. Make sure the control panel shows the same account and team before you add a payment method.
 
 Use `+"`"+`--no-browser`+"`"+` to print the URL instead of opening it.`, Writer, false)
 	AddBoolFlag(cmdAdd, doctl.ArgOAuthNoBrowser, "", false, "Print the payment method URL instead of opening a browser")
@@ -131,6 +131,8 @@ func RunPaymentMethodAdd(c *CmdConfig) error {
 	}
 	check.Succeed("Payment method not added for %s", team)
 
+	displayPaymentMethodAccountNote(c, account)
+
 	if noBrowser {
 		template.Render(c.Out, `{{nl}}Visit the link below to add a payment method to your DigitalOcean account.{{nl}}{{nl}}  {{underline .}}{{nl}}{{nl}}`, digitalOceanAddPaymentMethodURL)
 		return nil
@@ -141,6 +143,23 @@ func RunPaymentMethodAdd(c *CmdConfig) error {
 		template.Render(c.Out, `{{muted "Could not open a browser automatically; open the URL above manually."}}{{nl}}{{nl}}`, nil)
 	}
 	return nil
+}
+
+type paymentMethodAccountNote struct {
+	Email string
+	Team  string
+}
+
+// displayPaymentMethodAccountNote names the account doctl checked. The control
+// panel uses the browser's own session, which can belong to a different
+// account or team than doctl's token.
+func displayPaymentMethodAccountNote(c *CmdConfig, account *do.Account) {
+	note := paymentMethodAccountNote{Email: account.Email}
+	if account.Team != nil {
+		note.Team = account.Team.Name
+	}
+	template.Render(c.Out, `{{nl}}doctl is signed in as {{highlight .Email}}{{if .Team}} on team {{highlight .Team}}{{end}}.{{nl}}`, note)
+	template.Render(c.Out, `{{warning "Your browser may be signed in to a different account or team."}} {{muted "Check that the control panel shows the same account and team before you add a payment method."}}{{nl}}`, nil)
 }
 
 // paymentMethodTeam names the team a payment method applies to.

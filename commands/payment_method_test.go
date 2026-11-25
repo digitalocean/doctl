@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -237,6 +238,7 @@ func TestPaymentMethodAddSkipsRedirectWhenPaymentMethodOnFile(t *testing.T) {
 		assert.Contains(t, checks.String(), "Payment method already added for this team")
 		assert.Contains(t, out.String(), digitalOceanBillingURL)
 		assert.NotContains(t, out.String(), digitalOceanAddPaymentMethodURL)
+		assert.NotContains(t, out.String(), "Your browser may be signed in")
 	})
 }
 
@@ -247,12 +249,39 @@ func TestPaymentMethodAddNamesTheTeam(t *testing.T) {
 		account := paymentMethodTestAccount(true, true)
 		account.Team = &godo.TeamInfo{Name: "Sharks"}
 		tm.account.EXPECT().Get().Return(account, nil)
-		_, checks := capturePaymentMethodOutput(config)
+		out, checks := capturePaymentMethodOutput(config)
 
 		require.NoError(t, RunPaymentMethodAdd(config))
 
 		assert.Contains(t, checks.String(), "Payment method not added for team - Sharks")
+		assert.Contains(t, out.String(), "doctl is signed in as sammy@digitalocean.com on team Sharks.")
 	})
+}
+
+// The control panel uses the browser's session, not doctl's token, so the
+// customer is told which account doctl checked before the page opens.
+func TestPaymentMethodAddWarnsBrowserAccountMayDiffer(t *testing.T) {
+	for _, noBrowser := range []bool{false, true} {
+		t.Run(fmt.Sprintf("no-browser=%t", noBrowser), func(t *testing.T) {
+			stubOpenPaymentMethodURL(t, func(string) error { return nil })
+
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.account.EXPECT().Get().Return(paymentMethodTestAccount(true, true), nil)
+				config.Doit.Set(config.NS, doctl.ArgOAuthNoBrowser, noBrowser)
+				out, _ := capturePaymentMethodOutput(config)
+
+				require.NoError(t, RunPaymentMethodAdd(config))
+
+				got := out.String()
+				assert.Contains(t, got, "doctl is signed in as sammy@digitalocean.com.")
+				assert.NotContains(t, got, "on team")
+				assert.Contains(t, got, "Your browser may be signed in to a different account or team.")
+				note := strings.Index(got, "doctl is signed in as")
+				url := strings.Index(got, digitalOceanAddPaymentMethodURL)
+				assert.True(t, note >= 0 && note < url, "the account note comes before the URL: %s", got)
+			})
+		})
+	}
 }
 
 func TestPaymentMethodAddReturnsAccountError(t *testing.T) {
