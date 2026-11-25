@@ -792,6 +792,7 @@ const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness sess
 	harnessInferenceModelEnv + " (for example " + defaultOpenHandsModel + " or anthropic-claude-4.5-sonnet). " +
 	"--harness openhands and --harness hermes run on DigitalOcean Inference and default to " +
 	defaultOpenHandsModel + " and " + defaultHermesModel + "; " +
+	"for --harness claude-code and --harness codex, --model selects DigitalOcean Inference too, billed to your DigitalOcean team, and your own vendor key is used only if you pass it with --secret (ANTHROPIC_API_KEY or OPENAI_API_KEY); " +
 	"the other harnesses use their own vendor key and leave it unset unless given. " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
@@ -1165,10 +1166,12 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			permission: permission,
 			template:   template,
 			model:      model,
+			secrets:    secrets,
 		})
 		if err != nil {
 			return nil, err
 		}
+		noteIgnoredVendorKey(harness, model, secrets)
 	} else {
 		raw, err = readManifestBytes(os.Stdin, specPath)
 		if err != nil {
@@ -1202,6 +1205,51 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		}
 	}
 	return src, nil
+}
+
+// noteIgnoredVendorKey says, once, that a vendor key exported in the shell is
+// not used when --model selects DigitalOcean Inference on claude-code or
+// codex. It goes to stderr so -o json stdout stays clean.
+func noteIgnoredVendorKey(harness, model string, secrets map[string]string) {
+	var keyEnv string
+	var vendor string
+	agent, _ := resolveHarnessAgent(harness)
+	switch agent {
+	case claudeCodeAgentName:
+		keyEnv, vendor = anthropicAPIKeyEnv, "Anthropic"
+	case codexAgentName:
+		keyEnv, vendor = openAIAPIKeyEnv, "OpenAI"
+	default:
+		return
+	}
+	if strings.TrimSpace(model) == "" || vendorKeyPassed(secrets) {
+		return
+	}
+	if strings.TrimSpace(os.Getenv(keyEnv)) == "" {
+		return
+	}
+	env := uiEnv()
+	fmt.Fprintf(env.ErrWriter(), "Using DigitalOcean Inference for %s; model usage is billed to your DigitalOcean team. %s in your environment is not used; to use and be billed on your own %s account, pass --%s %s=... (or =@file).\n",
+		model, keyEnv, vendor, doctl.ArgAgentSecret, keyEnv)
+}
+
+// hasKeyPlaceholder reports whether an inference or vendor key's env or secret
+// slot still holds a ${VAR} reference. A real create would fill or prompt for
+// that value instead of asking for a DigitalOcean key.
+func hasKeyPlaceholder(manifest []byte) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return false
+	}
+	_, legacy := doc["apiVersion"]
+	env, _, _, _ := extractManifestEnvAndSecrets(doc, legacy)
+	secrets := manifestSecretValues(manifest)
+	for _, name := range []string{harnessInferenceAPIKeyEnv, openAIAPIKeyEnv, anthropicAPIKeyEnv} {
+		if isEnvPlaceholder(env[name]) || isEnvPlaceholder(secrets[name]) {
+			return true
+		}
+	}
+	return false
 }
 
 func agentSourcesExclusiveErr() error {
@@ -1401,6 +1449,9 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	})
 	if err != nil {
 		return err
+	}
+	if needsManagedModelAccessKey(manifest) && !hasKeyPlaceholder(src.manifest) {
+		fmt.Fprintln(uiEnv().ErrWriter(), "A DigitalOcean Inference key will be requested for this session when it is created; model usage is billed to your DigitalOcean team.")
 	}
 	if len(unbound) > 0 {
 		notice("not set locally, so left as a placeholder: %s. "+
