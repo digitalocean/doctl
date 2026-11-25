@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -342,7 +344,7 @@ func TestRunADSSecretPutFromFlag(t *testing.T) {
 		config.Args = []string{"warehouse-db"}
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testADSRegion)
 		config.Doit.Set(config.NS, doctl.ArgADSWorkspace, testADSWorkspace)
-		config.Doit.Set(config.NS, doctl.ArgADSSecretData, map[string]string{"password": "secret_value"})
+		config.Doit.Set(config.NS, doctl.ArgADSSecretData, []string{"password=secret_value"})
 
 		for _, format := range []string{"text", "json"} {
 			buf := withInsightsOutput(t, config, format)
@@ -381,12 +383,16 @@ func TestRunADSSecretPutRejectsBadInput(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		data    map[string]string
+		data    []string
 		file    string
 		wantErr string
 	}{
 		{name: "no properties", wantErr: "at least one property is required"},
-		{name: "flag and file", data: map[string]string{"a": "b"}, file: nested, wantErr: "cannot be combined"},
+		{name: "flag and file", data: []string{"a=b"}, file: nested, wantErr: "cannot be combined"},
+		{name: "repeated key", data: []string{"password=secret_value", "password=secret_value"}, wantErr: `"password" is given more than once`},
+		{name: "missing equals sign", data: []string{"secret_value"}, wantErr: "must be formatted as key=value"},
+		{name: "empty key", data: []string{"=secret_value"}, wantErr: "names must not be empty"},
+		{name: "whitespace key", data: []string{" =secret_value"}, wantErr: "names must not be empty"},
 		{name: "non-string value", file: nested, wantErr: "values are all strings"},
 		{name: "missing file", file: filepath.Join(dir, "missing.json"), wantErr: "missing.json"},
 	}
@@ -407,6 +413,268 @@ func TestRunADSSecretPutRejectsBadInput(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantErr)
 				assert.NotContains(t, err.Error(), "secret_value")
+			})
+		})
+	}
+}
+
+func TestADSSecretDataFlag(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []string
+		want    map[string]string
+		wantErr string
+	}{
+		{
+			name: "no repeats",
+			data: []string{"user=loader", "password=hunter2"},
+			want: map[string]string{"user": "loader", "password": "hunter2"},
+		},
+		{
+			name:    "repeated key with different values",
+			data:    []string{"password=first_value", "password=second_value"},
+			wantErr: `secret property "password" is given more than once in --data; pass each property once`,
+		},
+		{
+			name:    "repeated key with the same value",
+			data:    []string{"password=same_value", "password=same_value"},
+			wantErr: `secret property "password" is given more than once in --data; pass each property once`,
+		},
+		{
+			name:    "key repeated three times",
+			data:    []string{"password=first_value", "password=second_value", "password=third_value"},
+			wantErr: `secret property "password" is given more than once in --data; pass each property once`,
+		},
+		{
+			name:    "repeat separated by other keys",
+			data:    []string{"password=first_value", "user=loader", "host=db", "password=second_value"},
+			wantErr: `secret property "password" is given more than once in --data; pass each property once`,
+		},
+		{
+			name:    "repeated key with an empty value",
+			data:    []string{"password=", "password="},
+			wantErr: `secret property "password" is given more than once in --data; pass each property once`,
+		},
+		{
+			name: "same value under different keys",
+			data: []string{"primary=shared_value", "replica=shared_value"},
+			want: map[string]string{"primary": "shared_value", "replica": "shared_value"},
+		},
+		{
+			name: "keys that differ only in case",
+			data: []string{"password=lower_value", "Password=upper_value"},
+			want: map[string]string{"password": "lower_value", "Password": "upper_value"},
+		},
+		{
+			name:    "repeat alongside a key that differs only in case",
+			data:    []string{"password=first_value", "Password=upper_value", "password=second_value"},
+			wantErr: `secret property "password" is given more than once in --data; pass each property once`,
+		},
+		{
+			name: "keys that differ only in case after trimming",
+			data: []string{" Password=upper_value", "password=lower_value"},
+			want: map[string]string{"Password": "upper_value", "password": "lower_value"},
+		},
+		{
+			name: "keys trimmed, values kept as given",
+			data: []string{" user =loader", "\tpassword= padded value "},
+			want: map[string]string{"user": "loader", "password": " padded value "},
+		},
+		{
+			name:    "repeated after trimming",
+			data:    []string{"password=first_value", " password =second_value"},
+			wantErr: `secret property "password" is given more than once in --data; pass each property once`,
+		},
+		{
+			name: "brackets, quotes, commas and equals signs kept",
+			data: []string{"[key=v", "csv=a,b", `quote=a"b`, "pad=a=b==", "password=abc]"},
+			want: map[string]string{"[key": "v", "csv": "a,b", "quote": `a"b`, "pad": "a=b==", "password": "abc]"},
+		},
+		{
+			name:    "missing equals sign",
+			data:    []string{"user=loader", "hunter2_value"},
+			wantErr: "--data must be formatted as key=value",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+				config.Doit.Set(config.NS, doctl.ArgADSSecretData, tt.data)
+
+				got, err := adsSecretDataFlag(config)
+				if tt.wantErr == "" {
+					require.NoError(t, err)
+					assert.Equal(t, tt.want, got)
+					return
+				}
+				require.Error(t, err)
+				assert.Equal(t, tt.wantErr, err.Error())
+				assert.NotContains(t, err.Error(), "_value", "the error echoed a secret value")
+			})
+		})
+	}
+}
+
+func TestADSSecretDataFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    map[string]string
+		wantErr string
+	}{
+		{
+			name:    "json without repeats",
+			content: `{"user":"loader","password":"hunter2"}`,
+			want:    map[string]string{"user": "loader", "password": "hunter2"},
+		},
+		{
+			name:    "yaml without repeats",
+			content: "user: loader\npassword: hunter2\n",
+			want:    map[string]string{"user": "loader", "password": "hunter2"},
+		},
+		{
+			name:    "json repeated key",
+			content: `{"password":"first_value","password":"second_value"}`,
+			wantErr: `secret property "password" is given more than once in --data-file; pass each property once`,
+		},
+		{
+			name:    "yaml repeated key",
+			content: "password: first_value\npassword: second_value\n",
+			wantErr: `secret property "password" is given more than once in --data-file; pass each property once`,
+		},
+		{
+			name:    "repeated key with the same value",
+			content: `{"password":"same_value","password":"same_value"}`,
+			wantErr: `secret property "password" is given more than once in --data-file; pass each property once`,
+		},
+		{
+			name:    "key repeated three times",
+			content: `{"password":"first_value","user":"loader","password":"second_value","password":"third_value"}`,
+			wantErr: `secret property "password" is given more than once in --data-file; pass each property once`,
+		},
+		{
+			name:    "repeated after trimming",
+			content: `{"password":"first_value"," password ":"second_value"}`,
+			wantErr: `secret property "password" is given more than once in --data-file; pass each property once`,
+		},
+		{
+			name:    "keys trimmed, values kept as given",
+			content: `{" user ":"loader","password":" padded value "}`,
+			want:    map[string]string{"user": "loader", "password": " padded value "},
+		},
+		{
+			name:    "keys that differ only in case",
+			content: `{"password":"lower_value","Password":"upper_value"}`,
+			want:    map[string]string{"password": "lower_value", "Password": "upper_value"},
+		},
+		{
+			name:    "empty file",
+			content: "",
+		},
+		{
+			name:    "not an object",
+			content: `["password","secret_value"]`,
+			wantErr: "must be a JSON or YAML object",
+		},
+		{
+			name:    "non-string value",
+			content: "password:\n  inner: secret_value\n",
+			wantErr: "values are all strings",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "secret")
+			require.NoError(t, os.WriteFile(path, []byte(tt.content), 0o600))
+
+			got, err := adsSecretDataFile(path)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.NotContains(t, err.Error(), "_value", "the error echoed a secret value")
+		})
+	}
+}
+
+func TestRunADSSecretPutKeepsKeysThatDifferOnlyInCase(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "case.json")
+	require.NoError(t, os.WriteFile(path, []byte(`{"password":"a","Password":"b"}`), 0o600))
+
+	tests := []struct {
+		name string
+		data []string
+		file string
+	}{
+		{name: "from --data", data: []string{"password=a", "Password=b"}},
+		{name: "from --data-file", file: path},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.ads.EXPECT().PutWorkspaceSecret(&godo.ADSPutWorkspaceSecretRequest{
+					Region:    testADSRegion,
+					UUID:      testADSWorkspace,
+					SecretKey: "warehouse-db",
+					Data:      map[string]string{"password": "a", "Password": "b"},
+				}).Return(&godo.ADSPutWorkspaceSecretResponse{}, nil)
+				config.Args = []string{"warehouse-db"}
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, testADSRegion)
+				config.Doit.Set(config.NS, doctl.ArgADSWorkspace, testADSWorkspace)
+				if tt.data != nil {
+					config.Doit.Set(config.NS, doctl.ArgADSSecretData, tt.data)
+				}
+				if tt.file != "" {
+					config.Doit.Set(config.NS, doctl.ArgADSSecretDataFile, tt.file)
+				}
+
+				require.NoError(t, RunADSSecretPut(config))
+			})
+		})
+	}
+}
+
+func TestRunADSSecretPutWarnsOnEmptyValue(t *testing.T) {
+	dir := t.TempDir()
+	emptyFile := filepath.Join(dir, "empty.json")
+	require.NoError(t, os.WriteFile(emptyFile, []byte(`{"user":"loader","password":""}`), 0o600))
+
+	tests := []struct {
+		name string
+		data []string
+		file string
+	}{
+		{name: "from --data", data: []string{"user=loader", "password="}},
+		{name: "from --data-file", file: emptyFile},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				var stderr bytes.Buffer
+				withUIEnv(t, ui.Plain(&bytes.Buffer{}, &stderr))
+
+				tm.ads.EXPECT().PutWorkspaceSecret(&godo.ADSPutWorkspaceSecretRequest{
+					Region:    testADSRegion,
+					UUID:      testADSWorkspace,
+					SecretKey: "warehouse-db",
+					Data:      map[string]string{"user": "loader", "password": ""},
+				}).Return(&godo.ADSPutWorkspaceSecretResponse{}, nil)
+				config.Args = []string{"warehouse-db"}
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, testADSRegion)
+				config.Doit.Set(config.NS, doctl.ArgADSWorkspace, testADSWorkspace)
+				if tt.data != nil {
+					config.Doit.Set(config.NS, doctl.ArgADSSecretData, tt.data)
+				}
+				if tt.file != "" {
+					config.Doit.Set(config.NS, doctl.ArgADSSecretDataFile, tt.file)
+				}
+
+				require.NoError(t, RunADSSecretPut(config))
+				assert.Contains(t, stderr.String(), `Warning: secret property "password" has an empty value`)
+				assert.NotContains(t, stderr.String(), `"user"`, "only empty values should be reported")
 			})
 		})
 	}

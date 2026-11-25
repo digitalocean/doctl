@@ -26,6 +26,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
+	yamlv3 "gopkg.in/yaml.v3"
 	"sigs.k8s.io/yaml"
 )
 
@@ -418,14 +419,15 @@ A secret is a set of string properties. doctl never prints property values: ` + 
 	}
 
 	put := CmdBuilder(cmd, RunADSSecretPut, "put <secret-key>", "Create or replace a workspace secret",
-		"Writes a workspace secret, replacing any existing version with the same key.\n\nPass properties with `--data key=value`, repeated or comma-separated, or read them from a flat JSON or YAML object with `--data-file`. Use `--data-file -` to read from stdin, which keeps values out of your shell history. The values are not printed back.", Writer, adsNS(cmd),
+		"Writes a workspace secret, replacing any existing version with the same key. Properties you don't pass are removed, so to change one property, pass the full set.\n\nPass each property with its own `--data key=value` flag. Everything after the first `=` is the value, stored exactly as received. Property names are case-sensitive, so `password` and `Password` are separate properties. Each property can be given only once. Wrap each value in single quotes, as in `--data 'password=...'`, so your shell doesn't expand characters like `$`, `!`, or backticks. Use `--data-file` for values that contain a single quote or span multiple lines, or `--data-file -` to keep values out of your shell history. The values are not printed back.", Writer, adsNS(cmd),
 		displayerType(&displayers.ADSSecretWrite{}))
 	put.Args = cobra.ExactArgs(1)
 	addADSRegionFlag(put)
 	addADSWorkspaceFlag(put)
-	AddStringMapStringFlag(put, doctl.ArgADSSecretData, "", map[string]string{}, "Secret property as `key=value`. Repeat the flag for more properties")
-	AddStringFlag(put, doctl.ArgADSSecretDataFile, "", "", "Path to a JSON or YAML object of string properties. Set to - to read from stdin")
-	put.Example = "The following example stores database credentials read from stdin: doctl ads secret put warehouse-db --region nyc3 --workspace f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --data-file - < creds.json"
+	AddStringArrayFlag(put, doctl.ArgADSSecretData, "", []string{}, "Secret property as `key=value`, one per flag. Repeat the flag for more properties. Each property can be given once; names are case-sensitive. Wrap the value in single quotes")
+	AddStringFlag(put, doctl.ArgADSSecretDataFile, "", "", "Path to a JSON or YAML object of string properties. Each property can appear once. Set to - to read from stdin")
+	put.Example = "The following example stores two properties, one per `--data` flag. Single quotes keep the shell from changing the value: doctl ads secret put warehouse-db --region nyc3 --workspace f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --data user=loader --data 'password=pa$$,w0rd'\n\n" +
+		"The following example stores database credentials read from stdin: doctl ads secret put warehouse-db --region nyc3 --workspace f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --data-file - < creds.json"
 
 	get := CmdBuilder(cmd, RunADSSecretGet, "get <secret-key>", "Get a workspace secret's metadata",
 		"Retrieves a workspace secret's metadata and property names. Property values are never returned.", Writer, adsNS(cmd),
@@ -471,9 +473,88 @@ func readADSFile(path string) ([]byte, error) {
 	return data, nil
 }
 
+// adsSecretProperty is one secret property in the order it was given.
+type adsSecretProperty struct {
+	key, value string
+}
+
+// adsSecretPropertyMap trims each key and rejects a key given more than once.
+// Errors name keys only, never values.
+func adsSecretPropertyMap(props []adsSecretProperty, flag string) (map[string]string, error) {
+	data := make(map[string]string, len(props))
+	for _, p := range props {
+		key := strings.TrimSpace(p.key)
+		if _, seen := data[key]; seen {
+			return nil, fmt.Errorf("secret property %q is given more than once in --%s; pass each property once", key, flag)
+		}
+		data[key] = p.value
+	}
+	return data, nil
+}
+
+// adsSecretDataFlag parses each --data value as one key=value property,
+// splitting at the first "=".
+func adsSecretDataFlag(c *CmdConfig) (map[string]string, error) {
+	items, err := getInsightsStringArray(c, doctl.ArgADSSecretData)
+	if err != nil {
+		return nil, err
+	}
+	props := make([]adsSecretProperty, 0, len(items))
+	for _, item := range items {
+		key, value, ok := strings.Cut(item, "=")
+		if !ok {
+			return nil, fmt.Errorf("--%s must be formatted as key=value", doctl.ArgADSSecretData)
+		}
+		props = append(props, adsSecretProperty{key, value})
+	}
+	return adsSecretPropertyMap(props, doctl.ArgADSSecretData)
+}
+
+// adsSecretDataFile reads properties from a flat JSON or YAML object.
+// Decoding into a map keeps only the last of a repeated key, so the keys are
+// also read in order from the parsed document to catch repeats.
+func adsSecretDataFile(path string) (map[string]string, error) {
+	raw, err := readADSFile(path)
+	if err != nil {
+		return nil, err
+	}
+	// Parse errors can quote the input, which here is secret, so they
+	// are replaced rather than wrapped.
+	jsonData, err := yaml.YAMLToJSON(raw)
+	if err != nil {
+		return nil, errADSSecretDataFile
+	}
+	values := map[string]string{}
+	if err := json.Unmarshal(jsonData, &values); err != nil {
+		return nil, errADSSecretDataFile
+	}
+
+	var doc yamlv3.Node
+	if err := yamlv3.Unmarshal(raw, &doc); err != nil {
+		return nil, errADSSecretDataFile
+	}
+	if len(doc.Content) == 0 {
+		return values, nil
+	}
+	obj := doc.Content[0]
+	if obj.Kind != yamlv3.MappingNode {
+		return nil, errADSSecretDataFile
+	}
+	props := make([]adsSecretProperty, 0, len(obj.Content)/2)
+	for i := 0; i+1 < len(obj.Content); i += 2 {
+		key := obj.Content[i].Value
+		value, ok := values[key]
+		if !ok {
+			return nil, errADSSecretDataFile
+		}
+		props = append(props, adsSecretProperty{key, value})
+	}
+	return adsSecretPropertyMap(props, doctl.ArgADSSecretDataFile)
+}
+
 // adsSecretData reads the secret properties from --data or --data-file.
 func adsSecretData(c *CmdConfig) (map[string]string, error) {
-	data, err := c.Doit.GetStringMapString(c.NS, doctl.ArgADSSecretData)
+	data, err := adsSecretDataFlag(c)
 	if err != nil {
 		return nil, err
 	}
@@ -486,28 +567,20 @@ func adsSecretData(c *CmdConfig) (map[string]string, error) {
 		if len(data) > 0 {
 			return nil, fmt.Errorf("--%s cannot be combined with --%s", doctl.ArgADSSecretDataFile, doctl.ArgADSSecretData)
 		}
-		raw, err := readADSFile(path)
-		if err != nil {
+		if data, err = adsSecretDataFile(path); err != nil {
 			return nil, err
-		}
-		// Parse errors can quote the input, which here is secret, so they
-		// are replaced rather than wrapped.
-		jsonData, err := yaml.YAMLToJSON(raw)
-		if err != nil {
-			return nil, errADSSecretDataFile
-		}
-		data = map[string]string{}
-		if err := json.Unmarshal(jsonData, &data); err != nil {
-			return nil, errADSSecretDataFile
 		}
 	}
 
 	if len(data) == 0 {
 		return nil, fmt.Errorf("at least one property is required: set --%s or --%s", doctl.ArgADSSecretData, doctl.ArgADSSecretDataFile)
 	}
-	for key := range data {
+	for key, value := range data {
 		if strings.TrimSpace(key) == "" {
 			return nil, errors.New("secret property names must not be empty")
+		}
+		if value == "" {
+			warn("secret property %q has an empty value", key)
 		}
 	}
 	return data, nil
