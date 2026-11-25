@@ -96,7 +96,9 @@ func Auth() *Command {
 			Short: "Display commands for authenticating doctl with an account",
 			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account, either by signing in through your browser with OAuth or with tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
-The quickest way to get started is ` + "`" + `doctl auth login` + "`" + `, which uses the OAuth 2.1 authorization code flow with PKCE. It opens your browser so you can approve access, then saves the access token to the ` + "`" + `default` + "`" + ` authentication context. Tokens issued this way are short-lived; doctl stores a refresh token and renews the access token automatically, so you do not have to return to the control panel when it expires. Use ` + "`" + `--scopes` + "`" + ` to request permissions up front, such as ` + "`" + `--scopes "read write"` + "`" + `, or omit it to choose them on the authorization screen.
+If you do not have a DigitalOcean account yet, start with ` + "`" + `doctl signup` + "`" + `, which opens the signup page in your browser. When the account is ready, run ` + "`" + `doctl auth login` + "`" + ` to authorize doctl.
+
+The quickest way to get started with an existing account is ` + "`" + `doctl auth login` + "`" + `, which uses the OAuth 2.1 authorization code flow with PKCE. It opens your browser so you can approve access, then saves the access token to the ` + "`" + `default` + "`" + ` authentication context. Tokens issued this way are short-lived; doctl stores a refresh token and renews the access token automatically, so you do not have to return to the control panel when it expires. Use ` + "`" + `--scopes` + "`" + ` to request permissions up front, such as ` + "`" + `--scopes "read write"` + "`" + `, or omit it to choose them on the authorization screen.
 
 If you prefer a personal access token instead, call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
 
@@ -125,6 +127,8 @@ You can use doctl without initializing it by adding the `+"`"+`--access-token`+"
 The following example saves an AMD DevCloud token under the context ` + "`" + `amd` + "`" + `: doctl auth init --context amd --token-validation-server https://devcloud.amd.com`
 
 	cmdAuthLogin := cmdBuilderWithInit(cmd, RunAuthLogin, "login", "Sign in to DigitalOcean via OAuth 2.1 in your browser", `This command signs doctl in to your DigitalOcean account in the browser. You approve access there instead of creating and pasting an API token.
+
+If you do not have an account yet, see the help for `+"`"+`doctl signup`+"`"+`.
 
 doctl signs in as the doctl application DigitalOcean publishes, so there is nothing to register first. It opens your browser, and after you approve the request it saves the access token and uses that authentication context for later commands.
 
