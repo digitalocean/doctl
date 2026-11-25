@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.246.0] - 2026-11-25
+
+- #1244 - @rishabhsingh-do - hosted agents: document and test live permissions updates in UpdateSessionConfig (MARSOHS-2938)
+- #1247 - @ldalbert - account: add is_trial to Account
+- #1243 - @RohithSangati - Append the detected AI agent to the User-Agent header
+- #1241 - @gane5hvarma - hosted agents: document URL-bound secret, egress and model session updates
+
 ## [1.245.0] - 2026-11-23
 
 - #1240 - @kishlay-singh-DO - microvms: add PortForwardURL
