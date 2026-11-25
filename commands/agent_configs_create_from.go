@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -49,17 +50,52 @@ const (
 // decide keep or new for each secret. Nothing is created until the final
 // confirm, and Esc/Ctrl-C at any prompt creates nothing.
 func runAgentsConfigCreateFrom(c *CmdConfig, from, name string) error {
-	err := createAgentConfigFrom(c, from, name)
+	err := createAgentConfigFrom(c, charmCreateFromPrompts, from, name)
 	if isPromptCanceled(err) {
-		fmt.Fprintln(c.Out, colorize("Canceled. Nothing was created.", colMuted))
+		fmt.Fprintln(createFromScreen(c), colorize("Canceled. Nothing was created.", colMuted))
 		return nil
 	}
 	return err
 }
 
-func createAgentConfigFrom(c *CmdConfig, from, name string) error {
+// createFromScreen is where the create-from cards go: stdout, unless stdout
+// carries structured output that the cards would corrupt.
+func createFromScreen(c *CmdConfig) io.Writer {
+	if agentStructuredOutput(c) {
+		return os.Stderr
+	}
+	return c.Out
+}
+
+// createFromPrompts is every question create-from asks, so tests can answer
+// them without a terminal.
+type createFromPrompts struct {
+	name    func(initial string, validate func(string) error) (string, error)
+	confirm func(text string, def confirm.Choice) (confirm.Choice, error)
+	choose  func(label string, options []string) (string, error)
+	secret  func(label string) (string, error)
+}
+
+var charmCreateFromPrompts = createFromPrompts{
+	name: func(initial string, validate func(string) error) (string, error) {
+		return input.New("Name for the new config:", input.WithInitialValue(initial),
+			input.WithRequired(), input.WithValidator(validate)).Prompt()
+	},
+	confirm: func(text string, def confirm.Choice) (confirm.Choice, error) {
+		return confirm.New(text, confirm.WithDefaultChoice(def)).Prompt()
+	},
+	choose: func(label string, options []string) (string, error) {
+		return selection.New(options, selection.WithFiltering(false), selection.WithPrompt(label)).Select()
+	},
+	secret: func(label string) (string, error) {
+		return input.New(label, input.WithHidden(), input.WithRequired()).Prompt()
+	},
+}
+
+func createAgentConfigFrom(c *CmdConfig, ask createFromPrompts, from, name string) error {
 	svc := c.HostedAgents()
 	stylingEnabled = detectStyling()
+	screen := createFromScreen(c)
 	if from == "" {
 		picked, err := pickAgentConfig(c)
 		if err != nil {
@@ -78,31 +114,26 @@ func createAgentConfigFrom(c *CmdConfig, from, name string) error {
 	if err := dec.Decode(&doc); err != nil {
 		return fmt.Errorf("reading the manifest of %s: %w", src.Name, err)
 	}
-	printCreateFromSource(c, src, doc)
+	printCreateFromSource(screen, src, doc)
 	sourceDoc, _ := manifestYAML(doc) // snapshot to diff against after edits
 
 	if name == "" {
 		name = src.Name + "-2"
 	}
-	name, err = input.New("Name for the new config:",
-		input.WithInitialValue(name),
-		input.WithRequired(),
-		input.WithValidator(func(s string) error {
-			switch {
-			case s == src.Name:
-				return fmt.Errorf("must differ from %s while it exists", src.Name)
-			case !agentConfigNameRE.MatchString(s):
-				return fmt.Errorf("letters, digits, '-', '.', '_'; start and end alphanumeric")
-			}
-			return nil
-		}),
-	).Prompt()
+	name, err = ask.name(name, func(s string) error {
+		switch {
+		case s == src.Name:
+			return fmt.Errorf("must differ from %s while it exists", src.Name)
+		case !agentConfigNameRE.MatchString(s):
+			return fmt.Errorf("letters, digits, '-', '.', '_'; start and end alphanumeric")
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	edit, err := confirm.New("Edit the manifest in "+editorName()+" first?",
-		confirm.WithDefaultChoice(confirm.No)).Prompt()
+	edit, err := ask.confirm("Edit the manifest in "+editorName()+" first?", confirm.No)
 	if err != nil {
 		return err
 	}
@@ -112,7 +143,7 @@ func createAgentConfigFrom(c *CmdConfig, from, name string) error {
 		}
 	}
 
-	// Keep starts off on every slot: nothing is copied unless chosen.
+	// New is the default on every slot: nothing is copied unless Keep is chosen.
 	sourceSlots := map[string]godo.HostedAgentConfigCredentialSlot{}
 	for _, s := range src.Credentials {
 		sourceSlots[s.Name] = s
@@ -128,9 +159,7 @@ func createAgentConfigFrom(c *CmdConfig, from, name string) error {
 		}
 		prev, onSource := sourceSlots[slot.Name]
 		if onSource && isTenantSecretSource(prev.Source) && prev.Provider == slot.Provider {
-			choice, err := selection.New([]string{secretChoiceNew, secretChoiceKeep},
-				selection.WithFiltering(false),
-				selection.WithPrompt(label+":")).Select()
+			choice, err := ask.choose(label+":", []string{secretChoiceNew, secretChoiceKeep})
 			if err != nil {
 				return err
 			}
@@ -139,7 +168,7 @@ func createAgentConfigFrom(c *CmdConfig, from, name string) error {
 				continue
 			}
 		}
-		value, err := input.New("New value for "+label+":", input.WithHidden(), input.WithRequired()).Prompt()
+		value, err := ask.secret("New value for " + label + ":")
 		if err != nil {
 			return err
 		}
@@ -147,9 +176,8 @@ func createAgentConfigFrom(c *CmdConfig, from, name string) error {
 		typed = append(typed, slot.Name)
 	}
 
-	printCreateFromPlan(c, src, name, changedManifestKeys(sourceDoc, doc), reuse, typed)
-	ok, err := confirm.New(fmt.Sprintf("Create %s from %s?", name, src.Name),
-		confirm.WithDefaultChoice(confirm.Yes)).Prompt()
+	printCreateFromPlan(screen, src, name, changedManifestKeys(sourceDoc, doc), reuse, typed)
+	ok, err := ask.confirm(fmt.Sprintf("Create %s from %s?", name, src.Name), confirm.Yes)
 	if err != nil {
 		return err
 	}
@@ -222,7 +250,7 @@ func pickAgentConfig(c *CmdConfig) (string, error) {
 
 // printCreateFromSource is the first screen: the loaded config as GET returned
 // it. Secret values are never available, so each slot shows name and provider.
-func printCreateFromSource(c *CmdConfig, src *godo.HostedAgentConfig, doc map[string]any) {
+func printCreateFromSource(w io.Writer, src *godo.HostedAgentConfig, doc map[string]any) {
 	var body strings.Builder
 	fmt.Fprintf(&body, "%s\n\n", boldColor("Creating from", colHighlight))
 	body.WriteString(cardRow("Name", src.Name))
@@ -242,18 +270,18 @@ func printCreateFromSource(c *CmdConfig, src *godo.HostedAgentConfig, doc map[st
 		}
 		body.WriteString(cardRow(label, slot.Name+"  "+colorize(kind+" · value hidden", colMuted)))
 	}
-	renderAgentCard(c.Out, body.String())
+	renderAgentCard(w, body.String())
 	if manifest, err := manifestYAML(doc); err == nil {
-		fmt.Fprintln(c.Out, colorize("Manifest", colMuted))
+		fmt.Fprintln(w, colorize("Manifest", colMuted))
 		for _, line := range strings.Split(strings.TrimRight(manifest, "\n"), "\n") {
-			fmt.Fprintln(c.Out, colorize("  "+line, colMuted))
+			fmt.Fprintln(w, colorize("  "+line, colMuted))
 		}
-		fmt.Fprintln(c.Out)
+		fmt.Fprintln(w)
 	}
 }
 
 // printCreateFromPlan summarizes the request before the confirm.
-func printCreateFromPlan(c *CmdConfig, src *godo.HostedAgentConfig, name string, changed, reuse, typed []string) {
+func printCreateFromPlan(w io.Writer, src *godo.HostedAgentConfig, name string, changed, reuse, typed []string) {
 	none := colorize("none", colMuted)
 	joined := func(names []string) string {
 		if len(names) == 0 {
@@ -271,7 +299,7 @@ func printCreateFromPlan(c *CmdConfig, src *godo.HostedAgentConfig, name string,
 	body.WriteString(cardRow("Insights", colorize(insightsSummary(src.Insights)+" (copied)", colMuted)))
 	fmt.Fprintln(&body)
 	body.WriteString(colorize("A new config is created. "+src.Name+" and its sessions are unchanged.", colMuted))
-	renderAgentCard(c.Out, body.String())
+	renderAgentCard(w, body.String())
 }
 
 // changedManifestKeys names the manifest keys the edit changed, ignoring
