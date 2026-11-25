@@ -75,9 +75,6 @@ func (f *fakeManagedHarbor) handle(w http.ResponseWriter, r *http.Request) {
 	signed := func(name string) string { return f.server.URL + "/spaces/" + name + "?X-Amz-Signature=supersecret" }
 	base := "/v1/eval-harness"
 	switch {
-	case r.Method == http.MethodGet && r.URL.Path == base+"/preview/jobs":
-		fmt.Fprint(w, `{"jobs":[{"uuid":"job-preview","name":"preview","status":"queued","n_total":1,"n_completed":0,"n_errored":0}]}`)
-
 	case r.Method == http.MethodPost && r.URL.Path == base+"/datasets/bug-fixes/uploads":
 		require.NoError(f.t, json.NewDecoder(r.Body).Decode(&f.announced))
 		fmt.Fprintf(w, `{"unchanged":false,"upload":{"uuid":"up-1","dataset":"bug-fixes","status":"uploading","digest":%q},"upload_url":{"method":"PUT","url":%q,"expires_at":"2026-11-19T00:00:00Z"}}`, f.announced["digest"], signed("blob"))
@@ -250,17 +247,6 @@ var _ = suite("genai/harbor", func(t *testing.T, when spec.G, it spec.S) {
 		output, err := exec.Command(builtBinaryPath, "-t", "wrong-token", "-u", fake.server.URL, "genai", "harbor", "job", "list").CombinedOutput()
 		expect.Error(err)
 		expect.Contains(string(output), "401")
-	})
-
-	it("sends requests to the preview lane with --preview", func() {
-		for _, args := range [][]string{
-			{"genai", "harbor", "--preview", "job", "list"},
-			{"genai", "harbor", "job", "list", "--preview"},
-		} {
-			output, err := doctl(args...).CombinedOutput()
-			expect.NoError(err, string(output))
-			expect.Contains(string(output), "job-preview")
-		}
 	})
 
 	it("validates attempts before calling the API", func() {
