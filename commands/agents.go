@@ -652,7 +652,7 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("ask"),
 			displayerType(&displayers.HostedAgentPrompt{}))...)
 	AddStringFlag(cmdPrompt, doctl.ArgAgentOnHITL, "", "", "Resolve every approval request this way (approve|reject|defer). Without it, an approval request stops the command, since nothing here can ask a human.")
-	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds to wait for the run to finish, exiting 124 if it does not (0 waits indefinitely). A timeout does not stop the agent; Ctrl-C does.")
+	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds for waking the session, sending the prompt and waiting for the run to finish, exiting 124 if it does not (0 waits indefinitely). A timeout does not stop the agent; Ctrl-C does.")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptIncludeReasoning, "", false, "Also print the model's reasoning to stderr, not just its answer")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptQuiet, "q", false, "Suppress progress on stderr; stdout still carries the answer")
 	cmdPrompt.Example = agentCLI + ` prompt my-session What is the capital of France?; ` + agentCLI + ` prompt sess_abc123 "Summarize the README" --timeout 300; ` + agentCLI + ` prompt my-session "Fix the failing test" --on-hitl approve; cat task.md | ` + agentCLI + ` prompt my-session -`
@@ -2269,10 +2269,20 @@ func RunAgentsResume(c *CmdConfig) error {
 		return err
 	}
 	warnBoundReuseSession(c, sessionID)
-	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
+	svc := c.HostedAgents()
+	sess, err := svc.GetSession(sessionID)
+	if err != nil {
 		return err
 	}
+	if sess.Status != godo.HostedAgentSessionStatusPaused {
+		return fmt.Errorf("session %s is %s, not paused; there is nothing to resume", sessionID, humanSessionStatus(sess.Status))
+	}
 	stylingEnabled = detectStyling()
+	prog := newStageProgress(wakeStderr)
+	defer prog.stop()
+	if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
+		return err
+	}
 	printAgentSuccess(c.Out, fmt.Sprintf("Session %s resumed", sessionID))
 	return nil
 }

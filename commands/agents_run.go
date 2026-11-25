@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -109,6 +110,10 @@ const (
 	anthropicAPIKeyEnv   = "ANTHROPIC_API_KEY"
 	minimaxAPIKeyEnv     = "MINIMAX_API_KEY"
 )
+
+// sessionReadyReadRetries is how many failed session reads in a row a wait
+// for READY rides out before giving up.
+const sessionReadyReadRetries = 2
 
 var (
 	sessionReadyPollInterval = time.Second
@@ -341,8 +346,10 @@ func launchExistingSession(c *CmdConfig, ref string) error {
 	// reports that rather than this trying to resume it.
 	if sess.Status == godo.HostedAgentSessionStatusPaused {
 		fmt.Fprintf(c.Out, "%s\n", colorize(fmt.Sprintf("Session %s is paused — resuming…", displaySessionRef(sess)), colMuted))
-		if err := svc.ResumeSession(sessionID); err != nil {
-			return beautifyAgentError(err)
+		prog := newStageProgress(c.Out)
+		defer prog.stop()
+		if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
+			return beautifyAgentErrorFor(c, err)
 		}
 		// Re-read: the session we hold says "paused", which would banner and
 		// stream as though the resume had not happened.
@@ -902,6 +909,18 @@ type creationProgress struct {
 	out   io.Writer
 	start time.Time
 	spin  *lineSpinner
+	// seeThrough looks past the reporting wrapper on c.Out when deciding
+	// whether out is a terminal. Only the wake stages opt in; the other
+	// commands keep their line-per-call output.
+	seeThrough bool
+}
+
+// newStageProgress is newCreationProgress for the wake, poll and send stages,
+// which animate in place on a terminal even when out is a command's c.Out.
+func newStageProgress(out io.Writer) *creationProgress {
+	p := newCreationProgress(out)
+	p.seeThrough = true
+	return p
 }
 
 func newCreationProgress(out io.Writer) *creationProgress {
@@ -950,7 +969,11 @@ func (p *creationProgress) wait(msg string) {
 		p.spin.setLabel(msg)
 		return
 	}
-	if isTerminalWriter(p.out) {
+	termOut := p.out
+	if p.seeThrough {
+		termOut = underlyingWriter(termOut)
+	}
+	if isTerminalWriter(termOut) {
 		p.spin = newLineSpinner(p.out, msg, p.start)
 		return
 	}
@@ -974,6 +997,18 @@ func (p *creationProgress) elapsed() time.Duration {
 		return 0
 	}
 	return d.Truncate(time.Second)
+}
+
+// underlyingWriter unwraps the reporting wrapper every command's c.Out is
+// given, which would otherwise hide the terminal behind it.
+func underlyingWriter(w io.Writer) io.Writer {
+	for {
+		rw, ok := w.(*reportingWriter)
+		if !ok {
+			return w
+		}
+		w = rw.out
+	}
 }
 
 // isTerminalWriter reports whether w is a real terminal doctl can safely
@@ -1105,6 +1140,20 @@ func startupWordsFor(sess *do.HostedAgentSession) startupWords {
 	return agentStartupWords
 }
 
+// sessionEndedError is a wait for READY that met a terminal status instead.
+type sessionEndedError struct{ status godo.HostedAgentSessionStatus }
+
+func (e *sessionEndedError) Error() string {
+	return fmt.Sprintf("session entered %s before becoming ready", humanSessionStatus(e.status))
+}
+
+// transientReadErr reports a failure a later read can fix: a transport error
+// or a 5xx. A 4xx (auth, not found) answers the same way every time.
+func transientReadErr(err error) bool {
+	_, status, ok := agentAPIError(err)
+	return !ok || status >= http.StatusInternalServerError
+}
+
 func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	ticker := time.NewTicker(sessionReadyPollInterval)
 	defer ticker.Stop()
@@ -1121,12 +1170,32 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 		out = prog.out
 		nextHint = creationClock().Add(creationHintInterval)
 	}
+	tick := func() error {
+		select {
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("timed out waiting for session %s to become ready (last status: %s)", sessionID, humanSessionStatus(lastStatus))
+			}
+			return ctx.Err()
+		case <-ticker.C:
+			return nil
+		}
+	}
 
+	failedReads := 0
 	for {
 		sess, err := svc.GetSession(sessionID)
 		if err != nil {
-			return nil, err
+			if failedReads >= sessionReadyReadRetries || !transientReadErr(err) {
+				return nil, err
+			}
+			failedReads++
+			if err := tick(); err != nil {
+				return nil, err
+			}
+			continue
 		}
+		failedReads = 0
 		words := startupWordsFor(sess)
 
 		if prog != nil && !sawBitsReady {
@@ -1185,16 +1254,11 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 		case godo.HostedAgentSessionStatusFailed,
 			godo.HostedAgentSessionStatusDestroyed,
 			godo.HostedAgentSessionStatusDestroying:
-			return nil, fmt.Errorf("session entered %s before becoming ready", humanSessionStatus(sess.Status))
+			return nil, &sessionEndedError{status: sess.Status}
 		}
 
-		select {
-		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				return nil, fmt.Errorf("timed out waiting for session %s to become ready (last status: %s)", sessionID, humanSessionStatus(lastStatus))
-			}
-			return nil, ctx.Err()
-		case <-ticker.C:
+		if err := tick(); err != nil {
+			return nil, err
 		}
 	}
 }
