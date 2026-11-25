@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -109,6 +110,10 @@ const (
 	anthropicAPIKeyEnv   = "ANTHROPIC_API_KEY"
 	minimaxAPIKeyEnv     = "MINIMAX_API_KEY"
 )
+
+// sessionReadyReadRetries is how many failed session reads in a row a wait
+// for READY rides out before giving up.
+const sessionReadyReadRetries = 2
 
 var (
 	sessionReadyPollInterval = time.Second
@@ -1135,6 +1140,20 @@ func startupWordsFor(sess *do.HostedAgentSession) startupWords {
 	return agentStartupWords
 }
 
+// sessionEndedError is a wait for READY that met a terminal status instead.
+type sessionEndedError struct{ status godo.HostedAgentSessionStatus }
+
+func (e *sessionEndedError) Error() string {
+	return fmt.Sprintf("session entered %s before becoming ready", humanSessionStatus(e.status))
+}
+
+// transientReadErr reports a failure a later read can fix: a transport error
+// or a 5xx. A 4xx (auth, not found) answers the same way every time.
+func transientReadErr(err error) bool {
+	_, status, ok := agentAPIError(err)
+	return !ok || status >= http.StatusInternalServerError
+}
+
 func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	ticker := time.NewTicker(sessionReadyPollInterval)
 	defer ticker.Stop()
@@ -1151,12 +1170,32 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 		out = prog.out
 		nextHint = creationClock().Add(creationHintInterval)
 	}
+	tick := func() error {
+		select {
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("timed out waiting for session %s to become ready (last status: %s)", sessionID, humanSessionStatus(lastStatus))
+			}
+			return ctx.Err()
+		case <-ticker.C:
+			return nil
+		}
+	}
 
+	failedReads := 0
 	for {
 		sess, err := svc.GetSession(sessionID)
 		if err != nil {
-			return nil, err
+			if failedReads >= sessionReadyReadRetries || !transientReadErr(err) {
+				return nil, err
+			}
+			failedReads++
+			if err := tick(); err != nil {
+				return nil, err
+			}
+			continue
 		}
+		failedReads = 0
 		words := startupWordsFor(sess)
 
 		if prog != nil && !sawBitsReady {
@@ -1215,16 +1254,11 @@ func waitForSessionReady(ctx context.Context, svc do.HostedAgentsService, sessio
 		case godo.HostedAgentSessionStatusFailed,
 			godo.HostedAgentSessionStatusDestroyed,
 			godo.HostedAgentSessionStatusDestroying:
-			return nil, fmt.Errorf("session entered %s before becoming ready", humanSessionStatus(sess.Status))
+			return nil, &sessionEndedError{status: sess.Status}
 		}
 
-		select {
-		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				return nil, fmt.Errorf("timed out waiting for session %s to become ready (last status: %s)", sessionID, humanSessionStatus(lastStatus))
-			}
-			return nil, ctx.Err()
-		case <-ticker.C:
+		if err := tick(); err != nil {
+			return nil, err
 		}
 	}
 }

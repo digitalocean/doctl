@@ -212,6 +212,45 @@ func TestWakeSessionWithProgress_AlreadyRunningWaitsThroughTransitions(t *testin
 	})
 }
 
+// A wait for READY rides out a couple of transient read failures, but not a
+// third in a row or any 4xx.
+func TestWaitForSessionReady_TransientReadFailures(t *testing.T) {
+	fastPoll(t)
+	unavailable := wakeAPIErr(http.StatusServiceUnavailable, "try later")
+	// The last read decides the outcome: nil is READY, an error is returned.
+	tests := []struct {
+		name  string
+		reads []error
+	}{
+		{"two transient then ready", []error{unavailable, errors.New("connection reset"), nil}},
+		{"three transient", []error{unavailable, unavailable, unavailable}},
+		{"404", []error{wakeAPIErr(http.StatusNotFound, "gone")}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				var calls []*gomock.Call
+				for _, err := range tc.reads {
+					if err == nil {
+						calls = append(calls, tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusReady), nil))
+					} else {
+						calls = append(calls, tm.hostedAgents.EXPECT().GetSession("sess_1").Return(nil, err))
+					}
+				}
+				gomock.InOrder(calls...)
+
+				_, err := waitForSessionReady(context.Background(), tm.hostedAgents, "sess_1", nil)
+				last := tc.reads[len(tc.reads)-1]
+				if last == nil {
+					require.NoError(t, err)
+				} else {
+					assert.Same(t, last, err)
+				}
+			})
+		})
+	}
+}
+
 // resume on a session that is not paused is an error, as the 409 used to be,
 // and never calls the resume endpoint.
 func TestRunAgentsResume_NotPausedFails(t *testing.T) {
