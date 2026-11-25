@@ -49,7 +49,7 @@ func TestHistoryReconstructsTurns(t *testing.T) {
 	srv, h := newBridgedFacade(t)
 	queueTwoTurnHistory(h)
 
-	msgs := getMessages(t, srv.URL+"/session/ses_x/message")
+	msgs := getMessages(t, srv.URL+testSessionURL("/message"))
 	require.Len(t, msgs, 4) // user+assistant per turn
 
 	// Turn 1: user question then assistant answer, linked by parentID.
@@ -93,7 +93,7 @@ func TestHistoryHonorsLimit(t *testing.T) {
 	srv, h := newBridgedFacade(t)
 	queueTwoTurnHistory(h)
 
-	msgs := getMessages(t, srv.URL+"/session/ses_x/message?limit=2")
+	msgs := getMessages(t, srv.URL+testSessionURL("/message?limit=2"))
 	require.Len(t, msgs, 2)
 	// The newest messages win: turn 2's user+assistant.
 	assert.Equal(t, "second question", msgs[0].Parts[0]["text"])
@@ -102,7 +102,7 @@ func TestHistoryHonorsLimit(t *testing.T) {
 
 func TestHistoryEmptyForFreshSession(t *testing.T) {
 	srv, _ := newBridgedFacade(t)
-	msgs := getMessages(t, srv.URL+"/session/ses_x/message")
+	msgs := getMessages(t, srv.URL+testSessionURL("/message"))
 	assert.Empty(t, msgs)
 }
 
@@ -133,7 +133,7 @@ func TestHistoryReconstructsToolTurn(t *testing.T) {
 		agentproxytest.Event{RunID: "run-t", Type: string(godo.HostedAgentEventKindRunCompleted), Data: json.RawMessage(`{"total_tokens_in":700,"total_tokens_out":30,"run_cost_micros":31500}`)},
 	)
 
-	msgs := getMessages(t, srv.URL+"/session/ses_x/message")
+	msgs := getMessages(t, srv.URL+testSessionURL("/message"))
 	require.Len(t, msgs, 2)
 	asst := msgs[1]
 	require.Len(t, asst.Parts, 3) // tool + text + step-finish
@@ -177,7 +177,7 @@ func TestHistoryIsCachedUntilInvalidated(t *testing.T) {
 		agentproxytest.Event{RunID: "run-1", Type: string(godo.HostedAgentEventKindTokenChunk), Data: json.RawMessage(`{"text":"old answer"}`)},
 		agentproxytest.Event{RunID: "run-1", Type: string(godo.HostedAgentEventKindRunCompleted)},
 	)
-	first := getMessages(t, srv.URL+"/session/ses_x/message")
+	first := getMessages(t, srv.URL+testSessionURL("/message"))
 	require.Len(t, first, 2)
 
 	// The harness's durable history changes, but the cache still serves the
@@ -186,14 +186,14 @@ func TestHistoryIsCachedUntilInvalidated(t *testing.T) {
 		agentproxytest.Event{RunID: "run-2", Type: string(godo.HostedAgentEventKindRunStarted), Data: json.RawMessage(`{"user_input":"new"}`)},
 		agentproxytest.Event{RunID: "run-2", Type: string(godo.HostedAgentEventKindRunCompleted)},
 	)
-	cached := getMessages(t, srv.URL+"/session/ses_x/message")
+	cached := getMessages(t, srv.URL+testSessionURL("/message"))
 	require.Len(t, cached, 2)
 	assert.Equal(t, "old", cached[0].Parts[0]["text"])
 
 	// ...until a completed live turn invalidates it (translateEvent does
 	// this; exercised directly here).
 	f.invalidateHistory()
-	fresh := getMessages(t, srv.URL+"/session/ses_x/message")
+	fresh := getMessages(t, srv.URL+testSessionURL("/message"))
 	require.Len(t, fresh, 1) // run-2 has no answer text: user message only
 	assert.Equal(t, "new", fresh[0].Parts[0]["text"])
 }
@@ -207,7 +207,7 @@ func TestHistoryFailedTurn(t *testing.T) {
 		agentproxytest.Event{RunID: "run-f", Type: string(godo.HostedAgentEventKindRunFailed), Data: json.RawMessage(`{"message":"boom"}`)},
 	)
 
-	msgs := getMessages(t, srv.URL+"/session/ses_x/message")
+	msgs := getMessages(t, srv.URL+testSessionURL("/message"))
 	require.Len(t, msgs, 2)
 	assert.Equal(t, "user", msgs[0].Info["role"])
 	assert.Equal(t, "assistant", msgs[1].Info["role"])

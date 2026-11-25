@@ -32,6 +32,7 @@ type Account struct {
 	EmailVerified   bool      `json:"email_verified,omitempty"`
 	Status          string    `json:"status,omitempty"`
 	StatusMessage   string    `json:"status_message,omitempty"`
+	IsTrial         bool      `json:"is_trial,omitempty"`
 	Team            *TeamInfo `json:"team,omitempty"`
 }
 
