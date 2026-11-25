@@ -16,11 +16,13 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/ui"
+	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
 
@@ -37,11 +39,17 @@ const (
 // openPaymentMethodURL opens a URL in a browser popup window. Tests replace it.
 var openPaymentMethodURL = openURLInPopupWindow
 
+// paymentMethodAccountScope is the token permission payment-method add needs
+// to read the account it checks.
+const paymentMethodAccountScope = "account:read"
+
 // paymentMethodCheckError is a failed pre-flight check of payment-method add,
 // carrying the step that resolves it.
 type paymentMethodCheckError struct {
 	msg      string
 	nextStep string
+	// failure replaces the check's default failure line when set.
+	failure string
 }
 
 func (e *paymentMethodCheckError) Error() string    { return e.msg }
@@ -66,8 +74,8 @@ The popup is a Chrome, Edge, Brave, or Chromium app window. If none of those bro
 
 Before opening the page, doctl checks that:
 
-- doctl is signed in to your account. If it is not, run `+"`"+`doctl auth login`+"`"+` first.
-- Your account's email address is verified. Verify it from the link in the email DigitalOcean sent you, then run this command again.
+- doctl is signed in to your account with the `+"`"+paymentMethodAccountScope+"`"+` permission. If it is not, run `+"`"+`doctl auth login`+"`"+` first.
+- Your account's email address is verified. If it is not, run `+"`"+`doctl auth login`+"`"+` to verify it, then run this command again.
 - Your team does not have a payment method yet. Teams that already have one can manage payment methods at `+digitalOceanBillingURL+`.
 
 Payment details are entered in the browser; doctl does not collect them itself.
@@ -92,7 +100,12 @@ func RunPaymentMethodAdd(c *CmdConfig) error {
 	check.Start()
 	account, err := paymentMethodAccount(c)
 	if err != nil {
-		check.Fail("Could not verify sign-in")
+		failure := "Could not verify sign-in"
+		var checkErr *paymentMethodCheckError
+		if errors.As(err, &checkErr) && checkErr.failure != "" {
+			failure = checkErr.failure
+		}
+		check.Fail("%s", failure)
 		return err
 	}
 	check.Succeed("Signed in as %s", account.Email)
@@ -103,7 +116,7 @@ func RunPaymentMethodAdd(c *CmdConfig) error {
 		check.Fail("Email address %s is not verified", account.Email)
 		return &paymentMethodCheckError{
 			msg:      fmt.Sprintf("the email address %s on your account is not verified", account.Email),
-			nextStep: "verify it from the link in the email DigitalOcean sent you, then run doctl payment-method add again",
+			nextStep: "run doctl auth login to verify your email, then run doctl payment-method add again",
 		}
 	}
 	check.Succeed("Email address verified")
@@ -139,7 +152,8 @@ func paymentMethodTeam(account *do.Account) string {
 }
 
 // paymentMethodAccount initializes the API client and fetches the account,
-// pointing a customer with no access token at doctl auth login.
+// pointing a customer with no access token, or one without account:read, at
+// doctl auth login.
 func paymentMethodAccount(c *CmdConfig) (*do.Account, error) {
 	if err := c.initServices(c); err != nil {
 		var missing *doctl.MissingAccessTokenErr
@@ -152,5 +166,14 @@ func paymentMethodAccount(c *CmdConfig) (*do.Account, error) {
 		return nil, err
 	}
 
-	return c.Account().Get()
+	account, err := c.Account().Get()
+	var errResp *godo.ErrorResponse
+	if errors.As(err, &errResp) && errResp.Response != nil && errResp.Response.StatusCode == http.StatusForbidden {
+		return nil, &paymentMethodCheckError{
+			msg:      fmt.Sprintf("your access token does not have the %s permission that doctl payment-method add needs", paymentMethodAccountScope),
+			nextStep: fmt.Sprintf("run doctl auth login and grant the %s permission (or use an API token that includes it)", paymentMethodAccountScope),
+			failure:  fmt.Sprintf("Access token is missing the %s permission", paymentMethodAccountScope),
+		}
+	}
+	return account, err
 }

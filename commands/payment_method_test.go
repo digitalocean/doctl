@@ -168,6 +168,32 @@ func TestPaymentMethodAddRejectedTokenSuggestsAuthLogin(t *testing.T) {
 	})
 }
 
+func TestPaymentMethodAddExplainsMissingAccountReadScope(t *testing.T) {
+	openCalled := false
+	stubOpenPaymentMethodURL(t, func(string) error {
+		openCalled = true
+		return nil
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.account.EXPECT().Get().Return(nil, &godo.ErrorResponse{
+			Response: &http.Response{StatusCode: http.StatusForbidden},
+			Message:  "You are not authorized to perform this operation",
+		})
+		_, checks := capturePaymentMethodOutput(config)
+
+		err := RunPaymentMethodAdd(config)
+		require.Error(t, err)
+
+		assert.Contains(t, err.Error(), "account:read")
+		assert.Contains(t, resolveStructured(err).NextStep(), "doctl auth login")
+		assert.Contains(t, resolveStructured(err).NextStep(), "account:read")
+		assert.Contains(t, checks.String(), "Access token is missing the account:read permission")
+		assert.NotContains(t, checks.String(), "Checking email verification")
+		assert.False(t, openCalled)
+	})
+}
+
 func TestPaymentMethodAddRequiresVerifiedEmail(t *testing.T) {
 	openCalled := false
 	stubOpenPaymentMethodURL(t, func(string) error {
@@ -184,6 +210,7 @@ func TestPaymentMethodAddRequiresVerifiedEmail(t *testing.T) {
 
 		assert.Contains(t, err.Error(), "not verified")
 		assert.Contains(t, err.Error(), "sammy@digitalocean.com")
+		assert.Contains(t, resolveStructured(err).NextStep(), "run doctl auth login to verify your email")
 		assert.Contains(t, checks.String(), "Signed in as sammy@digitalocean.com")
 		assert.Contains(t, checks.String(), "Email address sammy@digitalocean.com is not verified")
 		assert.NotContains(t, checks.String(), "Checking payment method")
