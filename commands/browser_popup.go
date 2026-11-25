@@ -16,6 +16,7 @@ package commands
 import (
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 
@@ -86,8 +87,8 @@ func popupLaunchers(env popupEnv, url string) []popupLauncher {
 	switch env.goos {
 	case "darwin":
 		for _, app := range []string{"Google Chrome", "Microsoft Edge", "Brave Browser", "Chromium"} {
-			for _, dir := range []string{"/Applications", filepath.Join(env.home, "Applications")} {
-				if env.exists(filepath.Join(dir, app+".app")) {
+			for _, dir := range []string{"/Applications", path.Join(env.home, "Applications")} {
+				if env.exists(path.Join(dir, app+".app")) {
 					// -n is required: without it macOS drops --args when the
 					// browser is already running.
 					launchers = append(launchers, popupLauncher{
@@ -111,15 +112,15 @@ func popupLaunchers(env popupEnv, url string) []popupLauncher {
 				filepath.Join(root, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
 			)
 		}
-		for _, path := range candidates {
-			if env.exists(path) {
-				launchers = append(launchers, popupLauncher{path: path, args: chromiumArgs})
+		for _, exe := range candidates {
+			if env.exists(exe) {
+				launchers = append(launchers, popupLauncher{path: exe, args: chromiumArgs})
 			}
 		}
 	default:
 		for _, name := range []string{"google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge", "brave-browser"} {
-			if path, err := env.lookPath(name); err == nil {
-				launchers = append(launchers, popupLauncher{path: path, args: chromiumArgs})
+			if exe, err := env.lookPath(name); err == nil {
+				launchers = append(launchers, popupLauncher{path: exe, args: chromiumArgs})
 			}
 		}
 	}

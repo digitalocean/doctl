@@ -51,7 +51,7 @@ func fakePopupEnv(goos string, installed ...string) popupEnv {
 func TestPopupLaunchersDarwin(t *testing.T) {
 	env := fakePopupEnv("darwin",
 		"/Applications/Microsoft Edge.app",
-		filepath.Join("/Users/sammy/Applications", "Google Chrome.app"),
+		"/Users/sammy/Applications/Google Chrome.app",
 	)
 
 	launchers := popupLaunchers(env, popupTestURL)
