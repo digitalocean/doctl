@@ -243,7 +243,7 @@ func agentErrorTitleAndTips(msg string, status int) (title string, tips []string
 		// this message. Its token and permissions are fine, so the scopes tip would
 		// send it the wrong way, and a retry does not help.
 		if strings.Contains(lower, "workspaces are not enabled") {
-			return "Not available yet", nil
+			return "Limited availability", []string{"Request access at https://cloudsupport.digitalocean.com"}
 		}
 		return "Access denied", []string{"Check your token scopes or team permissions"}
 	case http.StatusNotFound:
