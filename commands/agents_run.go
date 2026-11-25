@@ -543,6 +543,30 @@ type harnessManifestOpts struct {
 	// openhands and hermes, which get defaultOpenHandsModel and
 	// defaultHermesModel.
 	model string
+	// secrets holds the values from the secret flags, keyed by name. Only
+	// presence is read, to tell whether a vendor key was supplied.
+	secrets map[string]string
+}
+
+// vendorKeyPassed reports whether --secret supplied the Anthropic or OpenAI
+// key. Either one means the user is bringing a vendor key, so the session is
+// not on DigitalOcean Inference.
+func vendorKeyPassed(secrets map[string]string) bool {
+	for _, name := range []string{anthropicAPIKeyEnv, openAIAPIKeyEnv} {
+		if strings.TrimSpace(secrets[name]) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// usesDOInferenceForModel reports whether --model on claude-code or codex
+// selects DigitalOcean Inference: a non-empty model and no Anthropic or OpenAI
+// key passed with --secret. A key exported in the shell does not count. A
+// vendor key in the session would win over the DigitalOcean key and send the
+// model name to the vendor.
+func usesDOInferenceForModel(o harnessManifestOpts) bool {
+	return strings.TrimSpace(o.model) != "" && !vendorKeyPassed(o.secrets)
 }
 
 // defaultOpenHandsModel is the DigitalOcean Inference model an openhands
@@ -660,16 +684,28 @@ func buildHarnessManifest(o harnessManifestOpts) ([]byte, error) {
 		// above, where OpenAI runs the loop. The prompt is not embedded here
 		// either; it is sent post-ready by sendInitialPrompt, as for opencode
 		// and claude-code.
-		doc.Secrets = map[string]string{
-			"OPENAI_API_KEY": "${" + openAIAPIKeyEnv + "}",
+		//
+		// With --model and no vendor key passed via --secret, the slot is
+		// left out so the session runs on DigitalOcean Inference (see
+		// usesDOInferenceForModel).
+		if !usesDOInferenceForModel(o) {
+			doc.Secrets = map[string]string{
+				"OPENAI_API_KEY": "${" + openAIAPIKeyEnv + "}",
+			}
 		}
 	case agent == claudeCodeAgentName:
 		// Claude Code needs its own inference key just like Codex needs
 		// OPENAI_API_KEY. Referencing it here (rather than baking in a
 		// literal) routes through expandManifestEnvCollect/ensureEnvVar so a
 		// missing key is prompted for on a TTY.
-		doc.Secrets = map[string]string{
-			"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
+		//
+		// With --model and no vendor key passed via --secret, the slot
+		// is left out so the session runs on DigitalOcean Inference (see
+		// usesDOInferenceForModel).
+		if !usesDOInferenceForModel(o) {
+			doc.Secrets = map[string]string{
+				"ANTHROPIC_API_KEY": "${" + anthropicAPIKeyEnv + "}",
+			}
 		}
 	case agent == minimaxCodeAgentName:
 		// Same as claude-code with MiniMax's key: mcode dials MiniMax's own
@@ -1575,15 +1611,17 @@ func printSessionListItem(w io.Writer, sess *do.HostedAgentSession) {
 		meta = append(meta, colorize(createdAgo(sess.CreatedAt.Time), colMuted))
 	}
 	fmt.Fprintf(w, "  %s\n", strings.Join(meta, colorize(" · ", colMuted)))
+	// The full ID is always shown so it can be pasted into other commands. An
+	// unnamed session already shows its ID as the title, so skip the repeat.
+	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+		fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
+	}
 	// Shown without --verbose, so the list says which sessions hold a workspace.
 	// Like the show card, a session without one gets no line.
 	if ws := strings.TrimSpace(sess.WorkspaceID); ws != "" {
 		fmt.Fprintf(w, "  %s %s\n", colorize("workspace", colMuted), ws)
 	}
 	if Verbose {
-		if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
-			fmt.Fprintf(w, "  %s\n", colorize(id, colMuted))
-		}
 		if repo := strings.TrimSpace(sess.RepoHint); repo != "" {
 			fmt.Fprintf(w, "  %s %s\n", colorize("repo", colMuted), repo)
 		}
@@ -1601,10 +1639,8 @@ func printSessionShowCard(w io.Writer, sess *do.HostedAgentSession) {
 
 	var body strings.Builder
 	body.WriteString(cardRow("Session", ref))
-	if Verbose {
-		if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
-			body.WriteString(cardRow("ID", colorize(id, colMuted)))
-		}
+	if id := strings.TrimSpace(sess.SessionID); id != "" && id != ref {
+		body.WriteString(cardRow("ID", colorize(id, colMuted)))
 	}
 	body.WriteString(cardRow("Agent", agent))
 	body.WriteString(cardRow("Status", sessionStatusGlyph(sess.Status)+" "+sessionStatusWithReason(sess)))

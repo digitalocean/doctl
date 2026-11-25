@@ -173,6 +173,24 @@ var _ = suite("harness-runtime/update-config", func(t *testing.T, when spec.G, i
 		expect.Equal(int32(0), atomic.LoadInt32(&gets))
 	})
 
+	it("sends a skills section through unchanged", func() {
+		const skillsManifest = "skills:\n  - name: release-checklist\n    description: Use when preparing a release.\n    instructions: |\n      1. Bump the version.\n      2. Tag the release.\n"
+		skillsPath := filepath.Join(t.TempDir(), "skills.yaml")
+		expect.NoError(os.WriteFile(skillsPath, []byte(skillsManifest), 0o644))
+
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"harness-runtime", "update", "sess_cfg", "--spec", skillsPath,
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err, string(output))
+		expect.Equal(skillsManifest, gotBody["manifest_yaml"])
+		expect.Len(gotBody, 1)
+		expect.Contains(string(output), "updated")
+	})
+
 	it("rejects --spec together with --resume-on-topoff", func() {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",

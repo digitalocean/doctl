@@ -611,7 +611,7 @@ func Agents() *Command {
 		Writer, agentsNS(
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
-	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets, egress, permissions. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed), "egress" replaces allow_hosts and allow_ips (the VPC cannot change), and "permissions" is the full policy (a rule left out is removed, {} removes the policy unless it holds a rule the agent can't change; what can change depends on the agent, see the command help). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
+	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets, egress, permissions, skills. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed), "egress" replaces allow_hosts and allow_ips (the VPC cannot change), "permissions" is the full policy (a rule left out is removed, {} removes the policy unless it holds a rule the agent can't change; what can change depends on the agent, see the command help), and "skills" is the full skill list ([] removes every skill; claude-code, codex and opencode only). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
 	acceptFileAliasFor(cmdUpdate)
 	AddIntFlag(cmdUpdate, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for a config update to finish (0 uses the default). Only used with --spec. Ignored with -o json.")
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentNoWait, "", false, "With --spec, return once the config update is accepted instead of waiting for it to finish. Implied by -o json.")
@@ -792,6 +792,7 @@ const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness sess
 	harnessInferenceModelEnv + " (for example " + defaultOpenHandsModel + " or anthropic-claude-4.5-sonnet). " +
 	"--harness openhands and --harness hermes run on DigitalOcean Inference and default to " +
 	defaultOpenHandsModel + " and " + defaultHermesModel + "; " +
+	"for --harness claude-code and --harness codex, --model selects DigitalOcean Inference too, billed to your DigitalOcean team, and your own vendor key is used only if you pass it with --secret (ANTHROPIC_API_KEY or OPENAI_API_KEY); " +
 	"the other harnesses use their own vendor key and leave it unset unless given. " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
@@ -1165,10 +1166,12 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			permission: permission,
 			template:   template,
 			model:      model,
+			secrets:    secrets,
 		})
 		if err != nil {
 			return nil, err
 		}
+		noteIgnoredVendorKey(harness, model, secrets)
 	} else {
 		raw, err = readManifestBytes(os.Stdin, specPath)
 		if err != nil {
@@ -1202,6 +1205,51 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		}
 	}
 	return src, nil
+}
+
+// noteIgnoredVendorKey says, once, that a vendor key exported in the shell is
+// not used when --model selects DigitalOcean Inference on claude-code or
+// codex. It goes to stderr so -o json stdout stays clean.
+func noteIgnoredVendorKey(harness, model string, secrets map[string]string) {
+	var keyEnv string
+	var vendor string
+	agent, _ := resolveHarnessAgent(harness)
+	switch agent {
+	case claudeCodeAgentName:
+		keyEnv, vendor = anthropicAPIKeyEnv, "Anthropic"
+	case codexAgentName:
+		keyEnv, vendor = openAIAPIKeyEnv, "OpenAI"
+	default:
+		return
+	}
+	if strings.TrimSpace(model) == "" || vendorKeyPassed(secrets) {
+		return
+	}
+	if strings.TrimSpace(os.Getenv(keyEnv)) == "" {
+		return
+	}
+	env := uiEnv()
+	fmt.Fprintf(env.ErrWriter(), "Using DigitalOcean Inference for %s; model usage is billed to your DigitalOcean team. %s in your environment is not used; to use and be billed on your own %s account, pass --%s %s=... (or =@file).\n",
+		model, keyEnv, vendor, doctl.ArgAgentSecret, keyEnv)
+}
+
+// hasKeyPlaceholder reports whether an inference or vendor key's env or secret
+// slot still holds a ${VAR} reference. A real create would fill or prompt for
+// that value instead of asking for a DigitalOcean key.
+func hasKeyPlaceholder(manifest []byte) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return false
+	}
+	_, legacy := doc["apiVersion"]
+	env, _, _, _ := extractManifestEnvAndSecrets(doc, legacy)
+	secrets := manifestSecretValues(manifest)
+	for _, name := range []string{harnessInferenceAPIKeyEnv, openAIAPIKeyEnv, anthropicAPIKeyEnv} {
+		if isEnvPlaceholder(env[name]) || isEnvPlaceholder(secrets[name]) {
+			return true
+		}
+	}
+	return false
 }
 
 func agentSourcesExclusiveErr() error {
@@ -1402,6 +1450,9 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	if err != nil {
 		return err
 	}
+	if needsManagedModelAccessKey(manifest) && !hasKeyPlaceholder(src.manifest) {
+		fmt.Fprintln(uiEnv().ErrWriter(), "A DigitalOcean Inference key will be requested for this session when it is created; model usage is billed to your DigitalOcean team.")
+	}
 	if len(unbound) > 0 {
 		notice("not set locally, so left as a placeholder: %s. "+
 			"Supply the value where this manifest is used, e.g. `--%s %s=@path/to/value`",
@@ -1550,8 +1601,9 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 
 	// Transports differ by type: Codex is WebSocket; OpenCode is HTTP+SSE.
 	// --replay is codex-only (OpenCode fetches history itself).
-	// OpenCode also gets a one-time Basic Auth password on the Connect line
-	// (`opencode attach --password`) so the local facade is not open.
+	// OpenCode: mint a Basic Auth password and print it for
+	// OPENCODE_SERVER_PASSWORD — not --password on argv (local users can
+	// read cmdline).
 	listenURL := fmt.Sprintf("ws://127.0.0.1:%d", port)
 	connectCmd := fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)
 	var proxyPassword string
@@ -1565,17 +1617,11 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 			return fmt.Errorf("minting proxy password: %w", err)
 		}
 		listenURL = fmt.Sprintf("http://127.0.0.1:%d", port)
-		// Quote so a future alphabet change cannot break the shell line.
-		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d --password %s", port, strconv.Quote(proxyPassword))
+		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d", port)
 	}
 
 	stylingEnabled = detectStyling()
-	var body strings.Builder
-	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
-	body.WriteString(cardRow("Session", displaySessionRef(sess)))
-	body.WriteString(cardRow("Listen", listenURL))
-	body.WriteString(cardRow("Connect", connectCmd))
-	renderAgentCard(c.Out, body.String())
+	renderAgentCard(c.Out, startProxyCardBody(displaySessionRef(sess), listenURL, connectCmd, proxyPassword))
 
 	// SIGTERM alongside SIGINT: under a process manager or plain `kill` (not
 	// `-9`), only handling os.Interrupt meant the graceful-shutdown path in
@@ -2339,8 +2385,8 @@ func RunAgentsUpdate(c *CmdConfig) error {
 }
 
 // runAgentsUpdateConfig sends a partial manifest (tools, env, secrets, egress,
-// permissions) to the session and, unless told not to, waits for the server to
-// finish applying it.
+// permissions, skills) to the session and, unless told not to, waits for the
+// server to finish applying it.
 func runAgentsUpdateConfig(c *CmdConfig, sessionID string) error {
 	path, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
@@ -2429,7 +2475,7 @@ func agentSessionUpdateRequest(c *CmdConfig) (*godo.HostedAgentSessionUpdateRequ
 	if update.ResumeOnTopoff == nil {
 		// The server answers an empty body with a 400, so say what to pass
 		// instead of forwarding a request that cannot succeed.
-		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke), or --%s to change tools, env, secrets or permissions",
+		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke), or --%s to change tools, env, secrets, permissions or skills",
 			doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentSpec)
 	}
 	return update, nil
@@ -8497,6 +8543,21 @@ func hitlOutcomeLabel(code int32) string {
 // before color codes are applied so columns stay aligned in the terminal.
 func cardRow(label, value string) string {
 	return cardRowWidth(label, value, 8)
+}
+
+// startProxyCardBody is the start-proxy listening card (sans border).
+// proxyPassword is printed bare for OPENCODE_SERVER_PASSWORD — never quoted
+// and never embedded in Connect (argv exposure).
+func startProxyCardBody(sessionRef, listenURL, connectCmd, proxyPassword string) string {
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
+	body.WriteString(cardRow("Session", sessionRef))
+	body.WriteString(cardRow("Listen", listenURL))
+	if proxyPassword != "" {
+		body.WriteString(cardRow("Password", proxyPassword))
+	}
+	body.WriteString(cardRow("Connect", connectCmd))
+	return body.String()
 }
 
 // cardRowWidth is cardRow with an explicit label column, for a card whose
