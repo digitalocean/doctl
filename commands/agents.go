@@ -2260,10 +2260,18 @@ func RunAgentsResume(c *CmdConfig) error {
 		return err
 	}
 	warnBoundReuseSession(c, sessionID)
+	svc := c.HostedAgents()
+	sess, err := svc.GetSession(sessionID)
+	if err != nil {
+		return err
+	}
+	if sess.Status != godo.HostedAgentSessionStatusPaused {
+		return fmt.Errorf("session %s is %s, not paused; there is nothing to resume", sessionID, humanSessionStatus(sess.Status))
+	}
 	stylingEnabled = detectStyling()
 	prog := newStageProgress(c.Out)
 	defer prog.stop()
-	if _, err := wakeSessionWithProgress(context.Background(), c.HostedAgents(), sessionID, prog); err != nil {
+	if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
 		return err
 	}
 	printAgentSuccess(c.Out, fmt.Sprintf("Session %s resumed", sessionID))

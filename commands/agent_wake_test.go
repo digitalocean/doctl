@@ -167,6 +167,96 @@ func TestWakeSessionWithProgress_AlreadyRunningStillPausedFails(t *testing.T) {
 	})
 }
 
+func sessionInStatus(id string, status godo.HostedAgentSessionStatus) *do.HostedAgentSession {
+	return &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{SessionID: id, Status: status}}
+}
+
+// A session someone else was waking that fails or is destroyed did not wake.
+func TestWakeSessionWithProgress_AlreadyRunningThenTerminalFails(t *testing.T) {
+	fastPoll(t)
+	for _, status := range []godo.HostedAgentSessionStatus{
+		godo.HostedAgentSessionStatusFailed,
+		godo.HostedAgentSessionStatusDestroyed,
+	} {
+		t.Run(string(status), func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().ResumeSession("sess_1").Return(wakeAPIErr(http.StatusConflict, "session is already running"))
+				gomock.InOrder(
+					tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusPaused), nil),
+					tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", status), nil),
+				)
+
+				woke, err := wakeSessionWithProgress(context.Background(), tm.hostedAgents, "sess_1", nil)
+				assert.False(t, woke)
+				require.Error(t, err)
+				assert.Equal(t, "session sess_1 is "+humanSessionStatus(status)+" and cannot be woken", err.Error())
+			})
+		})
+	}
+}
+
+// Statuses on the way to awake keep the poll going until READY or DETACHED.
+func TestWakeSessionWithProgress_AlreadyRunningWaitsThroughTransitions(t *testing.T) {
+	fastPoll(t)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().ResumeSession("sess_1").Return(wakeAPIErr(http.StatusConflict, "session is already running"))
+		gomock.InOrder(
+			tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusProvisioning), nil),
+			tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusUpdating), nil),
+			tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusDetached), nil),
+		)
+
+		woke, err := wakeSessionWithProgress(context.Background(), tm.hostedAgents, "sess_1", nil)
+		require.NoError(t, err)
+		assert.False(t, woke)
+	})
+}
+
+// resume on a session that is not paused is an error, as the 409 used to be,
+// and never calls the resume endpoint.
+func TestRunAgentsResume_NotPausedFails(t *testing.T) {
+	for _, status := range []godo.HostedAgentSessionStatus{
+		godo.HostedAgentSessionStatusReady,
+		godo.HostedAgentSessionStatusDetached,
+		godo.HostedAgentSessionStatusFailed,
+		godo.HostedAgentSessionStatusDestroyed,
+	} {
+		t.Run(string(status), func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", status), nil)
+				var buf bytes.Buffer
+				config.Out = &buf
+				config.Args = []string{"sess_1"}
+
+				err := RunAgentsResume(config)
+				require.Error(t, err)
+				assert.Equal(t, "session sess_1 is "+humanSessionStatus(status)+", not paused; there is nothing to resume", err.Error())
+				assert.NotContains(t, buf.String(), "resumed")
+			})
+		})
+	}
+}
+
+// A paused session whose concurrent wake fails is not reported as resumed.
+func TestRunAgentsResume_ConcurrentWakeFails(t *testing.T) {
+	fastPoll(t)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		gomock.InOrder(
+			tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusPaused), nil),
+			tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusFailed), nil),
+		)
+		tm.hostedAgents.EXPECT().ResumeSession("sess_1").Return(wakeAPIErr(http.StatusConflict, "session is already running"))
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_1"}
+
+		err := RunAgentsResume(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed and cannot be woken")
+		assert.NotContains(t, buf.String(), "resumed")
+	})
+}
+
 func TestWakeSessionWithProgress_OtherConflictIsAnError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().ResumeSession("sess_1").Return(wakeAPIErr(http.StatusConflict, "session is destroyed"))

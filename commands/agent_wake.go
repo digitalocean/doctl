@@ -96,20 +96,26 @@ func wakeSessionWithProgress(ctx context.Context, svc do.HostedAgentsService, se
 }
 
 // waitForWakeByPolling covers a resume that another client is already
-// performing: watch the session until it is no longer PAUSED.
+// performing: watch the session until it is READY or DETACHED. A session that
+// ends up failed or destroyed did not wake.
 func waitForWakeByPolling(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) error {
 	// Read once: the poll goroutine can outlive this call.
 	interval := sessionReadyPollInterval
 	pollCtx, cancel := context.WithTimeout(ctx, wakePollTimeout)
 	defer cancel()
 
+	var ended godo.HostedAgentSessionStatus
 	err := runStage(pollCtx, prog, "waiting for the session to wake", func() error {
 		for {
 			sess, err := svc.GetSession(sessionID)
 			if err != nil {
 				return err
 			}
-			if sess.Status != godo.HostedAgentSessionStatusPaused {
+			switch {
+			case sess.Status == godo.HostedAgentSessionStatusReady, sess.Status == godo.HostedAgentSessionStatusDetached:
+				return nil
+			case isTerminalSessionStatus(sess.Status):
+				ended = sess.Status
 				return nil
 			}
 			select {
@@ -120,6 +126,9 @@ func waitForWakeByPolling(ctx context.Context, svc do.HostedAgentsService, sessi
 		}
 	})
 	switch {
+	case err == nil && ended != "":
+		prog.stopSpin()
+		return fmt.Errorf("session %s is %s and cannot be woken", sessionID, humanSessionStatus(ended))
 	case err == nil:
 		prog.stopSpin()
 		return nil
