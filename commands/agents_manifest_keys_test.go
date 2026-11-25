@@ -62,7 +62,7 @@ func TestEditDistance(t *testing.T) {
 }
 
 func TestNearMissKey(t *testing.T) {
-	root := manifestRootKeys.names()
+	root := manifestKeys().root.names()
 	for _, tc := range []struct {
 		name    string
 		unknown string
@@ -474,12 +474,12 @@ func TestValidFixturesUseEveryKnownKey(t *testing.T) {
 						if strings.HasPrefix(ck, "do.") {
 							isCatalog = true
 							if vm, ok := yamlMap(cv); ok {
-								walk(vm, manifestToolCatalogKeys, "tools[].{catalog}")
+								walk(vm, manifestKeys().toolCatalog, "tools[].{catalog}")
 							}
 						}
 					}
 					if !isCatalog {
-						walk(cm, manifestToolInlineKeys, "tools[]")
+						walk(cm, manifestKeys().toolInline, "tools[]")
 					}
 				}
 			}
@@ -488,7 +488,7 @@ func TestValidFixturesUseEveryKnownKey(t *testing.T) {
 	for _, name := range fixtures {
 		raw, err := os.ReadFile(filepath.Join("testdata", name))
 		require.NoError(t, err)
-		walk(parseManifestDoc(t, string(raw)), manifestRootKeys, "")
+		walk(parseManifestDoc(t, string(raw)), manifestKeys().root, "")
 	}
 
 	want := flattenKeyTree()

@@ -29,11 +29,9 @@ import (
 // at only `agent` and `name`, so `validate` and `create --dry-run` passed it.
 //
 // Source of truth: the published flat agent manifest JSON schema. A copy
-// (as of 2026-11-19) lives in testdata/agent.flat.schema.json, and the key tree
-// is generated from it (see the go:generate line below), so a schema refresh
-// is one command and TestManifestKeyTreeIsGenerated fails if it was skipped.
-// Key order is the schema's property order; it breaks ties between equally
-// close candidates.
+// (as of 2026-11-19) is embedded from agent.flat.schema.json, and the key tree
+// is built from it at first use (agents_manifest_keys_schema.go). Key order is
+// the schema's property order; it breaks ties between equally close candidates.
 //
 // Only closed objects (additionalProperties: false) are listed. Open objects
 // (config, labels, env, secrets slot names, permissions.rules[].match,
@@ -89,12 +87,6 @@ func (n *keyNode) names() []string {
 	}
 	return out
 }
-
-// The tree itself (manifestRootKeys and the nodes under it) lives in
-// agents_manifest_keys_tree.go, generated from testdata/agent.flat.schema.json.
-// To follow a schema change, replace the copy and run `go generate ./commands`.
-//
-//go:generate go run ./internal/manifestkeys/cmd
 
 // editDistance is the Levenshtein distance between a and b, counted in runes.
 // The server counts bytes. Every known key is ASCII, and a candidate within
@@ -196,7 +188,7 @@ func joinManifestPath(parent, key string) string {
 // permissions.network.<key> or mounts[0].<key>.
 func unknownManifestKeys(doc map[string]any) (errs, warns []string) {
 	w := &keyWalker{}
-	w.object(doc, manifestRootKeys, "")
+	w.object(doc, manifestKeys().root, "")
 	return w.errs, w.warns
 }
 
@@ -312,7 +304,7 @@ func (w *keyWalker) tool(m map[string]any, path string) {
 		}
 	}
 	if !catalog {
-		w.object(m, manifestToolInlineKeys, path)
+		w.object(m, manifestKeys().toolInline, path)
 		return
 	}
 	keys := make([]string, 0, len(m))
@@ -327,13 +319,13 @@ func (w *keyWalker) tool(m map[string]any, path string) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		if vm, ok := manifestMap(m[k]); ok {
-			w.object(vm, manifestToolCatalogKeys, joinManifestPath(path, k))
+			w.object(vm, manifestKeys().toolCatalog, joinManifestPath(path, k))
 		}
 	}
 	// A catalog entry that also carries other keys is neither form; check those
 	// against the inline-server keys so a misspelled inline-server key is still caught.
 	if len(others) > 0 {
-		w.object(others, manifestToolInlineKeys, path)
+		w.object(others, manifestKeys().toolInline, path)
 	}
 }
 
