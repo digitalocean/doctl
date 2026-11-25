@@ -164,7 +164,7 @@ Each object holds a subset of the API's event fields: ` + "`event_id`" + `, ` + 
 
 With ` + "`-o json`" + `, an error before the first event prints doctl's standard ` + "`errors`" + ` object on stdout. An error after the first event goes to stderr, so stdout holds only events.
 
-The server returns at most the newest 2000 events or 4 MiB, from the last 14 days. When older events are dropped, the output has no marker.
+Very old or long histories may show only recent events. When older events are dropped, the output has no marker.
 
 JSON output includes the full prompt, tool arguments and log fields, which text output leaves out.`
 
