@@ -131,7 +131,11 @@ type HostedAgentsService interface {
 	// answers 202 with outcome ACCEPTED and the session in
 	// SESSION_STATUS_UPDATING; callers poll GetSession until the status leaves
 	// UPDATING and then read Session.Update. An unchanged manifest answers 200
-	// with outcome UNCHANGED.
+	// with outcome UNCHANGED. An OAuth secret that names a provider connection
+	// with actor can switch to another connection of the same provider: send
+	// it as {source: oauth, provider, actor} with the new connection's user_id
+	// as actor, and keep every other secret as {}. The agent restarts to read
+	// the new token.
 	UpdateSessionConfig(context.Context, string, *HostedAgentSessionConfigUpdateRequest) (*HostedAgentSessionConfigUpdateResponse, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
 	PauseSession(context.Context, string) (*Response, error)
@@ -550,6 +554,39 @@ type HostedAgentSession struct {
 	// sent the header (teams on the regional routing rollout); never on the
 	// wire.
 	Location string `json:"-"`
+	// Mutability says which manifest sections a live config update
+	// (UpdateSessionConfig) can change on this session. Nil when the server
+	// did not return it.
+	Mutability *HostedAgentSessionMutability `json:"mutability,omitempty"`
+}
+
+// HostedAgentSessionMutability is the per-section live-update capability of
+// one session, recorded when it was created. A section that is false answers
+// 409 when UpdateSessionConfig tries to change what it covers. A session
+// created before the field existed reads false for every key.
+type HostedAgentSessionMutability struct {
+	// Model: the model can change through the env key the session's endpoint
+	// reads it from. Independent of Env.
+	Model bool `json:"model"`
+	// Env: env keys other than the model keys can change.
+	Env bool `json:"env"`
+	// Secrets: the secrets section can change.
+	Secrets bool `json:"secrets"`
+	// Tools: the Action Gateway (do.actions) entries of tools can change. A
+	// custom MCP server also needs CustomTools.
+	Tools bool `json:"tools"`
+	// Permissions: the default and the rules of the types the session's agent
+	// enforces live can change. filesystem and network never change.
+	Permissions bool `json:"permissions"`
+	// Egress: the egress allowlist can change.
+	Egress bool `json:"egress"`
+	// SystemPrompt: the standing instruction can be replaced.
+	SystemPrompt bool `json:"system_prompt"`
+	// CustomTools: a custom MCP server (name, url) in tools can be added,
+	// modified or removed. It also needs Tools. The agent restarts when the
+	// change alters its environment. False until the session's agent supports it, and for a session
+	// created before that.
+	CustomTools bool `json:"custom_tools"`
 }
 
 // HostedAgentsRegionalBaseURL returns the base URL of the API host for one
@@ -1142,7 +1179,9 @@ type HostedAgentWorkspaceTransferCancelResponse struct {
 // /v2/harness-runtime/sessions/{session_id} when changing live configuration.
 // ManifestYAML holds only the sections to change (tools, env, secrets,
 // permissions); absent sections are untouched. It cannot be combined with
-// resume_on_topoff.
+// resume_on_topoff. In secrets, {source: oauth, provider, actor} switches an
+// OAuth secret that was created with actor to another connection of the same
+// provider.
 type HostedAgentSessionConfigUpdateRequest struct {
 	ManifestYAML string `json:"manifest_yaml"`
 }
@@ -1422,8 +1461,10 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 
 // UpdateSessionConfig patches the live configuration of a session from a
 // partial manifest YAML (tools, env, secrets, egress, permissions). In tools,
-// only Action Gateway (do.actions) entries can change; the session's custom MCP
-// servers must be sent back exactly as they are. The response carries the
+// Action Gateway (do.actions) entries can change. A custom MCP server can be
+// added, modified or removed only where Session.Mutability.CustomTools is true
+// (and Tools is too); otherwise the update is a 409. Send the session's other
+// custom MCP servers back exactly as they are. The response carries the
 // session, the outcome (ACCEPTED on HTTP 202, UNCHANGED on HTTP 200) and any
 // warnings. godo does not wait: on ACCEPTED the session is
 // SESSION_STATUS_UPDATING and the caller polls GetSession until the status
@@ -1433,10 +1474,20 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 // enabled, including permission updates for a manifest with a permissions
 // section, even one that matches the session's policy), 409
 // (session status does not allow an update, a turn or approval is in
-// progress, the session's mutability does not allow the change, or the agent
+// progress, the session's mutability does not allow the change, including a
+// custom MCP server change where Mutability.CustomTools is false, or the agent
 // can't apply a permissions change), 422 (requires a new session, including
-// adding, removing or changing a custom MCP server, or changing
-// egress.vpc_uuid or egress.subnet_uuid).
+// changing egress.vpc_uuid or egress.subnet_uuid).
+//
+// A custom MCP server change where Mutability.CustomTools is true restarts the
+// agent when it alters the agent's environment (a server added, removed or
+// moved, or a changed credential): the update then ends APPLIED_RESTARTED. A
+// change that does not, such as editing the tools allowlist of an existing
+// server, ends APPLIED. A server with auth that is added,
+// moved to another url or given another secret slot must carry its credential
+// in the same patch: send the secret's value in secrets, or use a URL-bound
+// secret whose url covers the server's URL (host, path prefix and default port
+// only); otherwise it is a 400.
 //
 // permissions is the full policy, in the same form as at create: the default
 // action and every rule, so a rule left out is removed. Rules are checked in

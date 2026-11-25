@@ -38,11 +38,23 @@ type MicroVMCheckpoints []MicroVMCheckpoint
 //go:generate go run go.uber.org/mock/mockgen -source microvms.go -package=mocks -destination mocks/MicroVMsService.go MicroVMsService
 
 // MicroVMListFilter selects which MicroVMs List returns. Empty fields are
-// omitted. Region, Name, and TagName combine with logical AND when set.
+// omitted. Set fields combine with logical AND.
 type MicroVMListFilter struct {
 	Region  string
 	Name    string
 	TagName string
+	// ForkID selects the copies one fork created; ForkedFrom, the MicroVMs
+	// forked from a MicroVM.
+	ForkID     string
+	ForkedFrom string
+}
+
+// MicroVMFork is an accepted fork: the copies, in creating, the id of the
+// fork, and the checkpoint the copies start from.
+type MicroVMFork struct {
+	MicroVMs     MicroVMs
+	ForkID       string
+	CheckpointID string
 }
 
 // MicroVMsService is an interface for interacting with DigitalOcean's
@@ -52,6 +64,7 @@ type MicroVMsService interface {
 	Get(id string) (*MicroVM, error)
 	Create(req *godo.MicroVMCreateRequest) (*MicroVM, error)
 	Update(id string, req *godo.MicroVMUpdateRequest) (*MicroVM, error)
+	Fork(id string, req *godo.MicroVMForkRequest) (*MicroVMFork, error)
 	Pause(id string) (*MicroVM, error)
 	Resume(id string) (*MicroVM, error)
 	Delete(id string) error
@@ -96,9 +109,11 @@ func NewMicroVMsService(client *godo.Client) MicroVMsService {
 
 func (s *microVMsService) List(filter MicroVMListFilter) (MicroVMs, error) {
 	base := &godo.ListMicroVMsOptions{
-		Region:  filter.Region,
-		Name:    filter.Name,
-		TagName: filter.TagName,
+		Region:     filter.Region,
+		Name:       filter.Name,
+		TagName:    filter.TagName,
+		ForkID:     filter.ForkID,
+		ForkedFrom: filter.ForkedFrom,
 	}
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		listOpt := *base
@@ -153,6 +168,18 @@ func (s *microVMsService) Update(id string, req *godo.MicroVMUpdateRequest) (*Mi
 		return nil, err
 	}
 	return &MicroVM{MicroVM: md}, nil
+}
+
+func (s *microVMsService) Fork(id string, req *godo.MicroVMForkRequest) (*MicroVMFork, error) {
+	f, _, err := s.client.MicroVMs.Fork(context.TODO(), id, req)
+	if err != nil {
+		return nil, err
+	}
+	out := &MicroVMFork{ForkID: f.ForkID, CheckpointID: f.CheckpointID, MicroVMs: make(MicroVMs, len(f.MicroVMs))}
+	for i := range f.MicroVMs {
+		out.MicroVMs[i] = MicroVM{MicroVM: &f.MicroVMs[i]}
+	}
+	return out, nil
 }
 
 func (s *microVMsService) Pause(id string) (*MicroVM, error) {

@@ -174,6 +174,21 @@ func (mr *MockMicroVMsServiceMockRecorder) Exec(id, req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockMicroVMsService)(nil).Exec), id, req)
 }
 
+// Fork mocks base method.
+func (m *MockMicroVMsService) Fork(id string, req *godo.MicroVMForkRequest) (*do.MicroVMFork, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Fork", id, req)
+	ret0, _ := ret[0].(*do.MicroVMFork)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Fork indicates an expected call of Fork.
+func (mr *MockMicroVMsServiceMockRecorder) Fork(id, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fork", reflect.TypeOf((*MockMicroVMsService)(nil).Fork), id, req)
+}
+
 // Get mocks base method.
 func (m *MockMicroVMsService) Get(id string) (*do.MicroVM, error) {
 	m.ctrl.T.Helper()
