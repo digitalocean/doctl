@@ -31,7 +31,7 @@ func instantReconnect(t *testing.T) {
 // open deterministically the live one.
 func warmHistory(t *testing.T, srv *httptest.Server) {
 	t.Helper()
-	resp, err := http.Get(srv.URL + "/session/ses_x/message")
+	resp, err := http.Get(srv.URL + testSessionURL("/message"))
 	require.NoError(t, err)
 	resp.Body.Close()
 }

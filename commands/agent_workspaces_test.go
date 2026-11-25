@@ -411,14 +411,26 @@ func TestRunAgentsWorkspaceDelete_ConflictShowsServerMessage(t *testing.T) {
 }
 
 // A team that is not enrolled for workspaces gets a 403 from the API. It reads as
-// "Not available yet", not as a permissions problem, and carries no scopes tip.
-func TestBeautifyAgentError_WorkspacesNotEnabledReadsAsNotAvailableYet(t *testing.T) {
+// "Limited availability", not as a permissions problem, and points to support.
+func TestBeautifyAgentError_WorkspacesNotEnabledReadsAsLimitedAvailability(t *testing.T) {
 	out := beautifyAgentError(godoStatusErr(http.StatusForbidden, "workspaces are not enabled"))
 	var pretty *agentPrettyError
 	require.True(t, errors.As(out, &pretty))
-	assert.Equal(t, "Not available yet", pretty.title)
+	assert.Equal(t, "Limited availability", pretty.title)
 	assert.Equal(t, "workspaces are not enabled", pretty.reason)
-	assert.Empty(t, pretty.tips, "the token is fine, and a retry does not help")
+	require.Len(t, pretty.tips, 1)
+	assert.Contains(t, pretty.tips[0], "cloudsupport.digitalocean.com")
+}
+
+func TestBeautifyAgentError_WorkspacesNotEnabledFullMessage(t *testing.T) {
+	const msg = "workspaces are not enabled for this team: persistent workspaces are in limited availability. Contact DigitalOcean support to request access"
+	out := beautifyAgentError(godoStatusErr(http.StatusForbidden, msg))
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Limited availability", pretty.title)
+	assert.Equal(t, msg, pretty.reason)
+	require.Len(t, pretty.tips, 1)
+	assert.Contains(t, pretty.tips[0], "cloudsupport.digitalocean.com")
 }
 
 // Any other 403 is still a permissions problem.
@@ -431,11 +443,11 @@ func TestBeautifyAgentError_OtherForbiddenStaysAccessDenied(t *testing.T) {
 }
 
 func TestBeautifyAgentError_NotImplementedReadsAsNotAvailableYet(t *testing.T) {
-	out := beautifyAgentError(godoStatusErr(http.StatusNotImplemented, "workspaces are not enabled"))
+	out := beautifyAgentError(godoStatusErr(http.StatusNotImplemented, "workspaces are not available yet"))
 	var pretty *agentPrettyError
 	require.True(t, errors.As(out, &pretty))
 	assert.Equal(t, "Not available yet", pretty.title)
-	assert.Equal(t, "workspaces are not enabled", pretty.reason)
+	assert.Equal(t, "workspaces are not available yet", pretty.reason)
 	assert.Empty(t, pretty.tips, "a 501 does not get better with a retry")
 }
 
@@ -678,4 +690,92 @@ func TestWorkspaceHelpSaysFromConfigOnly(t *testing.T) {
 	}
 	assert.Contains(t, agentsWorkspaceRootHelpMD, "create --from-config reviewer --name review-2 --workspace <workspace-id>")
 	assert.NotContains(t, agentsCreateHelpMD, "--spec agents.yaml --workspace")
+}
+
+func setVerboseForTest(t *testing.T, v bool) {
+	t.Helper()
+	prev := Verbose
+	Verbose = v
+	t.Cleanup(func() { Verbose = prev })
+}
+
+// Distinct from the workspace UUIDs used elsewhere in this file, so a count of
+// it can only match the session ID.
+const sessionIDForTest = "0190a7c4-5b2d-7e81-8f3a-6c9d1e2f4a5b"
+
+// lineIndex returns the index of the first line that satisfies match, or -1.
+func lineIndex(lines []string, match func(string) bool) int {
+	for i, l := range lines {
+		if match(l) {
+			return i
+		}
+	}
+	return -1
+}
+
+func sessionForIDTest(name string) *do.HostedAgentSession {
+	return &do.HostedAgentSession{HostedAgentSession: &godo.HostedAgentSession{
+		SessionID:   sessionIDForTest,
+		Name:        name,
+		Status:      godo.HostedAgentSessionStatusReady,
+		WorkspaceID: "ws_1",
+	}}
+}
+
+// The full session ID shows without --verbose, once, and never repeats the
+// title of an unnamed session.
+func TestPrintSessionShowCard_ID(t *testing.T) {
+	t.Run("named session without verbose", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionShowCard(&buf, sessionForIDTest("demo"))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+		lines := strings.Split(buf.String(), "\n")
+		i := lineIndex(lines, func(l string) bool { return strings.Contains(l, "Session") })
+		require.True(t, i >= 0 && i+1 < len(lines), "no Session row in %q", buf.String())
+		assert.Equal(t, []string{"ID", sessionIDForTest}, strings.Fields(lines[i+1]),
+			"the ID row sits directly below the Session row")
+	})
+	t.Run("unnamed session prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionShowCard(&buf, sessionForIDTest(""))
+		// The next-step hint repeats the reference, so check the card rows only.
+		card, _, _ := strings.Cut(buf.String(), "Next step")
+		assert.Equal(t, 1, strings.Count(card, sessionIDForTest))
+	})
+	t.Run("verbose prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, true)
+		var buf bytes.Buffer
+		printSessionShowCard(&buf, sessionForIDTest("demo"))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+	})
+}
+
+func TestPrintSessionListItem_ID(t *testing.T) {
+	t.Run("sits between the meta line and the workspace line", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionListItem(&buf, sessionForIDTest("demo"))
+		out := buf.String()
+		assert.Equal(t, 1, strings.Count(out, sessionIDForTest))
+		lines := strings.Split(out, "\n")
+		meta := lineIndex(lines, func(l string) bool { return strings.Contains(l, "ready") })
+		id := lineIndex(lines, func(l string) bool { return strings.TrimSpace(l) == sessionIDForTest })
+		ws := lineIndex(lines, func(l string) bool { return strings.HasPrefix(strings.TrimSpace(l), "workspace") })
+		require.True(t, meta >= 0 && id == meta+1 && ws == id+1,
+			"want the ID alone on the line between meta and workspace, got %q", out)
+	})
+	t.Run("unnamed session prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, false)
+		var buf bytes.Buffer
+		printSessionListItem(&buf, sessionForIDTest(""))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+	})
+	t.Run("verbose prints the ID once", func(t *testing.T) {
+		setVerboseForTest(t, true)
+		var buf bytes.Buffer
+		printSessionListItem(&buf, sessionForIDTest("demo"))
+		assert.Equal(t, 1, strings.Count(buf.String(), sessionIDForTest))
+	})
 }

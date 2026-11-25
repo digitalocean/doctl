@@ -161,6 +161,47 @@ func TestRunAuthLoginSwitchesToTheNamedContext(t *testing.T) {
 	assert.Nil(t, loadOAuthTokenState(doctl.ArgDefaultContext))
 }
 
+// Signing in saves the new credentials and the context to use. viper also
+// holds the token resolved for this invocation, as DIGITALOCEAN_ACCESS_TOKEN
+// would supply it, and every login flag. None of that may reach the file.
+func TestRunAuthLoginPersistsOnlyTheSignIn(t *testing.T) {
+	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
+	stub := withStubConfigFile(t, `access-token: saved-token
+context: default
+`)
+	defer withStubConfig(t, map[string]any{
+		doctl.ArgContext:     doctl.ArgDefaultContext,
+		doctl.ArgAccessToken: "ambient-token",
+	})()
+	Context = "your-team"
+
+	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "read write")
+	config.Doit.Set(config.NS, doctl.ArgOAuthSaveScope, true)
+	viper.Set(config.NS+"."+doctl.ArgOAuthClientID, "staging-client")
+	viper.Set(config.NS+"."+doctl.ArgOAuthNoBrowser, true)
+
+	stubOAuthLogin(t, func(_ context.Context, _ oauth.LoginOptions) (*oauth.Token, error) {
+		return &oauth.Token{AccessToken: "doo_v1_access", RefreshToken: "dor_v1_refresh"}, nil
+	})
+
+	require.NoError(t, RunAuthLogin(config))
+
+	written := stub.settings(t)
+	assert.Equal(t, "your-team", written[doctl.ArgContext])
+	assert.Equal(t, "saved-token", written[doctl.ArgAccessToken], "the default context's token must be left as it was")
+	assert.Equal(t, map[any]any{"your-team": "doo_v1_access"}, written[authContextsKey])
+	assert.Equal(t, "read write", written[oauthDefaultScopesConfigKey])
+
+	sessions, ok := written[oauthTokensConfigKey].(map[any]any)
+	require.True(t, ok)
+	session, ok := sessions["your-team"].(map[any]any)
+	require.True(t, ok)
+	assert.Equal(t, "dor_v1_refresh", session["refresh-token"])
+
+	assert.NotContains(t, stub.String(), "ambient-token")
+	assert.NotContains(t, written, config.NS, "login flags apply to one invocation only")
+}
+
 func TestRunAuthLoginDoesNotCallTheAuthorizationServerBeforeTheBrowser(t *testing.T) {
 	var requests []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -193,13 +234,12 @@ func TestRunAuthLoginHonorsClientIDFlag(t *testing.T) {
 
 	assert.Equal(t, "staging-client", capturedOpts.ClientID)
 	assert.Equal(t, "staging-client", loadOAuthTokenState(doctl.ArgDefaultContext).ClientID)
-	assert.Equal(t, oauth.DefaultClientID, viper.Get(config.NS+"."+doctl.ArgOAuthClientID))
 }
 
 func TestRunAuthLoginClientIDAppliesOnlyToThisInvocation(t *testing.T) {
 	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
-	// Left behind by an earlier `doctl auth login --client-id staging-client`,
-	// which writeConfig saves with the rest of the settings.
+	// Left behind in the config file by an earlier version of
+	// `doctl auth login --client-id staging-client`.
 	config.Doit.Set(config.NS, doctl.ArgOAuthClientID, "staging-client")
 	config.Doit.(*doctl.TestConfig).IsSetMap[doctl.ArgOAuthClientID] = false
 
@@ -239,8 +279,8 @@ func TestRunAuthLoginExplainsARejectedClient(t *testing.T) {
 
 func TestRunAuthLoginNoBrowserAppliesOnlyToThisInvocation(t *testing.T) {
 	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
-	// Left behind by an earlier `doctl auth login --no-browser`, which
-	// writeConfig saves with the rest of the settings.
+	// Left behind in the config file by an earlier version of
+	// `doctl auth login --no-browser`.
 	config.Doit.Set(config.NS, doctl.ArgOAuthNoBrowser, true)
 	config.Doit.(*doctl.TestConfig).IsSetMap[doctl.ArgOAuthNoBrowser] = false
 
@@ -252,7 +292,6 @@ func TestRunAuthLoginNoBrowserAppliesOnlyToThisInvocation(t *testing.T) {
 
 	require.NoError(t, RunAuthLogin(config))
 	assert.False(t, capturedOpts.NoBrowser, "a saved --no-browser must not keep the browser closed")
-	assert.Equal(t, false, viper.Get(config.NS+"."+doctl.ArgOAuthNoBrowser))
 }
 
 func TestRunAuthLoginHonorsNoBrowserFlag(t *testing.T) {
@@ -282,13 +321,12 @@ func TestRunAuthLoginRequestsTheGivenScopes(t *testing.T) {
 	require.NoError(t, RunAuthLogin(config))
 
 	assert.Equal(t, []string{"read", "write"}, capturedOpts.Scopes)
-	assert.Equal(t, defaultOAuthScopes, viper.Get(config.NS+"."+doctl.ArgOAuthScopes))
 }
 
 func TestRunAuthLoginScopeAppliesOnlyToThisInvocation(t *testing.T) {
 	config, _ := newOAuthTestCmdConfig(t, "https://cloud.example.com")
-	// Left behind by an earlier `doctl auth login --scopes "read write"`, which
-	// writeConfig saves with the rest of the settings.
+	// Left behind in the config file by an earlier version of
+	// `doctl auth login --scopes "read write"`.
 	config.Doit.Set(config.NS, doctl.ArgOAuthScopes, "read write")
 	config.Doit.(*doctl.TestConfig).IsSetMap[doctl.ArgOAuthScopes] = false
 
@@ -300,7 +338,6 @@ func TestRunAuthLoginScopeAppliesOnlyToThisInvocation(t *testing.T) {
 
 	require.NoError(t, RunAuthLogin(config))
 	assert.Empty(t, capturedOpts.Scopes, "a saved --scopes must not be reused on later logins")
-	assert.Equal(t, defaultOAuthScopes, viper.Get(config.NS+"."+doctl.ArgOAuthScopes))
 }
 
 func TestRunAuthLoginSaveScopePersistsDefault(t *testing.T) {
@@ -315,7 +352,6 @@ func TestRunAuthLoginSaveScopePersistsDefault(t *testing.T) {
 
 	require.NoError(t, RunAuthLogin(config))
 	assert.Equal(t, "read write", loadOAuthDefaultScopes())
-	assert.Equal(t, false, viper.Get(config.NS+"."+doctl.ArgOAuthSaveScope))
 }
 
 func TestRunAuthLoginUsesSavedDefaultScopes(t *testing.T) {
@@ -479,8 +515,17 @@ func TestRefreshExpiredOAuthToken(t *testing.T) {
 	})
 }
 
+// Replacing a context's token must drop the OAuth session saved for it, or the
+// next command renews that session over the top of the new token.
 func TestAuthInitDiscardsTheOAuthSession(t *testing.T) {
 	resetOAuthConfig(t)
+	stub := withStubConfigFile(t, `access-token: doo_v1_old
+oauth-tokens:
+  default:
+    refresh-token: dor_v1_refresh
+  work:
+    refresh-token: dor_v1_work
+`)
 	storeOAuthTokenState(doctl.ArgDefaultContext, &oauthTokenState{
 		RefreshToken: "dor_v1_refresh",
 		ExpiresAt:    time.Now().Add(-time.Minute),
@@ -498,6 +543,27 @@ func TestAuthInitDiscardsTheOAuthSession(t *testing.T) {
 	})
 
 	assert.Nil(t, loadOAuthTokenState(doctl.ArgDefaultContext))
+
+	written := stub.settings(t)
+	assert.Equal(t, "dop_v1_pat", written[doctl.ArgAccessToken])
+	assert.Equal(t, map[any]any{"work": map[any]any{"refresh-token": "dor_v1_work"}}, written[oauthTokensConfigKey])
+}
+
+func TestAuthRemoveDiscardsTheOAuthSession(t *testing.T) {
+	resetOAuthConfig(t)
+	stub := withStubConfigFile(t, `auth-contexts:
+  work: doo_v1_work
+oauth-tokens:
+  work:
+    refresh-token: dor_v1_work
+`)
+	defer withContext(t, "work")()
+
+	require.NoError(t, RunAuthRemove(&CmdConfig{Out: io.Discard}))
+
+	written := stub.settings(t)
+	assert.NotContains(t, stub.String(), "doo_v1_work")
+	assert.NotContains(t, written, oauthTokensConfigKey)
 }
 
 func TestOAuthTokenStateIsScopedToAContext(t *testing.T) {
@@ -570,7 +636,6 @@ func newOAuthTestCmdConfig(t *testing.T, issuer string) (*CmdConfig, *string) {
 func resetOAuthConfig(t *testing.T) {
 	t.Helper()
 
-	previousWriter := cfgFileWriter
 	previousContext := Context
 	previousTokens := viper.Get(oauthTokensConfigKey)
 	previousDefaultScopes := viper.Get(oauthDefaultScopesConfigKey)
@@ -589,14 +654,13 @@ func resetOAuthConfig(t *testing.T) {
 		previousEphemeral[key] = viper.Get(key)
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
+	withStubConfigFile(t, "")
 	Context = ""
 	viper.Set(doctl.ArgContext, doctl.ArgDefaultContext)
 	viper.Set(oauthTokensConfigKey, nil)
 	viper.Set(oauthDefaultScopesConfigKey, nil)
 
 	t.Cleanup(func() {
-		cfgFileWriter = previousWriter
 		Context = previousContext
 		viper.Set(oauthTokensConfigKey, previousTokens)
 		viper.Set(oauthDefaultScopesConfigKey, previousDefaultScopes)

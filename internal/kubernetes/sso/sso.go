@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
 	"golang.org/x/oauth2"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/coreos/go-oidc"
 	"github.com/google/uuid"
@@ -29,11 +29,22 @@ var (
 
 const (
 	defaultLocalServerPort uint16 = 8080
+
+	// DefaultLoginTimeout is used when the caller does not set a deadline.
+	DefaultLoginTimeout = 5 * time.Minute
+
+	serverShutdownTimeout = 500 * time.Millisecond
 )
 
 // GetIDToken obtains an ID token from an OIDC provider, following the Authorization Code Flow with PKCE:
 // https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce
 func GetIDToken(ctx context.Context, clientID, issuerURL string, opts ...LocalOIDCLoginOption) (string, time.Time, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, DefaultLoginTimeout)
+		defer cancel()
+	}
+
 	ssoTool, err := newLocalOIDCLogin(clientID, issuerURL, opts...)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("setting up SSO login tool: %w", err)
@@ -129,63 +140,55 @@ func (t *localOIDCLogin) loginURL() string {
 }
 
 func (t *localOIDCLogin) getAuthCode(ctx context.Context) (string, error) {
-	var group errgroup.Group
-
-	server := &http.Server{
-		Handler: t.ssoServer,
-		Addr:    fmt.Sprintf("127.0.0.1:%d", t.port),
+	// Bind before opening the browser so a prebound port cannot divert the login.
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", t.port))
+	if err != nil {
+		return "", fmt.Errorf("listening for the OIDC callback on port %d: %w", t.port, err)
 	}
-	defer server.Close()
+	defer listener.Close()
 
-	group.Go(func() error {
+	server := &http.Server{Handler: t.ssoServer}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
+		defer cancel()
+		t.logger.Println("Shutting down local OIDC authentication server")
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			_ = server.Close()
+		}
+	}()
+
+	serveErr := make(chan error, 1)
+	go func() {
 		t.logger.Printf("Starting local server for OIDC authentication on port %d\n", t.port)
-		if err := server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				return fmt.Errorf("web server shutdown unexpectedly: %w", err)
-			}
+		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serveErr <- fmt.Errorf("web server shutdown unexpectedly: %w", err)
 		}
-
-		return nil
-	})
-
-	var authCode authCodeResponse
-	group.Go(func() error {
-		defer func() {
-			ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
-			defer cancel()
-			t.logger.Println("Shutting down local OIDC authentication server")
-			_ = server.Shutdown(ctx)
-		}()
-
-		select {
-		case code := <-t.ssoServer.authCodeCh:
-			authCode = code
-			return nil
-		case err := <-t.ssoServer.errorCh:
-			return err
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	})
+	}()
 
 	t.logger.Printf("Opening login URL in the default browser. If it didn't open automatically, paste this URL into your preferred browser:\n\t%s\n", t.loginURL())
 	if err := t.openURL(t.loginURL()); err != nil {
 		return "", fmt.Errorf("opening OIDC login URL in browser: %v", err)
 	}
 
-	if err := group.Wait(); err != nil {
+	select {
+	case authCode := <-t.ssoServer.authCodeCh:
+		if authCode.code == "" {
+			return "", errors.New("no authorization code received")
+		}
+		if authCode.state != t.state {
+			return "", errors.New("authorzation flow state mismatch")
+		}
+		return authCode.code, nil
+	case err := <-t.ssoServer.errorCh:
 		return "", err
+	case err := <-serveErr:
+		return "", err
+	case <-ctx.Done():
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return "", fmt.Errorf("timed out waiting for browser authorization: %w", ctx.Err())
+		}
+		return "", ctx.Err()
 	}
-
-	if authCode.code == "" {
-		return "", errors.New("no authorization code received")
-	}
-
-	if authCode.state != t.state {
-		return "", errors.New("authorzation flow state mismatch")
-	}
-
-	return authCode.code, nil
 }
 
 func (t *localOIDCLogin) getIDToken(ctx context.Context) (string, time.Time, error) {
