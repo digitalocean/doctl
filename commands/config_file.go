@@ -87,6 +87,42 @@ func (c *configFile) setCurrentContext(context string) {
 	c.doc[doctl.ArgContext] = context
 }
 
+// set stores a top-level setting, or removes it when value is nil.
+func (c *configFile) set(key string, value any) {
+	if value == nil {
+		delete(c.doc, key)
+		return
+	}
+
+	c.doc[key] = value
+}
+
+// setOAuthSession stores what is needed to renew a context's access token.
+func (c *configFile) setOAuthSession(context string, session map[string]any) {
+	sessions := c.mapping(oauthTokensConfigKey)
+	sessions[mapKey(sessions, strings.ToLower(context))] = session
+	c.doc[oauthTokensConfigKey] = sessions
+}
+
+// removeOAuthSession drops a context's OAuth session. It must go whenever the
+// context's token is replaced or removed, or the next command would renew the
+// old session over the top of the new credentials.
+func (c *configFile) removeOAuthSession(context string) {
+	sessions := c.mapping(oauthTokensConfigKey)
+
+	key := mapKey(sessions, context)
+	if _, ok := sessions[key]; !ok {
+		return
+	}
+
+	delete(sessions, key)
+	if len(sessions) == 0 {
+		delete(c.doc, oauthTokensConfigKey)
+		return
+	}
+	c.doc[oauthTokensConfigKey] = sessions
+}
+
 // hasContext reports whether the file knows the named context. The default
 // context always exists, since it is implied by the top-level access-token
 // rather than listed alongside the others.
@@ -144,30 +180,40 @@ func (c *configFile) write() error {
 	return nil
 }
 
-// contexts returns the named contexts, normalised to a map this code can write
-// to. yaml decodes nested mappings with interface keys, and a file that has
-// never held a named context has no such key at all.
+// contexts returns the named contexts as a map this code can write to.
 func (c *configFile) contexts() map[any]any {
-	switch v := c.doc[authContextsKey].(type) {
+	return c.mapping(authContextsKey)
+}
+
+// mapping returns the nested mapping under key, normalised to a map this code
+// can write to. yaml decodes nested mappings with interface keys, and a file
+// that has never held the setting has no such key at all.
+func (c *configFile) mapping(key string) map[any]any {
+	switch v := c.doc[key].(type) {
 	case map[any]any:
 		return v
 	case map[string]any:
-		contexts := make(map[any]any, len(v))
-		for name, token := range v {
-			contexts[name] = token
+		m := make(map[any]any, len(v))
+		for name, value := range v {
+			m[name] = value
 		}
-		return contexts
+		return m
 	default:
 		return map[any]any{}
 	}
 }
 
-// contextKey finds the key a context is already stored under, so a name
-// differing only in case updates that entry instead of adding a second one.
-// doctl lowercases names before they reach here; files written by an older
-// version, or by hand, may not have.
+// contextKey finds the key a context is already stored under in auth-contexts.
 func (c *configFile) contextKey(context string) any {
-	for key := range c.contexts() {
+	return mapKey(c.contexts(), context)
+}
+
+// mapKey finds the key a context is already stored under, so a name differing
+// only in case updates that entry instead of adding a second one. doctl
+// lowercases names before they reach here; files written by an older version,
+// or by hand, may not have.
+func mapKey(m map[any]any, context string) any {
+	for key := range m {
 		if name, ok := key.(string); ok && strings.EqualFold(name, context) {
 			return key
 		}
