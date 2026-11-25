@@ -288,12 +288,28 @@ func TestAgentsStartProxyHelpExplainsBridge(t *testing.T) {
 	assert.Contains(t, agentsStartProxyHelpMD, "codex --remote")
 	assert.Contains(t, agentsStartProxyHelpMD, "opencode attach")
 	assert.Contains(t, agentsStartProxyHelpMD, "OPENCODE_SERVER_PASSWORD")
+	assert.Contains(t, agentsStartProxyHelpMD, "$env:OPENCODE_SERVER_PASSWORD")
 	assert.NotContains(t, agentsStartProxyHelpMD, "opencode attach http://127.0.0.1:1144 --password",
 		"password must not be suggested on argv")
 	assert.Contains(t, agentsStartProxyHelpMD, opencode.TestedVersion,
 		"the help must state which opencode version the bridge was tested against")
 	assert.Contains(t, agentsStartProxyHelpMD, "launch")
 	assert.NotContains(t, agentsStartProxyHelpMD, "What's new")
+}
+
+func TestStartProxyCardBodyPrintsBarePassword(t *testing.T) {
+	prev := stylingEnabled
+	stylingEnabled = false
+	t.Cleanup(func() { stylingEnabled = prev })
+
+	pass := "El04abcXYZ-_0123456789ABCDEFGHij"
+	connect := "opencode attach http://127.0.0.1:1144"
+	body := startProxyCardBody("my-session", "http://127.0.0.1:1144", connect, pass)
+
+	assert.Contains(t, body, "Password "+pass+"\n")
+	assert.NotContains(t, body, `"`+pass+`"`)
+	assert.Contains(t, body, connect)
+	assert.NotContains(t, body, "--password")
 }
 
 func TestHighlightInlineCode(t *testing.T) {

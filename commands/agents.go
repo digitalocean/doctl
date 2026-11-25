@@ -1570,15 +1570,7 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	}
 
 	stylingEnabled = detectStyling()
-	var body strings.Builder
-	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
-	body.WriteString(cardRow("Session", displaySessionRef(sess)))
-	body.WriteString(cardRow("Listen", listenURL))
-	if proxyPassword != "" {
-		body.WriteString(cardRow("Password", strconv.Quote(proxyPassword)))
-	}
-	body.WriteString(cardRow("Connect", connectCmd))
-	renderAgentCard(c.Out, body.String())
+	renderAgentCard(c.Out, startProxyCardBody(displaySessionRef(sess), listenURL, connectCmd, proxyPassword))
 
 	// SIGTERM alongside SIGINT: under a process manager or plain `kill` (not
 	// `-9`), only handling os.Interrupt meant the graceful-shutdown path in
@@ -8500,6 +8492,21 @@ func hitlOutcomeLabel(code int32) string {
 // before color codes are applied so columns stay aligned in the terminal.
 func cardRow(label, value string) string {
 	return cardRowWidth(label, value, 8)
+}
+
+// startProxyCardBody is the start-proxy listening card (sans border).
+// proxyPassword is printed bare for OPENCODE_SERVER_PASSWORD — never quoted
+// and never embedded in Connect (argv exposure).
+func startProxyCardBody(sessionRef, listenURL, connectCmd, proxyPassword string) string {
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
+	body.WriteString(cardRow("Session", sessionRef))
+	body.WriteString(cardRow("Listen", listenURL))
+	if proxyPassword != "" {
+		body.WriteString(cardRow("Password", proxyPassword))
+	}
+	body.WriteString(cardRow("Connect", connectCmd))
+	return body.String()
 }
 
 // cardRowWidth is cardRow with an explicit label column, for a card whose
