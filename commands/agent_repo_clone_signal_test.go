@@ -84,7 +84,7 @@ func TestFinishSessionStart_InterruptDuringCloneSkipsPrompt(t *testing.T) {
 		tm.hostedAgents.EXPECT().GetSession("sess_int2").Return(ready, nil)
 		tm.hostedAgents.EXPECT().ExecInSandbox(gomock.Any(), "sess_int2", gomock.Any()).
 			DoAndReturn(func(_ context.Context, _ string, req *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {
-				if req.Argv[0] == "test" {
+				if req.Argv[0] == "git" {
 					return &godo.HostedAgentSandboxExecResponse{ExitCode: 1}, nil
 				}
 				interruptSelf(t)

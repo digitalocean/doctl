@@ -81,7 +81,7 @@ These four are equivalent:
 ` + agentCLI + ` create --spec agents.yaml
 ` + "```\n\n" + `With a manifest or ` + "`--harness`" + `, optionally pass ` + "`--gh-repo`" + ` and ` + "`--prompt`" + `. Example:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --prompt "Review the README"
-` + "```\n\n" + `With ` + "`--gh-repo`" + `, doctl clones the repository (shallow, over HTTPS) into ` + "`/workspace/<repo>`" + ` once the session is ready and before ` + "`--prompt`" + ` is sent, waiting up to 10 minutes. If the clone fails the command exits non-zero, the prompt is not sent and the session is left running. An existing ` + "`/workspace/<repo>`" + ` is reused. Private repositories clone when GitHub is connected (` + "`" + agentCLI + " auth github`" + `): doctl then gives the session your GitHub token as ` + "`GITHUB_TOKEN`" + `, which the agent can also use to push.
+` + "```\n\n" + `With ` + "`--gh-repo`" + `, doctl clones the repository (shallow, over HTTPS) into ` + "`/workspace/<repo>`" + ` once the session is ready and before ` + "`--prompt`" + ` is sent, waiting up to 10 minutes. If the clone fails the command exits non-zero, the prompt is not sent and the session is left running. An existing clone of the same repository at ` + "`/workspace/<repo>`" + ` is reused; another repository there fails the command. A public repository needs nothing else. A private one needs GitHub connected (` + "`" + agentCLI + " auth github`" + `) and ` + "`" + githubTokenOptIn + "`" + `, which gives the session, and so the agent, your GitHub token as ` + "`GITHUB_TOKEN`" + `; the agent can also push with it, and an Agent Config saved from the session keeps the reference.
 
 Flat manifests use a top-level ` + "`name`" + ` (or pass ` + "`--name`" + `, which writes that field). Minimal example:
 ` + "```yaml\n" + `name: my-session
@@ -146,7 +146,7 @@ const agentsLaunchHelpMD = `Open an interactive chat on a session, creating it f
 ` + agentCLI + ` launch agents.yaml
 ` + agentCLI + ` launch --harness opencode --gh-repo owner/repo --prompt "Review the README"
 ` + agentCLI + ` launch --from-config reviewer --name my-session
-` + "```\n\n" + `With ` + "`--gh-repo`" + `, the repository is cloned into ` + "`/workspace/<repo>`" + ` once the session is ready and before ` + "`--prompt`" + ` is sent; private repositories clone when GitHub is connected (` + "`" + agentCLI + " auth github`" + `), because doctl then gives the session your GitHub token as ` + "`GITHUB_TOKEN`" + `, which the agent can also use to push.
+` + "```\n\n" + `With ` + "`--gh-repo`" + `, the repository is cloned into ` + "`/workspace/<repo>`" + ` once the session is ready and before ` + "`--prompt`" + ` is sent; a private repository also needs GitHub connected (` + "`" + agentCLI + " auth github`" + `) and ` + "`" + githubTokenOptIn + "`" + `, which gives the agent your GitHub token as ` + "`GITHUB_TOKEN`" + `.
 
 **How the positional argument is read.** One rule: *does a readable file exist at that path?* If yes it is a manifest and a new session is created; if no it is treated as a session name or ID. An argument that is neither reports both possibilities. Naming a creation flag settles it without consulting the filesystem.
 

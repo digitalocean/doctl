@@ -55,14 +55,13 @@ func defaultAskConnectGitHub() (bool, error) {
 	return choice == confirm.Yes, nil
 }
 
-// maybeOfferGitHubAuth checks team GitHub connect status when --gh-repo is used,
-// and reports whether GitHub is connected by the end. Already connected →
-// continue. Otherwise optionally run `agent auth github`. Declining (or
-// non-interactive) continues; public repos do not require auth.
+// maybeOfferGitHubAuth checks team GitHub connect status when --gh-repo is used.
+// Already connected → continue. Otherwise optionally run `agent auth github`.
+// Declining (or non-interactive) continues; public repos do not require auth.
 //
 // Structured output never prompts, and its status lines go to stderr so stdout
 // stays one JSON document.
-func maybeOfferGitHubAuth(c *CmdConfig) (bool, error) {
+func maybeOfferGitHubAuth(c *CmdConfig) error {
 	structured := agentStructuredOutput(c)
 	var out io.Writer = c.Out
 	if structured {
@@ -73,27 +72,27 @@ func maybeOfferGitHubAuth(c *CmdConfig) (bool, error) {
 	start, err := svc.StartProviderAuth(agentGitHubProvider)
 	if err != nil {
 		warn("could not check GitHub connection status: %v (continuing; use `doctl harness-runtime auth github` for private repos)", err)
-		return false, nil
+		return nil
 	}
 	if start != nil && strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
 		fmt.Fprintf(out, "%s %s\n", colorize("✓", colSuccess), colorize("GitHub already connected", colMuted))
-		return true, nil
+		return nil
 	}
 
 	connect := false
 	if !structured {
 		if connect, err = askConnectGitHub(); err != nil {
-			return false, err
+			return err
 		}
 	}
 	if !connect {
 		fmt.Fprintf(out, "%s %s\n",
 			colorize("•", colMuted),
-			colorize("Skipping GitHub connect — fine for public repos. Private repos need the connection (`doctl harness-runtime auth github`); with it, doctl gives the session your GitHub token.", colMuted))
-		return false, nil
+			colorize("Skipping GitHub connect — fine for public repos. Private repos need the connection (`doctl harness-runtime auth github`) and "+githubTokenOptIn+".", colMuted))
+		return nil
 	}
 
-	return completeProviderAuthConnected(c, svc, agentGitHubProvider, start, false, false)
+	return completeProviderAuth(c, svc, agentGitHubProvider, start, false, false)
 }
 
 const (

@@ -180,9 +180,10 @@ func resolvedManifestSecretValues(manifest []byte) map[string]string {
 	}
 	out := make(map[string]string, len(vals))
 	for name, value := range vals {
-		// An oauth/ reference is resolved by the server, not a value to
-		// expand ${NAME} into or to count as a credential supplied locally.
-		if isEnvPlaceholder(value) || strings.HasPrefix(value, "oauth/") {
+		// The GitHub connection reference is resolved by the server, not a
+		// value to expand ${NAME} into or to count as a credential supplied
+		// locally.
+		if isEnvPlaceholder(value) || value == githubOAuthRef {
 			continue
 		}
 		out[name] = value
@@ -272,8 +273,8 @@ func dropEnvKeysCoveredBySecrets(manifest []byte) []byte {
 //
 // A value that is a provider reference such as "oauth/github" is written the
 // same way; the server reads that shorthand as a connection, not a plaintext
-// credential. Only flat manifests take it: callers must not pass a reference
-// for a legacy envelope, whose list slots name their source separately.
+// credential. Only flat manifests read it that way: a legacy envelope's list
+// slots name their source separately.
 func injectManifestSecrets(manifest []byte, secrets map[string]string) ([]byte, error) {
 	if len(secrets) == 0 {
 		return manifest, nil

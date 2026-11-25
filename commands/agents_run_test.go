@@ -1069,8 +1069,7 @@ func TestMaybeOfferGitHubAuth_AlreadyConnected(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		_, err := maybeOfferGitHubAuth(config)
-		require.NoError(t, err)
+		require.NoError(t, maybeOfferGitHubAuth(config))
 		assert.Contains(t, buf.String(), "GitHub already connected")
 	})
 }
@@ -1092,8 +1091,7 @@ func TestMaybeOfferGitHubAuth_SkipWhenDeclined(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		_, err := maybeOfferGitHubAuth(config)
-		require.NoError(t, err)
+		require.NoError(t, maybeOfferGitHubAuth(config))
 		assert.Contains(t, buf.String(), "Skipping GitHub connect")
 	})
 }
@@ -1123,8 +1121,7 @@ func TestMaybeOfferGitHubAuth_ConnectsWhenAccepted(t *testing.T) {
 
 		var buf bytes.Buffer
 		config.Out = &buf
-		_, err := maybeOfferGitHubAuth(config)
-		require.NoError(t, err)
+		require.NoError(t, maybeOfferGitHubAuth(config))
 		assert.Contains(t, buf.String(), "github connected successfully")
 	})
 }

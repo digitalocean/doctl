@@ -38,10 +38,10 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// expectRepoClone expects the existence check and then the clone, in order,
-// for owner/repo in the session. checkExit is the exit status of the check
-// (0 means the folder exists, so no clone follows); cloneStderr non-empty
-// makes the clone fail.
+// expectRepoClone expects the existing-clone check and then the clone, in
+// order, for owner/repo in the session. checkExit is the exit status of the
+// check (0 means a clone of owner/repo is there, so no clone follows);
+// cloneStderr non-empty makes the clone fail.
 func expectRepoClone(tm *tcMocks, sessionID, owner, repo string, checkExit int, cloneStderr string) *gomock.Call {
 	_, clone := expectRepoCalls(tm, sessionID, owner, repo, checkExit, cloneStderr)
 	return clone
@@ -54,10 +54,10 @@ func expectRepoCalls(tm *tcMocks, sessionID, owner, repo string, checkExit int, 
 	dest := "/workspace/" + repo
 	check = tm.hostedAgents.EXPECT().
 		ExecInSandbox(gomock.Any(), sessionID, &godo.HostedAgentSandboxExecRequest{
-			Argv:           []string{"test", "-e", dest},
+			Argv:           []string{"git", "-C", dest, "remote", "get-url", "origin"},
 			TimeoutSeconds: repoCheckTimeoutSeconds,
 		}).
-		Return(&godo.HostedAgentSandboxExecResponse{ExitCode: checkExit}, nil)
+		Return(&godo.HostedAgentSandboxExecResponse{ExitCode: checkExit, Stdout: "https://github.com/" + owner + "/" + repo + ".git\n"}, nil)
 	if checkExit == 0 {
 		return check, check
 	}
@@ -172,8 +172,9 @@ func TestRunAgentsCreate_RepoCloneFailureKeepsSessionAndSkipsPrompt(t *testing.T
 		assert.Contains(t, msg, "Could not clone owner/private into /workspace/private")
 		assert.Contains(t, msg, "terminal prompts disabled")
 		assert.Contains(t, msg, "The session demo is still running and the prompt was not sent")
-		assert.Contains(t, msg, "doctl harness-runtime exec demo -- git clone --depth 1 https://github.com/owner/private.git /workspace/private")
-		assert.Contains(t, msg, "token may not have access", "the connected create gave the session a token")
+		assert.Contains(t, msg, "doctl harness-runtime exec demo -- sh -c '")
+		assert.Contains(t, msg, "' sh https://github.com/owner/private.git /workspace/private")
+		assert.Contains(t, msg, "run the command again with --secret GITHUB_TOKEN=oauth/github", "without the opt-in the session has no token")
 		t.Logf("failure error:\n%s", msg)
 	})
 }
@@ -271,7 +272,7 @@ func TestCloneRequestedRepo_NeverLeaksTokens(t *testing.T) {
 				for _, a := range req.Argv {
 					assert.NotContains(t, a, localToken, "the local token must never travel in argv")
 				}
-				if req.Argv[0] == "test" {
+				if req.Argv[0] == "git" {
 					return &godo.HostedAgentSandboxExecResponse{ExitCode: 1}, nil
 				}
 				assert.Equal(t, repoCloneScript, req.Argv[2])
@@ -316,7 +317,7 @@ func TestCloneRequestedRepo_ExecErrorIsLoud(t *testing.T) {
 }
 
 // launch and create share finishSessionStart, so this pins the order for both:
-// ready, existence check, clone, then the prompt.
+// ready, existing-clone check, clone, then the prompt.
 func TestFinishSessionStart_OrderIsReadyCloneThenPrompt(t *testing.T) {
 	repoTestSetup(t)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -362,7 +363,7 @@ func TestRunAgentsCreate_RepoCloneAPIErrorHasNoPrivateHintOrTransportNoise(t *te
 		expectRepoSession(tm, "sess_api")
 		tm.hostedAgents.EXPECT().ExecInSandbox(gomock.Any(), "sess_api", gomock.Any()).
 			DoAndReturn(func(_ context.Context, _ string, req *godo.HostedAgentSandboxExecRequest) (*godo.HostedAgentSandboxExecResponse, error) {
-				if req.Argv[0] == "test" {
+				if req.Argv[0] == "git" {
 					return &godo.HostedAgentSandboxExecResponse{ExitCode: 1}, nil
 				}
 				return nil, errors.New(`POST https://api.digitalocean.com/v2/x/exec: 404 (request "abc") session not found`)
@@ -457,75 +458,38 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
-func TestGitHubTokenSlot(t *testing.T) {
-	flat := []byte("harness: opencode\nname: demo\n")
-
-	t.Run("connected adds the slot to the create body", func(t *testing.T) {
-		repoTestSetup(t)
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			var stderr bytes.Buffer
-			prev := execStderr
-			execStderr = &stderr
-			t.Cleanup(func() { execStderr = prev })
-
-			tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(m []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-					assert.Contains(t, string(m), "GITHUB_TOKEN: oauth/github")
-					return repoTestSession("s"), nil
-				})
-			tm.hostedAgents.EXPECT().StartProviderAuth("github").
-				Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
-			config.Out = &bytes.Buffer{}
-			_, err := createAgentSession(config, &agentCreationSource{repo: "o/r", manifest: flat}, nil)
-			require.NoError(t, err)
-			assert.Contains(t, stderr.String(), "can also push with it")
+// The token reaches the session only when the user asks for it with --secret;
+// connecting GitHub alone never puts it in the create body.
+func TestGitHubTokenIsOptIn(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		secrets []string
+		want    bool
+	}{
+		{"connected, no opt-in", nil, false},
+		{"opt-in", []string{"GITHUB_TOKEN=oauth/github"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repoTestSetup(t)
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(m []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
+						assert.Equal(t, tc.want, strings.Contains(string(m), "GITHUB_TOKEN: oauth/github"), string(m))
+						return repoTestSession("s"), nil
+					})
+				tm.hostedAgents.EXPECT().StartProviderAuth("github").
+					Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+				config.Out = &bytes.Buffer{}
+				config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+				config.Doit.Set(config.NS, doctl.ArgAgentRepo, "o/r")
+				config.Doit.Set(config.NS, doctl.ArgAgentSecret, tc.secrets)
+				src, err := resolveAgentCreationSource(config)
+				require.NoError(t, err)
+				_, err = createAgentSession(config, src, nil)
+				require.NoError(t, err)
+			})
 		})
-	})
-
-	t.Run("not connected adds nothing", func(t *testing.T) {
-		repoTestSetup(t)
-		prevOut := Output
-		Output = "json" // no prompt; the team is simply not connected
-		t.Cleanup(func() { Output = prevOut })
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(m []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-					assert.NotContains(t, string(m), "GITHUB_TOKEN")
-					return repoTestSession("s"), nil
-				})
-			tm.hostedAgents.EXPECT().StartProviderAuth("github").
-				Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "pending"}, nil)
-			config.Out = &bytes.Buffer{}
-			_, err := createAgentSession(config, &agentCreationSource{repo: "o/r", manifest: flat}, nil)
-			require.NoError(t, err)
-		})
-	})
-
-	t.Run("already declared is untouched", func(t *testing.T) {
-		declared := []byte("harness: opencode\nsecrets:\n  GITHUB_TOKEN: my-own-value\n")
-		src := &agentCreationSource{repo: "o/r", manifest: declared}
-		added, _, err := addGitHubTokenSlot(src)
-		require.NoError(t, err)
-		assert.False(t, added)
-		assert.Equal(t, declared, src.manifest)
-	})
-
-	t.Run("legacy envelope is left alone", func(t *testing.T) {
-		legacy := []byte("apiVersion: v1\nkind: Agent\nspec: {}\n")
-		src := &agentCreationSource{repo: "o/r", manifest: legacy}
-		added, _, err := addGitHubTokenSlot(src)
-		require.NoError(t, err)
-		assert.False(t, added)
-	})
-
-	t.Run("existing secrets are kept", func(t *testing.T) {
-		src := &agentCreationSource{repo: "o/r", manifest: []byte("harness: opencode\nsecrets:\n  OTHER: x\n")}
-		added, _, err := addGitHubTokenSlot(src)
-		require.NoError(t, err)
-		assert.True(t, added)
-		assert.Contains(t, string(src.manifest), "OTHER: x")
-		assert.Contains(t, string(src.manifest), "GITHUB_TOKEN: oauth/github")
-	})
+	}
 }
 
 func TestLastRepoErrorLinesIsRuneSafe(t *testing.T) {
@@ -575,7 +539,7 @@ func TestRepoCloneErrorHints(t *testing.T) {
 	mk := func(text string, kind cloneFailure, hasToken bool) string {
 		return repoCloneError("o/r", "https://github.com/o/r.git", "/workspace/r", "demo", "demo", text, kind, hasToken, true).Error()
 	}
-	assert.Contains(t, mk(authErr, cloneGitError, false), "connect GitHub (`doctl harness-runtime auth github`) and run the command again")
+	assert.Contains(t, mk(authErr, cloneGitError, false), "connect GitHub (`doctl harness-runtime auth github`) and run the command again with --secret GITHUB_TOKEN=oauth/github")
 
 	withToken := mk(authErr, cloneGitError, true)
 	assert.Contains(t, withToken, "token may not have access")
@@ -633,7 +597,7 @@ func TestRetryCommandCarriesRegion(t *testing.T) {
 		expectRepoClone(tm, "s", "o", "r", 1, "fatal: boom\n")
 		_, err := cloneRequestedRepo(config, mk("mem1"), &agentCreationSource{repo: "o/r"}, nil)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "doctl harness-runtime exec demo --region mem1 -- git clone")
+		assert.Contains(t, err.Error(), "doctl harness-runtime exec demo --region mem1 -- sh -c '")
 	})
 }
 
@@ -681,7 +645,7 @@ func TestCloneRequestedRepo_CheckKeepsRetryingClientAndItIsRestored(t *testing.T
 		// Only the check is on the mock (the retrying client); the clone goes
 		// through the rebuilt client and shows up in hosts.
 		tm.hostedAgents.EXPECT().ExecInSandbox(gomock.Any(), "s", &godo.HostedAgentSandboxExecRequest{
-			Argv: []string{"test", "-e", "/workspace/r"}, TimeoutSeconds: repoCheckTimeoutSeconds,
+			Argv: []string{"git", "-C", "/workspace/r", "remote", "get-url", "origin"}, TimeoutSeconds: repoCheckTimeoutSeconds,
 		}).Return(&godo.HostedAgentSandboxExecResponse{ExitCode: 1}, nil)
 
 		_, err := cloneRequestedRepo(config, repoTestSession("s"), &agentCreationSource{repo: "o/r"}, nil)
@@ -691,82 +655,15 @@ func TestCloneRequestedRepo_CheckKeepsRetryingClientAndItIsRestored(t *testing.T
 	})
 }
 
-func TestMaybeOfferGitHubAuthConnectedResult(t *testing.T) {
-	pending := &godo.HostedAgentProviderAuthStart{Provider: "github", Status: "pending",
-		ConnectURL: "https://example.com/connect", PollURL: "https://example.com/poll"}
-	cases := []struct {
-		name  string
-		setup func(tm *tcMocks)
-		want  bool
-	}{
-		{"already connected", func(tm *tcMocks) {
-			tm.hostedAgents.EXPECT().StartProviderAuth("github").
-				Return(&godo.HostedAgentProviderAuthStart{Status: "success"}, nil)
-		}, true},
-		{"status check error", func(tm *tcMocks) {
-			tm.hostedAgents.EXPECT().StartProviderAuth("github").Return(nil, errors.New("boom"))
-		}, false},
-		{"declined", func(tm *tcMocks) {
-			tm.hostedAgents.EXPECT().StartProviderAuth("github").Return(pending, nil)
-			askConnectGitHub = func() (bool, error) { return false, nil }
-		}, false},
-		{"accepted but nothing to poll", func(tm *tcMocks) {
-			noPoll := *pending
-			noPoll.PollURL = ""
-			tm.hostedAgents.EXPECT().StartProviderAuth("github").Return(&noPoll, nil)
-			askConnectGitHub = func() (bool, error) { return true, nil }
-		}, false},
-		{"accepted and poll succeeds", func(tm *tcMocks) {
-			tm.hostedAgents.EXPECT().StartProviderAuth("github").Return(pending, nil)
-			tm.hostedAgents.EXPECT().PollProviderAuth("github", "https://example.com/poll").
-				Return(&godo.HostedAgentProviderAuthPoll{Provider: "github", Status: "success"}, nil)
-			askConnectGitHub = func() (bool, error) { return true, nil }
-		}, true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				prevAsk, prevInterval := askConnectGitHub, agentsAuthPollInterval
-				t.Cleanup(func() { askConnectGitHub, agentsAuthPollInterval = prevAsk, prevInterval })
-				agentsAuthPollInterval = time.Millisecond
-				tc.setup(tm)
-				config.Out = &bytes.Buffer{}
-				got, err := maybeOfferGitHubAuth(config)
-				require.NoError(t, err)
-				assert.Equal(t, tc.want, got)
-			})
-		})
-	}
-}
-
-func TestLegacyEnvelopeSkipSaysSo(t *testing.T) {
-	repoTestSetup(t)
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		var stderr bytes.Buffer
-		prev := execStderr
-		execStderr = &stderr
-		t.Cleanup(func() { execStderr = prev })
-		tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(m []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
-				assert.NotContains(t, string(m), "oauth/github")
-				return repoTestSession("s"), nil
-			})
-		tm.hostedAgents.EXPECT().StartProviderAuth("github").
-			Return(&godo.HostedAgentProviderAuthStart{Status: "success"}, nil)
-		config.Out = &bytes.Buffer{}
-		_, err := createAgentSession(config, &agentCreationSource{repo: "o/r", manifest: []byte("apiVersion: agents.digitalocean.com/v1alpha1\nkind: Agent\nmetadata:\n  name: demo\nspec:\n  runtime:\n    adapter: opencode\n")}, nil)
-		require.NoError(t, err)
-		assert.Contains(t, stderr.String(), "add GITHUB_TOKEN: oauth/github under secrets in a flat manifest")
-	})
-}
-
-// The slot is added before the manifest is expanded, so a ${GITHUB_TOKEN}
-// reference elsewhere must not resolve to the literal reference.
+// --secret lands before the manifest is expanded, so a ${GITHUB_TOKEN}
+// reference elsewhere must not resolve to the literal reference. Only the
+// GitHub reference is skipped: any other value is the user's own.
 func TestOAuthReferenceIsNotAnExpansionValue(t *testing.T) {
-	m := []byte("harness: opencode\nsecrets:\n  GITHUB_TOKEN: oauth/github\n  OTHER: real\n")
+	m := []byte("harness: opencode\nsecrets:\n  GITHUB_TOKEN: oauth/github\n  OTHER: real\n  LOOKALIKE: oauth/gitlab\n")
 	got := resolvedManifestSecretValues(m)
 	assert.NotContains(t, got, "GITHUB_TOKEN")
 	assert.Equal(t, "real", got["OTHER"])
+	assert.Equal(t, "oauth/gitlab", got["LOOKALIKE"])
 }
 
 func TestDryRunWithRepoSaysWhatItWouldDo(t *testing.T) {
@@ -776,13 +673,77 @@ func TestDryRunWithRepoSaysWhatItWouldDo(t *testing.T) {
 		execStderr = &stderr
 		t.Cleanup(func() { execStderr = prev })
 
-		config.Out = &bytes.Buffer{}
+		var out bytes.Buffer
+		config.Out = &out
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "owner/repo")
 		config.Doit.Set(config.NS, doctl.ArgAgentDryRun, true)
 
 		require.NoError(t, RunAgentsCreate(config)) // no mock expectations: any API call fails
 		assert.Contains(t, stderr.String(), "Would clone owner/repo into /workspace/repo")
-		assert.Contains(t, stderr.String(), "If GitHub is connected, create also adds GITHUB_TOKEN: oauth/github.")
+		assert.NotContains(t, out.String()+stderr.String(), "GITHUB_TOKEN")
 	})
+}
+
+func TestOriginIsRepo(t *testing.T) {
+	for _, o := range []string{"https://github.com/o/r.git\n", "https://github.com/O/R", "git@github.com:o/r.git", "ssh://git@github.com/o/r", "https://github.com/o/r/"} {
+		assert.True(t, originIsRepo(o, "o/r"), o)
+	}
+	for _, o := range []string{"https://github.com/bob/r.git", "https://github.com/o/r2.git", "https://gitlab.com/o/r.git", "https://github.com/x/o/r", ""} {
+		assert.False(t, originIsRepo(o, "o/r"), o)
+	}
+}
+
+// A reused workspace holding another owner's repo of the same name must not be
+// taken for the requested one: no clone, no prompt, and a clear failure.
+func TestRunAgentsCreate_ExistingDifferentRepoFails(t *testing.T) {
+	repoTestSetup(t)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectRepoSession(tm, "sess_other")
+		tm.hostedAgents.EXPECT().ExecInSandbox(gomock.Any(), "sess_other", &godo.HostedAgentSandboxExecRequest{
+			Argv: []string{"git", "-C", "/workspace/app", "remote", "get-url", "origin"}, TimeoutSeconds: repoCheckTimeoutSeconds,
+		}).Return(&godo.HostedAgentSandboxExecResponse{Stdout: "https://github.com/bob/app.git\n"}, nil)
+
+		config.Out = &bytes.Buffer{}
+		setRepoCreateFlags(config, "alice/app")
+
+		err := RunAgentsCreate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "/workspace/app already holds a different repository (origin https://github.com/bob/app.git), not alice/app")
+		assert.Contains(t, err.Error(), "prompt was not sent")
+	})
+}
+
+// The printed retry command must hand sh the very script the clone ran, so a
+// private repository retries with the same credential helper.
+func TestRetryCommandQuotesTheCloneScript(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs a POSIX sh")
+	}
+	out, err := exec.Command("sh", "-c", "printf %s "+shellQuote(repoCloneScript)).Output()
+	require.NoError(t, err)
+	assert.Equal(t, repoCloneScript, string(out))
+}
+
+// Real git, no network: the helper in the clone script answers git's
+// credential request with the token from the environment.
+func TestRepoCloneHelperServesTokenToGit(t *testing.T) {
+	gitPath, err := exec.LookPath("git")
+	if err != nil || runtime.GOOS == "windows" {
+		t.Skip("needs git and a POSIX sh")
+	}
+	const marker = "-c 'credential.helper="
+	start := strings.Index(repoCloneScript, marker)
+	require.GreaterOrEqual(t, start, 0)
+	helper := repoCloneScript[start+len(marker):]
+	helper = helper[:strings.Index(helper, "' clone")]
+
+	token := fakeGitHubToken("o")
+	cmd := exec.Command(gitPath, "-c", "credential.helper=", "-c", "credential.helper="+helper, "credential", "fill")
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + t.TempDir(), "GIT_TERMINAL_PROMPT=0", "GIT_CONFIG_NOSYSTEM=1", "GITHUB_TOKEN=" + token}
+	cmd.Stdin = strings.NewReader("protocol=https\nhost=github.com\npath=o/r.git\n\n")
+	out, err := cmd.Output()
+	require.NoError(t, err)
+	assert.Contains(t, string(out), "username=x-access-token\n")
+	assert.Contains(t, string(out), "password="+token+"\n")
 }

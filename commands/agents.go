@@ -745,7 +745,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + harness), e.g. "name: my-session\nharness: opencode"; agent is the original name of harness and still works. Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
-	AddStringFlag(cmd, doctl.ArgAgentRepo, "", "", "GitHub repository (https://github.com/org/repo or org/repo). Cloned into /workspace/<repo> once the session is ready, before --prompt is sent. Private repositories clone when GitHub is connected (doctl harness-runtime auth github): doctl then gives the session your GitHub token as GITHUB_TOKEN, which the agent can also use to push. Only with --harness or --spec.")
+	AddStringFlag(cmd, doctl.ArgAgentRepo, "", "", "GitHub repository (https://github.com/org/repo or org/repo). Cloned into /workspace/<repo> once the session is ready, before --prompt is sent. Public repositories need nothing else. A private repository needs GitHub connected (doctl harness-runtime auth github) and "+githubTokenOptIn+", which gives the session, and so the agent, your GitHub token as GITHUB_TOKEN; the agent can also push with it. Only with --harness or --spec.")
 	AddStringFlag(cmd, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmd, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --from-config.")
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
@@ -1221,23 +1221,8 @@ func agentSourcesExclusiveErr() error {
 func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if src.repo != "" {
 		warnPromptBeforeClone(src)
-		connected, err := maybeOfferGitHubAuth(c)
-		if err != nil {
+		if err := maybeOfferGitHubAuth(c); err != nil {
 			return nil, err
-		}
-		// Only a connected team can be given the slot: the server rejects a
-		// create that names the GitHub source when it is not connected.
-		if connected {
-			added, skippedLegacy, err := addGitHubTokenSlot(src)
-			if err != nil {
-				return nil, err
-			}
-			if skippedLegacy {
-				fmt.Fprintln(execStderr, "This manifest uses the deprecated envelope format, so doctl cannot add the GitHub token for you. To clone private repositories, add GITHUB_TOKEN: oauth/github under secrets in a flat manifest.")
-			}
-			if added {
-				fmt.Fprintln(execStderr, "Giving the session your GitHub connection as GITHUB_TOKEN: the agent can clone private repositories and can also push with it.")
-			}
 		}
 	}
 	sess, err := createAgentSessionIn(c, src, prog)
@@ -1315,7 +1300,6 @@ func RunAgentsCreate(c *CmdConfig) error {
 		if src.repo != "" {
 			_, dest := repoClonePaths(src.repo)
 			fmt.Fprintf(execStderr, "Would clone %s into %s once the session is ready.\n", src.repo, dest)
-			fmt.Fprintln(execStderr, "If GitHub is connected, create also adds GITHUB_TOKEN: oauth/github.")
 		}
 		return printResolvedManifest(c, src)
 	}
@@ -2499,25 +2483,16 @@ func RunAgentsAuth(c *CmdConfig) error {
 // completeProviderAuth finishes a StartProviderAuth response: success, browser
 // connect card, and optional poll until authorized.
 func completeProviderAuth(c *CmdConfig, svc do.HostedAgentsService, provider string, start *godo.HostedAgentProviderAuthStart, noBrowser, noWait bool) error {
-	_, err := completeProviderAuthConnected(c, svc, provider, start, noBrowser, noWait)
-	return err
-}
-
-// completeProviderAuthConnected is completeProviderAuth that also reports
-// whether the provider is known to be connected when it returns: true for an
-// existing connection or a confirmed poll, false when the authorization was only
-// shown (noWait) or never awaited.
-func completeProviderAuthConnected(c *CmdConfig, svc do.HostedAgentsService, provider string, start *godo.HostedAgentProviderAuthStart, noBrowser, noWait bool) (bool, error) {
 	if start == nil {
-		return false, fmt.Errorf("empty provider auth response for %s", provider)
+		return fmt.Errorf("empty provider auth response for %s", provider)
 	}
 	if strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
 		stylingEnabled = detectStyling()
 		printAgentSuccess(c.Out, fmt.Sprintf("%s is already connected for your team", provider))
-		return true, nil
+		return nil
 	}
 	if start.ConnectURL == "" {
-		return false, fmt.Errorf("harness-api returned status %q with no authorization URL", start.Status)
+		return fmt.Errorf("harness-api returned status %q with no authorization URL", start.Status)
 	}
 
 	stylingEnabled = detectStyling()
@@ -2536,7 +2511,7 @@ func completeProviderAuthConnected(c *CmdConfig, svc do.HostedAgentsService, pro
 
 	if noWait || start.PollURL == "" {
 		printAgentSuccess(c.Out, fmt.Sprintf("Re-run `doctl harness-runtime auth %s` after authorizing to confirm the connection", provider))
-		return false, nil
+		return nil
 	}
 
 	// SIGTERM alongside SIGINT so the wait loop exits cleanly under a process
@@ -2551,19 +2526,19 @@ func completeProviderAuthConnected(c *CmdConfig, svc do.HostedAgentsService, pro
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				return false, fmt.Errorf("authorization was not completed before it expired; re-run `doctl harness-runtime auth %s` to start again", provider)
+				return fmt.Errorf("authorization was not completed before it expired; re-run `doctl harness-runtime auth %s` to start again", provider)
 			}
-			return false, fmt.Errorf("stopped waiting; re-run `doctl harness-runtime auth %s` to check the connection later", provider)
+			return fmt.Errorf("stopped waiting; re-run `doctl harness-runtime auth %s` to check the connection later", provider)
 		case <-time.After(agentsAuthPollInterval):
 		}
 
 		poll, err := svc.PollProviderAuth(provider, start.PollURL)
 		if err != nil {
-			return false, err
+			return err
 		}
 		if strings.EqualFold(poll.Status, agentProviderAuthStatusSuccess) {
 			printAgentSuccess(c.Out, fmt.Sprintf("%s connected successfully", provider))
-			return true, nil
+			return nil
 		}
 	}
 }

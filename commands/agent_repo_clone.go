@@ -39,7 +39,8 @@ const (
 	// shallow clone of a very large repository over a slow link.
 	repoCloneTimeoutSeconds = 600
 
-	// repoCheckTimeoutSeconds bounds the existence check, which is a stat.
+	// repoCheckTimeoutSeconds bounds the existing-clone check, which reads the
+	// destination's git config.
 	repoCheckTimeoutSeconds = 30
 
 	// githubTokenSecret is the secret slot that hands the session the user's
@@ -49,6 +50,11 @@ const (
 	// githubOAuthRef is the slot value that resolves, server-side, to the
 	// team's GitHub connection. It is a reference, not a credential.
 	githubOAuthRef = "oauth/github"
+
+	// githubTokenOptIn is how a user gives the session their GitHub token. It
+	// is never added for them: the agent can push with it, and an Agent Config
+	// saved from the session keeps it for every later session.
+	githubTokenOptIn = "--secret " + githubTokenSecret + "=" + githubOAuthRef
 
 	// repoCloneScript runs inside the sandbox. It is fixed text with no user
 	// input: the URL and destination arrive as $1 and $2. The token is read from
@@ -142,17 +148,22 @@ func cloneRequestedRepo(c *CmdConfig, sess *do.HostedAgentSession, src *agentCre
 	defer cancel()
 
 	// The check is idempotent, so it uses the normal retrying client: a
-	// transient error must not look like a reused workspace. An exec error here
-	// (as opposed to a non-zero exit) is not proof the folder is missing, so it
-	// falls through to the clone, which fails loudly if the folder is there.
+	// transient error must not look like a reused workspace. Anything short of
+	// an origin that names this repository falls through to the clone, which
+	// fails loudly if the folder is there.
 	check, checkErr := c.HostedAgents().ExecInSandbox(ctx, sess.SessionID, &godo.HostedAgentSandboxExecRequest{
-		Argv:           []string{"test", "-e", dest},
+		Argv:           []string{"git", "-C", dest, "remote", "get-url", "origin"},
 		TimeoutSeconds: repoCheckTimeoutSeconds,
 	})
 	if ctx.Err() != nil {
 		return 0, repoCloneInterrupted(sessionRef, heldBack)
 	}
 	if checkErr == nil && check != nil && check.ExitCode == 0 {
+		if !originIsRepo(check.Stdout, ref) {
+			return 0, &agentPrettyError{title: "Repository clone failed", reason: fmt.Sprintf(
+				"%s already holds a different repository (origin %s), not %s.\nThe session %s is still running%s.",
+				dest, redactRepoSecrets(strings.TrimSpace(check.Stdout)), ref, sessionRef, promptNote(heldBack))}
+		}
 		prog.step("Using existing " + dest)
 		return 0, nil
 	}
@@ -318,14 +329,14 @@ func repoCloneError(ref, cloneURL, dest, sessionRef, retryRef, reasonText string
 		fmt.Fprintf(&b, "%s\n", reason)
 	}
 	fmt.Fprintf(&b, "The session %s is still running%s.\n", sessionRef, promptNote(heldBack))
-	fmt.Fprintf(&b, "Retry the clone with: %s exec %s -- git clone --depth 1 %s %s", agentCLI, retryRef, cloneURL, dest)
+	fmt.Fprintf(&b, "Retry the clone with: %s exec %s -- sh -c %s sh %s %s", agentCLI, retryRef, shellQuote(repoCloneScript), cloneURL, dest)
 	switch {
 	case kind == cloneGitMissing:
 		b.WriteString("\ngit is not available in this session's image, so the repository cannot be cloned there.")
 	case kind == cloneGitError && repoAuthHintRE.MatchString(reasonText) && hasToken:
 		b.WriteString("\nIf the repository is private, the GitHub connection's token may not have access to it; check the connection's permissions for this repository.")
 	case kind == cloneGitError && repoAuthHintRE.MatchString(reasonText):
-		fmt.Fprintf(&b, "\nIf the repository is private, connect GitHub (`%s auth github`) and run the command again; doctl then gives the session your GitHub token.", agentCLI)
+		fmt.Fprintf(&b, "\nIf the repository is private, connect GitHub (`%s auth github`) and run the command again with %s, which gives the session, and so the agent, your GitHub token.", agentCLI, githubTokenOptIn)
 	}
 	return &agentPrettyError{title: "Repository clone failed", reason: b.String()}
 }
@@ -365,27 +376,16 @@ func manifestDeclaresName(manifest []byte, name string) bool {
 	return false
 }
 
-// addGitHubTokenSlot declares GITHUB_TOKEN: oauth/github in a flat manifest so
-// the session receives the user's GitHub connection. It reports whether it
-// added the slot, and whether it skipped only because the manifest uses the
-// deprecated envelope format, whose slots are lists with a separate source
-// field this shorthand does not describe. A manifest that already declares the
-// name is left alone.
-func addGitHubTokenSlot(src *agentCreationSource) (added, skippedLegacy bool, err error) {
-	if src.configID != "" || len(src.manifest) == 0 || manifestDeclaresName(src.manifest, githubTokenSecret) {
-		return false, false, nil
-	}
-	var probe map[string]any
-	if err := yaml.Unmarshal(src.manifest, &probe); err != nil {
-		return false, false, nil
-	}
-	if _, legacy := probe["apiVersion"]; legacy {
-		return false, true, nil
-	}
-	out, err := injectManifestSecrets(src.manifest, map[string]string{githubTokenSecret: githubOAuthRef})
-	if err != nil {
-		return false, false, err
-	}
-	src.manifest = out
-	return true, false, nil
+// originIsRepo reports whether a git origin URL, in HTTPS or SSH form, names
+// the GitHub repository ref. GitHub names are case-insensitive.
+func originIsRepo(origin, ref string) bool {
+	o := strings.ToLower(strings.TrimSuffix(strings.TrimSuffix(strings.TrimSpace(origin), "/"), ".git"))
+	ref = strings.ToLower(ref)
+	return o == "https://github.com/"+ref || o == "git@github.com:"+ref || o == "ssh://git@github.com/"+ref
+}
+
+// shellQuote single-quotes s for a POSIX shell, so a printed command can be
+// pasted back as is.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
