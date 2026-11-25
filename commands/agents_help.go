@@ -156,7 +156,17 @@ const agentsListHelpMD = `List sessions visible to your team. Filter with ` + "`
 
 const agentsShowHelpMD = `Print details for one session. Pass the session ID or name.`
 
-const agentsLogsHelpMD = `Replay the session's event history, then exit. Very old or long histories may show only recent events.`
+const agentsLogsHelpMD = `Replay the session's event history, then exit.
+
+With ` + "`-o json`" + `, prints newline-delimited JSON, one object per line, so the history can be read as data (for example with ` + "`jq`" + `). Token chunks are not merged. ` + "`--pretty`" + ` implies ` + "`-o json`" + ` and indents each object, so its output is not one object per line. An empty history prints nothing on stdout.
+
+Each object holds a subset of the API's event fields: ` + "`event_id`" + `, ` + "`run_id`" + `, ` + "`session_id`" + `, ` + "`timestamp`" + `, ` + "`seq`" + `, ` + "`source_event_id`" + `, ` + "`source_event_type`" + `, ` + "`type`" + ` and ` + "`data`" + `. It leaves out ` + "`tenant_id`" + `, ` + "`config_id`" + ` and ` + "`trace_parent`" + `. Empty ` + "`session_id`" + `, ` + "`source_event_id`" + ` and ` + "`source_event_type`" + ` are omitted, and a missing ` + "`timestamp`" + ` or ` + "`data`" + ` prints as ` + "`null`" + `.
+
+With ` + "`-o json`" + `, an error before the first event prints doctl's standard ` + "`errors`" + ` object on stdout. An error after the first event goes to stderr, so stdout holds only events.
+
+Very old or long histories may show only recent events. When older events are dropped, the output has no marker.
+
+JSON output includes the full prompt, tool arguments and log fields, which text output leaves out.`
 
 const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "`approve`" + `, ` + "`reject`" + `, or ` + "`defer`" + `. For an MCP elicitation that asks for values (a data form), pass ` + "`--content`" + ` with a JSON object matching what it requested — a plain ` + "`approve`" + ` with no ` + "`--content`" + ` is only correct for a yes/no approval or an OAuth link, not a form.`
 
@@ -209,7 +219,13 @@ secrets:
       match: {command: "rm -rf *"}
       action: deny
 ` + "```\n\n```bash\n" + agentCLI + ` update my-session --spec permissions.yaml
-` + "```\n\n" + `The change is applied while the session runs. A tools, URL-bound secret, egress or permissions change usually takes seconds; an env or plain secret change restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature, and a spec with a ` + "`permissions`" + ` section, even an unchanged one, also needs permission updates enabled for your team. The session status must be ` + "`SESSION_STATUS_READY`" + `, ` + "`SESSION_STATUS_DETACHED`" + ` or ` + "`SESSION_STATUS_PAUSED`" + ` (a paused session is resumed for the update and paused again, unless it was paused for zero balance), with no turn running and no approval pending. Any other status, including provisioning or already updating, is refused.
+` + "```\n\n" + `**OAuth connection.** An OAuth secret that names a provider connection with ` + "`actor`" + ` can switch to another connection of the same provider while the session runs. In ` + "`secrets`" + `, set it to ` + "`{source: oauth, provider, actor}`" + ` with the new connection's ` + "`user_id`" + ` as ` + "`actor`" + ` (run ` + "`" + agentCLI + " connections list`" + ` to see them), and keep every other secret as ` + "`{}`" + `. The new connection must be active, and yours or shared with your team; switching back to the connection the agent config names doesn't need that. The agent restarts, and its next ` + "`git`" + ` operation uses the new connection. Sending the connection the secret already uses changes nothing. The switch applies to this session only: new sessions from the same config start on the config's connection, and a rollback or fork uses the connection the session had when the checkpoint was taken. Action Gateway (` + "`do.actions`" + `) tools keep using the connection Action Gateway picks for the session, so ` + "`git`" + ` and those tools can act as different accounts. A token the agent already read stays valid with the provider until the old connection is revoked. Adding or removing an OAuth secret, changing its provider, or switching one that has no ` + "`actor`" + ` needs a new session. Your team must be enrolled in OAuth connection switching.
+` + "```yaml\n" + `secrets:
+  GITHUB_TOKEN:
+    source: oauth
+    provider: github
+    actor: github2
+` + "```\n\n" + `The change is applied while the session runs. A tools, URL-bound secret, egress or permissions change usually takes seconds; an env or plain secret change, or an OAuth connection switch, restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature, and a spec with a ` + "`permissions`" + ` section, even an unchanged one, also needs permission updates enabled for your team. The session status must be ` + "`SESSION_STATUS_READY`" + `, ` + "`SESSION_STATUS_DETACHED`" + ` or ` + "`SESSION_STATUS_PAUSED`" + ` (a paused session is resumed for the update and paused again, unless it was paused for zero balance), with no turn running and no approval pending. Any other status, including provisioning or already updating, is refused.
 
 **Session setting** (` + "`--resume-on-topoff`" + `): the consent to be resumed automatically after a low-balance pause:
 ` + "```bash\n" + agentCLI + ` update my-session --resume-on-topoff

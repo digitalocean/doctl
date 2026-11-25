@@ -566,10 +566,11 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("get"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 
-	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
+	cmdLogs := CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the event history for a session",
 		agentsLogsHelpMD,
 		Writer, agentsNS()...)
+	AddBoolFlag(cmdLogs, doctl.ArgAgentPretty, "", false, "Indent each JSON event for reading. Implies -o json.")
 
 	cmdApprove := CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
@@ -651,7 +652,7 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("ask"),
 			displayerType(&displayers.HostedAgentPrompt{}))...)
 	AddStringFlag(cmdPrompt, doctl.ArgAgentOnHITL, "", "", "Resolve every approval request this way (approve|reject|defer). Without it, an approval request stops the command, since nothing here can ask a human.")
-	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds to wait for the run to finish, exiting 124 if it does not (0 waits indefinitely). A timeout does not stop the agent; Ctrl-C does.")
+	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds for waking the session, sending the prompt and waiting for the run to finish, exiting 124 if it does not (0 waits indefinitely). A timeout does not stop the agent; Ctrl-C does.")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptIncludeReasoning, "", false, "Also print the model's reasoning to stderr, not just its answer")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptQuiet, "q", false, "Suppress progress on stderr; stdout still carries the answer")
 	cmdPrompt.Example = agentCLI + ` prompt my-session What is the capital of France?; ` + agentCLI + ` prompt sess_abc123 "Summarize the README" --timeout 300; ` + agentCLI + ` prompt my-session "Fix the failing test" --on-hitl approve; cat task.md | ` + agentCLI + ` prompt my-session -`
@@ -2268,10 +2269,20 @@ func RunAgentsResume(c *CmdConfig) error {
 		return err
 	}
 	warnBoundReuseSession(c, sessionID)
-	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
+	svc := c.HostedAgents()
+	sess, err := svc.GetSession(sessionID)
+	if err != nil {
 		return err
 	}
+	if sess.Status != godo.HostedAgentSessionStatusPaused {
+		return fmt.Errorf("session %s is %s, not paused; there is nothing to resume", sessionID, humanSessionStatus(sess.Status))
+	}
 	stylingEnabled = detectStyling()
+	prog := newStageProgress(wakeStderr)
+	defer prog.stop()
+	if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
+		return err
+	}
 	printAgentSuccess(c.Out, fmt.Sprintf("Session %s resumed", sessionID))
 	return nil
 }
@@ -3035,6 +3046,43 @@ func hitlOutcomeFor(s string) (godo.HostedAgentHITLOutcome, error) {
 // stream is finite: the server ends it after the last stored event, which is
 // what terminates the loop below.
 func RunAgentsLogs(c *CmdConfig) error {
+	pretty, err := c.Doit.GetBool(c.NS, doctl.ArgAgentPretty)
+	if err != nil {
+		return err
+	}
+	// Decide the format before any request so a refusal prints nothing. The
+	// global -o defaults to "text", so only an explicit -o text conflicts with
+	// --pretty; the default merely gets upgraded to JSON. outputFormat also
+	// sees a config file's output, as checkErr does.
+	format := outputFormat()
+	if format != "text" && format != "json" {
+		return errors.New("logs supports -o text and -o json")
+	}
+	if pretty && format == "text" && agentFlagChanged(c, doctl.ArgOutput) {
+		return errors.New("--pretty only applies to JSON output")
+	}
+	if format == "json" || pretty {
+		// Before the first event, the runner's checkErr prints the standard
+		// {"errors":[...]} envelope under -o json. After it, that envelope
+		// would be a non-event line in the stream, so report on stderr and
+		// exit non-zero silently instead.
+		out := &reportingWriter{out: c.Out}
+		c.Out = out
+		err := runAgentsLogs(c, pretty, true)
+		if err == nil || !out.wrote.Load() {
+			return err
+		}
+		// Same rewrite the runner applies, so a 402 says "add funds" here too.
+		err = beautifyAgentErrorFor(c, err)
+		if !errors.Is(err, ErrExitSilently) {
+			fmt.Fprint(uiEnv().ErrWriter(), formatStructuredError(uiEnv(), err))
+		}
+		return ErrExitSilently
+	}
+	return runAgentsLogs(c, pretty, false)
+}
+
+func runAgentsLogs(c *CmdConfig, pretty, asJSON bool) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
 		return err
@@ -3051,6 +3099,10 @@ func RunAgentsLogs(c *CmdConfig) error {
 		return err
 	}
 	defer stream.Close()
+
+	if asJSON {
+		return writeEventsJSON(c.Out, stream, pretty)
+	}
 
 	// TOKEN_CHUNK events stream token-by-token; buffer them so the whole
 	// assistant message renders as markdown at once. Other event kinds are
@@ -3075,6 +3127,67 @@ func RunAgentsLogs(c *CmdConfig) error {
 		renderEvent(c.Out, ev)
 	}
 	acc.flush(c.Out)
+	return stream.Err()
+}
+
+// logEventJSON is the subset of the server's event envelope that godo keeps,
+// under the server's field names. godo's event type has no JSON tags and drops
+// tenant_id, config_id and trace_parent while decoding, so those three cannot
+// be reproduced here. agentsLogsHelpMD lists the fields for users.
+type logEventJSON struct {
+	EventID         string          `json:"event_id"`
+	RunID           string          `json:"run_id"`
+	SessionID       string          `json:"session_id,omitempty"`
+	Timestamp       *string         `json:"timestamp"`
+	Seq             uint64          `json:"seq"`
+	SourceEventID   string          `json:"source_event_id,omitempty"`
+	SourceEventType string          `json:"source_event_type,omitempty"`
+	Type            string          `json:"type"`
+	Data            json.RawMessage `json:"data"`
+}
+
+// writeEventsJSON prints one JSON object per event. Each event is encoded in
+// full before it is written, so a mid-stream failure leaves only complete
+// lines behind. Token chunks are kept as separate events: the consumer is a
+// program that wants the history as recorded, not a merged message.
+func writeEventsJSON(w io.Writer, stream *godo.HostedAgentSessionStream, pretty bool) error {
+	for stream.Next() {
+		ev := stream.Current()
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			continue
+		}
+		out := logEventJSON{
+			EventID:         ev.EventID,
+			RunID:           ev.RunID,
+			SessionID:       ev.SessionID,
+			Seq:             ev.Seq,
+			SourceEventID:   ev.SourceEventID,
+			SourceEventType: ev.SourceEventType,
+			Type:            string(ev.Kind),
+			Data:            ev.Payload,
+		}
+		// godo leaves the time zero when the frame had none; null says so
+		// instead of inventing year 1.
+		if !ev.At.Time.IsZero() {
+			ts := ev.At.Time.UTC().Format(time.RFC3339Nano)
+			out.Timestamp = &ts
+		}
+		if len(out.Data) == 0 {
+			out.Data = json.RawMessage("null")
+		}
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		if pretty {
+			enc.SetIndent("", "  ")
+		}
+		if err := enc.Encode(out); err != nil {
+			return err
+		}
+		if _, err := w.Write(buf.Bytes()); err != nil {
+			return err
+		}
+	}
 	return stream.Err()
 }
 
