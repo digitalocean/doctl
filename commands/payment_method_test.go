@@ -145,7 +145,7 @@ func TestPaymentMethodAddSuggestsAuthLoginWithoutToken(t *testing.T) {
 		require.True(t, errors.As(err, &ns))
 		assert.Contains(t, ns.NextStep(), "doctl auth login")
 		assert.Contains(t, err.Error(), "not signed in")
-		assert.Contains(t, checks.String(), "Could not verify sign-in")
+		assert.Contains(t, checks.String(), "Not signed in to a DigitalOcean account")
 		assert.NotContains(t, checks.String(), "Checking email verification")
 		assert.False(t, openCalled)
 		assert.Empty(t, out.String())
@@ -191,6 +191,12 @@ func TestPaymentMethodAddExplainsMissingAccountReadScope(t *testing.T) {
 		assert.Contains(t, checks.String(), "Access token is missing the account:read permission")
 		assert.NotContains(t, checks.String(), "Checking email verification")
 		assert.False(t, openCalled)
+
+		// The failed check line already names the problem, so the error block
+		// is only the next step.
+		assert.Equal(t,
+			"→ run doctl auth login and grant the account:read permission (or use an API token that includes it)\n",
+			formatStructuredError(ui.Env{}, err))
 	})
 }
 

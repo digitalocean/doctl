@@ -30,7 +30,7 @@ const (
 	// digitalOceanAddPaymentMethodURL is the control-panel page where a
 	// customer adds a payment method. Payment details are web-only; doctl only
 	// opens or prints this URL.
-	digitalOceanAddPaymentMethodURL = "https://cloud.digitalocean.com/account/billing/add-payment-method?i=c949bc"
+	digitalOceanAddPaymentMethodURL = "https://cloud.digitalocean.com/account/billing/add-payment-method"
 
 	// digitalOceanBillingURL is the control-panel billing overview.
 	digitalOceanBillingURL = "https://cloud.digitalocean.com/account/billing"
@@ -54,6 +54,9 @@ type paymentMethodCheckError struct {
 
 func (e *paymentMethodCheckError) Error() string    { return e.msg }
 func (e *paymentMethodCheckError) NextStep() string { return e.nextStep }
+
+// alreadyReported is true because the failed check line states the problem.
+func (e *paymentMethodCheckError) alreadyReported() bool { return true }
 
 // PaymentMethod creates the payment-method commands hierarchy.
 func PaymentMethod() *Command {
@@ -146,7 +149,7 @@ func RunPaymentMethodAdd(c *CmdConfig) error {
 // paymentMethodTeam names the team a payment method applies to.
 func paymentMethodTeam(account *do.Account) string {
 	if account.Team != nil && account.Team.Name != "" {
-		return "team " + account.Team.Name
+		return "team - " + account.Team.Name
 	}
 	return "this team"
 }
@@ -161,6 +164,7 @@ func paymentMethodAccount(c *CmdConfig) (*do.Account, error) {
 			return nil, &paymentMethodCheckError{
 				msg:      "doctl is not signed in to a DigitalOcean account",
 				nextStep: "run doctl auth login (or doctl auth init to use an API token)",
+				failure:  "Not signed in to a DigitalOcean account",
 			}
 		}
 		return nil, err

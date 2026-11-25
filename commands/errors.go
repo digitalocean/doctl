@@ -407,6 +407,13 @@ func checkErr(err error) {
 	errAction()
 }
 
+// reportedError is an error a command has already shown on screen, such as a
+// failed check line, so text output skips the title and prints only what
+// follows it. JSON output is unaffected.
+type reportedError interface {
+	alreadyReported() bool
+}
+
 // formatStructuredError renders err in the shared Title/Reason/status/request/
 // next-step shape checkErr uses for text output. Agent and generic failures
 // both go through here so hosted-agent copy does not keep a parallel card.
@@ -419,7 +426,10 @@ func formatStructuredError(env ui.Env, err error) string {
 	if title == "" {
 		title = err.Error()
 	}
-	fmt.Fprintf(&b, "%s %s\n", style.ErrorLabel(), title)
+	var reported reportedError
+	if !errors.As(err, &reported) || !reported.alreadyReported() {
+		fmt.Fprintf(&b, "%s %s\n", style.ErrorLabel(), title)
+	}
 
 	if reason := se.Reason(); reason != "" {
 		fmt.Fprintf(&b, "%s\n", style.Dim(reason))
