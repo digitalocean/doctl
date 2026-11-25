@@ -30,10 +30,6 @@ import (
 // yet, so every route is built from this prefix.
 const harborBasePath = "/v1/eval-harness"
 
-// harborPreviewBasePath is the preview lane. The edge rewrites it to
-// harborBasePath on the preview deployment, so routes below it are the same.
-const harborPreviewBasePath = harborBasePath + "/preview"
-
 // Upload states.
 const (
 	HarborUploadUploading  = "uploading"
@@ -342,14 +338,11 @@ type harborService struct {
 var _ HarborService = &harborService{}
 
 // NewHarborService builds a HarborService on the shared API client, so it uses
-// the same token, base URL, and retry policy as every other command. preview
-// sends requests to the preview lane instead of production.
-func NewHarborService(client *godo.Client, preview bool) HarborService {
-	basePath := harborBasePath
-	if preview {
-		basePath = harborPreviewBasePath
-	}
-	return &harborService{client: client, basePath: basePath}
+// the same token, base URL, and retry policy as every other command. To test
+// against a preview deployment, point the client at it with --api-url or
+// DIGITALOCEAN_API_URL.
+func NewHarborService(client *godo.Client) HarborService {
+	return &harborService{client: client, basePath: harborBasePath}
 }
 
 func (s *harborService) do(method, path string, body any, header http.Header, out any) (*godo.Response, error) {

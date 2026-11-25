@@ -31,7 +31,7 @@ func newHarborTestService(t *testing.T, handler http.HandlerFunc) HarborService 
 	t.Cleanup(server.Close)
 	client, err := godo.New(http.DefaultClient, godo.SetBaseURL(server.URL+"/"))
 	require.NoError(t, err)
-	return NewHarborService(client, false)
+	return NewHarborService(client)
 }
 
 func TestHarborServiceRequests(t *testing.T) {
@@ -169,22 +169,6 @@ func TestHarborServiceDeleteJob(t *testing.T) {
 	})
 	require.NoError(t, svc.DeleteJob("job-1"))
 	assert.Equal(t, "DELETE /v1/eval-harness/jobs/job-1", got)
-}
-
-func TestHarborServicePreview(t *testing.T) {
-	var gotPath string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"jobs":[]}`)
-	}))
-	t.Cleanup(server.Close)
-	client, err := godo.New(http.DefaultClient, godo.SetBaseURL(server.URL+"/"))
-	require.NoError(t, err)
-
-	_, err = NewHarborService(client, true).ListJobs("")
-	require.NoError(t, err)
-	assert.Equal(t, "/v1/eval-harness/preview/jobs", gotPath)
 }
 
 func TestHarborServiceErrors(t *testing.T) {

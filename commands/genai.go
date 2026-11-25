@@ -14,19 +14,10 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/digitalocean/doctl"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-const (
-	harborNS = "genai.harbor"
-
-	// harborPreviewFlagKey is the viper key of the group-level --preview flag.
-	// One persistent flag serves every subcommand, so it does not use the
-	// per-command key AddBoolFlag would produce.
-	harborPreviewFlagKey = harborNS + "." + doctl.ArgHarborPreview
-)
+const harborNS = "genai.harbor"
 
 // GenAI creates the genai command.
 func GenAI() *Command {
@@ -65,12 +56,6 @@ Author and check a task on your own machine with the harbor CLI: ` + "`harbor ta
 A task passed to ` + "`run`" + ` uses ` + "`-T`" + ` or ` + "`--task`" + `. ` + "`-t`" + ` is doctl's access token.`,
 		},
 	}
-
-	// Hidden until launch: the preview lane is gated by the genai_preview
-	// feature flag and is only for testing before the production routes open.
-	cmd.PersistentFlags().Bool(doctl.ArgHarborPreview, false, "Send requests to the preview deployment of the Harbor API")
-	cmd.PersistentFlags().MarkHidden(doctl.ArgHarborPreview)
-	viper.BindPFlag(harborPreviewFlagKey, cmd.PersistentFlags().Lookup(doctl.ArgHarborPreview))
 
 	cmd.AddCommand(HarborDatasetCmd())
 	HarborRunCmd(cmd)

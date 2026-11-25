@@ -1321,8 +1321,6 @@ const (
 	ArgHarborJobConfig = "job-config"
 	// ArgHarborPollInterval is how often a waiting Harbor command checks for progress.
 	ArgHarborPollInterval = "poll-interval"
-	// ArgHarborPreview sends Harbor requests to the preview lane of the API.
-	ArgHarborPreview = "preview"
 	// ArgHarborStatus limits a Harbor job list to one job status.
 	ArgHarborStatus = "status"
 
