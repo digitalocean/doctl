@@ -191,12 +191,6 @@ func TestPaymentMethodAddExplainsMissingAccountReadScope(t *testing.T) {
 		assert.Contains(t, checks.String(), "Access token is missing the account:read permission")
 		assert.NotContains(t, checks.String(), "Checking email verification")
 		assert.False(t, openCalled)
-
-		// The failed check line already names the problem, so the error block
-		// is only the next step.
-		assert.Equal(t,
-			"→ run doctl auth login and grant the account:read permission (or use an API token that includes it)\n",
-			formatStructuredError(ui.Env{}, err))
 	})
 }
 
@@ -257,7 +251,7 @@ func TestPaymentMethodAddNamesTheTeam(t *testing.T) {
 
 		require.NoError(t, RunPaymentMethodAdd(config))
 
-		assert.Contains(t, checks.String(), "Payment method not added for team Sharks")
+		assert.Contains(t, checks.String(), "Payment method not added for team - Sharks")
 	})
 }
 

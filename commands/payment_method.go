@@ -55,9 +55,6 @@ type paymentMethodCheckError struct {
 func (e *paymentMethodCheckError) Error() string    { return e.msg }
 func (e *paymentMethodCheckError) NextStep() string { return e.nextStep }
 
-// alreadyReported is true because the failed check line states the problem.
-func (e *paymentMethodCheckError) alreadyReported() bool { return true }
-
 // PaymentMethod creates the payment-method commands hierarchy.
 func PaymentMethod() *Command {
 	cmd := &Command{
