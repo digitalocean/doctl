@@ -557,7 +557,7 @@ func Agents() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (zero-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
+	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason: zero-balance (paused by the prepayment gate), idle, or manual. Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
 	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by zero-balance`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
