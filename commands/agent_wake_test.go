@@ -257,6 +257,25 @@ func TestRunAgentsResume_ConcurrentWakeFails(t *testing.T) {
 	})
 }
 
+// resume's progress goes to stderr so piped stdout carries only the result.
+func TestRunAgentsResume_ProgressOnStderr(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var stdout, stderr bytes.Buffer
+		prev := wakeStderr
+		wakeStderr = &stderr
+		t.Cleanup(func() { wakeStderr = prev })
+		tm.hostedAgents.EXPECT().GetSession("sess_1").Return(sessionInStatus("sess_1", godo.HostedAgentSessionStatusPaused), nil)
+		tm.hostedAgents.EXPECT().ResumeSession("sess_1").Return(nil)
+		config.Out = &stdout
+		config.Args = []string{"sess_1"}
+
+		require.NoError(t, RunAgentsResume(config))
+		assert.Contains(t, stdout.String(), "Session sess_1 resumed")
+		assert.NotContains(t, stdout.String(), "Session awake")
+		assert.Contains(t, stderr.String(), "Session awake")
+	})
+}
+
 func TestWakeSessionWithProgress_OtherConflictIsAnError(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.hostedAgents.EXPECT().ResumeSession("sess_1").Return(wakeAPIErr(http.StatusConflict, "session is destroyed"))
@@ -411,20 +430,31 @@ func TestAgentsPromptSendFailureAfterWake(t *testing.T) {
 	})
 }
 
-// Only a 500 after a wake means "the agent was not listening yet".
-func TestAgentsPromptOtherSendFailureAfterWakeIsOrdinary(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		capturePrompt(t, config)
-		expectPausedPrompt(t, tm)
-		tm.hostedAgents.EXPECT().ResumeSession(testPromptSessionID).Return(nil)
-		tm.hostedAgents.EXPECT().SendInput(testPromptSessionID, gomock.Any()).
-			Return(nil, wakeAPIErr(http.StatusBadGateway, "bad gateway"))
+// Any 5xx after a wake means "the agent was not listening yet"; a 4xx does not.
+func TestAgentsPromptSendStatusAfterWake(t *testing.T) {
+	for _, tc := range []struct {
+		status           int
+		wantNotDelivered bool
+	}{
+		{http.StatusBadGateway, true},
+		{http.StatusServiceUnavailable, true},
+		{http.StatusBadRequest, false},
+	} {
+		t.Run(http.StatusText(tc.status), func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				capturePrompt(t, config)
+				expectPausedPrompt(t, tm)
+				tm.hostedAgents.EXPECT().ResumeSession(testPromptSessionID).Return(nil)
+				tm.hostedAgents.EXPECT().SendInput(testPromptSessionID, gomock.Any()).
+					Return(nil, wakeAPIErr(tc.status, "send failed"))
 
-		config.Args = []string{testPromptSessionID, "hi"}
-		err := RunAgentsPrompt(config)
-		require.Error(t, err)
-		assert.NotContains(t, err.Error(), "not delivered")
-	})
+				config.Args = []string{testPromptSessionID, "hi"}
+				err := RunAgentsPrompt(config)
+				require.Error(t, err)
+				assert.Equal(t, tc.wantNotDelivered, strings.Contains(err.Error(), "not delivered"), err.Error())
+			})
+		})
+	}
 }
 
 // Without a wake, a 500 is an ordinary API error.

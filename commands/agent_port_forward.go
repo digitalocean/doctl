@@ -331,11 +331,9 @@ func ensureSessionAwakeSession(c *CmdConfig, sessionID string, verb string, show
 		return nil, beautifyAgentErrorFor(c, err)
 	}
 
-	// The wake already reported progress, so this check stays quiet; it is kept
-	// for a session someone else was waking, which may not be READY yet.
 	ctx, cancel := context.WithTimeout(context.Background(), runWaitTimeout)
 	defer cancel()
-	if _, err := waitForSessionReady(ctx, svc, sessionID, nil); err != nil {
+	if _, err := waitForSessionReady(ctx, svc, sessionID, prog); err != nil {
 		return nil, beautifyAgentError(err)
 	}
 	return sess, nil

@@ -2269,7 +2269,7 @@ func RunAgentsResume(c *CmdConfig) error {
 		return fmt.Errorf("session %s is %s, not paused; there is nothing to resume", sessionID, humanSessionStatus(sess.Status))
 	}
 	stylingEnabled = detectStyling()
-	prog := newStageProgress(c.Out)
+	prog := newStageProgress(wakeStderr)
 	defer prog.stop()
 	if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
 		return err

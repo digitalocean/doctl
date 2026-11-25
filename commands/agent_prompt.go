@@ -400,7 +400,7 @@ func (p *promptCollector) drain(stream *godo.HostedAgentSessionStream) (bool, er
 			}
 			// A server error right after a wake can mean the agent was not
 			// listening yet; the text was not accepted.
-			if _, status, ok := agentAPIError(err); ok && p.woke && status == http.StatusInternalServerError {
+			if _, status, ok := agentAPIError(err); ok && p.woke && status >= http.StatusInternalServerError {
 				return false, errors.New("the prompt was not delivered: the agent in the session did not start listening in time. Send it again.")
 			}
 			return false, beautifyAgentError(err)

@@ -1092,7 +1092,6 @@ func TestRunAgentsResume(t *testing.T) {
 		config.Out = &buf
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
-		assert.Contains(t, buf.String(), "Session awake")
 		assert.Contains(t, buf.String(), "resumed")
 	})
 }

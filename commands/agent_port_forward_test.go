@@ -505,6 +505,7 @@ func TestEnsureSessionAwakeForPortForward_ResumesPaused(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "is paused — resuming")
 		assert.Contains(t, buf.String(), "Session awake")
+		assert.Contains(t, buf.String(), "Agent is ready", "the post-wake READY wait shows progress")
 	})
 }
 

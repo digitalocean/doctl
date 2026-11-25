@@ -16,7 +16,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -31,6 +33,8 @@ var (
 	// wakePollTimeout bounds how long doctl waits for a session to leave
 	// PAUSED after being told it is already running.
 	wakePollTimeout = 45 * time.Second
+	// wakeStderr carries progress for commands whose stdout is their result.
+	wakeStderr io.Writer = os.Stderr
 )
 
 // runStage runs fn while showing label: one line updated in place on a
