@@ -645,6 +645,23 @@ func TestMKPublishOffTerminalNeedsYes(t *testing.T) {
 	assert.Equal(t, "abc123", readMKState(dir).ListingID)
 }
 
+// TestWatchHoldsBackNewFlags: a --watch update publishes only the FLAGs the
+// first publish showed; a new random-looking value is held back.
+func TestWatchHoldsBackNewFlags(t *testing.T) {
+	l, files := buildTestListing(t)
+	shown := reviewListing(l, files)
+	assert.Empty(t, mkNewFlags(shown, reviewListing(l, files)), "the egress FLAG was shown at the start")
+
+	edited := map[string]string{}
+	for k, v := range files {
+		edited[k] = v
+	}
+	edited["CLAUDE.md"] += "seed Xk9mQ2vR7tW1bN6pL3sD8fG4hJ0kZ5cVa\n"
+	fresh := mkNewFlags(shown, reviewListing(l, edited))
+	require.Len(t, fresh, 1)
+	assert.Equal(t, "Random-looking values", fresh[0].Rule)
+}
+
 // TestMKDeploySaysWhenClaudeMDIsNotApplied: CLAUDE.md reaches the session
 // only through the workspace copy, so the consent card and the warning say
 // so when --no-native-files skips it or the copy fails.

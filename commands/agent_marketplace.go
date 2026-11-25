@@ -27,6 +27,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"syscall"
@@ -115,11 +116,11 @@ On publish, credentials in known formats are replaced by declared secret slots t
 
 	cmdDeploy := CmdBuilder(cmd, RunAgentsMarketplaceDeploy, "deploy <listing-id>[@<version>]",
 		"Run a published listing in your team",
-		`Downloads the listing, reviews it again on your machine, shows what it can do and which secrets it needs, then creates a Claude Code session in your team. The agent runs on DigitalOcean Serverless Inference with your HARNESS_INFERENCE_API_KEY (read from --secret, the environment, or a prompt). Other secrets come only from --secret NAME=value, NAME=@file, or a hidden prompt, never from your environment, and the agent can read every secret you give it.`,
+		`Downloads the listing, reviews it again on your machine, shows what it can do and which secrets it needs, then creates a Claude Code session in your team. The agent runs on DigitalOcean Serverless Inference with your HARNESS_INFERENCE_API_KEY (read from --secret, the environment, or a prompt). Other secrets come only from the secret flag (a value, a file or stdin; see its help) or a hidden prompt, never from your environment, and the agent can read every secret you give it.`,
 		Writer, ns...)
 	AddStringSliceFlag(cmdDeploy, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddStringFlag(cmdDeploy, mkArgModel, "", "", "Inference model ID (default: a Claude model from your Serverless Inference catalog)")
-	AddStringFlag(cmdDeploy, mkArgInferenceURL, "", mkDefaultInferenceURL, "Serverless Inference base URL used to pick a model (the platform sets the session's own endpoint)")
+	AddStringFlag(cmdDeploy, mkArgInferenceURL, "", mkDefaultInferenceURL, "Serverless Inference base URL. Deploy sends your HARNESS_INFERENCE_API_KEY here to pick a model, and the session uses it as its inference endpoint")
 	AddStringFlag(cmdDeploy, mkArgName, "", "", "Session name (default: listing slug plus a short suffix)")
 	AddBoolFlag(cmdDeploy, mkArgYes, "y", false, "Deploy without the confirmation prompt (required when not run in a terminal)")
 	AddBoolFlag(cmdDeploy, mkArgNoAttach, "", false, "Create the session but do not open the chat")
@@ -429,13 +430,21 @@ func RunAgentsMarketplacePublish(c *CmdConfig) error {
 
 	// once publishes the folder. The first call shows the full review, the
 	// file list and the listed card; --watch updates are one line each.
+	// A watch update never publishes a FLAG the first call did not show.
+	var shown []mkFinding
 	once := func(first bool) error {
 		findings := reviewListing(l, files)
-		if first || reviewFailed(findings) {
+		fresh := mkNewFlags(shown, findings)
+		if first || reviewFailed(findings) || len(fresh) > 0 {
 			printMKReview(c.Out, findings)
 		}
 		if reviewFailed(findings) {
 			return errors.New("review failed; fix the items marked FAIL in the folder and publish again")
+		}
+		if first {
+			shown = findings
+		} else if len(fresh) > 0 {
+			return fmt.Errorf("the review raised a FLAG that was not there when you started watching (%s); fix it, or stop watching and run publish again to confirm it", fresh[0].Rule)
 		}
 		st := readMKState(dir)
 		hash := mkFilesHash(files)
@@ -537,6 +546,18 @@ func RunAgentsMarketplacePublish(c *CmdConfig) error {
 			seen = h
 		}
 	}
+}
+
+// mkNewFlags returns the FLAG findings in now that were not in shown. A FLAG
+// whose detail changed (a new random-looking value, say) counts as new.
+func mkNewFlags(shown, now []mkFinding) []mkFinding {
+	var out []mkFinding
+	for _, f := range now {
+		if f.Level == mkFlag && !slices.Contains(shown, f) {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 func mkFilesHash(files map[string]string) string {
