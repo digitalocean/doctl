@@ -129,7 +129,7 @@ func TestRunAgentsCreate_ModelUsesManagedKey(t *testing.T) {
 				})
 				assert.NotContains(t, stdout.String(), "DigitalOcean Inference")
 
-				note := "Using DigitalOcean Inference for kimi-k3. " + tc.keyEnv + " in your environment is not used; to use your own " + tc.vendor + " key, pass --secret " + tc.keyEnv + "=... (or =@file)."
+				note := "Using DigitalOcean Inference for kimi-k3; model usage is billed to your DigitalOcean team. " + tc.keyEnv + " in your environment is not used; to use and be billed on your own " + tc.vendor + " account, pass --secret " + tc.keyEnv + "=... (or =@file)."
 				if exported {
 					assert.Equal(t, 1, bytes.Count(stderr.Bytes(), []byte(note)), "stderr=%q", stderr.String())
 				} else {
@@ -261,7 +261,19 @@ func TestRunAgentsCreate_DryRunModelNotesManagedKey(t *testing.T) {
 		assert.NotContains(t, out.String(), "ANTHROPIC_API_KEY")
 		assert.Contains(t, out.String(), "HARNESS_INFERENCE_MODEL: kimi-k3")
 	})
-	assert.Equal(t, 1, bytes.Count(stderr.Bytes(), []byte("A DigitalOcean Inference key will be requested")))
+	assert.Equal(t, 1, bytes.Count(stderr.Bytes(), []byte("A DigitalOcean Inference key will be requested for this session when it is created; model usage is billed to your DigitalOcean team.")))
+}
+
+func TestPrintResolvedManifest_KeyNoteIgnoresPlaceholderOutsideKeySlots(t *testing.T) {
+	os.Unsetenv("OPENAI_API_KEY")
+	_, stderr := captureUIEnv(t)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		var out bytes.Buffer
+		config.Out = &out
+		src := &agentCreationSource{manifest: []byte("harness: claude-code\nprompt: echo ${OPENAI_API_KEY}\nenv:\n  HARNESS_INFERENCE_MODEL: kimi-k3\n")}
+		require.NoError(t, printResolvedManifest(config, src))
+	})
+	assert.Contains(t, stderr.String(), "will be requested")
 }
 
 func TestValidateAgentManifest_ClaudeCodeManagedKeyManifestDoesNotWarn(t *testing.T) {
