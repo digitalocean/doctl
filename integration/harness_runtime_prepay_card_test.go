@@ -83,6 +83,20 @@ var _ = suite("harness-runtime/prepay-card", func(t *testing.T, when spec.G, it 
 			expect.Equal(strings.TrimSpace(prepayCardCash), resume())
 		})
 	})
+
+	// The help for update and list describes the same pause, so it must not
+	// blame a zero balance a credit-funded team never had.
+	it("names the prepayment gate in update and list help", func() {
+		for args, want := range map[string]string{
+			"update": "unless the prepayment gate paused it",
+			"list":   "zero-balance (paused by the prepayment gate)",
+		} {
+			output, err := exec.Command(builtBinaryPath, "harness-runtime", args, "--help").CombinedOutput()
+			expect.NoError(err)
+			expect.Contains(string(output), want)
+			expect.NotContains(string(output), "zero balance")
+		}
+	})
 })
 
 const prepayCardCredit string = `
