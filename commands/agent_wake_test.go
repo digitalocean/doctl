@@ -251,6 +251,43 @@ func TestWaitForSessionReady_TransientReadFailures(t *testing.T) {
 	}
 }
 
+// --verbose logs which way the wake went and how long it took.
+func TestWakeSessionWithProgress_VerboseLogsPath(t *testing.T) {
+	fastPoll(t)
+	prevTimeout, prevVerbose, prevErr := wakePollTimeout, Verbose, wakeStderr
+	wakePollTimeout, Verbose = 30*time.Millisecond, true
+	t.Cleanup(func() { wakePollTimeout, Verbose, wakeStderr = prevTimeout, prevVerbose, prevErr })
+
+	conflict := wakeAPIErr(http.StatusConflict, "session is already running")
+	paused := sessionInStatus("sess_1", godo.HostedAgentSessionStatusPaused)
+	ready := sessionInStatus("sess_1", godo.HostedAgentSessionStatusReady)
+	tests := []struct {
+		name   string
+		resume error
+		status *do.HostedAgentSession
+		want   string
+	}{
+		{"resume", nil, nil, "path=resume outcome=ok"},
+		{"409 poll", conflict, ready, "path=409-poll outcome=ok"},
+		{"409 timeout", conflict, paused, "path=409-poll outcome=timeout"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				var buf syncBuffer
+				wakeStderr = &buf
+				tm.hostedAgents.EXPECT().ResumeSession("sess_1").Return(tc.resume)
+				if tc.status != nil {
+					tm.hostedAgents.EXPECT().GetSession("sess_1").Return(tc.status, nil).AnyTimes()
+				}
+
+				_, _ = wakeSessionWithProgress(context.Background(), tm.hostedAgents, "sess_1", nil)
+				assert.Contains(t, buf.String(), "doctl: wake session=sess_1 "+tc.want+" elapsed=")
+			})
+		})
+	}
+}
+
 // resume on a session that is not paused is an error, as the 409 used to be,
 // and never calls the resume endpoint.
 func TestRunAgentsResume_NotPausedFails(t *testing.T) {

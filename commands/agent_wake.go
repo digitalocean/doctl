@@ -83,8 +83,11 @@ func runStage(ctx context.Context, prog *creationProgress, label string, fn func
 // already running is not that: someone else started the wake, so doctl waits
 // for the session to leave PAUSED instead and reports false. ctx ends the wait,
 // not the request.
-func wakeSessionWithProgress(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (bool, error) {
-	err := runStage(ctx, prog, "waking the session", func() error {
+func wakeSessionWithProgress(ctx context.Context, svc do.HostedAgentsService, sessionID string, prog *creationProgress) (woke bool, err error) {
+	start, path := creationClock(), "resume"
+	defer func() { logWake(sessionID, path, start, err) }()
+
+	err = runStage(ctx, prog, "waking the session", func() error {
 		return svc.ResumeSession(sessionID)
 	})
 	switch {
@@ -94,9 +97,26 @@ func wakeSessionWithProgress(ctx context.Context, svc do.HostedAgentsService, se
 	case ctx.Err() != nil:
 		return false, ctx.Err()
 	case isAlreadyRunning(err):
+		path = "409-poll"
 		return false, waitForWakeByPolling(ctx, svc, sessionID, prog)
 	}
 	return false, wakeFailure(err)
+}
+
+// logWake writes one --verbose line per wake, for diagnosing a slow one.
+func logWake(sessionID, path string, start time.Time, err error) {
+	if !Verbose {
+		return
+	}
+	outcome := "ok"
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		outcome = "timeout"
+	case err != nil:
+		outcome = "error"
+	}
+	fmt.Fprintf(wakeStderr, "doctl: wake session=%s path=%s outcome=%s elapsed=%s\n",
+		sessionID, path, outcome, creationClock().Sub(start).Round(time.Millisecond))
 }
 
 // waitForWakeByPolling covers a resume that another client is already
