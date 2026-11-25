@@ -167,7 +167,12 @@ func markAgentPublicPreviewTermsSeen(key string) {
 	seen := append(viper.GetStringSlice(agentPublicPreviewTermsSeenKey), key)
 	viper.Set(agentPublicPreviewTermsSeenKey, seen)
 	// Best-effort: failing to persist should not block create/launch.
-	_ = writeConfig()
+	cfg, err := loadConfigFile()
+	if err != nil {
+		return
+	}
+	cfg.set(agentPublicPreviewTermsSeenKey, seen)
+	_ = cfg.write()
 }
 
 // printAgentNextPage prints a muted pagination hint when next is non-empty.

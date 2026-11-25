@@ -340,6 +340,33 @@ func TestSpinnerStyling(t *testing.T) {
 	})
 }
 
+func TestSpinnerWithoutElapsed(t *testing.T) {
+	t.Run("plain stream", func(t *testing.T) {
+		var out, errOut bytes.Buffer
+		env := Detect(&out, &errOut, WithAnimation(false))
+
+		s := env.NewSpinner("Checking sign-in", WithoutElapsed())
+		s.now = fixedClock(time.Second)
+		s.Start()
+		s.Succeed("Signed in")
+
+		assert.Equal(t, "Checking sign-in\nSigned in\n", errOut.String())
+	})
+
+	t.Run("animated", func(t *testing.T) {
+		var out, errOut bytes.Buffer
+		env := Detect(&out, &errOut, WithAnimation(true))
+
+		s := env.NewSpinner("Checking sign-in", WithoutElapsed())
+		s.now = fixedClock(time.Second)
+		s.Start()
+		s.Succeed("Signed in")
+
+		assert.Contains(t, errOut.String(), "Signed in")
+		assert.NotContains(t, errOut.String(), "s)")
+	})
+}
+
 func TestSpinnerElapsed(t *testing.T) {
 	env := Plain(io.Discard, io.Discard)
 

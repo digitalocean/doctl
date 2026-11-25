@@ -274,21 +274,24 @@ func tunnelHeader(token, deviceID string) http.Header {
 // themselves (BUG-044). Terminal sessions are rejected; already-ready
 // sessions are left alone.
 func ensureSessionAwakeForPortForward(c *CmdConfig, sessionID string) (*do.HostedAgentSession, error) {
-	return ensureSessionAwakeSession(c, sessionID, "port-forwarded")
+	return ensureSessionAwakeSession(c, sessionID, "port-forwarded", true)
 }
 
 // ensureSessionAwake is the shared half of the above: `verb` names what the
 // caller is about to do with the session, for the terminal-status error
 // ("cannot be port-forwarded", "cannot serve Agent Canvas").
-func ensureSessionAwake(c *CmdConfig, sessionID string, verb string) error {
-	_, err := ensureSessionAwakeSession(c, sessionID, verb)
+//
+// showProgress selects the wake-with-progress step; canvas keeps its earlier
+// resume-and-wait behaviour.
+func ensureSessionAwake(c *CmdConfig, sessionID string, verb string, showProgress bool) error {
+	_, err := ensureSessionAwakeSession(c, sessionID, verb, showProgress)
 	return err
 }
 
 // ensureSessionAwakeSession is ensureSessionAwake that also hands back the
 // session as it was read (before any resume), for callers that need its
 // agent kind.
-func ensureSessionAwakeSession(c *CmdConfig, sessionID string, verb string) (*do.HostedAgentSession, error) {
+func ensureSessionAwakeSession(c *CmdConfig, sessionID string, verb string, showProgress bool) (*do.HostedAgentSession, error) {
 	svc := c.HostedAgents()
 	sess, err := svc.GetSession(sessionID)
 	if err != nil {
@@ -308,14 +311,28 @@ func ensureSessionAwakeSession(c *CmdConfig, sessionID string, verb string) (*do
 	// port-forward is the one agent command outside the pretty-error wrapper,
 	// so the prepay card has to be built here or a gated resume would print a
 	// raw REST dump.
-	if err := svc.ResumeSession(sessionID); err != nil {
+	if !showProgress {
+		if err := svc.ResumeSession(sessionID); err != nil {
+			return nil, beautifyAgentErrorFor(c, err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), runWaitTimeout)
+		defer cancel()
+		prog := newCreationProgress(c.Out)
+		defer prog.stop()
+		if _, err := waitForSessionReady(ctx, svc, sessionID, prog); err != nil {
+			return nil, beautifyAgentError(err)
+		}
+		return sess, nil
+	}
+
+	prog := newStageProgress(c.Out)
+	defer prog.stop()
+	if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
 		return nil, beautifyAgentErrorFor(c, err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), runWaitTimeout)
 	defer cancel()
-	prog := newCreationProgress(c.Out)
-	defer prog.stop()
 	if _, err := waitForSessionReady(ctx, svc, sessionID, prog); err != nil {
 		return nil, beautifyAgentError(err)
 	}

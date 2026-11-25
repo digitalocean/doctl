@@ -244,7 +244,7 @@ func TestEnsureSessionAwake_RejectsTerminalWithVerb(t *testing.T) {
 				Status:    godo.HostedAgentSessionStatusDestroyed,
 			},
 		}, nil)
-		err := ensureSessionAwake(config, "sess_done", "served to Agent Canvas")
+		err := ensureSessionAwake(config, "sess_done", "served to Agent Canvas", false)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot be served to Agent Canvas")
 	})

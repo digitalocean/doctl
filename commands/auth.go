@@ -31,7 +31,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -235,6 +234,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 		// DIGITALOCEAN_ACCESS_TOKEN. The latter two only ever reach the
 		// default context. Every other command leaves the credentials alone.
 		cfg.setToken(context, token)
+		cfg.removeOAuthSession(context)
 
 		return cfg.write()
 	}
@@ -258,6 +258,7 @@ func RunAuthRemove(c *CmdConfig) error {
 	}
 
 	removeOAuthTokenState(context)
+	cfg.removeOAuthSession(context)
 
 	notice("Context deleted successfully")
 
@@ -357,63 +358,6 @@ func RunAuthSwitch(c *CmdConfig) error {
 
 	notice("Now using context [%s] by default", context)
 	return cfg.write()
-}
-
-func writeConfig() error {
-	f, err := cfgFileWriter()
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	settings := viper.AllSettings()
-	// Bound CLI flags live in viper for the duration of a command. Dumping
-	// AllSettings() into config.yaml would otherwise persist per-invocation
-	// inputs (notably agents create --spec) and silently reuse them later
-	// (MARSOHS-1671). Strip those before writing; also clears already-poisoned keys.
-	stripEphemeralAgentFlagsFromConfig(settings)
-
-	b, err := yaml.Marshal(settings)
-	if err != nil {
-		return errors.New("Unable to encode configuration to YAML format.")
-	}
-
-	_, err = f.Write(b)
-	if err != nil {
-		return errors.New("Unable to write configuration.")
-	}
-
-	return nil
-}
-
-// ephemeralAgentConfigCommands are agents.* subtrees whose flags are per-run
-// inputs (paths, prompts, secrets, names). None of them belong in the global
-// config file — relative paths especially, which resolve differently by cwd.
-var ephemeralAgentConfigCommands = []string{"create", "launch", "validate", "start", "run", "deploy"}
-
-// stripEphemeralAgentFlagsFromConfig removes per-invocation agent command
-// flags from a viper AllSettings map so writeConfig cannot persist them.
-func stripEphemeralAgentFlagsFromConfig(settings map[string]any) {
-	if settings == nil {
-		return
-	}
-	agents, ok := settings["agents"].(map[string]any)
-	if !ok {
-		return
-	}
-	for _, cmd := range ephemeralAgentConfigCommands {
-		delete(agents, cmd)
-	}
-	if cfg, ok := agents["config"].(map[string]any); ok {
-		delete(cfg, "create")
-		if len(cfg) == 0 {
-			delete(agents, "config")
-		}
-	}
-	if len(agents) == 0 {
-		delete(settings, "agents")
-	}
 }
 
 // defaultConfigFileWriter returns a writer to a newly created config.yaml file in the default config home.

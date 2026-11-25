@@ -1,0 +1,159 @@
+[
+  { "name": "no agent when nothing is set", "env": {}, "expected": null },
+
+  { "name": "CURSOR_AGENT detected as cursor-cli", "env": { "CURSOR_AGENT": "1" }, "expected": "cursor-cli" },
+  { "name": "empty CURSOR_AGENT is ignored", "env": { "CURSOR_AGENT": "" }, "expected": null },
+  {
+    "name": "CURSOR_EXTENSION_HOST_ROLE=agent-exec detected as cursor-cli",
+    "env": { "CURSOR_EXTENSION_HOST_ROLE": "agent-exec" },
+    "expected": "cursor-cli"
+  },
+  {
+    "name": "CURSOR_EXTENSION_HOST_ROLE with another value is ignored",
+    "env": { "CURSOR_EXTENSION_HOST_ROLE": "worker" },
+    "expected": null
+  },
+
+  { "name": "AI_AGENT is used as the agent name", "env": { "AI_AGENT": "my-agent" }, "expected": "my-agent" },
+  { "name": "AI_AGENT may include a version", "env": { "AI_AGENT": "devin@1.2" }, "expected": "devin@1.2" },
+  { "name": "AI_AGENT is trimmed", "env": { "AI_AGENT": "  my-agent  " }, "expected": "my-agent" },
+  {
+    "name": "AI_AGENT takes priority over agent rules",
+    "env": { "AI_AGENT": "my-agent", "CURSOR_AGENT": "1" },
+    "expected": "my-agent"
+  },
+  { "name": "AI_AGENT with a newline is ignored", "env": { "AI_AGENT": "bad\nX-Injected: 1" }, "expected": null },
+  { "name": "AI_AGENT with a space is ignored", "env": { "AI_AGENT": "bad agent" }, "expected": null },
+  {
+    "name": "AI_AGENT longer than 64 characters is ignored",
+    "env": { "AI_AGENT": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    "expected": null
+  },
+  {
+    "name": "invalid AI_AGENT falls through to agent rules",
+    "env": { "AI_AGENT": "bad agent", "CURSOR_AGENT": "1" },
+    "expected": "cursor-cli"
+  },
+
+  { "name": "AGENT=amp detected as amp", "env": { "AGENT": "amp" }, "expected": "amp" },
+  { "name": "AGENT with another value is ignored", "env": { "AGENT": "other" }, "expected": null },
+  { "name": "amp wins over the CLAUDECODE it also sets", "env": { "AGENT": "amp", "CLAUDECODE": "1" }, "expected": "amp" },
+  { "name": "CLAUDE_CODE_IS_COWORK alone is not an agent", "env": { "CLAUDE_CODE_IS_COWORK": "1" }, "expected": null },
+  {
+    "name": "CLAUDE_CODE_IS_COWORK with CLAUDE_CODE detected as cowork",
+    "env": { "CLAUDE_CODE_IS_COWORK": "1", "CLAUDE_CODE": "1" },
+    "expected": "cowork"
+  },
+  {
+    "name": "cowork wins over the CLAUDECODE it also sets",
+    "env": { "CLAUDE_CODE_IS_COWORK": "1", "CLAUDECODE": "1" },
+    "expected": "cowork"
+  },
+  { "name": "CLAUDECODE detected as claude-code", "env": { "CLAUDECODE": "1" }, "expected": "claude-code" },
+  { "name": "CLAUDE_CODE detected as claude-code", "env": { "CLAUDE_CODE": "1" }, "expected": "claude-code" },
+  { "name": "CODEX_SANDBOX detected as codex", "env": { "CODEX_SANDBOX": "seatbelt" }, "expected": "codex" },
+  { "name": "CODEX_CI detected as codex", "env": { "CODEX_CI": "1" }, "expected": "codex" },
+  { "name": "CODEX_THREAD_ID detected as codex", "env": { "CODEX_THREAD_ID": "abc" }, "expected": "codex" },
+  {
+    "name": "CODEX_SANDBOX_NETWORK_DISABLED detected as codex",
+    "env": { "CODEX_SANDBOX_NETWORK_DISABLED": "1" },
+    "expected": "codex"
+  },
+  { "name": "GEMINI_CLI detected as gemini-cli", "env": { "GEMINI_CLI": "1" }, "expected": "gemini-cli" },
+  { "name": "COPILOT_CLI detected as github-copilot", "env": { "COPILOT_CLI": "1" }, "expected": "github-copilot" },
+  { "name": "COPILOT_MODEL detected as github-copilot", "env": { "COPILOT_MODEL": "gpt-5" }, "expected": "github-copilot" },
+  { "name": "OPENCODE detected as opencode", "env": { "OPENCODE": "1" }, "expected": "opencode" },
+  { "name": "OPENCODE_CLIENT detected as opencode", "env": { "OPENCODE_CLIENT": "vscode" }, "expected": "opencode" },
+  { "name": "ANTIGRAVITY_AGENT detected as antigravity", "env": { "ANTIGRAVITY_AGENT": "1" }, "expected": "antigravity" },
+  {
+    "name": "ANTIGRAVITY_CLI_ALIAS detected as antigravity",
+    "env": { "ANTIGRAVITY_CLI_ALIAS": "agy" },
+    "expected": "antigravity"
+  },
+  { "name": "AUGMENT_AGENT detected as augment-cli", "env": { "AUGMENT_AGENT": "1" }, "expected": "augment-cli" },
+  { "name": "CLINE_ACTIVE detected as cline", "env": { "CLINE_ACTIVE": "true" }, "expected": "cline" },
+  { "name": "CRUSH detected as crush", "env": { "CRUSH": "1" }, "expected": "crush" },
+  { "name": "HERMES_SESSION_ID detected as hermes-agent", "env": { "HERMES_SESSION_ID": "abc" }, "expected": "hermes-agent" },
+  { "name": "KILOCODE_FEATURE detected as kilo-code", "env": { "KILOCODE_FEATURE": "cli" }, "expected": "kilo-code" },
+  { "name": "ROO_ACTIVE detected as roo-code", "env": { "ROO_ACTIVE": "true" }, "expected": "roo-code" },
+  { "name": "QWEN_CODE detected as qwen-code", "env": { "QWEN_CODE": "1" }, "expected": "qwen-code" },
+  { "name": "KIMI_PLUGIN_ROOT detected as kimi", "env": { "KIMI_PLUGIN_ROOT": "/tmp/kimi" }, "expected": "kimi" },
+  { "name": "KIMI_CODE_HOME alone is not an agent", "env": { "KIMI_CODE_HOME": "/tmp/kimi" }, "expected": null },
+  { "name": "GROK_AGENT=1 detected as grok-build", "env": { "GROK_AGENT": "1" }, "expected": "grok-build" },
+  { "name": "GROK_AGENT with another value is ignored", "env": { "GROK_AGENT": "0" }, "expected": null },
+  { "name": "GROK_PLUGIN_ROOT detected as grok-build", "env": { "GROK_PLUGIN_ROOT": "/tmp/grok" }, "expected": "grok-build" },
+  {
+    "name": "grok-build wins over the Claude Code markers it may expose",
+    "env": { "GROK_PLUGIN_DATA": "/tmp/grok-data", "CLAUDE_CODE": "1" },
+    "expected": "grok-build"
+  },
+  { "name": "SAND_AGENT detected as grok-bot", "env": { "SAND_AGENT": "1" }, "expected": "grok-bot" },
+  { "name": "JUNIE_SHIM_PATH detected as junie", "env": { "JUNIE_SHIM_PATH": "/tmp/junie" }, "expected": "junie" },
+  { "name": "JUNIE_DATA detected as junie", "env": { "JUNIE_DATA": "/tmp/junie" }, "expected": "junie" },
+  { "name": "DEVIN_DIR detected as devin", "env": { "DEVIN_DIR": "/opt/.devin" }, "expected": "devin" },
+  { "name": "OPENCLAW_SHELL detected as openclaw", "env": { "OPENCLAW_SHELL": "1" }, "expected": "openclaw" },
+  { "name": "TRAE_AI_SHELL_ID detected as trae", "env": { "TRAE_AI_SHELL_ID": "abc" }, "expected": "trae" },
+  { "name": "VTCODE=1 detected as vtcode", "env": { "VTCODE": "1" }, "expected": "vtcode" },
+  { "name": "VTCODE with another value is ignored", "env": { "VTCODE": "0" }, "expected": null },
+  { "name": "DSH_SHELL detected as deepseek-harness", "env": { "DSH_SHELL": "1" }, "expected": "deepseek-harness" },
+  { "name": "AGENT_CONTEXT_OUT detected as kiro", "env": { "AGENT_CONTEXT_OUT": "/tmp/out" }, "expected": "kiro" },
+  { "name": "TERM_PROGRAM=kiro alone is not an agent", "env": { "TERM_PROGRAM": "kiro" }, "expected": null },
+  { "name": "PI_CODING_AGENT detected as pi", "env": { "PI_CODING_AGENT": "1" }, "expected": "pi" },
+  { "name": "GOOSE_TERMINAL detected as goose", "env": { "GOOSE_TERMINAL": "1" }, "expected": "goose" },
+  { "name": "GOOSE_PROVIDER alone is not an agent", "env": { "GOOSE_PROVIDER": "openai" }, "expected": null },
+  { "name": "MANUS_ADDON_RUNTIME_SPEC_PATH detected as manus", "env": { "MANUS_ADDON_RUNTIME_SPEC_PATH": "/tmp/spec" }, "expected": "manus" },
+  { "name": "MANUS_OPERATOR_PLATFORM detected as cue", "env": { "MANUS_OPERATOR_PLATFORM": "desktop" }, "expected": "cue" },
+  { "name": "JARVIS_TOOL_CALL_ID detected as muse", "env": { "JARVIS_TOOL_CALL_ID": "abc" }, "expected": "muse" },
+  { "name": "INSTINCT_OUTER_TOOL_USE_ID detected as instinct", "env": { "INSTINCT_OUTER_TOOL_USE_ID": "abc" }, "expected": "instinct" },
+  { "name": "WORKBUDDY_APP_NAME detected as workbuddy", "env": { "WORKBUDDY_APP_NAME": "workbuddy" }, "expected": "workbuddy" },
+  { "name": "QODER_WORK_INTEGRATION_PRODUCT detected as qwenwork", "env": { "QODER_WORK_INTEGRATION_PRODUCT": "qwen" }, "expected": "qwenwork" },
+  { "name": "DOUBAO_OFFICE_AGENT_NAME detected as doubao-work", "env": { "DOUBAO_OFFICE_AGENT_NAME": "doubao" }, "expected": "doubao-work" },
+  { "name": "REPL_ID detected as replit", "env": { "REPL_ID": "abc" }, "expected": "replit" },
+
+  { "name": "CURSOR_TRACE_ID alone is not an agent", "env": { "CURSOR_TRACE_ID": "abc" }, "expected": null },
+  {
+    "name": "an agent started by the Cursor agent wins over cursor-cli",
+    "env": { "CURSOR_AGENT": "1", "CLAUDECODE": "1" },
+    "expected": "claude-code"
+  },
+  {
+    "name": "an agent running on Replit wins over replit",
+    "env": { "REPL_ID": "abc", "CODEX_SANDBOX": "seatbelt" },
+    "expected": "codex"
+  },
+  {
+    "name": "cursor-cli on Replit is cursor-cli",
+    "env": { "REPL_ID": "abc", "CURSOR_AGENT": "1" },
+    "expected": "cursor-cli"
+  },
+  {
+    "name": "a terminal agent started from an editor agent wins over the editor agent",
+    "env": { "CLINE_ACTIVE": "true", "GOOSE_TERMINAL": "1" },
+    "expected": "goose"
+  },
+  {
+    "name": "a terminal agent on an agent's machine wins over the machine's agent",
+    "env": { "DEVIN_DIR": "/opt/.devin", "PI_CODING_AGENT": "1" },
+    "expected": "pi"
+  },
+  {
+    "name": "an editor agent on an agent's machine wins over the machine's agent",
+    "env": { "DEVIN_DIR": "/opt/.devin", "CURSOR_AGENT": "1" },
+    "expected": "cursor-cli"
+  },
+  {
+    "name": "an exported COPILOT_GITHUB_TOKEN does not hide the Cursor agent",
+    "env": { "COPILOT_GITHUB_TOKEN": "token", "CURSOR_AGENT": "1" },
+    "expected": "cursor-cli"
+  },
+  {
+    "name": "an exported COPILOT_GITHUB_TOKEN does not hide the machine's agent",
+    "env": { "COPILOT_GITHUB_TOKEN": "token", "MANUS_ADDON_RUNTIME_SPEC_PATH": "/tmp/spec" },
+    "expected": "manus"
+  },
+  {
+    "name": "github-copilot on Replit is github-copilot",
+    "env": { "REPL_ID": "abc", "COPILOT_CLI": "1" },
+    "expected": "github-copilot"
+  }
+]

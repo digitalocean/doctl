@@ -279,6 +279,21 @@ func (mr *MockMicroVMsServiceMockRecorder) Pause(id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pause", reflect.TypeOf((*MockMicroVMsService)(nil).Pause), id)
 }
 
+// PortForwardURL mocks base method.
+func (m *MockMicroVMsService) PortForwardURL(id string, port int) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PortForwardURL", id, port)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PortForwardURL indicates an expected call of PortForwardURL.
+func (mr *MockMicroVMsServiceMockRecorder) PortForwardURL(id, port any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PortForwardURL", reflect.TypeOf((*MockMicroVMsService)(nil).PortForwardURL), id, port)
+}
+
 // RemoveURL mocks base method.
 func (m *MockMicroVMsService) RemoveURL(microVMID, urlID string) error {
 	m.ctrl.T.Helper()
