@@ -210,6 +210,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Balance())
 	DoitCmd.AddCommand(BillingHistory())
 	DoitCmd.AddCommand(Prepayment())
+	DoitCmd.AddCommand(PaymentMethod())
 	DoitCmd.AddCommand(Invoices())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Kubernetes())
