@@ -287,7 +287,9 @@ func TestAgentsStartProxyHelpExplainsBridge(t *testing.T) {
 	assert.Contains(t, agentsStartProxyHelpMD, "WebSocket")
 	assert.Contains(t, agentsStartProxyHelpMD, "codex --remote")
 	assert.Contains(t, agentsStartProxyHelpMD, "opencode attach")
-	assert.Contains(t, agentsStartProxyHelpMD, "--password")
+	assert.Contains(t, agentsStartProxyHelpMD, "OPENCODE_SERVER_PASSWORD")
+	assert.NotContains(t, agentsStartProxyHelpMD, "opencode attach http://127.0.0.1:1144 --password",
+		"password must not be suggested on argv")
 	assert.Contains(t, agentsStartProxyHelpMD, opencode.TestedVersion,
 		"the help must state which opencode version the bridge was tested against")
 	assert.Contains(t, agentsStartProxyHelpMD, "launch")

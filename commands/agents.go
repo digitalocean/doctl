@@ -1550,8 +1550,9 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 
 	// Transports differ by type: Codex is WebSocket; OpenCode is HTTP+SSE.
 	// --replay is codex-only (OpenCode fetches history itself).
-	// OpenCode also gets a one-time Basic Auth password on the Connect line
-	// (`opencode attach --password`) so the local facade is not open.
+	// OpenCode: mint a Basic Auth password and print it for
+	// OPENCODE_SERVER_PASSWORD — not --password on argv (local users can
+	// read cmdline).
 	listenURL := fmt.Sprintf("ws://127.0.0.1:%d", port)
 	connectCmd := fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)
 	var proxyPassword string
@@ -1565,8 +1566,7 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 			return fmt.Errorf("minting proxy password: %w", err)
 		}
 		listenURL = fmt.Sprintf("http://127.0.0.1:%d", port)
-		// Quote so a future alphabet change cannot break the shell line.
-		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d --password %s", port, strconv.Quote(proxyPassword))
+		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d", port)
 	}
 
 	stylingEnabled = detectStyling()
@@ -1574,6 +1574,9 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
 	body.WriteString(cardRow("Session", displaySessionRef(sess)))
 	body.WriteString(cardRow("Listen", listenURL))
+	if proxyPassword != "" {
+		body.WriteString(cardRow("Password", strconv.Quote(proxyPassword)))
+	}
 	body.WriteString(cardRow("Connect", connectCmd))
 	renderAgentCard(c.Out, body.String())
 
