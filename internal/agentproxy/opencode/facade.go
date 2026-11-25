@@ -112,6 +112,25 @@ func (f *Facade) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mux.ServeHTTP(w, r)
 }
 
+// requireSessionPath 404s unless {id} is this facade's bridged session.
+// Callers used to pass any id and still hit f.SessionID.
+func (f *Facade) requireSessionPath(w http.ResponseWriter, r *http.Request) bool {
+	if r.PathValue("id") == f.ocSessionID() {
+		return true
+	}
+	http.NotFound(w, r)
+	return false
+}
+
+func (f *Facade) withSessionPath(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !f.requireSessionPath(w, r) {
+			return
+		}
+		next(w, r)
+	}
+}
+
 // buildMux registers the attach-burst surface captured from a real
 // `opencode attach` (TestedVersion): ~30 routes, almost all read-only
 // bootstrap lookups. Anything not captured falls through to the unhandled
@@ -201,22 +220,22 @@ func (f *Facade) buildMux() {
 	// resume — real server returns empty arrays for a no-edits session.
 	mux.HandleFunc("GET /session", f.handleSessionList)
 	mux.HandleFunc("POST /session", f.handleSessionCreate)
-	mux.HandleFunc("GET /session/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /session/{id}", f.withSessionPath(func(w http.ResponseWriter, r *http.Request) {
 		f.writeJSON(w, f.sessionObject())
-	})
-	mux.HandleFunc("GET /session/{id}/message", f.handleMessageList)
-	mux.HandleFunc("GET /session/{id}/diff", f.json([]any{}))
-	mux.HandleFunc("GET /session/{id}/todo", f.json([]any{}))
-	mux.HandleFunc("POST /session/{id}/prompt_async", f.handlePromptAsync)
+	}))
+	mux.HandleFunc("GET /session/{id}/message", f.withSessionPath(f.handleMessageList))
+	mux.HandleFunc("GET /session/{id}/diff", f.withSessionPath(f.json([]any{})))
+	mux.HandleFunc("GET /session/{id}/todo", f.withSessionPath(f.json([]any{})))
+	mux.HandleFunc("POST /session/{id}/prompt_async", f.withSessionPath(f.handlePromptAsync))
 	// The synchronous variant officially awaits the reply; bridging that
 	// faithfully would block a request goroutine for a whole turn. Current
 	// TUIs use prompt_async (M0 capture); if a client POSTs /message, treat
 	// it as fire-and-forget and let the reply ride the stream — log it so a
 	// client that genuinely blocks on the response is diagnosable.
-	mux.HandleFunc("POST /session/{id}/message", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /session/{id}/message", f.withSessionPath(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("agentproxy/opencode: POST message treated as prompt_async (reply rides the stream)")
 		f.handlePromptAsync(w, r)
-	})
+	}))
 
 	// The /api/* surface (new in recent opencode versions; sits alongside
 	// the older paths above — the TUI queries both). Wrapped responses:
@@ -251,7 +270,7 @@ func (f *Facade) buildMux() {
 		}
 		f.handlePermissionReply(w, r.PathValue("requestID"), body.Reply, body.Message)
 	})
-	mux.HandleFunc("POST /session/{id}/permissions/{permissionID}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /session/{id}/permissions/{permissionID}", f.withSessionPath(func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Response string `json:"response"`
 		}
@@ -260,14 +279,14 @@ func (f *Facade) buildMux() {
 			return
 		}
 		f.handlePermissionReply(w, r.PathValue("permissionID"), body.Response, "")
-	})
+	}))
 
 	// Share syncs conversation history to opencode's public share
 	// infrastructure — never appropriate for a hosted session. Refuse
 	// loudly rather than 404-ing quietly.
-	mux.HandleFunc("POST /session/{id}/share", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /session/{id}/share", f.withSessionPath(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "sharing a hosted session is disabled", http.StatusForbidden)
-	})
+	}))
 
 	// Everything else: honest 404 plus the drift log. opencode's TUI
 	// tolerates 404s on optional lookups; anything it *requires* will show

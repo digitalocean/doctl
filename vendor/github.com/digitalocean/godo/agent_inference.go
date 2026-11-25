@@ -68,7 +68,7 @@ func NewAgentInferenceClient(baseURL, accessKey string, opts ...AgentInferenceCl
 		baseURL:    u,
 		accessKey:  accessKey,
 		httpClient: &http.Client{},
-		userAgent:  userAgent,
+		userAgent:  defaultUserAgent(),
 	}
 	c.Chat = &AgentChatService{Completions: &AgentChatCompletionService{parent: c}}
 
