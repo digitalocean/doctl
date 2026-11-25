@@ -15,10 +15,12 @@ package doctl
 
 import (
 	"os"
+	"reflect"
 	"regexp"
 	"testing"
 
 	"github.com/digitalocean/godo"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -222,4 +224,120 @@ func TestCommandName(t *testing.T) {
 			t.Errorf("got %s, want %s", actual, expected)
 		}
 	})
+}
+
+func TestLiveConfigGetStringMapStringFromFlag(t *testing.T) {
+	flags := pflag.NewFlagSet("put", pflag.ContinueOnError)
+	flags.StringToStringP("data", "", map[string]string{}, "")
+	viper.BindPFlag("secret.put.data", flags.Lookup("data"))
+	t.Cleanup(viper.Reset)
+
+	if err := flags.Parse([]string{"--data", "user=loader", "--data", "password=a=b"}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := (&LiveConfig{}).GetStringMapString("secret.put", "data")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got["user"] != "loader" || got["password"] != "a=b" {
+		t.Errorf("got %v, want map[password:a=b user:loader]", got)
+	}
+}
+
+func TestLiveConfigGetStringMapStringFromStringArrayFlag(t *testing.T) {
+	cases := []struct {
+		name    string
+		args    []string
+		want    map[string]string
+		wantErr bool
+	}{
+		{
+			name: "two properties",
+			args: []string{"--data", "user=loader", "--data", "password=hunter2"},
+			want: map[string]string{"user": "loader", "password": "hunter2"},
+		},
+		{
+			name: "comma in value",
+			args: []string{"--data", "password=a,b"},
+			want: map[string]string{"password": "a,b"},
+		},
+		{
+			name: "comma-separated pairs in one flag stay one property",
+			args: []string{"--data", "user=loader,password=hunter2"},
+			want: map[string]string{"user": "loader,password=hunter2"},
+		},
+		{
+			name: "quotes in value",
+			args: []string{"--data", `inner=a"b`, "--data", `wrapped="ab"`, "--data", `trailing=abc"`},
+			want: map[string]string{"inner": `a"b`, "wrapped": `"ab"`, "trailing": `abc"`},
+		},
+		{
+			name: "trailing bracket on last value",
+			args: []string{"--data", "user=loader", "--data", "password=abc]"},
+			want: map[string]string{"user": "loader", "password": "abc]"},
+		},
+		{
+			name: "leading bracket on first key",
+			args: []string{"--data", "[key=v", "--data", "user=loader"},
+			want: map[string]string{"[key": "v", "user": "loader"},
+		},
+		{
+			name: "value of only brackets",
+			args: []string{"--data", "open=[", "--data", "wrapped=[abc]", "--data", "close=]]"},
+			want: map[string]string{"open": "[", "wrapped": "[abc]", "close": "]]"},
+		},
+		{
+			name: "equals signs in value",
+			args: []string{"--data", "password=a=b=="},
+			want: map[string]string{"password": "a=b=="},
+		},
+		{
+			name: "surrounding whitespace and newline kept",
+			args: []string{"--data", "pad= a b ", "--data", "multi=line1\nline2"},
+			want: map[string]string{"pad": " a b ", "multi": "line1\nline2"},
+		},
+		{
+			name: "empty value",
+			args: []string{"--data", "password="},
+			want: map[string]string{"password": ""},
+		},
+		{
+			name: "repeated key keeps the last value",
+			args: []string{"--data", "password=first", "--data", "password=second"},
+			want: map[string]string{"password": "second"},
+		},
+		{
+			name:    "missing equals sign",
+			args:    []string{"--data", "password"},
+			wantErr: true,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			flags := pflag.NewFlagSet("put", pflag.ContinueOnError)
+			flags.StringArrayP("data", "", []string{}, "")
+			viper.BindPFlag("secret.put.data", flags.Lookup("data"))
+			t.Cleanup(viper.Reset)
+
+			if err := flags.Parse(c.args); err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := (&LiveConfig{}).GetStringMapString("secret.put", "data")
+			if c.wantErr {
+				if err == nil {
+					t.Fatalf("expected an error, got %v", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Errorf("got %q, want %q", got, c.want)
+			}
+		})
+	}
 }
