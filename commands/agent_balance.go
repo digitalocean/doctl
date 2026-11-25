@@ -141,9 +141,11 @@ func isDefaultAPIURL(u string) bool {
 }
 
 // scopesCoverBillingRead reports whether any scope grants billing read access.
-// TODO: the exact scope names the token-info endpoint returns, and the name of
-// its response field ("scopes"), have not been confirmed; check both against
-// real tokens before relying on this rule.
+// Token info returns "scopes": ["read", "write"] for a `doctl auth login`
+// OAuth token and for a full-access personal access token (checked live
+// 2026-11-25).
+// TODO: billing:read and billing:* are the documented custom-scope names but
+// have not been checked against a live custom-scoped token.
 func scopesCoverBillingRead(scopes []string) bool {
 	for _, s := range scopes {
 		switch s {
