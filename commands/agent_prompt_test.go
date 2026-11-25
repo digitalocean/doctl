@@ -386,7 +386,7 @@ func TestAgentsPromptFailedRunExitsNonZero(t *testing.T) {
 // commands an unattended script has to sequence itself.
 func TestAgentsPromptResumesPausedSession(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		capturePrompt(t, config)
+		_, stderr, _ := capturePrompt(t, config)
 		stubReconnectSleep(t)
 
 		srv := httptest.NewServer(hostedAgentSSEHandler(completedRun("Paris"), nil))
@@ -415,6 +415,7 @@ func TestAgentsPromptResumesPausedSession(t *testing.T) {
 
 		config.Args = []string{testPromptSessionID, "hi"}
 		require.NoError(t, RunAgentsPrompt(config))
+		assert.Contains(t, stderr.String(), "Session awake")
 	})
 }
 
