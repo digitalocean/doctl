@@ -411,14 +411,26 @@ func TestRunAgentsWorkspaceDelete_ConflictShowsServerMessage(t *testing.T) {
 }
 
 // A team that is not enrolled for workspaces gets a 403 from the API. It reads as
-// "Not available yet", not as a permissions problem, and carries no scopes tip.
-func TestBeautifyAgentError_WorkspacesNotEnabledReadsAsNotAvailableYet(t *testing.T) {
+// "Limited availability", not as a permissions problem, and points to support.
+func TestBeautifyAgentError_WorkspacesNotEnabledReadsAsLimitedAvailability(t *testing.T) {
 	out := beautifyAgentError(godoStatusErr(http.StatusForbidden, "workspaces are not enabled"))
 	var pretty *agentPrettyError
 	require.True(t, errors.As(out, &pretty))
-	assert.Equal(t, "Not available yet", pretty.title)
+	assert.Equal(t, "Limited availability", pretty.title)
 	assert.Equal(t, "workspaces are not enabled", pretty.reason)
-	assert.Empty(t, pretty.tips, "the token is fine, and a retry does not help")
+	require.Len(t, pretty.tips, 1)
+	assert.Contains(t, pretty.tips[0], "cloudsupport.digitalocean.com")
+}
+
+func TestBeautifyAgentError_WorkspacesNotEnabledFullMessage(t *testing.T) {
+	const msg = "workspaces are not enabled for this team: persistent workspaces are in limited availability. Contact DigitalOcean support to request access"
+	out := beautifyAgentError(godoStatusErr(http.StatusForbidden, msg))
+	var pretty *agentPrettyError
+	require.True(t, errors.As(out, &pretty))
+	assert.Equal(t, "Limited availability", pretty.title)
+	assert.Equal(t, msg, pretty.reason)
+	require.Len(t, pretty.tips, 1)
+	assert.Contains(t, pretty.tips[0], "cloudsupport.digitalocean.com")
 }
 
 // Any other 403 is still a permissions problem.
@@ -431,11 +443,11 @@ func TestBeautifyAgentError_OtherForbiddenStaysAccessDenied(t *testing.T) {
 }
 
 func TestBeautifyAgentError_NotImplementedReadsAsNotAvailableYet(t *testing.T) {
-	out := beautifyAgentError(godoStatusErr(http.StatusNotImplemented, "workspaces are not enabled"))
+	out := beautifyAgentError(godoStatusErr(http.StatusNotImplemented, "workspaces are not available yet"))
 	var pretty *agentPrettyError
 	require.True(t, errors.As(out, &pretty))
 	assert.Equal(t, "Not available yet", pretty.title)
-	assert.Equal(t, "workspaces are not enabled", pretty.reason)
+	assert.Equal(t, "workspaces are not available yet", pretty.reason)
 	assert.Empty(t, pretty.tips, "a 501 does not get better with a retry")
 }
 
