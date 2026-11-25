@@ -40,13 +40,14 @@ func TestAgentConfigCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dir := t.TempDir()
 		specPath := filepath.Join(dir, "agent.yaml")
-		require.NoError(t, os.WriteFile(specPath, []byte("agent: opencode\n"), 0o600))
+		require.NoError(t, os.WriteFile(specPath, []byte("harness: opencode\n"), 0o600))
 
 		tm.hostedAgents.EXPECT().
 			CreateAgentConfig(gomock.Any(), false).
 			DoAndReturn(func(req *godo.HostedAgentConfigCreateRequest, manageModelAccessKey bool) (*godo.HostedAgentConfig, error) {
 				assert.Equal(t, "my-config", req.Name)
-				assert.Contains(t, req.ManifestYAML, "agent: opencode")
+				assert.Contains(t, req.ManifestYAML, "harness: opencode")
+				assert.NotContains(t, req.ManifestYAML, "agent:")
 				assert.False(t, manageModelAccessKey)
 				return &godo.HostedAgentConfig{ID: "cfg_1", Name: "my-config"}, nil
 			})

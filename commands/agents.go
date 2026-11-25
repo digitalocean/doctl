@@ -1175,7 +1175,7 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		}
 		if manifestUsesLegacyEnvelope(raw) {
 			warn("this manifest uses the deprecated apiVersion/kind/metadata/spec envelope format; " +
-				"switch to the flat format (top-level `agent:` key, no envelope — see `" + agentCLI + " create --help`). " +
+				"switch to the flat format (top-level `harness:` key, no envelope — see `" + agentCLI + " create --help`). " +
 				"The envelope is still accepted for now but will be rejected after the transition window")
 		}
 	}
