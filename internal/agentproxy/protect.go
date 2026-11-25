@@ -9,12 +9,11 @@ import (
 )
 
 // OpenCodeProxyBasicUser is the Basic Auth user opencode attach sends
-// (`opencode attach --password`). Same username as `opencode serve`.
+// (OPENCODE_SERVER_PASSWORD / --password). Same as `opencode serve`.
 const OpenCodeProxyBasicUser = "opencode"
 
-// NewProxyPassword mints a one-time Basic Auth password for start-proxy.
-// The alphabet is URL-safe base64 without padding, so the value is safe to
-// paste unquoted on a shell command line.
+// NewProxyPassword mints a one-time Basic Auth password for start-proxy
+// (URL-safe base64; paste as-is into OPENCODE_SERVER_PASSWORD).
 func NewProxyPassword() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

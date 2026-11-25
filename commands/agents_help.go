@@ -286,8 +286,14 @@ Typical flow:
 
 # terminal 2 — connect Codex to the proxy
 codex --remote ws://127.0.0.1:1144
-` + "```\n\n" + `With ` + "`--type opencode`" + `, use the Connect line the proxy prints (includes a one-time ` + "`--password`" + `; ` + "`--continue`" + ` resumes prior turns):
-` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --password <printed-secret> --continue
+` + "```\n\n" + `With ` + "`--type opencode`" + `, the proxy prints a one-time Password. Set ` + "`OPENCODE_SERVER_PASSWORD`" + ` to that value (unset any existing ` + "`OPENCODE_SERVER_PASSWORD`" + ` / ` + "`OPENCODE_PASSWORD`" + ` first), then attach. Prefer the env var over ` + "`--password`" + ` on the command line — other local users can often read process argv. ` + "`--continue`" + ` resumes prior turns:
+` + "```bash\n" + `# bash/zsh
+export OPENCODE_SERVER_PASSWORD='<printed-secret>'
+opencode attach http://127.0.0.1:1144 --continue
+
+# PowerShell
+$env:OPENCODE_SERVER_PASSWORD='<printed-secret>'
+opencode attach http://127.0.0.1:1144 --continue
 ` + "```\n\n" + `The opencode bridge is tested against opencode ` + opencode.TestedVersion + `; other versions usually work, and the proxy logs any request it does not recognize.
 
 Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.
