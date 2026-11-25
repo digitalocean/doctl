@@ -97,11 +97,11 @@ harness: opencode
   allow_hosts: [api.github.com]
   allow_ips: ["203.0.113.10"]
   vpc_uuid: <uuid>
-` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + ` and ` + "`codex-agentapi`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset.
+` + "```\n\n" + `${VAR} in a manifest is expanded from your environment (prompted in a terminal when missing). For ` + "`codex`" + ` and ` + "`codex-agentapi`" + `, doctl prompts for ` + "`$OPENAI_API_KEY`" + ` when unset; with ` + "`--harness codex --model`" + `, it does not, because the session runs on DigitalOcean Inference.
 
 **Secrets.** ` + "`--secret NAME=VALUE`" + ` fills a secret slot the manifest declares, overriding any value written in the file — so a checked-in ` + "`agents.yaml`" + ` can name the credentials it needs without carrying them. ` + "`NAME=@path`" + ` reads the value from a file and ` + "`NAME=-`" + ` from stdin, neither of which leaves it in shell history. Repeat the flag per secret. For ` + "`claude-code`" + `, ` + "`--secret ANTHROPIC_API_KEY=@path`" + ` (or ` + "`=-`" + `) is enough — the key need not also be in the process environment; the same holds for ` + "`minimax-code`" + ` and ` + "`MINIMAX_API_KEY`" + `. ` + "`NAME=-`" + ` cannot be combined with a manifest on stdin (` + "`--spec -`" + `). Not needed with ` + "`--from-config`" + `: that config captured its values when it was created, and keeps them server-side.
 
-When the resolved manifest sets ` + "`HARNESS_INFERENCE_MODEL`" + ` without ` + "`HARNESS_INFERENCE_API_KEY`" + `, ` + "`OPENAI_API_KEY`" + `, or ` + "`ANTHROPIC_API_KEY`" + `, doctl asks harness-api to mint a DigitalOcean Inference key (` + "`manage_model_access_key`" + `). Supply one of those secrets to bring your own key instead.
+When the resolved manifest sets ` + "`HARNESS_INFERENCE_MODEL`" + ` without ` + "`HARNESS_INFERENCE_API_KEY`" + `, ` + "`OPENAI_API_KEY`" + `, or ` + "`ANTHROPIC_API_KEY`" + `, doctl asks the platform to issue a DigitalOcean Inference key for the session, and the session's model usage is billed to your DigitalOcean team. Supply one of those secrets to bring your own key instead. With ` + "`--harness claude-code`" + ` or ` + "`--harness codex`" + `, ` + "`--model`" + ` selects DigitalOcean Inference, billed to your team, and leaves the vendor key slot out; pass ` + "`--secret ANTHROPIC_API_KEY=...`" + ` (or ` + "`OPENAI_API_KEY`" + `) to use and be billed on your own vendor account. A key exported in your shell is ignored, so a ` + "`--model`" + ` session that used to run on an exported vendor key now runs on DigitalOcean Inference.
 
 **Inspect before creating.** ` + "`--dry-run`" + ` prints the fully-resolved manifest — name applied, ` + "`${VAR}`" + ` expanded, secret values redacted — and exits without calling the API. That makes a working ` + "`--harness`" + ` invocation reusable, with no file ever touching disk:
 ` + "```bash\n" + agentCLI + ` create --harness claude-code --gh-repo owner/repo --dry-run \
@@ -160,7 +160,17 @@ const agentsListHelpMD = `List sessions visible to your team. Filter with ` + "`
 
 const agentsShowHelpMD = `Print details for one session. Pass the session ID or name.`
 
-const agentsLogsHelpMD = `Replay the session's event history, then exit. Very old or long histories may show only recent events.`
+const agentsLogsHelpMD = `Replay the session's event history, then exit.
+
+With ` + "`-o json`" + `, prints newline-delimited JSON, one object per line, so the history can be read as data (for example with ` + "`jq`" + `). Token chunks are not merged. ` + "`--pretty`" + ` implies ` + "`-o json`" + ` and indents each object, so its output is not one object per line. An empty history prints nothing on stdout.
+
+Each object holds a subset of the API's event fields: ` + "`event_id`" + `, ` + "`run_id`" + `, ` + "`session_id`" + `, ` + "`timestamp`" + `, ` + "`seq`" + `, ` + "`source_event_id`" + `, ` + "`source_event_type`" + `, ` + "`type`" + ` and ` + "`data`" + `. It leaves out ` + "`tenant_id`" + `, ` + "`config_id`" + ` and ` + "`trace_parent`" + `. Empty ` + "`session_id`" + `, ` + "`source_event_id`" + ` and ` + "`source_event_type`" + ` are omitted, and a missing ` + "`timestamp`" + ` or ` + "`data`" + ` prints as ` + "`null`" + `.
+
+With ` + "`-o json`" + `, an error before the first event prints doctl's standard ` + "`errors`" + ` object on stdout. An error after the first event goes to stderr, so stdout holds only events.
+
+Very old or long histories may show only recent events. When older events are dropped, the output has no marker.
+
+JSON output includes the full prompt, tool arguments and log fields, which text output leaves out.`
 
 const agentsApproveHelpMD = `Resolve a pending approval without attaching: ` + "`approve`" + `, ` + "`reject`" + `, or ` + "`defer`" + `. For an MCP elicitation that asks for values (a data form), pass ` + "`--content`" + ` with a JSON object matching what it requested — a plain ` + "`approve`" + ` with no ` + "`--content`" + ` is only correct for a yes/no approval or an OAuth link, not a form.`
 
@@ -180,10 +190,54 @@ Nothing running is not an error: the command says so and exits 0, so it is safe 
 
 const agentsUpdateHelpMD = `Change a session that already exists. Only what you pass is changed; everything else is left alone. Two kinds of change, which cannot be combined in one call.
 
-**Live config** (` + "`--spec`" + `, alias ` + "`--file`" + `): send a partial manifest holding only the sections to change, ` + "`tools`, `env` and `secrets`" + `. Sections you leave out are untouched. ` + "`tools`" + ` is the full replacement list (` + "`tools: []`" + ` detaches every MCP server). ` + "`env`" + ` and ` + "`secrets`" + ` are full sets: a key you leave out is removed, and a secret is a string to set or rotate, or ` + "`{}`" + ` to keep its current value. ` + "`model`" + ` and ` + "`permissions`" + ` are not supported yet.
+**Live config** (` + "`--spec`" + `, alias ` + "`--file`" + `): send a partial manifest holding only the sections to change, ` + "`tools`, `env`, `secrets`, `egress`, `permissions` and `skills`" + `. Sections you leave out are untouched. ` + "`tools`" + ` is the full replacement list, but only Action Gateway (` + "`do.actions`" + `) entries can change: include the session's custom MCP servers exactly as they are, because adding, removing or changing one needs a new session; on a session without custom MCP servers, ` + "`tools: []`" + ` detaches every Action Gateway tool. ` + "`env`" + ` and ` + "`secrets`" + ` are full sets: a key you leave out is removed, and a secret is a string to set or rotate, or ` + "`{}`" + ` to keep its current value. The model is set in ` + "`env`" + ` (see **Model** below); a top-level ` + "`model`" + ` section is rejected.
 ` + "```bash\n" + agentCLI + ` update my-session --spec tools.yaml
 ` + agentCLI + ` update my-session --file - < tools.yaml
-` + "```\n\n" + `The change is applied while the session runs. A tools-only change usually takes seconds; an env or secret change restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature, and the session must be running.
+` + "```\n\n" + `**URL-bound secrets.** The egress proxy sends a URL-bound secret only to requests that match its ` + "`url`" + `; the agent never receives the value. In ` + "`secrets`" + `, set a new value as a string to rotate one (its ` + "`url`" + ` and ` + "`scheme`" + ` stay the same); set ` + "`{value, url, scheme}`" + ` to move one; set ` + "`{value, url}`" + ` to add one (` + "`scheme`" + ` defaults to ` + "`bearer`" + `); set ` + "`{url}`" + ` to bind an existing plain secret to a URL with its current value; set ` + "`{}`" + ` to keep one; or leave one out to remove it. Moving a secret to a new host or path, or to ` + "`scheme: raw`" + `, requires ` + "`value`" + `. The ` + "`url`" + ` must use ` + "`https://`" + ` and an exact hostname, with an optional path and no port, query or fragment. A URL-bound secret cannot be changed back to a plain secret.
+
+**Egress.** ` + "`egress`" + ` replaces the session's allowlist. Write it as an object with ` + "`allow_hosts`" + ` (hostnames) and ` + "`allow_ips`" + ` (exact IPv4/IPv6 addresses, not CIDRs); only this form is supported in an update. A host or IP address you leave out is removed. The VPC cannot change: leave out ` + "`vpc_uuid`" + ` and ` + "`subnet_uuid`" + `, or set them to their current values.
+` + "```yaml\n" + `secrets:
+  GITHUB_TOKEN: {}
+  JIRA_API_TOKEN:
+    value: ${JIRA_API_TOKEN}
+    url: https://example.atlassian.net/rest/api/3
+egress:
+  allow_hosts: [api.github.com, example.atlassian.net]
+  allow_ips: ["203.0.113.10"]
+` + "```\n\n" + `URL-bound secret and egress changes do not restart the agent; they take effect on the session's next outbound connection, and connections that are already open stay open. They require URL-bound secret and egress updates to be enabled for your team. A session created with unrestricted egress and no URL-bound secrets cannot gain either one; create a new session instead.
+
+**Model.** Set the model in the ` + "`env`" + ` key that matches the endpoint the session was created with: ` + "`HARNESS_INFERENCE_MODEL`" + ` for DigitalOcean Serverless Inference (a model id or ` + "`router:<name>`" + `); ` + "`MODEL`" + ` for the session's own OpenAI-compatible endpoint (` + "`OPENAI_BASE_URL`" + `; ` + "`MODEL`" + ` is read before ` + "`OPENAI_MODEL`" + `); ` + "`ANTHROPIC_MODEL`" + ` for its own Anthropic endpoint (` + "`ANTHROPIC_BASE_URL`" + `) or the Anthropic API (an ` + "`ANTHROPIC_API_KEY`" + ` secret). A session keeps the endpoint it was created with: send the base URL with its current value, and don't add or remove ` + "`HARNESS_INFERENCE_MODEL`" + `. On a session with its own endpoint, removing the model key selects the agent's default model, and the provider key (` + "`OPENAI_API_KEY`" + ` or ` + "`ANTHROPIC_API_KEY`" + `) can only be rotated: set a new value, or ` + "`{}`" + ` to keep it. It can't be removed or added, and its ` + "`url`" + ` and ` + "`scheme`" + ` can't change. A model name must be one line of at most 256 bytes, with no leading or trailing spaces.
+` + "```yaml\n" + `env:
+  OPENAI_BASE_URL: https://llm.example.com/v1
+  MODEL: my-model-v2
+secrets:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+` + "```\n\n" + `**Permissions.** ` + "`permissions`" + ` is the full policy, written as at create: the ` + "`default`" + ` action and every rule, so a rule you leave out is removed. For native rules the last match wins, so the order is part of the policy; Action Gateway matches ` + "`do.actions`" + ` rules by specificity instead, but moving any rule still counts as a change. ` + "`permissions: {}`" + ` removes the policy (the agent's built-in default applies) only if the agent can change every rule in it, and ` + "`permissions: null`" + ` is rejected. New rules apply from the agent's next tool call, without a restart, except on ` + "`langgraph`" + `, where a change to ` + "`do.actions`" + ` rules or the default restarts the agent. What can change depends on the agent: ` + "`claude-code`" + ` and ` + "`opencode`" + ` take the default and ` + "`bash`" + `, ` + "`file.read`" + `, ` + "`file.write`" + `, ` + "`mcp`" + ` and ` + "`do.actions`" + ` rules; ` + "`openhands`" + ` takes the default and ` + "`bash`" + `, ` + "`file.read`" + `, ` + "`file.write`" + ` and ` + "`web.fetch`" + ` rules; ` + "`codex`" + ` takes the default and ` + "`bash`" + ` and ` + "`do.actions`" + ` rules, with ` + "`allow`" + `, ` + "`ask`" + ` or ` + "`deny`" + `; ` + "`hermes`" + ` and ` + "`langgraph`" + ` take only ` + "`do.actions`" + ` rules and a default of ` + "`allow`" + ` or ` + "`deny`" + `; other agents take none. On ` + "`openhands`" + `, while the session uses ` + "`do.actions`" + ` tools, the default cannot change. ` + "`permissions.filesystem`" + ` and ` + "`permissions.network`" + ` never change live: leave them out to keep the session's, and setting them to something else is refused. Only what differs from the current policy is checked, and a removed rule counts: a rule of a type the agent cannot change has to stay in every ` + "`permissions`" + ` section you send, so ` + "`permissions: {}`" + ` is refused while the policy has one (for example a ` + "`file.read`" + ` rule on ` + "`codex`" + `, or a ` + "`bash`" + ` rule on ` + "`hermes`" + `). If any of it cannot apply, the whole update is refused (nothing is applied, tools, env and secrets included) and the error names the changes to drop. A session created before live permission updates were released cannot change its permissions: create a new session.
+` + "```yaml\n" + `permissions:
+  default: ask
+  rules:
+    - tool: bash
+      match: {command: "npm test"}
+      action: allow
+    - tool: bash
+      match: {command: "rm -rf *"}
+      action: deny
+` + "```\n\n```bash\n" + agentCLI + ` update my-session --spec permissions.yaml
+` + "```\n\n" + `**OAuth connection.** An OAuth secret that names a provider connection with ` + "`actor`" + ` can switch to another connection of the same provider while the session runs. In ` + "`secrets`" + `, set it to ` + "`{source: oauth, provider, actor}`" + ` with the new connection's ` + "`user_id`" + ` as ` + "`actor`" + ` (run ` + "`" + agentCLI + " connections list`" + ` to see them), and keep every other secret as ` + "`{}`" + `. The new connection must be active and owned by you; another team member's connection is refused, even when it's active. Switching back to the connection the agent config names doesn't need that. The agent restarts, and its next ` + "`git`" + ` operation uses the new connection. Sending the connection the secret already uses changes nothing. The switch applies to this session only: new sessions from the same config start on the config's connection, and a rollback or fork uses the connection the session had when the checkpoint was taken. Action Gateway (` + "`do.actions`" + `) tools keep using the connection Action Gateway picks for the session, so ` + "`git`" + ` and those tools can act as different accounts. A token the agent already read stays valid with the provider until the old connection is revoked. Adding or removing an OAuth secret, changing its provider, or switching one that has no ` + "`actor`" + ` needs a new session. Your team must be enrolled in OAuth connection switching.
+` + "```yaml\n" + `secrets:
+  GITHUB_TOKEN:
+    source: oauth
+    provider: github
+    actor: github2
+` + "```\n\n" + `**Skills.** ` + "`skills`" + ` is the full list of inline skills, written as at create (` + "`name`" + `, ` + "`description`" + `, ` + "`instructions`" + `, and optionally ` + "`license`" + `, ` + "`metadata`" + ` and ` + "`allowed_tools`" + `), so a skill you leave out is removed. ` + "`skills: []`" + ` removes every skill, ` + "`skills: null`" + ` is rejected, and the list is checked with the same rules and limits as at create. The same skills in another order are not a change. The agent reloads its skills without a restart, so the conversation continues. Only ` + "`claude-code`" + `, ` + "`codex`" + ` and ` + "`opencode`" + ` sessions take skills; any other agent, or a session created before live updates were tracked, is refused. If the agent refuses the new skills (for example, a skill named like one the session's repository already ships), the update fails with ` + "`update_failed`" + ` and the session keeps its previous skills: rename the skill and send the update again. Only an agent that cannot reload skills on a running session fails with ` + "`requires_new_session`" + `. When the same update also changes ` + "`permissions`" + `, the failure cannot say which of the two the agent refused; send them as separate updates to find out.
+` + "```yaml\n" + `skills:
+  - name: release-checklist
+    description: Use when preparing a release.
+    instructions: |
+      1. Bump the version.
+      2. Tag the release.
+` + "```\n\n```bash\n" + agentCLI + ` update my-session --spec skills.yaml
+` + "```\n\n" + `The change is applied while the session runs. A tools, URL-bound secret, egress, permissions or skills change usually takes seconds; an env or plain secret change, or an OAuth connection switch, restarts the agent and can take about two minutes. doctl waits until it finishes (` + "`--wait-timeout`" + `), or returns at once with ` + "`--no-wait`" + ` or ` + "`-o json`" + `. If the update fails the server reverts to the previous config and doctl exits with an error saying so. Your team must be enrolled in the config-update feature, and a spec with a ` + "`permissions`" + ` section, even an unchanged one, also needs permission updates enabled for your team; likewise a spec with a ` + "`skills`" + ` section, even an unchanged one, needs skills updates enabled for your team. The session status must be ` + "`SESSION_STATUS_READY`" + `, ` + "`SESSION_STATUS_DETACHED`" + ` or ` + "`SESSION_STATUS_PAUSED`" + ` (a paused session is resumed for the update and paused again, unless it was paused for zero balance), with no turn running and no approval pending. Any other status, including provisioning or already updating, is refused.
 
 **Session setting** (` + "`--resume-on-topoff`" + `): the consent to be resumed automatically after a low-balance pause:
 ` + "```bash\n" + agentCLI + ` update my-session --resume-on-topoff
@@ -236,8 +290,8 @@ Typical flow:
 
 # terminal 2 — connect Codex to the proxy
 codex --remote ws://127.0.0.1:1144
-` + "```\n\n" + `With ` + "`--type opencode`" + `, connect the opencode TUI instead (` + "`--continue`" + ` resumes the session's prior turns):
-` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --continue
+` + "```\n\n" + `With ` + "`--type opencode`" + `, use the Connect line the proxy prints (includes a one-time ` + "`--password`" + `; ` + "`--continue`" + ` resumes prior turns):
+` + "```bash\n" + `opencode attach http://127.0.0.1:1144 --password <printed-secret> --continue
 ` + "```\n\n" + `The opencode bridge is tested against opencode ` + opencode.TestedVersion + `; other versions usually work, and the proxy logs any request it does not recognize.
 
 Only one of ` + "`launch`" + ` and ` + "`start-proxy`" + ` can stream the same session from one machine at a time.

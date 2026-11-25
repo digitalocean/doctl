@@ -566,10 +566,11 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("get"),
 			displayerType(&displayers.HostedAgentSession{}))...)
 
-	CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
+	cmdLogs := CmdBuilder(cmd, RunAgentsLogs, "logs <session>",
 		"Replay the event history for a session",
 		agentsLogsHelpMD,
 		Writer, agentsNS()...)
+	AddBoolFlag(cmdLogs, doctl.ArgAgentPretty, "", false, "Indent each JSON event for reading. Implies -o json.")
 
 	cmdApprove := CmdBuilder(cmd, RunAgentsApprove, "approve <session> <request-id> <approve|reject|defer>",
 		"Resolve a pending HITL request out of band",
@@ -610,7 +611,7 @@ func Agents() *Command {
 		Writer, agentsNS(
 			displayerType(&displayers.HostedAgentSession{}))...)
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
-	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
+	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "f", "", `Path to a partial manifest (YAML) holding only the sections to change: tools, env, secrets, egress, permissions, skills. Absent sections are untouched; "tools" is the full replacement list, "env" and "secrets" are full sets (a key left out is removed), "egress" replaces allow_hosts and allow_ips (the VPC cannot change), "permissions" is the full policy (a rule left out is removed, {} removes the policy unless it holds a rule the agent can't change; what can change depends on the agent, see the command help), and "skills" is the full skill list ([] removes every skill; claude-code, codex and opencode only). Equivalently --file. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --resume-on-topoff.`)
 	acceptFileAliasFor(cmdUpdate)
 	AddIntFlag(cmdUpdate, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for a config update to finish (0 uses the default). Only used with --spec. Ignored with -o json.")
 	AddBoolFlag(cmdUpdate, doctl.ArgAgentNoWait, "", false, "With --spec, return once the config update is accepted instead of waiting for it to finish. Implied by -o json.")
@@ -651,7 +652,7 @@ func Agents() *Command {
 		Writer, agentsNS(aliasOpt("ask"),
 			displayerType(&displayers.HostedAgentPrompt{}))...)
 	AddStringFlag(cmdPrompt, doctl.ArgAgentOnHITL, "", "", "Resolve every approval request this way (approve|reject|defer). Without it, an approval request stops the command, since nothing here can ask a human.")
-	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds to wait for the run to finish, exiting 124 if it does not (0 waits indefinitely). A timeout does not stop the agent; Ctrl-C does.")
+	AddIntFlag(cmdPrompt, doctl.ArgAgentPromptTimeout, "", 0, "Maximum seconds for waking the session, sending the prompt and waiting for the run to finish, exiting 124 if it does not (0 waits indefinitely). A timeout does not stop the agent; Ctrl-C does.")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptIncludeReasoning, "", false, "Also print the model's reasoning to stderr, not just its answer")
 	AddBoolFlag(cmdPrompt, doctl.ArgAgentPromptQuiet, "q", false, "Suppress progress on stderr; stdout still carries the answer")
 	cmdPrompt.Example = agentCLI + ` prompt my-session What is the capital of France?; ` + agentCLI + ` prompt sess_abc123 "Summarize the README" --timeout 300; ` + agentCLI + ` prompt my-session "Fix the failing test" --on-hitl approve; cat task.md | ` + agentCLI + ` prompt my-session -`
@@ -791,6 +792,7 @@ const agentModelFlagDesc = "DigitalOcean Inference model id for a --harness sess
 	harnessInferenceModelEnv + " (for example " + defaultOpenHandsModel + " or anthropic-claude-4.5-sonnet). " +
 	"--harness openhands and --harness hermes run on DigitalOcean Inference and default to " +
 	defaultOpenHandsModel + " and " + defaultHermesModel + "; " +
+	"for --harness claude-code and --harness codex, --model selects DigitalOcean Inference too, billed to your DigitalOcean team, and your own vendor key is used only if you pass it with --secret (ANTHROPIC_API_KEY or OPENAI_API_KEY); " +
 	"the other harnesses use their own vendor key and leave it unset unless given. " +
 	"Only valid with --harness; a --spec manifest declares its own."
 
@@ -1171,10 +1173,12 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 			permission: permission,
 			template:   template,
 			model:      model,
+			secrets:    secrets,
 		})
 		if err != nil {
 			return nil, err
 		}
+		noteIgnoredVendorKey(harness, model, secrets)
 	} else {
 		raw, err = readManifestBytes(os.Stdin, specPath)
 		if err != nil {
@@ -1208,6 +1212,51 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 		}
 	}
 	return src, nil
+}
+
+// noteIgnoredVendorKey says, once, that a vendor key exported in the shell is
+// not used when --model selects DigitalOcean Inference on claude-code or
+// codex. It goes to stderr so -o json stdout stays clean.
+func noteIgnoredVendorKey(harness, model string, secrets map[string]string) {
+	var keyEnv string
+	var vendor string
+	agent, _ := resolveHarnessAgent(harness)
+	switch agent {
+	case claudeCodeAgentName:
+		keyEnv, vendor = anthropicAPIKeyEnv, "Anthropic"
+	case codexAgentName:
+		keyEnv, vendor = openAIAPIKeyEnv, "OpenAI"
+	default:
+		return
+	}
+	if strings.TrimSpace(model) == "" || vendorKeyPassed(secrets) {
+		return
+	}
+	if strings.TrimSpace(os.Getenv(keyEnv)) == "" {
+		return
+	}
+	env := uiEnv()
+	fmt.Fprintf(env.ErrWriter(), "Using DigitalOcean Inference for %s; model usage is billed to your DigitalOcean team. %s in your environment is not used; to use and be billed on your own %s account, pass --%s %s=... (or =@file).\n",
+		model, keyEnv, vendor, doctl.ArgAgentSecret, keyEnv)
+}
+
+// hasKeyPlaceholder reports whether an inference or vendor key's env or secret
+// slot still holds a ${VAR} reference. A real create would fill or prompt for
+// that value instead of asking for a DigitalOcean key.
+func hasKeyPlaceholder(manifest []byte) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(manifest, &doc); err != nil || doc == nil {
+		return false
+	}
+	_, legacy := doc["apiVersion"]
+	env, _, _, _ := extractManifestEnvAndSecrets(doc, legacy)
+	secrets := manifestSecretValues(manifest)
+	for _, name := range []string{harnessInferenceAPIKeyEnv, openAIAPIKeyEnv, anthropicAPIKeyEnv} {
+		if isEnvPlaceholder(env[name]) || isEnvPlaceholder(secrets[name]) {
+			return true
+		}
+	}
+	return false
 }
 
 func agentSourcesExclusiveErr() error {
@@ -1405,6 +1454,9 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	if err != nil {
 		return err
 	}
+	if needsManagedModelAccessKey(manifest) && !hasKeyPlaceholder(src.manifest) {
+		fmt.Fprintln(uiEnv().ErrWriter(), "A DigitalOcean Inference key will be requested for this session when it is created; model usage is billed to your DigitalOcean team.")
+	}
 	if len(unbound) > 0 {
 		notice("not set locally, so left as a placeholder: %s. "+
 			"Supply the value where this manifest is used, e.g. `--%s %s=@path/to/value`",
@@ -1551,18 +1603,25 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		return fmt.Errorf("session %q not found: %w", sessionRef, err)
 	}
 
-	// The two facades speak different transports, so the listen URL scheme
-	// and the connect command diverge per type. --replay is codex-only:
-	// opencode's attach fetches history itself (GET /session/{id}/message,
-	// served from M3 on), so there is nothing for the proxy to push.
+	// Transports differ by type: Codex is WebSocket; OpenCode is HTTP+SSE.
+	// --replay is codex-only (OpenCode fetches history itself).
+	// OpenCode also gets a one-time Basic Auth password on the Connect line
+	// (`opencode attach --password`) so the local facade is not open.
 	listenURL := fmt.Sprintf("ws://127.0.0.1:%d", port)
 	connectCmd := fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)
+	var proxyPassword string
 	if proxyType == "opencode" {
 		if replay {
 			return fmt.Errorf("--replay is codex-only; opencode's own `attach` replays history itself")
 		}
+		var err error
+		proxyPassword, err = agentproxy.NewProxyPassword()
+		if err != nil {
+			return fmt.Errorf("minting proxy password: %w", err)
+		}
 		listenURL = fmt.Sprintf("http://127.0.0.1:%d", port)
-		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d", port)
+		// Quote so a future alphabet change cannot break the shell line.
+		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d --password %s", port, strconv.Quote(proxyPassword))
 	}
 
 	stylingEnabled = detectStyling()
@@ -1587,11 +1646,12 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 		if err != nil {
 			dir = "/"
 		}
-		return agentproxy.ServeHTTP(ctx, port, &opencode.Facade{
+		handler := agentproxy.ProtectLoopbackHTTP(&opencode.Facade{
 			SessionID: sessionID,
 			Sessions:  svc,
 			Dir:       dir,
-		})
+		}, proxyPassword)
+		return agentproxy.ServeHTTP(ctx, port, handler)
 	}
 
 	// Fresh Facade per connection (see ServeListener): per-connection state
@@ -2264,10 +2324,20 @@ func RunAgentsResume(c *CmdConfig) error {
 		return err
 	}
 	warnBoundReuseSession(c, sessionID)
-	if err := c.HostedAgents().ResumeSession(sessionID); err != nil {
+	svc := c.HostedAgents()
+	sess, err := svc.GetSession(sessionID)
+	if err != nil {
 		return err
 	}
+	if sess.Status != godo.HostedAgentSessionStatusPaused {
+		return fmt.Errorf("session %s is %s, not paused; there is nothing to resume", sessionID, humanSessionStatus(sess.Status))
+	}
 	stylingEnabled = detectStyling()
+	prog := newStageProgress(wakeStderr)
+	defer prog.stop()
+	if _, err := wakeSessionWithProgress(context.Background(), svc, sessionID, prog); err != nil {
+		return err
+	}
 	printAgentSuccess(c.Out, fmt.Sprintf("Session %s resumed", sessionID))
 	return nil
 }
@@ -2323,8 +2393,9 @@ func RunAgentsUpdate(c *CmdConfig) error {
 	return nil
 }
 
-// runAgentsUpdateConfig sends a partial manifest (tools, env, secrets) to the
-// session and, unless told not to, waits for the server to finish applying it.
+// runAgentsUpdateConfig sends a partial manifest (tools, env, secrets, egress,
+// permissions, skills) to the session and, unless told not to, waits for the
+// server to finish applying it.
 func runAgentsUpdateConfig(c *CmdConfig, sessionID string) error {
 	path, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
@@ -2413,7 +2484,7 @@ func agentSessionUpdateRequest(c *CmdConfig) (*godo.HostedAgentSessionUpdateRequ
 	if update.ResumeOnTopoff == nil {
 		// The server answers an empty body with a 400, so say what to pass
 		// instead of forwarding a request that cannot succeed.
-		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke), or --%s to change tools, env or secrets",
+		return nil, fmt.Errorf("nothing to update: pass --%s (or --%s=false to revoke), or --%s to change tools, env, secrets, permissions or skills",
 			doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentResumeOnTopoff, doctl.ArgAgentSpec)
 	}
 	return update, nil
@@ -3030,6 +3101,43 @@ func hitlOutcomeFor(s string) (godo.HostedAgentHITLOutcome, error) {
 // stream is finite: the server ends it after the last stored event, which is
 // what terminates the loop below.
 func RunAgentsLogs(c *CmdConfig) error {
+	pretty, err := c.Doit.GetBool(c.NS, doctl.ArgAgentPretty)
+	if err != nil {
+		return err
+	}
+	// Decide the format before any request so a refusal prints nothing. The
+	// global -o defaults to "text", so only an explicit -o text conflicts with
+	// --pretty; the default merely gets upgraded to JSON. outputFormat also
+	// sees a config file's output, as checkErr does.
+	format := outputFormat()
+	if format != "text" && format != "json" {
+		return errors.New("logs supports -o text and -o json")
+	}
+	if pretty && format == "text" && agentFlagChanged(c, doctl.ArgOutput) {
+		return errors.New("--pretty only applies to JSON output")
+	}
+	if format == "json" || pretty {
+		// Before the first event, the runner's checkErr prints the standard
+		// {"errors":[...]} envelope under -o json. After it, that envelope
+		// would be a non-event line in the stream, so report on stderr and
+		// exit non-zero silently instead.
+		out := &reportingWriter{out: c.Out}
+		c.Out = out
+		err := runAgentsLogs(c, pretty, true)
+		if err == nil || !out.wrote.Load() {
+			return err
+		}
+		// Same rewrite the runner applies, so a 402 says "add funds" here too.
+		err = beautifyAgentErrorFor(c, err)
+		if !errors.Is(err, ErrExitSilently) {
+			fmt.Fprint(uiEnv().ErrWriter(), formatStructuredError(uiEnv(), err))
+		}
+		return ErrExitSilently
+	}
+	return runAgentsLogs(c, pretty, false)
+}
+
+func runAgentsLogs(c *CmdConfig, pretty, asJSON bool) error {
 	sessionID, err := sessionIDArg(c)
 	if err != nil {
 		return err
@@ -3046,6 +3154,10 @@ func RunAgentsLogs(c *CmdConfig) error {
 		return err
 	}
 	defer stream.Close()
+
+	if asJSON {
+		return writeEventsJSON(c.Out, stream, pretty)
+	}
 
 	// TOKEN_CHUNK events stream token-by-token; buffer them so the whole
 	// assistant message renders as markdown at once. Other event kinds are
@@ -3070,6 +3182,67 @@ func RunAgentsLogs(c *CmdConfig) error {
 		renderEvent(c.Out, ev)
 	}
 	acc.flush(c.Out)
+	return stream.Err()
+}
+
+// logEventJSON is the subset of the server's event envelope that godo keeps,
+// under the server's field names. godo's event type has no JSON tags and drops
+// tenant_id, config_id and trace_parent while decoding, so those three cannot
+// be reproduced here. agentsLogsHelpMD lists the fields for users.
+type logEventJSON struct {
+	EventID         string          `json:"event_id"`
+	RunID           string          `json:"run_id"`
+	SessionID       string          `json:"session_id,omitempty"`
+	Timestamp       *string         `json:"timestamp"`
+	Seq             uint64          `json:"seq"`
+	SourceEventID   string          `json:"source_event_id,omitempty"`
+	SourceEventType string          `json:"source_event_type,omitempty"`
+	Type            string          `json:"type"`
+	Data            json.RawMessage `json:"data"`
+}
+
+// writeEventsJSON prints one JSON object per event. Each event is encoded in
+// full before it is written, so a mid-stream failure leaves only complete
+// lines behind. Token chunks are kept as separate events: the consumer is a
+// program that wants the history as recorded, not a merged message.
+func writeEventsJSON(w io.Writer, stream *godo.HostedAgentSessionStream, pretty bool) error {
+	for stream.Next() {
+		ev := stream.Current()
+		if ev.Kind == godo.HostedAgentEventKindStreamState {
+			continue
+		}
+		out := logEventJSON{
+			EventID:         ev.EventID,
+			RunID:           ev.RunID,
+			SessionID:       ev.SessionID,
+			Seq:             ev.Seq,
+			SourceEventID:   ev.SourceEventID,
+			SourceEventType: ev.SourceEventType,
+			Type:            string(ev.Kind),
+			Data:            ev.Payload,
+		}
+		// godo leaves the time zero when the frame had none; null says so
+		// instead of inventing year 1.
+		if !ev.At.Time.IsZero() {
+			ts := ev.At.Time.UTC().Format(time.RFC3339Nano)
+			out.Timestamp = &ts
+		}
+		if len(out.Data) == 0 {
+			out.Data = json.RawMessage("null")
+		}
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		if pretty {
+			enc.SetIndent("", "  ")
+		}
+		if err := enc.Encode(out); err != nil {
+			return err
+		}
+		if _, err := w.Write(buf.Bytes()); err != nil {
+			return err
+		}
+	}
 	return stream.Err()
 }
 

@@ -1165,6 +1165,9 @@ const (
 	// requestedSchema, passed to `agents approve` alongside the outcome.
 	ArgAgentHITLContent = "content"
 
+	// ArgAgentPretty indents each JSON event printed by `logs`.
+	ArgAgentPretty = "pretty"
+
 	// ArgAgentResumeOnTopoff opts a session in to automatic resumption when the
 	// team's prepayment balance is topped off after a low-balance pause. Set at
 	// create, or changed later on an existing session with `agents update`.
@@ -1289,6 +1292,42 @@ const (
 
 	// ArgEvaluationDatasetParadigm filters or sets the evaluation dataset paradigm.
 	ArgEvaluationDatasetParadigm = "dataset-paradigm"
+
+	// ArgHarborName overrides the name of a published Harbor task, dataset, or job.
+	ArgHarborName = "name"
+	// ArgHarborQuery searches Harbor tasks by name.
+	ArgHarborQuery = "query"
+	// ArgHarborOut is the local folder Harbor downloads are written into.
+	ArgHarborOut = "out"
+	// ArgHarborTask is a Harbor task to run. It is repeatable.
+	ArgHarborTask = "task"
+	// ArgHarborTaskShort is the shorthand for ArgHarborTask. -t is taken by --access-token.
+	ArgHarborTaskShort = "T"
+	// ArgHarborDataset is the Harbor dataset to run.
+	ArgHarborDataset = "dataset"
+	// ArgHarborAgent is an agent to run. It is repeatable and paired with ArgHarborModel.
+	ArgHarborAgent = "agent"
+	// ArgHarborModel is the model an agent uses. It is repeatable and paired with ArgHarborAgent.
+	ArgHarborModel = "model"
+	// ArgHarborAttempts is how many times each agent attempts each task.
+	ArgHarborAttempts = "attempts"
+	// ArgHarborConcurrency is how many trials of a job run at once.
+	ArgHarborConcurrency = "concurrency"
+	// ArgHarborMaxRetries is how many times an errored trial is retried.
+	ArgHarborMaxRetries = "max-retries"
+	// ArgHarborIdempotencyKey makes a retried job submission return the original job.
+	ArgHarborIdempotencyKey = "idempotency-key"
+	// ArgHarborDryRun validates a job without starting it.
+	ArgHarborDryRun = "dry-run"
+	// ArgHarborJobConfig is a Harbor job file in YAML or JSON. -c is doctl's
+	// own config file, so the job file cannot use that flag.
+	ArgHarborJobConfig = "job-config"
+	// ArgHarborPollInterval is how often a waiting Harbor command checks for progress.
+	ArgHarborPollInterval = "poll-interval"
+	// ArgHarborPreview sends Harbor requests to the preview lane of the API.
+	ArgHarborPreview = "preview"
+	// ArgHarborStatus limits a Harbor job list to one job status.
+	ArgHarborStatus = "status"
 
 	// ArgEvaluationHasGroundTruth filters datasets by whether they include ground truth.
 	ArgEvaluationHasGroundTruth = "has-ground-truth"

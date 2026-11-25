@@ -16,6 +16,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -154,6 +155,144 @@ func TestRunAgentsUpdate_ConfigFailedReverted(t *testing.T) {
 		err := RunAgentsUpdate(config)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "mcp server did not start")
+		assert.Contains(t, err.Error(), "reverted")
+	})
+}
+
+const updateConfigPermissionsManifest = "permissions:\n  default: ask\n  rules:\n    - tool: bash\n      match:\n        command: \"rm -rf *\"\n      action: deny\n    - tool: do.actions/exa_web_search\n      action: allow\n"
+
+func TestRunAgentsUpdate_ConfigSendsPermissions(t *testing.T) {
+	old := sessionReadyPollInterval
+	sessionReadyPollInterval = time.Millisecond
+	defer func() { sessionReadyPollInterval = old }()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			UpdateSessionConfig(updateConfigSessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: updateConfigPermissionsManifest}).
+			Return(&godo.HostedAgentSessionConfigUpdateResponse{
+				Session: updateSession(godo.HostedAgentSessionStatusUpdating, &godo.HostedAgentSessionConfigUpdate{State: godo.HostedAgentSessionConfigUpdateStateApplying}),
+				Outcome: godo.HostedAgentSessionConfigUpdateOutcomeAccepted,
+			}, nil)
+		tm.hostedAgents.EXPECT().GetSession(updateConfigSessionID).
+			Return(&do.HostedAgentSession{HostedAgentSession: updateSession(godo.HostedAgentSessionStatusReady, &godo.HostedAgentSessionConfigUpdate{
+				State:    godo.HostedAgentSessionConfigUpdateStateApplied,
+				Sections: []string{"permissions"},
+			})}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{updateConfigSessionID}
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, writeUpdateSpec(t, updateConfigPermissionsManifest))
+
+		require.NoError(t, RunAgentsUpdate(config))
+		assert.Contains(t, buf.String(), "updated")
+	})
+}
+
+func TestRunAgentsUpdate_ConfigPermissionsRefused(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		refusal := `permissions can't change live on hermes for: bash rule "rm -rf *" (only do.actions allow/deny rules and an allow or deny default action can change on this agent). Remove these changes and send the update again (update_unsupported)`
+		tm.hostedAgents.EXPECT().
+			UpdateSessionConfig(updateConfigSessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: updateConfigPermissionsManifest}).
+			Return(nil, errors.New(refusal))
+
+		config.Args = []string{updateConfigSessionID}
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, writeUpdateSpec(t, updateConfigPermissionsManifest))
+
+		// No GetSession expectation: a refused update must not poll.
+		err := RunAgentsUpdate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), refusal)
+	})
+}
+
+func TestRunAgentsUpdate_NothingToUpdateNamesPermissionsAndSkills(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{updateConfigSessionID}
+
+		err := RunAgentsUpdate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "tools, env, secrets, permissions or skills")
+	})
+}
+
+const updateConfigSkillsManifest = "skills:\n  - name: release-checklist\n    description: Use when preparing a release.\n    instructions: |\n      1. Bump the version.\n      2. Tag the release.\n"
+
+func TestRunAgentsUpdate_ConfigSendsSkills(t *testing.T) {
+	old := sessionReadyPollInterval
+	sessionReadyPollInterval = time.Millisecond
+	defer func() { sessionReadyPollInterval = old }()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			UpdateSessionConfig(updateConfigSessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: updateConfigSkillsManifest}).
+			Return(&godo.HostedAgentSessionConfigUpdateResponse{
+				Session: updateSession(godo.HostedAgentSessionStatusUpdating, &godo.HostedAgentSessionConfigUpdate{State: godo.HostedAgentSessionConfigUpdateStateApplying}),
+				Outcome: godo.HostedAgentSessionConfigUpdateOutcomeAccepted,
+			}, nil)
+		tm.hostedAgents.EXPECT().GetSession(updateConfigSessionID).
+			Return(&do.HostedAgentSession{HostedAgentSession: updateSession(godo.HostedAgentSessionStatusReady, &godo.HostedAgentSessionConfigUpdate{
+				State:    godo.HostedAgentSessionConfigUpdateStateApplied,
+				Sections: []string{"skills"},
+			})}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{updateConfigSessionID}
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, writeUpdateSpec(t, updateConfigSkillsManifest))
+
+		require.NoError(t, RunAgentsUpdate(config))
+		assert.Contains(t, buf.String(), "updated")
+	})
+}
+
+func TestRunAgentsUpdate_ConfigSkillsRefused(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		refusal := "skills cannot be updated on a running hermes session (update_unsupported); create a new session to change skills"
+		tm.hostedAgents.EXPECT().
+			UpdateSessionConfig(updateConfigSessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: updateConfigSkillsManifest}).
+			Return(nil, errors.New(refusal))
+
+		config.Args = []string{updateConfigSessionID}
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, writeUpdateSpec(t, updateConfigSkillsManifest))
+
+		// No GetSession expectation: a refused update must not poll.
+		err := RunAgentsUpdate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), refusal)
+	})
+}
+
+// An agent that refuses the new skills fails the update with update_failed;
+// the session keeps its previous skills.
+func TestRunAgentsUpdate_ConfigSkillsRefusedByTheAgent(t *testing.T) {
+	old := sessionReadyPollInterval
+	sessionReadyPollInterval = time.Millisecond
+	defer func() { sessionReadyPollInterval = old }()
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		const detail = "the agent could not take the new skills"
+		tm.hostedAgents.EXPECT().
+			UpdateSessionConfig(updateConfigSessionID, &godo.HostedAgentSessionConfigUpdateRequest{ManifestYAML: updateConfigSkillsManifest}).
+			Return(&godo.HostedAgentSessionConfigUpdateResponse{
+				Session: updateSession(godo.HostedAgentSessionStatusUpdating, &godo.HostedAgentSessionConfigUpdate{State: godo.HostedAgentSessionConfigUpdateStateApplying}),
+				Outcome: godo.HostedAgentSessionConfigUpdateOutcomeAccepted,
+			}, nil)
+		tm.hostedAgents.EXPECT().GetSession(updateConfigSessionID).
+			Return(&do.HostedAgentSession{HostedAgentSession: updateSession(godo.HostedAgentSessionStatusReady, &godo.HostedAgentSessionConfigUpdate{
+				State:    godo.HostedAgentSessionConfigUpdateStateFailed,
+				Error:    godo.HostedAgentSessionConfigUpdateErrorUpdateFailed,
+				Detail:   detail,
+				Reverted: true,
+				Sections: []string{"skills"},
+			})}, nil)
+
+		config.Args = []string{updateConfigSessionID}
+		config.Doit.Set(config.NS, doctl.ArgAgentSpec, writeUpdateSpec(t, updateConfigSkillsManifest))
+
+		err := RunAgentsUpdate(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), detail)
 		assert.Contains(t, err.Error(), "reverted")
 	})
 }

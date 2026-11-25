@@ -161,6 +161,18 @@ func MicroVM() *Command {
 			"Requires the `exec_pty` feature (see `doctl compute microvm options`). A paused MicroVM is auto-resumed.",
 		Writer)
 
+	cmdMicroVMPortForward := CmdBuilder(cmd, RunMicroVMPortForward, "port-forward <microvm-id> [<local-port>:]<remote-port> [...]",
+		"Forward local TCP ports to a MicroVM",
+		"Opens a local TCP listener for each port pair. Each connection to `localhost:<local-port>` is carried over an "+
+			"authenticated WebSocket to `127.0.0.1:<remote-port>` inside the MicroVM, so the port does not need a public URL. "+
+			"A bare port forwards the same port on both ends; `0:<remote-port>` lets the OS pick a free local port, which is printed. "+
+			"Remote ports must be between 1 and 65535; port 50051 is reserved. A paused MicroVM is resumed first. "+
+			"Requires the `port_forward` feature (see `doctl compute microvm options`). "+
+			"The process runs in the foreground; press Ctrl-C to stop.",
+		Writer)
+	AddStringFlag(cmdMicroVMPortForward, doctl.ArgAgentForwardAddress, "", "127.0.0.1", "Local bind address")
+	cmdMicroVMPortForward.Example = `The following example forwards local port 8080 to port 80 inside a MicroVM: doctl compute microvm port-forward 01a0ef1a-d873-793d-ae6a-5dd6239be62a 8080:80`
+
 	cmdMicroVMUpload := CmdBuilder(cmd, RunMicroVMUpload, "upload <microvm-id>",
 		"Upload a file into a MicroVM",
 		"Uploads a single local file (at most 64 MiB) into the MicroVM's workload container at `--path`, "+
