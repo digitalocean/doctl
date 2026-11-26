@@ -176,7 +176,7 @@ func TestPermissionRejectViaSessionRoute(t *testing.T) {
 	ask := propsOf(t, fs.until("permission.asked"))
 	perID := ask["id"].(string)
 
-	replyResp, err := http.Post(srv.URL+"/session/ses_x/permissions/"+perID, "application/json",
+	replyResp, err := http.Post(srv.URL+testSessionURL("/permissions/"+perID), "application/json",
 		strings.NewReader(`{"response":"reject"}`))
 	require.NoError(t, err)
 	replyResp.Body.Close()

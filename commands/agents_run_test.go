@@ -1944,6 +1944,15 @@ func expectValidatePolicy(t *testing.T, tm *tcMocks, shipped godo.HostedAgentPol
 		Return(&godo.HostedAgentPolicyValidationResult{DefaultAction: shipped, DefaultActionRendered: shipped}, nil)
 }
 
+// allowValidatePolicy stubs the policy check for a --harness create that is
+// made to fail: the check may be cancelled before it is sent, and no line prints.
+func allowValidatePolicy(tm *tcMocks) {
+	tm.hostedAgents.EXPECT().
+		ValidatePolicy(gomock.Any(), gomock.Any()).
+		Return(&godo.HostedAgentPolicyValidationResult{DefaultAction: godo.HostedAgentPolicyActionAsk}, nil).
+		AnyTimes()
+}
+
 // The constant is what every other assertion reads, so a change to it would
 // move the tests with it. This pins the spelled-out default through the flag
 // resolver.

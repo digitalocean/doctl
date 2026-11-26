@@ -39,6 +39,7 @@ import (
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/doctl/internal/ui"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1092,9 +1093,13 @@ func TestRunAgentsPause(t *testing.T) {
 
 func TestRunAgentsResume(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(sessionInStatus("sess_test", godo.HostedAgentSessionStatusPaused), nil)
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		var buf bytes.Buffer
+		config.Out = &buf
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
+		assert.Contains(t, buf.String(), "resumed")
 	})
 }
 
@@ -1113,6 +1118,7 @@ func TestRunAgentsResume_WarnsWhenBoundToReuseTrigger(t *testing.T) {
 				BoundSessionID: "sess_test",
 			}}, nil
 		}
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(sessionInStatus("sess_test", godo.HostedAgentSessionStatusPaused), nil)
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
@@ -1131,6 +1137,7 @@ func TestRunAgentsResume_BoundSessionLookupMissIsSilent(t *testing.T) {
 		lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
 			return nil, errors.New("404")
 		}
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(sessionInStatus("sess_test", godo.HostedAgentSessionStatusPaused), nil)
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
@@ -6059,4 +6066,335 @@ func TestRunAgentsCreate_JSONKeepsPermissionLineOffStdout(t *testing.T) {
 		assert.Contains(t, stderr.String(), "permissions.default: ask (server will apply)")
 		assert.Empty(t, uiOut.String(), "the line must not reach stdout")
 	})
+}
+
+// logsFrame is an SSE frame with the full event envelope, for the `logs` tests.
+func logsFrame(id string, seq int, typ, dataJSON string) string {
+	return fmt.Sprintf(
+		"id: %s\ndata: {\"event_id\":%q,\"run_id\":\"run_1\",\"session_id\":\"sess_x\",\"timestamp\":\"2026-01-02T03:04:05Z\",\"seq\":%d,\"type\":%q,\"data\":%s}\n\n",
+		id, id, seq, typ, dataJSON)
+}
+
+// runLogsForTest runs `logs` against an SSE body. wantStream is false for the
+// cases that must be refused before any request is made.
+func runLogsForTest(t *testing.T, body string, trailErr error, output string, flags map[string]any, wantStream bool) (string, error) {
+	t.Helper()
+	prev := Output
+	Output = output
+	t.Cleanup(func() { Output = prev })
+
+	var out string
+	var runErr error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		srv := httptest.NewServer(hostedAgentSSEHandler(body, trailErr))
+		t.Cleanup(srv.Close)
+		client, err := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+		require.NoError(t, err)
+		if wantStream {
+			tm.hostedAgents.EXPECT().
+				StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+					assert.True(t, opt.ReplayOnly)
+					return openHostedAgentStream(t, client, opt), nil
+				}).
+				Times(1)
+		}
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_x"}
+		for k, v := range flags {
+			config.Doit.Set(config.NS, k, v)
+		}
+		runErr = RunAgentsLogs(config)
+		out = buf.String()
+	})
+	return out, runErr
+}
+
+const logsTestBody = "" +
+	"id: s0\ndata: {\"event_id\":\"s0\",\"type\":\"stream.state\",\"data\":{\"state\":\"live\"}}\n\n" +
+	`id: e1` + "\n" + `data: {"event_id":"e1","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:05Z","seq":1,"source_event_type":"native/x","type":"run.started","data":{"user_input":"a <b> & c"}}` + "\n\n" +
+	`id: e2` + "\n" + `data: {"event_id":"e2","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:06Z","seq":2,"type":"run.token_delta","data":{"text":"good"}}` + "\n\n" +
+	`id: e3` + "\n" + `data: {"event_id":"e3","run_id":"run_1","session_id":"sess_x","timestamp":"2026-01-02T03:04:07Z","seq":3,"type":"run.token_delta","data":{"text":"bye"}}` + "\n\n"
+
+func TestRunAgentsLogs_JSONLines(t *testing.T) {
+	out, err := runLogsForTest(t, logsTestBody, nil, "json", nil, true)
+	require.NoError(t, err)
+
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	require.Len(t, lines, 3, "stream.state skipped, token chunks not merged: %q", out)
+	assert.NotContains(t, out, "\x1b")
+	for _, l := range lines {
+		var m map[string]any
+		require.NoError(t, json.Unmarshal([]byte(l), &m), l)
+		assert.NotEmpty(t, m["type"])
+		assert.NotEmpty(t, m["timestamp"])
+		assert.NotNil(t, m["data"])
+	}
+	var first map[string]any
+	require.NoError(t, json.Unmarshal([]byte(lines[0]), &first))
+	assert.Equal(t, "run.started", first["type"])
+	assert.Equal(t, "e1", first["event_id"])
+	assert.Equal(t, "native/x", first["source_event_type"])
+	assert.Equal(t, "2026-01-02T03:04:05Z", first["timestamp"])
+	assert.EqualValues(t, 1, first["seq"])
+	assert.NotContains(t, first, "source_event_id", "empty optional fields are omitted")
+	assert.Contains(t, lines[0], `a <b> & c`, "no HTML escaping")
+}
+
+func TestRunAgentsLogs_PrettyImpliesJSONAndIndents(t *testing.T) {
+	out, err := runLogsForTest(t, logsTestBody, nil, "text", map[string]any{doctl.ArgAgentPretty: true}, true)
+	require.NoError(t, err)
+	assert.Contains(t, out, "\n  \"event_id\": \"e1\"")
+
+	dec := json.NewDecoder(strings.NewReader(out))
+	var types []string
+	for dec.More() {
+		var m map[string]any
+		require.NoError(t, dec.Decode(&m))
+		types = append(types, m["type"].(string))
+	}
+	assert.Equal(t, []string{"run.started", "run.token_delta", "run.token_delta"}, types)
+}
+
+func TestRunAgentsLogs_RefusesBeforeStreaming(t *testing.T) {
+	out, err := runLogsForTest(t, "", nil, "yaml", nil, false)
+	assert.EqualError(t, err, "logs supports -o text and -o json")
+	assert.Empty(t, out)
+
+	out, err = runLogsForTest(t, "", nil, "text", map[string]any{doctl.ArgAgentPretty: true, doctl.ArgOutput: "text"}, false)
+	assert.EqualError(t, err, "--pretty only applies to JSON output")
+	assert.Empty(t, out)
+}
+
+// The SSE handler's trailing error is a corrupt frame after the good ones, not
+// a transport error; the stream then fails with a decode error.
+func TestRunAgentsLogs_JSONMidStreamErrorKeepsPartialLines(t *testing.T) {
+	body := logsFrame("e1", 1, "run.started", `{}`)
+	out, err := runLogsForTest(t, body, errCorruptFrame, "json", nil, true)
+	require.Error(t, err)
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	require.Len(t, lines, 1, out)
+	var m map[string]any
+	require.NoError(t, json.Unmarshal([]byte(lines[0]), &m))
+	assert.Equal(t, "e1", m["event_id"])
+}
+
+// The frame carries every field of the server's event envelope. Scripts read
+// the help to learn which of them logs prints.
+func TestRunAgentsLogs_HelpNamesTheJSONFields(t *testing.T) {
+	frame := `id: e1` + "\n" + `data: {"event_id":"e1","run_id":"run_1","tenant_id":"42","session_id":"sess_x","config_id":"cfg_1","trace_parent":"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01","timestamp":"2026-01-02T03:04:05Z","seq":1,"source_event_id":"n1","source_event_type":"native/x","type":"run.started","data":{}}` + "\n\n"
+	out, err := runLogsForTest(t, frame, nil, "json", nil, true)
+	require.NoError(t, err)
+	var got map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(out), &got), out)
+	for k := range got {
+		assert.Contains(t, agentsLogsHelpMD, "`"+k+"`", "printed but not named in the help")
+	}
+	for _, k := range []string{"tenant_id", "config_id", "trace_parent"} {
+		assert.NotContains(t, got, k)
+		assert.Contains(t, agentsLogsHelpMD, "`"+k+"`", "left out but not named in the help")
+	}
+}
+
+// A config file's `output: json` reaches viper but not the -o flag variable.
+func TestRunAgentsLogs_ConfigFileOutputJSONPrintsJSON(t *testing.T) {
+	viper.Set("output", "json")
+	t.Cleanup(func() { viper.Set("output", "") })
+	out, err := runLogsForTest(t, logsTestBody, nil, "text", nil, true)
+	require.NoError(t, err)
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	require.Len(t, lines, 3, out)
+	for _, l := range lines {
+		assert.True(t, json.Valid([]byte(l)), l)
+	}
+}
+
+func TestRunAgentsLogs_TextModeStillMergesAndSkipsJSON(t *testing.T) {
+	out, err := runLogsForTest(t, logsTestBody, nil, "text", nil, true)
+	require.NoError(t, err)
+	assert.Contains(t, out, "[2026-01-02T03:04:05Z] run.started")
+	assert.NotContains(t, out, `"event_id"`)
+	assert.NotContains(t, out, "stream.state")
+	assert.Contains(t, out, "goodbye", "token chunks merge into one message")
+}
+
+// errCorruptFrame only signals hostedAgentSSEHandler to append a corrupt frame.
+var errCorruptFrame = errors.New("append a corrupt SSE frame")
+
+func TestRunAgentsLogs_AbsentDataAndTimestampArePrintedAsNull(t *testing.T) {
+	body := "id: e1\ndata: {\"event_id\":\"e1\",\"run_id\":\"run_1\",\"seq\":1,\"type\":\"run.started\"}\n\n" +
+		"id: e2\ndata: {\"event_id\":\"e2\",\"run_id\":\"run_1\",\"seq\":2,\"type\":\"run.started\",\"data\":null}\n\n"
+	out, err := runLogsForTest(t, body, nil, "json", nil, true)
+	require.NoError(t, err)
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	require.Len(t, lines, 2)
+	for _, l := range lines {
+		assert.Contains(t, l, `"data":null`)
+		assert.Contains(t, l, `"timestamp":null`)
+		assert.NotContains(t, l, "0001-01-01")
+	}
+}
+
+// runLogsThroughCheckErr runs `logs` the way the real runner does: the error it
+// returns is beautified and goes to checkErr, with stdout, stderr and the exit
+// hook captured. output is what -o sets, which both Output and viper see.
+func runLogsThroughCheckErr(t *testing.T, output string, flags map[string]any, body string, streamErr, startErr error) (stdout, stderr string, exited bool) {
+	t.Helper()
+	prevOut, prevAction := Output, errAction
+	Output = output
+	viper.Set("output", output)
+	t.Cleanup(func() { Output = prevOut; errAction = prevAction; viper.Set("output", "") })
+	errAction = func() { exited = true }
+
+	var errBuf, uiOut bytes.Buffer
+	withUIEnv(t, ui.Plain(&uiOut, &errBuf))
+	t.Cleanup(func() { assert.Empty(t, uiOut.String(), "nothing may reach the UI's stdout writer") })
+
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+	t.Cleanup(func() { os.Stdout = oldStdout })
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		srv := httptest.NewServer(hostedAgentSSEHandler(body, streamErr))
+		t.Cleanup(srv.Close)
+		client, cerr := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+		require.NoError(t, cerr)
+		tm.hostedAgents.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				if startErr != nil {
+					return nil, startErr
+				}
+				return openHostedAgentStream(t, client, opt), nil
+			})
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_x"}
+		for k, v := range flags {
+			config.Doit.Set(config.NS, k, v)
+		}
+		tm.prepayment.EXPECT().Get(gomock.Any()).Return(nil, nil, errors.New("lookup failed")).AnyTimes()
+		checkErr(beautifyAgentErrorFor(config, RunAgentsLogs(config)))
+		// Event lines go to the command's writer and checkErr prints to
+		// os.Stdout. Both are the process's stdout, events first.
+		stdout = buf.String()
+	})
+	require.NoError(t, w.Close())
+	extra, err := io.ReadAll(r)
+	require.NoError(t, err)
+	require.NoError(t, r.Close())
+	return stdout + string(extra), errBuf.String(), exited
+}
+
+func TestRunAgentsLogs_JSONErrorBeforeAnyEventPrintsTheErrorEnvelope(t *testing.T) {
+	stdout, stderr, exited := runLogsThroughCheckErr(t, "json", nil, "", nil, terminalStreamErr())
+	assert.True(t, exited, "exit must be non-zero")
+	assert.Empty(t, stderr)
+	var got outputErrors
+	require.NoError(t, json.Unmarshal([]byte(stdout), &got), stdout)
+	require.Len(t, got.Errors, 1)
+	assert.Equal(t, http.StatusNotFound, got.Errors[0].Status)
+}
+
+func TestRunAgentsLogs_ErrorAfterEventsGoesToStderr(t *testing.T) {
+	for name, tc := range map[string]struct {
+		output string
+		flags  map[string]any
+	}{
+		"json":   {"json", nil},
+		"pretty": {"text", map[string]any{doctl.ArgAgentPretty: true}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			stdout, stderr, exited := runLogsThroughCheckErr(t, tc.output, tc.flags, logsFrame("e1", 1, "run.started", `{}`), errCorruptFrame, nil)
+			assert.True(t, exited, "exit must be non-zero")
+			assert.Contains(t, stdout, `"e1"`)
+			assert.NotContains(t, stdout, `"errors"`)
+			assert.NotEmpty(t, stderr)
+		})
+	}
+}
+
+// --pretty without -o json leaves outputFormat at text, so checkErr renders
+// the error as text on stderr.
+func TestRunAgentsLogs_PrettyErrorBeforeAnyEventGoesToStderr(t *testing.T) {
+	stdout, stderr, exited := runLogsThroughCheckErr(t, "text", map[string]any{doctl.ArgAgentPretty: true}, "", nil, terminalStreamErr())
+	assert.True(t, exited, "exit must be non-zero")
+	assert.Empty(t, stdout)
+	assert.NotEmpty(t, stderr)
+}
+
+// logsCobraCmd returns the real `logs` command under a root carrying the same
+// persistent -o flag doit.go defines, with args parsed, so Changed reflects a
+// real command line.
+func logsCobraCmd(t *testing.T, args ...string) *Command {
+	t.Helper()
+	prev := Output
+	t.Cleanup(func() { Output = prev })
+	root := &cobra.Command{Use: "doctl"}
+	root.PersistentFlags().StringVarP(&Output, doctl.ArgOutput, "o", "text", "")
+	agents := Agents()
+	root.AddCommand(agents.Command)
+	found, _, err := root.Find([]string{agents.Name(), "logs"})
+	require.NoError(t, err)
+	require.NoError(t, found.ParseFlags(args))
+	return &Command{Command: found}
+}
+
+func runLogsCobra(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+	cmd := logsCobraCmd(t, args...)
+	pretty, err := cmd.Flags().GetBool(doctl.ArgAgentPretty)
+	require.NoError(t, err)
+
+	var out string
+	var runErr error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		srv := httptest.NewServer(hostedAgentSSEHandler(logsTestBody, nil))
+		t.Cleanup(srv.Close)
+		client, cerr := godo.New(nil, godo.SetBaseURL(srv.URL+"/"))
+		require.NoError(t, cerr)
+		tm.hostedAgents.EXPECT().
+			StreamSession(gomock.Any(), "sess_x", gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, opt *godo.HostedAgentSessionStreamOptions) (*godo.HostedAgentSessionStream, error) {
+				return openHostedAgentStream(t, client, opt), nil
+			}).
+			AnyTimes()
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_x"}
+		config.Command = cmd.Command
+		config.Doit.Set(config.NS, doctl.ArgAgentPretty, pretty)
+		runErr = RunAgentsLogs(config)
+		out = buf.String()
+	})
+	return out, runErr
+}
+
+func TestRunAgentsLogs_CobraFlags(t *testing.T) {
+	t.Run("pretty with explicit -o text is refused", func(t *testing.T) {
+		out, err := runLogsCobra(t, "--pretty", "-o", "text")
+		assert.EqualError(t, err, "--pretty only applies to JSON output")
+		assert.Empty(t, out)
+	})
+	t.Run("pretty alone is JSON", func(t *testing.T) {
+		out, err := runLogsCobra(t, "--pretty")
+		require.NoError(t, err)
+		assert.Contains(t, out, "\n  \"event_id\": \"e1\"")
+	})
+	t.Run("pretty with -o json is JSON", func(t *testing.T) {
+		out, err := runLogsCobra(t, "--pretty", "-o", "json")
+		require.NoError(t, err)
+		assert.Contains(t, out, "\n  \"event_id\": \"e1\"")
+	})
+}
+
+func TestRunAgentsLogs_JSONModePaymentRequiredShowsAddFunds(t *testing.T) {
+	stdout, stderr, exited := runLogsThroughCheckErr(t, "json", nil, "", nil, harnessAPIErr(http.StatusPaymentRequired, prepayBlockedWireMessage))
+	assert.True(t, exited)
+	assert.Empty(t, stderr)
+	assert.Contains(t, stdout, prepayBlockedTitle)
+	assert.Contains(t, stdout, prepayTopUpURL)
 }
