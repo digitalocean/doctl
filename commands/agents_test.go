@@ -38,6 +38,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -6070,4 +6071,16 @@ func TestAgentsDownload_LocalFileIsAliasForSaveTo(t *testing.T) {
 		_, err := (&doctl.LiveConfig{}).GetString("agents.download", doctl.ArgAgentSaveTo)
 		assert.Error(t, err)
 	})
+}
+
+func TestAcceptFlagAlias_SecondAliasKeepsFirst(t *testing.T) {
+	cmd := &Command{Command: &cobra.Command{Use: "x"}}
+	cmd.Flags().String("save-to", "", "")
+	cmd.Flags().String("spec", "", "")
+	acceptFlagAlias(cmd, "local-file", "save-to")
+	acceptFlagAlias(cmd, "file", "spec")
+
+	require.NoError(t, cmd.ParseFlags([]string{"--local-file", "a", "--file", "b"}))
+	assert.Equal(t, "a", cmd.Flags().Lookup("save-to").Value.String())
+	assert.Equal(t, "b", cmd.Flags().Lookup("spec").Value.String())
 }

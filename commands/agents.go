@@ -1642,14 +1642,15 @@ func acceptFileAliasFor(cmd *Command) {
 
 // acceptFlagAlias makes --alias a second spelling of --canonical on cmd. The
 // alias is not registered, so help output and required-flag checks only ever
-// see the canonical flag. A command can have one normalize function, so this
-// serves one alias per command.
+// see the canonical flag. A flag set has one normalize function, so each call
+// wraps the previous one and a command can take several aliases.
 func acceptFlagAlias(cmd *Command, alias, canonical string) {
-	cmd.Flags().SetNormalizeFunc(func(_ *pflag.FlagSet, name string) pflag.NormalizedName {
+	prev := cmd.Flags().GetNormalizeFunc()
+	cmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		if name == alias {
 			name = canonical
 		}
-		return pflag.NormalizedName(name)
+		return prev(f, name)
 	})
 }
 
