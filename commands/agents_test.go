@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -3870,6 +3871,66 @@ func TestHandleAttachCommandDownload_DefaultsLocalFile(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, contents, got)
 	})
+}
+
+// TestInferLocalNameFromWorkspacePath: Linux-plain names that traverse on Windows
+// must be rejected there.
+func TestInferLocalNameFromWorkspacePath(t *testing.T) {
+	tests := []struct {
+		name          string
+		workspacePath string
+		want          string
+		wantErr       bool
+	}{
+		{name: "ordinary file", workspacePath: "/workspace/readme.txt", want: "readme.txt"},
+		{name: "nested file uses last component", workspacePath: "/workspace/src/main.go", want: "main.go"},
+		{name: "trailing slash", workspacePath: "/workspace/readme.txt/", want: "readme.txt"},
+		{name: "dot", workspacePath: "/workspace/.", wantErr: true},
+		{name: "dot dot", workspacePath: "/workspace/..", wantErr: true},
+		{name: "dot dot trailing slash", workspacePath: "/workspace/../", wantErr: true},
+		// Legal Linux filenames that are path traversal on Windows.
+		{name: "backslash traversal", workspacePath: `..\outside.txt`, want: `..\outside.txt`, wantErr: runtime.GOOS == "windows"},
+		{name: "drive qualified", workspacePath: `C:\lab\outside.txt`, want: `C:\lab\outside.txt`, wantErr: runtime.GOOS == "windows"},
+		{name: "unc", workspacePath: `\\server\share\outside.txt`, want: `\\server\share\outside.txt`, wantErr: runtime.GOOS == "windows"},
+		{name: "trailing backslash", workspacePath: `dir\`, want: `dir\`, wantErr: runtime.GOOS == "windows"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := inferLocalNameFromWorkspacePath(tt.workspacePath)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Empty(t, got)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestHandleAttachCommandDownload_RejectsUnsafeDefaultLocalFile: rejects before
+// creating any transfer (no mock expectations set).
+func TestHandleAttachCommandDownload_RejectsUnsafeDefaultLocalFile(t *testing.T) {
+	workspacePaths := []string{"/workspace/..", "/workspace/../"}
+	if runtime.GOOS == "windows" {
+		workspacePaths = append(workspacePaths,
+			`/workspace/..\outside.txt`,
+			`/workspace/C:\lab\outside.txt`,
+			`/workspace/\\server\share\outside.txt`,
+			`/workspace/dir\`,
+		)
+	}
+
+	for _, workspacePath := range workspacePaths {
+		t.Run(workspacePath, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, _ *tcMocks) {
+				err := handleAttachCommand(config, config.HostedAgents(), "sess_x",
+					"/download "+workspacePath, &pendingHITL{})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "usage: /download")
+			})
+		})
+	}
 }
 
 // TestResolveFromAttachClearsQueue: an explicit /a <id> must remove that id
