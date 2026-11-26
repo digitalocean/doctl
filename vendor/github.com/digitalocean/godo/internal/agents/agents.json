@@ -1,0 +1,296 @@
+{
+  "$schema": "./agents.schema.json",
+  "version": 1,
+  "aiAgentVar": "AI_AGENT",
+  "namePattern": "^[A-Za-z0-9._@-]{1,64}$",
+  "agents": [
+    {
+      "name": "amp",
+      "description": "Amp. Also sets CLAUDECODE, so it must stay above claude-code.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_value", "name": "AGENT", "value": "amp" }] }
+    },
+    {
+      "name": "grok-build",
+      "description": "Grok Build. Runs Claude Code plugins and may expose Claude Code's markers, so it must stay above claude-code.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_value", "name": "GROK_AGENT", "value": "1" },
+          { "type": "env_set", "name": "GROK_PLUGIN_ROOT" },
+          { "type": "env_set", "name": "GROK_PLUGIN_DATA" }
+        ]
+      }
+    },
+    {
+      "name": "cowork",
+      "description": "Anthropic Cowork, built on Claude Code. Requires a Claude Code marker as well, and must stay above claude-code.",
+      "match": {
+        "type": "allOf",
+        "conditions": [
+          { "type": "env_set", "name": "CLAUDE_CODE_IS_COWORK" },
+          {
+            "type": "anyOf",
+            "conditions": [
+              { "type": "env_set", "name": "CLAUDECODE" },
+              { "type": "env_set", "name": "CLAUDE_CODE" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "claude-code",
+      "description": "Anthropic Claude Code.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "CLAUDECODE" },
+          { "type": "env_set", "name": "CLAUDE_CODE" }
+        ]
+      }
+    },
+    {
+      "name": "codex",
+      "description": "OpenAI Codex CLI.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "CODEX_SANDBOX" },
+          { "type": "env_set", "name": "CODEX_CI" },
+          { "type": "env_set", "name": "CODEX_THREAD_ID" },
+          { "type": "env_set", "name": "CODEX_SANDBOX_NETWORK_DISABLED" }
+        ]
+      }
+    },
+    {
+      "name": "gemini-cli",
+      "description": "Google Gemini CLI.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "GEMINI_CLI" }] }
+    },
+    {
+      "name": "opencode",
+      "description": "opencode.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "OPENCODE" },
+          { "type": "env_set", "name": "OPENCODE_CLIENT" }
+        ]
+      }
+    },
+    {
+      "name": "augment-cli",
+      "description": "Augment Code's Auggie CLI.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "AUGMENT_AGENT" }] }
+    },
+    {
+      "name": "crush",
+      "description": "Charm Crush.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "CRUSH" }] }
+    },
+    {
+      "name": "hermes-agent",
+      "description": "Nous Research Hermes Agent.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "HERMES_SESSION_ID" }] }
+    },
+    {
+      "name": "qwen-code",
+      "description": "Qwen Code.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "QWEN_CODE" }] }
+    },
+    {
+      "name": "kimi",
+      "description": "Kimi Code CLI.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "KIMI_PLUGIN_ROOT" }] }
+    },
+    {
+      "name": "junie",
+      "description": "JetBrains Junie.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "JUNIE_DATA" },
+          { "type": "env_set", "name": "JUNIE_SHIM_PATH" }
+        ]
+      }
+    },
+    {
+      "name": "vtcode",
+      "description": "VTCode.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_value", "name": "VTCODE", "value": "1" }] }
+    },
+    {
+      "name": "deepseek-harness",
+      "description": "DeepSeek Harness.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "DSH_SHELL" }] }
+    },
+    {
+      "name": "pi",
+      "description": "Pi coding agent.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "PI_CODING_AGENT" }] }
+    },
+    {
+      "name": "goose",
+      "description": "Goose. GOOSE_PROVIDER is not used: it only means Goose is configured, not running.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "GOOSE_TERMINAL" }] }
+    },
+    {
+      "name": "cline",
+      "description": "Cline.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "CLINE_ACTIVE" }] }
+    },
+    {
+      "name": "roo-code",
+      "description": "Roo Code.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "ROO_ACTIVE" },
+          { "type": "env_set", "name": "ROO_CLI_RUNTIME" }
+        ]
+      }
+    },
+    {
+      "name": "kilo-code",
+      "description": "Kilo Code.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "KILOCODE_FEATURE" }] }
+    },
+    {
+      "name": "trae",
+      "description": "ByteDance Trae, when its AI runs a shell.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "TRAE_AI_SHELL_ID" }] }
+    },
+    {
+      "name": "antigravity",
+      "description": "Google Antigravity.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "ANTIGRAVITY_AGENT" },
+          { "type": "env_set", "name": "ANTIGRAVITY_CLI_ALIAS" }
+        ]
+      }
+    },
+    {
+      "name": "kiro",
+      "description": "AWS Kiro agent. TERM_PROGRAM=kiro is not used: it is also set in Kiro's terminal without an agent.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "AGENT_CONTEXT_OUT" }] }
+    },
+    {
+      "name": "cursor-cli",
+      "description": "Cursor agent, from the Cursor CLI or editor. Kept low because tools the Cursor agent starts inherit CURSOR_AGENT, and the innermost agent should win. CURSOR_TRACE_ID is not used: it is set in Cursor's terminal without an agent.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "CURSOR_AGENT" },
+          { "type": "env_value", "name": "CURSOR_EXTENSION_HOST_ROLE", "value": "agent-exec" }
+        ]
+      }
+    },
+    {
+      "name": "devin",
+      "description": "Cognition Devin.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "DEVIN_DIR" },
+          { "type": "env_set", "name": "DEVIN_DISABLE_HISTEXPAND" }
+        ]
+      }
+    },
+    {
+      "name": "openclaw",
+      "description": "OpenClaw.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "OPENCLAW_SHELL" }] }
+    },
+    {
+      "name": "manus",
+      "description": "Manus.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "MANUS_ADDON_RUNTIME_SPEC_PATH" },
+          { "type": "env_set", "name": "MANUS_ADDON_RUNTIME_SPECS_REVISION" }
+        ]
+      }
+    },
+    {
+      "name": "cue",
+      "description": "Manus Cue.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "MANUS_LONG_DESKTOP_WORKER" },
+          { "type": "env_set", "name": "MANUS_OPERATOR_PLATFORM" }
+        ]
+      }
+    },
+    {
+      "name": "muse",
+      "description": "Meta Muse.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "JARVIS_IS_ASSIGNED" },
+          { "type": "env_set", "name": "JARVIS_TOOL_CALL_ID" }
+        ]
+      }
+    },
+    {
+      "name": "instinct",
+      "description": "Instinct.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "INSTINCT_OUTER_TOOL_USE_ID" },
+          { "type": "env_set", "name": "INSTINCT_OUTER_TOOL_USE_STARTED_AT" },
+          { "type": "env_set", "name": "INSTINCT_OUTER_TOOL_USE_TIMEOUT_SECONDS" }
+        ]
+      }
+    },
+    {
+      "name": "workbuddy",
+      "description": "Tencent WorkBuddy.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "WORKBUDDY_APPLICATION_NAME" },
+          { "type": "env_set", "name": "WORKBUDDY_APP_NAME" }
+        ]
+      }
+    },
+    {
+      "name": "qwenwork",
+      "description": "Alibaba QwenWork.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "QODER_WORK_INTEGRATION_PRODUCT" }] }
+    },
+    {
+      "name": "doubao-work",
+      "description": "Doubao Work.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "DOUBAO_OFFICE_AGENT_NAME" }] }
+    },
+    {
+      "name": "grok-bot",
+      "description": "Grok Bot.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "SAND_AGENT" }] }
+    },
+    {
+      "name": "github-copilot",
+      "description": "GitHub Copilot, including the Copilot CLI. Kept near the end: COPILOT_GITHUB_TOKEN and COPILOT_MODEL are user settings that may be exported in any shell.",
+      "match": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "env_set", "name": "COPILOT_CLI" },
+          { "type": "env_set", "name": "COPILOT_MODEL" },
+          { "type": "env_set", "name": "COPILOT_ALLOW_ALL" },
+          { "type": "env_set", "name": "COPILOT_GITHUB_TOKEN" }
+        ]
+      }
+    },
+    {
+      "name": "replit",
+      "description": "Replit. Checked last: REPL_ID is set everywhere on Replit, so any other agent running there should win.",
+      "match": { "type": "anyOf", "conditions": [{ "type": "env_set", "name": "REPL_ID" }] }
+    }
+  ]
+}

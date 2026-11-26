@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent detection rules",
+  "description": "Rules for detecting the AI agent driving a DigitalOcean client.\n\nEvaluation (first match wins):\n1. Read the variable named by aiAgentVar and trim it. If it matches namePattern, it is the agent name. Invalid values are ignored.\n2. Evaluate agents in array order. The first agent whose match is satisfied wins, so place more specific agents before more general ones.\n\nAgents pass their variables to every process they start, so the agent that issued the request must come before any agent that could have started it. Keep agents in these groups, in this order:\n- Terminal agents (Claude Code, Codex, ...). Agents that also set another agent's variables go first, such as amp and cowork before claude-code.\n- Agents hosted in an editor (Cline, Kiro, Cursor, ...), whose terminals pass their variables to child processes.\n- Agents that own the whole machine or desktop (Devin, Manus, ...).\n- Agents detected only through user settings that may be exported in any shell (GitHub Copilot).\n- Hosting environments that set a variable for every process (Replit).\n\nBump version only on changes an older reader would misread. Adding or reordering agents does not change the version.",
+  "type": "object",
+  "required": ["version", "aiAgentVar", "namePattern", "agents"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "aiAgentVar": { "type": "string", "minLength": 1 },
+    "namePattern": { "type": "string", "minLength": 1 },
+    "agents": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/agent" }
+    }
+  },
+  "definitions": {
+    "agent": {
+      "type": "object",
+      "required": ["name", "match"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Stable agent name sent to the API. Never rename an agent once released.",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "description": { "type": "string" },
+        "match": {
+          "oneOf": [
+            { "$ref": "#/definitions/anyOf" },
+            { "$ref": "#/definitions/allOf" }
+          ]
+        }
+      }
+    },
+    "condition": {
+      "oneOf": [
+        { "$ref": "#/definitions/anyOf" },
+        { "$ref": "#/definitions/allOf" },
+        { "$ref": "#/definitions/envSet" },
+        { "$ref": "#/definitions/envValue" }
+      ]
+    },
+    "anyOf": {
+      "type": "object",
+      "description": "Matches when any child condition matches. An empty list never matches.",
+      "required": ["type", "conditions"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "anyOf" },
+        "conditions": { "type": "array", "items": { "$ref": "#/definitions/condition" } }
+      }
+    },
+    "allOf": {
+      "type": "object",
+      "description": "Matches when every child condition matches. An empty list always matches.",
+      "required": ["type", "conditions"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "allOf" },
+        "conditions": { "type": "array", "items": { "$ref": "#/definitions/condition" } }
+      }
+    },
+    "envSet": {
+      "type": "object",
+      "description": "Matches when the environment variable is set and not empty.",
+      "required": ["type", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "env_set" },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "envValue": {
+      "type": "object",
+      "description": "Matches when the environment variable exactly equals value.",
+      "required": ["type", "name", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "env_value" },
+        "name": { "type": "string", "minLength": 1 },
+        "value": { "type": "string" }
+      }
+    }
+  }
+}
