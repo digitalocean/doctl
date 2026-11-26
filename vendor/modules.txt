@@ -103,9 +103,10 @@ github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.243.0
+# github.com/digitalocean/godo v1.246.0
 ## explicit; go 1.23.0
 github.com/digitalocean/godo
+github.com/digitalocean/godo/internal/agents
 github.com/digitalocean/godo/metrics
 # github.com/distribution/reference v0.6.0
 ## explicit; go 1.20

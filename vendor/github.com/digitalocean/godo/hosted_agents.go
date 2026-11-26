@@ -124,13 +124,14 @@ type HostedAgentsService interface {
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	// UpdateSession patches session-scoped settings on an existing session and
 	// returns the updated snapshot. Never touches the agent manifest or config;
-	// use UpdateSessionConfig to change tools, env or secrets.
+	// use UpdateSessionConfig to change tools, env, secrets or permissions.
 	UpdateSession(context.Context, string, *HostedAgentSessionUpdateRequest) (*HostedAgentSession, *Response, error)
 	// UpdateSessionConfig patches the live configuration of a session (tools,
-	// env, secrets) from a partial manifest YAML. The server answers 202 with
-	// outcome ACCEPTED and the session in SESSION_STATUS_UPDATING; callers poll
-	// GetSession until the status leaves UPDATING and then read Session.Update.
-	// An unchanged manifest answers 200 with outcome UNCHANGED.
+	// env, secrets, permissions) from a partial manifest YAML. The server
+	// answers 202 with outcome ACCEPTED and the session in
+	// SESSION_STATUS_UPDATING; callers poll GetSession until the status leaves
+	// UPDATING and then read Session.Update. An unchanged manifest answers 200
+	// with outcome UNCHANGED.
 	UpdateSessionConfig(context.Context, string, *HostedAgentSessionConfigUpdateRequest) (*HostedAgentSessionConfigUpdateResponse, *Response, error)
 	DestroySession(context.Context, string) (*Response, error)
 	PauseSession(context.Context, string) (*Response, error)
@@ -718,7 +719,7 @@ type HostedAgentSessionFromEnvironmentRequest = HostedAgentSessionFromConfigRequ
 // HostedAgentSessionUpdateRequest is the body for PATCH
 // /v2/harness-runtime/sessions/{session_id}: an allowlisted subset of session-scoped
 // settings (see HostedAgentsService.UpdateSessionConfig for live config
-// changes such as tools, env and secrets). The server rejects
+// changes such as tools, env, secrets and permissions). The server rejects
 // unknown top-level keys, and rejects an empty object, so every field is a
 // pointer: nil omits it and leaves the server-side value untouched.
 type HostedAgentSessionUpdateRequest struct {
@@ -1139,8 +1140,9 @@ type HostedAgentWorkspaceTransferCancelResponse struct {
 
 // HostedAgentSessionConfigUpdateRequest is the body for PATCH
 // /v2/harness-runtime/sessions/{session_id} when changing live configuration.
-// ManifestYAML holds only the sections to change (tools, env, secrets); absent
-// sections are untouched. It cannot be combined with resume_on_topoff.
+// ManifestYAML holds only the sections to change (tools, env, secrets,
+// permissions); absent sections are untouched. It cannot be combined with
+// resume_on_topoff.
 type HostedAgentSessionConfigUpdateRequest struct {
 	ManifestYAML string `json:"manifest_yaml"`
 }
@@ -1190,11 +1192,35 @@ type HostedAgentSessionConfigSectionChanges struct {
 	Changed []string `json:"changed,omitempty"`
 }
 
+// HostedAgentSessionConfigEgressChanges lists the hosts and IP addresses an
+// egress change added or removed. Mode is the new egress mode (allowlist,
+// unrestricted or deny_all), set only when the mode changed.
+type HostedAgentSessionConfigEgressChanges struct {
+	Mode    string   `json:"mode,omitempty"`
+	Added   []string `json:"added,omitempty"`
+	Removed []string `json:"removed,omitempty"`
+}
+
+// HostedAgentSessionConfigPermissionsChanges lists a permissions change.
+// Default is the new default action when it changed, and an empty string when
+// the default was removed. Rules names the rules added, removed or changed by
+// tool and match (bash "git *", do.actions/web_search); a rule kept with
+// another action or at another position is changed, since the last matching
+// rule wins.
+type HostedAgentSessionConfigPermissionsChanges struct {
+	Default *string                                 `json:"default,omitempty"`
+	Rules   *HostedAgentSessionConfigSectionChanges `json:"rules,omitempty"`
+}
+
 // HostedAgentSessionConfigChanges summarises changes per manifest section.
+// Secrets.Changed names the secrets that got a new value or were bound to
+// another URL or scheme; it never carries values.
 type HostedAgentSessionConfigChanges struct {
-	Tools   *HostedAgentSessionConfigSectionChanges `json:"tools,omitempty"`
-	Env     *HostedAgentSessionConfigSectionChanges `json:"env,omitempty"`
-	Secrets *HostedAgentSessionConfigSectionChanges `json:"secrets,omitempty"`
+	Tools       *HostedAgentSessionConfigSectionChanges     `json:"tools,omitempty"`
+	Env         *HostedAgentSessionConfigSectionChanges     `json:"env,omitempty"`
+	Secrets     *HostedAgentSessionConfigSectionChanges     `json:"secrets,omitempty"`
+	Egress      *HostedAgentSessionConfigEgressChanges      `json:"egress,omitempty"`
+	Permissions *HostedAgentSessionConfigPermissionsChanges `json:"permissions,omitempty"`
 }
 
 // HostedAgentSessionConfigUpdate describes one config update (or rollback) of a session.
@@ -1395,13 +1421,93 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 }
 
 // UpdateSessionConfig patches the live configuration of a session from a
-// partial manifest YAML (tools, env, secrets). The response carries the
+// partial manifest YAML (tools, env, secrets, egress, permissions). In tools,
+// only Action Gateway (do.actions) entries can change; the session's custom MCP
+// servers must be sent back exactly as they are. The response carries the
 // session, the outcome (ACCEPTED on HTTP 202, UNCHANGED on HTTP 200) and any
 // warnings. godo does not wait: on ACCEPTED the session is
 // SESSION_STATUS_UPDATING and the caller polls GetSession until the status
-// leaves UPDATING, then reads Session.Update. See the API error statuses: 403
-// (feature not enabled), 409 (not running / already updating), 422
-// (requires a new session), 501 (model or permissions).
+// leaves UPDATING, then reads Session.Update. See the API error statuses: 400
+// (invalid patch, including a top-level model section, permissions: null or a
+// malformed model name; change the model through env), 403 (feature not
+// enabled, including permission updates for a manifest with a permissions
+// section, even one that matches the session's policy), 409
+// (session status does not allow an update, a turn or approval is in
+// progress, the session's mutability does not allow the change, or the agent
+// can't apply a permissions change), 422 (requires a new session, including
+// adding, removing or changing a custom MCP server, or changing
+// egress.vpc_uuid or egress.subnet_uuid).
+//
+// permissions is the full policy, in the same form as at create: the default
+// action and every rule, so a rule left out is removed. Rules are checked in
+// order and the last match wins, so moving a rule is a change. "permissions:
+// {}" removes the policy (the agent's built-in default applies);
+// "permissions: null" is a 400. It applies from the agent's next tool call,
+// with no restart, except on langgraph, where a change to do.actions rules or
+// the default restarts the agent. What can change depends on the agent:
+// claude-code and opencode take the default and bash, file.read, file.write,
+// mcp and do.actions rules; openhands takes the default and bash, file.read,
+// file.write and web.fetch rules; codex takes the default and bash and
+// do.actions rules, with allow, ask or deny; hermes and langgraph take only
+// do.actions rules and a default of allow or deny; other agents take none. On
+// openhands, while the session uses do.actions tools, the default can't
+// change. permissions.filesystem and
+// permissions.network never change live: leave them out to keep the
+// session's, and setting them to something else is a 409. Only what differs
+// from the current policy is checked, and a removed rule counts: a rule of a
+// type the agent can't change must be kept in every permissions section you
+// send, so "permissions: {}" is a 409 while the policy has one (a file.read
+// rule on codex, a bash rule on hermes). If any of it can't apply, the whole
+// PATCH is a 409 and nothing is applied, tools, env and secrets included; the
+// error message names the changes to drop. A session created before live
+// permission updates were released also gets a 409: create a new session.
+// Session.Update.Changes.Permissions lists the default and rules that changed.
+//
+// A URL-bound secret can be rotated (a new value as a string), moved
+// ({value, url, scheme}), added ({value, url}; scheme defaults to bearer) or
+// removed (left out of secrets). Moving one to a new host or path, or to
+// scheme raw, requires value (400 otherwise). {url} with no value binds an
+// existing plain secret to a URL and keeps its value. A URL-bound secret
+// cannot be changed back to a plain secret. The url must be https:// with an
+// exact hostname, an optional path, and no port, query or fragment.
+//
+// egress replaces the session's allowlist. Send it as an object with
+// allow_hosts (hostnames) and allow_ips (exact IP addresses, not CIDR ranges);
+// only this form is supported in an update. Hosts and IPs left out are
+// removed. The VPC cannot change: omit vpc_uuid and subnet_uuid, or send their
+// current values.
+//
+// URL-bound secret and egress changes do not restart the agent: an update
+// that changes only those ends APPLIED, and the proxy applies the change on
+// the session's next outbound connection. Open connections are not closed.
+// Both need URL-bound secret and egress updates enabled for the team (403
+// otherwise). A session created with unrestricted egress and no URL-bound
+// secrets cannot gain either one: the update ends FAILED with
+// requires_new_session.
+//
+// The model changes through env, in the key that matches the endpoint the
+// session was created with:
+//   - DigitalOcean Serverless Inference (HARNESS_INFERENCE_MODEL, no endpoint
+//     of its own): HARNESS_INFERENCE_MODEL, set to a model id or router:<name>.
+//   - Its own OpenAI-compatible endpoint (OPENAI_BASE_URL): MODEL, which is
+//     read before OPENAI_MODEL.
+//   - Its own Anthropic endpoint (ANTHROPIC_BASE_URL) or the Anthropic API (an
+//     ANTHROPIC_API_KEY secret): ANTHROPIC_MODEL, which is read before MODEL.
+//
+// A session keeps its model endpoint: changing the provider or the base URL,
+// or adding or removing HARNESS_INFERENCE_MODEL, is a 422. On a session with
+// its own endpoint, removing the model key selects the agent's default model,
+// and the provider key (OPENAI_API_KEY or ANTHROPIC_API_KEY) can only be
+// rotated: removing it, adding it, or changing its url or scheme is a 422.
+// Rotating a URL-bound provider key follows the URL-bound secret rules above.
+// A model name must be one line of at most 256 bytes, with no leading or
+// trailing whitespace and no " #" or ": " (400).
+//
+// The session status must be SESSION_STATUS_READY, SESSION_STATUS_DETACHED or
+// SESSION_STATUS_PAUSED (a paused session is resumed for the update and paused
+// again, unless it was paused for zero balance), with no turn running and no
+// approval pending. Any other status, including PROVISIONING and UPDATING, is a
+// 409; a locked session is a 423.
 func (s *HostedAgentsServiceOp) UpdateSessionConfig(ctx context.Context, sessionID string, update *HostedAgentSessionConfigUpdateRequest) (*HostedAgentSessionConfigUpdateResponse, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
