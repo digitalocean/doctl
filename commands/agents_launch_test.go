@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -244,6 +245,30 @@ func TestRunAgentsLaunch_ResumesPausedSession(t *testing.T) {
 		err := RunAgentsLaunch(config)
 		require.Error(t, err)
 		assert.Contains(t, buf.String(), "is paused — resuming")
+		assert.Contains(t, buf.String(), "Session awake")
+	})
+}
+
+// A 409 "already running" waits for the other wake; if that wake fails,
+// launch stops there instead of attaching.
+func TestRunAgentsLaunch_ConcurrentWakeFails(t *testing.T) {
+	stubInteractiveTerminal(t, true)
+	fastPoll(t)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		gomock.InOrder(
+			tm.hostedAgents.EXPECT().GetSession("sess_paused").Return(sessionInStatus("sess_paused", godo.HostedAgentSessionStatusPaused), nil),
+			tm.hostedAgents.EXPECT().ResumeSession("sess_paused").Return(wakeAPIErr(http.StatusConflict, "session is already running")),
+			tm.hostedAgents.EXPECT().GetSession("sess_paused").Return(sessionInStatus("sess_paused", godo.HostedAgentSessionStatusFailed), nil),
+		)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = []string{"sess_paused"}
+		err := RunAgentsLaunch(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed and cannot be woken")
+		assert.NotContains(t, buf.String(), "Session awake")
 	})
 }
 

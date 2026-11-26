@@ -110,6 +110,7 @@ type MicroVMsService interface {
 
 	Exec(ctx context.Context, id string, execRequest *MicroVMExecRequest) (*MicroVMExecResult, *Response, error)
 	ConsoleURL(id string, opt *MicroVMConsoleOptions) (string, error)
+	PortForwardURL(id string, port int) (string, error)
 
 	UploadFile(ctx context.Context, id string, uploadRequest *MicroVMFileUploadRequest) (*MicroVMFileInfo, *Response, error)
 	DownloadFile(ctx context.Context, id, path string) (*MicroVMFileDownload, *Response, error)
@@ -419,6 +420,10 @@ type MicroVMConsoleExit struct {
 type MicroVMConsoleStatus struct {
 	State string `json:"state"`
 }
+
+// MicroVMPortForwardConnected is the status.state the server sends on a
+// port-forward WebSocket once the connection to the guest port is open.
+const MicroVMPortForwardConnected = "connected"
 
 // MicroVMFileUploadRequest is the input for UploadFile.
 type MicroVMFileUploadRequest struct {
@@ -1029,6 +1034,36 @@ func (s *MicroVMsServiceOp) Exec(ctx context.Context, id string, execRequest *Mi
 // status control (server→client) — see MarshalMicroVMConsoleResize and
 // ParseMicroVMConsoleControl.
 func (s *MicroVMsServiceOp) ConsoleURL(id string, opt *MicroVMConsoleOptions) (string, error) {
+	q := url.Values{}
+	if opt != nil {
+		if opt.Rows > 0 {
+			q.Set("rows", strconv.FormatUint(uint64(opt.Rows), 10))
+		}
+		if opt.Cols > 0 {
+			q.Set("cols", strconv.FormatUint(uint64(opt.Cols), 10))
+		}
+	}
+	return s.webSocketURL(id, "console", q)
+}
+
+// PortForwardURL builds the WebSocket URL that tunnels one TCP connection to
+// 127.0.0.1:port inside the MicroVM (GET /v2/microvms/{id}/port_forward).
+// As with ConsoleURL, godo does not dial WebSockets: the caller sets
+// Authorization: Bearer <token> on the handshake. Open one WebSocket for each
+// TCP connection. Binary frames in both directions are raw TCP bytes. The
+// server sends a {"status":{"state":"connected"}} text frame when the guest
+// port is open, or an {"error":...} text frame and then closes; decode both
+// with ParseMicroVMConsoleControl. Requires the port_forward feature gate (see
+// GetCreateOptions Features). The server rejects the reserved agent port.
+func (s *MicroVMsServiceOp) PortForwardURL(id string, port int) (string, error) {
+	if port < 1 || port > 65535 {
+		return "", NewArgError("port", "must be in 1..65535")
+	}
+	return s.webSocketURL(id, "port_forward", url.Values{"port": {strconv.Itoa(port)}})
+}
+
+// webSocketURL builds ws(s)://<base>/v2/microvms/{id}/{verb}?<q>.
+func (s *MicroVMsServiceOp) webSocketURL(id, verb string, q url.Values) (string, error) {
 	if id == "" {
 		return "", NewArgError("id", "cannot be empty")
 	}
@@ -1036,7 +1071,7 @@ func (s *MicroVMsServiceOp) ConsoleURL(id string, opt *MicroVMConsoleOptions) (s
 		return "", NewArgError("client.BaseURL", "cannot be nil")
 	}
 
-	u, err := s.client.BaseURL.Parse(fmt.Sprintf("%s/%s/console", microVMBasePath, id))
+	u, err := s.client.BaseURL.Parse(fmt.Sprintf("%s/%s/%s", microVMBasePath, id, verb))
 	if err != nil {
 		return "", err
 	}
@@ -1047,17 +1082,7 @@ func (s *MicroVMsServiceOp) ConsoleURL(id string, opt *MicroVMConsoleOptions) (s
 	case "http":
 		u.Scheme = "ws"
 	}
-
-	if opt != nil {
-		q := url.Values{}
-		if opt.Rows > 0 {
-			q.Set("rows", strconv.FormatUint(uint64(opt.Rows), 10))
-		}
-		if opt.Cols > 0 {
-			q.Set("cols", strconv.FormatUint(uint64(opt.Cols), 10))
-		}
-		u.RawQuery = q.Encode()
-	}
+	u.RawQuery = q.Encode()
 
 	return u.String(), nil
 }
