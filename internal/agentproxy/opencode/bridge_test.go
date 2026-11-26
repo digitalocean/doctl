@@ -20,6 +20,12 @@ import (
 
 const testSessionID = "11111111-2222-3333-4444-555555555555"
 
+func testOCSessionID() string { return ocID("ses_", testSessionID) }
+
+func testSessionURL(suffix string) string {
+	return "/session/" + testOCSessionID() + suffix
+}
+
 // newBridgedFacade wires a Facade against a fresh agentproxytest.Harness (a
 // real do.HostedAgentsService over httptest), plus an httptest server for
 // the facade's own client-facing surface.
@@ -37,7 +43,7 @@ func newBridgedFacade(t *testing.T) (*httptest.Server, *agentproxytest.Harness) 
 func postPrompt(t *testing.T, srv *httptest.Server, text string) *http.Response {
 	t.Helper()
 	body := `{"parts":[{"type":"text","text":` + string(mustJSON(t, text)) + `}]}`
-	resp, err := http.Post(srv.URL+"/session/ses_x/prompt_async", "application/json", strings.NewReader(body))
+	resp, err := http.Post(srv.URL+testSessionURL("/prompt_async"), "application/json", strings.NewReader(body))
 	require.NoError(t, err)
 	t.Cleanup(func() { resp.Body.Close() })
 	return resp
@@ -108,7 +114,7 @@ func TestPromptWithoutTextIs400(t *testing.T) {
 	h.QueueRun("run-1")
 
 	body := `{"parts":[{"type":"file","text":""}]}`
-	resp, err := http.Post(srv.URL+"/session/ses_x/prompt_async", "application/json", strings.NewReader(body))
+	resp, err := http.Post(srv.URL+testSessionURL("/prompt_async"), "application/json", strings.NewReader(body))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -354,7 +360,7 @@ func TestAssistantIDSortsAfterUserIDDespiteClockSkew(t *testing.T) {
 	// Client-minted user id far in the future of the event clock.
 	futureID := ocTimeID("msg_", timeNowMs()+3_600_000, 0, "clientmint")
 	body := `{"messageID":` + string(mustJSON(t, futureID)) + `,"parts":[{"type":"text","text":"skew test"}]}`
-	resp, err := http.Post(srv.URL+"/session/ses_x/prompt_async", "application/json", strings.NewReader(body))
+	resp, err := http.Post(srv.URL+testSessionURL("/prompt_async"), "application/json", strings.NewReader(body))
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)

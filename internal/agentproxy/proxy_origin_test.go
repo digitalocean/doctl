@@ -15,6 +15,7 @@ func TestAllowedProxyOrigin(t *testing.T) {
 		{"http://[" + "::1" + "]", true},
 		{"https://example.com", false},
 		{"http://evil.example", false},
+		{"null", false}, // sandboxed iframe Origin
 		{"://bad", false},
 	}
 	for _, tc := range cases {

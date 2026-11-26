@@ -1395,13 +1395,30 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 }
 
 // UpdateSessionConfig patches the live configuration of a session from a
-// partial manifest YAML (tools, env, secrets). The response carries the
+// partial manifest YAML (tools, env, secrets). In tools, only Action Gateway
+// (do.actions) entries can change; the session's custom MCP servers must be
+// sent back exactly as they are. The response carries the
 // session, the outcome (ACCEPTED on HTTP 202, UNCHANGED on HTTP 200) and any
 // warnings. godo does not wait: on ACCEPTED the session is
 // SESSION_STATUS_UPDATING and the caller polls GetSession until the status
-// leaves UPDATING, then reads Session.Update. See the API error statuses: 403
-// (feature not enabled), 409 (not running / already updating), 422
-// (requires a new session), 501 (model or permissions).
+// leaves UPDATING, then reads Session.Update. See the API error statuses: 400
+// (invalid patch, including a top-level model or permissions section; change
+// the model through env.HARNESS_INFERENCE_MODEL), 403 (feature not enabled),
+// 409 (session status does not allow an update, or a turn or approval is in
+// progress), 422 (requires a new session, including
+// adding, removing or changing a custom MCP server).
+//
+// The model can change only on a session whose model provider is DigitalOcean
+// Serverless Inference (created with HARNESS_INFERENCE_MODEL and no inference
+// endpoint of its own): set HARNESS_INFERENCE_MODEL in env to another
+// Serverless Inference model id or router:<name>. A session on any other model
+// provider cannot change its model (422).
+//
+// The session status must be SESSION_STATUS_READY, SESSION_STATUS_DETACHED or
+// SESSION_STATUS_PAUSED (a paused session is resumed for the update and paused
+// again, unless it was paused for zero balance), with no turn running and no
+// approval pending. Any other status, including PROVISIONING and UPDATING, is a
+// 409; a locked session is a 423.
 func (s *HostedAgentsServiceOp) UpdateSessionConfig(ctx context.Context, sessionID string, update *HostedAgentSessionConfigUpdateRequest) (*HostedAgentSessionConfigUpdateResponse, *Response, error) {
 	if sessionID == "" {
 		return nil, nil, errors.New("hosted agents: session id is required")
