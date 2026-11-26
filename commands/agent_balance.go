@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -141,17 +142,9 @@ func isDefaultAPIURL(u string) bool {
 }
 
 // scopesCoverBillingRead reports whether any scope grants billing read access.
-// Token info returns "scopes": ["read", "write"] for a `doctl auth login`
-// OAuth token and for a full-access personal access token (checked live
-// 2026-11-25).
-// TODO: billing:read and billing:* are the documented custom-scope names but
-// have not been checked against a live custom-scoped token.
+// Token info returns ["read", "write"] for a full-access or `doctl auth login`
+// token, ["read"] for a read-only token, and namespace:action permissions such
+// as "billing:read" for a custom-scoped token.
 func scopesCoverBillingRead(scopes []string) bool {
-	for _, s := range scopes {
-		switch s {
-		case "read", "billing:read", "billing:*":
-			return true
-		}
-	}
-	return false
+	return slices.Contains(scopes, "read") || slices.Contains(scopes, "billing:read")
 }
