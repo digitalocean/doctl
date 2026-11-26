@@ -31,6 +31,9 @@ var _ = suite("harness-runtime/prepay-card", func(t *testing.T, when spec.G, it 
 			w.Header().Add("content-type", "application/json")
 
 			switch req.URL.Path {
+			case "/v2/harness-runtime/sessions/sess_1":
+				// resume reads the session first and refuses one that is not paused.
+				w.Write([]byte(`{"session":{"session_id":"sess_1","status":"SESSION_STATUS_PAUSED","pause_reason":"zero_balance"}}`))
 			case "/v2/harness-runtime/triggers/by-session/sess_1":
 				// No trigger is bound to the session.
 				w.WriteHeader(http.StatusNotFound)
@@ -61,7 +64,7 @@ var _ = suite("harness-runtime/prepay-card", func(t *testing.T, when spec.G, it 
 
 		output, err := cmd.CombinedOutput()
 		expect.Error(err)
-		return strings.TrimSpace(string(output))
+		return normalizeWaitElapsed(strings.TrimSpace(string(output)))
 	}
 
 	when("the team pays from credit", func() {
@@ -84,16 +87,23 @@ var _ = suite("harness-runtime/prepay-card", func(t *testing.T, when spec.G, it 
 		})
 	})
 
-	// zero-balance is the API's name for the gate pause, which counts cash and
-	// credit together, so the help must not leave it reading as a zero balance.
-	it("says in list help that zero-balance is the prepayment gate", func() {
-		output, err := exec.Command(builtBinaryPath, "harness-runtime", "list", "--help").CombinedOutput()
-		expect.NoError(err)
-		expect.Contains(string(output), "zero-balance (paused by the prepayment gate)")
+	// The gate counts cash and credit together, so the help for the pause it
+	// causes must not blame a zero balance a credit-funded team never had.
+	it("names the prepayment gate in update and list help", func() {
+		for args, want := range map[string]string{
+			"update": "unless the prepayment gate paused it",
+			"list":   "zero-balance (paused by the prepayment gate)",
+		} {
+			output, err := exec.Command(builtBinaryPath, "harness-runtime", args, "--help").CombinedOutput()
+			expect.NoError(err)
+			expect.Contains(string(output), want)
+			expect.NotContains(string(output), "zero balance")
+		}
 	})
 })
 
 const prepayCardCredit string = `
+… waking the session (elapsed)
 Error: Blocked by the prepayment gate
 Your team's prepayment and credit don't cover its usage, so Harness Runtime can't start or resume sessions. Balance $0.00, Available Credit $9.29. Running sessions were paused and their work is saved.
 status 402
@@ -101,6 +111,7 @@ status 402
 `
 
 const prepayCardCash string = `
+… waking the session (elapsed)
 Error: Blocked by the prepayment gate
 Your team's prepayment and credit don't cover its usage, so Harness Runtime can't start or resume sessions. Balance $0.00, Available Credit $0.00. Running sessions were paused and their work is saved.
 status 402
