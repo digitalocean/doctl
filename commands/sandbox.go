@@ -57,9 +57,13 @@ func Sandbox() *Command {
 		"Let the sandbox reach the internet. Pass `--allow-internet-access=false` to limit it to the platform file-transfer host")
 	AddStringArrayFlag(cmdSandboxCreate, doctl.ArgSandboxEnv, "", nil,
 		"An environment variable for the sandbox, in `KEY=VALUE` form. Repeatable. The values are secrets and are never shown")
+	AddStringFlag(cmdSandboxCreate, doctl.ArgSandboxWorkspaceID, "", "",
+		"The ID of an available persistent workspace to attach. Create one with `doctl sandbox workspace create`")
 	cmdSandboxCreate.Example = "The following example creates a sandbox from the default template and size: doctl sandbox create\n\n" +
 		"The following example creates a sandbox with no internet access and one environment variable: " +
-		"doctl sandbox create --template coding-base --size mars-2vcpu-4gb --allow-internet-access=false --env API_KEY=secret"
+		"doctl sandbox create --template coding-base --size mars-2vcpu-4gb --allow-internet-access=false --env API_KEY=secret\n\n" +
+		"The following example creates a sandbox with a persistent workspace attached: " +
+		"doctl sandbox create --workspace-id 11111111-2222-4333-8444-555555555555"
 
 	cmdSandboxList := CmdBuilder(cmd, RunSandboxList, "list",
 		"List the sandboxes on your account",
@@ -99,6 +103,7 @@ func Sandbox() *Command {
 
 	addSandboxCommandCmds(cmd)
 	addSandboxTemplateCmds(cmd)
+	addSandboxWorkspaceCmds(cmd)
 	addSandboxSnapshotCmds(cmd)
 
 	return cmd
@@ -136,7 +141,12 @@ func RunSandboxCreate(c *CmdConfig) error {
 		return err
 	}
 
-	req := &godo.SandboxCreateRequest{Template: template, SizeSlug: size}
+	workspaceID, err := c.Doit.GetString(c.NS, doctl.ArgSandboxWorkspaceID)
+	if err != nil {
+		return err
+	}
+
+	req := &godo.SandboxCreateRequest{Template: template, SizeSlug: size, WorkspaceID: strings.TrimSpace(workspaceID)}
 	if !allowInternet {
 		// Unset means unrestricted, so only the restricted case is sent.
 		req.AllowInternetAccess = &allowInternet

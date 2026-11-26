@@ -42,7 +42,7 @@ func testSandbox(state godo.SandboxState) do.Sandbox {
 func TestSandboxCommands(t *testing.T) {
 	cmd := Sandbox()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "command", "create", "delete", "exec", "get", "list", "pause", "resume", "snapshot", "template")
+	assertCommandNames(t, cmd, "command", "create", "delete", "exec", "get", "list", "pause", "resume", "snapshot", "template", "workspace")
 	assert.Equal(t, "sandbox", cmd.Use)
 	assert.Equal(t, []string{"sandboxes", "sb"}, cmd.Aliases)
 }
@@ -77,6 +77,24 @@ func TestSandboxCreateWithOptions(t *testing.T) {
 			SizeSlug:            "s-1vcpu-2gb",
 			AllowInternetAccess: &off,
 			EnvVars:             map[string]string{"A": "1", "B": "x=y,z"},
+		}).Return(&running, nil)
+
+		assert.NoError(t, RunSandboxCreate(config))
+	})
+}
+
+func TestSandboxCreateWithAWorkspace(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgSandboxTemplate, "coding-base")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "mars-2vcpu-4gb")
+		config.Doit.Set(config.NS, doctl.ArgSandboxAllowInternetAccess, true)
+		config.Doit.Set(config.NS, doctl.ArgSandboxWorkspaceID, testSandboxWorkspaceID)
+
+		running := testSandbox(godo.SandboxStateRunning)
+		tm.sandboxes.EXPECT().Create(&godo.SandboxCreateRequest{
+			Template:    "coding-base",
+			SizeSlug:    "mars-2vcpu-4gb",
+			WorkspaceID: testSandboxWorkspaceID,
 		}).Return(&running, nil)
 
 		assert.NoError(t, RunSandboxCreate(config))

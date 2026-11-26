@@ -51,11 +51,24 @@ type SandboxesService interface {
 	ListTemplateBuilds(templateID string) (SandboxTemplateBuilds, error)
 	GetTemplateBuild(templateID, buildID string) (*SandboxTemplateBuild, error)
 
+	ListWorkspaces(state godo.SandboxWorkspaceState) (SandboxWorkspaces, error)
+	GetWorkspace(workspaceID string) (*SandboxWorkspace, error)
+	CreateWorkspace(req *godo.SandboxWorkspaceCreateRequest) (*SandboxWorkspace, error)
+	DeleteWorkspace(workspaceID string) error
+
 	ListSnapshots(sandboxID string) (SandboxSnapshots, error)
 	GetSnapshot(snapshotID string) (*SandboxSnapshot, error)
 	CreateSnapshot(sandboxID string, req *godo.SandboxSnapshotCreateRequest) (*SandboxSnapshot, error)
 	DeleteSnapshot(snapshotID string) error
 }
+
+// SandboxWorkspace wraps a godo SandboxWorkspace.
+type SandboxWorkspace struct {
+	*godo.SandboxWorkspace
+}
+
+// SandboxWorkspaces is a slice of SandboxWorkspace.
+type SandboxWorkspaces []SandboxWorkspace
 
 // SandboxSnapshot wraps a godo SandboxSnapshot.
 type SandboxSnapshot struct {
@@ -197,6 +210,47 @@ func (s *sandboxesService) SignalCommand(sandboxID string, pid int64, signal god
 func (s *sandboxesService) WriteCommandStdin(sandboxID string, pid int64, data []byte, eof bool) error {
 	_, err := s.client.Sandboxes.WriteCommandStdin(context.TODO(), sandboxID, pid,
 		&godo.SandboxCommandStdinRequest{Data: data, EOF: eof})
+	return err
+}
+
+// ListWorkspaces returns every persistent workspace of the team, following the
+// next-page token. An empty state returns any state.
+func (s *sandboxesService) ListWorkspaces(state godo.SandboxWorkspaceState) (SandboxWorkspaces, error) {
+	var out SandboxWorkspaces
+	opt := &godo.SandboxWorkspaceListOptions{State: state}
+	for {
+		page, _, err := s.client.Sandboxes.ListWorkspaces(context.TODO(), opt)
+		if err != nil {
+			return nil, err
+		}
+		for i := range page.Workspaces {
+			out = append(out, SandboxWorkspace{SandboxWorkspace: &page.Workspaces[i]})
+		}
+		if page.NextPageToken == "" {
+			return out, nil
+		}
+		opt.PageToken = page.NextPageToken
+	}
+}
+
+func (s *sandboxesService) GetWorkspace(workspaceID string) (*SandboxWorkspace, error) {
+	w, _, err := s.client.Sandboxes.GetWorkspace(context.TODO(), workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxWorkspace{SandboxWorkspace: w}, nil
+}
+
+func (s *sandboxesService) CreateWorkspace(req *godo.SandboxWorkspaceCreateRequest) (*SandboxWorkspace, error) {
+	w, _, err := s.client.Sandboxes.CreateWorkspace(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &SandboxWorkspace{SandboxWorkspace: w}, nil
+}
+
+func (s *sandboxesService) DeleteWorkspace(workspaceID string) error {
+	_, err := s.client.Sandboxes.DeleteWorkspace(context.TODO(), workspaceID)
 	return err
 }
 

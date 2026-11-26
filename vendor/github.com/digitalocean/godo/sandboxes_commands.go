@@ -74,7 +74,8 @@ type SandboxCommandEvent struct {
 	Keepalive *struct{}              `json:"keepalive,omitempty"`
 }
 
-// SandboxCommandStreamError is a transport error the gateway sent in the stream.
+// SandboxCommandStreamError is a transport error the gateway sent in the
+// stream. The command and exec streams both return it.
 type SandboxCommandStreamError struct {
 	GRPCCode   int32  `json:"grpc_code"`
 	HTTPCode   int32  `json:"http_code"`
@@ -99,12 +100,19 @@ type SandboxCommandStream struct {
 // envelopes that carry neither a result nor an error. A stream error is
 // returned as *SandboxCommandStreamError.
 func (s *SandboxCommandStream) Next() (*SandboxCommandEvent, error) {
+	return nextSandboxStreamEvent[SandboxCommandEvent](s.dec)
+}
+
+// nextSandboxStreamEvent decodes the next {"result": ...} or {"error": ...}
+// envelope of a grpc-gateway stream. It skips envelopes that carry neither,
+// and returns io.EOF when the stream ends.
+func nextSandboxStreamEvent[T any](dec *json.Decoder) (*T, error) {
 	for {
 		var envelope struct {
-			Result *SandboxCommandEvent       `json:"result"`
+			Result *T                         `json:"result"`
 			Error  *SandboxCommandStreamError `json:"error"`
 		}
-		if err := s.dec.Decode(&envelope); err != nil {
+		if err := dec.Decode(&envelope); err != nil {
 			return nil, err
 		}
 		if envelope.Error != nil {
