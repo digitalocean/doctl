@@ -15,6 +15,9 @@ package commands
 
 import (
 	"bytes"
+	"errors"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"testing"
@@ -394,6 +397,61 @@ func TestDropletGet(t *testing.T) {
 
 		err := RunDropletGet(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestDropletGet_NumericName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		numericNamed := do.Droplet{Droplet: &godo.Droplet{
+			ID:   42,
+			Name: "123456",
+		}}
+		notFound := &godo.ErrorResponse{
+			Response: &http.Response{
+				StatusCode: http.StatusNotFound,
+				Request:    &http.Request{Method: http.MethodGet, URL: &url.URL{Path: "/v2/droplets/123456"}},
+			},
+			Message: "droplet not found",
+		}
+		tm.droplets.EXPECT().Get(123456).Return(nil, notFound)
+		tm.droplets.EXPECT().List().Return(do.Droplets{numericNamed}, nil)
+		tm.droplets.EXPECT().Get(42).Return(&numericNamed, nil)
+
+		config.Args = append(config.Args, "123456")
+		config.Doit.Set(config.NS, doctl.ArgTemplate, "{{.Name}}")
+
+		err := RunDropletGet(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDropletGet_NumericIDKeepsNonNotFoundErrors(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.EXPECT().Get(123456).Return(nil, errors.New("connection refused"))
+
+		config.Args = append(config.Args, "123456")
+
+		err := RunDropletGet(config)
+		assert.EqualError(t, err, "connection refused")
+	})
+}
+
+func TestDropletGet_NumericNameNotFoundKeepsAPIError(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		notFound := &godo.ErrorResponse{
+			Response: &http.Response{
+				StatusCode: http.StatusNotFound,
+				Request:    &http.Request{Method: http.MethodGet, URL: &url.URL{Path: "/v2/droplets/999999"}},
+			},
+			Message: "droplet not found",
+		}
+		tm.droplets.EXPECT().Get(999999).Return(nil, notFound)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
+
+		config.Args = append(config.Args, "999999")
+
+		err := RunDropletGet(config)
+		assert.ErrorContains(t, err, "404")
 	})
 }
 
