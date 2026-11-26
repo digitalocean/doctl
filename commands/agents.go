@@ -1605,8 +1605,9 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 
 	// Transports differ by type: Codex is WebSocket; OpenCode is HTTP+SSE.
 	// --replay is codex-only (OpenCode fetches history itself).
-	// OpenCode also gets a one-time Basic Auth password on the Connect line
-	// (`opencode attach --password`) so the local facade is not open.
+	// OpenCode: mint a Basic Auth password and print it for
+	// OPENCODE_SERVER_PASSWORD — not --password on argv (local users can
+	// read cmdline).
 	listenURL := fmt.Sprintf("ws://127.0.0.1:%d", port)
 	connectCmd := fmt.Sprintf("codex --remote ws://127.0.0.1:%d", port)
 	var proxyPassword string
@@ -1620,17 +1621,11 @@ func RunAgentsStartProxy(c *CmdConfig) error {
 			return fmt.Errorf("minting proxy password: %w", err)
 		}
 		listenURL = fmt.Sprintf("http://127.0.0.1:%d", port)
-		// Quote so a future alphabet change cannot break the shell line.
-		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d --password %s", port, strconv.Quote(proxyPassword))
+		connectCmd = fmt.Sprintf("opencode attach http://127.0.0.1:%d", port)
 	}
 
 	stylingEnabled = detectStyling()
-	var body strings.Builder
-	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
-	body.WriteString(cardRow("Session", displaySessionRef(sess)))
-	body.WriteString(cardRow("Listen", listenURL))
-	body.WriteString(cardRow("Connect", connectCmd))
-	renderAgentCard(c.Out, body.String())
+	renderAgentCard(c.Out, startProxyCardBody(displaySessionRef(sess), listenURL, connectCmd, proxyPassword))
 
 	// SIGTERM alongside SIGINT: under a process manager or plain `kill` (not
 	// `-9`), only handling os.Interrupt meant the graceful-shutdown path in
@@ -8552,6 +8547,21 @@ func hitlOutcomeLabel(code int32) string {
 // before color codes are applied so columns stay aligned in the terminal.
 func cardRow(label, value string) string {
 	return cardRowWidth(label, value, 8)
+}
+
+// startProxyCardBody is the start-proxy listening card (sans border).
+// proxyPassword is printed bare for OPENCODE_SERVER_PASSWORD — never quoted
+// and never embedded in Connect (argv exposure).
+func startProxyCardBody(sessionRef, listenURL, connectCmd, proxyPassword string) string {
+	var body strings.Builder
+	fmt.Fprintf(&body, "%s\n\n", boldColor("Proxy listening", colSuccess))
+	body.WriteString(cardRow("Session", sessionRef))
+	body.WriteString(cardRow("Listen", listenURL))
+	if proxyPassword != "" {
+		body.WriteString(cardRow("Password", proxyPassword))
+	}
+	body.WriteString(cardRow("Connect", connectCmd))
+	return body.String()
 }
 
 // cardRowWidth is cardRow with an explicit label column, for a card whose
