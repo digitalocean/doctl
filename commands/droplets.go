@@ -14,7 +14,9 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"sort"
 	"strconv"
@@ -755,6 +757,68 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 	return fn(extractedIDs)
 }
 
+// getDropletByIdentifier resolves a Droplet ID or name. Numeric identifiers
+// are treated as IDs first, since that is the common case and avoids listing
+// every Droplet. If no Droplet has that ID, the identifier is retried as a
+// name so that all-numeric Droplet names remain addressable.
+func getDropletByIdentifier(ds do.DropletsService, identifier string) (*do.Droplet, error) {
+	id, err := strconv.Atoi(identifier)
+	if err != nil {
+		d, found, err := getDropletByName(ds, identifier)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			return nil, fmt.Errorf("Droplet with the name %q could not be found.", identifier)
+		}
+		return d, nil
+	}
+
+	d, err := ds.Get(id)
+	if err == nil {
+		return d, nil
+	}
+	if !isDropletNotFound(err) {
+		return nil, err
+	}
+
+	// The ID does not exist; the identifier may be an all-numeric name.
+	d, found, nameErr := getDropletByName(ds, identifier)
+	if nameErr != nil {
+		return nil, nameErr
+	}
+	if !found {
+		// Keep the API's error when the identifier is neither a known ID nor a name.
+		return nil, err
+	}
+	return d, nil
+}
+
+// getDropletByName looks up a name in the Droplet list. found is false when no
+// Droplet has that name, which lets callers decide which error to surface.
+func getDropletByName(ds do.DropletsService, name string) (*do.Droplet, bool, error) {
+	sum, err := buildDropletSummary(ds)
+	if err != nil {
+		return nil, false, err
+	}
+
+	switch count := sum.count[name]; {
+	case count == 0:
+		return nil, false, nil
+	case count > 1:
+		return nil, false, fmt.Errorf("There are %d Droplets with the name %q; please provide a specific Droplet ID. [%s]",
+			count, name, strings.Join(sum.byName[name], ", "))
+	default:
+		d, err := ds.Get(sum.byID[name])
+		return d, true, err
+	}
+}
+
+func isDropletNotFound(err error) bool {
+	var apiErr *godo.ErrorResponse
+	return errors.As(err, &apiErr) && apiErr.Response != nil && apiErr.Response.StatusCode == http.StatusNotFound
+}
+
 // RunDropletGet returns a droplet.
 func RunDropletGet(c *CmdConfig) error {
 	err := ensureOneArg(c)
@@ -767,30 +831,20 @@ func RunDropletGet(c *CmdConfig) error {
 		return err
 	}
 
-	ds := c.Droplets()
-	fn := func(ids []int) error {
-		for _, id := range ids {
-			d, err := ds.Get(id)
-			if err != nil {
-				return err
-			}
-
-			item := &displayers.Droplet{Droplets: do.Droplets{*d}}
-
-			if getTemplate != "" {
-				t := template.New("Get template")
-				t, err = t.Parse(getTemplate)
-				if err != nil {
-					return err
-				}
-				return t.Execute(c.Out, d)
-			}
-			return c.Display(item)
-		}
-		return nil
+	d, err := getDropletByIdentifier(c.Droplets(), c.Args[0])
+	if err != nil {
+		return err
 	}
-	return matchDroplets(c.Args, ds, fn)
 
+	item := &displayers.Droplet{Droplets: do.Droplets{*d}}
+	if getTemplate != "" {
+		t, err := template.New("Get template").Parse(getTemplate)
+		if err != nil {
+			return err
+		}
+		return t.Execute(c.Out, d)
+	}
+	return c.Display(item)
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
