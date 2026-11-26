@@ -23,16 +23,12 @@ import (
 
 // HarnessPrepayBalance renders the team's prepayment balance and gate state.
 //
-// Config may be nil when the token could not read billing; the table then
-// reports the gate state as unknown rather than implying a healthy zero.
+// Config or Status may be nil when the API answered 200 without them; the
+// table then reports the gate state as unknown rather than implying a healthy
+// zero. A balance that could not be read at all is an error, not a table.
 type HarnessPrepayBalance struct {
 	Config *do.PrepaymentConfig
 	Status *do.PrepaymentStatus
-
-	// NoPermission records that the token lacks billing:read. It is a
-	// user-actionable state, not an error, so it is displayed rather than
-	// returned.
-	NoPermission bool
 }
 
 var _ Displayable = &HarnessPrepayBalance{}
@@ -101,9 +97,6 @@ func (b *HarnessPrepayBalance) autoTopOff() string {
 }
 
 func (b *HarnessPrepayBalance) status() string {
-	if b.NoPermission {
-		return "unknown (token lacks billing:read)"
-	}
 	if b.Status == nil {
 		return "unknown"
 	}
