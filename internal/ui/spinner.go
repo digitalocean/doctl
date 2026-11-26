@@ -42,7 +42,8 @@ type Spinner struct {
 	glyphs Glyphs
 	now    func() time.Time
 
-	heading string
+	heading     string
+	hideElapsed bool
 
 	mu      sync.Mutex
 	message string
@@ -65,6 +66,14 @@ type SpinnerOption func(*Spinner)
 func WithHeading(format string, a ...any) SpinnerOption {
 	return func(s *Spinner) {
 		s.heading = fmt.Sprintf(format, a...)
+	}
+}
+
+// WithoutElapsed leaves the elapsed time off every line, for steps quick
+// enough that it would only ever read (0s).
+func WithoutElapsed() SpinnerOption {
+	return func(s *Spinner) {
+		s.hideElapsed = true
 	}
 }
 
@@ -230,14 +239,14 @@ func (s *Spinner) finish(glyph string, color lipgloss.TerminalColor, message str
 	// A plain stream closes on the sentence alone: no glyph, and no `Success:`
 	// label, which a running narrative of one line per stage does not carry.
 	if !s.env.Anim {
-		fmt.Fprintf(s.out, "%s %s\n", s.styled(color, true, message), s.duration(elapsed))
+		fmt.Fprintln(s.out, s.withElapsed(s.styled(color, true, message), elapsed))
 		return
 	}
 
 	lead := s.env.SprintErr(s.env.NewErrStyle().Foreground(color), glyph)
 	text := s.env.SprintErr(s.env.NewErrStyle().Foreground(color).Bold(true), message)
 
-	fmt.Fprintf(s.out, "%s %s %s\n", lead, text, s.duration(elapsed))
+	fmt.Fprintln(s.out, s.withElapsed(lead+" "+text, elapsed))
 }
 
 // styled paints one piece of a progress line. Whether the paint lands is
@@ -274,7 +283,7 @@ func (s *Spinner) report(now time.Time) {
 	}
 	s.reported, s.reportedAt = s.message, now
 
-	fmt.Fprintf(s.out, "%s %s\n", s.styled(ColorWarning, false, s.message), s.duration(now.Sub(s.started)))
+	fmt.Fprintln(s.out, s.withElapsed(s.styled(ColorWarning, false, s.message), now.Sub(s.started)))
 }
 
 // paint draws one animation frame over the previous one.
@@ -290,10 +299,19 @@ func (s *Spinner) paint(frame int) {
 	style := s.env.NewErrStyle().Foreground(ColorWarning)
 	glyph := s.env.SprintErr(style, frames[frame%len(frames)])
 	message := s.env.SprintErr(style, s.message+s.glyphs.Ellipsis)
-	line := fmt.Sprintf("%s %s %s", glyph, message, s.duration(s.now().Sub(s.started)))
+	line := s.withElapsed(glyph+" "+message, s.now().Sub(s.started))
 
 	fmt.Fprint(s.out, eraseLine+truncate(line, s.env.Width, s.glyphs.Ellipsis))
 	s.painted = true
+}
+
+// withElapsed appends the elapsed time to line unless WithoutElapsed is set.
+func (s *Spinner) withElapsed(line string, d time.Duration) string {
+	if s.hideElapsed {
+		return line
+	}
+
+	return line + " " + s.duration(d)
 }
 
 // duration renders elapsed time as dim chrome, truncated to whole seconds.

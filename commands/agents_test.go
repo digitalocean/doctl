@@ -1088,9 +1088,13 @@ func TestRunAgentsPause(t *testing.T) {
 
 func TestRunAgentsResume(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(sessionInStatus("sess_test", godo.HostedAgentSessionStatusPaused), nil)
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
+		var buf bytes.Buffer
+		config.Out = &buf
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
+		assert.Contains(t, buf.String(), "resumed")
 	})
 }
 
@@ -1109,6 +1113,7 @@ func TestRunAgentsResume_WarnsWhenBoundToReuseTrigger(t *testing.T) {
 				BoundSessionID: "sess_test",
 			}}, nil
 		}
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(sessionInStatus("sess_test", godo.HostedAgentSessionStatusPaused), nil)
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
@@ -1127,6 +1132,7 @@ func TestRunAgentsResume_BoundSessionLookupMissIsSilent(t *testing.T) {
 		lookupBoundTrigger = func(*CmdConfig, string) (*do.HostedAgentTrigger, error) {
 			return nil, errors.New("404")
 		}
+		tm.hostedAgents.EXPECT().GetSession("sess_test").Return(sessionInStatus("sess_test", godo.HostedAgentSessionStatusPaused), nil)
 		tm.hostedAgents.EXPECT().ResumeSession("sess_test").Return(nil)
 		config.Args = []string{"sess_test"}
 		assert.NoError(t, RunAgentsResume(config))
