@@ -23,10 +23,12 @@ import (
 )
 
 // agentFlatSchema is a copy of the flat agent manifest JSON schema with the
-// free-text descriptions removed. Keys for server features doctl does not
-// support yet are left out on purpose: a manifest using one gets the "unknown
-// field" warning, which says it may be a newer field. To follow a schema
-// change, copy the new schema over and drop those keys.
+// free-text descriptions removed, taken from the published schema of
+// 2026-11-19. No key of that version is left out. The two keys added to the
+// published schema since, system_prompt and secrets.<name>.actor, are not in
+// this copy yet, so a manifest using one gets the "unknown field" warning,
+// which says it may be a newer field. To follow a schema change, copy the new
+// schema over with its descriptions removed.
 //
 //go:embed agent.flat.schema.json
 var agentFlatSchema []byte
